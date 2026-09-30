@@ -120,7 +120,13 @@ describe("Contestant scoping", function()
 
         Tornado.start(ctx)
         task.wait(0.04)
-        expect(workspace:FindFirstChild("RoundTornado") ~= nil).toBe(true)
+        local tornado = workspace:FindFirstChild("RoundTornado")
+        expect(tornado ~= nil).toBe(true)
+
+        local dangerZone = tornado and tornado:FindFirstChild("DangerZone")
+        expect(dangerZone ~= nil).toBe(true)
+        expect((dangerZone :: BasePart).Size.Y).toBe(84)
+        expect((dangerZone :: BasePart).Size.Z).toBe(84)
 
         JumpShock.start(ctx)
 
