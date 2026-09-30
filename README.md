@@ -21,6 +21,9 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Mobile achievements progress panel and unlock notifications
 - Solo Rush mode with faster rounds, solo reward bonus, and instant round end on elimination
 - Elimination tracking that prevents respawns from being counted as survival
+- Server-side retention and gameplay analytics segmented by Solo/Multiplayer
+- Economy analytics for Coins sources, daily rewards, quests and achievements
+- Onboarding funnel tracking from join to first survival
 - Server-side reward handling
 - No paid assets required
 
@@ -60,8 +63,7 @@ The next milestones are:
 - daily quests and streak rewards
 - cosmetic inventory
 - analytics hooks
-- analytics hooks
-- retention balancing
+- retention balancing using live analytics
 - monetization only after retention is validated
 
 ## Architecture
