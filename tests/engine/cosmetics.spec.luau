@@ -2,9 +2,7 @@
 local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Cosmetics = require(ReplicatedStorage.Shared.Cosmetics)
-local CosmeticInventory = require("../../src/server/CosmeticInventory")
+local Cosmetics = require("../../src/server/CosmeticsCatalog")
 
 describe("Cosmetic inventory", function()
     it("exposes a valid ordered catalog", function()
@@ -15,24 +13,24 @@ describe("Cosmetic inventory", function()
     end)
 
     it("unlocks cosmetics according to player level", function()
-        local serialized, unlocked = CosmeticInventory.mergeLevelUnlocks("", 1)
+        local serialized, unlocked = Cosmetics.mergeLevelUnlocks("", 1)
         expect(serialized).toBe("trail_blue")
         expect(#unlocked).toBe(1)
-        expect(CosmeticInventory.canEquip(serialized, "trail_blue")).toBe(true)
-        expect(CosmeticInventory.canEquip(serialized, "trail_gold")).toBe(false)
+        expect(Cosmetics.canEquip(serialized, "trail_blue")).toBe(true)
+        expect(Cosmetics.canEquip(serialized, "trail_gold")).toBe(false)
 
-        local upgraded = CosmeticInventory.mergeLevelUnlocks(serialized, 3)
-        expect(CosmeticInventory.canEquip(upgraded, "trail_gold")).toBe(true)
-        expect(CosmeticInventory.canEquip(upgraded, "trail_void")).toBe(false)
+        local upgraded = Cosmetics.mergeLevelUnlocks(serialized, 3)
+        expect(Cosmetics.canEquip(upgraded, "trail_gold")).toBe(true)
+        expect(Cosmetics.canEquip(upgraded, "trail_void")).toBe(false)
     end)
 
     it("rejects unknown or locked cosmetics", function()
-        expect(CosmeticInventory.canEquip("trail_blue", "not_real")).toBe(false)
-        expect(CosmeticInventory.canEquip("trail_blue", "trail_void")).toBe(false)
+        expect(Cosmetics.canEquip("trail_blue", "not_real")).toBe(false)
+        expect(Cosmetics.canEquip("trail_blue", "trail_void")).toBe(false)
     end)
 
     it("serializes ownership deterministically", function()
-        local raw = CosmeticInventory.serialize({
+        local raw = Cosmetics.serialize({
             trail_void = true,
             trail_blue = true,
             trail_gold = true,
