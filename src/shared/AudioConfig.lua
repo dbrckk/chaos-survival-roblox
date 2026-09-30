@@ -16,6 +16,7 @@ AudioConfig.Sfx = {
     Ready = {SoundId = "rbxasset://sounds/switch.wav", Volume = 0.30, PlaybackSpeed = 1.35},
     RoundStart = {SoundId = "rbxasset://sounds/switch.wav", Volume = 0.45, PlaybackSpeed = 0.85},
     DoubleChaos = {SoundId = "rbxasset://sounds/collide.wav", Volume = 0.55, PlaybackSpeed = 0.75},
+    LastSurvivor = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.48, PlaybackSpeed = 0.62},
     Survived = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.52, PlaybackSpeed = 1.55},
     Eliminated = {SoundId = "rbxasset://sounds/collide.wav", Volume = 0.42, PlaybackSpeed = 0.72},
     Reward = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.36, PlaybackSpeed = 1.9},
