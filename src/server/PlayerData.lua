@@ -2,6 +2,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 
 local DailyRewards = require(script.Parent.DailyRewards)
+local DailyQuests = require(script.Parent.DailyQuests)
 
 local store = DataStoreService:GetDataStore("ChaosSurvival_v3")
 local PlayerData = {}
@@ -15,6 +16,17 @@ local DEFAULT = {
     BestStreak = 0,
     DailyStreak = 0,
     LastDailyDay = -1,
+
+    QuestDay = -1,
+    Quest1Id = "",
+    Quest1Progress = 0,
+    Quest1Claimed = false,
+    Quest2Id = "",
+    Quest2Progress = 0,
+    Quest2Claimed = false,
+    Quest3Id = "",
+    Quest3Progress = 0,
+    Quest3Claimed = false,
 }
 
 local function cloneDefault()
@@ -31,6 +43,24 @@ local function applyAttributes(player, data)
     data.Level = levelForXP(data.XP)
     for k,v in pairs(data) do
         player:SetAttribute(k, v)
+    end
+end
+
+local function resetDailyQuests(player, day)
+    local ids = DailyQuests.selectForDay(day, 3)
+    player:SetAttribute("QuestDay", day)
+
+    for i = 1, 3 do
+        player:SetAttribute("Quest" .. i .. "Id", ids[i])
+        player:SetAttribute("Quest" .. i .. "Progress", 0)
+        player:SetAttribute("Quest" .. i .. "Claimed", false)
+    end
+end
+
+function PlayerData.ensureDailyQuests(player, nowTimestamp)
+    local day = DailyQuests.dayNumber(nowTimestamp or os.time())
+    if player:GetAttribute("QuestDay") ~= day then
+        resetDailyQuests(player, day)
     end
 end
 
@@ -51,6 +81,7 @@ function PlayerData.load(player)
     end
 
     applyAttributes(player, data)
+    PlayerData.ensureDailyQuests(player)
     player:SetAttribute("DataLoaded", true)
 end
 
@@ -109,6 +140,76 @@ function PlayerData.claimDaily(player, nowTimestamp)
     PlayerData.add(player, "XP", claim.XP)
 
     return claim
+end
+
+function PlayerData.getQuestState(player, nowTimestamp)
+    PlayerData.ensureDailyQuests(player, nowTimestamp)
+
+    local quests = {}
+    for i = 1, 3 do
+        local id = player:GetAttribute("Quest" .. i .. "Id")
+        local definition = DailyQuests.definition(id)
+        if definition then
+            table.insert(quests, {
+                slot = i,
+                id = id,
+                title = definition.Title,
+                target = definition.Target,
+                progress = player:GetAttribute("Quest" .. i .. "Progress") or 0,
+                claimed = player:GetAttribute("Quest" .. i .. "Claimed") == true,
+                coins = definition.Coins,
+                xp = definition.XP,
+            })
+        end
+    end
+
+    return {
+        day = player:GetAttribute("QuestDay"),
+        quests = quests,
+    }
+end
+
+function PlayerData.progressQuestEvent(player, eventName, amount, nowTimestamp)
+    PlayerData.ensureDailyQuests(player, nowTimestamp)
+
+    local completed = {}
+
+    for i = 1, 3 do
+        local idKey = "Quest" .. i .. "Id"
+        local progressKey = "Quest" .. i .. "Progress"
+        local claimedKey = "Quest" .. i .. "Claimed"
+
+        local id = player:GetAttribute(idKey)
+        local definition = DailyQuests.definition(id)
+        local claimed = player:GetAttribute(claimedKey) == true
+
+        if definition and not claimed then
+            local progress, justCompleted = DailyQuests.applyProgress(
+                id,
+                player:GetAttribute(progressKey) or 0,
+                eventName,
+                amount or 1
+            )
+
+            player:SetAttribute(progressKey, progress)
+
+            if justCompleted then
+                player:SetAttribute(claimedKey, true)
+                PlayerData.add(player, "Coins", definition.Coins)
+                PlayerData.add(player, "XP", definition.XP)
+
+                table.insert(completed, {
+                    slot = i,
+                    id = id,
+                    title = definition.Title,
+                    coins = definition.Coins,
+                    xp = definition.XP,
+                })
+            end
+        end
+    end
+
+    return completed, PlayerData.getQuestState(player, nowTimestamp)
 end
 
 function PlayerData.init()
