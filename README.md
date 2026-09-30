@@ -12,6 +12,9 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Coins, XP, levels, wins and games played
 - DataStore persistence
 - Mobile-friendly HUD
+- Daily login rewards and streaks
+- Daily quests with persistent progress and automatic rewards
+- Server-side vote rate limiting
 - Server-side reward handling
 - No paid assets required
 
