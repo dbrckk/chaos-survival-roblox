@@ -22,6 +22,10 @@ local dailyRewardEvent = remotes:FindFirstChild("DailyReward") or Instance.new("
 dailyRewardEvent.Name = "DailyReward"
 dailyRewardEvent.Parent = remotes
 
+local questEvent = remotes:FindFirstChild("QuestUpdate") or Instance.new("RemoteEvent")
+questEvent.Name = "QuestUpdate"
+questEvent.Parent = remotes
+
 PlayerData.init()
 MapBuilder.build(Config)
 
@@ -43,6 +47,22 @@ local allowVote = RateLimiter.new(0.2)
 
 local function broadcast(payload)
     stateEvent:FireAllClients(payload)
+end
+
+local function sendQuestState(player, completed)
+    questEvent:FireClient(player, {
+        state = PlayerData.getQuestState(player),
+        completed = completed or {},
+    })
+end
+
+local function progressQuest(player, eventName, amount)
+    if player.Parent ~= Players or not player:GetAttribute("DataLoaded") then
+        return
+    end
+
+    local completed = PlayerData.progressQuestEvent(player, eventName, amount or 1)
+    sendQuestState(player, completed)
 end
 
 local function alive(player)
@@ -99,6 +119,8 @@ local function setupDailyReward(player)
                 rewardIndex = claim.RewardIndex,
             })
         end
+
+        sendQuestState(player)
     end)
 end
 
@@ -226,6 +248,7 @@ while true do
         end
         teleportToArena(p, i)
         PlayerData.add(p, "Games", 1)
+        progressQuest(p, "play_round", 1)
     end
 
     local selectedSet = {selected}
@@ -248,9 +271,17 @@ while true do
                 PlayerData.add(p, "Coins", Config.WinCoins)
                 PlayerData.add(p, "XP", Config.WinXP)
                 PlayerData.add(p, "Wins", 1)
+
+                progressQuest(p, "survive_round", 1)
+                progressQuest(p, "coins_earned", Config.WinCoins)
+
+                if #selectedSet > 1 then
+                    progressQuest(p, "survive_double", 1)
+                end
             else
                 PlayerData.add(p, "Coins", Config.ParticipationCoins)
                 PlayerData.add(p, "XP", Config.ParticipationXP)
+                progressQuest(p, "coins_earned", Config.ParticipationCoins)
             end
             p:LoadCharacter()
         end
