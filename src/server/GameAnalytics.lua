@@ -70,6 +70,25 @@ function GameAnalytics.economySource(player, amount, reason, itemSku, solo)
     end)
 end
 
+
+function GameAnalytics.economySink(player, amount, reason, itemSku, solo)
+    local numericAmount = math.max(0, tonumber(amount) or 0)
+    if numericAmount <= 0 then return false end
+
+    return safe(function()
+        AnalyticsService:LogEconomyEvent(
+            player,
+            Enum.AnalyticsEconomyFlowType.Sink,
+            "Coins",
+            numericAmount,
+            math.max(0, player:GetAttribute("Coins") or 0),
+            Enum.AnalyticsEconomyTransactionType.Shop.Name,
+            itemSku or "",
+            fields("Mode:" .. GameAnalytics.modeLabel(solo), "Sink:" .. tostring(reason), nil)
+        )
+    end)
+end
+
 function GameAnalytics.onboarding(player, step, stepName, solo)
     if not player then return false end
 
