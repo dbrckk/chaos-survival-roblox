@@ -24,6 +24,13 @@ AudioConfig.Sfx = {
     Bombs = {SoundId = "rbxasset://sounds/collide.wav", Volume = 0.36, PlaybackSpeed = 0.7},
     Wind = {SoundId = "rbxasset://sounds/action_falling.ogg", Volume = 0.17, PlaybackSpeed = 0.85, Looped = true},
     LowGravity = {SoundId = "rbxasset://sounds/action_swim.mp3", Volume = 0.12, PlaybackSpeed = 0.72, Looped = true},
+    Lava = {SoundId = "rbxasset://sounds/action_falling.ogg", Volume = 0.16, PlaybackSpeed = 0.62},
+    PlatformWarning = {SoundId = "rbxasset://sounds/switch.wav", Volume = 0.28, PlaybackSpeed = 1.55},
+    Tornado = {SoundId = "rbxasset://sounds/action_falling.ogg", Volume = 0.24, PlaybackSpeed = 0.78},
+    Freeze = {SoundId = "rbxasset://sounds/impact_water.mp3", Volume = 0.22, PlaybackSpeed = 1.35},
+    Speed = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.28, PlaybackSpeed = 1.65},
+    Darkness = {SoundId = "rbxasset://sounds/switch.wav", Volume = 0.25, PlaybackSpeed = 0.55},
+    Shrink = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.24, PlaybackSpeed = 0.72},
 }
 
 AudioConfig.DisasterLoop = {
@@ -34,9 +41,17 @@ AudioConfig.DisasterLoop = {
 }
 
 AudioConfig.DisasterAccent = {
-    JumpShock = "JumpShock",
-    Bombs = "Bombs",
+    RisingLava = "Lava",
     Meteors = "Meteor",
+    LowGravity = "LowGravity",
+    DisappearingPlatforms = "PlatformWarning",
+    Tornado = "Tornado",
+    Freeze = "Freeze",
+    Bombs = "Bombs",
+    SpeedSurge = "Speed",
+    Darkness = "Darkness",
+    ShrinkingArena = "Shrink",
+    JumpShock = "JumpShock",
 }
 
 return AudioConfig
