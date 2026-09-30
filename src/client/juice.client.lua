@@ -4,6 +4,8 @@ local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
+local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
@@ -166,7 +168,18 @@ local function setMood(state)
     if phase == "round" then
         roundDanger = (tonumber(state.seconds) or 99) <= 5
 
-        if doubleChaos then
+        local profile = DisasterVisuals.combine(state.disasterIds or {})
+        if profile then
+            atmosphere.Density = profile.Density
+            atmosphere.Haze = profile.Haze
+            atmosphere.Color = profile.Atmosphere
+            bloom.Intensity = profile.Bloom
+            color.Contrast = profile.Contrast
+            color.Saturation = profile.Saturation
+            color.TintColor = profile.Tint
+            vignette.BackgroundColor3 = profile.Accent
+            tweenCamera((roundDanger and profile.Fov + 3 or profile.Fov), 0.24)
+        elseif doubleChaos then
             atmosphere.Density = 0.23
             atmosphere.Haze = 1.15
             bloom.Intensity = 0.75
@@ -186,6 +199,18 @@ local function setMood(state)
             tweenCamera(roundDanger and 79 or 75, 0.24)
         end
 
+        local arena = workspace:FindFirstChild("GeneratedMap") and workspace.GeneratedMap:FindFirstChild("Arena")
+        local decor = arena and arena:FindFirstChild("Decor")
+        local beacon = decor and decor:FindFirstChild("CenterBeacon")
+        local light = beacon and beacon:FindFirstChild("ArenaGlow")
+        if profile and beacon and beacon:IsA("BasePart") then
+            beacon.Color = profile.Accent
+            if light and light:IsA("PointLight") then
+                light.Color = profile.Accent
+                light.Brightness = doubleChaos and 2.2 or 1.5
+            end
+        end
+
         if phase ~= lastPhase or state.title ~= lastRoundTitle then
             showBanner(
                 state.title or "CHAOS!",
@@ -203,6 +228,7 @@ local function setMood(state)
         color.Contrast = 0.08
         color.Saturation = 0.10
         color.TintColor = Color3.new(1, 1, 1)
+        atmosphere.Color = Color3.fromRGB(205, 215, 235)
         tweenCamera(72, 0.35)
     else
         roundDanger = false
@@ -212,6 +238,7 @@ local function setMood(state)
         color.Contrast = 0.05
         color.Saturation = 0.06
         color.TintColor = Color3.new(1, 1, 1)
+        atmosphere.Color = Color3.fromRGB(205, 215, 235)
         tweenCamera(70, 0.4)
     end
 
