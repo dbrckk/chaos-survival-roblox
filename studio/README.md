@@ -1,15 +1,15 @@
 # Automated Studio E2E playtest
 
-This harness uses Roblox's official StudioTestService and VirtualInput APIs.
+The repository contains a full Roblox Studio E2E harness built on Roblox's official `StudioTestService` and `VirtualInput` APIs.
 
-It verifies, in a real Studio client/server simulation:
+It verifies in a real Studio client/server simulation:
 
-- 2 initial clients + 2 staggered joins;
+- 2 initial clients plus 2 staggered joins;
 - generated lobby and arena;
 - required remotes;
-- HUD, juice and spectator GUIs;
-- viewport bounds for critical mobile HUD elements;
-- minimum tap-target size;
+- HUD, visual-effects and spectator GUIs;
+- viewport bounds for critical HUD elements;
+- minimum tap-target sizes;
 - exclusive Quest/Cosmetics/Achievements panels;
 - real virtual mouse clicks on menu buttons;
 - real disaster voting;
@@ -17,10 +17,36 @@ It verifies, in a real Studio client/server simulation:
 - at least one accelerated gameplay round;
 - one simulated client leaving and server cleanup.
 
-## Running
+## One-click local run
 
-Install/sync the project into Roblox Studio, install `studio/ChaosAutoplay.plugin.lua` as a local plugin, then click **Chaos E2E** in the Chaos Survival toolbar.
+Install/sync the project into an authenticated Roblox Studio session, install `studio/ChaosAutoplay.plugin.lua` as a local plugin, then click **Chaos E2E** in the Chaos Survival toolbar.
 
-The plugin launches a four-client test and prints either `PASS: ...` or `FAIL: ...`.
+The plugin starts a four-client test and prints either `PASS: ...` or `FAIL: ...`.
 
-The production game is unaffected: all E2E scripts exit immediately outside Studio and only activate when the test argument `suite = "ChaosE2E"` is present.
+## GitHub Actions
+
+`.github/workflows/roblox-studio-smoke.yml` is manual-only and intentionally targets a Windows **self-hosted runner**.
+
+Reason: a fresh GitHub-hosted runner has no Roblox Studio OAuth session. Experiments confirmed that Studio installs successfully but stops at the Roblox login dialog before `RunScript` executes. An Open Cloud API key does not act as a Studio user session.
+
+The self-hosted runner therefore must:
+
+1. run Windows;
+2. already have Roblox Studio installed;
+3. already have an authenticated Studio session for the runner user.
+
+## Always-on autonomous coverage
+
+The normal Open Cloud workflow does not need Studio login. It runs real Roblox-engine tests on every push, including:
+
+- all 11 disaster modules started and cleaned in a DataModel;
+- all 3 arena variants;
+- every disaster on every arena;
+- every allowed Double Chaos pair;
+- map hot-swapping and cleanup;
+- progression/data schema, rewards, quests, cosmetics and achievements;
+- Solo Rush and balancing rules;
+- audio configuration;
+- analytics helpers.
+
+Production behavior is unaffected by the Studio E2E harness. E2E scripts exit immediately outside Studio and only activate when the test argument `suite = "ChaosE2E"` is present.
