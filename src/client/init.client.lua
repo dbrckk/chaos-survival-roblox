@@ -449,6 +449,45 @@ achievementButton.Activated:Connect(function()
 end)
 
 
+
+local dataWarning = Instance.new("TextLabel")
+dataWarning.AnchorPoint = Vector2.new(0.5, 0)
+dataWarning.Position = UDim2.fromScale(0.5, 0.17)
+dataWarning.Size = UDim2.fromScale(0.78, 0.055)
+dataWarning.BackgroundColor3 = Color3.fromRGB(115, 50, 35)
+dataWarning.BackgroundTransparency = 0.08
+dataWarning.Font = Enum.Font.GothamBold
+dataWarning.TextColor3 = Color3.new(1, 1, 1)
+dataWarning.TextScaled = true
+dataWarning.TextWrapped = true
+dataWarning.Visible = false
+dataWarning.Text = ""
+dataWarning.ZIndex = 15
+dataWarning.Parent = root
+Instance.new("UICorner", dataWarning).CornerRadius = UDim.new(0, 12)
+
+local function refreshDataStatus()
+    if player:GetAttribute("DataLoaded") ~= true then
+        dataWarning.Visible = false
+        return
+    end
+
+    if player:GetAttribute("DataPersistenceAvailable") ~= true then
+        dataWarning.Text = "TEMPORARY SESSION • PROGRESS WILL NOT SAVE • REJOIN LATER"
+        dataWarning.Visible = true
+    elseif player:GetAttribute("LastSaveFailed") == true then
+        dataWarning.Text = "SAVE DELAYED • ROBLOX DATASTORE RETRYING"
+        dataWarning.Visible = true
+    else
+        dataWarning.Visible = false
+    end
+end
+
+for _, attr in ipairs({"DataLoaded", "DataPersistenceAvailable", "LastSaveFailed"}) do
+    player:GetAttributeChangedSignal(attr):Connect(refreshDataStatus)
+end
+refreshDataStatus()
+
 local resultFlash = Instance.new("Frame")
 resultFlash.Size = UDim2.fromScale(1, 1)
 resultFlash.BackgroundColor3 = Color3.new(1, 1, 1)
