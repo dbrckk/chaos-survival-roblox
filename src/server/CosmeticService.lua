@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local Cosmetics = require(script.Parent.CosmeticsCatalog)
-local CosmeticInventory = require(script.Parent.CosmeticInventory)
 
 local CosmeticService = {}
 
@@ -55,7 +54,7 @@ local function applyEffect(player)
 end
 
 local function stateFor(player)
-    local owned = CosmeticInventory.deserialize(player:GetAttribute("OwnedCosmetics") or "")
+    local owned = Cosmetics.deserialize(player:GetAttribute("OwnedCosmetics") or "")
     return {
         catalog = Cosmetics.publicList(),
         owned = owned,
@@ -73,7 +72,7 @@ local function sendState(player, unlocked)
 end
 
 local function syncUnlocks(player)
-    local merged, unlocked = CosmeticInventory.mergeLevelUnlocks(
+    local merged, unlocked = Cosmetics.mergeLevelUnlocks(
         player:GetAttribute("OwnedCosmetics") or "",
         player:GetAttribute("Level") or 1
     )
@@ -81,9 +80,9 @@ local function syncUnlocks(player)
     player:SetAttribute("OwnedCosmetics", merged)
 
     local equipped = player:GetAttribute("EquippedCosmetic") or ""
-    if equipped == "" and CosmeticInventory.canEquip(merged, "trail_blue") then
+    if equipped == "" and Cosmetics.canEquip(merged, "trail_blue") then
         player:SetAttribute("EquippedCosmetic", "trail_blue")
-    elseif not CosmeticInventory.canEquip(merged, equipped) then
+    elseif not Cosmetics.canEquip(merged, equipped) then
         player:SetAttribute("EquippedCosmetic", "")
     end
 
@@ -144,7 +143,7 @@ function CosmeticService.init(remotes, rateLimiterFactory)
         end
 
         local owned = player:GetAttribute("OwnedCosmetics") or ""
-        if not CosmeticInventory.canEquip(owned, cosmeticId) then
+        if not Cosmetics.canEquip(owned, cosmeticId) then
             return
         end
 
