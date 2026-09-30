@@ -11,6 +11,7 @@ local SoloRules = require(script.SoloRules)
 local GameAnalytics = require(script.GameAnalytics)
 local ArenaVariants = require(script.ArenaVariants)
 local DisasterBalance = require(script.DisasterBalance)
+local SessionStreak = require(script.SessionStreak)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -374,15 +375,16 @@ while true do
     for _, p in ipairs(contestants) do
         if p.Parent == Players then
             local survived = eliminated[p.UserId] ~= true and alive(p)
-            local survivalStreak = p:GetAttribute("SessionSurvivalStreak") or 0
+            local survivalStreak, bestSessionStreak = SessionStreak.update(
+                p:GetAttribute("SessionSurvivalStreak"),
+                p:GetAttribute("BestSessionSurvivalStreak"),
+                survived
+            )
+
+            p:SetAttribute("SessionSurvivalStreak", survivalStreak)
+            p:SetAttribute("BestSessionSurvivalStreak", bestSessionStreak)
 
             if survived then
-                survivalStreak += 1
-                p:SetAttribute("SessionSurvivalStreak", survivalStreak)
-                p:SetAttribute(
-                    "BestSessionSurvivalStreak",
-                    math.max(p:GetAttribute("BestSessionSurvivalStreak") or 0, survivalStreak)
-                )
                 survivors += 1
                 PlayerData.add(p, "Coins", winCoins)
                 PlayerData.add(p, "XP", winXP)
@@ -397,9 +399,6 @@ while true do
                     progressQuest(p, "survive_double", 1)
                 end
             else
-                survivalStreak = 0
-                p:SetAttribute("SessionSurvivalStreak", 0)
-
                 PlayerData.add(p, "Coins", Config.ParticipationCoins)
                 PlayerData.add(p, "XP", Config.ParticipationXP)
                 GameAnalytics.economySource(p, Config.ParticipationCoins, "RoundParticipation", selected.Id, roundSettings.Solo)
@@ -425,7 +424,7 @@ while true do
                 disasterName = selected.Name,
                 elapsedSeconds = math.floor(roundElapsed + 0.5),
                 survivalStreak = survivalStreak,
-                bestSessionStreak = p:GetAttribute("BestSessionSurvivalStreak") or survivalStreak,
+                bestSessionStreak = bestSessionStreak,
             })
 
             p:LoadCharacter()
