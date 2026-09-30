@@ -102,7 +102,8 @@ function D.start(ctx)
                     if dist < 42 and dist > 2 then
                         local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X).Unit
                         local strength = math.clamp((42 - dist) / 42, 0, 1)
-                        root.AssemblyLinearVelocity += tangent * force * strength + Vector3.new(0, 10 * strength, 0)
+                        local intensity = ctx.Intensity and ctx.Intensity() or 1
+                        root.AssemblyLinearVelocity += tangent * force * intensity * strength + Vector3.new(0, 10 * intensity * strength, 0)
                     end
                 end
             end
