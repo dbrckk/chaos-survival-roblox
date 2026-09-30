@@ -29,6 +29,16 @@ jobs:
           echo "/tmp/rojo" >> "$GITHUB_PATH"
           /tmp/rojo/rojo --version
 
+      - name: Validate Luau syntax
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          mkdir -p /tmp/luau
+          unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
+            xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
+
       - name: Build Roblox place
         run: |
           mkdir -p build
