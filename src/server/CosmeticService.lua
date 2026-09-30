@@ -241,6 +241,31 @@ local function buyCosmetic(player, cosmeticId)
     )
 end
 
+function CosmeticService.grant(player, cosmeticId)
+    if not player or type(cosmeticId) ~= "string" then
+        return false
+    end
+
+    local item = Cosmetics.get(cosmeticId)
+    if not item then
+        return false
+    end
+
+    local owned = Cosmetics.deserialize(player:GetAttribute("OwnedCosmetics") or "")
+    if owned[cosmeticId] then
+        return true
+    end
+
+    owned[cosmeticId] = true
+    player:SetAttribute("OwnedCosmetics", Cosmetics.serialize(owned))
+    if (player:GetAttribute("EquippedCosmetic") or "") == "" then
+        player:SetAttribute("EquippedCosmetic", cosmeticId)
+        applyEffect(player)
+    end
+    sendState(player, {cosmeticId}, "premium_granted")
+    return true
+end
+
 function CosmeticService.sync(player)
     if player:GetAttribute("DataLoaded") then
         syncUnlocks(player)
