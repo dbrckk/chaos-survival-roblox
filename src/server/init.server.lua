@@ -1,7 +1,25 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+
+if RunService:IsStudio() then
+    local okService, StudioTestService = pcall(game.GetService, game, "StudioTestService")
+    if okService and StudioTestService then
+        local okArgs, args = pcall(StudioTestService.GetTestArgs, StudioTestService)
+        if okArgs and type(args) == "table" and args.suite == "ChaosE2E" then
+            Config.IntermissionSeconds = 2
+            Config.VoteSeconds = 2
+            Config.RoundSeconds = 6
+            Config.PostRoundSeconds = 2
+            Config.Solo.IntermissionSeconds = 2
+            Config.Solo.VoteSeconds = 2
+            Config.Solo.RoundSeconds = 5
+            Config.Solo.PostRoundSeconds = 2
+        end
+    end
+end
 local MapBuilder = require(script.MapBuilder)
 local PlayerData = require(script.PlayerData)
 local RateLimiter = require(script.RateLimiter)
