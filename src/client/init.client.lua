@@ -437,6 +437,14 @@ local function renderAchievements(state)
     end
 end
 
+local panelScales = {}
+for _, panel in ipairs({questPanel, cosmeticsPanel, achievementPanel}) do
+    local scale = Instance.new("UIScale")
+    scale.Scale = 1
+    scale.Parent = panel
+    panelScales[panel] = scale
+end
+
 local function closeAllPanels()
     questPanel.Visible = false
     cosmeticsPanel.Visible = false
@@ -446,7 +454,18 @@ end
 local function openExclusive(panel)
     local opening = not panel.Visible
     closeAllPanels()
-    panel.Visible = opening
+
+    if opening then
+        local scale = panelScales[panel]
+        panel.Visible = true
+        scale.Scale = 0.92
+        TweenService:Create(
+            scale,
+            TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = 1}
+        ):Play()
+    end
+
     return opening
 end
 
