@@ -1,4 +1,3 @@
-local Players = game:GetService("Players")
 local D = {Name = "TORNADO", Hint = "KEEP YOUR DISTANCE!"}
 
 function D.start(ctx)
@@ -7,7 +6,7 @@ function D.start(ctx)
 
     task.spawn(function()
         while ctx.Active() do
-            for _, player in ipairs(Players:GetPlayers()) do
+            for _, player in ipairs(ctx.Contestants or {}) do
                 local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if root and hum and hum.Health > 0 then
