@@ -269,6 +269,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
             title = "SOLO RUSH: " .. title
         end
 
+        local disasterIds = {}
+        for _, disaster in ipairs(selected) do
+            table.insert(disasterIds, disaster.Id)
+        end
+
         broadcast({
             phase = "round",
             title = title,
@@ -277,6 +282,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             doubleChaos = #selected > 1,
             soloMode = roundSettings.Solo,
             arenaName = roundSettings.ArenaName or currentArenaVariant,
+            disasterIds = disasterIds,
         })
 
         task.wait(1)
