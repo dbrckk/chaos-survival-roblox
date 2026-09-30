@@ -106,7 +106,7 @@ function PlayerData.load(player)
     return ok
 end
 
-function PlayerData.save(player)
+function PlayerData.save(player, waitForExisting)
     if not active[player] then
         return false
     end
@@ -116,7 +116,19 @@ function PlayerData.save(player)
     end
 
     if saving[player] then
-        return false
+        if not waitForExisting then
+            return false
+        end
+
+        local deadline = os.clock() + 10
+        while saving[player] and os.clock() < deadline do
+            task.wait(0.05)
+        end
+
+        if saving[player] then
+            warn("Timed out waiting for existing save", player.UserId)
+            return false
+        end
     end
 
     saving[player] = true
@@ -255,7 +267,7 @@ function PlayerData.init()
     end)
 
     Players.PlayerRemoving:Connect(function(player)
-        PlayerData.save(player)
+        PlayerData.save(player, true)
         active[player] = nil
         saving[player] = nil
     end)
@@ -283,7 +295,7 @@ function PlayerData.init()
             if active[player] and player:GetAttribute("DataPersistenceAvailable") == true then
                 pending += 1
                 task.spawn(function()
-                    PlayerData.save(player)
+                    PlayerData.save(player, true)
                     pending -= 1
                 end)
             end
