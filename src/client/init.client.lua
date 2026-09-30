@@ -10,6 +10,7 @@ local dailyRewardEvent = remotes:WaitForChild("DailyReward")
 local questEvent = remotes:WaitForChild("QuestUpdate")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
 local cosmeticActionEvent = remotes:WaitForChild("CosmeticAction")
+local achievementEvent = remotes:WaitForChild("AchievementState")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosHUD"
@@ -322,6 +323,129 @@ cosmeticsButton.Activated:Connect(function()
     end
 end)
 
+
+local achievementButton = Instance.new("TextButton")
+achievementButton.AnchorPoint = Vector2.new(0.5, 1)
+achievementButton.Position = UDim2.fromScale(0.5, 0.90)
+achievementButton.Size = UDim2.fromScale(0.30, 0.065)
+achievementButton.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
+achievementButton.TextColor3 = Color3.new(1, 1, 1)
+achievementButton.Font = Enum.Font.GothamBold
+achievementButton.TextScaled = true
+achievementButton.Text = "ACHIEVEMENTS"
+achievementButton.Parent = root
+Instance.new("UICorner", achievementButton).CornerRadius = UDim.new(0, 14)
+
+local achievementPanel = Instance.new("Frame")
+achievementPanel.AnchorPoint = Vector2.new(0.5, 1)
+achievementPanel.Position = UDim2.fromScale(0.5, 0.82)
+achievementPanel.Size = UDim2.fromScale(0.82, 0.46)
+achievementPanel.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
+achievementPanel.BackgroundTransparency = 0.04
+achievementPanel.Visible = false
+achievementPanel.Parent = root
+Instance.new("UICorner", achievementPanel).CornerRadius = UDim.new(0, 18)
+
+local achievementHeader = Instance.new("TextLabel")
+achievementHeader.Size = UDim2.new(1, -24, 0, 42)
+achievementHeader.Position = UDim2.fromOffset(12, 6)
+achievementHeader.BackgroundTransparency = 1
+achievementHeader.Font = Enum.Font.GothamBlack
+achievementHeader.TextColor3 = Color3.new(1, 1, 1)
+achievementHeader.TextScaled = true
+achievementHeader.TextXAlignment = Enum.TextXAlignment.Left
+achievementHeader.Text = "ACHIEVEMENTS"
+achievementHeader.Parent = achievementPanel
+
+local achievementList = Instance.new("ScrollingFrame")
+achievementList.Size = UDim2.new(1, -24, 1, -58)
+achievementList.Position = UDim2.fromOffset(12, 50)
+achievementList.BackgroundTransparency = 1
+achievementList.BorderSizePixel = 0
+achievementList.ScrollBarThickness = 5
+achievementList.CanvasSize = UDim2.fromOffset(0, 0)
+achievementList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+achievementList.Parent = achievementPanel
+
+local achievementLayout = Instance.new("UIListLayout")
+achievementLayout.Padding = UDim.new(0, 8)
+achievementLayout.Parent = achievementList
+
+local achievementToast = Instance.new("Frame")
+achievementToast.AnchorPoint = Vector2.new(0.5, 0.5)
+achievementToast.Position = UDim2.fromScale(0.5, 0.50)
+achievementToast.Size = UDim2.fromScale(0.78, 0.16)
+achievementToast.BackgroundColor3 = Color3.fromRGB(80, 65, 28)
+achievementToast.BackgroundTransparency = 0.03
+achievementToast.Visible = false
+achievementToast.Parent = root
+Instance.new("UICorner", achievementToast).CornerRadius = UDim.new(0, 18)
+
+local achievementToastTitle = Instance.new("TextLabel")
+achievementToastTitle.Size = UDim2.new(1, -24, 0.48, 0)
+achievementToastTitle.Position = UDim2.fromOffset(12, 8)
+achievementToastTitle.BackgroundTransparency = 1
+achievementToastTitle.Font = Enum.Font.GothamBlack
+achievementToastTitle.TextColor3 = Color3.new(1, 1, 1)
+achievementToastTitle.TextScaled = true
+achievementToastTitle.Text = "ACHIEVEMENT UNLOCKED"
+achievementToastTitle.Parent = achievementToast
+
+local achievementToastBody = Instance.new("TextLabel")
+achievementToastBody.Size = UDim2.new(1, -24, 0.34, 0)
+achievementToastBody.Position = UDim2.new(0, 12, 0.56, 0)
+achievementToastBody.BackgroundTransparency = 1
+achievementToastBody.Font = Enum.Font.GothamMedium
+achievementToastBody.TextColor3 = Color3.fromRGB(245, 235, 205)
+achievementToastBody.TextScaled = true
+achievementToastBody.Text = ""
+achievementToastBody.Parent = achievementToast
+
+local function renderAchievements(state)
+    for _, child in ipairs(achievementList:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+
+    local items = state and state.achievements or {}
+    for _, item in ipairs(items) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, -6, 0, 72)
+        row.BackgroundColor3 = item.unlocked and Color3.fromRGB(55, 85, 65) or Color3.fromRGB(34, 38, 52)
+        row.Parent = achievementList
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+
+        local rowTitle = Instance.new("TextLabel")
+        rowTitle.Size = UDim2.new(1, -20, 0.42, 0)
+        rowTitle.Position = UDim2.fromOffset(10, 5)
+        rowTitle.BackgroundTransparency = 1
+        rowTitle.Font = Enum.Font.GothamBold
+        rowTitle.TextColor3 = Color3.new(1, 1, 1)
+        rowTitle.TextScaled = true
+        rowTitle.TextXAlignment = Enum.TextXAlignment.Left
+        rowTitle.Text = item.title or "Achievement"
+        rowTitle.Parent = row
+
+        local rowBody = Instance.new("TextLabel")
+        rowBody.Size = UDim2.new(1, -20, 0.40, 0)
+        rowBody.Position = UDim2.new(0, 10, 0.50, 0)
+        rowBody.BackgroundTransparency = 1
+        rowBody.Font = Enum.Font.GothamMedium
+        rowBody.TextColor3 = Color3.fromRGB(220, 225, 235)
+        rowBody.TextScaled = true
+        rowBody.TextXAlignment = Enum.TextXAlignment.Left
+
+        local status = item.unlocked and "DONE" or string.format("%d/%d", item.progress or 0, item.target or 0)
+        rowBody.Text = string.format("%s  •  %s  •  +%d coins", item.description or "", status, item.coins or 0)
+        rowBody.Parent = row
+    end
+end
+
+achievementButton.Activated:Connect(function()
+    achievementPanel.Visible = not achievementPanel.Visible
+end)
+
 local function refreshStats()
     stats.Text = string.format(
         "LVL %d    🪙 %d    🏆 %d",
@@ -374,6 +498,29 @@ end
 
 
 
+
+
+achievementEvent.OnClientEvent:Connect(function(payload)
+    if payload.state then
+        renderAchievements(payload.state)
+    end
+
+    local unlockedNow = payload.unlockedNow or {}
+    if #unlockedNow > 0 and payload.state and payload.state.achievements then
+        local unlockedId = unlockedNow[1]
+        for _, item in ipairs(payload.state.achievements) do
+            if item.id == unlockedId then
+                achievementToastTitle.Text = "ACHIEVEMENT UNLOCKED"
+                achievementToastBody.Text = string.format("%s   +%d coins   +%d XP", item.title or "Achievement", item.coins or 0, item.xp or 0)
+                achievementToast.Visible = true
+                task.delay(4, function()
+                    achievementToast.Visible = false
+                end)
+                break
+            end
+        end
+    end
+end)
 
 cosmeticStateEvent.OnClientEvent:Connect(function(payload)
     if payload.state then
