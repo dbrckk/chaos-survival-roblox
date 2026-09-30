@@ -18,11 +18,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rojo
+      - name: Install Rojo 7.7.0
         shell: pwsh
         run: |
-          cargo install rojo --version "^7" --locked
-          rojo --version
+          $zip = "$env:RUNNER_TEMP\rojo.zip"
+          $dir = "$env:RUNNER_TEMP\rojo"
+          Invoke-WebRequest -Uri "https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-windows-x86_64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+          $exe = Get-ChildItem $dir -Filter "rojo.exe" -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "Rojo executable not found." }
+          $exe.Directory.FullName | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $exe.FullName --version
 
       - name: Build place
         shell: pwsh
