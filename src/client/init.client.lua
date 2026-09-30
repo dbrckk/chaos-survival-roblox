@@ -11,6 +11,8 @@ local dailyRewardEvent = remotes:WaitForChild("DailyReward")
 local questEvent = remotes:WaitForChild("QuestUpdate")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
 local cosmeticActionEvent = remotes:WaitForChild("CosmeticAction")
+local monetizationStateEvent = remotes:WaitForChild("MonetizationState")
+local monetizationActionEvent = remotes:WaitForChild("MonetizationAction")
 local achievementEvent = remotes:WaitForChild("AchievementState")
 local roundFeedbackEvent = remotes:WaitForChild("RoundFeedback")
 local clientReadyEvent = remotes:WaitForChild("ClientReady")
@@ -437,7 +439,104 @@ local function renderCosmetics(state)
     end
 end
 
--- cosmetics navigation is wired after all three panels are created
+-- cosmetics navigation is wired after all panels are created
+
+local supportButton = Instance.new("TextButton")
+supportButton.Name = "SupportButton"
+supportButton.AnchorPoint = Vector2.new(1, 1)
+supportButton.Position = UDim2.fromScale(0.975, 0.825)
+supportButton.Size = UDim2.fromScale(0.26, 0.055)
+supportButton.BackgroundColor3 = Color3.fromRGB(68, 44, 82)
+supportButton.TextColor3 = Color3.new(1, 1, 1)
+supportButton.Font = Enum.Font.GothamBold
+supportButton.TextScaled = true
+supportButton.Text = "SUPPORT"
+supportButton.Visible = false
+supportButton.Parent = root
+Instance.new("UICorner", supportButton).CornerRadius = UDim.new(0, 14)
+
+local supportPanel = Instance.new("Frame")
+supportPanel.Name = "SupportPanel"
+supportPanel.AnchorPoint = Vector2.new(1, 1)
+supportPanel.Position = UDim2.fromScale(0.975, 0.75)
+supportPanel.Size = UDim2.fromScale(0.72, 0.30)
+supportPanel.BackgroundColor3 = Color3.fromRGB(22, 20, 31)
+supportPanel.BackgroundTransparency = 0.03
+supportPanel.Visible = false
+supportPanel.Parent = root
+Instance.new("UICorner", supportPanel).CornerRadius = UDim.new(0, 18)
+
+local supportHeader = Instance.new("TextLabel")
+supportHeader.Size = UDim2.new(1, -24, 0.20, 0)
+supportHeader.Position = UDim2.fromOffset(12, 6)
+supportHeader.BackgroundTransparency = 1
+supportHeader.Font = Enum.Font.GothamBlack
+supportHeader.TextColor3 = Color3.new(1, 1, 1)
+supportHeader.TextScaled = true
+supportHeader.TextXAlignment = Enum.TextXAlignment.Left
+supportHeader.Text = "SUPPORT THE GAME"
+supportHeader.Parent = supportPanel
+
+local supportFairPlay = Instance.new("TextLabel")
+supportFairPlay.Size = UDim2.new(1, -24, 0.14, 0)
+supportFairPlay.Position = UDim2.new(0, 12, 0.20, 0)
+supportFairPlay.BackgroundTransparency = 1
+supportFairPlay.Font = Enum.Font.GothamBold
+supportFairPlay.TextColor3 = Color3.fromRGB(175, 235, 195)
+supportFairPlay.TextScaled = true
+supportFairPlay.TextXAlignment = Enum.TextXAlignment.Left
+supportFairPlay.Text = "COSMETIC ONLY • NO GAMEPLAY ADVANTAGE"
+supportFairPlay.Parent = supportPanel
+
+local supportList = Instance.new("Frame")
+supportList.Size = UDim2.new(1, -24, 0.56, 0)
+supportList.Position = UDim2.new(0, 12, 0.38, 0)
+supportList.BackgroundTransparency = 1
+supportList.Parent = supportPanel
+
+local supportLayout = Instance.new("UIListLayout")
+supportLayout.Padding = UDim.new(0, 8)
+supportLayout.Parent = supportList
+
+local function renderMonetization(state)
+    for _, child in ipairs(supportList:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    local enabled = state and state.enabled == true
+    supportButton.Visible = enabled
+    if not enabled then
+        supportPanel.Visible = false
+        return
+    end
+
+    supportFairPlay.Text = state.fairPlay or "COSMETIC ONLY • NO GAMEPLAY ADVANTAGE"
+
+    for _, offer in ipairs(state.offers or {}) do
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, 0, 0, 54)
+        button.BackgroundColor3 = offer.owned
+            and Color3.fromRGB(50, 91, 69)
+            or Color3.fromRGB(67, 47, 82)
+        button.TextColor3 = Color3.new(1, 1, 1)
+        button.Font = Enum.Font.GothamBold
+        button.TextScaled = true
+        button.TextWrapped = true
+        button.Text = offer.owned
+            and string.format("%s   •   OWNED", offer.name or "Support Pack")
+            or string.format("%s   •   %d ROBUX", offer.name or "Support Pack", offer.price or 0)
+        button.Parent = supportList
+        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
+
+        button.Activated:Connect(function()
+            if not offer.owned then
+                monetizationActionEvent:FireServer("buy_pass", offer.key)
+            end
+        end)
+    end
+end
 
 
 local achievementButton = Instance.new("TextButton")
@@ -561,7 +660,7 @@ local function renderAchievements(state)
 end
 
 local panelScales = {}
-for _, panel in ipairs({questPanel, cosmeticsPanel, achievementPanel}) do
+for _, panel in ipairs({questPanel, cosmeticsPanel, achievementPanel, supportPanel}) do
     local scale = Instance.new("UIScale")
     scale.Scale = 1
     scale.Parent = panel
@@ -572,6 +671,7 @@ local function closeAllPanels()
     questPanel.Visible = false
     cosmeticsPanel.Visible = false
     achievementPanel.Visible = false
+    supportPanel.Visible = false
 end
 
 local function openExclusive(panel)
@@ -604,6 +704,12 @@ end)
 
 achievementButton.Activated:Connect(function()
     openExclusive(achievementPanel)
+end)
+
+supportButton.Activated:Connect(function()
+    if openExclusive(supportPanel) then
+        monetizationActionEvent:FireServer("sync")
+    end
 end)
 
 
@@ -881,6 +987,21 @@ achievementEvent.OnClientEvent:Connect(function(payload)
     end
 end)
 
+monetizationStateEvent.OnClientEvent:Connect(function(payload)
+    if payload.state then
+        renderMonetization(payload.state)
+    end
+
+    if payload.notice == "purchase_complete" then
+        questToastTitle.Text = "THANK YOU"
+        questToastBody.Text = "Premium cosmetic unlocked • no gameplay advantage"
+        questToast.Visible = true
+        task.delay(3.4, function()
+            questToast.Visible = false
+        end)
+    end
+end)
+
 cosmeticStateEvent.OnClientEvent:Connect(function(payload)
     if payload.state then
         renderCosmetics(payload.state)
@@ -990,3 +1111,4 @@ end)
 
 -- Signal only after this HUD has connected every initial-state listener.
 clientReadyEvent:FireServer()
+monetizationActionEvent:FireServer("sync")
