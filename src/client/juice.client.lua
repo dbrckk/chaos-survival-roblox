@@ -121,6 +121,7 @@ local secondaryAccent = nil
 local activeBeacon = nil
 local activeBeaconLight = nil
 local activeDoubleChaos = false
+local lastSurvivorAnnounced = false
 
 local function tweenCamera(targetFov, duration)
     camera = workspace.CurrentCamera or camera
@@ -274,6 +275,23 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     setMood(state)
+
+    local alive = tonumber(state.survivorsAlive)
+    local total = tonumber(state.contestantCount)
+
+    if state.phase == "round" and total and total > 1 and alive == 1 then
+        if not lastSurvivorAnnounced then
+            lastSurvivorAnnounced = true
+            showBanner(
+                "LAST SURVIVOR",
+                "One player remains",
+                Color3.fromRGB(115, 38, 38),
+                1.6
+            )
+        end
+    elseif state.phase ~= "round" or (alive and alive > 1) then
+        lastSurvivorAnnounced = false
+    end
 end)
 
 local function celebrateCharacter()
