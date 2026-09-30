@@ -210,9 +210,7 @@ questToastBody.TextScaled = true
 questToastBody.Text = ""
 questToastBody.Parent = questToast
 
-questButton.Activated:Connect(function()
-    questPanel.Visible = not questPanel.Visible
-end)
+-- panel navigation is wired after all three panels are created
 
 local function renderQuestState(state)
     local quests = state and state.quests or {}
@@ -318,12 +316,7 @@ local function renderCosmetics(state)
     end
 end
 
-cosmeticsButton.Activated:Connect(function()
-    cosmeticsPanel.Visible = not cosmeticsPanel.Visible
-    if cosmeticsPanel.Visible then
-        cosmeticActionEvent:FireServer("sync")
-    end
-end)
+-- cosmetics navigation is wired after all three panels are created
 
 
 local achievementButton = Instance.new("TextButton")
@@ -444,8 +437,31 @@ local function renderAchievements(state)
     end
 end
 
+local function closeAllPanels()
+    questPanel.Visible = false
+    cosmeticsPanel.Visible = false
+    achievementPanel.Visible = false
+end
+
+local function openExclusive(panel)
+    local opening = not panel.Visible
+    closeAllPanels()
+    panel.Visible = opening
+    return opening
+end
+
+questButton.Activated:Connect(function()
+    openExclusive(questPanel)
+end)
+
+cosmeticsButton.Activated:Connect(function()
+    if openExclusive(cosmeticsPanel) then
+        cosmeticActionEvent:FireServer("sync")
+    end
+end)
+
 achievementButton.Activated:Connect(function()
-    achievementPanel.Visible = not achievementPanel.Visible
+    openExclusive(achievementPanel)
 end)
 
 
@@ -725,6 +741,10 @@ dailyRewardEvent.OnClientEvent:Connect(function(reward)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if state.phase == "round" then
+        closeAllPanels()
+    end
+
     title.Text = state.title or "CHAOS SURVIVAL"
     hint.Text = state.hint or ""
     timer.Text = tostring(state.seconds or 0)
