@@ -100,6 +100,7 @@ task.spawn(function()
             "CosmeticAction",
             "AchievementState",
             "RoundFeedback",
+            "ClientReady",
         }) do
             if not remotes:FindFirstChild(name) then
                 fail("remote missing: " .. name)
