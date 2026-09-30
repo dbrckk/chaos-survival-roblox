@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   e2e:
-    runs-on: windows-latest
+    runs-on: [self-hosted, windows]
     timeout-minutes: 20
 
     steps:
@@ -38,45 +38,30 @@ jobs:
           rojo build default.project.json -o build/ChaosSurvival.rbxlx
           if (!(Test-Path build/ChaosSurvival.rbxlx)) { throw "Rojo build did not create the place file." }
 
-      - name: Download Roblox Studio installer
+      - name: Locate authenticated Roblox Studio
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "https://setup.rbxcdn.com/RobloxStudioInstaller.exe" -OutFile "$env:RUNNER_TEMP\RobloxStudioInstaller.exe"
-
-      - name: Install and locate Roblox Studio
-        shell: pwsh
-        run: |
-          $installer = "$env:RUNNER_TEMP\RobloxStudioInstaller.exe"
-          $process = Start-Process -FilePath $installer -PassThru
-          $process.WaitForExit()
-          Start-Sleep -Seconds 3
-
           $studioPath = $null
-          $running = Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($running) {
-            try { $studioPath = $running.Path } catch {}
-          }
+          $roots = @(
+            "$env:LOCALAPPDATA\Roblox",
+            "$env:USERPROFILE\AppData\Local\Roblox",
+            "C:\Program Files\Roblox",
+            "C:\Program Files (x86)\Roblox"
+          ) | Where-Object { Test-Path $_ }
 
-          if (-not $studioPath) {
-            $roots = @(
-              "$env:LOCALAPPDATA\Roblox",
-              "$env:USERPROFILE\AppData\Local\Roblox",
-              "C:\Program Files\Roblox",
-              "C:\Program Files (x86)\Roblox"
-            ) | Where-Object { Test-Path $_ }
-
-            foreach ($root in $roots) {
-              $candidate = Get-ChildItem $root -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
-                Sort-Object LastWriteTime -Descending |
-                Select-Object -First 1
-              if ($candidate) {
-                $studioPath = $candidate.FullName
-                break
-              }
+          foreach ($root in $roots) {
+            $candidate = Get-ChildItem $root -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 1
+            if ($candidate) {
+              $studioPath = $candidate.FullName
+              break
             }
           }
 
-          if (-not $studioPath) { throw "Roblox Studio executable was not found after installation." }
+          if (-not $studioPath) {
+            throw "Roblox Studio must already be installed on the authenticated self-hosted runner."
+          }
 
           Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
