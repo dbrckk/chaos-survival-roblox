@@ -1,6 +1,6 @@
 local DataSchema = {}
 
-DataSchema.Version = 1
+DataSchema.Version = 2
 
 DataSchema.Defaults = {
     DataVersion = DataSchema.Version,
@@ -26,7 +26,8 @@ DataSchema.Defaults = {
     Quest3Claimed = false,
 
     OwnedCosmetics = "",
-    EquippedCosmetic = "",
+    EquippedTrail = "",
+    EquippedAura = "",
 
     DoubleChaosSurvivals = 0,
     UnlockedAchievements = "",
@@ -45,6 +46,23 @@ function DataSchema.levelForXP(xp)
     return math.max(1, math.floor(math.sqrt(numericXP / 100)) + 1)
 end
 
+local function migrateLegacyEquipped(saved, data)
+    if type(saved) ~= "table" then
+        return
+    end
+
+    local legacy = saved.EquippedCosmetic
+    if type(legacy) ~= "string" or legacy == "" then
+        return
+    end
+
+    if string.sub(legacy, 1, 6) == "trail_" and data.EquippedTrail == "" then
+        data.EquippedTrail = legacy
+    elseif string.sub(legacy, 1, 5) == "aura_" and data.EquippedAura == "" then
+        data.EquippedAura = legacy
+    end
+end
+
 function DataSchema.normalize(saved)
     local data = DataSchema.cloneDefaults()
 
@@ -55,6 +73,7 @@ function DataSchema.normalize(saved)
                 data[key] = value
             end
         end
+        migrateLegacyEquipped(saved, data)
     end
 
     data.Coins = math.max(0, data.Coins)
