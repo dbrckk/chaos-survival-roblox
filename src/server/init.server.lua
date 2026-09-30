@@ -74,6 +74,7 @@ assert(#disasters >= 3, "At least 3 disasters are required")
 
 local roundNumber = 0
 local currentArenaVariant = "Classic"
+local lastPrimaryDisasterId = nil
 local currentVotes = {}
 local currentOptions = {}
 local voteOpen = false
@@ -135,6 +136,17 @@ end
 
 local function chooseVoteOptions()
     local pool = shuffledPool()
+
+    if lastPrimaryDisasterId and #pool > 3 then
+        local filtered = {}
+        for _, disaster in ipairs(pool) do
+            if disaster.Id ~= lastPrimaryDisasterId then
+                table.insert(filtered, disaster)
+            end
+        end
+        pool = filtered
+    end
+
     return {pool[1], pool[2], pool[3]}
 end
 
@@ -388,6 +400,7 @@ while true do
     voteOpen = false
 
     local selected = winningOption()
+    lastPrimaryDisasterId = selected.Id
     roundNumber += 1
 
     local contestants = Players:GetPlayers()
