@@ -238,14 +238,29 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     spawnFolder.Parent = arena
 
     for i, offset in ipairs(variant.SpawnOffsets) do
+        local spawnPosition = config.ArenaCenter + offset
         local s = part(
             spawnFolder,
             "Spawn" .. i,
-            Vector3.new(4, 1, 4),
-            config.ArenaCenter + offset,
-            Color3.fromRGB(90, 200, 120)
+            Vector3.new(4.6, 0.7, 4.6),
+            spawnPosition,
+            variant.BaseColor:Lerp(Color3.new(1, 1, 1), 0.12),
+            Enum.Material.Metal
         )
-        s.Transparency = 0.35
+        s.Transparency = 0.08
+
+        local glow = part(
+            arena,
+            "SpawnGlow" .. i,
+            Vector3.new(5.2, 0.12, 5.2),
+            spawnPosition + Vector3.new(0, -0.4, 0),
+            variant.PlatformColor,
+            Enum.Material.Neon
+        )
+        glow.CanCollide = false
+        glow.CanTouch = false
+        glow.CanQuery = false
+        glow.Transparency = 0.16
     end
 
     local platforms = Instance.new("Folder")
@@ -322,13 +337,68 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     light.Parent = beacon
 
     for i, definition in ipairs(variant.Platforms) do
-        part(
+        local platformPosition = config.ArenaCenter + definition.offset
+        local platform = part(
             platforms,
             "Platform" .. i,
             definition.size,
-            config.ArenaCenter + definition.offset,
-            variant.PlatformColor
+            platformPosition,
+            variant.PlatformColor,
+            Enum.Material.Metal
         )
+        platform.Color = variant.PlatformColor:Lerp(variant.BaseColor, 0.32)
+
+        local trim = part(
+            decor,
+            "PlatformGlow" .. i,
+            Vector3.new(definition.size.X + 0.5, 0.18, definition.size.Z + 0.5),
+            platformPosition - Vector3.new(0, (definition.size.Y * 0.5) + 0.13, 0),
+            variant.PlatformColor,
+            Enum.Material.Neon
+        )
+        trim.CanCollide = false
+        trim.CanTouch = false
+        trim.CanQuery = false
+        trim.Transparency = 0.18
+    end
+
+    local beaconOffsets = {
+        Vector3.new(-halfX + 3, 4.5, -halfZ + 3),
+        Vector3.new(halfX - 3, 4.5, -halfZ + 3),
+        Vector3.new(-halfX + 3, 4.5, halfZ - 3),
+        Vector3.new(halfX - 3, 4.5, halfZ - 3),
+    }
+
+    for i, offset in ipairs(beaconOffsets) do
+        local pillar = part(
+            decor,
+            "EdgeBeacon" .. i,
+            Vector3.new(0.8, 7, 0.8),
+            config.ArenaCenter + offset,
+            variant.BaseColor:Lerp(Color3.new(1, 1, 1), 0.10),
+            Enum.Material.Metal
+        )
+        pillar.CanCollide = false
+
+        local cap = part(
+            decor,
+            "EdgeBeaconGlow" .. i,
+            Vector3.new(1.35, 0.36, 1.35),
+            pillar.Position + Vector3.new(0, 3.55, 0),
+            variant.PlatformColor,
+            Enum.Material.Neon
+        )
+        cap.CanCollide = false
+        cap.CanTouch = false
+        cap.CanQuery = false
+        cap.Transparency = 0.10
+
+        local capLight = Instance.new("PointLight")
+        capLight.Color = variant.PlatformColor
+        capLight.Brightness = 0.55
+        capLight.Range = 11
+        capLight.Shadows = false
+        capLight.Parent = cap
     end
 
     return arena
