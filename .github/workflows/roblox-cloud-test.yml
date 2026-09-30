@@ -67,4 +67,21 @@ jobs:
 
       - name: Run tests in real Roblox engine
         if: steps.config.outputs.ready == 'true'
-        run: lest run --config lest.ci.toml engine
+        shell: bash
+        run: |
+          set +e
+          lest run --config lest.ci.toml engine 2>&1 | tee /tmp/lest-first.log
+          first_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$first_status" -eq 0 ]; then
+            exit 0
+          fi
+
+          if grep -Eq 'did not finish within the deadline|last state: PROCESSING' /tmp/lest-first.log; then
+            echo "Transient Roblox Open Cloud timeout detected; retrying once."
+            sleep 8
+            lest run --config lest.ci.toml engine
+          else
+            exit "$first_status"
+          fi
