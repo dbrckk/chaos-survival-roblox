@@ -25,9 +25,67 @@ Cosmetics.Definitions = {
         ColorA = Color3.fromRGB(145, 70, 255),
         ColorB = Color3.fromRGB(235, 120, 255),
     },
+    trail_plasma = {
+        Id = "trail_plasma",
+        Name = "Plasma Wake",
+        Kind = "trail",
+        CoinPrice = 450,
+        ColorA = Color3.fromRGB(30, 255, 210),
+        ColorB = Color3.fromRGB(80, 120, 255),
+    },
+    trail_inferno = {
+        Id = "trail_inferno",
+        Name = "Inferno",
+        Kind = "trail",
+        CoinPrice = 850,
+        ColorA = Color3.fromRGB(255, 65, 30),
+        ColorB = Color3.fromRGB(255, 190, 35),
+    },
+    trail_prism = {
+        Id = "trail_prism",
+        Name = "Prism Shift",
+        Kind = "trail",
+        CoinPrice = 1400,
+        ColorA = Color3.fromRGB(255, 70, 210),
+        ColorB = Color3.fromRGB(70, 235, 255),
+    },
+    aura_emerald = {
+        Id = "aura_emerald",
+        Name = "Emerald Core",
+        Kind = "aura",
+        CoinPrice = 650,
+        ColorA = Color3.fromRGB(45, 255, 145),
+        ColorB = Color3.fromRGB(150, 255, 205),
+    },
+    aura_solar = {
+        Id = "aura_solar",
+        Name = "Solar Crown",
+        Kind = "aura",
+        CoinPrice = 1100,
+        ColorA = Color3.fromRGB(255, 180, 35),
+        ColorB = Color3.fromRGB(255, 245, 150),
+    },
+    aura_cosmic = {
+        Id = "aura_cosmic",
+        Name = "Cosmic Storm",
+        Kind = "aura",
+        CoinPrice = 1800,
+        ColorA = Color3.fromRGB(115, 80, 255),
+        ColorB = Color3.fromRGB(255, 85, 220),
+    },
 }
 
-Cosmetics.Order = {"trail_blue", "trail_gold", "trail_void"}
+Cosmetics.Order = {
+    "trail_blue",
+    "trail_gold",
+    "trail_void",
+    "trail_plasma",
+    "trail_inferno",
+    "trail_prism",
+    "aura_emerald",
+    "aura_solar",
+    "aura_cosmic",
+}
 
 function Cosmetics.get(id)
     return Cosmetics.Definitions[id]
@@ -42,6 +100,7 @@ function Cosmetics.publicList()
             name = item.Name,
             kind = item.Kind,
             unlockLevel = item.UnlockLevel,
+            coinPrice = item.CoinPrice,
         })
     end
     return result
@@ -79,7 +138,7 @@ function Cosmetics.mergeLevelUnlocks(raw, level)
 
     for _, id in ipairs(Cosmetics.Order) do
         local item = Cosmetics.get(id)
-        if item and numericLevel >= item.UnlockLevel and not owned[id] then
+        if item and item.UnlockLevel and numericLevel >= item.UnlockLevel and not owned[id] then
             owned[id] = true
             table.insert(newlyUnlocked, id)
         end
@@ -96,6 +155,29 @@ function Cosmetics.canEquip(raw, id)
         return false
     end
     return Cosmetics.deserialize(raw)[id] == true
+end
+
+function Cosmetics.canBuy(raw, id, coins)
+    local item = Cosmetics.get(id)
+    if not item or not item.CoinPrice or item.CoinPrice <= 0 then
+        return false, "not_for_sale"
+    end
+
+    if Cosmetics.deserialize(raw)[id] then
+        return false, "owned"
+    end
+
+    if math.max(0, tonumber(coins) or 0) < item.CoinPrice then
+        return false, "insufficient_coins"
+    end
+
+    return true, nil
+end
+
+function Cosmetics.buy(raw, id)
+    local owned = Cosmetics.deserialize(raw)
+    owned[id] = true
+    return Cosmetics.serialize(owned)
 end
 
 return Cosmetics
