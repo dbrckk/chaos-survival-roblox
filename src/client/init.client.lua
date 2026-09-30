@@ -8,6 +8,8 @@ local voteEvent = remotes:WaitForChild("VoteDisaster")
 
 local dailyRewardEvent = remotes:WaitForChild("DailyReward")
 local questEvent = remotes:WaitForChild("QuestUpdate")
+local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
+local cosmeticActionEvent = remotes:WaitForChild("CosmeticAction")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosHUD"
@@ -223,6 +225,103 @@ local function renderQuestState(state)
 end
 
 
+
+local cosmeticsButton = Instance.new("TextButton")
+cosmeticsButton.AnchorPoint = Vector2.new(1, 1)
+cosmeticsButton.Position = UDim2.fromScale(0.975, 0.90)
+cosmeticsButton.Size = UDim2.fromScale(0.26, 0.065)
+cosmeticsButton.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
+cosmeticsButton.TextColor3 = Color3.new(1, 1, 1)
+cosmeticsButton.Font = Enum.Font.GothamBold
+cosmeticsButton.TextScaled = true
+cosmeticsButton.Text = "COSMETICS"
+cosmeticsButton.Parent = root
+Instance.new("UICorner", cosmeticsButton).CornerRadius = UDim.new(0, 14)
+
+local cosmeticsPanel = Instance.new("Frame")
+cosmeticsPanel.AnchorPoint = Vector2.new(1, 1)
+cosmeticsPanel.Position = UDim2.fromScale(0.975, 0.82)
+cosmeticsPanel.Size = UDim2.fromScale(0.72, 0.36)
+cosmeticsPanel.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
+cosmeticsPanel.BackgroundTransparency = 0.04
+cosmeticsPanel.Visible = false
+cosmeticsPanel.Parent = root
+Instance.new("UICorner", cosmeticsPanel).CornerRadius = UDim.new(0, 18)
+
+local cosmeticsHeader = Instance.new("TextLabel")
+cosmeticsHeader.Size = UDim2.new(1, -24, 0.16, 0)
+cosmeticsHeader.Position = UDim2.fromOffset(12, 6)
+cosmeticsHeader.BackgroundTransparency = 1
+cosmeticsHeader.Font = Enum.Font.GothamBlack
+cosmeticsHeader.TextColor3 = Color3.new(1, 1, 1)
+cosmeticsHeader.TextScaled = true
+cosmeticsHeader.TextXAlignment = Enum.TextXAlignment.Left
+cosmeticsHeader.Text = "COSMETICS"
+cosmeticsHeader.Parent = cosmeticsPanel
+
+local cosmeticsList = Instance.new("Frame")
+cosmeticsList.Size = UDim2.new(1, -24, 0.74, 0)
+cosmeticsList.Position = UDim2.new(0, 12, 0.20, 0)
+cosmeticsList.BackgroundTransparency = 1
+cosmeticsList.Parent = cosmeticsPanel
+
+local cosmeticsLayout = Instance.new("UIListLayout")
+cosmeticsLayout.Padding = UDim.new(0, 8)
+cosmeticsLayout.Parent = cosmeticsList
+
+local currentCosmeticState = nil
+
+local function renderCosmetics(state)
+    currentCosmeticState = state
+
+    for _, child in ipairs(cosmeticsList:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    local catalog = state and state.catalog or {}
+    local owned = state and state.owned or {}
+    local equipped = state and state.equipped or ""
+
+    for _, item in ipairs(catalog) do
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, 0, 0, 56)
+        button.BackgroundColor3 = Color3.fromRGB(34, 38, 52)
+        button.TextColor3 = Color3.new(1, 1, 1)
+        button.Font = Enum.Font.GothamBold
+        button.TextScaled = true
+        button.TextWrapped = true
+
+        local isOwned = owned[item.id] == true
+        if equipped == item.id then
+            button.Text = item.name .. "   •   EQUIPPED"
+            button.BackgroundColor3 = Color3.fromRGB(55, 110, 85)
+        elseif isOwned then
+            button.Text = item.name .. "   •   EQUIP"
+        else
+            button.Text = item.name .. "   •   LVL " .. tostring(item.unlockLevel)
+            button.BackgroundColor3 = Color3.fromRGB(48, 49, 58)
+        end
+
+        button.Parent = cosmeticsList
+        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
+
+        button.Activated:Connect(function()
+            if isOwned then
+                cosmeticActionEvent:FireServer("equip", item.id)
+            end
+        end)
+    end
+end
+
+cosmeticsButton.Activated:Connect(function()
+    cosmeticsPanel.Visible = not cosmeticsPanel.Visible
+    if cosmeticsPanel.Visible then
+        cosmeticActionEvent:FireServer("sync")
+    end
+end)
+
 local function refreshStats()
     stats.Text = string.format(
         "LVL %d    🪙 %d    🏆 %d",
@@ -274,6 +373,18 @@ local function showVotes(options)
 end
 
 
+
+
+cosmeticStateEvent.OnClientEvent:Connect(function(payload)
+    if payload.state then
+        renderCosmetics(payload.state)
+    end
+
+    local unlocked = payload.unlocked or {}
+    if #unlocked > 0 and currentCosmeticState then
+        renderCosmetics(payload.state)
+    end
+end)
 
 questEvent.OnClientEvent:Connect(function(payload)
     if payload.state then
