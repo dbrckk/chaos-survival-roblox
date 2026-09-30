@@ -73,6 +73,22 @@ Cosmetics.Definitions = {
         ColorA = Color3.fromRGB(115, 80, 255),
         ColorB = Color3.fromRGB(255, 85, 220),
     },
+    aura_supporter = {
+        Id = "aura_supporter",
+        Name = "Founder Glow",
+        Kind = "aura",
+        PremiumKey = "supporter",
+        ColorA = Color3.fromRGB(255, 115, 190),
+        ColorB = Color3.fromRGB(255, 225, 120),
+    },
+    trail_neon = {
+        Id = "trail_neon",
+        Name = "Hyper Neon",
+        Kind = "trail",
+        PremiumKey = "neon_pack",
+        ColorA = Color3.fromRGB(65, 255, 245),
+        ColorB = Color3.fromRGB(255, 70, 230),
+    },
 }
 
 Cosmetics.Order = {
@@ -85,6 +101,8 @@ Cosmetics.Order = {
     "aura_emerald",
     "aura_solar",
     "aura_cosmic",
+    "aura_supporter",
+    "trail_neon",
 }
 
 function Cosmetics.get(id)
@@ -101,6 +119,7 @@ function Cosmetics.publicList()
             kind = item.Kind,
             unlockLevel = item.UnlockLevel,
             coinPrice = item.CoinPrice,
+            premiumKey = item.PremiumKey,
         })
     end
     return result
