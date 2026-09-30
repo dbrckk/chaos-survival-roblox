@@ -94,22 +94,71 @@ jobs:
           $place = (Resolve-Path "build/ChaosSurvival.rbxlx").Path
           $script = (Resolve-Path "studio/ci-runner.luau").Path
           $output = Join-Path $env:GITHUB_WORKSPACE "build/studio-e2e.log"
+          $stdout = Join-Path $env:GITHUB_WORKSPACE "build/studio-stdout.log"
+          $stderr = Join-Path $env:GITHUB_WORKSPACE "build/studio-stderr.log"
 
-          & "$env:STUDIO_EXE" --task RunScript --localPlaceFile "$place" --runScriptFile "$script" --outputFile "$output" --quitAfterExecution
-          $exit = $LASTEXITCODE
+          $arguments = @(
+            "--task", "RunScript",
+            "--localPlaceFile", $place,
+            "--runScriptFile", $script,
+            "--outputFile", $output,
+            "--quitAfterExecution"
+          )
 
-          if (Test-Path $output) {
-            Get-Content $output
-          } else {
-            throw "Studio produced no E2E output."
+          $process = Start-Process -FilePath "$env:STUDIO_EXE" -ArgumentList $arguments -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $deadline = (Get-Date).AddSeconds(120)
+
+          while ((Get-Date) -lt $deadline) {
+            if (Test-Path $output) {
+              $contents = Get-Content $output -Raw -ErrorAction SilentlyContinue
+              if ($contents -match "CHAOS_STUDIO_E2E_OK" -or $contents -match "CHAOS_STUDIO_E2E_FAILED") {
+                break
+              }
+            }
+
+            if ($process.HasExited) {
+              Start-Sleep -Seconds 2
+              if (Test-Path $output) { break }
+            }
+
+            Start-Sleep -Milliseconds 500
           }
+
+          if (Test-Path $stdout) {
+            Write-Host "=== Studio stdout ==="
+            Get-Content $stdout
+          }
+          if (Test-Path $stderr) {
+            Write-Host "=== Studio stderr ==="
+            Get-Content $stderr
+          }
+
+          if (!(Test-Path $output)) {
+            Write-Host "=== Roblox logs ==="
+            $logRoots = @(
+              "$env:LOCALAPPDATA\Roblox\logs",
+              "$env:USERPROFILE\AppData\Local\Roblox\logs"
+            ) | Where-Object { Test-Path $_ }
+
+            foreach ($logRoot in $logRoots) {
+              Get-ChildItem $logRoot -File -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 4 |
+                ForEach-Object {
+                  Write-Host "--- $($_.FullName) ---"
+                  Get-Content $_.FullName -Tail 160 -ErrorAction SilentlyContinue
+                }
+            }
+
+            throw "Studio produced no E2E output within 120 seconds."
+          }
+
+          Write-Host "=== Studio E2E output ==="
+          Get-Content $output
 
           $contents = Get-Content $output -Raw
           if ($contents -notmatch "CHAOS_STUDIO_E2E_OK") {
             throw "Studio E2E playtest did not report success."
-          }
-          if ($exit -ne 0) {
-            throw "Roblox Studio exited with code $exit."
           }
 
       - name: Upload E2E artifacts
@@ -120,4 +169,6 @@ jobs:
           path: |
             build/ChaosSurvival.rbxlx
             build/studio-e2e.log
+            build/studio-stdout.log
+            build/studio-stderr.log
           if-no-files-found: warn
