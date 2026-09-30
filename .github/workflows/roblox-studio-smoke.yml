@@ -1,0 +1,91 @@
+name: Roblox Studio Smoke Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rojo
+        shell: pwsh
+        run: |
+          cargo install rojo --version "^7" --locked
+          rojo --version
+
+      - name: Build place
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          if (!(Test-Path build/ChaosSurvival.rbxlx)) { throw "Rojo build did not create the place file." }
+
+      - name: Download Roblox Studio installer
+        shell: pwsh
+        run: |
+          $url = "https://setup.rbxcdn.com/RobloxStudioInstaller.exe"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\RobloxStudioInstaller.exe"
+          if (!(Test-Path "$env:RUNNER_TEMP\RobloxStudioInstaller.exe")) { throw "Studio installer download failed." }
+
+      - name: Install Roblox Studio
+        shell: pwsh
+        run: |
+          $installer = "$env:RUNNER_TEMP\RobloxStudioInstaller.exe"
+          $process = Start-Process -FilePath $installer -PassThru
+          $process.WaitForExit()
+
+          $studio = Get-ChildItem "$env:LOCALAPPDATA\Roblox\Versions" -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          if (-not $studio) {
+            throw "Roblox Studio executable was not found after installation."
+          }
+
+          "STUDIO_EXE=$($studio.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Studio: $($studio.FullName)"
+
+      - name: Run Studio smoke test
+        shell: pwsh
+        run: |
+          $place = (Resolve-Path "build/ChaosSurvival.rbxlx").Path
+          $script = (Resolve-Path "tests/studio-smoke.luau").Path
+          $output = Join-Path $env:GITHUB_WORKSPACE "build/studio-smoke.log"
+
+          & "$env:STUDIO_EXE" --task RunScript --localPlaceFile "$place" --runScriptFile "$script" --outputFile "$output" --quitAfterExecution
+          $exit = $LASTEXITCODE
+
+          if (Test-Path $output) {
+            Get-Content $output
+          } else {
+            throw "Studio produced no smoke-test output."
+          }
+
+          $contents = Get-Content $output -Raw
+          if ($contents -notmatch "CHAOS_SMOKE_OK") {
+            throw "Roblox Studio smoke test did not report success."
+          }
+          if ($exit -ne 0) {
+            throw "Roblox Studio exited with code $exit."
+          }
+
+      - name: Upload smoke-test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roblox-studio-smoke
+          path: |
+            build/ChaosSurvival.rbxlx
+            build/studio-smoke.log
+          if-no-files-found: warn
