@@ -273,7 +273,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             seconds = t,
             doubleChaos = #selected > 1,
             soloMode = roundSettings.Solo,
-            arenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant,
+            arenaName = roundSettings.ArenaName or currentArenaVariant,
         })
 
         task.wait(1)
@@ -336,6 +336,7 @@ while true do
 
     local contestants = Players:GetPlayers()
     local roundSettings = SoloRules.resolve(Config, #contestants)
+    roundSettings.ArenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant
 
     MapBuilder.buildArena(Config, currentArenaVariant)
     for i, p in ipairs(contestants) do
@@ -437,6 +438,7 @@ while true do
             hint = resultHint,
             seconds = t,
             soloMode = roundSettings.Solo,
+            arenaName = roundSettings.ArenaName,
         })
         task.wait(1)
     end
