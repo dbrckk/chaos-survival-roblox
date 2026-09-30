@@ -5,6 +5,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local MapBuilder = require(script.MapBuilder)
 local PlayerData = require(script.PlayerData)
 local RateLimiter = require(script.RateLimiter)
+local CosmeticService = require(script.CosmeticService)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -27,6 +28,7 @@ questEvent.Name = "QuestUpdate"
 questEvent.Parent = remotes
 
 PlayerData.init()
+CosmeticService.init(remotes, RateLimiter)
 MapBuilder.build(Config)
 
 local disasters = {}
