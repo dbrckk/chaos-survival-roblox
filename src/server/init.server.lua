@@ -32,6 +32,7 @@ local GameAnalytics = require(script.GameAnalytics)
 local ArenaVariants = require(script.ArenaVariants)
 local DisasterBalance = require(script.DisasterBalance)
 local SessionStreak = require(script.SessionStreak)
+local RoundVariety = require(script.RoundVariety)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -135,18 +136,11 @@ local function shuffledPool()
 end
 
 local function chooseVoteOptions()
-    local pool = shuffledPool()
-
-    if lastPrimaryDisasterId and #pool > 3 then
-        local filtered = {}
-        for _, disaster in ipairs(pool) do
-            if disaster.Id ~= lastPrimaryDisasterId then
-                table.insert(filtered, disaster)
-            end
-        end
-        pool = filtered
-    end
-
+    local pool = RoundVariety.excludeImmediateRepeat(
+        shuffledPool(),
+        lastPrimaryDisasterId,
+        3
+    )
     return {pool[1], pool[2], pool[3]}
 end
 
