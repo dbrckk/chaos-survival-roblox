@@ -115,7 +115,13 @@ stateEvent.OnClientEvent:Connect(function(state)
     local phase = state.phase
     local seconds = tonumber(state.seconds) or 0
 
-    if phase == "round" then
+    if phase == "ready" then
+        stopDisasterLoop()
+        if phase ~= lastPhase or state.title ~= lastTitle then
+            play("Ready")
+        end
+        musicVolume(0.08, 0.18)
+    elseif phase == "round" then
         setDisasterLoop(state.disasterIds)
 
         if phase ~= lastPhase or state.title ~= lastTitle then
