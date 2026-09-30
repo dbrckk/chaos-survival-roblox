@@ -8,6 +8,7 @@ local RateLimiter = require(script.RateLimiter)
 local CosmeticService = require(script.CosmeticService)
 local AchievementService = require(script.AchievementService)
 local SoloRules = require(script.SoloRules)
+local GameAnalytics = require(script.GameAnalytics)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -68,6 +69,17 @@ local function progressQuest(player, eventName, amount)
 
     local completed = PlayerData.progressQuestEvent(player, eventName, amount or 1)
     sendQuestState(player, completed)
+
+    for _, quest in ipairs(completed) do
+        GameAnalytics.custom(
+            player,
+            "QuestCompleted",
+            1,
+            "Quest:" .. tostring(quest.id),
+            "Level:" .. tostring(player:GetAttribute("Level") or 1)
+        )
+        GameAnalytics.economySource(player, quest.coins or 0, "Quest", quest.id, #Players:GetPlayers() <= 1)
+    end
 end
 
 local function alive(player)
@@ -123,14 +135,32 @@ local function setupDailyReward(player)
                 xp = claim.XP,
                 rewardIndex = claim.RewardIndex,
             })
+
+            GameAnalytics.custom(
+                player,
+                "DailyRewardClaimed",
+                claim.Streak,
+                "RewardDay:" .. tostring(claim.RewardIndex),
+                "Streak:" .. tostring(claim.Streak)
+            )
+            GameAnalytics.economySource(player, claim.Coins, "DailyReward", "DailyDay" .. tostring(claim.RewardIndex), #Players:GetPlayers() <= 1)
         end
 
         sendQuestState(player)
     end)
 end
 
-Players.PlayerAdded:Connect(setupDailyReward)
+Players.PlayerAdded:Connect(function(player)
+    GameAnalytics.sessionStarted(player, #Players:GetPlayers())
+    setupDailyReward(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    GameAnalytics.sessionEnded(player)
+end)
+
 for _, player in ipairs(Players:GetPlayers()) do
+    GameAnalytics.sessionStarted(player, #Players:GetPlayers())
     setupDailyReward(player)
 end
 
@@ -140,6 +170,9 @@ voteEvent.OnServerEvent:Connect(function(player, disasterId)
     if not allowVote(player.UserId) then return end
     if not validOption(disasterId) then return end
     currentVotes[player.UserId] = disasterId
+
+    local currentRules = SoloRules.resolve(Config, #Players:GetPlayers())
+    GameAnalytics.vote(player, disasterId, currentRules.Solo)
 end)
 
 local function winningOption()
@@ -165,6 +198,7 @@ local function winningOption()
 end
 
 local function runDisasterSet(selected, contestants, roundSettings)
+    local roundStartedAt = os.clock()
     local roundActive = true
     local cleanup = {}
     local onCleanup = {}
@@ -249,7 +283,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         if obj and obj.Parent then obj:Destroy() end
     end
 
-    return eliminated, endedEarly
+    return eliminated, endedEarly, math.max(0, os.clock() - roundStartedAt)
 end
 
 while true do
@@ -312,7 +346,13 @@ while true do
         table.insert(selectedSet, candidates[math.random(1, #candidates)])
     end
 
-    local eliminated, endedEarly = runDisasterSet(selectedSet, contestants, roundSettings)
+    for _, p in ipairs(contestants) do
+        if p.Parent == Players then
+            GameAnalytics.roundStarted(p, roundNumber, roundSettings.Solo, selected.Id, #selectedSet > 1)
+        end
+    end
+
+    local eliminated, endedEarly, roundElapsed = runDisasterSet(selectedSet, contestants, roundSettings)
 
     local survivors = 0
     local winCoins = SoloRules.reward(Config.WinCoins, roundSettings.WinCoinMultiplier)
@@ -326,6 +366,7 @@ while true do
                 PlayerData.add(p, "XP", winXP)
                 PlayerData.add(p, "Wins", 1)
 
+                GameAnalytics.economySource(p, winCoins, "RoundSurvival", selected.Id, roundSettings.Solo)
                 progressQuest(p, "survive_round", 1)
                 progressQuest(p, "coins_earned", winCoins)
 
@@ -336,8 +377,19 @@ while true do
             else
                 PlayerData.add(p, "Coins", Config.ParticipationCoins)
                 PlayerData.add(p, "XP", Config.ParticipationXP)
+                GameAnalytics.economySource(p, Config.ParticipationCoins, "RoundParticipation", selected.Id, roundSettings.Solo)
                 progressQuest(p, "coins_earned", Config.ParticipationCoins)
             end
+
+            GameAnalytics.roundCompleted(
+                p,
+                survived,
+                roundSettings.Solo,
+                selected.Id,
+                #selectedSet > 1,
+                roundElapsed
+            )
+
             p:LoadCharacter()
         end
     end
