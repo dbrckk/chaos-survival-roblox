@@ -1,0 +1,12 @@
+[suites.engine]
+include = ["tests/engine/**/*.spec.luau"]
+backend = "cloud"
+default = false
+
+[place]
+universe_id = 1234567890
+place_id = 9876543210
+
+[settings]
+backend = "native"
+timeout_ms = 10000
