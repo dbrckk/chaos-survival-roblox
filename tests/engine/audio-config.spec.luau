@@ -25,6 +25,7 @@ describe("Audio configuration", function()
             "LastSurvivor",
             "Survived",
             "Eliminated",
+            "Hit",
             "Reward",
             "LevelUp",
         }
