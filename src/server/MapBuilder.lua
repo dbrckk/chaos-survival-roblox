@@ -19,21 +19,165 @@ local function buildLobby(root, config)
     lobby.Name = "Lobby"
     lobby.Parent = root
 
-    part(
+    local floor = part(
         lobby,
         "Floor",
-        Vector3.new(70, 2, 70),
+        Vector3.new(74, 2, 74),
         config.LobbyCenter,
-        Color3.fromRGB(45, 50, 65)
+        Color3.fromRGB(30, 34, 46),
+        Enum.Material.Slate
     )
+
+    local decor = Instance.new("Folder")
+    decor.Name = "Decor"
+    decor.Parent = lobby
+
+    local centerPlatform = part(
+        decor,
+        "CenterPlatform",
+        Vector3.new(24, 1.2, 24),
+        config.LobbyCenter + Vector3.new(0, 1.45, 0),
+        Color3.fromRGB(49, 57, 78),
+        Enum.Material.Metal
+    )
+
+    local centerGlow = part(
+        decor,
+        "CenterGlow",
+        Vector3.new(20, 0.22, 20),
+        config.LobbyCenter + Vector3.new(0, 2.08, 0),
+        Color3.fromRGB(80, 175, 255),
+        Enum.Material.Neon
+    )
+    centerGlow.CanCollide = false
+    centerGlow.Transparency = 0.22
+
+    local glowLight = Instance.new("PointLight")
+    glowLight.Name = "LobbyGlow"
+    glowLight.Color = centerGlow.Color
+    glowLight.Brightness = 1.3
+    glowLight.Range = 26
+    glowLight.Shadows = false
+    glowLight.Parent = centerGlow
+
+    local cornerOffsets = {
+        Vector3.new(-31, 5, -31),
+        Vector3.new(31, 5, -31),
+        Vector3.new(-31, 5, 31),
+        Vector3.new(31, 5, 31),
+    }
+
+    for i, offset in ipairs(cornerOffsets) do
+        local pylon = part(
+            decor,
+            "Pylon" .. i,
+            Vector3.new(2.2, 10, 2.2),
+            config.LobbyCenter + offset,
+            Color3.fromRGB(58, 70, 96),
+            Enum.Material.Metal
+        )
+
+        local cap = part(
+            decor,
+            "PylonGlow" .. i,
+            Vector3.new(2.8, 0.55, 2.8),
+            pylon.Position + Vector3.new(0, 5.25, 0),
+            Color3.fromRGB(125, 85, 255),
+            Enum.Material.Neon
+        )
+        cap.CanCollide = false
+
+        local light = Instance.new("PointLight")
+        light.Color = cap.Color
+        light.Brightness = 0.8
+        light.Range = 16
+        light.Shadows = false
+        light.Parent = cap
+    end
+
+    local arenaDirection = Vector3.new(0, 0, 1)
+    local archCenter = config.LobbyCenter + arenaDirection * 27
+
+    local leftColumn = part(
+        decor,
+        "ArenaGateLeft",
+        Vector3.new(3, 13, 3),
+        archCenter + Vector3.new(-10, 6.5, 0),
+        Color3.fromRGB(61, 71, 96),
+        Enum.Material.Metal
+    )
+
+    local rightColumn = part(
+        decor,
+        "ArenaGateRight",
+        Vector3.new(3, 13, 3),
+        archCenter + Vector3.new(10, 6.5, 0),
+        Color3.fromRGB(61, 71, 96),
+        Enum.Material.Metal
+    )
+
+    local archTop = part(
+        decor,
+        "ArenaGateTop",
+        Vector3.new(23, 3, 3),
+        archCenter + Vector3.new(0, 13, 0),
+        Color3.fromRGB(95, 72, 160),
+        Enum.Material.Neon
+    )
+
+    local sign = part(
+        decor,
+        "ChaosSign",
+        Vector3.new(18, 6, 0.5),
+        config.LobbyCenter + Vector3.new(0, 10, -25),
+        Color3.fromRGB(18, 21, 30),
+        Enum.Material.Metal
+    )
+    sign.CanCollide = false
+
+    local surface = Instance.new("SurfaceGui")
+    surface.Name = "TitleGui"
+    surface.Face = Enum.NormalId.Front
+    surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    surface.PixelsPerStud = 45
+    surface.AlwaysOnTop = false
+    surface.Parent = sign
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.fromScale(1, 0.62)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBlack
+    title.TextColor3 = Color3.fromRGB(245, 248, 255)
+    title.TextStrokeTransparency = 0.65
+    title.TextScaled = true
+    title.Text = "CHAOS SURVIVAL"
+    title.Parent = surface
+
+    local subtitle = Instance.new("TextLabel")
+    subtitle.Position = UDim2.fromScale(0, 0.62)
+    subtitle.Size = UDim2.fromScale(1, 0.30)
+    subtitle.BackgroundTransparency = 1
+    subtitle.Font = Enum.Font.GothamBold
+    subtitle.TextColor3 = Color3.fromRGB(120, 195, 255)
+    subtitle.TextScaled = true
+    subtitle.Text = "VOTE • SURVIVE • REPEAT"
+    subtitle.Parent = surface
 
     local lobbySpawn = Instance.new("SpawnLocation")
     lobbySpawn.Name = "LobbySpawn"
     lobbySpawn.Size = Vector3.new(8, 1, 8)
-    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2, 0)
+    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2.8, 0)
     lobbySpawn.Anchored = true
     lobbySpawn.Neutral = true
+    lobbySpawn.Transparency = 1
+    lobbySpawn.CanCollide = false
     lobbySpawn.Parent = lobby
+
+    floor:SetAttribute("VisualVersion", 2)
+    centerPlatform:SetAttribute("SafeHub", true)
+    leftColumn:SetAttribute("ArenaGate", true)
+    rightColumn:SetAttribute("ArenaGate", true)
+    archTop:SetAttribute("ArenaGate", true)
 end
 
 function MapBuilder.buildArena(config, variantId, arenaVariants)
