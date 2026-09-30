@@ -501,6 +501,11 @@ while true do
     local eliminated, endedEarly, roundElapsed = runDisasterSet(selectedSet, contestants, roundSettings)
 
     local survivors = 0
+    local feedbackDisasterName = selectedSet[1].Name
+    if #selectedSet > 1 then
+        feedbackDisasterName = selectedSet[1].Name .. " + " .. selectedSet[2].Name
+    end
+
     local winCoins = SoloRules.reward(Config.WinCoins, roundSettings.WinCoinMultiplier)
     local winXP = SoloRules.reward(Config.WinXP, roundSettings.WinXPMultiplier)
     for _, p in ipairs(contestants) do
@@ -559,7 +564,7 @@ while true do
                 soloMode = roundSettings.Solo,
                 doubleChaos = #selectedSet > 1,
                 arenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant,
-                disasterName = selected.Name,
+                disasterName = feedbackDisasterName,
                 elapsedSeconds = math.floor(roundElapsed + 0.5),
                 survivalStreak = survivalStreak,
                 bestSessionStreak = bestSessionStreak,
