@@ -68,6 +68,21 @@ timer.Text = "0"
 timer.Parent = top
 Instance.new("UICorner", timer).CornerRadius = UDim.new(1, 0)
 
+local aliveCounter = Instance.new("TextLabel")
+aliveCounter.Name = "AliveCounter"
+aliveCounter.AnchorPoint = Vector2.new(1, 0)
+aliveCounter.Position = UDim2.new(1, -14, 1, 8)
+aliveCounter.Size = UDim2.fromOffset(126, 30)
+aliveCounter.BackgroundColor3 = Color3.fromRGB(24, 29, 40)
+aliveCounter.BackgroundTransparency = 0.08
+aliveCounter.Font = Enum.Font.GothamBold
+aliveCounter.TextColor3 = Color3.fromRGB(230, 235, 245)
+aliveCounter.TextScaled = true
+aliveCounter.Text = ""
+aliveCounter.Visible = false
+aliveCounter.Parent = top
+Instance.new("UICorner", aliveCounter).CornerRadius = UDim.new(1, 0)
+
 local stats = Instance.new("TextLabel")\nstats.Name = "StatsHUD"
 stats.AnchorPoint = Vector2.new(0.5, 1)
 stats.Position = UDim2.fromScale(0.5, 0.975)
@@ -882,7 +897,7 @@ dailyRewardEvent.OnClientEvent:Connect(function(reward)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    if state.phase == "round" then
+    if state.phase == "round" or state.phase == "ready" then
         closeAllPanels()
     end
 
@@ -890,7 +905,23 @@ stateEvent.OnClientEvent:Connect(function(state)
     hint.Text = state.hint or ""
     timer.Text = tostring(state.seconds or 0)
 
-    if state.phase == "round" and (state.seconds or 0) <= 5 then
+    local alive = tonumber(state.survivorsAlive)
+    local total = tonumber(state.contestantCount)
+    if (state.phase == "round" or state.phase == "ready") and alive and total and total > 0 then
+        aliveCounter.Visible = true
+        if total == 1 then
+            aliveCounter.Text = "SOLO"
+        else
+            aliveCounter.Text = string.format("%d / %d ALIVE", alive, total)
+        end
+    else
+        aliveCounter.Visible = false
+    end
+
+    if state.phase == "ready" then
+        timer.BackgroundColor3 = Color3.fromRGB(70, 145, 255)
+        timer.Rotation = 0
+    elseif state.phase == "round" and (state.seconds or 0) <= 5 then
         timer.BackgroundColor3 = Color3.fromRGB(225, 55, 55)
         timer.Rotation = ((state.seconds or 0) % 2 == 0) and -4 or 4
     else
