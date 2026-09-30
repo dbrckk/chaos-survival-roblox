@@ -8,7 +8,7 @@ function D.start(ctx)
     task.spawn(function()
         local started = os.clock()
         while ctx.Active() and base.Parent do
-            local a = math.clamp((os.clock() - started) / ctx.Config.RoundSeconds, 0, 1)
+            local a = math.clamp((os.clock() - started) / ctx.RoundSeconds or ctx.Config.RoundSeconds, 0, 1)
             local scale = 1 - 0.55 * a
             base.Size = Vector3.new(originalSize.X * scale, originalSize.Y, originalSize.Z * scale)
             base.CFrame = originalCFrame
