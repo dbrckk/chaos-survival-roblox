@@ -315,6 +315,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
         OnCleanup = onCleanup,
         Active = function() return roundActive end,
         Contestants = contestants,
+        IsContestantActive = function(player)
+            if player.Parent ~= Players or eliminated[player.UserId] then
+                return false
+            end
+
+            local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            return hum ~= nil and hum.Health > 0
+        end,
         BalanceProfile = DisasterBalance.mobileProfile(#contestants),
     }
 
