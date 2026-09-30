@@ -212,6 +212,27 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     base:SetAttribute("OriginalSizeX", base.Size.X)
     base:SetAttribute("OriginalSizeZ", base.Size.Z)
 
+    local killPlane = part(
+        arena,
+        "KillPlane",
+        Vector3.new(160, 2, 160),
+        config.ArenaCenter + Vector3.new(0, -18, 0),
+        Color3.fromRGB(255, 0, 0),
+        Enum.Material.SmoothPlastic
+    )
+    killPlane.Transparency = 1
+    killPlane.CanCollide = false
+    killPlane.CanQuery = false
+    killPlane.CanTouch = true
+
+    killPlane.Touched:Connect(function(hit)
+        local character = hit and hit.Parent
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            humanoid.Health = 0
+        end
+    end)
+
     local spawnFolder = Instance.new("Folder")
     spawnFolder.Name = "Spawns"
     spawnFolder.Parent = arena
