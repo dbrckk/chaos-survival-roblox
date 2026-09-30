@@ -25,7 +25,8 @@ function D.start(ctx)
 
     task.spawn(function()
         while ctx.Active() do
-            task.wait(math.random(4,6))
+            local intensity = ctx.Intensity and ctx.Intensity() or 1
+            task.wait(math.max(3.2, math.random(4,6) / intensity))
             if not ctx.Active() then break end
 
             local warning = makeWarning(ctx)
