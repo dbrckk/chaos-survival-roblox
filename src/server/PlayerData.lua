@@ -135,6 +135,7 @@ function PlayerData.save(player)
 
     if ok then
         player:SetAttribute("LastSaveUnix", os.time())
+        player:SetAttribute("LastSaveFailed", false)
     else
         player:SetAttribute("LastSaveFailed", true)
         warn("Failed to persist player data after retries", player.UserId, err)
