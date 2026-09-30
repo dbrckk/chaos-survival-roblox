@@ -303,3 +303,20 @@ RunService.RenderStepped:Connect(function(dt)
 
     vignette.BackgroundTransparency += (targetTransparency - vignette.BackgroundTransparency) * math.min(1, dt * 10)
 end)
+
+
+task.spawn(function()
+    while player:GetAttribute("DataLoaded") ~= true do
+        task.wait(0.1)
+    end
+
+    if (player:GetAttribute("Games") or 0) == 0 then
+        task.wait(0.8)
+        showBanner(
+            "SURVIVE THE CHAOS",
+            "Vote • Move • Climb • Stay alive until the timer hits 0",
+            Color3.fromRGB(28, 42, 64),
+            3.2
+        )
+    end
+end)
