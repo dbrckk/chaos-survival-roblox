@@ -130,6 +130,7 @@ local secondaryAccent = nil
 local activeBeacon = nil
 local activeBeaconLight = nil
 local activeDoubleChaos = false
+local currentIntensity = 1
 local lastSurvivorAnnounced = false
 
 local function tweenCamera(targetFov, duration)
@@ -283,6 +284,7 @@ local function setMood(state)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     setMood(state)
 
     local alive = tonumber(state.survivorsAlive)
@@ -377,7 +379,8 @@ end)
 RunService.RenderStepped:Connect(function(dt)
     pulseClock += dt
 
-    local wave = (math.sin(pulseClock * (activeDoubleChaos and 5.2 or 3.6)) + 1) * 0.5
+    local pulseSpeed = (activeDoubleChaos and 5.2 or 3.6) * currentIntensity
+    local wave = (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
     local accent = activeAccent
 
     if activeDoubleChaos and secondaryAccent then
@@ -391,8 +394,8 @@ RunService.RenderStepped:Connect(function(dt)
 
         if activeBeaconLight and activeBeaconLight.Parent then
             activeBeaconLight.Color = accent
-            activeBeaconLight.Brightness = (activeDoubleChaos and 1.8 or 1.15) + wave * (activeDoubleChaos and 1.4 or 0.75)
-            activeBeaconLight.Range = 24 + wave * 12
+            activeBeaconLight.Brightness = ((activeDoubleChaos and 1.8 or 1.15) + wave * (activeDoubleChaos and 1.4 or 0.75)) * currentIntensity
+            activeBeaconLight.Range = 24 + wave * (10 + (currentIntensity * 3))
         end
     end
 
