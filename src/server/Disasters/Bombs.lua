@@ -30,7 +30,8 @@ function D.start(ctx)
                 Debris:AddItem(explosion, 1)
             end)
 
-            task.wait(1.0)
+            local intensity = ctx.Intensity and ctx.Intensity() or 1
+            task.wait(math.max(0.68, 1.0 / intensity))
         end
     end)
 end
