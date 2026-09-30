@@ -53,6 +53,7 @@ local lastPhase = nil
 local lastTitle = nil
 local lastCountdown = nil
 local lastLevel = player:GetAttribute("Level") or 1
+local lastSurvivorCuePlayed = false
 
 local function play(name)
     local sound = sfx[name]
@@ -151,6 +152,17 @@ stateEvent.OnClientEvent:Connect(function(state)
         stopDisasterLoop()
         musicVolume(0.11, 0.4)
         lastCountdown = nil
+    end
+
+    local alive = tonumber(state.survivorsAlive)
+    local total = tonumber(state.contestantCount)
+    if phase == "round" and total and total > 1 and alive == 1 then
+        if not lastSurvivorCuePlayed then
+            lastSurvivorCuePlayed = true
+            play("LastSurvivor")
+        end
+    elseif phase ~= "round" or (alive and alive > 1) then
+        lastSurvivorCuePlayed = false
     end
 
     lastPhase = phase
