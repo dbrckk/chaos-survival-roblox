@@ -384,15 +384,20 @@ while true do
             p:SetAttribute("SessionSurvivalStreak", survivalStreak)
             p:SetAttribute("BestSessionSurvivalStreak", bestSessionStreak)
 
+            local streakBonusCoins = SessionStreak.bonusCoins(survivalStreak)
+
             if survived then
                 survivors += 1
-                PlayerData.add(p, "Coins", winCoins)
+                PlayerData.add(p, "Coins", winCoins + streakBonusCoins)
                 PlayerData.add(p, "XP", winXP)
                 PlayerData.add(p, "Wins", 1)
 
                 GameAnalytics.economySource(p, winCoins, "RoundSurvival", selected.Id, roundSettings.Solo)
+                if streakBonusCoins > 0 then
+                    GameAnalytics.economySource(p, streakBonusCoins, "SurvivalStreak", "Streak" .. tostring(survivalStreak), roundSettings.Solo)
+                end
                 progressQuest(p, "survive_round", 1)
-                progressQuest(p, "coins_earned", winCoins)
+                progressQuest(p, "coins_earned", winCoins + streakBonusCoins)
 
                 if #selectedSet > 1 then
                     PlayerData.add(p, "DoubleChaosSurvivals", 1)
@@ -416,7 +421,9 @@ while true do
 
             roundFeedbackEvent:FireClient(p, {
                 survived = survived,
-                coins = survived and winCoins or Config.ParticipationCoins,
+                coins = survived and (winCoins + streakBonusCoins) or Config.ParticipationCoins,
+                baseCoins = survived and winCoins or Config.ParticipationCoins,
+                streakBonusCoins = survived and streakBonusCoins or 0,
                 xp = survived and winXP or Config.ParticipationXP,
                 soloMode = roundSettings.Solo,
                 doubleChaos = #selectedSet > 1,
