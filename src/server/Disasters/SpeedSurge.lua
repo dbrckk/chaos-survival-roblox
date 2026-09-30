@@ -1,13 +1,16 @@
 local Players = game:GetService("Players")
-local D = {Name = "SPEED SURGE", Hint = "TOO FAST TO STOP!"}
+local D = {Name = "SPEED SURGE", Hint = "FASTER, BUT STILL CONTROLLABLE!"}
 
 function D.start(ctx)
+    local profile = ctx.BalanceProfile or {}
+    local multiplier = profile.SpeedMultiplier or 1.5
+
     local previous = {}
     for _, p in ipairs(Players:GetPlayers()) do
         local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
         if hum then
             previous[hum] = hum.WalkSpeed
-            hum.WalkSpeed = math.max(28, hum.WalkSpeed * 1.8)
+            hum.WalkSpeed = math.min(26, math.max(22, hum.WalkSpeed * multiplier))
         end
     end
 
