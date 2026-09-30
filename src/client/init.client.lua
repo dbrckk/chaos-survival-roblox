@@ -81,6 +81,87 @@ stats.Text = ""
 stats.Parent = root
 Instance.new("UICorner", stats).CornerRadius = UDim.new(0, 16)
 
+
+local xpTrack = Instance.new("Frame")
+xpTrack.AnchorPoint = Vector2.new(0.5, 1)
+xpTrack.Position = UDim2.fromScale(0.5, 0.94)
+xpTrack.Size = UDim2.fromScale(0.62, 0.012)
+xpTrack.BackgroundColor3 = Color3.fromRGB(42, 47, 62)
+xpTrack.BackgroundTransparency = 0.08
+xpTrack.BorderSizePixel = 0
+xpTrack.Parent = root
+Instance.new("UICorner", xpTrack).CornerRadius = UDim.new(1, 0)
+
+local xpFill = Instance.new("Frame")
+xpFill.Size = UDim2.fromScale(0, 1)
+xpFill.BackgroundColor3 = Color3.fromRGB(105, 165, 255)
+xpFill.BorderSizePixel = 0
+xpFill.Parent = xpTrack
+Instance.new("UICorner", xpFill).CornerRadius = UDim.new(1, 0)
+
+local levelToast = Instance.new("Frame")
+levelToast.AnchorPoint = Vector2.new(0.5, 0.5)
+levelToast.Position = UDim2.fromScale(0.5, 0.30)
+levelToast.Size = UDim2.fromScale(0.50, 0.11)
+levelToast.BackgroundColor3 = Color3.fromRGB(40, 67, 115)
+levelToast.BackgroundTransparency = 1
+levelToast.Visible = false
+levelToast.ZIndex = 30
+levelToast.Parent = root
+Instance.new("UICorner", levelToast).CornerRadius = UDim.new(0, 18)
+
+local levelToastScale = Instance.new("UIScale")
+levelToastScale.Scale = 0.8
+levelToastScale.Parent = levelToast
+
+local levelToastText = Instance.new("TextLabel")
+levelToastText.Size = UDim2.fromScale(1, 1)
+levelToastText.BackgroundTransparency = 1
+levelToastText.Font = Enum.Font.GothamBlack
+levelToastText.TextColor3 = Color3.fromRGB(245, 250, 255)
+levelToastText.TextScaled = true
+levelToastText.Text = "LEVEL UP!"
+levelToastText.ZIndex = 31
+levelToastText.Parent = levelToast
+
+local lastKnownLevel = player:GetAttribute("Level") or 1
+
+local function xpProgressForLevel(level, xp)
+    local currentLevel = math.max(1, tonumber(level) or 1)
+    local currentXP = math.max(0, tonumber(xp) or 0)
+    local startXP = ((currentLevel - 1) ^ 2) * 100
+    local nextXP = (currentLevel ^ 2) * 100
+    local span = math.max(1, nextXP - startXP)
+    return math.clamp((currentXP - startXP) / span, 0, 1), nextXP
+end
+
+local function showLevelUp(level)
+    levelToastText.Text = "LEVEL " .. tostring(level) .. "!"
+    levelToast.Visible = true
+    levelToast.BackgroundTransparency = 1
+    levelToastScale.Scale = 0.78
+
+    TweenService:Create(
+        levelToast,
+        TweenInfo.new(0.18),
+        {BackgroundTransparency = 0.05}
+    ):Play()
+
+    TweenService:Create(
+        levelToastScale,
+        TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Scale = 1}
+    ):Play()
+
+    task.delay(2.1, function()
+        TweenService:Create(levelToast, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(levelToastScale, TweenInfo.new(0.2), {Scale = 0.88}):Play()
+        task.wait(0.22)
+        levelToast.Visible = false
+    end)
+end
+
+
 local votes = Instance.new("Frame")
 votes.AnchorPoint = Vector2.new(0.5, 0.5)
 votes.Position = UDim2.fromScale(0.5, 0.58)
@@ -636,12 +717,29 @@ local function showRoundFeedback(feedback)
 end
 
 local function refreshStats()
+    local level = player:GetAttribute("Level") or 1
+    local xp = player:GetAttribute("XP") or 0
+    local progress, nextXP = xpProgressForLevel(level, xp)
+
     stats.Text = string.format(
-        "LVL %d    🪙 %d    🏆 %d",
-        player:GetAttribute("Level") or 1,
+        "LVL %d    🪙 %d    🏆 %d    XP %d/%d",
+        level,
         player:GetAttribute("Coins") or 0,
-        player:GetAttribute("Wins") or 0
+        player:GetAttribute("Wins") or 0,
+        xp,
+        nextXP
     )
+
+    TweenService:Create(
+        xpFill,
+        TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Size = UDim2.fromScale(progress, 1)}
+    ):Play()
+
+    if level > lastKnownLevel then
+        showLevelUp(level)
+    end
+    lastKnownLevel = level
 end
 
 for _, attr in ipairs({"Level","Coins","Wins","XP"}) do
