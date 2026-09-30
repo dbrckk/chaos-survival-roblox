@@ -208,3 +208,32 @@ player:GetAttributeChangedSignal("Level"):Connect(function()
     end
     lastLevel = level
 end)
+
+
+local healthConnection = nil
+
+local function bindHealthAudio(character)
+    if healthConnection then
+        healthConnection:Disconnect()
+        healthConnection = nil
+    end
+
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if not humanoid then
+        return
+    end
+
+    local previousHealth = humanoid.Health
+    healthConnection = humanoid.HealthChanged:Connect(function(health)
+        if health < previousHealth and health > 0 then
+            play("Hit")
+        end
+        previousHealth = health
+    end)
+end
+
+if player.Character then
+    task.spawn(bindHealthAudio, player.Character)
+end
+
+player.CharacterAdded:Connect(bindHealthAudio)
