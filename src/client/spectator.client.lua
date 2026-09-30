@@ -94,7 +94,11 @@ local function spectateIndex(index)
     rebuildTargets()
 
     if #targets == 0 then
-        label.Text = "ELIMINATED • WAITING FOR NEXT ROUND"
+        if player:GetAttribute("RoundParticipant") == true then
+            label.Text = "ELIMINATED • WAITING FOR NEXT ROUND"
+        else
+            label.Text = "JOINING NEXT ROUND • WAITING FOR SURVIVORS"
+        end
         nextButton.Visible = false
         restoreCamera()
         return
@@ -107,7 +111,11 @@ local function spectateIndex(index)
     if hum and workspace.CurrentCamera then
         workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
         workspace.CurrentCamera.CameraSubject = hum
-        label.Text = "SPECTATING  " .. target.DisplayName
+        if player:GetAttribute("RoundParticipant") == true then
+            label.Text = "SPECTATING  " .. target.DisplayName
+        else
+            label.Text = "JOINING NEXT ROUND  •  SPECTATING  " .. target.DisplayName
+        end
         nextButton.Visible = #targets > 1
     end
 end
@@ -128,9 +136,6 @@ local function refresh()
             ):Play()
         end
         spectateIndex(math.max(1, targetIndex))
-        if not participant and #targets > 0 then
-            label.Text = "JOINING NEXT ROUND  •  " .. label.Text
-        end
     else
         card.Visible = false
         targetIndex = 0
@@ -146,10 +151,13 @@ player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
 player.CharacterAdded:Connect(function()
     task.wait(0.1)
-    if not (roundActive and player:GetAttribute("RoundEliminated") == true) then
-        restoreCamera()
-    else
+    local eliminated = player:GetAttribute("RoundEliminated") == true
+    local participant = player:GetAttribute("RoundParticipant") == true
+
+    if roundActive and (eliminated or not participant) then
         spectateIndex(math.max(1, targetIndex))
+    else
+        restoreCamera()
     end
 end)
 
