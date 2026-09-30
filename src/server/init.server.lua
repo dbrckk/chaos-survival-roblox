@@ -34,6 +34,7 @@ local ArenaVariants = require(script.ArenaVariants)
 local DisasterBalance = require(script.DisasterBalance)
 local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
+local RoundIntensity = require(script.RoundIntensity)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -329,6 +330,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
             return hum ~= nil and hum.Health > 0
         end,
         BalanceProfile = DisasterBalance.mobileProfile(#contestants),
+        Intensity = function()
+            return RoundIntensity.factor(
+                os.clock() - roundStartedAt,
+                roundSettings.RoundSeconds,
+                roundSettings.Solo,
+                #selected > 1
+            )
+        end,
     }
 
     for _, disaster in ipairs(selected) do
@@ -372,6 +381,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             disasterIds = disasterIds,
             survivorsAlive = survivorsAlive,
             contestantCount = #contestants,
+            intensity = RoundIntensity.factor(
+                roundSettings.RoundSeconds - t,
+                roundSettings.RoundSeconds,
+                roundSettings.Solo,
+                #selected > 1
+            ),
         })
 
         task.wait(1)
