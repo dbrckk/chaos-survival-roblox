@@ -31,6 +31,27 @@ describe("Arena variants", function()
             end
         end
     end)
+
+    it("avoids both recently played maps", function()
+        for _ = 1, 30 do
+            local nextId = ArenaVariants.chooseRecent({"Classic", "Towers"})
+            expect(nextId ~= "Classic").toBe(true)
+            expect(nextId ~= "Towers").toBe(true)
+            expect(ArenaVariants.get(nextId) ~= nil).toBe(true)
+        end
+    end)
+
+    it("keeps recent history bounded and unique", function()
+        local recent = ArenaVariants.pushRecent({"Classic", "Towers"}, "Orbital", 2)
+        expect(#recent).toBe(2)
+        expect(recent[1]).toBe("Orbital")
+        expect(recent[2]).toBe("Classic")
+
+        recent = ArenaVariants.pushRecent(recent, "Classic", 2)
+        expect(#recent).toBe(2)
+        expect(recent[1]).toBe("Classic")
+        expect(recent[2]).toBe("Orbital")
+    end)
 end)
 
 return nil
