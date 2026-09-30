@@ -21,7 +21,7 @@ function D.start(ctx)
     task.spawn(function()
         local started = os.clock()
         while ctx.Active() do
-            local a = math.clamp((os.clock()-started) / ctx.Config.RoundSeconds, 0, 1)
+            local a = math.clamp((os.clock()-started) / ctx.RoundSeconds or ctx.Config.RoundSeconds, 0, 1)
             lava.Position = Vector3.new(lava.Position.X, startY + a * 25, lava.Position.Z)
             task.wait(0.1)
         end
