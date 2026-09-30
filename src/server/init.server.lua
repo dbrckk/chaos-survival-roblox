@@ -82,7 +82,7 @@ assert(#disasters >= 3, "At least 3 disasters are required")
 
 local roundNumber = 0
 local currentArenaVariant = "Classic"
-local lastPrimaryDisasterId = nil
+local recentPrimaryDisasterIds = {}
 local currentVotes = {}
 local currentOptions = {}
 local voteOpen = false
@@ -143,9 +143,9 @@ local function shuffledPool()
 end
 
 local function chooseVoteOptions()
-    local pool = RoundVariety.excludeImmediateRepeat(
+    local pool = RoundVariety.excludeRecent(
         shuffledPool(),
-        lastPrimaryDisasterId,
+        recentPrimaryDisasterIds,
         3
     )
     return {pool[1], pool[2], pool[3]}
@@ -452,7 +452,7 @@ while true do
     voteOpen = false
 
     local selected = winningOption()
-    lastPrimaryDisasterId = selected.Id
+    recentPrimaryDisasterIds = RoundVariety.pushRecent(recentPrimaryDisasterIds, selected.Id, 2)
     roundNumber += 1
 
     local contestants = Players:GetPlayers()
@@ -572,49 +572,60 @@ while true do
                 roundElapsed
             )
 
+            local newlyUnlockedAchievements = AchievementService.evaluate(p)
+            if #newlyUnlockedAchievements > 0 then
+                GameAnalytics.custom(
+                    p,
+                    "AchievementUnlocked",
+                    #newlyUnlockedAchievements,
+                    "First:" .. tostring(newlyUnlockedAchievements[1]),
+                    "Level:" .. tostring(p:GetAttribute("Level") or 1)
+                )
+            end
+
             roundFeedbackEvent:FireClient(p, {
                 survived = survived,
                 coins = survived and (winCoins + streakBonusCoins) or Config.ParticipationCoins,
-                baseCoins = survived and winCoins or Config.ParticipationCoins,
-                streakBonusCoins = survived and streakBonusCoins or 0,
                 xp = survived and winXP or Config.ParticipationXP,
-                soloMode = roundSettings.Solo,
-                doubleChaos = #selectedSet > 1,
-                arenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant,
-                disasterName = feedbackDisasterName,
-                elapsedSeconds = math.floor(roundElapsed + 0.5),
-                survivalStreak = survivalStreak,
+                streak = survivalStreak,
+                streakBonusCoins = survived and streakBonusCoins or 0,
                 bestSessionStreak = bestSessionStreak,
+                arenaName = roundSettings.ArenaName,
+                disasterName = feedbackDisasterName,
+                doubleChaos = #selectedSet > 1,
+                soloMode = roundSettings.Solo,
+                elapsedSeconds = math.floor(roundElapsed + 0.5),
             })
-
-            p:SetAttribute("RoundEliminated", false)
-            p:SetAttribute("RoundParticipant", false)
-            p:LoadCharacter()
         end
     end
 
-    local resultTitle
-    local resultHint
-
-    if roundSettings.Solo then
-        resultTitle = survivors > 0 and "SOLO SURVIVED!" or "ELIMINATED"
-        resultHint = survivors > 0
-            and ("Solo reward +" .. winCoins .. " coins")
-            or (endedEarly and "Quick retry incoming" or "Try again")
-    else
-        resultTitle = survivors .. " SURVIVED"
-        resultHint = "Survivors +" .. winCoins .. " coins"
-    end
+    broadcast({
+        phase = "result",
+        title = endedEarly and "TOTAL WIPEOUT" or (survivors .. " SURVIVED"),
+        hint = "Next round soon",
+        seconds = roundSettings.PostRoundSeconds,
+        doubleChaos = #selectedSet > 1,
+        soloMode = roundSettings.Solo,
+        arenaName = roundSettings.ArenaName,
+    })
 
     for t = roundSettings.PostRoundSeconds, 1, -1 do
         broadcast({
-            phase = "results",
-            title = resultTitle,
-            hint = resultHint,
+            phase = "result",
+            title = endedEarly and "TOTAL WIPEOUT" or (survivors .. " SURVIVED"),
+            hint = "Next round soon",
             seconds = t,
+            doubleChaos = #selectedSet > 1,
             soloMode = roundSettings.Solo,
             arenaName = roundSettings.ArenaName,
         })
         task.wait(1)
+    end
+
+    for _, p in ipairs(contestants) do
+        if p.Parent == Players then
+            p:SetAttribute("RoundParticipant", false)
+            p:SetAttribute("RoundEliminated", false)
+        end
     end
 end
