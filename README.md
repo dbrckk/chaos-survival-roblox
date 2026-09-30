@@ -19,6 +19,8 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Server-authoritative cosmetic equipment and visible player trails
 - Persistent long-term achievements with server-side rewards
 - Mobile achievements progress panel and unlock notifications
+- Solo Rush mode with faster rounds, solo reward bonus, and instant round end on elimination
+- Elimination tracking that prevents respawns from being counted as survival
 - Server-side reward handling
 - No paid assets required
 
