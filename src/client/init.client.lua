@@ -7,6 +7,7 @@ local stateEvent = remotes:WaitForChild("RoundState")
 local voteEvent = remotes:WaitForChild("VoteDisaster")
 
 local dailyRewardEvent = remotes:WaitForChild("DailyReward")
+local questEvent = remotes:WaitForChild("QuestUpdate")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosHUD"
@@ -123,6 +124,105 @@ dailyBody.Text = ""
 dailyBody.Parent = dailyToast
 
 
+
+local questButton = Instance.new("TextButton")
+questButton.AnchorPoint = Vector2.new(0, 1)
+questButton.Position = UDim2.fromScale(0.025, 0.90)
+questButton.Size = UDim2.fromScale(0.22, 0.065)
+questButton.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
+questButton.TextColor3 = Color3.new(1, 1, 1)
+questButton.Font = Enum.Font.GothamBold
+questButton.TextScaled = true
+questButton.Text = "QUESTS"
+questButton.Parent = root
+Instance.new("UICorner", questButton).CornerRadius = UDim.new(0, 14)
+
+local questPanel = Instance.new("Frame")
+questPanel.AnchorPoint = Vector2.new(0, 1)
+questPanel.Position = UDim2.fromScale(0.025, 0.82)
+questPanel.Size = UDim2.fromScale(0.72, 0.34)
+questPanel.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
+questPanel.BackgroundTransparency = 0.04
+questPanel.Visible = false
+questPanel.Parent = root
+Instance.new("UICorner", questPanel).CornerRadius = UDim.new(0, 18)
+
+local questHeader = Instance.new("TextLabel")
+questHeader.Size = UDim2.new(1, -24, 0.18, 0)
+questHeader.Position = UDim2.fromOffset(12, 6)
+questHeader.BackgroundTransparency = 1
+questHeader.Font = Enum.Font.GothamBlack
+questHeader.TextColor3 = Color3.new(1, 1, 1)
+questHeader.TextScaled = true
+questHeader.TextXAlignment = Enum.TextXAlignment.Left
+questHeader.Text = "DAILY QUESTS"
+questHeader.Parent = questPanel
+
+local questRows = {}
+for i = 1, 3 do
+    local row = Instance.new("TextLabel")
+    row.Size = UDim2.new(1, -24, 0.22, 0)
+    row.Position = UDim2.new(0, 12, 0.20 + ((i - 1) * 0.25), 0)
+    row.BackgroundColor3 = Color3.fromRGB(34, 38, 52)
+    row.TextColor3 = Color3.fromRGB(235, 238, 245)
+    row.Font = Enum.Font.GothamMedium
+    row.TextScaled = true
+    row.TextWrapped = true
+    row.TextXAlignment = Enum.TextXAlignment.Left
+    row.Text = "Loading..."
+    row.Parent = questPanel
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+    questRows[i] = row
+end
+
+local questToast = Instance.new("Frame")
+questToast.AnchorPoint = Vector2.new(0.5, 0.5)
+questToast.Position = UDim2.fromScale(0.5, 0.50)
+questToast.Size = UDim2.fromScale(0.76, 0.15)
+questToast.BackgroundColor3 = Color3.fromRGB(32, 75, 50)
+questToast.BackgroundTransparency = 0.04
+questToast.Visible = false
+questToast.Parent = root
+Instance.new("UICorner", questToast).CornerRadius = UDim.new(0, 18)
+
+local questToastTitle = Instance.new("TextLabel")
+questToastTitle.Size = UDim2.new(1, -24, 0.48, 0)
+questToastTitle.Position = UDim2.fromOffset(12, 8)
+questToastTitle.BackgroundTransparency = 1
+questToastTitle.Font = Enum.Font.GothamBlack
+questToastTitle.TextColor3 = Color3.new(1, 1, 1)
+questToastTitle.TextScaled = true
+questToastTitle.Text = "QUEST COMPLETE"
+questToastTitle.Parent = questToast
+
+local questToastBody = Instance.new("TextLabel")
+questToastBody.Size = UDim2.new(1, -24, 0.34, 0)
+questToastBody.Position = UDim2.new(0, 12, 0.56, 0)
+questToastBody.BackgroundTransparency = 1
+questToastBody.Font = Enum.Font.GothamMedium
+questToastBody.TextColor3 = Color3.fromRGB(230, 240, 232)
+questToastBody.TextScaled = true
+questToastBody.Text = ""
+questToastBody.Parent = questToast
+
+questButton.Activated:Connect(function()
+    questPanel.Visible = not questPanel.Visible
+end)
+
+local function renderQuestState(state)
+    local quests = state and state.quests or {}
+    for i = 1, 3 do
+        local quest = quests[i]
+        if quest then
+            local marker = quest.claimed and "DONE" or string.format("%d/%d", quest.progress or 0, quest.target or 0)
+            questRows[i].Text = string.format("  %s  •  %s  •  +%d coins", quest.title or "Quest", marker, quest.coins or 0)
+        else
+            questRows[i].Text = "  No quest"
+        end
+    end
+end
+
+
 local function refreshStats()
     stats.Text = string.format(
         "LVL %d    🪙 %d    🏆 %d",
@@ -173,6 +273,25 @@ local function showVotes(options)
     end
 end
 
+
+
+questEvent.OnClientEvent:Connect(function(payload)
+    if payload.state then
+        renderQuestState(payload.state)
+    end
+
+    local completed = payload.completed or {}
+    if #completed > 0 then
+        local quest = completed[1]
+        questToastTitle.Text = "QUEST COMPLETE"
+        questToastBody.Text = string.format("%s   +%d coins   +%d XP", quest.title or "Daily quest", quest.coins or 0, quest.xp or 0)
+        questToast.Visible = true
+
+        task.delay(4, function()
+            questToast.Visible = false
+        end)
+    end
+end)
 
 dailyRewardEvent.OnClientEvent:Connect(function(reward)
     local streak = tonumber(reward.streak) or 1
