@@ -1,5 +1,3 @@
-local ArenaVariants = require(script.Parent.ArenaVariants)
-
 local MapBuilder = {}
 
 local function part(parent, name, size, position, color, material)
@@ -38,7 +36,7 @@ local function buildLobby(root, config)
     lobbySpawn.Parent = lobby
 end
 
-function MapBuilder.buildArena(config, variantId)
+function MapBuilder.buildArena(config, variantId, arenaVariants)
     local root = workspace:FindFirstChild("GeneratedMap")
     if not root then
         root = Instance.new("Folder")
@@ -51,7 +49,8 @@ function MapBuilder.buildArena(config, variantId)
         oldArena:Destroy()
     end
 
-    local variant = ArenaVariants.get(variantId) or ArenaVariants.get("Classic")
+    assert(arenaVariants, "arenaVariants is required")
+    local variant = arenaVariants.get(variantId) or arenaVariants.get("Classic")
     local arena = Instance.new("Folder")
     arena.Name = "Arena"
     arena:SetAttribute("VariantId", variant.Id)
@@ -101,7 +100,7 @@ function MapBuilder.buildArena(config, variantId)
     return arena
 end
 
-function MapBuilder.build(config, variantId)
+function MapBuilder.build(config, variantId, arenaVariants)
     local old = workspace:FindFirstChild("GeneratedMap")
     if old then
         old:Destroy()
@@ -112,7 +111,7 @@ function MapBuilder.build(config, variantId)
     root.Parent = workspace
 
     buildLobby(root, config)
-    MapBuilder.buildArena(config, variantId or "Classic")
+    MapBuilder.buildArena(config, variantId or "Classic", arenaVariants)
 
     return root
 end
