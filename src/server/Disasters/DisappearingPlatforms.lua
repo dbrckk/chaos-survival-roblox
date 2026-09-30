@@ -37,7 +37,8 @@ function D.start(ctx)
                 end
             end
 
-            task.wait(1.4)
+            local intensity = ctx.Intensity and ctx.Intensity() or 1
+            task.wait(math.max(0.95, 1.4 / intensity))
         end
     end)
 end
