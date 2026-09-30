@@ -170,8 +170,8 @@ local function setMood(state)
     local phase = state.phase
     local doubleChaos = state.doubleChaos == true
 
-    if phase == "round" then
-        roundDanger = (tonumber(state.seconds) or 99) <= 5
+    if phase == "round" or phase == "ready" then
+        roundDanger = phase == "round" and (tonumber(state.seconds) or 99) <= 5
 
         local ids = state.disasterIds or {}
         local profile = DisasterVisuals.combine(ids)
@@ -190,7 +190,13 @@ local function setMood(state)
             color.Saturation = profile.Saturation
             color.TintColor = profile.Tint
             vignette.BackgroundColor3 = profile.Accent
-            tweenCamera((roundDanger and profile.Fov + 3 or profile.Fov), 0.24)
+            local targetFov = profile.Fov
+            if phase == "ready" then
+                targetFov = math.max(72, profile.Fov - 3)
+            elseif roundDanger then
+                targetFov = profile.Fov + 3
+            end
+            tweenCamera(targetFov, 0.24)
         elseif doubleChaos then
             atmosphere.Density = 0.23
             atmosphere.Haze = 1.15
@@ -231,9 +237,9 @@ local function setMood(state)
         if phase ~= lastPhase or state.title ~= lastRoundTitle then
             showBanner(
                 state.title or "CHAOS!",
-                state.arenaName or "",
+                phase == "ready" and "POSITION YOURSELF" or (state.arenaName or ""),
                 doubleChaos and Color3.fromRGB(78, 24, 105) or Color3.fromRGB(28, 35, 52),
-                1.6
+                phase == "ready" and 1.15 or 1.6
             )
             lastRoundTitle = state.title
         end
