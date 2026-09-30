@@ -47,7 +47,8 @@ function D.start(ctx)
             if marker.Parent then marker:Destroy() end
             ctx.Cleanup[#ctx.Cleanup+1] = meteor
             Debris:AddItem(meteor, 6)
-            task.wait(0.7)
+            local intensity = ctx.Intensity and ctx.Intensity() or 1
+            task.wait(math.max(0.48, 0.7 / intensity))
         end
     end)
 end
