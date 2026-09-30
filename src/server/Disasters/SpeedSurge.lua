@@ -1,4 +1,3 @@
-local Players = game:GetService("Players")
 local D = {Name = "SPEED SURGE", Hint = "FASTER, BUT STILL CONTROLLABLE!"}
 
 function D.start(ctx)
@@ -6,7 +5,7 @@ function D.start(ctx)
     local multiplier = profile.SpeedMultiplier or 1.5
 
     local previous = {}
-    for _, p in ipairs(Players:GetPlayers()) do
+    for _, p in ipairs(ctx.Contestants or {}) do
         local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
         if hum then
             previous[hum] = hum.WalkSpeed
