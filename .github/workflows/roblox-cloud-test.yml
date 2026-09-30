@@ -55,6 +55,7 @@ jobs:
           [place]
           universe_id = $ROBLOX_UNIVERSE_ID
           place_id = $ROBLOX_PLACE_ID
+          rojo = "default.project.json"
 
           [settings]
           backend = "native"
