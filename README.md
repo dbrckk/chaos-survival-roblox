@@ -16,7 +16,9 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Daily quests with persistent progress and automatic rewards
 - Server-side vote rate limiting
 - Persistent cosmetic inventory with level unlocks
-- Server-authoritative cosmetic equipment and visible player trails
+- Coin-funded cosmetic shop with server-authoritative purchases
+- Nine earnable trails/auras plus two optional premium cosmetic rewards
+- Server-authoritative cosmetic equipment with trails, auras, lighting and highlights
 - Persistent long-term achievements with server-side rewards
 - Mobile achievements progress panel and unlock notifications
 - Solo Rush mode with faster rounds, solo reward bonus, and instant round end on elimination
@@ -73,7 +75,9 @@ For DataStore tests in Studio, use a test experience and enable:
 
 Automated Roblox-engine coverage now validates the core gameplay matrix on every push. The remaining launch gate is a graphical/touch-device Studio pass from an authenticated Studio session, followed by fixes from that pass.
 
-Monetization remains intentionally deferred until retention and real-device UX are validated.
+Monetization infrastructure is now present but remains opt-in and cosmetic-only. Paid offers stay hidden until real Roblox Game Pass IDs are configured as DataModel attributes named `SupporterPassId` and `NeonPackPassId`. The paid service never modifies survival power, movement, health, round rewards or progression rates.
+
+Recommended launch pricing is intentionally low-friction (for example 39–79 Robux per cosmetic/supporter pass), but the live price is always read from Roblox MarketplaceService rather than hard-coded in the client. Final prices should be set in Creator Dashboard only after the authenticated device playtest is clean.
 
 ## Architecture
 
