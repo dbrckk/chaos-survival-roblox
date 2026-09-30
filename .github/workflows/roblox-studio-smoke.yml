@@ -50,17 +50,47 @@ jobs:
           $installer = "$env:RUNNER_TEMP\RobloxStudioInstaller.exe"
           $process = Start-Process -FilePath $installer -PassThru
           $process.WaitForExit()
+          Start-Sleep -Seconds 3
 
-          $studio = Get-ChildItem "$env:LOCALAPPDATA\Roblox\Versions" -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
+          $studioPath = $null
 
-          if (-not $studio) {
+          $running = Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($running) {
+            try { $studioPath = $running.Path } catch {}
+          }
+
+          if (-not $studioPath) {
+            $roots = @(
+              "$env:LOCALAPPDATA\Roblox",
+              "$env:USERPROFILE\AppData\Local\Roblox",
+              "C:\Program Files\Roblox",
+              "C:\Program Files (x86)\Roblox"
+            ) | Where-Object { Test-Path $_ }
+
+            foreach ($root in $roots) {
+              $candidate = Get-ChildItem $root -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 1
+              if ($candidate) {
+                $studioPath = $candidate.FullName
+                break
+              }
+            }
+          }
+
+          if (-not $studioPath) {
+            Write-Host "Searching C:\Users for diagnostics..."
+            Get-ChildItem "C:\Users" -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+              Select-Object -First 20 -ExpandProperty FullName
             throw "Roblox Studio executable was not found after installation."
           }
 
-          "STUDIO_EXE=$($studio.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          Write-Host "Studio: $($studio.FullName)"
+          Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 2
+
+          "STUDIO_EXE=$studioPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Studio: $studioPath"
 
       - name: Run Studio smoke test
         shell: pwsh
