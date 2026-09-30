@@ -61,6 +61,7 @@ end
 
 local function validTarget(other)
     if other == player then return false end
+    if other:GetAttribute("RoundParticipant") ~= true then return false end
     if other:GetAttribute("RoundEliminated") == true then return false end
 
     local character = other.Character
@@ -113,7 +114,8 @@ end
 
 local function refresh()
     local eliminated = player:GetAttribute("RoundEliminated") == true
-    local shouldSpectate = roundActive and eliminated
+    local participant = player:GetAttribute("RoundParticipant") == true
+    local shouldSpectate = roundActive and (eliminated or not participant)
 
     if shouldSpectate then
         if not card.Visible then
@@ -126,6 +128,9 @@ local function refresh()
             ):Play()
         end
         spectateIndex(math.max(1, targetIndex))
+        if not participant and #targets > 0 then
+            label.Text = "JOINING NEXT ROUND  •  " .. label.Text
+        end
     else
         card.Visible = false
         targetIndex = 0
@@ -138,6 +143,7 @@ nextButton.Activated:Connect(function()
 end)
 
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
 player.CharacterAdded:Connect(function()
     task.wait(0.1)
     if not (roundActive and player:GetAttribute("RoundEliminated") == true) then
