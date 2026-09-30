@@ -51,6 +51,7 @@ function PlayerData.load(player)
     end
 
     applyAttributes(player, data)
+    player:SetAttribute("DataLoaded", true)
 end
 
 function PlayerData.save(player)
