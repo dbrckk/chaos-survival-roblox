@@ -183,12 +183,23 @@ voteEvent.OnServerEvent:Connect(function(player, disasterId)
     GameAnalytics.vote(player, disasterId, currentRules.Solo)
 end)
 
-local function winningOption()
+local function currentVoteCounts()
     local counts = {}
-    for _, d in ipairs(currentOptions) do counts[d.Id] = 0 end
-    for _, id in pairs(currentVotes) do
-        if counts[id] ~= nil then counts[id] += 1 end
+    for _, d in ipairs(currentOptions) do
+        counts[d.Id] = 0
     end
+
+    for _, id in pairs(currentVotes) do
+        if counts[id] ~= nil then
+            counts[id] += 1
+        end
+    end
+
+    return counts
+end
+
+local function winningOption()
+    local counts = currentVoteCounts()
 
     local bestCount = -1
     local winners = {}
@@ -321,8 +332,15 @@ while true do
         if t <= intermissionSettings.VoteSeconds then
             voteOpen = true
             options = {}
+            local voteCounts = currentVoteCounts()
+
             for _, d in ipairs(currentOptions) do
-                table.insert(options, {id = d.Id, name = d.Name, hint = d.Hint})
+                table.insert(options, {
+                    id = d.Id,
+                    name = d.Name,
+                    hint = d.Hint,
+                    votes = voteCounts[d.Id] or 0,
+                })
             end
         end
 
