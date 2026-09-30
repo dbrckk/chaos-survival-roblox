@@ -10,6 +10,7 @@ local AchievementService = require(script.AchievementService)
 local SoloRules = require(script.SoloRules)
 local GameAnalytics = require(script.GameAnalytics)
 local ArenaVariants = require(script.ArenaVariants)
+local DisasterBalance = require(script.DisasterBalance)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -240,6 +241,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         OnCleanup = onCleanup,
         Active = function() return roundActive end,
         Contestants = contestants,
+        BalanceProfile = DisasterBalance.mobileProfile(#contestants),
     }
 
     for _, disaster in ipairs(selected) do
@@ -352,11 +354,10 @@ while true do
     local selectedSet = {selected}
     local forceDouble = (roundNumber % roundSettings.DoubleChaosEvery == 0)
     if forceDouble or math.random() < roundSettings.DoubleChaosChance then
-        local candidates = {}
-        for _, d in ipairs(disasters) do
-            if d.Id ~= selected.Id then table.insert(candidates, d) end
+        local candidates = DisasterBalance.filterCompatible(selected.Id, disasters)
+        if #candidates > 0 then
+            table.insert(selectedSet, candidates[math.random(1, #candidates)])
         end
-        table.insert(selectedSet, candidates[math.random(1, #candidates)])
     end
 
     for _, p in ipairs(contestants) do
