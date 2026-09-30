@@ -3,52 +3,49 @@ local Players = game:GetService("Players")
 
 local DailyRewards = require(script.Parent.DailyRewards)
 local DailyQuests = require(script.Parent.DailyQuests)
+local DataSchema = require(script.Parent.DataSchema)
 
 local store = DataStoreService:GetDataStore("ChaosSurvival_v3")
 local PlayerData = {}
 
-local DEFAULT = {
-    Coins = 0,
-    XP = 0,
-    Wins = 0,
-    Games = 0,
-    Level = 1,
-    BestStreak = 0,
-    DailyStreak = 0,
-    LastDailyDay = -1,
+local MAX_ATTEMPTS = 4
+local AUTOSAVE_SECONDS = 60
 
-    QuestDay = -1,
-    Quest1Id = "",
-    Quest1Progress = 0,
-    Quest1Claimed = false,
-    Quest2Id = "",
-    Quest2Progress = 0,
-    Quest2Claimed = false,
-    Quest3Id = "",
-    Quest3Progress = 0,
-    Quest3Claimed = false,
+local active = {}
+local saving = {}
 
-    OwnedCosmetics = "",
-    EquippedCosmetic = "",
+local function withRetry(operationName, userId, callback)
+    local lastError
 
-    DoubleChaosSurvivals = 0,
-    UnlockedAchievements = "",
-}
+    for attempt = 1, MAX_ATTEMPTS do
+        local ok, result = pcall(callback)
+        if ok then
+            return true, result
+        end
 
-local function cloneDefault()
-    local t = {}
-    for k,v in pairs(DEFAULT) do t[k] = v end
-    return t
-end
+        lastError = result
+        warn(
+            string.format(
+                "%s failed for user %s (attempt %d/%d): %s",
+                operationName,
+                tostring(userId),
+                attempt,
+                MAX_ATTEMPTS,
+                tostring(result)
+            )
+        )
 
-local function levelForXP(xp)
-    return math.max(1, math.floor(math.sqrt(math.max(0, xp) / 100)) + 1)
+        if attempt < MAX_ATTEMPTS then
+            task.wait(DataSchema.retryDelay(attempt))
+        end
+    end
+
+    return false, lastError
 end
 
 local function applyAttributes(player, data)
-    data.Level = levelForXP(data.XP)
-    for k,v in pairs(data) do
-        player:SetAttribute(k, v)
+    for key, value in pairs(data) do
+        player:SetAttribute(key, value)
     end
 end
 
@@ -71,43 +68,76 @@ function PlayerData.ensureDailyQuests(player, nowTimestamp)
 end
 
 function PlayerData.load(player)
-    local data = cloneDefault()
-    local ok, saved = pcall(function()
+    if active[player] then
+        return true
+    end
+
+    player:SetAttribute("DataLoaded", false)
+    player:SetAttribute("DataPersistenceAvailable", false)
+    player:SetAttribute("DataLoadFailed", false)
+
+    local ok, savedOrError = withRetry("DataStore load", player.UserId, function()
         return store:GetAsync("u_" .. player.UserId)
     end)
 
-    if ok and type(saved) == "table" then
-        for k,v in pairs(DEFAULT) do
-            if type(saved[k]) == type(v) then
-                data[k] = saved[k]
-            end
-        end
-    elseif not ok then
-        warn("Failed to load player data", player.UserId, saved)
+    local data
+    if ok then
+        data = DataSchema.normalize(savedOrError)
+        player:SetAttribute("DataPersistenceAvailable", true)
+    else
+        data = DataSchema.cloneDefaults()
+        player:SetAttribute("DataLoadFailed", true)
+        warn(
+            "Using temporary session data; persistent saves disabled for user",
+            player.UserId,
+            savedOrError
+        )
+    end
+
+    if player.Parent ~= Players then
+        return false
     end
 
     applyAttributes(player, data)
     PlayerData.ensureDailyQuests(player)
+
+    active[player] = true
     player:SetAttribute("DataLoaded", true)
+    return ok
 end
 
 function PlayerData.save(player)
-    local data = {}
-    for k,_ in pairs(DEFAULT) do
-        data[k] = player:GetAttribute(k)
-        if data[k] == nil then
-            data[k] = DEFAULT[k]
-        end
+    if not active[player] then
+        return false
     end
 
-    local ok, err = pcall(function()
-        store:UpdateAsync("u_" .. player.UserId, function()
+    if player:GetAttribute("DataPersistenceAvailable") ~= true then
+        return false
+    end
+
+    if saving[player] then
+        return false
+    end
+
+    saving[player] = true
+
+    local data = DataSchema.snapshot(function(key)
+        return player:GetAttribute(key)
+    end)
+
+    local ok, err = withRetry("DataStore save", player.UserId, function()
+        return store:UpdateAsync("u_" .. player.UserId, function()
             return data
         end)
     end)
 
-    if not ok then
-        warn("Failed to save player data", player.UserId, err)
+    saving[player] = nil
+
+    if ok then
+        player:SetAttribute("LastSaveUnix", os.time())
+    else
+        player:SetAttribute("LastSaveFailed", true)
+        warn("Failed to persist player data after retries", player.UserId, err)
     end
 
     return ok
@@ -118,7 +148,7 @@ function PlayerData.add(player, field, amount)
     player:SetAttribute(field, value)
 
     if field == "XP" then
-        player:SetAttribute("Level", levelForXP(value))
+        player:SetAttribute("Level", DataSchema.levelForXP(value))
     end
 
     return value
@@ -219,16 +249,48 @@ function PlayerData.progressQuestEvent(player, eventName, amount, nowTimestamp)
 end
 
 function PlayerData.init()
-    Players.PlayerAdded:Connect(PlayerData.load)
-    Players.PlayerRemoving:Connect(PlayerData.save)
+    Players.PlayerAdded:Connect(function(player)
+        task.spawn(PlayerData.load, player)
+    end)
 
-    for _,p in ipairs(Players:GetPlayers()) do
-        task.spawn(PlayerData.load, p)
+    Players.PlayerRemoving:Connect(function(player)
+        PlayerData.save(player)
+        active[player] = nil
+        saving[player] = nil
+    end)
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        task.spawn(PlayerData.load, player)
     end
 
+    task.spawn(function()
+        while true do
+            task.wait(AUTOSAVE_SECONDS)
+
+            for _, player in ipairs(Players:GetPlayers()) do
+                if active[player] and player:GetAttribute("DataPersistenceAvailable") == true then
+                    task.spawn(PlayerData.save, player)
+                end
+            end
+        end
+    end)
+
     game:BindToClose(function()
-        for _,p in ipairs(Players:GetPlayers()) do
-            PlayerData.save(p)
+        local pending = 0
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            if active[player] and player:GetAttribute("DataPersistenceAvailable") == true then
+                pending += 1
+                task.spawn(function()
+                    PlayerData.save(player)
+                    pending -= 1
+                end)
+            end
+        end
+
+        local deadline = os.clock() + 12
+        while pending > 0 and os.clock() < deadline do
+            task.wait(0.1)
         end
     end)
 end
