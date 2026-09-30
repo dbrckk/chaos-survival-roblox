@@ -6,6 +6,7 @@ local MapBuilder = require(script.MapBuilder)
 local PlayerData = require(script.PlayerData)
 local RateLimiter = require(script.RateLimiter)
 local CosmeticService = require(script.CosmeticService)
+local AchievementService = require(script.AchievementService)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -29,6 +30,7 @@ questEvent.Parent = remotes
 
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
+AchievementService.init(remotes)
 MapBuilder.build(Config)
 
 local disasters = {}
@@ -278,6 +280,7 @@ while true do
                 progressQuest(p, "coins_earned", Config.WinCoins)
 
                 if #selectedSet > 1 then
+                    PlayerData.add(p, "DoubleChaosSurvivals", 1)
                     progressQuest(p, "survive_double", 1)
                 end
             else
