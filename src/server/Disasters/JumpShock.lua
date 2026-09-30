@@ -51,6 +51,9 @@ function D.start(ctx)
             if not ctx.Active() then break end
 
             for _, p in ipairs(ctx.Contestants or {}) do
+                if ctx.IsContestantActive and not ctx.IsContestantActive(p) then
+                    continue
+                end
                 local root = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                 local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
                 if root and hum and hum.Health > 0 then
