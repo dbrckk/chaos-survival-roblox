@@ -18,7 +18,8 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Persistent cosmetic inventory with level unlocks
 - Coin-funded cosmetic shop with server-authoritative purchases
 - Nine earnable trails/auras plus two optional premium cosmetic rewards
-- Server-authoritative cosmetic equipment with trails, auras, lighting and highlights
+- Independent persistent trail + aura loadout slots with automatic migration from legacy saves
+- Server-authoritative cosmetic equipment with combinable trails, auras, lighting and highlights
 - Persistent long-term achievements with server-side rewards
 - Mobile achievements progress panel and unlock notifications
 - Solo Rush mode with faster rounds, solo reward bonus, and instant round end on elimination
@@ -31,8 +32,11 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Final-five-second danger timer feedback
 - Server-side reward handling
 - Per-disaster visual identities with Double Chaos color blending
+- Progressive round-intensity director with solo/Double Chaos safety caps
+- Hazard cadence, arena VFX and audio mix react to escalating round intensity
 - Dynamic neon arena beacon reacting to active chaos
 - Procedural premium lobby hub with neon gate and title signage
+- Premium procedural arena treatment with metal spawn pads, neon platform underglow and edge beacons
 - Live multiplayer vote counts and leading-choice highlight
 - Mobile spectator mode after elimination
 - XP progress bar and level-up celebration
