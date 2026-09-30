@@ -39,6 +39,16 @@ jobs:
           find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
             xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
 
+      - name: Enforce fair-play monetization boundary
+        shell: bash
+        run: |
+          test -f src/server/MonetizationService.lua
+          grep -q 'CosmeticOnly:true' src/server/MonetizationService.lua
+          if grep -Eq 'WalkSpeed|JumpPower|MaxHealth|WinCoins|WinXP|PlayerData\.add|ParticipationCoins|ParticipationXP' src/server/MonetizationService.lua; then
+            echo "Paid monetization must never modify gameplay power or progression rewards."
+            exit 1
+          fi
+
       - name: Build Roblox place
         run: |
           mkdir -p build
