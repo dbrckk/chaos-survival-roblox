@@ -14,4 +14,13 @@ function SessionStreak.update(current, best, survived)
     return currentValue, bestValue
 end
 
+function SessionStreak.bonusCoins(streak)
+    local value = math.max(0, tonumber(streak) or 0)
+    if value < 2 then
+        return 0
+    end
+
+    return math.min(10, (value - 1) * 2)
+end
+
 return SessionStreak
