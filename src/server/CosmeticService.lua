@@ -118,6 +118,12 @@ local function setupPlayer(player)
     end)
 end
 
+function CosmeticService.sync(player)
+    if player:GetAttribute("DataLoaded") then
+        syncUnlocks(player)
+    end
+end
+
 function CosmeticService.init(remotes, rateLimiterFactory)
     stateEvent = remotes:FindFirstChild("CosmeticState") or Instance.new("RemoteEvent")
     stateEvent.Name = "CosmeticState"
