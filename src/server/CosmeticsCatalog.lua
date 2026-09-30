@@ -47,4 +47,55 @@ function Cosmetics.publicList()
     return result
 end
 
+function Cosmetics.deserialize(raw)
+    local set = {}
+    if type(raw) ~= "string" or raw == "" then
+        return set
+    end
+
+    for id in string.gmatch(raw, "[^,]+") do
+        if Cosmetics.get(id) then
+            set[id] = true
+        end
+    end
+
+    return set
+end
+
+function Cosmetics.serialize(set)
+    local ids = {}
+    for _, id in ipairs(Cosmetics.Order) do
+        if set[id] then
+            table.insert(ids, id)
+        end
+    end
+    return table.concat(ids, ",")
+end
+
+function Cosmetics.mergeLevelUnlocks(raw, level)
+    local owned = Cosmetics.deserialize(raw)
+    local numericLevel = math.max(1, tonumber(level) or 1)
+    local newlyUnlocked = {}
+
+    for _, id in ipairs(Cosmetics.Order) do
+        local item = Cosmetics.get(id)
+        if item and numericLevel >= item.UnlockLevel and not owned[id] then
+            owned[id] = true
+            table.insert(newlyUnlocked, id)
+        end
+    end
+
+    return Cosmetics.serialize(owned), newlyUnlocked
+end
+
+function Cosmetics.canEquip(raw, id)
+    if id == "" then
+        return true
+    end
+    if not Cosmetics.get(id) then
+        return false
+    end
+    return Cosmetics.deserialize(raw)[id] == true
+end
+
 return Cosmetics
