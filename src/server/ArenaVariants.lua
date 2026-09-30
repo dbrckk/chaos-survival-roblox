@@ -61,7 +61,6 @@ ArenaVariants.Definitions = {
         },
     },
 
-
     Orbital = {
         Id = "Orbital",
         Name = "ORBITAL RING",
@@ -72,50 +71,28 @@ ArenaVariants.Definitions = {
             local result = {}
             for i = 0, 7 do
                 local angle = math.rad(i * 45)
-                table.insert(result, Vector3.new(
-                    math.cos(angle) * 35,
-                    3,
-                    math.sin(angle) * 35
-                ))
+                table.insert(result, Vector3.new(math.cos(angle) * 35, 3, math.sin(angle) * 35))
             end
             return result
         end)(),
         Platforms = (function()
             local result = {}
-
             for i = 0, 7 do
                 local angle = math.rad(i * 45)
                 table.insert(result, {
-                    offset = Vector3.new(
-                        math.cos(angle) * 31,
-                        6 + ((i % 2) * 2),
-                        math.sin(angle) * 31
-                    ),
+                    offset = Vector3.new(math.cos(angle) * 31, 6 + ((i % 2) * 2), math.sin(angle) * 31),
                     size = Vector3.new(13, 2, 13),
                 })
             end
-
             for i = 0, 7 do
                 local angle = math.rad((i * 45) + 22.5)
                 table.insert(result, {
-                    offset = Vector3.new(
-                        math.cos(angle) * 18,
-                        11 + ((i % 2) * 2),
-                        math.sin(angle) * 18
-                    ),
+                    offset = Vector3.new(math.cos(angle) * 18, 11 + ((i % 2) * 2), math.sin(angle) * 18),
                     size = Vector3.new(11, 2, 11),
                 })
             end
-
-            table.insert(result, {
-                offset = Vector3.new(0, 7, 0),
-                size = Vector3.new(18, 2, 18),
-            })
-            table.insert(result, {
-                offset = Vector3.new(0, 15, 0),
-                size = Vector3.new(11, 2, 11),
-            })
-
+            table.insert(result, {offset = Vector3.new(0, 7, 0), size = Vector3.new(18, 2, 18)})
+            table.insert(result, {offset = Vector3.new(0, 15, 0), size = Vector3.new(11, 2, 11)})
             return result
         end)(),
     },
@@ -158,19 +135,38 @@ function ArenaVariants.get(id)
     return ArenaVariants.Definitions[id]
 end
 
-function ArenaVariants.choose(previousId)
+function ArenaVariants.chooseRecent(recentIds)
+    local excluded = {}
+    for _, id in ipairs(recentIds or {}) do
+        excluded[id] = true
+    end
+
     local candidates = {}
     for _, id in ipairs(ArenaVariants.Order) do
-        if id ~= previousId then
+        if not excluded[id] then
             table.insert(candidates, id)
         end
     end
 
     if #candidates == 0 then
-        candidates = ArenaVariants.Order
+        candidates = table.clone(ArenaVariants.Order)
     end
 
     return candidates[math.random(1, #candidates)]
+end
+
+function ArenaVariants.pushRecent(recentIds, id, limit)
+    local result = {id}
+    for _, previous in ipairs(recentIds or {}) do
+        if previous ~= id and #result < (limit or 2) then
+            table.insert(result, previous)
+        end
+    end
+    return result
+end
+
+function ArenaVariants.choose(previousId)
+    return ArenaVariants.chooseRecent(previousId and {previousId} or {})
 end
 
 return ArenaVariants
