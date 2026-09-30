@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
+local ArenaVariants = require("../../src/server/ArenaVariants")
 
 describe("Chaos Survival engine", function()
     it("builds a complete playable map hierarchy", function()
@@ -12,7 +13,7 @@ describe("Chaos Survival engine", function()
             existing:Destroy()
         end
 
-        local root = MapBuilder.build(Config)
+        local root = MapBuilder.build(Config, "Classic")
 
         expect(root ~= nil).toBe(true)
         expect(root.Parent == workspace).toBe(true)
@@ -27,8 +28,24 @@ describe("Chaos Survival engine", function()
 
         expect(spawns ~= nil).toBe(true)
         expect(platforms ~= nil).toBe(true)
-        expect(#(spawns :: Folder):GetChildren() >= 4).toBe(true)
-        expect(#(platforms :: Folder):GetChildren() >= 10).toBe(true)
+        expect(#(spawns :: Folder):GetChildren() >= 8).toBe(true)
+        expect(#(platforms :: Folder):GetChildren() >= 14).toBe(true)
+
+        root:Destroy()
+    end)
+
+    it("can hot-swap every arena variant without deleting the lobby", function()
+        local root = MapBuilder.build(Config, "Classic")
+        local lobby = root:FindFirstChild("Lobby")
+        expect(lobby ~= nil).toBe(true)
+
+        for _, id in ipairs(ArenaVariants.Order) do
+            local arena = MapBuilder.buildArena(Config, id)
+            expect(arena:GetAttribute("VariantId")).toBe(id)
+            expect(arena:FindFirstChild("Spawns") ~= nil).toBe(true)
+            expect(arena:FindFirstChild("Platforms") ~= nil).toBe(true)
+            expect(root:FindFirstChild("Lobby") == lobby).toBe(true)
+        end
 
         root:Destroy()
     end)
