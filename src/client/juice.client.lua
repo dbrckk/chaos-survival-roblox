@@ -204,6 +204,30 @@ stateEvent.OnClientEvent:Connect(function(state)
     setMood(state)
 end)
 
+local function celebrateCharacter()
+    local character = player.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+
+    local sparkles = Instance.new("Sparkles")
+    sparkles.Name = "VictorySparkles"
+    sparkles.SparkleColor = Color3.fromRGB(255, 225, 95)
+    sparkles.Parent = rootPart
+
+    local glow = Instance.new("PointLight")
+    glow.Name = "VictoryGlow"
+    glow.Color = Color3.fromRGB(255, 220, 110)
+    glow.Brightness = 2
+    glow.Range = 14
+    glow.Shadows = false
+    glow.Parent = rootPart
+
+    task.delay(1.8, function()
+        if sparkles.Parent then sparkles:Destroy() end
+        if glow.Parent then glow:Destroy() end
+    end)
+end
+
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     local survivalStreak = tonumber(feedback.survivalStreak) or 0
 
@@ -221,6 +245,24 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
     end
 
     if feedback.survived then
+        celebrateCharacter()
+
+        if survivalStreak >= 5 then
+            showBanner(
+                "UNSTOPPABLE x" .. survivalStreak,
+                "Survival streak bonus +" .. tostring(feedback.streakBonusCoins or 0) .. " coins",
+                Color3.fromRGB(115, 72, 18),
+                2.0
+            )
+        elseif survivalStreak >= 3 then
+            showBanner(
+                "HOT STREAK x" .. survivalStreak,
+                "Keep the run alive",
+                Color3.fromRGB(82, 48, 18),
+                1.7
+            )
+        end
+
         tweenCamera(67, 0.12)
         task.delay(0.13, function()
             tweenCamera(72, 0.28)
