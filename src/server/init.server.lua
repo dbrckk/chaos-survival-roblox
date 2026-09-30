@@ -216,6 +216,8 @@ clientReadyEvent.OnServerEvent:Connect(function(player)
 end)
 
 Players.PlayerAdded:Connect(function(player)
+    player:SetAttribute("RoundParticipant", false)
+    player:SetAttribute("RoundEliminated", false)
     GameAnalytics.sessionStarted(player, #Players:GetPlayers())
 end)
 
@@ -282,6 +284,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
     for _, player in ipairs(contestants) do
         eliminated[player.UserId] = false
+        player:SetAttribute("RoundParticipant", true)
         player:SetAttribute("RoundEliminated", false)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
@@ -563,6 +566,7 @@ while true do
             })
 
             p:SetAttribute("RoundEliminated", false)
+            p:SetAttribute("RoundParticipant", false)
             p:LoadCharacter()
         end
     end
