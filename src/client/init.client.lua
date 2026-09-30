@@ -6,6 +6,8 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local voteEvent = remotes:WaitForChild("VoteDisaster")
 
+local dailyRewardEvent = remotes:WaitForChild("DailyReward")
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosHUD"
 gui.ResetOnSpawn = false
@@ -90,6 +92,37 @@ layout.Parent = votes
 
 local selectedVote = nil
 
+local dailyToast = Instance.new("Frame")
+dailyToast.AnchorPoint = Vector2.new(0.5, 0.5)
+dailyToast.Position = UDim2.fromScale(0.5, 0.32)
+dailyToast.Size = UDim2.fromScale(0.72, 0.16)
+dailyToast.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
+dailyToast.BackgroundTransparency = 0.05
+dailyToast.Visible = false
+dailyToast.Parent = root
+Instance.new("UICorner", dailyToast).CornerRadius = UDim.new(0, 18)
+
+local dailyTitle = Instance.new("TextLabel")
+dailyTitle.Size = UDim2.new(1, -24, 0.48, 0)
+dailyTitle.Position = UDim2.fromOffset(12, 8)
+dailyTitle.BackgroundTransparency = 1
+dailyTitle.Font = Enum.Font.GothamBlack
+dailyTitle.TextColor3 = Color3.new(1, 1, 1)
+dailyTitle.TextScaled = true
+dailyTitle.Text = "DAILY REWARD"
+dailyTitle.Parent = dailyToast
+
+local dailyBody = Instance.new("TextLabel")
+dailyBody.Size = UDim2.new(1, -24, 0.36, 0)
+dailyBody.Position = UDim2.new(0, 12, 0.54, 0)
+dailyBody.BackgroundTransparency = 1
+dailyBody.Font = Enum.Font.GothamMedium
+dailyBody.TextColor3 = Color3.fromRGB(220, 225, 235)
+dailyBody.TextScaled = true
+dailyBody.Text = ""
+dailyBody.Parent = dailyToast
+
+
 local function refreshStats()
     stats.Text = string.format(
         "LVL %d    🪙 %d    🏆 %d",
@@ -139,6 +172,21 @@ local function showVotes(options)
         end)
     end
 end
+
+
+dailyRewardEvent.OnClientEvent:Connect(function(reward)
+    local streak = tonumber(reward.streak) or 1
+    local coins = tonumber(reward.coins) or 0
+    local xp = tonumber(reward.xp) or 0
+
+    dailyTitle.Text = "DAY " .. streak .. " STREAK"
+    dailyBody.Text = string.format("+%d coins   +%d XP", coins, xp)
+    dailyToast.Visible = true
+
+    task.delay(4, function()
+        dailyToast.Visible = false
+    end)
+end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     title.Text = state.title or "CHAOS SURVIVAL"
