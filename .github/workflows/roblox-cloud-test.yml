@@ -63,4 +63,4 @@ jobs:
 
       - name: Run tests in real Roblox engine
         if: steps.config.outputs.ready == 'true'
-        run: lest --config lest.ci.toml run engine
+        run: lest run --config lest.ci.toml engine
