@@ -26,6 +26,7 @@ local MapBuilder = require(script.MapBuilder)
 local PlayerData = require(script.PlayerData)
 local RateLimiter = require(script.RateLimiter)
 local CosmeticService = require(script.CosmeticService)
+local MonetizationService = require(script.MonetizationService)
 local AchievementService = require(script.AchievementService)
 local SoloRules = require(script.SoloRules)
 local GameAnalytics = require(script.GameAnalytics)
@@ -64,6 +65,7 @@ clientReadyEvent.Parent = remotes
 
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
+MonetizationService.init(remotes, RateLimiter, CosmeticService)
 AchievementService.init(remotes)
 MapBuilder.build(Config, "Classic", ArenaVariants)
 
