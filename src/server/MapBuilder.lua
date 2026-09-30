@@ -87,6 +87,75 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     platforms.Name = "Platforms"
     platforms.Parent = arena
 
+    local decor = Instance.new("Folder")
+    decor.Name = "Decor"
+    decor.Parent = arena
+
+    local halfX = variant.BaseSize.X * 0.5
+    local halfZ = variant.BaseSize.Z * 0.5
+    local edgeThickness = 0.35
+    local edgeHeight = 0.45
+
+    local edgeColor = variant.PlatformColor
+    local north = part(
+        decor,
+        "EdgeNorth",
+        Vector3.new(variant.BaseSize.X, edgeHeight, edgeThickness),
+        config.ArenaCenter + Vector3.new(0, 1.25, -halfZ + 0.4),
+        edgeColor,
+        Enum.Material.Neon
+    )
+    north.CanCollide = false
+
+    local south = part(
+        decor,
+        "EdgeSouth",
+        Vector3.new(variant.BaseSize.X, edgeHeight, edgeThickness),
+        config.ArenaCenter + Vector3.new(0, 1.25, halfZ - 0.4),
+        edgeColor,
+        Enum.Material.Neon
+    )
+    south.CanCollide = false
+
+    local west = part(
+        decor,
+        "EdgeWest",
+        Vector3.new(edgeThickness, edgeHeight, variant.BaseSize.Z),
+        config.ArenaCenter + Vector3.new(-halfX + 0.4, 1.25, 0),
+        edgeColor,
+        Enum.Material.Neon
+    )
+    west.CanCollide = false
+
+    local east = part(
+        decor,
+        "EdgeEast",
+        Vector3.new(edgeThickness, edgeHeight, variant.BaseSize.Z),
+        config.ArenaCenter + Vector3.new(halfX - 0.4, 1.25, 0),
+        edgeColor,
+        Enum.Material.Neon
+    )
+    east.CanCollide = false
+
+    local beacon = part(
+        decor,
+        "CenterBeacon",
+        Vector3.new(1.4, 14, 1.4),
+        config.ArenaCenter + Vector3.new(0, 7, 0),
+        edgeColor,
+        Enum.Material.Neon
+    )
+    beacon.CanCollide = false
+    beacon.Transparency = 0.35
+
+    local light = Instance.new("PointLight")
+    light.Name = "ArenaGlow"
+    light.Color = edgeColor
+    light.Brightness = 1.2
+    light.Range = 28
+    light.Shadows = false
+    light.Parent = beacon
+
     for i, definition in ipairs(variant.Platforms) do
         part(
             platforms,
