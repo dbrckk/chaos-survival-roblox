@@ -13,6 +13,7 @@ local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
 local cosmeticActionEvent = remotes:WaitForChild("CosmeticAction")
 local achievementEvent = remotes:WaitForChild("AchievementState")
 local roundFeedbackEvent = remotes:WaitForChild("RoundFeedback")
+local clientReadyEvent = remotes:WaitForChild("ClientReady")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosHUD"
@@ -953,3 +954,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         showVotes(nil)
     end
 end)
+
+
+-- Signal only after this HUD has connected every initial-state listener.
+clientReadyEvent:FireServer()
