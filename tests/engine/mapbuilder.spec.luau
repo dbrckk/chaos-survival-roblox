@@ -20,6 +20,15 @@ describe("Chaos Survival engine", function()
         expect(root:FindFirstChild("Lobby") ~= nil).toBe(true)
         expect(root:FindFirstChild("Arena") ~= nil).toBe(true)
 
+        local lobby = root:FindFirstChild("Lobby")
+        local lobbyDecor = lobby and lobby:FindFirstChild("Decor")
+        expect(lobbyDecor ~= nil).toBe(true)
+        expect((lobbyDecor :: Folder):FindFirstChild("CenterPlatform") ~= nil).toBe(true)
+        expect((lobbyDecor :: Folder):FindFirstChild("CenterGlow") ~= nil).toBe(true)
+        expect((lobbyDecor :: Folder):FindFirstChild("ArenaGateTop") ~= nil).toBe(true)
+        expect((lobbyDecor :: Folder):FindFirstChild("ChaosSign") ~= nil).toBe(true)
+        expect(#(lobbyDecor :: Folder):GetChildren() >= 12).toBe(true)
+
         local arena = root:FindFirstChild("Arena")
         expect(arena ~= nil).toBe(true)
 
