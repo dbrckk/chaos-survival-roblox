@@ -21,6 +21,7 @@ describe("Player data schema", function()
             Wins = 4,
             Games = 11,
             OwnedCosmetics = "trail_blue",
+            EquippedCosmetic = "trail_blue",
             UnlockedAchievements = "FIRST_SURVIVOR",
         })
 
@@ -29,9 +30,22 @@ describe("Player data schema", function()
         expect(data.Wins).toBe(4)
         expect(data.Games).toBe(11)
         expect(data.OwnedCosmetics).toBe("trail_blue")
+        expect(data.EquippedTrail).toBe("trail_blue")
+        expect(data.EquippedAura).toBe("")
         expect(data.UnlockedAchievements).toBe("FIRST_SURVIVOR")
         expect(data.DataVersion).toBe(DataSchema.Version)
         expect(data.Level).toBe(DataSchema.levelForXP(900))
+    end)
+
+    it("migrates legacy aura equipment into the aura slot", function()
+        local data = DataSchema.normalize({
+            OwnedCosmetics = "aura_emerald",
+            EquippedCosmetic = "aura_emerald",
+        })
+
+        expect(data.EquippedTrail).toBe("")
+        expect(data.EquippedAura).toBe("aura_emerald")
+        expect(data.DataVersion).toBe(2)
     end)
 
     it("rejects invalid types and clamps negative counters", function()
@@ -57,7 +71,9 @@ describe("Player data schema", function()
             XP = 400,
             Games = 9,
             Quest1Claimed = true,
-            OwnedCosmetics = "trail_blue,trail_gold",
+            OwnedCosmetics = "trail_blue,trail_gold,aura_emerald",
+            EquippedTrail = "trail_gold",
+            EquippedAura = "aura_emerald",
         }
 
         local snapshot = DataSchema.snapshot(function(key)
@@ -69,7 +85,9 @@ describe("Player data schema", function()
         expect(snapshot.Level).toBe(DataSchema.levelForXP(400))
         expect(snapshot.Games).toBe(9)
         expect(snapshot.Quest1Claimed).toBe(true)
-        expect(snapshot.OwnedCosmetics).toBe("trail_blue,trail_gold")
+        expect(snapshot.OwnedCosmetics).toBe("trail_blue,trail_gold,aura_emerald")
+        expect(snapshot.EquippedTrail).toBe("trail_gold")
+        expect(snapshot.EquippedAura).toBe("aura_emerald")
         expect(snapshot.DataVersion).toBe(DataSchema.Version)
     end)
 
