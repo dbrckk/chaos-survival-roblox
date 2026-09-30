@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local Config = require("../../src/shared/Config")
 local SpeedSurge = require("../../src/server/Disasters/SpeedSurge")
+local LowGravity = require("../../src/server/Disasters/LowGravity")
 local Tornado = require("../../src/server/Disasters/Tornado")
 local JumpShock = require("../../src/server/Disasters/JumpShock")
 
@@ -62,6 +63,43 @@ describe("Contestant scoping", function()
         end
 
         expect(includedHum.WalkSpeed).toBe(16)
+
+        includedCharacter:Destroy()
+        outsiderCharacter:Destroy()
+    end)
+
+    it("Moon Gravity only adds force to listed contestants and preserves world gravity", function()
+        local included, includedCharacter = fakeContestant(
+            "MoonIncluded",
+            Config.ArenaCenter + Vector3.new(8, 4, 0)
+        )
+        local _, outsiderCharacter = fakeContestant(
+            "MoonOutsider",
+            Config.LobbyCenter + Vector3.new(0, 4, 0)
+        )
+
+        local worldGravity = workspace.Gravity
+        local cleanup = {}
+        local onCleanup = {}
+
+        LowGravity.start({
+            Config = Config,
+            Contestants = {included},
+            Cleanup = cleanup,
+            OnCleanup = onCleanup,
+            Active = function() return true end,
+            BalanceProfile = {},
+        })
+
+        expect(workspace.Gravity).toBe(worldGravity)
+        expect(includedCharacter:FindFirstChild("MoonGravityForce", true) ~= nil).toBe(true)
+        expect(outsiderCharacter:FindFirstChild("MoonGravityForce", true) == nil).toBe(true)
+
+        for _, object in ipairs(cleanup) do
+            if object and object.Parent then
+                object:Destroy()
+            end
+        end
 
         includedCharacter:Destroy()
         outsiderCharacter:Destroy()
