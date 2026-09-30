@@ -11,10 +11,12 @@ if RunService:IsStudio() then
         if okArgs and type(args) == "table" and args.suite == "ChaosE2E" then
             Config.IntermissionSeconds = 2
             Config.VoteSeconds = 2
+            Config.ReadySeconds = 1
             Config.RoundSeconds = 6
             Config.PostRoundSeconds = 2
             Config.Solo.IntermissionSeconds = 2
             Config.Solo.VoteSeconds = 2
+            Config.Solo.ReadySeconds = 1
             Config.Solo.RoundSeconds = 5
             Config.Solo.PostRoundSeconds = 2
         end
@@ -257,16 +259,17 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end
     end
 
-    local function anyContestantRemaining()
+    local function countContestantsRemaining()
+        local count = 0
         for _, player in ipairs(contestants) do
             if player.Parent == Players and not eliminated[player.UserId] then
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
-                    return true
+                    count += 1
                 end
             end
         end
-        return false
+        return count
     end
 
     local ctx = {
@@ -288,7 +291,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
     local endedEarly = false
     for t = roundSettings.RoundSeconds, 1, -1 do
-        if not anyContestantRemaining() then
+        local survivorsAlive = countContestantsRemaining()
+        if survivorsAlive <= 0 then
             endedEarly = true
             break
         end
@@ -317,6 +321,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
             soloMode = roundSettings.Solo,
             arenaName = roundSettings.ArenaName or currentArenaVariant,
             disasterIds = disasterIds,
+            survivorsAlive = survivorsAlive,
+            contestantCount = #contestants,
         })
 
         task.wait(1)
@@ -406,6 +412,36 @@ while true do
         if #candidates > 0 then
             table.insert(selectedSet, candidates[math.random(1, #candidates)])
         end
+    end
+
+    local readyTitle = selectedSet[1].Name
+    local readyHint = selectedSet[1].Hint
+    if #selectedSet > 1 then
+        readyTitle = "DOUBLE CHAOS: " .. selectedSet[1].Name .. " + " .. selectedSet[2].Name
+        readyHint = selectedSet[1].Hint .. " / " .. selectedSet[2].Hint
+    elseif roundSettings.Solo then
+        readyTitle = "SOLO RUSH: " .. readyTitle
+    end
+
+    local readyDisasterIds = {}
+    for _, disaster in ipairs(selectedSet) do
+        table.insert(readyDisasterIds, disaster.Id)
+    end
+
+    for t = roundSettings.ReadySeconds, 1, -1 do
+        broadcast({
+            phase = "ready",
+            title = "READY: " .. readyTitle,
+            hint = "Find your position • " .. readyHint,
+            seconds = t,
+            doubleChaos = #selectedSet > 1,
+            soloMode = roundSettings.Solo,
+            arenaName = roundSettings.ArenaName,
+            disasterIds = readyDisasterIds,
+            survivorsAlive = #contestants,
+            contestantCount = #contestants,
+        })
+        task.wait(1)
     end
 
     for _, p in ipairs(contestants) do
