@@ -13,7 +13,7 @@ describe("Chaos Survival engine", function()
             existing:Destroy()
         end
 
-        local root = MapBuilder.build(Config, "Classic")
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
 
         expect(root ~= nil).toBe(true)
         expect(root.Parent == workspace).toBe(true)
@@ -40,7 +40,7 @@ describe("Chaos Survival engine", function()
         expect(lobby ~= nil).toBe(true)
 
         for _, id in ipairs(ArenaVariants.Order) do
-            local arena = MapBuilder.buildArena(Config, id)
+            local arena = MapBuilder.buildArena(Config, id, ArenaVariants)
             expect(arena:GetAttribute("VariantId")).toBe(id)
             expect(arena:FindFirstChild("Spawns") ~= nil).toBe(true)
             expect(arena:FindFirstChild("Platforms") ~= nil).toBe(true)
