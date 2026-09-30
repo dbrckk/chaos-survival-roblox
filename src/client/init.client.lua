@@ -660,26 +660,50 @@ local function showVotes(options)
     votes.Visible = options ~= nil and #options > 0
     if not votes.Visible then return end
 
+    local maxVotes = 0
     for _, option in ipairs(options) do
+        maxVotes = math.max(maxVotes, tonumber(option.votes) or 0)
+    end
+
+    for _, option in ipairs(options) do
+        local optionVotes = tonumber(option.votes) or 0
         local button = Instance.new("TextButton")
         button.Size = UDim2.new(0.31, 0, 0.92, 0)
-        button.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
+        button.BackgroundColor3 = selectedVote == option.id
+            and Color3.fromRGB(70, 145, 255)
+            or Color3.fromRGB(38, 42, 58)
         button.TextColor3 = Color3.new(1,1,1)
         button.Font = Enum.Font.GothamBold
         button.TextWrapped = true
         button.TextScaled = true
-        button.Text = option.name .. "\n\n" .. option.hint
+        button.Text = string.format(
+            "%s\n\n%s\n\n%d VOTE%s",
+            option.name,
+            option.hint,
+            optionVotes,
+            optionVotes == 1 and "" or "S"
+        )
         button.Parent = votes
         Instance.new("UICorner", button).CornerRadius = UDim.new(0, 18)
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = (maxVotes > 0 and optionVotes == maxVotes) and 3 or 1
+        stroke.Transparency = (maxVotes > 0 and optionVotes == maxVotes) and 0.12 or 0.65
+        stroke.Color = (maxVotes > 0 and optionVotes == maxVotes)
+            and Color3.fromRGB(255, 220, 95)
+            or Color3.fromRGB(120, 130, 155)
+        stroke.Parent = button
 
         button.Activated:Connect(function()
             selectedVote = option.id
             voteEvent:FireServer(option.id)
+
             for _, sibling in ipairs(votes:GetChildren()) do
                 if sibling:IsA("TextButton") then
                     sibling.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
                 end
             end
+
             button.BackgroundColor3 = Color3.fromRGB(70, 145, 255)
         end)
     end
