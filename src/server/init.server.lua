@@ -226,10 +226,15 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
     for _, player in ipairs(contestants) do
         eliminated[player.UserId] = false
+        player:SetAttribute("RoundEliminated", false)
+
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
             deathConnections[player.UserId] = hum.Died:Connect(function()
                 eliminated[player.UserId] = true
+                if player.Parent == Players then
+                    player:SetAttribute("RoundEliminated", true)
+                end
             end)
         end
     end
@@ -458,6 +463,7 @@ while true do
                 bestSessionStreak = bestSessionStreak,
             })
 
+            p:SetAttribute("RoundEliminated", false)
             p:LoadCharacter()
         end
     end
