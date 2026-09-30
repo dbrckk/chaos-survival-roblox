@@ -364,7 +364,7 @@ cosmeticsHeader.Font = Enum.Font.GothamBlack
 cosmeticsHeader.TextColor3 = Color3.new(1, 1, 1)
 cosmeticsHeader.TextScaled = true
 cosmeticsHeader.TextXAlignment = Enum.TextXAlignment.Left
-cosmeticsHeader.Text = "COSMETICS"
+cosmeticsHeader.Text = "LOADOUT • TRAIL + AURA"
 cosmeticsHeader.Parent = cosmeticsPanel
 
 local cosmeticsList = Instance.new("ScrollingFrame")
@@ -394,7 +394,9 @@ local function renderCosmetics(state)
 
     local catalog = state and state.catalog or {}
     local owned = state and state.owned or {}
-    local equipped = state and state.equipped or ""
+    local equipped = state and state.equipped or {}
+    local equippedTrail = type(equipped) == "table" and equipped.trail or ""
+    local equippedAura = type(equipped) == "table" and equipped.aura or ""
 
     for _, item in ipairs(catalog) do
         local button = Instance.new("TextButton")
@@ -410,7 +412,10 @@ local function renderCosmetics(state)
         local unlockLevel = tonumber(item.unlockLevel)
         local kindLabel = string.upper(tostring(item.kind or "cosmetic"))
 
-        if equipped == item.id then
+        local isEquipped = (item.kind == "trail" and equippedTrail == item.id)
+            or (item.kind == "aura" and equippedAura == item.id)
+
+        if isEquipped then
             button.Text = string.format("%s   •   %s   •   EQUIPPED", item.name, kindLabel)
             button.BackgroundColor3 = Color3.fromRGB(55, 110, 85)
         elseif isOwned then
