@@ -19,6 +19,7 @@ describe("Audio configuration", function()
             "UISelect",
             "Vote",
             "Countdown",
+            "Ready",
             "RoundStart",
             "DoubleChaos",
             "Survived",
