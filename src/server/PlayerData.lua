@@ -49,6 +49,38 @@ local function applyAttributes(player, data)
     end
 end
 
+local function setupLeaderstats(player)
+    local folder = player:FindFirstChild("leaderstats")
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "leaderstats"
+        folder.Parent = player
+    end
+
+    local wins = folder:FindFirstChild("Wins")
+    if not wins then
+        wins = Instance.new("IntValue")
+        wins.Name = "Wins"
+        wins.Parent = folder
+    end
+
+    local level = folder:FindFirstChild("Level")
+    if not level then
+        level = Instance.new("IntValue")
+        level.Name = "Level"
+        level.Parent = folder
+    end
+
+    local function refresh()
+        wins.Value = math.max(0, tonumber(player:GetAttribute("Wins")) or 0)
+        level.Value = math.max(1, tonumber(player:GetAttribute("Level")) or 1)
+    end
+
+    player:GetAttributeChangedSignal("Wins"):Connect(refresh)
+    player:GetAttributeChangedSignal("Level"):Connect(refresh)
+    refresh()
+end
+
 local function resetDailyQuests(player, day)
     local ids = DailyQuests.selectForDay(day, 3)
     player:SetAttribute("QuestDay", day)
@@ -99,6 +131,7 @@ function PlayerData.load(player)
     end
 
     applyAttributes(player, data)
+    setupLeaderstats(player)
     PlayerData.ensureDailyQuests(player)
 
     active[player] = true
