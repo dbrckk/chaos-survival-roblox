@@ -1,5 +1,4 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Cosmetics = require(ReplicatedStorage.Shared.Cosmetics)
+local Cosmetics = require(script.Parent.CosmeticsCatalog)
 
 local CosmeticInventory = {}
 
