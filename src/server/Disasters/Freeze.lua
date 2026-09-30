@@ -45,6 +45,9 @@ function D.start(ctx)
             if not ctx.Active() then break end
 
             for _, player in ipairs(ctx.Contestants or {}) do
+                if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
+                    continue
+                end
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
                     local oldSpeed = hum.WalkSpeed
