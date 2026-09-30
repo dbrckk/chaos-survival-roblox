@@ -15,6 +15,8 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Daily login rewards and streaks
 - Daily quests with persistent progress and automatic rewards
 - Server-side vote rate limiting
+- Persistent cosmetic inventory with level unlocks
+- Server-authoritative cosmetic equipment and visible player trails
 - Server-side reward handling
 - No paid assets required
 
