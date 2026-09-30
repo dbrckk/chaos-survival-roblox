@@ -7,6 +7,7 @@ local PlayerData = require(script.PlayerData)
 local RateLimiter = require(script.RateLimiter)
 local CosmeticService = require(script.CosmeticService)
 local AchievementService = require(script.AchievementService)
+local SoloRules = require(script.SoloRules)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -163,13 +164,38 @@ local function winningOption()
     return winners[math.random(1, #winners)]
 end
 
-local function runDisasterSet(selected, contestants)
+local function runDisasterSet(selected, contestants, roundSettings)
     local roundActive = true
     local cleanup = {}
     local onCleanup = {}
+    local eliminated = {}
+    local deathConnections = {}
+
+    for _, player in ipairs(contestants) do
+        eliminated[player.UserId] = false
+        local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            deathConnections[player.UserId] = hum.Died:Connect(function()
+                eliminated[player.UserId] = true
+            end)
+        end
+    end
+
+    local function anyContestantRemaining()
+        for _, player in ipairs(contestants) do
+            if player.Parent == Players and not eliminated[player.UserId] then
+                local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    return true
+                end
+            end
+        end
+        return false
+    end
 
     local ctx = {
         Config = Config,
+        RoundSeconds = roundSettings.RoundSeconds,
         Cleanup = cleanup,
         OnCleanup = onCleanup,
         Active = function() return roundActive end,
@@ -183,30 +209,47 @@ local function runDisasterSet(selected, contestants)
         end
     end
 
-    for t = Config.RoundSeconds, 1, -1 do
+    local endedEarly = false
+    for t = roundSettings.RoundSeconds, 1, -1 do
+        if not anyContestantRemaining() then
+            endedEarly = true
+            break
+        end
+
         local title = selected[1].Name
         local hint = selected[1].Hint
 
         if #selected > 1 then
             title = "DOUBLE CHAOS: " .. selected[1].Name .. " + " .. selected[2].Name
             hint = selected[1].Hint .. " / " .. selected[2].Hint
+        elseif roundSettings.Solo then
+            title = "SOLO RUSH: " .. title
         end
 
         broadcast({
             phase = "round",
             title = title,
-            hint = hint,
+            hint = roundSettings.Solo and ("Solo bonus active • " .. hint) or hint,
             seconds = t,
             doubleChaos = #selected > 1,
+            soloMode = roundSettings.Solo,
         })
+
         task.wait(1)
     end
 
     roundActive = false
+
+    for _, connection in pairs(deathConnections) do
+        connection:Disconnect()
+    end
+
     for _, fn in ipairs(onCleanup) do pcall(fn) end
     for _, obj in ipairs(cleanup) do
         if obj and obj.Parent then obj:Destroy() end
     end
+
+    return eliminated, endedEarly
 end
 
 while true do
@@ -219,9 +262,11 @@ while true do
     currentOptions = chooseVoteOptions()
     voteOpen = false
 
-    for t = Config.IntermissionSeconds, 1, -1 do
+    local intermissionSettings = SoloRules.resolve(Config, #Players:GetPlayers())
+
+    for t = intermissionSettings.IntermissionSeconds, 1, -1 do
         local options = nil
-        if t <= Config.VoteSeconds then
+        if t <= intermissionSettings.VoteSeconds then
             voteOpen = true
             options = {}
             for _, d in ipairs(currentOptions) do
@@ -231,10 +276,11 @@ while true do
 
         broadcast({
             phase = "intermission",
-            title = options and "VOTE FOR THE NEXT CHAOS" or "NEXT ROUND",
-            hint = options and "Choose one" or "Get ready",
+            title = options and "VOTE FOR THE NEXT CHAOS" or (intermissionSettings.Solo and "SOLO RUSH" or "NEXT ROUND"),
+            hint = options and "Choose one" or (intermissionSettings.Solo and "Fast rounds • bonus rewards" or "Get ready"),
             seconds = t,
             voteOptions = options,
+            soloMode = intermissionSettings.Solo,
         })
         task.wait(1)
     end
@@ -245,6 +291,7 @@ while true do
     roundNumber += 1
 
     local contestants = Players:GetPlayers()
+    local roundSettings = SoloRules.resolve(Config, #contestants)
     for i, p in ipairs(contestants) do
         if not p.Character or not alive(p) then
             p:LoadCharacter()
@@ -256,8 +303,8 @@ while true do
     end
 
     local selectedSet = {selected}
-    local forceDouble = (roundNumber % Config.DoubleChaosEvery == 0)
-    if forceDouble or math.random() < Config.DoubleChaosChance then
+    local forceDouble = (roundNumber % roundSettings.DoubleChaosEvery == 0)
+    if forceDouble or math.random() < roundSettings.DoubleChaosChance then
         local candidates = {}
         for _, d in ipairs(disasters) do
             if d.Id ~= selected.Id then table.insert(candidates, d) end
@@ -265,19 +312,22 @@ while true do
         table.insert(selectedSet, candidates[math.random(1, #candidates)])
     end
 
-    runDisasterSet(selectedSet, contestants)
+    local eliminated, endedEarly = runDisasterSet(selectedSet, contestants, roundSettings)
 
     local survivors = 0
+    local winCoins = SoloRules.reward(Config.WinCoins, roundSettings.WinCoinMultiplier)
+    local winXP = SoloRules.reward(Config.WinXP, roundSettings.WinXPMultiplier)
     for _, p in ipairs(contestants) do
         if p.Parent == Players then
-            if alive(p) then
+            local survived = eliminated[p.UserId] ~= true and alive(p)
+            if survived then
                 survivors += 1
-                PlayerData.add(p, "Coins", Config.WinCoins)
-                PlayerData.add(p, "XP", Config.WinXP)
+                PlayerData.add(p, "Coins", winCoins)
+                PlayerData.add(p, "XP", winXP)
                 PlayerData.add(p, "Wins", 1)
 
                 progressQuest(p, "survive_round", 1)
-                progressQuest(p, "coins_earned", Config.WinCoins)
+                progressQuest(p, "coins_earned", winCoins)
 
                 if #selectedSet > 1 then
                     PlayerData.add(p, "DoubleChaosSurvivals", 1)
@@ -292,12 +342,26 @@ while true do
         end
     end
 
-    for t = Config.PostRoundSeconds, 1, -1 do
+    local resultTitle
+    local resultHint
+
+    if roundSettings.Solo then
+        resultTitle = survivors > 0 and "SOLO SURVIVED!" or "ELIMINATED"
+        resultHint = survivors > 0
+            and ("Solo reward +" .. winCoins .. " coins")
+            or (endedEarly and "Quick retry incoming" or "Try again")
+    else
+        resultTitle = survivors .. " SURVIVED"
+        resultHint = "Survivors +" .. winCoins .. " coins"
+    end
+
+    for t = roundSettings.PostRoundSeconds, 1, -1 do
         broadcast({
             phase = "results",
-            title = survivors .. " SURVIVED",
-            hint = "Survivors +" .. Config.WinCoins .. " coins",
+            title = resultTitle,
+            hint = resultHint,
             seconds = t,
+            soloMode = roundSettings.Solo,
         })
         task.wait(1)
     end
