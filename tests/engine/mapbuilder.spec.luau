@@ -35,7 +35,7 @@ describe("Chaos Survival engine", function()
     end)
 
     it("can hot-swap every arena variant without deleting the lobby", function()
-        local root = MapBuilder.build(Config, "Classic")
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
         local lobby = root:FindFirstChild("Lobby")
         expect(lobby ~= nil).toBe(true)
 
