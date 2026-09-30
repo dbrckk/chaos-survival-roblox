@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -11,6 +12,7 @@ local questEvent = remotes:WaitForChild("QuestUpdate")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
 local cosmeticActionEvent = remotes:WaitForChild("CosmeticAction")
 local achievementEvent = remotes:WaitForChild("AchievementState")
+local roundFeedbackEvent = remotes:WaitForChild("RoundFeedback")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosHUD"
@@ -446,6 +448,108 @@ achievementButton.Activated:Connect(function()
     achievementPanel.Visible = not achievementPanel.Visible
 end)
 
+
+local resultFlash = Instance.new("Frame")
+resultFlash.Size = UDim2.fromScale(1, 1)
+resultFlash.BackgroundColor3 = Color3.new(1, 1, 1)
+resultFlash.BackgroundTransparency = 1
+resultFlash.BorderSizePixel = 0
+resultFlash.ZIndex = 20
+resultFlash.Parent = root
+
+local resultCard = Instance.new("Frame")
+resultCard.AnchorPoint = Vector2.new(0.5, 0.5)
+resultCard.Position = UDim2.fromScale(0.5, 0.54)
+resultCard.Size = UDim2.fromScale(0.80, 0.24)
+resultCard.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
+resultCard.BackgroundTransparency = 1
+resultCard.Visible = false
+resultCard.ZIndex = 21
+resultCard.Parent = root
+Instance.new("UICorner", resultCard).CornerRadius = UDim.new(0, 22)
+
+local resultScale = Instance.new("UIScale")
+resultScale.Scale = 0.82
+resultScale.Parent = resultCard
+
+local resultTitle = Instance.new("TextLabel")
+resultTitle.Size = UDim2.new(1, -28, 0.34, 0)
+resultTitle.Position = UDim2.fromOffset(14, 10)
+resultTitle.BackgroundTransparency = 1
+resultTitle.Font = Enum.Font.GothamBlack
+resultTitle.TextColor3 = Color3.new(1, 1, 1)
+resultTitle.TextScaled = true
+resultTitle.ZIndex = 22
+resultTitle.Text = "ROUND COMPLETE"
+resultTitle.Parent = resultCard
+
+local resultReward = Instance.new("TextLabel")
+resultReward.Size = UDim2.new(1, -28, 0.24, 0)
+resultReward.Position = UDim2.new(0, 14, 0.40, 0)
+resultReward.BackgroundTransparency = 1
+resultReward.Font = Enum.Font.GothamBold
+resultReward.TextColor3 = Color3.fromRGB(240, 225, 145)
+resultReward.TextScaled = true
+resultReward.ZIndex = 22
+resultReward.Text = ""
+resultReward.Parent = resultCard
+
+local resultMeta = Instance.new("TextLabel")
+resultMeta.Size = UDim2.new(1, -28, 0.22, 0)
+resultMeta.Position = UDim2.new(0, 14, 0.68, 0)
+resultMeta.BackgroundTransparency = 1
+resultMeta.Font = Enum.Font.GothamMedium
+resultMeta.TextColor3 = Color3.fromRGB(220, 225, 235)
+resultMeta.TextScaled = true
+resultMeta.ZIndex = 22
+resultMeta.Text = ""
+resultMeta.Parent = resultCard
+
+local resultToken = 0
+
+local function showRoundFeedback(feedback)
+    resultToken += 1
+    local token = resultToken
+
+    local survived = feedback.survived == true
+    resultTitle.Text = survived and "SURVIVED!" or "ELIMINATED"
+    resultReward.Text = string.format("+%d COINS   +%d XP", feedback.coins or 0, feedback.xp or 0)
+
+    local tags = {}
+    table.insert(tags, tostring(feedback.arenaName or "ARENA"))
+    table.insert(tags, tostring(feedback.disasterName or "CHAOS"))
+    if feedback.doubleChaos then table.insert(tags, "DOUBLE CHAOS") end
+    if feedback.soloMode then table.insert(tags, "SOLO RUSH") end
+    table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
+    resultMeta.Text = table.concat(tags, "  •  ")
+
+    resultCard.BackgroundColor3 = survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40)
+    resultFlash.BackgroundColor3 = survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95)
+
+    resultCard.Visible = true
+    resultCard.BackgroundTransparency = 1
+    resultScale.Scale = 0.82
+    resultFlash.BackgroundTransparency = 1
+
+    TweenService:Create(resultFlash, TweenInfo.new(0.12), {BackgroundTransparency = 0.72}):Play()
+    TweenService:Create(resultCard, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0.04}):Play()
+    TweenService:Create(resultScale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+    task.delay(0.14, function()
+        TweenService:Create(resultFlash, TweenInfo.new(0.28), {BackgroundTransparency = 1}):Play()
+    end)
+
+    task.delay(3.4, function()
+        if token ~= resultToken then return end
+        TweenService:Create(resultCard, TweenInfo.new(0.22), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(resultScale, TweenInfo.new(0.22), {Scale = 0.90}):Play()
+        task.wait(0.24)
+        if token == resultToken then
+            resultCard.Visible = false
+        end
+    end)
+end
+
 local function refreshStats()
     stats.Text = string.format(
         "LVL %d    🪙 %d    🏆 %d",
@@ -499,6 +603,11 @@ end
 
 
 
+
+
+roundFeedbackEvent.OnClientEvent:Connect(function(feedback)
+    showRoundFeedback(feedback)
+end)
 
 achievementEvent.OnClientEvent:Connect(function(payload)
     if payload.state then
@@ -569,6 +678,14 @@ stateEvent.OnClientEvent:Connect(function(state)
     title.Text = state.title or "CHAOS SURVIVAL"
     hint.Text = state.hint or ""
     timer.Text = tostring(state.seconds or 0)
+
+    if state.phase == "round" and (state.seconds or 0) <= 5 then
+        timer.BackgroundColor3 = Color3.fromRGB(225, 55, 55)
+        timer.Rotation = ((state.seconds or 0) % 2 == 0) and -4 or 4
+    else
+        timer.BackgroundColor3 = Color3.fromRGB(255, 90, 55)
+        timer.Rotation = 0
+    end
 
     if state.doubleChaos then
         top.BackgroundColor3 = Color3.fromRGB(90, 20, 120)
