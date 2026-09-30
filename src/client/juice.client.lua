@@ -59,6 +59,15 @@ vignette.BorderSizePixel = 0
 vignette.ZIndex = 1
 vignette.Parent = gui
 
+local damageFlash = Instance.new("Frame")
+damageFlash.Name = "DamageFlash"
+damageFlash.Size = UDim2.fromScale(1, 1)
+damageFlash.BackgroundColor3 = Color3.fromRGB(210, 35, 35)
+damageFlash.BackgroundTransparency = 1
+damageFlash.BorderSizePixel = 0
+damageFlash.ZIndex = 24
+damageFlash.Parent = gui
+
 local banner = Instance.new("Frame")
 banner.AnchorPoint = Vector2.new(0.5, 0.5)
 banner.Position = UDim2.fromScale(0.5, 0.42)
@@ -411,3 +420,40 @@ task.spawn(function()
         )
     end
 end)
+
+
+local healthConnection = nil
+
+local function bindDamageFeedback(character)
+    if healthConnection then
+        healthConnection:Disconnect()
+        healthConnection = nil
+    end
+
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if not humanoid then
+        return
+    end
+
+    local previousHealth = humanoid.Health
+    healthConnection = humanoid.HealthChanged:Connect(function(health)
+        if health < previousHealth and health > 0 then
+            local lost = previousHealth - health
+            damageFlash.BackgroundTransparency = math.clamp(0.88 - (lost / 250), 0.66, 0.88)
+            TweenService:Create(
+                damageFlash,
+                TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = 1}
+            ):Play()
+
+            tweenCamera(math.min(84, (camera and camera.FieldOfView or 72) + 2.5), 0.06)
+        end
+        previousHealth = health
+    end)
+end
+
+if player.Character then
+    task.spawn(bindDamageFeedback, player.Character)
+end
+
+player.CharacterAdded:Connect(bindDamageFeedback)
