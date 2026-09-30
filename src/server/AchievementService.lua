@@ -106,6 +106,10 @@ local function setupPlayer(player)
     end)
 end
 
+function AchievementService.sync(player)
+    evaluate(player)
+end
+
 function AchievementService.init(remotes)
     stateEvent = remotes:FindFirstChild("AchievementState") or Instance.new("RemoteEvent")
     stateEvent.Name = "AchievementState"
