@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MapBuilder = require(script.MapBuilder)
 local PlayerData = require(script.PlayerData)
+local RateLimiter = require(script.RateLimiter)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -16,6 +17,10 @@ stateEvent.Parent = remotes
 local voteEvent = remotes:FindFirstChild("VoteDisaster") or Instance.new("RemoteEvent")
 voteEvent.Name = "VoteDisaster"
 voteEvent.Parent = remotes
+
+local dailyRewardEvent = remotes:FindFirstChild("DailyReward") or Instance.new("RemoteEvent")
+dailyRewardEvent.Name = "DailyReward"
+dailyRewardEvent.Parent = remotes
 
 PlayerData.init()
 MapBuilder.build(Config)
@@ -33,6 +38,8 @@ assert(#disasters >= 3, "At least 3 disasters are required")
 local roundNumber = 0
 local currentVotes = {}
 local currentOptions = {}
+local voteOpen = false
+local allowVote = RateLimiter.new(0.2)
 
 local function broadcast(payload)
     stateEvent:FireAllClients(payload)
@@ -73,8 +80,37 @@ local function validOption(id)
     return false
 end
 
+local function setupDailyReward(player)
+    task.spawn(function()
+        if not player:GetAttribute("DataLoaded") then
+            player:GetAttributeChangedSignal("DataLoaded"):Wait()
+        end
+
+        if player.Parent ~= Players or not player:GetAttribute("DataLoaded") then
+            return
+        end
+
+        local claim = PlayerData.claimDaily(player)
+        if claim then
+            dailyRewardEvent:FireClient(player, {
+                streak = claim.Streak,
+                coins = claim.Coins,
+                xp = claim.XP,
+                rewardIndex = claim.RewardIndex,
+            })
+        end
+    end)
+end
+
+Players.PlayerAdded:Connect(setupDailyReward)
+for _, player in ipairs(Players:GetPlayers()) do
+    setupDailyReward(player)
+end
+
 voteEvent.OnServerEvent:Connect(function(player, disasterId)
+    if not voteOpen then return end
     if type(disasterId) ~= "string" then return end
+    if not allowVote(player.UserId) then return end
     if not validOption(disasterId) then return end
     currentVotes[player.UserId] = disasterId
 end)
@@ -155,10 +191,12 @@ while true do
 
     currentVotes = {}
     currentOptions = chooseVoteOptions()
+    voteOpen = false
 
     for t = Config.IntermissionSeconds, 1, -1 do
         local options = nil
         if t <= Config.VoteSeconds then
+            voteOpen = true
             options = {}
             for _, d in ipairs(currentOptions) do
                 table.insert(options, {id = d.Id, name = d.Name, hint = d.Hint})
@@ -174,6 +212,8 @@ while true do
         })
         task.wait(1)
     end
+
+    voteOpen = false
 
     local selected = winningOption()
     roundNumber += 1
