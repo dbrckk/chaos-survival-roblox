@@ -41,8 +41,12 @@ local function makeSound(name, definition, group)
 end
 
 local sfx = {}
+local basePlaybackSpeeds = {}
+local baseVolumes = {}
 for name, definition in pairs(AudioConfig.Sfx) do
     sfx[name] = makeSound(name, definition, sfxGroup)
+    basePlaybackSpeeds[name] = definition.PlaybackSpeed or 1
+    baseVolumes[name] = definition.Volume or 0.3
 end
 
 local lobbyMusic = makeSound("LobbyMusic", AudioConfig.Music.Lobby, musicGroup)
@@ -54,10 +58,17 @@ local lastTitle = nil
 local lastCountdown = nil
 local lastLevel = player:GetAttribute("Level") or 1
 local lastSurvivorCuePlayed = false
+local currentIntensity = 1
 
-local function play(name)
+local function play(name, pitchVariance)
     local sound = sfx[name]
     if not sound then return end
+
+    local baseSpeed = basePlaybackSpeeds[name] or 1
+    local variance = math.max(0, tonumber(pitchVariance) or 0)
+    local offset = variance > 0 and ((math.random() * 2 - 1) * variance) or 0
+    sound.PlaybackSpeed = math.clamp(baseSpeed + offset, 0.5, 2.5)
+    sound.Volume = baseVolumes[name] or sound.Volume
     sound.TimePosition = 0
     sound:Play()
 end
@@ -69,7 +80,7 @@ local function bindButton(instance)
 
     boundButtons[instance] = true
     instance.Activated:Connect(function()
-        play("UISelect")
+        play("UISelect", 0.035)
     end)
 end
 
@@ -100,6 +111,11 @@ local function setDisasterLoop(disasterIds)
     stopDisasterLoop()
     if targetName and sfx[targetName] then
         activeLoopName = targetName
+        sfx[targetName].PlaybackSpeed = math.clamp(
+            (basePlaybackSpeeds[targetName] or 1) * (0.96 + (currentIntensity * 0.04)),
+            0.6,
+            1.5
+        )
         sfx[targetName]:Play()
     end
 end
@@ -115,6 +131,21 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = state.phase
     local seconds = tonumber(state.seconds) or 0
+    currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
+
+    lobbyMusic.PlaybackSpeed = math.clamp(
+        (AudioConfig.Music.Lobby.PlaybackSpeed or 1) * (0.985 + ((currentIntensity - 0.9) * 0.05)),
+        0.96,
+        1.04
+    )
+
+    if activeLoopName and sfx[activeLoopName] then
+        sfx[activeLoopName].PlaybackSpeed = math.clamp(
+            (basePlaybackSpeeds[activeLoopName] or 1) * (0.96 + (currentIntensity * 0.04)),
+            0.6,
+            1.5
+        )
+    end
 
     if phase == "ready" then
         stopDisasterLoop()
@@ -139,7 +170,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
 
         if seconds <= 5 and seconds > 0 and seconds ~= lastCountdown then
-            play("Countdown")
+            play("Countdown", 0.02)
             lastCountdown = seconds
         end
 
@@ -170,11 +201,11 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
-    play(feedback.survived and "Survived" or "Eliminated")
+    play(feedback.survived and "Survived" or "Eliminated", 0.025)
 
     if (tonumber(feedback.streakBonusCoins) or 0) > 0 then
         task.delay(0.16, function()
-            play("Reward")
+            play("Reward", 0.045)
         end)
     end
 end)
