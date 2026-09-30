@@ -1,0 +1,228 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MapBuilder = require(script.MapBuilder)
+local PlayerData = require(script.PlayerData)
+
+local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
+remotes.Name = "Remotes"
+remotes.Parent = ReplicatedStorage
+
+local stateEvent = remotes:FindFirstChild("RoundState") or Instance.new("RemoteEvent")
+stateEvent.Name = "RoundState"
+stateEvent.Parent = remotes
+
+local voteEvent = remotes:FindFirstChild("VoteDisaster") or Instance.new("RemoteEvent")
+voteEvent.Name = "VoteDisaster"
+voteEvent.Parent = remotes
+
+PlayerData.init()
+MapBuilder.build(Config)
+
+local disasters = {}
+for _, module in ipairs(script.Disasters:GetChildren()) do
+    if module:IsA("ModuleScript") then
+        local loaded = require(module)
+        loaded.Id = module.Name
+        table.insert(disasters, loaded)
+    end
+end
+assert(#disasters >= 3, "At least 3 disasters are required")
+
+local roundNumber = 0
+local currentVotes = {}
+local currentOptions = {}
+
+local function broadcast(payload)
+    stateEvent:FireAllClients(payload)
+end
+
+local function alive(player)
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    return hum ~= nil and hum.Health > 0
+end
+
+local function teleportToArena(player, index)
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local spawns = workspace.GeneratedMap.Arena.Spawns:GetChildren()
+    if root and #spawns > 0 then
+        root.CFrame = spawns[((index - 1) % #spawns) + 1].CFrame + Vector3.new(0, 4, 0)
+    end
+end
+
+local function shuffledPool()
+    local pool = table.clone(disasters)
+    for i = #pool, 2, -1 do
+        local j = math.random(1, i)
+        pool[i], pool[j] = pool[j], pool[i]
+    end
+    return pool
+end
+
+local function chooseVoteOptions()
+    local pool = shuffledPool()
+    return {pool[1], pool[2], pool[3]}
+end
+
+local function validOption(id)
+    for _, d in ipairs(currentOptions) do
+        if d.Id == id then return true end
+    end
+    return false
+end
+
+voteEvent.OnServerEvent:Connect(function(player, disasterId)
+    if type(disasterId) ~= "string" then return end
+    if not validOption(disasterId) then return end
+    currentVotes[player.UserId] = disasterId
+end)
+
+local function winningOption()
+    local counts = {}
+    for _, d in ipairs(currentOptions) do counts[d.Id] = 0 end
+    for _, id in pairs(currentVotes) do
+        if counts[id] ~= nil then counts[id] += 1 end
+    end
+
+    local bestCount = -1
+    local winners = {}
+    for _, d in ipairs(currentOptions) do
+        local count = counts[d.Id] or 0
+        if count > bestCount then
+            bestCount = count
+            winners = {d}
+        elseif count == bestCount then
+            table.insert(winners, d)
+        end
+    end
+
+    return winners[math.random(1, #winners)]
+end
+
+local function runDisasterSet(selected, contestants)
+    local roundActive = true
+    local cleanup = {}
+    local onCleanup = {}
+
+    local ctx = {
+        Config = Config,
+        Cleanup = cleanup,
+        OnCleanup = onCleanup,
+        Active = function() return roundActive end,
+        Contestants = contestants,
+    }
+
+    for _, disaster in ipairs(selected) do
+        local ok, err = pcall(disaster.start, ctx)
+        if not ok then
+            warn("Disaster failed to start:", disaster.Id, err)
+        end
+    end
+
+    for t = Config.RoundSeconds, 1, -1 do
+        local title = selected[1].Name
+        local hint = selected[1].Hint
+
+        if #selected > 1 then
+            title = "DOUBLE CHAOS: " .. selected[1].Name .. " + " .. selected[2].Name
+            hint = selected[1].Hint .. " / " .. selected[2].Hint
+        end
+
+        broadcast({
+            phase = "round",
+            title = title,
+            hint = hint,
+            seconds = t,
+            doubleChaos = #selected > 1,
+        })
+        task.wait(1)
+    end
+
+    roundActive = false
+    for _, fn in ipairs(onCleanup) do pcall(fn) end
+    for _, obj in ipairs(cleanup) do
+        if obj and obj.Parent then obj:Destroy() end
+    end
+end
+
+while true do
+    while #Players:GetPlayers() < Config.MinimumPlayers do
+        broadcast({phase = "waiting", title = "WAITING FOR PLAYERS", hint = "", seconds = 0})
+        task.wait(1)
+    end
+
+    currentVotes = {}
+    currentOptions = chooseVoteOptions()
+
+    for t = Config.IntermissionSeconds, 1, -1 do
+        local options = nil
+        if t <= Config.VoteSeconds then
+            options = {}
+            for _, d in ipairs(currentOptions) do
+                table.insert(options, {id = d.Id, name = d.Name, hint = d.Hint})
+            end
+        end
+
+        broadcast({
+            phase = "intermission",
+            title = options and "VOTE FOR THE NEXT CHAOS" or "NEXT ROUND",
+            hint = options and "Choose one" or "Get ready",
+            seconds = t,
+            voteOptions = options,
+        })
+        task.wait(1)
+    end
+
+    local selected = winningOption()
+    roundNumber += 1
+
+    local contestants = Players:GetPlayers()
+    for i, p in ipairs(contestants) do
+        if not p.Character or not alive(p) then
+            p:LoadCharacter()
+            task.wait(0.1)
+        end
+        teleportToArena(p, i)
+        PlayerData.add(p, "Games", 1)
+    end
+
+    local selectedSet = {selected}
+    local forceDouble = (roundNumber % Config.DoubleChaosEvery == 0)
+    if forceDouble or math.random() < Config.DoubleChaosChance then
+        local candidates = {}
+        for _, d in ipairs(disasters) do
+            if d.Id ~= selected.Id then table.insert(candidates, d) end
+        end
+        table.insert(selectedSet, candidates[math.random(1, #candidates)])
+    end
+
+    runDisasterSet(selectedSet, contestants)
+
+    local survivors = 0
+    for _, p in ipairs(contestants) do
+        if p.Parent == Players then
+            if alive(p) then
+                survivors += 1
+                PlayerData.add(p, "Coins", Config.WinCoins)
+                PlayerData.add(p, "XP", Config.WinXP)
+                PlayerData.add(p, "Wins", 1)
+            else
+                PlayerData.add(p, "Coins", Config.ParticipationCoins)
+                PlayerData.add(p, "XP", Config.ParticipationXP)
+            end
+            p:LoadCharacter()
+        end
+    end
+
+    for t = Config.PostRoundSeconds, 1, -1 do
+        broadcast({
+            phase = "results",
+            title = survivors .. " SURVIVED",
+            hint = "Survivors +" .. Config.WinCoins .. " coins",
+            seconds = t,
+        })
+        task.wait(1)
+    end
+end
