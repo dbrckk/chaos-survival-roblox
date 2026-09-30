@@ -1,4 +1,3 @@
-local Players = game:GetService("Players")
 local D = {Name = "FREEZE PULSE", Hint = "MOVE BETWEEN SHORT FREEZES!"}
 
 function D.start(ctx)
@@ -8,7 +7,7 @@ function D.start(ctx)
     task.spawn(function()
         while ctx.Active() do
             task.wait(math.random(5, 7))
-            for _, player in ipairs(Players:GetPlayers()) do
+            for _, player in ipairs(ctx.Contestants or {}) do
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
                     local oldSpeed = hum.WalkSpeed
