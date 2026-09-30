@@ -58,6 +58,10 @@ local roundFeedbackEvent = remotes:FindFirstChild("RoundFeedback") or Instance.n
 roundFeedbackEvent.Name = "RoundFeedback"
 roundFeedbackEvent.Parent = remotes
 
+local clientReadyEvent = remotes:FindFirstChild("ClientReady") or Instance.new("RemoteEvent")
+clientReadyEvent.Name = "ClientReady"
+clientReadyEvent.Parent = remotes
+
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
 AchievementService.init(remotes)
@@ -184,18 +188,44 @@ local function setupDailyReward(player)
     end)
 end
 
+local clientReady = {}
+
+local function syncInitialClientState(player)
+    if clientReady[player] then
+        return
+    end
+    clientReady[player] = true
+
+    task.spawn(function()
+        if not player:GetAttribute("DataLoaded") then
+            player:GetAttributeChangedSignal("DataLoaded"):Wait()
+        end
+
+        if player.Parent ~= Players or not player:GetAttribute("DataLoaded") then
+            return
+        end
+
+        setupDailyReward(player)
+        CosmeticService.sync(player)
+        AchievementService.sync(player)
+    end)
+end
+
+clientReadyEvent.OnServerEvent:Connect(function(player)
+    syncInitialClientState(player)
+end)
+
 Players.PlayerAdded:Connect(function(player)
     GameAnalytics.sessionStarted(player, #Players:GetPlayers())
-    setupDailyReward(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
+    clientReady[player] = nil
     GameAnalytics.sessionEnded(player)
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
     GameAnalytics.sessionStarted(player, #Players:GetPlayers())
-    setupDailyReward(player)
 end
 
 voteEvent.OnServerEvent:Connect(function(player, disasterId)
