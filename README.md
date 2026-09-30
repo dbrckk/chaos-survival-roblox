@@ -17,6 +17,8 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Server-side vote rate limiting
 - Persistent cosmetic inventory with level unlocks
 - Server-authoritative cosmetic equipment and visible player trails
+- Persistent long-term achievements with server-side rewards
+- Mobile achievements progress panel and unlock notifications
 - Server-side reward handling
 - No paid assets required
 
@@ -55,7 +57,7 @@ The next milestones are:
 - anti-exploit sanity checks
 - daily quests and streak rewards
 - cosmetic inventory
-- badges / achievements
+- analytics hooks
 - analytics hooks
 - retention balancing
 - monetization only after retention is validated
