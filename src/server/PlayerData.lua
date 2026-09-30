@@ -1,7 +1,9 @@
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 
-local store = DataStoreService:GetDataStore("ChaosSurvival_v2")
+local DailyRewards = require(script.Parent.DailyRewards)
+
+local store = DataStoreService:GetDataStore("ChaosSurvival_v3")
 local PlayerData = {}
 
 local DEFAULT = {
@@ -11,6 +13,8 @@ local DEFAULT = {
     Games = 0,
     Level = 1,
     BestStreak = 0,
+    DailyStreak = 0,
+    LastDailyDay = -1,
 }
 
 local function cloneDefault()
@@ -21,6 +25,13 @@ end
 
 local function levelForXP(xp)
     return math.max(1, math.floor(math.sqrt(math.max(0, xp) / 100)) + 1)
+end
+
+local function applyAttributes(player, data)
+    data.Level = levelForXP(data.XP)
+    for k,v in pairs(data) do
+        player:SetAttribute(k, v)
+    end
 end
 
 function PlayerData.load(player)
@@ -35,16 +46,20 @@ function PlayerData.load(player)
                 data[k] = saved[k]
             end
         end
+    elseif not ok then
+        warn("Failed to load player data", player.UserId, saved)
     end
 
-    data.Level = levelForXP(data.XP)
-    for k,v in pairs(data) do player:SetAttribute(k, v) end
+    applyAttributes(player, data)
 end
 
 function PlayerData.save(player)
     local data = {}
     for k,_ in pairs(DEFAULT) do
-        data[k] = player:GetAttribute(k) or DEFAULT[k]
+        data[k] = player:GetAttribute(k)
+        if data[k] == nil then
+            data[k] = DEFAULT[k]
+        end
     end
 
     local ok, err = pcall(function()
@@ -56,6 +71,8 @@ function PlayerData.save(player)
     if not ok then
         warn("Failed to save player data", player.UserId, err)
     end
+
+    return ok
 end
 
 function PlayerData.add(player, field, amount)
@@ -65,6 +82,32 @@ function PlayerData.add(player, field, amount)
     if field == "XP" then
         player:SetAttribute("Level", levelForXP(value))
     end
+
+    return value
+end
+
+function PlayerData.claimDaily(player, nowTimestamp)
+    local currentDay = DailyRewards.dayNumber(nowTimestamp or os.time())
+    local claim = DailyRewards.compute(
+        player:GetAttribute("LastDailyDay"),
+        currentDay,
+        player:GetAttribute("DailyStreak")
+    )
+
+    if not claim then
+        return nil
+    end
+
+    player:SetAttribute("LastDailyDay", claim.Day)
+    player:SetAttribute("DailyStreak", claim.Streak)
+
+    local best = math.max(player:GetAttribute("BestStreak") or 0, claim.Streak)
+    player:SetAttribute("BestStreak", best)
+
+    PlayerData.add(player, "Coins", claim.Coins)
+    PlayerData.add(player, "XP", claim.XP)
+
+    return claim
 end
 
 function PlayerData.init()
