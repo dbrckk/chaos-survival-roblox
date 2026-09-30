@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local BadgeService = game:GetService("BadgeService")
 
 local Achievements = require(script.Parent.Achievements)
+local PlayerData = require(script.Parent.PlayerData)
 
 local AchievementService = {}
 
@@ -59,8 +60,8 @@ local function evaluate(player)
         for _, id in ipairs(unlockedNow) do
             local def = Achievements.get(id)
             if def then
-                player:SetAttribute("Coins", (player:GetAttribute("Coins") or 0) + def.Coins)
-                player:SetAttribute("XP", (player:GetAttribute("XP") or 0) + def.XP)
+                PlayerData.add(player, "Coins", def.Coins)
+                PlayerData.add(player, "XP", def.XP)
                 awardRobloxBadge(player, def)
             end
         end
