@@ -131,6 +131,8 @@ ArenaVariants.Definitions = {
     },
 }
 
+local legacyRecent = {}
+
 function ArenaVariants.get(id)
     return ArenaVariants.Definitions[id]
 end
@@ -166,7 +168,13 @@ function ArenaVariants.pushRecent(recentIds, id, limit)
 end
 
 function ArenaVariants.choose(previousId)
-    return ArenaVariants.chooseRecent(previousId and {previousId} or {})
+    if previousId then
+        legacyRecent = ArenaVariants.pushRecent(legacyRecent, previousId, 2)
+    end
+
+    local chosen = ArenaVariants.chooseRecent(legacyRecent)
+    legacyRecent = ArenaVariants.pushRecent(legacyRecent, chosen, 2)
+    return chosen
 end
 
 return ArenaVariants
