@@ -24,6 +24,9 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Server-side retention and gameplay analytics segmented by Solo/Multiplayer
 - Economy analytics for Coins sources, daily rewards, quests and achievements
 - Onboarding funnel tracking from join to first survival
+- Three rotating arena layouts with no immediate repeat
+- Animated personal round-result feedback with reward breakdown
+- Final-five-second danger timer feedback
 - Server-side reward handling
 - No paid assets required
 
@@ -58,7 +61,7 @@ For DataStore tests in Studio, use a test experience and enable:
 
 The next milestones are:
 
-- round-end polish and feedback
+- round-end polish and feedback ✅
 - anti-exploit sanity checks
 - daily quests and streak rewards
 - cosmetic inventory
