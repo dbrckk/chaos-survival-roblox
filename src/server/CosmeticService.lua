@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local Cosmetics = require(script.Parent.CosmeticsCatalog)
+local GameAnalytics = require(script.Parent.GameAnalytics)
 
 local CosmeticService = {}
 
@@ -150,6 +151,14 @@ function CosmeticService.init(remotes, rateLimiterFactory)
         player:SetAttribute("EquippedCosmetic", cosmeticId)
         applyEffect(player)
         sendState(player)
+
+        GameAnalytics.custom(
+            player,
+            "CosmeticEquipped",
+            1,
+            "Cosmetic:" .. cosmeticId,
+            "Level:" .. tostring(player:GetAttribute("Level") or 1)
+        )
     end)
 
     Players.PlayerAdded:Connect(setupPlayer)
