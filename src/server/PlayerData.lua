@@ -27,6 +27,9 @@ local DEFAULT = {
     Quest3Id = "",
     Quest3Progress = 0,
     Quest3Claimed = false,
+
+    OwnedCosmetics = "",
+    EquippedCosmetic = "",
 }
 
 local function cloneDefault()
