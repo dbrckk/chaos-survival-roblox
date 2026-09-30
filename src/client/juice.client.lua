@@ -32,6 +32,16 @@ rays.Intensity = 0.035
 rays.Spread = 0.82
 rays.Parent = Lighting
 
+local atmosphere = Lighting:FindFirstChild("ChaosAtmosphere") or Instance.new("Atmosphere")
+atmosphere.Name = "ChaosAtmosphere"
+atmosphere.Density = 0.18
+atmosphere.Offset = 0.15
+atmosphere.Color = Color3.fromRGB(205, 215, 235)
+atmosphere.Decay = Color3.fromRGB(90, 100, 125)
+atmosphere.Glare = 0.04
+atmosphere.Haze = 0.8
+atmosphere.Parent = Lighting
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosJuice"
 gui.ResetOnSpawn = false
@@ -157,6 +167,8 @@ local function setMood(state)
         roundDanger = (tonumber(state.seconds) or 99) <= 5
 
         if doubleChaos then
+            atmosphere.Density = 0.23
+            atmosphere.Haze = 1.15
             bloom.Intensity = 0.75
             color.Contrast = 0.16
             color.Saturation = 0.22
@@ -164,6 +176,8 @@ local function setMood(state)
             vignette.BackgroundColor3 = Color3.fromRGB(115, 15, 160)
             tweenCamera(roundDanger and 82 or 78, 0.24)
         else
+            atmosphere.Density = 0.18
+            atmosphere.Haze = 0.82
             bloom.Intensity = 0.48
             color.Contrast = 0.10
             color.Saturation = 0.14
@@ -183,6 +197,8 @@ local function setMood(state)
         end
     elseif phase == "results" then
         roundDanger = false
+        atmosphere.Density = 0.15
+        atmosphere.Haze = 0.65
         bloom.Intensity = 0.42
         color.Contrast = 0.08
         color.Saturation = 0.10
@@ -190,6 +206,8 @@ local function setMood(state)
         tweenCamera(72, 0.35)
     else
         roundDanger = false
+        atmosphere.Density = 0.14
+        atmosphere.Haze = 0.55
         bloom.Intensity = 0.30
         color.Contrast = 0.05
         color.Saturation = 0.06
