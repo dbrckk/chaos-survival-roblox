@@ -13,21 +13,20 @@ local EFFECT_NAMES = {
     "ChaosTrailA1",
     "ChaosAura",
     "ChaosAuraLight",
-    "ChaosAuraHighlight",
 }
 
-local function clearEffect(character)
+local function clearEffects(character)
     local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    for _, name in ipairs(EFFECT_NAMES) do
-        local obj = root:FindFirstChild(name)
-        if obj then
-            obj:Destroy()
+    if root then
+        for _, name in ipairs(EFFECT_NAMES) do
+            local obj = root:FindFirstChild(name)
+            if obj then
+                obj:Destroy()
+            end
         end
     end
 
-    local highlight = character:FindFirstChild("ChaosAuraHighlight")
+    local highlight = character and character:FindFirstChild("ChaosAuraHighlight")
     if highlight then
         highlight:Destroy()
     end
@@ -111,23 +110,32 @@ local function applyAura(character, root, item)
     highlight.Parent = character
 end
 
-local function applyEffect(player)
+local function slotForKind(kind)
+    if kind == "trail" then
+        return "EquippedTrail"
+    elseif kind == "aura" then
+        return "EquippedAura"
+    end
+    return nil
+end
+
+local function applyEffects(player)
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    clearEffect(character)
+    clearEffects(character)
 
-    local id = player:GetAttribute("EquippedCosmetic") or ""
-    local item = Cosmetics.get(id)
-    if not item then
-        return
+    local trailId = player:GetAttribute("EquippedTrail") or ""
+    local trailItem = Cosmetics.get(trailId)
+    if trailItem and trailItem.Kind == "trail" then
+        applyTrail(root, trailItem)
     end
 
-    if item.Kind == "trail" then
-        applyTrail(root, item)
-    elseif item.Kind == "aura" then
-        applyAura(character, root, item)
+    local auraId = player:GetAttribute("EquippedAura") or ""
+    local auraItem = Cosmetics.get(auraId)
+    if auraItem and auraItem.Kind == "aura" then
+        applyAura(character, root, auraItem)
     end
 end
 
@@ -136,7 +144,10 @@ local function stateFor(player)
     return {
         catalog = Cosmetics.publicList(),
         owned = owned,
-        equipped = player:GetAttribute("EquippedCosmetic") or "",
+        equipped = {
+            trail = player:GetAttribute("EquippedTrail") or "",
+            aura = player:GetAttribute("EquippedAura") or "",
+        },
         coins = math.max(0, tonumber(player:GetAttribute("Coins")) or 0),
     }
 end
@@ -151,6 +162,24 @@ local function sendState(player, unlocked, notice)
     end
 end
 
+local function normalizeSlot(player, slotAttribute, expectedKind, fallbackId)
+    local owned = player:GetAttribute("OwnedCosmetics") or ""
+    local equipped = player:GetAttribute(slotAttribute) or ""
+    local item = Cosmetics.get(equipped)
+
+    if equipped ~= "" and (not item or item.Kind ~= expectedKind or not Cosmetics.canEquip(owned, equipped)) then
+        player:SetAttribute(slotAttribute, "")
+        equipped = ""
+    end
+
+    if equipped == "" and fallbackId and Cosmetics.canEquip(owned, fallbackId) then
+        local fallback = Cosmetics.get(fallbackId)
+        if fallback and fallback.Kind == expectedKind then
+            player:SetAttribute(slotAttribute, fallbackId)
+        end
+    end
+end
+
 local function syncUnlocks(player)
     local merged, unlocked = Cosmetics.mergeLevelUnlocks(
         player:GetAttribute("OwnedCosmetics") or "",
@@ -158,16 +187,11 @@ local function syncUnlocks(player)
     )
 
     player:SetAttribute("OwnedCosmetics", merged)
-
-    local equipped = player:GetAttribute("EquippedCosmetic") or ""
-    if equipped == "" and Cosmetics.canEquip(merged, "trail_blue") then
-        player:SetAttribute("EquippedCosmetic", "trail_blue")
-    elseif not Cosmetics.canEquip(merged, equipped) then
-        player:SetAttribute("EquippedCosmetic", "")
-    end
+    normalizeSlot(player, "EquippedTrail", "trail", "trail_blue")
+    normalizeSlot(player, "EquippedAura", "aura", nil)
 
     sendState(player, unlocked)
-    applyEffect(player)
+    applyEffects(player)
 end
 
 local function setupPlayer(player)
@@ -194,13 +218,44 @@ local function setupPlayer(player)
 
         player.CharacterAdded:Connect(function()
             task.wait(0.15)
-            applyEffect(player)
+            applyEffects(player)
         end)
 
         if player.Character then
-            applyEffect(player)
+            applyEffects(player)
         end
     end)
+end
+
+local function equipCosmetic(player, cosmeticId)
+    local item = Cosmetics.get(cosmeticId)
+    if not item then
+        return false
+    end
+
+    local owned = player:GetAttribute("OwnedCosmetics") or ""
+    if not Cosmetics.canEquip(owned, cosmeticId) then
+        return false
+    end
+
+    local slot = slotForKind(item.Kind)
+    if not slot then
+        return false
+    end
+
+    player:SetAttribute(slot, cosmeticId)
+    applyEffects(player)
+    sendState(player)
+
+    GameAnalytics.custom(
+        player,
+        "CosmeticEquipped",
+        1,
+        "Cosmetic:" .. cosmeticId,
+        "Kind:" .. tostring(item.Kind),
+        "Level:" .. tostring(player:GetAttribute("Level") or 1)
+    )
+    return true
 end
 
 local function buyCosmetic(player, cosmeticId)
@@ -225,8 +280,7 @@ local function buyCosmetic(player, cosmeticId)
 
     player:SetAttribute("Coins", coins - price)
     player:SetAttribute("OwnedCosmetics", Cosmetics.buy(owned, cosmeticId))
-    player:SetAttribute("EquippedCosmetic", cosmeticId)
-    applyEffect(player)
+    equipCosmetic(player, cosmeticId)
     sendState(player, nil, "purchased")
 
     local solo = #Players:GetPlayers() <= 1
@@ -236,7 +290,7 @@ local function buyCosmetic(player, cosmeticId)
         "CosmeticPurchased",
         price,
         "Cosmetic:" .. cosmeticId,
-        "Level:" .. tostring(player:GetAttribute("Level") or 1),
+        "Kind:" .. tostring(item.Kind),
         "Mode:" .. GameAnalytics.modeLabel(solo)
     )
 end
@@ -252,17 +306,19 @@ function CosmeticService.grant(player, cosmeticId)
     end
 
     local owned = Cosmetics.deserialize(player:GetAttribute("OwnedCosmetics") or "")
-    if owned[cosmeticId] then
-        return true
+    local newlyGranted = not owned[cosmeticId]
+    if newlyGranted then
+        owned[cosmeticId] = true
+        player:SetAttribute("OwnedCosmetics", Cosmetics.serialize(owned))
     end
 
-    owned[cosmeticId] = true
-    player:SetAttribute("OwnedCosmetics", Cosmetics.serialize(owned))
-    if (player:GetAttribute("EquippedCosmetic") or "") == "" then
-        player:SetAttribute("EquippedCosmetic", cosmeticId)
-        applyEffect(player)
+    local slot = slotForKind(item.Kind)
+    if slot and (player:GetAttribute(slot) or "") == "" then
+        player:SetAttribute(slot, cosmeticId)
+        applyEffects(player)
     end
-    sendState(player, {cosmeticId}, "premium_granted")
+
+    sendState(player, newlyGranted and {cosmeticId} or {}, newlyGranted and "premium_granted" or nil)
     return true
 end
 
@@ -299,29 +355,9 @@ function CosmeticService.init(remotes, rateLimiterFactory)
 
         if action == "buy" then
             buyCosmetic(player, cosmeticId)
-            return
+        elseif action == "equip" then
+            equipCosmetic(player, cosmeticId)
         end
-
-        if action ~= "equip" then
-            return
-        end
-
-        local owned = player:GetAttribute("OwnedCosmetics") or ""
-        if not Cosmetics.canEquip(owned, cosmeticId) then
-            return
-        end
-
-        player:SetAttribute("EquippedCosmetic", cosmeticId)
-        applyEffect(player)
-        sendState(player)
-
-        GameAnalytics.custom(
-            player,
-            "CosmeticEquipped",
-            1,
-            "Cosmetic:" .. cosmeticId,
-            "Level:" .. tostring(player:GetAttribute("Level") or 1)
-        )
     end)
 
     Players.PlayerAdded:Connect(setupPlayer)
