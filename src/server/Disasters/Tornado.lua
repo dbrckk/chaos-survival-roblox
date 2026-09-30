@@ -30,7 +30,7 @@ function D.start(ctx)
     local dangerZone = tornadoPart(
         visual,
         "DangerZone",
-        Vector3.new(0.18, 74, 74),
+        Vector3.new(0.18, 84, 84),
         center + Vector3.new(0, 1.12, 0),
         Color3.fromRGB(80, 210, 215),
         0.90
