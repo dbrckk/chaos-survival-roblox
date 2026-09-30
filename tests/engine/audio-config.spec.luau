@@ -22,6 +22,7 @@ describe("Audio configuration", function()
             "Ready",
             "RoundStart",
             "DoubleChaos",
+            "LastSurvivor",
             "Survived",
             "Eliminated",
             "Reward",
