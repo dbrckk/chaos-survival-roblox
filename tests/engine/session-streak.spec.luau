@@ -28,4 +28,18 @@ describe("Session survival streak", function()
     end)
 end)
 
+describe("Session streak rewards", function()
+    it("starts rewards on the second consecutive survival", function()
+        expect(SessionStreak.bonusCoins(0)).toBe(0)
+        expect(SessionStreak.bonusCoins(1)).toBe(0)
+        expect(SessionStreak.bonusCoins(2)).toBe(2)
+        expect(SessionStreak.bonusCoins(3)).toBe(4)
+    end)
+
+    it("caps streak bonus to protect the economy", function()
+        expect(SessionStreak.bonusCoins(6)).toBe(10)
+        expect(SessionStreak.bonusCoins(20)).toBe(10)
+    end)
+end)
+
 return nil
