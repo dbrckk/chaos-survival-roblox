@@ -9,6 +9,7 @@ local CosmeticService = require(script.CosmeticService)
 local AchievementService = require(script.AchievementService)
 local SoloRules = require(script.SoloRules)
 local GameAnalytics = require(script.GameAnalytics)
+local ArenaVariants = require(script.ArenaVariants)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -30,6 +31,10 @@ local questEvent = remotes:FindFirstChild("QuestUpdate") or Instance.new("Remote
 questEvent.Name = "QuestUpdate"
 questEvent.Parent = remotes
 
+local roundFeedbackEvent = remotes:FindFirstChild("RoundFeedback") or Instance.new("RemoteEvent")
+roundFeedbackEvent.Name = "RoundFeedback"
+roundFeedbackEvent.Parent = remotes
+
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
 AchievementService.init(remotes)
@@ -46,6 +51,7 @@ end
 assert(#disasters >= 3, "At least 3 disasters are required")
 
 local roundNumber = 0
+local currentArenaVariant = "Classic"
 local currentVotes = {}
 local currentOptions = {}
 local voteOpen = false
@@ -267,6 +273,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             seconds = t,
             doubleChaos = #selected > 1,
             soloMode = roundSettings.Solo,
+            arenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant,
         })
 
         task.wait(1)
@@ -296,6 +303,8 @@ while true do
     currentOptions = chooseVoteOptions()
     voteOpen = false
 
+    currentArenaVariant = ArenaVariants.choose(currentArenaVariant)
+    local arenaDefinition = ArenaVariants.get(currentArenaVariant)
     local intermissionSettings = SoloRules.resolve(Config, #Players:GetPlayers())
 
     for t = intermissionSettings.IntermissionSeconds, 1, -1 do
@@ -311,10 +320,11 @@ while true do
         broadcast({
             phase = "intermission",
             title = options and "VOTE FOR THE NEXT CHAOS" or (intermissionSettings.Solo and "SOLO RUSH" or "NEXT ROUND"),
-            hint = options and "Choose one" or (intermissionSettings.Solo and "Fast rounds • bonus rewards" or "Get ready"),
+            hint = options and "Choose one" or ((arenaDefinition and arenaDefinition.Name or "ARENA") .. " • " .. (intermissionSettings.Solo and "Fast rounds • bonus rewards" or "Get ready")),
             seconds = t,
             voteOptions = options,
             soloMode = intermissionSettings.Solo,
+            arenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant,
         })
         task.wait(1)
     end
@@ -326,6 +336,8 @@ while true do
 
     local contestants = Players:GetPlayers()
     local roundSettings = SoloRules.resolve(Config, #contestants)
+
+    MapBuilder.buildArena(Config, currentArenaVariant)
     for i, p in ipairs(contestants) do
         if not p.Character or not alive(p) then
             p:LoadCharacter()
@@ -389,6 +401,17 @@ while true do
                 #selectedSet > 1,
                 roundElapsed
             )
+
+            roundFeedbackEvent:FireClient(p, {
+                survived = survived,
+                coins = survived and winCoins or Config.ParticipationCoins,
+                xp = survived and winXP or Config.ParticipationXP,
+                soloMode = roundSettings.Solo,
+                doubleChaos = #selectedSet > 1,
+                arenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant,
+                disasterName = selected.Name,
+                elapsedSeconds = math.floor(roundElapsed + 0.5),
+            })
 
             p:LoadCharacter()
         end
