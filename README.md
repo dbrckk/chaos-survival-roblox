@@ -28,6 +28,14 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Animated personal round-result feedback with reward breakdown
 - Final-five-second danger timer feedback
 - Server-side reward handling
+- Per-disaster visual identities with Double Chaos color blending
+- Dynamic neon arena beacon reacting to active chaos
+- Procedural premium lobby hub with neon gate and title signage
+- Live multiplayer vote counts and leading-choice highlight
+- Mobile spectator mode after elimination
+- XP progress bar and level-up celebration
+- Session survival streaks with capped coin bonuses
+- First-session onboarding banner
 - No paid assets required
 
 ## Current disasters
