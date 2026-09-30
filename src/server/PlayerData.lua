@@ -30,6 +30,9 @@ local DEFAULT = {
 
     OwnedCosmetics = "",
     EquippedCosmetic = "",
+
+    DoubleChaosSurvivals = 0,
+    UnlockedAchievements = "",
 }
 
 local function cloneDefault()
