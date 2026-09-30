@@ -552,7 +552,18 @@ local function showRoundFeedback(feedback)
 
     local survived = feedback.survived == true
     resultTitle.Text = survived and "SURVIVED!" or "ELIMINATED"
-    resultReward.Text = string.format("+%d COINS   +%d XP", feedback.coins or 0, feedback.xp or 0)
+
+    local streakBonus = tonumber(feedback.streakBonusCoins) or 0
+    if streakBonus > 0 then
+        resultReward.Text = string.format(
+            "+%d COINS   +%d XP   •   STREAK +%d",
+            feedback.coins or 0,
+            feedback.xp or 0,
+            streakBonus
+        )
+    else
+        resultReward.Text = string.format("+%d COINS   +%d XP", feedback.coins or 0, feedback.xp or 0)
+    end
 
     local tags = {}
     table.insert(tags, tostring(feedback.arenaName or "ARENA"))
