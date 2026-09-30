@@ -3,6 +3,7 @@ local BadgeService = game:GetService("BadgeService")
 
 local Achievements = require(script.Parent.Achievements)
 local PlayerData = require(script.Parent.PlayerData)
+local GameAnalytics = require(script.Parent.GameAnalytics)
 
 local AchievementService = {}
 
@@ -63,6 +64,21 @@ local function evaluate(player)
                 PlayerData.add(player, "Coins", def.Coins)
                 PlayerData.add(player, "XP", def.XP)
                 awardRobloxBadge(player, def)
+
+                GameAnalytics.custom(
+                    player,
+                    "AchievementUnlocked",
+                    1,
+                    "Achievement:" .. id,
+                    "Level:" .. tostring(player:GetAttribute("Level") or 1)
+                )
+                GameAnalytics.economySource(
+                    player,
+                    def.Coins,
+                    "Achievement",
+                    id,
+                    #Players:GetPlayers() <= 1
+                )
             end
         end
     end
