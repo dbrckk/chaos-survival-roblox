@@ -1,10 +1,33 @@
 local D = {Name = "MOON GRAVITY", Hint = "DON'T FLY AWAY!"}
 
 function D.start(ctx)
-    local old = workspace.Gravity
-    workspace.Gravity = 55
-    ctx.OnCleanup[#ctx.OnCleanup+1] = function()
-        workspace.Gravity = old
+    local targetGravity = 55
+    local worldGravity = workspace.Gravity
+
+    for _, player in ipairs(ctx.Contestants or {}) do
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+
+        if root and root:IsA("BasePart") and hum and hum.Health > 0 then
+            local attachment = Instance.new("Attachment")
+            attachment.Name = "MoonGravityAttachment"
+            attachment.Parent = root
+
+            local force = Instance.new("VectorForce")
+            force.Name = "MoonGravityForce"
+            force.Attachment0 = attachment
+            force.RelativeTo = Enum.ActuatorRelativeTo.World
+            force.ApplyAtCenterOfMass = true
+            force.Force = Vector3.new(
+                0,
+                math.max(0, root.AssemblyMass * (worldGravity - targetGravity)),
+                0
+            )
+            force.Parent = root
+
+            ctx.Cleanup[#ctx.Cleanup+1] = force
+            ctx.Cleanup[#ctx.Cleanup+1] = attachment
+        end
     end
 end
 
