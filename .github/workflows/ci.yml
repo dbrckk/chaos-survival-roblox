@@ -1,0 +1,38 @@
+name: Build Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rojo 7.7.0
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          echo "/tmp/rojo" >> "$GITHUB_PATH"
+          /tmp/rojo/rojo --version
+
+      - name: Build Roblox place
+        run: |
+          mkdir -p build
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          test -s build/ChaosSurvival.rbxlx
+
+      - name: Upload built place
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-place
+          path: build/ChaosSurvival.rbxlx
