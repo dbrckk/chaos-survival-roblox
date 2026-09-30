@@ -90,6 +90,9 @@ function D.start(ctx)
     task.spawn(function()
         while ctx.Active() do
             for _, player in ipairs(ctx.Contestants or {}) do
+                if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
+                    continue
+                end
                 local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if root and hum and hum.Health > 0 then
