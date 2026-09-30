@@ -25,7 +25,8 @@ root.Size = UDim2.fromScale(1, 1)
 root.BackgroundTransparency = 1
 root.Parent = gui
 
-local top = Instance.new("Frame")\ntop.Name = "TopHUD"
+local top = Instance.new("Frame")
+top.Name = "TopHUD"
 top.AnchorPoint = Vector2.new(0.5, 0)
 top.Position = UDim2.fromScale(0.5, 0.025)
 top.Size = UDim2.fromScale(0.88, 0.13)
@@ -83,7 +84,8 @@ aliveCounter.Visible = false
 aliveCounter.Parent = top
 Instance.new("UICorner", aliveCounter).CornerRadius = UDim.new(1, 0)
 
-local stats = Instance.new("TextLabel")\nstats.Name = "StatsHUD"
+local stats = Instance.new("TextLabel")
+stats.Name = "StatsHUD"
 stats.AnchorPoint = Vector2.new(0.5, 1)
 stats.Position = UDim2.fromScale(0.5, 0.975)
 stats.Size = UDim2.fromScale(0.65, 0.07)
@@ -97,7 +99,8 @@ stats.Parent = root
 Instance.new("UICorner", stats).CornerRadius = UDim.new(0, 16)
 
 
-local xpTrack = Instance.new("Frame")\nxpTrack.Name = "XPTrack"
+local xpTrack = Instance.new("Frame")
+xpTrack.Name = "XPTrack"
 xpTrack.AnchorPoint = Vector2.new(0.5, 1)
 xpTrack.Position = UDim2.fromScale(0.5, 0.94)
 xpTrack.Size = UDim2.fromScale(0.62, 0.012)
@@ -177,7 +180,8 @@ local function showLevelUp(level)
 end
 
 
-local votes = Instance.new("Frame")\nvotes.Name = "VotePanel"
+local votes = Instance.new("Frame")
+votes.Name = "VotePanel"
 votes.AnchorPoint = Vector2.new(0.5, 0.5)
 votes.Position = UDim2.fromScale(0.5, 0.58)
 votes.Size = UDim2.fromScale(0.88, 0.24)
@@ -226,7 +230,8 @@ dailyBody.Parent = dailyToast
 
 
 
-local questButton = Instance.new("TextButton")\nquestButton.Name = "QuestButton"
+local questButton = Instance.new("TextButton")
+questButton.Name = "QuestButton"
 questButton.AnchorPoint = Vector2.new(0, 1)
 questButton.Position = UDim2.fromScale(0.025, 0.90)
 questButton.Size = UDim2.fromScale(0.22, 0.065)
@@ -238,7 +243,8 @@ questButton.Text = "QUESTS"
 questButton.Parent = root
 Instance.new("UICorner", questButton).CornerRadius = UDim.new(0, 14)
 
-local questPanel = Instance.new("Frame")\nquestPanel.Name = "QuestPanel"
+local questPanel = Instance.new("Frame")
+questPanel.Name = "QuestPanel"
 questPanel.AnchorPoint = Vector2.new(0, 1)
 questPanel.Position = UDim2.fromScale(0.025, 0.82)
 questPanel.Size = UDim2.fromScale(0.72, 0.34)
@@ -323,7 +329,8 @@ end
 
 
 
-local cosmeticsButton = Instance.new("TextButton")\ncosmeticsButton.Name = "CosmeticsButton"
+local cosmeticsButton = Instance.new("TextButton")
+cosmeticsButton.Name = "CosmeticsButton"
 cosmeticsButton.AnchorPoint = Vector2.new(1, 1)
 cosmeticsButton.Position = UDim2.fromScale(0.975, 0.90)
 cosmeticsButton.Size = UDim2.fromScale(0.26, 0.065)
@@ -335,7 +342,8 @@ cosmeticsButton.Text = "COSMETICS"
 cosmeticsButton.Parent = root
 Instance.new("UICorner", cosmeticsButton).CornerRadius = UDim.new(0, 14)
 
-local cosmeticsPanel = Instance.new("Frame")\ncosmeticsPanel.Name = "CosmeticsPanel"
+local cosmeticsPanel = Instance.new("Frame")
+cosmeticsPanel.Name = "CosmeticsPanel"
 cosmeticsPanel.AnchorPoint = Vector2.new(1, 1)
 cosmeticsPanel.Position = UDim2.fromScale(0.975, 0.82)
 cosmeticsPanel.Size = UDim2.fromScale(0.72, 0.36)
@@ -415,7 +423,8 @@ end
 -- cosmetics navigation is wired after all three panels are created
 
 
-local achievementButton = Instance.new("TextButton")\nachievementButton.Name = "AchievementButton"
+local achievementButton = Instance.new("TextButton")
+achievementButton.Name = "AchievementButton"
 achievementButton.AnchorPoint = Vector2.new(0.5, 1)
 achievementButton.Position = UDim2.fromScale(0.5, 0.90)
 achievementButton.Size = UDim2.fromScale(0.30, 0.065)
@@ -427,7 +436,8 @@ achievementButton.Text = "ACHIEVEMENTS"
 achievementButton.Parent = root
 Instance.new("UICorner", achievementButton).CornerRadius = UDim.new(0, 14)
 
-local achievementPanel = Instance.new("Frame")\nachievementPanel.Name = "AchievementPanel"
+local achievementPanel = Instance.new("Frame")
+achievementPanel.Name = "AchievementPanel"
 achievementPanel.AnchorPoint = Vector2.new(0.5, 1)
 achievementPanel.Position = UDim2.fromScale(0.5, 0.82)
 achievementPanel.Size = UDim2.fromScale(0.82, 0.46)
@@ -627,7 +637,8 @@ resultFlash.BorderSizePixel = 0
 resultFlash.ZIndex = 20
 resultFlash.Parent = root
 
-local resultCard = Instance.new("Frame")\nresultCard.Name = "ResultCard"
+local resultCard = Instance.new("Frame")
+resultCard.Name = "ResultCard"
 resultCard.AnchorPoint = Vector2.new(0.5, 0.5)
 resultCard.Position = UDim2.fromScale(0.5, 0.54)
 resultCard.Size = UDim2.fromScale(0.80, 0.24)
