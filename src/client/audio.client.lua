@@ -15,6 +15,9 @@ local questEvent = remotes:WaitForChild("QuestUpdate")
 local achievementEvent = remotes:WaitForChild("AchievementState")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
 
+local playerGui = player:WaitForChild("PlayerGui")
+local boundButtons = setmetatable({}, {__mode = "k"})
+
 local musicGroup = SoundService:FindFirstChild("ChaosMusic") or Instance.new("SoundGroup")
 musicGroup.Name = "ChaosMusic"
 musicGroup.Volume = 1
@@ -57,6 +60,23 @@ local function play(name)
     sound.TimePosition = 0
     sound:Play()
 end
+
+local function bindButton(instance)
+    if not instance:IsA("GuiButton") or boundButtons[instance] then
+        return
+    end
+
+    boundButtons[instance] = true
+    instance.Activated:Connect(function()
+        play("UISelect")
+    end)
+end
+
+for _, descendant in ipairs(playerGui:GetDescendants()) do
+    bindButton(descendant)
+end
+
+playerGui.DescendantAdded:Connect(bindButton)
 
 local function stopDisasterLoop()
     if activeLoopName then
