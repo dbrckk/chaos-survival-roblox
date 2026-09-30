@@ -365,10 +365,14 @@ cosmeticsHeader.TextXAlignment = Enum.TextXAlignment.Left
 cosmeticsHeader.Text = "COSMETICS"
 cosmeticsHeader.Parent = cosmeticsPanel
 
-local cosmeticsList = Instance.new("Frame")
+local cosmeticsList = Instance.new("ScrollingFrame")
 cosmeticsList.Size = UDim2.new(1, -24, 0.74, 0)
 cosmeticsList.Position = UDim2.new(0, 12, 0.20, 0)
 cosmeticsList.BackgroundTransparency = 1
+cosmeticsList.BorderSizePixel = 0
+cosmeticsList.ScrollBarThickness = 5
+cosmeticsList.CanvasSize = UDim2.fromOffset(0, 0)
+cosmeticsList.AutomaticCanvasSize = Enum.AutomaticSize.Y
 cosmeticsList.Parent = cosmeticsPanel
 
 local cosmeticsLayout = Instance.new("UIListLayout")
@@ -400,13 +404,23 @@ local function renderCosmetics(state)
         button.TextWrapped = true
 
         local isOwned = owned[item.id] == true
+        local coinPrice = tonumber(item.coinPrice)
+        local unlockLevel = tonumber(item.unlockLevel)
+        local kindLabel = string.upper(tostring(item.kind or "cosmetic"))
+
         if equipped == item.id then
-            button.Text = item.name .. "   •   EQUIPPED"
+            button.Text = string.format("%s   •   %s   •   EQUIPPED", item.name, kindLabel)
             button.BackgroundColor3 = Color3.fromRGB(55, 110, 85)
         elseif isOwned then
-            button.Text = item.name .. "   •   EQUIP"
+            button.Text = string.format("%s   •   %s   •   EQUIP", item.name, kindLabel)
+        elseif coinPrice and coinPrice > 0 then
+            button.Text = string.format("%s   •   %s   •   🪙 %d", item.name, kindLabel, coinPrice)
+            button.BackgroundColor3 = Color3.fromRGB(62, 52, 36)
+        elseif unlockLevel then
+            button.Text = string.format("%s   •   %s   •   LVL %d", item.name, kindLabel, unlockLevel)
+            button.BackgroundColor3 = Color3.fromRGB(48, 49, 58)
         else
-            button.Text = item.name .. "   •   LVL " .. tostring(item.unlockLevel)
+            button.Text = string.format("%s   •   %s", item.name, kindLabel)
             button.BackgroundColor3 = Color3.fromRGB(48, 49, 58)
         end
 
@@ -416,6 +430,8 @@ local function renderCosmetics(state)
         button.Activated:Connect(function()
             if isOwned then
                 cosmeticActionEvent:FireServer("equip", item.id)
+            elseif coinPrice and coinPrice > 0 then
+                cosmeticActionEvent:FireServer("buy", item.id)
             end
         end)
     end
@@ -873,6 +889,22 @@ cosmeticStateEvent.OnClientEvent:Connect(function(payload)
     local unlocked = payload.unlocked or {}
     if #unlocked > 0 and currentCosmeticState then
         renderCosmetics(payload.state)
+    end
+
+    if payload.notice == "purchased" then
+        questToastTitle.Text = "COSMETIC UNLOCKED"
+        questToastBody.Text = "Equipped instantly • yours permanently"
+        questToast.Visible = true
+        task.delay(3, function()
+            questToast.Visible = false
+        end)
+    elseif payload.notice == "insufficient_coins" then
+        questToastTitle.Text = "MORE COINS NEEDED"
+        questToastBody.Text = "Survive rounds and complete quests to earn more"
+        questToast.Visible = true
+        task.delay(2.6, function()
+            questToast.Visible = false
+        end)
     end
 end)
 
