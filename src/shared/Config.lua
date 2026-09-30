@@ -13,6 +13,17 @@ local Config = {
     DoubleChaosEvery = 5,
     DoubleChaosChance = 0.12,
 
+    Solo = {
+        IntermissionSeconds = 6,
+        VoteSeconds = 4,
+        RoundSeconds = 30,
+        PostRoundSeconds = 4,
+        WinCoinMultiplier = 1.4,
+        WinXPMultiplier = 1.25,
+        DoubleChaosEvery = 4,
+        DoubleChaosChance = 0.10,
+    },
+
     ArenaCenter = Vector3.new(0, 0, 0),
     LobbyCenter = Vector3.new(0, 0, -150),
 }
