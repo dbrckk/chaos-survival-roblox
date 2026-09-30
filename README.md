@@ -6,7 +6,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 
 - Runtime-generated lobby and arena
 - Server-authoritative round loop
-- 10 modular disasters
+- 11 modular disasters
 - 3-choice disaster voting
 - Double Chaos combinations
 - Coins, XP, levels, wins and games played
@@ -36,6 +36,10 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - XP progress bar and level-up celebration
 - Session survival streaks with capped coin bonuses
 - First-session onboarding banner
+- Reactive music and SFX with a distinct audio cue for every disaster
+- Automatic countdown, victory, elimination, reward, level-up and UI sounds
+- Real-engine gameplay matrix: every arena × every disaster + every allowed Double Chaos pair
+- Four-client Studio E2E harness with virtual UI clicks, movement, voting, joins and leaves
 - No paid assets required
 
 ## Current disasters
@@ -67,15 +71,9 @@ For DataStore tests in Studio, use a test experience and enable:
 
 ## Product direction
 
-The next milestones are:
+Automated Roblox-engine coverage now validates the core gameplay matrix on every push. The remaining launch gate is a graphical/touch-device Studio pass from an authenticated Studio session, followed by fixes from that pass.
 
-- round-end polish and feedback ✅
-- anti-exploit sanity checks
-- daily quests and streak rewards
-- cosmetic inventory
-- analytics hooks
-- retention balancing using live analytics
-- monetization only after retention is validated
+Monetization remains intentionally deferred until retention and real-device UX are validated.
 
 ## Architecture
 
@@ -90,3 +88,10 @@ src/
 └── shared/
     └── Config.lua
 ```
+
+
+## Automated playtesting
+
+The default CI uses Roblox Open Cloud Engine Tests and currently covers all arena/disaster combinations plus every allowed Double Chaos pair in a real Roblox DataModel.
+
+A separate four-client Studio E2E harness is included under `studio/`. It automates UI clicks, voting, movement, staggered joins and client leave behavior using StudioTestService and VirtualInput. Roblox Studio requires a logged-in user session, so the GitHub Studio workflow is manual and targets an authenticated self-hosted Windows runner.
