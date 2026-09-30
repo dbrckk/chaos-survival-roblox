@@ -38,7 +38,7 @@ roundFeedbackEvent.Parent = remotes
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
 AchievementService.init(remotes)
-MapBuilder.build(Config)
+MapBuilder.build(Config, "Classic", ArenaVariants)
 
 local disasters = {}
 for _, module in ipairs(script.Disasters:GetChildren()) do
@@ -338,7 +338,7 @@ while true do
     local roundSettings = SoloRules.resolve(Config, #contestants)
     roundSettings.ArenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant
 
-    MapBuilder.buildArena(Config, currentArenaVariant)
+    MapBuilder.buildArena(Config, currentArenaVariant, ArenaVariants)
     for i, p in ipairs(contestants) do
         if not p.Character or not alive(p) then
             p:LoadCharacter()
