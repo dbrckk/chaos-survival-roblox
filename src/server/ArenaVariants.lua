@@ -1,6 +1,6 @@
 local ArenaVariants = {}
 
-ArenaVariants.Order = {"Classic", "Towers", "Crossroads"}
+ArenaVariants.Order = {"Classic", "Towers", "Crossroads", "Orbital"}
 
 ArenaVariants.Definitions = {
     Classic = {
@@ -59,6 +59,65 @@ ArenaVariants.Definitions = {
             {offset=Vector3.new(-24,14,0),size=Vector3.new(12,2,12)},
             {offset=Vector3.new(24,14,0),size=Vector3.new(12,2,12)},
         },
+    },
+
+
+    Orbital = {
+        Id = "Orbital",
+        Name = "ORBITAL RING",
+        BaseSize = Vector3.new(100, 2, 100),
+        BaseColor = Color3.fromRGB(72, 82, 102),
+        PlatformColor = Color3.fromRGB(90, 185, 175),
+        SpawnOffsets = (function()
+            local result = {}
+            for i = 0, 7 do
+                local angle = math.rad(i * 45)
+                table.insert(result, Vector3.new(
+                    math.cos(angle) * 35,
+                    3,
+                    math.sin(angle) * 35
+                ))
+            end
+            return result
+        end)(),
+        Platforms = (function()
+            local result = {}
+
+            for i = 0, 7 do
+                local angle = math.rad(i * 45)
+                table.insert(result, {
+                    offset = Vector3.new(
+                        math.cos(angle) * 31,
+                        6 + ((i % 2) * 2),
+                        math.sin(angle) * 31
+                    ),
+                    size = Vector3.new(13, 2, 13),
+                })
+            end
+
+            for i = 0, 7 do
+                local angle = math.rad((i * 45) + 22.5)
+                table.insert(result, {
+                    offset = Vector3.new(
+                        math.cos(angle) * 18,
+                        11 + ((i % 2) * 2),
+                        math.sin(angle) * 18
+                    ),
+                    size = Vector3.new(11, 2, 11),
+                })
+            end
+
+            table.insert(result, {
+                offset = Vector3.new(0, 7, 0),
+                size = Vector3.new(18, 2, 18),
+            })
+            table.insert(result, {
+                offset = Vector3.new(0, 15, 0),
+                size = Vector3.new(11, 2, 11),
+            })
+
+            return result
+        end)(),
     },
 
     Crossroads = {
