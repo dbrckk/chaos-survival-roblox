@@ -25,11 +25,15 @@ describe("Chaos Survival engine", function()
 
         local spawns = arena and arena:FindFirstChild("Spawns")
         local platforms = arena and arena:FindFirstChild("Platforms")
+        local decor = arena and arena:FindFirstChild("Decor")
 
         expect(spawns ~= nil).toBe(true)
         expect(platforms ~= nil).toBe(true)
+        expect(decor ~= nil).toBe(true)
         expect(#(spawns :: Folder):GetChildren() >= 8).toBe(true)
         expect(#(platforms :: Folder):GetChildren() >= 14).toBe(true)
+        expect((decor :: Folder):FindFirstChild("CenterBeacon") ~= nil).toBe(true)
+        expect(#(decor :: Folder):GetChildren() >= 5).toBe(true)
 
         root:Destroy()
     end)
@@ -44,6 +48,7 @@ describe("Chaos Survival engine", function()
             expect(arena:GetAttribute("VariantId")).toBe(id)
             expect(arena:FindFirstChild("Spawns") ~= nil).toBe(true)
             expect(arena:FindFirstChild("Platforms") ~= nil).toBe(true)
+            expect(arena:FindFirstChild("Decor") ~= nil).toBe(true)
             expect(root:FindFirstChild("Lobby") == lobby).toBe(true)
         end
 
