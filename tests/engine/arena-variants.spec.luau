@@ -5,8 +5,8 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ArenaVariants = require("../../src/server/ArenaVariants")
 
 describe("Arena variants", function()
-    it("defines three distinct playable layouts", function()
-        expect(#ArenaVariants.Order).toBe(3)
+    it("defines four distinct playable layouts", function()
+        expect(#ArenaVariants.Order).toBe(4)
 
         local seen = {}
         for _, id in ipairs(ArenaVariants.Order) do
