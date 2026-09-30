@@ -116,6 +116,11 @@ local lastPhase = nil
 local lastRoundTitle = nil
 local pulseClock = 0
 local roundDanger = false
+local activeAccent = Color3.fromRGB(115, 15, 160)
+local secondaryAccent = nil
+local activeBeacon = nil
+local activeBeaconLight = nil
+local activeDoubleChaos = false
 
 local function tweenCamera(targetFov, duration)
     camera = workspace.CurrentCamera or camera
@@ -168,8 +173,15 @@ local function setMood(state)
     if phase == "round" then
         roundDanger = (tonumber(state.seconds) or 99) <= 5
 
-        local profile = DisasterVisuals.combine(state.disasterIds or {})
+        local ids = state.disasterIds or {}
+        local profile = DisasterVisuals.combine(ids)
+        local primaryProfile = ids[1] and DisasterVisuals.get(ids[1])
+        local secondaryProfile = ids[2] and DisasterVisuals.get(ids[2])
+
         if profile then
+            activeAccent = profile.Accent
+            secondaryAccent = secondaryProfile and secondaryProfile.Accent or nil
+            activeDoubleChaos = doubleChaos
             atmosphere.Density = profile.Density
             atmosphere.Haze = profile.Haze
             atmosphere.Color = profile.Atmosphere
@@ -199,15 +211,20 @@ local function setMood(state)
             tweenCamera(roundDanger and 79 or 75, 0.24)
         end
 
-        local arena = workspace:FindFirstChild("GeneratedMap") and workspace.GeneratedMap:FindFirstChild("Arena")
+        local generatedMap = workspace:FindFirstChild("GeneratedMap")
+        local arena = generatedMap and generatedMap:FindFirstChild("Arena")
         local decor = arena and arena:FindFirstChild("Decor")
         local beacon = decor and decor:FindFirstChild("CenterBeacon")
         local light = beacon and beacon:FindFirstChild("ArenaGlow")
-        if profile and beacon and beacon:IsA("BasePart") then
-            beacon.Color = profile.Accent
-            if light and light:IsA("PointLight") then
-                light.Color = profile.Accent
-                light.Brightness = doubleChaos and 2.2 or 1.5
+
+        activeBeacon = beacon and beacon:IsA("BasePart") and beacon or nil
+        activeBeaconLight = light and light:IsA("PointLight") and light or nil
+
+        if profile and activeBeacon then
+            activeBeacon.Color = profile.Accent
+            if activeBeaconLight then
+                activeBeaconLight.Color = profile.Accent
+                activeBeaconLight.Brightness = doubleChaos and 2.2 or 1.5
             end
         end
 
@@ -222,6 +239,8 @@ local function setMood(state)
         end
     elseif phase == "results" then
         roundDanger = false
+        activeDoubleChaos = false
+        secondaryAccent = nil
         atmosphere.Density = 0.15
         atmosphere.Haze = 0.65
         bloom.Intensity = 0.42
@@ -232,6 +251,8 @@ local function setMood(state)
         tweenCamera(72, 0.35)
     else
         roundDanger = false
+        activeDoubleChaos = false
+        secondaryAccent = nil
         atmosphere.Density = 0.14
         atmosphere.Haze = 0.55
         bloom.Intensity = 0.30
@@ -322,6 +343,25 @@ end)
 
 RunService.RenderStepped:Connect(function(dt)
     pulseClock += dt
+
+    local wave = (math.sin(pulseClock * (activeDoubleChaos and 5.2 or 3.6)) + 1) * 0.5
+    local accent = activeAccent
+
+    if activeDoubleChaos and secondaryAccent then
+        accent = activeAccent:Lerp(secondaryAccent, wave)
+        vignette.BackgroundColor3 = accent
+    end
+
+    if activeBeacon and activeBeacon.Parent then
+        activeBeacon.Color = accent
+        activeBeacon.Transparency = 0.22 + (wave * 0.20)
+
+        if activeBeaconLight and activeBeaconLight.Parent then
+            activeBeaconLight.Color = accent
+            activeBeaconLight.Brightness = (activeDoubleChaos and 1.8 or 1.15) + wave * (activeDoubleChaos and 1.4 or 0.75)
+            activeBeaconLight.Range = 24 + wave * 12
+        end
+    end
 
     local targetTransparency = 1
     if roundDanger then
