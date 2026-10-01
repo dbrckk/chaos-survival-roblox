@@ -20,7 +20,9 @@ end
 
 function RoundCleanup.runCallbacks(callbacks, onError)
     local failures = 0
-    for index, callback in ipairs(callbacks or {}) do
+    local list = callbacks or {}
+    for index = #list, 1, -1 do
+        local callback = list[index]
         local ok, err = pcall(callback)
         if not ok then
             failures += 1
@@ -34,7 +36,9 @@ end
 
 function RoundCleanup.destroyAll(objects, onError)
     local failures = 0
-    for index, object in ipairs(objects or {}) do
+    local list = objects or {}
+    for index = #list, 1, -1 do
+        local object = list[index]
         if object and object.Parent then
             local ok, err = pcall(function()
                 object:Destroy()
