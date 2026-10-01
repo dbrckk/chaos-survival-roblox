@@ -12,15 +12,22 @@ function D.coverageSize(baseSize, padding)
     )
 end
 
-function D.rootTouchesLava(rootY, lavaTopY, clearance)
-    local root = tonumber(rootY)
-    local top = tonumber(lavaTopY)
-    if not root or not top then
+function D.rootInsideLava(rootPosition, lavaPosition, lavaSize, clearance)
+    if typeof(rootPosition) ~= "Vector3"
+        or typeof(lavaPosition) ~= "Vector3"
+        or typeof(lavaSize) ~= "Vector3"
+    then
         return false
     end
 
     local safeClearance = math.max(0, tonumber(clearance) or 2.5)
-    return (root - safeClearance) <= top
+    local halfX = math.max(0, lavaSize.X * 0.5)
+    local halfZ = math.max(0, lavaSize.Z * 0.5)
+    local lavaTopY = lavaPosition.Y + (lavaSize.Y * 0.5)
+
+    return math.abs(rootPosition.X - lavaPosition.X) <= halfX
+        and math.abs(rootPosition.Z - lavaPosition.Z) <= halfZ
+        and (rootPosition.Y - safeClearance) <= lavaTopY
 end
 
 function D.isActiveContestant(player, ctx)
@@ -95,7 +102,6 @@ function D.start(ctx)
             local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
             lava.Position = Vector3.new(lava.Position.X, startY + alpha * 25, lava.Position.Z)
 
-            local lavaTopY = lava.Position.Y + (lava.Size.Y * 0.5)
             for _, player in ipairs(ctx.Contestants or {}) do
                 if D.isActiveContestant(player, ctx) then
                     local character = player.Character
@@ -105,7 +111,7 @@ function D.start(ctx)
                         and root:IsA("BasePart")
                         and hum
                         and hum.Health > 0
-                        and D.rootTouchesLava(root.Position.Y, lavaTopY, 2.5)
+                        and D.rootInsideLava(root.Position, lava.Position, lava.Size, 2.5)
                     then
                         hum.Health = 0
                     end
