@@ -79,6 +79,7 @@ local function createPad(folder, center, definition, index)
     pad.Parent = folder
 
     local light = Instance.new("PointLight")
+    light.Name = "MobilityPadLight"
     light.Color = definition.Color
     light.Brightness = 0.75
     light.Range = 11
