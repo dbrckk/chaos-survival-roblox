@@ -337,6 +337,35 @@ local function buildLobby(root, config)
     decor.Name = "Decor"
     decor.Parent = lobby
 
+    local floorInset = decorPart(
+        decor,
+        "LobbyFloorInset",
+        Vector3.new(68, 0.12, 68),
+        config.LobbyCenter + Vector3.new(0, 1.08, 0),
+        VisualTheme.World.Deep,
+        VisualTheme.Materials.Panel
+    )
+    floorInset.Transparency = 0.04
+
+    local lobbyLanes = {
+        {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24)},
+        {name = "LobbyLaneSouth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, 24)},
+        {name = "LobbyLaneWest", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(-24, 1.16, 0)},
+        {name = "LobbyLaneEast", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(24, 1.16, 0)},
+    }
+
+    for i, def in ipairs(lobbyLanes) do
+        local lane = decorPart(
+            decor,
+            def.name,
+            def.size,
+            config.LobbyCenter + def.offset,
+            (i % 2 == 0) and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
+            VisualTheme.Materials.Glow
+        )
+        lane.Transparency = 0.38
+    end
+
     local centerPlatform = part(
         decor,
         "CenterPlatform",
@@ -378,8 +407,8 @@ local function buildLobby(root, config)
             "Pylon" .. i,
             Vector3.new(2.2, 10, 2.2),
             config.LobbyCenter + offset,
-            Color3.fromRGB(58, 70, 96),
-            Enum.Material.Metal
+            VisualTheme.World.Metal,
+            VisualTheme.Materials.Structure
         )
 
         local cap = part(
@@ -387,8 +416,8 @@ local function buildLobby(root, config)
             "PylonGlow" .. i,
             Vector3.new(2.8, 0.55, 2.8),
             pylon.Position + Vector3.new(0, 5.25, 0),
-            Color3.fromRGB(125, 85, 255),
-            Enum.Material.Neon
+            VisualTheme.Accents.Violet,
+            VisualTheme.Materials.Glow
         )
         cap.CanCollide = false
 
@@ -408,8 +437,8 @@ local function buildLobby(root, config)
         "ArenaGateLeft",
         Vector3.new(3, 13, 3),
         archCenter + Vector3.new(-10, 6.5, 0),
-        Color3.fromRGB(61, 71, 96),
-        Enum.Material.Metal
+        VisualTheme.World.Metal,
+        VisualTheme.Materials.Structure
     )
 
     local rightColumn = part(
@@ -426,8 +455,8 @@ local function buildLobby(root, config)
         "ArenaGateTop",
         Vector3.new(23, 3, 3),
         archCenter + Vector3.new(0, 13, 0),
-        Color3.fromRGB(95, 72, 160),
-        Enum.Material.Neon
+        VisualTheme.Accents.Violet,
+        VisualTheme.Materials.Glow
     )
 
     local sign = part(
@@ -435,8 +464,8 @@ local function buildLobby(root, config)
         "ChaosSign",
         Vector3.new(18, 6, 0.5),
         config.LobbyCenter + Vector3.new(0, 10, -25),
-        Color3.fromRGB(18, 21, 30),
-        Enum.Material.Metal
+        VisualTheme.World.Deep,
+        VisualTheme.Materials.Structure
     )
     sign.CanCollide = false
 
@@ -467,6 +496,35 @@ local function buildLobby(root, config)
     subtitle.TextScaled = true
     subtitle.Text = "VOTE • SURVIVE • REPEAT"
     subtitle.Parent = surface
+
+    local frameOffsets = {
+        Vector3.new(-34, 7, 0),
+        Vector3.new(34, 7, 0),
+        Vector3.new(0, 7, -34),
+        Vector3.new(0, 7, 34),
+    }
+
+    for i, offset in ipairs(frameOffsets) do
+        local spine = decorPart(
+            decor,
+            "LobbyFrameSpine" .. i,
+            Vector3.new(1.6, 14, 1.6),
+            config.LobbyCenter + offset,
+            VisualTheme.World.Metal,
+            VisualTheme.Materials.Structure
+        )
+        spine.Transparency = 0.03
+
+        local band = decorPart(
+            decor,
+            "LobbyFrameBand" .. i,
+            Vector3.new(3.6, 0.34, 3.6),
+            spine.Position + Vector3.new(0, 5.3, 0),
+            (i % 2 == 0) and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
+            VisualTheme.Materials.Glow
+        )
+        band.Transparency = 0.20
+    end
 
     local lobbySpawn = Instance.new("SpawnLocation")
     lobbySpawn.Name = "LobbySpawn"
