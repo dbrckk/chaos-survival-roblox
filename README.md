@@ -27,7 +27,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Server-side retention and gameplay analytics segmented by Solo/Multiplayer
 - Economy analytics for Coins sources, daily rewards, quests and achievements
 - Onboarding funnel tracking from join to first survival
-- Three rotating arena layouts with no immediate repeat
+- Four rotating arena layouts with no immediate repeat
 - Animated personal round-result feedback with reward breakdown
 - Final-five-second danger timer feedback
 - Server-side reward handling
@@ -77,7 +77,7 @@ For DataStore tests in Studio, use a test experience and enable:
 
 ## Product direction
 
-Automated Roblox-engine coverage now validates the core gameplay matrix on every push. The remaining launch gate is a graphical/touch-device Studio pass from an authenticated Studio session, followed by fixes from that pass.
+Automated Roblox-engine coverage validates the core gameplay matrix on every push. The project is in release-candidate hardening: the remaining launch gate is a graphical/touch-device Studio pass from an authenticated Studio session, a real-device performance/data persistence pass, and fixes from those passes.
 
 Monetization infrastructure is now present but remains opt-in and cosmetic-only. Paid offers stay hidden until real Roblox Game Pass IDs are configured as DataModel attributes named `SupporterPassId` and `NeonPackPassId`. The paid service never modifies survival power, movement, health, round rewards or progression rates.
 
