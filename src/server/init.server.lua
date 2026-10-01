@@ -396,6 +396,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local roundStartedAt = os.clock()
     local roundActive = true
     local overdriveActive = false
+    local finalRushActive = false
     local overdriveEligible = roundSettings.RoundSeconds >= 20
     local overdriveStartRemaining = math.floor(roundSettings.RoundSeconds * 0.58)
     local overdriveDuration = math.clamp(math.floor(roundSettings.RoundSeconds * 0.16), 5, 7)
@@ -446,6 +447,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         OnCleanup = onCleanup,
         Active = function() return roundActive end,
         Overdrive = function() return overdriveActive end,
+        FinalRush = function() return finalRushActive end,
         Contestants = contestants,
         IsContestantActive = function(player)
             if player.Parent ~= Players or eliminated[player.UserId] then
@@ -600,6 +602,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         overdriveActive = overdriveEligible
             and t <= overdriveStartRemaining
             and t > overdriveEndRemaining
+        finalRushActive = t <= 5
 
         local survivorsAlive = countContestantsRemaining()
         if survivorsAlive <= 0 then
@@ -642,6 +645,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             arenaMechanicHint = arenaMechanic and arenaMechanic.hint or nil,
             overdrive = overdriveActive,
             overdriveSeconds = overdriveActive and math.max(1, t - overdriveEndRemaining) or 0,
+            finalRush = finalRushActive,
             challengeId = roundChallenge.Id,
             challengeTitle = roundChallenge.Title,
             challengeShort = roundChallenge.Short,
@@ -661,6 +665,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     end
 
     overdriveActive = false
+    finalRushActive = false
     roundActive = false
     local roundElapsed = math.max(0, os.clock() - roundStartedAt)
 
