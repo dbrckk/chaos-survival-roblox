@@ -432,6 +432,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
             })
         end,
         OnArenaMechanicUsed = function(player, variantId, mechanicName)
+            if player.Parent ~= Players then
+                return
+            end
+
             arenaMechanicFeedbackEvent:FireClient(player, {
                 variantId = variantId,
                 mechanicName = mechanicName,
@@ -511,6 +515,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     end
 
     roundActive = false
+    local roundElapsed = math.max(0, os.clock() - roundStartedAt)
 
     local cleanupFailures = RoundCleanup.execute(
         deathConnections,
@@ -524,7 +529,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         warn("Round cleanup completed with failures:", cleanupFailures)
     end
 
-    return eliminated, endedEarly, math.max(0, os.clock() - roundStartedAt)
+    return eliminated, endedEarly, roundElapsed
 end
 
 while true do
