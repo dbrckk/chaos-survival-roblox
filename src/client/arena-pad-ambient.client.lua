@@ -4,32 +4,53 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
-local emitters = {}
-local currentRate = 6 * VfxQuality.get(player:GetAttribute("VfxQualityTier")).ParticleScale
+local visuals = {}
+
+local function profile()
+    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+end
+
+local currentRate = 6 * profile().ParticleScale
 
 local function refreshRates()
-    currentRate = 6 * VfxQuality.get(player:GetAttribute("VfxQualityTier")).ParticleScale
-    for pad, emitter in pairs(emitters) do
-        if not pad.Parent or not emitter.Parent then
-            emitters[pad] = nil
+    local tier = profile()
+    currentRate = 6 * tier.ParticleScale
+    if tier.Name == "Low" then
+        currentRate = math.min(currentRate, 1.8)
+    end
+
+    for pad, state in pairs(visuals) do
+        if not pad.Parent or not state.attachment.Parent then
+            visuals[pad] = nil
         else
-            emitter.Rate = currentRate
+            state.emitter.Rate = currentRate
+            state.highlight.FillTransparency = tier.Name == "Low" and 1 or 0.86
+            state.highlight.OutlineTransparency = tier.Name == "Low" and 0.36 or 0.16
+
+            local light = pad:FindFirstChild("MobilityPadLight")
+            if light and light:IsA("PointLight") then
+                light.Enabled = tier.Name ~= "Low"
+                light.Brightness = 0.55 + (0.20 * tier.Scale)
+            end
         end
     end
 end
 
-local function destroyEmitter(pad)
-    local emitter = emitters[pad]
-    if emitter then
-        emitters[pad] = nil
-        if emitter.Parent then
-            emitter.Parent:Destroy()
+local function destroyVisual(pad)
+    local state = visuals[pad]
+    if state then
+        visuals[pad] = nil
+        if state.attachment.Parent then
+            state.attachment:Destroy()
+        end
+        if state.highlight.Parent then
+            state.highlight:Destroy()
         end
     end
 end
 
 local function attach(pad)
-    if not pad:IsA("BasePart") or pad:GetAttribute("ArenaMobilityPad") ~= true or emitters[pad] then
+    if not pad:IsA("BasePart") or pad:GetAttribute("ArenaMobilityPad") ~= true or visuals[pad] then
         return
     end
 
@@ -56,7 +77,26 @@ local function attach(pad)
     emitter.Rate = currentRate
     emitter.Parent = attachment
 
-    emitters[pad] = emitter
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "MobilityPadHighlightLocal"
+    highlight.Adornee = pad
+    highlight.FillColor = pad.Color
+    highlight.FillTransparency = profile().Name == "Low" and 1 or 0.86
+    highlight.OutlineColor = pad.Color:Lerp(Color3.new(1, 1, 1), 0.42)
+    highlight.OutlineTransparency = profile().Name == "Low" and 0.36 or 0.16
+    highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+    highlight.Parent = pad
+
+    visuals[pad] = {
+        attachment = attachment,
+        emitter = emitter,
+        highlight = highlight,
+    }
+
+    local light = pad:FindFirstChild("MobilityPadLight")
+    if light and light:IsA("PointLight") then
+        light.Enabled = profile().Name ~= "Low"
+    end
 end
 
 local function scan(root)
@@ -74,8 +114,8 @@ workspace.DescendantAdded:Connect(function(descendant)
 end)
 
 workspace.DescendantRemoving:Connect(function(descendant)
-    if emitters[descendant] then
-        destroyEmitter(descendant)
+    if visuals[descendant] then
+        destroyVisual(descendant)
     end
 end)
 
