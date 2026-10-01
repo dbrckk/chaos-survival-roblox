@@ -28,6 +28,7 @@ local function renderBurst(payload)
     local position = payload.position
     local color = payload.color
     local radius = math.clamp(tonumber(payload.radius) or 8, 1, 40)
+    local kind = tostring(payload.kind or "")
 
     if typeof(position) ~= "Vector3" or typeof(color) ~= "Color3" then
         return
@@ -60,6 +61,42 @@ local function renderBurst(payload)
     burst.Transparency = 0.2
     burst.Parent = workspace
 
+    local ring = Instance.new("Part")
+    ring.Name = "LocalHazardShockRing"
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Size = Vector3.new(0.12, 1, 1)
+    ring.CFrame = CFrame.new(position + Vector3.new(0, 0.16, 0))
+        * CFrame.Angles(0, 0, math.rad(90))
+    ring.Anchored = true
+    ring.CanCollide = false
+    ring.CanTouch = false
+    ring.CanQuery = false
+    ring.CastShadow = false
+    ring.Material = Enum.Material.Neon
+    ring.Color = color
+    ring.Transparency = 0.18
+    ring.Parent = workspace
+
+    local core = nil
+    if profile.Name ~= "Low" then
+        core = Instance.new("Part")
+        core.Name = "LocalHazardImpactCore"
+        core.Shape = Enum.PartType.Ball
+        core.Size = Vector3.new(1.2, 1.2, 1.2)
+        core.Position = position
+        core.Anchored = true
+        core.CanCollide = false
+        core.CanTouch = false
+        core.CanQuery = false
+        core.CastShadow = false
+        core.Material = Enum.Material.Neon
+        core.Color = kind == "Meteor"
+            and Color3.fromRGB(255, 218, 115)
+            or color:Lerp(Color3.new(1, 1, 1), 0.18)
+        core.Transparency = 0.05
+        core.Parent = workspace
+    end
+
     local light
     if profile.Name ~= "Low" then
         light = Instance.new("PointLight")
@@ -80,6 +117,26 @@ local function renderBurst(payload)
             Transparency = 1,
         }
     ):Play()
+
+    TweenService:Create(
+        ring,
+        TweenInfo.new(duration * 1.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Size = Vector3.new(0.12, targetDiameter * 1.18, targetDiameter * 1.18),
+            Transparency = 1,
+        }
+    ):Play()
+
+    if core then
+        TweenService:Create(
+            core,
+            TweenInfo.new(duration * 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Size = Vector3.new(targetDiameter * 0.42, targetDiameter * 0.42, targetDiameter * 0.42),
+                Transparency = 1,
+            }
+        ):Play()
+    end
 
     if light then
         TweenService:Create(
@@ -125,8 +182,12 @@ local function renderBurst(payload)
         emitter:Emit(VfxQuality.particleCount("Medium", 14, 6))
     end
 
-    local lifetime = duration + 0.08
+    local lifetime = duration * 1.35 + 0.08
     Debris:AddItem(burst, lifetime)
+    Debris:AddItem(ring, lifetime)
+    if core then
+        Debris:AddItem(core, lifetime)
+    end
     task.delay(lifetime, function()
         activeBursts = math.max(0, activeBursts - 1)
     end)
