@@ -242,6 +242,13 @@ function PlayerData.claimDaily(player, nowTimestamp)
 end
 
 function PlayerData.getQuestState(player, nowTimestamp)
+    if not PlayerData.canMutate(player) then
+        return {
+            day = player and player:GetAttribute("QuestDay") or -1,
+            quests = {},
+        }
+    end
+
     PlayerData.ensureDailyQuests(player, nowTimestamp)
 
     local quests = {}
