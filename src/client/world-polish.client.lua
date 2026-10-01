@@ -26,6 +26,7 @@ local secondaryAccent = nil
 local doubleChaos = false
 local overdrive = false
 local finalRush = false
+local fusionName = nil
 local intensity = 1
 local previousPhase = "waiting"
 local readyPulseStartedAt = nil
@@ -380,6 +381,7 @@ local function rebuild(root)
     decorateArena(root)
     collectSecondaryLights(root)
     applyLightBudget()
+    refreshArenaHologramText()
 
     currentMapConnection = root.ChildAdded:Connect(function(child)
         if child.Name == "Arena" and root == currentMap then
@@ -416,6 +418,63 @@ workspace.ChildRemoved:Connect(function(child)
     end
 end)
 
+local function refreshArenaHologramText()
+    if not currentMap then
+        return
+    end
+
+    local arena = currentMap:FindFirstChild("Arena")
+    local decor = arena and arena:FindFirstChild("Decor")
+    local hologram = decor and decor:FindFirstChild("ArenaIdentityHologram")
+    local gui = hologram and hologram:FindFirstChild("ArenaIdentityGui")
+    if not gui then
+        return
+    end
+
+    local title = gui:FindFirstChild("ArenaIdentityTitle")
+    local hint = gui:FindFirstChild("ArenaIdentityHint")
+    local separator = gui:FindFirstChild("ArenaIdentitySeparator")
+
+    if not title or not title:IsA("TextLabel") or not hint or not hint:IsA("TextLabel") then
+        return
+    end
+
+    local titleText = tostring(title:GetAttribute("BaseText") or "CHAOS ARENA")
+    local hintText = tostring(hint:GetAttribute("BaseText") or "ADAPT • MOVE • SURVIVE")
+    local eventColor = nil
+
+    if phase == "round" and finalRush then
+        titleText = "FINAL RUSH"
+        hintText = "LAST 5 SECONDS • PADS RECHARGE FASTER"
+        eventColor = Color3.fromRGB(255, 92, 58)
+    elseif phase == "round" and overdrive then
+        titleText = "OVERDRIVE"
+        hintText = "BOOST PADS • SHARD SURGE • GOLDEN SHARD"
+        eventColor = Color3.fromRGB(255, 205, 85)
+    elseif doubleChaos and fusionName then
+        titleText = tostring(fusionName)
+        hintText = "CHAOS FUSION • SURVIVE BOTH HAZARDS"
+        eventColor = Color3.fromRGB(185, 100, 255)
+    end
+
+    title.Text = titleText
+    hint.Text = hintText
+
+    if eventColor then
+        title.TextStrokeColor3 = eventColor
+        hint.TextColor3 = eventColor:Lerp(Color3.new(1, 1, 1), 0.48)
+        if separator and separator:IsA("Frame") then
+            separator.BackgroundColor3 = eventColor
+        end
+    else
+        title.TextStrokeColor3 = accent
+        hint.TextColor3 = Color3.fromRGB(190, 210, 230)
+        if separator and separator:IsA("Frame") then
+            separator.BackgroundColor3 = accent
+        end
+    end
+end
+
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     local tier = quality()
     applyLightBudget()
@@ -440,6 +499,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     doubleChaos = state.doubleChaos == true
     overdrive = state.phase == "round" and state.overdrive == true
     finalRush = state.phase == "round" and state.finalRush == true
+    fusionName = type(state.fusionName) == "string" and state.fusionName or nil
     intensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
 
     local ids = state.disasterIds or {}
@@ -453,6 +513,8 @@ stateEvent.OnClientEvent:Connect(function(state)
         accent = Color3.fromRGB(90, 185, 255)
         secondaryAccent = nil
     end
+
+    refreshArenaHologramText()
 end)
 
 bindGeneratedMap()
