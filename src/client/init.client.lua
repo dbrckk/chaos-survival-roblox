@@ -43,7 +43,7 @@ top.BorderSizePixel = 0
 top.Parent = root
 UITheme.addCorner(top, UITheme.Corners.Large)
 UITheme.addStroke(top, UITheme.Colors.Border, 1.2, 0.32)
-UITheme.addGradient(top, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+local topGradient = UITheme.addGradient(top, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -90, 0.58, 0)
@@ -86,6 +86,11 @@ local timerGradient = UITheme.addGradient(
     Color3.fromRGB(220, 70, 55),
     90
 )
+
+local function setTimerPalette(first, second)
+    timer.BackgroundColor3 = first
+    timerGradient.Color = ColorSequence.new(first, second)
+end
 
 local aliveCounter = Instance.new("TextLabel")
 aliveCounter.Name = "AliveCounter"
@@ -604,6 +609,37 @@ achievementButton.Parent = root
 UITheme.addCorner(achievementButton, UITheme.Corners.Medium)
 UITheme.addStroke(achievementButton, UITheme.Colors.Gold, 1.2, 0.38)
 UITheme.addGradient(achievementButton, UITheme.Colors.PanelRaised, UITheme.Colors.PanelSoft, 90)
+
+
+local function bindPressFeedback(button)
+    local scale = Instance.new("UIScale")
+    scale.Scale = 1
+    scale.Parent = button
+
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(
+            scale,
+            TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Scale = 0.95}
+        ):Play()
+    end)
+
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(
+            scale,
+            TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = 1}
+        ):Play()
+    end)
+
+    button.MouseLeave:Connect(function()
+        TweenService:Create(scale, TweenInfo.new(0.10), {Scale = 1}):Play()
+    end)
+end
+
+bindPressFeedback(questButton)
+bindPressFeedback(achievementButton)
+bindPressFeedback(cosmeticsButton)
 
 local achievementPanel = Instance.new("Frame")
 achievementPanel.Name = "AchievementPanel"
@@ -1264,20 +1300,28 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 
     if state.phase == "ready" then
-        timer.BackgroundColor3 = UITheme.Colors.Blue
+        setTimerPalette(UITheme.Colors.Blue, UITheme.Colors.Cyan)
         timer.Rotation = 0
     elseif state.phase == "round" and (state.seconds or 0) <= 5 then
-        timer.BackgroundColor3 = UITheme.Colors.Red
+        setTimerPalette(UITheme.Colors.Red, UITheme.Colors.Orange)
         timer.Rotation = ((state.seconds or 0) % 2 == 0) and -4 or 4
     else
-        timer.BackgroundColor3 = UITheme.Colors.Orange
+        setTimerPalette(UITheme.Colors.Orange, Color3.fromRGB(220, 70, 55))
         timer.Rotation = 0
     end
 
     if state.doubleChaos then
-        top.BackgroundColor3 = Color3.fromRGB(90, 20, 120)
+        top.BackgroundColor3 = Color3.fromRGB(63, 28, 88)
+        topGradient.Color = ColorSequence.new(
+            Color3.fromRGB(86, 38, 118),
+            UITheme.Colors.Panel
+        )
     else
-        top.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
+        top.BackgroundColor3 = UITheme.Colors.Panel
+        topGradient.Color = ColorSequence.new(
+            UITheme.Colors.PanelRaised,
+            UITheme.Colors.Panel
+        )
     end
 
     if state.voteOptions then
