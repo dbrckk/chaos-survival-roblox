@@ -1,4 +1,6 @@
 local Players = game:GetService("Players")
+
+local PlayerReadiness = require(script.Parent.PlayerReadiness)
 local Cosmetics = require(script.Parent.CosmeticsCatalog)
 local GameAnalytics = require(script.Parent.GameAnalytics)
 
@@ -196,11 +198,7 @@ end
 
 local function setupPlayer(player)
     task.spawn(function()
-        if not player:GetAttribute("DataLoaded") then
-            player:GetAttributeChangedSignal("DataLoaded"):Wait()
-        end
-
-        if player.Parent ~= Players then
+        if not PlayerReadiness.waitForDataLoaded(player) then
             return
         end
 
