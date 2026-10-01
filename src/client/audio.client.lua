@@ -275,7 +275,14 @@ end)
 chaosShardCollectedEvent.OnClientEvent:Connect(function(payload)
     local total = math.max(1, math.floor(tonumber(payload.total) or 1))
     local variance = math.min(0.08, total * 0.008)
-    play("ShardCollect", variance)
+    if payload.golden == true then
+        play("GoldenShard", 0.025)
+        task.delay(0.07, function()
+            play("Reward", 0.02)
+        end)
+    else
+        play("ShardCollect", variance)
+    end
 
     if (tonumber(payload.flowBonus) or 0) > 0 then
         task.delay(0.06, function()
