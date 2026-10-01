@@ -840,6 +840,10 @@ local function showRoundFeedback(feedback)
     table.insert(tags, tostring(feedback.disasterName or "CHAOS"))
     if feedback.doubleChaos then table.insert(tags, "DOUBLE CHAOS") end
     if feedback.soloMode then table.insert(tags, "SOLO RUSH") end
+    local streakCount = tonumber(feedback.streak) or 0
+    if survived and streakCount >= 2 then
+        table.insert(tags, "STREAK x" .. tostring(streakCount))
+    end
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
     resultMeta.Text = table.concat(tags, "  •  ")
 
