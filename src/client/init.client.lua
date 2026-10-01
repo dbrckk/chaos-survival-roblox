@@ -482,39 +482,56 @@ local function renderCosmetics(state)
 
     for _, item in ipairs(catalog) do
         local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1, 0, 0, 56)
-        button.BackgroundColor3 = Color3.fromRGB(34, 38, 52)
-        button.TextColor3 = Color3.new(1, 1, 1)
+        button.Size = UDim2.new(1, 0, 0, 58)
+        button.BackgroundColor3 = UITheme.Colors.PanelSoft
+        button.BackgroundTransparency = 0.06
+        button.BorderSizePixel = 0
+        button.TextColor3 = UITheme.Colors.Text
         button.Font = Enum.Font.GothamBold
         button.TextScaled = true
         button.TextWrapped = true
+        button.AutoButtonColor = false
 
         local isOwned = owned[item.id] == true
         local coinPrice = tonumber(item.coinPrice)
         local unlockLevel = tonumber(item.unlockLevel)
         local kindLabel = string.upper(tostring(item.kind or "cosmetic"))
+        local kindAccent = item.kind == "trail" and UITheme.Colors.Cyan or UITheme.Colors.Magenta
 
         local isEquipped = (item.kind == "trail" and equippedTrail == item.id)
             or (item.kind == "aura" and equippedAura == item.id)
 
         if isEquipped then
             button.Text = string.format("%s   •   %s   •   EQUIPPED", item.name, kindLabel)
-            button.BackgroundColor3 = Color3.fromRGB(55, 110, 85)
+            button.BackgroundColor3 = UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.58)
         elseif isOwned then
             button.Text = string.format("%s   •   %s   •   EQUIP", item.name, kindLabel)
         elseif coinPrice and coinPrice > 0 then
-            button.Text = string.format("%s   •   %s   •   🪙 %d", item.name, kindLabel, coinPrice)
-            button.BackgroundColor3 = Color3.fromRGB(62, 52, 36)
+            button.Text = string.format("%s   •   %s   •   %d COINS", item.name, kindLabel, coinPrice)
+            button.BackgroundColor3 = UITheme.Colors.Gold:Lerp(UITheme.Colors.Panel, 0.72)
         elseif unlockLevel then
             button.Text = string.format("%s   •   %s   •   LVL %d", item.name, kindLabel, unlockLevel)
-            button.BackgroundColor3 = Color3.fromRGB(48, 49, 58)
+            button.BackgroundColor3 = UITheme.Colors.PanelSoft
         else
             button.Text = string.format("%s   •   %s", item.name, kindLabel)
             button.BackgroundColor3 = Color3.fromRGB(48, 49, 58)
         end
 
         button.Parent = cosmeticsList
-        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
+        UITheme.addCorner(button, UITheme.Corners.Small)
+        UITheme.addStroke(
+            button,
+            isEquipped and UITheme.Colors.Green or kindAccent,
+            isEquipped and 1.8 or 1.0,
+            isEquipped and 0.18 or 0.55
+        )
+        UITheme.addGradient(
+            button,
+            button.BackgroundColor3:Lerp(kindAccent, isEquipped and 0.10 or 0.06),
+            UITheme.Colors.Panel,
+            90
+        )
+        UITheme.addPressFeedback(button, 0.975)
 
         button.Activated:Connect(function()
             if isOwned then
@@ -533,25 +550,33 @@ supportButton.Name = "SupportButton"
 supportButton.AnchorPoint = Vector2.new(1, 1)
 supportButton.Position = UDim2.fromScale(0.975, 0.825)
 supportButton.Size = UDim2.fromScale(0.26, 0.055)
-supportButton.BackgroundColor3 = Color3.fromRGB(68, 44, 82)
-supportButton.TextColor3 = Color3.new(1, 1, 1)
+supportButton.BackgroundColor3 = UITheme.Colors.PanelRaised
+supportButton.BackgroundTransparency = 0.04
+supportButton.BorderSizePixel = 0
+supportButton.TextColor3 = UITheme.Colors.Text
 supportButton.Font = Enum.Font.GothamBold
 supportButton.TextScaled = true
 supportButton.Text = "SUPPORT"
 supportButton.Visible = false
 supportButton.Parent = root
-Instance.new("UICorner", supportButton).CornerRadius = UDim.new(0, 14)
+UITheme.addCorner(supportButton, UITheme.Corners.Medium)
+UITheme.addStroke(supportButton, UITheme.Colors.Violet, 1.2, 0.34)
+UITheme.addGradient(supportButton, UITheme.Colors.PanelRaised, UITheme.Colors.PanelSoft, 90)
+UITheme.addPressFeedback(supportButton, 0.95)
 
 local supportPanel = Instance.new("Frame")
 supportPanel.Name = "SupportPanel"
 supportPanel.AnchorPoint = Vector2.new(1, 1)
 supportPanel.Position = UDim2.fromScale(0.975, 0.75)
 supportPanel.Size = UDim2.fromScale(0.72, 0.30)
-supportPanel.BackgroundColor3 = Color3.fromRGB(22, 20, 31)
-supportPanel.BackgroundTransparency = 0.03
+supportPanel.BackgroundColor3 = UITheme.Colors.Panel
+supportPanel.BackgroundTransparency = 0.02
+supportPanel.BorderSizePixel = 0
 supportPanel.Visible = false
 supportPanel.Parent = root
-Instance.new("UICorner", supportPanel).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(supportPanel, UITheme.Corners.Large)
+UITheme.addStroke(supportPanel, UITheme.Colors.Violet, 1.2, 0.34)
+UITheme.addGradient(supportPanel, Color3.fromRGB(52, 34, 72), UITheme.Colors.Panel, 90)
 
 local supportHeader = Instance.new("TextLabel")
 supportHeader.Size = UDim2.new(1, -24, 0.20, 0)
@@ -605,9 +630,11 @@ local function renderMonetization(state)
         local button = Instance.new("TextButton")
         button.Size = UDim2.new(1, 0, 0, 54)
         button.BackgroundColor3 = offer.owned
-            and Color3.fromRGB(50, 91, 69)
-            or Color3.fromRGB(67, 47, 82)
-        button.TextColor3 = Color3.new(1, 1, 1)
+            and UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.60)
+            or UITheme.Colors.Violet:Lerp(UITheme.Colors.Panel, 0.62)
+        button.BackgroundTransparency = 0.04
+        button.BorderSizePixel = 0
+        button.TextColor3 = UITheme.Colors.Text
         button.Font = Enum.Font.GothamBold
         button.TextScaled = true
         button.TextWrapped = true
@@ -615,7 +642,14 @@ local function renderMonetization(state)
             and string.format("%s   •   OWNED", offer.name or "Support Pack")
             or string.format("%s   •   %d ROBUX", offer.name or "Support Pack", offer.price or 0)
         button.Parent = supportList
-        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
+        UITheme.addCorner(button, UITheme.Corners.Small)
+        UITheme.addStroke(
+            button,
+            offer.owned and UITheme.Colors.Green or UITheme.Colors.Violet,
+            1.1,
+            0.40
+        )
+        UITheme.addPressFeedback(button, 0.975)
 
         button.Activated:Connect(function()
             if not offer.owned then
@@ -728,28 +762,52 @@ local function renderAchievements(state)
     local items = state and state.achievements or {}
     for _, item in ipairs(items) do
         local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, -6, 0, 72)
-        row.BackgroundColor3 = item.unlocked and Color3.fromRGB(55, 85, 65) or Color3.fromRGB(34, 38, 52)
+        row.Size = UDim2.new(1, -6, 0, 76)
+        row.BackgroundColor3 = item.unlocked
+            and UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.68)
+            or UITheme.Colors.PanelSoft
+        row.BackgroundTransparency = 0.06
+        row.BorderSizePixel = 0
         row.Parent = achievementList
-        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+        UITheme.addCorner(row, UITheme.Corners.Small)
+        UITheme.addStroke(
+            row,
+            item.unlocked and UITheme.Colors.Gold or UITheme.Colors.Border,
+            item.unlocked and 1.5 or 1,
+            item.unlocked and 0.30 or 0.62
+        )
+        UITheme.addGradient(
+            row,
+            item.unlocked and UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.58) or UITheme.Colors.PanelSoft,
+            UITheme.Colors.Panel,
+            90
+        )
+
+        local unlockRail = Instance.new("Frame")
+        unlockRail.Size = UDim2.new(0, 4, 0.72, 0)
+        unlockRail.Position = UDim2.fromScale(0.015, 0.14)
+        unlockRail.BackgroundColor3 = item.unlocked and UITheme.Colors.Gold or UITheme.Colors.Border
+        unlockRail.BorderSizePixel = 0
+        unlockRail.Parent = row
+        UITheme.addCorner(unlockRail, UITheme.Corners.Pill)
 
         local rowTitle = Instance.new("TextLabel")
-        rowTitle.Size = UDim2.new(1, -20, 0.42, 0)
-        rowTitle.Position = UDim2.fromOffset(10, 5)
+        rowTitle.Size = UDim2.new(1, -32, 0.42, 0)
+        rowTitle.Position = UDim2.fromOffset(20, 5)
         rowTitle.BackgroundTransparency = 1
         rowTitle.Font = Enum.Font.GothamBold
-        rowTitle.TextColor3 = Color3.new(1, 1, 1)
+        rowTitle.TextColor3 = UITheme.Colors.Text
         rowTitle.TextScaled = true
         rowTitle.TextXAlignment = Enum.TextXAlignment.Left
         rowTitle.Text = item.title or "Achievement"
         rowTitle.Parent = row
 
         local rowBody = Instance.new("TextLabel")
-        rowBody.Size = UDim2.new(1, -20, 0.40, 0)
-        rowBody.Position = UDim2.new(0, 10, 0.50, 0)
+        rowBody.Size = UDim2.new(1, -32, 0.40, 0)
+        rowBody.Position = UDim2.new(0, 20, 0.50, 0)
         rowBody.BackgroundTransparency = 1
         rowBody.Font = Enum.Font.GothamMedium
-        rowBody.TextColor3 = Color3.fromRGB(220, 225, 235)
+        rowBody.TextColor3 = item.unlocked and Color3.fromRGB(220, 245, 225) or UITheme.Colors.Muted
         rowBody.TextScaled = true
         rowBody.TextXAlignment = Enum.TextXAlignment.Left
 
