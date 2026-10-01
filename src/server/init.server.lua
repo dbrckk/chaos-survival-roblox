@@ -129,6 +129,10 @@ local function progressQuest(player, eventName, amount)
     local completed = PlayerData.progressQuestEvent(player, eventName, amount or 1)
     sendQuestState(player, completed)
 
+    if #completed > 0 then
+        task.spawn(PlayerData.save, player, true)
+    end
+
     for _, quest in ipairs(completed) do
         GameAnalytics.custom(
             player,
@@ -256,6 +260,7 @@ local function setupDailyReward(player)
                 "Streak:" .. tostring(claim.Streak)
             )
             GameAnalytics.economySource(player, claim.Coins, "DailyReward", "DailyDay" .. tostring(claim.RewardIndex), #Players:GetPlayers() <= 1)
+            task.spawn(PlayerData.save, player, true)
         end
 
         sendQuestState(player)
