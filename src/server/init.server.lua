@@ -489,6 +489,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 position = position,
             })
 
+            progressQuest(player, "collect_shard", 1)
+            progressQuest(player, "coins_earned", amount)
+
             GameAnalytics.economySource(
                 player,
                 amount,
