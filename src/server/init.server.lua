@@ -1057,6 +1057,7 @@ while true do
     local eliminated, endedEarly, roundElapsed = runDisasterSet(selectedSet, contestants, roundSettings)
 
     local survivors = 0
+    local survivorUserIds = {}
     local feedbackDisasterName = selectedSet[1].Name
     if #selectedSet > 1 then
         feedbackDisasterName = selectedSet[1].Name .. " + " .. selectedSet[2].Name
@@ -1089,6 +1090,7 @@ while true do
 
             if survived then
                 survivors += 1
+                table.insert(survivorUserIds, p.UserId)
                 PlayerData.add(p, "Coins", winCoins + streakBonusCoins + fusionBonusCoins)
                 PlayerData.add(p, "XP", winXP)
                 PlayerData.add(p, "Wins", 1)
@@ -1224,6 +1226,8 @@ while true do
         fusionName = fusionName,
         soloMode = roundSettings.Solo,
         arenaName = roundSettings.ArenaName,
+        survivorUserIds = survivorUserIds,
+        fusionName = fusionName,
     })
 
     for t = roundSettings.PostRoundSeconds, 1, -1 do
@@ -1236,6 +1240,8 @@ while true do
             fusionName = fusionName,
             soloMode = roundSettings.Solo,
             arenaName = roundSettings.ArenaName,
+            survivorUserIds = survivorUserIds,
+            fusionName = fusionName,
         })
         task.wait(1)
     end
