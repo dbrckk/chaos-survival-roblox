@@ -1050,6 +1050,13 @@ monetizationStateEvent.OnClientEvent:Connect(function(payload)
         task.delay(3.4, function()
             questToast.Visible = false
         end)
+    elseif payload.notice == "data_unavailable" then
+        questToastTitle.Text = "PURCHASE TEMPORARILY PAUSED"
+        questToastBody.Text = "Your progress cannot be saved right now • rejoin before purchasing"
+        questToast.Visible = true
+        task.delay(3.4, function()
+            questToast.Visible = false
+        end)
     end
 end)
 
