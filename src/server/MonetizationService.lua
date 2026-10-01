@@ -160,6 +160,11 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
             return
         end
 
+        if player:GetAttribute("DataPersistenceAvailable") ~= true then
+            sendState(player, "data_unavailable")
+            return
+        end
+
         local offer = offerForKey(key)
         if not offer then
             return
