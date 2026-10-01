@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
+
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -23,8 +25,8 @@ root.Position = touchDevice
 root.Size = touchDevice
     and UDim2.new(0.62, 0, 0, 48)
     or UDim2.new(0.82, 0, 0, 54)
-root.BackgroundColor3 = Color3.fromRGB(12, 17, 27)
-root.BackgroundTransparency = 0.12
+root.BackgroundColor3 = UITheme.Colors.Panel
+root.BackgroundTransparency = 0.05
 root.BorderSizePixel = 0
 root.Visible = false
 root.Parent = gui
@@ -34,15 +36,9 @@ sizeConstraint.MinSize = Vector2.new(250, 48)
 sizeConstraint.MaxSize = Vector2.new(620, 58)
 sizeConstraint.Parent = root
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 15)
-corner.Parent = root
-
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(72, 104, 150)
-stroke.Thickness = 1.2
-stroke.Transparency = 0.35
-stroke.Parent = root
+UITheme.addCorner(root, UITheme.Corners.Large)
+local stroke = UITheme.addStroke(root, UITheme.Colors.Blue, 1.2, 0.30)
+UITheme.addGradient(root, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local scale = Instance.new("UIScale")
 scale.Scale = 0.96
@@ -55,7 +51,7 @@ shard.Size = UDim2.fromScale(0.27, 0.43)
 shard.BackgroundTransparency = 1
 shard.Font = Enum.Font.GothamBlack
 shard.Text = "SHARDS  0"
-shard.TextColor3 = Color3.fromRGB(135, 225, 255)
+shard.TextColor3 = UITheme.Colors.Cyan
 shard.TextScaled = true
 shard.TextXAlignment = Enum.TextXAlignment.Left
 shard.Parent = root
@@ -68,7 +64,7 @@ status.Size = UDim2.fromScale(0.36, 0.43)
 status.BackgroundTransparency = 1
 status.Font = Enum.Font.GothamBold
 status.Text = "STABLE"
-status.TextColor3 = Color3.fromRGB(205, 220, 240)
+status.TextColor3 = UITheme.Colors.Muted
 status.TextScaled = true
 status.TextXAlignment = Enum.TextXAlignment.Right
 status.Parent = root
@@ -77,7 +73,7 @@ local barBg = Instance.new("Frame")
 barBg.Name = "IntensityBackground"
 barBg.Position = UDim2.fromScale(0.025, 0.68)
 barBg.Size = UDim2.fromScale(0.95, 0.14)
-barBg.BackgroundColor3 = Color3.fromRGB(33, 41, 57)
+barBg.BackgroundColor3 = UITheme.Colors.PanelSoft
 barBg.BackgroundTransparency = 0.08
 barBg.BorderSizePixel = 0
 barBg.Parent = root
@@ -89,7 +85,7 @@ bgCorner.Parent = barBg
 local fill = Instance.new("Frame")
 fill.Name = "IntensityFill"
 fill.Size = UDim2.fromScale(0.08, 1)
-fill.BackgroundColor3 = Color3.fromRGB(78, 175, 255)
+fill.BackgroundColor3 = UITheme.Colors.Blue
 fill.BorderSizePixel = 0
 fill.Parent = barBg
 
@@ -169,11 +165,11 @@ local function refresh()
     status.TextColor3 = color
 
     if state.doubleChaos then
-        stroke.Color = Color3.fromRGB(190, 95, 255)
-        shard.TextColor3 = Color3.fromRGB(205, 150, 255)
+        stroke.Color = UITheme.Colors.Violet
+        shard.TextColor3 = Color3.fromRGB(215, 165, 255)
     else
-        stroke.Color = Color3.fromRGB(72, 104, 150)
-        shard.TextColor3 = Color3.fromRGB(135, 225, 255)
+        stroke.Color = UITheme.Colors.Blue
+        shard.TextColor3 = UITheme.Colors.Cyan
     end
 end
 
