@@ -94,10 +94,10 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
-[TODO] 7.1 Audit nombre de parts / emitters / lights.
-[TODO] 7.2 Vérifier tous les RenderStepped.
-[TODO] 7.3 Réduire effets hors écran / inutiles.
-[TODO] 7.4 Ajuster High / Medium / Low VFX.
+[EN COURS] 7.1 Audit nombre de parts / emitters / lights.
+[QA]   7.2 Vérifier tous les RenderStepped.
+[QA]   7.3 Réduire effets hors phase / inutiles.
+[QA]   7.4 Ajuster High / Medium / Low VFX.
 [TODO] 7.5 Soak test Android 30–60 minutes.
 [TODO] 7.6 Mesurer FPS via PerformancePulse et corriger les points faibles.
 
