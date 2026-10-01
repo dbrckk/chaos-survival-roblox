@@ -203,6 +203,11 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
             return
         end
 
+        if player:GetAttribute("DataPersistenceAvailable") ~= true then
+            sendState(player, "data_unavailable")
+            return
+        end
+
         for _, offer in ipairs(offers) do
             local passId = configuredPassId(offer)
             if passId and passId == purchasedPassId then
