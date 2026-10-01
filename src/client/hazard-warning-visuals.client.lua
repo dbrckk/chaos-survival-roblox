@@ -41,7 +41,12 @@ local function ensureRenderLoop()
             local pulse = (math.sin(alpha * math.pi * 6) + 1) * 0.5
 
             if state.kind == "Freeze" then
-                part.Transparency = 0.78 - (0.30 * math.sin(alpha * math.pi))
+                local freezePeak = 0.18 * currentTier.Scale
+                part.Transparency = math.clamp(
+                    0.84 - (freezePeak * math.sin(alpha * math.pi)),
+                    0.60,
+                    0.92
+                )
             elseif state.kind == "JumpShock" then
                 local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
                 part.Size = Vector3.new(part.Size.X, diameter, diameter)
