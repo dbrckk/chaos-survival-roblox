@@ -94,7 +94,7 @@ local function worldBurst(position, reward)
         core,
         TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
-            Size = Vector3.new(4.2, 4.2, 4.2),
+            Size = golden and Vector3.new(5.6, 5.6, 5.6) or Vector3.new(4.2, 4.2, 4.2),
             Transparency = 1,
         }
     ):Play()
@@ -103,7 +103,7 @@ local function worldBurst(position, reward)
         ring,
         TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
-            Size = Vector3.new(0.10, 8.5, 8.5),
+            Size = golden and Vector3.new(0.10, 11.5, 11.5) or Vector3.new(0.10, 8.5, 8.5),
             Transparency = 1,
         }
     ):Play()
@@ -129,14 +129,14 @@ local function worldBurst(position, reward)
             NumberSequenceKeypoint.new(1, 1),
         })
         emitter.Parent = attachment
-        emitter:Emit(VfxQuality.particleCount(tier.Name, 18, 7))
+        emitter:Emit(VfxQuality.particleCount(tier.Name, golden and 28 or 18, golden and 10 or 7))
     end
 
     if tier.Name == "High" then
         local light = Instance.new("PointLight")
         light.Color = primary
-        light.Brightness = 1.8
-        light.Range = 10
+        light.Brightness = golden and 2.6 or 1.8
+        light.Range = golden and 14 or 10
         light.Shadows = false
         light.Parent = core
         TweenService:Create(light, TweenInfo.new(0.22), {Brightness = 0}):Play()
