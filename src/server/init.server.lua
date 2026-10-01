@@ -65,6 +65,10 @@ local clientReadyEvent = remotes:FindFirstChild("ClientReady") or Instance.new("
 clientReadyEvent.Name = "ClientReady"
 clientReadyEvent.Parent = remotes
 
+local arenaMechanicFeedbackEvent = remotes:FindFirstChild("ArenaMechanicFeedback") or Instance.new("RemoteEvent")
+arenaMechanicFeedbackEvent.Name = "ArenaMechanicFeedback"
+arenaMechanicFeedbackEvent.Parent = remotes
+
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
 MonetizationService.init(remotes, RateLimiter, CosmeticService)
@@ -341,6 +345,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
             )
         end,
         OnArenaMechanicUsed = function(player, variantId, mechanicName)
+            arenaMechanicFeedbackEvent:FireClient(player, {
+                variantId = variantId,
+                mechanicName = mechanicName,
+            })
+
             GameAnalytics.custom(
                 player,
                 "ArenaMechanicUsed",
