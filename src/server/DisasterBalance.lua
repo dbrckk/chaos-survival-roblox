@@ -49,7 +49,10 @@ function DisasterBalance.mobileProfile(playerCount)
     return {
         MeteorWarningSeconds = count <= 2 and 1.05 or 0.9,
         MeteorDamage = count <= 2 and 45 or 50,
+        MeteorRadius = 8,
         BombWarningSeconds = count <= 2 and 1.45 or 1.25,
+        BombDamage = count <= 2 and 42 or 48,
+        BombRadius = 8,
         FreezeSeconds = count <= 2 and 0.9 or 1.1,
         TornadoForce = count <= 2 and 14 or 17,
         SpeedMultiplier = count <= 2 and 1.4 or 1.5,
