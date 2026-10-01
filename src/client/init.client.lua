@@ -1156,6 +1156,11 @@ local function showRoundFeedback(feedback)
     if nearMissCount > 0 then
         table.insert(tags, "CLOSE CALLS x" .. tostring(nearMissCount))
     end
+    local medals = type(feedback.medals) == "table" and feedback.medals or {}
+    if #medals > 0 then
+        table.insert(tags, "MEDALS x" .. tostring(#medals))
+    end
+
     local streakCount = tonumber(feedback.streak) or 0
     if survived and streakCount >= 2 then
         table.insert(tags, "STREAK x" .. tostring(streakCount))
@@ -1164,7 +1169,13 @@ local function showRoundFeedback(feedback)
     resultMeta.Text = table.concat(tags, "  •  ")
 
     if feedback.challengeCompleted then
-        resultTip.Text = "ROUND CHALLENGE COMPLETE • bonus secured"
+        if #medals > 0 then
+            resultTip.Text = "CHALLENGE COMPLETE • " .. table.concat(medals, " • ")
+        else
+            resultTip.Text = "ROUND CHALLENGE COMPLETE • bonus secured"
+        end
+    elseif #medals > 0 then
+        resultTip.Text = "MEDALS • " .. table.concat(medals, " • ")
     elseif survived then
         if feedback.criticalSurvival then
             resultTip.Text = "CLUTCH: you survived at critical health"
