@@ -5,6 +5,7 @@ local RoundCollectibles = {}
 RoundCollectibles.SpawnInterval = 8
 RoundCollectibles.InitialDelay = 4
 RoundCollectibles.CoinReward = 1
+RoundCollectibles.GoldenCoinReward = 3
 
 function RoundCollectibles.maxActive(contestantCount, soloMode)
     if soloMode then
@@ -15,6 +16,10 @@ end
 
 function RoundCollectibles.reward()
     return RoundCollectibles.CoinReward
+end
+
+function RoundCollectibles.goldenReward()
+    return RoundCollectibles.GoldenCoinReward
 end
 
 local function playerFromHit(hit)
@@ -63,7 +68,10 @@ local function candidateParts(arena)
     return candidates
 end
 
-local function makeShard(container, supportPart, index)
+local function makeShard(container, supportPart, index, reward, golden)
+    local resolvedReward = math.max(1, math.floor(tonumber(reward) or RoundCollectibles.CoinReward))
+    local isGolden = golden == true
+
     local shard = Instance.new("Part")
     shard.Name = "ChaosShard" .. index
     shard.Shape = Enum.PartType.Ball
@@ -74,16 +82,18 @@ local function makeShard(container, supportPart, index)
     shard.CanTouch = true
     shard.CastShadow = false
     shard.Material = Enum.Material.Neon
-    shard.Color = Color3.fromRGB(95, 220, 255)
+    shard.Color = isGolden and Color3.fromRGB(255, 205, 70) or Color3.fromRGB(95, 220, 255)
     shard.Position = supportPart.Position + Vector3.new(0, (supportPart.Size.Y * 0.5) + 2.2, 0)
     shard:SetAttribute("ChaosShard", true)
+    shard:SetAttribute("ChaosShardReward", resolvedReward)
+    shard:SetAttribute("ChaosShardGolden", isGolden)
     shard.Parent = container
 
     local light = Instance.new("PointLight")
     light.Name = "ShardGlow"
     light.Color = shard.Color
-    light.Brightness = 1.3
-    light.Range = 10
+    light.Brightness = isGolden and 2.0 or 1.3
+    light.Range = isGolden and 14 or 10
     light.Shadows = false
     light.Parent = shard
 
@@ -99,10 +109,15 @@ local function makeShard(container, supportPart, index)
     emitter.Acceleration = Vector3.new(0, 1.2, 0)
     emitter.SpreadAngle = Vector2.new(24, 24)
     emitter.LightEmission = 0.9
-    emitter.Color = ColorSequence.new(
-        Color3.fromRGB(85, 205, 255),
-        Color3.fromRGB(185, 120, 255)
-    )
+    emitter.Color = isGolden
+        and ColorSequence.new(
+            Color3.fromRGB(255, 240, 145),
+            Color3.fromRGB(255, 155, 45)
+        )
+        or ColorSequence.new(
+            Color3.fromRGB(85, 205, 255),
+            Color3.fromRGB(185, 120, 255)
+        )
     emitter.Size = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.18),
         NumberSequenceKeypoint.new(1, 0),
@@ -127,8 +142,8 @@ local function makeShard(container, supportPart, index)
     label.BackgroundTransparency = 0.18
     label.BorderSizePixel = 0
     label.Font = Enum.Font.GothamBlack
-    label.Text = "SHARD  +1"
-    label.TextColor3 = Color3.fromRGB(150, 235, 255)
+    label.Text = isGolden and ("GOLD SHARD  +" .. tostring(resolvedReward)) or ("SHARD  +" .. tostring(resolvedReward))
+    label.TextColor3 = isGolden and Color3.fromRGB(255, 230, 115) or Color3.fromRGB(150, 235, 255)
     label.TextScaled = true
     label.TextStrokeTransparency = 0.7
     label.Parent = billboard
@@ -138,7 +153,7 @@ local function makeShard(container, supportPart, index)
     corner.Parent = label
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(145, 110, 255)
+    stroke.Color = isGolden and Color3.fromRGB(255, 170, 55) or Color3.fromRGB(145, 110, 255)
     stroke.Thickness = 1.2
     stroke.Transparency = 0.35
     stroke.Parent = label
@@ -170,6 +185,7 @@ function RoundCollectibles.start(ctx)
         return math.min(4, maxActive + (surge and 1 or 0))
     end
     local spawnIndex = 0
+    local goldenSpawned = false
     local lastCandidate = nil
 
     local function activeCount()
@@ -208,7 +224,13 @@ function RoundCollectibles.start(ctx)
         end
 
         spawnIndex += 1
-        local shard = makeShard(container, support, spawnIndex)
+        local golden = ctx.Overdrive and ctx.Overdrive() == true and not goldenSpawned
+        local reward = golden and RoundCollectibles.goldenReward() or RoundCollectibles.reward()
+        if golden then
+            goldenSpawned = true
+        end
+
+        local shard = makeShard(container, support, spawnIndex, reward, golden)
         local claimed = false
 
         shard.Touched:Connect(function(hit)
@@ -222,9 +244,12 @@ function RoundCollectibles.start(ctx)
             end
 
             claimed = true
-            local reward = RoundCollectibles.reward()
+            local collectedReward = math.max(
+                1,
+                math.floor(tonumber(shard:GetAttribute("ChaosShardReward")) or RoundCollectibles.reward())
+            )
             if ctx.OnCollected then
-                ctx.OnCollected(player, reward, shard.Position)
+                ctx.OnCollected(player, collectedReward, shard.Position)
             end
             shard:Destroy()
         end)
@@ -243,6 +268,7 @@ function RoundCollectibles.start(ctx)
     return {
         name = "Chaos Shards",
         reward = RoundCollectibles.CoinReward,
+        goldenReward = RoundCollectibles.GoldenCoinReward,
         maxActive = maxActive,
     }
 end
