@@ -1227,7 +1227,6 @@ while true do
         soloMode = roundSettings.Solo,
         arenaName = roundSettings.ArenaName,
         survivorUserIds = survivorUserIds,
-        fusionName = fusionName,
     })
 
     for t = roundSettings.PostRoundSeconds, 1, -1 do
@@ -1241,7 +1240,6 @@ while true do
             soloMode = roundSettings.Solo,
             arenaName = roundSettings.ArenaName,
             survivorUserIds = survivorUserIds,
-            fusionName = fusionName,
         })
         task.wait(1)
     end
