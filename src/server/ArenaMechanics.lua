@@ -113,6 +113,11 @@ function ArenaMechanics.get(variantId)
     return ArenaMechanics.Definitions[variantId]
 end
 
+function ArenaMechanics.impulseFor(impulse, overdrive)
+    local multiplier = overdrive == true and 1.28 or 1
+    return impulse * multiplier
+end
+
 function ArenaMechanics.safeVelocity(currentVelocity, impulse)
     return MovementSafety.addImpulse(
         currentVelocity,
@@ -169,12 +174,15 @@ function ArenaMechanics.start(ctx, variantId)
             end
             cooldownUntil[player.UserId] = now + 1.1
 
+            local overdrive = ctx.Overdrive and ctx.Overdrive() == true
+            local appliedImpulse = ArenaMechanics.impulseFor(impulse, overdrive)
+
             root.AssemblyLinearVelocity = ArenaMechanics.safeVelocity(
                 root.AssemblyLinearVelocity,
-                impulse
+                appliedImpulse
             )
             if ctx.OnArenaMechanicUsed then
-                pcall(ctx.OnArenaMechanicUsed, player, variantId, definition.Name)
+                pcall(ctx.OnArenaMechanicUsed, player, variantId, definition.Name, overdrive)
             end
         end)
     end
