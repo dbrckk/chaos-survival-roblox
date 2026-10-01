@@ -862,7 +862,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     }
 
     for i, offset in ipairs(beaconOffsets) do
-        local pillar = part(
+        local pillar = decorPart(
             decor,
             "EdgeBeacon" .. i,
             Vector3.new(0.8, 7, 0.8),
