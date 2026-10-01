@@ -225,7 +225,17 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
+    local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
+    local masterRound = feedback.survived == true
+        and feedback.challengeCompleted == true
+        and momentumBest >= 4
+
     play(feedback.survived and "Survived" or "Eliminated", 0.025)
+    if masterRound then
+        task.delay(0.08, function()
+            play("MasterRound", 0.02)
+        end)
+    end
 
     if feedback.criticalSurvival then
         task.delay(0.12, function()
