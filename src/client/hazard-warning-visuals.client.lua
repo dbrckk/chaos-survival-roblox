@@ -6,6 +6,9 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local tracked = {}
+local localDecor = Instance.new("Folder")
+localDecor.Name = "ChaosHazardWarningDecorLocal"
+localDecor.Parent = workspace
 local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 local renderConnection = nil
 local warningNames = {
@@ -27,6 +30,9 @@ local function ensureRenderLoop()
     renderConnection = RunService.RenderStepped:Connect(function(dt)
         for part, state in pairs(tracked) do
             if not part.Parent then
+                if state.ring and state.ring.Parent then
+                    state.ring:Destroy()
+                end
                 tracked[part] = nil
                 continue
             end
@@ -55,9 +61,20 @@ local function ensureRenderLoop()
                 local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
                 part.Size = Vector3.new(diameter, part.Size.Y, diameter)
                 part.Transparency = 0.12 + (pulse * 0.24)
+
+                if state.ring and state.ring.Parent then
+                    local ringScale = 1.10 + (pulse * 0.12)
+                    state.ring.Size = Vector3.new(0.10, diameter * ringScale, diameter * ringScale)
+                    state.ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.06, 0))
+                        * CFrame.Angles(0, 0, math.rad(90))
+                    state.ring.Transparency = 0.42 + (0.28 * alpha) + (pulse * 0.08)
+                end
             end
 
             if alpha >= 1 then
+                if state.ring and state.ring.Parent then
+                    state.ring:Destroy()
+                end
                 tracked[part] = nil
             end
         end
@@ -79,6 +96,27 @@ local function register(part)
         return
     end
 
+    local ring = nil
+    if kind == "Meteor" or kind == "Bomb" then
+        ring = Instance.new("Part")
+        ring.Name = kind .. "WarningRingLocal"
+        ring.Shape = Enum.PartType.Cylinder
+        ring.Anchored = true
+        ring.CanCollide = false
+        ring.CanTouch = false
+        ring.CanQuery = false
+        ring.CastShadow = false
+        ring.Material = Enum.Material.Neon
+        ring.Color = kind == "Meteor"
+            and Color3.fromRGB(255, 190, 78)
+            or Color3.fromRGB(255, 72, 72)
+        ring.Transparency = 0.48
+        ring.Size = Vector3.new(0.10, part.Size.X * 1.12, part.Size.Z * 1.12)
+        ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.06, 0))
+            * CFrame.Angles(0, 0, math.rad(90))
+        ring.Parent = localDecor
+    end
+
     tracked[part] = {
         startedAt = tonumber(part:GetAttribute("WarningStartedAt")) or workspace:GetServerTimeNow(),
         kind = kind,
@@ -86,6 +124,7 @@ local function register(part)
         startSize = math.max(0.1, tonumber(part:GetAttribute("WarningStartSize")) or part.Size.X),
         endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
         clock = 0,
+        ring = ring,
     }
 
     ensureRenderLoop()
@@ -128,5 +167,9 @@ end
 
 workspace.ChildAdded:Connect(maybeRegister)
 workspace.ChildRemoved:Connect(function(child)
+    local state = tracked[child]
+    if state and state.ring and state.ring.Parent then
+        state.ring:Destroy()
+    end
     tracked[child] = nil
 end)
