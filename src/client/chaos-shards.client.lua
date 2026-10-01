@@ -235,6 +235,27 @@ local function attachVisual(shardPart)
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = folder
 
+    local facets = {}
+    for i = 1, 3 do
+        local facet = Instance.new("Part")
+        facet.Name = "ShardFacet" .. i
+        facet.Anchored = true
+        facet.CanCollide = false
+        facet.CanTouch = false
+        facet.CanQuery = false
+        facet.CastShadow = false
+        facet.Material = Enum.Material.Neon
+        facet.Color = i == 2
+            and Color3.fromRGB(165, 105, 255)
+            or Color3.fromRGB(90, 215, 255)
+        facet.Size = Vector3.new(0.28, 2.15, 0.56)
+        facet.Transparency = quality().Name == "Low" and 1 or 0.24
+        facet.CFrame = shardPart.CFrame
+            * CFrame.Angles(0, math.rad((i - 1) * 60), math.rad(22))
+        facet.Parent = folder
+        table.insert(facets, facet)
+    end
+
     local ring = Instance.new("SelectionSphere")
     ring.Name = "ShardRing"
     ring.Adornee = shardPart
@@ -244,6 +265,7 @@ local function attachVisual(shardPart)
     ring.SurfaceTransparency = 1
     ring.Parent = folder
 
+    folder:SetAttribute("HasCrystalFacets", true)
     shardVisuals[shardPart] = folder
 end
 
@@ -313,6 +335,19 @@ RunService.RenderStepped:Connect(function(dt)
             local ring = folder:FindFirstChild("ShardRing")
             if ring and ring:IsA("SelectionSphere") then
                 ring.Transparency = (close and 0.46 or 0.68) + pulse * 0.12
+            end
+
+            local facetTier = tier.Name
+            for i = 1, 3 do
+                local facet = folder:FindFirstChild("ShardFacet" .. i)
+                if facet and facet:IsA("BasePart") then
+                    local angle = pulseClock * (close and 1.45 or 0.75) + math.rad((i - 1) * 60)
+                    facet.CFrame = shardPart.CFrame
+                        * CFrame.Angles(0, angle, math.rad(22 + math.sin(pulseClock * 2 + i) * 4))
+                    facet.Transparency = facetTier == "Low"
+                        and 1
+                        or ((close and 0.12 or 0.26) + pulse * 0.08)
+                end
             end
         end
     end
