@@ -21,6 +21,22 @@ end
 
 local reportEvent = ReplicatedStorage:WaitForChild("ChaosE2EReport")
 local failures = {}
+local roundStateReceived = false
+local lastRoundPhase = nil
+local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
+
+if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
+    roundStateEvent.OnClientEvent:Connect(function(state)
+        if type(state) == "table" then
+            roundStateReceived = true
+            lastRoundPhase = state.phase
+        end
+    end)
+else
+    table.insert(failures, "RoundState RemoteEvent missing")
+end
+
 
 local function check(condition, message)
     if not condition then
@@ -149,10 +165,20 @@ else
     check(false, "HumanoidRootPart missing")
 end
 
+local roundStateDeadline = os.clock() + 5
+while not roundStateReceived and os.clock() < roundStateDeadline do
+    task.wait(0.1)
+end
+check(roundStateReceived, "no RoundState snapshot received after client bootstrap")
+
 reportEvent:FireServer({
     ok = #failures == 0,
     error = table.concat(failures, " | "),
     viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.zero,
+    roundStateReceived = roundStateReceived,
+    roundPhase = lastRoundPhase,
+    roundParticipant = player:GetAttribute("RoundParticipant") == true,
+    roundEliminated = player:GetAttribute("RoundEliminated") == true,
 })
 
 player:GetAttributeChangedSignal("ChaosE2EShouldLeave"):Connect(function()
