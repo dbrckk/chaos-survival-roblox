@@ -18,6 +18,13 @@ describe("Adaptive VFX quality", function()
         expect(VfxQuality.nextTier("Medium", 55)).toBe("High")
     end)
 
+    it("scales particle budgets predictably", function()
+        expect(VfxQuality.particleCount("High", 20, 4)).toBe(20)
+        expect(VfxQuality.particleCount("Medium", 20, 4)).toBe(14)
+        expect(VfxQuality.particleCount("Low", 20, 4)).toBe(9)
+        expect(VfxQuality.particleCount("Low", 2, 4)).toBe(4)
+    end)
+
     it("exposes bounded quality scales", function()
         for _, tierName in ipairs({"High", "Medium", "Low"}) do
             local tier = VfxQuality.get(tierName)
