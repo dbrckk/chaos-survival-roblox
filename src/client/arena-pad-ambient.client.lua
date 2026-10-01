@@ -5,6 +5,18 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local emitters = {}
+local currentRate = 6 * VfxQuality.get(player:GetAttribute("VfxQualityTier")).ParticleScale
+
+local function refreshRates()
+    currentRate = 6 * VfxQuality.get(player:GetAttribute("VfxQualityTier")).ParticleScale
+    for pad, emitter in pairs(emitters) do
+        if not pad.Parent or not emitter.Parent then
+            emitters[pad] = nil
+        else
+            emitter.Rate = currentRate
+        end
+    end
+end
 
 local function destroyEmitter(pad)
     local emitter = emitters[pad]
@@ -41,6 +53,7 @@ local function attach(pad)
         NumberSequenceKeypoint.new(0, 0.2),
         NumberSequenceKeypoint.new(1, 1),
     })
+    emitter.Rate = currentRate
     emitter.Parent = attachment
 
     emitters[pad] = emitter
@@ -68,19 +81,4 @@ end)
 
 scan(workspace)
 
-task.spawn(function()
-    while true do
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-        local rate = 6 * tier.ParticleScale
-
-        for pad, emitter in pairs(emitters) do
-            if not pad.Parent or not emitter.Parent then
-                destroyEmitter(pad)
-            else
-                emitter.Rate = rate
-            end
-        end
-
-        task.wait(0.75)
-    end
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshRates)
