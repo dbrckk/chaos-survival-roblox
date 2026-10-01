@@ -300,12 +300,13 @@ end
 
 voteEvent.OnServerEvent:Connect(function(player, disasterId)
     if not voteOpen then return end
+    if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then return end
     if type(disasterId) ~= "string" then return end
     if not allowVote(player.UserId) then return end
     if not validOption(disasterId) then return end
     currentVotes[player.UserId] = disasterId
 
-    local currentRules = SoloRules.resolve(Config, #Players:GetPlayers())
+    local currentRules = SoloRules.resolve(Config, readyPlayerCount())
     GameAnalytics.vote(player, disasterId, currentRules.Solo)
 end)
 
@@ -316,7 +317,11 @@ local function currentVoteCounts()
     end
 
     for userId, id in pairs(currentVotes) do
-        if Players:GetPlayerByUserId(userId) and counts[id] ~= nil then
+        local player = Players:GetPlayerByUserId(userId)
+        if player
+            and player:GetAttribute("DataLoaded") == true
+            and counts[id] ~= nil
+        then
             counts[id] += 1
         end
     end
