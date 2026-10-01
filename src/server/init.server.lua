@@ -24,6 +24,7 @@ if RunService:IsStudio() then
 end
 local MapBuilder = require(script.MapBuilder)
 local PlayerData = require(script.PlayerData)
+local PlayerReadiness = require(script.PlayerReadiness)
 local RateLimiter = require(script.RateLimiter)
 local CosmeticService = require(script.CosmeticService)
 local MonetizationService = require(script.MonetizationService)
@@ -225,11 +226,7 @@ end
 
 local function setupDailyReward(player)
     task.spawn(function()
-        if not player:GetAttribute("DataLoaded") then
-            player:GetAttributeChangedSignal("DataLoaded"):Wait()
-        end
-
-        if player.Parent ~= Players or not player:GetAttribute("DataLoaded") then
+        if not PlayerReadiness.waitForDataLoaded(player) then
             return
         end
 
@@ -270,11 +267,7 @@ local function syncInitialClientState(player)
     clientReady[player] = true
 
     task.spawn(function()
-        if not player:GetAttribute("DataLoaded") then
-            player:GetAttributeChangedSignal("DataLoaded"):Wait()
-        end
-
-        if player.Parent ~= Players or not player:GetAttribute("DataLoaded") then
+        if not PlayerReadiness.waitForDataLoaded(player) then
             return
         end
 
