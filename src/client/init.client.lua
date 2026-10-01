@@ -150,12 +150,14 @@ local levelToast = Instance.new("Frame")
 levelToast.AnchorPoint = Vector2.new(0.5, 0.5)
 levelToast.Position = UDim2.fromScale(0.5, 0.30)
 levelToast.Size = UDim2.fromScale(0.50, 0.11)
-levelToast.BackgroundColor3 = Color3.fromRGB(40, 67, 115)
+levelToast.BackgroundColor3 = UITheme.Colors.PanelRaised
 levelToast.BackgroundTransparency = 1
 levelToast.Visible = false
 levelToast.ZIndex = 30
 levelToast.Parent = root
-Instance.new("UICorner", levelToast).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(levelToast, UITheme.Corners.Large)
+UITheme.addStroke(levelToast, UITheme.Colors.Cyan, 1.4, 0.28)
+UITheme.addGradient(levelToast, UITheme.Colors.Blue, UITheme.Colors.Violet, 15)
 
 local levelToastScale = Instance.new("UIScale")
 levelToastScale.Scale = 0.8
@@ -250,11 +252,14 @@ local dailyToast = Instance.new("Frame")
 dailyToast.AnchorPoint = Vector2.new(0.5, 0.5)
 dailyToast.Position = UDim2.fromScale(0.5, 0.32)
 dailyToast.Size = UDim2.fromScale(0.72, 0.16)
-dailyToast.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
-dailyToast.BackgroundTransparency = 0.05
+dailyToast.BackgroundColor3 = UITheme.Colors.Panel
+dailyToast.BackgroundTransparency = 0.02
+dailyToast.BorderSizePixel = 0
 dailyToast.Visible = false
 dailyToast.Parent = root
-Instance.new("UICorner", dailyToast).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(dailyToast, UITheme.Corners.Large)
+UITheme.addStroke(dailyToast, UITheme.Colors.Blue, 1.2, 0.34)
+UITheme.addGradient(dailyToast, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local dailyTitle = Instance.new("TextLabel")
 dailyTitle.Size = UDim2.new(1, -24, 0.48, 0)
@@ -341,11 +346,14 @@ local questToast = Instance.new("Frame")
 questToast.AnchorPoint = Vector2.new(0.5, 0.5)
 questToast.Position = UDim2.fromScale(0.5, 0.50)
 questToast.Size = UDim2.fromScale(0.76, 0.15)
-questToast.BackgroundColor3 = Color3.fromRGB(32, 75, 50)
-questToast.BackgroundTransparency = 0.04
+questToast.BackgroundColor3 = UITheme.Colors.Panel
+questToast.BackgroundTransparency = 0.02
+questToast.BorderSizePixel = 0
 questToast.Visible = false
 questToast.Parent = root
-Instance.new("UICorner", questToast).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(questToast, UITheme.Corners.Large)
+UITheme.addStroke(questToast, UITheme.Colors.Green, 1.3, 0.28)
+UITheme.addGradient(questToast, Color3.fromRGB(26, 70, 52), UITheme.Colors.Panel, 90)
 
 local questToastTitle = Instance.new("TextLabel")
 questToastTitle.Size = UDim2.new(1, -24, 0.48, 0)
@@ -694,11 +702,14 @@ local achievementToast = Instance.new("Frame")
 achievementToast.AnchorPoint = Vector2.new(0.5, 0.5)
 achievementToast.Position = UDim2.fromScale(0.5, 0.50)
 achievementToast.Size = UDim2.fromScale(0.78, 0.16)
-achievementToast.BackgroundColor3 = Color3.fromRGB(80, 65, 28)
-achievementToast.BackgroundTransparency = 0.03
+achievementToast.BackgroundColor3 = UITheme.Colors.Panel
+achievementToast.BackgroundTransparency = 0.02
+achievementToast.BorderSizePixel = 0
 achievementToast.Visible = false
 achievementToast.Parent = root
-Instance.new("UICorner", achievementToast).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(achievementToast, UITheme.Corners.Large)
+UITheme.addStroke(achievementToast, UITheme.Colors.Gold, 1.4, 0.24)
+UITheme.addGradient(achievementToast, Color3.fromRGB(74, 58, 24), UITheme.Colors.Panel, 90)
 
 local achievementToastTitle = Instance.new("TextLabel")
 achievementToastTitle.Size = UDim2.new(1, -24, 0.48, 0)
@@ -870,12 +881,15 @@ resultCard.Name = "ResultCard"
 resultCard.AnchorPoint = Vector2.new(0.5, 0.5)
 resultCard.Position = UDim2.fromScale(0.5, 0.54)
 resultCard.Size = UDim2.fromScale(0.80, 0.29)
-resultCard.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
+resultCard.BackgroundColor3 = UITheme.Colors.Panel
 resultCard.BackgroundTransparency = 1
+resultCard.BorderSizePixel = 0
 resultCard.Visible = false
 resultCard.ZIndex = 21
 resultCard.Parent = root
-Instance.new("UICorner", resultCard).CornerRadius = UDim.new(0, 22)
+UITheme.addCorner(resultCard, UDim.new(0, 22))
+local resultStroke = UITheme.addStroke(resultCard, UITheme.Colors.Blue, 1.6, 0.24)
+local resultGradient = UITheme.addGradient(resultCard, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local resultScale = Instance.new("UIScale")
 resultScale.Scale = 0.82
@@ -886,7 +900,7 @@ resultTitle.Size = UDim2.new(1, -28, 0.34, 0)
 resultTitle.Position = UDim2.fromOffset(14, 10)
 resultTitle.BackgroundTransparency = 1
 resultTitle.Font = Enum.Font.GothamBlack
-resultTitle.TextColor3 = Color3.new(1, 1, 1)
+resultTitle.TextColor3 = UITheme.Colors.Text
 resultTitle.TextScaled = true
 resultTitle.ZIndex = 22
 resultTitle.Text = "ROUND COMPLETE"
@@ -897,7 +911,7 @@ resultReward.Size = UDim2.new(1, -28, 0.24, 0)
 resultReward.Position = UDim2.new(0, 14, 0.40, 0)
 resultReward.BackgroundTransparency = 1
 resultReward.Font = Enum.Font.GothamBold
-resultReward.TextColor3 = Color3.fromRGB(240, 225, 145)
+resultReward.TextColor3 = UITheme.Colors.Gold
 resultReward.TextScaled = true
 resultReward.ZIndex = 22
 resultReward.Text = ""
@@ -908,7 +922,7 @@ resultMeta.Size = UDim2.new(1, -28, 0.18, 0)
 resultMeta.Position = UDim2.new(0, 14, 0.64, 0)
 resultMeta.BackgroundTransparency = 1
 resultMeta.Font = Enum.Font.GothamMedium
-resultMeta.TextColor3 = Color3.fromRGB(220, 225, 235)
+resultMeta.TextColor3 = UITheme.Colors.Muted
 resultMeta.TextScaled = true
 resultMeta.ZIndex = 22
 resultMeta.Text = ""
@@ -919,7 +933,7 @@ resultTip.Size = UDim2.new(1, -28, 0.14, 0)
 resultTip.Position = UDim2.new(0, 14, 0.83, 0)
 resultTip.BackgroundTransparency = 1
 resultTip.Font = Enum.Font.GothamMedium
-resultTip.TextColor3 = Color3.fromRGB(195, 205, 220)
+resultTip.TextColor3 = UITheme.Colors.Muted
 resultTip.TextScaled = true
 resultTip.TextWrapped = true
 resultTip.ZIndex = 22
@@ -935,6 +949,10 @@ local function showRoundFeedback(feedback)
 
     local survived = feedback.survived == true
     resultTitle.Text = survived and "SURVIVED!" or "ELIMINATED"
+    resultStroke.Color = survived and UITheme.Colors.Green or UITheme.Colors.Red
+    resultGradient.Color = survived
+        and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
+        or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel)
 
     local streakBonus = tonumber(feedback.streakBonusCoins) or 0
     local shardCoins = tonumber(feedback.shardCoins) or 0
