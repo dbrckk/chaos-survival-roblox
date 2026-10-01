@@ -138,6 +138,8 @@ local vfxTier = VfxQuality.get(vfxTierName)
 local frameTimeAccumulator = 0
 local frameSampleCount = 0
 local qualitySampleClock = 0
+local visualUpdateClock = 0
+player:SetAttribute("VfxQualityTier", vfxTierName)
 
 local function tweenCamera(targetFov, duration)
     camera = workspace.CurrentCamera or camera
@@ -397,6 +399,7 @@ RunService.RenderStepped:Connect(function(dt)
         if nextTierName ~= vfxTierName then
             vfxTierName = nextTierName
             vfxTier = VfxQuality.get(vfxTierName)
+            player:SetAttribute("VfxQualityTier", vfxTierName)
             rays.Enabled = vfxTier.RaysEnabled
         end
 
@@ -404,6 +407,12 @@ RunService.RenderStepped:Connect(function(dt)
         frameSampleCount = 0
         qualitySampleClock = 0
     end
+
+    visualUpdateClock += dt
+    if visualUpdateClock < vfxTier.UpdateInterval then
+        return
+    end
+    visualUpdateClock = 0
 
     local pulseSpeed = (activeDoubleChaos and 5.2 or 3.6) * currentIntensity
     local wave = (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
