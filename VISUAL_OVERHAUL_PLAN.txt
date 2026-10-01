@@ -98,8 +98,10 @@ PHASE 6B — GAMEPLAY / FUN
 [QA]   6B.2 Booster temporairement pads + cadence des Chaos Shards.
 [QA]   6B.3 Ajouter un mini-défi rotatif par round avec petite récompense.
 [QA]   6B.4 Afficher progression / complétion du défi dans le HUD et les résultats.
-[EN COURS] 6B.5 Renforcer les VFX monde pendant OVERDRIVE.
-[TODO] 6B.6 QA équilibre/fun solo et multijoueur.
+[QA]   6B.5 Renforcer les VFX monde pendant OVERDRIVE.
+[QA]   6B.6 Ajouter médailles de style non économiques en fin de round.
+[QA]   6B.7 Ajouter FINAL RUSH sur les 5 dernières secondes.
+[TODO] 6B.8 QA équilibre/fun solo et multijoueur.
 
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
