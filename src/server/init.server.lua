@@ -536,11 +536,26 @@ while true do
     voteOpen = false
 
     currentArenaVariant = ArenaVariants.chooseRecent(recentArenaVariantIds)
-    recentArenaVariantIds = ArenaVariants.pushRecent(recentArenaVariantIds, currentArenaVariant, 2)
     local arenaDefinition = ArenaVariants.get(currentArenaVariant)
     local intermissionSettings = SoloRules.resolve(Config, readyPlayerCount())
 
+    local intermissionCancelled = false
     for t = intermissionSettings.IntermissionSeconds, 1, -1 do
+        local loadedCount = readyPlayerCount()
+        if loadedCount < Config.MinimumPlayers then
+            voteOpen = false
+            broadcast({
+                phase = "waiting",
+                title = #Players:GetPlayers() >= Config.MinimumPlayers and "PREPARING PLAYER DATA" or "WAITING FOR PLAYERS",
+                hint = #Players:GetPlayers() >= Config.MinimumPlayers and "Syncing your progress safely" or "",
+                seconds = 0,
+            })
+            intermissionCancelled = true
+            break
+        end
+
+        intermissionSettings = SoloRules.resolve(Config, loadedCount)
+
         local options = nil
         if t <= intermissionSettings.VoteSeconds then
             voteOpen = true
@@ -570,6 +585,11 @@ while true do
     end
 
     voteOpen = false
+
+    if intermissionCancelled then
+        task.wait(1)
+        continue
+    end
 
     local selected = winningOption()
 
@@ -754,6 +774,7 @@ while true do
     roundSettings.ArenaName = arenaName
 
     roundNumber = upcomingRoundNumber
+    recentArenaVariantIds = ArenaVariants.pushRecent(recentArenaVariantIds, currentArenaVariant, 2)
     recentPrimaryDisasterIds = RoundVariety.pushRecent(recentPrimaryDisasterIds, selected.Id, 2)
 
     for _, p in ipairs(contestants) do
