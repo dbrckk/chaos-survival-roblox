@@ -164,7 +164,7 @@ function PlayerData.load(player)
     PlayerData.ensureDailyQuests(player)
 
     active[player] = true
-    revisions[player] = 0
+    revisions[player] = ok and 1 or 0
     savedRevisions[player] = 0
     trackPersistentChanges(player)
     player:SetAttribute("DataLoaded", true)
@@ -178,12 +178,6 @@ function PlayerData.save(player, waitForExisting)
 
     if player:GetAttribute("DataPersistenceAvailable") ~= true then
         return false
-    end
-
-    local currentRevision = revisions[player] or 0
-    local lastSavedRevision = savedRevisions[player] or 0
-    if not waitForExisting and currentRevision == lastSavedRevision then
-        return true
     end
 
     if saving[player] then
@@ -200,6 +194,12 @@ function PlayerData.save(player, waitForExisting)
             warn("Timed out waiting for existing save", player.UserId)
             return false
         end
+    end
+
+    local currentRevision = revisions[player] or 0
+    local lastSavedRevision = savedRevisions[player] or 0
+    if currentRevision == lastSavedRevision then
+        return true
     end
 
     saving[player] = true
