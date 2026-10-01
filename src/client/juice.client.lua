@@ -302,7 +302,19 @@ local function setMood(state)
     lastPhase = phase
 end
 
+local currentState = nil
+
+local function refreshParticipantMood()
+    if currentState then
+        setMood(currentState)
+    end
+end
+
+player:GetAttributeChangedSignal("RoundParticipant"):Connect(refreshParticipantMood)
+player:GetAttributeChangedSignal("RoundEliminated"):Connect(refreshParticipantMood)
+
 stateEvent.OnClientEvent:Connect(function(state)
+    currentState = state
     currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     setMood(state)
 
