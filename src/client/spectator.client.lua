@@ -51,6 +51,7 @@ nextButton.Parent = card
 Instance.new("UICorner", nextButton).CornerRadius = UDim.new(0, 12)
 
 local roundActive = false
+local latestState = nil
 local targets = {}
 local targetIndex = 0
 
@@ -90,14 +91,38 @@ local function restoreCamera()
     end
 end
 
+local function roundSummary()
+    local state = latestState
+    if not state then
+        return ""
+    end
+
+    local alive = tonumber(state.survivorsAlive)
+    local seconds = tonumber(state.seconds)
+    local pieces = {}
+
+    if alive then
+        table.insert(pieces, tostring(math.max(0, math.floor(alive))) .. " ALIVE")
+    end
+    if seconds then
+        table.insert(pieces, tostring(math.max(0, math.floor(seconds))) .. "s")
+    end
+
+    return table.concat(pieces, "  •  ")
+end
+
 local function spectateIndex(index)
     rebuildTargets()
 
     if #targets == 0 then
+        local summary = roundSummary()
         if player:GetAttribute("RoundParticipant") == true then
             label.Text = "ELIMINATED • WAITING FOR NEXT ROUND"
         else
             label.Text = "JOINING NEXT ROUND • WAITING FOR SURVIVORS"
+        end
+        if summary ~= "" then
+            label.Text ..= "\n" .. summary
         end
         nextButton.Visible = false
         restoreCamera()
@@ -111,10 +136,14 @@ local function spectateIndex(index)
     if hum and workspace.CurrentCamera then
         workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
         workspace.CurrentCamera.CameraSubject = hum
+        local summary = roundSummary()
         if player:GetAttribute("RoundParticipant") == true then
             label.Text = "SPECTATING  " .. target.DisplayName
         else
-            label.Text = "JOINING NEXT ROUND  •  SPECTATING  " .. target.DisplayName
+            label.Text = "JOINING NEXT ROUND  •  " .. target.DisplayName
+        end
+        if summary ~= "" then
+            label.Text ..= "\n" .. summary
         end
         nextButton.Visible = #targets > 1
     end
@@ -162,6 +191,7 @@ player.CharacterAdded:Connect(function()
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    latestState = state
     roundActive = state.phase == "round"
     refresh()
 end)
