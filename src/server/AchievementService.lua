@@ -90,6 +90,8 @@ local function evaluate(player)
                 )
             end
         end
+
+        task.spawn(PlayerData.save, player, true)
     end
 
     sendState(player, unlockedNow)
