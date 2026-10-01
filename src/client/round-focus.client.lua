@@ -18,10 +18,10 @@ local root = Instance.new("Frame")
 root.Name = "FocusBar"
 root.AnchorPoint = Vector2.new(0.5, touchDevice and 0.5 or 1)
 root.Position = touchDevice
-    and UDim2.fromScale(0.5, 0.76)
+    and UDim2.fromScale(0.5, 0.77)
     or UDim2.new(0.5, 0, 1, -18)
 root.Size = touchDevice
-    and UDim2.new(0.74, 0, 0, 50)
+    and UDim2.new(0.62, 0, 0, 48)
     or UDim2.new(0.82, 0, 0, 54)
 root.BackgroundColor3 = Color3.fromRGB(12, 17, 27)
 root.BackgroundTransparency = 0.12
