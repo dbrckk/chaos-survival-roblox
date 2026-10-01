@@ -1,9 +1,11 @@
 local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
 local DailyRewards = require(script.Parent.DailyRewards)
 local DailyQuests = require(script.Parent.DailyQuests)
 local DataSchema = require(script.Parent.DataSchema)
+local DataSession = require(script.Parent.DataSession)
 
 local store = DataStoreService:GetDataStore("ChaosSurvival_v3")
 local PlayerData = {}
@@ -18,6 +20,7 @@ local loading = {}
 local saving = {}
 local revisions = {}
 local savedRevisions = {}
+local sessionTokens = {}
 local dataConnections = {}
 
 local function withRetry(operationName, userId, callback)
@@ -147,13 +150,18 @@ function PlayerData.load(player)
     player:SetAttribute("DataLoaded", false)
     player:SetAttribute("DataPersistenceAvailable", false)
     player:SetAttribute("DataLoadFailed", false)
+    player:SetAttribute("DataSaveConflict", false)
 
+    local sessionToken = HttpService:GenerateGUID(false)
     local ok, savedOrError = withRetry("DataStore load", player.UserId, function()
-        return store:GetAsync("u_" .. player.UserId)
+        return store:UpdateAsync("u_" .. player.UserId, function(saved)
+            return DataSession.claim(saved, sessionToken, os.time())
+        end)
     end)
 
     local data
     if ok then
+        sessionTokens[player] = sessionToken
         data = DataSchema.normalize(savedOrError)
         player:SetAttribute("DataPersistenceAvailable", true)
     else
@@ -222,13 +230,34 @@ function PlayerData.save(player, waitForExisting)
         return player:GetAttribute(key)
     end)
 
+    local sessionToken = sessionTokens[player]
+    if type(sessionToken) ~= "string" or sessionToken == "" then
+        saving[player] = nil
+        player:SetAttribute("LastSaveFailed", true)
+        warn("Missing DataStore session ownership token", player.UserId)
+        return false
+    end
+
+    local ownershipConflict = false
     local ok, err = withRetry("DataStore save", player.UserId, function()
-        return store:UpdateAsync("u_" .. player.UserId, function()
-            return data
+        return store:UpdateAsync("u_" .. player.UserId, function(saved)
+            local merged = DataSession.merge(saved, data, sessionToken, os.time())
+            if not merged then
+                ownershipConflict = true
+                return nil
+            end
+            return merged
         end)
     end)
 
     saving[player] = nil
+
+    if ownershipConflict then
+        player:SetAttribute("DataPersistenceAvailable", false)
+        player:SetAttribute("DataSaveConflict", true)
+        warn("Skipped stale DataStore save after session ownership changed", player.UserId)
+        return false
+    end
 
     if ok then
         savedRevisions[player] = math.max(savedRevisions[player] or 0, revisionAtStart)
@@ -386,6 +415,7 @@ function PlayerData.init()
         saving[player] = nil
         revisions[player] = nil
         savedRevisions[player] = nil
+        sessionTokens[player] = nil
     end)
 
     for _, player in ipairs(Players:GetPlayers()) do
