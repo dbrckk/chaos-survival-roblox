@@ -69,6 +69,10 @@ local arenaMechanicFeedbackEvent = remotes:FindFirstChild("ArenaMechanicFeedback
 arenaMechanicFeedbackEvent.Name = "ArenaMechanicFeedback"
 arenaMechanicFeedbackEvent.Parent = remotes
 
+local hazardImpactFeedbackEvent = remotes:FindFirstChild("HazardImpactFeedback") or Instance.new("RemoteEvent")
+hazardImpactFeedbackEvent.Name = "HazardImpactFeedback"
+hazardImpactFeedbackEvent.Parent = remotes
+
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
 MonetizationService.init(remotes, RateLimiter, CosmeticService)
@@ -343,6 +347,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 roundSettings.Solo,
                 #selected > 1
             )
+        end,
+        OnHazardImpact = function(position, color, radius, kind)
+            hazardImpactFeedbackEvent:FireAllClients({
+                position = position,
+                color = color,
+                radius = radius,
+                kind = kind,
+            })
         end,
         OnArenaMechanicUsed = function(player, variantId, mechanicName)
             arenaMechanicFeedbackEvent:FireClient(player, {
