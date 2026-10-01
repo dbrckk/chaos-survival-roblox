@@ -136,6 +136,149 @@ local function addArenaFoundation(decor, config, variant, theme)
     end
 end
 
+local function addVariantIdentity(decor, config, variant, theme)
+    local center = config.ArenaCenter
+    local halfX = variant.BaseSize.X * 0.5
+    local halfZ = variant.BaseSize.Z * 0.5
+
+    if variant.Id == "Classic" then
+        local markers = {
+            Vector3.new(-halfX + 8, 6, 0),
+            Vector3.new(halfX - 8, 6, 0),
+            Vector3.new(0, 6, -halfZ + 8),
+            Vector3.new(0, 6, halfZ - 8),
+        }
+
+        for i, offset in ipairs(markers) do
+            local tower = decorPart(
+                decor,
+                "GridMarker" .. i,
+                Vector3.new(2.2, 12, 2.2),
+                center + offset,
+                theme.Structure,
+                VisualTheme.Materials.Structure
+            )
+            tower.Transparency = 0.06
+
+            local crown = decorPart(
+                decor,
+                "GridMarkerGlow" .. i,
+                Vector3.new(3.8, 0.32, 3.8),
+                tower.Position + Vector3.new(0, 6.1, 0),
+                (i % 2 == 0) and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            crown.Transparency = 0.16
+        end
+    elseif variant.Id == "Towers" then
+        local corners = {
+            Vector3.new(-halfX + 7, 10, -halfZ + 7),
+            Vector3.new(halfX - 7, 10, -halfZ + 7),
+            Vector3.new(-halfX + 7, 10, halfZ - 7),
+            Vector3.new(halfX - 7, 10, halfZ - 7),
+        }
+
+        for i, offset in ipairs(corners) do
+            local mast = decorPart(
+                decor,
+                "TowerSpine" .. i,
+                Vector3.new(2.6, 20, 2.6),
+                center + offset,
+                theme.Structure,
+                VisualTheme.Materials.Structure
+            )
+            mast.Transparency = 0.04
+
+            for level = 1, 3 do
+                local band = decorPart(
+                    decor,
+                    "TowerBand" .. i .. "_" .. level,
+                    Vector3.new(4.4, 0.28, 4.4),
+                    mast.Position + Vector3.new(0, -6 + (level * 4.5), 0),
+                    level == 2 and theme.Secondary or theme.Accent,
+                    VisualTheme.Materials.Glow
+                )
+                band.Transparency = 0.22
+            end
+        end
+    elseif variant.Id == "Crossroads" then
+        local gates = {
+            {pos = Vector3.new(0, 6, -halfZ + 7), size = Vector3.new(18, 1.2, 1.4)},
+            {pos = Vector3.new(0, 6, halfZ - 7), size = Vector3.new(18, 1.2, 1.4)},
+            {pos = Vector3.new(-halfX + 7, 6, 0), size = Vector3.new(1.4, 1.2, 18)},
+            {pos = Vector3.new(halfX - 7, 6, 0), size = Vector3.new(1.4, 1.2, 18)},
+        }
+
+        for i, def in ipairs(gates) do
+            local rail = decorPart(
+                decor,
+                "CrossroadGate" .. i,
+                def.size,
+                center + def.pos,
+                (i % 2 == 0) and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            rail.Transparency = 0.18
+
+            local postSize = def.size.X > def.size.Z and Vector3.new(1.2, 10, 1.2) or Vector3.new(1.2, 10, 1.2)
+            local lateral = def.size.X > def.size.Z and Vector3.new(8.5, -5, 0) or Vector3.new(0, -5, 8.5)
+            for sign = -1, 1, 2 do
+                local post = decorPart(
+                    decor,
+                    "CrossroadPost" .. i .. "_" .. tostring(sign),
+                    postSize,
+                    rail.Position + (lateral * sign),
+                    theme.Structure,
+                    VisualTheme.Materials.Structure
+                )
+                post.Transparency = 0.05
+            end
+        end
+    elseif variant.Id == "Orbital" then
+        local ringRadius = 27
+        local segments = 12
+
+        for i = 1, segments do
+            local angle = ((i - 1) / segments) * math.pi * 2
+            local position = center + Vector3.new(
+                math.cos(angle) * ringRadius,
+                16 + math.sin(angle * 2) * 1.2,
+                math.sin(angle) * ringRadius
+            )
+
+            local segment = decorPart(
+                decor,
+                "OrbitalCrown" .. i,
+                Vector3.new(7.4, 0.42, 0.8),
+                position,
+                (i % 2 == 0) and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, math.rad(4))
+            segment.Transparency = 0.20
+        end
+
+        local core = decorPart(
+            decor,
+            "OrbitalCore",
+            Vector3.new(5, 5, 5),
+            center + Vector3.new(0, 13, 0),
+            theme.Secondary,
+            VisualTheme.Materials.Glow
+        )
+        core.Shape = Enum.PartType.Ball
+        core.Transparency = 0.34
+
+        local coreLight = Instance.new("PointLight")
+        coreLight.Name = "OrbitalCoreLight"
+        coreLight.Color = theme.Accent
+        coreLight.Brightness = 1.1
+        coreLight.Range = 24
+        coreLight.Shadows = false
+        coreLight.Parent = core
+    end
+end
+
 local function addPlatformFinish(decor, platform, index, theme)
     local topPanel = decorPart(
         decor,
@@ -434,6 +577,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     decor.Parent = arena
 
     addArenaFoundation(decor, config, variant, theme)
+    addVariantIdentity(decor, config, variant, theme)
 
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
