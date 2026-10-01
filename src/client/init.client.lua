@@ -878,6 +878,9 @@ local function showRoundFeedback(feedback)
     table.insert(tags, tostring(feedback.disasterName or "CHAOS"))
     if feedback.doubleChaos then table.insert(tags, "DOUBLE CHAOS") end
     if feedback.soloMode then table.insert(tags, "SOLO RUSH") end
+    if feedback.criticalSurvival then
+        table.insert(tags, "CLUTCH SURVIVAL")
+    end
     local shardCount = math.max(0, math.floor(tonumber(feedback.shardCount) or 0))
     if shardCount > 0 then
         table.insert(tags, "SHARDS x" .. tostring(shardCount))
@@ -890,7 +893,9 @@ local function showRoundFeedback(feedback)
     resultMeta.Text = table.concat(tags, "  •  ")
 
     if survived then
-        if streakCount >= 2 then
+        if feedback.criticalSurvival then
+            resultTip.Text = "CLUTCH: you survived at critical health"
+        elseif streakCount >= 2 then
             resultTip.Text = "NEXT: protect your streak and push it higher"
         else
             resultTip.Text = "NEXT: survive again to start a streak"
