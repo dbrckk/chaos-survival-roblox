@@ -9,6 +9,16 @@ local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardImpactFeedback")
 
 local MAX_DISTANCE = 150
+local activeBursts = 0
+
+local function maxConcurrentBursts(profile)
+    if profile.Name == "Low" then
+        return 6
+    elseif profile.Name == "Medium" then
+        return 10
+    end
+    return 14
+end
 
 local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -30,6 +40,11 @@ local function renderBurst(payload)
     end
 
     local profile = tier()
+    if activeBursts >= maxConcurrentBursts(profile) then
+        return
+    end
+    activeBursts += 1
+
     local burst = Instance.new("Part")
     burst.Name = "LocalHazardImpactBurst"
     burst.Shape = Enum.PartType.Ball
@@ -110,7 +125,11 @@ local function renderBurst(payload)
         emitter:Emit(VfxQuality.particleCount("Medium", 14, 6))
     end
 
-    Debris:AddItem(burst, duration + 0.08)
+    local lifetime = duration + 0.08
+    Debris:AddItem(burst, lifetime)
+    task.delay(lifetime, function()
+        activeBursts = math.max(0, activeBursts - 1)
+    end)
 end
 
 feedbackEvent.OnClientEvent:Connect(renderBurst)
