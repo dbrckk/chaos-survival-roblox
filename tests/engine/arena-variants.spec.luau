@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
+local ArenaTargeting = require("../../src/server/ArenaTargeting")
 
 describe("Arena variants", function()
     it("defines four distinct playable layouts", function()
@@ -20,6 +21,22 @@ describe("Arena variants", function()
             expect(variant.BaseSize.X >= 90).toBe(true)
             expect(variant.BaseSize.Z >= 90).toBe(true)
         end
+    end)
+
+    it("derives hazard targeting bounds from arena footprints", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local halfX, halfZ = ArenaTargeting.halfExtents(variant.BaseSize, 6, 42)
+
+            expect(halfX > 0).toBe(true)
+            expect(halfZ > 0).toBe(true)
+            expect(halfX <= (variant.BaseSize.X * 0.5)).toBe(true)
+            expect(halfZ <= (variant.BaseSize.Z * 0.5)).toBe(true)
+        end
+
+        local fallbackX, fallbackZ = ArenaTargeting.halfExtents(nil, 6, 42)
+        expect(fallbackX).toBe(42)
+        expect(fallbackZ).toBe(42)
     end)
 
     it("gives every arena concise actionable strategy guidance", function()
