@@ -393,6 +393,11 @@ end
 local function runDisasterSet(selected, contestants, roundSettings)
     local roundStartedAt = os.clock()
     local roundActive = true
+    local overdriveActive = false
+    local overdriveEligible = roundSettings.RoundSeconds >= 20
+    local overdriveStartRemaining = math.floor(roundSettings.RoundSeconds * 0.58)
+    local overdriveDuration = math.clamp(math.floor(roundSettings.RoundSeconds * 0.16), 5, 7)
+    local overdriveEndRemaining = math.max(0, overdriveStartRemaining - overdriveDuration)
     local cleanup = {}
     local onCleanup = {}
     local eliminated = {}
@@ -435,6 +440,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         Cleanup = cleanup,
         OnCleanup = onCleanup,
         Active = function() return roundActive end,
+        Overdrive = function() return overdriveActive end,
         Contestants = contestants,
         IsContestantActive = function(player)
             if player.Parent ~= Players or eliminated[player.UserId] then
@@ -481,7 +487,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 total = total,
             })
         end,
-        OnArenaMechanicUsed = function(player, variantId, mechanicName)
+        OnArenaMechanicUsed = function(player, variantId, mechanicName, usedOverdrive)
             if player.Parent ~= Players then
                 return
             end
@@ -489,6 +495,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             arenaMechanicFeedbackEvent:FireClient(player, {
                 variantId = variantId,
                 mechanicName = mechanicName,
+                overdrive = usedOverdrive == true,
             })
 
             GameAnalytics.custom(
@@ -497,7 +504,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 1,
                 "Arena:" .. tostring(variantId),
                 "Mechanic:" .. tostring(mechanicName),
-                "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo)
+                usedOverdrive == true and "Overdrive:Yes" or "Overdrive:No"
             )
         end,
         SoloMode = roundSettings.Solo,
@@ -578,6 +585,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
     local endedEarly = false
     for t = roundSettings.RoundSeconds, 1, -1 do
+        overdriveActive = overdriveEligible
+            and t <= overdriveStartRemaining
+            and t > overdriveEndRemaining
+
         local survivorsAlive = countContestantsRemaining()
         if survivorsAlive <= 0 then
             endedEarly = true
@@ -599,10 +610,15 @@ local function runDisasterSet(selected, contestants, roundSettings)
             table.insert(disasterIds, disaster.Id)
         end
 
+        local roundHint = roundSettings.Solo and ("Solo bonus active • " .. hint) or hint
+        if overdriveActive then
+            roundHint = "OVERDRIVE • Boost pads + Shard surge • " .. roundHint
+        end
+
         broadcast({
             phase = "round",
             title = title,
-            hint = roundSettings.Solo and ("Solo bonus active • " .. hint) or hint,
+            hint = roundHint,
             seconds = t,
             doubleChaos = #selected > 1,
             soloMode = roundSettings.Solo,
@@ -612,6 +628,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
             contestantCount = #contestants,
             arenaMechanicName = arenaMechanic and arenaMechanic.name or nil,
             arenaMechanicHint = arenaMechanic and arenaMechanic.hint or nil,
+            overdrive = overdriveActive,
+            overdriveSeconds = overdriveActive and math.max(1, t - overdriveEndRemaining) or 0,
             intensity = RoundIntensity.factor(
                 roundSettings.RoundSeconds - t,
                 roundSettings.RoundSeconds,
@@ -623,6 +641,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         task.wait(1)
     end
 
+    overdriveActive = false
     roundActive = false
     local roundElapsed = math.max(0, os.clock() - roundStartedAt)
 
