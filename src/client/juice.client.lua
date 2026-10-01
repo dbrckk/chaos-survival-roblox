@@ -12,6 +12,7 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local feedbackEvent = remotes:WaitForChild("RoundFeedback")
 local hazardNearMissEvent = remotes:WaitForChild("HazardNearMiss")
+local performancePulseEvent = remotes:WaitForChild("PerformancePulse")
 
 local camera = workspace.CurrentCamera
 
@@ -147,6 +148,9 @@ local frameTimeAccumulator = 0
 local frameSampleCount = 0
 local qualitySampleClock = 0
 local visualUpdateClock = 0
+local performancePulseClock = 0
+local performanceFpsAccumulator = 0
+local performanceFpsSamples = 0
 player:SetAttribute("VfxQualityTier", vfxTierName)
 
 local function setActiveBeacon(beacon, light)
@@ -493,6 +497,27 @@ RunService.RenderStepped:Connect(function(dt)
     frameTimeAccumulator += dt
     frameSampleCount += 1
     qualitySampleClock += dt
+
+    if dt > 0 then
+        performancePulseClock += dt
+        performanceFpsAccumulator += math.clamp(1 / dt, 0, 240)
+        performanceFpsSamples += 1
+
+        if performancePulseClock >= 45 and performanceFpsSamples > 0 then
+            local averageFps = performanceFpsAccumulator / performanceFpsSamples
+            local deviceClass = game:GetService("UserInputService").TouchEnabled and "Touch" or "Desktop"
+
+            performancePulseEvent:FireServer({
+                averageFps = math.floor(averageFps + 0.5),
+                vfxTier = vfxTierName,
+                deviceClass = deviceClass,
+            })
+
+            performancePulseClock = 0
+            performanceFpsAccumulator = 0
+            performanceFpsSamples = 0
+        end
+    end
 
     if qualitySampleClock >= 2.5 and frameSampleCount > 0 then
         local averageDt = frameTimeAccumulator / frameSampleCount
