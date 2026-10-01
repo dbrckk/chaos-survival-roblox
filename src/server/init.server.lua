@@ -74,6 +74,10 @@ local hazardImpactFeedbackEvent = remotes:FindFirstChild("HazardImpactFeedback")
 hazardImpactFeedbackEvent.Name = "HazardImpactFeedback"
 hazardImpactFeedbackEvent.Parent = remotes
 
+local hazardNearMissEvent = remotes:FindFirstChild("HazardNearMiss") or Instance.new("RemoteEvent")
+hazardNearMissEvent.Name = "HazardNearMiss"
+hazardNearMissEvent.Parent = remotes
+
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
 MonetizationService.init(remotes, RateLimiter, CosmeticService)
@@ -394,6 +398,13 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 color = color,
                 radius = radius,
                 kind = kind,
+            })
+        end,
+        OnHazardNearMiss = function(player, kind, distance, radius)
+            hazardNearMissEvent:FireClient(player, {
+                kind = kind,
+                distance = distance,
+                radius = radius,
             })
         end,
         OnArenaMechanicUsed = function(player, variantId, mechanicName)
