@@ -69,6 +69,21 @@ shard.TextXAlignment = Enum.TextXAlignment.Left
 shard.Parent = root
 UITheme.addCorner(shard, UITheme.Corners.Pill)
 
+local challenge = Instance.new("TextLabel")
+challenge.Name = "RoundChallenge"
+challenge.Position = UDim2.fromScale(0.31, 0.12)
+challenge.Size = UDim2.fromScale(0.32, 0.43)
+challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
+challenge.BackgroundTransparency = 0.18
+challenge.BorderSizePixel = 0
+challenge.Font = Enum.Font.GothamBold
+challenge.Text = "ROUND CHALLENGE"
+challenge.TextColor3 = UITheme.Colors.Muted
+challenge.TextScaled = true
+challenge.TextWrapped = true
+challenge.Parent = root
+UITheme.addCorner(challenge, UITheme.Corners.Pill)
+
 local status = Instance.new("TextLabel")
 status.Name = "Status"
 status.AnchorPoint = Vector2.new(1, 0)
@@ -159,9 +174,22 @@ end)
 
 local currentState = nil
 local visibleToken = 0
+local completedChallengeId = nil
 
 local function shardCount()
     return math.max(0, math.floor(tonumber(player:GetAttribute("RoundChaosShards")) or 0))
+end
+
+local function challengeProgress(state)
+    local metric = state and state.challengeMetric
+    if metric == "shards" then
+        return math.max(0, math.floor(tonumber(player:GetAttribute("RoundChaosShards")) or 0))
+    elseif metric == "pads" then
+        return math.max(0, math.floor(tonumber(player:GetAttribute("RoundMechanicUses")) or 0))
+    elseif metric == "nearMisses" then
+        return math.max(0, math.floor(tonumber(player:GetAttribute("RoundNearMisses")) or 0))
+    end
+    return 0
 end
 
 local function intensityLabel(value, seconds)
@@ -207,6 +235,32 @@ local function refresh()
 
     local count = shardCount()
     shard.Text = count == 1 and "SHARD  1" or ("SHARDS  " .. count)
+
+    local challengeId = state.challengeId
+    local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
+    local progress = math.min(challengeTarget, challengeProgress(state))
+    if challengeId then
+        local completed = progress >= challengeTarget
+        challenge.Text = completed
+            and ("DONE  " .. tostring(state.challengeShort or "CHALLENGE"))
+            or string.format("%s  %d/%d", tostring(state.challengeShort or "CHALLENGE"), progress, challengeTarget)
+        challenge.TextColor3 = completed and UITheme.Colors.Green or UITheme.Colors.Text
+
+        if completed and completedChallengeId ~= challengeId then
+            completedChallengeId = challengeId
+            challenge.BackgroundColor3 = UITheme.Colors.Green:Lerp(UITheme.Colors.PanelSoft, 0.68)
+            scale.Scale = 1.05
+            TweenService:Create(scale, TweenInfo.new(0.20, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        elseif not completed then
+            completedChallengeId = nil
+            challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
+        end
+    else
+        challenge.Text = "ROUND CHALLENGE"
+        challenge.TextColor3 = UITheme.Colors.Muted
+        challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
+        completedChallengeId = nil
+    end
 
     local intensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     local normalized = math.clamp((intensity - 0.85) / 0.40, 0.08, 1)
@@ -254,6 +308,9 @@ end
 
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
+
+player:GetAttributeChangedSignal("RoundNearMisses"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundMechanicUses"):Connect(refresh)
 
 player:GetAttributeChangedSignal("RoundChaosShards"):Connect(function()
     local previous = shard.Text
