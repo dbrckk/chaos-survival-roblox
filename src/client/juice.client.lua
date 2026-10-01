@@ -206,6 +206,7 @@ local function setMood(state)
             atmosphere.Haze = profile.Haze
             atmosphere.Color = profile.Atmosphere
             bloom.Intensity = profile.Bloom * vfxTier.Scale
+            color.Brightness = profile.Brightness or 0
             color.Contrast = profile.Contrast
             color.Saturation = profile.Saturation
             color.TintColor = profile.Tint
@@ -221,6 +222,7 @@ local function setMood(state)
             atmosphere.Density = 0.23
             atmosphere.Haze = 1.15
             bloom.Intensity = 0.75 * vfxTier.Scale
+            color.Brightness = 0
             color.Contrast = 0.16
             color.Saturation = 0.22
             color.TintColor = Color3.fromRGB(245, 225, 255)
@@ -230,6 +232,7 @@ local function setMood(state)
             atmosphere.Density = 0.18
             atmosphere.Haze = 0.82
             bloom.Intensity = 0.48 * vfxTier.Scale
+            color.Brightness = 0
             color.Contrast = 0.10
             color.Saturation = 0.14
             color.TintColor = Color3.new(1, 1, 1)
@@ -270,6 +273,7 @@ local function setMood(state)
         atmosphere.Density = 0.15
         atmosphere.Haze = 0.65
         bloom.Intensity = 0.42 * vfxTier.Scale
+        color.Brightness = 0
         color.Contrast = 0.08
         color.Saturation = 0.10
         color.TintColor = Color3.new(1, 1, 1)
@@ -282,6 +286,7 @@ local function setMood(state)
         atmosphere.Density = 0.14
         atmosphere.Haze = 0.55
         bloom.Intensity = 0.30 * vfxTier.Scale
+        color.Brightness = 0
         color.Contrast = 0.05
         color.Saturation = 0.06
         color.TintColor = Color3.new(1, 1, 1)
