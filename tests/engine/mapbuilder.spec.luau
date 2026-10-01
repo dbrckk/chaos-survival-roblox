@@ -49,6 +49,14 @@ describe("Chaos Survival engine", function()
         expect((decor :: Folder):FindFirstChild("CenterBeacon") ~= nil).toBe(true)
         expect(#(decor :: Folder):GetChildren() >= 5).toBe(true)
 
+        for _, item in ipairs((decor :: Folder):GetDescendants()) do
+            if item:IsA("BasePart") then
+                expect(item.CanCollide).toBe(false)
+                expect(item.CanTouch).toBe(false)
+                expect(item.CanQuery).toBe(false)
+            end
+        end
+
         root:Destroy()
     end)
 
