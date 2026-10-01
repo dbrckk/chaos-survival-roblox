@@ -52,10 +52,10 @@ describe("Round cleanup contracts", function()
             0.5
         )
 
-        expect(size.X).toBe(52)
-        expect(size.Z).toBe(0.35)
-        expect(offset.Z).toBe(-25.8)
-        expect(offset.Y).toBe(1.25)
+        expect(math.abs(size.X - 52) < 0.001).toBe(true)
+        expect(math.abs(size.Z - 0.35) < 0.001).toBe(true)
+        expect(math.abs(offset.Z + 25.8) < 0.001).toBe(true)
+        expect(math.abs(offset.Y - 1.25) < 0.001).toBe(true)
     end)
 
     it("Disappearing Platforms registers deterministic cleanup restoration", function()
