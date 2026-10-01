@@ -75,6 +75,12 @@ For DataStore tests in Studio, use a test experience and enable:
 
 **Game Settings → Security → Enable Studio Access to API Services**
 
+## Release candidate
+
+- Final certification checklist: [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+- Authenticated Studio/device report template: [studio/PLAYTEST_REPORT_TEMPLATE.md](studio/PLAYTEST_REPORT_TEMPLATE.md)
+- Change history: [CHANGELOG.md](CHANGELOG.md)
+
 ## Product direction
 
 Automated Roblox-engine coverage validates the core gameplay matrix on every push. The project is in release-candidate hardening: the remaining launch gate is a graphical/touch-device Studio pass from an authenticated Studio session, a real-device performance/data persistence pass, and fixes from those passes.
