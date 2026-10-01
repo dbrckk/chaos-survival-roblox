@@ -14,6 +14,7 @@ localFolder.Name = "ChaosWorldPolishLocal"
 localFolder.Parent = workspace
 
 local lobbySegments = {}
+local lobbyGateLinks = {}
 local beaconEmitters = {}
 local arenaGlowParts = {}
 local arenaEnergyLinks = {}
@@ -44,6 +45,7 @@ end
 
 local function clearPolish()
     clearTableInstances(lobbySegments)
+    clearTableInstances(lobbyGateLinks)
     clearTableInstances(beaconEmitters)
     clearTableInstances(arenaGlowParts)
     clearTableInstances(arenaEnergyLinks)
@@ -125,6 +127,49 @@ local function decorateLobby(root)
         segment:SetAttribute("OrbitAngle", angle)
         table.insert(lobbySegments, segment)
     end
+
+
+    local leftColumn = decor and decor:FindFirstChild("ArenaGateLeft")
+    local rightColumn = decor and decor:FindFirstChild("ArenaGateRight")
+    if leftColumn and rightColumn
+        and leftColumn:IsA("BasePart")
+        and rightColumn:IsA("BasePart")
+    then
+        for level = 1, 4 do
+            local height = -4.2 + (level * 2.2)
+
+            local a = Instance.new("Attachment")
+            a.Name = "GateLinkA" .. level
+            a.Position = Vector3.new(0, height, 0)
+            a.Parent = leftColumn
+
+            local b = Instance.new("Attachment")
+            b.Name = "GateLinkB" .. level
+            b.Position = Vector3.new(0, height, 0)
+            b.Parent = rightColumn
+
+            local beam = Instance.new("Beam")
+            beam.Name = "GateEnergyLink" .. level
+            beam.Attachment0 = a
+            beam.Attachment1 = b
+            beam.FaceCamera = true
+            beam.Width0 = 0.07
+            beam.Width1 = 0.07
+            beam.LightEmission = 1
+            beam.LightInfluence = 0
+            beam.Segments = 1
+            beam.Color = ColorSequence.new(
+                Color3.fromRGB(110, 105, 255),
+                Color3.fromRGB(75, 215, 255)
+            )
+            beam.Transparency = NumberSequence.new(0.56)
+            beam.Parent = a
+
+            table.insert(lobbyGateLinks, a)
+            table.insert(lobbyGateLinks, b)
+        end
+    end
+
 
     local gateTop = decor and decor:FindFirstChild("ArenaGateTop")
     if gateTop and gateTop:IsA("BasePart") then
@@ -399,6 +444,22 @@ RunService.RenderStepped:Connect(function(dt)
     end
     local elapsed = updateClock
     updateClock = 0
+
+    local gateTier = quality()
+    for index, attachment in ipairs(lobbyGateLinks) do
+        if attachment.Parent then
+            local beam = attachment:FindFirstChildOfClass("Beam")
+            if beam then
+                beam.Enabled = gateTier.Name ~= "Low"
+                local gateWave = (math.sin(clock * 2.4 + index * 0.45) + 1) * 0.5
+                beam.Width0 = 0.05 + gateWave * 0.05 * gateTier.Scale
+                beam.Width1 = beam.Width0
+                beam.Transparency = NumberSequence.new(
+                    math.clamp(0.48 + gateWave * 0.18 + (1 - gateTier.Scale) * 0.16, 0.42, 0.82)
+                )
+            end
+        end
+    end
 
     local lobbySpeed = phase == "round" and 0.55 or 0.34
     for i, segment in ipairs(lobbySegments) do
