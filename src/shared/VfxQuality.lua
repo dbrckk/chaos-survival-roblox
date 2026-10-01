@@ -6,18 +6,21 @@ VfxQuality.Tiers = {
         Scale = 1,
         ParticleScale = 1,
         RaysEnabled = true,
+        UpdateInterval = 1 / 60,
     },
     Medium = {
         Name = "Medium",
         Scale = 0.78,
         ParticleScale = 0.72,
         RaysEnabled = true,
+        UpdateInterval = 1 / 45,
     },
     Low = {
         Name = "Low",
         Scale = 0.58,
         ParticleScale = 0.45,
         RaysEnabled = false,
+        UpdateInterval = 1 / 30,
     },
 }
 
