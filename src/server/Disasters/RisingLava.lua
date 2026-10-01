@@ -31,10 +31,22 @@ function D.start(ctx)
     lava.Parent = workspace
 
     lava.Touched:Connect(function(hit)
-        local character = hit and hit.Parent
-        local hum = character and character:FindFirstChildOfClass("Humanoid")
-        local player = character and Players:GetPlayerFromCharacter(character)
+        local current = hit
+        local character = nil
+        local player = nil
 
+        while current and current ~= workspace do
+            if current:IsA("Model") then
+                player = Players:GetPlayerFromCharacter(current)
+                if player then
+                    character = current
+                    break
+                end
+            end
+            current = current.Parent
+        end
+
+        local hum = character and character:FindFirstChildOfClass("Humanoid")
         if hum and hum.Health > 0 and D.isActiveContestant(player, ctx) then
             hum.Health = 0
         end
