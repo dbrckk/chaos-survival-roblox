@@ -521,7 +521,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 end)
 
-local function celebrateCharacter()
+local function celebrateCharacter(masterRound)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return end
@@ -531,15 +531,19 @@ local function celebrateCharacter()
     if tier.Name ~= "Low" then
         sparkles = Instance.new("Sparkles")
         sparkles.Name = "VictorySparkles"
-        sparkles.SparkleColor = Color3.fromRGB(255, 225, 95)
+        sparkles.SparkleColor = masterRound
+            and Color3.fromRGB(110, 230, 255)
+            or Color3.fromRGB(255, 225, 95)
         sparkles.Parent = rootPart
     end
 
     local glow = Instance.new("PointLight")
     glow.Name = "VictoryGlow"
-    glow.Color = Color3.fromRGB(255, 220, 110)
-    glow.Brightness = 2 * tier.Scale
-    glow.Range = 10 + (4 * tier.Scale)
+    glow.Color = masterRound
+        and Color3.fromRGB(100, 220, 255)
+        or Color3.fromRGB(255, 220, 110)
+    glow.Brightness = (masterRound and 3 or 2) * tier.Scale
+    glow.Range = (masterRound and 16 or 10) + (4 * tier.Scale)
     glow.Shadows = false
     glow.Parent = rootPart
 
@@ -566,9 +570,18 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
     end
 
     if feedback.survived then
-        celebrateCharacter()
+        local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
+        local masterRound = feedback.challengeCompleted == true and momentumBest >= 4
+        celebrateCharacter(masterRound)
 
-        if feedback.criticalSurvival then
+        if masterRound then
+            showBanner(
+                "MASTER ROUND",
+                "Challenge complete • Momentum x" .. tostring(momentumBest),
+                Color3.fromRGB(80, 205, 235),
+                2.2
+            )
+        elseif feedback.criticalSurvival then
             showBanner(
                 "LAST-BREATH SURVIVAL",
                 "You escaped with almost no health left",
