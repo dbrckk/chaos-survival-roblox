@@ -148,14 +148,18 @@ end
 
 
 
-local function show(reward, total)
+local function show(reward, total, goldenFlag, flowBonus)
     token += 1
     local current = token
 
-    local golden = (tonumber(reward) or 1) >= 3
+    local golden = goldenFlag == true or (tonumber(reward) or 1) >= 3
+    local flow = math.max(0, math.floor(tonumber(flowBonus) or 0))
     label.Text = golden
         and ("+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD")
         or ("+" .. tostring(reward) .. " COIN  •  CHAOS SHARD " .. tostring(total))
+    if flow > 0 then
+        label.Text ..= "  •  FLOW COMBO +" .. tostring(flow)
+    end
     label.TextColor3 = golden and Color3.fromRGB(255, 225, 105) or UITheme.Colors.Cyan
     stroke.Color = golden and Color3.fromRGB(255, 165, 55) or UITheme.Colors.Violet
     label.Visible = true
@@ -199,7 +203,7 @@ end
 
 event.OnClientEvent:Connect(function(payload)
     local reward = tonumber(payload.reward) or 1
-    show(reward, tonumber(payload.total) or 1)
+    show(reward, tonumber(payload.total) or 1, payload.golden == true, payload.flowBonus)
     worldBurst(payload.position, reward)
 end)
 
