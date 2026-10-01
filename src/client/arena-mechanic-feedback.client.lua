@@ -114,8 +114,8 @@ local function pulseCharacter(accent)
         NumberSequenceKeypoint.new(1, 1),
     })
     emitter.Parent = root
-    local tier = currentVfxTier()
-    emitter:Emit(math.max(6, math.floor(18 * tier.ParticleScale + 0.5)))
+    local tierName = player:GetAttribute("VfxQualityTier")
+    emitter:Emit(VfxQuality.particleCount(tierName, 18, 6))
 
     task.delay(0.45, function()
         if emitter.Parent then
