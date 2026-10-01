@@ -1111,6 +1111,7 @@ local function showRoundFeedback(feedback)
     local challengeCoins = tonumber(feedback.challengeCoins) or 0
     local challengeXP = tonumber(feedback.challengeXP) or 0
     local flowCoins = tonumber(feedback.flowCoins) or 0
+    local fusionBonusCoins = tonumber(feedback.fusionBonusCoins) or 0
     local shownCoins = (tonumber(feedback.coins) or 0) + shardCoins + challengeCoins + flowCoins
     local shownXP = (tonumber(feedback.xp) or 0) + challengeXP
 
@@ -1127,6 +1128,9 @@ local function showRoundFeedback(feedback)
     if flowCoins > 0 then
         table.insert(extras, "FLOW +" .. tostring(flowCoins))
     end
+    if fusionBonusCoins > 0 then
+        table.insert(extras, "FUSION +" .. tostring(fusionBonusCoins))
+    end
 
     resultReward.Text = string.format("+%d COINS   +%d XP", shownCoins, shownXP)
     if #extras > 0 then
@@ -1136,7 +1140,9 @@ local function showRoundFeedback(feedback)
     local tags = {}
     table.insert(tags, tostring(feedback.arenaName or "ARENA"))
     table.insert(tags, tostring(feedback.disasterName or "CHAOS"))
-    if feedback.doubleChaos then table.insert(tags, "DOUBLE CHAOS") end
+    if feedback.doubleChaos then
+        table.insert(tags, feedback.fusionName and ("FUSION: " .. tostring(feedback.fusionName)) or "DOUBLE CHAOS")
+    end
     if feedback.soloMode then table.insert(tags, "SOLO RUSH") end
     if feedback.criticalSurvival then
         table.insert(tags, "CLUTCH SURVIVAL")
@@ -1174,7 +1180,9 @@ local function showRoundFeedback(feedback)
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
     resultMeta.Text = table.concat(tags, "  •  ")
 
-    if flowCoins > 0 and feedback.challengeCompleted then
+    if fusionBonusCoins > 0 and feedback.fusionName then
+        resultTip.Text = tostring(feedback.fusionName) .. " SURVIVED • FUSION BONUS +" .. tostring(fusionBonusCoins)
+    elseif flowCoins > 0 and feedback.challengeCompleted then
         resultTip.Text = "FLOW COMBO +" .. tostring(flowCoins) .. " • CHALLENGE COMPLETE"
     elseif flowCoins > 0 then
         resultTip.Text = "FLOW COMBO • pad → shard chain completed"
