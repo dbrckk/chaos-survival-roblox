@@ -319,21 +319,25 @@ local function celebrateCharacter()
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return end
 
-    local sparkles = Instance.new("Sparkles")
-    sparkles.Name = "VictorySparkles"
-    sparkles.SparkleColor = Color3.fromRGB(255, 225, 95)
-    sparkles.Parent = rootPart
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local sparkles = nil
+    if tier.Name ~= "Low" then
+        sparkles = Instance.new("Sparkles")
+        sparkles.Name = "VictorySparkles"
+        sparkles.SparkleColor = Color3.fromRGB(255, 225, 95)
+        sparkles.Parent = rootPart
+    end
 
     local glow = Instance.new("PointLight")
     glow.Name = "VictoryGlow"
     glow.Color = Color3.fromRGB(255, 220, 110)
-    glow.Brightness = 2
-    glow.Range = 14
+    glow.Brightness = 2 * tier.Scale
+    glow.Range = 10 + (4 * tier.Scale)
     glow.Shadows = false
     glow.Parent = rootPart
 
     task.delay(1.8, function()
-        if sparkles.Parent then sparkles:Destroy() end
+        if sparkles and sparkles.Parent then sparkles:Destroy() end
         if glow.Parent then glow:Destroy() end
     end)
 end
