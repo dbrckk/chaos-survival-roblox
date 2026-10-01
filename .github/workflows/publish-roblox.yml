@@ -1,0 +1,77 @@
+name: Publish Roblox Place
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type PUBLISH to deploy the current main branch to Roblox'
+        required: true
+        default: ''
+
+concurrency:
+  group: roblox-place-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: ${{ inputs.confirm == 'PUBLISH' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rojo 7.7.0
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          echo "/tmp/rojo" >> "$GITHUB_PATH"
+          /tmp/rojo/rojo --version
+
+      - name: Build place
+        shell: bash
+        run: |
+          mkdir -p build
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          test -s build/ChaosSurvival.rbxlx
+
+      - name: Publish place to Roblox
+        shell: bash
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_UNIVERSE_ID: "8998396328"
+          ROBLOX_PLACE_ID: "101933452561772"
+        run: |
+          test -n "$ROBLOX_API_KEY" || {
+            echo "ROBLOX_API_KEY secret is missing."
+            exit 1
+          }
+
+          response_file="$(mktemp)"
+          status="$(curl --silent --show-error --location             --output "$response_file"             --write-out "%{http_code}"             --request POST             "https://apis.roblox.com/universes/v1/$ROBLOX_UNIVERSE_ID/places/$ROBLOX_PLACE_ID/versions?versionType=Published"             --header "x-api-key: $ROBLOX_API_KEY"             --header "Content-Type: application/xml"             --data-binary @build/ChaosSurvival.rbxlx)"
+
+          cat "$response_file"
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo
+            echo "Roblox publish failed with HTTP $status."
+            echo "The API key must have universe-places:write access for this universe."
+            exit 1
+          fi
+
+          if ! grep -q '"versionNumber"' "$response_file"; then
+            echo
+            echo "Roblox did not return a published version number."
+            exit 1
+          fi
+
+      - name: Upload published place artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-published-place
+          path: build/ChaosSurvival.rbxlx
