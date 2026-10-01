@@ -56,12 +56,12 @@ PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 
 PHASE 4 — VFX CATASTROPHES
 ---------------------------
-[TODO] 4.1 Rising Lava : matière, vapeur, chaleur, lumière, montée plus spectaculaire.
-[TODO] 4.2 Freeze Pulse : anneau glace, brume froide, flash contrôlé, feedback joueur.
-[TODO] 4.3 Tornado : funnel, poussière, débris, flux de vent.
-[TODO] 4.4 Meteor Shower : trajectoires, marqueurs premium, impact et résidus courts.
-[TODO] 4.5 Bomb Rain : marqueurs, anticipation, shockwave et impact.
-[TODO] 4.6 Disappearing Platforms : instabilité, warning animé, disparition premium.
+[QA]   4.1 Rising Lava : surface animée, braises, chaleur, lumière et montée plus spectaculaire.
+[QA]   4.2 Freeze Pulse : anneau segmenté, brume froide et flash contrôlé.
+[QA]   4.3 Tornado : funnel enrichi, débris orbitaux et flux visuel.
+[QA]   4.4 Meteor Shower : warning premium + impact/shockwave enrichi.
+[QA]   4.5 Bomb Rain : warning premium + shockwave et impact enrichis.
+[QA]   4.6 Disappearing Platforms : instabilité pulsée et disparition plus lisible.
 [TODO] 4.7 Moon Gravity : ambiance spatiale, trails et feedback de mouvement.
 [TODO] 4.8 Speed Surge : trails directionnels et sensation de vitesse.
 [TODO] 4.9 Blackout : extinction progressive, éclairage de secours et contraste.
@@ -126,4 +126,4 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - HUD mobile récemment corrigé pour limiter les chevauchements.
 - Freeze glare réduit.
 - Base néon cohérente mais encore trop simple.
-- Priorité actuelle : PHASE 1 — enrichir fortement le monde avant d'ajouter davantage de systèmes.
+- Priorité actuelle : PHASE 4 — valider visuellement les catastrophes prioritaires, puis poursuivre Moon Gravity / Speed Surge / Blackout / Shrinking Arena / Jump Shock.
