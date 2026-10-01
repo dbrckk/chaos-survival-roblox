@@ -85,29 +85,7 @@ local function createPad(folder, center, definition, index)
     light.Shadows = false
     light.Parent = pad
 
-    local attachment = Instance.new("Attachment")
-    attachment.Position = Vector3.new(0, 0.25, 0)
-    attachment.Parent = pad
-
-    local particles = Instance.new("ParticleEmitter")
-    particles.Name = "MobilityPulse"
-    particles.Rate = 6
-    particles.Lifetime = NumberRange.new(0.25, 0.45)
-    particles.Speed = NumberRange.new(1.5, 3)
-    particles.SpreadAngle = Vector2.new(18, 18)
-    particles.LightEmission = 0.8
-    particles.Color = ColorSequence.new(definition.Color, Color3.new(1, 1, 1))
-    particles.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.22),
-        NumberSequenceKeypoint.new(1, 0),
-    })
-    particles.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    particles.Parent = attachment
-
-    return pad, padDefinition.impulse, particles
+    return pad, padDefinition.impulse
 end
 
 local function rootAndPlayerFromHit(hit)
@@ -172,7 +150,7 @@ function ArenaMechanics.start(ctx, variantId)
     local cooldownUntil = {}
 
     for index = 1, #definition.Pads do
-        local pad, impulse, particles = createPad(folder, base.Position, definition, index)
+        local pad, impulse = createPad(folder, base.Position, definition, index)
 
         pad.Touched:Connect(function(hit)
             if not ctx.Active() then
@@ -194,8 +172,6 @@ function ArenaMechanics.start(ctx, variantId)
                 root.AssemblyLinearVelocity,
                 impulse
             )
-            particles:Emit(14)
-
             if ctx.OnArenaMechanicUsed then
                 pcall(ctx.OnArenaMechanicUsed, player, variantId, definition.Name)
             end
