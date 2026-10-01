@@ -58,6 +58,17 @@ describe("Round cleanup contracts", function()
         expect(math.abs(offset.Y - 1.25) < 0.001).toBe(true)
     end)
 
+    it("Shrinking Arena recenters platforms without changing their height", function()
+        local offset = ShrinkingArena.scaledLocalPosition(
+            Vector3.new(34, 10, -25),
+            0.5
+        )
+
+        expect(math.abs(offset.X - 17) < 0.001).toBe(true)
+        expect(math.abs(offset.Y - 10) < 0.001).toBe(true)
+        expect(math.abs(offset.Z + 12.5) < 0.001).toBe(true)
+    end)
+
     it("Disappearing Platforms registers deterministic cleanup restoration", function()
         MapBuilder.build(Config, "Classic", ArenaVariants)
 
