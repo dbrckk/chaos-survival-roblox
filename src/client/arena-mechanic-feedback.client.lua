@@ -1,9 +1,7 @@
 local HapticService = game:GetService("HapticService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 
 local AudioConfig = require(ReplicatedStorage.Shared.AudioConfig)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -49,10 +47,6 @@ local function currentVfxTier()
 end
 
 local function pulseHaptics()
-    if not UserInputService.TouchEnabled then
-        return
-    end
-
     pcall(function()
         if HapticService:IsVibrationSupported(Enum.UserInputType.Gamepad1) then
             HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, 0.5)
