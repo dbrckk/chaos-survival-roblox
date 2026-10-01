@@ -8,6 +8,12 @@ local player = Players.LocalPlayer
 local tracked = {}
 local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 local renderConnection = nil
+local warningNames = {
+    BombWarning = true,
+    MeteorWarning = true,
+    FreezeWarning = true,
+    JumpShockWarning = true,
+}
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -87,6 +93,10 @@ local function maybeRegister(part)
 
     if part:GetAttribute("WarningKind") then
         register(part)
+        return
+    end
+
+    if not warningNames[part.Name] then
         return
     end
 
