@@ -162,15 +162,16 @@ local function teleportToArena(player, index)
     return true
 end
 
-local function ensureCharacterReady(player, timeoutSeconds)
+local function ensureContestantReady(player, timeoutSeconds)
     local deadline = os.clock() + math.max(0.5, tonumber(timeoutSeconds) or 4)
 
     while player.Parent == Players and os.clock() < deadline do
         local character = player.Character
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         local root = character and character:FindFirstChild("HumanoidRootPart")
+        local dataReady = player:GetAttribute("DataLoaded") == true
 
-        if humanoid and humanoid.Health > 0 and root then
+        if dataReady and humanoid and humanoid.Health > 0 and root then
             return true
         end
 
@@ -575,13 +576,15 @@ while true do
     for i, p in ipairs(contestants) do
         if p.Parent == Players then
             if not p.Character or not alive(p) then
-                local loaded = pcall(p.LoadCharacter, p)
-                if loaded then
-                    ensureCharacterReady(p, 4)
-                end
+                pcall(p.LoadCharacter, p)
             end
 
-            local teleported, teleportError = teleportToArena(p, i)
+            local contestantReady = ensureContestantReady(p, 4)
+            local teleported, teleportError = false, "contestant not ready"
+            if contestantReady then
+                teleported, teleportError = teleportToArena(p, i)
+            end
+
             if teleported then
                 table.insert(readyContestants, p)
                 PlayerData.add(p, "Games", 1)
