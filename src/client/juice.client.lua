@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -98,6 +99,17 @@ damageGradient.Transparency = NumberSequence.new({
 damageGradient.Rotation = 90
 damageGradient.Parent = damageFlash
 
+local damageGradient = Instance.new("UIGradient")
+damageGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.34),
+    NumberSequenceKeypoint.new(0.22, 0.78),
+    NumberSequenceKeypoint.new(0.50, 0.94),
+    NumberSequenceKeypoint.new(0.78, 0.78),
+    NumberSequenceKeypoint.new(1, 0.34),
+})
+damageGradient.Rotation = 90
+damageGradient.Parent = damageFlash
+
 local banner = Instance.new("Frame")
 banner.AnchorPoint = Vector2.new(0.5, 0.5)
 banner.Position = UDim2.fromScale(0.5, 0.42)
@@ -108,6 +120,8 @@ banner.Visible = false
 banner.ZIndex = 5
 banner.Parent = gui
 Instance.new("UICorner", banner).CornerRadius = UDim.new(0, 22)
+local bannerStroke = UITheme.addStroke(banner, UITheme.Colors.Blue, 1.4, 0.30)
+local bannerGradient = UITheme.addGradient(banner, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 local bannerStroke = UITheme.addStroke(banner, UITheme.Colors.Blue, 1.4, 0.30)
 local bannerGradient = UITheme.addGradient(banner, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
