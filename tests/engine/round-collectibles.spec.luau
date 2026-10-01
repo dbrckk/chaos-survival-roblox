@@ -9,6 +9,12 @@ describe("Round collectibles", function()
         expect(RoundCollectibles.reward()).toBe(1)
     end)
 
+    it("keeps the rare golden shard reward exciting but small", function()
+        expect(RoundCollectibles.goldenReward()).toBe(3)
+        expect(RoundCollectibles.goldenReward() > RoundCollectibles.reward()).toBe(true)
+        expect(RoundCollectibles.goldenReward() <= 3).toBe(true)
+    end)
+
     it("scales active shard pressure conservatively", function()
         expect(RoundCollectibles.maxActive(1, true)).toBe(1)
         expect(RoundCollectibles.maxActive(2, false)).toBe(1)
