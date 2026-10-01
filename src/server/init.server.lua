@@ -44,6 +44,7 @@ local RoundCollectibles = require(script.RoundCollectibles)
 local RoundChallenge = require(script.RoundChallenge)
 local RoundMedals = require(script.RoundMedals)
 local FlowCombo = require(script.FlowCombo)
+local ChaosFusion = require(script.ChaosFusion)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -395,6 +396,7 @@ end
 
 local function runDisasterSet(selected, contestants, roundSettings)
     local roundStartedAt = os.clock()
+    local fusionName = #selected > 1 and ChaosFusion.name(selected[1].Id, selected[2].Id) or nil
     local roundActive = true
     local overdriveActive = false
     local finalRushActive = false
@@ -653,8 +655,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         local hint = selected[1].Hint
 
         if #selected > 1 then
-            title = "DOUBLE CHAOS: " .. selected[1].Name .. " + " .. selected[2].Name
-            hint = selected[1].Hint .. " / " .. selected[2].Hint
+            title = "CHAOS FUSION: " .. tostring(fusionName)
+            hint = selected[1].Name .. " + " .. selected[2].Name .. " • " .. selected[1].Hint .. " / " .. selected[2].Hint
         elseif roundSettings.Solo then
             title = "SOLO RUSH: " .. title
         end
@@ -677,6 +679,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             hint = roundHint,
             seconds = t,
             doubleChaos = #selected > 1,
+            fusionName = fusionName,
             soloMode = roundSettings.Solo,
             arenaName = roundSettings.ArenaName or currentArenaVariant,
             disasterIds = disasterIds,
@@ -902,11 +905,14 @@ while true do
         end
     end
 
+    local fusionName = #selectedSet > 1
+        and ChaosFusion.name(selectedSet[1].Id, selectedSet[2].Id)
+        or nil
     local readyTitle = selectedSet[1].Name
     local readyHint = selectedSet[1].Hint
     if #selectedSet > 1 then
-        readyTitle = "DOUBLE CHAOS: " .. selectedSet[1].Name .. " + " .. selectedSet[2].Name
-        readyHint = selectedSet[1].Hint .. " / " .. selectedSet[2].Hint
+        readyTitle = "CHAOS FUSION: " .. tostring(fusionName)
+        readyHint = selectedSet[1].Name .. " + " .. selectedSet[2].Name .. " • " .. selectedSet[1].Hint .. " / " .. selectedSet[2].Hint
     elseif roundSettings.Solo then
         readyTitle = "SOLO RUSH: " .. readyTitle
     end
@@ -950,6 +956,7 @@ while true do
             hint = "Find your position • " .. readyHint,
             seconds = t,
             doubleChaos = #selectedSet > 1,
+            fusionName = fusionName,
             soloMode = readyCount == 1,
             arenaName = roundSettings.ArenaName,
             disasterIds = readyDisasterIds,
@@ -1024,6 +1031,7 @@ while true do
             p:SetAttribute("BestSessionSurvivalStreak", bestSessionStreak)
 
             local streakBonusCoins = SessionStreak.bonusCoins(survivalStreak)
+            local fusionBonusCoins = survived and #selectedSet > 1 and ChaosFusion.bonusCoins() or 0
 
             local criticalSurvival = false
             if survived then
@@ -1035,7 +1043,7 @@ while true do
 
             if survived then
                 survivors += 1
-                PlayerData.add(p, "Coins", winCoins + streakBonusCoins)
+                PlayerData.add(p, "Coins", winCoins + streakBonusCoins + fusionBonusCoins)
                 PlayerData.add(p, "XP", winXP)
                 PlayerData.add(p, "Wins", 1)
 
@@ -1043,8 +1051,17 @@ while true do
                 if streakBonusCoins > 0 then
                     GameAnalytics.economySource(p, streakBonusCoins, "SurvivalStreak", "Streak" .. tostring(survivalStreak), roundSettings.Solo)
                 end
+                if fusionBonusCoins > 0 then
+                    GameAnalytics.economySource(
+                        p,
+                        fusionBonusCoins,
+                        "ChaosFusionSurvival",
+                        tostring(fusionName),
+                        roundSettings.Solo
+                    )
+                end
                 progressQuest(p, "survive_round", 1)
-                progressQuest(p, "coins_earned", winCoins + streakBonusCoins)
+                progressQuest(p, "coins_earned", winCoins + streakBonusCoins + fusionBonusCoins)
 
                 if #selectedSet > 1 then
                     PlayerData.add(p, "DoubleChaosSurvivals", 1)
@@ -1118,10 +1135,12 @@ while true do
 
             roundFeedbackEvent:FireClient(p, {
                 survived = survived,
-                coins = survived and (winCoins + streakBonusCoins) or Config.ParticipationCoins,
+                coins = survived and (winCoins + streakBonusCoins + fusionBonusCoins) or Config.ParticipationCoins,
                 xp = survived and winXP or Config.ParticipationXP,
                 streak = survivalStreak,
                 streakBonusCoins = survived and streakBonusCoins or 0,
+                fusionBonusCoins = fusionBonusCoins,
+                fusionName = fusionName,
                 shardCount = roundShardCount,
                 shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundShardCoins")) or 0)),
                 flowCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundFlowCoins")) or 0)),
@@ -1149,9 +1168,10 @@ while true do
     broadcast({
         phase = "result",
         title = endedEarly and "TOTAL WIPEOUT" or (survivors .. " SURVIVED"),
-        hint = "Next round soon",
+        hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
         seconds = roundSettings.PostRoundSeconds,
         doubleChaos = #selectedSet > 1,
+        fusionName = fusionName,
         soloMode = roundSettings.Solo,
         arenaName = roundSettings.ArenaName,
     })
@@ -1160,9 +1180,10 @@ while true do
         broadcast({
             phase = "result",
             title = endedEarly and "TOTAL WIPEOUT" or (survivors .. " SURVIVED"),
-            hint = "Next round soon",
+            hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
             seconds = t,
             doubleChaos = #selectedSet > 1,
+            fusionName = fusionName,
             soloMode = roundSettings.Solo,
             arenaName = roundSettings.ArenaName,
         })
