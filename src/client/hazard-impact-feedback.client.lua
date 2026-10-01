@@ -17,7 +17,7 @@ end
 local function renderBurst(payload)
     local position = payload.position
     local color = payload.color
-    local radius = tonumber(payload.radius) or 8
+    local radius = math.clamp(tonumber(payload.radius) or 8, 1, 40)
 
     if typeof(position) ~= "Vector3" or typeof(color) ~= "Color3" then
         return
