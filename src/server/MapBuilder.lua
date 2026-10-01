@@ -315,6 +315,8 @@ local function addArenaHologram(decor, config, variant, theme)
     gui.Parent = sign
 
     local header = Instance.new("TextLabel")
+    header.Name = "ArenaIdentityTitle"
+    header:SetAttribute("BaseText", variant.Name)
     header.Size = UDim2.new(1, -24, 0.52, 0)
     header.Position = UDim2.fromOffset(12, 6)
     header.BackgroundTransparency = 1
@@ -327,6 +329,7 @@ local function addArenaHologram(decor, config, variant, theme)
     header.Parent = gui
 
     local separator = Instance.new("Frame")
+    separator.Name = "ArenaIdentitySeparator"
     separator.AnchorPoint = Vector2.new(0.5, 0)
     separator.Position = UDim2.fromScale(0.5, 0.55)
     separator.Size = UDim2.new(0.78, 0, 0, 3)
@@ -335,6 +338,8 @@ local function addArenaHologram(decor, config, variant, theme)
     separator.Parent = gui
 
     local hint = Instance.new("TextLabel")
+    hint.Name = "ArenaIdentityHint"
+    hint:SetAttribute("BaseText", variant.StrategyHint or "ADAPT • MOVE • SURVIVE")
     hint.Size = UDim2.new(1, -32, 0.30, 0)
     hint.Position = UDim2.new(0, 16, 0.62, 0)
     hint.BackgroundTransparency = 1
