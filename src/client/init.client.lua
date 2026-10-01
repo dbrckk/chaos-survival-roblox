@@ -1165,7 +1165,26 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 
     local gamesPlayed = tonumber(player:GetAttribute("Games")) or 0
-    rookieCoach.Visible = state.phase == "ready" and gamesPlayed <= 2
+    local rookie = gamesPlayed <= 2
+    rookieCoach.Visible = false
+
+    if rookie then
+        if state.phase == "intermission" and state.voteOptions then
+            rookieCoach.Text = "1/3  VOTE FOR A CHAOS  •  TAP THE DISASTER YOU WANT NEXT"
+            rookieCoach.Visible = true
+        elseif state.phase == "ready" then
+            rookieCoach.Text = "2/3  PICK A SAFE ROUTE  •  HEIGHT AND MOVEMENT MATTER"
+            rookieCoach.Visible = true
+        elseif state.phase == "round" then
+            local shardCount = math.max(0, math.floor(tonumber(player:GetAttribute("RoundChaosShards")) or 0))
+            if shardCount <= 0 then
+                rookieCoach.Text = "3/3  SURVIVE UNTIL 0  •  WARNING COLORS = DANGER  •  SHARDS = +1 COIN"
+            else
+                rookieCoach.Text = "SURVIVE UNTIL 0  •  KEEP MOVING  •  SHARDS ARE OPTIONAL BONUS COINS"
+            end
+            rookieCoach.Visible = true
+        end
+    end
 
     if state.phase == "ready" then
         timer.BackgroundColor3 = Color3.fromRGB(70, 145, 255)
