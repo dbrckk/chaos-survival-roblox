@@ -373,7 +373,13 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end,
     }
 
-    local arenaMechanic = ArenaMechanics.start(ctx, currentArenaVariant)
+    local arenaMechanic = nil
+    local mechanicOk, mechanicResult = pcall(ArenaMechanics.start, ctx, currentArenaVariant)
+    if mechanicOk then
+        arenaMechanic = mechanicResult
+    else
+        warn("Arena mechanic failed to start:", currentArenaVariant, mechanicResult)
+    end
 
     for _, disaster in ipairs(selected) do
         local ok, err = pcall(disaster.start, ctx)
