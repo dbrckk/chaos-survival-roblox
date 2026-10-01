@@ -353,18 +353,21 @@ function CosmeticService.init(remotes, rateLimiterFactory)
     actionEvent.Parent = remotes
 
     local allowAction = rateLimiterFactory.new(0.25)
+    local allowSync = rateLimiterFactory.new(1.0)
 
     actionEvent.OnServerEvent:Connect(function(player, action, cosmeticId)
         if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
             return
         end
 
-        if not allowAction(player.UserId) then
+        if action == "sync" then
+            if allowSync(player.UserId) then
+                sendState(player)
+            end
             return
         end
 
-        if action == "sync" then
-            sendState(player)
+        if not allowAction(player.UserId) then
             return
         end
 
