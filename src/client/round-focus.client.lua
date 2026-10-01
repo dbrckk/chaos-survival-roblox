@@ -119,7 +119,10 @@ end
 
 local function refresh()
     local state = currentState
-    if not state or state.phase ~= "round" then
+    local isParticipant = player:GetAttribute("RoundParticipant") == true
+    local isEliminated = player:GetAttribute("RoundEliminated") == true
+
+    if not state or state.phase ~= "round" or not isParticipant or isEliminated then
         if root.Visible then
             visibleToken += 1
             local token = visibleToken
@@ -167,6 +170,9 @@ local function refresh()
         shard.TextColor3 = Color3.fromRGB(135, 225, 255)
     end
 end
+
+player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
 
 player:GetAttributeChangedSignal("RoundChaosShards"):Connect(function()
     local previous = shard.Text
