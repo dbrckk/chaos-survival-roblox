@@ -410,12 +410,17 @@ local function runDisasterSet(selected, contestants, roundSettings)
             )
         end,
         OnHazardImpact = function(position, color, radius, kind)
-            hazardImpactFeedbackEvent:FireAllClients({
-                position = position,
-                color = color,
-                radius = radius,
-                kind = kind,
-            })
+            for _, player in ipairs(Players:GetPlayers()) do
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if root and (root.Position - position).Magnitude <= 180 then
+                    hazardImpactFeedbackEvent:FireClient(player, {
+                        position = position,
+                        color = color,
+                        radius = radius,
+                        kind = kind,
+                    })
+                end
+            end
         end,
         OnHazardNearMiss = function(player, kind, distance, radius)
             if player.Parent ~= Players or not allowHazardNearMiss(player.UserId) then
