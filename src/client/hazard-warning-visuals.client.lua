@@ -33,6 +33,9 @@ local function ensureRenderLoop()
                 if state.ring and state.ring.Parent then
                     state.ring:Destroy()
                 end
+                if state.label and state.label.Parent then
+                    state.label:Destroy()
+                end
                 tracked[part] = nil
                 continue
             end
@@ -79,9 +82,21 @@ local function ensureRenderLoop()
                 end
             end
 
+            if state.label and state.label.Parent then
+                state.label.StudsOffsetWorldSpace = Vector3.new(0, 2.6 + pulse * 0.18, 0)
+                local text = state.label:FindFirstChild("WarningText")
+                if text and text:IsA("TextLabel") then
+                    text.TextTransparency = math.clamp(0.02 + alpha * 0.22, 0, 1)
+                    text.TextStrokeTransparency = math.clamp(0.42 + alpha * 0.30, 0, 1)
+                end
+            end
+
             if alpha >= 1 then
                 if state.ring and state.ring.Parent then
                     state.ring:Destroy()
+                end
+                if state.label and state.label.Parent then
+                    state.label:Destroy()
                 end
                 tracked[part] = nil
             end
@@ -127,6 +142,47 @@ local function register(part)
         ring.Parent = localDecor
     end
 
+
+    local label = Instance.new("BillboardGui")
+    label.Name = kind .. "WarningLabelLocal"
+    label.Adornee = part
+    label.Size = UDim2.fromOffset(132, 34)
+    label.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
+    label.AlwaysOnTop = true
+    label.LightInfluence = 0
+    label.MaxDistance = currentTier.Name == "Low" and 90 or 130
+    label.Parent = localDecor
+
+    local warningText = Instance.new("TextLabel")
+    warningText.Name = "WarningText"
+    warningText.Size = UDim2.fromScale(1, 1)
+    warningText.BackgroundColor3 = Color3.fromRGB(12, 16, 24)
+    warningText.BackgroundTransparency = 0.18
+    warningText.BorderSizePixel = 0
+    warningText.Font = Enum.Font.GothamBlack
+    warningText.Text = kind == "JumpShock"
+        and "JUMP"
+        or string.upper(kind)
+    warningText.TextColor3 = kind == "Bomb"
+        and Color3.fromRGB(255, 120, 120)
+        or (kind == "Meteor"
+            and Color3.fromRGB(255, 205, 115)
+            or Color3.fromRGB(170, 225, 255))
+    warningText.TextScaled = true
+    warningText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    warningText.TextStrokeTransparency = 0.42
+    warningText.Parent = label
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = warningText
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = warningText.TextColor3
+    stroke.Thickness = 1
+    stroke.Transparency = 0.35
+    stroke.Parent = warningText
+
     tracked[part] = {
         startedAt = tonumber(part:GetAttribute("WarningStartedAt")) or workspace:GetServerTimeNow(),
         kind = kind,
@@ -135,6 +191,7 @@ local function register(part)
         endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
         clock = 0,
         ring = ring,
+        label = label,
     }
 
     ensureRenderLoop()
@@ -180,6 +237,9 @@ workspace.ChildRemoved:Connect(function(child)
     local state = tracked[child]
     if state and state.ring and state.ring.Parent then
         state.ring:Destroy()
+    end
+    if state and state.label and state.label.Parent then
+        state.label:Destroy()
     end
     tracked[child] = nil
 end)
