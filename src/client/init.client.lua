@@ -984,24 +984,26 @@ resultReward.BackgroundTransparency = 1
 resultReward.Font = Enum.Font.GothamBold
 resultReward.TextColor3 = UITheme.Colors.Gold
 resultReward.TextScaled = true
+resultReward.TextWrapped = true
 resultReward.ZIndex = 22
 resultReward.Text = ""
 resultReward.Parent = resultCard
 
 local resultMeta = Instance.new("TextLabel")
-resultMeta.Size = UDim2.new(1, -28, 0.18, 0)
-resultMeta.Position = UDim2.new(0, 14, 0.64, 0)
+resultMeta.Size = UDim2.new(1, -28, 0.20, 0)
+resultMeta.Position = UDim2.new(0, 14, 0.62, 0)
 resultMeta.BackgroundTransparency = 1
 resultMeta.Font = Enum.Font.GothamMedium
 resultMeta.TextColor3 = UITheme.Colors.Muted
 resultMeta.TextScaled = true
+resultMeta.TextWrapped = true
 resultMeta.ZIndex = 22
 resultMeta.Text = ""
 resultMeta.Parent = resultCard
 
 local resultTip = Instance.new("TextLabel")
-resultTip.Size = UDim2.new(1, -28, 0.14, 0)
-resultTip.Position = UDim2.new(0, 14, 0.83, 0)
+resultTip.Size = UDim2.new(1, -28, 0.13, 0)
+resultTip.Position = UDim2.new(0, 14, 0.84, 0)
 resultTip.BackgroundTransparency = 1
 resultTip.Font = Enum.Font.GothamMedium
 resultTip.TextColor3 = UITheme.Colors.Muted
@@ -1020,7 +1022,7 @@ local function applyResponsiveLayout()
         top.Size = UDim2.fromScale(0.88, 0.13)
         votes.Position = UDim2.fromScale(0.5, 0.58)
         votes.Size = UDim2.fromScale(0.88, 0.24)
-        resultCard.Size = UDim2.fromScale(0.80, 0.29)
+        resultCard.Size = UDim2.fromScale(0.80, 0.31)
         questPanel.Size = UDim2.fromScale(0.72, 0.34)
         cosmeticsPanel.Size = UDim2.fromScale(0.72, 0.36)
         achievementPanel.Size = UDim2.fromScale(0.82, 0.46)
@@ -1054,7 +1056,7 @@ local function applyResponsiveLayout()
 
     resultCard.Size = UDim2.fromScale(
         narrow and 0.90 or (wide and 0.68 or 0.80),
-        narrow and 0.31 or 0.29
+        narrow and 0.34 or 0.31
     )
 
     dailyToast.Size = UDim2.fromScale(narrow and 0.84 or 0.72, 0.16)
