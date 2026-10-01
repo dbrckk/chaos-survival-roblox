@@ -8,6 +8,8 @@ local PlayerReadiness = require(script.Parent.PlayerReadiness)
 
 local AchievementService = {}
 
+local setupStarted = setmetatable({}, {__mode = "k"})
+
 local stateEvent
 
 local function statsFor(player)
@@ -98,6 +100,10 @@ function AchievementService.evaluate(player)
 end
 
 local function setupPlayer(player)
+    if setupStarted[player] then
+        return
+    end
+    setupStarted[player] = true
     task.spawn(function()
         if not PlayerReadiness.waitForDataLoaded(player) then
             return
