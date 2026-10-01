@@ -1,7 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -246,8 +245,6 @@ bindGeneratedMap()
 RunService.RenderStepped:Connect(function(dt)
     clock += dt
     updateClock += dt
-
-    bindGeneratedMap()
 
     local tier = quality()
     if updateClock < math.max(0.025, tier.UpdateInterval) then
