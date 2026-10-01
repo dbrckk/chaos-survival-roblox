@@ -451,8 +451,8 @@ local function buildLobby(root, config)
         "ArenaGateRight",
         Vector3.new(3, 13, 3),
         archCenter + Vector3.new(10, 6.5, 0),
-        Color3.fromRGB(61, 71, 96),
-        Enum.Material.Metal
+        VisualTheme.World.Metal,
+        VisualTheme.Materials.Structure
     )
 
     local archTop = part(
@@ -612,8 +612,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             "Spawn" .. i,
             Vector3.new(4.6, 0.7, 4.6),
             spawnPosition,
-            variant.BaseColor:Lerp(Color3.new(1, 1, 1), 0.12),
-            Enum.Material.Metal
+            theme.Detail:Lerp(Color3.new(1, 1, 1), 0.10),
+            VisualTheme.Materials.Structure
         )
         s.Transparency = 0.08
 
@@ -628,6 +628,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         glow.CanCollide = false
         glow.CanTouch = false
         glow.CanQuery = false
+        glow.CastShadow = false
         glow.Transparency = 0.16
     end
 
@@ -648,7 +649,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     local edgeHeight = 0.45
 
     local edgeColor = theme.Accent
-    local north = part(
+    local north = decorPart(
         decor,
         "EdgeNorth",
         Vector3.new(variant.BaseSize.X, edgeHeight, edgeThickness),
@@ -658,7 +659,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     )
     north.CanCollide = false
 
-    local south = part(
+    local south = decorPart(
         decor,
         "EdgeSouth",
         Vector3.new(variant.BaseSize.X, edgeHeight, edgeThickness),
@@ -668,7 +669,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     )
     south.CanCollide = false
 
-    local west = part(
+    local west = decorPart(
         decor,
         "EdgeWest",
         Vector3.new(edgeThickness, edgeHeight, variant.BaseSize.Z),
@@ -678,7 +679,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     )
     west.CanCollide = false
 
-    local east = part(
+    local east = decorPart(
         decor,
         "EdgeEast",
         Vector3.new(edgeThickness, edgeHeight, variant.BaseSize.Z),
@@ -688,7 +689,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     )
     east.CanCollide = false
 
-    local beacon = part(
+    local beacon = decorPart(
         decor,
         "CenterBeacon",
         Vector3.new(1.4, 14, 1.4),
@@ -719,7 +720,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         )
         platform.Color = theme.Detail:Lerp(theme.Surface, 0.28)
 
-        local trim = part(
+        local trim = decorPart(
             decor,
             "PlatformGlow" .. i,
             Vector3.new(definition.size.X + 0.5, 0.18, definition.size.Z + 0.5),
@@ -752,21 +753,18 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         )
         pillar.CanCollide = false
 
-        local cap = part(
+        local cap = decorPart(
             decor,
             "EdgeBeaconGlow" .. i,
             Vector3.new(1.35, 0.36, 1.35),
             pillar.Position + Vector3.new(0, 3.55, 0),
-            variant.PlatformColor,
-            Enum.Material.Neon
+            (i % 2 == 0) and theme.Secondary or theme.Accent,
+            VisualTheme.Materials.Glow
         )
-        cap.CanCollide = false
-        cap.CanTouch = false
-        cap.CanQuery = false
         cap.Transparency = 0.10
 
         local capLight = Instance.new("PointLight")
-        capLight.Color = variant.PlatformColor
+        capLight.Color = (i % 2 == 0) and theme.Secondary or theme.Accent
         capLight.Brightness = 0.55
         capLight.Range = 11
         capLight.Shadows = false
