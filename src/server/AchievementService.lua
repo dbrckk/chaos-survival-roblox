@@ -4,6 +4,7 @@ local BadgeService = game:GetService("BadgeService")
 local Achievements = require(script.Parent.Achievements)
 local PlayerData = require(script.Parent.PlayerData)
 local GameAnalytics = require(script.Parent.GameAnalytics)
+local PlayerReadiness = require(script.Parent.PlayerReadiness)
 
 local AchievementService = {}
 
@@ -46,7 +47,12 @@ local function sendState(player, newlyUnlocked)
 end
 
 local function evaluate(player)
-    if not player:GetAttribute("DataLoaded") then
+    if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
+        return
+    end
+
+    if player:GetAttribute("DataPersistenceAvailable") ~= true then
+        sendState(player, {})
         return
     end
 
@@ -88,11 +94,7 @@ end
 
 local function setupPlayer(player)
     task.spawn(function()
-        if not player:GetAttribute("DataLoaded") then
-            player:GetAttributeChangedSignal("DataLoaded"):Wait()
-        end
-
-        if player.Parent ~= Players then
+        if not PlayerReadiness.waitForDataLoaded(player) then
             return
         end
 
