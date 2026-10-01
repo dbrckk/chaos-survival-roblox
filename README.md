@@ -26,9 +26,11 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Elimination tracking that prevents respawns from being counted as survival
 - Server-side retention and gameplay analytics segmented by Solo/Multiplayer
 - Economy analytics for Coins sources, daily rewards, quests and achievements
-- Onboarding funnel tracking from join to first survival
+- Onboarding funnel tracking from join to first survival and first Chaos Shard pickup
+- Contextual first-session coach covering vote, positioning, survival and optional shard collection
 - Four rotating arena layouts with no immediate repeat
-- Animated personal round-result feedback with reward breakdown
+- Animated personal round-result feedback with survival, streak, shard and close-call breakdown
+- Compact live round-focus HUD with Chaos intensity and shard count
 - Final-five-second danger timer feedback
 - Server-side reward handling
 - Per-disaster visual identities with Double Chaos color blending
@@ -37,8 +39,12 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Dynamic neon arena beacon reacting to active chaos
 - Procedural premium lobby hub with neon gate and title signage
 - Premium procedural arena treatment with metal spawn pads, neon platform underglow and edge beacons
+- Adaptive client-side world polish that rebuilds correctly across arena swaps and scales down on weaker devices
 - Live multiplayer vote counts and leading-choice highlight
-- Mobile spectator mode after elimination
+- Mobile spectator mode after elimination with live survivor/time context
+- Chaos Shards: optional server-authoritative risk/reward pickups with daily-quest integration
+- Close-call / near-miss feedback with per-round tracking
+- Critical-health clutch-survival feedback and analytics
 - XP progress bar and level-up celebration
 - Session survival streaks with capped coin bonuses
 - First-session onboarding banner
