@@ -194,7 +194,7 @@ end
 
 local function intensityLabel(value, seconds)
     if seconds <= 5 then
-        return "FINAL SECONDS", Color3.fromRGB(255, 105, 92)
+        return "FINAL RUSH", Color3.fromRGB(255, 105, 92)
     elseif value >= 1.18 then
         return "MAX CHAOS", Color3.fromRGB(245, 115, 190)
     elseif value >= 1.08 then
@@ -271,7 +271,10 @@ local function refresh()
     ):Play()
 
     local text, color = intensityLabel(intensity, tonumber(state.seconds) or 0)
-    if state.overdrive then
+    if state.finalRush then
+        text = "FINAL RUSH  " .. tostring(math.max(0, math.floor(tonumber(state.seconds) or 0))) .. "s"
+        color = UITheme.Colors.Red
+    elseif state.overdrive then
         text = "OVERDRIVE  " .. tostring(math.max(1, math.floor(tonumber(state.overdriveSeconds) or 1))) .. "s"
         color = UITheme.Colors.Gold
     end
@@ -288,7 +291,16 @@ local function refresh()
         ColorSequenceKeypoint.new(1, UITheme.Colors.Red),
     })
 
-    if state.overdrive then
+    if state.finalRush then
+        stroke.Color = UITheme.Colors.Red
+        accentRail.BackgroundColor3 = UITheme.Colors.Orange
+        shard.TextColor3 = UITheme.Colors.Orange
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, UITheme.Colors.Orange),
+            ColorSequenceKeypoint.new(0.5, UITheme.Colors.Red),
+            ColorSequenceKeypoint.new(1, UITheme.Colors.Magenta),
+        })
+    elseif state.overdrive then
         stroke.Color = UITheme.Colors.Gold
         accentRail.BackgroundColor3 = UITheme.Colors.Gold
         shard.TextColor3 = UITheme.Colors.Gold
