@@ -276,6 +276,12 @@ chaosShardCollectedEvent.OnClientEvent:Connect(function(payload)
     local total = math.max(1, math.floor(tonumber(payload.total) or 1))
     local variance = math.min(0.08, total * 0.008)
     play("ShardCollect", variance)
+
+    if (tonumber(payload.flowBonus) or 0) > 0 then
+        task.delay(0.06, function()
+            play("FlowCombo", 0.03)
+        end)
+    end
 end)
 
 hazardNearMissEvent.OnClientEvent:Connect(function()
