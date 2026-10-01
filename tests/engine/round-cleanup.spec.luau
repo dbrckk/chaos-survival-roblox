@@ -45,6 +45,19 @@ describe("Round cleanup contracts", function()
         end
     end)
 
+    it("Shrinking Arena keeps visual borders aligned with the playable floor", function()
+        local size, offset = ShrinkingArena.scaledEdgeTransform(
+            Vector3.new(104, 0.45, 0.35),
+            Vector3.new(0, 1.25, -51.6),
+            0.5
+        )
+
+        expect(size.X).toBe(52)
+        expect(size.Z).toBe(0.35)
+        expect(offset.Z).toBe(-25.8)
+        expect(offset.Y).toBe(1.25)
+    end)
+
     it("Disappearing Platforms registers deterministic cleanup restoration", function()
         MapBuilder.build(Config, "Classic", ArenaVariants)
 
