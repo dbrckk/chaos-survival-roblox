@@ -25,6 +25,7 @@ local accent = Color3.fromRGB(90, 185, 255)
 local secondaryAccent = nil
 local doubleChaos = false
 local overdrive = false
+local finalRush = false
 local intensity = 1
 local previousPhase = "waiting"
 local readyPulseStartedAt = nil
@@ -438,6 +439,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
     doubleChaos = state.doubleChaos == true
     overdrive = state.phase == "round" and state.overdrive == true
+    finalRush = state.phase == "round" and state.finalRush == true
     intensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
 
     local ids = state.disasterIds or {}
@@ -551,7 +553,9 @@ RunService.RenderStepped:Connect(function(dt)
     end
 
     local visualAccent = blendedAccent
-    if overdrive then
+    if finalRush then
+        visualAccent = Color3.fromRGB(255, 92, 58):Lerp(blendedAccent, 0.20)
+    elseif overdrive then
         visualAccent = Color3.fromRGB(255, 205, 85):Lerp(blendedAccent, 0.28)
     end
 
@@ -562,12 +566,12 @@ RunService.RenderStepped:Connect(function(dt)
             if beam then
                 beam.Enabled = linkTier.Name ~= "Low"
                 beam.Color = ColorSequence.new(visualAccent)
-                local linkWave = (math.sin(clock * (overdrive and 5.4 or 3.1)) + 1) * 0.5
-                beam.Width0 = (overdrive and 0.12 or 0.07) + linkWave * 0.08 * linkTier.Scale
+                local linkWave = (math.sin(clock * (finalRush and 7.2 or (overdrive and 5.4 or 3.1))) + 1) * 0.5
+                beam.Width0 = (finalRush and 0.15 or (overdrive and 0.12 or 0.07)) + linkWave * 0.08 * linkTier.Scale
                 beam.Width1 = beam.Width0
                 beam.Transparency = NumberSequence.new(
                     math.clamp(
-                        (overdrive and 0.18 or 0.30)
+                        (finalRush and 0.12 or (overdrive and 0.18 or 0.30))
                             + (1 - linkTier.Scale) * 0.24
                             + linkWave * 0.10,
                         0.14,
@@ -580,7 +584,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     for index, part in ipairs(hologramParts) do
         if part.Parent then
-            local shimmer = (math.sin(clock * (overdrive and 4.2 or 2.1) + index * 0.8) + 1) * 0.5
+            local shimmer = (math.sin(clock * (finalRush and 6.0 or (overdrive and 4.2 or 2.1)) + index * 0.8) + 1) * 0.5
             if part.Name == "ArenaIdentityGlow" then
                 part.Color = visualAccent
                 part.Transparency = (overdrive and 0.42 or 0.58) + shimmer * 0.18
@@ -601,7 +605,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     local arenaSpeed = (
         phase == "round"
-            and (overdrive and 2.45 or 1.55)
+            and (finalRush and 3.25 or (overdrive and 2.45 or 1.55))
             or (phase == "ready" and (0.95 + readyBoost * 1.35) or 0.65)
     ) * intensity
     for i, glow in ipairs(arenaGlowParts) do
@@ -637,7 +641,7 @@ RunService.RenderStepped:Connect(function(dt)
             if emitter then
                 emitter.Color = ColorSequence.new(visualAccent, Color3.new(1, 1, 1))
                 local baseRate = phase == "round"
-                    and (overdrive and 18 or 12)
+                    and (finalRush and 22 or (overdrive and 18 or 12))
                     or (phase == "ready" and (7 + readyBoost * 8) or 6)
                 local targetRate = baseRate * tier.ParticleScale * intensity
                 emitter.Rate += (targetRate - emitter.Rate) * math.min(1, elapsed * 6)
