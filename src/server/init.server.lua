@@ -31,6 +31,7 @@ local AchievementService = require(script.AchievementService)
 local SoloRules = require(script.SoloRules)
 local GameAnalytics = require(script.GameAnalytics)
 local ArenaVariants = require(script.ArenaVariants)
+local ArenaMechanics = require(script.ArenaMechanics)
 local DisasterBalance = require(script.DisasterBalance)
 local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
@@ -341,6 +342,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end,
     }
 
+    local arenaMechanic = ArenaMechanics.start(ctx, currentArenaVariant)
+
     for _, disaster in ipairs(selected) do
         local ok, err = pcall(disaster.start, ctx)
         if not ok then
@@ -382,6 +385,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
             disasterIds = disasterIds,
             survivorsAlive = survivorsAlive,
             contestantCount = #contestants,
+            arenaMechanicName = arenaMechanic and arenaMechanic.name or nil,
+            arenaMechanicHint = arenaMechanic and arenaMechanic.hint or nil,
             intensity = RoundIntensity.factor(
                 roundSettings.RoundSeconds - t,
                 roundSettings.RoundSeconds,
