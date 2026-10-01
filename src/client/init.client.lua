@@ -223,8 +223,9 @@ rookieCoach.Name = "RookieCoach"
 rookieCoach.AnchorPoint = Vector2.new(0.5, 1)
 rookieCoach.Position = UDim2.fromScale(0.5, touchDevice and 0.70 or 0.94)
 rookieCoach.Size = UDim2.fromScale(touchDevice and 0.68 or 0.88, touchDevice and 0.042 or 0.055)
-rookieCoach.BackgroundColor3 = Color3.fromRGB(18, 22, 31)
-rookieCoach.BackgroundTransparency = 0.10
+rookieCoach.BackgroundColor3 = UITheme.Colors.Panel
+rookieCoach.BackgroundTransparency = 0.05
+rookieCoach.BorderSizePixel = 0
 rookieCoach.Font = Enum.Font.GothamBold
 rookieCoach.TextColor3 = Color3.fromRGB(235, 240, 250)
 rookieCoach.TextScaled = true
@@ -233,7 +234,8 @@ rookieCoach.Text = "SURVIVE UNTIL 0  •  AVOID WARNING COLORS  •  GLOWING PAD
 rookieCoach.Visible = false
 rookieCoach.ZIndex = 12
 rookieCoach.Parent = root
-Instance.new("UICorner", rookieCoach).CornerRadius = UDim.new(0, 14)
+UITheme.addCorner(rookieCoach, UITheme.Corners.Medium)
+UITheme.addStroke(rookieCoach, UITheme.Colors.Blue, 1, 0.48)
 
 local dailyToast = Instance.new("Frame")
 dailyToast.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -272,13 +274,17 @@ questButton.Name = "QuestButton"
 questButton.AnchorPoint = Vector2.new(0, 1)
 questButton.Position = UDim2.fromScale(0.025, touchDevice and 0.88 or 0.90)
 questButton.Size = UDim2.fromScale(touchDevice and 0.20 or 0.22, touchDevice and 0.055 or 0.065)
-questButton.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
-questButton.TextColor3 = Color3.new(1, 1, 1)
+questButton.BackgroundColor3 = UITheme.Colors.PanelRaised
+questButton.BackgroundTransparency = 0.04
+questButton.BorderSizePixel = 0
+questButton.TextColor3 = UITheme.Colors.Text
 questButton.Font = Enum.Font.GothamBold
 questButton.TextScaled = true
 questButton.Text = "QUESTS"
 questButton.Parent = root
-Instance.new("UICorner", questButton).CornerRadius = UDim.new(0, 14)
+UITheme.addCorner(questButton, UITheme.Corners.Medium)
+UITheme.addStroke(questButton, UITheme.Colors.Cyan, 1.2, 0.38)
+UITheme.addGradient(questButton, UITheme.Colors.PanelRaised, UITheme.Colors.PanelSoft, 90)
 
 local questPanel = Instance.new("Frame")
 questPanel.Name = "QuestPanel"
@@ -371,13 +377,17 @@ cosmeticsButton.Name = "CosmeticsButton"
 cosmeticsButton.AnchorPoint = Vector2.new(1, 1)
 cosmeticsButton.Position = UDim2.fromScale(0.975, touchDevice and 0.88 or 0.90)
 cosmeticsButton.Size = UDim2.fromScale(touchDevice and 0.23 or 0.26, touchDevice and 0.055 or 0.065)
-cosmeticsButton.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
-cosmeticsButton.TextColor3 = Color3.new(1, 1, 1)
+cosmeticsButton.BackgroundColor3 = UITheme.Colors.PanelRaised
+cosmeticsButton.BackgroundTransparency = 0.04
+cosmeticsButton.BorderSizePixel = 0
+cosmeticsButton.TextColor3 = UITheme.Colors.Text
 cosmeticsButton.Font = Enum.Font.GothamBold
 cosmeticsButton.TextScaled = true
 cosmeticsButton.Text = "COSMETICS"
 cosmeticsButton.Parent = root
-Instance.new("UICorner", cosmeticsButton).CornerRadius = UDim.new(0, 14)
+UITheme.addCorner(cosmeticsButton, UITheme.Corners.Medium)
+UITheme.addStroke(cosmeticsButton, UITheme.Colors.Magenta, 1.2, 0.38)
+UITheme.addGradient(cosmeticsButton, UITheme.Colors.PanelRaised, UITheme.Colors.PanelSoft, 90)
 
 local cosmeticsPanel = Instance.new("Frame")
 cosmeticsPanel.Name = "CosmeticsPanel"
@@ -583,13 +593,17 @@ achievementButton.Name = "AchievementButton"
 achievementButton.AnchorPoint = Vector2.new(0.5, 1)
 achievementButton.Position = UDim2.fromScale(0.5, touchDevice and 0.88 or 0.90)
 achievementButton.Size = UDim2.fromScale(touchDevice and 0.27 or 0.30, touchDevice and 0.055 or 0.065)
-achievementButton.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
-achievementButton.TextColor3 = Color3.new(1, 1, 1)
+achievementButton.BackgroundColor3 = UITheme.Colors.PanelRaised
+achievementButton.BackgroundTransparency = 0.04
+achievementButton.BorderSizePixel = 0
+achievementButton.TextColor3 = UITheme.Colors.Text
 achievementButton.Font = Enum.Font.GothamBold
 achievementButton.TextScaled = true
 achievementButton.Text = "ACHIEVEMENTS"
 achievementButton.Parent = root
-Instance.new("UICorner", achievementButton).CornerRadius = UDim.new(0, 14)
+UITheme.addCorner(achievementButton, UITheme.Corners.Medium)
+UITheme.addStroke(achievementButton, UITheme.Colors.Gold, 1.2, 0.38)
+UITheme.addGradient(achievementButton, UITheme.Colors.PanelRaised, UITheme.Colors.PanelSoft, 90)
 
 local achievementPanel = Instance.new("Frame")
 achievementPanel.Name = "AchievementPanel"
