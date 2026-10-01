@@ -62,11 +62,11 @@ PHASE 4 — VFX CATASTROPHES
 [QA]   4.4 Meteor Shower : warning premium + impact/shockwave enrichi.
 [QA]   4.5 Bomb Rain : warning premium + shockwave et impact enrichis.
 [QA]   4.6 Disappearing Platforms : instabilité pulsée et disparition plus lisible.
-[TODO] 4.7 Moon Gravity : ambiance spatiale, trails et feedback de mouvement.
-[TODO] 4.8 Speed Surge : trails directionnels et sensation de vitesse.
-[TODO] 4.9 Blackout : extinction progressive, éclairage de secours et contraste.
-[TODO] 4.10 Shrinking Arena : bord énergétique plus spectaculaire.
-[TODO] 4.11 Jump Shock : onde de choc lisible et plus satisfaisante.
+[QA]   4.7 Moon Gravity : trail vertical, motes et feedback de faible gravité.
+[QA]   4.8 Speed Surge : ruban de vitesse directionnel et sensation de mouvement.
+[QA]   4.9 Blackout : ambiance sombre + balises d'urgence périphériques.
+[QA]   4.10 Shrinking Arena : périmètre énergétique pulsant synchronisé avec la base.
+[QA]   4.11 Jump Shock : double front d'onde énergétique.
 [TODO] 4.12 QA Double Chaos : lisibilité de toutes les combinaisons autorisées.
 
 PHASE 5 — UI / UX PREMIUM
@@ -126,4 +126,4 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - HUD mobile récemment corrigé pour limiter les chevauchements.
 - Freeze glare réduit.
 - Base néon cohérente mais encore trop simple.
-- Priorité actuelle : PHASE 4 — valider visuellement les catastrophes prioritaires, puis poursuivre Moon Gravity / Speed Surge / Blackout / Shrinking Arena / Jump Shock.
+- Priorité actuelle : PHASE 5 — refonte UI/UX premium après validation CI du lot VFX.
