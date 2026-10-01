@@ -25,6 +25,7 @@ local clock = 0
 local updateClock = 0
 local currentMap = nil
 local currentMapConnection = nil
+local secondaryLights = {}
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -43,6 +44,37 @@ local function clearPolish()
     clearTableInstances(lobbySegments)
     clearTableInstances(beaconEmitters)
     clearTableInstances(arenaGlowParts)
+    table.clear(secondaryLights)
+end
+
+local function collectSecondaryLights(root)
+    table.clear(secondaryLights)
+    for _, descendant in ipairs(root:GetDescendants()) do
+        if descendant:IsA("PointLight")
+            and (
+                descendant.Name == "LobbyPylonLight"
+                or descendant.Name == "EdgeBeaconLight"
+                or descendant.Name == "OrbitalCoreLight"
+            )
+        then
+            table.insert(secondaryLights, descendant)
+        end
+    end
+end
+
+local function applyLightBudget()
+    local tier = quality()
+    for index, light in ipairs(secondaryLights) do
+        if light.Parent then
+            if tier.Name == "Low" then
+                light.Enabled = false
+            elseif tier.Name == "Medium" then
+                light.Enabled = index % 2 == 1
+            else
+                light.Enabled = true
+            end
+        end
+    end
 end
 
 local function makeSegment(name, position, size, color)
@@ -199,6 +231,8 @@ local function rebuild(root)
     currentMap = root
     decorateLobby(root)
     decorateArena(root)
+    collectSecondaryLights(root)
+    applyLightBudget()
 
     currentMapConnection = root.ChildAdded:Connect(function(child)
         if child.Name == "Arena" and root == currentMap then
@@ -237,6 +271,7 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     local tier = quality()
+    applyLightBudget()
     for _, attachment in ipairs(beaconEmitters) do
         local emitter = attachment and attachment:FindFirstChildOfClass("ParticleEmitter")
         if emitter then
