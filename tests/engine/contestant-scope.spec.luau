@@ -124,6 +124,9 @@ describe("Contestant scoping", function()
             Cleanup = cleanup,
             OnCleanup = onCleanup,
             Active = function() return true end,
+            IsContestantActive = function(player)
+                return player == included
+            end,
             BalanceProfile = {},
         })
 
