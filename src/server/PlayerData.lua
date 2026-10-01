@@ -14,6 +14,7 @@ local AUTOSAVE_SPREAD_SECONDS = 12
 local SHUTDOWN_SAVE_DEADLINE_SECONDS = 27
 
 local active = {}
+local loading = {}
 local saving = {}
 local revisions = {}
 local savedRevisions = {}
@@ -130,8 +131,18 @@ end
 
 function PlayerData.load(player)
     if active[player] then
-        return true
+        return player:GetAttribute("DataPersistenceAvailable") == true
     end
+
+    if loading[player] then
+        while player.Parent == Players and loading[player] do
+            task.wait(0.05)
+        end
+        return active[player] == true
+            and player:GetAttribute("DataPersistenceAvailable") == true
+    end
+
+    loading[player] = true
 
     player:SetAttribute("DataLoaded", false)
     player:SetAttribute("DataPersistenceAvailable", false)
@@ -156,6 +167,7 @@ function PlayerData.load(player)
     end
 
     if player.Parent ~= Players then
+        loading[player] = nil
         return false
     end
 
@@ -168,6 +180,7 @@ function PlayerData.load(player)
     savedRevisions[player] = 0
     trackPersistentChanges(player)
     player:SetAttribute("DataLoaded", true)
+    loading[player] = nil
     return ok
 end
 
@@ -369,6 +382,7 @@ function PlayerData.init()
         PlayerData.save(player, true)
         disconnectDataConnections(player)
         active[player] = nil
+        loading[player] = nil
         saving[player] = nil
         revisions[player] = nil
         savedRevisions[player] = nil
