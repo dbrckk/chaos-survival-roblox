@@ -39,7 +39,7 @@ local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
 local RoundIntensity = require(script.RoundIntensity)
 local RoundCleanup = require(script.RoundCleanup)
-local SurvivalFeedback = require(script.SurvivalFeedback)
+local SurvivalFeedback = require(script.SurvivalFeedback)\nlocal RoundCollectibles = require(script.RoundCollectibles)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -50,7 +50,7 @@ local roundFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundFeedb
 local clientReadyEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ClientReady")
 local arenaMechanicFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ArenaMechanicFeedback")
 local hazardImpactFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardImpactFeedback")
-local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNearMiss")
+local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNearMiss")\nlocal chaosShardCollectedEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ChaosShardCollected")
 
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
@@ -367,7 +367,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     for _, player in ipairs(contestants) do
         eliminated[player.UserId] = false
         player:SetAttribute("RoundParticipant", true)
-        player:SetAttribute("RoundEliminated", false)
+        player:SetAttribute("RoundEliminated", false)\n        player:SetAttribute("RoundChaosShards", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
@@ -460,6 +460,46 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo)
             )
         end,
+        SoloMode = roundSettings.Solo,
+        OnCollected = function(player, reward, position)
+            if player.Parent ~= Players
+                or player:GetAttribute("DataLoaded") ~= true
+                or not ctx.IsContestantActive(player)
+            then
+                return
+            end
+
+            local amount = math.max(0, math.floor(tonumber(reward) or 0))
+            if amount <= 0 then
+                return
+            end
+
+            local total = (tonumber(player:GetAttribute("RoundChaosShards")) or 0) + 1
+            player:SetAttribute("RoundChaosShards", total)
+            PlayerData.add(player, "Coins", amount)
+
+            chaosShardCollectedEvent:FireClient(player, {
+                reward = amount,
+                total = total,
+                position = position,
+            })
+
+            GameAnalytics.economySource(
+                player,
+                amount,
+                "ChaosShard",
+                currentArenaVariant,
+                roundSettings.Solo
+            )
+            GameAnalytics.custom(
+                player,
+                "ChaosShardCollected",
+                1,
+                "Arena:" .. tostring(currentArenaVariant),
+                "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo),
+                "Count:" .. tostring(total)
+            )
+        end,
     }
 
     local arenaMechanic = nil
@@ -468,6 +508,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
         arenaMechanic = mechanicResult
     else
         warn("Arena mechanic failed to start:", currentArenaVariant, mechanicResult)
+    end
+
+    local collectibleOk, collectibleResult = pcall(RoundCollectibles.start, ctx)
+    if not collectibleOk then
+        warn("Round collectibles failed to start:", collectibleResult)
     end
 
     for _, disaster in ipairs(selected) do
