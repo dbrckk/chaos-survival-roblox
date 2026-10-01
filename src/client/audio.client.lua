@@ -62,6 +62,7 @@ local lastLevel = player:GetAttribute("Level") or 1
 local lastSurvivorCuePlayed = false
 local currentIntensity = 1
 local lastOverdrive = false
+local lastFinalRush = false
 
 local function play(name, pitchVariance)
     local sound = sfx[name]
@@ -136,6 +137,14 @@ stateEvent.OnClientEvent:Connect(function(state)
     local seconds = tonumber(state.seconds) or 0
     currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     local overdrive = phase == "round" and state.overdrive == true
+    local finalRush = phase == "round" and state.finalRush == true
+
+    if finalRush and not lastFinalRush then
+        play("FinalRush")
+        task.delay(0.08, function()
+            play("Countdown", 0.01)
+        end)
+    end
 
     if overdrive and not lastOverdrive then
         play("Overdrive")
@@ -209,6 +218,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         lastSurvivorCuePlayed = false
     end
 
+    lastFinalRush = finalRush
     lastOverdrive = overdrive
     lastPhase = phase
     lastTitle = state.title
