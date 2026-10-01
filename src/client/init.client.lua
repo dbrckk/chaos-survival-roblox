@@ -758,7 +758,10 @@ local function refreshDataStatus()
         return
     end
 
-    if player:GetAttribute("DataPersistenceAvailable") ~= true then
+    if player:GetAttribute("DataSaveConflict") == true then
+        dataWarning.Text = "NEWER SESSION DETECTED • THIS SESSION WILL NOT SAVE • REJOIN HERE TO CONTINUE"
+        dataWarning.Visible = true
+    elseif player:GetAttribute("DataPersistenceAvailable") ~= true then
         dataWarning.Text = "TEMPORARY SESSION • PROGRESS WILL NOT SAVE • REJOIN LATER"
         dataWarning.Visible = true
     elseif player:GetAttribute("LastSaveFailed") == true then
@@ -769,7 +772,7 @@ local function refreshDataStatus()
     end
 end
 
-for _, attr in ipairs({"DataLoaded", "DataPersistenceAvailable", "LastSaveFailed"}) do
+for _, attr in ipairs({"DataLoaded", "DataPersistenceAvailable", "DataSaveConflict", "LastSaveFailed"}) do
     player:GetAttributeChangedSignal(attr):Connect(refreshDataStatus)
 end
 refreshDataStatus()
