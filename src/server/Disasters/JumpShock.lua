@@ -1,3 +1,4 @@
+local MovementSafety = if script then require(script.Parent.Parent.MovementSafety) else require("../MovementSafety")
 local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 local D = {Name = "JUMP SHOCK", Hint = "WATCH THE BLUE SHOCKWAVE!"}
 
@@ -48,10 +49,16 @@ function D.start(ctx)
                 local root = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                 local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
                 if root and hum and hum.Health > 0 then
-                    root.AssemblyLinearVelocity += Vector3.new(
-                        math.random(-horizontal,horizontal),
-                        math.random(34,46),
-                        math.random(-horizontal,horizontal)
+                    root.AssemblyLinearVelocity = MovementSafety.addImpulse(
+                        root.AssemblyLinearVelocity,
+                        Vector3.new(
+                            math.random(-horizontal,horizontal),
+                            math.random(34,46),
+                            math.random(-horizontal,horizontal)
+                        ),
+                        62,
+                        -55,
+                        58
                     )
                 end
             end
