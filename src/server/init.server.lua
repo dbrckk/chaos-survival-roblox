@@ -25,6 +25,7 @@ end
 local MapBuilder = require(script.MapBuilder)
 local PlayerData = require(script.PlayerData)
 local PlayerReadiness = require(script.PlayerReadiness)
+local RemoteRegistry = require(script.RemoteRegistry)
 local RateLimiter = require(script.RateLimiter)
 local CosmeticService = require(script.CosmeticService)
 local MonetizationService = require(script.MonetizationService)
@@ -40,45 +41,16 @@ local RoundIntensity = require(script.RoundIntensity)
 local RoundCleanup = require(script.RoundCleanup)
 local SurvivalFeedback = require(script.SurvivalFeedback)
 
-local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
-remotes.Name = "Remotes"
-remotes.Parent = ReplicatedStorage
-
-local stateEvent = remotes:FindFirstChild("RoundState") or Instance.new("RemoteEvent")
-stateEvent.Name = "RoundState"
-stateEvent.Parent = remotes
-
-local voteEvent = remotes:FindFirstChild("VoteDisaster") or Instance.new("RemoteEvent")
-voteEvent.Name = "VoteDisaster"
-voteEvent.Parent = remotes
-
-local dailyRewardEvent = remotes:FindFirstChild("DailyReward") or Instance.new("RemoteEvent")
-dailyRewardEvent.Name = "DailyReward"
-dailyRewardEvent.Parent = remotes
-
-local questEvent = remotes:FindFirstChild("QuestUpdate") or Instance.new("RemoteEvent")
-questEvent.Name = "QuestUpdate"
-questEvent.Parent = remotes
-
-local roundFeedbackEvent = remotes:FindFirstChild("RoundFeedback") or Instance.new("RemoteEvent")
-roundFeedbackEvent.Name = "RoundFeedback"
-roundFeedbackEvent.Parent = remotes
-
-local clientReadyEvent = remotes:FindFirstChild("ClientReady") or Instance.new("RemoteEvent")
-clientReadyEvent.Name = "ClientReady"
-clientReadyEvent.Parent = remotes
-
-local arenaMechanicFeedbackEvent = remotes:FindFirstChild("ArenaMechanicFeedback") or Instance.new("RemoteEvent")
-arenaMechanicFeedbackEvent.Name = "ArenaMechanicFeedback"
-arenaMechanicFeedbackEvent.Parent = remotes
-
-local hazardImpactFeedbackEvent = remotes:FindFirstChild("HazardImpactFeedback") or Instance.new("RemoteEvent")
-hazardImpactFeedbackEvent.Name = "HazardImpactFeedback"
-hazardImpactFeedbackEvent.Parent = remotes
-
-local hazardNearMissEvent = remotes:FindFirstChild("HazardNearMiss") or Instance.new("RemoteEvent")
-hazardNearMissEvent.Name = "HazardNearMiss"
-hazardNearMissEvent.Parent = remotes
+local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
+local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
+local voteEvent = RemoteRegistry.ensureRemoteEvent(remotes, "VoteDisaster")
+local dailyRewardEvent = RemoteRegistry.ensureRemoteEvent(remotes, "DailyReward")
+local questEvent = RemoteRegistry.ensureRemoteEvent(remotes, "QuestUpdate")
+local roundFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundFeedback")
+local clientReadyEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ClientReady")
+local arenaMechanicFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ArenaMechanicFeedback")
+local hazardImpactFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardImpactFeedback")
+local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNearMiss")
 
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
@@ -140,7 +112,10 @@ local function sendQuestState(player, completed)
 end
 
 local function progressQuest(player, eventName, amount)
-    if player.Parent ~= Players or not player:GetAttribute("DataLoaded") then
+    if player.Parent ~= Players
+        or player:GetAttribute("DataLoaded") ~= true
+        or player:GetAttribute("DataPersistenceAvailable") ~= true
+    then
         return
     end
 
