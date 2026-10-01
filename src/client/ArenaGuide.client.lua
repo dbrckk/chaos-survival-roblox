@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -43,6 +44,21 @@ label.Parent = card
 
 local token = 0
 
+local function currentArenaHint()
+    local root = Workspace:FindFirstChild("GeneratedMap")
+    local arena = root and root:FindFirstChild("Arena")
+    if not arena then
+        return nil
+    end
+
+    local hint = arena:GetAttribute("StrategyHint")
+    if type(hint) ~= "string" or hint == "" then
+        return nil
+    end
+
+    return hint
+end
+
 local function hide()
     token += 1
     local thisToken = token
@@ -55,19 +71,46 @@ local function hide()
     end)
 end
 
-local function show(arenaName, strategyHint)
-    if type(strategyHint) ~= "string" or strategyHint == "" then
-        hide()
-        return
-    end
-
+local function reveal(arenaName, hint)
     token += 1
-    label.Text = string.format("%s  •  %s", arenaName or "ARENA", strategyHint)
+    label.Text = string.format("%s  •  %s", arenaName or "ARENA", hint)
     card.Visible = true
     card.BackgroundTransparency = 1
     label.TextTransparency = 1
     TweenService:Create(card, TweenInfo.new(0.18), {BackgroundTransparency = 0.10}):Play()
     TweenService:Create(label, TweenInfo.new(0.18), {TextTransparency = 0}):Play()
+end
+
+local function show(arenaName, replicatedHint)
+    if type(replicatedHint) == "string" and replicatedHint ~= "" then
+        reveal(arenaName, replicatedHint)
+        return
+    end
+
+    local requestToken = token + 1
+    token = requestToken
+
+    task.spawn(function()
+        -- The arena may arrive a few frames after RoundState when StreamingEnabled is active.
+        -- Retry briefly instead of silently dropping the pre-round strategy card.
+        for _ = 1, 8 do
+            if token ~= requestToken then
+                return
+            end
+
+            local hint = currentArenaHint()
+            if hint then
+                reveal(arenaName, hint)
+                return
+            end
+
+            task.wait(0.05)
+        end
+
+        if token == requestToken then
+            hide()
+        end
+    end)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
