@@ -940,6 +940,68 @@ resultTip.ZIndex = 22
 resultTip.Text = ""
 resultTip.Parent = resultCard
 
+local function applyResponsiveLayout()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local aspect = viewport.Y > 0 and (viewport.X / viewport.Y) or 1.78
+
+    if not touchDevice then
+        top.Size = UDim2.fromScale(0.88, 0.13)
+        votes.Position = UDim2.fromScale(0.5, 0.58)
+        votes.Size = UDim2.fromScale(0.88, 0.24)
+        resultCard.Size = UDim2.fromScale(0.80, 0.29)
+        return
+    end
+
+    local narrow = aspect < 1.7
+    local wide = aspect > 2.0
+
+    top.Position = UDim2.fromScale(0.5, narrow and 0.018 or 0.025)
+    top.Size = UDim2.fromScale(narrow and 0.94 or 0.90, narrow and 0.145 or 0.13)
+
+    votes.Position = UDim2.fromScale(0.5, narrow and 0.55 or 0.57)
+    votes.Size = UDim2.fromScale(narrow and 0.96 or 0.92, narrow and 0.30 or 0.27)
+
+    rookieCoach.Position = UDim2.fromScale(0.5, narrow and 0.68 or 0.70)
+    rookieCoach.Size = UDim2.fromScale(narrow and 0.78 or 0.68, narrow and 0.048 or 0.042)
+
+    local actionY = narrow and 0.87 or 0.88
+    questButton.Position = UDim2.fromScale(0.025, actionY)
+    achievementButton.Position = UDim2.fromScale(0.5, actionY)
+    cosmeticsButton.Position = UDim2.fromScale(0.975, actionY)
+
+    questButton.Size = UDim2.fromScale(narrow and 0.21 or 0.20, narrow and 0.058 or 0.055)
+    achievementButton.Size = UDim2.fromScale(narrow and 0.30 or 0.27, narrow and 0.058 or 0.055)
+    cosmeticsButton.Size = UDim2.fromScale(narrow and 0.25 or 0.23, narrow and 0.058 or 0.055)
+
+    stats.Size = UDim2.fromScale(narrow and 0.74 or 0.65, narrow and 0.064 or 0.07)
+    xpTrack.Size = UDim2.fromScale(narrow and 0.70 or 0.62, 0.012)
+
+    resultCard.Size = UDim2.fromScale(
+        narrow and 0.90 or (wide and 0.68 or 0.80),
+        narrow and 0.31 or 0.29
+    )
+
+    dailyToast.Size = UDim2.fromScale(narrow and 0.84 or 0.72, 0.16)
+    questToast.Size = UDim2.fromScale(narrow and 0.86 or 0.76, 0.15)
+    achievementToast.Size = UDim2.fromScale(narrow and 0.88 or 0.78, 0.16)
+end
+
+applyResponsiveLayout()
+
+local responsiveCamera = workspace.CurrentCamera
+if responsiveCamera then
+    responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    responsiveCamera = workspace.CurrentCamera
+    if responsiveCamera then
+        applyResponsiveLayout()
+        responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+    end
+end)
+
 local resultToken = 0
 local lastRoundHint = ""
 
