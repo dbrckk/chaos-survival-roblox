@@ -277,6 +277,9 @@ local function refresh()
     elseif state.overdrive then
         text = "OVERDRIVE  " .. tostring(math.max(1, math.floor(tonumber(state.overdriveSeconds) or 1))) .. "s"
         color = UITheme.Colors.Gold
+    elseif state.doubleChaos then
+        text = "CHAOS FUSION"
+        color = UITheme.Colors.Violet
     end
     status.Text = text
     status.TextColor3 = color
