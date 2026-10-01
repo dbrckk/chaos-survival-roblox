@@ -63,6 +63,7 @@ jobs:
             "tests/engine/data-schema.spec.luau",
             "tests/engine/game-analytics.spec.luau",
             "tests/engine/rate-limiter.spec.luau",
+            "tests/engine/server-contracts.spec.luau",
             "tests/engine/session-streak.spec.luau",
             "tests/engine/solo-rush.spec.luau",
             "tests/engine/survival-feedback.spec.luau",
@@ -102,6 +103,38 @@ jobs:
           backend = "native"
           timeout_ms = 10000
           EOF
+
+      - name: Verify engine spec shard coverage
+        if: steps.config.outputs.ready == 'true'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob
+          import tomllib
+          from collections import Counter
+
+          with open("lest.ci.toml", "rb") as handle:
+              config = tomllib.load(handle)
+
+          assigned = []
+          for suite in ("core", "gameplay", "matrix"):
+              assigned.extend(config["suites"][suite]["include"])
+
+          actual = sorted(glob.glob("tests/engine/**/*.spec.luau", recursive=True))
+          counts = Counter(assigned)
+          missing = sorted(set(actual) - set(assigned))
+          duplicates = sorted(path for path, count in counts.items() if count != 1)
+          extra = sorted(set(assigned) - set(actual))
+
+          if missing or duplicates or extra:
+              print("Invalid Open Cloud shard coverage")
+              print("missing:", missing)
+              print("duplicates:", duplicates)
+              print("extra:", extra)
+              raise SystemExit(1)
+
+          print(f"All {len(actual)} engine specs are assigned exactly once.")
+          PY
 
       - name: Run sharded tests in real Roblox engine
         if: steps.config.outputs.ready == 'true'
