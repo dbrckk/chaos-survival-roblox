@@ -14,6 +14,7 @@ local dailyRewardEvent = remotes:WaitForChild("DailyReward")
 local questEvent = remotes:WaitForChild("QuestUpdate")
 local achievementEvent = remotes:WaitForChild("AchievementState")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
+local chaosShardCollectedEvent = remotes:WaitForChild("ChaosShardCollected")
 
 local playerGui = player:WaitForChild("PlayerGui")
 local boundButtons = setmetatable({}, {__mode = "k"})
@@ -230,6 +231,12 @@ cosmeticStateEvent.OnClientEvent:Connect(function(payload)
     if #(payload.unlocked or {}) > 0 then
         play("Reward")
     end
+end)
+
+chaosShardCollectedEvent.OnClientEvent:Connect(function(payload)
+    local total = math.max(1, math.floor(tonumber(payload.total) or 1))
+    local variance = math.min(0.08, total * 0.008)
+    play("ShardCollect", variance)
 end)
 
 player:GetAttributeChangedSignal("Level"):Connect(function()
