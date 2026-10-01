@@ -1106,7 +1106,10 @@ local function showRoundFeedback(feedback)
 
     local streakBonus = tonumber(feedback.streakBonusCoins) or 0
     local shardCoins = tonumber(feedback.shardCoins) or 0
-    local shownCoins = (tonumber(feedback.coins) or 0) + shardCoins
+    local challengeCoins = tonumber(feedback.challengeCoins) or 0
+    local challengeXP = tonumber(feedback.challengeXP) or 0
+    local shownCoins = (tonumber(feedback.coins) or 0) + shardCoins + challengeCoins
+    local shownXP = (tonumber(feedback.xp) or 0) + challengeXP
 
     local extras = {}
     if streakBonus > 0 then
@@ -1115,8 +1118,11 @@ local function showRoundFeedback(feedback)
     if shardCoins > 0 then
         table.insert(extras, "SHARDS +" .. tostring(shardCoins))
     end
+    if feedback.challengeCompleted then
+        table.insert(extras, "CHALLENGE +" .. tostring(challengeCoins))
+    end
 
-    resultReward.Text = string.format("+%d COINS   +%d XP", shownCoins, feedback.xp or 0)
+    resultReward.Text = string.format("+%d COINS   +%d XP", shownCoins, shownXP)
     if #extras > 0 then
         resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")
     end
@@ -1128,6 +1134,19 @@ local function showRoundFeedback(feedback)
     if feedback.soloMode then table.insert(tags, "SOLO RUSH") end
     if feedback.criticalSurvival then
         table.insert(tags, "CLUTCH SURVIVAL")
+    end
+    if feedback.challengeCompleted then
+        table.insert(tags, "CHALLENGE COMPLETE")
+    elseif feedback.challengeTitle then
+        table.insert(
+            tags,
+            string.format(
+                "%s %d/%d",
+                tostring(feedback.challengeTitle),
+                tonumber(feedback.challengeProgress) or 0,
+                tonumber(feedback.challengeTarget) or 1
+            )
+        )
     end
     local shardCount = math.max(0, math.floor(tonumber(feedback.shardCount) or 0))
     if shardCount > 0 then
@@ -1144,7 +1163,9 @@ local function showRoundFeedback(feedback)
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
     resultMeta.Text = table.concat(tags, "  •  ")
 
-    if survived then
+    if feedback.challengeCompleted then
+        resultTip.Text = "ROUND CHALLENGE COMPLETE • bonus secured"
+    elseif survived then
         if feedback.criticalSurvival then
             resultTip.Text = "CLUTCH: you survived at critical health"
         elseif streakCount >= 2 then
