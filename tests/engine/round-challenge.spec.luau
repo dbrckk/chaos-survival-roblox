@@ -9,17 +9,20 @@ describe("Round challenge", function()
         expect(RoundChallenge.forRound(1).Id).toBe("SHARD_HUNT")
         expect(RoundChallenge.forRound(2).Id).toBe("MOBILITY_MASTER")
         expect(RoundChallenge.forRound(3).Id).toBe("DANGER_DANCE")
-        expect(RoundChallenge.forRound(4).Id).toBe("SHARD_HUNT")
+        expect(RoundChallenge.forRound(4).Id).toBe("MOMENTUM_3")
+        expect(RoundChallenge.forRound(5).Id).toBe("SHARD_HUNT")
     end)
 
     it("reads only the metric required by the challenge", function()
         local shard = RoundChallenge.Definitions[1]
         local pads = RoundChallenge.Definitions[2]
         local danger = RoundChallenge.Definitions[3]
+        local momentum = RoundChallenge.Definitions[4]
 
-        expect(RoundChallenge.progress(shard, 2, 99, 99)).toBe(2)
-        expect(RoundChallenge.progress(pads, 99, 1, 99)).toBe(1)
-        expect(RoundChallenge.progress(danger, 99, 99, 1)).toBe(1)
+        expect(RoundChallenge.progress(shard, 2, 99, 99, 99)).toBe(2)
+        expect(RoundChallenge.progress(pads, 99, 1, 99, 99)).toBe(1)
+        expect(RoundChallenge.progress(danger, 99, 99, 1, 99)).toBe(1)
+        expect(RoundChallenge.progress(momentum, 99, 99, 99, 3)).toBe(3)
     end)
 
     it("clamps progress and reports completion", function()
