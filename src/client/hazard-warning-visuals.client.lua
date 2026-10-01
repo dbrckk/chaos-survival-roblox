@@ -23,7 +23,7 @@ local function register(part)
     end
 
     tracked[part] = {
-        started = os.clock(),
+        startedAt = tonumber(part:GetAttribute("WarningStartedAt")) or workspace:GetServerTimeNow(),
         kind = kind,
         duration = math.max(0.05, tonumber(part:GetAttribute("WarningDuration")) or 0.05),
         startSize = math.max(0.1, tonumber(part:GetAttribute("WarningStartSize")) or part.Size.X),
@@ -81,7 +81,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
         state.clock = 0
 
-        local alpha = math.clamp((os.clock() - state.started) / state.duration, 0, 1)
+        local alpha = math.clamp((workspace:GetServerTimeNow() - state.startedAt) / state.duration, 0, 1)
         local pulse = (math.sin(alpha * math.pi * 6) + 1) * 0.5
 
         if state.kind == "Freeze" then
