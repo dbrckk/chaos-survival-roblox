@@ -1,4 +1,5 @@
 local DisasterImpact = if script then require(script.Parent.Parent.DisasterImpact) else require("../DisasterImpact")
+local ArenaTargeting = if script then require(script.Parent.Parent.ArenaTargeting) else require("../ArenaTargeting")
 local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 
 local D = {Name = "BOMB RAIN", Hint = "WATCH THE RED MARKERS!"}
@@ -11,8 +12,8 @@ function D.start(ctx)
 
     task.spawn(function()
         while ctx.Active() do
-            local x, z = math.random(-42,42), math.random(-42,42)
-            local impactPosition = ctx.Config.ArenaCenter + Vector3.new(x, 1.2, z)
+            local offset = ArenaTargeting.randomOffset(6, 42)
+            local impactPosition = ctx.Config.ArenaCenter + offset + Vector3.new(0, 1.2, 0)
 
             local marker = Instance.new("Part")
             marker.Name = "BombWarning"
