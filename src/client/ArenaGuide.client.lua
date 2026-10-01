@@ -17,7 +17,7 @@ local card = Instance.new("Frame")
 card.Name = "StrategyCard"
 card.AnchorPoint = Vector2.new(0.5, 0)
 card.Position = UDim2.fromScale(0.5, 0.165)
-card.Size = UDim2.fromScale(0.72, 0.072)
+card.Size = UDim2.fromScale(0.76, 0.105)
 card.BackgroundColor3 = Color3.fromRGB(18, 22, 31)
 card.BackgroundTransparency = 1
 card.Visible = false
@@ -44,12 +44,22 @@ label.Parent = card
 
 local token = 0
 
-local function replicatedHint()
-    local hint = arenaMetadata:GetAttribute("StrategyHint")
-    if type(hint) ~= "string" or hint == "" then
-        return nil
+local function replicatedHints()
+    local strategy = arenaMetadata:GetAttribute("StrategyHint")
+    local mechanicName = arenaMetadata:GetAttribute("MechanicName")
+    local mechanicHint = arenaMetadata:GetAttribute("MechanicHint")
+
+    if type(strategy) ~= "string" or strategy == "" then
+        strategy = nil
     end
-    return hint
+    if type(mechanicName) ~= "string" or mechanicName == "" then
+        mechanicName = nil
+    end
+    if type(mechanicHint) ~= "string" or mechanicHint == "" then
+        mechanicHint = nil
+    end
+
+    return strategy, mechanicName, mechanicHint
 end
 
 local function hide()
@@ -64,9 +74,13 @@ local function hide()
     end)
 end
 
-local function reveal(arenaName, hint)
+local function reveal(arenaName, hint, mechanicName, mechanicHint)
     token += 1
-    label.Text = string.format("%s  •  %s", arenaName or "ARENA", hint)
+    if mechanicName and mechanicHint then
+        label.Text = string.format("%s  •  %s\n%s  •  %s", arenaName or "ARENA", hint, mechanicName, mechanicHint)
+    else
+        label.Text = string.format("%s  •  %s", arenaName or "ARENA", hint)
+    end
     card.Visible = true
     card.BackgroundTransparency = 1
     label.TextTransparency = 1
@@ -75,13 +89,14 @@ local function reveal(arenaName, hint)
 end
 
 local function show(arenaName, stateHint)
+    local replicatedStrategy, mechanicName, mechanicHint = replicatedHints()
     local hint = stateHint
     if type(hint) ~= "string" or hint == "" then
-        hint = replicatedHint()
+        hint = replicatedStrategy
     end
 
     if hint then
-        reveal(arenaName, hint)
+        reveal(arenaName, hint, mechanicName, mechanicHint)
     else
         hide()
     end
