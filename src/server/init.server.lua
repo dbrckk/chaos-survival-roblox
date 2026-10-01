@@ -42,6 +42,7 @@ local RoundCleanup = require(script.RoundCleanup)
 local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
 local RoundChallenge = require(script.RoundChallenge)
+local RoundMedals = require(script.RoundMedals)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -412,6 +413,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundChaosShards", 0)
         player:SetAttribute("RoundNearMisses", 0)
         player:SetAttribute("RoundMechanicUses", 0)
+        player:SetAttribute("RoundOverdriveUses", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
@@ -497,6 +499,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
             local mechanicUses = math.max(0, math.floor(tonumber(player:GetAttribute("RoundMechanicUses")) or 0)) + 1
             player:SetAttribute("RoundMechanicUses", mechanicUses)
+            if usedOverdrive == true then
+                local overdriveUses = math.max(0, math.floor(tonumber(player:GetAttribute("RoundOverdriveUses")) or 0)) + 1
+                player:SetAttribute("RoundOverdriveUses", overdriveUses)
+            end
 
             arenaMechanicFeedbackEvent:FireClient(player, {
                 variantId = variantId,
@@ -1008,6 +1014,7 @@ while true do
             local roundShardCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0))
             local roundNearMissCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundNearMisses")) or 0))
             local roundMechanicUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMechanicUses")) or 0))
+            local roundOverdriveUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundOverdriveUses")) or 0))
             local challengeProgress = RoundChallenge.progress(
                 roundChallenge,
                 roundShardCount,
@@ -1017,6 +1024,14 @@ while true do
             local challengeCompleted = challengeProgress >= roundChallenge.Target
             local challengeCoins = challengeCompleted and roundChallenge.Coins or 0
             local challengeXP = challengeCompleted and roundChallenge.XP or 0
+
+            local medals = RoundMedals.evaluate({
+                shards = roundShardCount,
+                pads = roundMechanicUses,
+                nearMisses = roundNearMissCount,
+                overdriveUses = roundOverdriveUses,
+                criticalSurvival = criticalSurvival,
+            })
 
             if challengeCompleted then
                 PlayerData.add(p, "Coins", challengeCoins)
@@ -1072,6 +1087,7 @@ while true do
                 challengeCompleted = challengeCompleted,
                 challengeCoins = challengeCoins,
                 challengeXP = challengeXP,
+                medals = medals,
                 bestSessionStreak = bestSessionStreak,
                 arenaName = roundSettings.ArenaName,
                 disasterName = feedbackDisasterName,
