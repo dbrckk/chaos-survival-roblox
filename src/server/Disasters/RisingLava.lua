@@ -2,6 +2,16 @@ local Players = game:GetService("Players")
 
 local D = {Name = "RISING LAVA", Hint = "GET HIGH!"}
 
+function D.coverageSize(baseSize, padding)
+    local size = typeof(baseSize) == "Vector3" and baseSize or Vector3.new(102, 2, 102)
+    local extra = math.max(0, tonumber(padding) or 8)
+    return Vector3.new(
+        math.max(1, size.X + extra),
+        4,
+        math.max(1, size.Z + extra)
+    )
+end
+
 function D.isActiveContestant(player, ctx)
     if not player then
         return false
@@ -21,9 +31,17 @@ function D.isActiveContestant(player, ctx)
 end
 
 function D.start(ctx)
+    local generatedMap = workspace:FindFirstChild("GeneratedMap")
+    local arena = generatedMap and generatedMap:FindFirstChild("Arena")
+    local base = arena and arena:FindFirstChild("Base")
+    local lavaSize = D.coverageSize(
+        base and base:IsA("BasePart") and base.Size or nil,
+        8
+    )
+
     local lava = Instance.new("Part")
     lava.Name = "RoundLava"
-    lava.Size = Vector3.new(110, 4, 110)
+    lava.Size = lavaSize
     lava.Position = ctx.Config.ArenaCenter + Vector3.new(0, -8, 0)
     lava.Anchored = true
     lava.Material = Enum.Material.Neon
