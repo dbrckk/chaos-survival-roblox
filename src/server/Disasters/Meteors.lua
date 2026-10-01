@@ -1,5 +1,6 @@
 local Debris = game:GetService("Debris")
 local DisasterImpact = if script then require(script.Parent.Parent.DisasterImpact) else require("../DisasterImpact")
+local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 
 local D = {Name = "METEOR SHOWER", Hint = "WATCH THE WARNING CIRCLES!"}
 
@@ -29,7 +30,8 @@ function D.start(ctx)
             marker.Parent = workspace
             ctx.Cleanup[#ctx.Cleanup+1] = marker
 
-            DisasterImpact.animateMarker(marker, warningSeconds, 5.5, radius * 2)
+            HazardWarning.configure(marker, "Meteor", warningSeconds, 5.5, radius * 2)
+            task.wait(warningSeconds)
 
             if not ctx.Active() then
                 if marker.Parent then marker:Destroy() end
