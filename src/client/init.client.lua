@@ -995,6 +995,10 @@ local function applyResponsiveLayout()
         votes.Position = UDim2.fromScale(0.5, 0.58)
         votes.Size = UDim2.fromScale(0.88, 0.24)
         resultCard.Size = UDim2.fromScale(0.80, 0.29)
+        questPanel.Size = UDim2.fromScale(0.72, 0.34)
+        cosmeticsPanel.Size = UDim2.fromScale(0.72, 0.36)
+        achievementPanel.Size = UDim2.fromScale(0.82, 0.46)
+        supportPanel.Size = UDim2.fromScale(0.72, 0.30)
         return
     end
 
@@ -1030,6 +1034,18 @@ local function applyResponsiveLayout()
     dailyToast.Size = UDim2.fromScale(narrow and 0.84 or 0.72, 0.16)
     questToast.Size = UDim2.fromScale(narrow and 0.86 or 0.76, 0.15)
     achievementToast.Size = UDim2.fromScale(narrow and 0.88 or 0.78, 0.16)
+
+    questPanel.Position = UDim2.fromScale(0.025, narrow and 0.80 or 0.82)
+    questPanel.Size = UDim2.fromScale(narrow and 0.90 or 0.78, narrow and 0.32 or 0.34)
+
+    cosmeticsPanel.Position = UDim2.fromScale(0.975, narrow and 0.80 or 0.82)
+    cosmeticsPanel.Size = UDim2.fromScale(narrow and 0.90 or 0.78, narrow and 0.34 or 0.36)
+
+    achievementPanel.Position = UDim2.fromScale(0.5, narrow and 0.80 or 0.82)
+    achievementPanel.Size = UDim2.fromScale(narrow and 0.92 or 0.84, narrow and 0.40 or 0.46)
+
+    supportPanel.Position = UDim2.fromScale(0.975, narrow and 0.73 or 0.75)
+    supportPanel.Size = UDim2.fromScale(narrow and 0.88 or 0.74, narrow and 0.27 or 0.30)
 end
 
 applyResponsiveLayout()
