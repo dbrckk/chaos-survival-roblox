@@ -41,7 +41,7 @@ PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 [QA]   2.3 Crossroads : quatre lanes visuellement distinctes + signalétique directionnelle.
 [QA]   2.4 Orbital Ring : identité circulaire + anneaux énergétiques + noyau central.
 [QA]   2.5 Ajouter variations de décor propres à chaque arène.
-[QA]   2.6 Vérifier qu'aucun décor ne crée de nouveau safe spot ou collision parasite.
+[QA]   2.6 Vérifier qu'aucun décor ne crée de nouveau safe spot ou collision parasite — garde-fou moteur ajouté.
 [TODO] 2.7 QA Android / desktop des 4 arènes.
 
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
@@ -94,7 +94,7 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
-[EN COURS] 7.1 Audit nombre de parts / emitters / lights.
+[QA]   7.1 Audit nombre de parts / emitters / lights.
 [QA]   7.2 Vérifier tous les RenderStepped.
 [QA]   7.3 Réduire effets hors phase / inutiles.
 [QA]   7.4 Ajuster High / Medium / Low VFX.
