@@ -548,10 +548,29 @@ while true do
     )
     if not arenaBuilt then
         warn("Arena build failed:", currentArenaVariant, arenaBuildError)
-        MapBuilder.buildArena(Config, "Classic", ArenaVariants)
-        currentArenaVariant = "Classic"
-        local fallbackDefinition = ArenaVariants.get("Classic")
-        roundSettings.ArenaName = fallbackDefinition and fallbackDefinition.Name or "Classic"
+
+        local fallbackBuilt, fallbackError = pcall(
+            MapBuilder.buildArena,
+            Config,
+            "Classic",
+            ArenaVariants
+        )
+
+        if fallbackBuilt then
+            currentArenaVariant = "Classic"
+            local fallbackDefinition = ArenaVariants.get("Classic")
+            roundSettings.ArenaName = fallbackDefinition and fallbackDefinition.Name or "Classic"
+        else
+            warn("Classic arena fallback failed:", fallbackError)
+            broadcast({
+                phase = "waiting",
+                title = "ARENA RECOVERY",
+                hint = "Rebuilding the arena",
+                seconds = 0,
+            })
+            task.wait(1)
+            continue
+        end
     end
 
     local readyContestants = {}
