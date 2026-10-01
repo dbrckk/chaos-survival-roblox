@@ -57,6 +57,14 @@ local function ensureRenderLoop()
                 local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
                 part.Size = Vector3.new(part.Size.X, diameter, diameter)
                 part.Transparency = 0.30 + (0.58 * alpha)
+
+                if state.ring and state.ring.Parent then
+                    local trailingDiameter = math.max(state.startSize, diameter * 0.82)
+                    state.ring.Size = Vector3.new(0.08, trailingDiameter, trailingDiameter)
+                    state.ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.08, 0))
+                        * CFrame.Angles(0, 0, math.rad(90))
+                    state.ring.Transparency = 0.38 + (0.54 * alpha)
+                end
             else
                 local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
                 part.Size = Vector3.new(diameter, part.Size.Y, diameter)
@@ -97,7 +105,7 @@ local function register(part)
     end
 
     local ring = nil
-    if kind == "Meteor" or kind == "Bomb" then
+    if kind == "Meteor" or kind == "Bomb" or kind == "JumpShock" then
         ring = Instance.new("Part")
         ring.Name = kind .. "WarningRingLocal"
         ring.Shape = Enum.PartType.Cylinder
@@ -109,7 +117,9 @@ local function register(part)
         ring.Material = Enum.Material.Neon
         ring.Color = kind == "Meteor"
             and Color3.fromRGB(255, 190, 78)
-            or Color3.fromRGB(255, 72, 72)
+            or (kind == "JumpShock"
+                and Color3.fromRGB(115, 190, 255)
+                or Color3.fromRGB(255, 72, 72))
         ring.Transparency = 0.48
         ring.Size = Vector3.new(0.10, part.Size.X * 1.12, part.Size.Z * 1.12)
         ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.06, 0))
