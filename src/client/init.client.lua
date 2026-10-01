@@ -201,6 +201,23 @@ layout.Parent = votes
 
 local selectedVote = nil
 
+local rookieCoach = Instance.new("TextLabel")
+rookieCoach.Name = "RookieCoach"
+rookieCoach.AnchorPoint = Vector2.new(0.5, 1)
+rookieCoach.Position = UDim2.fromScale(0.5, 0.94)
+rookieCoach.Size = UDim2.fromScale(0.88, 0.055)
+rookieCoach.BackgroundColor3 = Color3.fromRGB(18, 22, 31)
+rookieCoach.BackgroundTransparency = 0.10
+rookieCoach.Font = Enum.Font.GothamBold
+rookieCoach.TextColor3 = Color3.fromRGB(235, 240, 250)
+rookieCoach.TextScaled = true
+rookieCoach.TextWrapped = true
+rookieCoach.Text = "SURVIVE UNTIL 0  •  AVOID WARNING COLORS  •  GLOWING PADS = ESCAPE"
+rookieCoach.Visible = false
+rookieCoach.ZIndex = 12
+rookieCoach.Parent = root
+Instance.new("UICorner", rookieCoach).CornerRadius = UDim.new(0, 14)
+
 local dailyToast = Instance.new("Frame")
 dailyToast.AnchorPoint = Vector2.new(0.5, 0.5)
 dailyToast.Position = UDim2.fromScale(0.5, 0.32)
@@ -1120,6 +1137,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     else
         aliveCounter.Visible = false
     end
+
+    local gamesPlayed = tonumber(player:GetAttribute("Games")) or 0
+    rookieCoach.Visible = state.phase == "ready" and gamesPlayed <= 2
 
     if state.phase == "ready" then
         timer.BackgroundColor3 = Color3.fromRGB(70, 145, 255)
