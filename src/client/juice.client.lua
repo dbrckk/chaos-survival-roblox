@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -132,6 +133,11 @@ local activeBeaconLight = nil
 local activeDoubleChaos = false
 local currentIntensity = 1
 local lastSurvivorAnnounced = false
+local vfxTierName = "High"
+local vfxTier = VfxQuality.get(vfxTierName)
+local frameTimeAccumulator = 0
+local frameSampleCount = 0
+local qualitySampleClock = 0
 
 local function tweenCamera(targetFov, duration)
     camera = workspace.CurrentCamera or camera
@@ -196,7 +202,7 @@ local function setMood(state)
             atmosphere.Density = profile.Density
             atmosphere.Haze = profile.Haze
             atmosphere.Color = profile.Atmosphere
-            bloom.Intensity = profile.Bloom
+            bloom.Intensity = profile.Bloom * vfxTier.Scale
             color.Contrast = profile.Contrast
             color.Saturation = profile.Saturation
             color.TintColor = profile.Tint
@@ -211,7 +217,7 @@ local function setMood(state)
         elseif doubleChaos then
             atmosphere.Density = 0.23
             atmosphere.Haze = 1.15
-            bloom.Intensity = 0.75
+            bloom.Intensity = 0.75 * vfxTier.Scale
             color.Contrast = 0.16
             color.Saturation = 0.22
             color.TintColor = Color3.fromRGB(245, 225, 255)
@@ -220,7 +226,7 @@ local function setMood(state)
         else
             atmosphere.Density = 0.18
             atmosphere.Haze = 0.82
-            bloom.Intensity = 0.48
+            bloom.Intensity = 0.48 * vfxTier.Scale
             color.Contrast = 0.10
             color.Saturation = 0.14
             color.TintColor = Color3.new(1, 1, 1)
@@ -260,7 +266,7 @@ local function setMood(state)
         secondaryAccent = nil
         atmosphere.Density = 0.15
         atmosphere.Haze = 0.65
-        bloom.Intensity = 0.42
+        bloom.Intensity = 0.42 * vfxTier.Scale
         color.Contrast = 0.08
         color.Saturation = 0.10
         color.TintColor = Color3.new(1, 1, 1)
@@ -272,7 +278,7 @@ local function setMood(state)
         secondaryAccent = nil
         atmosphere.Density = 0.14
         atmosphere.Haze = 0.55
-        bloom.Intensity = 0.30
+        bloom.Intensity = 0.30 * vfxTier.Scale
         color.Contrast = 0.05
         color.Saturation = 0.06
         color.TintColor = Color3.new(1, 1, 1)
@@ -280,6 +286,7 @@ local function setMood(state)
         tweenCamera(70, 0.4)
     end
 
+    rays.Enabled = vfxTier.RaysEnabled
     lastPhase = phase
 end
 
@@ -378,6 +385,25 @@ end)
 
 RunService.RenderStepped:Connect(function(dt)
     pulseClock += dt
+    frameTimeAccumulator += dt
+    frameSampleCount += 1
+    qualitySampleClock += dt
+
+    if qualitySampleClock >= 2.5 and frameSampleCount > 0 then
+        local averageDt = frameTimeAccumulator / frameSampleCount
+        local averageFps = averageDt > 0 and (1 / averageDt) or 60
+        local nextTierName = VfxQuality.nextTier(vfxTierName, averageFps)
+
+        if nextTierName ~= vfxTierName then
+            vfxTierName = nextTierName
+            vfxTier = VfxQuality.get(vfxTierName)
+            rays.Enabled = vfxTier.RaysEnabled
+        end
+
+        frameTimeAccumulator = 0
+        frameSampleCount = 0
+        qualitySampleClock = 0
+    end
 
     local pulseSpeed = (activeDoubleChaos and 5.2 or 3.6) * currentIntensity
     local wave = (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
@@ -394,8 +420,8 @@ RunService.RenderStepped:Connect(function(dt)
 
         if activeBeaconLight and activeBeaconLight.Parent then
             activeBeaconLight.Color = accent
-            activeBeaconLight.Brightness = ((activeDoubleChaos and 1.8 or 1.15) + wave * (activeDoubleChaos and 1.4 or 0.75)) * currentIntensity
-            activeBeaconLight.Range = 24 + wave * (10 + (currentIntensity * 3))
+            activeBeaconLight.Brightness = ((activeDoubleChaos and 1.8 or 1.15) + wave * (activeDoubleChaos and 1.4 or 0.75)) * currentIntensity * vfxTier.Scale
+            activeBeaconLight.Range = (24 + wave * (10 + (currentIntensity * 3))) * (0.82 + (vfxTier.Scale * 0.18))
         end
     end
 
