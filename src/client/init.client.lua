@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
+
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -35,17 +37,20 @@ top.Name = "TopHUD"
 top.AnchorPoint = Vector2.new(0.5, 0)
 top.Position = UDim2.fromScale(0.5, 0.025)
 top.Size = UDim2.fromScale(0.88, 0.13)
-top.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
-top.BackgroundTransparency = 0.12
+top.BackgroundColor3 = UITheme.Colors.Panel
+top.BackgroundTransparency = 0.06
+top.BorderSizePixel = 0
 top.Parent = root
-Instance.new("UICorner", top).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(top, UITheme.Corners.Large)
+UITheme.addStroke(top, UITheme.Colors.Border, 1.2, 0.32)
+UITheme.addGradient(top, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -90, 0.58, 0)
 title.Position = UDim2.fromOffset(18, 6)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBlack
-title.TextColor3 = Color3.new(1,1,1)
+title.TextColor3 = UITheme.Colors.Text
 title.TextScaled = true
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Text = "CHAOS SURVIVAL"
@@ -56,7 +61,7 @@ hint.Size = UDim2.new(1, -100, 0.32, 0)
 hint.Position = UDim2.new(0, 18, 0.62, 0)
 hint.BackgroundTransparency = 1
 hint.Font = Enum.Font.GothamMedium
-hint.TextColor3 = Color3.fromRGB(210,215,230)
+hint.TextColor3 = UITheme.Colors.Muted
 hint.TextScaled = true
 hint.TextXAlignment = Enum.TextXAlignment.Left
 hint.Text = ""
@@ -66,28 +71,38 @@ local timer = Instance.new("TextLabel")
 timer.AnchorPoint = Vector2.new(1, 0.5)
 timer.Position = UDim2.new(1, -14, 0.5, 0)
 timer.Size = UDim2.fromOffset(70, 70)
-timer.BackgroundColor3 = Color3.fromRGB(255,90,55)
+timer.BackgroundColor3 = UITheme.Colors.Orange
 timer.Font = Enum.Font.GothamBlack
-timer.TextColor3 = Color3.new(1,1,1)
+timer.TextColor3 = UITheme.Colors.Text
 timer.TextScaled = true
 timer.Text = "0"
+timer.BorderSizePixel = 0
 timer.Parent = top
-Instance.new("UICorner", timer).CornerRadius = UDim.new(1, 0)
+UITheme.addCorner(timer, UITheme.Corners.Pill)
+UITheme.addStroke(timer, Color3.fromRGB(255, 215, 170), 1.4, 0.28)
+local timerGradient = UITheme.addGradient(
+    timer,
+    UITheme.Colors.Orange,
+    Color3.fromRGB(220, 70, 55),
+    90
+)
 
 local aliveCounter = Instance.new("TextLabel")
 aliveCounter.Name = "AliveCounter"
 aliveCounter.AnchorPoint = Vector2.new(1, 0)
 aliveCounter.Position = UDim2.new(1, -14, 1, 8)
 aliveCounter.Size = UDim2.fromOffset(126, 30)
-aliveCounter.BackgroundColor3 = Color3.fromRGB(24, 29, 40)
-aliveCounter.BackgroundTransparency = 0.08
+aliveCounter.BackgroundColor3 = UITheme.Colors.PanelRaised
+aliveCounter.BackgroundTransparency = 0.04
 aliveCounter.Font = Enum.Font.GothamBold
-aliveCounter.TextColor3 = Color3.fromRGB(230, 235, 245)
+aliveCounter.TextColor3 = UITheme.Colors.Text
 aliveCounter.TextScaled = true
 aliveCounter.Text = ""
 aliveCounter.Visible = false
+aliveCounter.BorderSizePixel = 0
 aliveCounter.Parent = top
-Instance.new("UICorner", aliveCounter).CornerRadius = UDim.new(1, 0)
+UITheme.addCorner(aliveCounter, UITheme.Corners.Pill)
+UITheme.addStroke(aliveCounter, UITheme.Colors.Border, 1, 0.45)
 
 local stats = Instance.new("TextLabel")
 stats.Name = "StatsHUD"
@@ -189,7 +204,7 @@ local votes = Instance.new("Frame")
 votes.Name = "VotePanel"
 votes.AnchorPoint = Vector2.new(0.5, 0.5)
 votes.Position = UDim2.fromScale(0.5, 0.58)
-votes.Size = UDim2.fromScale(0.88, 0.24)
+votes.Size = UDim2.fromScale(touchDevice and 0.92 or 0.88, touchDevice and 0.27 or 0.24)
 votes.BackgroundTransparency = 1
 votes.Visible = false
 votes.Parent = root
@@ -986,46 +1001,83 @@ local function showVotes(options)
         maxVotes = math.max(maxVotes, tonumber(option.votes) or 0)
     end
 
-    for _, option in ipairs(options) do
+    for index, option in ipairs(options) do
         local optionVotes = tonumber(option.votes) or 0
-        local button = Instance.new("TextButton")
-        button.Size = UDim2.new(0.31, 0, 0.92, 0)
-        button.BackgroundColor3 = selectedVote == option.id
-            and Color3.fromRGB(70, 145, 255)
-            or Color3.fromRGB(38, 42, 58)
-        button.TextColor3 = Color3.new(1,1,1)
-        button.Font = Enum.Font.GothamBold
-        button.TextWrapped = true
-        button.TextScaled = true
-        button.Text = string.format(
-            "%s\n\n%s\n\n%d VOTE%s",
-            option.name,
-            option.hint,
-            optionVotes,
-            optionVotes == 1 and "" or "S"
-        )
-        button.Parent = votes
-        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 18)
+        local selected = selectedVote == option.id
 
-        local stroke = Instance.new("UIStroke")
-        stroke.Thickness = (maxVotes > 0 and optionVotes == maxVotes) and 3 or 1
-        stroke.Transparency = (maxVotes > 0 and optionVotes == maxVotes) and 0.12 or 0.65
-        stroke.Color = (maxVotes > 0 and optionVotes == maxVotes)
-            and Color3.fromRGB(255, 220, 95)
-            or Color3.fromRGB(120, 130, 155)
-        stroke.Parent = button
+        local button = Instance.new("TextButton")
+        button.Name = "VoteCard_" .. tostring(option.id)
+        button.Size = UDim2.new(0.31, 0, 0.94, 0)
+        button.BackgroundColor3 = selected and UITheme.Colors.Blue or UITheme.Colors.PanelRaised
+        button.BackgroundTransparency = selected and 0.02 or 0.05
+        button.BorderSizePixel = 0
+        button.AutoButtonColor = false
+        button.Text = ""
+        button.Parent = votes
+        UITheme.addCorner(button, UITheme.Corners.Large)
+
+        local accentColor = index == 1
+            and UITheme.Colors.Cyan
+            or (index == 2 and UITheme.Colors.Violet or UITheme.Colors.Orange)
+
+        local stroke = UITheme.addStroke(
+            button,
+            (maxVotes > 0 and optionVotes == maxVotes) and UITheme.Colors.Gold or accentColor,
+            (maxVotes > 0 and optionVotes == maxVotes) and 2.4 or 1.2,
+            (maxVotes > 0 and optionVotes == maxVotes) and 0.12 or 0.42
+        )
+
+        local accent = Instance.new("Frame")
+        accent.Size = UDim2.new(1, 0, 0, 6)
+        accent.BackgroundColor3 = accentColor
+        accent.BorderSizePixel = 0
+        accent.Parent = button
+        UITheme.addCorner(accent, UITheme.Corners.Pill)
+
+        local name = Instance.new("TextLabel")
+        name.Position = UDim2.fromScale(0.07, 0.12)
+        name.Size = UDim2.fromScale(0.86, 0.28)
+        name.BackgroundTransparency = 1
+        name.Font = Enum.Font.GothamBlack
+        name.Text = string.upper(tostring(option.name or "CHAOS"))
+        name.TextColor3 = UITheme.Colors.Text
+        name.TextScaled = true
+        name.TextWrapped = true
+        name.Parent = button
+
+        local hintLabel = Instance.new("TextLabel")
+        hintLabel.Position = UDim2.fromScale(0.08, 0.43)
+        hintLabel.Size = UDim2.fromScale(0.84, 0.27)
+        hintLabel.BackgroundTransparency = 1
+        hintLabel.Font = Enum.Font.GothamMedium
+        hintLabel.Text = tostring(option.hint or "")
+        hintLabel.TextColor3 = UITheme.Colors.Muted
+        hintLabel.TextScaled = true
+        hintLabel.TextWrapped = true
+        hintLabel.Parent = button
+
+        local votePill = Instance.new("TextLabel")
+        votePill.AnchorPoint = Vector2.new(0.5, 1)
+        votePill.Position = UDim2.fromScale(0.5, 0.92)
+        votePill.Size = UDim2.fromScale(0.66, 0.18)
+        votePill.BackgroundColor3 = selected and accentColor or UITheme.Colors.PanelSoft
+        votePill.BackgroundTransparency = 0.04
+        votePill.BorderSizePixel = 0
+        votePill.Font = Enum.Font.GothamBold
+        votePill.Text = string.format("%d VOTE%s", optionVotes, optionVotes == 1 and "" or "S")
+        votePill.TextColor3 = UITheme.Colors.Text
+        votePill.TextScaled = true
+        votePill.Parent = button
+        UITheme.addCorner(votePill, UITheme.Corners.Pill)
+
+        if selected then
+            UITheme.addGradient(button, UITheme.Colors.Blue, UITheme.Colors.Violet, 15)
+        end
 
         button.Activated:Connect(function()
             selectedVote = option.id
             voteEvent:FireServer(option.id)
-
-            for _, sibling in ipairs(votes:GetChildren()) do
-                if sibling:IsA("TextButton") then
-                    sibling.BackgroundColor3 = Color3.fromRGB(38, 42, 58)
-                end
-            end
-
-            button.BackgroundColor3 = Color3.fromRGB(70, 145, 255)
+            showVotes(options)
         end)
     end
 end
@@ -1198,13 +1250,13 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 
     if state.phase == "ready" then
-        timer.BackgroundColor3 = Color3.fromRGB(70, 145, 255)
+        timer.BackgroundColor3 = UITheme.Colors.Blue
         timer.Rotation = 0
     elseif state.phase == "round" and (state.seconds or 0) <= 5 then
-        timer.BackgroundColor3 = Color3.fromRGB(225, 55, 55)
+        timer.BackgroundColor3 = UITheme.Colors.Red
         timer.Rotation = ((state.seconds or 0) % 2 == 0) and -4 or 4
     else
-        timer.BackgroundColor3 = Color3.fromRGB(255, 90, 55)
+        timer.BackgroundColor3 = UITheme.Colors.Orange
         timer.Rotation = 0
     end
 
