@@ -1,3 +1,4 @@
+local MovementSafety = if script then require(script.Parent.Parent.MovementSafety) else require("../MovementSafety")
 local D = {Name = "TORNADO", Hint = "KEEP YOUR DISTANCE!"}
 
 local function tornadoPart(parent, name, size, position, color, transparency)
@@ -87,7 +88,13 @@ function D.start(ctx)
                     if dist < 42 and dist > 2 then
                         local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X).Unit
                         local strength = math.clamp((42 - dist) / 42, 0, 1)
-                        root.AssemblyLinearVelocity += tangent * force * intensity * strength + Vector3.new(0, 10 * intensity * strength, 0)
+                        root.AssemblyLinearVelocity = MovementSafety.addImpulse(
+                            root.AssemblyLinearVelocity,
+                            tangent * force * intensity * strength + Vector3.new(0, 10 * intensity * strength, 0),
+                            62,
+                            -55,
+                            58
+                        )
                     end
                 end
             end
