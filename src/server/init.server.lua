@@ -412,6 +412,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundParticipant", true)
         player:SetAttribute("RoundEliminated", false)
         player:SetAttribute("RoundChaosShards", 0)
+        player:SetAttribute("RoundShardCoins", 0)
         player:SetAttribute("RoundNearMisses", 0)
         player:SetAttribute("RoundMechanicUses", 0)
         player:SetAttribute("RoundOverdriveUses", 0)
@@ -542,7 +543,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
             end
 
             local total = (tonumber(player:GetAttribute("RoundChaosShards")) or 0) + 1
+            local shardCoinTotal = math.max(0, math.floor(tonumber(player:GetAttribute("RoundShardCoins")) or 0)) + amount
             player:SetAttribute("RoundChaosShards", total)
+            player:SetAttribute("RoundShardCoins", shardCoinTotal)
             PlayerData.add(player, "Coins", amount)
 
             chaosShardCollectedEvent:FireClient(player, {
@@ -1085,7 +1088,7 @@ while true do
                 streak = survivalStreak,
                 streakBonusCoins = survived and streakBonusCoins or 0,
                 shardCount = roundShardCount,
-                shardCoins = roundShardCount * RoundCollectibles.reward(),
+                shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundShardCoins")) or 0)),
                 nearMissCount = roundNearMissCount,
                 mechanicUses = roundMechanicUses,
                 challengeId = roundChallenge.Id,
