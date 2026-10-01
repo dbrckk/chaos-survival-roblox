@@ -1,0 +1,133 @@
+CHAOS SURVIVAL — PUBLIC PRESENTATION PLAN
+=========================================
+
+POSITIONNEMENT
+--------------
+Nom : CHAOS SURVIVAL
+Tagline principale : VOTE. SURVIVE. ADAPT.
+Promesse : des rounds courts, lisibles et spectaculaires où chaque catastrophe change la manière de se déplacer.
+Angle : facile à comprendre en quelques secondes, rejouable seul ou entre amis, zéro pay-to-win.
+
+DESCRIPTION ROBLOX — VERSION COURTE
+-----------------------------------
+VOTE. SURVIVE. ADAPT.
+
+Every round throws a new disaster at the arena.
+Climb, dodge, use mobility pads, collect optional Chaos Shards and survive until the timer hits zero.
+
+• 11 disasters
+• 4 rotating arenas
+• Solo Rush + multiplayer
+• Double Chaos rounds
+• Daily quests and rewards
+• Earnable trails and auras
+• Cosmetic-only support passes
+• No pay-to-win
+
+Can you survive the chaos?
+
+DESCRIPTION ROBLOX — VERSION FR
+--------------------------------
+VOTE. SURVIS. ADAPTE-TOI.
+
+À chaque round, une nouvelle catastrophe transforme l'arène.
+Grimpe, esquive, utilise les pads de mobilité, récupère des Chaos Shards optionnels et tiens jusqu'à zéro.
+
+• 11 catastrophes
+• 4 arènes rotatives
+• Solo Rush + multijoueur
+• Rounds Double Chaos
+• Quêtes et récompenses quotidiennes
+• Trails et auras à débloquer
+• Pass de soutien uniquement cosmétiques
+• Aucun pay-to-win
+
+Jusqu'où survivras-tu au chaos ?
+
+ICÔNE — BRIEF FINAL
+-------------------
+Format : carré, lisible en très petite taille.
+Sujet principal : cristal Chaos cyan/violet au centre.
+Fond : moitié lave orange, moitié tempête bleu/violet.
+Silhouette : anneau futuriste autour du cristal.
+Texte : aucun texte ou uniquement un petit symbole "!" si nécessaire.
+Contraste : extrêmement fort.
+Lecture mobile : le cristal doit rester reconnaissable à environ 64 px.
+Interdit : trop de personnages, petit texte, décor complexe, logos tiers.
+
+THUMBNAIL 1 — HERO / PROMESSE
+------------------------------
+Premier plan : avatar Roblox stylisé courant vers caméra.
+Milieu : arène Neon Chaos avec plusieurs niveaux.
+Fond : Rising Lava + météore en chute + Tornado lointain.
+Couleurs : orange contre cyan/violet.
+Texte court possible : SURVIVE THE CHAOS
+But : communiquer le concept en moins d'une seconde.
+
+THUMBNAIL 2 — DOUBLE CHAOS
+---------------------------
+Deux dangers très lisibles simultanément.
+Exemple : lave montante + pluie de météores.
+Arène clairement visible.
+Deux avatars évitent des impacts.
+Texte : DOUBLE CHAOS
+But : montrer la variété et le spectacle.
+
+THUMBNAIL 3 — SOLO RUSH
+------------------------
+Un seul avatar au centre.
+Timer rouge/orange en arrière-plan.
+Arène plus sombre et intense.
+Texte : SOLO RUSH
+But : montrer que le jeu est intéressant même sans autres joueurs.
+
+THUMBNAIL 4 — MULTIPLAYER
+--------------------------
+4–6 avatars répartis sur plusieurs hauteurs.
+Pads, Shards et warnings visibles.
+Un joueur saute pendant qu'un autre évite un danger.
+Pas de catastrophe qui cache toute l'arène.
+But : donner une impression sociale et dynamique.
+
+THUMBNAIL 5 — PROGRESSION / COSMETICS
+-------------------------------------
+Trois avatars avec trails / auras différents.
+Chaos Shard au centre.
+UI très légère avec LEVEL UP ou DAILY QUEST COMPLETE.
+But : montrer la rejouabilité sans suggérer de pay-to-win.
+
+CAPTURES GAMEPLAY À PRODUIRE
+----------------------------
+1. Lobby premium avec portail d'énergie.
+2. Classic Grid avec nouvelle grille techno.
+3. Tower Run avec architecture verticale.
+4. Crossroads et ses quatre lanes.
+5. Orbital Ring avec couronne/noyau.
+6. Rising Lava proche de mi-round.
+7. Tornado avec débris.
+8. Meteor impact avec shockwave.
+9. Freeze Pulse sans surexposition.
+10. Vote premium sur Android.
+11. Résultat SURVIVED avec breakdown.
+12. Spectateur avec barre de vie cible.
+
+TRAILER COURT — STORYBOARD 20–25 s
+----------------------------------
+0–2 s : logo / cristal Chaos + impact sonore.
+2–5 s : vote rapide entre trois catastrophes.
+5–8 s : round démarre, révélation de l'arène.
+8–12 s : Meteor / Tornado / Lava cuts rapides.
+12–15 s : Chaos Shard récupéré + burst.
+15–18 s : Double Chaos spectaculaire.
+18–21 s : clutch survival / result card.
+21–25 s : montage 4 arènes + CTA "VOTE. SURVIVE. ADAPT."
+
+RÈGLES DE PRÉSENTATION
+----------------------
+- Montrer du vrai gameplay ou un rendu fidèle au gameplay.
+- Ne pas promettre de fonctionnalités absentes.
+- Ne jamais présenter les achats comme nécessaires.
+- L'avatar et les dangers doivent rester lisibles sur écran de téléphone.
+- Maximum 2–4 mots de texte par thumbnail.
+- Garder la palette cyan/violet/orange de l'identité Neon Chaos.
+- Favoriser silhouettes fortes et contraste plutôt que détails minuscules.
