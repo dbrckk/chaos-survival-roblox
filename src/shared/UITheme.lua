@@ -67,4 +67,24 @@ function UITheme.addCorner(parent, radius)
     return corner
 end
 
+function UITheme.addPressFeedback(button, pressedScale)
+    local scale = button:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+    scale.Scale = 1
+    scale.Parent = button
+
+    local target = math.clamp(tonumber(pressedScale) or 0.96, 0.88, 1)
+
+    button.MouseButton1Down:Connect(function()
+        scale.Scale = target
+    end)
+    button.MouseButton1Up:Connect(function()
+        scale.Scale = 1
+    end)
+    button.MouseLeave:Connect(function()
+        scale.Scale = 1
+    end)
+
+    return scale
+end
+
 return UITheme
