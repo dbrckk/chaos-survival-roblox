@@ -1,7 +1,13 @@
 local D = {Name = "DISAPPEARING PLATFORMS", Hint = "YELLOW MEANS MOVE!"}
 
 function D.start(ctx)
-    local folder = workspace.GeneratedMap.Arena.Platforms
+    local generatedMap = workspace:FindFirstChild("GeneratedMap")
+    local arena = generatedMap and generatedMap:FindFirstChild("Arena")
+    local folder = arena and arena:FindFirstChild("Platforms")
+    if not folder then
+        return
+    end
+
     local activeStates = {}
     local generation = 0
 
@@ -32,7 +38,7 @@ function D.start(ctx)
     end
 
     task.spawn(function()
-        while ctx.Active() do
+        while ctx.Active() and folder.Parent do
             local parts = folder:GetChildren()
             if #parts > 0 then
                 local p = parts[math.random(1, #parts)]
