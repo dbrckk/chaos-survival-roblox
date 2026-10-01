@@ -7,6 +7,8 @@ local GameAnalytics = require(script.Parent.GameAnalytics)
 
 local MonetizationService = {}
 
+local setupStarted = setmetatable({}, {__mode = "k"})
+
 local offers = {
     {
         key = "supporter",
@@ -116,6 +118,10 @@ local function offerForKey(key)
 end
 
 local function setupPlayer(player)
+    if setupStarted[player] then
+        return
+    end
+    setupStarted[player] = true
     task.spawn(function()
         if not PlayerReadiness.waitForDataLoaded(player) then
             return
