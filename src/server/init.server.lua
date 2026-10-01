@@ -1108,7 +1108,8 @@ while true do
                 roundChallenge,
                 roundShardCount,
                 roundMechanicUses,
-                roundNearMissCount
+                roundNearMissCount,
+                roundMomentumBest
             )
             local challengeCompleted = challengeProgress >= roundChallenge.Target
             local challengeCoins = challengeCompleted and roundChallenge.Coins or 0
