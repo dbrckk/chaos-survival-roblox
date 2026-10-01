@@ -25,11 +25,11 @@ Légende
 
 PHASE 1 — DIRECTION ARTISTIQUE ET FONDATIONS
 -------------------------------------------
-[EN COURS] 1.1 Créer une palette centrale Neon Chaos Arena.
-[EN COURS] 1.2 Centraliser couleurs structurelles, surfaces, accents et niveaux de glow.
-[TODO]     1.3 Renforcer le lighting global et la profondeur atmosphérique.
-[TODO]     1.4 Ajouter une vraie silhouette visuelle à chacune des 4 arènes.
-[TODO]     1.5 Ajouter couches de sol, sous-structures, cadres, panneaux et détails techniques.
+[FAIT]     1.1 Créer une palette centrale Neon Chaos Arena.
+[FAIT]     1.2 Centraliser couleurs structurelles, surfaces, accents et niveaux de glow.
+[EN COURS] 1.3 Renforcer le lighting global et la profondeur atmosphérique.
+[EN COURS] 1.4 Ajouter une vraie silhouette visuelle à chacune des 4 arènes.
+[FAIT]     1.5 Ajouter couches de sol, sous-structures, cadres, panneaux et détails techniques.
 [TODO]     1.6 Ajouter décor lointain léger et profondeur autour des arènes.
 [TODO]     1.7 Renforcer le lobby pour qu'il ressemble à un hub premium.
 [TODO]     1.8 QA Android de la nouvelle direction artistique.
