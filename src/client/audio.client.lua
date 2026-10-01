@@ -15,6 +15,7 @@ local questEvent = remotes:WaitForChild("QuestUpdate")
 local achievementEvent = remotes:WaitForChild("AchievementState")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
 local chaosShardCollectedEvent = remotes:WaitForChild("ChaosShardCollected")
+local hazardNearMissEvent = remotes:WaitForChild("HazardNearMiss")
 
 local playerGui = player:WaitForChild("PlayerGui")
 local boundButtons = setmetatable({}, {__mode = "k"})
@@ -243,6 +244,10 @@ chaosShardCollectedEvent.OnClientEvent:Connect(function(payload)
     local total = math.max(1, math.floor(tonumber(payload.total) or 1))
     local variance = math.min(0.08, total * 0.008)
     play("ShardCollect", variance)
+end)
+
+hazardNearMissEvent.OnClientEvent:Connect(function()
+    play("Speed", 0.05)
 end)
 
 player:GetAttributeChangedSignal("Level"):Connect(function()
