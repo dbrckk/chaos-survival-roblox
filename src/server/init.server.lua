@@ -103,6 +103,7 @@ local currentVotes = {}
 local currentOptions = {}
 local voteOpen = false
 local allowVote = RateLimiter.new(0.2)
+local allowHazardNearMiss = RateLimiter.new(0.9)
 
 local function broadcast(payload)
     stateEvent:FireAllClients(payload)
@@ -417,6 +418,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
             })
         end,
         OnHazardNearMiss = function(player, kind, distance, radius)
+            if player.Parent ~= Players or not allowHazardNearMiss(player.UserId) then
+                return
+            end
+
             hazardNearMissEvent:FireClient(player, {
                 kind = kind,
                 distance = distance,
