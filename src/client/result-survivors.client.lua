@@ -111,13 +111,27 @@ stateEvent.OnClientEvent:Connect(function(state)
         return
     end
 
-    clear()
-
+    local desired = {}
     local ids = type(state.survivorUserIds) == "table" and state.survivorUserIds or {}
     for _, userId in ipairs(ids) do
-        local target = Players:GetPlayerByUserId(tonumber(userId) or -1)
-        if target then
-            spotlight(target)
+        local numericId = tonumber(userId)
+        if numericId then
+            desired[numericId] = true
+            local target = Players:GetPlayerByUserId(numericId)
+            if target then
+                spotlight(target)
+            end
+        end
+    end
+
+    for userId, bundle in pairs(active) do
+        if not desired[userId] then
+            for _, instance in ipairs(bundle) do
+                if instance and instance.Parent then
+                    instance:Destroy()
+                end
+            end
+            active[userId] = nil
         end
     end
 end)
