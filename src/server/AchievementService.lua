@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local RemoteRegistry = require(script.Parent.RemoteRegistry)
 local BadgeService = game:GetService("BadgeService")
 
 local Achievements = require(script.Parent.Achievements)
@@ -124,9 +125,7 @@ function AchievementService.sync(player)
 end
 
 function AchievementService.init(remotes)
-    stateEvent = remotes:FindFirstChild("AchievementState") or Instance.new("RemoteEvent")
-    stateEvent.Name = "AchievementState"
-    stateEvent.Parent = remotes
+    stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "AchievementState")
 
     Players.PlayerAdded:Connect(setupPlayer)
     for _, player in ipairs(Players:GetPlayers()) do
