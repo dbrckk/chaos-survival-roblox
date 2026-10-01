@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
+local MovementSafety = require("../../src/server/MovementSafety")
 
 describe("Arena mechanics", function()
     it("defines one mobility mechanic for every playable arena", function()
@@ -34,6 +35,16 @@ describe("Arena mechanics", function()
                 expect(pad.impulse.Magnitude <= 60).toBe(true)
             end
         end
+    end)
+
+    it("uses the shared movement safety contract for pad impulses", function()
+        local current = Vector3.new(90, 80, -95)
+        local impulse = Vector3.new(46, 55, 46)
+
+        local padVelocity = ArenaMechanics.safeVelocity(current, impulse)
+        local sharedVelocity = MovementSafety.addImpulse(current, impulse, 60, -52, 58)
+
+        expect((padVelocity - sharedVelocity).Magnitude < 0.001).toBe(true)
     end)
 
     it("clamps stacked disaster velocity before applying pad motion", function()
