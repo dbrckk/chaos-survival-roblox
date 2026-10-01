@@ -284,6 +284,124 @@ local function addVariantIdentity(decor, config, variant, theme)
     end
 end
 
+local function addVariantFloorLanguage(decor, config, variant, theme)
+    local center = config.ArenaCenter
+
+    if variant.Id == "Classic" then
+        for i = -2, 2 do
+            if i ~= 0 then
+                local xLine = decorPart(
+                    decor,
+                    "ClassicGridX" .. tostring(i),
+                    Vector3.new(0.16, 0.06, variant.BaseSize.Z - 14),
+                    center + Vector3.new(i * 16, 1.19, 0),
+                    i % 2 == 0 and theme.Secondary or theme.Accent,
+                    VisualTheme.Materials.Glow
+                )
+                xLine.Transparency = 0.54
+
+                local zLine = decorPart(
+                    decor,
+                    "ClassicGridZ" .. tostring(i),
+                    Vector3.new(variant.BaseSize.X - 14, 0.06, 0.16),
+                    center + Vector3.new(0, 1.19, i * 16),
+                    i % 2 == 0 and theme.Secondary or theme.Accent,
+                    VisualTheme.Materials.Glow
+                )
+                zLine.Transparency = 0.54
+            end
+        end
+    elseif variant.Id == "Towers" then
+        local pads = {
+            Vector3.new(-28, 1.20, -28),
+            Vector3.new(28, 1.20, -28),
+            Vector3.new(-28, 1.20, 28),
+            Vector3.new(28, 1.20, 28),
+        }
+        for i, offset in ipairs(pads) do
+            local plate = decorPart(
+                decor,
+                "TowerGroundPlate" .. i,
+                Vector3.new(17, 0.08, 17),
+                center + offset,
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            plate.Transparency = 0.72
+
+            local core = decorPart(
+                decor,
+                "TowerGroundCore" .. i,
+                Vector3.new(5.5, 0.10, 5.5),
+                center + offset + Vector3.new(0, 0.03, 0),
+                theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            core.Transparency = 0.42
+        end
+    elseif variant.Id == "Crossroads" then
+        local laneDefs = {
+            {size = Vector3.new(13, 0.08, 56), offset = Vector3.new(0, 1.20, -25)},
+            {size = Vector3.new(13, 0.08, 56), offset = Vector3.new(0, 1.20, 25)},
+            {size = Vector3.new(56, 0.08, 13), offset = Vector3.new(-25, 1.20, 0)},
+            {size = Vector3.new(56, 0.08, 13), offset = Vector3.new(25, 1.20, 0)},
+        }
+        for i, def in ipairs(laneDefs) do
+            local lane = decorPart(
+                decor,
+                "CrossroadLaneFill" .. i,
+                def.size,
+                center + def.offset,
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            lane.Transparency = 0.84
+        end
+
+        local hub = decorPart(
+            decor,
+            "CrossroadHubMark",
+            Vector3.new(22, 0.10, 22),
+            center + Vector3.new(0, 1.22, 0),
+            theme.Secondary,
+            VisualTheme.Materials.Glow
+        )
+        hub.Transparency = 0.70
+    elseif variant.Id == "Orbital" then
+        for i = 0, 7 do
+            local angle = math.rad(i * 45)
+            local radius = 25
+            local position = center + Vector3.new(
+                math.cos(angle) * radius * 0.5,
+                1.20,
+                math.sin(angle) * radius * 0.5
+            )
+            local spoke = decorPart(
+                decor,
+                "OrbitalSpoke" .. tostring(i + 1),
+                Vector3.new(radius, 0.07, 0.20),
+                position,
+                i % 2 == 0 and theme.Accent or theme.Secondary,
+                VisualTheme.Materials.Glow
+            )
+            spoke.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
+            spoke.Transparency = 0.52
+        end
+
+        local coreMark = decorPart(
+            decor,
+            "OrbitalCoreMark",
+            Vector3.new(14, 0.10, 14),
+            center + Vector3.new(0, 1.21, 0),
+            theme.Accent,
+            VisualTheme.Materials.Glow
+        )
+        coreMark.Shape = Enum.PartType.Cylinder
+        coreMark.CFrame = CFrame.new(coreMark.Position) * CFrame.Angles(0, 0, math.rad(90))
+        coreMark.Transparency = 0.58
+    end
+end
+
 local function addPlatformFinish(decor, platform, index, theme)
     local topPanel = decorPart(
         decor,
@@ -642,6 +760,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
 
     addArenaFoundation(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
+    addVariantFloorLanguage(decor, config, variant, theme)
 
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
