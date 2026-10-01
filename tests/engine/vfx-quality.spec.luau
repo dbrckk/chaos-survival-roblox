@@ -25,7 +25,10 @@ describe("Adaptive VFX quality", function()
             expect(tier.Scale <= 1).toBe(true)
             expect(tier.ParticleScale > 0).toBe(true)
             expect(tier.ParticleScale <= 1).toBe(true)
+            expect(tier.UpdateInterval > 0).toBe(true)
         end
+
+        expect(VfxQuality.get("Low").UpdateInterval > VfxQuality.get("High").UpdateInterval).toBe(true)
     end)
 end)
 
