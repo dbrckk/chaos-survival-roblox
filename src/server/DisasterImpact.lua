@@ -39,23 +39,5 @@ function DisasterImpact.applyRadialDamage(ctx, position, radius, maxDamage)
     return hits
 end
 
-function DisasterImpact.animateMarker(marker, seconds, startSize, endSize)
-    local duration = math.max(0.05, tonumber(seconds) or 0.05)
-    local started = os.clock()
-
-    while marker.Parent do
-        local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
-        local pulse = (math.sin(alpha * math.pi * 6) + 1) * 0.5
-        local diameter = startSize + ((endSize - startSize) * alpha)
-
-        marker.Size = Vector3.new(diameter, marker.Size.Y, diameter)
-        marker.Transparency = 0.12 + (pulse * 0.24)
-
-        if alpha >= 1 then
-            break
-        end
-        task.wait(0.035)
-    end
-end
 
 return DisasterImpact
