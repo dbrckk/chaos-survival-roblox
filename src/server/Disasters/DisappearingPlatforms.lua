@@ -2,37 +2,68 @@ local D = {Name = "DISAPPEARING PLATFORMS", Hint = "YELLOW MEANS MOVE!"}
 
 function D.start(ctx)
     local folder = workspace.GeneratedMap.Arena.Platforms
+    local activeStates = {}
+    local generation = 0
+
+    local function restore(part)
+        local state = activeStates[part]
+        if not state then
+            return
+        end
+
+        activeStates[part] = nil
+        if part and part.Parent then
+            part.Transparency = state.transparency
+            part.CanCollide = state.canCollide
+            part.Color = state.color
+            part.Material = state.material
+        end
+    end
+
+    ctx.OnCleanup[#ctx.OnCleanup+1] = function()
+        generation += 1
+        local parts = {}
+        for part in pairs(activeStates) do
+            table.insert(parts, part)
+        end
+        for _, part in ipairs(parts) do
+            restore(part)
+        end
+    end
 
     task.spawn(function()
         while ctx.Active() do
             local parts = folder:GetChildren()
             if #parts > 0 then
                 local p = parts[math.random(1, #parts)]
-                if p:IsA("BasePart") and p.CanCollide then
-                    local oldTransparency = p.Transparency
-                    local oldCanCollide = p.CanCollide
-                    local oldColor = p.Color
-                    local oldMaterial = p.Material
+                if p:IsA("BasePart") and p.CanCollide and not activeStates[p] then
+                    generation += 1
+                    local token = generation
+                    activeStates[p] = {
+                        transparency = p.Transparency,
+                        canCollide = p.CanCollide,
+                        color = p.Color,
+                        material = p.Material,
+                        generation = token,
+                    }
 
                     p.Color = Color3.fromRGB(255, 205, 70)
                     p.Material = Enum.Material.Neon
 
                     task.wait(0.75)
-                    if ctx.Active() and p and p.Parent then
+                    local state = activeStates[p]
+                    if ctx.Active() and state and state.generation == token and p.Parent then
                         p.Transparency = 1
                         p.CanCollide = false
 
                         task.delay(2.0, function()
-                            if p and p.Parent then
-                                p.Transparency = oldTransparency
-                                p.CanCollide = oldCanCollide
-                                p.Color = oldColor
-                                p.Material = oldMaterial
+                            local delayedState = activeStates[p]
+                            if delayedState and delayedState.generation == token then
+                                restore(p)
                             end
                         end)
-                    elseif p and p.Parent then
-                        p.Color = oldColor
-                        p.Material = oldMaterial
+                    else
+                        restore(p)
                     end
                 end
             end
