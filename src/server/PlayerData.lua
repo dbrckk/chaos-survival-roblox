@@ -276,6 +276,7 @@ function PlayerData.canMutate(player)
         and player.Parent == Players
         and active[player] == true
         and player:GetAttribute("DataLoaded") == true
+        and player:GetAttribute("DataPersistenceAvailable") == true
 end
 
 function PlayerData.add(player, field, amount)
