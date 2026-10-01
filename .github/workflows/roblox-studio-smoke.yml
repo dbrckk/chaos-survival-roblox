@@ -70,6 +70,23 @@ jobs:
           "STUDIO_EXE=$studioPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Studio: $studioPath"
 
+      - name: Record Studio test metadata
+        shell: pwsh
+        run: |
+          $metadata = Join-Path $env:GITHUB_WORKSPACE "build/studio-e2e-metadata.txt"
+          $studioInfo = Get-Item "$env:STUDIO_EXE"
+          @(
+            "commit=$env:GITHUB_SHA"
+            "run_id=$env:GITHUB_RUN_ID"
+            "run_attempt=$env:GITHUB_RUN_ATTEMPT"
+            "runner=$env:RUNNER_NAME"
+            "os=$env:RUNNER_OS"
+            "utc=$([DateTime]::UtcNow.ToString('o'))"
+            "studio_path=$env:STUDIO_EXE"
+            "studio_file_version=$($studioInfo.VersionInfo.FileVersion)"
+            "studio_product_version=$($studioInfo.VersionInfo.ProductVersion)"
+          ) | Set-Content -Path $metadata -Encoding utf8
+
       - name: Run four-client automated playtest
         shell: pwsh
         run: |
@@ -153,4 +170,5 @@ jobs:
             build/studio-e2e.log
             build/studio-stdout.log
             build/studio-stderr.log
+            build/studio-e2e-metadata.txt
           if-no-files-found: warn
