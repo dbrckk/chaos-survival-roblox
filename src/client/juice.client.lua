@@ -28,10 +28,20 @@ local function getOrCreateLightingEffect(name, className)
     return effect
 end
 
+Lighting.Brightness = 2
+Lighting.ExposureCompensation = 0.05
+Lighting.EnvironmentDiffuseScale = 0.38
+Lighting.EnvironmentSpecularScale = 0.72
+Lighting.GlobalShadows = true
+Lighting.ShadowSoftness = 0.22
+Lighting.ClockTime = 15.8
+Lighting.Ambient = Color3.fromRGB(78, 86, 112)
+Lighting.OutdoorAmbient = Color3.fromRGB(105, 116, 145)
+
 local bloom = getOrCreateLightingEffect("ChaosBloom", "BloomEffect")
-bloom.Intensity = 0.35
-bloom.Size = 28
-bloom.Threshold = 1.1
+bloom.Intensity = 0.32
+bloom.Size = 22
+bloom.Threshold = 1.18
 
 local color = getOrCreateLightingEffect("ChaosColor", "ColorCorrectionEffect")
 color.Brightness = 0
@@ -44,12 +54,12 @@ rays.Intensity = 0.035
 rays.Spread = 0.82
 
 local atmosphere = getOrCreateLightingEffect("ChaosAtmosphere", "Atmosphere")
-atmosphere.Density = 0.18
-atmosphere.Offset = 0.15
-atmosphere.Color = Color3.fromRGB(205, 215, 235)
-atmosphere.Decay = Color3.fromRGB(90, 100, 125)
-atmosphere.Glare = 0.04
-atmosphere.Haze = 0.8
+atmosphere.Density = 0.16
+atmosphere.Offset = 0.18
+atmosphere.Color = Color3.fromRGB(185, 205, 235)
+atmosphere.Decay = Color3.fromRGB(58, 72, 105)
+atmosphere.Glare = 0.03
+atmosphere.Haze = 0.72
 atmosphere.Parent = Lighting
 
 local gui = Instance.new("ScreenGui")
@@ -236,6 +246,20 @@ end
 local function setMood(state)
     local phase = state.phase
     local doubleChaos = state.doubleChaos == true
+
+    if phase == "round" then
+        Lighting.ExposureCompensation = doubleChaos and -0.04 or 0.02
+        Lighting.EnvironmentDiffuseScale = 0.34
+        Lighting.EnvironmentSpecularScale = 0.76
+    elseif phase == "ready" then
+        Lighting.ExposureCompensation = 0.04
+        Lighting.EnvironmentDiffuseScale = 0.38
+        Lighting.EnvironmentSpecularScale = 0.72
+    else
+        Lighting.ExposureCompensation = 0.07
+        Lighting.EnvironmentDiffuseScale = 0.42
+        Lighting.EnvironmentSpecularScale = 0.68
+    end
 
     if phase == "round" or phase == "ready" then
         roundDanger = phase == "round" and (tonumber(state.seconds) or 99) <= 5
