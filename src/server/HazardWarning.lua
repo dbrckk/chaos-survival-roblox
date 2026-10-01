@@ -19,10 +19,13 @@ function HazardWarning.arenaCoverageDiameter(fallback)
 end
 
 function HazardWarning.configure(part, kind, duration, startSize, endSize)
-    part:SetAttribute("WarningKind", kind)
-    part:SetAttribute("WarningDuration", math.max(0.05, tonumber(duration) or 0.05))
+    local safeDuration = math.max(0.05, tonumber(duration) or 0.05)
+    part:SetAttribute("WarningDuration", safeDuration)
     part:SetAttribute("WarningStartSize", math.max(0.1, tonumber(startSize) or 1))
     part:SetAttribute("WarningEndSize", math.max(0.1, tonumber(endSize) or startSize or 1))
+    part:SetAttribute("WarningStartedAt", workspace:GetServerTimeNow())
+    -- WarningKind is the readiness marker and must be replicated after all metadata.
+    part:SetAttribute("WarningKind", kind)
 end
 
 return HazardWarning
