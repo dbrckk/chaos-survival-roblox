@@ -7,7 +7,6 @@ local RunService = game:GetService("RunService")
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
-local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -99,16 +98,20 @@ damageGradient.Transparency = NumberSequence.new({
 damageGradient.Rotation = 90
 damageGradient.Parent = damageFlash
 
-local damageGradient = Instance.new("UIGradient")
-damageGradient.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.34),
-    NumberSequenceKeypoint.new(0.22, 0.78),
-    NumberSequenceKeypoint.new(0.50, 0.94),
-    NumberSequenceKeypoint.new(0.78, 0.78),
-    NumberSequenceKeypoint.new(1, 0.34),
-})
-damageGradient.Rotation = 90
-damageGradient.Parent = damageFlash
+local criticalFrame = Instance.new("Frame")
+criticalFrame.Name = "CriticalHealthEdge"
+criticalFrame.Size = UDim2.fromScale(1, 1)
+criticalFrame.BackgroundTransparency = 1
+criticalFrame.BorderSizePixel = 0
+criticalFrame.ZIndex = 23
+criticalFrame.Parent = gui
+
+local criticalStroke = Instance.new("UIStroke")
+criticalStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+criticalStroke.Color = UITheme.Colors.Red
+criticalStroke.Thickness = 5
+criticalStroke.Transparency = 1
+criticalStroke.Parent = criticalFrame
 
 local banner = Instance.new("Frame")
 banner.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -120,8 +123,6 @@ banner.Visible = false
 banner.ZIndex = 5
 banner.Parent = gui
 Instance.new("UICorner", banner).CornerRadius = UDim.new(0, 22)
-local bannerStroke = UITheme.addStroke(banner, UITheme.Colors.Blue, 1.4, 0.30)
-local bannerGradient = UITheme.addGradient(banner, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 local bannerStroke = UITheme.addStroke(banner, UITheme.Colors.Blue, 1.4, 0.30)
 local bannerGradient = UITheme.addGradient(banner, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
@@ -188,6 +189,7 @@ local visualUpdateClock = 0
 local performancePulseClock = 0
 local performanceFpsAccumulator = 0
 local performanceFpsSamples = 0
+local healthRatio = 1
 player:SetAttribute("VfxQualityTier", vfxTierName)
 
 local function setActiveBeacon(beacon, light)
@@ -602,6 +604,20 @@ RunService.RenderStepped:Connect(function(dt)
         targetTransparency = 0.91 + math.sin(pulseClock * 8) * 0.035
     end
 
+    local criticalHealth = currentState
+        and currentState.phase == "round"
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+        and healthRatio > 0
+        and healthRatio <= 0.30
+
+    if criticalHealth then
+        criticalStroke.Transparency = 0.54 + wave * 0.24
+        criticalStroke.Thickness = 4 + wave * 2
+    else
+        criticalStroke.Transparency += (1 - criticalStroke.Transparency) * math.min(1, dt * 10)
+    end
+
     vignette.BackgroundTransparency += (targetTransparency - vignette.BackgroundTransparency) * math.min(1, dt * 10)
 end)
 
@@ -637,7 +653,9 @@ local function bindDamageFeedback(character)
     end
 
     local previousHealth = humanoid.Health
+    healthRatio = humanoid.MaxHealth > 0 and (humanoid.Health / humanoid.MaxHealth) or 1
     healthConnection = humanoid.HealthChanged:Connect(function(health)
+        healthRatio = humanoid.MaxHealth > 0 and math.clamp(health / humanoid.MaxHealth, 0, 1) or 1
         if health < previousHealth and health > 0 then
             local lost = previousHealth - health
             damageFlash.BackgroundTransparency = math.clamp(0.88 - (lost / 250), 0.66, 0.88)
