@@ -48,12 +48,12 @@ end
 
 local function evaluate(player)
     if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
-        return
+        return {}
     end
 
     if player:GetAttribute("DataPersistenceAvailable") ~= true then
         sendState(player, {})
-        return
+        return {}
     end
 
     local serialized, unlockedNow = Achievements.evaluate(
@@ -90,6 +90,11 @@ local function evaluate(player)
     end
 
     sendState(player, unlockedNow)
+    return unlockedNow
+end
+
+function AchievementService.evaluate(player)
+    return evaluate(player)
 end
 
 local function setupPlayer(player)
