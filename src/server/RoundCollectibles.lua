@@ -164,6 +164,11 @@ function RoundCollectibles.start(ctx)
     table.insert(ctx.Cleanup, container)
 
     local maxActive = RoundCollectibles.maxActive(#(ctx.Contestants or {}), ctx.SoloMode == true)
+
+    local function activeLimit()
+        local surge = ctx.Overdrive and ctx.Overdrive() == true
+        return math.min(4, maxActive + (surge and 1 or 0))
+    end
     local spawnIndex = 0
     local lastCandidate = nil
 
@@ -193,7 +198,7 @@ function RoundCollectibles.start(ctx)
     end
 
     local function spawnOne()
-        if not ctx.Active() or not container.Parent or activeCount() >= maxActive then
+        if not ctx.Active() or not container.Parent or activeCount() >= activeLimit() then
             return
         end
 
@@ -230,7 +235,8 @@ function RoundCollectibles.start(ctx)
 
         while ctx.Active() and container.Parent do
             spawnOne()
-            task.wait(RoundCollectibles.SpawnInterval)
+            local surge = ctx.Overdrive and ctx.Overdrive() == true
+            task.wait(surge and math.max(3, RoundCollectibles.SpawnInterval * 0.5) or RoundCollectibles.SpawnInterval)
         end
     end)
 
