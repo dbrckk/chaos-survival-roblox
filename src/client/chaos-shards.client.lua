@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+
 local player = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
 
@@ -97,6 +99,11 @@ end)
 
 local shardVisuals = {}
 local pulseClock = 0
+local updateClock = 0
+
+local function quality()
+    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+end
 
 local function removeVisual(shardPart)
     local visual = shardVisuals[shardPart]
@@ -165,7 +172,18 @@ end)
 scanShards(workspace)
 
 RunService.RenderStepped:Connect(function(dt)
+    if next(shardVisuals) == nil then
+        return
+    end
+
     pulseClock += dt
+    updateClock += dt
+
+    local tier = quality()
+    if updateClock < math.max(1 / 30, tier.UpdateInterval) then
+        return
+    end
+    updateClock = 0
 
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -175,13 +193,23 @@ RunService.RenderStepped:Connect(function(dt)
             removeVisual(shardPart)
         else
             local distance = rootPart and (rootPart.Position - shardPart.Position).Magnitude or 999
-            local close = distance <= 24
+            local closeDistance = 24 * tier.Scale
+            local close = distance <= closeDistance
             local pulse = (math.sin(pulseClock * (close and 6.5 or 3.8)) + 1) * 0.5
 
             local highlight = folder:FindFirstChild("ShardHighlight")
             if highlight and highlight:IsA("Highlight") then
-                highlight.FillTransparency = (close and 0.42 or 0.66) + pulse * 0.08
-                highlight.OutlineTransparency = close and 0.04 or 0.18
+                local detailScale = tier.Scale
+                highlight.FillTransparency = math.clamp(
+                    (close and 0.42 or 0.66) + pulse * 0.08 + ((1 - detailScale) * 0.12),
+                    0,
+                    1
+                )
+                highlight.OutlineTransparency = math.clamp(
+                    (close and 0.04 or 0.18) + ((1 - detailScale) * 0.22),
+                    0,
+                    1
+                )
             end
 
             local ring = folder:FindFirstChild("ShardRing")
