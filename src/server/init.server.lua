@@ -23,6 +23,7 @@ if RunService:IsStudio() then
     end
 end
 local MapBuilder = require(script.MapBuilder)
+local LobbyActivities = require(script.LobbyActivities)
 local PlayerData = require(script.PlayerData)
 local PlayerReadiness = require(script.PlayerReadiness)
 local RemoteRegistry = require(script.RemoteRegistry)
@@ -65,6 +66,10 @@ CosmeticService.init(remotes, RateLimiter)
 MonetizationService.init(remotes, RateLimiter, CosmeticService)
 AchievementService.init(remotes)
 MapBuilder.build(Config, "Classic", ArenaVariants)
+local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
+if not lobbyActivitiesOk then
+    warn("Lobby activities failed to start:", lobbyActivitiesError)
+end
 
 local disasterModules = {}
 for _, module in ipairs(script.Disasters:GetChildren()) do
