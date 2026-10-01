@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
@@ -91,4 +92,102 @@ end
 
 event.OnClientEvent:Connect(function(payload)
     show(tonumber(payload.reward) or 1, tonumber(payload.total) or 1)
+end)
+
+
+local shardVisuals = {}
+local pulseClock = 0
+
+local function removeVisual(shardPart)
+    local visual = shardVisuals[shardPart]
+    if visual then
+        shardVisuals[shardPart] = nil
+        if visual.Parent then
+            visual:Destroy()
+        end
+    end
+end
+
+local function attachVisual(shardPart)
+    if not shardPart:IsA("BasePart")
+        or shardPart:GetAttribute("ChaosShard") ~= true
+        or shardVisuals[shardPart]
+    then
+        return
+    end
+
+    local folder = Instance.new("Folder")
+    folder.Name = "LocalShardPolish"
+    folder.Parent = shardPart
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ShardHighlight"
+    highlight.Adornee = shardPart
+    highlight.FillColor = Color3.fromRGB(90, 210, 255)
+    highlight.FillTransparency = 0.68
+    highlight.OutlineColor = Color3.fromRGB(210, 160, 255)
+    highlight.OutlineTransparency = 0.18
+    highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+    highlight.Parent = folder
+
+    local ring = Instance.new("SelectionSphere")
+    ring.Name = "ShardRing"
+    ring.Adornee = shardPart
+    ring.Color3 = Color3.fromRGB(130, 225, 255)
+    ring.SurfaceColor3 = Color3.fromRGB(145, 105, 255)
+    ring.Transparency = 0.72
+    ring.SurfaceTransparency = 1
+    ring.Parent = folder
+
+    shardVisuals[shardPart] = folder
+end
+
+local function scanShards(root)
+    for _, descendant in ipairs(root:GetDescendants()) do
+        if descendant:IsA("BasePart") and descendant:GetAttribute("ChaosShard") == true then
+            attachVisual(descendant)
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("BasePart") and descendant:GetAttribute("ChaosShard") == true then
+        attachVisual(descendant)
+    end
+end)
+
+workspace.DescendantRemoving:Connect(function(descendant)
+    if shardVisuals[descendant] then
+        removeVisual(descendant)
+    end
+end)
+
+scanShards(workspace)
+
+RunService.RenderStepped:Connect(function(dt)
+    pulseClock += dt
+
+    local character = player.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+    for shardPart, folder in pairs(shardVisuals) do
+        if not shardPart.Parent or not folder.Parent then
+            removeVisual(shardPart)
+        else
+            local distance = rootPart and (rootPart.Position - shardPart.Position).Magnitude or 999
+            local close = distance <= 24
+            local pulse = (math.sin(pulseClock * (close and 6.5 or 3.8)) + 1) * 0.5
+
+            local highlight = folder:FindFirstChild("ShardHighlight")
+            if highlight and highlight:IsA("Highlight") then
+                highlight.FillTransparency = (close and 0.42 or 0.66) + pulse * 0.08
+                highlight.OutlineTransparency = close and 0.04 or 0.18
+            end
+
+            local ring = folder:FindFirstChild("ShardRing")
+            if ring and ring:IsA("SelectionSphere") then
+                ring.Transparency = (close and 0.46 or 0.68) + pulse * 0.12
+            end
+        end
+    end
 end)
