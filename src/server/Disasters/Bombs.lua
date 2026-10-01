@@ -1,4 +1,5 @@
 local DisasterImpact = if script then require(script.Parent.Parent.DisasterImpact) else require("../DisasterImpact")
+local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 
 local D = {Name = "BOMB RAIN", Hint = "WATCH THE RED MARKERS!"}
 
@@ -28,7 +29,8 @@ function D.start(ctx)
             ctx.Cleanup[#ctx.Cleanup+1] = marker
 
             task.spawn(function()
-                DisasterImpact.animateMarker(marker, warningSeconds, 5.5, radius * 2)
+                HazardWarning.configure(marker, "Bomb", warningSeconds, 5.5, radius * 2)
+                task.wait(warningSeconds)
                 if not marker.Parent or not ctx.Active() then
                     return
                 end
