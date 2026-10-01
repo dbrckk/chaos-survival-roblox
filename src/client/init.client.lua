@@ -169,6 +169,16 @@ UITheme.addCorner(levelToast, UITheme.Corners.Large)
 UITheme.addStroke(levelToast, UITheme.Colors.Cyan, 1.4, 0.28)
 UITheme.addGradient(levelToast, UITheme.Colors.Blue, UITheme.Colors.Violet, 15)
 
+local levelAccent = Instance.new("Frame")
+levelAccent.AnchorPoint = Vector2.new(0.5, 0)
+levelAccent.Position = UDim2.fromScale(0.5, 0.08)
+levelAccent.Size = UDim2.new(0, 0, 0, 4)
+levelAccent.BackgroundColor3 = UITheme.Colors.Cyan
+levelAccent.BorderSizePixel = 0
+levelAccent.ZIndex = 31
+levelAccent.Parent = levelToast
+UITheme.addCorner(levelAccent, UITheme.Corners.Pill)
+
 local levelToastScale = Instance.new("UIScale")
 levelToastScale.Scale = 0.8
 levelToastScale.Parent = levelToast
@@ -199,6 +209,7 @@ local function showLevelUp(level)
     levelToast.Visible = true
     levelToast.BackgroundTransparency = 1
     levelToastScale.Scale = 0.78
+    levelAccent.Size = UDim2.new(0, 0, 0, 4)
 
     TweenService:Create(
         levelToast,
@@ -210,6 +221,11 @@ local function showLevelUp(level)
         levelToastScale,
         TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {Scale = 1}
+    ):Play()
+    TweenService:Create(
+        levelAccent,
+        TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Size = UDim2.new(0.86, 0, 0, 4)}
     ):Play()
 
     task.delay(2.1, function()
@@ -936,6 +952,16 @@ UITheme.addCorner(resultCard, UDim.new(0, 22))
 local resultStroke = UITheme.addStroke(resultCard, UITheme.Colors.Blue, 1.6, 0.24)
 local resultGradient = UITheme.addGradient(resultCard, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
+local resultAccent = Instance.new("Frame")
+resultAccent.AnchorPoint = Vector2.new(0.5, 0)
+resultAccent.Position = UDim2.fromScale(0.5, 0.035)
+resultAccent.Size = UDim2.new(0.88, 0, 0, 5)
+resultAccent.BackgroundColor3 = UITheme.Colors.Blue
+resultAccent.BorderSizePixel = 0
+resultAccent.ZIndex = 22
+resultAccent.Parent = resultCard
+UITheme.addCorner(resultAccent, UITheme.Corners.Pill)
+
 local resultScale = Instance.new("UIScale")
 resultScale.Scale = 0.82
 resultScale.Parent = resultCard
@@ -1073,6 +1099,7 @@ local function showRoundFeedback(feedback)
     local survived = feedback.survived == true
     resultTitle.Text = survived and "SURVIVED!" or "ELIMINATED"
     resultStroke.Color = survived and UITheme.Colors.Green or UITheme.Colors.Red
+    resultAccent.BackgroundColor3 = survived and UITheme.Colors.Green or UITheme.Colors.Red
     resultGradient.Color = survived
         and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
         or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel)
@@ -1139,7 +1166,11 @@ local function showRoundFeedback(feedback)
     resultScale.Scale = 0.82
     resultFlash.BackgroundTransparency = 1
 
-    TweenService:Create(resultFlash, TweenInfo.new(0.12), {BackgroundTransparency = 0.72}):Play()
+    TweenService:Create(
+        resultFlash,
+        TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundTransparency = survived and 0.78 or 0.82}
+    ):Play()
     TweenService:Create(resultCard, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0.04}):Play()
     TweenService:Create(resultScale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
