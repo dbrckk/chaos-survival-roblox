@@ -275,9 +275,6 @@ end)
 Players.PlayerRemoving:Connect(function(player)
     clientReady[player] = nil
     currentVotes[player.UserId] = nil
-    if allowVote.clear then
-        allowVote:clear(player.UserId)
-    end
     GameAnalytics.sessionEnded(player)
 end)
 
