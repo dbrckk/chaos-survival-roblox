@@ -1,5 +1,3 @@
-local Debris = game:GetService("Debris")
-
 local DisasterImpact = {}
 
 function DisasterImpact.damageForDistance(distance, radius, maxDamage)
@@ -39,50 +37,6 @@ function DisasterImpact.applyRadialDamage(ctx, position, radius, maxDamage)
     end
 
     return hits
-end
-
-function DisasterImpact.createBurst(position, color, radius)
-    local burst = Instance.new("Part")
-    burst.Name = "HazardImpactBurst"
-    burst.Shape = Enum.PartType.Ball
-    burst.Size = Vector3.new(1, 1, 1)
-    burst.Position = position
-    burst.Anchored = true
-    burst.CanCollide = false
-    burst.CanTouch = false
-    burst.CanQuery = false
-    burst.CastShadow = false
-    burst.Material = Enum.Material.Neon
-    burst.Color = color
-    burst.Transparency = 0.18
-    burst.Parent = workspace
-
-    local light = Instance.new("PointLight")
-    light.Color = color
-    light.Brightness = 2.4
-    light.Range = math.max(12, radius * 2.2)
-    light.Shadows = false
-    light.Parent = burst
-
-    task.spawn(function()
-        local started = os.clock()
-        local duration = 0.24
-        while burst.Parent do
-            local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
-            local diameter = 1 + ((radius * 2) * alpha)
-            burst.Size = Vector3.new(diameter, diameter, diameter)
-            burst.Transparency = 0.18 + (0.82 * alpha)
-            light.Brightness = 2.4 * (1 - alpha)
-
-            if alpha >= 1 then
-                break
-            end
-            task.wait()
-        end
-    end)
-
-    Debris:AddItem(burst, 0.32)
-    return burst
 end
 
 function DisasterImpact.animateMarker(marker, seconds, startSize, endSize)
