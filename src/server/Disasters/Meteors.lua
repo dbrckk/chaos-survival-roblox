@@ -9,6 +9,7 @@ function D.start(ctx)
     local warningSeconds = profile.MeteorWarningSeconds or 0.9
     local damage = profile.MeteorDamage or 50
     local radius = profile.MeteorRadius or 8
+    local travelSeconds = 0.5
 
     task.spawn(function()
         while ctx.Active() do
@@ -44,32 +45,32 @@ function D.start(ctx)
             meteor.Size = Vector3.new(7,7,7)
             meteor.Material = Enum.Material.Neon
             meteor.Color = Color3.fromRGB(255,120,40)
-            meteor.Position = impactPosition + Vector3.new(0, 65, 0)
+            meteor.Position = impactPosition + Vector3.new(0, 52, 0)
             meteor.Anchored = false
-            meteor.CanCollide = true
-            meteor.CanTouch = true
+            meteor.CanCollide = false
+            meteor.CanTouch = false
+            meteor.CanQuery = false
+            meteor.CastShadow = false
             meteor.Parent = workspace
-            meteor.AssemblyLinearVelocity = Vector3.new(math.random(-5,5), -72, math.random(-5,5))
+            meteor.AssemblyLinearVelocity = Vector3.new(0, -70, 0)
 
-            local resolved = false
-            local connection
-            connection = meteor.Touched:Connect(function(hit)
-                if resolved or not ctx.Active() then
+            if marker.Parent then marker:Destroy() end
+            ctx.Cleanup[#ctx.Cleanup+1] = meteor
+            Debris:AddItem(meteor, travelSeconds + 1)
+
+            task.delay(travelSeconds, function()
+                if not ctx.Active() then
+                    if meteor.Parent then
+                        meteor:Destroy()
+                    end
                     return
                 end
 
-                local character = hit and hit.Parent
-                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-                if humanoid and character == meteor.Parent then
-                    return
+                if meteor.Parent then
+                    meteor.Position = impactPosition + Vector3.new(0, 1, 0)
                 end
 
-                resolved = true
-                if connection then
-                    connection:Disconnect()
-                end
-
-                local position = meteor.Position
+                local position = impactPosition + Vector3.new(0, 1, 0)
                 DisasterImpact.applyRadialDamage(ctx, position, radius, damage, "Meteor")
                 if ctx.OnHazardImpact then
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 120, 40), radius, "Meteor")
@@ -79,10 +80,6 @@ function D.start(ctx)
                     meteor:Destroy()
                 end
             end)
-
-            if marker.Parent then marker:Destroy() end
-            ctx.Cleanup[#ctx.Cleanup+1] = meteor
-            Debris:AddItem(meteor, 6)
 
             local intensity = ctx.Intensity and ctx.Intensity() or 1
             task.wait(math.max(0.48, 0.7 / intensity))
