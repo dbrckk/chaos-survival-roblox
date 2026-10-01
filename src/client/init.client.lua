@@ -857,15 +857,20 @@ local function showRoundFeedback(feedback)
     resultTitle.Text = survived and "SURVIVED!" or "ELIMINATED"
 
     local streakBonus = tonumber(feedback.streakBonusCoins) or 0
+    local shardCoins = tonumber(feedback.shardCoins) or 0
+    local shownCoins = (tonumber(feedback.coins) or 0) + shardCoins
+
+    local extras = {}
     if streakBonus > 0 then
-        resultReward.Text = string.format(
-            "+%d COINS   +%d XP   •   STREAK +%d",
-            feedback.coins or 0,
-            feedback.xp or 0,
-            streakBonus
-        )
-    else
-        resultReward.Text = string.format("+%d COINS   +%d XP", feedback.coins or 0, feedback.xp or 0)
+        table.insert(extras, "STREAK +" .. tostring(streakBonus))
+    end
+    if shardCoins > 0 then
+        table.insert(extras, "SHARDS +" .. tostring(shardCoins))
+    end
+
+    resultReward.Text = string.format("+%d COINS   +%d XP", shownCoins, feedback.xp or 0)
+    if #extras > 0 then
+        resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")
     end
 
     local tags = {}
@@ -873,6 +878,10 @@ local function showRoundFeedback(feedback)
     table.insert(tags, tostring(feedback.disasterName or "CHAOS"))
     if feedback.doubleChaos then table.insert(tags, "DOUBLE CHAOS") end
     if feedback.soloMode then table.insert(tags, "SOLO RUSH") end
+    local shardCount = math.max(0, math.floor(tonumber(feedback.shardCount) or 0))
+    if shardCount > 0 then
+        table.insert(tags, "SHARDS x" .. tostring(shardCount))
+    end
     local streakCount = tonumber(feedback.streak) or 0
     if survived and streakCount >= 2 then
         table.insert(tags, "STREAK x" .. tostring(streakCount))
