@@ -61,6 +61,21 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce production release hygiene
+        shell: bash
+        run: |
+          if grep -RniE --include='*.lua' --include='*.luau' '\b(TODO|FIXME|HACK)\b' src; then
+            echo "Production source contains unresolved TODO/FIXME/HACK markers."
+            exit 1
+          fi
+
+          if grep -RniE --include='*.lua' --include='*.luau' '(123456|000000|PLACEHOLDER_ID|FAKE_ID|DUMMY_ID)' src; then
+            echo "Production source contains an obvious placeholder/fake identifier."
+            exit 1
+          fi
+
+          echo "Production release hygiene verified."
+
       - name: Enforce server service export contracts
         shell: bash
         run: |
