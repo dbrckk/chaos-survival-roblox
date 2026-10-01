@@ -80,6 +80,7 @@ jobs:
             "tests/engine/disaster-impact.spec.luau",
             "tests/engine/disaster-runtime.spec.luau",
             "tests/engine/disaster-visuals.spec.luau",
+            "tests/engine/flow-combo.spec.luau",
             "tests/engine/hazard-warning.spec.luau",
             "tests/engine/mapbuilder.spec.luau",
             "tests/engine/movement-safety.spec.luau",
