@@ -371,6 +371,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundParticipant", true)
         player:SetAttribute("RoundEliminated", false)
         player:SetAttribute("RoundChaosShards", 0)
+        player:SetAttribute("RoundNearMisses", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
@@ -438,10 +439,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 return
             end
 
+            local total = math.max(0, math.floor(tonumber(player:GetAttribute("RoundNearMisses")) or 0)) + 1
+            player:SetAttribute("RoundNearMisses", total)
+
             hazardNearMissEvent:FireClient(player, {
                 kind = kind,
                 distance = distance,
                 radius = radius,
+                total = total,
             })
         end,
         OnArenaMechanicUsed = function(player, variantId, mechanicName)
@@ -966,6 +971,7 @@ while true do
                 streakBonusCoins = survived and streakBonusCoins or 0,
                 shardCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0)),
                 shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0)) * RoundCollectibles.reward(),
+                nearMissCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundNearMisses")) or 0)),
                 bestSessionStreak = bestSessionStreak,
                 arenaName = roundSettings.ArenaName,
                 disasterName = feedbackDisasterName,
