@@ -63,6 +63,7 @@ jobs:
             "tests/engine/data-schema.spec.luau",
             "tests/engine/game-analytics.spec.luau",
             "tests/engine/rate-limiter.spec.luau",
+            "tests/engine/remote-registry.spec.luau",
             "tests/engine/session-streak.spec.luau",
             "tests/engine/solo-rush.spec.luau",
             "tests/engine/survival-feedback.spec.luau",
