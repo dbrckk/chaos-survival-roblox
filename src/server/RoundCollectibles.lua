@@ -105,6 +105,36 @@ local function makeShard(container, supportPart, index)
     })
     emitter.Parent = attachment
 
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ShardLabel"
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.fromOffset(96, 34)
+    billboard.StudsOffset = Vector3.new(0, 1.8, 0)
+    billboard.MaxDistance = 70
+    billboard.Parent = shard
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundColor3 = Color3.fromRGB(12, 24, 38)
+    label.BackgroundTransparency = 0.18
+    label.BorderSizePixel = 0
+    label.Font = Enum.Font.GothamBlack
+    label.Text = "SHARD  +1"
+    label.TextColor3 = Color3.fromRGB(150, 235, 255)
+    label.TextScaled = true
+    label.TextStrokeTransparency = 0.7
+    label.Parent = billboard
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 9)
+    corner.Parent = label
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(145, 110, 255)
+    stroke.Thickness = 1.2
+    stroke.Transparency = 0.35
+    stroke.Parent = label
+
     return shard
 end
 
