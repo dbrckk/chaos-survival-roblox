@@ -16,6 +16,7 @@ localFolder.Parent = workspace
 local lobbySegments = {}
 local beaconEmitters = {}
 local arenaGlowParts = {}
+local hologramParts = {}
 local phase = "waiting"
 local accent = Color3.fromRGB(90, 185, 255)
 local secondaryAccent = nil
@@ -44,6 +45,7 @@ local function clearPolish()
     clearTableInstances(lobbySegments)
     clearTableInstances(beaconEmitters)
     clearTableInstances(arenaGlowParts)
+    table.clear(hologramParts)
     table.clear(secondaryLights)
 end
 
@@ -204,6 +206,15 @@ local function decorateArena(root)
         end
     end
 
+    local hologram = decor:FindFirstChild("ArenaIdentityHologram")
+    local hologramGlow = decor:FindFirstChild("ArenaIdentityGlow")
+    if hologram and hologram:IsA("BasePart") then
+        table.insert(hologramParts, hologram)
+    end
+    if hologramGlow and hologramGlow:IsA("BasePart") then
+        table.insert(hologramParts, hologramGlow)
+    end
+
     local centerBeacon = decor:FindFirstChild("CenterBeacon")
     if centerBeacon and centerBeacon:IsA("BasePart") then
         for i = 1, 4 do
@@ -272,6 +283,18 @@ end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     local tier = quality()
     applyLightBudget()
+    for index, part in ipairs(hologramParts) do
+        if part.Parent then
+            local shimmer = (math.sin(clock * 2.1 + index * 0.8) + 1) * 0.5
+            if part.Name == "ArenaIdentityGlow" then
+                part.Color = blendedAccent
+                part.Transparency = 0.58 + shimmer * 0.20
+            else
+                part.Transparency = 0.16 + shimmer * 0.08
+            end
+        end
+    end
+
     for _, attachment in ipairs(beaconEmitters) do
         local emitter = attachment and attachment:FindFirstChildOfClass("ParticleEmitter")
         if emitter then
