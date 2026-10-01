@@ -50,12 +50,15 @@ scale.Parent = label
 
 local token = 0
 
-local function worldBurst(position)
+local function worldBurst(position, reward)
     if typeof(position) ~= "Vector3" then
         return
     end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local golden = (tonumber(reward) or 1) >= 3
+    local primary = golden and Color3.fromRGB(255, 215, 75) or UITheme.Colors.Cyan
+    local secondary = golden and Color3.fromRGB(255, 145, 45) or UITheme.Colors.Violet
 
     local core = Instance.new("Part")
     core.Name = "ShardPickupCoreLocal"
@@ -68,7 +71,7 @@ local function worldBurst(position)
     core.CanQuery = false
     core.CastShadow = false
     core.Material = Enum.Material.Neon
-    core.Color = UITheme.Colors.Cyan
+    core.Color = primary
     core.Transparency = 0.04
     core.Parent = workspace
 
@@ -83,7 +86,7 @@ local function worldBurst(position)
     ring.CanQuery = false
     ring.CastShadow = false
     ring.Material = Enum.Material.Neon
-    ring.Color = UITheme.Colors.Violet
+    ring.Color = secondary
     ring.Transparency = 0.16
     ring.Parent = workspace
 
@@ -116,7 +119,7 @@ local function worldBurst(position)
         emitter.Speed = NumberRange.new(3.5, 7.5)
         emitter.SpreadAngle = Vector2.new(180, 180)
         emitter.LightEmission = 1
-        emitter.Color = ColorSequence.new(UITheme.Colors.Cyan, UITheme.Colors.Violet)
+        emitter.Color = ColorSequence.new(primary, secondary)
         emitter.Size = NumberSequence.new({
             NumberSequenceKeypoint.new(0, 0.22),
             NumberSequenceKeypoint.new(1, 0),
@@ -131,7 +134,7 @@ local function worldBurst(position)
 
     if tier.Name == "High" then
         local light = Instance.new("PointLight")
-        light.Color = UITheme.Colors.Cyan
+        light.Color = primary
         light.Brightness = 1.8
         light.Range = 10
         light.Shadows = false
@@ -149,7 +152,12 @@ local function show(reward, total)
     token += 1
     local current = token
 
-    label.Text = "+" .. tostring(reward) .. " COIN  •  CHAOS SHARD " .. tostring(total)
+    local golden = (tonumber(reward) or 1) >= 3
+    label.Text = golden
+        and ("+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD")
+        or ("+" .. tostring(reward) .. " COIN  •  CHAOS SHARD " .. tostring(total))
+    label.TextColor3 = golden and Color3.fromRGB(255, 225, 105) or UITheme.Colors.Cyan
+    stroke.Color = golden and Color3.fromRGB(255, 165, 55) or UITheme.Colors.Violet
     label.Visible = true
     label.TextTransparency = 1
     label.BackgroundTransparency = 1
@@ -190,8 +198,9 @@ local function show(reward, total)
 end
 
 event.OnClientEvent:Connect(function(payload)
-    show(tonumber(payload.reward) or 1, tonumber(payload.total) or 1)
-    worldBurst(payload.position)
+    local reward = tonumber(payload.reward) or 1
+    show(reward, tonumber(payload.total) or 1)
+    worldBurst(payload.position, reward)
 end)
 
 
@@ -221,6 +230,8 @@ local function attachVisual(shardPart)
         return
     end
 
+    local golden = shardPart:GetAttribute("ChaosShardGolden") == true
+
     local folder = Instance.new("Folder")
     folder.Name = "LocalShardPolish"
     folder.Parent = shardPart
@@ -228,9 +239,9 @@ local function attachVisual(shardPart)
     local highlight = Instance.new("Highlight")
     highlight.Name = "ShardHighlight"
     highlight.Adornee = shardPart
-    highlight.FillColor = Color3.fromRGB(90, 210, 255)
+    highlight.FillColor = golden and Color3.fromRGB(255, 215, 80) or Color3.fromRGB(90, 210, 255)
     highlight.FillTransparency = 0.68
-    highlight.OutlineColor = Color3.fromRGB(210, 160, 255)
+    highlight.OutlineColor = golden and Color3.fromRGB(255, 245, 175) or Color3.fromRGB(210, 160, 255)
     highlight.OutlineTransparency = 0.18
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = folder
@@ -245,9 +256,9 @@ local function attachVisual(shardPart)
         facet.CanQuery = false
         facet.CastShadow = false
         facet.Material = Enum.Material.Neon
-        facet.Color = i == 2
-            and Color3.fromRGB(165, 105, 255)
-            or Color3.fromRGB(90, 215, 255)
+        facet.Color = golden
+            and (i == 2 and Color3.fromRGB(255, 155, 45) or Color3.fromRGB(255, 225, 95))
+            or (i == 2 and Color3.fromRGB(165, 105, 255) or Color3.fromRGB(90, 215, 255))
         facet.Size = Vector3.new(0.28, 2.15, 0.56)
         facet.Transparency = quality().Name == "Low" and 1 or 0.24
         facet.CFrame = shardPart.CFrame
@@ -259,8 +270,8 @@ local function attachVisual(shardPart)
     local ring = Instance.new("SelectionSphere")
     ring.Name = "ShardRing"
     ring.Adornee = shardPart
-    ring.Color3 = Color3.fromRGB(130, 225, 255)
-    ring.SurfaceColor3 = Color3.fromRGB(145, 105, 255)
+    ring.Color3 = golden and Color3.fromRGB(255, 225, 105) or Color3.fromRGB(130, 225, 255)
+    ring.SurfaceColor3 = golden and Color3.fromRGB(255, 145, 45) or Color3.fromRGB(145, 105, 255)
     ring.Transparency = 0.72
     ring.SurfaceTransparency = 1
     ring.Parent = folder
@@ -315,7 +326,9 @@ RunService.RenderStepped:Connect(function(dt)
             local distance = rootPart and (rootPart.Position - shardPart.Position).Magnitude or 999
             local closeDistance = 24 * tier.Scale
             local close = distance <= closeDistance
-            local pulse = (math.sin(pulseClock * (close and 6.5 or 3.8)) + 1) * 0.5
+            local golden = shardPart:GetAttribute("ChaosShardGolden") == true
+            local pulseSpeed = golden and (close and 8.2 or 5.2) or (close and 6.5 or 3.8)
+            local pulse = (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
 
             local highlight = folder:FindFirstChild("ShardHighlight")
             if highlight and highlight:IsA("Highlight") then
@@ -341,7 +354,7 @@ RunService.RenderStepped:Connect(function(dt)
             for i = 1, 3 do
                 local facet = folder:FindFirstChild("ShardFacet" .. i)
                 if facet and facet:IsA("BasePart") then
-                    local angle = pulseClock * (close and 1.45 or 0.75) + math.rad((i - 1) * 60)
+                    local angle = pulseClock * (golden and 1.85 or (close and 1.45 or 0.75)) + math.rad((i - 1) * 60)
                     facet.CFrame = shardPart.CFrame
                         * CFrame.Angles(0, angle, math.rad(22 + math.sin(pulseClock * 2 + i) * 4))
                     facet.Transparency = facetTier == "Low"
