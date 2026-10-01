@@ -69,6 +69,41 @@ describe("Contestant scoping", function()
         outsiderCharacter:Destroy()
     end)
 
+    it("Speed Surge cleanup does not overwrite a newer speed state", function()
+        local included, includedCharacter, includedHum = fakeContestant(
+            "SpeedState",
+            Config.ArenaCenter + Vector3.new(8, 4, 0)
+        )
+
+        local cleanup = {}
+        local onCleanup = {}
+        local active = true
+
+        SpeedSurge.start({
+            Config = Config,
+            Contestants = {included},
+            Cleanup = cleanup,
+            OnCleanup = onCleanup,
+            Active = function() return active end,
+            IsContestantActive = function(player)
+                return player == included
+            end,
+            BalanceProfile = {SpeedMultiplier = 1.5},
+        })
+
+        local surgeSpeed = includedHum.WalkSpeed
+        expect(surgeSpeed > 16).toBe(true)
+
+        includedHum.WalkSpeed = 18
+        active = false
+        for _, fn in ipairs(onCleanup) do
+            pcall(fn)
+        end
+
+        expect(includedHum.WalkSpeed).toBe(18)
+        includedCharacter:Destroy()
+    end)
+
     it("Moon Gravity only adds force to listed contestants and preserves world gravity", function()
         local included, includedCharacter = fakeContestant(
             "MoonIncluded",
