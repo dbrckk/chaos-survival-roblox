@@ -113,13 +113,17 @@ local function offerForKey(key)
     return nil
 end
 
+local function waitForDataLoaded(player)
+    while player.Parent == Players and player:GetAttribute("DataLoaded") ~= true do
+        player:GetAttributeChangedSignal("DataLoaded"):Wait()
+    end
+
+    return player.Parent == Players and player:GetAttribute("DataLoaded") == true
+end
+
 local function setupPlayer(player)
     task.spawn(function()
-        if player:GetAttribute("DataLoaded") ~= true then
-            player:GetAttributeChangedSignal("DataLoaded"):Wait()
-        end
-
-        if player.Parent ~= Players then
+        if not waitForDataLoaded(player) then
             return
         end
 
@@ -142,6 +146,10 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
     local allowAction = rateLimiterFactory.new(0.75)
 
     actionEvent.OnServerEvent:Connect(function(player, action, key)
+        if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
+            return
+        end
+
         if action == "sync" then
             sendState(player)
             return
@@ -184,6 +192,10 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
 
     MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, purchasedPassId, purchaseSuccess)
         if not purchaseSuccess or player.Parent ~= Players then
+            return
+        end
+
+        if not waitForDataLoaded(player) then
             return
         end
 
