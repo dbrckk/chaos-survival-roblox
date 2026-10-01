@@ -945,6 +945,17 @@ while true do
                 roundElapsed
             )
 
+            if criticalSurvival then
+                GameAnalytics.custom(
+                    p,
+                    "CriticalSurvival",
+                    1,
+                    "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo),
+                    "Disaster:" .. tostring(selected.Id),
+                    "Double:" .. tostring(#selectedSet > 1)
+                )
+            end
+
             AchievementService.evaluate(p)
 
             roundFeedbackEvent:FireClient(p, {
