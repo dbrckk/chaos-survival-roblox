@@ -7,6 +7,8 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local player = Players.LocalPlayer
 local tracked = {}
 local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+local renderConnection = nil
+local ensureRenderLoop
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -30,6 +32,8 @@ local function register(part)
         endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
         clock = 0,
     }
+
+    ensureRenderLoop()
 end
 
 local function maybeRegister(part)
@@ -68,36 +72,47 @@ workspace.ChildRemoved:Connect(function(child)
     tracked[child] = nil
 end)
 
-RunService.RenderStepped:Connect(function(dt)
-    for part, state in pairs(tracked) do
-        if not part.Parent then
-            tracked[part] = nil
-            continue
-        end
-
-        state.clock += dt
-        if state.clock < currentTier.UpdateInterval then
-            continue
-        end
-        state.clock = 0
-
-        local alpha = math.clamp((workspace:GetServerTimeNow() - state.startedAt) / state.duration, 0, 1)
-        local pulse = (math.sin(alpha * math.pi * 6) + 1) * 0.5
-
-        if state.kind == "Freeze" then
-            part.Transparency = 0.78 - (0.30 * math.sin(alpha * math.pi))
-        elseif state.kind == "JumpShock" then
-            local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
-            part.Size = Vector3.new(part.Size.X, diameter, diameter)
-            part.Transparency = 0.30 + (0.58 * alpha)
-        else
-            local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
-            part.Size = Vector3.new(diameter, part.Size.Y, diameter)
-            part.Transparency = 0.12 + (pulse * 0.24)
-        end
-
-        if alpha >= 1 then
-            tracked[part] = nil
-        end
+ensureRenderLoop = function()
+    if renderConnection or next(tracked) == nil then
+        return
     end
-end)
+
+    renderConnection = RunService.RenderStepped:Connect(function(dt)
+        for part, state in pairs(tracked) do
+            if not part.Parent then
+                tracked[part] = nil
+                continue
+            end
+
+            state.clock += dt
+            if state.clock < currentTier.UpdateInterval then
+                continue
+            end
+            state.clock = 0
+
+            local alpha = math.clamp((workspace:GetServerTimeNow() - state.startedAt) / state.duration, 0, 1)
+            local pulse = (math.sin(alpha * math.pi * 6) + 1) * 0.5
+
+            if state.kind == "Freeze" then
+                part.Transparency = 0.78 - (0.30 * math.sin(alpha * math.pi))
+            elseif state.kind == "JumpShock" then
+                local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
+                part.Size = Vector3.new(part.Size.X, diameter, diameter)
+                part.Transparency = 0.30 + (0.58 * alpha)
+            else
+                local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
+                part.Size = Vector3.new(diameter, part.Size.Y, diameter)
+                part.Transparency = 0.12 + (pulse * 0.24)
+            end
+
+            if alpha >= 1 then
+                tracked[part] = nil
+            end
+        end
+
+        if next(tracked) == nil and renderConnection then
+            renderConnection:Disconnect()
+            renderConnection = nil
+        end
+    end)
+end
