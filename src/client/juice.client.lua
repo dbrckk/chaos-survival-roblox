@@ -11,6 +11,7 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local feedbackEvent = remotes:WaitForChild("RoundFeedback")
+local hazardNearMissEvent = remotes:WaitForChild("HazardNearMiss")
 
 local camera = workspace.CurrentCamera
 
@@ -341,6 +342,28 @@ local function celebrateCharacter()
         if glow.Parent then glow:Destroy() end
     end)
 end
+
+local lastNearMissAt = 0
+
+hazardNearMissEvent.OnClientEvent:Connect(function(payload)
+    local now = os.clock()
+    if now - lastNearMissAt < 1.2 then
+        return
+    end
+    lastNearMissAt = now
+
+    local kind = tostring(payload.kind or "HAZARD"):upper()
+    local accent = kind == "METEOR"
+        and Color3.fromRGB(190, 105, 35)
+        or Color3.fromRGB(165, 45, 45)
+
+    showBanner(
+        "CLUTCH DODGE",
+        kind .. " missed by inches",
+        accent,
+        1.05
+    )
+end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     local survivalStreak = tonumber(feedback.streak) or 0
