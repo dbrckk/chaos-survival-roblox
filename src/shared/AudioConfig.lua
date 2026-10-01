@@ -35,6 +35,7 @@ AudioConfig.Sfx = {
     Speed = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.28, PlaybackSpeed = 1.65},
     MobilityPad = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.34, PlaybackSpeed = 1.25},
     Overdrive = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.52, PlaybackSpeed = 0.72},
+    FinalRush = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.42, PlaybackSpeed = 1.05},
     Darkness = {SoundId = "rbxasset://sounds/switch.wav", Volume = 0.25, PlaybackSpeed = 0.55},
     Shrink = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.24, PlaybackSpeed = 0.72},
 }
