@@ -518,7 +518,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 1,
                 "Arena:" .. tostring(variantId),
                 "Mechanic:" .. tostring(mechanicName),
-                usedOverdrive == true and "Overdrive:Yes" or "Overdrive:No"
+                "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo)
+                    .. "|Overdrive:" .. (usedOverdrive == true and "Yes" or "No")
             )
         end,
         SoloMode = roundSettings.Solo,
@@ -626,7 +627,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end
 
         local roundHint = roundSettings.Solo and ("Solo bonus active • " .. hint) or hint
-        if overdriveActive then
+        if finalRushActive then
+            roundHint = "FINAL RUSH • Pads recharge faster • " .. roundHint
+        elseif overdriveActive then
             roundHint = "OVERDRIVE • Boost pads + Shard surge • " .. roundHint
         end
 
