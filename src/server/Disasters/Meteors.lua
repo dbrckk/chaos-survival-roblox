@@ -69,7 +69,9 @@ function D.start(ctx)
 
                 local position = meteor.Position
                 DisasterImpact.applyRadialDamage(ctx, position, radius, damage)
-                DisasterImpact.createBurst(position, Color3.fromRGB(255, 120, 40), radius)
+                if ctx.OnHazardImpact then
+                    pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 120, 40), radius, "Meteor")
+                end
 
                 if meteor.Parent then
                     meteor:Destroy()
