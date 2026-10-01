@@ -14,9 +14,24 @@ local function copyTable(source)
     return result
 end
 
-function DataSession.claim(saved, token, claimedAt)
+function DataSession.claim(saved, token, claimedAt, force)
+    local currentToken = type(saved) == "table" and saved[DataSession.TokenKey] or nil
+    local requestedToken = tostring(token or "")
+
+    if requestedToken == "" then
+        return nil
+    end
+
+    if not force
+        and type(currentToken) == "string"
+        and currentToken ~= ""
+        and currentToken ~= requestedToken
+    then
+        return nil
+    end
+
     local result = copyTable(saved)
-    result[DataSession.TokenKey] = tostring(token or "")
+    result[DataSession.TokenKey] = requestedToken
     result[DataSession.ClaimedAtKey] = math.max(0, tonumber(claimedAt) or 0)
     return result
 end
@@ -38,6 +53,17 @@ function DataSession.merge(saved, snapshot, token, savedAt)
         result[key] = value
     end
     result[DataSession.TokenKey] = token
+    result[DataSession.SavedAtKey] = math.max(0, tonumber(savedAt) or 0)
+    return result
+end
+
+function DataSession.release(saved, token, savedAt)
+    if not DataSession.owns(saved, token) then
+        return nil
+    end
+
+    local result = copyTable(saved)
+    result[DataSession.TokenKey] = ""
     result[DataSession.SavedAtKey] = math.max(0, tonumber(savedAt) or 0)
     return result
 end
