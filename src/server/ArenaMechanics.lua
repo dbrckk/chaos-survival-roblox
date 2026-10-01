@@ -118,6 +118,10 @@ function ArenaMechanics.impulseFor(impulse, overdrive)
     return impulse * multiplier
 end
 
+function ArenaMechanics.cooldownFor(finalRush)
+    return finalRush == true and 0.65 or 1.1
+end
+
 function ArenaMechanics.safeVelocity(currentVelocity, impulse)
     return MovementSafety.addImpulse(
         currentVelocity,
@@ -172,7 +176,8 @@ function ArenaMechanics.start(ctx, variantId)
             if (cooldownUntil[player.UserId] or 0) > now then
                 return
             end
-            cooldownUntil[player.UserId] = now + 1.1
+            local finalRush = ctx.FinalRush and ctx.FinalRush() == true
+            cooldownUntil[player.UserId] = now + ArenaMechanics.cooldownFor(finalRush)
 
             local overdrive = ctx.Overdrive and ctx.Overdrive() == true
             local appliedImpulse = ArenaMechanics.impulseFor(impulse, overdrive)
