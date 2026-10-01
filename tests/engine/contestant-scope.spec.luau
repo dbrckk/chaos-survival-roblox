@@ -154,10 +154,14 @@ describe("Contestant scoping", function()
     end)
 
 
-    it("Rising Lava detects scripted contact without relying on Touched", function()
-        expect(RisingLava.rootTouchesLava(10, 7.5, 2.5)).toBe(true)
-        expect(RisingLava.rootTouchesLava(10.1, 7.5, 2.5)).toBe(false)
-        expect(RisingLava.rootTouchesLava(5, 7.5, 2.5)).toBe(true)
+    it("Rising Lava detects scripted contact only inside its footprint", function()
+        local lavaPosition = Vector3.new(0, 5.5, 0)
+        local lavaSize = Vector3.new(100, 4, 100)
+
+        expect(RisingLava.rootInsideLava(Vector3.new(0, 10, 0), lavaPosition, lavaSize, 2.5)).toBe(true)
+        expect(RisingLava.rootInsideLava(Vector3.new(0, 10.1, 0), lavaPosition, lavaSize, 2.5)).toBe(false)
+        expect(RisingLava.rootInsideLava(Vector3.new(60, 5, 0), lavaPosition, lavaSize, 2.5)).toBe(false)
+        expect(RisingLava.rootInsideLava(Vector3.new(0, 5, 60), lavaPosition, lavaSize, 2.5)).toBe(false)
     end)
 
     it("Rising Lava fully covers the active arena footprint", function()
