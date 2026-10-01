@@ -510,6 +510,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo),
                 "Count:" .. tostring(total)
             )
+            GameAnalytics.onboarding(
+                player,
+                6,
+                "FirstShardCollected",
+                roundSettings.Solo
+            )
         end,
     }
 
