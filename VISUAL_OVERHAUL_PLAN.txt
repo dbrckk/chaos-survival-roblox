@@ -87,9 +87,9 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.2 Clutch Survival plus spectaculaire mais bref.
 [QA]   6.3 Close Call plus lisible et moins intrusif.
 [QA]   6.4 Shard pickup world burst.
-[TODO] 6.5 Level up / reward / streak polish.
+[EN COURS] 6.5 Level up / reward / streak polish.
 [EN COURS] 6.6 Round start / round end transitions.
-[TODO] 6.7 Spectator polish.
+[QA]   6.7 Spectator polish.
 [TODO] 6.8 Vérifier fatigue visuelle et accessibilité.
 
 PHASE 7 — OPTIMISATION VISUELLE
