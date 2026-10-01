@@ -947,6 +947,8 @@ while true do
                 xp = survived and winXP or Config.ParticipationXP,
                 streak = survivalStreak,
                 streakBonusCoins = survived and streakBonusCoins or 0,
+                shardCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0)),
+                shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0)) * RoundCollectibles.reward(),
                 bestSessionStreak = bestSessionStreak,
                 arenaName = roundSettings.ArenaName,
                 disasterName = feedbackDisasterName,
