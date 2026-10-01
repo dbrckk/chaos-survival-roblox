@@ -551,6 +551,45 @@ local function buildLobby(root, config)
         lane.Transparency = 0.38
     end
 
+
+    local loopSteps = {
+        {label = "01  VOTE", offset = Vector3.new(-21, 1.16, -10), color = VisualTheme.Accents.Cyan},
+        {label = "02  SURVIVE", offset = Vector3.new(0, 1.16, -18), color = VisualTheme.Accents.Violet},
+        {label = "03  REPEAT", offset = Vector3.new(21, 1.16, -10), color = VisualTheme.Accents.Magenta},
+    }
+
+    for i, def in ipairs(loopSteps) do
+        local panel = decorPart(
+            decor,
+            "LobbyLoopPanel" .. i,
+            Vector3.new(15, 0.10, 5.2),
+            config.LobbyCenter + def.offset,
+            VisualTheme.World.Deep,
+            VisualTheme.Materials.Panel
+        )
+        panel.Transparency = 0.03
+
+        local gui = Instance.new("SurfaceGui")
+        gui.Name = "LoopPanelGui"
+        gui.Face = Enum.NormalId.Top
+        gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+        gui.PixelsPerStud = 34
+        gui.LightInfluence = 0
+        gui.AlwaysOnTop = false
+        gui.Parent = panel
+
+        local text = Instance.new("TextLabel")
+        text.Size = UDim2.fromScale(1, 1)
+        text.BackgroundTransparency = 1
+        text.Font = Enum.Font.GothamBlack
+        text.Text = def.label
+        text.TextColor3 = def.color
+        text.TextStrokeColor3 = Color3.fromRGB(5, 8, 14)
+        text.TextStrokeTransparency = 0.40
+        text.TextScaled = true
+        text.Parent = gui
+    end
+
     local centerPlatform = part(
         decor,
         "CenterPlatform",
