@@ -22,6 +22,7 @@ AudioConfig.Sfx = {
     Hit = {SoundId = "rbxasset://sounds/collide.wav", Volume = 0.18, PlaybackSpeed = 1.45},
     Reward = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.36, PlaybackSpeed = 1.9},
     ShardCollect = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.30, PlaybackSpeed = 2.25},
+    GoldenShard = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.50, PlaybackSpeed = 1.60},
     LevelUp = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.58, PlaybackSpeed = 2.15},
     JumpShock = {SoundId = "rbxasset://sounds/short spring sound.wav", Volume = 0.34, PlaybackSpeed = 1.15},
     Meteor = {SoundId = "rbxasset://sounds/collide.wav", Volume = 0.30, PlaybackSpeed = 0.9},
