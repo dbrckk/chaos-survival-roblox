@@ -106,8 +106,8 @@ PHASE 8 — PRESENTATION PUBLIQUE
 [TODO] 8.1 Créer icône finale.
 [TODO] 8.2 Créer 3–5 thumbnails cohérents.
 [TODO] 8.3 Créer captures gameplay propres.
-[TODO] 8.4 Écrire description publique orientée joueurs.
-[TODO] 8.5 Préparer trailer court si utile.
+[FAIT] 8.4 Écrire description publique orientée joueurs.
+[FAIT] 8.5 Préparer trailer court si utile.
 [TODO] 8.6 Vérifier rendu mobile de la page Roblox.
 
 PHASE 9 — CERTIFICATION VISUELLE FINALE
