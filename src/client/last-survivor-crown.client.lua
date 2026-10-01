@@ -1,6 +1,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -44,8 +47,10 @@ scale.Scale = 0.86
 scale.Parent = label
 
 local activeHighlight = nil
+local activeAura = nil
 local activeCharacter = nil
 local activeUserId = nil
+local pulseClock = 0
 
 local function clear()
     activeUserId = nil
@@ -56,6 +61,11 @@ local function clear()
     if activeHighlight then
         activeHighlight:Destroy()
         activeHighlight = nil
+    end
+
+    if activeAura then
+        activeAura:Destroy()
+        activeAura = nil
     end
 end
 
@@ -111,6 +121,50 @@ local function bind(userId)
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = character
     activeHighlight = highlight
+
+    local aura = Instance.new("Attachment")
+    aura.Name = "LastSurvivorAuraLocal"
+    aura.Position = Vector3.new(0, 1.15, 0)
+    aura.Parent = head
+
+    local emitter = Instance.new("ParticleEmitter")
+    emitter.Name = "CrownMotes"
+    emitter.Rate = 0
+    emitter.Lifetime = NumberRange.new(0.45, 0.85)
+    emitter.Speed = NumberRange.new(0.45, 1.2)
+    emitter.Acceleration = Vector3.new(0, 1.8, 0)
+    emitter.SpreadAngle = Vector2.new(55, 55)
+    emitter.LightEmission = 1
+    emitter.Color = ColorSequence.new(
+        Color3.fromRGB(255, 235, 145),
+        Color3.fromRGB(255, 155, 55)
+    )
+    emitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.18),
+        NumberSequenceKeypoint.new(0.55, 0.11),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    emitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.05),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    emitter.Parent = aura
+
+    local light = Instance.new("PointLight")
+    light.Name = "CrownLight"
+    light.Color = Color3.fromRGB(255, 205, 80)
+    light.Brightness = 0.85
+    light.Range = 8
+    light.Shadows = false
+    light.Parent = aura
+
+    local tier = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
+    if tier.Name ~= "Low" then
+        emitter:Emit(VfxQuality.particleCount(tier.Name, 16, 6))
+    end
+    light.Enabled = tier.Name == "High"
+
+    activeAura = aura
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
@@ -130,5 +184,45 @@ end)
 Players.PlayerRemoving:Connect(function(player)
     if activeUserId == player.UserId then
         clear()
+    end
+end)
+
+
+local emitClock = 0
+RunService.RenderStepped:Connect(function(dt)
+    if not activeAura or not activeAura.Parent or not activeHighlight then
+        return
+    end
+
+    pulseClock += dt
+    emitClock += dt
+
+    local tier = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
+    local pulse = (math.sin(pulseClock * 3.4) + 1) * 0.5
+
+    activeHighlight.FillTransparency = math.clamp(
+        0.91 - (pulse * 0.07 * tier.Scale),
+        0.78,
+        0.95
+    )
+    activeHighlight.OutlineTransparency = math.clamp(
+        0.15 - (pulse * 0.08 * tier.Scale),
+        0.02,
+        0.24
+    )
+    stroke.Transparency = math.clamp(0.24 - pulse * 0.12, 0.06, 0.28)
+
+    local light = activeAura:FindFirstChild("CrownLight")
+    if light and light:IsA("PointLight") then
+        light.Enabled = tier.Name == "High"
+        light.Brightness = 0.72 + pulse * 0.42
+    end
+
+    if tier.Name ~= "Low" and emitClock >= math.max(0.45, 0.72 / tier.Scale) then
+        emitClock = 0
+        local emitter = activeAura:FindFirstChild("CrownMotes")
+        if emitter and emitter:IsA("ParticleEmitter") then
+            emitter:Emit(VfxQuality.particleCount(tier.Name, 5, 2))
+        end
     end
 end)
