@@ -61,6 +61,7 @@ jobs:
             "tests/engine/daily-quests.spec.luau",
             "tests/engine/daily-rewards.spec.luau",
             "tests/engine/data-schema.spec.luau",
+            "tests/engine/data-session.spec.luau",
             "tests/engine/game-analytics.spec.luau",
             "tests/engine/rate-limiter.spec.luau",
             "tests/engine/remote-registry.spec.luau",
