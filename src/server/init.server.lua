@@ -41,6 +41,7 @@ local RoundIntensity = require(script.RoundIntensity)
 local RoundCleanup = require(script.RoundCleanup)
 local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
+local RoundChallenge = require(script.RoundChallenge)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -398,6 +399,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local overdriveStartRemaining = math.floor(roundSettings.RoundSeconds * 0.58)
     local overdriveDuration = math.clamp(math.floor(roundSettings.RoundSeconds * 0.16), 5, 7)
     local overdriveEndRemaining = math.max(0, overdriveStartRemaining - overdriveDuration)
+    local roundChallenge = RoundChallenge.forRound(roundNumber)
     local cleanup = {}
     local onCleanup = {}
     local eliminated = {}
@@ -409,6 +411,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundEliminated", false)
         player:SetAttribute("RoundChaosShards", 0)
         player:SetAttribute("RoundNearMisses", 0)
+        player:SetAttribute("RoundMechanicUses", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
@@ -491,6 +494,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
             if player.Parent ~= Players then
                 return
             end
+
+            local mechanicUses = math.max(0, math.floor(tonumber(player:GetAttribute("RoundMechanicUses")) or 0)) + 1
+            player:SetAttribute("RoundMechanicUses", mechanicUses)
 
             arenaMechanicFeedbackEvent:FireClient(player, {
                 variantId = variantId,
@@ -630,6 +636,13 @@ local function runDisasterSet(selected, contestants, roundSettings)
             arenaMechanicHint = arenaMechanic and arenaMechanic.hint or nil,
             overdrive = overdriveActive,
             overdriveSeconds = overdriveActive and math.max(1, t - overdriveEndRemaining) or 0,
+            challengeId = roundChallenge.Id,
+            challengeTitle = roundChallenge.Title,
+            challengeShort = roundChallenge.Short,
+            challengeMetric = roundChallenge.Metric,
+            challengeTarget = roundChallenge.Target,
+            challengeCoins = roundChallenge.Coins,
+            challengeXP = roundChallenge.XP,
             intensity = RoundIntensity.factor(
                 roundSettings.RoundSeconds - t,
                 roundSettings.RoundSeconds,
@@ -992,6 +1005,34 @@ while true do
                 progressQuest(p, "coins_earned", Config.ParticipationCoins)
             end
 
+            local roundShardCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0))
+            local roundNearMissCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundNearMisses")) or 0))
+            local roundMechanicUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMechanicUses")) or 0))
+            local challengeProgress = RoundChallenge.progress(
+                roundChallenge,
+                roundShardCount,
+                roundMechanicUses,
+                roundNearMissCount
+            )
+            local challengeCompleted = challengeProgress >= roundChallenge.Target
+            local challengeCoins = challengeCompleted and roundChallenge.Coins or 0
+            local challengeXP = challengeCompleted and roundChallenge.XP or 0
+
+            if challengeCompleted then
+                PlayerData.add(p, "Coins", challengeCoins)
+                PlayerData.add(p, "XP", challengeXP)
+                progressQuest(p, "coins_earned", challengeCoins)
+                GameAnalytics.economySource(p, challengeCoins, "RoundChallenge", roundChallenge.Id, roundSettings.Solo)
+                GameAnalytics.custom(
+                    p,
+                    "RoundChallengeCompleted",
+                    1,
+                    "Challenge:" .. roundChallenge.Id,
+                    "Arena:" .. tostring(currentArenaVariant),
+                    "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo)
+                )
+            end
+
             GameAnalytics.roundCompleted(
                 p,
                 survived,
@@ -1020,9 +1061,17 @@ while true do
                 xp = survived and winXP or Config.ParticipationXP,
                 streak = survivalStreak,
                 streakBonusCoins = survived and streakBonusCoins or 0,
-                shardCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0)),
-                shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0)) * RoundCollectibles.reward(),
-                nearMissCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundNearMisses")) or 0)),
+                shardCount = roundShardCount,
+                shardCoins = roundShardCount * RoundCollectibles.reward(),
+                nearMissCount = roundNearMissCount,
+                mechanicUses = roundMechanicUses,
+                challengeId = roundChallenge.Id,
+                challengeTitle = roundChallenge.Title,
+                challengeProgress = challengeProgress,
+                challengeTarget = roundChallenge.Target,
+                challengeCompleted = challengeCompleted,
+                challengeCoins = challengeCoins,
+                challengeXP = challengeXP,
                 bestSessionStreak = bestSessionStreak,
                 arenaName = roundSettings.ArenaName,
                 disasterName = feedbackDisasterName,
