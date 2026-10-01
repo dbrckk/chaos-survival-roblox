@@ -1,7 +1,13 @@
 local D = {Name = "SHRINKING ARENA", Hint = "STAY NEAR THE CENTER!"}
 
 function D.start(ctx)
-    local base = workspace.GeneratedMap.Arena.Base
+    local generatedMap = workspace:FindFirstChild("GeneratedMap")
+    local arena = generatedMap and generatedMap:FindFirstChild("Arena")
+    local base = arena and arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then
+        return
+    end
+
     local originalSize = base.Size
     local originalCFrame = base.CFrame
 
