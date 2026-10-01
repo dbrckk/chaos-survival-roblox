@@ -1110,7 +1110,8 @@ local function showRoundFeedback(feedback)
     local shardCoins = tonumber(feedback.shardCoins) or 0
     local challengeCoins = tonumber(feedback.challengeCoins) or 0
     local challengeXP = tonumber(feedback.challengeXP) or 0
-    local shownCoins = (tonumber(feedback.coins) or 0) + shardCoins + challengeCoins
+    local flowCoins = tonumber(feedback.flowCoins) or 0
+    local shownCoins = (tonumber(feedback.coins) or 0) + shardCoins + challengeCoins + flowCoins
     local shownXP = (tonumber(feedback.xp) or 0) + challengeXP
 
     local extras = {}
@@ -1122,6 +1123,9 @@ local function showRoundFeedback(feedback)
     end
     if feedback.challengeCompleted then
         table.insert(extras, "CHALLENGE +" .. tostring(challengeCoins))
+    end
+    if flowCoins > 0 then
+        table.insert(extras, "FLOW +" .. tostring(flowCoins))
     end
 
     resultReward.Text = string.format("+%d COINS   +%d XP", shownCoins, shownXP)
@@ -1170,7 +1174,11 @@ local function showRoundFeedback(feedback)
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
     resultMeta.Text = table.concat(tags, "  •  ")
 
-    if feedback.challengeCompleted then
+    if flowCoins > 0 and feedback.challengeCompleted then
+        resultTip.Text = "FLOW COMBO +" .. tostring(flowCoins) .. " • CHALLENGE COMPLETE"
+    elseif flowCoins > 0 then
+        resultTip.Text = "FLOW COMBO • pad → shard chain completed"
+    elseif feedback.challengeCompleted then
         if #medals > 0 then
             resultTip.Text = "CHALLENGE COMPLETE • " .. table.concat(medals, " • ")
         else
