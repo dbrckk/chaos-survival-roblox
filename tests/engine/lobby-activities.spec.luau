@@ -8,12 +8,13 @@ describe("Lobby activities", function()
     it("provides four symmetric practice boost pads", function()
         expect(#LobbyActivities.Definitions).toBe(4)
 
-        local total = Vector3.zero
+        local planarTotal = Vector3.zero
         for _, definition in ipairs(LobbyActivities.Definitions) do
-            total += definition.offset
+            planarTotal += Vector3.new(definition.offset.X, 0, definition.offset.Z)
+            expect(math.abs(definition.offset.Y - 1.45) < 0.001).toBe(true)
         end
 
-        expect(total.Magnitude < 0.001).toBe(true)
+        expect(planarTotal.Magnitude < 0.001).toBe(true)
     end)
 
     it("keeps practice boosts inside movement safety limits", function()
