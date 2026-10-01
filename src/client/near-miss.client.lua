@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
+
 local player = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardNearMiss")
 
@@ -15,7 +17,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local flash = Instance.new("Frame")
 flash.Name = "EdgeFlash"
 flash.Size = UDim2.fromScale(1, 1)
-flash.BackgroundColor3 = Color3.fromRGB(255, 185, 90)
+flash.BackgroundColor3 = UITheme.Colors.Orange
 flash.BackgroundTransparency = 1
 flash.BorderSizePixel = 0
 flash.Visible = false
@@ -36,7 +38,7 @@ card.Name = "NearMissCard"
 card.AnchorPoint = Vector2.new(0.5, 0.5)
 card.Position = UDim2.fromScale(0.5, 0.34)
 card.Size = UDim2.new(0.48, 0, 0, 62)
-card.BackgroundColor3 = Color3.fromRGB(24, 28, 38)
+card.BackgroundColor3 = UITheme.Colors.Panel
 card.BackgroundTransparency = 1
 card.BorderSizePixel = 0
 card.Visible = false
@@ -48,14 +50,22 @@ sizeConstraint.MaxSize = Vector2.new(420, 72)
 sizeConstraint.Parent = card
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 16)
+corner.CornerRadius = UITheme.Corners.Large
 corner.Parent = card
 
 local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(255, 185, 90)
+stroke.Color = UITheme.Colors.Orange
 stroke.Thickness = 1.5
 stroke.Transparency = 0.35
 stroke.Parent = card
+
+local accentLine = Instance.new("Frame")
+accentLine.Size = UDim2.new(1, -20, 0, 4)
+accentLine.Position = UDim2.fromOffset(10, 7)
+accentLine.BackgroundColor3 = UITheme.Colors.Orange
+accentLine.BorderSizePixel = 0
+accentLine.Parent = card
+UITheme.addCorner(accentLine, UITheme.Corners.Pill)
 
 local scale = Instance.new("UIScale")
 scale.Scale = 0.82
@@ -67,7 +77,7 @@ title.Position = UDim2.fromOffset(12, 5)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBlack
 title.Text = "CLOSE CALL!"
-title.TextColor3 = Color3.fromRGB(255, 225, 165)
+title.TextColor3 = UITheme.Colors.Gold
 title.TextScaled = true
 title.Parent = card
 
@@ -77,7 +87,7 @@ detail.Position = UDim2.new(0, 12, 0.62, 0)
 detail.BackgroundTransparency = 1
 detail.Font = Enum.Font.GothamBold
 detail.Text = ""
-detail.TextColor3 = Color3.fromRGB(215, 220, 235)
+detail.TextColor3 = UITheme.Colors.Muted
 detail.TextScaled = true
 detail.Parent = card
 
