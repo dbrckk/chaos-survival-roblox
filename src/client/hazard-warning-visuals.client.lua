@@ -23,7 +23,6 @@ local function register(part)
         duration = math.max(0.05, tonumber(part:GetAttribute("WarningDuration")) or 0.05),
         startSize = math.max(0.1, tonumber(part:GetAttribute("WarningStartSize")) or part.Size.X),
         endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
-        baseTransparency = part.Transparency,
         clock = 0,
     }
 end
