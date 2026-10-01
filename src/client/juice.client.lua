@@ -374,7 +374,9 @@ local function setMood(state)
             showBanner(
                 state.title or "CHAOS!",
                 phase == "ready" and "POSITION YOURSELF" or (state.arenaName or ""),
-                doubleChaos and Color3.fromRGB(78, 24, 105) or Color3.fromRGB(28, 35, 52),
+                doubleChaos
+                    and UITheme.Colors.Violet
+                    or (profile and profile.Accent or UITheme.Colors.Blue),
                 phase == "ready" and 1.15 or 1.6
             )
             lastRoundTitle = state.title
