@@ -1,5 +1,5 @@
 local Debris = game:GetService("Debris")
-local DisasterImpact = require(script.Parent.Parent.DisasterImpact)
+local DisasterImpact = if script then require(script.Parent.Parent.DisasterImpact) else require("../DisasterImpact")
 
 local D = {Name = "METEOR SHOWER", Hint = "WATCH THE WARNING CIRCLES!"}
 
