@@ -24,6 +24,7 @@ reportEvent.Name = "ChaosE2EReport"
 reportEvent.Parent = ReplicatedStorage
 
 local reports = {}
+local spectatorProbeReports = {}
 local failures = {}
 local removedUserId = nil
 
@@ -35,6 +36,14 @@ end
 reportEvent.OnServerEvent:Connect(function(player, report)
     if type(report) ~= "table" then
         fail("invalid report from " .. player.Name)
+        return
+    end
+
+    if report.kind == "spectator_probe" then
+        spectatorProbeReports[player.UserId] = report
+        if report.ok ~= true or report.spectatorVisible ~= true then
+            fail(player.Name .. ": spectator probe failed")
+        end
         return
     end
 
@@ -154,6 +163,38 @@ task.spawn(function()
 
     local players = Players:GetPlayers()
     if #players > 1 then
+        local probePlayer = players[#players]
+        local remotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
+        local roundState = remotesFolder and remotesFolder:FindFirstChild("RoundState")
+
+        if roundState and roundState:IsA("RemoteEvent") then
+            probePlayer:SetAttribute("RoundParticipant", false)
+            probePlayer:SetAttribute("RoundEliminated", false)
+            probePlayer:SetAttribute("ChaosE2ESpectatorProbe", true)
+            task.wait(0.25)
+            roundState:FireClient(probePlayer, {
+                phase = "round",
+                title = "E2E SPECTATOR PROBE",
+                hint = "",
+                seconds = 3,
+            })
+
+            local probeDeadline = os.clock() + 5
+            while spectatorProbeReports[probePlayer.UserId] == nil and os.clock() < probeDeadline do
+                task.wait(0.1)
+            end
+
+            local probeReport = spectatorProbeReports[probePlayer.UserId]
+            if not probeReport or probeReport.spectatorVisible ~= true then
+                fail("spectator UI did not activate for E2E probe")
+            end
+        else
+            fail("RoundState remote unavailable for spectator probe")
+        end
+    end
+
+    players = Players:GetPlayers()
+    if #players > 1 then
         players[#players]:SetAttribute("ChaosE2EShouldLeave", true)
 
         local leaveDeadline = os.clock() + 8
@@ -170,7 +211,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, UI/input/vote/movement/round-state/join-leave verified",
+            "PASS: %d clients, UI/input/vote/movement/round-state/spectator/join-leave verified",
             expectedTotal
         ))
     end
