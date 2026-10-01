@@ -191,7 +191,18 @@ function PlayerData.save(player, waitForExisting)
     return ok
 end
 
+function PlayerData.canMutate(player)
+    return player ~= nil
+        and player.Parent == Players
+        and active[player] == true
+        and player:GetAttribute("DataLoaded") == true
+end
+
 function PlayerData.add(player, field, amount)
+    if not PlayerData.canMutate(player) then
+        return tonumber(player and player:GetAttribute(field)) or 0
+    end
+
     local value = (player:GetAttribute(field) or 0) + amount
     player:SetAttribute(field, value)
 
@@ -203,6 +214,10 @@ function PlayerData.add(player, field, amount)
 end
 
 function PlayerData.claimDaily(player, nowTimestamp)
+    if not PlayerData.canMutate(player) then
+        return nil
+    end
+
     local currentDay = DailyRewards.dayNumber(nowTimestamp or os.time())
     local claim = DailyRewards.compute(
         player:GetAttribute("LastDailyDay"),
@@ -254,6 +269,10 @@ function PlayerData.getQuestState(player, nowTimestamp)
 end
 
 function PlayerData.progressQuestEvent(player, eventName, amount, nowTimestamp)
+    if not PlayerData.canMutate(player) then
+        return {}, PlayerData.getQuestState(player, nowTimestamp)
+    end
+
     PlayerData.ensureDailyQuests(player, nowTimestamp)
 
     local completed = {}
