@@ -36,6 +36,7 @@ local DisasterBalance = require(script.DisasterBalance)
 local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
 local RoundIntensity = require(script.RoundIntensity)
+local RoundCleanup = require(script.RoundCleanup)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -476,13 +477,16 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
     roundActive = false
 
-    for _, connection in pairs(deathConnections) do
-        connection:Disconnect()
-    end
-
-    for _, fn in ipairs(onCleanup) do pcall(fn) end
-    for _, obj in ipairs(cleanup) do
-        if obj and obj.Parent then obj:Destroy() end
+    local cleanupFailures = RoundCleanup.execute(
+        deathConnections,
+        onCleanup,
+        cleanup,
+        function(kind, key, err)
+            warn("Round cleanup failure:", kind, key, err)
+        end
+    )
+    if cleanupFailures > 0 then
+        warn("Round cleanup completed with failures:", cleanupFailures)
     end
 
     return eliminated, endedEarly, math.max(0, os.clock() - roundStartedAt)
