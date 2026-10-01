@@ -228,6 +228,10 @@ local function setupPlayer(player)
 end
 
 local function equipCosmetic(player, cosmeticId)
+    if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
+        return false
+    end
+
     local item = Cosmetics.get(cosmeticId)
     if not item then
         return false
@@ -259,6 +263,10 @@ local function equipCosmetic(player, cosmeticId)
 end
 
 local function buyCosmetic(player, cosmeticId)
+    if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
+        return
+    end
+
     local owned = player:GetAttribute("OwnedCosmetics") or ""
     local coins = math.max(0, tonumber(player:GetAttribute("Coins")) or 0)
     local canBuy, reason = Cosmetics.canBuy(owned, cosmeticId, coins)
@@ -296,7 +304,11 @@ local function buyCosmetic(player, cosmeticId)
 end
 
 function CosmeticService.grant(player, cosmeticId)
-    if not player or type(cosmeticId) ~= "string" then
+    if not player
+        or player.Parent ~= Players
+        or player:GetAttribute("DataLoaded") ~= true
+        or type(cosmeticId) ~= "string"
+    then
         return false
     end
 
@@ -340,6 +352,10 @@ function CosmeticService.init(remotes, rateLimiterFactory)
     local allowAction = rateLimiterFactory.new(0.25)
 
     actionEvent.OnServerEvent:Connect(function(player, action, cosmeticId)
+        if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
+            return
+        end
+
         if action == "sync" then
             sendState(player)
             return
