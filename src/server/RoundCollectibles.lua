@@ -97,6 +97,13 @@ local function makeShard(container, supportPart, index, reward, golden)
     light.Shadows = false
     light.Parent = shard
 
+    if isGolden then
+        local sparkles = Instance.new("Sparkles")
+        sparkles.Name = "GoldenShardSparkles"
+        sparkles.SparkleColor = Color3.fromRGB(255, 225, 105)
+        sparkles.Parent = shard
+    end
+
     local attachment = Instance.new("Attachment")
     attachment.Name = "ShardVfx"
     attachment.Parent = shard
