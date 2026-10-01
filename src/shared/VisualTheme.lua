@@ -24,7 +24,7 @@ VisualTheme.Accents = {
 VisualTheme.Materials = {
     Floor = Enum.Material.Slate,
     Structure = Enum.Material.Metal,
-    Panel = Enum.Material.Metal,
+    Panel = Enum.Material.DiamondPlate,
     Glow = Enum.Material.Neon,
 }
 
@@ -37,6 +37,9 @@ VisualTheme.Glow = {
 
 VisualTheme.Arenas = {
     Classic = {
+        FloorMaterial = Enum.Material.DiamondPlate,
+        StructureMaterial = Enum.Material.Metal,
+        PanelMaterial = Enum.Material.DiamondPlate,
         Surface = Color3.fromRGB(31, 39, 55),
         Structure = Color3.fromRGB(62, 76, 102),
         Accent = Color3.fromRGB(72, 185, 255),
@@ -44,6 +47,9 @@ VisualTheme.Arenas = {
         Detail = Color3.fromRGB(112, 135, 170),
     },
     Towers = {
+        FloorMaterial = Enum.Material.Metal,
+        StructureMaterial = Enum.Material.Metal,
+        PanelMaterial = Enum.Material.DiamondPlate,
         Surface = Color3.fromRGB(28, 38, 52),
         Structure = Color3.fromRGB(55, 76, 92),
         Accent = Color3.fromRGB(62, 215, 225),
@@ -51,6 +57,9 @@ VisualTheme.Arenas = {
         Detail = Color3.fromRGB(104, 160, 180),
     },
     Crossroads = {
+        FloorMaterial = Enum.Material.Slate,
+        StructureMaterial = Enum.Material.Metal,
+        PanelMaterial = Enum.Material.DiamondPlate,
         Surface = Color3.fromRGB(37, 32, 50),
         Structure = Color3.fromRGB(73, 59, 92),
         Accent = Color3.fromRGB(213, 86, 255),
@@ -58,6 +67,9 @@ VisualTheme.Arenas = {
         Detail = Color3.fromRGB(156, 115, 188),
     },
     Orbital = {
+        FloorMaterial = Enum.Material.SmoothPlastic,
+        StructureMaterial = Enum.Material.Metal,
+        PanelMaterial = Enum.Material.SmoothPlastic,
         Surface = Color3.fromRGB(23, 43, 48),
         Structure = Color3.fromRGB(50, 79, 82),
         Accent = Color3.fromRGB(76, 235, 190),
