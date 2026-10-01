@@ -75,6 +75,7 @@ jobs:
 
           [suites.gameplay]
           include = [
+            "tests/engine/chaos-fusion.spec.luau",
             "tests/engine/contestant-scope.spec.luau",
             "tests/engine/disaster-balance.spec.luau",
             "tests/engine/disaster-impact.spec.luau",
