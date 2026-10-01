@@ -5,6 +5,10 @@ function D.start(ctx)
     local worldGravity = workspace.Gravity
 
     for _, player in ipairs(ctx.Contestants or {}) do
+        if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
+            continue
+        end
+
         local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 
