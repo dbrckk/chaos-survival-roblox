@@ -267,6 +267,11 @@ local function buyCosmetic(player, cosmeticId)
         return
     end
 
+    if player:GetAttribute("DataPersistenceAvailable") ~= true then
+        sendState(player, nil, "data_unavailable")
+        return
+    end
+
     local owned = player:GetAttribute("OwnedCosmetics") or ""
     local coins = math.max(0, tonumber(player:GetAttribute("Coins")) or 0)
     local canBuy, reason = Cosmetics.canBuy(owned, cosmeticId, coins)
