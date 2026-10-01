@@ -67,7 +67,7 @@ local function addArenaFoundation(decor, config, variant, theme)
         Vector3.new(math.max(8, baseSize.X - 7), 0.14, math.max(8, baseSize.Z - 7)),
         center + Vector3.new(0, 1.08, 0),
         theme.Surface:Lerp(theme.Detail, 0.22),
-        VisualTheme.Materials.Panel
+        theme.PanelMaterial or VisualTheme.Materials.Panel
     )
     deckInset.Transparency = 0.03
 
@@ -475,7 +475,7 @@ local function addPlatformFinish(decor, platform, index, theme)
         ),
         platform.Position + Vector3.new(0, (platform.Size.Y * 0.5) + 0.055, 0),
         theme.Surface:Lerp(theme.Detail, 0.28),
-        VisualTheme.Materials.Panel
+        theme.PanelMaterial or VisualTheme.Materials.Panel
     )
     topPanel.Transparency = 0.04
 
@@ -757,7 +757,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         variant.BaseSize,
         config.ArenaCenter,
         theme.Surface,
-        VisualTheme.Materials.Floor
+        theme.FloorMaterial or VisualTheme.Materials.Floor
     )
     base:SetAttribute("OriginalSizeX", base.Size.X)
     base:SetAttribute("OriginalSizeZ", base.Size.Z)
@@ -899,7 +899,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             definition.size,
             platformPosition,
             theme.Detail,
-            VisualTheme.Materials.Structure
+            theme.StructureMaterial or VisualTheme.Materials.Structure
         )
         platform.Color = theme.Detail:Lerp(theme.Surface, 0.28)
 
