@@ -1077,6 +1077,13 @@ cosmeticStateEvent.OnClientEvent:Connect(function(payload)
         task.delay(2.6, function()
             questToast.Visible = false
         end)
+    elseif payload.notice == "data_unavailable" then
+        questToastTitle.Text = "SHOP TEMPORARILY PAUSED"
+        questToastBody.Text = "Your progress cannot be saved right now • try again later"
+        questToast.Visible = true
+        task.delay(3.2, function()
+            questToast.Visible = false
+        end)
     end
 end)
 
