@@ -43,6 +43,25 @@ describe("Disaster visual identities", function()
         expect((combined :: any).Accent).toBe((base :: any).Accent)
     end)
 
+    it("applies blackout brightness without darkening unrelated profiles", function()
+        local blackout = DisasterVisuals.combine({"Darkness"})
+        local lava = DisasterVisuals.combine({"RisingLava"})
+
+        expect(blackout ~= nil).toBe(true)
+        expect(lava ~= nil).toBe(true)
+        expect((blackout :: any).Brightness < 0).toBe(true)
+        expect((lava :: any).Brightness).toBe(0)
+    end)
+
+    it("blends blackout brightness for double chaos", function()
+        local combined = DisasterVisuals.combine({"Darkness", "RisingLava"})
+        expect(combined ~= nil).toBe(true)
+
+        local brightness = (combined :: any).Brightness
+        expect(brightness < 0).toBe(true)
+        expect(brightness > -0.28).toBe(true)
+    end)
+
     it("blends two disasters within safe visual limits", function()
         local combined = DisasterVisuals.combine({"RisingLava", "LowGravity"})
 
