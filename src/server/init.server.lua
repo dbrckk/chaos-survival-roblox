@@ -39,7 +39,8 @@ local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
 local RoundIntensity = require(script.RoundIntensity)
 local RoundCleanup = require(script.RoundCleanup)
-local SurvivalFeedback = require(script.SurvivalFeedback)\nlocal RoundCollectibles = require(script.RoundCollectibles)
+local SurvivalFeedback = require(script.SurvivalFeedback)
+local RoundCollectibles = require(script.RoundCollectibles)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -50,7 +51,8 @@ local roundFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundFeedb
 local clientReadyEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ClientReady")
 local arenaMechanicFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ArenaMechanicFeedback")
 local hazardImpactFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardImpactFeedback")
-local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNearMiss")\nlocal chaosShardCollectedEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ChaosShardCollected")
+local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNearMiss")
+local chaosShardCollectedEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ChaosShardCollected")
 
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
@@ -367,7 +369,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
     for _, player in ipairs(contestants) do
         eliminated[player.UserId] = false
         player:SetAttribute("RoundParticipant", true)
-        player:SetAttribute("RoundEliminated", false)\n        player:SetAttribute("RoundChaosShards", 0)
+        player:SetAttribute("RoundEliminated", false)
+        player:SetAttribute("RoundChaosShards", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
