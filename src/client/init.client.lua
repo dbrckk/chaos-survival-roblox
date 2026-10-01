@@ -885,6 +885,10 @@ local function showRoundFeedback(feedback)
     if shardCount > 0 then
         table.insert(tags, "SHARDS x" .. tostring(shardCount))
     end
+    local nearMissCount = math.max(0, math.floor(tonumber(feedback.nearMissCount) or 0))
+    if nearMissCount > 0 then
+        table.insert(tags, "CLOSE CALLS x" .. tostring(nearMissCount))
+    end
     local streakCount = tonumber(feedback.streak) or 0
     if survived and streakCount >= 2 then
         table.insert(tags, "STREAK x" .. tostring(streakCount))
