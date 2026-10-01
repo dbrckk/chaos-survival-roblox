@@ -533,8 +533,6 @@ while true do
     voteOpen = false
 
     local selected = winningOption()
-    recentPrimaryDisasterIds = RoundVariety.pushRecent(recentPrimaryDisasterIds, selected.Id, 2)
-    roundNumber += 1
 
     local contestants = Players:GetPlayers()
     local roundSettings = SoloRules.resolve(Config, #contestants)
@@ -596,6 +594,24 @@ while true do
         end
     end
     contestants = readyContestants
+
+    if #contestants == 0 then
+        broadcast({
+            phase = "waiting",
+            title = "WAITING FOR READY PLAYERS",
+            hint = "Preparing the next round",
+            seconds = 0,
+        })
+        task.wait(1)
+        continue
+    end
+
+    local resolvedArenaName = roundSettings.ArenaName
+    roundSettings = SoloRules.resolve(Config, #contestants)
+    roundSettings.ArenaName = resolvedArenaName
+
+    recentPrimaryDisasterIds = RoundVariety.pushRecent(recentPrimaryDisasterIds, selected.Id, 2)
+    roundNumber += 1
 
     local selectedSet = {selected}
     local forceDouble = (roundNumber % roundSettings.DoubleChaosEvery == 0)
