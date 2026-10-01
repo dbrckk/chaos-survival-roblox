@@ -7,6 +7,7 @@ local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local Freeze = require("../../src/server/Disasters/Freeze")
 local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
+local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
 
 local function baseContext()
     return {
@@ -23,6 +24,17 @@ local function baseContext()
 end
 
 describe("Round cleanup contracts", function()
+    it("structural disasters safely no-op when arena geometry is unavailable", function()
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        if generated then
+            generated:Destroy()
+        end
+
+        local ctx = baseContext()
+        expect(pcall(ShrinkingArena.start, ctx)).toBe(true)
+        expect(pcall(DisappearingPlatforms.start, ctx)).toBe(true)
+    end)
+
     it("Freeze registers deterministic cleanup restoration", function()
         local ctx = baseContext()
         Freeze.start(ctx)
