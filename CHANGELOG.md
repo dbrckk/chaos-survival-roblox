@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-01 — Release-candidate game-feel and mobile polish
+
+- Added optional server-authoritative Chaos Shards with coin rewards, daily-quest progress, analytics and round-result breakdown.
+- Added compact live round-focus HUD for Chaos intensity and shard progress.
+- Added contextual first-session coaching for voting, positioning, survival and shards.
+- Added close-call / near-miss feedback, sound, combo display and per-round summary tracking.
+- Added critical-health clutch-survival feedback and analytics.
+- Improved spectator HUD with live survivor/time context and hid active-player HUD while spectating.
+- Added adaptive shard visuals and removed redundant per-frame world-polish work for better mobile performance.
+- Fixed procedural world polish so it rebuilds on arena swaps inside the same GeneratedMap.
+- Preserved cosmetic-only monetization and server-authoritative gameplay.
+
 All notable changes to Chaos Survival are documented here.
 
 ## Unreleased — Release Candidate Hardening
