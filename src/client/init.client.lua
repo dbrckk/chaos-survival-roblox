@@ -1099,12 +1099,23 @@ local function showRoundFeedback(feedback)
     local token = resultToken
 
     local survived = feedback.survived == true
-    resultTitle.Text = survived and "SURVIVED!" or "ELIMINATED"
-    resultStroke.Color = survived and UITheme.Colors.Green or UITheme.Colors.Red
-    resultAccent.BackgroundColor3 = survived and UITheme.Colors.Green or UITheme.Colors.Red
-    resultGradient.Color = survived
-        and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
-        or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel)
+    local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
+    local masterRound = survived and feedback.challengeCompleted == true and momentumBest >= 4
+
+    resultTitle.Text = masterRound
+        and "MASTER ROUND!"
+        or (survived and "SURVIVED!" or "ELIMINATED")
+    resultStroke.Color = masterRound
+        and UITheme.Colors.Gold
+        or (survived and UITheme.Colors.Green or UITheme.Colors.Red)
+    resultAccent.BackgroundColor3 = masterRound
+        and UITheme.Colors.Cyan
+        or (survived and UITheme.Colors.Green or UITheme.Colors.Red)
+    resultGradient.Color = masterRound
+        and ColorSequence.new(Color3.fromRGB(35, 73, 82), Color3.fromRGB(45, 34, 18))
+        or (survived
+            and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
+            or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel))
 
     local streakBonus = tonumber(feedback.streakBonusCoins) or 0
     local shardCoins = tonumber(feedback.shardCoins) or 0
@@ -1168,7 +1179,6 @@ local function showRoundFeedback(feedback)
     if nearMissCount > 0 then
         table.insert(tags, "CLOSE CALLS x" .. tostring(nearMissCount))
     end
-    local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
     if momentumBest >= 2 then
         table.insert(tags, "MOMENTUM x" .. tostring(momentumBest))
     end
@@ -1185,7 +1195,9 @@ local function showRoundFeedback(feedback)
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
     resultMeta.Text = table.concat(tags, "  •  ")
 
-    if fusionBonusCoins > 0 and feedback.fusionName then
+    if masterRound then
+        resultTip.Text = "MASTER ROUND • challenge complete • momentum x" .. tostring(momentumBest)
+    elseif fusionBonusCoins > 0 and feedback.fusionName then
         resultTip.Text = tostring(feedback.fusionName) .. " SURVIVED • FUSION BONUS +" .. tostring(fusionBonusCoins)
     elseif flowCoins > 0 and feedback.challengeCompleted then
         resultTip.Text = "FLOW COMBO +" .. tostring(flowCoins) .. " • CHALLENGE COMPLETE"
@@ -1213,8 +1225,12 @@ local function showRoundFeedback(feedback)
         resultTip.Text = "TIP: keep moving and react early to warning zones"
     end
 
-    resultCard.BackgroundColor3 = survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40)
-    resultFlash.BackgroundColor3 = survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95)
+    resultCard.BackgroundColor3 = masterRound
+        and Color3.fromRGB(30, 64, 69)
+        or (survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40))
+    resultFlash.BackgroundColor3 = masterRound
+        and Color3.fromRGB(255, 220, 95)
+        or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95))
 
     resultCard.Visible = true
     resultCard.BackgroundTransparency = 1
