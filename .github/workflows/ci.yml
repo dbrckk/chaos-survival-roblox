@@ -49,6 +49,18 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce client protocol contracts
+        shell: bash
+        run: |
+          if grep -RFn --include='*.lua' --include='*.luau' 'phase == "results"' src; then
+            echo 'Round phase contract is "result", not "results".'
+            exit 1
+          fi
+          if grep -RFn --include='*.lua' --include='*.luau' 'feedback.survivalStreak' src/client; then
+            echo 'Round feedback streak key is "streak".'
+            exit 1
+          fi
+
       - name: Build Roblox place
         run: |
           mkdir -p build
