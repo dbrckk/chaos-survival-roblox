@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
+
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
@@ -16,22 +18,33 @@ local card = Instance.new("Frame")
 card.AnchorPoint = Vector2.new(0.5, 1)
 card.Position = UDim2.fromScale(0.5, 0.88)
 card.Size = UDim2.fromScale(0.58, 0.105)
-card.BackgroundColor3 = Color3.fromRGB(18, 21, 30)
-card.BackgroundTransparency = 0.08
+card.BackgroundColor3 = UITheme.Colors.Panel
+card.BackgroundTransparency = 0.05
+card.BorderSizePixel = 0
 card.Visible = false
 card.Parent = gui
-Instance.new("UICorner", card).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(card, UITheme.Corners.Large)
+local cardStroke = UITheme.addStroke(card, UITheme.Colors.Blue, 1.3, 0.28)
+UITheme.addGradient(card, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+
+local accentRail = Instance.new("Frame")
+accentRail.Size = UDim2.new(0.90, 0, 0, 4)
+accentRail.Position = UDim2.fromScale(0.05, 0.06)
+accentRail.BackgroundColor3 = UITheme.Colors.Blue
+accentRail.BorderSizePixel = 0
+accentRail.Parent = card
+UITheme.addCorner(accentRail, UITheme.Corners.Pill)
 
 local scale = Instance.new("UIScale")
 scale.Scale = 1
 scale.Parent = card
 
 local label = Instance.new("TextLabel")
-label.Size = UDim2.new(0.68, -14, 1, -12)
-label.Position = UDim2.fromOffset(12, 6)
+label.Size = UDim2.new(0.68, -14, 0.64, -4)
+label.Position = UDim2.fromOffset(12, 7)
 label.BackgroundTransparency = 1
 label.Font = Enum.Font.GothamBold
-label.TextColor3 = Color3.fromRGB(235, 240, 250)
+label.TextColor3 = UITheme.Colors.Text
 label.TextScaled = true
 label.TextWrapped = true
 label.TextXAlignment = Enum.TextXAlignment.Left
@@ -42,18 +55,73 @@ local nextButton = Instance.new("TextButton")
 nextButton.AnchorPoint = Vector2.new(1, 0.5)
 nextButton.Position = UDim2.new(1, -8, 0.5, 0)
 nextButton.Size = UDim2.new(0.28, 0, 0.72, 0)
-nextButton.BackgroundColor3 = Color3.fromRGB(65, 120, 220)
+nextButton.BackgroundColor3 = UITheme.Colors.Blue
 nextButton.Font = Enum.Font.GothamBlack
-nextButton.TextColor3 = Color3.new(1, 1, 1)
+nextButton.TextColor3 = UITheme.Colors.Text
 nextButton.TextScaled = true
 nextButton.Text = "NEXT"
 nextButton.Parent = card
-Instance.new("UICorner", nextButton).CornerRadius = UDim.new(0, 12)
+UITheme.addCorner(nextButton, UITheme.Corners.Medium)
+UITheme.addStroke(nextButton, UITheme.Colors.Cyan, 1.1, 0.35)
+UITheme.addGradient(nextButton, UITheme.Colors.Blue, UITheme.Colors.Violet, 25)
+UITheme.addPressFeedback(nextButton, 0.94)
+
+local healthTrack = Instance.new("Frame")
+healthTrack.Name = "TargetHealthTrack"
+healthTrack.Position = UDim2.fromScale(0.04, 0.79)
+healthTrack.Size = UDim2.fromScale(0.62, 0.10)
+healthTrack.BackgroundColor3 = UITheme.Colors.PanelSoft
+healthTrack.BackgroundTransparency = 0.05
+healthTrack.BorderSizePixel = 0
+healthTrack.Parent = card
+UITheme.addCorner(healthTrack, UITheme.Corners.Pill)
+
+local healthFill = Instance.new("Frame")
+healthFill.Name = "TargetHealthFill"
+healthFill.Size = UDim2.fromScale(1, 1)
+healthFill.BackgroundColor3 = UITheme.Colors.Green
+healthFill.BorderSizePixel = 0
+healthFill.Parent = healthTrack
+UITheme.addCorner(healthFill, UITheme.Corners.Pill)
 
 local roundActive = false
 local latestState = nil
 local targets = {}
 local targetIndex = 0
+local targetHealthConnection = nil
+
+
+local function clearTargetHealth()
+    if targetHealthConnection then
+        targetHealthConnection:Disconnect()
+        targetHealthConnection = nil
+    end
+    healthFill.Size = UDim2.fromScale(0, 1)
+end
+
+local function bindTargetHealth(humanoid)
+    clearTargetHealth()
+    if not humanoid then
+        return
+    end
+
+    local function update()
+        local ratio = humanoid.MaxHealth > 0
+            and math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+            or 0
+        healthFill.BackgroundColor3 = ratio > 0.55
+            and UITheme.Colors.Green
+            or (ratio > 0.25 and UITheme.Colors.Gold or UITheme.Colors.Red)
+        TweenService:Create(
+            healthFill,
+            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = UDim2.fromScale(ratio, 1)}
+        ):Play()
+    end
+
+    update()
+    targetHealthConnection = humanoid.HealthChanged:Connect(update)
+end
 
 local function localHumanoid()
     local character = player.Character
@@ -125,6 +193,7 @@ local function spectateIndex(index)
             label.Text ..= "\n" .. summary
         end
         nextButton.Visible = false
+        clearTargetHealth()
         restoreCamera()
         return
     end
@@ -146,6 +215,7 @@ local function spectateIndex(index)
             label.Text ..= "\n" .. summary
         end
         nextButton.Visible = #targets > 1
+        bindTargetHealth(hum)
     end
 end
 
@@ -168,6 +238,7 @@ local function refresh()
     else
         card.Visible = false
         targetIndex = 0
+        clearTargetHealth()
         restoreCamera()
     end
 end
