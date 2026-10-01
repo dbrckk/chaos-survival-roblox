@@ -464,8 +464,13 @@ local function runDisasterSet(selected, contestants, roundSettings)
         OnCollected = function(player, reward, position)
             if player.Parent ~= Players
                 or player:GetAttribute("DataLoaded") ~= true
-                or not ctx.IsContestantActive(player)
+                or eliminated[player.UserId]
             then
+                return
+            end
+
+            local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then
                 return
             end
 
