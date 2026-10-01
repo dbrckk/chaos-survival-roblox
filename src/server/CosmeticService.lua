@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local RemoteRegistry = require(script.Parent.RemoteRegistry)
 
 local PlayerReadiness = require(script.Parent.PlayerReadiness)
 local Cosmetics = require(script.Parent.CosmeticsCatalog)
@@ -350,13 +351,8 @@ function CosmeticService.sync(player)
 end
 
 function CosmeticService.init(remotes, rateLimiterFactory)
-    stateEvent = remotes:FindFirstChild("CosmeticState") or Instance.new("RemoteEvent")
-    stateEvent.Name = "CosmeticState"
-    stateEvent.Parent = remotes
-
-    actionEvent = remotes:FindFirstChild("CosmeticAction") or Instance.new("RemoteEvent")
-    actionEvent.Name = "CosmeticAction"
-    actionEvent.Parent = remotes
+    stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "CosmeticState")
+    actionEvent = RemoteRegistry.ensureRemoteEvent(remotes, "CosmeticAction")
 
     local allowAction = rateLimiterFactory.new(0.25)
     local allowSync = rateLimiterFactory.new(1.0)
