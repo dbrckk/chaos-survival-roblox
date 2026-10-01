@@ -696,7 +696,7 @@ local function buildLobby(root, config)
 
     local surface = Instance.new("SurfaceGui")
     surface.Name = "TitleGui"
-    surface.Face = Enum.NormalId.Front
+    surface.Face = Enum.NormalId.Back
     surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     surface.PixelsPerStud = 45
     surface.AlwaysOnTop = false
