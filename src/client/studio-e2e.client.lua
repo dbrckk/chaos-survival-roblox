@@ -181,6 +181,32 @@ reportEvent:FireServer({
     roundEliminated = player:GetAttribute("RoundEliminated") == true,
 })
 
+local function runSpectatorProbe()
+    local spectatorCard = spectator and spectator:FindFirstChildWhichIsA("Frame", true)
+    local deadline = os.clock() + 4
+
+    while spectatorCard and not spectatorCard.Visible and os.clock() < deadline do
+        task.wait(0.1)
+    end
+
+    reportEvent:FireServer({
+        kind = "spectator_probe",
+        ok = spectatorCard ~= nil and spectatorCard.Visible == true,
+        error = spectatorCard and "" or "spectator card missing",
+        spectatorVisible = spectatorCard ~= nil and spectatorCard.Visible == true,
+    })
+end
+
+player:GetAttributeChangedSignal("ChaosE2ESpectatorProbe"):Connect(function()
+    if player:GetAttribute("ChaosE2ESpectatorProbe") == true then
+        task.spawn(runSpectatorProbe)
+    end
+end)
+
+if player:GetAttribute("ChaosE2ESpectatorProbe") == true then
+    task.spawn(runSpectatorProbe)
+end
+
 player:GetAttributeChangedSignal("ChaosE2EShouldLeave"):Connect(function()
     if player:GetAttribute("ChaosE2EShouldLeave") == true then
         task.wait(0.25)
