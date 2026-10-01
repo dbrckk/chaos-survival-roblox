@@ -43,6 +43,7 @@ local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
 local RoundChallenge = require(script.RoundChallenge)
 local RoundMedals = require(script.RoundMedals)
+local FlowCombo = require(script.FlowCombo)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -406,6 +407,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local onCleanup = {}
     local eliminated = {}
     local deathConnections = {}
+    local lastMechanicAt = {}
+    local flowComboClaimed = {}
 
     for _, player in ipairs(contestants) do
         eliminated[player.UserId] = false
@@ -416,6 +419,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundNearMisses", 0)
         player:SetAttribute("RoundMechanicUses", 0)
         player:SetAttribute("RoundOverdriveUses", 0)
+        player:SetAttribute("RoundFlowCoins", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
@@ -502,6 +506,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
             local mechanicUses = math.max(0, math.floor(tonumber(player:GetAttribute("RoundMechanicUses")) or 0)) + 1
             player:SetAttribute("RoundMechanicUses", mechanicUses)
+            lastMechanicAt[player.UserId] = os.clock()
             if usedOverdrive == true then
                 local overdriveUses = math.max(0, math.floor(tonumber(player:GetAttribute("RoundOverdriveUses")) or 0)) + 1
                 player:SetAttribute("RoundOverdriveUses", overdriveUses)
@@ -524,7 +529,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             )
         end,
         SoloMode = roundSettings.Solo,
-        OnCollected = function(player, reward, position)
+        OnCollected = function(player, reward, position, golden)
             if player.Parent ~= Players
                 or player:GetAttribute("DataLoaded") ~= true
                 or eliminated[player.UserId]
@@ -544,26 +549,56 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
             local total = (tonumber(player:GetAttribute("RoundChaosShards")) or 0) + 1
             local shardCoinTotal = math.max(0, math.floor(tonumber(player:GetAttribute("RoundShardCoins")) or 0)) + amount
+            local flowBonus = 0
+            if FlowCombo.qualifies(lastMechanicAt[player.UserId], os.clock(), flowComboClaimed[player.UserId]) then
+                flowComboClaimed[player.UserId] = true
+                flowBonus = FlowCombo.BonusCoins
+            end
+
             player:SetAttribute("RoundChaosShards", total)
             player:SetAttribute("RoundShardCoins", shardCoinTotal)
-            PlayerData.add(player, "Coins", amount)
+            if flowBonus > 0 then
+                local flowTotal = math.max(0, math.floor(tonumber(player:GetAttribute("RoundFlowCoins")) or 0)) + flowBonus
+                player:SetAttribute("RoundFlowCoins", flowTotal)
+            end
+
+            PlayerData.add(player, "Coins", amount + flowBonus)
 
             chaosShardCollectedEvent:FireClient(player, {
                 reward = amount,
                 total = total,
                 position = position,
+                golden = golden == true,
+                flowBonus = flowBonus,
             })
 
             progressQuest(player, "collect_shard", 1)
-            progressQuest(player, "coins_earned", amount)
+            progressQuest(player, "coins_earned", amount + flowBonus)
 
             GameAnalytics.economySource(
                 player,
                 amount,
-                "ChaosShard",
+                golden == true and "GoldenChaosShard" or "ChaosShard",
                 currentArenaVariant,
                 roundSettings.Solo
             )
+            if flowBonus > 0 then
+                GameAnalytics.economySource(
+                    player,
+                    flowBonus,
+                    "FlowCombo",
+                    currentArenaVariant,
+                    roundSettings.Solo
+                )
+                GameAnalytics.custom(
+                    player,
+                    "FlowComboCompleted",
+                    1,
+                    "Arena:" .. tostring(currentArenaVariant),
+                    "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo)
+                )
+            end
+
             GameAnalytics.custom(
                 player,
                 "ChaosShardCollected",
@@ -1089,6 +1124,7 @@ while true do
                 streakBonusCoins = survived and streakBonusCoins or 0,
                 shardCount = roundShardCount,
                 shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundShardCoins")) or 0)),
+                flowCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundFlowCoins")) or 0)),
                 nearMissCount = roundNearMissCount,
                 mechanicUses = roundMechanicUses,
                 challengeId = roundChallenge.Id,
