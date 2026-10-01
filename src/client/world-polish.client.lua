@@ -16,6 +16,7 @@ localFolder.Parent = workspace
 local lobbySegments = {}
 local beaconEmitters = {}
 local arenaGlowParts = {}
+local arenaEnergyLinks = {}
 local hologramParts = {}
 local phase = "waiting"
 local accent = Color3.fromRGB(90, 185, 255)
@@ -45,6 +46,7 @@ local function clearPolish()
     clearTableInstances(lobbySegments)
     clearTableInstances(beaconEmitters)
     clearTableInstances(arenaGlowParts)
+    clearTableInstances(arenaEnergyLinks)
     table.clear(hologramParts)
     table.clear(secondaryLights)
 end
@@ -191,6 +193,37 @@ local function addBeaconParticles(part)
     table.insert(beaconEmitters, attachment)
 end
 
+local function addEnergyLink(a, b, name)
+    if not a or not b or not a:IsA("BasePart") or not b:IsA("BasePart") then
+        return
+    end
+
+    local attachmentA = Instance.new("Attachment")
+    attachmentA.Name = name .. "A"
+    attachmentA.Parent = a
+
+    local attachmentB = Instance.new("Attachment")
+    attachmentB.Name = name .. "B"
+    attachmentB.Parent = b
+
+    local beam = Instance.new("Beam")
+    beam.Name = name
+    beam.Attachment0 = attachmentA
+    beam.Attachment1 = attachmentB
+    beam.FaceCamera = true
+    beam.Width0 = 0.11
+    beam.Width1 = 0.11
+    beam.LightEmission = 1
+    beam.LightInfluence = 0
+    beam.Segments = 1
+    beam.Transparency = NumberSequence.new(0.34)
+    beam.Color = ColorSequence.new(accent)
+    beam.Parent = attachmentA
+
+    table.insert(arenaEnergyLinks, attachmentA)
+    table.insert(arenaEnergyLinks, attachmentB)
+end
+
 local function decorateArena(root)
     local arena = root:FindFirstChild("Arena")
     local decor = arena and arena:FindFirstChild("Decor")
@@ -204,6 +237,21 @@ local function decorateArena(root)
         then
             addBeaconParticles(child)
         end
+    end
+
+    local beaconParts = {}
+    for i = 1, 4 do
+        local beacon = decor:FindFirstChild("EdgeBeaconGlow" .. i)
+        if beacon and beacon:IsA("BasePart") then
+            beaconParts[i] = beacon
+        end
+    end
+
+    if beaconParts[1] and beaconParts[2] and beaconParts[3] and beaconParts[4] then
+        addEnergyLink(beaconParts[1], beaconParts[2], "NorthEnergyLink")
+        addEnergyLink(beaconParts[2], beaconParts[4], "EastEnergyLink")
+        addEnergyLink(beaconParts[4], beaconParts[3], "SouthEnergyLink")
+        addEnergyLink(beaconParts[3], beaconParts[1], "WestEnergyLink")
     end
 
     local hologram = decor:FindFirstChild("ArenaIdentityHologram")
@@ -283,6 +331,23 @@ end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     local tier = quality()
     applyLightBudget()
+    local linkTier = quality()
+    for _, attachment in ipairs(arenaEnergyLinks) do
+        if attachment.Parent then
+            local beam = attachment:FindFirstChildOfClass("Beam")
+            if beam then
+                beam.Enabled = linkTier.Name ~= "Low"
+                beam.Color = ColorSequence.new(blendedAccent)
+                local linkWave = (math.sin(clock * 3.1) + 1) * 0.5
+                beam.Width0 = 0.07 + linkWave * 0.08 * linkTier.Scale
+                beam.Width1 = beam.Width0
+                beam.Transparency = NumberSequence.new(
+                    math.clamp(0.30 + (1 - linkTier.Scale) * 0.24 + linkWave * 0.10, 0.24, 0.80)
+                )
+            end
+        end
+    end
+
     for index, part in ipairs(hologramParts) do
         if part.Parent then
             local shimmer = (math.sin(clock * 2.1 + index * 0.8) + 1) * 0.5
