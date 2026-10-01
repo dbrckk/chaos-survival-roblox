@@ -35,8 +35,12 @@ function D.start(ctx)
 
         frozen[humanoid] = nil
         if humanoid and humanoid.Parent then
-            humanoid.WalkSpeed = state.walkSpeed
-            humanoid.JumpPower = state.jumpPower
+            if humanoid.WalkSpeed == state.appliedWalkSpeed then
+                humanoid.WalkSpeed = state.walkSpeed
+            end
+            if humanoid.JumpPower == state.appliedJumpPower then
+                humanoid.JumpPower = state.jumpPower
+            end
         end
     end
 
@@ -78,13 +82,17 @@ function D.start(ctx)
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
                     restore(hum)
+                    local appliedWalkSpeed = 4
+                    local appliedJumpPower = 0
                     frozen[hum] = {
                         walkSpeed = hum.WalkSpeed,
                         jumpPower = hum.JumpPower,
+                        appliedWalkSpeed = appliedWalkSpeed,
+                        appliedJumpPower = appliedJumpPower,
                         generation = pulseGeneration,
                     }
-                    hum.WalkSpeed = 4
-                    hum.JumpPower = 0
+                    hum.WalkSpeed = appliedWalkSpeed
+                    hum.JumpPower = appliedJumpPower
 
                     task.delay(freezeSeconds, function()
                         local state = frozen[hum]
