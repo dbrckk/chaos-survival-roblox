@@ -40,6 +40,32 @@ local ACCENTS = {
     Orbital = Color3.fromRGB(65, 255, 205),
 }
 
+local overdriveLabel = Instance.new("TextLabel")
+overdriveLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+overdriveLabel.Position = UDim2.fromScale(0.5, 0.61)
+overdriveLabel.Size = UDim2.fromOffset(290, 52)
+overdriveLabel.BackgroundColor3 = Color3.fromRGB(35, 28, 14)
+overdriveLabel.BackgroundTransparency = 1
+overdriveLabel.BorderSizePixel = 0
+overdriveLabel.Font = Enum.Font.GothamBlack
+overdriveLabel.Text = "OVERDRIVE BOOST"
+overdriveLabel.TextColor3 = Color3.fromRGB(255, 225, 115)
+overdriveLabel.TextScaled = true
+overdriveLabel.TextTransparency = 1
+overdriveLabel.Visible = false
+overdriveLabel.ZIndex = 4
+overdriveLabel.Parent = gui
+
+local overdriveCorner = Instance.new("UICorner")
+overdriveCorner.CornerRadius = UDim.new(0, 14)
+overdriveCorner.Parent = overdriveLabel
+
+local overdriveStroke = Instance.new("UIStroke")
+overdriveStroke.Color = Color3.fromRGB(255, 210, 90)
+overdriveStroke.Thickness = 1.5
+overdriveStroke.Transparency = 0.25
+overdriveStroke.Parent = overdriveLabel
+
 local lastTrigger = 0
 
 local function currentVfxTier()
@@ -125,7 +151,10 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     end
     lastTrigger = now
 
-    local accent = ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255)
+    local overdrive = payload.overdrive == true
+    local accent = overdrive
+        and Color3.fromRGB(255, 210, 90)
+        or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))
     local tier = currentVfxTier()
     flash.BackgroundColor3 = accent
     flash.BackgroundTransparency = 0.91 + ((1 - tier.Scale) * 0.04)
@@ -140,4 +169,23 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     end
     pulseCharacter(accent)
     pulseHaptics()
+
+    if overdrive then
+        overdriveLabel.Visible = true
+        overdriveLabel.TextTransparency = 1
+        overdriveLabel.BackgroundTransparency = 1
+        TweenService:Create(overdriveLabel, TweenInfo.new(0.12), {
+            TextTransparency = 0,
+            BackgroundTransparency = 0.10,
+        }):Play()
+        task.delay(0.55, function()
+            TweenService:Create(overdriveLabel, TweenInfo.new(0.18), {
+                TextTransparency = 1,
+                BackgroundTransparency = 1,
+            }):Play()
+            task.delay(0.2, function()
+                overdriveLabel.Visible = false
+            end)
+        end)
+    end
 end)
