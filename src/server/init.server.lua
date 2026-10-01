@@ -135,12 +135,49 @@ local function alive(player)
 end
 
 local function teleportToArena(player, index)
-    local char = player.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    local spawns = workspace.GeneratedMap.Arena.Spawns:GetChildren()
-    if root and #spawns > 0 then
-        root.CFrame = spawns[((index - 1) % #spawns) + 1].CFrame + Vector3.new(0, 4, 0)
+    local generatedMap = workspace:FindFirstChild("GeneratedMap")
+    local arena = generatedMap and generatedMap:FindFirstChild("Arena")
+    local spawnFolder = arena and arena:FindFirstChild("Spawns")
+    if not spawnFolder then
+        return false, "arena spawns unavailable"
     end
+
+    local spawns = spawnFolder:GetChildren()
+    if #spawns == 0 then
+        return false, "arena has no spawns"
+    end
+
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return false, "character root unavailable"
+    end
+
+    local spawn = spawns[((index - 1) % #spawns) + 1]
+    if not spawn:IsA("BasePart") then
+        return false, "invalid arena spawn"
+    end
+
+    root.CFrame = spawn.CFrame + Vector3.new(0, 4, 0)
+    return true
+end
+
+local function ensureCharacterReady(player, timeoutSeconds)
+    local deadline = os.clock() + math.max(0.5, tonumber(timeoutSeconds) or 4)
+
+    while player.Parent == Players and os.clock() < deadline do
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+
+        if humanoid and humanoid.Health > 0 and root then
+            return true
+        end
+
+        task.wait(0.05)
+    end
+
+    return false
 end
 
 local function shuffledPool()
@@ -503,16 +540,43 @@ while true do
     local roundSettings = SoloRules.resolve(Config, #contestants)
     roundSettings.ArenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant
 
-    MapBuilder.buildArena(Config, currentArenaVariant, ArenaVariants)
-    for i, p in ipairs(contestants) do
-        if not p.Character or not alive(p) then
-            p:LoadCharacter()
-            task.wait(0.1)
-        end
-        teleportToArena(p, i)
-        PlayerData.add(p, "Games", 1)
-        progressQuest(p, "play_round", 1)
+    local arenaBuilt, arenaBuildError = pcall(
+        MapBuilder.buildArena,
+        Config,
+        currentArenaVariant,
+        ArenaVariants
+    )
+    if not arenaBuilt then
+        warn("Arena build failed:", currentArenaVariant, arenaBuildError)
+        MapBuilder.buildArena(Config, "Classic", ArenaVariants)
+        currentArenaVariant = "Classic"
+        local fallbackDefinition = ArenaVariants.get("Classic")
+        roundSettings.ArenaName = fallbackDefinition and fallbackDefinition.Name or "Classic"
     end
+
+    local readyContestants = {}
+    for i, p in ipairs(contestants) do
+        if p.Parent == Players then
+            if not p.Character or not alive(p) then
+                local loaded = pcall(p.LoadCharacter, p)
+                if loaded then
+                    ensureCharacterReady(p, 4)
+                end
+            end
+
+            local teleported, teleportError = teleportToArena(p, i)
+            if teleported then
+                table.insert(readyContestants, p)
+                PlayerData.add(p, "Games", 1)
+                progressQuest(p, "play_round", 1)
+            else
+                warn("Skipping unready contestant:", p.Name, teleportError)
+                p:SetAttribute("RoundParticipant", false)
+                p:SetAttribute("RoundEliminated", false)
+            end
+        end
+    end
+    contestants = readyContestants
 
     local selectedSet = {selected}
     local forceDouble = (roundNumber % roundSettings.DoubleChaosEvery == 0)
