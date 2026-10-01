@@ -456,6 +456,26 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundMomentumBest", best)
     end
 
+    local function lastSurvivorUserId()
+        local survivorUserId = nil
+        local count = 0
+
+        for _, player in ipairs(contestants) do
+            if player.Parent == Players and not eliminated[player.UserId] then
+                local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    count += 1
+                    survivorUserId = player.UserId
+                    if count > 1 then
+                        return nil
+                    end
+                end
+            end
+        end
+
+        return count == 1 and survivorUserId or nil
+    end
+
     local function countContestantsRemaining()
         local count = 0
         for _, player in ipairs(contestants) do
@@ -710,6 +730,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             disasterIds = disasterIds,
             survivorsAlive = survivorsAlive,
             contestantCount = #contestants,
+            lastSurvivorUserId = (#contestants > 1 and survivorsAlive == 1) and lastSurvivorUserId() or nil,
             arenaMechanicName = arenaMechanic and arenaMechanic.name or nil,
             arenaMechanicHint = arenaMechanic and arenaMechanic.hint or nil,
             overdrive = overdriveActive,
