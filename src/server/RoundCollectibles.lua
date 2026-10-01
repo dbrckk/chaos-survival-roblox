@@ -1,0 +1,206 @@
+local Players = game:GetService("Players")
+
+local RoundCollectibles = {}
+
+RoundCollectibles.SpawnInterval = 8
+RoundCollectibles.InitialDelay = 4
+RoundCollectibles.CoinReward = 1
+
+function RoundCollectibles.maxActive(contestantCount, soloMode)
+    if soloMode then
+        return 1
+    end
+    return math.clamp(math.ceil(math.max(1, contestantCount or 1) / 3), 1, 3)
+end
+
+function RoundCollectibles.reward()
+    return RoundCollectibles.CoinReward
+end
+
+local function playerFromHit(hit)
+    local current = hit
+    while current and current ~= workspace do
+        if current:IsA("Model") then
+            local player = Players:GetPlayerFromCharacter(current)
+            if player then
+                return player
+            end
+        end
+        current = current.Parent
+    end
+    return nil
+end
+
+local function candidateParts(arena)
+    local candidates = {}
+
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    if platforms then
+        for _, child in ipairs(platforms:GetChildren()) do
+            if child:IsA("BasePart") and child.Parent then
+                table.insert(candidates, child)
+            end
+        end
+    end
+
+    local spawns = arena and arena:FindFirstChild("Spawns")
+    if spawns then
+        for _, child in ipairs(spawns:GetChildren()) do
+            if child:IsA("BasePart") and child.Parent then
+                table.insert(candidates, child)
+            end
+        end
+    end
+
+    return candidates
+end
+
+local function makeShard(container, supportPart, index)
+    local shard = Instance.new("Part")
+    shard.Name = "ChaosShard" .. index
+    shard.Shape = Enum.PartType.Ball
+    shard.Size = Vector3.new(1.55, 1.55, 1.55)
+    shard.Anchored = true
+    shard.CanCollide = false
+    shard.CanQuery = false
+    shard.CanTouch = true
+    shard.CastShadow = false
+    shard.Material = Enum.Material.Neon
+    shard.Color = Color3.fromRGB(95, 220, 255)
+    shard.Position = supportPart.Position + Vector3.new(0, (supportPart.Size.Y * 0.5) + 2.2, 0)
+    shard:SetAttribute("ChaosShard", true)
+    shard.Parent = container
+
+    local light = Instance.new("PointLight")
+    light.Name = "ShardGlow"
+    light.Color = shard.Color
+    light.Brightness = 1.3
+    light.Range = 10
+    light.Shadows = false
+    light.Parent = shard
+
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "ShardVfx"
+    attachment.Parent = shard
+
+    local emitter = Instance.new("ParticleEmitter")
+    emitter.Name = "ShardMotes"
+    emitter.Rate = 8
+    emitter.Lifetime = NumberRange.new(0.35, 0.7)
+    emitter.Speed = NumberRange.new(0.5, 1.6)
+    emitter.Acceleration = Vector3.new(0, 1.2, 0)
+    emitter.SpreadAngle = Vector2.new(24, 24)
+    emitter.LightEmission = 0.9
+    emitter.Color = ColorSequence.new(
+        Color3.fromRGB(85, 205, 255),
+        Color3.fromRGB(185, 120, 255)
+    )
+    emitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.18),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    emitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.15),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    emitter.Parent = attachment
+
+    return shard
+end
+
+function RoundCollectibles.start(ctx)
+    local generatedMap = workspace:FindFirstChild("GeneratedMap")
+    local arena = generatedMap and generatedMap:FindFirstChild("Arena")
+    if not arena then
+        return nil
+    end
+
+    local candidates = candidateParts(arena)
+    if #candidates == 0 then
+        return nil
+    end
+
+    local container = Instance.new("Folder")
+    container.Name = "RoundChaosShards"
+    container.Parent = workspace
+    table.insert(ctx.Cleanup, container)
+
+    local maxActive = RoundCollectibles.maxActive(#(ctx.Contestants or {}), ctx.SoloMode == true)
+    local spawnIndex = 0
+    local lastCandidate = nil
+
+    local function activeCount()
+        local count = 0
+        for _, child in ipairs(container:GetChildren()) do
+            if child:IsA("BasePart") and child:GetAttribute("ChaosShard") == true then
+                count += 1
+            end
+        end
+        return count
+    end
+
+    local function chooseCandidate()
+        if #candidates == 1 then
+            return candidates[1]
+        end
+
+        local candidate = candidates[math.random(1, #candidates)]
+        local attempts = 0
+        while candidate == lastCandidate and attempts < 4 do
+            candidate = candidates[math.random(1, #candidates)]
+            attempts += 1
+        end
+        lastCandidate = candidate
+        return candidate
+    end
+
+    local function spawnOne()
+        if not ctx.Active() or not container.Parent or activeCount() >= maxActive then
+            return
+        end
+
+        local support = chooseCandidate()
+        if not support or not support.Parent then
+            return
+        end
+
+        spawnIndex += 1
+        local shard = makeShard(container, support, spawnIndex)
+        local claimed = false
+
+        shard.Touched:Connect(function(hit)
+            if claimed or not ctx.Active() or not shard.Parent then
+                return
+            end
+
+            local player = playerFromHit(hit)
+            if not player or not ctx.IsContestantActive(player) then
+                return
+            end
+
+            claimed = true
+            local reward = RoundCollectibles.reward()
+            if ctx.OnCollected then
+                ctx.OnCollected(player, reward, shard.Position)
+            end
+            shard:Destroy()
+        end)
+    end
+
+    task.spawn(function()
+        task.wait(RoundCollectibles.InitialDelay)
+
+        while ctx.Active() and container.Parent do
+            spawnOne()
+            task.wait(RoundCollectibles.SpawnInterval)
+        end
+    end)
+
+    return {
+        name = "Chaos Shards",
+        reward = RoundCollectibles.CoinReward,
+        maxActive = maxActive,
+    }
+end
+
+return RoundCollectibles
