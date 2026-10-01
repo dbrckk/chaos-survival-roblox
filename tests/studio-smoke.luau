@@ -42,13 +42,54 @@ for _, child in ipairs(disastersFolder:GetChildren()) do
     end
 end
 
-check(disasterCount >= 10, "Expected at least 10 disasters, found " .. tostring(disasterCount))
+check(disasterCount == 11, "Expected exactly 11 disasters, found " .. tostring(disasterCount))
 
-local root = MapBuilder.build(Config)
+local arenaVariantsModule = server:FindFirstChild("ArenaVariants")
+check(arenaVariantsModule ~= nil, "ArenaVariants module missing")
+local ArenaVariants = require(arenaVariantsModule)
+check(type(ArenaVariants.Order) == "table", "ArenaVariants.Order missing")
+check(#ArenaVariants.Order == 4, "Expected exactly 4 arena variants")
+
+local root = MapBuilder.build(Config, ArenaVariants.Order[1], ArenaVariants)
 check(root ~= nil and root.Parent == workspace, "MapBuilder did not create map")
 check(root:FindFirstChild("Lobby") ~= nil, "Lobby missing")
-check(root:FindFirstChild("Arena") ~= nil, "Arena missing")
-check(root.Arena:FindFirstChild("Spawns") ~= nil, "Arena spawns missing")
-check(#root.Arena.Spawns:GetChildren() >= 4, "Not enough arena spawns")
 
-print("CHAOS_SMOKE_OK disasters=" .. tostring(disasterCount))
+for _, arenaId in ipairs(ArenaVariants.Order) do
+    MapBuilder.buildArena(Config, arenaId, ArenaVariants)
+    local arena = root:FindFirstChild("Arena")
+    check(arena ~= nil, "Arena missing after build: " .. tostring(arenaId))
+    local spawns = arena:FindFirstChild("Spawns")
+    check(spawns ~= nil, "Arena spawns missing: " .. tostring(arenaId))
+    check(#spawns:GetChildren() >= 4, "Not enough arena spawns: " .. tostring(arenaId))
+    local base = arena:FindFirstChild("Base")
+    check(base ~= nil and base:IsA("BasePart"), "Arena base missing: " .. tostring(arenaId))
+end
+
+local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+check(remotes ~= nil and remotes:IsA("Folder"), "Remotes folder missing")
+for _, remoteName in ipairs({
+    "RoundState",
+    "VoteDisaster",
+    "DailyReward",
+    "QuestUpdate",
+    "RoundFeedback",
+    "ClientReady",
+    "ArenaMechanicFeedback",
+    "HazardImpactFeedback",
+    "HazardNearMiss",
+    "CosmeticState",
+    "CosmeticAction",
+    "MonetizationState",
+    "MonetizationAction",
+    "AchievementState",
+}) do
+    local remote = remotes:FindFirstChild(remoteName)
+    check(remote ~= nil and remote:IsA("RemoteEvent"), "RemoteEvent missing or wrong class: " .. remoteName)
+end
+
+print(
+    "CHAOS_SMOKE_OK disasters="
+        .. tostring(disasterCount)
+        .. " arenas="
+        .. tostring(#ArenaVariants.Order)
+)
