@@ -1,3 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+
 local MapBuilder = {}
 
 function MapBuilder.humanoidFromHit(hit)
@@ -29,6 +32,150 @@ local function part(parent, name, size, position, color, material)
     return p
 end
 
+
+local function decorPart(parent, name, size, position, color, material)
+    local p = part(parent, name, size, position, color, material)
+    p.CanCollide = false
+    p.CanTouch = false
+    p.CanQuery = false
+    p.CastShadow = false
+    return p
+end
+
+local function addArenaFoundation(decor, config, variant, theme)
+    local baseSize = variant.BaseSize
+    local center = config.ArenaCenter
+
+    local undercarriage = decorPart(
+        decor,
+        "ArenaUndercarriage",
+        Vector3.new(math.max(8, baseSize.X - 5), 2.4, math.max(8, baseSize.Z - 5)),
+        center + Vector3.new(0, -2.1, 0),
+        theme.Structure,
+        VisualTheme.Materials.Structure
+    )
+    undercarriage.Transparency = 0.04
+
+    local deckInset = decorPart(
+        decor,
+        "ArenaDeckInset",
+        Vector3.new(math.max(8, baseSize.X - 7), 0.14, math.max(8, baseSize.Z - 7)),
+        center + Vector3.new(0, 1.08, 0),
+        theme.Surface:Lerp(theme.Detail, 0.22),
+        VisualTheme.Materials.Panel
+    )
+    deckInset.Transparency = 0.03
+
+    local laneLengthX = math.max(18, baseSize.X - 18)
+    local laneLengthZ = math.max(18, baseSize.Z - 18)
+    local lanes = {
+        {name = "DeckLineNorth", size = Vector3.new(laneLengthX, 0.08, 0.36), pos = Vector3.new(0, 1.17, -12), color = theme.Accent},
+        {name = "DeckLineSouth", size = Vector3.new(laneLengthX, 0.08, 0.36), pos = Vector3.new(0, 1.17, 12), color = theme.Secondary},
+        {name = "DeckLineWest", size = Vector3.new(0.36, 0.08, laneLengthZ), pos = Vector3.new(-12, 1.17, 0), color = theme.Secondary},
+        {name = "DeckLineEast", size = Vector3.new(0.36, 0.08, laneLengthZ), pos = Vector3.new(12, 1.17, 0), color = theme.Accent},
+    }
+
+    for _, def in ipairs(lanes) do
+        local line = decorPart(
+            decor,
+            def.name,
+            def.size,
+            center + def.pos,
+            def.color,
+            VisualTheme.Materials.Glow
+        )
+        line.Transparency = 0.30
+    end
+
+    local radiusX = (baseSize.X * 0.5) + 4.5
+    local radiusZ = (baseSize.Z * 0.5) + 4.5
+    local segmentCount = 16
+    for i = 1, segmentCount do
+        local angle = ((i - 1) / segmentCount) * math.pi * 2
+        local x = math.cos(angle) * radiusX
+        local z = math.sin(angle) * radiusZ
+        local halo = decorPart(
+            decor,
+            "OuterHalo" .. i,
+            Vector3.new(5.5, 0.18, 0.42),
+            center + Vector3.new(x, -1.15, z),
+            (i % 2 == 0) and theme.Accent or theme.Secondary,
+            VisualTheme.Materials.Glow
+        )
+        halo.CFrame = CFrame.new(halo.Position) * CFrame.Angles(0, -angle, 0)
+        halo.Transparency = 0.34
+    end
+
+    local frameOffsets = {
+        Vector3.new(-baseSize.X * 0.32, 4.2, -baseSize.Z * 0.32),
+        Vector3.new(baseSize.X * 0.32, 4.2, -baseSize.Z * 0.32),
+        Vector3.new(-baseSize.X * 0.32, 4.2, baseSize.Z * 0.32),
+        Vector3.new(baseSize.X * 0.32, 4.2, baseSize.Z * 0.32),
+    }
+
+    for i, offset in ipairs(frameOffsets) do
+        local column = decorPart(
+            decor,
+            "FrameColumn" .. i,
+            Vector3.new(1.4, 8.4, 1.4),
+            center + offset,
+            theme.Structure,
+            VisualTheme.Materials.Structure
+        )
+        column.Transparency = 0.05
+
+        local slit = decorPart(
+            decor,
+            "FrameColumnGlow" .. i,
+            Vector3.new(0.42, 5.6, 1.48),
+            column.Position,
+            (i % 2 == 0) and theme.Secondary or theme.Accent,
+            VisualTheme.Materials.Glow
+        )
+        slit.Transparency = 0.20
+    end
+end
+
+local function addPlatformFinish(decor, platform, index, theme)
+    local topPanel = decorPart(
+        decor,
+        "PlatformPanel" .. index,
+        Vector3.new(
+            math.max(1, platform.Size.X - 0.8),
+            0.10,
+            math.max(1, platform.Size.Z - 0.8)
+        ),
+        platform.Position + Vector3.new(0, (platform.Size.Y * 0.5) + 0.055, 0),
+        theme.Surface:Lerp(theme.Detail, 0.28),
+        VisualTheme.Materials.Panel
+    )
+    topPanel.Transparency = 0.04
+
+    local underFrame = decorPart(
+        decor,
+        "PlatformUnderFrame" .. index,
+        Vector3.new(platform.Size.X + 0.5, 0.42, platform.Size.Z + 0.5),
+        platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.18, 0),
+        theme.Structure,
+        VisualTheme.Materials.Structure
+    )
+    underFrame.Transparency = 0.08
+
+    local core = decorPart(
+        decor,
+        "PlatformCoreGlow" .. index,
+        Vector3.new(
+            math.max(0.8, platform.Size.X * 0.42),
+            0.16,
+            math.max(0.8, platform.Size.Z * 0.42)
+        ),
+        platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.42, 0),
+        (index % 2 == 0) and theme.Secondary or theme.Accent,
+        VisualTheme.Materials.Glow
+    )
+    core.Transparency = 0.26
+end
+
 local function buildLobby(root, config)
     local lobby = Instance.new("Folder")
     lobby.Name = "Lobby"
@@ -39,8 +186,8 @@ local function buildLobby(root, config)
         "Floor",
         Vector3.new(74, 2, 74),
         config.LobbyCenter,
-        Color3.fromRGB(30, 34, 46),
-        Enum.Material.Slate
+        VisualTheme.World.Surface,
+        VisualTheme.Materials.Floor
     )
 
     local decor = Instance.new("Folder")
@@ -52,8 +199,8 @@ local function buildLobby(root, config)
         "CenterPlatform",
         Vector3.new(24, 1.2, 24),
         config.LobbyCenter + Vector3.new(0, 1.45, 0),
-        Color3.fromRGB(49, 57, 78),
-        Enum.Material.Metal
+        VisualTheme.World.SurfaceRaised,
+        VisualTheme.Materials.Structure
     )
 
     local centerGlow = part(
@@ -61,8 +208,8 @@ local function buildLobby(root, config)
         "CenterGlow",
         Vector3.new(20, 0.22, 20),
         config.LobbyCenter + Vector3.new(0, 2.08, 0),
-        Color3.fromRGB(80, 175, 255),
-        Enum.Material.Neon
+        VisualTheme.Accents.Cyan,
+        VisualTheme.Materials.Glow
     )
     centerGlow.CanCollide = false
     centerGlow.Transparency = 0.22
@@ -210,6 +357,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
 
     assert(arenaVariants, "arenaVariants is required")
     local variant = arenaVariants.get(variantId) or arenaVariants.get("Classic")
+    local theme = VisualTheme.arena(variant.Id)
     local arena = Instance.new("Folder")
     arena.Name = "Arena"
     arena:SetAttribute("VariantId", variant.Id)
@@ -221,8 +369,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         "Base",
         variant.BaseSize,
         config.ArenaCenter,
-        variant.BaseColor,
-        Enum.Material.Concrete
+        theme.Surface,
+        VisualTheme.Materials.Floor
     )
     base:SetAttribute("OriginalSizeX", base.Size.X)
     base:SetAttribute("OriginalSizeZ", base.Size.Z)
@@ -268,8 +416,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             "SpawnGlow" .. i,
             Vector3.new(5.2, 0.12, 5.2),
             spawnPosition + Vector3.new(0, -0.4, 0),
-            variant.PlatformColor,
-            Enum.Material.Neon
+            (i % 2 == 0) and theme.Secondary or theme.Accent,
+            VisualTheme.Materials.Glow
         )
         glow.CanCollide = false
         glow.CanTouch = false
@@ -285,12 +433,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     decor.Name = "Decor"
     decor.Parent = arena
 
+    addArenaFoundation(decor, config, variant, theme)
+
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
     local edgeThickness = 0.35
     local edgeHeight = 0.45
 
-    local edgeColor = variant.PlatformColor
+    local edgeColor = theme.Accent
     local north = part(
         decor,
         "EdgeNorth",
@@ -357,23 +507,24 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             "Platform" .. i,
             definition.size,
             platformPosition,
-            variant.PlatformColor,
-            Enum.Material.Metal
+            theme.Detail,
+            VisualTheme.Materials.Structure
         )
-        platform.Color = variant.PlatformColor:Lerp(variant.BaseColor, 0.32)
+        platform.Color = theme.Detail:Lerp(theme.Surface, 0.28)
 
         local trim = part(
             decor,
             "PlatformGlow" .. i,
             Vector3.new(definition.size.X + 0.5, 0.18, definition.size.Z + 0.5),
             platformPosition - Vector3.new(0, (definition.size.Y * 0.5) + 0.13, 0),
-            variant.PlatformColor,
-            Enum.Material.Neon
+            (i % 2 == 0) and theme.Secondary or theme.Accent,
+            VisualTheme.Materials.Glow
         )
         trim.CanCollide = false
         trim.CanTouch = false
         trim.CanQuery = false
         trim.Transparency = 0.18
+        addPlatformFinish(decor, platform, i, theme)
     end
 
     local beaconOffsets = {
@@ -389,8 +540,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             "EdgeBeacon" .. i,
             Vector3.new(0.8, 7, 0.8),
             config.ArenaCenter + offset,
-            variant.BaseColor:Lerp(Color3.new(1, 1, 1), 0.10),
-            Enum.Material.Metal
+            theme.Structure:Lerp(Color3.new(1, 1, 1), 0.08),
+            VisualTheme.Materials.Structure
         )
         pillar.CanCollide = false
 
