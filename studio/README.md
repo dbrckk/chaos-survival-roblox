@@ -40,8 +40,9 @@ The self-hosted runner therefore must:
 The normal Open Cloud workflow does not need Studio login. It runs real Roblox-engine tests on every push, including:
 
 - all 11 disaster modules started and cleaned in a DataModel;
-- all 3 arena variants;
+- all 4 arena variants;
 - every disaster on every arena;
+- current round-state sync for late joiners;
 - every allowed Double Chaos pair;
 - map hot-swapping and cleanup;
 - progression/data schema, rewards, quests, cosmetics and achievements;
