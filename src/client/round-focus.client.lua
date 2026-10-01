@@ -188,6 +188,8 @@ local function challengeProgress(state)
         return math.max(0, math.floor(tonumber(player:GetAttribute("RoundMechanicUses")) or 0))
     elseif metric == "nearMisses" then
         return math.max(0, math.floor(tonumber(player:GetAttribute("RoundNearMisses")) or 0))
+    elseif metric == "momentum" then
+        return math.max(0, math.floor(tonumber(player:GetAttribute("RoundMomentumBest")) or 0))
     end
     return 0
 end
@@ -326,6 +328,7 @@ player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
 
 player:GetAttributeChangedSignal("RoundNearMisses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundMechanicUses"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundMomentumBest"):Connect(refresh)
 
 player:GetAttributeChangedSignal("RoundChaosShards"):Connect(function()
     local previous = shard.Text
