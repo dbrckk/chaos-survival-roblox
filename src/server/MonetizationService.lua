@@ -150,16 +150,16 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
             return
         end
 
+        if not allowAction(player.UserId) then
+            return
+        end
+
         if action == "sync" then
             sendState(player)
             return
         end
 
         if action ~= "buy_pass" or type(key) ~= "string" then
-            return
-        end
-
-        if not allowAction(player.UserId) then
             return
         end
 
