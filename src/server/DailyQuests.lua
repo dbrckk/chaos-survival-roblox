@@ -49,6 +49,14 @@ DailyQuests.Definitions = {
         Coins = 85,
         XP = 45,
     },
+    COLLECT_6 = {
+        Id = "COLLECT_6",
+        Title = "Collect 6 Chaos Shards",
+        Event = "collect_shard",
+        Target = 6,
+        Coins = 55,
+        XP = 30,
+    },
 }
 
 local ORDER = {
@@ -58,6 +66,7 @@ local ORDER = {
     "EARN_75",
     "PLAY_5",
     "SURVIVE_3",
+    "COLLECT_6",
 }
 
 function DailyQuests.dayNumber(timestamp)
