@@ -1,5 +1,20 @@
 local MapBuilder = {}
 
+function MapBuilder.humanoidFromHit(hit)
+    local current = hit
+    while current and current ~= workspace do
+        if current:IsA("Model") then
+            local humanoid = current:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                return humanoid
+            end
+        end
+        current = current.Parent
+    end
+
+    return nil
+end
+
 local function part(parent, name, size, position, color, material)
     local p = Instance.new("Part")
     p.Name = name
@@ -226,8 +241,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     killPlane.CanTouch = true
 
     killPlane.Touched:Connect(function(hit)
-        local character = hit and hit.Parent
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local humanoid = MapBuilder.humanoidFromHit(hit)
         if humanoid and humanoid.Health > 0 then
             humanoid.Health = 0
         end
