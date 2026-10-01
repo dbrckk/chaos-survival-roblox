@@ -1,5 +1,6 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
+local RemoteRegistry = require(script.Parent.RemoteRegistry)
 
 local PlayerReadiness = require(script.Parent.PlayerReadiness)
 
@@ -135,13 +136,8 @@ end
 function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
     cosmeticService = cosmetics
 
-    stateEvent = remotes:FindFirstChild("MonetizationState") or Instance.new("RemoteEvent")
-    stateEvent.Name = "MonetizationState"
-    stateEvent.Parent = remotes
-
-    actionEvent = remotes:FindFirstChild("MonetizationAction") or Instance.new("RemoteEvent")
-    actionEvent.Name = "MonetizationAction"
-    actionEvent.Parent = remotes
+    stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "MonetizationState")
+    actionEvent = RemoteRegistry.ensureRemoteEvent(remotes, "MonetizationAction")
 
     local allowAction = rateLimiterFactory.new(0.75)
     local allowSync = rateLimiterFactory.new(1.0)
