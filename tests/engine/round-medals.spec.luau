@@ -11,15 +11,17 @@ describe("Round medals", function()
             pads = 3,
             nearMisses = 3,
             overdriveUses = 1,
+            momentumBest = 4,
             criticalSurvival = true,
         })
 
-        expect(#medals).toBe(5)
+        expect(#medals).toBe(6)
         expect(medals[1]).toBe("SHARD HUNTER")
         expect(medals[2]).toBe("MOBILITY ACE")
         expect(medals[3]).toBe("DAREDEVIL")
         expect(medals[4]).toBe("OVERDRIVE RIDER")
-        expect(medals[5]).toBe("CLUTCH")
+        expect(medals[5]).toBe("MOMENTUM MASTER")
+        expect(medals[6]).toBe("CLUTCH")
     end)
 
     it("does not award medals below thresholds", function()
@@ -28,6 +30,7 @@ describe("Round medals", function()
             pads = 2,
             nearMisses = 2,
             overdriveUses = 0,
+            momentumBest = 3,
             criticalSurvival = false,
         })
         expect(#medals).toBe(0)
