@@ -1,3 +1,4 @@
+local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 local D = {Name = "FREEZE PULSE", Hint = "BLUE FLASH = FREEZE INCOMING!"}
 
 local function createWarning(ctx)
@@ -31,14 +32,8 @@ function D.start(ctx)
             if not ctx.Active() then break end
 
             local warning = createWarning(ctx)
-            local started = os.clock()
-
-            while ctx.Active() and warning.Parent do
-                local alpha = math.clamp((os.clock() - started) / warningSeconds, 0, 1)
-                warning.Transparency = 0.78 - (0.30 * math.sin(alpha * math.pi))
-                if alpha >= 1 then break end
-                task.wait(0.04)
-            end
+            HazardWarning.configure(warning, "Freeze", warningSeconds, 86, 86)
+            task.wait(warningSeconds)
 
             if warning.Parent then
                 warning:Destroy()
