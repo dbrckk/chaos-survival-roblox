@@ -104,6 +104,15 @@ describe("Contestant scoping", function()
         includedCharacter:Destroy()
     end)
 
+    it("Moon Gravity compensation tracks mass and never pulls downward", function()
+        expect(LowGravity.compensationForce(10, 196.2, 55) > 0).toBe(true)
+        expect(LowGravity.compensationForce(20, 196.2, 55)).toBe(
+            LowGravity.compensationForce(10, 196.2, 55) * 2
+        )
+        expect(LowGravity.compensationForce(10, 40, 55)).toBe(0)
+        expect(LowGravity.compensationForce(-5, 196.2, 55)).toBe(0)
+    end)
+
     it("Moon Gravity only adds force to listed contestants and preserves world gravity", function()
         local included, includedCharacter = fakeContestant(
             "MoonIncluded",
