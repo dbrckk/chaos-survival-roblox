@@ -52,6 +52,28 @@ describe("Chaos Survival engine", function()
         root:Destroy()
     end)
 
+    it("resolves humanoids from nested hit descendants", function()
+        local character = Instance.new("Model")
+        character.Name = "NestedCharacter"
+
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = character
+
+        local accessory = Instance.new("Model")
+        accessory.Name = "NestedAccessory"
+        accessory.Parent = character
+
+        local handle = Instance.new("Part")
+        handle.Name = "Handle"
+        handle.Parent = accessory
+
+        character.Parent = workspace
+
+        expect(MapBuilder.humanoidFromHit(handle)).toBe(humanoid)
+
+        character:Destroy()
+    end)
+
     it("can hot-swap every arena variant without deleting the lobby", function()
         local root = MapBuilder.build(Config, "Classic", ArenaVariants)
         local lobby = root:FindFirstChild("Lobby")
