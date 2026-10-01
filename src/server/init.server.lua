@@ -868,16 +868,7 @@ while true do
                 roundElapsed
             )
 
-            local newlyUnlockedAchievements = AchievementService.evaluate(p)
-            if #newlyUnlockedAchievements > 0 then
-                GameAnalytics.custom(
-                    p,
-                    "AchievementUnlocked",
-                    #newlyUnlockedAchievements,
-                    "First:" .. tostring(newlyUnlockedAchievements[1]),
-                    "Level:" .. tostring(p:GetAttribute("Level") or 1)
-                )
-            end
+            AchievementService.evaluate(p)
 
             roundFeedbackEvent:FireClient(p, {
                 survived = survived,
