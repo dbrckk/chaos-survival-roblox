@@ -30,6 +30,27 @@ describe("Round cleanup", function()
         expect(errors[1].kind).toBe("callback")
     end)
 
+    it("unwinds cleanup callbacks in reverse registration order", function()
+        local order = {}
+
+        local failures = RoundCleanup.runCallbacks({
+            function()
+                table.insert(order, "first")
+            end,
+            function()
+                table.insert(order, "second")
+            end,
+            function()
+                table.insert(order, "third")
+            end,
+        })
+
+        expect(failures).toBe(0)
+        expect(order[1]).toBe("third")
+        expect(order[2]).toBe("second")
+        expect(order[3]).toBe("first")
+    end)
+
     it("destroys remaining cleanup objects", function()
         local a = Instance.new("Folder")
         local b = Instance.new("Folder")
