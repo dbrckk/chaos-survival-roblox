@@ -206,7 +206,8 @@ local function setMood(state)
             atmosphere.Haze = profile.Haze
             atmosphere.Color = profile.Atmosphere
             bloom.Intensity = profile.Bloom * vfxTier.Scale
-            color.Brightness = profile.Brightness or 0
+            local roundParticipant = player:GetAttribute("RoundParticipant") == true
+            color.Brightness = roundParticipant and (profile.Brightness or 0) or 0
             color.Contrast = profile.Contrast
             color.Saturation = profile.Saturation
             color.TintColor = profile.Tint
