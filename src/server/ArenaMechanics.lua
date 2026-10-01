@@ -180,6 +180,10 @@ function ArenaMechanics.start(ctx, variantId)
             end
             root.AssemblyLinearVelocity = velocity
             particles:Emit(14)
+
+            if ctx.OnArenaMechanicUsed then
+                pcall(ctx.OnArenaMechanicUsed, player, variantId, definition.Name)
+            end
         end)
     end
 
