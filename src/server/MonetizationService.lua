@@ -1,6 +1,8 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 
+local PlayerReadiness = require(script.Parent.PlayerReadiness)
+
 local GameAnalytics = require(script.Parent.GameAnalytics)
 
 local MonetizationService = {}
@@ -113,17 +115,9 @@ local function offerForKey(key)
     return nil
 end
 
-local function waitForDataLoaded(player)
-    while player.Parent == Players and player:GetAttribute("DataLoaded") ~= true do
-        player:GetAttributeChangedSignal("DataLoaded"):Wait()
-    end
-
-    return player.Parent == Players and player:GetAttribute("DataLoaded") == true
-end
-
 local function setupPlayer(player)
     task.spawn(function()
-        if not waitForDataLoaded(player) then
+        if not PlayerReadiness.waitForDataLoaded(player) then
             return
         end
 
@@ -195,7 +189,7 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
             return
         end
 
-        if not waitForDataLoaded(player) then
+        if not PlayerReadiness.waitForDataLoaded(player) then
             return
         end
 
