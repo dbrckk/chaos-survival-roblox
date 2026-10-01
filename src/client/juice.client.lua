@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -86,16 +87,29 @@ damageFlash.BorderSizePixel = 0
 damageFlash.ZIndex = 24
 damageFlash.Parent = gui
 
+local damageGradient = Instance.new("UIGradient")
+damageGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.34),
+    NumberSequenceKeypoint.new(0.22, 0.78),
+    NumberSequenceKeypoint.new(0.50, 0.94),
+    NumberSequenceKeypoint.new(0.78, 0.78),
+    NumberSequenceKeypoint.new(1, 0.34),
+})
+damageGradient.Rotation = 90
+damageGradient.Parent = damageFlash
+
 local banner = Instance.new("Frame")
 banner.AnchorPoint = Vector2.new(0.5, 0.5)
 banner.Position = UDim2.fromScale(0.5, 0.42)
 banner.Size = UDim2.fromScale(0.86, 0.18)
-banner.BackgroundColor3 = Color3.fromRGB(15, 17, 24)
+banner.BackgroundColor3 = UITheme.Colors.Panel
 banner.BackgroundTransparency = 1
 banner.Visible = false
 banner.ZIndex = 5
 banner.Parent = gui
 Instance.new("UICorner", banner).CornerRadius = UDim.new(0, 22)
+local bannerStroke = UITheme.addStroke(banner, UITheme.Colors.Blue, 1.4, 0.30)
+local bannerGradient = UITheme.addGradient(banner, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local bannerScale = Instance.new("UIScale")
 bannerScale.Scale = 0.72
@@ -106,7 +120,7 @@ bannerTitle.Size = UDim2.new(1, -32, 0.58, 0)
 bannerTitle.Position = UDim2.fromOffset(16, 8)
 bannerTitle.BackgroundTransparency = 1
 bannerTitle.Font = Enum.Font.GothamBlack
-bannerTitle.TextColor3 = Color3.new(1, 1, 1)
+bannerTitle.TextColor3 = UITheme.Colors.Text
 bannerTitle.TextScaled = true
 bannerTitle.TextStrokeTransparency = 0.72
 bannerTitle.ZIndex = 6
@@ -118,7 +132,7 @@ bannerSub.Size = UDim2.new(1, -32, 0.28, 0)
 bannerSub.Position = UDim2.new(0, 16, 0.66, 0)
 bannerSub.BackgroundTransparency = 1
 bannerSub.Font = Enum.Font.GothamBold
-bannerSub.TextColor3 = Color3.fromRGB(218, 224, 240)
+bannerSub.TextColor3 = UITheme.Colors.Muted
 bannerSub.TextScaled = true
 bannerSub.ZIndex = 6
 bannerSub.Text = ""
@@ -214,7 +228,13 @@ local function showBanner(mainText, subText, accent, duration)
     bannerToken += 1
     local token = bannerToken
 
-    banner.BackgroundColor3 = accent or Color3.fromRGB(15, 17, 24)
+    local resolvedAccent = accent or UITheme.Colors.Blue
+    banner.BackgroundColor3 = UITheme.Colors.Panel
+    bannerStroke.Color = resolvedAccent
+    bannerGradient.Color = ColorSequence.new(
+        resolvedAccent:Lerp(UITheme.Colors.PanelRaised, 0.62),
+        UITheme.Colors.Panel
+    )
     bannerTitle.Text = mainText or ""
     bannerSub.Text = subText or ""
     banner.Visible = true
