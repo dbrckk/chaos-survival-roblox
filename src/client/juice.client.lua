@@ -15,29 +15,35 @@ local hazardNearMissEvent = remotes:WaitForChild("HazardNearMiss")
 
 local camera = workspace.CurrentCamera
 
-local bloom = Lighting:FindFirstChild("ChaosBloom") or Instance.new("BloomEffect")
-bloom.Name = "ChaosBloom"
+local function getOrCreateLightingEffect(name, className)
+    local existing = Lighting:FindFirstChild(name)
+    if existing and not existing:IsA(className) then
+        existing:Destroy()
+        existing = nil
+    end
+
+    local effect = existing or Instance.new(className)
+    effect.Name = name
+    effect.Parent = Lighting
+    return effect
+end
+
+local bloom = getOrCreateLightingEffect("ChaosBloom", "BloomEffect")
 bloom.Intensity = 0.35
 bloom.Size = 28
 bloom.Threshold = 1.1
-bloom.Parent = Lighting
 
-local color = Lighting:FindFirstChild("ChaosColor") or Instance.new("ColorCorrectionEffect")
-color.Name = "ChaosColor"
+local color = getOrCreateLightingEffect("ChaosColor", "ColorCorrectionEffect")
 color.Brightness = 0
 color.Contrast = 0.06
 color.Saturation = 0.08
 color.TintColor = Color3.new(1, 1, 1)
-color.Parent = Lighting
 
-local rays = Lighting:FindFirstChild("ChaosRays") or Instance.new("SunRaysEffect")
-rays.Name = "ChaosRays"
+local rays = getOrCreateLightingEffect("ChaosRays", "SunRaysEffect")
 rays.Intensity = 0.035
 rays.Spread = 0.82
-rays.Parent = Lighting
 
-local atmosphere = Lighting:FindFirstChild("ChaosAtmosphere") or Instance.new("Atmosphere")
-atmosphere.Name = "ChaosAtmosphere"
+local atmosphere = getOrCreateLightingEffect("ChaosAtmosphere", "Atmosphere")
 atmosphere.Density = 0.18
 atmosphere.Offset = 0.15
 atmosphere.Color = Color3.fromRGB(205, 215, 235)
@@ -131,6 +137,7 @@ local activeAccent = Color3.fromRGB(115, 15, 160)
 local secondaryAccent = nil
 local activeBeacon = nil
 local activeBeaconLight = nil
+local activeBeaconDefaults = nil
 local activeDoubleChaos = false
 local currentIntensity = 1
 local lastSurvivorAnnounced = false
@@ -141,6 +148,43 @@ local frameSampleCount = 0
 local qualitySampleClock = 0
 local visualUpdateClock = 0
 player:SetAttribute("VfxQualityTier", vfxTierName)
+
+local function setActiveBeacon(beacon, light)
+    if activeBeacon ~= beacon then
+        activeBeacon = beacon
+        activeBeaconLight = light
+        activeBeaconDefaults = beacon and {
+            color = beacon.Color,
+            transparency = beacon.Transparency,
+            lightColor = light and light.Color or nil,
+            lightBrightness = light and light.Brightness or nil,
+            lightRange = light and light.Range or nil,
+        } or nil
+    else
+        activeBeaconLight = light
+    end
+end
+
+local function resetActiveBeacon()
+    if activeBeacon and activeBeacon.Parent and activeBeaconDefaults then
+        activeBeacon.Color = activeBeaconDefaults.color
+        activeBeacon.Transparency = activeBeaconDefaults.transparency
+    end
+    if activeBeaconLight and activeBeaconLight.Parent and activeBeaconDefaults then
+        if activeBeaconDefaults.lightColor then
+            activeBeaconLight.Color = activeBeaconDefaults.lightColor
+        end
+        if activeBeaconDefaults.lightBrightness then
+            activeBeaconLight.Brightness = activeBeaconDefaults.lightBrightness
+        end
+        if activeBeaconDefaults.lightRange then
+            activeBeaconLight.Range = activeBeaconDefaults.lightRange
+        end
+    end
+    activeBeacon = nil
+    activeBeaconLight = nil
+    activeBeaconDefaults = nil
+end
 
 local function tweenCamera(targetFov, duration)
     camera = workspace.CurrentCamera or camera
@@ -250,8 +294,10 @@ local function setMood(state)
         local beacon = decor and decor:FindFirstChild("CenterBeacon")
         local light = beacon and beacon:FindFirstChild("ArenaGlow")
 
-        activeBeacon = beacon and beacon:IsA("BasePart") and beacon or nil
-        activeBeaconLight = light and light:IsA("PointLight") and light or nil
+        setActiveBeacon(
+            beacon and beacon:IsA("BasePart") and beacon or nil,
+            light and light:IsA("PointLight") and light or nil
+        )
 
         if profile and activeBeacon then
             activeBeacon.Color = profile.Accent
@@ -271,6 +317,7 @@ local function setMood(state)
             lastRoundTitle = state.title
         end
     elseif phase == "result" then
+        resetActiveBeacon()
         roundDanger = false
         activeDoubleChaos = false
         secondaryAccent = nil
@@ -284,6 +331,7 @@ local function setMood(state)
         atmosphere.Color = Color3.fromRGB(205, 215, 235)
         tweenCamera(72, 0.35)
     else
+        resetActiveBeacon()
         roundDanger = false
         activeDoubleChaos = false
         secondaryAccent = nil
