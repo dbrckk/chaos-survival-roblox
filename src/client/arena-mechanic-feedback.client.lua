@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local AudioConfig = require(ReplicatedStorage.Shared.AudioConfig)
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArenaMechanicFeedback")
@@ -42,6 +43,10 @@ local ACCENTS = {
 }
 
 local lastTrigger = 0
+
+local function currentVfxTier()
+    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+end
 
 local function pulseHaptics()
     if not UserInputService.TouchEnabled then
@@ -109,7 +114,8 @@ local function pulseCharacter(accent)
         NumberSequenceKeypoint.new(1, 1),
     })
     emitter.Parent = root
-    emitter:Emit(18)
+    local tier = currentVfxTier()
+    emitter:Emit(math.max(6, math.floor(18 * tier.ParticleScale + 0.5)))
 
     task.delay(0.45, function()
         if emitter.Parent then
@@ -126,15 +132,18 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     lastTrigger = now
 
     local accent = ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255)
+    local tier = currentVfxTier()
     flash.BackgroundColor3 = accent
-    flash.BackgroundTransparency = 0.91
+    flash.BackgroundTransparency = 0.91 + ((1 - tier.Scale) * 0.04)
     TweenService:Create(flash, TweenInfo.new(0.22), {BackgroundTransparency = 1}):Play()
 
     sound.PlaybackSpeed = (AudioConfig.Sfx.MobilityPad.PlaybackSpeed or 1.25) + ((math.random() - 0.5) * 0.08)
     sound.TimePosition = 0
     sound:Play()
 
-    pulseCamera()
+    if tier.Name ~= "Low" then
+        pulseCamera()
+    end
     pulseCharacter(accent)
     pulseHaptics()
 end)
