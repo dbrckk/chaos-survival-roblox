@@ -86,6 +86,7 @@ jobs:
             "tests/engine/round-cleanup-resilience.spec.luau",
             "tests/engine/round-cleanup.spec.luau",
             "tests/engine/round-intensity.spec.luau",
+            "tests/engine/round-medals.spec.luau",
             "tests/engine/round-collectibles.spec.luau",
             "tests/engine/round-challenge.spec.luau",
             "tests/engine/round-variety.spec.luau",
