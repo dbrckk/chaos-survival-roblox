@@ -330,7 +330,7 @@ local function celebrateCharacter()
 end
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
-    local survivalStreak = tonumber(feedback.survivalStreak) or 0
+    local survivalStreak = tonumber(feedback.streak or feedback.survivalStreak) or 0
 
     if survivalStreak >= 2 then
         streak.Text = "SURVIVAL STREAK x" .. survivalStreak
