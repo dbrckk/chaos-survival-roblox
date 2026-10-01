@@ -5,6 +5,8 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
 local MovementSafety = require("../../src/server/MovementSafety")
+local Config = require("../../src/shared/Config")
+local MapBuilder = require("../../src/server/MapBuilder")
 
 describe("Arena mechanics", function()
     it("defines one mobility mechanic for every playable arena", function()
@@ -34,6 +36,38 @@ describe("Arena mechanics", function()
                 expect(pad.impulse.Magnitude >= 20).toBe(true)
                 expect(pad.impulse.Magnitude <= 60).toBe(true)
             end
+        end
+    end)
+
+    it("keeps ambient pad particles client-side", function()
+        MapBuilder.build(Config, "Classic", ArenaVariants)
+
+        local cleanup = {}
+        local ctx = {
+            Config = Config,
+            Cleanup = cleanup,
+            OnCleanup = {},
+            Active = function() return true end,
+            Contestants = {},
+            IsContestantActive = function() return false end,
+        }
+
+        local result = ArenaMechanics.start(ctx, "Classic")
+        expect(result ~= nil).toBe(true)
+
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        local mechanics = arena and arena:FindFirstChild("Mechanics")
+        expect(mechanics ~= nil).toBe(true)
+        expect(mechanics and mechanics:FindFirstChildWhichIsA("ParticleEmitter", true) == nil).toBe(true)
+
+        for _, object in ipairs(cleanup) do
+            if object and object.Parent then
+                object:Destroy()
+            end
+        end
+        if generated then
+            generated:Destroy()
         end
     end)
 
