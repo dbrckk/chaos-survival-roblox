@@ -249,7 +249,12 @@ function RoundCollectibles.start(ctx)
                 math.floor(tonumber(shard:GetAttribute("ChaosShardReward")) or RoundCollectibles.reward())
             )
             if ctx.OnCollected then
-                ctx.OnCollected(player, collectedReward, shard.Position)
+                ctx.OnCollected(
+                    player,
+                    collectedReward,
+                    shard.Position,
+                    shard:GetAttribute("ChaosShardGolden") == true
+                )
             end
             shard:Destroy()
         end)
