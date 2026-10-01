@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local ArenaVariants = require(script.Parent.ArenaVariants)
+local ArenaMechanics = require(script.Parent.ArenaMechanics)
 
 local metadata = ReplicatedStorage:FindFirstChild("ArenaMetadata") or Instance.new("Folder")
 metadata.Name = "ArenaMetadata"
@@ -11,6 +12,10 @@ local function publish(definition)
     metadata:SetAttribute("VariantId", definition.Id)
     metadata:SetAttribute("VariantName", definition.Name)
     metadata:SetAttribute("StrategyHint", definition.StrategyHint)
+
+    local mechanic = ArenaMechanics.get(definition.Id)
+    metadata:SetAttribute("MechanicName", mechanic and mechanic.Name or "")
+    metadata:SetAttribute("MechanicHint", mechanic and mechanic.Hint or "")
 end
 
 local function applyMetadata(arena)
