@@ -46,12 +46,12 @@ PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 -------------------------------------------
-[TODO] 3.1 Améliorer le sky mood de base.
-[EN COURS] 3.2 Ajouter profondeur par haze / atmosphere mieux contrôlés.
-[TODO] 3.3 Créer variantes d'ambiance par catastrophe.
+[QA]   3.1 Améliorer le sky mood de base.
+[QA]   3.2 Ajouter profondeur par haze / atmosphere mieux contrôlés.
+[QA]   3.3 Créer variantes d'ambiance par catastrophe.
 [QA]        3.4 Ajouter silhouettes et structures lointaines peu coûteuses.
-[TODO] 3.5 Ajouter particules d'ambiance adaptatives.
-[TODO] 3.6 Améliorer transitions visuelles entre lobby, vote, ready, round et result.
+[QA]   3.5 Ajouter particules d'ambiance adaptatives.
+[QA]   3.6 Améliorer transitions visuelles entre lobby, vote, ready, round et result.
 [TODO] 3.7 QA confort visuel 30 minutes.
 
 PHASE 4 — VFX CATASTROPHES
@@ -76,7 +76,7 @@ PHASE 5 — UI / UX PREMIUM
 [QA]   5.3 Refaire timer / badge SOLO / titre catastrophe.
 [QA]   5.4 Refaire HUD Shards / intensité.
 [QA]   5.5 Améliorer Quests / Achievements / Cosmetics.
-[EN COURS] 5.6 Ajouter icônes / symboles cohérents sans assets payants.
+[QA]   5.6 Ajouter icônes / symboles cohérents sans assets payants.
 [QA]   5.7 Harmoniser ombres, strokes, corners, animations et micro-interactions.
 [QA]   5.8 Adapter automatiquement l'UI aux formats Android étroits / larges.
 [EN COURS] 5.9 QA tactile complète.
@@ -90,7 +90,7 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.5 Level up / reward / streak polish.
 [QA]   6.6 Round start / round end transitions.
 [QA]   6.7 Spectator polish.
-[TODO] 6.8 Vérifier fatigue visuelle et accessibilité.
+[QA]   6.8 Vérifier fatigue visuelle et accessibilité.
 
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
