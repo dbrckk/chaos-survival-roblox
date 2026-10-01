@@ -6,6 +6,11 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local tracked = {}
+local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+end)
 
 local function register(part)
     if not part:IsA("BasePart") then
@@ -64,8 +69,6 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 RunService.RenderStepped:Connect(function(dt)
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-
     for part, state in pairs(tracked) do
         if not part.Parent then
             tracked[part] = nil
@@ -73,7 +76,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
 
         state.clock += dt
-        if state.clock < tier.UpdateInterval then
+        if state.clock < currentTier.UpdateInterval then
             continue
         end
         state.clock = 0
