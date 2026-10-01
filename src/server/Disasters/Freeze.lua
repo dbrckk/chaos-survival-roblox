@@ -1,11 +1,11 @@
 local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 local D = {Name = "FREEZE PULSE", Hint = "BLUE FLASH = FREEZE INCOMING!"}
 
-local function createWarning(ctx)
+local function createWarning(ctx, diameter)
     local warning = Instance.new("Part")
     warning.Name = "FreezeWarning"
     warning.Shape = Enum.PartType.Cylinder
-    warning.Size = Vector3.new(0.16, 86, 86)
+    warning.Size = Vector3.new(0.16, diameter, diameter)
     warning.CFrame = CFrame.new(ctx.Config.ArenaCenter + Vector3.new(0, 1.16, 0))
         * CFrame.Angles(0, 0, math.rad(90))
     warning.Anchored = true
@@ -57,8 +57,9 @@ function D.start(ctx)
             task.wait(math.max(3.8, math.random(5, 7) / intensity))
             if not ctx.Active() then break end
 
-            local warning = createWarning(ctx)
-            HazardWarning.configure(warning, "Freeze", warningSeconds, 86, 86)
+            local warningDiameter = HazardWarning.arenaCoverageDiameter(150)
+            local warning = createWarning(ctx, warningDiameter)
+            HazardWarning.configure(warning, "Freeze", warningSeconds, warningDiameter, warningDiameter)
             task.wait(warningSeconds)
 
             if warning.Parent then
