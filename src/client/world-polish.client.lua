@@ -14,6 +14,7 @@ localFolder.Name = "ChaosWorldPolishLocal"
 localFolder.Parent = workspace
 
 local lobbySegments = {}
+local lobbyCoreParts = {}
 local lobbyGateLinks = {}
 local beaconEmitters = {}
 local arenaGlowParts = {}
@@ -47,6 +48,7 @@ end
 
 local function clearPolish()
     clearTableInstances(lobbySegments)
+    clearTableInstances(lobbyCoreParts)
     clearTableInstances(lobbyGateLinks)
     clearTableInstances(beaconEmitters)
     clearTableInstances(arenaGlowParts)
@@ -112,6 +114,43 @@ local function decorateLobby(root)
     local center = decor and decor:FindFirstChild("CenterPlatform")
     if not center or not center:IsA("BasePart") then
         return
+    end
+
+    local tier = quality()
+    local coreCenter = center.Position + Vector3.new(0, 5.2, 0)
+
+    local orb = makeSegment(
+        "LobbyChaosCoreOrb",
+        coreCenter,
+        Vector3.new(3.6, 3.6, 3.6),
+        Color3.fromRGB(86, 210, 255)
+    )
+    orb.Shape = Enum.PartType.Ball
+    orb.Transparency = tier.Name == "Low" and 0.46 or 0.26
+    orb:SetAttribute("CorePartIndex", 0)
+    table.insert(lobbyCoreParts, orb)
+
+    local coreLight = Instance.new("PointLight")
+    coreLight.Name = "LobbyChaosCoreLight"
+    coreLight.Color = Color3.fromRGB(105, 185, 255)
+    coreLight.Brightness = tier.Name == "Low" and 0 or (1.2 * tier.Scale)
+    coreLight.Range = 18 + 6 * tier.Scale
+    coreLight.Shadows = false
+    coreLight.Enabled = tier.Name ~= "Low"
+    coreLight.Parent = orb
+
+    if tier.Name ~= "Low" then
+        for i = 1, 3 do
+            local blade = makeSegment(
+                "LobbyChaosCoreBlade" .. i,
+                coreCenter,
+                Vector3.new(0.42, 6.4, 1.15),
+                i == 2 and Color3.fromRGB(180, 95, 255) or Color3.fromRGB(70, 220, 255)
+            )
+            blade.Transparency = 0.28
+            blade:SetAttribute("CorePartIndex", i)
+            table.insert(lobbyCoreParts, blade)
+        end
     end
 
     local segmentCount = 12
@@ -452,6 +491,45 @@ RunService.RenderStepped:Connect(function(dt)
     end
     local elapsed = updateClock
     updateClock = 0
+
+    local coreTier = quality()
+    local coreCenter = Config.LobbyCenter + Vector3.new(0, 6.65, 0)
+    if currentMap then
+        local lobby = currentMap:FindFirstChild("Lobby")
+        local decor = lobby and lobby:FindFirstChild("Decor")
+        local centerPart = decor and decor:FindFirstChild("CenterPlatform")
+        if centerPart and centerPart:IsA("BasePart") then
+            coreCenter = centerPart.Position + Vector3.new(0, 5.2, 0)
+        end
+    end
+
+    for _, corePart in ipairs(lobbyCoreParts) do
+        if corePart.Parent then
+            local index = tonumber(corePart:GetAttribute("CorePartIndex")) or 0
+            local verticalWave = math.sin(clock * 1.8) * 0.22
+            if index == 0 then
+                corePart.Position = coreCenter + Vector3.new(0, verticalWave, 0)
+                corePart.Color = Color3.fromRGB(80, 205, 255):Lerp(
+                    Color3.fromRGB(175, 95, 255),
+                    (math.sin(clock * 1.4) + 1) * 0.5
+                )
+                corePart.Transparency = coreTier.Name == "Low"
+                    and 0.46
+                    or (0.22 + ((math.sin(clock * 2.3) + 1) * 0.5) * 0.12)
+
+                local light = corePart:FindFirstChild("LobbyChaosCoreLight")
+                if light and light:IsA("PointLight") then
+                    light.Enabled = coreTier.Name ~= "Low"
+                    light.Brightness = (1.0 + ((math.sin(clock * 2.2) + 1) * 0.5) * 0.7) * coreTier.Scale
+                end
+            else
+                local angle = clock * (0.45 + index * 0.10) + math.rad(index * 60)
+                corePart.CFrame = CFrame.new(coreCenter + Vector3.new(0, verticalWave, 0))
+                    * CFrame.Angles(math.rad(18), angle, math.rad(28 + index * 10))
+                corePart.Transparency = coreTier.Name == "Low" and 1 or 0.26
+            end
+        end
+    end
 
     local gateTier = quality()
     for index, attachment in ipairs(lobbyGateLinks) do
