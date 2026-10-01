@@ -1,4 +1,5 @@
 local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
 local DisasterImpact = if script then require(script.Parent.Parent.DisasterImpact) else require("../DisasterImpact")
 local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 
@@ -47,15 +48,18 @@ function D.start(ctx)
             meteor.Material = Enum.Material.Neon
             meteor.Color = Color3.fromRGB(255,120,40)
             meteor.Position = impactPosition + Vector3.new(0, fallHeight, 0)
-            meteor.Anchored = false
+            meteor.Anchored = true
             meteor.CanCollide = false
             meteor.CanTouch = false
             meteor.CanQuery = false
             meteor.CastShadow = false
             meteor.Parent = workspace
-            local gravity = workspace.Gravity
-            local launchVelocityY = (-fallHeight + (0.5 * gravity * travelSeconds * travelSeconds)) / travelSeconds
-            meteor.AssemblyLinearVelocity = Vector3.new(0, launchVelocityY, 0)
+            local impactVisualPosition = impactPosition + Vector3.new(0, 1, 0)
+            TweenService:Create(
+                meteor,
+                TweenInfo.new(travelSeconds, Enum.EasingStyle.Linear),
+                {Position = impactVisualPosition}
+            ):Play()
 
             if marker.Parent then marker:Destroy() end
             ctx.Cleanup[#ctx.Cleanup+1] = meteor
@@ -70,10 +74,10 @@ function D.start(ctx)
                 end
 
                 if meteor.Parent then
-                    meteor.Position = impactPosition + Vector3.new(0, 1, 0)
+                    meteor.Position = impactVisualPosition
                 end
 
-                local position = impactPosition + Vector3.new(0, 1, 0)
+                local position = impactVisualPosition
                 DisasterImpact.applyRadialDamage(ctx, position, radius, damage, "Meteor")
                 if ctx.OnHazardImpact then
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 120, 40), radius, "Meteor")
