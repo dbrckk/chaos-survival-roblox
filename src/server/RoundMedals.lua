@@ -16,6 +16,9 @@ function RoundMedals.evaluate(stats)
     if (tonumber(stats.overdriveUses) or 0) >= 1 then
         table.insert(medals, "OVERDRIVE RIDER")
     end
+    if (tonumber(stats.momentumBest) or 0) >= 4 then
+        table.insert(medals, "MOMENTUM MASTER")
+    end
     if stats.criticalSurvival == true then
         table.insert(medals, "CLUTCH")
     end
