@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -23,6 +24,7 @@ local intensity = 1
 local clock = 0
 local updateClock = 0
 local currentMap = nil
+local currentMapConnection = nil
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -97,6 +99,7 @@ local function decorateLobby(root)
 
         local emitter = Instance.new("ParticleEmitter")
         emitter.Name = "GateEnergy"
+        emitter:SetAttribute("BaseRate", 7)
         emitter.Rate = 7 * quality().ParticleScale
         emitter.Lifetime = NumberRange.new(0.55, 1.05)
         emitter.Speed = NumberRange.new(0.3, 1.2)
@@ -132,6 +135,7 @@ local function addBeaconParticles(part)
 
     local emitter = Instance.new("ParticleEmitter")
     emitter.Name = "BeaconMotes"
+    emitter:SetAttribute("BaseRate", 9)
     emitter.Rate = 9 * quality().ParticleScale
     emitter.Lifetime = NumberRange.new(0.45, 0.95)
     emitter.Speed = NumberRange.new(0.8, 2.2)
@@ -186,10 +190,25 @@ local function decorateArena(root)
 end
 
 local function rebuild(root)
+    if currentMapConnection then
+        currentMapConnection:Disconnect()
+        currentMapConnection = nil
+    end
+
     clearPolish()
     currentMap = root
     decorateLobby(root)
     decorateArena(root)
+
+    currentMapConnection = root.ChildAdded:Connect(function(child)
+        if child.Name == "Arena" and root == currentMap then
+            task.defer(function()
+                if root == currentMap and root.Parent then
+                    rebuild(root)
+                end
+            end)
+        end
+    end)
 end
 
 local function bindGeneratedMap()
@@ -207,6 +226,10 @@ end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child == currentMap then
+        if currentMapConnection then
+            currentMapConnection:Disconnect()
+            currentMapConnection = nil
+        end
         currentMap = nil
         clearPolish()
     end
@@ -217,7 +240,8 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     for _, attachment in ipairs(beaconEmitters) do
         local emitter = attachment and attachment:FindFirstChildOfClass("ParticleEmitter")
         if emitter then
-            emitter.Rate = 9 * tier.ParticleScale
+            local baseRate = tonumber(emitter:GetAttribute("BaseRate")) or 9
+            emitter.Rate = baseRate * tier.ParticleScale
         end
     end
 end)
@@ -258,7 +282,7 @@ RunService.RenderStepped:Connect(function(dt)
         if segment.Parent then
             local baseAngle = segment:GetAttribute("OrbitAngle") or 0
             local angle = baseAngle + clock * lobbySpeed
-            local center = Vector3.new(0, 0, -150)
+            local center = Config.LobbyCenter
             if currentMap then
                 local lobby = currentMap:FindFirstChild("Lobby")
                 local decor = lobby and lobby:FindFirstChild("Decor")
