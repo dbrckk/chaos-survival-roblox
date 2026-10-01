@@ -14,6 +14,7 @@ local MAX_ATTEMPTS = 4
 local AUTOSAVE_SECONDS = 60
 local AUTOSAVE_SPREAD_SECONDS = 12
 local SHUTDOWN_SAVE_DEADLINE_SECONDS = 27
+local SESSION_HANDOFF_WAIT_SECONDS = 8
 
 local active = {}
 local loading = {}
@@ -153,11 +154,37 @@ function PlayerData.load(player)
     player:SetAttribute("DataSaveConflict", false)
 
     local sessionToken = HttpService:GenerateGUID(false)
-    local ok, savedOrError = withRetry("DataStore load", player.UserId, function()
-        return store:UpdateAsync("u_" .. player.UserId, function(saved)
-            return DataSession.claim(saved, sessionToken, os.time())
+
+    local function tryClaimSession(force)
+        local blocked = false
+        local ok, result = withRetry("DataStore session claim", player.UserId, function()
+            return store:UpdateAsync("u_" .. player.UserId, function(saved)
+                local claimed = DataSession.claim(saved, sessionToken, os.time(), force)
+                if not claimed then
+                    blocked = true
+                    return nil
+                end
+                blocked = false
+                return claimed
+            end)
         end)
-    end)
+        return ok, result, blocked
+    end
+
+    local ok, savedOrError, blocked = tryClaimSession(false)
+    if ok and blocked and player.Parent == Players then
+        task.wait(SESSION_HANDOFF_WAIT_SECONDS * 0.5)
+        ok, savedOrError, blocked = tryClaimSession(false)
+    end
+    if ok and blocked and player.Parent == Players then
+        task.wait(SESSION_HANDOFF_WAIT_SECONDS * 0.5)
+        ok, savedOrError, blocked = tryClaimSession(true)
+    end
+
+    if blocked then
+        ok = false
+        savedOrError = "DataStore session ownership could not be acquired"
+    end
 
     local data
     if ok then
@@ -269,6 +296,36 @@ function PlayerData.save(player, waitForExisting)
     end
 
     return ok
+end
+
+function PlayerData.releaseSession(player)
+    local sessionToken = sessionTokens[player]
+    if type(sessionToken) ~= "string" or sessionToken == "" then
+        return false
+    end
+
+    local ownershipConflict = false
+    local ok, err = withRetry("DataStore session release", player.UserId, function()
+        return store:UpdateAsync("u_" .. player.UserId, function(saved)
+            local released = DataSession.release(saved, sessionToken, os.time())
+            if not released then
+                ownershipConflict = true
+                return nil
+            end
+            return released
+        end)
+    end)
+
+    if ownershipConflict then
+        return false
+    end
+    if not ok then
+        warn("Failed to release DataStore session", player.UserId, err)
+        return false
+    end
+
+    sessionTokens[player] = nil
+    return true
 end
 
 function PlayerData.canMutate(player)
@@ -410,6 +467,7 @@ function PlayerData.init()
 
     Players.PlayerRemoving:Connect(function(player)
         PlayerData.save(player, true)
+        PlayerData.releaseSession(player)
         disconnectDataConnections(player)
         active[player] = nil
         loading[player] = nil
@@ -455,6 +513,7 @@ function PlayerData.init()
                 pending += 1
                 task.spawn(function()
                     PlayerData.save(player, true)
+                    PlayerData.releaseSession(player)
                     pending -= 1
                 end)
             end
