@@ -7,6 +7,7 @@ local SpeedSurge = require("../../src/server/Disasters/SpeedSurge")
 local LowGravity = require("../../src/server/Disasters/LowGravity")
 local Tornado = require("../../src/server/Disasters/Tornado")
 local JumpShock = require("../../src/server/Disasters/JumpShock")
+local RisingLava = require("../../src/server/Disasters/RisingLava")
 
 local function fakeContestant(name, position)
     local character = Instance.new("Model")
@@ -103,6 +104,23 @@ describe("Contestant scoping", function()
 
         includedCharacter:Destroy()
         outsiderCharacter:Destroy()
+    end)
+
+
+    it("Rising Lava only eliminates active contestants", function()
+        local included = {Name = "Included"}
+        local outsider = {Name = "Outsider"}
+
+        local ctx = {
+            Contestants = {included},
+            IsContestantActive = function(player)
+                return player == included
+            end,
+        }
+
+        expect(RisingLava.isActiveContestant(included, ctx)).toBe(true)
+        expect(RisingLava.isActiveContestant(outsider, ctx)).toBe(false)
+        expect(RisingLava.isActiveContestant(nil, ctx)).toBe(false)
     end)
 
     it("creates clear world telegraphs for Tornado and Jump Shock", function()
