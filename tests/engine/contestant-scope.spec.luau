@@ -145,6 +145,13 @@ describe("Contestant scoping", function()
     end)
 
 
+    it("Rising Lava fully covers the active arena footprint", function()
+        local size = RisingLava.coverageSize(Vector3.new(104, 2, 104), 8)
+        expect(size.X).toBe(112)
+        expect(size.Z).toBe(112)
+        expect(size.Y).toBe(4)
+    end)
+
     it("Rising Lava only eliminates active contestants", function()
         local included = {Name = "Included"}
         local outsider = {Name = "Outsider"}
