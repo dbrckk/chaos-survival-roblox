@@ -128,6 +128,17 @@ function ArenaMechanics.get(variantId)
     return ArenaMechanics.Definitions[variantId]
 end
 
+function ArenaMechanics.safeVelocity(currentVelocity, impulse)
+    local combined = currentVelocity + impulse
+    local horizontal = Vector3.new(combined.X, 0, combined.Z)
+    if horizontal.Magnitude > 60 then
+        horizontal = horizontal.Unit * 60
+    end
+
+    local vertical = math.clamp(combined.Y, -52, 58)
+    return Vector3.new(horizontal.X, vertical, horizontal.Z)
+end
+
 function ArenaMechanics.start(ctx, variantId)
     local definition = ArenaMechanics.get(variantId)
     if not definition then
@@ -174,11 +185,10 @@ function ArenaMechanics.start(ctx, variantId)
             end
             cooldownUntil[player.UserId] = now + 1.1
 
-            local velocity = root.AssemblyLinearVelocity + impulse
-            if velocity.Magnitude > 82 then
-                velocity = velocity.Unit * 82
-            end
-            root.AssemblyLinearVelocity = velocity
+            root.AssemblyLinearVelocity = ArenaMechanics.safeVelocity(
+                root.AssemblyLinearVelocity,
+                impulse
+            )
             particles:Emit(14)
 
             if ctx.OnArenaMechanicUsed then
