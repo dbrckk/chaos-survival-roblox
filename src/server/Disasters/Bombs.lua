@@ -38,7 +38,7 @@ function D.start(ctx)
                 local position = marker.Position + Vector3.new(0, 1, 0)
                 marker:Destroy()
 
-                DisasterImpact.applyRadialDamage(ctx, position, radius, damage)
+                DisasterImpact.applyRadialDamage(ctx, position, radius, damage, "Bomb")
                 if ctx.OnHazardImpact then
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 65, 65), radius, "Bomb")
                 end
