@@ -114,14 +114,17 @@ stats.Name = "StatsHUD"
 stats.AnchorPoint = Vector2.new(0.5, 1)
 stats.Position = UDim2.fromScale(0.5, 0.975)
 stats.Size = UDim2.fromScale(0.65, 0.07)
-stats.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
-stats.BackgroundTransparency = 0.15
+stats.BackgroundColor3 = UITheme.Colors.Panel
+stats.BackgroundTransparency = 0.05
+stats.BorderSizePixel = 0
 stats.Font = Enum.Font.GothamBold
-stats.TextColor3 = Color3.new(1,1,1)
+stats.TextColor3 = UITheme.Colors.Text
 stats.TextScaled = true
 stats.Text = ""
 stats.Parent = root
-Instance.new("UICorner", stats).CornerRadius = UDim.new(0, 16)
+UITheme.addCorner(stats, UITheme.Corners.Large)
+UITheme.addStroke(stats, UITheme.Colors.Border, 1, 0.45)
+UITheme.addGradient(stats, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 
 local xpTrack = Instance.new("Frame")
@@ -129,7 +132,7 @@ xpTrack.Name = "XPTrack"
 xpTrack.AnchorPoint = Vector2.new(0.5, 1)
 xpTrack.Position = UDim2.fromScale(0.5, 0.94)
 xpTrack.Size = UDim2.fromScale(0.62, 0.012)
-xpTrack.BackgroundColor3 = Color3.fromRGB(42, 47, 62)
+xpTrack.BackgroundColor3 = UITheme.Colors.PanelSoft
 xpTrack.BackgroundTransparency = 0.08
 xpTrack.BorderSizePixel = 0
 xpTrack.Parent = root
@@ -137,10 +140,11 @@ Instance.new("UICorner", xpTrack).CornerRadius = UDim.new(1, 0)
 
 local xpFill = Instance.new("Frame")
 xpFill.Size = UDim2.fromScale(0, 1)
-xpFill.BackgroundColor3 = Color3.fromRGB(105, 165, 255)
+xpFill.BackgroundColor3 = UITheme.Colors.Blue
 xpFill.BorderSizePixel = 0
 xpFill.Parent = xpTrack
 Instance.new("UICorner", xpFill).CornerRadius = UDim.new(1, 0)
+UITheme.addGradient(xpFill, UITheme.Colors.Cyan, UITheme.Colors.Violet, 0)
 
 local levelToast = Instance.new("Frame")
 levelToast.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -296,11 +300,14 @@ questPanel.Name = "QuestPanel"
 questPanel.AnchorPoint = Vector2.new(0, 1)
 questPanel.Position = UDim2.fromScale(0.025, 0.82)
 questPanel.Size = UDim2.fromScale(0.72, 0.34)
-questPanel.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
-questPanel.BackgroundTransparency = 0.04
+questPanel.BackgroundColor3 = UITheme.Colors.Panel
+questPanel.BackgroundTransparency = 0.02
+questPanel.BorderSizePixel = 0
 questPanel.Visible = false
 questPanel.Parent = root
-Instance.new("UICorner", questPanel).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(questPanel, UITheme.Corners.Large)
+UITheme.addStroke(questPanel, UITheme.Colors.Cyan, 1.2, 0.38)
+UITheme.addGradient(questPanel, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local questHeader = Instance.new("TextLabel")
 questHeader.Size = UDim2.new(1, -24, 0.18, 0)
@@ -399,11 +406,14 @@ cosmeticsPanel.Name = "CosmeticsPanel"
 cosmeticsPanel.AnchorPoint = Vector2.new(1, 1)
 cosmeticsPanel.Position = UDim2.fromScale(0.975, 0.82)
 cosmeticsPanel.Size = UDim2.fromScale(0.72, 0.36)
-cosmeticsPanel.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
-cosmeticsPanel.BackgroundTransparency = 0.04
+cosmeticsPanel.BackgroundColor3 = UITheme.Colors.Panel
+cosmeticsPanel.BackgroundTransparency = 0.02
+cosmeticsPanel.BorderSizePixel = 0
 cosmeticsPanel.Visible = false
 cosmeticsPanel.Parent = root
-Instance.new("UICorner", cosmeticsPanel).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(cosmeticsPanel, UITheme.Corners.Large)
+UITheme.addStroke(cosmeticsPanel, UITheme.Colors.Magenta, 1.2, 0.38)
+UITheme.addGradient(cosmeticsPanel, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local cosmeticsHeader = Instance.new("TextLabel")
 cosmeticsHeader.Size = UDim2.new(1, -24, 0.16, 0)
@@ -646,11 +656,14 @@ achievementPanel.Name = "AchievementPanel"
 achievementPanel.AnchorPoint = Vector2.new(0.5, 1)
 achievementPanel.Position = UDim2.fromScale(0.5, 0.82)
 achievementPanel.Size = UDim2.fromScale(0.82, 0.46)
-achievementPanel.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
-achievementPanel.BackgroundTransparency = 0.04
+achievementPanel.BackgroundColor3 = UITheme.Colors.Panel
+achievementPanel.BackgroundTransparency = 0.02
+achievementPanel.BorderSizePixel = 0
 achievementPanel.Visible = false
 achievementPanel.Parent = root
-Instance.new("UICorner", achievementPanel).CornerRadius = UDim.new(0, 18)
+UITheme.addCorner(achievementPanel, UITheme.Corners.Large)
+UITheme.addStroke(achievementPanel, UITheme.Colors.Gold, 1.2, 0.38)
+UITheme.addGradient(achievementPanel, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local achievementHeader = Instance.new("TextLabel")
 achievementHeader.Size = UDim2.new(1, -24, 0, 42)
