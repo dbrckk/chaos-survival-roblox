@@ -1,5 +1,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local visualThemeModule = shared and shared:FindFirstChild("VisualTheme")
+local VisualTheme = if visualThemeModule
+    then require(visualThemeModule)
+    else require("../shared/VisualTheme")
 
 local MapBuilder = {}
 
