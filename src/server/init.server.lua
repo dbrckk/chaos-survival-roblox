@@ -140,6 +140,16 @@ local function alive(player)
     return hum ~= nil and hum.Health > 0
 end
 
+local function readyPlayerCount()
+    local count = 0
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player:GetAttribute("DataLoaded") == true then
+            count += 1
+        end
+    end
+    return count
+end
+
 local function teleportToArena(player, index)
     local generatedMap = workspace:FindFirstChild("GeneratedMap")
     local arena = generatedMap and generatedMap:FindFirstChild("Arena")
@@ -505,8 +515,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
 end
 
 while true do
-    while #Players:GetPlayers() < Config.MinimumPlayers do
-        broadcast({phase = "waiting", title = "WAITING FOR PLAYERS", hint = "", seconds = 0})
+    while readyPlayerCount() < Config.MinimumPlayers do
+        local connected = #Players:GetPlayers()
+        broadcast({
+            phase = "waiting",
+            title = connected >= Config.MinimumPlayers and "PREPARING PLAYER DATA" or "WAITING FOR PLAYERS",
+            hint = connected >= Config.MinimumPlayers and "Syncing your progress safely" or "",
+            seconds = 0,
+        })
         task.wait(1)
     end
 
@@ -517,7 +533,7 @@ while true do
     currentArenaVariant = ArenaVariants.chooseRecent(recentArenaVariantIds)
     recentArenaVariantIds = ArenaVariants.pushRecent(recentArenaVariantIds, currentArenaVariant, 2)
     local arenaDefinition = ArenaVariants.get(currentArenaVariant)
-    local intermissionSettings = SoloRules.resolve(Config, #Players:GetPlayers())
+    local intermissionSettings = SoloRules.resolve(Config, readyPlayerCount())
 
     for t = intermissionSettings.IntermissionSeconds, 1, -1 do
         local options = nil
