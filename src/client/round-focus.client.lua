@@ -101,6 +101,46 @@ gradient.Color = ColorSequence.new({
 })
 gradient.Parent = fill
 
+
+local function applyResponsiveLayout()
+    if not touchDevice then
+        root.AnchorPoint = Vector2.new(0.5, 1)
+        root.Position = UDim2.new(0.5, 0, 1, -18)
+        root.Size = UDim2.new(0.82, 0, 0, 54)
+        return
+    end
+
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local aspect = viewport.Y > 0 and (viewport.X / viewport.Y) or 1.78
+    local narrow = aspect < 1.7
+    local wide = aspect > 2.0
+
+    root.AnchorPoint = Vector2.new(0.5, 0.5)
+    root.Position = UDim2.fromScale(0.5, narrow and 0.75 or 0.77)
+    root.Size = UDim2.new(
+        narrow and 0.70 or (wide and 0.55 or 0.62),
+        0,
+        0,
+        narrow and 50 or 48
+    )
+end
+
+applyResponsiveLayout()
+
+local responsiveCamera = workspace.CurrentCamera
+if responsiveCamera then
+    responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    responsiveCamera = workspace.CurrentCamera
+    if responsiveCamera then
+        applyResponsiveLayout()
+        responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+    end
+end)
+
 local currentState = nil
 local visibleToken = 0
 
