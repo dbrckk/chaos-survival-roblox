@@ -40,6 +40,16 @@ UITheme.addCorner(root, UITheme.Corners.Large)
 local stroke = UITheme.addStroke(root, UITheme.Colors.Blue, 1.2, 0.30)
 UITheme.addGradient(root, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
+local accentRail = Instance.new("Frame")
+accentRail.Name = "DisasterAccent"
+accentRail.AnchorPoint = Vector2.new(0.5, 0)
+accentRail.Position = UDim2.fromScale(0.5, 0)
+accentRail.Size = UDim2.new(0.90, 0, 0, 4)
+accentRail.BackgroundColor3 = UITheme.Colors.Cyan
+accentRail.BorderSizePixel = 0
+accentRail.Parent = root
+UITheme.addCorner(accentRail, UITheme.Corners.Pill)
+
 local scale = Instance.new("UIScale")
 scale.Scale = 0.96
 scale.Parent = root
@@ -48,26 +58,32 @@ local shard = Instance.new("TextLabel")
 shard.Name = "ShardCount"
 shard.Position = UDim2.fromScale(0.025, 0.12)
 shard.Size = UDim2.fromScale(0.27, 0.43)
-shard.BackgroundTransparency = 1
+shard.BackgroundColor3 = UITheme.Colors.PanelSoft
+shard.BackgroundTransparency = 0.16
+shard.BorderSizePixel = 0
 shard.Font = Enum.Font.GothamBlack
 shard.Text = "SHARDS  0"
 shard.TextColor3 = UITheme.Colors.Cyan
 shard.TextScaled = true
 shard.TextXAlignment = Enum.TextXAlignment.Left
 shard.Parent = root
+UITheme.addCorner(shard, UITheme.Corners.Pill)
 
 local status = Instance.new("TextLabel")
 status.Name = "Status"
 status.AnchorPoint = Vector2.new(1, 0)
 status.Position = UDim2.fromScale(0.975, 0.12)
 status.Size = UDim2.fromScale(0.36, 0.43)
-status.BackgroundTransparency = 1
+status.BackgroundColor3 = UITheme.Colors.PanelSoft
+status.BackgroundTransparency = 0.18
+status.BorderSizePixel = 0
 status.Font = Enum.Font.GothamBold
 status.Text = "STABLE"
 status.TextColor3 = UITheme.Colors.Muted
 status.TextScaled = true
 status.TextXAlignment = Enum.TextXAlignment.Right
 status.Parent = root
+UITheme.addCorner(status, UITheme.Corners.Pill)
 
 local barBg = Instance.new("Frame")
 barBg.Name = "IntensityBackground"
@@ -204,12 +220,22 @@ local function refresh()
     status.Text = text
     status.TextColor3 = color
 
+    local primaryId = state.disasterIds and state.disasterIds[1]
+    local disasterAccent = UITheme.disasterAccent(primaryId, UITheme.Colors.Cyan)
+    accentRail.BackgroundColor3 = disasterAccent
+    fill.BackgroundColor3 = disasterAccent
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, disasterAccent),
+        ColorSequenceKeypoint.new(0.55, disasterAccent:Lerp(UITheme.Colors.Violet, 0.45)),
+        ColorSequenceKeypoint.new(1, UITheme.Colors.Red),
+    })
+
     if state.doubleChaos then
         stroke.Color = UITheme.Colors.Violet
         shard.TextColor3 = Color3.fromRGB(215, 165, 255)
     else
-        stroke.Color = UITheme.Colors.Blue
-        shard.TextColor3 = UITheme.Colors.Cyan
+        stroke.Color = disasterAccent
+        shard.TextColor3 = disasterAccent
     end
 end
 
