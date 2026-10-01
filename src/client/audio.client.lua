@@ -204,6 +204,12 @@ end)
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     play(feedback.survived and "Survived" or "Eliminated", 0.025)
 
+    if feedback.criticalSurvival then
+        task.delay(0.12, function()
+            play("LastSurvivor", 0.03)
+        end)
+    end
+
     if (tonumber(feedback.streakBonusCoins) or 0) > 0 then
         task.delay(0.16, function()
             play("Reward", 0.045)
