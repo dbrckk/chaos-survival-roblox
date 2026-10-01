@@ -14,6 +14,10 @@ describe("Hazard warning metadata", function()
         expect(part:GetAttribute("WarningStartSize")).toBe(5.5)
         expect(part:GetAttribute("WarningEndSize")).toBe(16)
 
+        local startedAt = tonumber(part:GetAttribute("WarningStartedAt"))
+        expect(startedAt ~= nil).toBe(true)
+        expect(math.abs((startedAt :: number) - workspace:GetServerTimeNow()) < 1).toBe(true)
+
         part:Destroy()
     end)
 
