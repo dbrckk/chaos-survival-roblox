@@ -299,8 +299,8 @@ local function currentVoteCounts()
         counts[d.Id] = 0
     end
 
-    for _, id in pairs(currentVotes) do
-        if counts[id] ~= nil then
+    for userId, id in pairs(currentVotes) do
+        if Players:GetPlayerByUserId(userId) and counts[id] ~= nil then
             counts[id] += 1
         end
     end
