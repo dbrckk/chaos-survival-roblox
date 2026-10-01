@@ -12,6 +12,17 @@ function D.coverageSize(baseSize, padding)
     )
 end
 
+function D.rootTouchesLava(rootY, lavaTopY, clearance)
+    local root = tonumber(rootY)
+    local top = tonumber(lavaTopY)
+    if not root or not top then
+        return false
+    end
+
+    local safeClearance = math.max(0, tonumber(clearance) or 2.5)
+    return (root - safeClearance) <= top
+end
+
 function D.isActiveContestant(player, ctx)
     if not player then
         return false
@@ -83,6 +94,24 @@ function D.start(ctx)
         while ctx.Active() and lava.Parent do
             local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
             lava.Position = Vector3.new(lava.Position.X, startY + alpha * 25, lava.Position.Z)
+
+            local lavaTopY = lava.Position.Y + (lava.Size.Y * 0.5)
+            for _, player in ipairs(ctx.Contestants or {}) do
+                if D.isActiveContestant(player, ctx) then
+                    local character = player.Character
+                    local root = character and character:FindFirstChild("HumanoidRootPart")
+                    local hum = character and character:FindFirstChildOfClass("Humanoid")
+                    if root
+                        and root:IsA("BasePart")
+                        and hum
+                        and hum.Health > 0
+                        and D.rootTouchesLava(root.Position.Y, lavaTopY, 2.5)
+                    then
+                        hum.Health = 0
+                    end
+                end
+            end
+
             task.wait(0.1)
         end
     end)
