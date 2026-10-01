@@ -587,9 +587,9 @@ RunService.RenderStepped:Connect(function(dt)
             local shimmer = (math.sin(clock * (finalRush and 6.0 or (overdrive and 4.2 or 2.1)) + index * 0.8) + 1) * 0.5
             if part.Name == "ArenaIdentityGlow" then
                 part.Color = visualAccent
-                part.Transparency = (overdrive and 0.42 or 0.58) + shimmer * 0.18
+                part.Transparency = (finalRush and 0.34 or (overdrive and 0.42 or 0.58)) + shimmer * 0.18
             else
-                part.Transparency = (overdrive and 0.10 or 0.16) + shimmer * 0.08
+                part.Transparency = (finalRush and 0.06 or (overdrive and 0.10 or 0.16)) + shimmer * 0.08
             end
         end
     end
