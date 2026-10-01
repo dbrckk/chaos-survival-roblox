@@ -17,6 +17,14 @@ describe("Hazard warning metadata", function()
         part:Destroy()
     end)
 
+    it("covers rectangular arena corners with global warnings", function()
+        local diameter = HazardWarning.coverageDiameter(Vector3.new(104, 2, 104), 6)
+        local half = diameter * 0.5
+        local cornerDistance = Vector2.new(52, 52).Magnitude
+
+        expect(half > cornerDistance).toBe(true)
+    end)
+
     it("sanitizes invalid durations and sizes", function()
         local part = Instance.new("Part")
         HazardWarning.configure(part, "Bomb", -2, -5, 0)
