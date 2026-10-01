@@ -40,7 +40,7 @@ jobs:
         if: steps.config.outputs.ready == 'true'
         shell: bash
         run: |
-          curl -fsSL -o /tmp/lest.zip https://github.com/lest-luau/lest/releases/download/v0.6.0/lest-0.6.0-linux-x86_64.zip
+          curl --retry 5 --retry-all-errors --retry-delay 3 -fsSL -o /tmp/lest.zip https://github.com/lest-luau/lest/releases/download/v0.6.0/lest-0.6.0-linux-x86_64.zip
           unzip -q /tmp/lest.zip -d /tmp/lest
           chmod +x /tmp/lest/lest
           echo "/tmp/lest" >> "$GITHUB_PATH"
