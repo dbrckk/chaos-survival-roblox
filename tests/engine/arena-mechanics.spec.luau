@@ -36,6 +36,23 @@ describe("Arena mechanics", function()
         end
     end)
 
+    it("clamps stacked disaster velocity before applying pad motion", function()
+        local velocity = ArenaMechanics.safeVelocity(
+            Vector3.new(90, 80, -95),
+            Vector3.new(46, 55, 46)
+        )
+
+        local horizontal = Vector3.new(velocity.X, 0, velocity.Z)
+        expect(horizontal.Magnitude <= 60.001).toBe(true)
+        expect(velocity.Y).toBe(58)
+
+        local falling = ArenaMechanics.safeVelocity(
+            Vector3.new(0, -90, 0),
+            Vector3.new(0, 8, 0)
+        )
+        expect(falling.Y).toBe(-52)
+    end)
+
     it("keeps mobility impulses non-lethal and bounded", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local mechanic = ArenaMechanics.get(id)
