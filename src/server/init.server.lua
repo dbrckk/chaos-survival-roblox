@@ -618,11 +618,10 @@ while true do
     roundSettings = SoloRules.resolve(Config, #contestants)
     roundSettings.ArenaName = resolvedArenaName
 
-    recentPrimaryDisasterIds = RoundVariety.pushRecent(recentPrimaryDisasterIds, selected.Id, 2)
-    roundNumber += 1
+    local upcomingRoundNumber = roundNumber + 1
 
     local selectedSet = {selected}
-    local forceDouble = (roundNumber % roundSettings.DoubleChaosEvery == 0)
+    local forceDouble = (upcomingRoundNumber % roundSettings.DoubleChaosEvery == 0)
     if forceDouble or math.random() < roundSettings.DoubleChaosChance then
         local candidates = DisasterBalance.filterCompatible(selected.Id, disasters)
         if #candidates > 0 then
@@ -688,6 +687,9 @@ while true do
     local arenaName = roundSettings.ArenaName
     roundSettings = SoloRules.resolve(Config, #contestants)
     roundSettings.ArenaName = arenaName
+
+    roundNumber = upcomingRoundNumber
+    recentPrimaryDisasterIds = RoundVariety.pushRecent(recentPrimaryDisasterIds, selected.Id, 2)
 
     for _, p in ipairs(contestants) do
         GameAnalytics.roundStarted(p, roundNumber, roundSettings.Solo, selected.Id, #selectedSet > 1)
