@@ -24,6 +24,7 @@ local phase = "waiting"
 local accent = Color3.fromRGB(90, 185, 255)
 local secondaryAccent = nil
 local doubleChaos = false
+local overdrive = false
 local intensity = 1
 local previousPhase = "waiting"
 local readyPulseStartedAt = nil
@@ -417,34 +418,6 @@ end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     local tier = quality()
     applyLightBudget()
-    local linkTier = quality()
-    for _, attachment in ipairs(arenaEnergyLinks) do
-        if attachment.Parent then
-            local beam = attachment:FindFirstChildOfClass("Beam")
-            if beam then
-                beam.Enabled = linkTier.Name ~= "Low"
-                beam.Color = ColorSequence.new(blendedAccent)
-                local linkWave = (math.sin(clock * 3.1) + 1) * 0.5
-                beam.Width0 = 0.07 + linkWave * 0.08 * linkTier.Scale
-                beam.Width1 = beam.Width0
-                beam.Transparency = NumberSequence.new(
-                    math.clamp(0.30 + (1 - linkTier.Scale) * 0.24 + linkWave * 0.10, 0.24, 0.80)
-                )
-            end
-        end
-    end
-
-    for index, part in ipairs(hologramParts) do
-        if part.Parent then
-            local shimmer = (math.sin(clock * 2.1 + index * 0.8) + 1) * 0.5
-            if part.Name == "ArenaIdentityGlow" then
-                part.Color = blendedAccent
-                part.Transparency = 0.58 + shimmer * 0.20
-            else
-                part.Transparency = 0.16 + shimmer * 0.08
-            end
-        end
-    end
 
     for _, attachment in ipairs(beaconEmitters) do
         local emitter = attachment and attachment:FindFirstChildOfClass("ParticleEmitter")
@@ -464,6 +437,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         readyPulseStartedAt = nil
     end
     doubleChaos = state.doubleChaos == true
+    overdrive = state.phase == "round" and state.overdrive == true
     intensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
 
     local ids = state.disasterIds or {}
@@ -576,6 +550,46 @@ RunService.RenderStepped:Connect(function(dt)
         blendedAccent = accent:Lerp(secondaryAccent, blend)
     end
 
+    local visualAccent = blendedAccent
+    if overdrive then
+        visualAccent = Color3.fromRGB(255, 205, 85):Lerp(blendedAccent, 0.28)
+    end
+
+    local linkTier = quality()
+    for _, attachment in ipairs(arenaEnergyLinks) do
+        if attachment.Parent then
+            local beam = attachment:FindFirstChildOfClass("Beam")
+            if beam then
+                beam.Enabled = linkTier.Name ~= "Low"
+                beam.Color = ColorSequence.new(visualAccent)
+                local linkWave = (math.sin(clock * (overdrive and 5.4 or 3.1)) + 1) * 0.5
+                beam.Width0 = (overdrive and 0.12 or 0.07) + linkWave * 0.08 * linkTier.Scale
+                beam.Width1 = beam.Width0
+                beam.Transparency = NumberSequence.new(
+                    math.clamp(
+                        (overdrive and 0.18 or 0.30)
+                            + (1 - linkTier.Scale) * 0.24
+                            + linkWave * 0.10,
+                        0.14,
+                        0.80
+                    )
+                )
+            end
+        end
+    end
+
+    for index, part in ipairs(hologramParts) do
+        if part.Parent then
+            local shimmer = (math.sin(clock * (overdrive and 4.2 or 2.1) + index * 0.8) + 1) * 0.5
+            if part.Name == "ArenaIdentityGlow" then
+                part.Color = visualAccent
+                part.Transparency = (overdrive and 0.42 or 0.58) + shimmer * 0.18
+            else
+                part.Transparency = (overdrive and 0.10 or 0.16) + shimmer * 0.08
+            end
+        end
+    end
+
     local readyBoost = 0
     if phase == "ready" and readyPulseStartedAt then
         local elapsedReady = clock - readyPulseStartedAt
@@ -587,7 +601,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     local arenaSpeed = (
         phase == "round"
-            and 1.55
+            and (overdrive and 2.45 or 1.55)
             or (phase == "ready" and (0.95 + readyBoost * 1.35) or 0.65)
     ) * intensity
     for i, glow in ipairs(arenaGlowParts) do
@@ -607,7 +621,7 @@ RunService.RenderStepped:Connect(function(dt)
                     math.sin(angle) * radius
                 )
                 glow.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
-                glow.Color = blendedAccent
+                glow.Color = visualAccent
                 glow.Transparency = phase == "round"
                     and 0.12
                     or (phase == "ready"
@@ -621,9 +635,9 @@ RunService.RenderStepped:Connect(function(dt)
         if attachment.Parent then
             local emitter = attachment:FindFirstChildOfClass("ParticleEmitter")
             if emitter then
-                emitter.Color = ColorSequence.new(blendedAccent, Color3.new(1, 1, 1))
+                emitter.Color = ColorSequence.new(visualAccent, Color3.new(1, 1, 1))
                 local baseRate = phase == "round"
-                    and 12
+                    and (overdrive and 18 or 12)
                     or (phase == "ready" and (7 + readyBoost * 8) or 6)
                 local targetRate = baseRate * tier.ParticleScale * intensity
                 emitter.Rate += (targetRate - emitter.Rate) * math.min(1, elapsed * 6)
