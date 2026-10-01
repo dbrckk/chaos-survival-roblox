@@ -545,6 +545,7 @@ local function buildLobby(root, config)
         cap.CanCollide = false
 
         local light = Instance.new("PointLight")
+        light.Name = "LobbyPylonLight"
         light.Color = cap.Color
         light.Brightness = 0.8
         light.Range = 16
@@ -883,6 +884,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         cap.Transparency = 0.10
 
         local capLight = Instance.new("PointLight")
+        capLight.Name = "EdgeBeaconLight"
         capLight.Color = (i % 2 == 0) and theme.Secondary or theme.Accent
         capLight.Brightness = 0.55
         capLight.Range = 11
