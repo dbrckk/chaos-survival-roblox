@@ -175,7 +175,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
 
         musicVolume(state.doubleChaos and 0.045 or 0.065, 0.2)
-    elseif phase == "results" then
+    elseif phase == "result" then
         stopDisasterLoop()
         musicVolume(0.09, 0.35)
         lastCountdown = nil
