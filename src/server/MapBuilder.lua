@@ -284,6 +284,68 @@ local function addVariantIdentity(decor, config, variant, theme)
     end
 end
 
+local function addArenaHologram(decor, config, variant, theme)
+    local sign = decorPart(
+        decor,
+        "ArenaIdentityHologram",
+        Vector3.new(20, 6.4, 0.28),
+        config.ArenaCenter + Vector3.new(0, 11, -(variant.BaseSize.Z * 0.5) - 5.5),
+        theme.Surface,
+        VisualTheme.Materials.Panel
+    )
+    sign.Transparency = 0.20
+
+    local backGlow = decorPart(
+        decor,
+        "ArenaIdentityGlow",
+        Vector3.new(21.2, 7.3, 0.10),
+        sign.Position + Vector3.new(0, 0, 0.20),
+        theme.Accent,
+        VisualTheme.Materials.Glow
+    )
+    backGlow.Transparency = 0.68
+
+    local gui = Instance.new("SurfaceGui")
+    gui.Name = "ArenaIdentityGui"
+    gui.Face = Enum.NormalId.Front
+    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    gui.PixelsPerStud = 42
+    gui.LightInfluence = 0
+    gui.AlwaysOnTop = false
+    gui.Parent = sign
+
+    local header = Instance.new("TextLabel")
+    header.Size = UDim2.new(1, -24, 0.52, 0)
+    header.Position = UDim2.fromOffset(12, 6)
+    header.BackgroundTransparency = 1
+    header.Font = Enum.Font.GothamBlack
+    header.Text = variant.Name
+    header.TextColor3 = Color3.fromRGB(242, 247, 255)
+    header.TextStrokeColor3 = theme.Accent
+    header.TextStrokeTransparency = 0.56
+    header.TextScaled = true
+    header.Parent = gui
+
+    local separator = Instance.new("Frame")
+    separator.AnchorPoint = Vector2.new(0.5, 0)
+    separator.Position = UDim2.fromScale(0.5, 0.55)
+    separator.Size = UDim2.new(0.78, 0, 0, 3)
+    separator.BackgroundColor3 = theme.Accent
+    separator.BorderSizePixel = 0
+    separator.Parent = gui
+
+    local hint = Instance.new("TextLabel")
+    hint.Size = UDim2.new(1, -32, 0.30, 0)
+    hint.Position = UDim2.new(0, 16, 0.62, 0)
+    hint.BackgroundTransparency = 1
+    hint.Font = Enum.Font.GothamBold
+    hint.Text = variant.StrategyHint or "ADAPT • MOVE • SURVIVE"
+    hint.TextColor3 = theme.Detail:Lerp(Color3.new(1, 1, 1), 0.50)
+    hint.TextScaled = true
+    hint.TextWrapped = true
+    hint.Parent = gui
+end
+
 local function addVariantFloorLanguage(decor, config, variant, theme)
     local center = config.ArenaCenter
 
@@ -762,6 +824,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     addArenaFoundation(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantFloorLanguage(decor, config, variant, theme)
+    addArenaHologram(decor, config, variant, theme)
 
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
