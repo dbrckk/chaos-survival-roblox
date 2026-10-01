@@ -82,6 +82,7 @@ assert(#disasters >= 3, "At least 3 disasters are required")
 
 local roundNumber = 0
 local currentArenaVariant = "Classic"
+local recentArenaVariantIds = {currentArenaVariant}
 local recentPrimaryDisasterIds = {}
 local currentVotes = {}
 local currentOptions = {}
@@ -416,7 +417,8 @@ while true do
     currentOptions = chooseVoteOptions()
     voteOpen = false
 
-    currentArenaVariant = ArenaVariants.choose(currentArenaVariant)
+    currentArenaVariant = ArenaVariants.chooseRecent(recentArenaVariantIds)
+    recentArenaVariantIds = ArenaVariants.pushRecent(recentArenaVariantIds, currentArenaVariant, 2)
     local arenaDefinition = ArenaVariants.get(currentArenaVariant)
     local intermissionSettings = SoloRules.resolve(Config, #Players:GetPlayers())
 
