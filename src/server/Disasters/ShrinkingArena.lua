@@ -38,6 +38,7 @@ function D.start(ctx)
                     part = edge,
                     size = edge.Size,
                     cframe = edge.CFrame,
+                    localCFrame = originalCFrame:ToObjectSpace(edge.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(edge.Position),
                 }
             end
@@ -52,6 +53,7 @@ function D.start(ctx)
                 movableParts[#movableParts+1] = {
                     part = platform,
                     cframe = platform.CFrame,
+                    localCFrame = originalCFrame:ToObjectSpace(platform.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(platform.Position),
                 }
             end
@@ -64,6 +66,7 @@ function D.start(ctx)
                 movableParts[#movableParts+1] = {
                     part = item,
                     cframe = item.CFrame,
+                    localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(item.Position),
                 }
             end
@@ -92,7 +95,8 @@ function D.start(ctx)
                         scale
                     )
                     edge.Size = size
-                    edge.CFrame = originalCFrame * CFrame.new(localPosition)
+                    local rotationOnly = state.localCFrame - state.localCFrame.Position
+                    edge.CFrame = (originalCFrame * CFrame.new(localPosition)) * rotationOnly
                 end
             end
 
@@ -100,7 +104,7 @@ function D.start(ctx)
                 local part = state.part
                 if part.Parent then
                     local localPosition = D.scaledLocalPosition(state.localPosition, scale)
-                    local rotationOnly = state.cframe - state.cframe.Position
+                    local rotationOnly = state.localCFrame - state.localCFrame.Position
                     part.CFrame = (originalCFrame * CFrame.new(localPosition)) * rotationOnly
                 end
             end
