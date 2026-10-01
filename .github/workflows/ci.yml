@@ -61,6 +61,45 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce performance telemetry isolation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("src/server/init.server.lua").read_text()
+          marker = 'performancePulseEvent.OnServerEvent:Connect'
+          start = source.find(marker)
+          if start < 0:
+              raise SystemExit("PerformancePulse handler is missing.")
+
+          end = source.find("\nend)\n", start)
+          if end < 0:
+              raise SystemExit("PerformancePulse handler is malformed.")
+
+          handler = source[start:end]
+          forbidden = [
+              "PlayerData.add",
+              "WalkSpeed",
+              "JumpPower",
+              "MaxHealth",
+              "Humanoid.Health",
+              "Coins",
+              "XP",
+              "Wins",
+          ]
+
+          found = [token for token in forbidden if token in handler]
+          if found:
+              print("Performance telemetry must remain analytics-only:", ", ".join(found))
+              raise SystemExit(1)
+
+          if "GameAnalytics.custom" not in handler:
+              raise SystemExit("PerformancePulse must terminate in analytics only.")
+
+          print("Performance telemetry isolation verified.")
+          PY
+
       - name: Enforce production release hygiene
         shell: bash
         run: |
