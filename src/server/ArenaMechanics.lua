@@ -1,3 +1,5 @@
+local Players = game:GetService("Players")
+local MovementSafety = if script then require(script.Parent.MovementSafety) else require("./MovementSafety")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
@@ -109,19 +111,23 @@ local function createPad(folder, center, definition, index)
 end
 
 local function rootAndPlayerFromHit(hit)
-    local character = hit and hit.Parent
-    if not character then
-        return nil, nil
+    local current = hit
+    while current and current ~= workspace do
+        if current:IsA("Model") then
+            local player = Players:GetPlayerFromCharacter(current)
+            if player then
+                local humanoid = current:FindFirstChildOfClass("Humanoid")
+                local root = current:FindFirstChild("HumanoidRootPart")
+                if humanoid and humanoid.Health > 0 and root and root:IsA("BasePart") then
+                    return root, player
+                end
+                return nil, nil
+            end
+        end
+        current = current.Parent
     end
 
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not humanoid or humanoid.Health <= 0 or not root then
-        return nil, nil
-    end
-
-    local Players = game:GetService("Players")
-    return root, Players:GetPlayerFromCharacter(character)
+    return nil, nil
 end
 
 function ArenaMechanics.get(variantId)
@@ -129,14 +135,13 @@ function ArenaMechanics.get(variantId)
 end
 
 function ArenaMechanics.safeVelocity(currentVelocity, impulse)
-    local combined = currentVelocity + impulse
-    local horizontal = Vector3.new(combined.X, 0, combined.Z)
-    if horizontal.Magnitude > 60 then
-        horizontal = horizontal.Unit * 60
-    end
-
-    local vertical = math.clamp(combined.Y, -52, 58)
-    return Vector3.new(horizontal.X, vertical, horizontal.Z)
+    return MovementSafety.addImpulse(
+        currentVelocity,
+        impulse,
+        60,
+        -52,
+        58
+    )
 end
 
 function ArenaMechanics.start(ctx, variantId)
