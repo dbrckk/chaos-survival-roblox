@@ -656,10 +656,37 @@ while true do
         task.wait(1)
     end
 
+    local startingContestants = {}
     for _, p in ipairs(contestants) do
-        if p.Parent == Players then
-            GameAnalytics.roundStarted(p, roundNumber, roundSettings.Solo, selected.Id, #selectedSet > 1)
+        if p.Parent == Players
+            and p:GetAttribute("DataLoaded") == true
+            and alive(p)
+        then
+            table.insert(startingContestants, p)
+        else
+            p:SetAttribute("RoundParticipant", false)
+            p:SetAttribute("RoundEliminated", false)
         end
+    end
+    contestants = startingContestants
+
+    if #contestants == 0 then
+        broadcast({
+            phase = "waiting",
+            title = "ROUND CANCELLED",
+            hint = "No ready players remain",
+            seconds = 0,
+        })
+        task.wait(1)
+        continue
+    end
+
+    local arenaName = roundSettings.ArenaName
+    roundSettings = SoloRules.resolve(Config, #contestants)
+    roundSettings.ArenaName = arenaName
+
+    for _, p in ipairs(contestants) do
+        GameAnalytics.roundStarted(p, roundNumber, roundSettings.Solo, selected.Id, #selectedSet > 1)
     end
 
     local eliminated, endedEarly, roundElapsed = runDisasterSet(selectedSet, contestants, roundSettings)
