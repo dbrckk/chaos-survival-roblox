@@ -769,7 +769,7 @@ local resultCard = Instance.new("Frame")
 resultCard.Name = "ResultCard"
 resultCard.AnchorPoint = Vector2.new(0.5, 0.5)
 resultCard.Position = UDim2.fromScale(0.5, 0.54)
-resultCard.Size = UDim2.fromScale(0.80, 0.24)
+resultCard.Size = UDim2.fromScale(0.80, 0.29)
 resultCard.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
 resultCard.BackgroundTransparency = 1
 resultCard.Visible = false
@@ -804,8 +804,8 @@ resultReward.Text = ""
 resultReward.Parent = resultCard
 
 local resultMeta = Instance.new("TextLabel")
-resultMeta.Size = UDim2.new(1, -28, 0.22, 0)
-resultMeta.Position = UDim2.new(0, 14, 0.68, 0)
+resultMeta.Size = UDim2.new(1, -28, 0.18, 0)
+resultMeta.Position = UDim2.new(0, 14, 0.64, 0)
 resultMeta.BackgroundTransparency = 1
 resultMeta.Font = Enum.Font.GothamMedium
 resultMeta.TextColor3 = Color3.fromRGB(220, 225, 235)
@@ -814,7 +814,20 @@ resultMeta.ZIndex = 22
 resultMeta.Text = ""
 resultMeta.Parent = resultCard
 
+local resultTip = Instance.new("TextLabel")
+resultTip.Size = UDim2.new(1, -28, 0.14, 0)
+resultTip.Position = UDim2.new(0, 14, 0.83, 0)
+resultTip.BackgroundTransparency = 1
+resultTip.Font = Enum.Font.GothamMedium
+resultTip.TextColor3 = Color3.fromRGB(195, 205, 220)
+resultTip.TextScaled = true
+resultTip.TextWrapped = true
+resultTip.ZIndex = 22
+resultTip.Text = ""
+resultTip.Parent = resultCard
+
 local resultToken = 0
+local lastRoundHint = ""
 
 local function showRoundFeedback(feedback)
     resultToken += 1
@@ -846,6 +859,18 @@ local function showRoundFeedback(feedback)
     end
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
     resultMeta.Text = table.concat(tags, "  •  ")
+
+    if survived then
+        if streakCount >= 2 then
+            resultTip.Text = "NEXT: protect your streak and push it higher"
+        else
+            resultTip.Text = "NEXT: survive again to start a streak"
+        end
+    elseif lastRoundHint ~= "" then
+        resultTip.Text = "TIP: " .. lastRoundHint
+    else
+        resultTip.Text = "TIP: keep moving and react early to warning zones"
+    end
 
     resultCard.BackgroundColor3 = survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40)
     resultFlash.BackgroundColor3 = survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95)
@@ -1073,6 +1098,10 @@ end)
 stateEvent.OnClientEvent:Connect(function(state)
     if state.phase == "round" or state.phase == "ready" then
         closeAllPanels()
+    end
+
+    if state.phase == "round" and type(state.hint) == "string" and state.hint ~= "" then
+        lastRoundHint = state.hint
     end
 
     title.Text = state.title or "CHAOS SURVIVAL"
