@@ -356,12 +356,12 @@ function CosmeticService.init(remotes, rateLimiterFactory)
             return
         end
 
-        if action == "sync" then
-            sendState(player)
+        if not allowAction(player.UserId) then
             return
         end
 
-        if not allowAction(player.UserId) then
+        if action == "sync" then
+            sendState(player)
             return
         end
 
