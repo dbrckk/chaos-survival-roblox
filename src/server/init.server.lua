@@ -233,6 +233,11 @@ local function setupDailyReward(player)
             return
         end
 
+        if player:GetAttribute("DataPersistenceAvailable") ~= true then
+            sendQuestState(player)
+            return
+        end
+
         local claim = PlayerData.claimDaily(player)
         if claim then
             dailyRewardEvent:FireClient(player, {
