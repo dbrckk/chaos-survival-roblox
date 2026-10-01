@@ -22,6 +22,18 @@ describe("Arena variants", function()
         end
     end)
 
+    it("gives every arena concise actionable strategy guidance", function()
+        local seenHints = {}
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            expect(type(variant.StrategyHint)).toBe("string")
+            expect(#variant.StrategyHint >= 24).toBe(true)
+            expect(#variant.StrategyHint <= 96).toBe(true)
+            expect(seenHints[variant.StrategyHint] == nil).toBe(true)
+            seenHints[variant.StrategyHint] = true
+        end
+    end)
+
     it("never immediately repeats a map when alternatives exist", function()
         for _, previous in ipairs(ArenaVariants.Order) do
             for _ = 1, 20 do
