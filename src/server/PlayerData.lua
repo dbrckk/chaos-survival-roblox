@@ -10,6 +10,8 @@ local PlayerData = {}
 
 local MAX_ATTEMPTS = 4
 local AUTOSAVE_SECONDS = 60
+local AUTOSAVE_SPREAD_SECONDS = 12
+local SHUTDOWN_SAVE_DEADLINE_SECONDS = 27
 
 local active = {}
 local saving = {}
@@ -313,10 +315,22 @@ function PlayerData.init()
         while true do
             task.wait(AUTOSAVE_SECONDS)
 
-            for _, player in ipairs(Players:GetPlayers()) do
-                if active[player] and player:GetAttribute("DataPersistenceAvailable") == true then
-                    task.spawn(PlayerData.save, player)
+            local players = Players:GetPlayers()
+            local count = #players
+            for index, player in ipairs(players) do
+                local delaySeconds = 0
+                if count > 1 then
+                    delaySeconds = ((index - 1) / count) * AUTOSAVE_SPREAD_SECONDS
                 end
+
+                task.delay(delaySeconds, function()
+                    if player.Parent == Players
+                        and active[player]
+                        and player:GetAttribute("DataPersistenceAvailable") == true
+                    then
+                        PlayerData.save(player)
+                    end
+                end)
             end
         end
     end)
@@ -334,9 +348,13 @@ function PlayerData.init()
             end
         end
 
-        local deadline = os.clock() + 12
+        local deadline = os.clock() + SHUTDOWN_SAVE_DEADLINE_SECONDS
         while pending > 0 and os.clock() < deadline do
             task.wait(0.1)
+        end
+
+        if pending > 0 then
+            warn("Server shutdown reached save deadline with pending player saves:", pending)
         end
     end)
 end
