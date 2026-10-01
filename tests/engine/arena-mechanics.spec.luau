@@ -71,6 +71,16 @@ describe("Arena mechanics", function()
         end
     end)
 
+    it("boosts pad impulses during overdrive without mutating the base vector", function()
+        local base = Vector3.new(20, 10, -12)
+        local normal = ArenaMechanics.impulseFor(base, false)
+        local boosted = ArenaMechanics.impulseFor(base, true)
+
+        expect((normal - base).Magnitude < 0.001).toBe(true)
+        expect((boosted - (base * 1.28)).Magnitude < 0.001).toBe(true)
+        expect((base - Vector3.new(20, 10, -12)).Magnitude < 0.001).toBe(true)
+    end)
+
     it("uses the shared movement safety contract for pad impulses", function()
         local current = Vector3.new(90, 80, -95)
         local impulse = Vector3.new(46, 55, 46)
