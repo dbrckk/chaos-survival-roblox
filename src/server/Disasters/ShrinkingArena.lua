@@ -1,5 +1,11 @@
 local D = {Name = "SHRINKING ARENA", Hint = "STAY NEAR THE CENTER!"}
 
+function D.scaledLocalPosition(localPosition, scale)
+    local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
+    local offset = typeof(localPosition) == "Vector3" and localPosition or Vector3.zero
+    return Vector3.new(offset.X * safeScale, offset.Y, offset.Z * safeScale)
+end
+
 function D.scaledEdgeTransform(originalSize, localPosition, scale)
     local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
     local size = typeof(originalSize) == "Vector3" and originalSize or Vector3.one
@@ -8,11 +14,7 @@ function D.scaledEdgeTransform(originalSize, localPosition, scale)
     local scaledX = size.X > 1 and (size.X * safeScale) or size.X
     local scaledZ = size.Z > 1 and (size.Z * safeScale) or size.Z
 
-    return Vector3.new(scaledX, size.Y, scaledZ), Vector3.new(
-        offset.X * safeScale,
-        offset.Y,
-        offset.Z * safeScale
-    )
+    return Vector3.new(scaledX, size.Y, scaledZ), D.scaledLocalPosition(offset, safeScale)
 end
 
 function D.start(ctx)
@@ -37,6 +39,32 @@ function D.start(ctx)
                     size = edge.Size,
                     cframe = edge.CFrame,
                     localPosition = originalCFrame:PointToObjectSpace(edge.Position),
+                }
+            end
+        end
+    end
+
+    local movableParts = {}
+    local platforms = arena:FindFirstChild("Platforms")
+    if platforms then
+        for _, platform in ipairs(platforms:GetChildren()) do
+            if platform:IsA("BasePart") then
+                movableParts[#movableParts+1] = {
+                    part = platform,
+                    cframe = platform.CFrame,
+                    localPosition = originalCFrame:PointToObjectSpace(platform.Position),
+                }
+            end
+        end
+    end
+
+    if decor then
+        for _, item in ipairs(decor:GetChildren()) do
+            if item:IsA("BasePart") and string.match(item.Name, "^PlatformGlow%d+$") then
+                movableParts[#movableParts+1] = {
+                    part = item,
+                    cframe = item.CFrame,
+                    localPosition = originalCFrame:PointToObjectSpace(item.Position),
                 }
             end
         end
@@ -68,6 +96,15 @@ function D.start(ctx)
                 end
             end
 
+            for _, state in ipairs(movableParts) do
+                local part = state.part
+                if part.Parent then
+                    local localPosition = D.scaledLocalPosition(state.localPosition, scale)
+                    local rotationOnly = state.cframe - state.cframe.Position
+                    part.CFrame = (originalCFrame * CFrame.new(localPosition)) * rotationOnly
+                end
+            end
+
             task.wait(0.15)
         end
     end)
@@ -83,6 +120,13 @@ function D.start(ctx)
             if edge and edge.Parent then
                 edge.Size = state.size
                 edge.CFrame = state.cframe
+            end
+        end
+
+        for _, state in ipairs(movableParts) do
+            local part = state.part
+            if part and part.Parent then
+                part.CFrame = state.cframe
             end
         end
     end
