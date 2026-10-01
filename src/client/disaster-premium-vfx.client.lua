@@ -12,6 +12,7 @@ localFolder.Parent = workspace
 local lavaState = nil
 local freezeStates = {}
 local clock = 0
+local updateClock = 0
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -225,7 +226,18 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 RunService.RenderStepped:Connect(function(dt)
+    if not lavaState and next(freezeStates) == nil then
+        return
+    end
+
     clock += dt
+    updateClock += dt
+
+    local tier = quality()
+    if updateClock < math.max(1 / 30, tier.UpdateInterval) then
+        return
+    end
+    updateClock = 0
 
     if lavaState and lavaState.lava and lavaState.lava.Parent then
         local lava = lavaState.lava
@@ -242,7 +254,6 @@ RunService.RenderStepped:Connect(function(dt)
             surface.Transparency = 0.20 + pulse * 0.16
         end
         if lavaState.light and lavaState.light.Parent then
-            local tier = quality()
             lavaState.light.Brightness = (1.0 + math.sin(clock * 3.1) * 0.22) * tier.Scale
         end
     end
