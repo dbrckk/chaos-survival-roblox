@@ -327,6 +327,18 @@ local function setMood(state)
             clouds.Density = 0.34
             clouds.Color = Color3.fromRGB(205, 215, 235)
         end
+    elseif phase == "intermission" then
+        clouds.Cover = 0.20
+        clouds.Density = 0.24
+        clouds.Color = Color3.fromRGB(215, 228, 246)
+    elseif phase == "vote" then
+        clouds.Cover = 0.26
+        clouds.Density = 0.30
+        clouds.Color = Color3.fromRGB(195, 210, 242)
+    elseif phase == "result" then
+        clouds.Cover = 0.30
+        clouds.Density = 0.30
+        clouds.Color = Color3.fromRGB(208, 220, 238)
     else
         clouds.Cover = 0.24
         clouds.Density = 0.28
@@ -431,6 +443,9 @@ local function setMood(state)
             lastRoundTitle = state.title
         end
     elseif phase == "result" then
+        Lighting.ExposureCompensation = 0.08
+        Lighting.EnvironmentDiffuseScale = 0.44
+        Lighting.EnvironmentSpecularScale = 0.66
         resetActiveBeacon()
         roundDanger = false
         activeDoubleChaos = false
@@ -445,6 +460,14 @@ local function setMood(state)
         atmosphere.Color = Color3.fromRGB(205, 215, 235)
         tweenCamera(72, 0.35)
     else
+        if phase == "vote" then
+            Lighting.ExposureCompensation = 0.10
+            color.Contrast = 0.08
+            color.Saturation = 0.10
+        elseif phase == "intermission" then
+            Lighting.ExposureCompensation = 0.09
+        end
+
         resetActiveBeacon()
         roundDanger = false
         activeDoubleChaos = false
