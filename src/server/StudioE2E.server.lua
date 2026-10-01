@@ -43,6 +43,18 @@ reportEvent.OnServerEvent:Connect(function(player, report)
     if report.ok ~= true then
         fail(player.Name .. ": " .. tostring(report.error or "client report failed"))
     end
+
+    if report.roundStateReceived ~= true then
+        fail(player.Name .. ": current RoundState snapshot was not received")
+    end
+
+    if type(report.roundPhase) ~= "string" or report.roundPhase == "" then
+        fail(player.Name .. ": missing round phase in E2E report")
+    end
+
+    if typeof(report.viewport) ~= "Vector2" or report.viewport.X <= 0 or report.viewport.Y <= 0 then
+        fail(player.Name .. ": invalid viewport reported")
+    end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
@@ -101,6 +113,11 @@ task.spawn(function()
             "AchievementState",
             "RoundFeedback",
             "ClientReady",
+            "ArenaMechanicFeedback",
+            "HazardImpactFeedback",
+            "HazardNearMiss",
+            "MonetizationState",
+            "MonetizationAction",
         }) do
             if not remotes:FindFirstChild(name) then
                 fail("remote missing: " .. name)
@@ -153,7 +170,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, UI/input/vote/movement/round/join-leave verified",
+            "PASS: %d clients, UI/input/vote/movement/round-state/join-leave verified",
             expectedTotal
         ))
     end
