@@ -53,6 +53,7 @@ local arenaMechanicFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "Ar
 local hazardImpactFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardImpactFeedback")
 local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNearMiss")
 local chaosShardCollectedEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ChaosShardCollected")
+local performancePulseEvent = RemoteRegistry.ensureRemoteEvent(remotes, "PerformancePulse")
 
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
@@ -101,6 +102,7 @@ local currentOptions = {}
 local voteOpen = false
 local allowVote = RateLimiter.new(0.2)
 local allowHazardNearMiss = RateLimiter.new(0.9)
+local allowPerformancePulse = RateLimiter.new(45)
 local lastRoundState = {
     phase = "waiting",
     title = "WAITING FOR PLAYERS",
@@ -112,6 +114,36 @@ local function broadcast(payload)
     lastRoundState = payload
     stateEvent:FireAllClients(payload)
 end
+
+performancePulseEvent.OnServerEvent:Connect(function(player, payload)
+    if player.Parent ~= Players
+        or type(payload) ~= "table"
+        or not allowPerformancePulse(player.UserId)
+    then
+        return
+    end
+
+    local fps = math.clamp(tonumber(payload.averageFps) or 0, 0, 240)
+    local tier = tostring(payload.vfxTier or "Unknown")
+    if tier ~= "High" and tier ~= "Medium" and tier ~= "Low" then
+        tier = "Unknown"
+    end
+
+    local deviceClass = tostring(payload.deviceClass or "Unknown")
+    if #deviceClass > 24 then
+        deviceClass = string.sub(deviceClass, 1, 24)
+    end
+
+    GameAnalytics.custom(
+        player,
+        "ClientPerformancePulse",
+        math.floor(fps + 0.5),
+        "VFX:" .. tier,
+        "Device:" .. deviceClass,
+        "Round:" .. tostring(roundNumber)
+    )
+end)
+
 
 local function sendQuestState(player, completed)
     questEvent:FireClient(player, {
