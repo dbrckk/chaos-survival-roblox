@@ -655,20 +655,52 @@ while true do
         table.insert(readyDisasterIds, disaster.Id)
     end
 
+    local readyCancelled = false
     for t = roundSettings.ReadySeconds, 1, -1 do
+        local readyCount = 0
+        for _, p in ipairs(contestants) do
+            if p.Parent == Players
+                and p:GetAttribute("DataLoaded") == true
+                and alive(p)
+            then
+                readyCount += 1
+            end
+        end
+
+        if readyCount == 0 then
+            broadcast({
+                phase = "waiting",
+                title = "ROUND CANCELLED",
+                hint = "No ready players remain",
+                seconds = 0,
+            })
+            readyCancelled = true
+            break
+        end
+
+        local displayTitle = readyTitle
+        if readyCount == 1 and #selectedSet == 1 and not string.find(displayTitle, "SOLO RUSH:", 1, true) then
+            displayTitle = "SOLO RUSH: " .. selectedSet[1].Name
+        end
+
         broadcast({
             phase = "ready",
-            title = "READY: " .. readyTitle,
+            title = "READY: " .. displayTitle,
             hint = "Find your position • " .. readyHint,
             seconds = t,
             doubleChaos = #selectedSet > 1,
-            soloMode = roundSettings.Solo,
+            soloMode = readyCount == 1,
             arenaName = roundSettings.ArenaName,
             disasterIds = readyDisasterIds,
-            survivorsAlive = #contestants,
-            contestantCount = #contestants,
+            survivorsAlive = readyCount,
+            contestantCount = readyCount,
         })
         task.wait(1)
+    end
+
+    if readyCancelled then
+        task.wait(1)
+        continue
     end
 
     local startingContestants = {}
@@ -678,7 +710,7 @@ while true do
             and alive(p)
         then
             table.insert(startingContestants, p)
-        else
+        elseif p.Parent == Players then
             p:SetAttribute("RoundParticipant", false)
             p:SetAttribute("RoundEliminated", false)
         end
