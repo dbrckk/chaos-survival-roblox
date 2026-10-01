@@ -12,6 +12,7 @@ local characterEffects = {}
 local shrinkParts = {}
 local blackoutParts = {}
 local clock = 0
+local updateClock = 0
 local currentPhase = "waiting"
 
 local function has(id)
@@ -288,15 +289,29 @@ player:GetAttributeChangedSignal("RoundEliminated"):Connect(rebuildCharacterEffe
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildCharacterEffects)
 
 RunService.RenderStepped:Connect(function(dt)
+    local shrinkActive = currentPhase == "round" and has("ShrinkingArena")
+    local blackoutActive = currentPhase == "round" and has("Darkness")
+    if not shrinkActive and not blackoutActive then
+        return
+    end
+
     clock += dt
-    if currentPhase == "round" and has("ShrinkingArena") then
+    updateClock += dt
+
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    if updateClock < math.max(1 / 30, tier.UpdateInterval) then
+        return
+    end
+    updateClock = 0
+
+    if shrinkActive then
         ensureShrinkVisuals()
         updateShrink()
     elseif #shrinkParts > 0 then
         clearShrink()
     end
 
-    if currentPhase == "round" and has("Darkness") then
+    if blackoutActive then
         ensureBlackoutVisuals()
         local pulse = (math.sin(clock * 2.6) + 1) * 0.5
         for i, beacon in ipairs(blackoutParts) do
