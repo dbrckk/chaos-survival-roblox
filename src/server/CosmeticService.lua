@@ -186,6 +186,12 @@ local function normalizeSlot(player, slotAttribute, expectedKind, fallbackId)
 end
 
 local function syncUnlocks(player)
+    if player:GetAttribute("DataPersistenceAvailable") ~= true then
+        sendState(player, {})
+        applyEffects(player)
+        return
+    end
+
     local merged, unlocked = Cosmetics.mergeLevelUnlocks(
         player:GetAttribute("OwnedCosmetics") or "",
         player:GetAttribute("Level") or 1
@@ -233,7 +239,10 @@ local function setupPlayer(player)
 end
 
 local function equipCosmetic(player, cosmeticId)
-    if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
+    if player.Parent ~= Players
+        or player:GetAttribute("DataLoaded") ~= true
+        or player:GetAttribute("DataPersistenceAvailable") ~= true
+    then
         return false
     end
 
@@ -317,6 +326,7 @@ function CosmeticService.grant(player, cosmeticId)
     if not player
         or player.Parent ~= Players
         or player:GetAttribute("DataLoaded") ~= true
+        or player:GetAttribute("DataPersistenceAvailable") ~= true
         or type(cosmeticId) ~= "string"
     then
         return false
