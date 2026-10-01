@@ -89,12 +89,26 @@ MapBuilder.build(Config, "Classic", ArenaVariants)
 local disasters = {}
 for _, module in ipairs(script.Disasters:GetChildren()) do
     if module:IsA("ModuleScript") then
-        local loaded = require(module)
+        local ok, loaded = pcall(require, module)
+        if not ok then
+            warn("Disaster module failed to load:", module.Name, loaded)
+            continue
+        end
+
+        if type(loaded) ~= "table"
+            or type(loaded.start) ~= "function"
+            or type(loaded.Name) ~= "string"
+            or loaded.Name == ""
+        then
+            warn("Disaster module has an invalid contract:", module.Name)
+            continue
+        end
+
         loaded.Id = module.Name
         table.insert(disasters, loaded)
     end
 end
-assert(#disasters >= 3, "At least 3 disasters are required")
+assert(#disasters >= 3, "At least 3 valid disasters are required")
 
 local roundNumber = 0
 local currentArenaVariant = "Classic"
