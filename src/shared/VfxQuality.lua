@@ -54,4 +54,11 @@ function VfxQuality.get(tier)
     return VfxQuality.Tiers[tier] or VfxQuality.Tiers.High
 end
 
+function VfxQuality.particleCount(tier, baseCount, minimum)
+    local profile = VfxQuality.get(tier)
+    local base = math.max(0, tonumber(baseCount) or 0)
+    local floorCount = math.max(0, tonumber(minimum) or 0)
+    return math.max(floorCount, math.floor((base * profile.ParticleScale) + 0.5))
+end
+
 return VfxQuality
