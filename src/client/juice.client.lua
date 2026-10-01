@@ -15,6 +15,18 @@ local feedbackEvent = remotes:WaitForChild("RoundFeedback")
 local performancePulseEvent = remotes:WaitForChild("PerformancePulse")
 
 local camera = workspace.CurrentCamera
+local terrain = workspace.Terrain
+
+local clouds = terrain:FindFirstChildOfClass("Clouds")
+if not clouds then
+    clouds = Instance.new("Clouds")
+    clouds.Name = "ChaosClouds"
+    clouds.Parent = terrain
+end
+clouds.Enabled = true
+clouds.Cover = 0.28
+clouds.Density = 0.32
+clouds.Color = Color3.fromRGB(210, 220, 240)
 
 local function getOrCreateLightingEffect(name, className)
     local existing = Lighting:FindFirstChild(name)
@@ -282,6 +294,44 @@ end
 local function setMood(state)
     local phase = state.phase
     local doubleChaos = state.doubleChaos == true
+    local ids = state.disasterIds or {}
+    local primaryId = ids[1]
+
+    if phase == "round" or phase == "ready" then
+        if primaryId == "Tornado" then
+            clouds.Cover = 0.72
+            clouds.Density = 0.58
+            clouds.Color = Color3.fromRGB(145, 175, 185)
+        elseif primaryId == "Darkness" then
+            clouds.Cover = 0.82
+            clouds.Density = 0.66
+            clouds.Color = Color3.fromRGB(78, 88, 118)
+        elseif primaryId == "RisingLava" then
+            clouds.Cover = 0.42
+            clouds.Density = 0.38
+            clouds.Color = Color3.fromRGB(225, 165, 125)
+        elseif primaryId == "Freeze" then
+            clouds.Cover = 0.50
+            clouds.Density = 0.42
+            clouds.Color = Color3.fromRGB(190, 220, 238)
+        elseif primaryId == "Meteors" or primaryId == "Bombs" then
+            clouds.Cover = 0.46
+            clouds.Density = 0.44
+            clouds.Color = Color3.fromRGB(195, 150, 140)
+        elseif doubleChaos then
+            clouds.Cover = 0.58
+            clouds.Density = 0.50
+            clouds.Color = Color3.fromRGB(165, 145, 205)
+        else
+            clouds.Cover = 0.32
+            clouds.Density = 0.34
+            clouds.Color = Color3.fromRGB(205, 215, 235)
+        end
+    else
+        clouds.Cover = 0.24
+        clouds.Density = 0.28
+        clouds.Color = Color3.fromRGB(215, 225, 242)
+    end
 
     if phase == "round" then
         Lighting.ExposureCompensation = doubleChaos and -0.04 or 0.02
@@ -300,7 +350,6 @@ local function setMood(state)
     if phase == "round" or phase == "ready" then
         roundDanger = phase == "round" and (tonumber(state.seconds) or 99) <= 5
 
-        local ids = state.disasterIds or {}
         local profile = DisasterVisuals.combine(ids)
         local primaryProfile = ids[1] and DisasterVisuals.get(ids[1])
         local secondaryProfile = ids[2] and DisasterVisuals.get(ids[2])
