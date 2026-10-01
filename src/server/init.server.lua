@@ -730,6 +730,14 @@ while true do
 
             local streakBonusCoins = SessionStreak.bonusCoins(survivalStreak)
 
+            local criticalSurvival = false
+            if survived then
+                local humanoid = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.MaxHealth > 0 then
+                    criticalSurvival = (humanoid.Health / humanoid.MaxHealth) <= 0.20
+                end
+            end
+
             if survived then
                 survivors += 1
                 PlayerData.add(p, "Coins", winCoins + streakBonusCoins)
@@ -786,6 +794,7 @@ while true do
                 doubleChaos = #selectedSet > 1,
                 soloMode = roundSettings.Solo,
                 elapsedSeconds = math.floor(roundElapsed + 0.5),
+                criticalSurvival = criticalSurvival,
             })
         end
     end
