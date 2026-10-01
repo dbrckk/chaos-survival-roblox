@@ -121,6 +121,7 @@ for index, offset in ipairs(offsets) do
 end
 
 local function resetCourse()
+setActive(false)
     currentIndex = 1
     startedAt = nil
 
