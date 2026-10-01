@@ -92,6 +92,15 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.7 Spectator polish.
 [QA]   6.8 Vérifier fatigue visuelle et accessibilité.
 
+PHASE 6B — GAMEPLAY / FUN
+--------------------------
+[QA]   6B.1 Ajouter une fenêtre OVERDRIVE en milieu de round.
+[QA]   6B.2 Booster temporairement pads + cadence des Chaos Shards.
+[QA]   6B.3 Ajouter un mini-défi rotatif par round avec petite récompense.
+[QA]   6B.4 Afficher progression / complétion du défi dans le HUD et les résultats.
+[EN COURS] 6B.5 Renforcer les VFX monde pendant OVERDRIVE.
+[TODO] 6B.6 QA équilibre/fun solo et multijoueur.
+
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
 [QA]   7.1 Audit nombre de parts / emitters / lights.
@@ -126,4 +135,4 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - HUD mobile récemment corrigé pour limiter les chevauchements.
 - Freeze glare réduit.
 - Base néon cohérente mais encore trop simple.
-- Priorité actuelle : PHASE 6 — finaliser transitions/récompenses/spectateur, puis audit performance visuel.
+- Priorité actuelle : PHASE 6B — gameplay/fun (OVERDRIVE + défis), puis QA Android et équilibrage réel.
