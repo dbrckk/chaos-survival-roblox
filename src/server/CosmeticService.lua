@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local RemoteRegistry = require(script.Parent.RemoteRegistry)
 
 local PlayerReadiness = require(script.Parent.PlayerReadiness)
+local PlayerData = require(script.Parent.PlayerData)
 local Cosmetics = require(script.Parent.CosmeticsCatalog)
 local GameAnalytics = require(script.Parent.GameAnalytics)
 
@@ -309,6 +310,7 @@ local function buyCosmetic(player, cosmeticId)
     player:SetAttribute("OwnedCosmetics", Cosmetics.buy(owned, cosmeticId))
     equipCosmetic(player, cosmeticId)
     sendState(player, nil, "purchased")
+    task.spawn(PlayerData.save, player, true)
 
     local solo = #Players:GetPlayers() <= 1
     GameAnalytics.economySink(player, price, "Cosmetic", cosmeticId, solo)
@@ -351,6 +353,9 @@ function CosmeticService.grant(player, cosmeticId)
     end
 
     sendState(player, newlyGranted and {cosmeticId} or {}, newlyGranted and "premium_granted" or nil)
+    if newlyGranted then
+        task.spawn(PlayerData.save, player, true)
+    end
     return true
 end
 
