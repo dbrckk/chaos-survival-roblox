@@ -627,7 +627,14 @@ RunService.RenderStepped:Connect(function(dt)
             local beam = attachment:FindFirstChildOfClass("Beam")
             if beam then
                 beam.Enabled = linkTier.Name ~= "Low"
-                beam.Color = ColorSequence.new(visualAccent)
+                if doubleChaos and secondaryAccent and not overdrive and not finalRush then
+                    beam.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, accent),
+                        ColorSequenceKeypoint.new(1, secondaryAccent),
+                    })
+                else
+                    beam.Color = ColorSequence.new(visualAccent)
+                end
                 local linkWave = (math.sin(clock * (finalRush and 7.2 or (overdrive and 5.4 or 3.1))) + 1) * 0.5
                 beam.Width0 = (finalRush and 0.15 or (overdrive and 0.12 or 0.07)) + linkWave * 0.08 * linkTier.Scale
                 beam.Width1 = beam.Width0
