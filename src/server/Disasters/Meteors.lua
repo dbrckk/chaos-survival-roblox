@@ -10,6 +10,7 @@ function D.start(ctx)
     local damage = profile.MeteorDamage or 50
     local radius = profile.MeteorRadius or 8
     local travelSeconds = 0.5
+    local fallHeight = 52
 
     task.spawn(function()
         while ctx.Active() do
@@ -45,14 +46,16 @@ function D.start(ctx)
             meteor.Size = Vector3.new(7,7,7)
             meteor.Material = Enum.Material.Neon
             meteor.Color = Color3.fromRGB(255,120,40)
-            meteor.Position = impactPosition + Vector3.new(0, 52, 0)
+            meteor.Position = impactPosition + Vector3.new(0, fallHeight, 0)
             meteor.Anchored = false
             meteor.CanCollide = false
             meteor.CanTouch = false
             meteor.CanQuery = false
             meteor.CastShadow = false
             meteor.Parent = workspace
-            meteor.AssemblyLinearVelocity = Vector3.new(0, -70, 0)
+            local gravity = workspace.Gravity
+            local launchVelocityY = (-fallHeight + (0.5 * gravity * travelSeconds * travelSeconds)) / travelSeconds
+            meteor.AssemblyLinearVelocity = Vector3.new(0, launchVelocityY, 0)
 
             if marker.Parent then marker:Destroy() end
             ctx.Cleanup[#ctx.Cleanup+1] = meteor
