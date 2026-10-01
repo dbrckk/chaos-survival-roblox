@@ -217,6 +217,10 @@ local function refresh()
     ):Play()
 
     local text, color = intensityLabel(intensity, tonumber(state.seconds) or 0)
+    if state.overdrive then
+        text = "OVERDRIVE  " .. tostring(math.max(1, math.floor(tonumber(state.overdriveSeconds) or 1))) .. "s"
+        color = UITheme.Colors.Gold
+    end
     status.Text = text
     status.TextColor3 = color
 
@@ -230,7 +234,16 @@ local function refresh()
         ColorSequenceKeypoint.new(1, UITheme.Colors.Red),
     })
 
-    if state.doubleChaos then
+    if state.overdrive then
+        stroke.Color = UITheme.Colors.Gold
+        accentRail.BackgroundColor3 = UITheme.Colors.Gold
+        shard.TextColor3 = UITheme.Colors.Gold
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, UITheme.Colors.Gold),
+            ColorSequenceKeypoint.new(0.55, UITheme.Colors.Cyan),
+            ColorSequenceKeypoint.new(1, UITheme.Colors.Violet),
+        })
+    elseif state.doubleChaos then
         stroke.Color = UITheme.Colors.Violet
         shard.TextColor3 = Color3.fromRGB(215, 165, 255)
     else
