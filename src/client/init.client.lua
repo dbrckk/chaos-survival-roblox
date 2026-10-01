@@ -341,15 +341,18 @@ for i = 1, 3 do
     local row = Instance.new("TextLabel")
     row.Size = UDim2.new(1, -24, 0.22, 0)
     row.Position = UDim2.new(0, 12, 0.20 + ((i - 1) * 0.25), 0)
-    row.BackgroundColor3 = Color3.fromRGB(34, 38, 52)
-    row.TextColor3 = Color3.fromRGB(235, 238, 245)
+    row.BackgroundColor3 = UITheme.Colors.PanelSoft
+    row.BackgroundTransparency = 0.10
+    row.BorderSizePixel = 0
+    row.TextColor3 = UITheme.Colors.Text
     row.Font = Enum.Font.GothamMedium
     row.TextScaled = true
     row.TextWrapped = true
     row.TextXAlignment = Enum.TextXAlignment.Left
     row.Text = "Loading..."
     row.Parent = questPanel
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+    UITheme.addCorner(row, UITheme.Corners.Small)
+    UITheme.addStroke(row, UITheme.Colors.Cyan, 1, 0.74)
     questRows[i] = row
 end
 
@@ -642,35 +645,6 @@ UITheme.addGradient(achievementButton, UITheme.Colors.PanelRaised, UITheme.Color
 UITheme.addPressFeedback(achievementButton, 0.95)
 
 
-local function bindPressFeedback(button)
-    local scale = Instance.new("UIScale")
-    scale.Scale = 1
-    scale.Parent = button
-
-    button.MouseButton1Down:Connect(function()
-        TweenService:Create(
-            scale,
-            TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {Scale = 0.95}
-        ):Play()
-    end)
-
-    button.MouseButton1Up:Connect(function()
-        TweenService:Create(
-            scale,
-            TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            {Scale = 1}
-        ):Play()
-    end)
-
-    button.MouseLeave:Connect(function()
-        TweenService:Create(scale, TweenInfo.new(0.10), {Scale = 1}):Play()
-    end)
-end
-
-bindPressFeedback(questButton)
-bindPressFeedback(achievementButton)
-bindPressFeedback(cosmeticsButton)
 
 local achievementPanel = Instance.new("Frame")
 achievementPanel.Name = "AchievementPanel"
