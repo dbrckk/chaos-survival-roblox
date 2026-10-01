@@ -24,6 +24,8 @@ local accent = Color3.fromRGB(90, 185, 255)
 local secondaryAccent = nil
 local doubleChaos = false
 local intensity = 1
+local previousPhase = "waiting"
+local readyPulseStartedAt = nil
 local clock = 0
 local updateClock = 0
 local currentMap = nil
@@ -415,7 +417,13 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    previousPhase = phase
     phase = tostring(state.phase or "waiting")
+    if phase == "ready" and previousPhase ~= "ready" then
+        readyPulseStartedAt = os.clock()
+    elseif phase ~= "ready" then
+        readyPulseStartedAt = nil
+    end
     doubleChaos = state.doubleChaos == true
     intensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
 
@@ -490,7 +498,20 @@ RunService.RenderStepped:Connect(function(dt)
         blendedAccent = accent:Lerp(secondaryAccent, blend)
     end
 
-    local arenaSpeed = (phase == "round" and 1.55 or 0.65) * intensity
+    local readyBoost = 0
+    if phase == "ready" and readyPulseStartedAt then
+        local elapsedReady = clock - readyPulseStartedAt
+        if elapsedReady >= 0 and elapsedReady <= 1.6 then
+            local normalized = elapsedReady / 1.6
+            readyBoost = math.sin(normalized * math.pi)
+        end
+    end
+
+    local arenaSpeed = (
+        phase == "round"
+            and 1.55
+            or (phase == "ready" and (0.95 + readyBoost * 1.35) or 0.65)
+    ) * intensity
     for i, glow in ipairs(arenaGlowParts) do
         if glow.Parent then
             local baseAngle = glow:GetAttribute("OrbitAngle") or 0
@@ -509,7 +530,11 @@ RunService.RenderStepped:Connect(function(dt)
                 )
                 glow.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
                 glow.Color = blendedAccent
-                glow.Transparency = phase == "round" and 0.12 or 0.38
+                glow.Transparency = phase == "round"
+                    and 0.12
+                    or (phase == "ready"
+                        and math.clamp(0.34 - readyBoost * 0.20, 0.10, 0.40)
+                        or 0.38)
             end
         end
     end
@@ -519,7 +544,10 @@ RunService.RenderStepped:Connect(function(dt)
             local emitter = attachment:FindFirstChildOfClass("ParticleEmitter")
             if emitter then
                 emitter.Color = ColorSequence.new(blendedAccent, Color3.new(1, 1, 1))
-                local targetRate = (phase == "round" and 12 or 6) * tier.ParticleScale * intensity
+                local baseRate = phase == "round"
+                    and 12
+                    or (phase == "ready" and (7 + readyBoost * 8) or 6)
+                local targetRate = baseRate * tier.ParticleScale * intensity
                 emitter.Rate += (targetRate - emitter.Rate) * math.min(1, elapsed * 6)
             end
         end
