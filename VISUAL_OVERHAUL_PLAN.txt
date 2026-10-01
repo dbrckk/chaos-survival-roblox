@@ -27,19 +27,19 @@ PHASE 1 — DIRECTION ARTISTIQUE ET FONDATIONS
 -------------------------------------------
 [FAIT]     1.1 Créer une palette centrale Neon Chaos Arena.
 [FAIT]     1.2 Centraliser couleurs structurelles, surfaces, accents et niveaux de glow.
-[EN COURS] 1.3 Renforcer le lighting global et la profondeur atmosphérique.
-[EN COURS] 1.4 Ajouter une vraie silhouette visuelle à chacune des 4 arènes.
+[QA]        1.3 Renforcer le lighting global et la profondeur atmosphérique.
+[FAIT]      1.4 Ajouter une vraie silhouette visuelle à chacune des 4 arènes.
 [FAIT]     1.5 Ajouter couches de sol, sous-structures, cadres, panneaux et détails techniques.
-[TODO]     1.6 Ajouter décor lointain léger et profondeur autour des arènes.
-[TODO]     1.7 Renforcer le lobby pour qu'il ressemble à un hub premium.
+[QA]        1.6 Ajouter décor lointain léger et profondeur autour des arènes.
+[FAIT]      1.7 Renforcer le lobby pour qu'il ressemble à un hub premium.
 [TODO]     1.8 QA Android de la nouvelle direction artistique.
 
 PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 ---------------------------------------
-[TODO] 2.1 Classic Grid : grille techno lisible + architecture périphérique.
-[TODO] 2.2 Tower Run : verticalité renforcée + structures porteuses + noyaux lumineux.
-[TODO] 2.3 Crossroads : quatre lanes visuellement distinctes + signalétique directionnelle.
-[TODO] 2.4 Orbital Ring : identité circulaire + anneaux énergétiques + noyau central.
+[EN COURS] 2.1 Classic Grid : grille techno lisible + architecture périphérique.
+[EN COURS] 2.2 Tower Run : verticalité renforcée + structures porteuses + noyaux lumineux.
+[EN COURS] 2.3 Crossroads : quatre lanes visuellement distinctes + signalétique directionnelle.
+[EN COURS] 2.4 Orbital Ring : identité circulaire + anneaux énergétiques + noyau central.
 [TODO] 2.5 Ajouter variations de décor propres à chaque arène.
 [TODO] 2.6 Vérifier qu'aucun décor ne crée de nouveau safe spot ou collision parasite.
 [TODO] 2.7 QA Android / desktop des 4 arènes.
@@ -47,9 +47,9 @@ PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 -------------------------------------------
 [TODO] 3.1 Améliorer le sky mood de base.
-[TODO] 3.2 Ajouter profondeur par haze / atmosphere mieux contrôlés.
+[EN COURS] 3.2 Ajouter profondeur par haze / atmosphere mieux contrôlés.
 [TODO] 3.3 Créer variantes d'ambiance par catastrophe.
-[TODO] 3.4 Ajouter silhouettes et structures lointaines peu coûteuses.
+[QA]        3.4 Ajouter silhouettes et structures lointaines peu coûteuses.
 [TODO] 3.5 Ajouter particules d'ambiance adaptatives.
 [TODO] 3.6 Améliorer transitions visuelles entre lobby, vote, ready, round et result.
 [TODO] 3.7 QA confort visuel 30 minutes.
