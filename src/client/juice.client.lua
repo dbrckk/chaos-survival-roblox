@@ -254,7 +254,7 @@ local function setMood(state)
             )
             lastRoundTitle = state.title
         end
-    elseif phase == "results" then
+    elseif phase == "result" then
         roundDanger = false
         activeDoubleChaos = false
         secondaryAccent = nil
