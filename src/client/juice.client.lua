@@ -384,7 +384,14 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
     if feedback.survived then
         celebrateCharacter()
 
-        if survivalStreak >= 5 then
+        if feedback.criticalSurvival then
+            showBanner(
+                "LAST-BREATH SURVIVAL",
+                "You escaped with almost no health left",
+                Color3.fromRGB(125, 42, 38),
+                1.9
+            )
+        elseif survivalStreak >= 5 then
             showBanner(
                 "UNSTOPPABLE x" .. survivalStreak,
                 "Survival streak bonus +" .. tostring(feedback.streakBonusCoins or 0) .. " coins",
