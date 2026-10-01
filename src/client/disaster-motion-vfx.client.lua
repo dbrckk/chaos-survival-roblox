@@ -10,6 +10,7 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local activeIds = {}
 local characterEffects = {}
 local shrinkParts = {}
+local blackoutParts = {}
 local clock = 0
 local currentPhase = "waiting"
 
@@ -33,6 +34,15 @@ local function clearShrink()
         end
     end
     table.clear(shrinkParts)
+end
+
+local function clearBlackout()
+    for _, instance in ipairs(blackoutParts) do
+        if instance and instance.Parent then
+            instance:Destroy()
+        end
+    end
+    table.clear(blackoutParts)
 end
 
 local function makeAttachment(parent, name, position)
@@ -115,30 +125,28 @@ local function rebuildCharacterEffects()
         local left = makeAttachment(root, "SpeedTrailLeft", Vector3.new(-0.85, -0.7, 0.5))
         local right = makeAttachment(root, "SpeedTrailRight", Vector3.new(0.85, -0.7, 0.5))
 
-        for index, attachment in ipairs({left, right}) do
-            local trail = Instance.new("Trail")
-            trail.Name = "SpeedSurgeTrail" .. index
-            trail.Attachment0 = attachment
-            trail.Attachment1 = attachment
-            trail.Lifetime = 0.22 * tier.Scale
-            trail.MinLength = 0.05
-            trail.FaceCamera = true
-            trail.LightEmission = 1
-            trail.Color = ColorSequence.new(
-                Color3.fromRGB(255, 82, 205),
-                Color3.fromRGB(110, 155, 255)
-            )
-            trail.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.18),
-                NumberSequenceKeypoint.new(1, 1),
-            })
-            trail.WidthScale = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.48),
-                NumberSequenceKeypoint.new(1, 0),
-            })
-            trail.Parent = root
-            table.insert(characterEffects, trail)
-        end
+        local trail = Instance.new("Trail")
+        trail.Name = "SpeedSurgeRibbon"
+        trail.Attachment0 = left
+        trail.Attachment1 = right
+        trail.Lifetime = 0.22 * tier.Scale
+        trail.MinLength = 0.05
+        trail.FaceCamera = true
+        trail.LightEmission = 1
+        trail.Color = ColorSequence.new(
+            Color3.fromRGB(255, 82, 205),
+            Color3.fromRGB(110, 155, 255)
+        )
+        trail.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.18),
+            NumberSequenceKeypoint.new(1, 1),
+        })
+        trail.WidthScale = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.48),
+            NumberSequenceKeypoint.new(1, 0),
+        })
+        trail.Parent = root
+        table.insert(characterEffects, trail)
     end
 end
 
@@ -213,6 +221,51 @@ local function updateShrink()
     end
 end
 
+
+local function ensureBlackoutVisuals()
+    if currentPhase ~= "round" or not has("Darkness") then
+        clearBlackout()
+        return
+    end
+
+    if #blackoutParts > 0 then
+        return
+    end
+
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local base = arena and arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then
+        return
+    end
+
+    local halfX = base.Size.X * 0.5
+    local halfZ = base.Size.Z * 0.5
+    local offsets = {
+        Vector3.new(-halfX + 4, 2.2, -halfZ + 4),
+        Vector3.new(halfX - 4, 2.2, -halfZ + 4),
+        Vector3.new(-halfX + 4, 2.2, halfZ - 4),
+        Vector3.new(halfX - 4, 2.2, halfZ - 4),
+    }
+
+    for i, offset in ipairs(offsets) do
+        local beacon = Instance.new("Part")
+        beacon.Name = "BlackoutEmergencyBeacon" .. i
+        beacon.Anchored = true
+        beacon.CanCollide = false
+        beacon.CanTouch = false
+        beacon.CanQuery = false
+        beacon.CastShadow = false
+        beacon.Material = Enum.Material.Neon
+        beacon.Color = i % 2 == 0 and Color3.fromRGB(115, 90, 220) or Color3.fromRGB(75, 120, 220)
+        beacon.Size = Vector3.new(0.55, 3.2, 0.55)
+        beacon.CFrame = base.CFrame * CFrame.new(offset)
+        beacon.Transparency = 0.38
+        beacon.Parent = workspace
+        table.insert(blackoutParts, beacon)
+    end
+end
+
 local function applyState(state)
     currentPhase = tostring(state.phase or "waiting")
     table.clear(activeIds)
@@ -222,6 +275,7 @@ local function applyState(state)
 
     rebuildCharacterEffects()
     ensureShrinkVisuals()
+    ensureBlackoutVisuals()
 end
 
 stateEvent.OnClientEvent:Connect(applyState)
@@ -240,5 +294,20 @@ RunService.RenderStepped:Connect(function(dt)
         updateShrink()
     elseif #shrinkParts > 0 then
         clearShrink()
+    end
+
+    if currentPhase == "round" and has("Darkness") then
+        ensureBlackoutVisuals()
+        local pulse = (math.sin(clock * 2.6) + 1) * 0.5
+        for i, beacon in ipairs(blackoutParts) do
+            if beacon.Parent then
+                beacon.Transparency = 0.34 + pulse * 0.30
+                beacon.Color = i % 2 == 0
+                    and Color3.fromRGB(115, 90 + math.floor(pulse * 25), 220)
+                    or Color3.fromRGB(75, 115 + math.floor(pulse * 20), 220)
+            end
+        end
+    elseif #blackoutParts > 0 then
+        clearBlackout()
     end
 end)
