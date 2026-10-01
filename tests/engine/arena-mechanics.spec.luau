@@ -81,6 +81,11 @@ describe("Arena mechanics", function()
         expect((base - Vector3.new(20, 10, -12)).Magnitude < 0.001).toBe(true)
     end)
 
+    it("reduces mobility-pad cooldown during final rush", function()
+        expect(ArenaMechanics.cooldownFor(false)).toBe(1.1)
+        expect(ArenaMechanics.cooldownFor(true)).toBe(0.65)
+    end)
+
     it("uses the shared movement safety contract for pad impulses", function()
         local current = Vector3.new(90, 80, -95)
         local impulse = Vector3.new(46, 55, 46)
