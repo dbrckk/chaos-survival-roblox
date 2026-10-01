@@ -28,6 +28,15 @@ RoundChallenge.Definitions = {
         Coins = 7,
         XP = 7,
     },
+    {
+        Id = "MOMENTUM_3",
+        Title = "KEEP THE FLOW",
+        Short = "MOMENTUM",
+        Metric = "momentum",
+        Target = 3,
+        Coins = 7,
+        XP = 7,
+    },
 }
 
 function RoundChallenge.forRound(roundNumber)
@@ -36,7 +45,7 @@ function RoundChallenge.forRound(roundNumber)
     return RoundChallenge.Definitions[index]
 end
 
-function RoundChallenge.progress(definition, shards, pads, nearMisses)
+function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest)
     if not definition then
         return 0
     end
@@ -48,13 +57,15 @@ function RoundChallenge.progress(definition, shards, pads, nearMisses)
         value = pads
     elseif definition.Metric == "nearMisses" then
         value = nearMisses
+    elseif definition.Metric == "momentum" then
+        value = momentumBest
     end
 
     return math.clamp(math.floor(tonumber(value) or 0), 0, definition.Target)
 end
 
-function RoundChallenge.completed(definition, shards, pads, nearMisses)
-    return RoundChallenge.progress(definition, shards, pads, nearMisses) >= (definition and definition.Target or math.huge)
+function RoundChallenge.completed(definition, shards, pads, nearMisses, momentumBest)
+    return RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest) >= (definition and definition.Target or math.huge)
 end
 
 return RoundChallenge
