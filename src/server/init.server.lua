@@ -45,6 +45,7 @@ local RoundChallenge = require(script.RoundChallenge)
 local RoundMedals = require(script.RoundMedals)
 local FlowCombo = require(script.FlowCombo)
 local ChaosFusion = require(script.ChaosFusion)
+local RoundMomentum = require(script.RoundMomentum)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -411,6 +412,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local deathConnections = {}
     local lastMechanicAt = {}
     local flowComboClaimed = {}
+    local momentumLastAt = {}
 
     for _, player in ipairs(contestants) do
         eliminated[player.UserId] = false
@@ -422,6 +424,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundMechanicUses", 0)
         player:SetAttribute("RoundOverdriveUses", 0)
         player:SetAttribute("RoundFlowCoins", 0)
+        player:SetAttribute("RoundMomentum", 0)
+        player:SetAttribute("RoundMomentumBest", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
@@ -432,6 +436,24 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 end
             end)
         end
+    end
+
+    local function bumpMomentum(player)
+        if player.Parent ~= Players then
+            return
+        end
+
+        local now = os.clock()
+        local current = math.max(0, math.floor(tonumber(player:GetAttribute("RoundMomentum")) or 0))
+        local nextCombo = RoundMomentum.next(current, momentumLastAt[player.UserId], now)
+        momentumLastAt[player.UserId] = now
+
+        player:SetAttribute("RoundMomentum", nextCombo)
+        local best = math.max(
+            nextCombo,
+            math.max(0, math.floor(tonumber(player:GetAttribute("RoundMomentumBest")) or 0))
+        )
+        player:SetAttribute("RoundMomentumBest", best)
     end
 
     local function countContestantsRemaining()
@@ -493,6 +515,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
             local total = math.max(0, math.floor(tonumber(player:GetAttribute("RoundNearMisses")) or 0)) + 1
             player:SetAttribute("RoundNearMisses", total)
+            bumpMomentum(player)
 
             hazardNearMissEvent:FireClient(player, {
                 kind = kind,
@@ -509,6 +532,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             local mechanicUses = math.max(0, math.floor(tonumber(player:GetAttribute("RoundMechanicUses")) or 0)) + 1
             player:SetAttribute("RoundMechanicUses", mechanicUses)
             lastMechanicAt[player.UserId] = os.clock()
+            bumpMomentum(player)
             if usedOverdrive == true then
                 local overdriveUses = math.max(0, math.floor(tonumber(player:GetAttribute("RoundOverdriveUses")) or 0)) + 1
                 player:SetAttribute("RoundOverdriveUses", overdriveUses)
@@ -559,6 +583,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
             player:SetAttribute("RoundChaosShards", total)
             player:SetAttribute("RoundShardCoins", shardCoinTotal)
+            bumpMomentum(player)
             if flowBonus > 0 then
                 local flowTotal = math.max(0, math.floor(tonumber(player:GetAttribute("RoundFlowCoins")) or 0)) + flowBonus
                 player:SetAttribute("RoundFlowCoins", flowTotal)
@@ -1078,6 +1103,7 @@ while true do
             local roundNearMissCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundNearMisses")) or 0))
             local roundMechanicUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMechanicUses")) or 0))
             local roundOverdriveUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundOverdriveUses")) or 0))
+            local roundMomentumBest = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMomentumBest")) or 0))
             local challengeProgress = RoundChallenge.progress(
                 roundChallenge,
                 roundShardCount,
@@ -1093,6 +1119,7 @@ while true do
                 pads = roundMechanicUses,
                 nearMisses = roundNearMissCount,
                 overdriveUses = roundOverdriveUses,
+                momentumBest = roundMomentumBest,
                 criticalSurvival = criticalSurvival,
             })
 
@@ -1154,6 +1181,7 @@ while true do
                 challengeCoins = challengeCoins,
                 challengeXP = challengeXP,
                 medals = medals,
+                momentumBest = roundMomentumBest,
                 bestSessionStreak = bestSessionStreak,
                 arenaName = roundSettings.ArenaName,
                 disasterName = feedbackDisasterName,
