@@ -37,7 +37,9 @@ function D.start(ctx)
                 marker:Destroy()
 
                 DisasterImpact.applyRadialDamage(ctx, position, radius, damage)
-                DisasterImpact.createBurst(position, Color3.fromRGB(255, 65, 65), radius)
+                if ctx.OnHazardImpact then
+                    pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 65, 65), radius, "Bomb")
+                end
             end)
 
             local intensity = ctx.Intensity and ctx.Intensity() or 1
