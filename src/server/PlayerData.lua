@@ -466,8 +466,10 @@ function PlayerData.init()
     end)
 
     Players.PlayerRemoving:Connect(function(player)
-        PlayerData.save(player, true)
-        PlayerData.releaseSession(player)
+        local saved = PlayerData.save(player, true)
+        if saved then
+            PlayerData.releaseSession(player)
+        end
         disconnectDataConnections(player)
         active[player] = nil
         loading[player] = nil
@@ -512,8 +514,10 @@ function PlayerData.init()
             if active[player] and player:GetAttribute("DataPersistenceAvailable") == true then
                 pending += 1
                 task.spawn(function()
-                    PlayerData.save(player, true)
-                    PlayerData.releaseSession(player)
+                    local saved = PlayerData.save(player, true)
+                    if saved then
+                        PlayerData.releaseSession(player)
+                    end
                     pending -= 1
                 end)
             end
