@@ -14,19 +14,35 @@ local light = nil
 local pulseClock = 0
 local updateClock = 0
 
+local bindToken = 0
+
 local function bind(model)
     if not model or model.Name ~= "RoundTornado" then
         return
     end
 
+    bindToken += 1
+    local token = bindToken
     activeModel = model
-    dangerZone = model:FindFirstChild("DangerZone")
-    lower = model:FindFirstChild("LowerFunnel")
-    middle = model:FindFirstChild("MiddleFunnel")
-    upper = model:FindFirstChild("UpperFunnel")
-    light = middle and middle:FindFirstChild("TornadoGlow") or nil
     pulseClock = 0
     updateClock = 0
+
+    task.spawn(function()
+        local nextDangerZone = model:WaitForChild("DangerZone", 2)
+        local nextLower = model:WaitForChild("LowerFunnel", 2)
+        local nextMiddle = model:WaitForChild("MiddleFunnel", 2)
+        local nextUpper = model:WaitForChild("UpperFunnel", 2)
+
+        if token ~= bindToken or activeModel ~= model or not model.Parent then
+            return
+        end
+
+        dangerZone = nextDangerZone
+        lower = nextLower
+        middle = nextMiddle
+        upper = nextUpper
+        light = nextMiddle and nextMiddle:FindFirstChild("TornadoGlow") or nil
+    end)
 end
 
 local function findExisting()
@@ -44,6 +60,7 @@ end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child == activeModel then
+        bindToken += 1
         activeModel = nil
         dangerZone = nil
         lower = nil
