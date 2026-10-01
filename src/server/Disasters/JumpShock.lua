@@ -1,3 +1,4 @@
+local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 local D = {Name = "JUMP SHOCK", Hint = "WATCH THE BLUE SHOCKWAVE!"}
 
 local function makeWarning(ctx)
@@ -30,20 +31,9 @@ function D.start(ctx)
             if not ctx.Active() then break end
 
             local warning = makeWarning(ctx)
-            local started = os.clock()
             local warningSeconds = 0.65
-
-            while ctx.Active() and warning.Parent do
-                local alpha = math.clamp((os.clock() - started) / warningSeconds, 0, 1)
-                local diameter = 8 + (64 * alpha)
-                warning.Size = Vector3.new(0.15, diameter, diameter)
-                warning.Transparency = 0.30 + (0.58 * alpha)
-
-                if alpha >= 1 then
-                    break
-                end
-                task.wait(0.04)
-            end
+            HazardWarning.configure(warning, "JumpShock", warningSeconds, 8, 72)
+            task.wait(warningSeconds)
 
             if warning.Parent then
                 warning:Destroy()
