@@ -72,23 +72,8 @@ function D.start(ctx)
     light.Parent = middle
 
     task.spawn(function()
-        local clock = 0
-        while ctx.Active() and visual.Parent do
-            clock += 0.08
-            local pulse = (math.sin(clock * 4) + 1) * 0.5
-
-            dangerZone.Transparency = 0.88 + pulse * 0.07
-            lower.Transparency = 0.30 + pulse * 0.16
-            middle.Transparency = 0.40 + pulse * 0.15
-            upper.Transparency = 0.50 + pulse * 0.14
-            light.Brightness = 1.0 + pulse * 0.9
-
-            task.wait(0.08)
-        end
-    end)
-
-    task.spawn(function()
         while ctx.Active() do
+            local intensity = ctx.Intensity and ctx.Intensity() or 1
             for _, player in ipairs(ctx.Contestants or {}) do
                 if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
                     continue
@@ -102,7 +87,6 @@ function D.start(ctx)
                     if dist < 42 and dist > 2 then
                         local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X).Unit
                         local strength = math.clamp((42 - dist) / 42, 0, 1)
-                        local intensity = ctx.Intensity and ctx.Intensity() or 1
                         root.AssemblyLinearVelocity += tangent * force * intensity * strength + Vector3.new(0, 10 * intensity * strength, 0)
                     end
                 end
