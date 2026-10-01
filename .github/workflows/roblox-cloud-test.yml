@@ -16,7 +16,7 @@ permissions:
 jobs:
   engine:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
@@ -46,13 +46,51 @@ jobs:
           echo "/tmp/lest" >> "$GITHUB_PATH"
           /tmp/lest/lest --version
 
-      - name: Generate CI test config
+      - name: Generate sharded CI test config
         if: steps.config.outputs.ready == 'true'
         shell: bash
         run: |
           cat > lest.ci.toml <<EOF
-          [suites.engine]
-          include = ["tests/engine/**/*.spec.luau"]
+          [suites.core]
+          include = [
+            "tests/engine/achievements.spec.luau",
+            "tests/engine/arena-mechanics.spec.luau",
+            "tests/engine/arena-variants.spec.luau",
+            "tests/engine/audio-config.spec.luau",
+            "tests/engine/cosmetics.spec.luau",
+            "tests/engine/daily-quests.spec.luau",
+            "tests/engine/daily-rewards.spec.luau",
+            "tests/engine/data-schema.spec.luau",
+            "tests/engine/game-analytics.spec.luau",
+            "tests/engine/rate-limiter.spec.luau",
+            "tests/engine/session-streak.spec.luau",
+            "tests/engine/solo-rush.spec.luau",
+            "tests/engine/survival-feedback.spec.luau",
+            "tests/engine/vfx-quality.spec.luau",
+          ]
+          backend = "cloud"
+          default = false
+
+          [suites.gameplay]
+          include = [
+            "tests/engine/contestant-scope.spec.luau",
+            "tests/engine/disaster-balance.spec.luau",
+            "tests/engine/disaster-impact.spec.luau",
+            "tests/engine/disaster-runtime.spec.luau",
+            "tests/engine/disaster-visuals.spec.luau",
+            "tests/engine/hazard-warning.spec.luau",
+            "tests/engine/mapbuilder.spec.luau",
+            "tests/engine/movement-safety.spec.luau",
+            "tests/engine/round-cleanup-resilience.spec.luau",
+            "tests/engine/round-cleanup.spec.luau",
+            "tests/engine/round-intensity.spec.luau",
+            "tests/engine/round-variety.spec.luau",
+          ]
+          backend = "cloud"
+          default = false
+
+          [suites.matrix]
+          include = ["tests/engine/gameplay-matrix.spec.luau"]
           backend = "cloud"
           default = false
 
@@ -65,23 +103,31 @@ jobs:
           timeout_ms = 10000
           EOF
 
-      - name: Run tests in real Roblox engine
+      - name: Run sharded tests in real Roblox engine
         if: steps.config.outputs.ready == 'true'
         shell: bash
         run: |
-          set +e
-          lest run --config lest.ci.toml engine 2>&1 | tee /tmp/lest-first.log
-          first_status=${PIPESTATUS[0]}
-          set -e
+          run_suite() {
+            suite="$1"
+            log="/tmp/lest-$suite.log"
 
-          if [ "$first_status" -eq 0 ]; then
-            exit 0
-          fi
+            echo "::group::Open Cloud suite: $suite"
+            set +e
+            lest run --config lest.ci.toml "$suite" 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            set -e
 
-          if grep -Eq 'did not finish within the deadline|last state: PROCESSING' /tmp/lest-first.log; then
-            echo "Transient Roblox Open Cloud timeout detected; retrying once."
-            sleep 8
-            lest run --config lest.ci.toml engine
-          else
-            exit "$first_status"
-          fi
+            if [ "$status" -ne 0 ] && grep -Eq 'did not finish within the deadline|last state: PROCESSING' "$log"; then
+              echo "Transient Roblox Open Cloud timeout detected for $suite; retrying once."
+              sleep 8
+              lest run --config lest.ci.toml "$suite"
+              status=$?
+            fi
+
+            echo "::endgroup::"
+            return "$status"
+          }
+
+          run_suite core
+          run_suite gameplay
+          run_suite matrix
