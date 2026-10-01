@@ -34,18 +34,26 @@ end
 local function candidateParts(arena)
     local candidates = {}
 
-    local platforms = arena and arena:FindFirstChild("Platforms")
-    if platforms then
-        for _, child in ipairs(platforms:GetChildren()) do
+    -- Prefer permanent spawn pads so a pickup never becomes stranded in mid-air
+    -- when a disaster removes or moves temporary arena platforms.
+    local spawns = arena and arena:FindFirstChild("Spawns")
+    if spawns then
+        for _, child in ipairs(spawns:GetChildren()) do
             if child:IsA("BasePart") and child.Parent then
                 table.insert(candidates, child)
             end
         end
     end
 
-    local spawns = arena and arena:FindFirstChild("Spawns")
-    if spawns then
-        for _, child in ipairs(spawns:GetChildren()) do
+    if #candidates > 0 then
+        return candidates
+    end
+
+    -- Fallback keeps the system functional for future arena layouts that omit
+    -- dedicated spawn pads.
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    if platforms then
+        for _, child in ipairs(platforms:GetChildren()) do
             if child:IsA("BasePart") and child.Parent then
                 table.insert(candidates, child)
             end
