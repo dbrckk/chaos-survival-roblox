@@ -69,6 +69,30 @@ describe("Round cleanup contracts", function()
         expect(math.abs(offset.Z + 12.5) < 0.001).toBe(true)
     end)
 
+    it("Disappearing Platforms filters out invalid and already active parts", function()
+        local folder = Instance.new("Folder")
+        local valid = Instance.new("Part")
+        valid.CanCollide = true
+        valid.Parent = folder
+
+        local disabled = Instance.new("Part")
+        disabled.CanCollide = false
+        disabled.Parent = folder
+
+        local nested = Instance.new("Folder")
+        nested.Parent = folder
+
+        local activeStates = {}
+        local eligible = DisappearingPlatforms.eligiblePlatforms(folder, activeStates)
+        expect(#eligible).toBe(1)
+        expect(eligible[1]).toBe(valid)
+
+        activeStates[valid] = true
+        expect(#DisappearingPlatforms.eligiblePlatforms(folder, activeStates)).toBe(0)
+
+        folder:Destroy()
+    end)
+
     it("Disappearing Platforms registers deterministic cleanup restoration", function()
         MapBuilder.build(Config, "Classic", ArenaVariants)
 
