@@ -61,6 +61,39 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce server service export contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          init = Path("src/server/init.server.lua").read_text()
+          modules = {
+              "AchievementService": Path("src/server/AchievementService.lua"),
+              "CosmeticService": Path("src/server/CosmeticService.lua"),
+              "MonetizationService": Path("src/server/MonetizationService.lua"),
+              "GameAnalytics": Path("src/server/GameAnalytics.lua"),
+              "PlayerData": Path("src/server/PlayerData.lua"),
+          }
+
+          missing = []
+          for module, path in modules.items():
+              source = path.read_text()
+              exports = set(re.findall(rf"function\s+{module}\.([A-Za-z_][A-Za-z0-9_]*)", source))
+              calls = set(re.findall(rf"\b{module}\.([A-Za-z_][A-Za-z0-9_]*)", init))
+              for method in sorted(calls - exports):
+                  missing.append(f"{module}.{method}")
+
+          if missing:
+              print("Server module contract mismatch:")
+              for method in missing:
+                  print(" -", method)
+              raise SystemExit(1)
+
+          print("Server service contracts verified.")
+          PY
+
       - name: Build Roblox place
         run: |
           mkdir -p build
