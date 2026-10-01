@@ -24,6 +24,32 @@ function D.start(ctx)
     local profile = ctx.BalanceProfile or {}
     local freezeSeconds = profile.FreezeSeconds or 1.1
     local warningSeconds = 0.7
+    local frozen = {}
+    local generation = 0
+
+    local function restore(humanoid)
+        local state = frozen[humanoid]
+        if not state then
+            return
+        end
+
+        frozen[humanoid] = nil
+        if humanoid and humanoid.Parent then
+            humanoid.WalkSpeed = state.walkSpeed
+            humanoid.JumpPower = state.jumpPower
+        end
+    end
+
+    ctx.OnCleanup[#ctx.OnCleanup+1] = function()
+        generation += 1
+        local targets = {}
+        for humanoid in pairs(frozen) do
+            table.insert(targets, humanoid)
+        end
+        for _, humanoid in ipairs(targets) do
+            restore(humanoid)
+        end
+    end
 
     task.spawn(function()
         while ctx.Active() do
@@ -40,20 +66,29 @@ function D.start(ctx)
             end
             if not ctx.Active() then break end
 
+            generation += 1
+            local pulseGeneration = generation
+
             for _, player in ipairs(ctx.Contestants or {}) do
                 if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
                     continue
                 end
+
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
-                    local oldSpeed = hum.WalkSpeed
-                    local oldJump = hum.JumpPower
+                    restore(hum)
+                    frozen[hum] = {
+                        walkSpeed = hum.WalkSpeed,
+                        jumpPower = hum.JumpPower,
+                        generation = pulseGeneration,
+                    }
                     hum.WalkSpeed = 4
                     hum.JumpPower = 0
+
                     task.delay(freezeSeconds, function()
-                        if hum and hum.Parent and hum.Health > 0 then
-                            hum.WalkSpeed = oldSpeed
-                            hum.JumpPower = oldJump
+                        local state = frozen[hum]
+                        if state and state.generation == pulseGeneration then
+                            restore(hum)
                         end
                     end)
                 end
