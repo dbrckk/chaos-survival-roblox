@@ -70,7 +70,7 @@ function D.start(ctx)
                 end
 
                 local position = meteor.Position
-                DisasterImpact.applyRadialDamage(ctx, position, radius, damage)
+                DisasterImpact.applyRadialDamage(ctx, position, radius, damage, "Meteor")
                 if ctx.OnHazardImpact then
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 120, 40), radius, "Meteor")
                 end
