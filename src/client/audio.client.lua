@@ -61,6 +61,7 @@ local lastCountdown = nil
 local lastLevel = player:GetAttribute("Level") or 1
 local lastSurvivorCuePlayed = false
 local currentIntensity = 1
+local lastOverdrive = false
 
 local function play(name, pitchVariance)
     local sound = sfx[name]
@@ -134,11 +135,21 @@ stateEvent.OnClientEvent:Connect(function(state)
     local phase = state.phase
     local seconds = tonumber(state.seconds) or 0
     currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
+    local overdrive = phase == "round" and state.overdrive == true
+
+    if overdrive and not lastOverdrive then
+        play("Overdrive")
+        task.delay(0.10, function()
+            play("Speed", 0.03)
+        end)
+    end
 
     lobbyMusic.PlaybackSpeed = math.clamp(
-        (AudioConfig.Music.Lobby.PlaybackSpeed or 1) * (0.985 + ((currentIntensity - 0.9) * 0.05)),
+        (AudioConfig.Music.Lobby.PlaybackSpeed or 1)
+            * (0.985 + ((currentIntensity - 0.9) * 0.05))
+            * (overdrive and 1.035 or 1),
         0.96,
-        1.04
+        1.08
     )
 
     if activeLoopName and sfx[activeLoopName] then
@@ -176,7 +187,7 @@ stateEvent.OnClientEvent:Connect(function(state)
             lastCountdown = seconds
         end
 
-        musicVolume(state.doubleChaos and 0.045 or 0.065, 0.2)
+        musicVolume(overdrive and 0.075 or (state.doubleChaos and 0.045 or 0.065), 0.2)
     elseif phase == "result" then
         stopDisasterLoop()
         musicVolume(0.09, 0.35)
@@ -198,6 +209,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         lastSurvivorCuePlayed = false
     end
 
+    lastOverdrive = overdrive
     lastPhase = phase
     lastTitle = state.title
 end)
@@ -208,6 +220,16 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
     if feedback.criticalSurvival then
         task.delay(0.12, function()
             play("LastSurvivor", 0.03)
+        end)
+    end
+
+    if feedback.challengeCompleted then
+        task.delay(0.10, function()
+            play("LevelUp", 0.03)
+        end)
+    elseif type(feedback.medals) == "table" and #feedback.medals > 0 then
+        task.delay(0.12, function()
+            play("Reward", 0.04)
         end)
     end
 
