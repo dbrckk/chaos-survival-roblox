@@ -33,7 +33,8 @@ function D.start(ctx)
 
             local warning = makeWarning(ctx)
             local warningSeconds = 0.65
-            HazardWarning.configure(warning, "JumpShock", warningSeconds, 8, 72)
+            local warningDiameter = HazardWarning.arenaCoverageDiameter(150)
+            HazardWarning.configure(warning, "JumpShock", warningSeconds, 8, warningDiameter)
             task.wait(warningSeconds)
 
             if warning.Parent then
