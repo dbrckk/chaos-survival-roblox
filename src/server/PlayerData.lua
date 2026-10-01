@@ -15,6 +15,9 @@ local SHUTDOWN_SAVE_DEADLINE_SECONDS = 27
 
 local active = {}
 local saving = {}
+local revisions = {}
+local savedRevisions = {}
+local dataConnections = {}
 
 local function withRetry(operationName, userId, callback)
     local lastError
@@ -49,6 +52,30 @@ local function applyAttributes(player, data)
     for key, value in pairs(data) do
         player:SetAttribute(key, value)
     end
+end
+
+local function disconnectDataConnections(player)
+    local connections = dataConnections[player]
+    if connections then
+        for _, connection in ipairs(connections) do
+            connection:Disconnect()
+        end
+    end
+    dataConnections[player] = nil
+end
+
+local function trackPersistentChanges(player)
+    disconnectDataConnections(player)
+
+    local connections = {}
+    for key in pairs(DataSchema.Defaults) do
+        connections[#connections+1] = player:GetAttributeChangedSignal(key):Connect(function()
+            if active[player] then
+                revisions[player] = (revisions[player] or 0) + 1
+            end
+        end)
+    end
+    dataConnections[player] = connections
 end
 
 local function setupLeaderstats(player)
@@ -137,6 +164,9 @@ function PlayerData.load(player)
     PlayerData.ensureDailyQuests(player)
 
     active[player] = true
+    revisions[player] = 0
+    savedRevisions[player] = 0
+    trackPersistentChanges(player)
     player:SetAttribute("DataLoaded", true)
     return ok
 end
@@ -148,6 +178,12 @@ function PlayerData.save(player, waitForExisting)
 
     if player:GetAttribute("DataPersistenceAvailable") ~= true then
         return false
+    end
+
+    local currentRevision = revisions[player] or 0
+    local lastSavedRevision = savedRevisions[player] or 0
+    if not waitForExisting and currentRevision == lastSavedRevision then
+        return true
     end
 
     if saving[player] then
@@ -167,6 +203,7 @@ function PlayerData.save(player, waitForExisting)
     end
 
     saving[player] = true
+    local revisionAtStart = revisions[player] or 0
 
     local data = DataSchema.snapshot(function(key)
         return player:GetAttribute(key)
@@ -181,6 +218,7 @@ function PlayerData.save(player, waitForExisting)
     saving[player] = nil
 
     if ok then
+        savedRevisions[player] = math.max(savedRevisions[player] or 0, revisionAtStart)
         player:SetAttribute("LastSaveUnix", os.time())
         player:SetAttribute("LastSaveFailed", false)
     else
@@ -329,8 +367,11 @@ function PlayerData.init()
 
     Players.PlayerRemoving:Connect(function(player)
         PlayerData.save(player, true)
+        disconnectDataConnections(player)
         active[player] = nil
         saving[player] = nil
+        revisions[player] = nil
+        savedRevisions[player] = nil
     end)
 
     for _, player in ipairs(Players:GetPlayers()) do
