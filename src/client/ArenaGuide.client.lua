@@ -1,7 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -44,21 +43,6 @@ label.Parent = card
 
 local token = 0
 
-local function currentArenaHint()
-    local root = Workspace:FindFirstChild("GeneratedMap")
-    local arena = root and root:FindFirstChild("Arena")
-    if not arena then
-        return nil
-    end
-
-    local hint = arena:GetAttribute("StrategyHint")
-    if type(hint) ~= "string" or hint == "" then
-        return nil
-    end
-
-    return hint
-end
-
 local function hide()
     token += 1
     local thisToken = token
@@ -71,15 +55,14 @@ local function hide()
     end)
 end
 
-local function show(arenaName)
-    local hint = currentArenaHint()
-    if not hint then
+local function show(arenaName, strategyHint)
+    if type(strategyHint) ~= "string" or strategyHint == "" then
         hide()
         return
     end
 
     token += 1
-    label.Text = string.format("%s  •  %s", arenaName or "ARENA", hint)
+    label.Text = string.format("%s  •  %s", arenaName or "ARENA", strategyHint)
     card.Visible = true
     card.BackgroundTransparency = 1
     label.TextTransparency = 1
@@ -89,7 +72,7 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     if state.phase == "ready" then
-        show(state.arenaName)
+        show(state.arenaName, state.arenaStrategy)
     elseif state.phase == "round" or state.phase == "waiting" then
         hide()
     end
