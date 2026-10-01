@@ -37,6 +37,7 @@ local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
 local RoundIntensity = require(script.RoundIntensity)
 local RoundCleanup = require(script.RoundCleanup)
+local SurvivalFeedback = require(script.SurvivalFeedback)
 
 local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -734,7 +735,7 @@ while true do
             if survived then
                 local humanoid = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
                 if humanoid and humanoid.MaxHealth > 0 then
-                    criticalSurvival = (humanoid.Health / humanoid.MaxHealth) <= 0.20
+                    criticalSurvival = SurvivalFeedback.isCriticalHealth(humanoid.Health, humanoid.MaxHealth)
                 end
             end
 
