@@ -340,6 +340,16 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 #selected > 1
             )
         end,
+        OnArenaMechanicUsed = function(player, variantId, mechanicName)
+            GameAnalytics.custom(
+                player,
+                "ArenaMechanicUsed",
+                1,
+                "Arena:" .. tostring(variantId),
+                "Mechanic:" .. tostring(mechanicName),
+                "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo)
+            )
+        end,
     }
 
     local arenaMechanic = ArenaMechanics.start(ctx, currentArenaVariant)
