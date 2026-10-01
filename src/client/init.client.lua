@@ -42,8 +42,18 @@ top.BackgroundTransparency = 0.06
 top.BorderSizePixel = 0
 top.Parent = root
 UITheme.addCorner(top, UITheme.Corners.Large)
-UITheme.addStroke(top, UITheme.Colors.Border, 1.2, 0.32)
+local topStroke = UITheme.addStroke(top, UITheme.Colors.Border, 1.2, 0.32)
 local topGradient = UITheme.addGradient(top, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+
+local topAccent = Instance.new("Frame")
+topAccent.Name = "PhaseAccent"
+topAccent.AnchorPoint = Vector2.new(0.5, 1)
+topAccent.Position = UDim2.fromScale(0.5, 1)
+topAccent.Size = UDim2.new(0.92, 0, 0, 4)
+topAccent.BackgroundColor3 = UITheme.Colors.Cyan
+topAccent.BorderSizePixel = 0
+topAccent.Parent = top
+UITheme.addCorner(topAccent, UITheme.Corners.Pill)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -90, 0.58, 0)
@@ -299,6 +309,7 @@ questButton.Parent = root
 UITheme.addCorner(questButton, UITheme.Corners.Medium)
 UITheme.addStroke(questButton, UITheme.Colors.Cyan, 1.2, 0.38)
 UITheme.addGradient(questButton, UITheme.Colors.PanelRaised, UITheme.Colors.PanelSoft, 90)
+UITheme.addPressFeedback(questButton, 0.95)
 
 local questPanel = Instance.new("Frame")
 questPanel.Name = "QuestPanel"
@@ -408,6 +419,7 @@ cosmeticsButton.Parent = root
 UITheme.addCorner(cosmeticsButton, UITheme.Corners.Medium)
 UITheme.addStroke(cosmeticsButton, UITheme.Colors.Magenta, 1.2, 0.38)
 UITheme.addGradient(cosmeticsButton, UITheme.Colors.PanelRaised, UITheme.Colors.PanelSoft, 90)
+UITheme.addPressFeedback(cosmeticsButton, 0.95)
 
 local cosmeticsPanel = Instance.new("Frame")
 cosmeticsPanel.Name = "CosmeticsPanel"
@@ -627,6 +639,7 @@ achievementButton.Parent = root
 UITheme.addCorner(achievementButton, UITheme.Corners.Medium)
 UITheme.addStroke(achievementButton, UITheme.Colors.Gold, 1.2, 0.38)
 UITheme.addGradient(achievementButton, UITheme.Colors.PanelRaised, UITheme.Colors.PanelSoft, 90)
+UITheme.addPressFeedback(achievementButton, 0.95)
 
 
 local function bindPressFeedback(button)
@@ -1147,39 +1160,76 @@ local function showVotes(options)
     for index, option in ipairs(options) do
         local optionVotes = tonumber(option.votes) or 0
         local selected = selectedVote == option.id
+        local leading = maxVotes > 0 and optionVotes == maxVotes
+        local accentColor = UITheme.disasterAccent(option.id, UITheme.Colors.Cyan)
 
         local button = Instance.new("TextButton")
         button.Name = "VoteCard_" .. tostring(option.id)
         button.Size = UDim2.new(0.31, 0, 0.94, 0)
-        button.BackgroundColor3 = selected and UITheme.Colors.Blue or UITheme.Colors.PanelRaised
-        button.BackgroundTransparency = selected and 0.02 or 0.05
+        button.BackgroundColor3 = UITheme.Colors.PanelRaised
+        button.BackgroundTransparency = selected and 0.01 or 0.035
         button.BorderSizePixel = 0
         button.AutoButtonColor = false
         button.Text = ""
+        button.ClipsDescendants = false
         button.Parent = votes
         UITheme.addCorner(button, UITheme.Corners.Large)
-
-        local accentColor = index == 1
-            and UITheme.Colors.Cyan
-            or (index == 2 and UITheme.Colors.Violet or UITheme.Colors.Orange)
+        local cardScale = UITheme.addPressFeedback(button, 0.955)
 
         local stroke = UITheme.addStroke(
             button,
-            (maxVotes > 0 and optionVotes == maxVotes) and UITheme.Colors.Gold or accentColor,
-            (maxVotes > 0 and optionVotes == maxVotes) and 2.4 or 1.2,
-            (maxVotes > 0 and optionVotes == maxVotes) and 0.12 or 0.42
+            leading and UITheme.Colors.Gold or accentColor,
+            leading and 2.4 or (selected and 2.0 or 1.2),
+            leading and 0.10 or (selected and 0.14 or 0.38)
+        )
+
+        local backgroundGradient = UITheme.addGradient(
+            button,
+            selected and accentColor:Lerp(UITheme.Colors.PanelRaised, 0.62) or UITheme.Colors.PanelRaised,
+            UITheme.Colors.Panel,
+            90
         )
 
         local accent = Instance.new("Frame")
-        accent.Size = UDim2.new(1, 0, 0, 6)
+        accent.Name = "AccentRail"
+        accent.Size = UDim2.new(1, 0, 0, selected and 8 or 5)
         accent.BackgroundColor3 = accentColor
         accent.BorderSizePixel = 0
         accent.Parent = button
         UITheme.addCorner(accent, UITheme.Corners.Pill)
 
+        local indexBadge = Instance.new("TextLabel")
+        indexBadge.Position = UDim2.fromScale(0.06, 0.10)
+        indexBadge.Size = UDim2.fromScale(0.22, 0.20)
+        indexBadge.BackgroundColor3 = accentColor
+        indexBadge.BackgroundTransparency = 0.12
+        indexBadge.BorderSizePixel = 0
+        indexBadge.Font = Enum.Font.GothamBlack
+        indexBadge.Text = string.format("%02d", index)
+        indexBadge.TextColor3 = UITheme.Colors.Text
+        indexBadge.TextScaled = true
+        indexBadge.Parent = button
+        UITheme.addCorner(indexBadge, UITheme.Corners.Pill)
+
+        local statusBadge = Instance.new("TextLabel")
+        statusBadge.AnchorPoint = Vector2.new(1, 0)
+        statusBadge.Position = UDim2.fromScale(0.94, 0.10)
+        statusBadge.Size = UDim2.fromScale(0.42, 0.20)
+        statusBadge.BackgroundColor3 = selected
+            and UITheme.Colors.Green
+            or (leading and UITheme.Colors.Gold or UITheme.Colors.PanelSoft)
+        statusBadge.BackgroundTransparency = selected and 0.04 or 0.12
+        statusBadge.BorderSizePixel = 0
+        statusBadge.Font = Enum.Font.GothamBold
+        statusBadge.Text = selected and "YOUR VOTE" or (leading and "LEADING" or "CHOOSE")
+        statusBadge.TextColor3 = selected and UITheme.Colors.Panel or UITheme.Colors.Text
+        statusBadge.TextScaled = true
+        statusBadge.Parent = button
+        UITheme.addCorner(statusBadge, UITheme.Corners.Pill)
+
         local name = Instance.new("TextLabel")
-        name.Position = UDim2.fromScale(0.07, 0.12)
-        name.Size = UDim2.fromScale(0.86, 0.28)
+        name.Position = UDim2.fromScale(0.07, 0.34)
+        name.Size = UDim2.fromScale(0.86, 0.23)
         name.BackgroundTransparency = 1
         name.Font = Enum.Font.GothamBlack
         name.Text = string.upper(tostring(option.name or "CHAOS"))
@@ -1189,8 +1239,8 @@ local function showVotes(options)
         name.Parent = button
 
         local hintLabel = Instance.new("TextLabel")
-        hintLabel.Position = UDim2.fromScale(0.08, 0.43)
-        hintLabel.Size = UDim2.fromScale(0.84, 0.27)
+        hintLabel.Position = UDim2.fromScale(0.08, 0.58)
+        hintLabel.Size = UDim2.fromScale(0.84, 0.17)
         hintLabel.BackgroundTransparency = 1
         hintLabel.Font = Enum.Font.GothamMedium
         hintLabel.Text = tostring(option.hint or "")
@@ -1201,10 +1251,10 @@ local function showVotes(options)
 
         local votePill = Instance.new("TextLabel")
         votePill.AnchorPoint = Vector2.new(0.5, 1)
-        votePill.Position = UDim2.fromScale(0.5, 0.92)
-        votePill.Size = UDim2.fromScale(0.66, 0.18)
+        votePill.Position = UDim2.fromScale(0.5, 0.94)
+        votePill.Size = UDim2.fromScale(0.70, 0.15)
         votePill.BackgroundColor3 = selected and accentColor or UITheme.Colors.PanelSoft
-        votePill.BackgroundTransparency = 0.04
+        votePill.BackgroundTransparency = selected and 0.02 or 0.08
         votePill.BorderSizePixel = 0
         votePill.Font = Enum.Font.GothamBold
         votePill.Text = string.format("%d VOTE%s", optionVotes, optionVotes == 1 and "" or "S")
@@ -1213,18 +1263,20 @@ local function showVotes(options)
         votePill.Parent = button
         UITheme.addCorner(votePill, UITheme.Corners.Pill)
 
-        if selected then
-            UITheme.addGradient(button, UITheme.Colors.Blue, UITheme.Colors.Violet, 15)
-        end
-
         button.Activated:Connect(function()
+            cardScale.Scale = 0.94
+            TweenService:Create(
+                cardScale,
+                TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                {Scale = 1}
+            ):Play()
+
             selectedVote = option.id
             voteEvent:FireServer(option.id)
             showVotes(options)
         end)
     end
 end
-
 
 
 
@@ -1402,6 +1454,11 @@ stateEvent.OnClientEvent:Connect(function(state)
         setTimerPalette(UITheme.Colors.Orange, Color3.fromRGB(220, 70, 55))
         timer.Rotation = 0
     end
+
+    local primaryDisasterId = state.disasterIds and state.disasterIds[1]
+    local activeUiAccent = UITheme.disasterAccent(primaryDisasterId, UITheme.Colors.Cyan)
+    topAccent.BackgroundColor3 = activeUiAccent
+    topStroke.Color = state.doubleChaos and UITheme.Colors.Violet or activeUiAccent
 
     if state.doubleChaos then
         top.BackgroundColor3 = Color3.fromRGB(63, 28, 88)
