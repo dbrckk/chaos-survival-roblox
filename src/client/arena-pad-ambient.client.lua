@@ -4,7 +4,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local visuals = {}
+local overdriveActive = false
 
 local function profile()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -14,7 +16,7 @@ local currentRate = 6 * profile().ParticleScale
 
 local function refreshRates()
     local tier = profile()
-    currentRate = 6 * tier.ParticleScale
+    currentRate = 6 * tier.ParticleScale * (overdriveActive and 1.75 or 1)
     if tier.Name == "Low" then
         currentRate = math.min(currentRate, 1.8)
     end
@@ -24,13 +26,20 @@ local function refreshRates()
             visuals[pad] = nil
         else
             state.emitter.Rate = currentRate
-            state.highlight.FillTransparency = tier.Name == "Low" and 1 or 0.86
-            state.highlight.OutlineTransparency = tier.Name == "Low" and 0.36 or 0.16
+            state.highlight.FillColor = overdriveActive
+                and Color3.fromRGB(255, 205, 92)
+                or pad.Color
+            state.highlight.OutlineColor = overdriveActive
+                and Color3.fromRGB(255, 245, 190)
+                or pad.Color:Lerp(Color3.new(1, 1, 1), 0.42)
+            state.highlight.FillTransparency = tier.Name == "Low" and 1 or (overdriveActive and 0.74 or 0.86)
+            state.highlight.OutlineTransparency = tier.Name == "Low" and 0.36 or (overdriveActive and 0.04 or 0.16)
 
             local light = pad:FindFirstChild("MobilityPadLight")
             if light and light:IsA("PointLight") then
                 light.Enabled = tier.Name ~= "Low"
-                light.Brightness = 0.55 + (0.20 * tier.Scale)
+                light.Color = overdriveActive and Color3.fromRGB(255, 215, 105) or pad.Color
+                light.Brightness = (0.55 + (0.20 * tier.Scale)) * (overdriveActive and 1.65 or 1)
             end
         end
     end
@@ -122,3 +131,12 @@ end)
 scan(workspace)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshRates)
+
+
+stateEvent.OnClientEvent:Connect(function(state)
+    local nextOverdrive = state.phase == "round" and state.overdrive == true
+    if nextOverdrive ~= overdriveActive then
+        overdriveActive = nextOverdrive
+        refreshRates()
+    end
+end)
