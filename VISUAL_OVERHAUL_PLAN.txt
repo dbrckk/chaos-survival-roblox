@@ -36,12 +36,12 @@ PHASE 1 — DIRECTION ARTISTIQUE ET FONDATIONS
 
 PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 ---------------------------------------
-[EN COURS] 2.1 Classic Grid : grille techno lisible + architecture périphérique.
-[EN COURS] 2.2 Tower Run : verticalité renforcée + structures porteuses + noyaux lumineux.
-[EN COURS] 2.3 Crossroads : quatre lanes visuellement distinctes + signalétique directionnelle.
-[EN COURS] 2.4 Orbital Ring : identité circulaire + anneaux énergétiques + noyau central.
-[TODO] 2.5 Ajouter variations de décor propres à chaque arène.
-[TODO] 2.6 Vérifier qu'aucun décor ne crée de nouveau safe spot ou collision parasite.
+[QA]   2.1 Classic Grid : grille techno lisible + architecture périphérique.
+[QA]   2.2 Tower Run : verticalité renforcée + structures porteuses + noyaux lumineux.
+[QA]   2.3 Crossroads : quatre lanes visuellement distinctes + signalétique directionnelle.
+[QA]   2.4 Orbital Ring : identité circulaire + anneaux énergétiques + noyau central.
+[QA]   2.5 Ajouter variations de décor propres à chaque arène.
+[QA]   2.6 Vérifier qu'aucun décor ne crée de nouveau safe spot ou collision parasite.
 [TODO] 2.7 QA Android / desktop des 4 arènes.
 
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
