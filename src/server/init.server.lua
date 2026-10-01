@@ -548,7 +548,10 @@ while true do
     local intermissionSettings = SoloRules.resolve(Config, readyPlayerCount())
 
     local intermissionCancelled = false
-    for t = intermissionSettings.IntermissionSeconds, 1, -1 do
+    local remainingIntermission = intermissionSettings.IntermissionSeconds
+    local previousSoloMode = intermissionSettings.Solo
+
+    while remainingIntermission >= 1 do
         local loadedCount = readyPlayerCount()
         if loadedCount < Config.MinimumPlayers then
             voteOpen = false
@@ -563,9 +566,17 @@ while true do
         end
 
         intermissionSettings = SoloRules.resolve(Config, loadedCount)
+        if intermissionSettings.Solo ~= previousSoloMode then
+            if intermissionSettings.Solo then
+                remainingIntermission = math.min(remainingIntermission, intermissionSettings.IntermissionSeconds)
+            else
+                remainingIntermission = math.max(remainingIntermission, intermissionSettings.IntermissionSeconds)
+            end
+            previousSoloMode = intermissionSettings.Solo
+        end
 
         local options = nil
-        if t <= intermissionSettings.VoteSeconds then
+        if remainingIntermission <= intermissionSettings.VoteSeconds then
             voteOpen = true
             options = {}
             local voteCounts = currentVoteCounts()
@@ -578,18 +589,21 @@ while true do
                     votes = voteCounts[d.Id] or 0,
                 })
             end
+        else
+            voteOpen = false
         end
 
         broadcast({
             phase = "intermission",
             title = options and "VOTE FOR THE NEXT CHAOS" or (intermissionSettings.Solo and "SOLO RUSH" or "NEXT ROUND"),
             hint = options and "Choose one" or ((arenaDefinition and arenaDefinition.Name or "ARENA") .. " • " .. (intermissionSettings.Solo and "Fast rounds • bonus rewards" or "Get ready")),
-            seconds = t,
+            seconds = remainingIntermission,
             voteOptions = options,
             soloMode = intermissionSettings.Solo,
             arenaName = arenaDefinition and arenaDefinition.Name or currentArenaVariant,
         })
         task.wait(1)
+        remainingIntermission -= 1
     end
 
     voteOpen = false
