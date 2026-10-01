@@ -307,7 +307,7 @@ local function addArenaHologram(decor, config, variant, theme)
 
     local gui = Instance.new("SurfaceGui")
     gui.Name = "ArenaIdentityGui"
-    gui.Face = Enum.NormalId.Front
+    gui.Face = Enum.NormalId.Back
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     gui.PixelsPerStud = 42
     gui.LightInfluence = 0
