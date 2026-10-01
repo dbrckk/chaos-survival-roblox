@@ -104,7 +104,8 @@ PHASE 6B — GAMEPLAY / FUN
 [QA]   6B.8 Ajouter un Golden Chaos Shard unique pendant OVERDRIVE (+3 coins).
 [QA]   6B.9 Ajouter FLOW COMBO : pad puis Shard sous 5 s, +2 coins une fois/round.
 [QA]   6B.10 Transformer Double Chaos en CHAOS FUSION nommée + bonus survie +5 coins.
-[TODO] 6B.11 QA équilibre/fun solo et multijoueur.
+[QA]   6B.11 Ajouter MOMENTUM STREAK non économique sur pad / Shard / Close Call.
+[TODO] 6B.12 QA équilibre/fun solo et multijoueur.
 
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
