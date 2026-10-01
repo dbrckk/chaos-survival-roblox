@@ -1168,6 +1168,11 @@ local function showRoundFeedback(feedback)
     if nearMissCount > 0 then
         table.insert(tags, "CLOSE CALLS x" .. tostring(nearMissCount))
     end
+    local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
+    if momentumBest >= 2 then
+        table.insert(tags, "MOMENTUM x" .. tostring(momentumBest))
+    end
+
     local medals = type(feedback.medals) == "table" and feedback.medals or {}
     if #medals > 0 then
         table.insert(tags, "MEDALS x" .. tostring(#medals))
