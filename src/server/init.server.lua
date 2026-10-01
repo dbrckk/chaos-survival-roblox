@@ -86,9 +86,18 @@ MonetizationService.init(remotes, RateLimiter, CosmeticService)
 AchievementService.init(remotes)
 MapBuilder.build(Config, "Classic", ArenaVariants)
 
-local disasters = {}
+local disasterModules = {}
 for _, module in ipairs(script.Disasters:GetChildren()) do
     if module:IsA("ModuleScript") then
+        table.insert(disasterModules, module)
+    end
+end
+table.sort(disasterModules, function(a, b)
+    return a.Name < b.Name
+end)
+
+local disasters = {}
+for _, module in ipairs(disasterModules) do
         local ok, loaded = pcall(require, module)
         if not ok then
             warn("Disaster module failed to load:", module.Name, loaded)
@@ -106,7 +115,6 @@ for _, module in ipairs(script.Disasters:GetChildren()) do
 
         loaded.Id = module.Name
         table.insert(disasters, loaded)
-    end
 end
 assert(#disasters >= 3, "At least 3 valid disasters are required")
 
