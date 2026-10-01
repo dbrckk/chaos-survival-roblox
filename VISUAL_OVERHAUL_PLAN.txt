@@ -83,12 +83,12 @@ PHASE 5 — UI / UX PREMIUM
 
 PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
-[TODO] 6.1 Feedback dégâts plus premium.
-[TODO] 6.2 Clutch Survival plus spectaculaire mais bref.
-[TODO] 6.3 Close Call plus lisible et moins intrusif.
-[TODO] 6.4 Shard pickup world burst.
+[QA]   6.1 Feedback dégâts plus premium.
+[QA]   6.2 Clutch Survival plus spectaculaire mais bref.
+[QA]   6.3 Close Call plus lisible et moins intrusif.
+[QA]   6.4 Shard pickup world burst.
 [TODO] 6.5 Level up / reward / streak polish.
-[TODO] 6.6 Round start / round end transitions.
+[EN COURS] 6.6 Round start / round end transitions.
 [TODO] 6.7 Spectator polish.
 [TODO] 6.8 Vérifier fatigue visuelle et accessibilité.
 
@@ -126,4 +126,4 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - HUD mobile récemment corrigé pour limiter les chevauchements.
 - Freeze glare réduit.
 - Base néon cohérente mais encore trop simple.
-- Priorité actuelle : PHASE 6 — feedback joueur et game feel visuel après validation du lot UI sur Android.
+- Priorité actuelle : PHASE 6 — finaliser transitions/récompenses/spectateur, puis audit performance visuel.
