@@ -17,12 +17,30 @@ UITheme.Colors = {
     Green = Color3.fromRGB(95, 225, 155),
 }
 
+UITheme.DisasterAccents = {
+    RisingLava = Color3.fromRGB(255, 105, 38),
+    Meteors = Color3.fromRGB(255, 155, 58),
+    LowGravity = Color3.fromRGB(118, 145, 255),
+    DisappearingPlatforms = Color3.fromRGB(255, 208, 72),
+    Tornado = Color3.fromRGB(72, 215, 225),
+    Freeze = Color3.fromRGB(92, 195, 255),
+    Bombs = Color3.fromRGB(255, 72, 78),
+    SpeedSurge = Color3.fromRGB(245, 82, 205),
+    Darkness = Color3.fromRGB(108, 96, 205),
+    ShrinkingArena = Color3.fromRGB(190, 82, 245),
+    JumpShock = Color3.fromRGB(82, 155, 255),
+}
+
 UITheme.Corners = {
     Small = UDim.new(0, 10),
     Medium = UDim.new(0, 14),
     Large = UDim.new(0, 18),
     Pill = UDim.new(1, 0),
 }
+
+function UITheme.disasterAccent(id, fallback)
+    return UITheme.DisasterAccents[id] or fallback or UITheme.Colors.Cyan
+end
 
 function UITheme.addStroke(parent, color, thickness, transparency)
     local stroke = Instance.new("UIStroke")
