@@ -42,6 +42,16 @@ describe("Daily quests", function()
         expect(progress).toBe(75)
         expect(completed).toBe(true)
     end)
+
+    it("tracks chaos shard collection independently", function()
+        local progress, completed = DailyQuests.applyProgress("COLLECT_6", 5, "collect_shard", 1)
+        expect(progress).toBe(6)
+        expect(completed).toBe(true)
+
+        local unrelated, unrelatedCompleted = DailyQuests.applyProgress("COLLECT_6", 0, "survive_round", 1)
+        expect(unrelated).toBe(0)
+        expect(unrelatedCompleted).toBe(false)
+    end)
 end)
 
 return nil
