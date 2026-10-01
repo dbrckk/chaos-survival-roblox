@@ -99,8 +99,15 @@ local currentOptions = {}
 local voteOpen = false
 local allowVote = RateLimiter.new(0.2)
 local allowHazardNearMiss = RateLimiter.new(0.9)
+local lastRoundState = {
+    phase = "waiting",
+    title = "WAITING FOR PLAYERS",
+    hint = "",
+    seconds = 0,
+}
 
 local function broadcast(payload)
+    lastRoundState = payload
     stateEvent:FireAllClients(payload)
 end
 
@@ -262,6 +269,7 @@ local function syncInitialClientState(player)
         return
     end
     clientReady[player] = true
+    stateEvent:FireClient(player, lastRoundState)
 
     task.spawn(function()
         if not PlayerReadiness.waitForDataLoaded(player) then
