@@ -420,7 +420,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     previousPhase = phase
     phase = tostring(state.phase or "waiting")
     if phase == "ready" and previousPhase ~= "ready" then
-        readyPulseStartedAt = os.clock()
+        readyPulseStartedAt = clock
     elseif phase ~= "ready" then
         readyPulseStartedAt = nil
     end
