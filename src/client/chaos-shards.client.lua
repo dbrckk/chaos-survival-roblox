@@ -2,8 +2,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local player = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
@@ -20,12 +22,12 @@ label.Name = "Reward"
 label.AnchorPoint = Vector2.new(0.5, 0.5)
 label.Position = UDim2.fromScale(0.5, 0.66)
 label.Size = UDim2.fromOffset(260, 54)
-label.BackgroundColor3 = Color3.fromRGB(17, 30, 48)
+label.BackgroundColor3 = UITheme.Colors.Panel
 label.BackgroundTransparency = 1
 label.BorderSizePixel = 0
 label.Font = Enum.Font.GothamBlack
 label.Text = ""
-label.TextColor3 = Color3.fromRGB(120, 225, 255)
+label.TextColor3 = UITheme.Colors.Cyan
 label.TextStrokeTransparency = 0.65
 label.TextScaled = true
 label.TextTransparency = 1
@@ -37,7 +39,7 @@ corner.CornerRadius = UDim.new(0, 14)
 corner.Parent = label
 
 local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(126, 107, 255)
+stroke.Color = UITheme.Colors.Violet
 stroke.Thickness = 1.5
 stroke.Transparency = 0.35
 stroke.Parent = label
@@ -47,6 +49,101 @@ scale.Scale = 0.78
 scale.Parent = label
 
 local token = 0
+
+local function worldBurst(position)
+    if typeof(position) ~= "Vector3" then
+        return
+    end
+
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+
+    local core = Instance.new("Part")
+    core.Name = "ShardPickupCoreLocal"
+    core.Shape = Enum.PartType.Ball
+    core.Size = Vector3.new(0.8, 0.8, 0.8)
+    core.Position = position
+    core.Anchored = true
+    core.CanCollide = false
+    core.CanTouch = false
+    core.CanQuery = false
+    core.CastShadow = false
+    core.Material = Enum.Material.Neon
+    core.Color = UITheme.Colors.Cyan
+    core.Transparency = 0.04
+    core.Parent = workspace
+
+    local ring = Instance.new("Part")
+    ring.Name = "ShardPickupRingLocal"
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Size = Vector3.new(0.10, 1.2, 1.2)
+    ring.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+    ring.Anchored = true
+    ring.CanCollide = false
+    ring.CanTouch = false
+    ring.CanQuery = false
+    ring.CastShadow = false
+    ring.Material = Enum.Material.Neon
+    ring.Color = UITheme.Colors.Violet
+    ring.Transparency = 0.16
+    ring.Parent = workspace
+
+    TweenService:Create(
+        core,
+        TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Size = Vector3.new(4.2, 4.2, 4.2),
+            Transparency = 1,
+        }
+    ):Play()
+
+    TweenService:Create(
+        ring,
+        TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Size = Vector3.new(0.10, 8.5, 8.5),
+            Transparency = 1,
+        }
+    ):Play()
+
+    if tier.Name ~= "Low" then
+        local attachment = Instance.new("Attachment")
+        attachment.Parent = core
+
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Name = "ShardPickupMotes"
+        emitter.Rate = 0
+        emitter.Lifetime = NumberRange.new(0.28, 0.48)
+        emitter.Speed = NumberRange.new(3.5, 7.5)
+        emitter.SpreadAngle = Vector2.new(180, 180)
+        emitter.LightEmission = 1
+        emitter.Color = ColorSequence.new(UITheme.Colors.Cyan, UITheme.Colors.Violet)
+        emitter.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.22),
+            NumberSequenceKeypoint.new(1, 0),
+        })
+        emitter.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.05),
+            NumberSequenceKeypoint.new(1, 1),
+        })
+        emitter.Parent = attachment
+        emitter:Emit(VfxQuality.particleCount(tier.Name, 18, 7))
+    end
+
+    if tier.Name == "High" then
+        local light = Instance.new("PointLight")
+        light.Color = UITheme.Colors.Cyan
+        light.Brightness = 1.8
+        light.Range = 10
+        light.Shadows = false
+        light.Parent = core
+        TweenService:Create(light, TweenInfo.new(0.22), {Brightness = 0}):Play()
+    end
+
+    Debris:AddItem(core, 0.40)
+    Debris:AddItem(ring, 0.40)
+end
+
+
 
 local function show(reward, total)
     token += 1
@@ -94,6 +191,7 @@ end
 
 event.OnClientEvent:Connect(function(payload)
     show(tonumber(payload.reward) or 1, tonumber(payload.total) or 1)
+    worldBurst(payload.position)
 end)
 
 
