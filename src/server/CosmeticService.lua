@@ -6,6 +6,8 @@ local GameAnalytics = require(script.Parent.GameAnalytics)
 
 local CosmeticService = {}
 
+local setupStarted = setmetatable({}, {__mode = "k"})
+
 local stateEvent
 local actionEvent
 
@@ -197,6 +199,10 @@ local function syncUnlocks(player)
 end
 
 local function setupPlayer(player)
+    if setupStarted[player] then
+        return
+    end
+    setupStarted[player] = true
     task.spawn(function()
         if not PlayerReadiness.waitForDataLoaded(player) then
             return
