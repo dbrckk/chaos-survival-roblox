@@ -92,10 +92,10 @@ PHASE D — VFX / ANIMATION
 [A FAIRE] D5 Réduction stricte du bruit pendant Final Rush.
 
 PHASE E — CUSTOMIZATION
-[EN COURS] E1 Catalogue structuré en collections cohérentes ; extension du nombre d'items à poursuivre.
+[EN COURS] E1 Catalogue porté à 15 items avec set Arena Masters ; extension future optionnelle.
 [FAIT] E2 Raretés visuelles Common/Rare/Epic/Legendary/Premium, sans puissance.
 [FAIT] E3 Preview claire dans UI : dégradé réel ColorA→ColorB affiché sur chaque carte cosmétique.
-[A FAIRE] E4 Unlocks liés à maîtrise et achievements.
+[FAIT] E4 Quatre cosmétiques GOLD liés aux maîtrises d'arène, débloqués automatiquement et non achetables.
 [A FAIRE] E5 Sets premium peu chers mais désirables.
 
 PHASE F — RETENTION / FUN
