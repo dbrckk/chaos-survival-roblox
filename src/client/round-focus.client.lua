@@ -241,7 +241,12 @@ local function refresh()
     local challengeId = state.challengeId
     local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
     local progress = math.min(challengeTarget, challengeProgress(state))
-    if challengeId then
+    if state.finalRush then
+        challenge.Text = "SURVIVE"
+        challenge.TextColor3 = UITheme.Colors.Orange
+        challenge.BackgroundColor3 = UITheme.Colors.Red:Lerp(UITheme.Colors.PanelSoft, 0.82)
+        completedChallengeId = nil
+    elseif challengeId then
         local completed = progress >= challengeTarget
         challenge.Text = completed
             and ("DONE  " .. tostring(state.challengeShort or "CHALLENGE"))
