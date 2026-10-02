@@ -1064,6 +1064,52 @@ for _, panel in ipairs({questPanel, cosmeticsPanel, achievementPanel, supportPan
     panelScales[panel] = scale
 end
 
+local cameraViewportConnection = nil
+
+local function applyResponsivePanelConstraints()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local compact = viewport.X < 760 or viewport.Y < 500
+    local narrow = viewport.X < 560
+
+    questPanelConstraint.MinSize = compact and Vector2.new(220, 205) or Vector2.new(260, 250)
+    cosmeticsPanelConstraint.MinSize = compact and Vector2.new(220, 190) or Vector2.new(270, 220)
+    achievementPanelConstraint.MinSize = compact and Vector2.new(225, 205) or Vector2.new(280, 250)
+    supportPanelConstraint.MinSize = compact and Vector2.new(220, 170) or Vector2.new(270, 190)
+
+    local panelWidth = narrow and 0.94 or (compact and 0.88 or 0.72)
+    local panelBottom = compact and 0.90 or 0.82
+    questPanel.Size = UDim2.fromScale(panelWidth, compact and 0.52 or 0.46)
+    questPanel.Position = UDim2.fromScale(narrow and 0.03 or 0.025, panelBottom)
+
+    cosmeticsPanel.Size = UDim2.fromScale(panelWidth, compact and 0.46 or 0.36)
+    cosmeticsPanel.Position = UDim2.fromScale(narrow and 0.97 or 0.975, panelBottom)
+
+    achievementPanel.Size = UDim2.fromScale(narrow and 0.94 or (compact and 0.90 or 0.82), compact and 0.52 or 0.46)
+    achievementPanel.Position = UDim2.fromScale(0.5, panelBottom)
+
+    supportPanel.Size = UDim2.fromScale(panelWidth, compact and 0.38 or 0.30)
+    supportPanel.Position = UDim2.fromScale(narrow and 0.97 or 0.975, compact and 0.88 or 0.75)
+
+    top.Size = UDim2.fromScale(narrow and 0.95 or 0.88, narrow and 0.115 or 0.13)
+end
+
+local function bindViewportSizing()
+    if cameraViewportConnection then
+        cameraViewportConnection:Disconnect()
+        cameraViewportConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        cameraViewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsivePanelConstraints)
+    end
+    applyResponsivePanelConstraints()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindViewportSizing)
+bindViewportSizing()
+
 local function closeAllPanels()
     questPanel.Visible = false
     cosmeticsPanel.Visible = false
