@@ -8,6 +8,7 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
+local cosmeticActionEvent = remotes:WaitForChild("CosmeticAction")
 
 local folder = Instance.new("Folder")
 folder.Name = "LobbyProfileHologramLocal"
@@ -207,6 +208,15 @@ end
 for _, attribute in ipairs({"Level", "XP", "Wins", "Coins", "DataLoaded"}) do
     player:GetAttributeChangedSignal(attribute):Connect(refresh)
 end
+
+local function requestCosmeticSync()
+    if player:GetAttribute("DataLoaded") == true then
+        cosmeticActionEvent:FireServer("sync")
+    end
+end
+
+player:GetAttributeChangedSignal("DataLoaded"):Connect(requestCosmeticSync)
+task.delay(0.8, requestCosmeticSync)
 
 cosmeticStateEvent.OnClientEvent:Connect(function(payload)
     local state = payload and payload.state
