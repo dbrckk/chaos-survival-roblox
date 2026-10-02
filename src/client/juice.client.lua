@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -192,7 +193,7 @@ local activeBeaconDefaults = nil
 local activeDoubleChaos = false
 local currentIntensity = 1
 local lastSurvivorAnnounced = false
-local vfxTierName = "High"
+local vfxTierName = VfxQuality.initialTier(UserInputService.TouchEnabled)
 local vfxTier = VfxQuality.get(vfxTierName)
 local frameTimeAccumulator = 0
 local frameSampleCount = 0
@@ -629,7 +630,7 @@ RunService.RenderStepped:Connect(function(dt)
 
         if performancePulseClock >= 45 and performanceFpsSamples > 0 then
             local averageFps = performanceFpsAccumulator / performanceFpsSamples
-            local deviceClass = game:GetService("UserInputService").TouchEnabled and "Touch" or "Desktop"
+            local deviceClass = UserInputService.TouchEnabled and "Touch" or "Desktop"
 
             performancePulseEvent:FireServer({
                 averageFps = math.floor(averageFps + 0.5),
