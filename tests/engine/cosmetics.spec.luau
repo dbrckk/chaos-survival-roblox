@@ -7,7 +7,7 @@ local Cosmetics = require("../../src/server/CosmeticsCatalog")
 describe("Cosmetic inventory", function()
     it("exposes the expanded ordered catalog", function()
         local list = Cosmetics.publicList()
-        expect(#list).toBe(11)
+        expect(#list).toBe(15)
         expect(list[1].id).toBe("trail_blue")
         expect(list[1].unlockLevel).toBe(1)
         expect(list[4].id).toBe("trail_plasma")
@@ -17,6 +17,8 @@ describe("Cosmetic inventory", function()
         expect(list[1].rarity).toBe("Common")
         expect(list[6].rarity).toBe("Legendary")
         expect(list[10].collection).toBe("Founder")
+        expect(list[12].arenaMasteryId).toBe("Classic")
+        expect(list[12].arenaMasteryPoints).toBe(18)
     end)
 
     it("unlocks level cosmetics without granting shop items", function()
@@ -31,6 +33,24 @@ describe("Cosmetic inventory", function()
         expect(Cosmetics.canEquip(upgraded, "trail_gold")).toBe(true)
         expect(Cosmetics.canEquip(upgraded, "trail_void")).toBe(true)
         expect(Cosmetics.canEquip(upgraded, "aura_cosmic")).toBe(false)
+    end)
+
+    it("unlocks arena mastery cosmetics at GOLD", function()
+        local raw, unlocked = Cosmetics.mergeMasteryUnlocks(
+            "trail_blue",
+            "Classic=18;Towers=17;Crossroads=36;Orbital=9"
+        )
+
+        expect(Cosmetics.canEquip(raw, "trail_gridmaster")).toBe(true)
+        expect(Cosmetics.canEquip(raw, "trail_nexus")).toBe(true)
+        expect(Cosmetics.canEquip(raw, "aura_towercore")).toBe(false)
+        expect(Cosmetics.canEquip(raw, "aura_orbital")).toBe(false)
+        expect(#unlocked).toBe(2)
+
+        local secondRaw, secondUnlocked = Cosmetics.mergeMasteryUnlocks(raw, "Classic=36;Towers=18;Crossroads=36;Orbital=18")
+        expect(Cosmetics.canEquip(secondRaw, "aura_towercore")).toBe(true)
+        expect(Cosmetics.canEquip(secondRaw, "aura_orbital")).toBe(true)
+        expect(#secondUnlocked).toBe(2)
     end)
 
     it("validates coin purchases server-side", function()
@@ -66,7 +86,7 @@ describe("Cosmetic inventory", function()
         local state = Cosmetics.collectionState("trail_blue,trail_gold,trail_plasma,trail_prism")
 
         expect(state.owned).toBe(4)
-        expect(state.total).toBe(11)
+        expect(state.total).toBe(15)
         expect(state.completedCollections >= 1).toBe(true)
         expect(state.totalCollections >= 4).toBe(true)
         expect(state.nextMilestone).toBe(6)
@@ -84,8 +104,12 @@ describe("Cosmetic inventory", function()
             aura_cosmic = true,
             aura_supporter = true,
             trail_neon = true,
+            trail_gridmaster = true,
+            aura_towercore = true,
+            trail_nexus = true,
+            aura_orbital = true,
         }))
-        expect(complete.owned).toBe(11)
+        expect(complete.owned).toBe(15)
         expect(complete.maxed).toBe(true)
         expect(complete.nextMilestone).toBe(nil)
     end)
