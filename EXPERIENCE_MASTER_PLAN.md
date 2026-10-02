@@ -62,16 +62,16 @@ P2 — Présentation publique
 ROADMAP
 =======
 PHASE A — GAME FEEL CORE
-[A FAIRE] A1 Caméra réactive légère : landing, impacts, pads, vitesse.
-[A FAIRE] A2 Mouvement : anticipation/squash visuel, micro-tilt, feedback airborne/landing.
+[FAIT] A1 Caméra réactive légère : landing, impacts, pads, vitesse.
+[EN COURS] A2 Mouvement : micro-tilt + landing ajoutés ; squash/animation corporelle à poursuivre.
 [A FAIRE] A3 Feedback tactile/gamepad si supporté, sans dépendance.
-[A FAIRE] A4 Option de réduction automatique sur VFX Low / mobile.
+[FAIT] A4 Réduction automatique du mouvement caméra sur VFX Low / mobile.
 [A FAIRE] A5 QA conflits caméra et motion sickness.
 
 PHASE B — AUDIO PREMIUM
-[A FAIRE] B1 Spatialiser météores/bombes/impacts.
-[A FAIRE] B2 Créer mix dynamique Music / Hazard / UI / Reward.
-[A FAIRE] B3 Ducking musique lors des alertes et Final Rush.
+[FAIT] B1 Spatialiser météores/bombes/impacts.
+[EN COURS] B2 Mix dynamique Music/SFX par phase ajouté ; séparation Hazard/UI/Reward à poursuivre.
+[FAIT] B3 Ducking musique lors des rounds critiques / Final Rush.
 [A FAIRE] B4 Remplacer progressivement sons prototype par assets originaux/Creator Store vérifiés.
 [A FAIRE] B5 Ambiances propres à chaque arène.
 
@@ -82,7 +82,7 @@ PHASE C — MAP ART PASS
 [A FAIRE] C4 Orbital : reactor ring / rotating energy architecture.
 [A FAIRE] C5 Lobby : hub social avec objectifs/progression lisibles dans le monde.
 [A FAIRE] C6 Micro-décors animés et profondeur hors zone jouable.
-[A FAIRE] C7 Variation légère par round sans dégrader la lecture.
+[EN COURS] C7 Signatures animées locales distinctes ajoutées aux 4 arènes ; variation par round à poursuivre.
 
 PHASE D — VFX / ANIMATION
 [A FAIRE] D1 Hiérarchie telegraph -> impact -> aftermath.
