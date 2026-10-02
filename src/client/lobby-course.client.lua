@@ -121,10 +121,6 @@ for index, offset in ipairs(offsets) do
 end
 
 local function resetCourse()
-for _, bundle in ipairs(checkpointParts) do
-    bundle.part.Transparency = 1
-    bundle.billboard.Enabled = false
-end
     currentIndex = 1
     startedAt = nil
 
@@ -262,3 +258,8 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 resetCourse()
+card.Visible = false
+for _, bundle in ipairs(checkpointParts) do
+    bundle.part.Transparency = 1
+    bundle.billboard.Enabled = false
+end
