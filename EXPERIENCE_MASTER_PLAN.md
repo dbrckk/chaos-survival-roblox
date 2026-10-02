@@ -70,7 +70,7 @@ PHASE A — GAME FEEL CORE
 
 PHASE B — AUDIO PREMIUM
 [FAIT] B1 Spatialiser météores/bombes/impacts.
-[EN COURS] B2 Mix dynamique Music/SFX par phase ajouté ; séparation Hazard/UI/Reward à poursuivre.
+[FAIT] B2 Mix dynamique séparé Music / Hazard / UI / Reward, avec priorité danger en round et Final Rush.
 [FAIT] B3 Ducking musique lors des rounds critiques / Final Rush.
 [A FAIRE] B4 Remplacer progressivement sons prototype par assets originaux/Creator Store vérifiés.
 [EN COURS] B5 Profils tonaux/pitch propres à chaque arène ajoutés ; assets d'ambiance dédiés à sélectionner plus tard.
@@ -115,7 +115,7 @@ PHASE G — UI/UX
 
 PHASE H — PERFORMANCE
 [EN COURS] H1 Budgets dynamiques déjà appliqués aux world VFX, impacts, lights et cosmétiques ; mesures réelles restantes.
-[EN COURS] H2 Boucles catastrophe déjà idle ; world-polish optimisé avec centres lobby en cache et profil VFX réutilisé.
+[EN COURS] H2 Boucles catastrophe idle ; world-polish cache centres lobby + CenterBeacon, réutilise profil VFX et réduit motion.
 [EN COURS] H3 Budgets VFX/Light étendus aux cosmétiques par client ; Low désactive aura lights et réduit fortement particules/trails.
 [A FAIRE] H4 Soak Android 30-60 min.
 [A FAIRE] H5 MicroProfiler sur appareil réel.
