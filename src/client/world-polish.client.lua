@@ -36,6 +36,7 @@ local currentMap = nil
 local currentMapConnection = nil
 local cachedLobbyCenter = Config.LobbyCenter
 local cachedLobbyCoreCenter = Config.LobbyCenter + Vector3.new(0, 6.65, 0)
+local cachedArenaBeacon = nil
 local secondaryLights = {}
 
 local function quality()
@@ -62,6 +63,7 @@ local function clearPolish()
     table.clear(secondaryLights)
     cachedLobbyCenter = Config.LobbyCenter
     cachedLobbyCoreCenter = Config.LobbyCenter + Vector3.new(0, 6.65, 0)
+    cachedArenaBeacon = nil
 end
 
 local function collectSecondaryLights(root)
@@ -361,6 +363,7 @@ local function decorateArena(root)
 
     local centerBeacon = decor:FindFirstChild("CenterBeacon")
     if centerBeacon and centerBeacon:IsA("BasePart") then
+        cachedArenaBeacon = centerBeacon
         for i = 1, 4 do
             local angle = ((i - 1) / 4) * math.pi * 2
             local p = makeSegment(
@@ -537,13 +540,16 @@ RunService.RenderStepped:Connect(function(dt)
     local elapsed = updateClock
     updateClock = 0
 
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
+    local motionScale = reducedMotion and 0.28 or 1
+
     local coreTier = tier
     local coreCenter = cachedLobbyCoreCenter
 
     for _, corePart in ipairs(lobbyCoreParts) do
         if corePart.Parent then
             local index = tonumber(corePart:GetAttribute("CorePartIndex")) or 0
-            local verticalWave = math.sin(clock * 1.8) * 0.22
+            local verticalWave = math.sin(clock * 1.8) * 0.22 * motionScale
             if index == 0 then
                 corePart.Position = coreCenter + Vector3.new(0, verticalWave, 0)
                 corePart.Color = Color3.fromRGB(80, 205, 255):Lerp(
@@ -560,7 +566,7 @@ RunService.RenderStepped:Connect(function(dt)
                     light.Brightness = (1.0 + ((math.sin(clock * 2.2) + 1) * 0.5) * 0.7) * coreTier.Scale
                 end
             else
-                local angle = clock * (0.45 + index * 0.10) + math.rad(index * 60)
+                local angle = clock * (0.45 + index * 0.10) * motionScale + math.rad(index * 60)
                 corePart.CFrame = CFrame.new(coreCenter + Vector3.new(0, verticalWave, 0))
                     * CFrame.Angles(math.rad(18), angle, math.rad(28 + index * 10))
                 corePart.Transparency = coreTier.Name == "Low" and 1 or 0.26
@@ -584,7 +590,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    local lobbySpeed = phase == "round" and 0.55 or 0.34
+    local lobbySpeed = (phase == "round" and 0.55 or 0.34) * motionScale
     for i, segment in ipairs(lobbySegments) do
         if segment.Parent then
             local baseAngle = segment:GetAttribute("OrbitAngle") or 0
@@ -612,7 +618,7 @@ RunService.RenderStepped:Connect(function(dt)
         visualAccent = Color3.fromRGB(255, 205, 85):Lerp(blendedAccent, 0.28)
     end
 
-    local linkTier = quality()
+    local linkTier = tier
     for _, attachment in ipairs(arenaEnergyLinks) do
         if attachment.Parent then
             local beam = attachment:FindFirstChildOfClass("Beam")
@@ -667,21 +673,18 @@ RunService.RenderStepped:Connect(function(dt)
         phase == "round"
             and (finalRush and 3.25 or (overdrive and 2.45 or 1.55))
             or (phase == "ready" and (0.95 + readyBoost * 1.35) or 0.65)
-    ) * intensity
+    ) * intensity * motionScale
     for i, glow in ipairs(arenaGlowParts) do
         if glow.Parent then
             local baseAngle = glow:GetAttribute("OrbitAngle") or 0
             local angle = baseAngle + clock * arenaSpeed
-            local root = currentMap
-            local arena = root and root:FindFirstChild("Arena")
-            local decor = arena and arena:FindFirstChild("Decor")
-            local beacon = decor and decor:FindFirstChild("CenterBeacon")
+            local beacon = cachedArenaBeacon
 
-            if beacon and beacon:IsA("BasePart") then
-                local radius = 4.2 + math.sin(clock * 2 + i) * 0.35
+            if beacon and beacon.Parent then
+                local radius = 4.2 + math.sin(clock * 2 + i) * 0.35 * motionScale
                 local position = beacon.Position + Vector3.new(
                     math.cos(angle) * radius,
-                    -5.2 + math.sin(clock * 3.2 + i) * 0.18,
+                    -5.2 + math.sin(clock * 3.2 + i) * 0.18 * motionScale,
                     math.sin(angle) * radius
                 )
                 glow.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
