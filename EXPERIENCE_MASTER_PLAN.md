@@ -108,13 +108,13 @@ PHASE F — RETENTION / FUN
 
 PHASE G — UI/UX
 [EN COURS] G1 Layout responsive + dock tactile ajoutés ; validation réelle 16:9/tall/tablet encore requise.
-[EN COURS] G2 Boutons méta masqués pendant READY/ROUND + dock tactile unique ; simplification fine des panneaux à poursuivre.
+[EN COURS] G2 Boutons méta masqués pendant READY/ROUND + dock tactile unique + result tags compactés sur mobile ; simplification fine à poursuivre.
 [A FAIRE] G3 Microanimations cohérentes via tokens.
 [EN COURS] G4 Hiérarchie de phase renforcée : gameplay critique > méta-progression.
 [EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors/world polish ; contraste et warnings redondants, QA réelle restante.
 
 PHASE H — PERFORMANCE
-[EN COURS] H1 Budgets dynamiques déjà appliqués aux world VFX, impacts, lights et cosmétiques ; mesures réelles restantes.
+[EN COURS] H1 Budgets dynamiques appliqués aux world VFX, impacts, lights, cosmétiques et scan IA warnings mis en cache ; mesures réelles restantes.
 [EN COURS] H2 Boucles catastrophe idle ; world-polish cache centres lobby + CenterBeacon, réutilise profil VFX et réduit motion.
 [EN COURS] H3 Budgets VFX/Light étendus aux cosmétiques par client ; Low désactive aura lights et réduit fortement particules/trails.
 [A FAIRE] H4 Soak Android 30-60 min.
