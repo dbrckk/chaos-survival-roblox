@@ -24,6 +24,10 @@ VfxQuality.Tiers = {
     },
 }
 
+function VfxQuality.initialTier(isTouchDevice)
+    return isTouchDevice == true and "Medium" or "High"
+end
+
 function VfxQuality.nextTier(currentTier, averageFps)
     local fps = tonumber(averageFps) or 60
     local current = VfxQuality.Tiers[currentTier] and currentTier or "High"
