@@ -770,7 +770,7 @@ local function renderMonetization(state)
 
     for _, offer in ipairs(state.offers or {}) do
         local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1, 0, 0, 54)
+        button.Size = UDim2.new(1, 0, 0, 62)
         button.BackgroundColor3 = offer.owned
             and UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.60)
             or UITheme.Colors.Violet:Lerp(UITheme.Colors.Panel, 0.62)
@@ -781,12 +781,13 @@ local function renderMonetization(state)
         button.TextScaled = true
         button.TextWrapped = true
         local itemCount = math.max(1, math.floor(tonumber(offer.itemCount) or 1))
+        local tagline = tostring(offer.tagline or (tostring(itemCount) .. " COSMETICS • PERMANENT"))
         button.Text = offer.owned
-            and string.format("%s   •   %d COSMETICS   •   OWNED", offer.name or "Support Pack", itemCount)
+            and string.format("%s\n%s • OWNED", offer.name or "Support Pack", tagline)
             or string.format(
-                "%s   •   %d COSMETICS   •   %d ROBUX",
+                "%s\n%s • %d ROBUX",
                 offer.name or "Support Pack",
-                itemCount,
+                tagline,
                 offer.price or 0
             )
         button.Parent = supportList
