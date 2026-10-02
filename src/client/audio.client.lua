@@ -158,17 +158,44 @@ local function arenaAudioProfile()
     return ARENA_AUDIO[tostring(id or "Classic")] or ARENA_AUDIO.Classic
 end
 
-local function play(name, pitchVariance)
+local function playRaw(name, pitchVariance, volumeScale, pitchOffset)
     local sound = sfx[name]
     if not sound then return end
 
     local baseSpeed = basePlaybackSpeeds[name] or 1
     local variance = math.max(0, tonumber(pitchVariance) or 0)
-    local offset = variance > 0 and ((math.random() * 2 - 1) * variance) or 0
-    sound.PlaybackSpeed = math.clamp(baseSpeed + offset, 0.5, 2.5)
-    sound.Volume = baseVolumes[name] or sound.Volume
+    local randomOffset = variance > 0 and ((math.random() * 2 - 1) * variance) or 0
+    sound.PlaybackSpeed = math.clamp(
+        baseSpeed + randomOffset + (tonumber(pitchOffset) or 0),
+        0.5,
+        2.5
+    )
+    sound.Volume = (baseVolumes[name] or sound.Volume) * math.max(0, tonumber(volumeScale) or 1)
     sound.TimePosition = 0
     sound:Play()
+end
+
+local function play(name, pitchVariance)
+    local composite = AudioConfig.Composite and AudioConfig.Composite[name]
+    if type(composite) ~= "table" then
+        playRaw(name, pitchVariance, 1, 0)
+        return
+    end
+
+    for _, layer in ipairs(composite) do
+        local soundName = layer.Sound
+        local delaySeconds = math.max(0, tonumber(layer.Delay) or 0)
+        local volumeScale = math.max(0, tonumber(layer.VolumeScale) or 1)
+        local pitchOffset = tonumber(layer.PitchOffset) or 0
+
+        if delaySeconds > 0 then
+            task.delay(delaySeconds, function()
+                playRaw(soundName, pitchVariance, volumeScale, pitchOffset)
+            end)
+        else
+            playRaw(soundName, pitchVariance, volumeScale, pitchOffset)
+        end
+    end
 end
 
 local function bindButton(instance)
