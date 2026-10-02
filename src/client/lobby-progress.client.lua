@@ -60,7 +60,7 @@ stats.Font = Enum.Font.GothamBold
 stats.TextColor3 = UITheme.Colors.Text
 stats.TextScaled = true
 stats.TextXAlignment = Enum.TextXAlignment.Left
-stats.Text = "LVL 1 • 0 WINS • COLLECTION 0/11"
+stats.Text = "LVL 1 • 0 WINS • COLLECTION 0/0"
 stats.Parent = panel
 
 local goal = Instance.new("TextLabel")
@@ -114,6 +114,7 @@ local function refresh()
     local wins = math.max(0, math.floor(tonumber(player:GetAttribute("Wins")) or 0))
     local xp = math.max(0, math.floor(tonumber(player:GetAttribute("XP")) or 0))
     local owned = ownedCount()
+    local total = math.max(owned, math.floor(tonumber(player:GetAttribute("CosmeticCatalogTotal")) or 0))
 
     local currentXP, nextXP = levelBounds(level)
     local span = math.max(1, nextXP - currentXP)
@@ -121,17 +122,18 @@ local function refresh()
     local remaining = math.max(0, nextXP - xp)
 
     stats.Text = string.format(
-        "LVL %d  •  %d WINS  •  COLLECTION %d/11",
+        "LVL %d  •  %d WINS  •  COLLECTION %d/%d",
         level,
         wins,
-        owned
+        owned,
+        total
     )
     goal.Text = remaining > 0
         and string.format("NEXT • LEVEL %d • %d XP TO GO", level + 1, remaining)
         or string.format("LEVEL %d READY", level + 1)
     bar.Size = UDim2.fromScale(progress, 1)
 
-    local complete = owned >= 11
+    local complete = total > 0 and owned >= total
     if complete then
         title.Text = "YOUR CHAOS RUN • COLLECTION COMPLETE"
         title.TextColor3 = UITheme.Colors.Gold
@@ -141,7 +143,7 @@ local function refresh()
     end
 end
 
-for _, attribute in ipairs({"Level", "Wins", "XP", "OwnedCosmetics"}) do
+for _, attribute in ipairs({"Level", "Wins", "XP", "OwnedCosmetics", "CosmeticCatalogTotal"}) do
     player:GetAttributeChangedSignal(attribute):Connect(refresh)
 end
 
