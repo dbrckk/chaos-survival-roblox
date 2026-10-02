@@ -71,6 +71,7 @@ jobs:
             "tests/engine/solo-rush.spec.luau",
             "tests/engine/survival-feedback.spec.luau",
             "tests/engine/vfx-quality.spec.luau",
+          "tests/engine/weekly-challenges.spec.luau",
           ]
           backend = "cloud"
           default = false
