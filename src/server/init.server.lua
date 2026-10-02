@@ -1054,9 +1054,9 @@ while true do
             soloMode = readyCount == 1,
             arenaName = roundSettings.ArenaName,
             disasterIds = readyDisasterIds,
-            survivorsAlive = readyCount + AISurvivorService.activeCount(),
-            contestantCount = readyCount + AISurvivorService.activeCount(),
-            aiSurvivors = AISurvivorService.activeCount(),
+            survivorsAlive = readyCount + AISurvivorService.visibleCount(),
+            contestantCount = readyCount + AISurvivorService.visibleCount(),
+            aiSurvivors = AISurvivorService.visibleCount(),
         })
         task.wait(1)
     end
@@ -1267,9 +1267,14 @@ while true do
         end
     end
 
+    local displayedSurvivors = survivors + aiSurvivorsAtFinish
+    local resultTitle = endedEarly
+        and (aiSurvivorsAtFinish > 0 and "YOU WERE ELIMINATED" or "TOTAL WIPEOUT")
+        or (displayedSurvivors .. " SURVIVED")
+
     broadcast({
         phase = "result",
-        title = endedEarly and "TOTAL WIPEOUT" or ((survivors + aiSurvivorsAtFinish) .. " SURVIVED"),
+        title = resultTitle,
         hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
         seconds = roundSettings.PostRoundSeconds,
         doubleChaos = #selectedSet > 1,
@@ -1282,7 +1287,7 @@ while true do
     for t = roundSettings.PostRoundSeconds, 1, -1 do
         broadcast({
             phase = "result",
-            title = endedEarly and "TOTAL WIPEOUT" or ((survivors + aiSurvivorsAtFinish) .. " SURVIVED"),
+            title = resultTitle,
             hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
             seconds = t,
             doubleChaos = #selectedSet > 1,
