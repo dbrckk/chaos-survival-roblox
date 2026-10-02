@@ -201,7 +201,7 @@ function Cosmetics.publicList()
     return result
 end
 
-Cosmetics.CollectorMilestones = {3, 6, 9, #Cosmetics.Order}
+Cosmetics.CollectorMilestones = {3, 6, 9, 12, #Cosmetics.Order}
 
 function Cosmetics.collectionState(raw)
     local owned = Cosmetics.deserialize(raw)
