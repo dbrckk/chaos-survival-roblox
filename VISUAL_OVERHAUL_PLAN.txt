@@ -119,7 +119,10 @@ PHASE 6C — AI SURVIVORS SOLO
 [FAIT] 6C.7 Ajouter votes IA avec délai humain sans pouvoir écraser un vote humain.
 [FAIT] 6C.8 Intégrer les bots au compteur visuel de survivants sans Coins/XP/DataStore.
 [TODO] 6C.9 QA comportement réel Android : collisions, naturel des déplacements, performances.
-[TODO] 6C.10 Ajuster personalities / taux d'erreur après playtest réel.
+[TODO] 6C.10 Ajuster personalities / taux d'erreur / anticipation après playtest réel.
+[FAIT] 6C.11 Ajouter séparation entre bots, évitement de cibles communes et récupération anti-blocage.
+[FAIT] 6C.12 Ajouter anticipation courte des warnings selon vélocité, sans réflexes parfaits.
+[FAIT] 6C.13 Ajouter variation persistante par serveur (vitesse, réaction, risque, sauts).
 
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
