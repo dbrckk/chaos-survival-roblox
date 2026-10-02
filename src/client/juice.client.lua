@@ -200,8 +200,7 @@ local frameSampleCount = 0
 local qualitySampleClock = 0
 local visualUpdateClock = 0
 local performancePulseClock = 0
-local performanceFpsAccumulator = 0
-local performanceFpsSamples = 0
+local performanceFrameCount = 0
 local healthRatio = 1
 player:SetAttribute("VfxQualityTier", vfxTierName)
 
@@ -625,11 +624,14 @@ RunService.RenderStepped:Connect(function(dt)
 
     if dt > 0 then
         performancePulseClock += dt
-        performanceFpsAccumulator += math.clamp(1 / dt, 0, 240)
-        performanceFpsSamples += 1
+        performanceFrameCount += 1
 
-        if performancePulseClock >= 45 and performanceFpsSamples > 0 then
-            local averageFps = performanceFpsAccumulator / performanceFpsSamples
+        if performancePulseClock >= 45 and performanceFrameCount > 0 then
+            local averageFps = math.clamp(
+                performanceFrameCount / performancePulseClock,
+                0,
+                240
+            )
             local deviceClass = UserInputService.TouchEnabled and "Touch" or "Desktop"
 
             performancePulseEvent:FireServer({
@@ -639,8 +641,7 @@ RunService.RenderStepped:Connect(function(dt)
             })
 
             performancePulseClock = 0
-            performanceFpsAccumulator = 0
-            performanceFpsSamples = 0
+            performanceFrameCount = 0
         end
     end
 
