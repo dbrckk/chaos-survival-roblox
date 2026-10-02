@@ -69,6 +69,51 @@ describe("Contestant scoping", function()
         outsiderCharacter:Destroy()
     end)
 
+    it("Speed Surge applies to active AI hazard contestants without touching outsiders", function()
+        local human, humanCharacter, humanHum = fakeContestant(
+            "Human",
+            Config.ArenaCenter + Vector3.new(6, 4, 0)
+        )
+        local bot, botCharacter, botHum = fakeContestant(
+            "Bot",
+            Config.ArenaCenter + Vector3.new(-6, 4, 0)
+        )
+        local outsider, outsiderCharacter, outsiderHum = fakeContestant(
+            "Outsider",
+            Config.LobbyCenter + Vector3.new(0, 4, 0)
+        )
+
+        bot.IsAISurvivor = true
+
+        local cleanup = {}
+        local onCleanup = {}
+
+        SpeedSurge.start({
+            Config = Config,
+            Contestants = {human},
+            HazardContestants = {human, bot},
+            Cleanup = cleanup,
+            OnCleanup = onCleanup,
+            Active = function() return true end,
+            IsContestantActive = function(subject)
+                return subject == human or subject == bot
+            end,
+            BalanceProfile = {SpeedMultiplier = 1.5},
+        })
+
+        expect(humanHum.WalkSpeed > 16).toBe(true)
+        expect(botHum.WalkSpeed > 16).toBe(true)
+        expect(outsiderHum.WalkSpeed).toBe(16)
+
+        for _, fn in ipairs(onCleanup) do
+            pcall(fn)
+        end
+
+        humanCharacter:Destroy()
+        botCharacter:Destroy()
+        outsiderCharacter:Destroy()
+    end)
+
     it("Speed Surge cleanup does not overwrite a newer speed state", function()
         local included, includedCharacter, includedHum = fakeContestant(
             "SpeedState",
