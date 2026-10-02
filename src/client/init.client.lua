@@ -948,6 +948,53 @@ local function renderAchievements(state)
     end
 end
 
+local metaDock = nil
+if touchDevice then
+    metaDock = Instance.new("Frame")
+    metaDock.Name = "MetaDock"
+    metaDock.AnchorPoint = Vector2.new(0.5, 1)
+    metaDock.Position = UDim2.fromScale(0.5, 0.965)
+    metaDock.Size = UDim2.fromScale(0.94, 0.060)
+    metaDock.BackgroundColor3 = UITheme.Colors.Panel
+    metaDock.BackgroundTransparency = 0.12
+    metaDock.BorderSizePixel = 0
+    metaDock.Parent = root
+    UITheme.addCorner(metaDock, UITheme.Corners.Large)
+    UITheme.addStroke(metaDock, UITheme.Colors.Cyan, 1, 0.72)
+
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.Padding = UDim.new(0.012, 0)
+    layout.Parent = metaDock
+
+    questButton.AnchorPoint = Vector2.zero
+    achievementButton.AnchorPoint = Vector2.zero
+    cosmeticsButton.AnchorPoint = Vector2.zero
+    supportButton.AnchorPoint = Vector2.zero
+
+    questButton.Position = UDim2.fromScale(0, 0)
+    achievementButton.Position = UDim2.fromScale(0, 0)
+    cosmeticsButton.Position = UDim2.fromScale(0, 0)
+    supportButton.Position = UDim2.fromScale(0, 0)
+
+    questButton.Size = UDim2.new(0.225, 0, 0.82, 0)
+    achievementButton.Size = UDim2.new(0.225, 0, 0.82, 0)
+    cosmeticsButton.Size = UDim2.new(0.225, 0, 0.82, 0)
+    supportButton.Size = UDim2.new(0.225, 0, 0.82, 0)
+
+    questButton.Text = "QUESTS"
+    achievementButton.Text = "AWARDS"
+    cosmeticsButton.Text = "STYLE"
+    supportButton.Text = "SUPPORT"
+
+    questButton.Parent = metaDock
+    achievementButton.Parent = metaDock
+    cosmeticsButton.Parent = metaDock
+    supportButton.Parent = metaDock
+end
+
 local panelScales = {}
 for _, panel in ipairs({questPanel, cosmeticsPanel, achievementPanel, supportPanel}) do
     local scale = Instance.new("UIScale")
@@ -1157,14 +1204,16 @@ local function applyResponsiveLayout()
     rookieCoach.Position = UDim2.fromScale(0.5, narrow and 0.68 or 0.70)
     rookieCoach.Size = UDim2.fromScale(narrow and 0.78 or 0.68, narrow and 0.048 or 0.042)
 
-    local actionY = narrow and 0.87 or 0.88
-    questButton.Position = UDim2.fromScale(0.025, actionY)
-    achievementButton.Position = UDim2.fromScale(0.5, actionY)
-    cosmeticsButton.Position = UDim2.fromScale(0.975, actionY)
+    if metaDock then
+        metaDock.Position = UDim2.fromScale(0.5, narrow and 0.972 or 0.965)
+        metaDock.Size = UDim2.fromScale(narrow and 0.96 or 0.92, narrow and 0.066 or 0.060)
 
-    questButton.Size = UDim2.fromScale(narrow and 0.21 or 0.20, narrow and 0.058 or 0.055)
-    achievementButton.Size = UDim2.fromScale(narrow and 0.30 or 0.27, narrow and 0.058 or 0.055)
-    cosmeticsButton.Size = UDim2.fromScale(narrow and 0.25 or 0.23, narrow and 0.058 or 0.055)
+        local dockHeight = narrow and 0.84 or 0.82
+        questButton.Size = UDim2.new(0.225, 0, dockHeight, 0)
+        achievementButton.Size = UDim2.new(0.225, 0, dockHeight, 0)
+        cosmeticsButton.Size = UDim2.new(0.225, 0, dockHeight, 0)
+        supportButton.Size = UDim2.new(0.225, 0, dockHeight, 0)
+    end
 
     stats.Size = UDim2.fromScale(narrow and 0.74 or 0.65, narrow and 0.064 or 0.07)
     xpTrack.Size = UDim2.fromScale(narrow and 0.70 or 0.62, 0.012)
@@ -1745,6 +1794,9 @@ end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     metaControlsSuppressed = state.phase == "round" or state.phase == "ready"
+    if metaDock then
+        metaDock.Visible = not metaControlsSuppressed
+    end
     questButton.Visible = not metaControlsSuppressed
     cosmeticsButton.Visible = not metaControlsSuppressed
     achievementButton.Visible = not metaControlsSuppressed
