@@ -158,9 +158,40 @@ local function arenaAudioProfile()
     return ARENA_AUDIO[tostring(id or "Classic")] or ARENA_AUDIO.Classic
 end
 
+local activeVoices = {}
+
 local function playRaw(name, pitchVariance, volumeScale, pitchOffset)
-    local sound = sfx[name]
-    if not sound then return end
+    local baseSound = sfx[name]
+    if not baseSound then return end
+
+    local sound = baseSound
+    if baseSound.IsPlaying and not baseSound.Looped then
+        local active = activeVoices[name] or 0
+        if active >= 2 then
+            return
+        end
+
+        sound = baseSound:Clone()
+        sound.Name = name .. "Voice"
+        sound.Looped = false
+        sound.Parent = SoundService
+        activeVoices[name] = active + 1
+
+        local cleaned = false
+        local function cleanup()
+            if cleaned then
+                return
+            end
+            cleaned = true
+            activeVoices[name] = math.max(0, (activeVoices[name] or 1) - 1)
+            if sound.Parent then
+                sound:Destroy()
+            end
+        end
+
+        sound.Ended:Connect(cleanup)
+        task.delay(3.5, cleanup)
+    end
 
     local baseSpeed = basePlaybackSpeeds[name] or 1
     local variance = math.max(0, tonumber(pitchVariance) or 0)
