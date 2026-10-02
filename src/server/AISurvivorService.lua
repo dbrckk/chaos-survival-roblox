@@ -657,8 +657,16 @@ local function clampToArena(position)
     return base.CFrame:PointToWorldSpace(clamped)
 end
 
+local cachedWarningParts = {}
+local cachedWarningsAt = -math.huge
+
 local function warningParts()
-    local result = {}
+    local now = os.clock()
+    if now - cachedWarningsAt < 0.15 then
+        return cachedWarningParts
+    end
+
+    table.clear(cachedWarningParts)
     for _, child in ipairs(workspace:GetChildren()) do
         if child:IsA("BasePart")
             and (
@@ -668,10 +676,11 @@ local function warningParts()
                 or child.Name == "JumpShockWarning"
             )
         then
-            table.insert(result, child)
+            table.insert(cachedWarningParts, child)
         end
     end
-    return result
+    cachedWarningsAt = now
+    return cachedWarningParts
 end
 
 local function disappearingPlatformEscape(record, root, now)
@@ -911,17 +920,35 @@ local function socialArenaTarget(record, root)
         return nil
     end
 
-    local humans = Players:GetPlayers()
-    if #humans == 0 then
+    local eligible = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        local humanRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local humanHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        local roundEligible = not record.inRound
+            or (
+                player:GetAttribute("RoundParticipant") == true
+                and player:GetAttribute("RoundEliminated") ~= true
+            )
+
+        if roundEligible
+            and humanRoot
+            and humanRoot:IsA("BasePart")
+            and humanHumanoid
+            and humanHumanoid.Health > 0
+        then
+            table.insert(eligible, {
+                player = player,
+                root = humanRoot,
+            })
+        end
+    end
+
+    if #eligible == 0 then
         return nil
     end
 
-    local player = humans[math.random(1, #humans)]
-    local humanRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    local humanHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if not humanRoot or not humanRoot:IsA("BasePart") or not humanHumanoid or humanHumanoid.Health <= 0 then
-        return nil
-    end
+    local selected = eligible[math.random(1, #eligible)]
+    local humanRoot = selected.root
 
     local offset = root.Position - humanRoot.Position
     local horizontal = Vector3.new(offset.X, 0, offset.Z)
