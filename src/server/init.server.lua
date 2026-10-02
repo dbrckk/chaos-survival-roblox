@@ -1239,12 +1239,14 @@ while true do
             local roundMechanicUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMechanicUses")) or 0))
             local roundOverdriveUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundOverdriveUses")) or 0))
             local roundMomentumBest = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMomentumBest")) or 0))
+            local roundFlowCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundFlowCoins")) or 0))
             local challengeProgress = RoundChallenge.progress(
                 roundChallenge,
                 roundShardCount,
                 roundMechanicUses,
                 roundNearMissCount,
-                roundMomentumBest
+                roundMomentumBest,
+                roundFlowCoins
             )
             local challengeCompleted = challengeProgress >= roundChallenge.Target
             local challengeCoins = challengeCompleted and roundChallenge.Coins or 0
@@ -1311,7 +1313,7 @@ while true do
                 fusionName = fusionName,
                 shardCount = roundShardCount,
                 shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundShardCoins")) or 0)),
-                flowCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundFlowCoins")) or 0)),
+                flowCoins = roundFlowCoins,
                 nearMissCount = roundNearMissCount,
                 mechanicUses = roundMechanicUses,
                 challengeId = roundChallenge.Id,
