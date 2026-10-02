@@ -641,6 +641,23 @@ local function renderCosmetics(state)
         )
         UITheme.addPressFeedback(button, 0.975)
 
+        if typeof(item.colorA) == "Color3" and typeof(item.colorB) == "Color3" then
+            local preview = Instance.new("Frame")
+            preview.Name = "CosmeticColorPreview"
+            preview.AnchorPoint = Vector2.new(0.5, 1)
+            preview.Position = UDim2.new(0.5, 0, 1, -3)
+            preview.Size = UDim2.new(0.86, 0, 0, 5)
+            preview.BackgroundColor3 = item.colorA
+            preview.BorderSizePixel = 0
+            preview.ZIndex = button.ZIndex + 1
+            preview.Parent = button
+            UITheme.addCorner(preview, UITheme.Corners.Pill)
+
+            local previewGradient = Instance.new("UIGradient")
+            previewGradient.Color = ColorSequence.new(item.colorA, item.colorB)
+            previewGradient.Parent = preview
+        end
+
         button:SetAttribute("CosmeticCollection", collection)
         button:SetAttribute("CosmeticRarity", rarity)
 
