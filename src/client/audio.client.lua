@@ -1,3 +1,4 @@
+local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
@@ -16,6 +17,7 @@ local achievementEvent = remotes:WaitForChild("AchievementState")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
 local chaosShardCollectedEvent = remotes:WaitForChild("ChaosShardCollected")
 local hazardNearMissEvent = remotes:WaitForChild("HazardNearMiss")
+local hazardImpactFeedbackEvent = remotes:WaitForChild("HazardImpactFeedback")
 
 local playerGui = player:WaitForChild("PlayerGui")
 local boundButtons = setmetatable({}, {__mode = "k"})
@@ -29,6 +31,20 @@ local sfxGroup = SoundService:FindFirstChild("ChaosSFX") or Instance.new("SoundG
 sfxGroup.Name = "ChaosSFX"
 sfxGroup.Volume = 1
 sfxGroup.Parent = SoundService
+
+local musicEq = musicGroup:FindFirstChild("ChaosMusicEQ") or Instance.new("EqualizerSoundEffect")
+musicEq.Name = "ChaosMusicEQ"
+musicEq.LowGain = 0
+musicEq.MidGain = 0
+musicEq.HighGain = 0
+musicEq.Parent = musicGroup
+
+local sfxEq = sfxGroup:FindFirstChild("ChaosSFXEQ") or Instance.new("EqualizerSoundEffect")
+sfxEq.Name = "ChaosSFXEQ"
+sfxEq.LowGain = 0
+sfxEq.MidGain = 0
+sfxEq.HighGain = 0
+sfxEq.Parent = sfxGroup
 
 local function makeSound(name, definition, group)
     local sound = Instance.new("Sound")
@@ -132,12 +148,93 @@ local function musicVolume(target, duration)
     ):Play()
 end
 
+local function setMix(phase, overdrive, finalRush)
+    local musicTarget = 1
+    local sfxTarget = 1
+    local lowGain = 0
+    local highGain = 0
+
+    if phase == "round" then
+        musicTarget = finalRush and 0.72 or (overdrive and 0.82 or 0.90)
+        sfxTarget = 1
+        lowGain = finalRush and -2.5 or -1.2
+        highGain = finalRush and -1.8 or -0.5
+    elseif phase == "ready" then
+        musicTarget = 0.88
+        sfxTarget = 0.94
+        lowGain = -0.8
+    elseif phase == "result" then
+        musicTarget = 1
+        sfxTarget = 0.96
+    end
+
+    TweenService:Create(musicGroup, TweenInfo.new(0.18), {Volume = musicTarget}):Play()
+    TweenService:Create(sfxGroup, TweenInfo.new(0.12), {Volume = sfxTarget}):Play()
+    TweenService:Create(musicEq, TweenInfo.new(0.18), {
+        LowGain = lowGain,
+        HighGain = highGain,
+    }):Play()
+end
+
+local lastSpatialImpactAt = 0
+local function playSpatialImpact(payload)
+    local position = payload and payload.position
+    if typeof(position) ~= "Vector3" then
+        return
+    end
+
+    local now = os.clock()
+    if now - lastSpatialImpactAt < 0.10 then
+        return
+    end
+    lastSpatialImpactAt = now
+
+    local kind = tostring(payload.kind or "")
+    local definition = kind == "Meteor" and AudioConfig.Sfx.Meteor
+        or (kind == "Bomb" and AudioConfig.Sfx.Bombs or nil)
+    if not definition then
+        return
+    end
+
+    local holder = Instance.new("Part")
+    holder.Name = "LocalSpatialImpactAudio"
+    holder.Size = Vector3.new(0.2, 0.2, 0.2)
+    holder.Position = position
+    holder.Anchored = true
+    holder.CanCollide = false
+    holder.CanTouch = false
+    holder.CanQuery = false
+    holder.Transparency = 1
+    holder.Parent = workspace
+
+    local sound = Instance.new("Sound")
+    sound.Name = kind .. "Spatial"
+    sound.SoundId = definition.SoundId
+    sound.Volume = math.max(0.18, (definition.Volume or 0.3) * 0.88)
+    sound.PlaybackSpeed = math.clamp(
+        (definition.PlaybackSpeed or 1) + ((math.random() - 0.5) * 0.08),
+        0.55,
+        2
+    )
+    sound.RollOffMode = Enum.RollOffMode.InverseTapered
+    sound.RollOffMinDistance = 8
+    sound.RollOffMaxDistance = 125
+    sound.EmitterSize = 6
+    sound.SoundGroup = sfxGroup
+    sound.Parent = holder
+    sound:Play()
+
+    Debris:AddItem(holder, 4)
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = state.phase
     local seconds = tonumber(state.seconds) or 0
     currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     local overdrive = phase == "round" and state.overdrive == true
     local finalRush = phase == "round" and state.finalRush == true
+
+    setMix(phase, overdrive, finalRush)
 
     if finalRush and not lastFinalRush then
         play("FinalRush")
@@ -304,6 +401,8 @@ end)
 hazardNearMissEvent.OnClientEvent:Connect(function()
     play("Speed", 0.05)
 end)
+
+hazardImpactFeedbackEvent.OnClientEvent:Connect(playSpatialImpact)
 
 player:GetAttributeChangedSignal("Level"):Connect(function()
     local level = player:GetAttribute("Level") or 1
