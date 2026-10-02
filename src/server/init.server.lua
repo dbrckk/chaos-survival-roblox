@@ -187,14 +187,24 @@ local function progressQuest(player, eventName, amount)
     end
 
     for _, quest in ipairs(completed) do
+        local weekly = quest.scope == "weekly"
+        local eventName = weekly and "WeeklyChallengeCompleted" or "QuestCompleted"
+        local economySource = weekly and "WeeklyChallenge" or "Quest"
+
         GameAnalytics.custom(
             player,
-            "QuestCompleted",
+            eventName,
             1,
-            "Quest:" .. tostring(quest.id),
+            (weekly and "Weekly:" or "Quest:") .. tostring(quest.id),
             "Level:" .. tostring(player:GetAttribute("Level") or 1)
         )
-        GameAnalytics.economySource(player, quest.coins or 0, "Quest", quest.id, #Players:GetPlayers() <= 1)
+        GameAnalytics.economySource(
+            player,
+            quest.coins or 0,
+            economySource,
+            quest.id,
+            #Players:GetPlayers() <= 1
+        )
     end
 end
 
