@@ -76,6 +76,10 @@ describe("Player data schema", function()
             EquippedAura = "aura_emerald",
             ArenaMastery = "Classic=7",
             DisasterMastery = "Meteors=12",
+            WeeklyChallengeWeek = 2800,
+            Weekly1Id = "PLAY_20",
+            Weekly1Progress = 7,
+            Weekly1Claimed = false,
         }
 
         local snapshot = DataSchema.snapshot(function(key)
@@ -92,6 +96,10 @@ describe("Player data schema", function()
         expect(snapshot.EquippedAura).toBe("aura_emerald")
         expect(snapshot.ArenaMastery).toBe("Classic=7")
         expect(snapshot.DisasterMastery).toBe("Meteors=12")
+        expect(snapshot.WeeklyChallengeWeek).toBe(2800)
+        expect(snapshot.Weekly1Id).toBe("PLAY_20")
+        expect(snapshot.Weekly1Progress).toBe(7)
+        expect(snapshot.Weekly1Claimed).toBe(false)
         expect(snapshot.DataVersion).toBe(DataSchema.Version)
     end)
 
