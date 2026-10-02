@@ -38,6 +38,9 @@ local function qualityScale()
     if UserInputService.TouchEnabled then
         scale *= 0.78
     end
+    if player:GetAttribute("ReduceMotion") == true then
+        scale *= 0.18
+    end
     return scale
 end
 
@@ -85,7 +88,9 @@ local function emitLandingBurst(strength)
         NumberSequenceKeypoint.new(1, 1),
     })
     emitter.Parent = attachment
-    emitter:Emit(VfxQuality.particleCount(tierName, math.floor(10 + strength * 10), 4))
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
+    local fullCount = math.floor(10 + strength * 10)
+    emitter:Emit(VfxQuality.particleCount(tierName, reducedMotion and math.max(4, math.floor(fullCount * 0.45)) or fullCount, 4))
 
     task.delay(0.4, function()
         if attachment.Parent then
