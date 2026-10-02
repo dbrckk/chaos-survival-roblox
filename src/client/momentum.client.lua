@@ -1,7 +1,10 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+local finalRushActive = false
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosMomentum"
@@ -99,7 +102,11 @@ local function refresh()
     local active = player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
 
-    if not active or combo < 2 then
+    if not active or combo < 2 or finalRushActive then
+        if finalRushActive and chip.Visible then
+            token += 1
+            chip.Visible = false
+        end
         return
     end
 
@@ -146,5 +153,19 @@ player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
     if player:GetAttribute("RoundEliminated") == true then
         token += 1
         chip.Visible = false
+    end
+end)
+
+
+stateEvent.OnClientEvent:Connect(function(state)
+    local nextFinalRush = state.phase == "round" and state.finalRush == true
+    if nextFinalRush ~= finalRushActive then
+        finalRushActive = nextFinalRush
+        if finalRushActive then
+            token += 1
+            chip.Visible = false
+        else
+            refresh()
+        end
     end
 end)
