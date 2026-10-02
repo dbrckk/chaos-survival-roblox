@@ -102,7 +102,7 @@ PHASE F — RETENTION / FUN
 [FAIT] F1 "Next goal" niveau/XP affiché après les rounds hors événements prioritaires.
 [FAIT] F2 Mastery persistante catastrophe/arène avec paliers Rookie/Bronze/Silver/Gold/Elite et affichage post-round.
 [FAIT] F3 Weekly challenges persistants : 2 objectifs/semaine, progression serveur-authoritative, récompenses modérées et UI intégrée.
-[FAIT] F4 Collection log dérivé de l'inventaire : sets cohérents, progression owned/total, sets complétés et milestones Collector.
+[FAIT] F4 Collection log : sets, owned/total, sets complétés, milestones Collector 3/6/9/11 et célébration honorifique au franchissement.
 [EN COURS] F5 FIRST CHAOS medal + célébration monde garanties au premier round terminé ; accélération FTUE déjà via rookie coach, QA réelle restante.
 [FAIT] F6 Rotation portée à 6 micro-objectifs, toujours un seul challenge affiché : shards, pads, close call, momentum, flow et variété.
 
