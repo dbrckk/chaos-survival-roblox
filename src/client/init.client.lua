@@ -543,6 +543,35 @@ local RARITY_COLORS = {
 local function renderCosmetics(state)
     currentCosmeticState = state
 
+    local collectionLog = state and state.collectionLog or nil
+    if type(collectionLog) == "table" then
+        local owned = math.max(0, math.floor(tonumber(collectionLog.owned) or 0))
+        local total = math.max(0, math.floor(tonumber(collectionLog.total) or 0))
+        local completedSets = math.max(0, math.floor(tonumber(collectionLog.completedCollections) or 0))
+        local totalSets = math.max(0, math.floor(tonumber(collectionLog.totalCollections) or 0))
+        if collectionLog.maxed == true then
+            cosmeticsHeader.Text = string.format(
+                "COLLECTION COMPLETE • %d/%d • SETS %d/%d",
+                owned,
+                total,
+                completedSets,
+                totalSets
+            )
+        else
+            local nextMilestone = math.max(owned, math.floor(tonumber(collectionLog.nextMilestone) or owned))
+            cosmeticsHeader.Text = string.format(
+                "LOADOUT • %d/%d • SETS %d/%d • NEXT %d",
+                owned,
+                total,
+                completedSets,
+                totalSets,
+                nextMilestone
+            )
+        end
+    else
+        cosmeticsHeader.Text = "LOADOUT • TRAIL + AURA"
+    end
+
     for _, child in ipairs(cosmeticsList:GetChildren()) do
         if child:IsA("TextButton") then
             child:Destroy()
