@@ -63,7 +63,7 @@ ROADMAP
 =======
 PHASE A — GAME FEEL CORE
 [FAIT] A1 Caméra réactive légère : landing, impacts, pads, vitesse.
-[EN COURS] A2 Mouvement : micro-tilt + landing + burst + sensation périphérique de vitesse adaptative ; animation corporelle avancée à poursuivre.
+[FAIT] A2 Mouvement : micro-tilt, landing/burst, sensation périphérique de vitesse + lean/compression corporelle R15 locale et compatible Animate.
 [FAIT] A3 Haptics adaptatifs touch/gamepad : pads, impacts, close calls, shards, Final Rush et résultats.
 [FAIT] A4 Réduction automatique du mouvement caméra sur VFX Low / mobile.
 [EN COURS] A5 Reduce Motion persistant ajouté ; QA réelle motion sickness à effectuer sur appareil.
@@ -81,7 +81,7 @@ PHASE C — MAP ART PASS
 [EN COURS] C3 Crossroads : gantries/signaux + flux directionnel + skyline transit basse ; signage/QA finale restante.
 [EN COURS] C4 Orbital : reactor nodes/struts + couronne + satellites/nodes distants ; QA visuelle finale restante.
 [FAIT] C5 Lobby hub : couronne, panneaux identité/fair-play et hologramme progression personnelle niveau/wins/coins/XP/collection.
-[EN COURS] C6 Micro-décors animés par arène + profondeur skyline arène/lobby, client-local et adaptatifs.
+[EN COURS] C6 Micro-décors animés + skyline + couronne orbitale du Chaos Core, client-local et adaptatifs ; QA visuelle finale restante.
 [FAIT] C7 Signatures animées distinctes + 3 profils de rythme/direction/amplitude alternés à chaque round.
 
 PHASE D — VFX / ANIMATION
