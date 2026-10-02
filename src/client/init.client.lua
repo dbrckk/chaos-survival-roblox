@@ -1094,6 +1094,23 @@ end)
 local resultToken = 0
 local lastRoundHint = ""
 
+local function nextLevelGoalText()
+    local level = math.max(1, math.floor(tonumber(player:GetAttribute("Level")) or 1))
+    local xp = math.max(0, math.floor(tonumber(player:GetAttribute("XP")) or 0))
+    local _, nextXP = xpProgressForLevel(level, xp)
+    local remaining = math.max(0, math.floor(nextXP - xp))
+
+    if remaining <= 0 then
+        return "NEXT GOAL • LEVEL " .. tostring(level + 1) .. " READY"
+    end
+
+    return string.format(
+        "NEXT GOAL • LEVEL %d • %d XP TO GO",
+        level + 1,
+        remaining
+    )
+end
+
 local function showRoundFeedback(feedback)
     resultToken += 1
     local token = resultToken
@@ -1215,9 +1232,9 @@ local function showRoundFeedback(feedback)
         if feedback.criticalSurvival then
             resultTip.Text = "CLUTCH: you survived at critical health"
         elseif streakCount >= 2 then
-            resultTip.Text = "NEXT: protect your streak and push it higher"
+            resultTip.Text = "STREAK x" .. tostring(streakCount) .. " • " .. nextLevelGoalText()
         else
-            resultTip.Text = "NEXT: survive again to start a streak"
+            resultTip.Text = nextLevelGoalText()
         end
     elseif lastRoundHint ~= "" then
         resultTip.Text = "TIP: " .. lastRoundHint
