@@ -96,7 +96,7 @@ PHASE E — CUSTOMIZATION
 [FAIT] E2 Raretés visuelles Common/Rare/Epic/Legendary/Premium, sans puissance.
 [FAIT] E3 Preview claire dans UI : dégradé réel ColorA→ColorB affiché sur chaque carte cosmétique.
 [FAIT] E4 Quatre cosmétiques GOLD liés aux maîtrises d'arène, unlock live, non achetables et explicités dans l'UI.
-[A FAIRE] E5 Sets premium peu chers mais désirables.
+[FAIT] E5 Deux sets premium permanents clarifiés (Founder + Hyper Neon), trail+aura, prix Marketplace dynamique, aucun avantage gameplay.
 
 PHASE F — RETENTION / FUN
 [FAIT] F1 "Next goal" niveau/XP affiché après les rounds hors événements prioritaires.
