@@ -101,6 +101,16 @@ Cosmetics.Definitions = {
         ColorA = Color3.fromRGB(255, 115, 190),
         ColorB = Color3.fromRGB(255, 225, 120),
     },
+    trail_founder = {
+        Id = "trail_founder",
+        Name = "Founder Comet",
+        Kind = "trail",
+        PremiumKey = "supporter",
+        Rarity = "Premium",
+        Collection = "Founder",
+        ColorA = Color3.fromRGB(255, 220, 105),
+        ColorB = Color3.fromRGB(255, 105, 190),
+    },
     trail_neon = {
         Id = "trail_neon",
         Name = "Hyper Neon",
@@ -110,6 +120,16 @@ Cosmetics.Definitions = {
         Collection = "Neon Circuit",
         ColorA = Color3.fromRGB(65, 255, 245),
         ColorB = Color3.fromRGB(255, 70, 230),
+    },
+    aura_neon = {
+        Id = "aura_neon",
+        Name = "Hyper Neon Halo",
+        Kind = "aura",
+        PremiumKey = "neon_pack",
+        Rarity = "Premium",
+        Collection = "Neon Circuit",
+        ColorA = Color3.fromRGB(75, 255, 235),
+        ColorB = Color3.fromRGB(255, 75, 225),
     },
     trail_gridmaster = {
         Id = "trail_gridmaster",
@@ -168,7 +188,9 @@ Cosmetics.Order = {
     "aura_solar",
     "aura_cosmic",
     "aura_supporter",
+    "trail_founder",
     "trail_neon",
+    "aura_neon",
     "trail_gridmaster",
     "aura_towercore",
     "trail_nexus",
@@ -201,7 +223,7 @@ function Cosmetics.publicList()
     return result
 end
 
-Cosmetics.CollectorMilestones = {3, 6, 9, 12, #Cosmetics.Order}
+Cosmetics.CollectorMilestones = {3, 6, 9, 12, 15, #Cosmetics.Order}
 
 function Cosmetics.collectionState(raw)
     local owned = Cosmetics.deserialize(raw)
