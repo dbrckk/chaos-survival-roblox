@@ -155,6 +155,7 @@ local function stateFor(player)
             aura = player:GetAttribute("EquippedAura") or "",
         },
         coins = math.max(0, tonumber(player:GetAttribute("Coins")) or 0),
+        collectionLog = Cosmetics.collectionState(player:GetAttribute("OwnedCosmetics") or ""),
     }
 end
 
