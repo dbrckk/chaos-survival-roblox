@@ -144,6 +144,8 @@ function Cosmetics.publicList()
             premiumKey = item.PremiumKey,
             rarity = item.Rarity or "Common",
             collection = item.Collection or "Core",
+            colorA = item.ColorA,
+            colorB = item.ColorB,
         })
     end
     return result
