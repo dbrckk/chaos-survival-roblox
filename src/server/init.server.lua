@@ -1251,6 +1251,7 @@ while true do
             local challengeXP = challengeCompleted and roundChallenge.XP or 0
 
             local medals = RoundMedals.evaluate({
+                firstRound = math.max(0, tonumber(p:GetAttribute("Games")) or 0) == 1,
                 shards = roundShardCount,
                 pads = roundMechanicUses,
                 nearMisses = roundNearMissCount,
