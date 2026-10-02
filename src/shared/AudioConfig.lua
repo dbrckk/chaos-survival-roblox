@@ -43,6 +43,47 @@ AudioConfig.Sfx = {
     Shrink = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.24, PlaybackSpeed = 0.72},
 }
 
+AudioConfig.Composite = {
+    Ready = {
+        {Sound = "Ready", VolumeScale = 0.82, PitchOffset = -0.03},
+        {Sound = "Countdown", Delay = 0.045, VolumeScale = 0.34, PitchOffset = -0.22},
+    },
+    RoundStart = {
+        {Sound = "RoundStart", VolumeScale = 0.92, PitchOffset = -0.06},
+        {Sound = "Speed", Delay = 0.035, VolumeScale = 0.30, PitchOffset = -0.38},
+    },
+    DoubleChaos = {
+        {Sound = "DoubleChaos", VolumeScale = 0.92, PitchOffset = -0.10},
+        {Sound = "Speed", Delay = 0.035, VolumeScale = 0.42, PitchOffset = -0.48},
+        {Sound = "Countdown", Delay = 0.10, VolumeScale = 0.26, PitchOffset = -0.52},
+    },
+    FinalRush = {
+        {Sound = "FinalRush", VolumeScale = 0.92, PitchOffset = -0.08},
+        {Sound = "Countdown", Delay = 0.055, VolumeScale = 0.38, PitchOffset = -0.40},
+    },
+    Survived = {
+        {Sound = "Survived", VolumeScale = 0.94, PitchOffset = 0.02},
+        {Sound = "Reward", Delay = 0.055, VolumeScale = 0.48, PitchOffset = -0.14},
+    },
+    Eliminated = {
+        {Sound = "Eliminated", VolumeScale = 0.92, PitchOffset = -0.06},
+        {Sound = "Darkness", Delay = 0.025, VolumeScale = 0.28, PitchOffset = -0.16},
+    },
+    LevelUp = {
+        {Sound = "LevelUp", VolumeScale = 0.90, PitchOffset = -0.02},
+        {Sound = "Reward", Delay = 0.06, VolumeScale = 0.44, PitchOffset = 0.08},
+    },
+    MasterRound = {
+        {Sound = "MasterRound", VolumeScale = 0.94, PitchOffset = -0.03},
+        {Sound = "GoldenShard", Delay = 0.055, VolumeScale = 0.42, PitchOffset = -0.20},
+        {Sound = "Reward", Delay = 0.12, VolumeScale = 0.38, PitchOffset = 0.10},
+    },
+    GoldenShard = {
+        {Sound = "GoldenShard", VolumeScale = 0.92, PitchOffset = -0.02},
+        {Sound = "Reward", Delay = 0.045, VolumeScale = 0.36, PitchOffset = 0.12},
+    },
+}
+
 AudioConfig.DisasterLoop = {
     Tornado = "Wind",
     Meteors = "Wind",
