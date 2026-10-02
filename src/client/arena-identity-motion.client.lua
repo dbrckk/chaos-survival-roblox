@@ -47,20 +47,27 @@ local function rebuild()
     if currentVariant == "Classic" then
         for i = 1, 4 do
             trackPart(decor:FindFirstChild("GridMarkerGlow" .. i), i)
+            trackPart(decor:FindFirstChild("ClassicBroadcastGlow" .. i), i + 4)
         end
     elseif currentVariant == "Towers" then
         for tower = 1, 4 do
             for level = 1, 3 do
                 trackPart(decor:FindFirstChild("TowerBand" .. tower .. "_" .. level), (tower - 1) * 3 + level)
             end
+            trackPart(decor:FindFirstChild("TowerMachineryCap" .. tower), 12 + tower)
+            trackPart(decor:FindFirstChild("TowerAntenna" .. tower), 16 + tower)
         end
     elseif currentVariant == "Crossroads" then
         for i = 1, 4 do
             trackPart(decor:FindFirstChild("CrossroadGate" .. i), i)
+            trackPart(decor:FindFirstChild("CrossroadSignal" .. i), i + 4)
         end
     elseif currentVariant == "Orbital" then
         for i = 1, 12 do
             trackPart(decor:FindFirstChild("OrbitalCrown" .. i), i)
+        end
+        for i = 1, 8 do
+            trackPart(decor:FindFirstChild("OrbitalReactorNode" .. i), 12 + i)
         end
     end
 end
