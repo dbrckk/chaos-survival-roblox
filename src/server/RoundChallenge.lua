@@ -37,6 +37,24 @@ RoundChallenge.Definitions = {
         Coins = 7,
         XP = 7,
     },
+    {
+        Id = "FLOW_CHAIN",
+        Title = "FLOW CHAIN",
+        Short = "FLOW",
+        Metric = "flow",
+        Target = 1,
+        Coins = 8,
+        XP = 8,
+    },
+    {
+        Id = "MIX_IT_UP",
+        Title = "MIX IT UP",
+        Short = "VARIETY",
+        Metric = "variety",
+        Target = 2,
+        Coins = 7,
+        XP = 7,
+    },
 }
 
 function RoundChallenge.forRound(roundNumber)
@@ -45,7 +63,7 @@ function RoundChallenge.forRound(roundNumber)
     return RoundChallenge.Definitions[index]
 end
 
-function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest)
+function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest, flowCoins)
     if not definition then
         return 0
     end
@@ -59,13 +77,21 @@ function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumB
         value = nearMisses
     elseif definition.Metric == "momentum" then
         value = momentumBest
+    elseif definition.Metric == "flow" then
+        value = (tonumber(flowCoins) or 0) > 0 and 1 or 0
+    elseif definition.Metric == "variety" then
+        value = 0
+        if (tonumber(shards) or 0) > 0 then value += 1 end
+        if (tonumber(pads) or 0) > 0 then value += 1 end
+        if (tonumber(nearMisses) or 0) > 0 then value += 1 end
+        if (tonumber(momentumBest) or 0) >= 2 then value += 1 end
     end
 
     return math.clamp(math.floor(tonumber(value) or 0), 0, definition.Target)
 end
 
-function RoundChallenge.completed(definition, shards, pads, nearMisses, momentumBest)
-    return RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest) >= (definition and definition.Target or math.huge)
+function RoundChallenge.completed(definition, shards, pads, nearMisses, momentumBest, flowCoins)
+    return RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest, flowCoins) >= (definition and definition.Target or math.huge)
 end
 
 return RoundChallenge
