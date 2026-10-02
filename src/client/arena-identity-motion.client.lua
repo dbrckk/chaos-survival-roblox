@@ -74,12 +74,19 @@ end
 
 local function qualityScale()
     local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local scale
     if profile.Name == "Low" then
-        return 0.38
+        scale = 0.38
     elseif profile.Name == "Medium" then
-        return 0.68
+        scale = 0.68
+    else
+        scale = 1
     end
-    return 1
+
+    if player:GetAttribute("ReduceMotion") == true then
+        scale *= 0.30
+    end
+    return scale
 end
 
 workspace.ChildAdded:Connect(function(child)
