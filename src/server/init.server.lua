@@ -1294,6 +1294,11 @@ while true do
                 soloMode = roundSettings.Solo,
                 elapsedSeconds = math.floor(roundElapsed + 0.5),
                 criticalSurvival = criticalSurvival,
+                arenaMastery = arenaMasteryState,
+                arenaMasteryName = roundSettings.ArenaName,
+                disasterMastery = disasterMasteryState,
+                disasterMasteryName = selected.Name,
+                masteryGain = masteryGain,
             })
         end
     end
