@@ -1,3 +1,5 @@
+local TweenService = game:GetService("TweenService")
+
 local UITheme = {}
 
 UITheme.Colors = {
@@ -38,6 +40,15 @@ UITheme.Corners = {
     Pill = UDim.new(1, 0),
 }
 
+UITheme.Motion = {
+    PressIn = TweenInfo.new(0.075, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    PressOut = TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    PanelIn = TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    EmphasisIn = TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    FastFade = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    StandardFade = TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+}
+
 function UITheme.disasterAccent(id, fallback)
     return UITheme.DisasterAccents[id] or fallback or UITheme.Colors.Cyan
 end
@@ -73,15 +84,24 @@ function UITheme.addPressFeedback(button, pressedScale)
     scale.Parent = button
 
     local target = math.clamp(tonumber(pressedScale) or 0.96, 0.88, 1)
+    local activeTween = nil
+
+    local function tweenTo(value, info)
+        if activeTween then
+            activeTween:Cancel()
+        end
+        activeTween = TweenService:Create(scale, info, {Scale = value})
+        activeTween:Play()
+    end
 
     button.MouseButton1Down:Connect(function()
-        scale.Scale = target
+        tweenTo(target, UITheme.Motion.PressIn)
     end)
     button.MouseButton1Up:Connect(function()
-        scale.Scale = 1
+        tweenTo(1, UITheme.Motion.PressOut)
     end)
     button.MouseLeave:Connect(function()
-        scale.Scale = 1
+        tweenTo(1, UITheme.Motion.PressOut)
     end)
 
     return scale
