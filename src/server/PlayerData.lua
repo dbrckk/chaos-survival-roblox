@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 
 local DailyRewards = require(script.Parent.DailyRewards)
 local DailyQuests = require(script.Parent.DailyQuests)
+local WeeklyChallenges = require(script.Parent.WeeklyChallenges)
 local DataSchema = require(script.Parent.DataSchema)
 local DataSession = require(script.Parent.DataSession)
 
@@ -126,10 +127,28 @@ local function resetDailyQuests(player, day)
     end
 end
 
+local function resetWeeklyChallenges(player, week)
+    local ids = WeeklyChallenges.selectForWeek(week, 2)
+    player:SetAttribute("WeeklyChallengeWeek", week)
+
+    for i = 1, 2 do
+        player:SetAttribute("Weekly" .. i .. "Id", ids[i])
+        player:SetAttribute("Weekly" .. i .. "Progress", 0)
+        player:SetAttribute("Weekly" .. i .. "Claimed", false)
+    end
+end
+
 function PlayerData.ensureDailyQuests(player, nowTimestamp)
     local day = DailyQuests.dayNumber(nowTimestamp or os.time())
     if player:GetAttribute("QuestDay") ~= day then
         resetDailyQuests(player, day)
+    end
+end
+
+function PlayerData.ensureWeeklyChallenges(player, nowTimestamp)
+    local week = WeeklyChallenges.weekNumber(nowTimestamp or os.time())
+    if player:GetAttribute("WeeklyChallengeWeek") ~= week then
+        resetWeeklyChallenges(player, week)
     end
 end
 
@@ -209,6 +228,7 @@ function PlayerData.load(player)
     applyAttributes(player, data)
     setupLeaderstats(player)
     PlayerData.ensureDailyQuests(player)
+    PlayerData.ensureWeeklyChallenges(player)
 
     active[player] = true
     revisions[player] = ok and 1 or 0
@@ -383,11 +403,14 @@ function PlayerData.getQuestState(player, nowTimestamp)
     if not PlayerData.canMutate(player) then
         return {
             day = player and player:GetAttribute("QuestDay") or -1,
+            week = player and player:GetAttribute("WeeklyChallengeWeek") or -1,
             quests = {},
+            weekly = {},
         }
     end
 
     PlayerData.ensureDailyQuests(player, nowTimestamp)
+    PlayerData.ensureWeeklyChallenges(player, nowTimestamp)
 
     local quests = {}
     for i = 1, 3 do
@@ -407,9 +430,29 @@ function PlayerData.getQuestState(player, nowTimestamp)
         end
     end
 
+    local weekly = {}
+    for i = 1, 2 do
+        local id = player:GetAttribute("Weekly" .. i .. "Id")
+        local definition = WeeklyChallenges.definition(id)
+        if definition then
+            table.insert(weekly, {
+                slot = i,
+                id = id,
+                title = definition.Title,
+                target = definition.Target,
+                progress = player:GetAttribute("Weekly" .. i .. "Progress") or 0,
+                claimed = player:GetAttribute("Weekly" .. i .. "Claimed") == true,
+                coins = definition.Coins,
+                xp = definition.XP,
+            })
+        end
+    end
+
     return {
         day = player:GetAttribute("QuestDay"),
+        week = player:GetAttribute("WeeklyChallengeWeek"),
         quests = quests,
+        weekly = weekly,
     }
 end
 
@@ -419,6 +462,7 @@ function PlayerData.progressQuestEvent(player, eventName, amount, nowTimestamp)
     end
 
     PlayerData.ensureDailyQuests(player, nowTimestamp)
+    PlayerData.ensureWeeklyChallenges(player, nowTimestamp)
 
     local completed = {}
 
@@ -447,6 +491,42 @@ function PlayerData.progressQuestEvent(player, eventName, amount, nowTimestamp)
                 PlayerData.add(player, "XP", definition.XP)
 
                 table.insert(completed, {
+                    slot = i,
+                    id = id,
+                    title = definition.Title,
+                    coins = definition.Coins,
+                    xp = definition.XP,
+                })
+            end
+        end
+    end
+
+    for i = 1, 2 do
+        local idKey = "Weekly" .. i .. "Id"
+        local progressKey = "Weekly" .. i .. "Progress"
+        local claimedKey = "Weekly" .. i .. "Claimed"
+
+        local id = player:GetAttribute(idKey)
+        local definition = WeeklyChallenges.definition(id)
+        local claimed = player:GetAttribute(claimedKey) == true
+
+        if definition and not claimed then
+            local progress, justCompleted = WeeklyChallenges.applyProgress(
+                id,
+                player:GetAttribute(progressKey) or 0,
+                eventName,
+                amount or 1
+            )
+
+            player:SetAttribute(progressKey, progress)
+
+            if justCompleted then
+                player:SetAttribute(claimedKey, true)
+                PlayerData.add(player, "Coins", definition.Coins)
+                PlayerData.add(player, "XP", definition.XP)
+
+                table.insert(completed, {
+                    scope = "weekly",
                     slot = i,
                     id = id,
                     title = definition.Title,
