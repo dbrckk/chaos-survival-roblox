@@ -63,7 +63,7 @@ ROADMAP
 =======
 PHASE A — GAME FEEL CORE
 [FAIT] A1 Caméra réactive légère : landing, impacts, pads, vitesse.
-[EN COURS] A2 Mouvement : micro-tilt + landing + burst adaptatif ajoutés ; animation corporelle avancée à poursuivre.
+[EN COURS] A2 Mouvement : micro-tilt + landing + burst + sensation périphérique de vitesse adaptative ; animation corporelle avancée à poursuivre.
 [FAIT] A3 Haptics adaptatifs touch/gamepad : pads, impacts, close calls, shards, Final Rush et résultats.
 [FAIT] A4 Réduction automatique du mouvement caméra sur VFX Low / mobile.
 [EN COURS] A5 Reduce Motion persistant ajouté ; QA réelle motion sickness à effectuer sur appareil.
