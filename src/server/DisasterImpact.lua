@@ -25,7 +25,7 @@ end
 function DisasterImpact.applyRadialDamage(ctx, position, radius, maxDamage, hazardKind)
     local hits = 0
 
-    for _, player in ipairs(ctx.Contestants or {}) do
+    for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
         if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
             continue
         end
