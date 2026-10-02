@@ -104,6 +104,11 @@ AudioConfig.Composite = {
         {Sound = "ShardCollect", Delay = 0.03, VolumeScale = 0.30, PitchOffset = 0.10},
         {Sound = "Reward", Delay = 0.07, VolumeScale = 0.24, PitchOffset = 0.18},
     },
+    NearMiss = {
+        {Sound = "Speed", VolumeScale = 0.56, PitchOffset = 0.16},
+        {Sound = "Wind", Delay = 0.025, VolumeScale = 0.20, PitchOffset = 0.28},
+        {Sound = "Hit", Delay = 0.055, VolumeScale = 0.16, PitchOffset = 0.34},
+    },
 }
 
 AudioConfig.DisasterLoop = {
