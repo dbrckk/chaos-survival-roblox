@@ -23,6 +23,7 @@ local bob = 0
 local shakeClock = 0
 local lastVerticalVelocity = 0
 local wasAirborne = false
+local lastLandingBurstAt = 0
 
 local function disconnectCharacter()
     for _, connection in ipairs(characterConnections) do
@@ -38,6 +39,59 @@ local function qualityScale()
         scale *= 0.78
     end
     return scale
+end
+
+local function emitLandingBurst(strength)
+    if not root or not root.Parent then
+        return
+    end
+
+    local now = os.clock()
+    if now - lastLandingBurstAt < 0.28 then
+        return
+    end
+    lastLandingBurstAt = now
+
+    local tierName = player:GetAttribute("VfxQualityTier")
+    local profile = VfxQuality.get(tierName)
+    if profile.Name == "Low" and strength < 0.34 then
+        return
+    end
+
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "LandingBurstLocal"
+    attachment.Position = Vector3.new(0, -2.35, 0)
+    attachment.Parent = root
+
+    local emitter = Instance.new("ParticleEmitter")
+    emitter.Name = "LandingDust"
+    emitter.Rate = 0
+    emitter.Lifetime = NumberRange.new(0.16, 0.28)
+    emitter.Speed = NumberRange.new(2.4, 5.6)
+    emitter.SpreadAngle = Vector2.new(145, 12)
+    emitter.Acceleration = Vector3.new(0, 1.2, 0)
+    emitter.LightInfluence = 0.35
+    emitter.Color = ColorSequence.new(
+        Color3.fromRGB(130, 155, 190),
+        Color3.fromRGB(205, 220, 240)
+    )
+    emitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.18 + strength * 0.18),
+        NumberSequenceKeypoint.new(0.55, 0.12),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    emitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.28),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    emitter.Parent = attachment
+    emitter:Emit(VfxQuality.particleCount(tierName, math.floor(10 + strength * 10), 4))
+
+    task.delay(0.4, function()
+        if attachment.Parent then
+            attachment:Destroy()
+        end
+    end)
 end
 
 local function bindCharacter(nextCharacter)
@@ -71,10 +125,9 @@ local function bindCharacter(nextCharacter)
             wasAirborne = false
             local fallSpeed = math.max(0, -lastVerticalVelocity)
             if fallSpeed > 22 then
-                landingKick = math.max(
-                    landingKick,
-                    math.clamp((fallSpeed - 22) / 58, 0.08, 0.72)
-                )
+                local strength = math.clamp((fallSpeed - 22) / 58, 0.08, 0.72)
+                landingKick = math.max(landingKick, strength)
+                emitLandingBurst(strength)
             end
         end
     end))
