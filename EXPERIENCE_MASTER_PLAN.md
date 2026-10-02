@@ -63,7 +63,7 @@ ROADMAP
 =======
 PHASE A — GAME FEEL CORE
 [FAIT] A1 Caméra réactive légère : landing, impacts, pads, vitesse.
-[EN COURS] A2 Mouvement : micro-tilt + landing ajoutés ; squash/animation corporelle à poursuivre.
+[EN COURS] A2 Mouvement : micro-tilt + landing + burst adaptatif ajoutés ; animation corporelle avancée à poursuivre.
 [A FAIRE] A3 Feedback tactile/gamepad si supporté, sans dépendance.
 [FAIT] A4 Réduction automatique du mouvement caméra sur VFX Low / mobile.
 [A FAIRE] A5 QA conflits caméra et motion sickness.
@@ -76,10 +76,10 @@ PHASE B — AUDIO PREMIUM
 [A FAIRE] B5 Ambiances propres à chaque arène.
 
 PHASE C — MAP ART PASS
-[A FAIRE] C1 Classic Grid : identité "arena broadcast / grid core".
-[A FAIRE] C2 Towers : skyline vertical, machinery, updraft language.
-[A FAIRE] C3 Crossroads : transit nexus / lane signage / moving arrows.
-[A FAIRE] C4 Orbital : reactor ring / rotating energy architecture.
+[EN COURS] C1 Classic Grid : broadcast fins + grille animée ajoutés ; art pass fin à poursuivre.
+[EN COURS] C2 Towers : machinery/antennes + énergie verticale ajoutées ; art pass fin à poursuivre.
+[EN COURS] C3 Crossroads : gantries/signaux + flux directionnel ajoutés ; signage fin à poursuivre.
+[EN COURS] C4 Orbital : reactor nodes/struts + couronne animée ajoutés ; art pass fin à poursuivre.
 [A FAIRE] C5 Lobby : hub social avec objectifs/progression lisibles dans le monde.
 [A FAIRE] C6 Micro-décors animés et profondeur hors zone jouable.
 [EN COURS] C7 Signatures animées locales distinctes ajoutées aux 4 arènes ; variation par round à poursuivre.
@@ -92,14 +92,14 @@ PHASE D — VFX / ANIMATION
 [A FAIRE] D5 Réduction stricte du bruit pendant Final Rush.
 
 PHASE E — CUSTOMIZATION
-[A FAIRE] E1 Étendre catalog en collections cohérentes.
-[A FAIRE] E2 Ajouter rareté visuelle uniquement, jamais puissance.
+[EN COURS] E1 Catalogue structuré en collections cohérentes ; extension du nombre d'items à poursuivre.
+[FAIT] E2 Raretés visuelles Common/Rare/Epic/Legendary/Premium, sans puissance.
 [A FAIRE] E3 Preview 3D/rotation ou preview claire dans UI.
 [A FAIRE] E4 Unlocks liés à maîtrise et achievements.
 [A FAIRE] E5 Sets premium peu chers mais désirables.
 
 PHASE F — RETENTION / FUN
-[A FAIRE] F1 "Next goal" post-round.
+[FAIT] F1 "Next goal" niveau/XP affiché après les rounds hors événements prioritaires.
 [A FAIRE] F2 Mastery catastrophe et arène.
 [A FAIRE] F3 Weekly challenges.
 [A FAIRE] F4 Collection log / milestones.
