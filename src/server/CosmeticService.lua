@@ -160,6 +160,7 @@ local function stateFor(player)
 end
 
 local function sendState(player, unlocked, notice)
+    player:SetAttribute("CosmeticCatalogTotal", #Cosmetics.Order)
     if stateEvent then
         stateEvent:FireClient(player, {
             state = stateFor(player),
