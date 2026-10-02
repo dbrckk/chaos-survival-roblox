@@ -75,7 +75,9 @@ function AISurvivorRules.reactionReady(firstSeenAt, now, reactionSeconds)
         return false
     end
 
-    return (current - seen) >= math.max(0, tonumber(reactionSeconds) or 0)
+    local elapsed = current - seen
+    local required = math.max(0, tonumber(reactionSeconds) or 0)
+    return elapsed + 1e-6 >= required
 end
 
 return AISurvivorRules
