@@ -111,6 +111,50 @@ Cosmetics.Definitions = {
         ColorA = Color3.fromRGB(65, 255, 245),
         ColorB = Color3.fromRGB(255, 70, 230),
     },
+    trail_gridmaster = {
+        Id = "trail_gridmaster",
+        Name = "Gridmaster",
+        Kind = "trail",
+        ArenaMasteryId = "Classic",
+        ArenaMasteryPoints = 18,
+        Rarity = "Legendary",
+        Collection = "Arena Masters",
+        ColorA = Color3.fromRGB(70, 205, 255),
+        ColorB = Color3.fromRGB(235, 250, 255),
+    },
+    aura_towercore = {
+        Id = "aura_towercore",
+        Name = "Tower Core",
+        Kind = "aura",
+        ArenaMasteryId = "Towers",
+        ArenaMasteryPoints = 18,
+        Rarity = "Legendary",
+        Collection = "Arena Masters",
+        ColorA = Color3.fromRGB(60, 230, 255),
+        ColorB = Color3.fromRGB(90, 120, 255),
+    },
+    trail_nexus = {
+        Id = "trail_nexus",
+        Name = "Nexus Runner",
+        Kind = "trail",
+        ArenaMasteryId = "Crossroads",
+        ArenaMasteryPoints = 18,
+        Rarity = "Legendary",
+        Collection = "Arena Masters",
+        ColorA = Color3.fromRGB(255, 85, 205),
+        ColorB = Color3.fromRGB(160, 95, 255),
+    },
+    aura_orbital = {
+        Id = "aura_orbital",
+        Name = "Orbital Halo",
+        Kind = "aura",
+        ArenaMasteryId = "Orbital",
+        ArenaMasteryPoints = 18,
+        Rarity = "Legendary",
+        Collection = "Arena Masters",
+        ColorA = Color3.fromRGB(65, 255, 205),
+        ColorB = Color3.fromRGB(90, 185, 255),
+    },
 }
 
 Cosmetics.Order = {
@@ -125,6 +169,10 @@ Cosmetics.Order = {
     "aura_cosmic",
     "aura_supporter",
     "trail_neon",
+    "trail_gridmaster",
+    "aura_towercore",
+    "trail_nexus",
+    "aura_orbital",
 }
 
 function Cosmetics.get(id)
@@ -142,6 +190,8 @@ function Cosmetics.publicList()
             unlockLevel = item.UnlockLevel,
             coinPrice = item.CoinPrice,
             premiumKey = item.PremiumKey,
+            arenaMasteryId = item.ArenaMasteryId,
+            arenaMasteryPoints = item.ArenaMasteryPoints,
             rarity = item.Rarity or "Common",
             collection = item.Collection or "Core",
             colorA = item.ColorA,
@@ -243,6 +293,42 @@ function Cosmetics.mergeLevelUnlocks(raw, level)
     for _, id in ipairs(Cosmetics.Order) do
         local item = Cosmetics.get(id)
         if item and item.UnlockLevel and numericLevel >= item.UnlockLevel and not owned[id] then
+            owned[id] = true
+            table.insert(newlyUnlocked, id)
+        end
+    end
+
+    return Cosmetics.serialize(owned), newlyUnlocked
+end
+
+local function masteryPoints(raw, id)
+    if type(raw) ~= "string" or raw == "" or type(id) ~= "string" or id == "" then
+        return 0
+    end
+
+    for entry in string.gmatch(raw, "[^;]+") do
+        local entryId, value = string.match(entry, "^([^=]+)=(%d+)$")
+        if entryId == id then
+            return math.max(0, math.floor(tonumber(value) or 0))
+        end
+    end
+    return 0
+end
+
+function Cosmetics.mergeMasteryUnlocks(raw, arenaMasteryRaw)
+    local owned = Cosmetics.deserialize(raw)
+    local newlyUnlocked = {}
+
+    for _, id in ipairs(Cosmetics.Order) do
+        local item = Cosmetics.get(id)
+        local requiredId = item and item.ArenaMasteryId
+        local requiredPoints = item and tonumber(item.ArenaMasteryPoints) or nil
+
+        if requiredId
+            and requiredPoints
+            and masteryPoints(arenaMasteryRaw, requiredId) >= requiredPoints
+            and not owned[id]
+        then
             owned[id] = true
             table.insert(newlyUnlocked, id)
         end
