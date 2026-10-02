@@ -34,6 +34,8 @@ local clock = 0
 local updateClock = 0
 local currentMap = nil
 local currentMapConnection = nil
+local cachedLobbyCenter = Config.LobbyCenter
+local cachedLobbyCoreCenter = Config.LobbyCenter + Vector3.new(0, 6.65, 0)
 local secondaryLights = {}
 
 local function quality()
@@ -58,6 +60,8 @@ local function clearPolish()
     clearTableInstances(arenaEnergyLinks)
     table.clear(hologramParts)
     table.clear(secondaryLights)
+    cachedLobbyCenter = Config.LobbyCenter
+    cachedLobbyCoreCenter = Config.LobbyCenter + Vector3.new(0, 6.65, 0)
 end
 
 local function collectSecondaryLights(root)
@@ -119,8 +123,11 @@ local function decorateLobby(root)
         return
     end
 
+    cachedLobbyCenter = center.Position
+    cachedLobbyCoreCenter = center.Position + Vector3.new(0, 5.2, 0)
+
     local tier = quality()
-    local coreCenter = center.Position + Vector3.new(0, 5.2, 0)
+    local coreCenter = cachedLobbyCoreCenter
 
     local orb = makeSegment(
         "LobbyChaosCoreOrb",
@@ -531,15 +538,7 @@ RunService.RenderStepped:Connect(function(dt)
     updateClock = 0
 
     local coreTier = quality()
-    local coreCenter = Config.LobbyCenter + Vector3.new(0, 6.65, 0)
-    if currentMap then
-        local lobby = currentMap:FindFirstChild("Lobby")
-        local decor = lobby and lobby:FindFirstChild("Decor")
-        local centerPart = decor and decor:FindFirstChild("CenterPlatform")
-        if centerPart and centerPart:IsA("BasePart") then
-            coreCenter = centerPart.Position + Vector3.new(0, 5.2, 0)
-        end
-    end
+    local coreCenter = cachedLobbyCoreCenter
 
     for _, corePart in ipairs(lobbyCoreParts) do
         if corePart.Parent then
@@ -590,15 +589,7 @@ RunService.RenderStepped:Connect(function(dt)
         if segment.Parent then
             local baseAngle = segment:GetAttribute("OrbitAngle") or 0
             local angle = baseAngle + clock * lobbySpeed
-            local center = Config.LobbyCenter
-            if currentMap then
-                local lobby = currentMap:FindFirstChild("Lobby")
-                local decor = lobby and lobby:FindFirstChild("Decor")
-                local centerPart = decor and decor:FindFirstChild("CenterPlatform")
-                if centerPart and centerPart:IsA("BasePart") then
-                    center = centerPart.Position
-                end
-            end
+            local center = cachedLobbyCenter
 
             local radius = 15.5
             local position = center + Vector3.new(math.cos(angle) * radius, 1.0, math.sin(angle) * radius)
