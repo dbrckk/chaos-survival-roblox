@@ -569,6 +569,8 @@ local function newRecord(slot)
         lastProgressPosition = nil,
         lastProgressAt = 0,
         stuckCount = 0,
+        nextEmoteAt = os.clock() + 3 + math.random() * 6,
+        emoteUntil = 0,
     }
 
     record.proxy = {
@@ -1061,6 +1063,47 @@ local function recoverIfStuck(record, humanoid, root, now)
     return true
 end
 
+local function maybeSocialGesture(record, humanoid, root, now)
+    if now < (record.nextEmoteAt or 0) or currentState.phase == "round" then
+        return false
+    end
+
+    record.nextEmoteAt = now + 5 + math.random() * 9
+    if math.random() > 0.46 then
+        return false
+    end
+
+    local humans = Players:GetPlayers()
+    if #humans == 0 then
+        return false
+    end
+
+    local human = humans[math.random(1, #humans)]
+    local humanRoot = human.Character and human.Character:FindFirstChild("HumanoidRootPart")
+    if not humanRoot or not humanRoot:IsA("BasePart") then
+        return false
+    end
+
+    local distance = (humanRoot.Position - root.Position).Magnitude
+    if distance > 22 then
+        return false
+    end
+
+    -- A short stop + turn reads like acknowledgement without requiring chat spam.
+    humanoid:Move(Vector3.zero)
+    local look = Vector3.new(humanRoot.Position.X, root.Position.Y, humanRoot.Position.Z)
+    if (look - root.Position).Magnitude > 0.2 then
+        root.CFrame = CFrame.lookAt(root.Position, look)
+    end
+    record.idleUntil = now + 0.35 + math.random() * 0.55
+    record.target = nil
+
+    if math.random() < 0.28 then
+        humanoid.Jump = true
+    end
+    return true
+end
+
 local function stepRecord(record, now)
     local model = record.model
     local humanoid = model and model:FindFirstChildOfClass("Humanoid")
@@ -1075,6 +1118,10 @@ local function stepRecord(record, now)
     end
 
     if recoverIfStuck(record, humanoid, root, now) then
+        return
+    end
+
+    if maybeSocialGesture(record, humanoid, root, now) then
         return
     end
 
@@ -1213,8 +1260,19 @@ function AISurvivorService.setRoundState(state)
         elseif phase == "result" then
             for _, record in ipairs(records) do
                 local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
-                if humanoid and humanoid.Health > 0 and math.random() < 0.55 then
-                    humanoid.Jump = true
+                local root = record.model and record.model:FindFirstChild("HumanoidRootPart")
+                if humanoid and humanoid.Health > 0 then
+                    record.target = nil
+                    record.targetPart = nil
+                    humanoid:Move(Vector3.zero)
+
+                    local roll = math.random()
+                    if roll < 0.42 then
+                        humanoid.Jump = true
+                    elseif roll < 0.72 and root and root:IsA("BasePart") then
+                        local angle = math.random() * math.pi * 2
+                        humanoid:MoveTo(root.Position + Vector3.new(math.cos(angle) * 5, 0, math.sin(angle) * 5))
+                    end
                 end
             end
         elseif phase == "intermission" or phase == "waiting" then
