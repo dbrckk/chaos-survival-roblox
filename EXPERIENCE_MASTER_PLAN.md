@@ -85,7 +85,7 @@ PHASE C — MAP ART PASS
 [EN COURS] C7 Signatures animées locales distinctes ajoutées aux 4 arènes ; variation par round à poursuivre.
 
 PHASE D — VFX / ANIMATION
-[A FAIRE] D1 Hiérarchie telegraph -> impact -> aftermath.
+[FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle.
 [FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
 [A FAIRE] D3 Signature visuelle unique par disaster.
 [EN COURS] D4 Feedback monde victoire/élimination/Master Round ajouté ; animations corporelles avancées à poursuivre.
