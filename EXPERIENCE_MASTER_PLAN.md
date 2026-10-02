@@ -95,7 +95,7 @@ PHASE E — CUSTOMIZATION
 [EN COURS] E1 Catalogue porté à 15 items avec set Arena Masters ; extension future optionnelle.
 [FAIT] E2 Raretés visuelles Common/Rare/Epic/Legendary/Premium, sans puissance.
 [FAIT] E3 Preview claire dans UI : dégradé réel ColorA→ColorB affiché sur chaque carte cosmétique.
-[FAIT] E4 Quatre cosmétiques GOLD liés aux maîtrises d'arène, débloqués automatiquement et non achetables.
+[FAIT] E4 Quatre cosmétiques GOLD liés aux maîtrises d'arène, unlock live, non achetables et explicités dans l'UI.
 [A FAIRE] E5 Sets premium peu chers mais désirables.
 
 PHASE F — RETENTION / FUN
@@ -103,7 +103,7 @@ PHASE F — RETENTION / FUN
 [FAIT] F2 Mastery persistante catastrophe/arène avec paliers Rookie/Bronze/Silver/Gold/Elite et affichage post-round.
 [FAIT] F3 Weekly challenges persistants : 2 objectifs/semaine, progression serveur-authoritative, récompenses modérées et UI intégrée.
 [FAIT] F4 Collection log dérivé de l'inventaire : sets cohérents, progression owned/total, sets complétés et milestones Collector.
-[A FAIRE] F5 Premier round accéléré + moment de joie garanti.
+[EN COURS] F5 FIRST CHAOS medal + célébration monde garanties au premier round terminé ; accélération FTUE déjà via rookie coach, QA réelle restante.
 [A FAIRE] F6 Variété contrôlée de micro-objectifs sans surcharge.
 
 PHASE G — UI/UX
