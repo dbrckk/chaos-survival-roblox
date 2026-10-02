@@ -32,6 +32,21 @@ sfxGroup.Name = "ChaosSFX"
 sfxGroup.Volume = 1
 sfxGroup.Parent = SoundService
 
+local uiGroup = SoundService:FindFirstChild("ChaosUI") or Instance.new("SoundGroup")
+uiGroup.Name = "ChaosUI"
+uiGroup.Volume = 1
+uiGroup.Parent = SoundService
+
+local hazardGroup = SoundService:FindFirstChild("ChaosHazard") or Instance.new("SoundGroup")
+hazardGroup.Name = "ChaosHazard"
+hazardGroup.Volume = 1
+hazardGroup.Parent = SoundService
+
+local rewardGroup = SoundService:FindFirstChild("ChaosReward") or Instance.new("SoundGroup")
+rewardGroup.Name = "ChaosReward"
+rewardGroup.Volume = 1
+rewardGroup.Parent = SoundService
+
 local musicEq = musicGroup:FindFirstChild("ChaosMusicEQ") or Instance.new("EqualizerSoundEffect")
 musicEq.Name = "ChaosMusicEQ"
 musicEq.LowGain = 0
@@ -58,11 +73,60 @@ local function makeSound(name, definition, group)
     return sound
 end
 
+local UI_SOUNDS = {
+    UISelect = true,
+    Vote = true,
+    Countdown = true,
+    Ready = true,
+}
+local REWARD_SOUNDS = {
+    Reward = true,
+    ShardCollect = true,
+    GoldenShard = true,
+    LevelUp = true,
+    Survived = true,
+    MasterRound = true,
+    FlowCombo = true,
+    LastSurvivor = true,
+}
+local HAZARD_SOUNDS = {
+    DoubleChaos = true,
+    Eliminated = true,
+    Hit = true,
+    JumpShock = true,
+    Meteor = true,
+    Bombs = true,
+    Wind = true,
+    LowGravity = true,
+    Lava = true,
+    PlatformWarning = true,
+    Tornado = true,
+    Freeze = true,
+    Speed = true,
+    MobilityPad = true,
+    Overdrive = true,
+    FinalRush = true,
+    Darkness = true,
+    Shrink = true,
+    RoundStart = true,
+}
+
+local function soundGroupFor(name)
+    if UI_SOUNDS[name] then
+        return uiGroup
+    elseif REWARD_SOUNDS[name] then
+        return rewardGroup
+    elseif HAZARD_SOUNDS[name] then
+        return hazardGroup
+    end
+    return sfxGroup
+end
+
 local sfx = {}
 local basePlaybackSpeeds = {}
 local baseVolumes = {}
 for name, definition in pairs(AudioConfig.Sfx) do
-    sfx[name] = makeSound(name, definition, sfxGroup)
+    sfx[name] = makeSound(name, definition, soundGroupFor(name))
     basePlaybackSpeeds[name] = definition.PlaybackSpeed or 1
     baseVolumes[name] = definition.Volume or 0.3
 end
@@ -165,6 +229,9 @@ end
 local function setMix(phase, overdrive, finalRush)
     local musicTarget = 1
     local sfxTarget = 1
+    local uiTarget = 1
+    local hazardTarget = 1
+    local rewardTarget = 1
     local lowGain = 0
     local midGain = 0
     local highGain = 0
@@ -172,20 +239,32 @@ local function setMix(phase, overdrive, finalRush)
 
     if phase == "round" then
         musicTarget = finalRush and 0.72 or (overdrive and 0.82 or 0.90)
-        sfxTarget = 1
+        sfxTarget = 0.96
+        uiTarget = finalRush and 0.64 or 0.78
+        hazardTarget = 1
+        rewardTarget = finalRush and 0.70 or 0.86
         lowGain = finalRush and -2.5 or -1.2
         highGain = finalRush and -1.8 or -0.5
     elseif phase == "ready" then
         musicTarget = 0.88
         sfxTarget = 0.94
+        uiTarget = 0.92
+        hazardTarget = 0.96
+        rewardTarget = 0.90
         lowGain = -0.8
     elseif phase == "result" then
         musicTarget = 1
         sfxTarget = 0.96
+        uiTarget = 0.94
+        hazardTarget = 0.88
+        rewardTarget = 1
     end
 
     TweenService:Create(musicGroup, TweenInfo.new(0.18), {Volume = musicTarget}):Play()
     TweenService:Create(sfxGroup, TweenInfo.new(0.12), {Volume = sfxTarget}):Play()
+    TweenService:Create(uiGroup, TweenInfo.new(0.12), {Volume = uiTarget}):Play()
+    TweenService:Create(hazardGroup, TweenInfo.new(0.10), {Volume = hazardTarget}):Play()
+    TweenService:Create(rewardGroup, TweenInfo.new(0.14), {Volume = rewardTarget}):Play()
     TweenService:Create(musicEq, TweenInfo.new(0.18), {
         LowGain = lowGain + arenaProfile.Low,
         MidGain = midGain + arenaProfile.Mid,
@@ -237,7 +316,7 @@ local function playSpatialImpact(payload)
     sound.RollOffMinDistance = 8
     sound.RollOffMaxDistance = 125
     sound.EmitterSize = 6
-    sound.SoundGroup = sfxGroup
+    sound.SoundGroup = hazardGroup
     sound.Parent = holder
     sound:Play()
 
