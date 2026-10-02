@@ -331,7 +331,7 @@ local questPanel = Instance.new("Frame")
 questPanel.Name = "QuestPanel"
 questPanel.AnchorPoint = Vector2.new(0, 1)
 questPanel.Position = UDim2.fromScale(0.025, 0.82)
-questPanel.Size = UDim2.fromScale(0.72, 0.34)
+questPanel.Size = UDim2.fromScale(0.72, 0.46)
 questPanel.BackgroundColor3 = UITheme.Colors.Panel
 questPanel.BackgroundTransparency = 0.02
 questPanel.BorderSizePixel = 0
@@ -342,7 +342,7 @@ UITheme.addStroke(questPanel, UITheme.Colors.Cyan, 1.2, 0.38)
 UITheme.addGradient(questPanel, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
 local questHeader = Instance.new("TextLabel")
-questHeader.Size = UDim2.new(1, -24, 0.18, 0)
+questHeader.Size = UDim2.new(1, -24, 0.10, 0)
 questHeader.Position = UDim2.fromOffset(12, 6)
 questHeader.BackgroundTransparency = 1
 questHeader.Font = Enum.Font.GothamBlack
@@ -355,8 +355,8 @@ questHeader.Parent = questPanel
 local questRows = {}
 for i = 1, 3 do
     local row = Instance.new("TextLabel")
-    row.Size = UDim2.new(1, -24, 0.22, 0)
-    row.Position = UDim2.new(0, 12, 0.20 + ((i - 1) * 0.25), 0)
+    row.Size = UDim2.new(1, -24, 0.12, 0)
+    row.Position = UDim2.new(0, 12, 0.12 + ((i - 1) * 0.14), 0)
     row.BackgroundColor3 = UITheme.Colors.PanelSoft
     row.BackgroundTransparency = 0.10
     row.BorderSizePixel = 0
@@ -370,6 +370,37 @@ for i = 1, 3 do
     UITheme.addCorner(row, UITheme.Corners.Small)
     UITheme.addStroke(row, UITheme.Colors.Cyan, 1, 0.74)
     questRows[i] = row
+end
+
+local weeklyHeader = Instance.new("TextLabel")
+weeklyHeader.Size = UDim2.new(1, -24, 0.09, 0)
+weeklyHeader.Position = UDim2.new(0, 12, 0.54, 0)
+weeklyHeader.BackgroundTransparency = 1
+weeklyHeader.Font = Enum.Font.GothamBlack
+weeklyHeader.TextColor3 = UITheme.Colors.Gold
+weeklyHeader.TextScaled = true
+weeklyHeader.TextXAlignment = Enum.TextXAlignment.Left
+weeklyHeader.Text = "WEEKLY CHALLENGES"
+weeklyHeader.Parent = questPanel
+
+local weeklyRows = {}
+for i = 1, 2 do
+    local row = Instance.new("TextLabel")
+    row.Size = UDim2.new(1, -24, 0.13, 0)
+    row.Position = UDim2.new(0, 12, 0.65 + ((i - 1) * 0.15), 0)
+    row.BackgroundColor3 = UITheme.Colors.Gold:Lerp(UITheme.Colors.PanelSoft, 0.88)
+    row.BackgroundTransparency = 0.08
+    row.BorderSizePixel = 0
+    row.TextColor3 = UITheme.Colors.Text
+    row.Font = Enum.Font.GothamMedium
+    row.TextScaled = true
+    row.TextWrapped = true
+    row.TextXAlignment = Enum.TextXAlignment.Left
+    row.Text = "Loading..."
+    row.Parent = questPanel
+    UITheme.addCorner(row, UITheme.Corners.Small)
+    UITheme.addStroke(row, UITheme.Colors.Gold, 1, 0.60)
+    weeklyRows[i] = row
 end
 
 local questToast = Instance.new("Frame")
@@ -413,9 +444,29 @@ local function renderQuestState(state)
         local quest = quests[i]
         if quest then
             local marker = quest.claimed and "DONE" or string.format("%d/%d", quest.progress or 0, quest.target or 0)
-            questRows[i].Text = string.format("  %s  •  %s  •  +%d coins", quest.title or "Quest", marker, quest.coins or 0)
+            questRows[i].Text = string.format("  %s  •  %s  •  +%d", quest.title or "Quest", marker, quest.coins or 0)
         else
-            questRows[i].Text = "  No quest"
+            questRows[i].Text = "  No daily quest"
+        end
+    end
+
+    local weekly = state and state.weekly or {}
+    for i = 1, 2 do
+        local challenge = weekly[i]
+        if challenge then
+            local marker = challenge.claimed and "DONE"
+                or string.format("%d/%d", challenge.progress or 0, challenge.target or 0)
+            weeklyRows[i].Text = string.format(
+                "  %s  •  %s  •  +%d coins +%d XP",
+                challenge.title or "Weekly",
+                marker,
+                challenge.coins or 0,
+                challenge.xp or 0
+            )
+            weeklyRows[i].TextColor3 = challenge.claimed and UITheme.Colors.Green or UITheme.Colors.Text
+        else
+            weeklyRows[i].Text = "  No weekly challenge"
+            weeklyRows[i].TextColor3 = UITheme.Colors.Muted
         end
     end
 end
@@ -1038,7 +1089,7 @@ local function applyResponsiveLayout()
         votes.Position = UDim2.fromScale(0.5, 0.58)
         votes.Size = UDim2.fromScale(0.88, 0.24)
         resultCard.Size = UDim2.fromScale(0.80, 0.31)
-        questPanel.Size = UDim2.fromScale(0.72, 0.34)
+        questPanel.Size = UDim2.fromScale(0.72, 0.46)
         cosmeticsPanel.Size = UDim2.fromScale(0.72, 0.36)
         achievementPanel.Size = UDim2.fromScale(0.82, 0.46)
         supportPanel.Size = UDim2.fromScale(0.72, 0.30)
@@ -1079,7 +1130,7 @@ local function applyResponsiveLayout()
     achievementToast.Size = UDim2.fromScale(narrow and 0.88 or 0.78, 0.16)
 
     questPanel.Position = UDim2.fromScale(0.025, narrow and 0.80 or 0.82)
-    questPanel.Size = UDim2.fromScale(narrow and 0.90 or 0.78, narrow and 0.32 or 0.34)
+    questPanel.Size = UDim2.fromScale(narrow and 0.90 or 0.78, narrow and 0.46 or 0.44)
 
     cosmeticsPanel.Position = UDim2.fromScale(0.975, narrow and 0.80 or 0.82)
     cosmeticsPanel.Size = UDim2.fromScale(narrow and 0.90 or 0.78, narrow and 0.34 or 0.36)
