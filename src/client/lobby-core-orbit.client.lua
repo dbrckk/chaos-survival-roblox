@@ -95,6 +95,7 @@ task.spawn(function()
         local speed = reduced and 0.10 or (active and 0.42 or 0.20)
         local amplitude = reduced and 0.12 or 0.55
         local now = os.clock()
+        local tier = quality()
 
         for i, entry in ipairs(nodes) do
             local part = entry.part
@@ -107,7 +108,7 @@ task.spawn(function()
                     math.sin(angle) * entry.radius
                 )
                 part.Transparency = active
-                    and (quality().Name == "Low" and 0.36 or 0.16)
+                    and (tier.Name == "Low" and 0.36 or 0.16)
                     or 0.62
             end
         end
