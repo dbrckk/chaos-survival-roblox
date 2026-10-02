@@ -82,7 +82,7 @@ PHASE C — MAP ART PASS
 [EN COURS] C4 Orbital : reactor nodes/struts + couronne + satellites/nodes distants ; QA visuelle finale restante.
 [FAIT] C5 Lobby hub : couronne, panneaux identité/fair-play et hologramme progression personnelle niveau/wins/coins/XP/collection.
 [EN COURS] C6 Micro-décors animés ajoutés par arène, client-local et adaptatifs ; profondeur finale à poursuivre.
-[EN COURS] C7 Signatures animées locales distinctes ajoutées aux 4 arènes ; variation par round à poursuivre.
+[FAIT] C7 Signatures animées distinctes + 3 profils de rythme/direction/amplitude alternés à chaque round.
 
 PHASE D — VFX / ANIMATION
 [FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle.
@@ -92,7 +92,7 @@ PHASE D — VFX / ANIMATION
 [FAIT] D5 Final Rush réduit UI méta + challenge/momentum + auras/lights/trails/highlights non essentiels.
 
 PHASE E — CUSTOMIZATION
-[EN COURS] E1 Catalogue porté à 15 items avec set Arena Masters ; extension future optionnelle.
+[EN COURS] E1 Catalogue porté à 17 items avec Founder, Hyper Neon et Arena Masters ; extension future optionnelle.
 [FAIT] E2 Raretés visuelles Common/Rare/Epic/Legendary/Premium, sans puissance.
 [FAIT] E3 Preview claire dans UI : dégradé réel ColorA→ColorB affiché sur chaque carte cosmétique.
 [FAIT] E4 Quatre cosmétiques GOLD liés aux maîtrises d'arène, unlock live, non achetables et explicités dans l'UI.
