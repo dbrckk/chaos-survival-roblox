@@ -48,6 +48,7 @@ local FlowCombo = require(script.FlowCombo)
 local ChaosFusion = require(script.ChaosFusion)
 local RoundMomentum = require(script.RoundMomentum)
 local AISurvivorService = require(script.AISurvivorService)
+local Mastery = require(script.Mastery)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -1172,6 +1173,32 @@ while true do
                 progressQuest(p, "coins_earned", Config.ParticipationCoins)
             end
 
+            local masteryGain = Mastery.roundGain(survived)
+            local arenaMasteryRaw, arenaMasteryPoints = Mastery.add(
+                p:GetAttribute("ArenaMastery"),
+                tostring(currentArenaVariant),
+                masteryGain
+            )
+            p:SetAttribute("ArenaMastery", arenaMasteryRaw)
+
+            local disasterMasteryRaw = p:GetAttribute("DisasterMastery")
+            local primaryDisasterMasteryPoints = 0
+            for _, disaster in ipairs(selectedSet) do
+                local nextRaw, points = Mastery.add(
+                    disasterMasteryRaw,
+                    tostring(disaster.Id),
+                    masteryGain
+                )
+                disasterMasteryRaw = nextRaw
+                if disaster.Id == selected.Id then
+                    primaryDisasterMasteryPoints = points
+                end
+            end
+            p:SetAttribute("DisasterMastery", disasterMasteryRaw)
+
+            local arenaMasteryState = Mastery.state(arenaMasteryPoints)
+            local disasterMasteryState = Mastery.state(primaryDisasterMasteryPoints)
+
             local roundShardCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundChaosShards")) or 0))
             local roundNearMissCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundNearMisses")) or 0))
             local roundMechanicUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMechanicUses")) or 0))
@@ -1195,6 +1222,10 @@ while true do
                 overdriveUses = roundOverdriveUses,
                 momentumBest = roundMomentumBest,
                 criticalSurvival = criticalSurvival,
+                arenaMastery = arenaMasteryState,
+                arenaMasteryName = roundSettings.ArenaName,
+                disasterMastery = disasterMasteryState,
+                disasterMasteryName = selected.Name,
             })
 
             if challengeCompleted then
