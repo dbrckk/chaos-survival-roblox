@@ -115,8 +115,8 @@ PHASE G — UI/UX
 
 PHASE H — PERFORMANCE
 [A FAIRE] H1 Budget CPU/GPU/instances par phase.
-[A FAIRE] H2 Réduire RenderStepped non essentiels.
-[A FAIRE] H3 Audit lights/particles/attachments.
+[EN COURS] H2 Boucles catastrophe déjà idle ; world-polish optimisé avec centres lobby en cache et profil VFX réutilisé.
+[EN COURS] H3 Budgets VFX/Light déjà adaptatifs ; audit fin encore à poursuivre.
 [A FAIRE] H4 Soak Android 30-60 min.
 [A FAIRE] H5 MicroProfiler sur appareil réel.
 
