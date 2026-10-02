@@ -1253,6 +1253,7 @@ local function applyResponsiveLayout()
         return
     end
 
+    local compact = aspect < 1.50
     local narrow = aspect < 1.7
     local wide = aspect > 2.0
 
@@ -1280,41 +1281,49 @@ local function applyResponsiveLayout()
     xpTrack.Size = UDim2.fromScale(narrow and 0.70 or 0.62, 0.012)
 
     resultCard.Size = UDim2.fromScale(
-        narrow and 0.90 or (wide and 0.68 or 0.80),
-        narrow and 0.34 or 0.31
+        compact and 0.94 or (narrow and 0.90 or (wide and 0.68 or 0.80)),
+        compact and 0.30 or (narrow and 0.34 or 0.31)
     )
 
     dailyToast.Size = UDim2.fromScale(narrow and 0.84 or 0.72, 0.16)
     questToast.Size = UDim2.fromScale(narrow and 0.86 or 0.76, 0.15)
     achievementToast.Size = UDim2.fromScale(narrow and 0.88 or 0.78, 0.16)
 
-    questPanel.Position = UDim2.fromScale(0.025, narrow and 0.80 or 0.82)
-    questPanel.Size = UDim2.fromScale(narrow and 0.90 or 0.78, narrow and 0.46 or 0.44)
+    questPanel.Position = UDim2.fromScale(0.025, compact and 0.77 or (narrow and 0.80 or 0.82))
+    questPanel.Size = UDim2.fromScale(compact and 0.94 or (narrow and 0.90 or 0.78), compact and 0.40 or (narrow and 0.46 or 0.44))
 
-    cosmeticsPanel.Position = UDim2.fromScale(0.975, narrow and 0.80 or 0.82)
-    cosmeticsPanel.Size = UDim2.fromScale(narrow and 0.90 or 0.78, narrow and 0.34 or 0.36)
+    cosmeticsPanel.Position = UDim2.fromScale(0.975, compact and 0.77 or (narrow and 0.80 or 0.82))
+    cosmeticsPanel.Size = UDim2.fromScale(compact and 0.94 or (narrow and 0.90 or 0.78), compact and 0.30 or (narrow and 0.34 or 0.36))
 
-    achievementPanel.Position = UDim2.fromScale(0.5, narrow and 0.80 or 0.82)
-    achievementPanel.Size = UDim2.fromScale(narrow and 0.92 or 0.84, narrow and 0.40 or 0.46)
+    achievementPanel.Position = UDim2.fromScale(0.5, compact and 0.77 or (narrow and 0.80 or 0.82))
+    achievementPanel.Size = UDim2.fromScale(compact and 0.94 or (narrow and 0.92 or 0.84), compact and 0.35 or (narrow and 0.40 or 0.46))
 
-    supportPanel.Position = UDim2.fromScale(0.975, narrow and 0.73 or 0.75)
-    supportPanel.Size = UDim2.fromScale(narrow and 0.88 or 0.74, narrow and 0.27 or 0.30)
+    supportPanel.Position = UDim2.fromScale(0.975, compact and 0.70 or (narrow and 0.73 or 0.75))
+    supportPanel.Size = UDim2.fromScale(compact and 0.92 or (narrow and 0.88 or 0.74), compact and 0.24 or (narrow and 0.27 or 0.30))
 end
 
 applyResponsiveLayout()
 
 local responsiveCamera = workspace.CurrentCamera
-if responsiveCamera then
-    responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
-end
+local responsiveViewportConnection = nil
 
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+local function bindResponsiveCamera()
+    if responsiveViewportConnection then
+        responsiveViewportConnection:Disconnect()
+        responsiveViewportConnection = nil
+    end
+
     responsiveCamera = workspace.CurrentCamera
     if responsiveCamera then
-        applyResponsiveLayout()
-        responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+        responsiveViewportConnection = responsiveCamera
+            :GetPropertyChangedSignal("ViewportSize")
+            :Connect(applyResponsiveLayout)
     end
-end)
+    applyResponsiveLayout()
+end
+
+bindResponsiveCamera()
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindResponsiveCamera)
 
 local resultToken = 0
 local lastRoundHint = ""
