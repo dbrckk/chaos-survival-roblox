@@ -82,6 +82,28 @@ AudioConfig.Composite = {
         {Sound = "GoldenShard", VolumeScale = 0.92, PitchOffset = -0.02},
         {Sound = "Reward", Delay = 0.045, VolumeScale = 0.36, PitchOffset = 0.12},
     },
+    Vote = {
+        {Sound = "Vote", VolumeScale = 0.84, PitchOffset = -0.03},
+        {Sound = "UISelect", Delay = 0.025, VolumeScale = 0.24, PitchOffset = 0.18},
+    },
+    Reward = {
+        {Sound = "Reward", VolumeScale = 0.88, PitchOffset = -0.03},
+        {Sound = "ShardCollect", Delay = 0.038, VolumeScale = 0.26, PitchOffset = -0.20},
+    },
+    LastSurvivor = {
+        {Sound = "LastSurvivor", VolumeScale = 0.92, PitchOffset = -0.04},
+        {Sound = "Darkness", Delay = 0.035, VolumeScale = 0.22, PitchOffset = -0.24},
+    },
+    Overdrive = {
+        {Sound = "Overdrive", VolumeScale = 0.90, PitchOffset = -0.08},
+        {Sound = "Speed", Delay = 0.035, VolumeScale = 0.38, PitchOffset = -0.26},
+        {Sound = "Countdown", Delay = 0.085, VolumeScale = 0.22, PitchOffset = -0.46},
+    },
+    FlowCombo = {
+        {Sound = "FlowCombo", VolumeScale = 0.90, PitchOffset = -0.02},
+        {Sound = "ShardCollect", Delay = 0.03, VolumeScale = 0.30, PitchOffset = 0.10},
+        {Sound = "Reward", Delay = 0.07, VolumeScale = 0.24, PitchOffset = 0.18},
+    },
 }
 
 AudioConfig.DisasterLoop = {
