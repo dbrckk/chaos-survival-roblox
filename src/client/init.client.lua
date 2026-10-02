@@ -1109,6 +1109,30 @@ end)
 local resultToken = 0
 local lastRoundHint = ""
 
+local function masteryGoalText(feedback)
+    local state = feedback and feedback.arenaMastery
+    local name = feedback and feedback.arenaMasteryName
+    if type(state) ~= "table" or not name then
+        return nil
+    end
+
+    local tier = tostring(state.tier or "ROOKIE")
+    if state.maxed == true then
+        return string.format("MASTERY • %s • %s MAX", tostring(name), tier)
+    end
+
+    local nextTier = tostring(state.nextTier or "NEXT")
+    local points = math.max(0, math.floor(tonumber(state.points) or 0))
+    local nextPoints = math.max(points, math.floor(tonumber(state.nextPoints) or points))
+    return string.format(
+        "NEXT GOAL • %s %s %d/%d",
+        tostring(name),
+        nextTier,
+        points,
+        nextPoints
+    )
+end
+
 local function nextLevelGoalText()
     local level = math.max(1, math.floor(tonumber(player:GetAttribute("Level")) or 1))
     local xp = math.max(0, math.floor(tonumber(player:GetAttribute("XP")) or 0))
@@ -1224,6 +1248,15 @@ local function showRoundFeedback(feedback)
     if survived and streakCount >= 2 then
         table.insert(tags, "STREAK x" .. tostring(streakCount))
     end
+    local arenaMastery = feedback.arenaMastery
+    if type(arenaMastery) == "table" and feedback.arenaMasteryName then
+        table.insert(
+            tags,
+            string.upper(tostring(feedback.arenaMasteryName))
+                .. " "
+                .. tostring(arenaMastery.tier or "ROOKIE")
+        )
+    end
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
     resultMeta.Text = table.concat(tags, "  •  ")
 
@@ -1247,9 +1280,10 @@ local function showRoundFeedback(feedback)
         if feedback.criticalSurvival then
             resultTip.Text = "CLUTCH: you survived at critical health"
         elseif streakCount >= 2 then
-            resultTip.Text = "STREAK x" .. tostring(streakCount) .. " • " .. nextLevelGoalText()
+            resultTip.Text = "STREAK x" .. tostring(streakCount) .. " • "
+                .. (masteryGoalText(feedback) or nextLevelGoalText())
         else
-            resultTip.Text = nextLevelGoalText()
+            resultTip.Text = masteryGoalText(feedback) or nextLevelGoalText()
         end
     elseif lastRoundHint ~= "" then
         resultTip.Text = "TIP: " .. lastRoundHint
