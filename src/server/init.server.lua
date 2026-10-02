@@ -770,7 +770,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             arenaName = roundSettings.ArenaName or currentArenaVariant,
             disasterIds = disasterIds,
             survivorsAlive = survivorsAlive,
-            contestantCount = #contestants + AISurvivorService.activeCount(),
+            contestantCount = #contestants + AISurvivorService.visibleCount(),
             aiSurvivors = aiSurvivorsAlive,
             lastSurvivorUserId = (survivorsAlive == 1 and humanSurvivorsAlive == 1) and lastSurvivorUserId() or nil,
             arenaMechanicName = arenaMechanic and arenaMechanic.name or nil,
