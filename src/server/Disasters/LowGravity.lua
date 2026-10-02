@@ -13,7 +13,7 @@ function D.start(ctx)
     local worldGravity = workspace.Gravity
     local activeForces = {}
 
-    for _, player in ipairs(ctx.Contestants or {}) do
+    for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
         if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
             continue
         end
