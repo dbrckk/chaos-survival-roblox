@@ -64,7 +64,7 @@ ROADMAP
 PHASE A — GAME FEEL CORE
 [FAIT] A1 Caméra réactive légère : landing, impacts, pads, vitesse.
 [EN COURS] A2 Mouvement : micro-tilt + landing + burst adaptatif ajoutés ; animation corporelle avancée à poursuivre.
-[A FAIRE] A3 Feedback tactile/gamepad si supporté, sans dépendance.
+[FAIT] A3 Haptics adaptatifs touch/gamepad : pads, impacts, close calls, shards, Final Rush et résultats.
 [FAIT] A4 Réduction automatique du mouvement caméra sur VFX Low / mobile.
 [EN COURS] A5 Reduce Motion persistant ajouté ; QA réelle motion sickness à effectuer sur appareil.
 
@@ -89,7 +89,7 @@ PHASE D — VFX / ANIMATION
 [FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
 [A FAIRE] D3 Signature visuelle unique par disaster.
 [EN COURS] D4 Feedback monde victoire/élimination/Master Round ajouté ; animations corporelles avancées à poursuivre.
-[A FAIRE] D5 Réduction stricte du bruit pendant Final Rush.
+[FAIT] D5 Final Rush réduit UI méta + challenge/momentum + auras/lights/trails/highlights non essentiels.
 
 PHASE E — CUSTOMIZATION
 [EN COURS] E1 Catalogue porté à 15 items avec set Arena Masters ; extension future optionnelle.
