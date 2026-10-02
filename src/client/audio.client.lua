@@ -80,6 +80,20 @@ local currentIntensity = 1
 local lastOverdrive = false
 local lastFinalRush = false
 
+local ARENA_AUDIO = {
+    Classic = {Pitch = 1.000, Low = 0.0, Mid = 0.2, High = 0.4},
+    Towers = {Pitch = 0.988, Low = 0.8, Mid = -0.4, High = 1.0},
+    Crossroads = {Pitch = 1.012, Low = -0.8, Mid = 1.1, High = 0.6},
+    Orbital = {Pitch = 0.976, Low = 1.2, Mid = -0.7, High = -0.2},
+}
+
+local function arenaAudioProfile()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local id = arena and arena:GetAttribute("VariantId")
+    return ARENA_AUDIO[tostring(id or "Classic")] or ARENA_AUDIO.Classic
+end
+
 local function play(name, pitchVariance)
     local sound = sfx[name]
     if not sound then return end
@@ -152,7 +166,9 @@ local function setMix(phase, overdrive, finalRush)
     local musicTarget = 1
     local sfxTarget = 1
     local lowGain = 0
+    local midGain = 0
     local highGain = 0
+    local arenaProfile = arenaAudioProfile()
 
     if phase == "round" then
         musicTarget = finalRush and 0.72 or (overdrive and 0.82 or 0.90)
@@ -171,8 +187,9 @@ local function setMix(phase, overdrive, finalRush)
     TweenService:Create(musicGroup, TweenInfo.new(0.18), {Volume = musicTarget}):Play()
     TweenService:Create(sfxGroup, TweenInfo.new(0.12), {Volume = sfxTarget}):Play()
     TweenService:Create(musicEq, TweenInfo.new(0.18), {
-        LowGain = lowGain,
-        HighGain = highGain,
+        LowGain = lowGain + arenaProfile.Low,
+        MidGain = midGain + arenaProfile.Mid,
+        HighGain = highGain + arenaProfile.High,
     }):Play()
 end
 
@@ -250,12 +267,14 @@ stateEvent.OnClientEvent:Connect(function(state)
         end)
     end
 
+    local arenaProfile = arenaAudioProfile()
     lobbyMusic.PlaybackSpeed = math.clamp(
         (AudioConfig.Music.Lobby.PlaybackSpeed or 1)
+            * arenaProfile.Pitch
             * (0.985 + ((currentIntensity - 0.9) * 0.05))
             * (overdrive and 1.035 or 1),
-        0.96,
-        1.08
+        0.94,
+        1.10
     )
 
     if activeLoopName and sfx[activeLoopName] then
