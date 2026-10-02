@@ -481,6 +481,14 @@ cosmeticsLayout.Parent = cosmeticsList
 
 local currentCosmeticState = nil
 
+local RARITY_COLORS = {
+    Common = UITheme.Colors.Muted,
+    Rare = UITheme.Colors.Cyan,
+    Epic = UITheme.Colors.Violet,
+    Legendary = UITheme.Colors.Gold,
+    Premium = UITheme.Colors.Magenta,
+}
+
 local function renderCosmetics(state)
     currentCosmeticState = state
 
@@ -512,24 +520,28 @@ local function renderCosmetics(state)
         local coinPrice = tonumber(item.coinPrice)
         local unlockLevel = tonumber(item.unlockLevel)
         local kindLabel = string.upper(tostring(item.kind or "cosmetic"))
+        local rarity = tostring(item.rarity or "Common")
+        local rarityLabel = string.upper(rarity)
+        local collection = tostring(item.collection or "")
         local kindAccent = item.kind == "trail" and UITheme.Colors.Cyan or UITheme.Colors.Magenta
+        local rarityAccent = RARITY_COLORS[rarity] or kindAccent
 
         local isEquipped = (item.kind == "trail" and equippedTrail == item.id)
             or (item.kind == "aura" and equippedAura == item.id)
 
         if isEquipped then
-            button.Text = string.format("%s   •   %s   •   EQUIPPED", item.name, kindLabel)
+            button.Text = string.format("%s   •   %s   •   %s   •   EQUIPPED", item.name, rarityLabel, kindLabel)
             button.BackgroundColor3 = UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.58)
         elseif isOwned then
-            button.Text = string.format("%s   •   %s   •   EQUIP", item.name, kindLabel)
+            button.Text = string.format("%s   •   %s   •   %s   •   EQUIP", item.name, rarityLabel, kindLabel)
         elseif coinPrice and coinPrice > 0 then
-            button.Text = string.format("%s   •   %s   •   %d COINS", item.name, kindLabel, coinPrice)
+            button.Text = string.format("%s   •   %s   •   %s   •   %d COINS", item.name, rarityLabel, kindLabel, coinPrice)
             button.BackgroundColor3 = UITheme.Colors.Gold:Lerp(UITheme.Colors.Panel, 0.72)
         elseif unlockLevel then
-            button.Text = string.format("%s   •   %s   •   LVL %d", item.name, kindLabel, unlockLevel)
+            button.Text = string.format("%s   •   %s   •   %s   •   LVL %d", item.name, rarityLabel, kindLabel, unlockLevel)
             button.BackgroundColor3 = UITheme.Colors.PanelSoft
         else
-            button.Text = string.format("%s   •   %s", item.name, kindLabel)
+            button.Text = string.format("%s   •   %s   •   %s", item.name, rarityLabel, kindLabel)
             button.BackgroundColor3 = Color3.fromRGB(48, 49, 58)
         end
 
@@ -537,17 +549,20 @@ local function renderCosmetics(state)
         UITheme.addCorner(button, UITheme.Corners.Small)
         UITheme.addStroke(
             button,
-            isEquipped and UITheme.Colors.Green or kindAccent,
+            isEquipped and UITheme.Colors.Green or rarityAccent,
             isEquipped and 1.8 or 1.0,
             isEquipped and 0.18 or 0.55
         )
         UITheme.addGradient(
             button,
-            button.BackgroundColor3:Lerp(kindAccent, isEquipped and 0.10 or 0.06),
+            button.BackgroundColor3:Lerp(rarityAccent, isEquipped and 0.10 or 0.08),
             UITheme.Colors.Panel,
             90
         )
         UITheme.addPressFeedback(button, 0.975)
+
+        button:SetAttribute("CosmeticCollection", collection)
+        button:SetAttribute("CosmeticRarity", rarity)
 
         button.Activated:Connect(function()
             if isOwned then
