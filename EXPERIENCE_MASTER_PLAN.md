@@ -114,9 +114,9 @@ PHASE G — UI/UX
 [EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors ; contraste et redondance warnings déjà présents, QA réelle restante.
 
 PHASE H — PERFORMANCE
-[A FAIRE] H1 Budget CPU/GPU/instances par phase.
+[EN COURS] H1 Budgets dynamiques déjà appliqués aux world VFX, impacts, lights et cosmétiques ; mesures réelles restantes.
 [EN COURS] H2 Boucles catastrophe déjà idle ; world-polish optimisé avec centres lobby en cache et profil VFX réutilisé.
-[EN COURS] H3 Budgets VFX/Light déjà adaptatifs ; audit fin encore à poursuivre.
+[EN COURS] H3 Budgets VFX/Light étendus aux cosmétiques par client ; Low désactive aura lights et réduit fortement particules/trails.
 [A FAIRE] H4 Soak Android 30-60 min.
 [A FAIRE] H5 MicroProfiler sur appareil réel.
 
