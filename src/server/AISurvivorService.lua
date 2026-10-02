@@ -36,6 +36,56 @@ local IDENTITIES = {
         Height = 1.04,
         Width = 1.02,
     },
+    {
+        Username = "KaiPixel",
+        DisplayName = "Kai",
+        Skin = Color3.fromRGB(225, 181, 148),
+        Torso = Color3.fromRGB(200, 72, 82),
+        Legs = Color3.fromRGB(35, 39, 52),
+        Accent = Color3.fromRGB(255, 110, 125),
+        Height = 1.00,
+        Width = 0.98,
+    },
+    {
+        Username = "LumiDash",
+        DisplayName = "Lumi",
+        Skin = Color3.fromRGB(238, 198, 170),
+        Torso = Color3.fromRGB(232, 112, 180),
+        Legs = Color3.fromRGB(48, 42, 62),
+        Accent = Color3.fromRGB(255, 145, 220),
+        Height = 0.97,
+        Width = 0.95,
+    },
+    {
+        Username = "TheoFlux",
+        DisplayName = "Theo",
+        Skin = Color3.fromRGB(166, 112, 82),
+        Torso = Color3.fromRGB(225, 142, 55),
+        Legs = Color3.fromRGB(42, 44, 48),
+        Accent = Color3.fromRGB(255, 190, 80),
+        Height = 1.03,
+        Width = 1.01,
+    },
+    {
+        Username = "RinVector",
+        DisplayName = "Rin",
+        Skin = Color3.fromRGB(214, 165, 133),
+        Torso = Color3.fromRGB(78, 84, 190),
+        Legs = Color3.fromRGB(32, 34, 50),
+        Accent = Color3.fromRGB(125, 135, 255),
+        Height = 1.01,
+        Width = 0.97,
+    },
+    {
+        Username = "EzraJump",
+        DisplayName = "Ezra",
+        Skin = Color3.fromRGB(108, 75, 58),
+        Torso = Color3.fromRGB(56, 164, 214),
+        Legs = Color3.fromRGB(30, 42, 54),
+        Accent = Color3.fromRGB(90, 205, 255),
+        Height = 1.05,
+        Width = 1.03,
+    },
 }
 
 local config = nil
@@ -50,6 +100,7 @@ local voteToken = 0
 local voteIds = {}
 local started = false
 local brainStarted = false
+local identityOrder = {}
 
 local function humanCount()
     return #Players:GetPlayers()
@@ -396,7 +447,8 @@ local function destroyRecord(record)
 end
 
 local function newRecord(slot)
-    local identity = IDENTITIES[((slot - 1) % #IDENTITIES) + 1]
+    local identityIndex = identityOrder[slot] or (((slot - 1) % #IDENTITIES) + 1)
+    local identity = IDENTITIES[identityIndex]
     local record = {
         slot = slot,
         identity = identity,
@@ -414,6 +466,7 @@ local function newRecord(slot)
         targetIsPad = false,
         threat = nil,
         threatSeenAt = nil,
+        idleUntil = 0,
     }
 
     record.proxy = {
@@ -721,6 +774,24 @@ end
 
 local function chooseLobbyTarget(record)
     local center = config.LobbyCenter
+
+    if math.random() < 0.26 then
+        local players = Players:GetPlayers()
+        if #players > 0 then
+            local player = players[math.random(1, #players)]
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root and root:IsA("BasePart") then
+                local angle = math.random() * math.pi * 2
+                local radius = 6 + math.random() * 8
+                return root.Position + Vector3.new(
+                    math.cos(angle) * radius,
+                    0,
+                    math.sin(angle) * radius
+                ), 1.4 + math.random() * 1.8
+            end
+        end
+    end
+
     local angle = math.random() * math.pi * 2
     local radius = 8 + math.random() * 20
     local position = center + Vector3.new(
@@ -790,6 +861,11 @@ local function stepRecord(record, now)
         return
     end
 
+    if now < (record.idleUntil or 0) then
+        humanoid:Move(Vector3.zero)
+        return
+    end
+
     if now >= record.nextJump then
         local jumpChance = record.profile.JumpChance
         if hasDisaster("LowGravity") then
@@ -808,6 +884,11 @@ local function stepRecord(record, now)
             record.target = nil
             record.targetPart = nil
             record.targetIsPad = false
+            if math.random() < 0.38 then
+                record.idleUntil = now + 0.35 + math.random() * 1.25
+                humanoid:Move(Vector3.zero)
+                return
+            end
         end
 
         if now >= record.nextThink or not record.target then
@@ -827,6 +908,11 @@ local function stepRecord(record, now)
     else
         if record.target and (root.Position - record.target).Magnitude < 3.8 then
             record.target = nil
+            if math.random() < 0.56 then
+                record.idleUntil = now + 0.6 + math.random() * 1.8
+                humanoid:Move(Vector3.zero)
+                return
+            end
         end
 
         if now >= record.nextThink or not record.target then
@@ -864,6 +950,15 @@ function AISurvivorService.start(gameConfig)
 
     started = true
     config = gameConfig
+
+    identityOrder = {}
+    for index = 1, #IDENTITIES do
+        identityOrder[index] = index
+    end
+    for index = #identityOrder, 2, -1 do
+        local swapIndex = math.random(1, index)
+        identityOrder[index], identityOrder[swapIndex] = identityOrder[swapIndex], identityOrder[index]
+    end
 
     botsFolder = workspace:FindFirstChild("AISurvivors")
     if botsFolder then
@@ -999,6 +1094,17 @@ end
 
 function AISurvivorService.activeCount()
     return #records
+end
+
+function AISurvivorService.visibleCount()
+    local count = 0
+    for _, record in ipairs(records) do
+        local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
+        if record.model and record.model.Parent and humanoid and humanoid.Health > 0 then
+            count += 1
+        end
+    end
+    return count
 end
 
 function AISurvivorService.names()
