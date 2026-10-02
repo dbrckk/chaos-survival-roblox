@@ -61,6 +61,35 @@ describe("Cosmetic inventory", function()
         expect(Cosmetics.canEquip("trail_blue", "trail_void")).toBe(false)
     end)
 
+
+    it("summarizes collection completion and collector milestones", function()
+        local state = Cosmetics.collectionState("trail_blue,trail_gold,trail_plasma,trail_prism")
+
+        expect(state.owned).toBe(4)
+        expect(state.total).toBe(11)
+        expect(state.completedCollections >= 1).toBe(true)
+        expect(state.totalCollections >= 4).toBe(true)
+        expect(state.nextMilestone).toBe(6)
+        expect(state.maxed).toBe(false)
+
+        local complete = Cosmetics.collectionState(Cosmetics.serialize({
+            trail_blue = true,
+            trail_gold = true,
+            trail_void = true,
+            trail_plasma = true,
+            trail_inferno = true,
+            trail_prism = true,
+            aura_emerald = true,
+            aura_solar = true,
+            aura_cosmic = true,
+            aura_supporter = true,
+            trail_neon = true,
+        }))
+        expect(complete.owned).toBe(11)
+        expect(complete.maxed).toBe(true)
+        expect(complete.nextMilestone).toBe(nil)
+    end)
+
     it("serializes ownership deterministically", function()
         local raw = Cosmetics.serialize({
             aura_cosmic = true,
