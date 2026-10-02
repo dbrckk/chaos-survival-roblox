@@ -13,6 +13,8 @@ AISurvivorRules.Profiles = {
         JumpChance = 0.14,
         TargetHoldMin = 1.4,
         TargetHoldMax = 2.8,
+        MistakeChance = 0.08,
+        SocialChance = 0.16,
     },
     {
         Id = "Balanced",
@@ -23,6 +25,8 @@ AISurvivorRules.Profiles = {
         JumpChance = 0.20,
         TargetHoldMin = 1.2,
         TargetHoldMax = 2.5,
+        MistakeChance = 0.13,
+        SocialChance = 0.24,
     },
     {
         Id = "Bold",
@@ -33,6 +37,8 @@ AISurvivorRules.Profiles = {
         JumpChance = 0.27,
         TargetHoldMin = 0.9,
         TargetHoldMax = 2.1,
+        MistakeChance = 0.20,
+        SocialChance = 0.31,
     },
 }
 
