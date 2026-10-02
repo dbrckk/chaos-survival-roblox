@@ -566,6 +566,9 @@ local function newRecord(slot)
         threat = nil,
         threatSeenAt = nil,
         idleUntil = 0,
+        lastProgressPosition = nil,
+        lastProgressAt = 0,
+        stuckCount = 0,
     }
 
     record.proxy = {
@@ -819,12 +822,48 @@ local function scoreCandidate(record, root, candidate)
     return score
 end
 
+local function socialArenaTarget(record, root)
+    if math.random() >= (record.profile.SocialChance or 0) then
+        return nil
+    end
+
+    local humans = Players:GetPlayers()
+    if #humans == 0 then
+        return nil
+    end
+
+    local player = humans[math.random(1, #humans)]
+    local humanRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local humanHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanRoot or not humanRoot:IsA("BasePart") or not humanHumanoid or humanHumanoid.Health <= 0 then
+        return nil
+    end
+
+    local offset = root.Position - humanRoot.Position
+    local horizontal = Vector3.new(offset.X, 0, offset.Z)
+    if horizontal.Magnitude < 0.5 then
+        local angle = math.random() * math.pi * 2
+        horizontal = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    else
+        horizontal = horizontal.Unit
+    end
+
+    return clampToArena(humanRoot.Position + horizontal * (5 + math.random() * 5))
+end
+
 local function chooseArenaTarget(record, root, now)
     local threatTarget = immediateThreat(record, root, now)
     if threatTarget then
         record.targetIsPad = false
         record.targetPart = nil
         return threatTarget, 0.7
+    end
+
+    local socialTarget = socialArenaTarget(record, root)
+    if socialTarget then
+        record.targetIsPad = false
+        record.targetPart = nil
+        return socialTarget, 0.65 + math.random() * 1.0
     end
 
     local pads = mechanicsPads()
@@ -864,6 +903,11 @@ local function chooseArenaTarget(record, root, now)
     local choiceRange = record.profile.Id == "Bold"
         and math.min(3, #ranked)
         or (record.profile.Id == "Balanced" and math.min(2, #ranked) or 1)
+
+    -- Real players do not always choose the mathematically best route.
+    if #ranked > choiceRange and math.random() < (record.profile.MistakeChance or 0) then
+        choiceRange = math.min(#ranked, choiceRange + 2)
+    end
     local selected = ranked[math.random(1, choiceRange)].candidate
 
     local hold = record.profile.TargetHoldMin
@@ -974,6 +1018,49 @@ local function tryLobbyPracticeImpulse(record, root, now)
     record.targetPart = nil
 end
 
+local function recoverIfStuck(record, humanoid, root, now)
+    if not record.target then
+        record.lastProgressPosition = root.Position
+        record.lastProgressAt = now
+        record.stuckCount = 0
+        return false
+    end
+
+    if not record.lastProgressPosition then
+        record.lastProgressPosition = root.Position
+        record.lastProgressAt = now
+        return false
+    end
+
+    if now - (record.lastProgressAt or 0) < 1.15 then
+        return false
+    end
+
+    local moved = (root.Position - record.lastProgressPosition).Magnitude
+    record.lastProgressPosition = root.Position
+    record.lastProgressAt = now
+
+    if moved >= 1.15 then
+        record.stuckCount = 0
+        return false
+    end
+
+    record.stuckCount = (record.stuckCount or 0) + 1
+    humanoid.Jump = true
+    record.target = nil
+    record.targetPart = nil
+    record.targetIsPad = false
+    record.nextThink = 0
+
+    if record.stuckCount >= 2 then
+        local side = root.CFrame.RightVector * ((math.random() < 0.5) and -6 or 6)
+        humanoid:MoveTo(clampToArena(root.Position + side))
+        record.stuckCount = 0
+    end
+
+    return true
+end
+
 local function stepRecord(record, now)
     local model = record.model
     local humanoid = model and model:FindFirstChildOfClass("Humanoid")
@@ -984,6 +1071,10 @@ local function stepRecord(record, now)
 
     if currentState.phase == "result" then
         humanoid:Move(Vector3.zero)
+        return
+    end
+
+    if recoverIfStuck(record, humanoid, root, now) then
         return
     end
 
