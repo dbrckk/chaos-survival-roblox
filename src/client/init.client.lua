@@ -541,6 +541,15 @@ cosmeticsLayout.Padding = UDim.new(0, 8)
 cosmeticsLayout.Parent = cosmeticsList
 
 local currentCosmeticState = nil
+local previousCosmeticOwnedCount = nil
+local pendingCollectorMilestone = nil
+
+local COLLECTOR_MILESTONES = {
+    [3] = "COLLECTOR I",
+    [6] = "COLLECTOR II",
+    [9] = "COLLECTOR III",
+    [11] = "COLLECTION COMPLETE",
+}
 
 local RARITY_COLORS = {
     Common = UITheme.Colors.Muted,
@@ -554,6 +563,20 @@ local function renderCosmetics(state)
     currentCosmeticState = state
 
     local collectionLog = state and state.collectionLog or nil
+    if type(collectionLog) == "table" then
+        local ownedNow = math.max(0, math.floor(tonumber(collectionLog.owned) or 0))
+        if previousCosmeticOwnedCount ~= nil and ownedNow > previousCosmeticOwnedCount then
+            for threshold, label in pairs(COLLECTOR_MILESTONES) do
+                if previousCosmeticOwnedCount < threshold and ownedNow >= threshold then
+                    pendingCollectorMilestone = {
+                        threshold = threshold,
+                        label = label,
+                    }
+                end
+            end
+        end
+        previousCosmeticOwnedCount = ownedNow
+    end
     if type(collectionLog) == "table" then
         local owned = math.max(0, math.floor(tonumber(collectionLog.owned) or 0))
         local total = math.max(0, math.floor(tonumber(collectionLog.total) or 0))
@@ -1779,10 +1802,19 @@ cosmeticStateEvent.OnClientEvent:Connect(function(payload)
     end
 
     if payload.notice == "purchased" then
-        questToastTitle.Text = "COSMETIC UNLOCKED"
-        questToastBody.Text = "Equipped instantly • yours permanently"
+        if pendingCollectorMilestone then
+            questToastTitle.Text = pendingCollectorMilestone.label
+            questToastBody.Text = string.format(
+                "%d cosmetics collected • milestone reached",
+                pendingCollectorMilestone.threshold
+            )
+            pendingCollectorMilestone = nil
+        else
+            questToastTitle.Text = "COSMETIC UNLOCKED"
+            questToastBody.Text = "Equipped instantly • yours permanently"
+        end
         questToast.Visible = true
-        task.delay(3, function()
+        task.delay(3.4, function()
             questToast.Visible = false
         end)
     elseif payload.notice == "insufficient_coins" then
