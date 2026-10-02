@@ -81,7 +81,7 @@ PHASE C — MAP ART PASS
 [EN COURS] C3 Crossroads : gantries/signaux + flux directionnel + skyline transit basse ; signage/QA finale restante.
 [EN COURS] C4 Orbital : reactor nodes/struts + couronne + satellites/nodes distants ; QA visuelle finale restante.
 [FAIT] C5 Lobby hub : couronne, panneaux identité/fair-play et hologramme progression personnelle niveau/wins/coins/XP/collection.
-[EN COURS] C6 Micro-décors animés ajoutés par arène, client-local et adaptatifs ; profondeur finale à poursuivre.
+[EN COURS] C6 Micro-décors animés par arène + profondeur skyline arène/lobby, client-local et adaptatifs.
 [FAIT] C7 Signatures animées distinctes + 3 profils de rythme/direction/amplitude alternés à chaque round.
 
 PHASE D — VFX / ANIMATION
