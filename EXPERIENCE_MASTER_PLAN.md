@@ -104,7 +104,7 @@ PHASE F — RETENTION / FUN
 [FAIT] F3 Weekly challenges persistants : 2 objectifs/semaine, progression serveur-authoritative, récompenses modérées et UI intégrée.
 [FAIT] F4 Collection log dérivé de l'inventaire : sets cohérents, progression owned/total, sets complétés et milestones Collector.
 [EN COURS] F5 FIRST CHAOS medal + célébration monde garanties au premier round terminé ; accélération FTUE déjà via rookie coach, QA réelle restante.
-[A FAIRE] F6 Variété contrôlée de micro-objectifs sans surcharge.
+[FAIT] F6 Rotation portée à 6 micro-objectifs, toujours un seul challenge affiché : shards, pads, close call, momentum, flow et variété.
 
 PHASE G — UI/UX
 [EN COURS] G1 Layout responsive + dock tactile ajoutés ; validation réelle 16:9/tall/tablet encore requise.
