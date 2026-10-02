@@ -45,7 +45,7 @@ describe("Player data schema", function()
 
         expect(data.EquippedTrail).toBe("")
         expect(data.EquippedAura).toBe("aura_emerald")
-        expect(data.DataVersion).toBe(2)
+        expect(data.DataVersion).toBe(DataSchema.Version)
     end)
 
     it("rejects invalid types and clamps negative counters", function()
@@ -74,6 +74,8 @@ describe("Player data schema", function()
             OwnedCosmetics = "trail_blue,trail_gold,aura_emerald",
             EquippedTrail = "trail_gold",
             EquippedAura = "aura_emerald",
+            ArenaMastery = "Classic=7",
+            DisasterMastery = "Meteors=12",
         }
 
         local snapshot = DataSchema.snapshot(function(key)
@@ -88,6 +90,8 @@ describe("Player data schema", function()
         expect(snapshot.OwnedCosmetics).toBe("trail_blue,trail_gold,aura_emerald")
         expect(snapshot.EquippedTrail).toBe("trail_gold")
         expect(snapshot.EquippedAura).toBe("aura_emerald")
+        expect(snapshot.ArenaMastery).toBe("Classic=7")
+        expect(snapshot.DisasterMastery).toBe("Meteors=12")
         expect(snapshot.DataVersion).toBe(DataSchema.Version)
     end)
 
