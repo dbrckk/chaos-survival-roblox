@@ -1109,28 +1109,44 @@ end)
 local resultToken = 0
 local lastRoundHint = ""
 
-local function masteryGoalText(feedback)
-    local state = feedback and feedback.arenaMastery
-    local name = feedback and feedback.arenaMasteryName
+local function masteryProgressText(state, name)
     if type(state) ~= "table" or not name then
         return nil
     end
 
     local tier = tostring(state.tier or "ROOKIE")
     if state.maxed == true then
-        return string.format("MASTERY • %s • %s MAX", tostring(name), tier)
+        return string.format("%s %s MAX", tostring(name), tier)
     end
 
     local nextTier = tostring(state.nextTier or "NEXT")
     local points = math.max(0, math.floor(tonumber(state.points) or 0))
     local nextPoints = math.max(points, math.floor(tonumber(state.nextPoints) or points))
     return string.format(
-        "NEXT GOAL • %s %s %d/%d",
+        "%s %s %d/%d",
         tostring(name),
         nextTier,
         points,
         nextPoints
     )
+end
+
+local function masteryGoalText(feedback)
+    local arenaText = masteryProgressText(
+        feedback and feedback.arenaMastery,
+        feedback and feedback.arenaMasteryName
+    )
+    local disasterText = masteryProgressText(
+        feedback and feedback.disasterMastery,
+        feedback and feedback.disasterMasteryName
+    )
+
+    if arenaText and disasterText then
+        return "MASTERY • " .. arenaText .. " • " .. disasterText
+    elseif arenaText or disasterText then
+        return "MASTERY • " .. tostring(arenaText or disasterText)
+    end
+    return nil
 end
 
 local function nextLevelGoalText()
@@ -1255,6 +1271,15 @@ local function showRoundFeedback(feedback)
             string.upper(tostring(feedback.arenaMasteryName))
                 .. " "
                 .. tostring(arenaMastery.tier or "ROOKIE")
+        )
+    end
+    local disasterMastery = feedback.disasterMastery
+    if type(disasterMastery) == "table" and feedback.disasterMasteryName then
+        table.insert(
+            tags,
+            string.upper(tostring(feedback.disasterMasteryName))
+                .. " "
+                .. tostring(disasterMastery.tier or "ROOKIE")
         )
     end
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
