@@ -549,7 +549,7 @@ chaosShardCollectedEvent.OnClientEvent:Connect(function(payload)
 end)
 
 hazardNearMissEvent.OnClientEvent:Connect(function()
-    play("Speed", 0.05)
+    play("NearMiss", 0.035)
 end)
 
 hazardImpactFeedbackEvent.OnClientEvent:Connect(playSpatialImpact)
