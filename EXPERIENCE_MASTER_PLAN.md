@@ -72,7 +72,7 @@ PHASE B — AUDIO PREMIUM
 [FAIT] B1 Spatialiser météores/bombes/impacts.
 [FAIT] B2 Mix dynamique séparé Music / Hazard / UI / Reward, avec priorité danger en round et Final Rush.
 [FAIT] B3 Ducking musique lors des rounds critiques / Final Rush.
-[EN COURS] B4 Cues critiques recomposés en couches premium ; remplacement final par assets originaux/Creator Store vérifiés encore à faire.
+[EN COURS] B4 Cues critiques + Vote/Reward/Last Survivor/Overdrive/Flow Combo recomposés en couches premium ; remplacement final par assets originaux/Creator Store vérifiés encore à faire.
 [EN COURS] B5 Profils tonaux/pitch propres à chaque arène ajoutés ; assets d'ambiance dédiés à sélectionner plus tard.
 
 PHASE C — MAP ART PASS
