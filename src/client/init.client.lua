@@ -1443,6 +1443,16 @@ local function showRoundFeedback(feedback)
         )
     end
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
+
+    if touchDevice and #tags > 7 then
+        local compactTags = {}
+        for i = 1, 6 do
+            table.insert(compactTags, tags[i])
+        end
+        table.insert(compactTags, "+" .. tostring(#tags - 6) .. " MORE")
+        tags = compactTags
+    end
+
     resultMeta.Text = table.concat(tags, "  •  ")
 
     if masterRound then
