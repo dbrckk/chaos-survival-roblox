@@ -897,6 +897,108 @@ local function buildLobby(root, config)
         band.Transparency = 0.20
     end
 
+    local haloRadius = 18
+    for i = 1, 12 do
+        local angle = ((i - 1) / 12) * math.pi * 2
+        local position = config.LobbyCenter + Vector3.new(
+            math.cos(angle) * haloRadius,
+            13.5 + math.sin(angle * 2) * 0.45,
+            math.sin(angle) * haloRadius
+        )
+        local segment = decorPart(
+            decor,
+            "LobbyHaloSegment" .. i,
+            Vector3.new(4.8, 0.22, 0.48),
+            position,
+            (i % 3 == 0) and VisualTheme.Accents.Magenta
+                or ((i % 2 == 0) and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan),
+            VisualTheme.Materials.Glow
+        )
+        segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
+        segment.Transparency = 0.24
+        segment.CanCollide = false
+        segment.CanTouch = false
+        segment.CanQuery = false
+        segment.CastShadow = false
+    end
+
+    local identityPanels = {
+        {
+            name = "Disasters",
+            text = "11 DISASTERS",
+            offset = Vector3.new(-28, 5.5, -16),
+            color = VisualTheme.Accents.Cyan,
+            face = Enum.NormalId.Front,
+        },
+        {
+            name = "Arenas",
+            text = "4 ARENAS",
+            offset = Vector3.new(28, 5.5, -16),
+            color = VisualTheme.Accents.Violet,
+            face = Enum.NormalId.Front,
+        },
+        {
+            name = "Solo",
+            text = "SOLO READY",
+            offset = Vector3.new(-28, 5.5, 16),
+            color = VisualTheme.Accents.Magenta,
+            face = Enum.NormalId.Back,
+        },
+        {
+            name = "FairPlay",
+            text = "COSMETIC • NO P2W",
+            offset = Vector3.new(28, 5.5, 16),
+            color = VisualTheme.Accents.Gold or Color3.fromRGB(255, 205, 85),
+            face = Enum.NormalId.Back,
+        },
+    }
+
+    for i, def in ipairs(identityPanels) do
+        local panel = decorPart(
+            decor,
+            "LobbyIdentityPanel" .. i,
+            Vector3.new(12, 4.2, 0.45),
+            config.LobbyCenter + def.offset,
+            VisualTheme.World.Deep,
+            VisualTheme.Materials.Structure
+        )
+        panel.CanCollide = false
+        panel.Transparency = 0.04
+
+        local rail = decorPart(
+            decor,
+            "LobbyIdentityRail" .. i,
+            Vector3.new(12.4, 0.24, 0.60),
+            panel.Position + Vector3.new(0, -2.0, 0),
+            def.color,
+            VisualTheme.Materials.Glow
+        )
+        rail.CanCollide = false
+        rail.CanTouch = false
+        rail.CanQuery = false
+        rail.Transparency = 0.16
+
+        local gui = Instance.new("SurfaceGui")
+        gui.Name = def.name .. "Gui"
+        gui.Face = def.face
+        gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+        gui.PixelsPerStud = 44
+        gui.LightInfluence = 0
+        gui.AlwaysOnTop = false
+        gui.Parent = panel
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.fromScale(1, 1)
+        label.BackgroundTransparency = 1
+        label.Font = Enum.Font.GothamBlack
+        label.Text = def.text
+        label.TextColor3 = def.color
+        label.TextStrokeColor3 = Color3.fromRGB(4, 7, 12)
+        label.TextStrokeTransparency = 0.46
+        label.TextScaled = true
+        label.Parent = gui
+    end
+
     local lobbySpawn = Instance.new("SpawnLocation")
     lobbySpawn.Name = "LobbySpawn"
     lobbySpawn.Size = Vector3.new(8, 1, 8)
