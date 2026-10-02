@@ -47,6 +47,7 @@ local RoundMedals = require(script.RoundMedals)
 local FlowCombo = require(script.FlowCombo)
 local ChaosFusion = require(script.ChaosFusion)
 local RoundMomentum = require(script.RoundMomentum)
+local AISurvivorService = require(script.AISurvivorService)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -69,6 +70,11 @@ MapBuilder.build(Config, "Classic", ArenaVariants)
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
 if not lobbyActivitiesOk then
     warn("Lobby activities failed to start:", lobbyActivitiesError)
+end
+
+local aiSurvivorsOk, aiSurvivorsError = pcall(AISurvivorService.start, Config)
+if not aiSurvivorsOk then
+    warn("AI Survivors failed to start:", aiSurvivorsError)
 end
 
 local disasterModules = {}
@@ -110,6 +116,7 @@ local recentPrimaryDisasterIds = {}
 local currentVotes = {}
 local currentOptions = {}
 local voteOpen = false
+local botVoteStarted = false
 local allowVote = RateLimiter.new(0.2)
 local allowHazardNearMiss = RateLimiter.new(0.9)
 local allowPerformancePulse = RateLimiter.new(45)
@@ -122,6 +129,7 @@ local lastRoundState = {
 
 local function broadcast(payload)
     lastRoundState = payload
+    pcall(AISurvivorService.setRoundState, payload)
     stateEvent:FireAllClients(payload)
 end
 
@@ -363,7 +371,7 @@ voteEvent.OnServerEvent:Connect(function(player, disasterId)
     GameAnalytics.vote(player, disasterId, currentRules.Solo)
 end)
 
-local function currentVoteCounts()
+local function humanVoteCounts()
     local counts = {}
     for _, d in ipairs(currentOptions) do
         counts[d.Id] = 0
@@ -382,8 +390,28 @@ local function currentVoteCounts()
     return counts
 end
 
+local function currentVoteCounts()
+    local counts = humanVoteCounts()
+    local aiCounts = AISurvivorService.voteCounts()
+
+    for id, amount in pairs(aiCounts) do
+        if counts[id] ~= nil then
+            counts[id] += math.max(0, math.floor(tonumber(amount) or 0))
+        end
+    end
+
+    return counts
+end
+
 local function winningOption()
-    local counts = currentVoteCounts()
+    local humanCounts = humanVoteCounts()
+    local humanVotes = 0
+    for _, count in pairs(humanCounts) do
+        humanVotes += count
+    end
+
+    -- AI votes make the lobby feel populated, but humans always keep agency.
+    local counts = humanVotes > 0 and humanCounts or currentVoteCounts()
 
     local bestCount = -1
     local winners = {}
@@ -411,6 +439,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local overdriveDuration = math.clamp(math.floor(roundSettings.RoundSeconds * 0.16), 5, 7)
     local overdriveEndRemaining = math.max(0, overdriveStartRemaining - overdriveDuration)
     local roundChallenge = RoundChallenge.forRound(roundNumber)
+    local hazardContestants = AISurvivorService.hazardContestants(contestants)
     local cleanup = {}
     local onCleanup = {}
     local eliminated = {}
@@ -503,12 +532,17 @@ local function runDisasterSet(selected, contestants, roundSettings)
         Overdrive = function() return overdriveActive end,
         FinalRush = function() return finalRushActive end,
         Contestants = contestants,
-        IsContestantActive = function(player)
-            if player.Parent ~= Players or eliminated[player.UserId] then
+        HazardContestants = hazardContestants,
+        IsContestantActive = function(subject)
+            if AISurvivorService.isBotSubject(subject) then
+                return AISurvivorService.isSubjectActive(subject)
+            end
+
+            if subject.Parent ~= Players or eliminated[subject.UserId] then
                 return false
             end
 
-            local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            local hum = subject.Character and subject.Character:FindFirstChildOfClass("Humanoid")
             return hum ~= nil and hum.Health > 0
         end,
         BalanceProfile = DisasterBalance.mobileProfile(#contestants),
@@ -695,8 +729,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and t > overdriveEndRemaining
         finalRushActive = t <= 5
 
-        local survivorsAlive = countContestantsRemaining()
-        if survivorsAlive <= 0 then
+        local humanSurvivorsAlive = countContestantsRemaining()
+        local aiSurvivorsAlive = AISurvivorService.aliveRoundCount()
+        local survivorsAlive = humanSurvivorsAlive + aiSurvivorsAlive
+        if humanSurvivorsAlive <= 0 then
             endedEarly = true
             break
         end
@@ -734,8 +770,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
             arenaName = roundSettings.ArenaName or currentArenaVariant,
             disasterIds = disasterIds,
             survivorsAlive = survivorsAlive,
-            contestantCount = #contestants,
-            lastSurvivorUserId = (#contestants > 1 and survivorsAlive == 1) and lastSurvivorUserId() or nil,
+            contestantCount = #contestants + AISurvivorService.activeCount(),
+            aiSurvivors = aiSurvivorsAlive,
+            lastSurvivorUserId = (survivorsAlive == 1 and humanSurvivorsAlive == 1) and lastSurvivorUserId() or nil,
             arenaMechanicName = arenaMechanic and arenaMechanic.name or nil,
             arenaMechanicHint = arenaMechanic and arenaMechanic.hint or nil,
             overdrive = overdriveActive,
@@ -794,6 +831,8 @@ while true do
     currentVotes = {}
     currentOptions = chooseVoteOptions()
     voteOpen = false
+    botVoteStarted = false
+    AISurvivorService.clearVotes()
 
     currentArenaVariant = ArenaVariants.chooseRecent(recentArenaVariantIds)
     local arenaDefinition = ArenaVariants.get(currentArenaVariant)
@@ -830,6 +869,10 @@ while true do
         local options = nil
         if remainingIntermission <= intermissionSettings.VoteSeconds then
             voteOpen = true
+            if not botVoteStarted then
+                botVoteStarted = true
+                AISurvivorService.beginVote(currentOptions, roundNumber + 1)
+            end
             options = {}
             local voteCounts = currentVoteCounts()
 
@@ -1011,8 +1054,9 @@ while true do
             soloMode = readyCount == 1,
             arenaName = roundSettings.ArenaName,
             disasterIds = readyDisasterIds,
-            survivorsAlive = readyCount,
-            contestantCount = readyCount,
+            survivorsAlive = readyCount + AISurvivorService.activeCount(),
+            contestantCount = readyCount + AISurvivorService.activeCount(),
+            aiSurvivors = AISurvivorService.activeCount(),
         })
         task.wait(1)
     end
@@ -1063,6 +1107,7 @@ while true do
 
     local survivors = 0
     local survivorUserIds = {}
+    local aiSurvivorsAtFinish = AISurvivorService.aliveRoundCount()
     local feedbackDisasterName = selectedSet[1].Name
     if #selectedSet > 1 then
         feedbackDisasterName = selectedSet[1].Name .. " + " .. selectedSet[2].Name
@@ -1224,7 +1269,7 @@ while true do
 
     broadcast({
         phase = "result",
-        title = endedEarly and "TOTAL WIPEOUT" or (survivors .. " SURVIVED"),
+        title = endedEarly and "TOTAL WIPEOUT" or ((survivors + aiSurvivorsAtFinish) .. " SURVIVED"),
         hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
         seconds = roundSettings.PostRoundSeconds,
         doubleChaos = #selectedSet > 1,
@@ -1237,7 +1282,7 @@ while true do
     for t = roundSettings.PostRoundSeconds, 1, -1 do
         broadcast({
             phase = "result",
-            title = endedEarly and "TOTAL WIPEOUT" or (survivors .. " SURVIVED"),
+            title = endedEarly and "TOTAL WIPEOUT" or ((survivors + aiSurvivorsAtFinish) .. " SURVIVED"),
             hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
             seconds = t,
             doubleChaos = #selectedSet > 1,
