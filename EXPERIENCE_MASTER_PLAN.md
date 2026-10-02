@@ -81,7 +81,7 @@ PHASE C — MAP ART PASS
 [EN COURS] C3 Crossroads : gantries/signaux + flux directionnel ajoutés ; signage fin à poursuivre.
 [EN COURS] C4 Orbital : reactor nodes/struts + couronne animée ajoutés ; art pass fin à poursuivre.
 [A FAIRE] C5 Lobby : hub social avec objectifs/progression lisibles dans le monde.
-[A FAIRE] C6 Micro-décors animés et profondeur hors zone jouable.
+[EN COURS] C6 Micro-décors animés ajoutés par arène, client-local et adaptatifs ; profondeur finale à poursuivre.
 [EN COURS] C7 Signatures animées locales distinctes ajoutées aux 4 arènes ; variation par round à poursuivre.
 
 PHASE D — VFX / ANIMATION
@@ -111,7 +111,7 @@ PHASE G — UI/UX
 [EN COURS] G2 Boutons méta masqués pendant READY/ROUND ; simplification fine des panneaux à poursuivre.
 [A FAIRE] G3 Microanimations cohérentes via tokens.
 [EN COURS] G4 Hiérarchie de phase renforcée : gameplay critique > méta-progression.
-[EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors ; contraste et redondance warnings déjà présents, QA réelle restante.
+[EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors/world polish ; contraste et warnings redondants, QA réelle restante.
 
 PHASE H — PERFORMANCE
 [EN COURS] H1 Budgets dynamiques déjà appliqués aux world VFX, impacts, lights et cosmétiques ; mesures réelles restantes.
