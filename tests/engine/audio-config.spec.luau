@@ -39,6 +39,33 @@ describe("Audio configuration", function()
         end
     end)
 
+    it("keeps composite cue layers valid", function()
+        local requiredComposite = {
+            "Ready",
+            "RoundStart",
+            "DoubleChaos",
+            "FinalRush",
+            "Survived",
+            "Eliminated",
+            "LevelUp",
+            "MasterRound",
+            "GoldenShard",
+        }
+
+        for _, cueName in ipairs(requiredComposite) do
+            local layers = AudioConfig.Composite[cueName]
+            expect(type(layers)).toBe("table")
+            expect(#layers >= 2).toBe(true)
+
+            for _, layer in ipairs(layers) do
+                expect(type(layer.Sound)).toBe("string")
+                expect(AudioConfig.Sfx[layer.Sound] ~= nil).toBe(true)
+                expect((tonumber(layer.Delay) or 0) >= 0).toBe(true)
+                expect((tonumber(layer.VolumeScale) or 1) > 0).toBe(true)
+            end
+        end
+    end)
+
     it("only maps disaster loops to loopable sounds", function()
         for _, cueName in pairs(AudioConfig.DisasterLoop) do
             local cue = AudioConfig.Sfx[cueName]
