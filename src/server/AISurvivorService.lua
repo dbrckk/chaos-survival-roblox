@@ -566,6 +566,8 @@ local function newRecord(slot)
         strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
+        platformThreat = nil,
+        platformThreatSeenAt = nil,
         idleUntil = 0,
         lastProgressPosition = nil,
         lastProgressAt = 0,
@@ -661,6 +663,63 @@ local function warningParts()
         end
     end
     return result
+end
+
+local function disappearingPlatformEscape(record, root, now)
+    if not hasDisaster("DisappearingPlatforms") then
+        record.platformThreat = nil
+        record.platformThreatSeenAt = nil
+        return nil
+    end
+
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.FilterDescendantsInstances = record.model and {record.model} or {}
+
+    local hit = workspace:Raycast(root.Position, Vector3.new(0, -7, 0), rayParams)
+    local part = hit and hit.Instance
+    local platforms = part and part.Parent
+    local isWarning = part
+        and part:IsA("BasePart")
+        and platforms
+        and platforms.Name == "Platforms"
+        and part.Material == Enum.Material.Neon
+
+    if not isWarning then
+        record.platformThreat = nil
+        record.platformThreatSeenAt = nil
+        return nil
+    end
+
+    if record.platformThreat ~= part then
+        record.platformThreat = part
+        record.platformThreatSeenAt = now
+    end
+
+    if not AISurvivorRules.reactionReady(
+        record.platformThreatSeenAt,
+        now,
+        record.profile.ReactionSeconds
+    ) then
+        return nil
+    end
+
+    local base = arenaBase()
+    local center = base and base.Position or config.ArenaCenter
+    local towardCenter = center - root.Position
+    local horizontal = Vector3.new(towardCenter.X, 0, towardCenter.Z)
+    if horizontal.Magnitude < 0.5 then
+        local angle = record.slot * 2.13 + now
+        horizontal = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    else
+        horizontal = horizontal.Unit
+    end
+
+    local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X)
+    local dodge = horizontal * (9 + math.random() * 5)
+        + tangent * ((math.random() * 2 - 1) * 5)
+
+    return clampToArena(root.Position + dodge)
 end
 
 local function immediateThreat(record, root, now)
@@ -895,6 +954,13 @@ local function separateTarget(record, target)
 end
 
 local function chooseArenaTarget(record, root, now)
+    local platformEscape = disappearingPlatformEscape(record, root, now)
+    if platformEscape then
+        record.targetIsPad = false
+        record.targetPart = nil
+        return separateTarget(record, platformEscape), 0.55
+    end
+
     local threatTarget = immediateThreat(record, root, now)
     if threatTarget then
         record.targetIsPad = false
