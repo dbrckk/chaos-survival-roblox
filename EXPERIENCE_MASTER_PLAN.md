@@ -94,7 +94,7 @@ PHASE D — VFX / ANIMATION
 PHASE E — CUSTOMIZATION
 [EN COURS] E1 Catalogue structuré en collections cohérentes ; extension du nombre d'items à poursuivre.
 [FAIT] E2 Raretés visuelles Common/Rare/Epic/Legendary/Premium, sans puissance.
-[A FAIRE] E3 Preview 3D/rotation ou preview claire dans UI.
+[FAIT] E3 Preview claire dans UI : dégradé réel ColorA→ColorB affiché sur chaque carte cosmétique.
 [A FAIRE] E4 Unlocks liés à maîtrise et achievements.
 [A FAIRE] E5 Sets premium peu chers mais désirables.
 
