@@ -780,9 +780,15 @@ local function renderMonetization(state)
         button.Font = Enum.Font.GothamBold
         button.TextScaled = true
         button.TextWrapped = true
+        local itemCount = math.max(1, math.floor(tonumber(offer.itemCount) or 1))
         button.Text = offer.owned
-            and string.format("%s   •   OWNED", offer.name or "Support Pack")
-            or string.format("%s   •   %d ROBUX", offer.name or "Support Pack", offer.price or 0)
+            and string.format("%s   •   %d COSMETICS   •   OWNED", offer.name or "Support Pack", itemCount)
+            or string.format(
+                "%s   •   %d COSMETICS   •   %d ROBUX",
+                offer.name or "Support Pack",
+                itemCount,
+                offer.price or 0
+            )
         button.Parent = supportList
         UITheme.addCorner(button, UITheme.Corners.Small)
         UITheme.addStroke(
