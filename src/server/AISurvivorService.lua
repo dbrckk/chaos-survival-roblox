@@ -548,10 +548,19 @@ end
 local function newRecord(slot)
     local identityIndex = identityOrder[slot] or (((slot - 1) % #IDENTITIES) + 1)
     local identity = IDENTITIES[identityIndex]
+    local baseProfile = AISurvivorRules.profileForSlot(slot)
+    local profile = table.clone(baseProfile)
+
+    -- Persistent per-server variance prevents three recognizable fixed NPC archetypes.
+    profile.WalkSpeed = math.clamp(baseProfile.WalkSpeed + (math.random() - 0.5) * 1.1, 14.6, 17.6)
+    profile.ReactionSeconds = math.clamp(baseProfile.ReactionSeconds + (math.random() - 0.5) * 0.12, 0.16, 0.58)
+    profile.Risk = math.clamp(baseProfile.Risk + (math.random() - 0.5) * 0.12, 0.16, 0.82)
+    profile.JumpChance = math.clamp(baseProfile.JumpChance + (math.random() - 0.5) * 0.06, 0.10, 0.32)
+
     local record = {
         slot = slot,
         identity = identity,
-        profile = AISurvivorRules.profileForSlot(slot),
+        profile = profile,
         model = nil,
         proxy = nil,
         connections = {},
