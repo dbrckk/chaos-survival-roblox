@@ -76,10 +76,10 @@ PHASE B — AUDIO PREMIUM
 [EN COURS] B5 Profils tonaux/pitch propres à chaque arène ajoutés ; assets d'ambiance dédiés à sélectionner plus tard.
 
 PHASE C — MAP ART PASS
-[EN COURS] C1 Classic Grid : broadcast fins + grille animée ajoutés ; art pass fin à poursuivre.
-[EN COURS] C2 Towers : machinery/antennes + énergie verticale ajoutées ; art pass fin à poursuivre.
-[EN COURS] C3 Crossroads : gantries/signaux + flux directionnel ajoutés ; signage fin à poursuivre.
-[EN COURS] C4 Orbital : reactor nodes/struts + couronne animée ajoutés ; art pass fin à poursuivre.
+[EN COURS] C1 Classic Grid : broadcast fins + grille animée + skyline technique dédiée ; QA visuelle finale restante.
+[EN COURS] C2 Towers : machinery/antennes + énergie verticale + mégatours distantes ; QA visuelle finale restante.
+[EN COURS] C3 Crossroads : gantries/signaux + flux directionnel + skyline transit basse ; signage/QA finale restante.
+[EN COURS] C4 Orbital : reactor nodes/struts + couronne + satellites/nodes distants ; QA visuelle finale restante.
 [EN COURS] C5 Lobby renforcé : couronne suspendue, panneaux identité/contenu/fair-play ; progression personnalisée monde à poursuivre.
 [EN COURS] C6 Micro-décors animés ajoutés par arène, client-local et adaptatifs ; profondeur finale à poursuivre.
 [EN COURS] C7 Signatures animées locales distinctes ajoutées aux 4 arènes ; variation par round à poursuivre.
@@ -87,7 +87,7 @@ PHASE C — MAP ART PASS
 PHASE D — VFX / ANIMATION
 [FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle.
 [FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
-[A FAIRE] D3 Signature visuelle unique par disaster.
+[FAIT] D3 11 signatures catastrophe : palettes/atmosphères distinctes + warning geometry dédiée pour Meteor/Bomb/JumpShock/Disappearing Platforms.
 [EN COURS] D4 Feedback monde victoire/élimination/Master Round ajouté ; animations corporelles avancées à poursuivre.
 [FAIT] D5 Final Rush réduit UI méta + challenge/momentum + auras/lights/trails/highlights non essentiels.
 
