@@ -239,6 +239,103 @@ local function attachAnimations(record, humanoid)
     end))
 end
 
+
+local function cosmeticPart(parent, name, size, color)
+    local part = Instance.new("Part")
+    part.Name = name
+    part.Size = size
+    part.Color = color
+    part.Material = Enum.Material.SmoothPlastic
+    part.Massless = true
+    part.Anchored = false
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part.CastShadow = true
+    part.Parent = parent
+    return part
+end
+
+local function weldTo(part, target)
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = target
+    weld.Part1 = part
+    weld.Parent = part
+end
+
+local function addPrimitiveAccessory(record, model)
+    local head = model:FindFirstChild("Head")
+    local torso = model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso")
+    if not head or not head:IsA("BasePart") then
+        return
+    end
+
+    local style = ((record.slot - 1) % 3) + 1
+    local accent = record.identity.Accent
+
+    if style == 1 then
+        local visor = cosmeticPart(
+            model,
+            "PlayerVisor",
+            Vector3.new(2.05, 0.24, 1.18),
+            accent:Lerp(Color3.new(1, 1, 1), 0.12)
+        )
+        visor.CFrame = head.CFrame * CFrame.new(0, 0.58, -0.02)
+        weldTo(visor, head)
+
+        local brim = cosmeticPart(
+            model,
+            "PlayerVisorBrim",
+            Vector3.new(1.5, 0.10, 0.55),
+            accent
+        )
+        brim.CFrame = head.CFrame * CFrame.new(0, 0.48, -0.67)
+        weldTo(brim, head)
+    elseif style == 2 then
+        for side = -1, 1, 2 do
+            local ear = cosmeticPart(
+                model,
+                side < 0 and "HeadphoneLeft" or "HeadphoneRight",
+                Vector3.new(0.34, 0.76, 0.76),
+                accent
+            )
+            ear.Shape = Enum.PartType.Cylinder
+            ear.CFrame = head.CFrame
+                * CFrame.new(side * 0.98, 0.04, 0)
+                * CFrame.Angles(0, 0, math.rad(90))
+            weldTo(ear, head)
+        end
+
+        local band = cosmeticPart(
+            model,
+            "HeadphoneBand",
+            Vector3.new(1.75, 0.18, 0.28),
+            accent:Lerp(Color3.new(1, 1, 1), 0.20)
+        )
+        band.CFrame = head.CFrame * CFrame.new(0, 0.68, 0)
+        weldTo(band, head)
+    elseif torso and torso:IsA("BasePart") then
+        local pack = cosmeticPart(
+            model,
+            "PlayerBackpack",
+            Vector3.new(1.55, 1.85, 0.48),
+            record.identity.Legs:Lerp(accent, 0.24)
+        )
+        pack.CFrame = torso.CFrame * CFrame.new(0, 0.02, 0.74)
+        weldTo(pack, torso)
+
+        local strip = cosmeticPart(
+            model,
+            "BackpackGlow",
+            Vector3.new(0.28, 1.36, 0.10),
+            accent
+        )
+        strip.Material = Enum.Material.Neon
+        strip.CFrame = torso.CFrame * CFrame.new(0, 0.02, 1.00)
+        weldTo(strip, torso)
+    end
+end
+
 local function addCosmeticTrail(record, root)
     if record.slot == 1 then
         return
@@ -363,6 +460,7 @@ local function createRig(record)
     record.threat = nil
     record.threatSeenAt = nil
 
+    addPrimitiveAccessory(record, model)
     addCosmeticTrail(record, root)
     attachAnimations(record, humanoid)
 
