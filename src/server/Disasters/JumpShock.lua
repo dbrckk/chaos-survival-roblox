@@ -43,7 +43,7 @@ function D.start(ctx)
 
             if not ctx.Active() then break end
 
-            for _, p in ipairs(ctx.Contestants or {}) do
+            for _, p in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
                 if ctx.IsContestantActive and not ctx.IsContestantActive(p) then
                     continue
                 end
