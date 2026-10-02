@@ -121,7 +121,10 @@ for index, offset in ipairs(offsets) do
 end
 
 local function resetCourse()
-setActive(false)
+for _, bundle in ipairs(checkpointParts) do
+    bundle.part.Transparency = 1
+    bundle.billboard.Enabled = false
+end
     currentIndex = 1
     startedAt = nil
 
