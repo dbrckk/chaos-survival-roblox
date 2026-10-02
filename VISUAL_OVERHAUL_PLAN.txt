@@ -108,6 +108,19 @@ PHASE 6B — GAMEPLAY / FUN
 [QA]   6B.12 Ajouter Last Survivor Crown pour renforcer le spectacle en multijoueur.
 [EN COURS] 6B.13 QA équilibre/fun solo et multijoueur — garde-fous moteur présents, validation réelle joueur/appareil encore requise.
 
+PHASE 6C — AI SURVIVORS SOLO
+------------------------------
+[FAIT] 6C.1 Définir population dynamique : jusqu'à 3 bots pour viser 4 participants visibles.
+[FAIT] 6C.2 Ajouter 3 profils imparfaits : prudent / équilibré / audacieux.
+[FAIT] 6C.3 Ajouter avatars R15, noms, couleurs et animations Roblox natives.
+[FAIT] 6C.4 Ajouter déplacement lobby/arène, sauts, trajectoires et utilisation des pads.
+[FAIT] 6C.5 Faire réagir les bots aux warnings, Lava, Tornado, Shrinking Arena et plateformes.
+[FAIT] 6C.6 Faire subir aux bots les mêmes dégâts/forces de catastrophes que les joueurs.
+[FAIT] 6C.7 Ajouter votes IA avec délai humain sans pouvoir écraser un vote humain.
+[FAIT] 6C.8 Intégrer les bots au compteur visuel de survivants sans Coins/XP/DataStore.
+[TODO] 6C.9 QA comportement réel Android : collisions, naturel des déplacements, performances.
+[TODO] 6C.10 Ajuster personalities / taux d'erreur après playtest réel.
+
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
 [QA]   7.1 Audit nombre de parts / emitters / lights.
@@ -142,4 +155,4 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - HUD mobile récemment corrigé pour limiter les chevauchements.
 - Freeze glare réduit.
 - Base néon cohérente mais encore trop simple.
-- Priorité actuelle : QA Android + équilibrage réel, réduction de surcharge UI et certification finale.
+- Priorité actuelle : QA des AI Survivors + Android réel, puis équilibrage final et certification.
