@@ -80,7 +80,7 @@ PHASE C — MAP ART PASS
 [EN COURS] C2 Towers : machinery/antennes + énergie verticale + mégatours distantes ; QA visuelle finale restante.
 [EN COURS] C3 Crossroads : gantries/signaux + flux directionnel + skyline transit basse ; signage/QA finale restante.
 [EN COURS] C4 Orbital : reactor nodes/struts + couronne + satellites/nodes distants ; QA visuelle finale restante.
-[EN COURS] C5 Lobby renforcé : couronne suspendue, panneaux identité/contenu/fair-play ; progression personnalisée monde à poursuivre.
+[FAIT] C5 Lobby hub : couronne, panneaux identité/fair-play et hologramme progression personnelle niveau/wins/coins/XP/collection.
 [EN COURS] C6 Micro-décors animés ajoutés par arène, client-local et adaptatifs ; profondeur finale à poursuivre.
 [EN COURS] C7 Signatures animées locales distinctes ajoutées aux 4 arènes ; variation par round à poursuivre.
 
@@ -109,7 +109,7 @@ PHASE F — RETENTION / FUN
 PHASE G — UI/UX
 [EN COURS] G1 Layout responsive + dock tactile ajoutés ; validation réelle 16:9/tall/tablet encore requise.
 [EN COURS] G2 Boutons méta masqués pendant READY/ROUND + dock tactile unique + result tags compactés sur mobile ; simplification fine à poursuivre.
-[A FAIRE] G3 Microanimations cohérentes via tokens.
+[FAIT] G3 Tokens de mouvement UI centralisés : press/release, panel-in, result emphasis et fades cohérents.
 [EN COURS] G4 Hiérarchie de phase renforcée : gameplay critique > méta-progression.
 [EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors/world polish ; contraste et warnings redondants, QA réelle restante.
 
