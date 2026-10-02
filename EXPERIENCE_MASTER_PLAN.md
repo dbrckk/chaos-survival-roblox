@@ -101,7 +101,7 @@ PHASE E — CUSTOMIZATION
 PHASE F — RETENTION / FUN
 [FAIT] F1 "Next goal" niveau/XP affiché après les rounds hors événements prioritaires.
 [FAIT] F2 Mastery persistante catastrophe/arène avec paliers Rookie/Bronze/Silver/Gold/Elite et affichage post-round.
-[A FAIRE] F3 Weekly challenges.
+[FAIT] F3 Weekly challenges persistants : 2 objectifs/semaine, progression serveur-authoritative, récompenses modérées et UI intégrée.
 [A FAIRE] F4 Collection log / milestones.
 [A FAIRE] F5 Premier round accéléré + moment de joie garanti.
 [A FAIRE] F6 Variété contrôlée de micro-objectifs sans surcharge.
