@@ -1664,11 +1664,17 @@ questEvent.OnClientEvent:Connect(function(payload)
     local completed = payload.completed or {}
     if #completed > 0 then
         local quest = completed[1]
-        questToastTitle.Text = "QUEST COMPLETE"
-        questToastBody.Text = string.format("%s   +%d coins   +%d XP", quest.title or "Daily quest", quest.coins or 0, quest.xp or 0)
+        local weekly = quest.scope == "weekly"
+        questToastTitle.Text = weekly and "WEEKLY COMPLETE" or "QUEST COMPLETE"
+        questToastBody.Text = string.format(
+            "%s   +%d coins   +%d XP",
+            quest.title or (weekly and "Weekly challenge" or "Daily quest"),
+            quest.coins or 0,
+            quest.xp or 0
+        )
         questToast.Visible = true
 
-        task.delay(4, function()
+        task.delay(weekly and 4.6 or 4, function()
             questToast.Visible = false
         end)
     end
