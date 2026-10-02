@@ -4,6 +4,10 @@ function RoundMedals.evaluate(stats)
     stats = stats or {}
     local medals = {}
 
+    if stats.firstRound == true then
+        table.insert(medals, "FIRST CHAOS")
+    end
+
     if (tonumber(stats.shards) or 0) >= 3 then
         table.insert(medals, "SHARD HUNTER")
     end
