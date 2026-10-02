@@ -97,6 +97,16 @@ local function celebrate(feedback)
         and feedback.challengeCompleted == true
         and momentumBest >= 4
 
+    local firstChaos = false
+    if type(feedback.medals) == "table" then
+        for _, medal in ipairs(feedback.medals) do
+            if medal == "FIRST CHAOS" then
+                firstChaos = true
+                break
+            end
+        end
+    end
+
     if survived then
         local color = masterRound and UITheme.Colors.Gold or UITheme.Colors.Green
         local ringRadius = masterRound and 22 or 16
@@ -131,6 +141,32 @@ local function celebrate(feedback)
                 3.5
             )
         end
+    end
+
+    if firstChaos then
+        task.delay(0.08, function()
+            local currentRoot = rootPart()
+            if not currentRoot then
+                return
+            end
+
+            makeRing(
+                currentRoot,
+                UITheme.Colors.Cyan,
+                tier.Name == "Low" and 12 or 17,
+                0.52,
+                -2.15
+            )
+
+            if tier.Name ~= "Low" then
+                makeBurst(
+                    currentRoot,
+                    UITheme.Colors.Cyan,
+                    VfxQuality.particleCount(tier.Name, 12, 5),
+                    4.8
+                )
+            end
+        end)
     end
 end
 
