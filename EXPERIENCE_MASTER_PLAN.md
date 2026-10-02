@@ -107,8 +107,8 @@ PHASE F — RETENTION / FUN
 [FAIT] F6 Rotation portée à 6 micro-objectifs, toujours un seul challenge affiché : shards, pads, close call, momentum, flow et variété.
 
 PHASE G — UI/UX
-[EN COURS] G1 Layout responsive + dock tactile ajoutés ; validation réelle 16:9/tall/tablet encore requise.
-[EN COURS] G2 Boutons méta masqués pendant READY/ROUND + dock tactile unique + result tags compactés sur mobile ; simplification fine à poursuivre.
+[EN COURS] G1 Layout responsive + dock tactile + palier compact/tablette <1.50 ajoutés ; validation réelle 16:9/tall/tablet encore requise.
+[EN COURS] G2 Boutons méta masqués pendant READY/ROUND + dock tactile unique + result/panels compactés sur tablette/mobile ; QA réelle restante.
 [FAIT] G3 Tokens de mouvement UI centralisés : press/release, panel-in, result emphasis et fades cohérents.
 [EN COURS] G4 Hiérarchie de phase renforcée : gameplay critique > méta-progression.
 [EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors/world polish ; contraste et warnings redondants, QA réelle restante.
