@@ -66,7 +66,7 @@ PHASE A — GAME FEEL CORE
 [EN COURS] A2 Mouvement : micro-tilt + landing + burst adaptatif ajoutés ; animation corporelle avancée à poursuivre.
 [A FAIRE] A3 Feedback tactile/gamepad si supporté, sans dépendance.
 [FAIT] A4 Réduction automatique du mouvement caméra sur VFX Low / mobile.
-[A FAIRE] A5 QA conflits caméra et motion sickness.
+[EN COURS] A5 Reduce Motion persistant ajouté ; QA réelle motion sickness à effectuer sur appareil.
 
 PHASE B — AUDIO PREMIUM
 [FAIT] B1 Spatialiser météores/bombes/impacts.
@@ -111,7 +111,7 @@ PHASE G — UI/UX
 [EN COURS] G2 Boutons méta masqués pendant READY/ROUND ; simplification fine des panneaux à poursuivre.
 [A FAIRE] G3 Microanimations cohérentes via tokens.
 [EN COURS] G4 Hiérarchie de phase renforcée : gameplay critique > méta-progression.
-[A FAIRE] G5 Accessibility : motion reduction, contrast, warning redundancy.
+[EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors ; contraste et redondance warnings déjà présents, QA réelle restante.
 
 PHASE H — PERFORMANCE
 [A FAIRE] H1 Budget CPU/GPU/instances par phase.
