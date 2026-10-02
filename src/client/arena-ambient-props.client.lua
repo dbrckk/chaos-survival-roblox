@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local folder = Instance.new("Folder")
 folder.Name = "ArenaAmbientPropsLocal"
 folder.Parent = workspace
@@ -14,6 +15,8 @@ local currentVariant = "Classic"
 local center = Vector3.zero
 local halfX = 50
 local halfZ = 50
+local lastPhase = "waiting"
+local roundVisualMode = 1
 
 local function clear()
     for _, item in ipairs(tracked) do
@@ -187,6 +190,14 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     task.defer(rebuild)
 end)
 
+stateEvent.OnClientEvent:Connect(function(state)
+    local phase = tostring(state.phase or "waiting")
+    if phase == "round" and lastPhase ~= "round" then
+        roundVisualMode = (roundVisualMode % 3) + 1
+    end
+    lastPhase = phase
+end)
+
 task.defer(rebuild)
 
 task.spawn(function()
@@ -195,26 +206,33 @@ task.spawn(function()
             local _, qualityScale = tierLimits()
             local motionScale = player:GetAttribute("ReduceMotion") == true and 0.25 or 1
             local now = os.clock()
+            local modeDirection = roundVisualMode == 2 and -1 or 1
+            local modeSpeed = roundVisualMode == 3 and 1.22 or (roundVisualMode == 2 and 0.88 or 1)
+            local modeAmplitude = roundVisualMode == 3 and 1.18 or (roundVisualMode == 2 and 0.82 or 1)
 
             for _, item in ipairs(tracked) do
                 local p = item.part
                 if p and p.Parent then
                     if currentVariant == "Classic" then
-                        local hover = math.sin(now * 1.15 + item.index) * 0.55 * qualityScale * motionScale
+                        local hover = math.sin(now * 1.15 * modeSpeed + item.index * modeDirection)
+                            * 0.55 * qualityScale * motionScale * modeAmplitude
                         p.Position = item.base + Vector3.new(0, hover, 0)
                         if item.glow and item.glow.Parent then
                             item.glow.Position = p.Position + Vector3.new(0, 0, -0.2)
-                            item.glow.Transparency = 0.14 + ((math.sin(now * 2 + item.index) + 1) * 0.5) * 0.22
+                            item.glow.Transparency = 0.14
+                                + ((math.sin(now * 2 * modeSpeed + item.index * modeDirection) + 1) * 0.5) * 0.22
                         end
                     elseif currentVariant == "Towers" then
-                        local travel = math.sin(now * 0.72 + item.index * 0.85) * 3.6 * qualityScale * motionScale
+                        local travel = math.sin(now * 0.72 * modeSpeed + item.index * 0.85 * modeDirection)
+                            * 3.6 * qualityScale * motionScale * modeAmplitude
                         p.Position = item.base + Vector3.new(0, travel, 0)
                     elseif currentVariant == "Crossroads" then
-                        local pulse = (math.sin(now * 2.2 + item.index * 0.9) + 1) * 0.5
+                        local pulse = (math.sin(now * 2.2 * modeSpeed + item.index * 0.9 * modeDirection) + 1) * 0.5
                         p.Transparency = 0.14 + pulse * 0.30
                     elseif currentVariant == "Orbital" then
-                        local angle = item.angle + now * 0.15 * motionScale
-                        local lift = math.sin(now * 0.9 + item.index) * 1.1 * qualityScale * motionScale
+                        local angle = item.angle + now * 0.15 * motionScale * modeSpeed * modeDirection
+                        local lift = math.sin(now * 0.9 * modeSpeed + item.index)
+                            * 1.1 * qualityScale * motionScale * modeAmplitude
                         p.Position = center + Vector3.new(
                             math.cos(angle) * item.radius,
                             13 + lift,
