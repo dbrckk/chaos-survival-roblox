@@ -24,6 +24,84 @@ local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
+local function makeAftermath(position, color, radius, kind, profile)
+    local afterglow = Instance.new("Part")
+    afterglow.Name = "LocalHazardAfterglow"
+    afterglow.Shape = Enum.PartType.Cylinder
+    afterglow.Size = Vector3.new(0.06, math.max(2.4, radius * 1.25), math.max(2.4, radius * 1.25))
+    afterglow.CFrame = CFrame.new(position + Vector3.new(0, 0.08, 0))
+        * CFrame.Angles(0, 0, math.rad(90))
+    afterglow.Anchored = true
+    afterglow.CanCollide = false
+    afterglow.CanTouch = false
+    afterglow.CanQuery = false
+    afterglow.CastShadow = false
+    afterglow.Material = Enum.Material.Neon
+    afterglow.Color = kind == "Meteor"
+        and Color3.fromRGB(255, 145, 70)
+        or color:Lerp(Color3.fromRGB(95, 80, 105), 0.42)
+    afterglow.Transparency = profile.Name == "Low" and 0.82 or 0.72
+    afterglow.Parent = workspace
+
+    TweenService:Create(
+        afterglow,
+        TweenInfo.new(profile.Name == "Low" and 0.7 or 1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Size = Vector3.new(0.06, radius * 1.8, radius * 1.8),
+            Transparency = 1,
+        }
+    ):Play()
+    Debris:AddItem(afterglow, 1.25)
+
+    if profile.Name == "Low" then
+        return
+    end
+
+    local debrisCount = profile.Name == "High" and 7 or 4
+    for i = 1, debrisCount do
+        local angle = ((i - 1) / debrisCount) * math.pi * 2 + math.random() * 0.45
+        local distance = radius * (0.28 + math.random() * 0.40)
+        local shard = Instance.new("Part")
+        shard.Name = "LocalImpactDebris"
+        shard.Size = Vector3.new(
+            0.18 + math.random() * 0.28,
+            0.08 + math.random() * 0.12,
+            0.30 + math.random() * 0.42
+        )
+        shard.CFrame = CFrame.new(
+            position
+                + Vector3.new(math.cos(angle) * distance, 0.13, math.sin(angle) * distance)
+        ) * CFrame.Angles(
+            math.random() * 1.4,
+            math.random() * math.pi,
+            math.random() * 1.4
+        )
+        shard.Anchored = true
+        shard.CanCollide = false
+        shard.CanTouch = false
+        shard.CanQuery = false
+        shard.CastShadow = false
+        shard.Material = Enum.Material.Metal
+        shard.Color = color:Lerp(Color3.fromRGB(35, 38, 48), 0.72)
+        shard.Transparency = 0.12
+        shard.Parent = workspace
+
+        TweenService:Create(
+            shard,
+            TweenInfo.new(0.72 + math.random() * 0.30, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Position = shard.Position + Vector3.new(
+                    math.cos(angle) * (1.5 + math.random() * 2.2),
+                    0.15 + math.random() * 0.45,
+                    math.sin(angle) * (1.5 + math.random() * 2.2)
+                ),
+                Transparency = 1,
+            }
+        ):Play()
+        Debris:AddItem(shard, 1.1)
+    end
+end
+
 local function renderBurst(payload)
     local position = payload.position
     local color = payload.color
@@ -181,6 +259,8 @@ local function renderBurst(payload)
         emitter.Parent = burst
         emitter:Emit(VfxQuality.particleCount("Medium", 14, 6))
     end
+
+    makeAftermath(position, color, radius, kind, profile)
 
     local lifetime = duration * 1.35 + 0.08
     Debris:AddItem(burst, lifetime)
