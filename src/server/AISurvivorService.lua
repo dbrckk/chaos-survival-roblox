@@ -563,6 +563,7 @@ local function newRecord(slot)
         target = nil,
         targetPart = nil,
         targetIsPad = false,
+        strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
         idleUntil = 0,
@@ -853,19 +854,59 @@ local function socialArenaTarget(record, root)
     return clampToArena(humanRoot.Position + horizontal * (5 + math.random() * 5))
 end
 
+local function separateTarget(record, target)
+    local adjusted = target
+    local push = Vector3.zero
+
+    for _, other in ipairs(records) do
+        if other ~= record and other.model and other.model.Parent then
+            local otherRoot = other.model:FindFirstChild("HumanoidRootPart")
+            if otherRoot and otherRoot:IsA("BasePart") then
+                local delta = adjusted - otherRoot.Position
+                local horizontal = Vector3.new(delta.X, 0, delta.Z)
+                local distance = horizontal.Magnitude
+                if distance < 6.5 then
+                    local away
+                    if distance > 0.2 then
+                        away = horizontal.Unit
+                    else
+                        local angle = (record.slot * 2.17 + other.slot * 1.31)
+                        away = Vector3.new(math.cos(angle), 0, math.sin(angle))
+                    end
+                    push += away * (6.5 - distance) * 0.62
+                end
+            end
+
+            if other.target then
+                local targetDelta = adjusted - other.target
+                local targetHorizontal = Vector3.new(targetDelta.X, 0, targetDelta.Z)
+                if targetHorizontal.Magnitude < 5 then
+                    local angle = record.slot * 1.91 + other.slot * 0.77
+                    push += Vector3.new(math.cos(angle), 0, math.sin(angle)) * 3.5
+                end
+            end
+        end
+    end
+
+    if push.Magnitude > 0.1 then
+        adjusted = clampToArena(adjusted + Vector3.new(push.X, 0, push.Z))
+    end
+    return adjusted
+end
+
 local function chooseArenaTarget(record, root, now)
     local threatTarget = immediateThreat(record, root, now)
     if threatTarget then
         record.targetIsPad = false
         record.targetPart = nil
-        return threatTarget, 0.7
+        return separateTarget(record, threatTarget), 0.7
     end
 
     local socialTarget = socialArenaTarget(record, root)
     if socialTarget then
         record.targetIsPad = false
         record.targetPart = nil
-        return socialTarget, 0.65 + math.random() * 1.0
+        return separateTarget(record, socialTarget), 0.65 + math.random() * 1.0
     end
 
     local pads = mechanicsPads()
@@ -880,7 +921,7 @@ local function chooseArenaTarget(record, root, now)
         local pad = pads[math.random(1, #pads)]
         record.targetIsPad = true
         record.targetPart = pad
-        return pad.Position + Vector3.new(0, 1.8, 0), 1.6
+        return separateTarget(record, pad.Position + Vector3.new(0, 1.8, 0)), 1.6
     end
 
     record.targetIsPad = false
@@ -914,7 +955,7 @@ local function chooseArenaTarget(record, root, now)
 
     local hold = record.profile.TargetHoldMin
         + math.random() * (record.profile.TargetHoldMax - record.profile.TargetHoldMin)
-    return selected.position, hold
+    return separateTarget(record, selected.position), hold
 end
 
 local function chooseLobbyTarget(record)
@@ -1167,7 +1208,14 @@ local function stepRecord(record, now)
             if delta.Y > 2.2 and horizontal.Magnitude < 10 then
                 humanoid.Jump = true
             end
-            humanoid:MoveTo(record.target)
+            local destination = record.target
+            if horizontal.Magnitude > 8 and math.abs(record.strafeBias or 0) > 0.03 then
+                local direction = horizontal.Unit
+                local tangent = Vector3.new(-direction.Z, 0, direction.X)
+                local curve = math.min(3.2, horizontal.Magnitude * 0.10) * record.strafeBias
+                destination = clampToArena(destination + tangent * curve)
+            end
+            humanoid:MoveTo(destination)
         end
     else
         tryLobbyPracticeImpulse(record, root, now)
