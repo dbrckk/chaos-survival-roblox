@@ -725,9 +725,15 @@ end
 local function immediateThreat(record, root, now)
     local nearest = nil
     local nearestDistance = math.huge
+    local velocity = root.AssemblyLinearVelocity
+    local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
+    local anticipation = 0.18 + (1 - record.profile.Risk) * 0.20
+    local predictedPosition = root.Position + horizontalVelocity * anticipation
 
     for _, warning in ipairs(warningParts()) do
-        local distance = (root.Position - warning.Position).Magnitude
+        local currentDistance = (root.Position - warning.Position).Magnitude
+        local predictedDistance = (predictedPosition - warning.Position).Magnitude
+        local distance = math.min(currentDistance, predictedDistance)
         local warningRadius = math.max(warning.Size.X, warning.Size.Z, warning.Size.Y) * 0.5
         local threshold = warning.Name == "FreezeWarning" or warning.Name == "JumpShockWarning"
             and 80
@@ -772,7 +778,8 @@ local function immediateThreat(record, root, now)
         return nil
     end
 
-    local away = root.Position - nearest.Position
+    local escapeOrigin = predictedPosition
+    local away = escapeOrigin - nearest.Position
     local horizontal = Vector3.new(away.X, 0, away.Z)
     if horizontal.Magnitude < 0.1 then
         horizontal = Vector3.new(math.random() - 0.5, 0, math.random() - 0.5)
@@ -781,10 +788,16 @@ local function immediateThreat(record, root, now)
 
     local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X)
     local wobble = (math.random() - 0.5) * (8 + record.profile.Risk * 8)
+    local momentumCorrection = Vector3.new(-horizontalVelocity.X, 0, -horizontalVelocity.Z)
+    if momentumCorrection.Magnitude > 8 then
+        momentumCorrection = momentumCorrection.Unit * math.min(7, momentumCorrection.Magnitude * 0.22)
+    end
+
     return clampToArena(
         root.Position
             + horizontal * (16 + (1 - record.profile.Risk) * 10)
             + tangent * wobble
+            + momentumCorrection
     )
 end
 
