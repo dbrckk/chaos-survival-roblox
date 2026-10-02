@@ -14,14 +14,14 @@ local offers = {
     {
         key = "supporter",
         idAttribute = "SupporterPassId",
-        cosmeticId = "aura_supporter",
-        fallbackName = "Founder Supporter",
+        cosmeticIds = {"aura_supporter", "trail_founder"},
+        fallbackName = "Founder Supporter Set",
     },
     {
         key = "neon_pack",
         idAttribute = "NeonPackPassId",
-        cosmeticId = "trail_neon",
-        fallbackName = "Hyper Neon Pack",
+        cosmeticIds = {"trail_neon", "aura_neon"},
+        fallbackName = "Hyper Neon Set",
     },
 }
 
@@ -67,8 +67,19 @@ local function publicOffer(player, offer)
         name = tostring(info.Name or offer.fallbackName),
         price = math.max(0, tonumber(info.PriceInRobux) or 0),
         owned = ownsPass(player, passId),
-        cosmeticId = offer.cosmeticId,
+        cosmeticIds = table.clone(offer.cosmeticIds or {}),
+        itemCount = #(offer.cosmeticIds or {}),
     }
+end
+
+local function grantOffer(player, offer)
+    if not cosmeticService then
+        return
+    end
+
+    for _, cosmeticId in ipairs(offer.cosmeticIds or {}) do
+        cosmeticService.grant(player, cosmeticId)
+    end
 end
 
 local function grantOwnedPasses(player)
@@ -79,7 +90,7 @@ local function grantOwnedPasses(player)
     for _, offer in ipairs(offers) do
         local passId = configuredPassId(offer)
         if passId and ownsPass(player, passId) then
-            cosmeticService.grant(player, offer.cosmeticId)
+            grantOffer(player, offer)
         end
     end
 end
@@ -178,7 +189,7 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
         end
 
         if ownsPass(player, passId) then
-            cosmeticService.grant(player, offer.cosmeticId)
+            grantOffer(player, offer)
             sendState(player, "already_owned")
             return
         end
@@ -211,7 +222,7 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
         for _, offer in ipairs(offers) do
             local passId = configuredPassId(offer)
             if passId and passId == purchasedPassId then
-                cosmeticService.grant(player, offer.cosmeticId)
+                grantOffer(player, offer)
                 sendState(player, "purchase_complete")
                 GameAnalytics.custom(
                     player,
