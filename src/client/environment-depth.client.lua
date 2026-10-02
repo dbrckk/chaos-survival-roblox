@@ -46,17 +46,38 @@ local function makePart(name, size, cframe, color, material, transparency)
     return p
 end
 
+local function arenaVariant()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    return tostring(arena and arena:GetAttribute("VariantId") or "Classic")
+end
+
 local function rebuild()
     clear()
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local variant = arenaVariant()
     local count = tier.Name == "Low" and 6 or (tier.Name == "Medium" and 8 or 10)
-    local radius = 128
+    local radius = variant == "Orbital" and 142
+        or (variant == "Towers" and 136 or 128)
 
     for i = 1, count do
         local angle = ((i - 1) / count) * math.pi * 2
-        local height = 28 + ((i * 11) % 24)
-        local width = 7 + ((i * 5) % 5)
+        local height
+        local width
+        if variant == "Towers" then
+            height = 50 + ((i * 13) % 34)
+            width = 4 + ((i * 3) % 4)
+        elseif variant == "Crossroads" then
+            height = 18 + ((i * 7) % 15)
+            width = 11 + ((i * 5) % 7)
+        elseif variant == "Orbital" then
+            height = 16 + ((i * 5) % 11)
+            width = 6 + ((i * 3) % 4)
+        else
+            height = 28 + ((i * 11) % 24)
+            width = 7 + ((i * 5) % 5)
+        end
         local position = Config.ArenaCenter + Vector3.new(
             math.cos(angle) * radius,
             (height * 0.5) - 5,
@@ -67,19 +88,30 @@ local function rebuild()
             "DistantSpire" .. i,
             Vector3.new(width, height, width),
             CFrame.new(position) * CFrame.Angles(0, -angle, 0),
-            VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, 0.28),
+            VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, variant == "Towers" and 0.42 or 0.28),
             VisualTheme.Materials.Structure,
-            0.16
+            variant == "Orbital" and 0.24 or 0.16
         )
+        if variant == "Orbital" then
+            body.Shape = Enum.PartType.Ball
+            body.Size = Vector3.new(width, width, width)
+        end
 
+        local capHeight = variant == "Orbital" and 0 or ((height * 0.5) + 0.4)
         local cap = makePart(
             "DistantSpireGlow" .. i,
-            Vector3.new(width + 1.6, 0.5, width + 1.6),
-            body.CFrame + Vector3.new(0, (height * 0.5) + 0.4, 0),
+            variant == "Orbital"
+                and Vector3.new(width + 2.2, width + 2.2, width + 2.2)
+                or Vector3.new(width + 1.6, 0.5, width + 1.6),
+            body.CFrame + Vector3.new(0, capHeight, 0),
             i % 2 == 0 and currentAccent or secondaryAccent,
             VisualTheme.Materials.Glow,
             tier.Name == "Low" and 0.48 or 0.32
         )
+        if variant == "Orbital" then
+            cap.Shape = Enum.PartType.Ball
+            cap.Transparency = tier.Name == "Low" and 0.72 or 0.58
+        end
         table.insert(glows, cap)
 
         if tier.Name ~= "Low" and i % 2 == 1 then
@@ -91,7 +123,9 @@ local function rebuild()
             )
             local bridge = makePart(
                 "DistantBridge" .. i,
-                Vector3.new(18, 0.6, 2.2),
+                variant == "Crossroads"
+                    and Vector3.new(28, 0.7, 3.0)
+                    or (variant == "Orbital" and Vector3.new(22, 0.45, 1.4) or Vector3.new(18, 0.6, 2.2)),
                 CFrame.new(bridgePosition) * CFrame.Angles(0, -bridgeAngle, math.rad((i % 3) - 1)),
                 VisualTheme.World.Metal,
                 VisualTheme.Materials.Structure,
@@ -103,6 +137,42 @@ local function rebuild()
 end
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
+
+local mapConnection = nil
+
+local function bindMap()
+    if mapConnection then
+        mapConnection:Disconnect()
+        mapConnection = nil
+    end
+
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    if generated then
+        mapConnection = generated.ChildAdded:Connect(function(child)
+            if child.Name == "Arena" then
+                task.defer(rebuild)
+            end
+        end)
+    end
+end
+
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        task.defer(function()
+            bindMap()
+            rebuild()
+        end)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        clear()
+        bindMap()
+    end
+end)
+
+bindMap()
 
 stateEvent.OnClientEvent:Connect(function(state)
     local ids = state.disasterIds or {}
