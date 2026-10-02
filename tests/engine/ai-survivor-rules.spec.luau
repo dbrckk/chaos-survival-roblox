@@ -21,6 +21,20 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.profileForSlot(4).Id).toBe("Cautious")
     end)
 
+    it("keeps human-like behavior traits bounded and varied", function()
+        local cautious = AISurvivorRules.profileForSlot(1)
+        local balanced = AISurvivorRules.profileForSlot(2)
+        local bold = AISurvivorRules.profileForSlot(3)
+
+        for _, profile in ipairs({cautious, balanced, bold}) do
+            expect(profile.MistakeChance >= 0 and profile.MistakeChance <= 0.30).toBe(true)
+            expect(profile.SocialChance >= 0 and profile.SocialChance <= 0.40).toBe(true)
+        end
+
+        expect(cautious.MistakeChance < bold.MistakeChance).toBe(true)
+        expect(cautious.SocialChance < bold.SocialChance).toBe(true)
+    end)
+
     it("delays reactions instead of granting perfect reflexes", function()
         expect(AISurvivorRules.reactionReady(10, 10.19, 0.20)).toBe(false)
         expect(AISurvivorRules.reactionReady(10, 10.20, 0.20)).toBe(true)
