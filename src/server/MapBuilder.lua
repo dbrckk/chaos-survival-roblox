@@ -284,6 +284,147 @@ local function addVariantIdentity(decor, config, variant, theme)
     end
 end
 
+local function addVariantLandmarks(decor, config, variant, theme)
+    local center = config.ArenaCenter
+    local halfX = variant.BaseSize.X * 0.5
+    local halfZ = variant.BaseSize.Z * 0.5
+
+    if variant.Id == "Classic" then
+        local defs = {
+            {offset = Vector3.new(-halfX - 5, 8, -18), size = Vector3.new(1.8, 16, 5.5)},
+            {offset = Vector3.new(halfX + 5, 8, 18), size = Vector3.new(1.8, 16, 5.5)},
+            {offset = Vector3.new(-18, 8, halfZ + 5), size = Vector3.new(5.5, 16, 1.8)},
+            {offset = Vector3.new(18, 8, -halfZ - 5), size = Vector3.new(5.5, 16, 1.8)},
+        }
+        for i, def in ipairs(defs) do
+            local fin = decorPart(
+                decor,
+                "ClassicBroadcastFin" .. i,
+                def.size,
+                center + def.offset,
+                theme.Structure,
+                VisualTheme.Materials.Structure
+            )
+            fin.Transparency = 0.05
+
+            local stripSize = def.size.X < def.size.Z
+                and Vector3.new(0.22, 10, def.size.Z + 0.08)
+                or Vector3.new(def.size.X + 0.08, 10, 0.22)
+            local strip = decorPart(
+                decor,
+                "ClassicBroadcastGlow" .. i,
+                stripSize,
+                fin.Position + Vector3.new(0, 0.5, 0),
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            strip.Transparency = 0.24
+        end
+    elseif variant.Id == "Towers" then
+        local offsets = {
+            Vector3.new(-halfX - 6, 12, -halfZ - 6),
+            Vector3.new(halfX + 6, 12, -halfZ - 6),
+            Vector3.new(-halfX - 6, 12, halfZ + 6),
+            Vector3.new(halfX + 6, 12, halfZ + 6),
+        }
+        for i, offset in ipairs(offsets) do
+            local machinery = decorPart(
+                decor,
+                "TowerMachinery" .. i,
+                Vector3.new(5.2, 24, 5.2),
+                center + offset,
+                theme.Structure,
+                VisualTheme.Materials.Structure
+            )
+            machinery.Transparency = 0.04
+
+            local cap = decorPart(
+                decor,
+                "TowerMachineryCap" .. i,
+                Vector3.new(7.4, 1.0, 7.4),
+                machinery.Position + Vector3.new(0, 12.4, 0),
+                theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            cap.Transparency = 0.18
+
+            local antenna = decorPart(
+                decor,
+                "TowerAntenna" .. i,
+                Vector3.new(0.55, 9, 0.55),
+                machinery.Position + Vector3.new(0, 17.2, 0),
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            antenna.Transparency = 0.16
+        end
+    elseif variant.Id == "Crossroads" then
+        local defs = {
+            {offset = Vector3.new(0, 8, -halfZ - 4), size = Vector3.new(28, 2.0, 2.0)},
+            {offset = Vector3.new(0, 8, halfZ + 4), size = Vector3.new(28, 2.0, 2.0)},
+            {offset = Vector3.new(-halfX - 4, 8, 0), size = Vector3.new(2.0, 2.0, 28)},
+            {offset = Vector3.new(halfX + 4, 8, 0), size = Vector3.new(2.0, 2.0, 28)},
+        }
+        for i, def in ipairs(defs) do
+            local gantry = decorPart(
+                decor,
+                "CrossroadGantry" .. i,
+                def.size,
+                center + def.offset,
+                theme.Structure,
+                VisualTheme.Materials.Structure
+            )
+            gantry.Transparency = 0.04
+
+            local signal = decorPart(
+                decor,
+                "CrossroadSignal" .. i,
+                def.size.X > def.size.Z and Vector3.new(18, 0.34, 2.12) or Vector3.new(2.12, 0.34, 18),
+                gantry.Position,
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            signal.Transparency = 0.16
+        end
+    elseif variant.Id == "Orbital" then
+        local radius = math.max(halfX, halfZ) + 7
+        for i = 1, 8 do
+            local angle = ((i - 1) / 8) * math.pi * 2
+            local position = center + Vector3.new(
+                math.cos(angle) * radius,
+                9 + ((i % 2) * 3),
+                math.sin(angle) * radius
+            )
+
+            local node = decorPart(
+                decor,
+                "OrbitalReactorNode" .. i,
+                Vector3.new(4.4, 4.4, 4.4),
+                position,
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            node.Shape = Enum.PartType.Ball
+            node.Transparency = 0.20
+
+            local strut = decorPart(
+                decor,
+                "OrbitalReactorStrut" .. i,
+                Vector3.new(8.5, 0.55, 0.55),
+                center + Vector3.new(
+                    math.cos(angle) * (radius - 4.4),
+                    7,
+                    math.sin(angle) * (radius - 4.4)
+                ),
+                theme.Structure,
+                VisualTheme.Materials.Structure
+            )
+            strut.CFrame = CFrame.new(strut.Position) * CFrame.Angles(0, -angle, 0)
+            strut.Transparency = 0.10
+        end
+    end
+end
+
 local function addArenaHologram(decor, config, variant, theme)
     local sign = decorPart(
         decor,
@@ -867,6 +1008,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
 
     addArenaFoundation(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
+    addVariantLandmarks(decor, config, variant, theme)
     addVariantFloorLanguage(decor, config, variant, theme)
     addArenaHologram(decor, config, variant, theme)
 
