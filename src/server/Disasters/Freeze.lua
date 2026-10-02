@@ -74,7 +74,7 @@ function D.start(ctx)
             generation += 1
             local pulseGeneration = generation
 
-            for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
+            for _, player in ipairs(ctx.HazardContestants or ctx.HazardContestants or ctx.Contestants or {}) do
                 if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
                     continue
                 end
