@@ -54,6 +54,7 @@ jobs:
           [suites.core]
           include = [
             "tests/engine/achievements.spec.luau",
+            "tests/engine/ai-survivor-rules.spec.luau",
             "tests/engine/arena-mechanics.spec.luau",
             "tests/engine/arena-variants.spec.luau",
             "tests/engine/audio-config.spec.luau",
