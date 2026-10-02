@@ -27,7 +27,7 @@ Cosmetics.Definitions = {
         Kind = "trail",
         UnlockLevel = 5,
         Rarity = "Epic",
-        Collection = "Void",
+        Collection = "Cosmic Rift",
         ColorA = Color3.fromRGB(145, 70, 255),
         ColorB = Color3.fromRGB(235, 120, 255),
     },
@@ -47,7 +47,7 @@ Cosmetics.Definitions = {
         Kind = "trail",
         CoinPrice = 850,
         Rarity = "Epic",
-        Collection = "Inferno",
+        Collection = "Elemental Core",
         ColorA = Color3.fromRGB(255, 65, 30),
         ColorB = Color3.fromRGB(255, 190, 35),
     },
@@ -57,7 +57,7 @@ Cosmetics.Definitions = {
         Kind = "trail",
         CoinPrice = 1400,
         Rarity = "Legendary",
-        Collection = "Prism",
+        Collection = "Neon Circuit",
         ColorA = Color3.fromRGB(255, 70, 210),
         ColorB = Color3.fromRGB(70, 235, 255),
     },
@@ -77,7 +77,7 @@ Cosmetics.Definitions = {
         Kind = "aura",
         CoinPrice = 1100,
         Rarity = "Epic",
-        Collection = "Solar",
+        Collection = "Elemental Core",
         ColorA = Color3.fromRGB(255, 180, 35),
         ColorB = Color3.fromRGB(255, 245, 150),
     },
@@ -87,7 +87,7 @@ Cosmetics.Definitions = {
         Kind = "aura",
         CoinPrice = 1800,
         Rarity = "Legendary",
-        Collection = "Cosmic",
+        Collection = "Cosmic Rift",
         ColorA = Color3.fromRGB(115, 80, 255),
         ColorB = Color3.fromRGB(255, 85, 220),
     },
@@ -107,7 +107,7 @@ Cosmetics.Definitions = {
         Kind = "trail",
         PremiumKey = "neon_pack",
         Rarity = "Premium",
-        Collection = "Hyper Neon",
+        Collection = "Neon Circuit",
         ColorA = Color3.fromRGB(65, 255, 245),
         ColorB = Color3.fromRGB(255, 70, 230),
     },
@@ -147,6 +147,65 @@ function Cosmetics.publicList()
         })
     end
     return result
+end
+
+Cosmetics.CollectorMilestones = {3, 6, 9, #Cosmetics.Order}
+
+function Cosmetics.collectionState(raw)
+    local owned = Cosmetics.deserialize(raw)
+    local collections = {}
+    local order = {}
+    local ownedCount = 0
+
+    for _, id in ipairs(Cosmetics.Order) do
+        local item = Cosmetics.Definitions[id]
+        local collection = item.Collection or "Core"
+        if not collections[collection] then
+            collections[collection] = {
+                name = collection,
+                owned = 0,
+                total = 0,
+                complete = false,
+            }
+            table.insert(order, collection)
+        end
+
+        local state = collections[collection]
+        state.total += 1
+        if owned[id] then
+            state.owned += 1
+            ownedCount += 1
+        end
+    end
+
+    local list = {}
+    local completedCollections = 0
+    for _, name in ipairs(order) do
+        local state = collections[name]
+        state.complete = state.total > 0 and state.owned >= state.total
+        if state.complete then
+            completedCollections += 1
+        end
+        table.insert(list, state)
+    end
+
+    local nextMilestone = nil
+    for _, threshold in ipairs(Cosmetics.CollectorMilestones) do
+        if ownedCount < threshold then
+            nextMilestone = threshold
+            break
+        end
+    end
+
+    return {
+        owned = ownedCount,
+        total = #Cosmetics.Order,
+        collections = list,
+        completedCollections = completedCollections,
+        totalCollections = #list,
+        nextMilestone = nextMilestone,
+        maxed = nextMilestone == nil,
+    }
 end
 
 function Cosmetics.deserialize(raw)
