@@ -24,6 +24,8 @@ local shakeClock = 0
 local lastVerticalVelocity = 0
 local wasAirborne = false
 local lastLandingBurstAt = 0
+local lastHorizontalSpeed = 0
+local accelerationKick = 0
 
 local function disconnectCharacter()
     for _, connection in ipairs(characterConnections) do
@@ -112,6 +114,8 @@ local function bindCharacter(nextCharacter)
     bob = 0
     lastVerticalVelocity = 0
     wasAirborne = false
+    lastHorizontalSpeed = 0
+    accelerationKick = 0
 
     if not humanoid or not root then
         return
@@ -195,6 +199,15 @@ RunService:BindToRenderStep(
         local velocity = root.AssemblyLinearVelocity
         local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
         local speed = horizontalVelocity.Magnitude
+        local rawAcceleration = (speed - lastHorizontalSpeed) / math.max(dt, 1 / 240)
+        lastHorizontalSpeed = speed
+        local targetAccelerationKick = math.clamp(rawAcceleration / 420, -0.030, 0.030)
+        accelerationKick = exponential(
+            accelerationKick,
+            targetAccelerationKick,
+            math.abs(targetAccelerationKick) > math.abs(accelerationKick) and 10 or 6,
+            dt
+        )
 
         local lateralSpeed = camera.CFrame.RightVector:Dot(horizontalVelocity)
         local targetLean = math.clamp(-lateralSpeed / 950, -0.018, 0.018)
@@ -216,6 +229,7 @@ RunService:BindToRenderStep(
         local pitch =
             (landingKick * 0.026)
             - (mechanicKick * 0.018)
+            - accelerationKick
             + (math.sin(shakeClock * 1.91) * impactKick * 0.018)
         local roll =
             lean
