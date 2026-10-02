@@ -1,6 +1,6 @@
 local DataSchema = {}
 
-DataSchema.Version = 3
+DataSchema.Version = 4
 
 DataSchema.Defaults = {
     DataVersion = DataSchema.Version,
@@ -24,6 +24,14 @@ DataSchema.Defaults = {
     Quest3Id = "",
     Quest3Progress = 0,
     Quest3Claimed = false,
+
+    WeeklyChallengeWeek = -1,
+    Weekly1Id = "",
+    Weekly1Progress = 0,
+    Weekly1Claimed = false,
+    Weekly2Id = "",
+    Weekly2Progress = 0,
+    Weekly2Claimed = false,
 
     OwnedCosmetics = "",
     EquippedTrail = "",
