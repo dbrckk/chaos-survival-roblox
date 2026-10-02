@@ -73,7 +73,7 @@ PHASE B — AUDIO PREMIUM
 [EN COURS] B2 Mix dynamique Music/SFX par phase ajouté ; séparation Hazard/UI/Reward à poursuivre.
 [FAIT] B3 Ducking musique lors des rounds critiques / Final Rush.
 [A FAIRE] B4 Remplacer progressivement sons prototype par assets originaux/Creator Store vérifiés.
-[A FAIRE] B5 Ambiances propres à chaque arène.
+[EN COURS] B5 Profils tonaux/pitch propres à chaque arène ajoutés ; assets d'ambiance dédiés à sélectionner plus tard.
 
 PHASE C — MAP ART PASS
 [EN COURS] C1 Classic Grid : broadcast fins + grille animée ajoutés ; art pass fin à poursuivre.
@@ -86,9 +86,9 @@ PHASE C — MAP ART PASS
 
 PHASE D — VFX / ANIMATION
 [A FAIRE] D1 Hiérarchie telegraph -> impact -> aftermath.
-[A FAIRE] D2 Debris/afterglow adaptatifs.
+[FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
 [A FAIRE] D3 Signature visuelle unique par disaster.
-[A FAIRE] D4 Animation victoire/élimination/near miss/master round.
+[EN COURS] D4 Feedback monde victoire/élimination/Master Round ajouté ; animations corporelles avancées à poursuivre.
 [A FAIRE] D5 Réduction stricte du bruit pendant Final Rush.
 
 PHASE E — CUSTOMIZATION
@@ -100,7 +100,7 @@ PHASE E — CUSTOMIZATION
 
 PHASE F — RETENTION / FUN
 [FAIT] F1 "Next goal" niveau/XP affiché après les rounds hors événements prioritaires.
-[A FAIRE] F2 Mastery catastrophe et arène.
+[FAIT] F2 Mastery persistante catastrophe/arène avec paliers Rookie/Bronze/Silver/Gold/Elite et affichage post-round.
 [A FAIRE] F3 Weekly challenges.
 [A FAIRE] F4 Collection log / milestones.
 [A FAIRE] F5 Premier round accéléré + moment de joie garanti.
