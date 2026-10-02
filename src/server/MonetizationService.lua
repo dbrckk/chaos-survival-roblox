@@ -16,12 +16,14 @@ local offers = {
         idAttribute = "SupporterPassId",
         cosmeticIds = {"aura_supporter", "trail_founder"},
         fallbackName = "Founder Supporter Set",
+        tagline = "FOUNDER AURA + COMET TRAIL • PERMANENT",
     },
     {
         key = "neon_pack",
         idAttribute = "NeonPackPassId",
         cosmeticIds = {"trail_neon", "aura_neon"},
         fallbackName = "Hyper Neon Set",
+        tagline = "NEON TRAIL + HALO • PERMANENT",
     },
 }
 
@@ -69,6 +71,7 @@ local function publicOffer(player, offer)
         owned = ownsPass(player, passId),
         cosmeticIds = table.clone(offer.cosmeticIds or {}),
         itemCount = #(offer.cosmeticIds or {}),
+        tagline = offer.tagline,
     }
 end
 
