@@ -106,7 +106,7 @@ PHASE 6B — GAMEPLAY / FUN
 [QA]   6B.10 Transformer Double Chaos en CHAOS FUSION nommée + bonus survie +5 coins.
 [QA]   6B.11 Ajouter MOMENTUM STREAK non économique sur pad / Shard / Close Call.
 [QA]   6B.12 Ajouter Last Survivor Crown pour renforcer le spectacle en multijoueur.
-[TODO] 6B.13 QA équilibre/fun solo et multijoueur.
+[EN COURS] 6B.13 QA équilibre/fun solo et multijoueur — garde-fous moteur présents, validation réelle joueur/appareil encore requise.
 
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
@@ -115,7 +115,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.3 Réduire effets hors phase / inutiles.
 [QA]   7.4 Ajuster High / Medium / Low VFX.
 [TODO] 7.5 Soak test Android 30–60 minutes.
-[TODO] 7.6 Mesurer FPS via PerformancePulse et corriger les points faibles.
+[EN COURS] 7.6 Mesurer FPS via PerformancePulse et corriger les points faibles — calcul FPS réel corrigé, mesures Android encore requises.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
@@ -142,4 +142,4 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - HUD mobile récemment corrigé pour limiter les chevauchements.
 - Freeze glare réduit.
 - Base néon cohérente mais encore trop simple.
-- Priorité actuelle : PHASE 6B — gameplay/fun (OVERDRIVE + défis), puis QA Android et équilibrage réel.
+- Priorité actuelle : QA Android + équilibrage réel, réduction de surcharge UI et certification finale.
