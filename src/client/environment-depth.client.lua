@@ -61,6 +61,50 @@ local function rebuild()
     local radius = variant == "Orbital" and 142
         or (variant == "Towers" and 136 or 128)
 
+    local lobbyCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+    local lobbyRadius = 72
+    for i = 1, lobbyCount do
+        local angle = ((i - 1) / lobbyCount) * math.pi * 2 + math.rad(22.5)
+        local height = 18 + ((i * 9) % 18)
+        local width = 5 + ((i * 3) % 5)
+        local position = Config.LobbyCenter + Vector3.new(
+            math.cos(angle) * lobbyRadius,
+            (height * 0.5) - 2,
+            math.sin(angle) * lobbyRadius
+        )
+
+        local tower = makePart(
+            "LobbyDistantTower" .. i,
+            Vector3.new(width, height, width),
+            CFrame.new(position) * CFrame.Angles(0, -angle, 0),
+            VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, 0.34),
+            VisualTheme.Materials.Structure,
+            tier.Name == "Low" and 0.28 or 0.18
+        )
+
+        local cap = makePart(
+            "LobbyDistantGlow" .. i,
+            Vector3.new(width + 1.2, 0.42, width + 1.2),
+            tower.CFrame + Vector3.new(0, (height * 0.5) + 0.25, 0),
+            i % 2 == 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
+            VisualTheme.Materials.Glow,
+            tier.Name == "Low" and 0.58 or 0.38
+        )
+        table.insert(glows, cap)
+
+        if tier.Name == "High" and i % 2 == 0 then
+            local fin = makePart(
+                "LobbyDistantFin" .. i,
+                Vector3.new(0.32, 5.5, width + 2.2),
+                tower.CFrame + Vector3.new(0, (height * 0.5) - 3.0, 0),
+                i % 4 == 0 and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
+                VisualTheme.Materials.Glow,
+                0.46
+            )
+            fin.CastShadow = false
+        end
+    end
+
     for i = 1, count do
         local angle = ((i - 1) / count) * math.pi * 2
         local height
