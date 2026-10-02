@@ -1031,7 +1031,7 @@ local function openExclusive(panel)
         scale.Scale = 0.92
         TweenService:Create(
             scale,
-            TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            UITheme.Motion.PanelIn,
             {Scale = 1}
         ):Play()
     end
@@ -1500,20 +1500,20 @@ local function showRoundFeedback(feedback)
 
     TweenService:Create(
         resultFlash,
-        TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        UITheme.Motion.FastFade,
         {BackgroundTransparency = survived and 0.78 or 0.82}
     ):Play()
-    TweenService:Create(resultCard, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0.04}):Play()
-    TweenService:Create(resultScale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    TweenService:Create(resultCard, UITheme.Motion.EmphasisIn, {BackgroundTransparency = 0.04}):Play()
+    TweenService:Create(resultScale, UITheme.Motion.EmphasisIn, {Scale = 1}):Play()
 
     task.delay(0.14, function()
-        TweenService:Create(resultFlash, TweenInfo.new(0.28), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(resultFlash, UITheme.Motion.StandardFade, {BackgroundTransparency = 1}):Play()
     end)
 
     task.delay(3.4, function()
         if token ~= resultToken then return end
-        TweenService:Create(resultCard, TweenInfo.new(0.22), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(resultScale, TweenInfo.new(0.22), {Scale = 0.90}):Play()
+        TweenService:Create(resultCard, UITheme.Motion.StandardFade, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(resultScale, UITheme.Motion.StandardFade, {Scale = 0.90}):Play()
         task.wait(0.24)
         if token == resultToken then
             resultCard.Visible = false
