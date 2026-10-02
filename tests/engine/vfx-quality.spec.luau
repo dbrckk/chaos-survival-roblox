@@ -5,6 +5,12 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local VfxQuality = require("../../src/shared/VfxQuality")
 
 describe("Adaptive VFX quality", function()
+    it("starts touch devices conservatively without capping capable hardware", function()
+        expect(VfxQuality.initialTier(true)).toBe("Medium")
+        expect(VfxQuality.initialTier(false)).toBe("High")
+        expect(VfxQuality.nextTier(VfxQuality.initialTier(true), 60)).toBe("High")
+    end)
+
     it("degrades progressively under sustained low frame rate", function()
         expect(VfxQuality.nextTier("High", 60)).toBe("High")
         expect(VfxQuality.nextTier("High", 40)).toBe("Medium")
