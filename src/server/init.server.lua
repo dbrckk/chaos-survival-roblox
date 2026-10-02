@@ -62,11 +62,36 @@ local hazardImpactFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "Haz
 local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNearMiss")
 local chaosShardCollectedEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ChaosShardCollected")
 local performancePulseEvent = RemoteRegistry.ensureRemoteEvent(remotes, "PerformancePulse")
+local accessibilitySettingsEvent = RemoteRegistry.ensureRemoteEvent(remotes, "AccessibilitySettings")
 
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
 MonetizationService.init(remotes, RateLimiter, CosmeticService)
 AchievementService.init(remotes)
+
+local allowAccessibilityChange = RateLimiter.new(0.35)
+accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value)
+    if not allowAccessibilityChange(player.UserId) then
+        return
+    end
+    if setting ~= "ReduceMotion" or type(value) ~= "boolean" then
+        return
+    end
+    if not PlayerData.canMutate(player) then
+        return
+    end
+
+    player:SetAttribute("ReduceMotion", value)
+    task.spawn(PlayerData.save, player, true)
+    GameAnalytics.custom(
+        player,
+        "AccessibilitySettingChanged",
+        value and 1 or 0,
+        "Setting:ReduceMotion",
+        "Device:" .. (player:GetAttribute("ClientDeviceClass") or "Unknown")
+    )
+end)
+
 MapBuilder.build(Config, "Classic", ArenaVariants)
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
 if not lobbyActivitiesOk then
