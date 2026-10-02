@@ -24,6 +24,14 @@ describe("Round medals", function()
         expect(medals[6]).toBe("CLUTCH")
     end)
 
+    it("guarantees a first chaos medal on the first completed round", function()
+        local medals = RoundMedals.evaluate({
+            firstRound = true,
+        })
+        expect(#medals).toBe(1)
+        expect(medals[1]).toBe("FIRST CHAOS")
+    end)
+
     it("does not award medals below thresholds", function()
         local medals = RoundMedals.evaluate({
             shards = 2,
