@@ -108,9 +108,9 @@ PHASE F — RETENTION / FUN
 
 PHASE G — UI/UX
 [A FAIRE] G1 Audit mobile 16:9 / tall / tablet.
-[A FAIRE] G2 Simplifier panneaux et réduire concurrence visuelle.
+[EN COURS] G2 Boutons méta masqués pendant READY/ROUND ; simplification fine des panneaux à poursuivre.
 [A FAIRE] G3 Microanimations cohérentes via tokens.
-[A FAIRE] G4 State machine UI claire.
+[EN COURS] G4 Hiérarchie de phase renforcée : gameplay critique > méta-progression.
 [A FAIRE] G5 Accessibility : motion reduction, contrast, warning redundancy.
 
 PHASE H — PERFORMANCE
