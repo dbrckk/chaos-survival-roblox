@@ -341,6 +341,11 @@ UITheme.addCorner(questPanel, UITheme.Corners.Large)
 UITheme.addStroke(questPanel, UITheme.Colors.Cyan, 1.2, 0.38)
 UITheme.addGradient(questPanel, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
 
+local questPanelConstraint = Instance.new("UISizeConstraint")
+questPanelConstraint.MinSize = Vector2.new(260, 250)
+questPanelConstraint.MaxSize = Vector2.new(620, 430)
+questPanelConstraint.Parent = questPanel
+
 local questHeader = Instance.new("TextLabel")
 questHeader.Size = UDim2.new(1, -24, 0.10, 0)
 questHeader.Position = UDim2.fromOffset(12, 6)
@@ -504,6 +509,11 @@ cosmeticsPanel.Parent = root
 UITheme.addCorner(cosmeticsPanel, UITheme.Corners.Large)
 UITheme.addStroke(cosmeticsPanel, UITheme.Colors.Magenta, 1.2, 0.38)
 UITheme.addGradient(cosmeticsPanel, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+
+local cosmeticsPanelConstraint = Instance.new("UISizeConstraint")
+cosmeticsPanelConstraint.MinSize = Vector2.new(270, 220)
+cosmeticsPanelConstraint.MaxSize = Vector2.new(620, 390)
+cosmeticsPanelConstraint.Parent = cosmeticsPanel
 
 local cosmeticsHeader = Instance.new("TextLabel")
 cosmeticsHeader.Size = UDim2.new(1, -24, 0.16, 0)
@@ -719,6 +729,11 @@ UITheme.addCorner(supportPanel, UITheme.Corners.Large)
 UITheme.addStroke(supportPanel, UITheme.Colors.Violet, 1.2, 0.34)
 UITheme.addGradient(supportPanel, Color3.fromRGB(52, 34, 72), UITheme.Colors.Panel, 90)
 
+local supportPanelConstraint = Instance.new("UISizeConstraint")
+supportPanelConstraint.MinSize = Vector2.new(270, 190)
+supportPanelConstraint.MaxSize = Vector2.new(620, 330)
+supportPanelConstraint.Parent = supportPanel
+
 local supportHeader = Instance.new("TextLabel")
 supportHeader.Size = UDim2.new(1, -24, 0.20, 0)
 supportHeader.Position = UDim2.fromOffset(12, 6)
@@ -842,6 +857,11 @@ achievementPanel.Parent = root
 UITheme.addCorner(achievementPanel, UITheme.Corners.Large)
 UITheme.addStroke(achievementPanel, UITheme.Colors.Gold, 1.2, 0.38)
 UITheme.addGradient(achievementPanel, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+
+local achievementPanelConstraint = Instance.new("UISizeConstraint")
+achievementPanelConstraint.MinSize = Vector2.new(280, 250)
+achievementPanelConstraint.MaxSize = Vector2.new(700, 430)
+achievementPanelConstraint.Parent = achievementPanel
 
 local achievementHeader = Instance.new("TextLabel")
 achievementHeader.Size = UDim2.new(1, -24, 0, 42)
