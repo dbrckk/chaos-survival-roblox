@@ -656,6 +656,8 @@ end
 
 -- cosmetics navigation is wired after all panels are created
 
+local metaControlsSuppressed = false
+
 local supportButton = Instance.new("TextButton")
 supportButton.Name = "SupportButton"
 supportButton.AnchorPoint = Vector2.new(1, 1)
@@ -729,7 +731,8 @@ local function renderMonetization(state)
     end
 
     local enabled = state and state.enabled == true
-    supportButton.Visible = enabled
+    supportButton:SetAttribute("MonetizationEnabled", enabled)
+    supportButton.Visible = enabled and not metaControlsSuppressed
     if not enabled then
         supportPanel.Visible = false
         return
@@ -1724,7 +1727,14 @@ dailyRewardEvent.OnClientEvent:Connect(function(reward)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    if state.phase == "round" or state.phase == "ready" then
+    metaControlsSuppressed = state.phase == "round" or state.phase == "ready"
+    questButton.Visible = not metaControlsSuppressed
+    cosmeticsButton.Visible = not metaControlsSuppressed
+    achievementButton.Visible = not metaControlsSuppressed
+    supportButton.Visible = (not metaControlsSuppressed)
+        and supportButton:GetAttribute("MonetizationEnabled") == true
+
+    if metaControlsSuppressed then
         closeAllPanels()
     end
 
