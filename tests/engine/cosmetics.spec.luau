@@ -7,18 +7,20 @@ local Cosmetics = require("../../src/server/CosmeticsCatalog")
 describe("Cosmetic inventory", function()
     it("exposes the expanded ordered catalog", function()
         local list = Cosmetics.publicList()
-        expect(#list).toBe(15)
+        expect(#list).toBe(17)
         expect(list[1].id).toBe("trail_blue")
         expect(list[1].unlockLevel).toBe(1)
         expect(list[4].id).toBe("trail_plasma")
         expect(list[4].coinPrice).toBe(450)
         expect(list[10].premiumKey).toBe("supporter")
-        expect(list[11].premiumKey).toBe("neon_pack")
+        expect(list[11].premiumKey).toBe("supporter")
+        expect(list[12].premiumKey).toBe("neon_pack")
+        expect(list[13].premiumKey).toBe("neon_pack")
         expect(list[1].rarity).toBe("Common")
         expect(list[6].rarity).toBe("Legendary")
         expect(list[10].collection).toBe("Founder")
-        expect(list[12].arenaMasteryId).toBe("Classic")
-        expect(list[12].arenaMasteryPoints).toBe(18)
+        expect(list[14].arenaMasteryId).toBe("Classic")
+        expect(list[14].arenaMasteryPoints).toBe(18)
     end)
 
     it("unlocks level cosmetics without granting shop items", function()
@@ -86,7 +88,7 @@ describe("Cosmetic inventory", function()
         local state = Cosmetics.collectionState("trail_blue,trail_gold,trail_plasma,trail_prism")
 
         expect(state.owned).toBe(4)
-        expect(state.total).toBe(15)
+        expect(state.total).toBe(17)
         expect(state.completedCollections >= 1).toBe(true)
         expect(state.totalCollections >= 4).toBe(true)
         expect(state.nextMilestone).toBe(6)
@@ -103,13 +105,15 @@ describe("Cosmetic inventory", function()
             aura_solar = true,
             aura_cosmic = true,
             aura_supporter = true,
+            trail_founder = true,
             trail_neon = true,
+            aura_neon = true,
             trail_gridmaster = true,
             aura_towercore = true,
             trail_nexus = true,
             aura_orbital = true,
         }))
-        expect(complete.owned).toBe(15)
+        expect(complete.owned).toBe(17)
         expect(complete.maxed).toBe(true)
         expect(complete.nextMilestone).toBe(nil)
     end)
