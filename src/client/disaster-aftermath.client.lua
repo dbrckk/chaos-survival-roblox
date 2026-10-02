@@ -126,7 +126,11 @@ local function playAftermath(ids)
     token += 1
     local current = token
     local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
     local scale = quality.Name == "Low" and 0.36 or (quality.Name == "Medium" and 0.68 or 1)
+    if reducedMotion then
+        scale *= 0.28
+    end
 
     tint.TintColor = Color3.new(1, 1, 1)
     tint.Saturation = 0
@@ -145,7 +149,7 @@ local function playAftermath(ids)
     TweenService:Create(
         blur,
         TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Size = (profile.Blur or 0) * scale}
+        {Size = reducedMotion and 0 or ((profile.Blur or 0) * scale)}
     ):Play()
 
     task.delay(quality.Name == "Low" and 0.45 or 0.85, function()
