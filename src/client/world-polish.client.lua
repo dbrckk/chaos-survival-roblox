@@ -537,7 +537,7 @@ RunService.RenderStepped:Connect(function(dt)
     local elapsed = updateClock
     updateClock = 0
 
-    local coreTier = quality()
+    local coreTier = tier
     local coreCenter = cachedLobbyCoreCenter
 
     for _, corePart in ipairs(lobbyCoreParts) do
@@ -568,7 +568,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    local gateTier = quality()
+    local gateTier = tier
     for index, attachment in ipairs(lobbyGateLinks) do
         if attachment.Parent then
             local beam = attachment:FindFirstChildOfClass("Beam")
