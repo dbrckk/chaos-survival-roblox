@@ -1,6 +1,6 @@
 local DataSchema = {}
 
-DataSchema.Version = 2
+DataSchema.Version = 3
 
 DataSchema.Defaults = {
     DataVersion = DataSchema.Version,
@@ -31,6 +31,9 @@ DataSchema.Defaults = {
 
     DoubleChaosSurvivals = 0,
     UnlockedAchievements = "",
+
+    ArenaMastery = "",
+    DisasterMastery = "",
 }
 
 function DataSchema.cloneDefaults()
