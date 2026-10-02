@@ -49,8 +49,9 @@ AudioConfig.Composite = {
         {Sound = "Countdown", Delay = 0.045, VolumeScale = 0.34, PitchOffset = -0.22},
     },
     RoundStart = {
-        {Sound = "RoundStart", VolumeScale = 0.92, PitchOffset = -0.06},
-        {Sound = "Speed", Delay = 0.035, VolumeScale = 0.30, PitchOffset = -0.38},
+        {Sound = "RoundStart", VolumeScale = 0.90, PitchOffset = -0.06},
+        {Sound = "Speed", Delay = 0.035, VolumeScale = 0.28, PitchOffset = -0.38},
+        {Sound = "UISelect", Delay = 0.105, VolumeScale = 0.18, PitchOffset = 0.20},
     },
     DoubleChaos = {
         {Sound = "DoubleChaos", VolumeScale = 0.92, PitchOffset = -0.10},
@@ -58,16 +59,19 @@ AudioConfig.Composite = {
         {Sound = "Countdown", Delay = 0.10, VolumeScale = 0.26, PitchOffset = -0.52},
     },
     FinalRush = {
-        {Sound = "FinalRush", VolumeScale = 0.92, PitchOffset = -0.08},
-        {Sound = "Countdown", Delay = 0.055, VolumeScale = 0.38, PitchOffset = -0.40},
+        {Sound = "FinalRush", VolumeScale = 0.90, PitchOffset = -0.08},
+        {Sound = "Countdown", Delay = 0.055, VolumeScale = 0.36, PitchOffset = -0.40},
+        {Sound = "Speed", Delay = 0.11, VolumeScale = 0.22, PitchOffset = 0.18},
     },
     Survived = {
-        {Sound = "Survived", VolumeScale = 0.94, PitchOffset = 0.02},
-        {Sound = "Reward", Delay = 0.055, VolumeScale = 0.48, PitchOffset = -0.14},
+        {Sound = "Survived", VolumeScale = 0.92, PitchOffset = 0.02},
+        {Sound = "Reward", Delay = 0.055, VolumeScale = 0.44, PitchOffset = -0.14},
+        {Sound = "ShardCollect", Delay = 0.13, VolumeScale = 0.22, PitchOffset = 0.24},
     },
     Eliminated = {
-        {Sound = "Eliminated", VolumeScale = 0.92, PitchOffset = -0.06},
-        {Sound = "Darkness", Delay = 0.025, VolumeScale = 0.28, PitchOffset = -0.16},
+        {Sound = "Eliminated", VolumeScale = 0.90, PitchOffset = -0.08},
+        {Sound = "Darkness", Delay = 0.025, VolumeScale = 0.25, PitchOffset = -0.18},
+        {Sound = "Hit", Delay = 0.085, VolumeScale = 0.15, PitchOffset = -0.26},
     },
     LevelUp = {
         {Sound = "LevelUp", VolumeScale = 0.90, PitchOffset = -0.02},
