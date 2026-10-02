@@ -361,9 +361,6 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     if finalRush and not lastFinalRush then
         play("FinalRush")
-        task.delay(0.08, function()
-            play("Countdown", 0.01)
-        end)
     end
 
     if overdrive and not lastOverdrive then
@@ -509,9 +506,6 @@ chaosShardCollectedEvent.OnClientEvent:Connect(function(payload)
     local variance = math.min(0.08, total * 0.008)
     if payload.golden == true then
         play("GoldenShard", 0.025)
-        task.delay(0.07, function()
-            play("Reward", 0.02)
-        end)
     else
         play("ShardCollect", variance)
     end
