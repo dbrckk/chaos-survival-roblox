@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 
 local AISurvivorRules = require(script.Parent.AISurvivorRules)
 local ArenaMechanics = require(script.Parent.ArenaMechanics)
+local LobbyActivities = require(script.Parent.LobbyActivities)
 
 local AISurvivorService = {}
 
@@ -806,11 +807,12 @@ local function chooseLobbyTarget(record)
         local activities = lobby and lobby:FindFirstChild("Activities")
         local pads = sortedParts(activities)
         if #pads > 0 then
-            position = pads[math.random(1, #pads)].Position + Vector3.new(0, 1.7, 0)
+            local pad = pads[math.random(1, #pads)]
+            return pad.Position + Vector3.new(0, 1.7, 0), 1.6 + math.random() * 1.2, pad
         end
     end
 
-    return position, 1.8 + math.random() * 2.8
+    return position, 1.8 + math.random() * 2.8, nil
 end
 
 local function tryPadImpulse(record, root, now)
@@ -846,6 +848,32 @@ local function tryPadImpulse(record, root, now)
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
+end
+
+local function tryLobbyPracticeImpulse(record, root, now)
+    local pad = record.targetPart
+    if not pad
+        or not pad.Parent
+        or pad:GetAttribute("LobbyPracticePad") ~= true
+        or now < record.nextPadAt
+        or (root.Position - pad.Position).Magnitude > 5.4
+    then
+        return
+    end
+
+    local index = tonumber(string.match(pad.Name, "(%d+)$"))
+    local definition = index and LobbyActivities.Definitions[index] or nil
+    if not definition then
+        return
+    end
+
+    root.AssemblyLinearVelocity = LobbyActivities.safeVelocity(
+        root.AssemblyLinearVelocity,
+        definition.impulse
+    )
+    record.nextPadAt = now + 1.0
+    record.target = nil
+    record.targetPart = nil
 end
 
 local function stepRecord(record, now)
@@ -906,6 +934,8 @@ local function stepRecord(record, now)
             humanoid:MoveTo(record.target)
         end
     else
+        tryLobbyPracticeImpulse(record, root, now)
+
         if record.target and (root.Position - record.target).Magnitude < 3.8 then
             record.target = nil
             if math.random() < 0.56 then
@@ -916,8 +946,9 @@ local function stepRecord(record, now)
         end
 
         if now >= record.nextThink or not record.target then
-            local target, hold = chooseLobbyTarget(record)
+            local target, hold, targetPart = chooseLobbyTarget(record)
             record.target = target
+            record.targetPart = targetPart
             record.nextThink = now + hold
         end
 
