@@ -199,6 +199,15 @@ local function syncUnlocks(player)
         player:GetAttribute("Level") or 1
     )
 
+    local masteryMerged, masteryUnlocked = Cosmetics.mergeMasteryUnlocks(
+        merged,
+        player:GetAttribute("ArenaMastery") or ""
+    )
+    merged = masteryMerged
+    for _, cosmeticId in ipairs(masteryUnlocked) do
+        table.insert(unlocked, cosmeticId)
+    end
+
     player:SetAttribute("OwnedCosmetics", merged)
     normalizeSlot(player, "EquippedTrail", "trail", "trail_blue")
     normalizeSlot(player, "EquippedAura", "aura", nil)
@@ -220,6 +229,10 @@ local function setupPlayer(player)
         syncUnlocks(player)
 
         player:GetAttributeChangedSignal("Level"):Connect(function()
+            syncUnlocks(player)
+        end)
+
+        player:GetAttributeChangedSignal("ArenaMastery"):Connect(function()
             syncUnlocks(player)
         end)
 
