@@ -326,3 +326,5 @@ ensureRenderLoop = function()
     end
     end)
 end
+
+ensureRenderLoop()
