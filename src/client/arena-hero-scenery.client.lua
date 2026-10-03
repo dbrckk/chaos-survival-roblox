@@ -31,6 +31,23 @@ local function makePart(name, size, cframe, color, material, transparency, castS
     return part
 end
 
+local function makeWedge(name, size, cframe, color, material, transparency, castShadow)
+    local part = Instance.new("WedgePart")
+    part.Name = name
+    part.Size = size
+    part.CFrame = cframe
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part.CastShadow = castShadow == true
+    part.Material = material or Enum.Material.Metal
+    part.Color = color
+    part.Transparency = transparency or 0
+    part.Parent = folder
+    return part
+end
+
 local function localFrame(base, x, y, z, yaw)
     return base.CFrame
         * CFrame.new(x, y, z)
@@ -95,7 +112,7 @@ local function buildClassic(base, theme, tier)
             {18, 0, -hz - 10, 90},
         }
         for i, item in ipairs(fins) do
-            makePart(
+            makeWedge(
                 "ClassicSkyFin" .. i,
                 Vector3.new(1.0, 10 + (i % 2) * 3, 6.5),
                 localFrame(base, item[1], 6.0, item[3], item[4]),
@@ -141,7 +158,7 @@ local function buildTowers(base, theme, tier)
         )
 
         if tier.Name ~= "Low" then
-            makePart(
+            makeWedge(
                 "TowerCrownWing" .. i,
                 Vector3.new(9.5, 0.7, 1.25),
                 pylon.CFrame * CFrame.new(0, height * 0.5 - 2.2, 0),
@@ -260,7 +277,7 @@ local function buildCrossroads(base, theme, tier)
         )
 
         if tier.Name == "High" then
-            makePart(
+            makeWedge(
                 "CrossroadHeroBlade" .. i,
                 Vector3.new(8.0, 0.5, 0.8),
                 body.CFrame * CFrame.new(0, height * 0.5 - 1.1, 0),
