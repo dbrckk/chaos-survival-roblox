@@ -55,6 +55,61 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.reachableElevation(12, 6, "Towers")).toBe(true)
     end)
 
+    it("preserves plausible route continuity per arena", function()
+        local center = Vector3.zero
+
+        expect(
+            AISurvivorRules.routeContinuity(
+                "Orbital",
+                Vector3.new(29, 0, 0),
+                Vector3.new(29, 0, 12),
+                center,
+                0.2
+            ) > 0
+        ).toBe(true)
+        expect(
+            AISurvivorRules.routeContinuity(
+                "Orbital",
+                Vector3.new(29, 0, 0),
+                Vector3.new(29, 0, -12),
+                center,
+                0.2
+            ) < 0
+        ).toBe(true)
+
+        expect(
+            AISurvivorRules.routeContinuity(
+                "Towers",
+                Vector3.new(28, 0, 28),
+                Vector3.new(25, 8, 25),
+                center,
+                0
+            ) > AISurvivorRules.routeContinuity(
+                "Towers",
+                Vector3.new(28, 0, 28),
+                Vector3.new(-25, 8, -25),
+                center,
+                0
+            )
+        ).toBe(true)
+
+        expect(
+            AISurvivorRules.routeContinuity(
+                "Crossroads",
+                Vector3.new(24, 0, 2),
+                Vector3.new(-20, 0, 1),
+                center,
+                0
+            ) > AISurvivorRules.routeContinuity(
+                "Crossroads",
+                Vector3.new(24, 0, 2),
+                Vector3.new(20, 0, 20),
+                center,
+                0
+            )
+        ).toBe(true)
+    end)
+
     it("gives each arena a distinct route affinity", function()
         local center = Vector3.zero
 
