@@ -59,6 +59,43 @@ describe("AI survivor rules", function()
         ).toBe(true)
     end)
 
+    it("increases bounded survival pressure as health and round danger worsen", function()
+        local healthy = AISurvivorRules.survivalPressure(100, 100, false, false)
+        local wounded = AISurvivorRules.survivalPressure(45, 100, false, false)
+        local critical = AISurvivorRules.survivalPressure(20, 100, true, true)
+
+        expect(healthy).toBe(0)
+        expect(wounded > healthy).toBe(true)
+        expect(critical > wounded).toBe(true)
+        expect(critical <= 0.82).toBe(true)
+    end)
+
+    it("becomes more cautious under pressure without becoming perfect", function()
+        local base = {
+            Risk = 0.60,
+            SocialChance = 0.30,
+            MistakeChance = 0.16,
+            PadChance = 0.25,
+            HesitationChance = 0.10,
+            ReconsiderChance = 0.08,
+            FollowThrough = 1.0,
+            DirectionBias = 0.4,
+        }
+
+        local calm = AISurvivorRules.pressuredTraits(base, 0)
+        local pressured = AISurvivorRules.pressuredTraits(base, 0.8)
+
+        expect(calm.Risk).toBe(base.Risk)
+        expect(pressured.Risk < calm.Risk).toBe(true)
+        expect(pressured.SocialChance < calm.SocialChance).toBe(true)
+        expect(pressured.MistakeChance < calm.MistakeChance).toBe(true)
+        expect(pressured.MistakeChance >= 0.03).toBe(true)
+        expect(pressured.PadChance > calm.PadChance).toBe(true)
+        expect(pressured.HesitationChance < calm.HesitationChance).toBe(true)
+        expect(pressured.ReconsiderChance > calm.ReconsiderChance).toBe(true)
+        expect(pressured.DirectionBias).toBe(base.DirectionBias)
+    end)
+
     it("uses mobility pads more often when arena topology calls for them", function()
         local base = 0.20
 
