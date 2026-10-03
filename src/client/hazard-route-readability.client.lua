@@ -62,6 +62,8 @@ local currentPhase = "waiting"
 local finalRush = false
 local warningStates = {}
 local updateClock = 0
+local renderConnection = nil
+local ensureRenderLoop
 
 local SUPPORTED = {
     Meteor = true,
@@ -145,6 +147,10 @@ local function createState(warning, kind)
         left = left,
         right = right,
     }
+
+    if ensureRenderLoop then
+        ensureRenderLoop()
+    end
 end
 
 local function maybeBind(instance)
@@ -253,12 +259,28 @@ stateEvent.OnClientEvent:Connect(function(state)
         for _, warningState in pairs(warningStates) do
             hideState(warningState)
         end
+    elseif ensureRenderLoop then
+        ensureRenderLoop()
     end
 end)
 
-RunService.RenderStepped:Connect(function(dt)
-    if currentPhase ~= "round"
-        or player:GetAttribute("RoundParticipant") ~= true
+ensureRenderLoop = function()
+    if renderConnection
+        or currentPhase ~= "round"
+        or next(warningStates) == nil
+    then
+        return
+    end
+
+    renderConnection = RunService.RenderStepped:Connect(function(dt)
+        if currentPhase ~= "round" or next(warningStates) == nil then
+            cue.Visible = false
+            renderConnection:Disconnect()
+            renderConnection = nil
+            return
+        end
+
+        if player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true
         or next(warningStates) == nil
     then
@@ -315,4 +337,7 @@ RunService.RenderStepped:Connect(function(dt)
         cueBadge.Text = KIND_BADGES[kind] or "!"
         cueText.Text = KIND_LABELS[kind] or "DANGER  •  MOVE OUT"
     end
-end)
+    end)
+end
+
+ensureRenderLoop()
