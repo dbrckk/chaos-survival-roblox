@@ -110,7 +110,7 @@ PHASE G — UI/UX
 [EN COURS] G1 Layout responsive + dock tactile + palier compact/tablette <1.50 ajoutés ; validation réelle 16:9/tall/tablet encore requise.
 [EN COURS] G2 Boutons méta masqués pendant READY/ROUND + dock tactile unique + result/panels compactés sur tablette/mobile ; QA réelle restante.
 [FAIT] G3 Tokens de mouvement UI centralisés : press/release, panel-in, result emphasis et fades cohérents.
-[EN COURS] G4 Hiérarchie de phase renforcée : gameplay critique > méta-progression.
+[FAIT] G4 State machine UI : READY/ROUND ferme la méta, masque le dock et invalide tout résultat retardé ; gameplay critique prioritaire.
 [EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors/world polish ; contraste et warnings redondants, QA réelle restante.
 
 PHASE H — PERFORMANCE
