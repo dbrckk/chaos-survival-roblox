@@ -22,8 +22,8 @@ local MOODS = {
         Outdoor = Color3.fromRGB(104, 120, 154),
         Saturation = 0.025,
         Contrast = 0.018,
-        Diffuse = 0.72,
-        Specular = 0.88,
+        ColorShiftTop = Color3.fromRGB(8, 14, 24),
+        ColorShiftBottom = Color3.fromRGB(4, 7, 13),
         ShadowSoftness = 0.34,
     },
     Towers = {
@@ -32,8 +32,8 @@ local MOODS = {
         Outdoor = Color3.fromRGB(94, 130, 143),
         Saturation = 0.015,
         Contrast = 0.030,
-        Diffuse = 0.66,
-        Specular = 0.94,
+        ColorShiftTop = Color3.fromRGB(4, 18, 22),
+        ColorShiftBottom = Color3.fromRGB(3, 8, 12),
         ShadowSoftness = 0.26,
     },
     Crossroads = {
@@ -42,8 +42,8 @@ local MOODS = {
         Outdoor = Color3.fromRGB(126, 101, 148),
         Saturation = 0.035,
         Contrast = 0.026,
-        Diffuse = 0.68,
-        Specular = 0.84,
+        ColorShiftTop = Color3.fromRGB(18, 7, 24),
+        ColorShiftBottom = Color3.fromRGB(8, 4, 13),
         ShadowSoftness = 0.42,
     },
     Orbital = {
@@ -52,8 +52,8 @@ local MOODS = {
         Outdoor = Color3.fromRGB(91, 137, 132),
         Saturation = 0.030,
         Contrast = 0.022,
-        Diffuse = 0.62,
-        Specular = 1.00,
+        ColorShiftTop = Color3.fromRGB(5, 20, 17),
+        ColorShiftBottom = Color3.fromRGB(3, 9, 9),
         ShadowSoftness = 0.30,
     },
 }
@@ -77,15 +77,15 @@ local function applyMood(duration)
     local accessibilityScale = reducedMotion and 0.72 or 1
     local scale = roundScale * accessibilityScale
 
-    local materialScale = quality.Name == "Low" and 0.70
-        or (quality.Name == "Medium" and 0.86 or 1)
-    local diffuse = math.clamp((mood.Diffuse or 0.7) * materialScale, 0.35, 1)
-    local specular = math.clamp((mood.Specular or 0.9) * materialScale, 0.30, 1)
+    local colorShiftScale = quality.Name == "Low" and 0.42
+        or (quality.Name == "Medium" and 0.72 or 1)
     local shadowSoftness = math.clamp(
         (mood.ShadowSoftness or 0.35) + (quality.Name == "Low" and 0.20 or 0),
         0,
         1
     )
+    local colorShiftTop = Color3.new():Lerp(mood.ColorShiftTop or Color3.new(), colorShiftScale)
+    local colorShiftBottom = Color3.new():Lerp(mood.ColorShiftBottom or Color3.new(), colorShiftScale)
 
     TweenService:Create(
         effect,
@@ -103,8 +103,8 @@ local function applyMood(duration)
         {
             Ambient = mood.Ambient,
             OutdoorAmbient = mood.Outdoor,
-            EnvironmentDiffuseScale = diffuse,
-            EnvironmentSpecularScale = specular,
+            ColorShift_Top = colorShiftTop,
+            ColorShift_Bottom = colorShiftBottom,
             ShadowSoftness = shadowSoftness,
         }
     ):Play()
