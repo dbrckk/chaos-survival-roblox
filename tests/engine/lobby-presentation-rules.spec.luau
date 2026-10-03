@@ -44,6 +44,17 @@ describe("Lobby presentation rules", function()
         expect(readySub).toBe("Storm Core")
     end)
 
+    it("uses a waiting-specific lobby message", function()
+        local title, subtitle = LobbyPresentationRules.statusText(
+            "waiting",
+            0,
+            "WAITING FOR PLAYERS",
+            nil
+        )
+        expect(title).toBe("LOBBY OPEN")
+        expect(subtitle).toBe("PRACTICE WHILE PLAYERS JOIN")
+    end)
+
     it("slows ambient pulses for accessibility", function()
         local normal = LobbyPresentationRules.pulseCadence("High", false, "launch")
         local reduced = LobbyPresentationRules.pulseCadence("High", true, "launch")
