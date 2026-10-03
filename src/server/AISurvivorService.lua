@@ -754,7 +754,7 @@ local function immediateThreat(record, root, now)
     local nearestDistance = math.huge
     local velocity = root.AssemblyLinearVelocity
     local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
-    local anticipation = 0.18 + (1 - traits.Risk or record.profile.Risk) * 0.20
+    local anticipation = 0.18 + (1 - record.profile.Risk) * 0.20
     local predictedPosition = root.Position + horizontalVelocity * anticipation
 
     for _, warning in ipairs(warningParts()) do
@@ -814,7 +814,7 @@ local function immediateThreat(record, root, now)
     horizontal = horizontal.Unit
 
     local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X)
-    local wobble = (math.random() - 0.5) * (8 + traits.Risk or record.profile.Risk * 8)
+    local wobble = (math.random() - 0.5) * (8 + record.profile.Risk * 8)
     local momentumCorrection = Vector3.new(-horizontalVelocity.X, 0, -horizontalVelocity.Z)
     if momentumCorrection.Magnitude > 8 then
         momentumCorrection = momentumCorrection.Unit * math.min(7, momentumCorrection.Magnitude * 0.22)
@@ -822,7 +822,7 @@ local function immediateThreat(record, root, now)
 
     return clampToArena(
         root.Position
-            + horizontal * (16 + (1 - traits.Risk or record.profile.Risk) * 10)
+            + horizontal * (16 + (1 - record.profile.Risk) * 10)
             + tangent * wobble
             + momentumCorrection
     )
@@ -898,6 +898,7 @@ local function scoreCandidate(record, root, candidate)
     local position = candidate.position
     local center = config.ArenaCenter
     local traits = record.roundTraits or record.profile
+    local risk = traits.Risk or record.profile.Risk
     local distanceFromCenter = (Vector3.new(position.X, 0, position.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude
     local travelDistance = (position - root.Position).Magnitude
     local variantId = arenaVariantId()
@@ -912,15 +913,15 @@ local function scoreCandidate(record, root, candidate)
     )
 
     if hasDisaster("RisingLava") then
-        score += position.Y * (1.45 - traits.Risk or record.profile.Risk * 0.45)
+        score += position.Y * (1.45 - risk * 0.45)
     end
 
     if hasDisaster("Tornado") then
-        score += math.min(distanceFromCenter, 44) * (0.72 - traits.Risk or record.profile.Risk * 0.16)
+        score += math.min(distanceFromCenter, 44) * (0.72 - risk * 0.16)
     end
 
     if hasDisaster("ShrinkingArena") then
-        score -= distanceFromCenter * (0.86 - traits.Risk or record.profile.Risk * 0.24)
+        score -= distanceFromCenter * (0.86 - risk * 0.24)
     end
 
     for _, warning in ipairs(warningParts()) do
@@ -928,7 +929,7 @@ local function scoreCandidate(record, root, candidate)
             local warningDistance = (position - warning.Position).Magnitude
             local radius = math.max(warning.Size.X, warning.Size.Z) * 0.5 + 7
             if warningDistance < radius then
-                score -= 90 * (1 - traits.Risk or record.profile.Risk * 0.40)
+                score -= 90 * (1 - risk * 0.40)
             end
         end
     end
