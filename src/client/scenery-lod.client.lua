@@ -30,6 +30,10 @@ local FOLDERS = {
         LowDistance = 110,
         MediumDistance = 175,
     },
+    ArenaHeroSceneryLocal = {
+        LowDistance = 130,
+        MediumDistance = 205,
+    },
 }
 
 local function cameraPosition()
