@@ -1696,6 +1696,11 @@ local function showVotes(options)
     votes.Visible = options ~= nil and #options > 0
     if not votes.Visible then return end
 
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local voteClass = UIResponsive.classify(viewport, touchDevice)
+    local compactVote = touchDevice and voteClass.tinyHeight
+
     local maxVotes = 0
     for _, option in ipairs(options) do
         maxVotes = math.max(maxVotes, tonumber(option.votes) or 0)
@@ -1743,8 +1748,11 @@ local function showVotes(options)
         UITheme.addCorner(accent, UITheme.Corners.Pill)
 
         local indexBadge = Instance.new("TextLabel")
-        indexBadge.Position = UDim2.fromScale(0.06, 0.10)
-        indexBadge.Size = UDim2.fromScale(0.22, 0.20)
+        indexBadge.Position = UDim2.fromScale(0.06, compactVote and 0.08 or 0.10)
+        indexBadge.Size = UDim2.fromScale(
+            compactVote and 0.18 or 0.22,
+            compactVote and 0.17 or 0.20
+        )
         indexBadge.BackgroundColor3 = accentColor
         indexBadge.BackgroundTransparency = 0.12
         indexBadge.BorderSizePixel = 0
@@ -1757,23 +1765,28 @@ local function showVotes(options)
 
         local statusBadge = Instance.new("TextLabel")
         statusBadge.AnchorPoint = Vector2.new(1, 0)
-        statusBadge.Position = UDim2.fromScale(0.94, 0.10)
-        statusBadge.Size = UDim2.fromScale(0.42, 0.20)
+        statusBadge.Position = UDim2.fromScale(0.94, compactVote and 0.08 or 0.10)
+        statusBadge.Size = UDim2.fromScale(
+            compactVote and 0.34 or 0.42,
+            compactVote and 0.17 or 0.20
+        )
         statusBadge.BackgroundColor3 = selected
             and UITheme.Colors.Green
             or (leading and UITheme.Colors.Gold or UITheme.Colors.PanelSoft)
         statusBadge.BackgroundTransparency = selected and 0.04 or 0.12
         statusBadge.BorderSizePixel = 0
         statusBadge.Font = Enum.Font.GothamBold
-        statusBadge.Text = selected and "YOUR VOTE" or (leading and "LEADING" or "CHOOSE")
+        statusBadge.Text = compactVote
+            and (selected and "VOTED" or (leading and "TOP" or "TAP"))
+            or (selected and "YOUR VOTE" or (leading and "LEADING" or "CHOOSE"))
         statusBadge.TextColor3 = selected and UITheme.Colors.Panel or UITheme.Colors.Text
         statusBadge.TextScaled = true
         statusBadge.Parent = button
         UITheme.addCorner(statusBadge, UITheme.Corners.Pill)
 
         local name = Instance.new("TextLabel")
-        name.Position = UDim2.fromScale(0.07, 0.34)
-        name.Size = UDim2.fromScale(0.86, 0.23)
+        name.Position = UDim2.fromScale(0.07, compactVote and 0.29 or 0.34)
+        name.Size = UDim2.fromScale(0.86, compactVote and 0.32 or 0.23)
         name.BackgroundTransparency = 1
         name.Font = Enum.Font.GothamBlack
         name.Text = string.upper(tostring(option.name or "CHAOS"))
@@ -1791,12 +1804,16 @@ local function showVotes(options)
         hintLabel.TextColor3 = UITheme.Colors.Muted
         hintLabel.TextScaled = true
         hintLabel.TextWrapped = true
+        hintLabel.Visible = not compactVote
         hintLabel.Parent = button
 
         local votePill = Instance.new("TextLabel")
         votePill.AnchorPoint = Vector2.new(0.5, 1)
-        votePill.Position = UDim2.fromScale(0.5, 0.94)
-        votePill.Size = UDim2.fromScale(0.70, 0.15)
+        votePill.Position = UDim2.fromScale(0.5, compactVote and 0.92 or 0.94)
+        votePill.Size = UDim2.fromScale(
+            compactVote and 0.62 or 0.70,
+            compactVote and 0.18 or 0.15
+        )
         votePill.BackgroundColor3 = selected and accentColor or UITheme.Colors.PanelSoft
         votePill.BackgroundTransparency = selected and 0.02 or 0.08
         votePill.BorderSizePixel = 0
