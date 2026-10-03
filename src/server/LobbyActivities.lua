@@ -124,6 +124,10 @@ function LobbyActivities.start(config)
                 return
             end
             cooldownUntil[player.UserId] = now + 0.9
+            player:SetAttribute(
+                "LobbyPracticeUses",
+                math.max(0, math.floor(tonumber(player:GetAttribute("LobbyPracticeUses")) or 0)) + 1
+            )
 
             root.AssemblyLinearVelocity = LobbyActivities.safeVelocity(
                 root.AssemblyLinearVelocity,
