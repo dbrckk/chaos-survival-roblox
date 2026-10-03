@@ -72,7 +72,7 @@ PHASE B — AUDIO PREMIUM
 [FAIT] B2 Mix dynamique séparé Music / Hazard / UI / Reward, avec priorité danger en round et Final Rush.
 [FAIT] B3 Ducking musique lors des rounds critiques / Final Rush.
 [EN COURS] B4 Cues critiques + chaque accent catastrophe + Vote/Reward/Last Survivor/Overdrive/Flow Combo/MobilityPad recomposés en couches distinctes ; loops protégés des accents one-shot, Meteor/Bomb multi-couches spatiales, landing pondéré par airtime, EQ/réverb propres aux cues clés pour réduire l'effet sons Roblox recyclés. Remplacement final par assets originaux/Creator Store vérifiés encore à faire.
-[EN COURS] B5 Profils tonaux/pitch propres à chaque arène ajoutés ; assets d'ambiance dédiés à sélectionner plus tard.
+[EN COURS] B5 Profils tonaux/pitch propres à chaque arène + beds spatiaux 3D ajoutés : Classic/Towers/Crossroads/Orbital ont EQ, réverb, pitch, rayon et placement distincts ; 1/2/3 sources selon Low/Medium/High et ducking automatique Overdrive/Final Rush. Assets d'ambiance originaux dédiés à sélectionner plus tard.
 
 PHASE C — MAP ART PASS
 [EN COURS] C1 Classic Grid : broadcast fins, grille animée, mâts skyline, cadrage broadcast, surface technique, sous-structure et réponse lumière/ColorShift dédiée ; QA visuelle finale restante.
@@ -196,3 +196,6 @@ Ordre d'exécution immédiat
 - [FAIT] Void multicouche : cadre intermédiaire vers y=-17, seconde profondeur Medium/High vers y=-36, accents emissifs budgetés et fond distant non-collidable ; aucun RenderStepped/Heartbeat ajouté.
 
 - [FAIT] Perf micro-vie arène : ArenaAmbientProps et ArenaIdentityMotion conservent toutes leurs animations pendant READY/ROUND/RESULT mais passent à 0,60 s de sommeil au lobby au lieu de mettre à jour les props ~10 Hz hors écran.
+
+- [FAIT] Spatial arena ambience : beds 3D map-specific autour de l'arène, rolloff borné pour rester inaudible au lobby, EQ/réverb propres à chaque map, fade par phase et aucun RenderStepped/Heartbeat.
+- [FAIT] Perf speed-feel : boucle UI passe de 20 Hz permanent à 0,40 s hors participation, 0,12 s sous le seuil de vitesse et 0,08 s seulement quand les streaks sont visibles.
