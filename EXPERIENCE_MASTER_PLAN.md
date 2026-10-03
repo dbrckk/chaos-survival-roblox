@@ -85,7 +85,7 @@ PHASE C — MAP ART PASS
 [FAIT] C7 Signatures animées distinctes + 3 profils de rythme/direction/amplitude alternés à chaque round.
 
 PHASE D — VFX / ANIMATION
-[FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle.
+[FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle. Ajout d'une lecture de fuite locale basée sur proximité pour Meteor/Bomb/Freeze, limitée au joueur réellement menacé et réduite en Final Rush/Low.
 [FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
 [FAIT] D3 11 signatures catastrophe : palettes/atmosphères distinctes + warning geometry dédiée pour Meteor/Bomb/JumpShock/Disappearing Platforms.
 [FAIT] D4 Feedback monde + poses corporelles procédurales distinctes pour victoire, élimination et Master Round, compatibles Animate/Reduce Motion.
