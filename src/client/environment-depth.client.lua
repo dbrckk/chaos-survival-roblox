@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
@@ -16,6 +17,7 @@ folder.Parent = workspace
 
 local structures = {}
 local glows = {}
+local transitGlows = {}
 local currentAccent = VisualTheme.Accents.Cyan
 local secondaryAccent = VisualTheme.Accents.Violet
 
@@ -27,6 +29,7 @@ local function clear()
     end
     table.clear(structures)
     table.clear(glows)
+    table.clear(transitGlows)
 end
 
 local function makePart(name, size, cframe, color, material, transparency)
@@ -127,6 +130,7 @@ local function addTransitDepth(tier)
         )
         cross.CastShadow = false
         table.insert(glows, cross)
+        table.insert(transitGlows, cross)
 
         if tier.Name ~= "Low" then
             local lower = linePart(
@@ -158,6 +162,7 @@ local function addTransitDepth(tier)
             )
             rail.CastShadow = false
             table.insert(glows, rail)
+            table.insert(transitGlows, rail)
         end
     end
 
@@ -251,6 +256,7 @@ local function addHorizonDepth(tier)
 end
 
 local function rebuild()
+applyTransitPhase(currentPhase)
     clear()
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -643,7 +649,86 @@ local function rebuild()
     end
 end
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
+local transitionToken = 0
+local currentPhase = "waiting"
+
+local function applyTransitPhase(phase)
+    currentPhase = tostring(phase or "waiting")
+    transitionToken += 1
+    local token = transitionToken
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local reduced = player:GetAttribute("ReduceMotion") == true
+
+    if currentPhase == "ready" then
+        for index, part in ipairs(transitGlows) do
+            if part and part.Parent then
+                local delaySeconds = reduced and 0 or ((index - 1) * 0.045)
+                task.delay(delaySeconds, function()
+                    if token ~= transitionToken or not part.Parent then
+                        return
+                    end
+
+                    TweenService:Create(
+                        part,
+                        TweenInfo.new(
+                            reduced and 0.08 or 0.16,
+                            Enum.EasingStyle.Quad,
+                            Enum.EasingDirection.Out
+                        ),
+                        {Transparency = tier.Name == "Low" and 0.48 or 0.20}
+                    ):Play()
+
+                    task.delay(reduced and 0.10 or 0.20, function()
+                        if token == transitionToken and part.Parent then
+                            TweenService:Create(
+                                part,
+                                TweenInfo.new(
+                                    reduced and 0.10 or 0.28,
+                                    Enum.EasingStyle.Quad,
+                                    Enum.EasingDirection.Out
+                                ),
+                                {Transparency = tier.Name == "Low" and 0.68 or 0.44}
+                            ):Play()
+                        end
+                    end)
+                end)
+            end
+        end
+        return
+    end
+
+    local targetTransparency
+    if currentPhase == "round" then
+        targetTransparency = tier.Name == "Low" and 0.88 or 0.76
+    elseif currentPhase == "result" then
+        targetTransparency = tier.Name == "Low" and 0.74 or 0.56
+    else
+        targetTransparency = tier.Name == "Low" and 0.72 or 0.50
+    end
+
+    for _, part in ipairs(transitGlows) do
+        if part and part.Parent then
+            TweenService:Create(
+                part,
+                TweenInfo.new(
+                    reduced and 0.08 or 0.24,
+                    Enum.EasingStyle.Quad,
+                    Enum.EasingDirection.Out
+                ),
+                {Transparency = targetTransparency}
+            ):Play()
+        end
+    end
+end
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    rebuild()
+    applyTransitPhase(currentPhase)
+end)
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    applyTransitPhase(currentPhase)
+end)
 
 local mapConnection = nil
 
@@ -682,6 +767,8 @@ end)
 bindMap()
 
 stateEvent.OnClientEvent:Connect(function(state)
+    applyTransitPhase(state.phase)
+
     local ids = state.disasterIds or {}
     local profile = DisasterVisuals.combine(ids)
     local secondary = ids[2] and DisasterVisuals.get(ids[2]) or nil
