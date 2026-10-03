@@ -72,6 +72,27 @@ describe("AI survivor rules", function()
         expect(pressuredLowGravity < lowGravity).toBe(true)
     end)
 
+    it("selects distinct lobby modes with vote taking priority", function()
+        expect(AISurvivorRules.lobbyActivity(0.05, 0.20, 0.20, false)).toBe("social")
+        expect(AISurvivorRules.lobbyActivity(0.30, 0.20, 0.20, false)).toBe("practice")
+        expect(AISurvivorRules.lobbyActivity(0.80, 0.20, 0.20, false)).toBe("roam")
+        expect(AISurvivorRules.lobbyActivity(0.80, 0.20, 0.20, true)).toBe("vote")
+    end)
+
+    it("spreads vote gathering and social spacing around partners", function()
+        local a = AISurvivorRules.voteGatherOffset(1, 4)
+        local b = AISurvivorRules.voteGatherOffset(2, 4)
+        expect(a.Magnitude >= 6 and a.Magnitude <= 10.01).toBe(true)
+        expect(b.Magnitude >= 6 and b.Magnitude <= 10.01).toBe(true)
+        expect((a - b).Magnitude > 1).toBe(true)
+
+        local socialA = AISurvivorRules.socialSpacing(1, 2)
+        local socialB = AISurvivorRules.socialSpacing(2, 1)
+        expect(socialA.Magnitude >= 4.5 and socialA.Magnitude <= 6.46).toBe(true)
+        expect(socialB.Magnitude >= 4.5 and socialB.Magnitude <= 6.46).toBe(true)
+        expect((socialA - socialB).Magnitude > 0.5).toBe(true)
+    end)
+
     it("cycles five avatar styles across survivor identities", function()
         local seen = {}
         for index = 1, 8 do
