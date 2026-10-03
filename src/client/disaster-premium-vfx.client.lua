@@ -192,6 +192,7 @@ local function bindFreeze(warning)
         radius = radius,
         startedAt = workspace:GetServerTimeNow(),
         duration = math.max(0.1, tonumber(warning:GetAttribute("WarningDuration")) or 0.7),
+        mist = mist,
     }
 end
 
@@ -234,6 +235,8 @@ RunService.RenderStepped:Connect(function(dt)
     updateClock += dt
 
     local tier = quality()
+    local reduceMotion = player:GetAttribute("ReduceMotion") == true
+    local motionScale = reduceMotion and 0.18 or 1
     if updateClock < math.max(1 / 30, tier.UpdateInterval) then
         return
     end
@@ -243,18 +246,29 @@ RunService.RenderStepped:Connect(function(dt)
         local lava = lavaState.lava
         local surface = lavaState.surface
         if surface and surface.Parent then
-            local pulse = (math.sin(clock * 2.8) + 1) * 0.5
+            local pulse = (math.sin(clock * (reduceMotion and 0.9 or 2.8)) + 1) * 0.5
             surface.Size = Vector3.new(
                 math.max(1, lava.Size.X - 1.2),
                 0.12,
                 math.max(1, lava.Size.Z - 1.2)
             )
             surface.CFrame = lava.CFrame + Vector3.new(0, (lava.Size.Y * 0.5) + 0.08, 0)
-            surface.Color = Color3.fromRGB(255, 118 + math.floor(pulse * 40), 25)
-            surface.Transparency = 0.20 + pulse * 0.16
+            surface.Color = Color3.fromRGB(
+                255,
+                128 + math.floor(pulse * (reduceMotion and 12 or 40)),
+                25
+            )
+            surface.Transparency = 0.22 + pulse * (reduceMotion and 0.05 or 0.16)
+        end
+        if lavaState.embers and lavaState.embers.Parent then
+            lavaState.embers.Rate = 14 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
         end
         if lavaState.light and lavaState.light.Parent then
-            lavaState.light.Brightness = (1.0 + math.sin(clock * 3.1) * 0.22) * tier.Scale
+            lavaState.light.Brightness = (
+                1.0 + math.sin(clock * (reduceMotion and 0.8 or 3.1))
+                    * 0.22
+                    * motionScale
+            ) * tier.Scale
         end
     end
 
@@ -275,12 +289,16 @@ RunService.RenderStepped:Connect(function(dt)
                 local radius = state.radius * expansion
                 local position = Vector3.new(
                     warning.Position.X + math.cos(angle) * radius,
-                    y + math.sin(clock * 5 + i) * 0.07,
+                    y + math.sin(clock * (reduceMotion and 1.1 or 5) + i) * 0.07 * motionScale,
                     warning.Position.Z + math.sin(angle) * radius
                 )
                 segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
                 segment.Transparency = 0.26 + alpha * 0.34
             end
+        end
+
+        if state.mist and state.mist.Parent then
+            state.mist.Rate = 10 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
         end
 
         if state.center and state.center.Parent then
