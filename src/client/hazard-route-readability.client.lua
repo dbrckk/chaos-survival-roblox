@@ -233,15 +233,15 @@ local function updateState(warning, state, root, tier, now)
     return distance - dangerRadius
 end
 
-workspace.DescendantAdded:Connect(maybeBind)
-workspace.DescendantRemoving:Connect(function(instance)
+workspace.ChildAdded:Connect(maybeBind)
+workspace.ChildRemoved:Connect(function(instance)
     if warningStates[instance] then
         destroyState(instance)
     end
 end)
 
-for _, descendant in ipairs(workspace:GetDescendants()) do
-    maybeBind(descendant)
+for _, child in ipairs(workspace:GetChildren()) do
+    maybeBind(child)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
