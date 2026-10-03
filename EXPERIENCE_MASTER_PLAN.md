@@ -109,6 +109,7 @@ PHASE F — RETENTION / FUN
 [FAIT] F8 AI Survivors hazard-aware : réactions urgentes Meteor/Bomb/plateforme instable évaluées à chaque tick cerveau indépendamment du wander, délai humain par profil conservé, CollapsePhase utilisé comme source de vérité, plateformes/pads mobiles suivis pendant ShrinkingArena et parité dégâts radiaux IA/humains couverte par test.
 [FAIT] F9 AI Survivors map-aware : sélection de cibles limitée aux hauteurs atteignables à pied, usage des pads pondéré par topologie, approche des pads non décalée par l'anti-regroupement, cibles sociales verticalement atteignables, continuité de route propre à Classic/Towers/Crossroads/Orbital (anneau Orbital, lanes Crossroads, montée locale Towers).
 [FAIT] F10 AI Survivors humanisés : tempérament légèrement différent à chaque round tout en conservant l'identité Cautious/Balanced/Bold, hésitations rares hors urgence, changements d'avis occasionnels, durée d'engagement variable, direction préférée renouvelée par round et suivi social anticipant légèrement le mouvement réel d'un joueur proche. Les réactions critiques aux hazards gardent le profil de base afin de ne pas simuler des erreurs artificielles face aux télégraphes.
+[FAIT] F11 Difficulté AI Survivors calibrée sans triche : mêmes 100 PV/dégâts que les humains, pression de survie bornée selon santé/Final Rush/Double Chaos, risque/social/hésitation et largeur de choix ajustés progressivement, sauts optionnels réduits à faible santé mais jamais supprimés ; aucune modification des réflexes critiques face aux warnings.
 
 PHASE G — UI/UX
 [EN COURS] G1 Layout responsive + dock tactile + palier compact/tablette <1.50 ajoutés ; validation réelle 16:9/tall/tablet encore requise.
@@ -119,7 +120,7 @@ PHASE G — UI/UX
 
 PHASE H — PERFORMANCE
 [EN COURS] H1 Budgets dynamiques appliqués aux world VFX, impacts, lights, cosmétiques + LOD local scenery ; mesures réelles restantes.
-[EN COURS] H2 Boucles catastrophe idle ; world-polish cache centres lobby + CenterBeacon, réutilise profil VFX et réduit motion. Audit transversal des 11 catastrophes : fallbacks contestants nettoyés, Freeze couvre JumpPower+JumpHeight, RisingLava ne bloque plus la physique, régression ShrinkingArena/pads couverte par test moteur.
+[EN COURS] H2 Boucles catastrophe idle ; world-polish cache centres lobby + CenterBeacon, réutilise profil VFX et réduit motion. Audit transversal des 11 catastrophes : fallbacks contestants nettoyés, Freeze couvre JumpPower+JumpHeight, RisingLava ne bloque plus la physique, régression ShrinkingArena/pads couverte par test moteur. Les pads lisent désormais leur impulsion live et ShrinkingArena réduit/restaure leur poussée horizontale avec la taille réelle de l'arène afin d'éviter les launches hors-zone.
 [EN COURS] H3 Budgets VFX/Light étendus aux cosmétiques et ambience ; Low réduit lights/particles/specular, Final Rush supprime du bruit visuel.
 [A FAIRE] H4 Soak Android 30-60 min.
 [A FAIRE] H5 MicroProfiler sur appareil réel.
