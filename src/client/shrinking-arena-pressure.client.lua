@@ -98,6 +98,7 @@ RunService.RenderStepped:Connect(function(dt)
     if updateClock < cadence then
         return
     end
+    local elapsed = updateClock
     updateClock = 0
 
     local base = arenaBase()
@@ -108,7 +109,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 
     local pressure = edgePressure(base, root)
-    smoothedPressure += (pressure - smoothedPressure) * math.clamp(dt * 12, 0, 1)
+    smoothedPressure += (pressure - smoothedPressure) * math.clamp(elapsed * 12, 0, 1)
 
     if smoothedPressure < 0.05 then
         frame.Visible = false
