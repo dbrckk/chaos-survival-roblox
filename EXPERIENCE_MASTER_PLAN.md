@@ -119,7 +119,7 @@ PHASE G — UI/UX
 [EN COURS] G2 Dock tactile unique avec cible >=44 px, stats/XP déplacés au-dessus du dock puis masqués pendant READY/ROUND mobile, panels réservés au-dessus du dock, warning data séparé du compteur survivants et menus FTUE masqués avant la première manche ; QA réelle restante.
 [FAIT] G3 Tokens de mouvement UI centralisés : press/release, panel-in, result emphasis et fades cohérents.
 [FAIT] G4 State machine UI : READY/ROUND ferme la méta, masque le dock et invalide tout résultat retardé ; gameplay critique prioritaire.
-[EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors/world polish ; contraste et warnings redondants, QA réelle restante.
+[EN COURS] G5 Accessibilité chaos renforcée : Reduce Motion persistant actif sur caméra/postFX/décors/world polish + Freeze/Lava premium ; textes critiques avec planchers lisibles mobile ; Meteor/Bomb ajoutent cue écran texte+badge et formes d'évasion distinctes ; ShrinkingArena affiche MOVE CENTER à forte pression ; Disappearing Platforms ajoute un X de pré-effondrement en plus de la couleur. QA contraste/daltonisme/motion sickness réelle restante.
 
 PHASE H — PERFORMANCE
 [EN COURS] H1 Budgets dynamiques appliqués aux world VFX, impacts, lights, cosmétiques + LOD local scenery ; mesures réelles restantes.
