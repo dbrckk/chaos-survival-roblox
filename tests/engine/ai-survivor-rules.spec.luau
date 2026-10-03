@@ -35,6 +35,38 @@ describe("AI survivor rules", function()
         expect(cautious.SocialChance < bold.SocialChance).toBe(true)
     end)
 
+    it("rejects unreachable vertical targets without a pad route", function()
+        expect(AISurvivorRules.reachableElevation(3, 10, "Classic")).toBe(true)
+        expect(AISurvivorRules.reachableElevation(3, 11, "Classic")).toBe(false)
+        expect(AISurvivorRules.reachableElevation(3, 11.4, "Towers")).toBe(true)
+        expect(AISurvivorRules.reachableElevation(3, 12, "Towers")).toBe(false)
+        expect(AISurvivorRules.reachableElevation(12, 6, "Towers")).toBe(true)
+    end)
+
+    it("gives each arena a distinct route affinity", function()
+        local center = Vector3.zero
+
+        expect(
+            AISurvivorRules.routeAffinity("Orbital", Vector3.new(29, 0, 0), center)
+            > AISurvivorRules.routeAffinity("Orbital", Vector3.zero, center)
+        ).toBe(true)
+
+        expect(
+            AISurvivorRules.routeAffinity("Crossroads", Vector3.new(30, 0, 0), center)
+            > AISurvivorRules.routeAffinity("Crossroads", Vector3.new(20, 0, 20), center)
+        ).toBe(true)
+
+        expect(
+            AISurvivorRules.routeAffinity("Towers", Vector3.new(28, 0, 28), center)
+            > AISurvivorRules.routeAffinity("Towers", Vector3.new(28, 0, 0), center)
+        ).toBe(true)
+
+        expect(
+            AISurvivorRules.routeAffinity("Classic", Vector3.new(24, 0, 0), center)
+            > AISurvivorRules.routeAffinity("Classic", Vector3.zero, center)
+        ).toBe(true)
+    end)
+
     it("rejects collapsing or non-solid platform targets", function()
         expect(AISurvivorRules.platformAvailable(true, 0, nil)).toBe(true)
         expect(AISurvivorRules.platformAvailable(true, 0.2, "Warning")).toBe(false)
