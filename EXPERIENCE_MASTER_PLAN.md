@@ -58,6 +58,26 @@ P2 — Présentation publique
 - Icon/thumbnails/captures finales encore absents.
 - Nécessitera des scènes composées spécifiquement pour la page Roblox.
 
+RE-AUDIT — 2026-10-04
+=======================
+P0 — Validation réelle
+- Plus gros risque restant : aucune certification visuelle/tactile/performance longue sur vrai Android ni Studio authentifié pour le HEAD actuel. Le code peut être propre sans garantir composition, occlusion, chauffe ou confort caméra réels.
+
+P0 — Audio assets
+- Architecture audio désormais avancée (mix, spatial, EQ/réverb, ambience map-specific, footsteps material-aware), mais plusieurs sources utilisent encore des sons Roblox historiques. L'écart qualitatif principal est maintenant l'acquisition/remplacement par assets originaux ou Creator Store vérifiés.
+
+P1 — Animation
+- Body feel procédural riche : stride, freinage, virage, jump/fall, launch, impact, résultats et anticipation READY. Le plafond restant vient surtout de l'absence de clips authored originaux publiés sur Roblox.
+
+P1 — Maps / décor
+- Géométrie, profondeur et langage de navigation sont solides. Le pass actuel ajoute landmarks narratifs, asymétrie et silhouettes de bord propres à chaque map. Reste principalement la QA visuelle en caméra réelle et, éventuellement, une passe finale de composition après captures Studio.
+
+P1 — UI critique
+- Hiérarchie survival/danger renforcée. Les cues Meteor/Bomb et ShrinkingArena disposent maintenant de lanes séparées sur petits écrans ; validation tactile réelle reste requise.
+
+P2 — Public polish
+- Icon, thumbnails, trailer et captures finales restent non produits ; à ne lancer qu'après certification visuelle/device du build.
+
 ROADMAP
 =======
 PHASE A — GAME FEEL CORE
@@ -202,3 +222,10 @@ Ordre d'exécution immédiat
 
 - [FAIT] Render loops catastrophe passés à la demande : disaster-motion-vfx, disaster-premium-vfx, ShrinkingArena pressure, DisappearingPlatforms readability, Meteor/Bomb hazard routes et Tornado ne gardent plus de RenderStepped connecté quand aucun effet correspondant n'est actif.
 - [FAIT] AI server perf : warnings Meteor/Bomb/Freeze/JumpShock indexés via Workspace ChildAdded/ChildRemoved au lieu d'un scan GetChildren toutes les ~0,15 s ; brain cadence = 0,18 s avec bots actifs, 0,42 s pendant RESULT et 0,75 s sans bot.
+
+- [FAIT] Map storytelling pass : chaque arène reçoit un landmark narratif hors gameplay (régie broadcast Classic, lift maintenance Towers, hub transit Crossroads, reactor Orbital) avec labels Medium/High et zéro boucle frame.
+- [FAIT] Silhouettes de bord propres : ticks broadcast Classic, buttresses Towers, rails de sortie Crossroads, ticks tangentiels Orbital ; aucun impact collision/gameplay.
+- [FAIT] Asymétrie contrôlée Medium/High : booth ops, crane maintenance, lane fermée et docking arm pour casser l'effet procédural trop régulier.
+- [FAIT] Anticipation READY procédurale : stance corporelle légère avant départ, relâchée au GO, désactivée progressivement par le mouvement et couverte par BodyMotionRules.
+- [FAIT] UI danger lanes : cue Meteor/Bomb repositionné sous top HUD selon UIResponsive ; MOVE CENTER bascule latéralement sur compact/tiny pour coexister en Double Chaos.
+- [FAIT] Footsteps material-aware : EQ/réverb du son Running local pilotés par FloorMaterial, donnant une signature distincte DiamondPlate/Metal/Slate/SmoothPlastic sans asset supplémentaire ni boucle frame.
