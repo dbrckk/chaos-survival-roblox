@@ -21,13 +21,13 @@ function RoundEventPresentation.roundTitle(state)
     state = type(state) == "table" and state or {}
 
     if state.doubleChaos == true and state.fusionName then
-        return "CHAOS FUSION", tostring(state.fusionName)
+        return "SURVIVE THE FUSION!", tostring(state.fusionName) .. " • TWO HAZARDS ACTIVE"
     end
 
-    local title = tostring(state.title or "CHAOS LIVE")
+    local title = tostring(state.title or "CHAOS")
     title = title:gsub("^SOLO RUSH:%s*", "")
     title = title:gsub("^CHAOS FUSION:%s*", "")
-    return "CHAOS LIVE", title
+    return "SURVIVE!", title
 end
 
 function RoundEventPresentation.countdownValue(state, previousPhase)
