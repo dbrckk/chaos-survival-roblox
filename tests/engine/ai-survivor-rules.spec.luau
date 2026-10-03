@@ -72,6 +72,45 @@ describe("AI survivor rules", function()
         expect(pressuredLowGravity < lowGravity).toBe(true)
     end)
 
+    it("cycles five avatar styles across survivor identities", function()
+        local seen = {}
+        for index = 1, 8 do
+            local style = AISurvivorRules.appearanceStyle(index)
+            expect(style >= 1 and style <= 5).toBe(true)
+            seen[style] = true
+        end
+
+        local count = 0
+        for _ in pairs(seen) do
+            count += 1
+        end
+        expect(count).toBe(5)
+        expect(AISurvivorRules.appearanceStyle(1)).toBe(1)
+        expect(AISurvivorRules.appearanceStyle(6)).toBe(1)
+    end)
+
+    it("keeps identity-based body scales bounded and varied", function()
+        local bodyA, proportionA = AISurvivorRules.bodyScales(1)
+        local bodyB, proportionB = AISurvivorRules.bodyScales(2)
+
+        expect(bodyA >= 0.04 and bodyA <= 0.20).toBe(true)
+        expect(proportionA >= 0.08 and proportionA <= 0.28).toBe(true)
+        expect(bodyB >= 0.04 and bodyB <= 0.20).toBe(true)
+        expect(proportionB >= 0.08 and proportionB <= 0.28).toBe(true)
+        expect(bodyA ~= bodyB or proportionA ~= proportionB).toBe(true)
+    end)
+
+    it("varies result reactions with temperament without changing gameplay stats", function()
+        expect(AISurvivorRules.resultReaction(0.05, 0.20)).toBe("jump")
+        expect(AISurvivorRules.resultReaction(0.45, 0.20)).toBe("sidestep")
+        expect(AISurvivorRules.resultReaction(0.68, 0.20)).toBe("acknowledge")
+        expect(AISurvivorRules.resultReaction(0.95, 0.20)).toBe("still")
+
+        local cautiousJumpCutoff = AISurvivorRules.resultReaction(0.30, 0.10)
+        local boldJumpCutoff = AISurvivorRules.resultReaction(0.30, 0.90)
+        expect(cautiousJumpCutoff ~= boldJumpCutoff).toBe(true)
+    end)
+
     it("smooths ordinary steering but keeps urgent steering direct", function()
         local previous = Vector3.new(1, 0, 0)
         local desired = Vector3.new(0, 0, 1)
