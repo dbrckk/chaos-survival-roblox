@@ -68,6 +68,39 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+function AISurvivorRules.reachableElevation(currentY, targetY, variantId)
+    local rise = (tonumber(targetY) or 0) - (tonumber(currentY) or 0)
+    if rise <= 0 then
+        return true
+    end
+
+    local limit = variantId == "Towers" and 8.5 or 7.5
+    return rise <= limit
+end
+
+function AISurvivorRules.routeAffinity(variantId, position, center)
+    if typeof(position) ~= "Vector3" or typeof(center) ~= "Vector3" then
+        return 0
+    end
+
+    local offset = Vector3.new(position.X - center.X, 0, position.Z - center.Z)
+    local radius = offset.Magnitude
+
+    if variantId == "Orbital" then
+        local ringError = math.abs(radius - 29)
+        return 8 - math.min(12, ringError * 0.45)
+    elseif variantId == "Crossroads" then
+        local laneDistance = math.min(math.abs(offset.X), math.abs(offset.Z))
+        return 7 - math.min(11, laneDistance * 0.55)
+    elseif variantId == "Towers" then
+        local cornerDistance = math.abs(math.abs(offset.X) - math.abs(offset.Z))
+        return 4 - math.min(7, cornerDistance * 0.18)
+    end
+
+    local preferredRadius = 24
+    return 4 - math.min(7, math.abs(radius - preferredRadius) * 0.20)
+end
+
 function AISurvivorRules.platformAvailable(canCollide, transparency, collapsePhase)
     if canCollide ~= true then
         return false
