@@ -168,7 +168,5 @@ Ordre d'exécution immédiat
 
 - [FAIT] Présentation résultat premium : hiérarchie partagée MASTER / CLUTCH / SURVIVED / ELIMINATED, carte résultat colorée distinctement, célébration clutch dédiée, spotlight monde du joueur local et des survivants humains/AI pour conserver une fin de round crédible même en solo.
 
-- [FAIT] Presentation layer de manche : countdown READY 3-2-1 synchronisé audio/visuel, CHAOS LIVE/CHAOS FUSION au vrai passage en ROUND, rails écran colorés, pulse monde au round start, double pulse pour Fusion et pulse orange/rouge au Final Rush. Priorités explicites Final Rush > Round Start > Fusion > Overdrive > countdown, aucun RenderStepped ajouté.
-- [FAIT] Arena reveal resynchronisé avec l'entrée réelle en READY afin que la signature de map soit vue après téléportation, et round-events repositionné sur mobile court pour ne pas recouvrir les cues de danger.
-
-- [FAIT] Presentation layer round : countdown 3-2-1 déjà synchronisé audio/visuel, reveal de départ simplifié en SURVIVE!/SURVIVE THE FUSION!, priorités Final Rush > Round Start > Fusion > Overdrive, micro-kick caméra additive compatible Reduce Motion et pulse monde local sans boucle frame.
+- [FAIT] Presentation layer de manche : countdown READY 3-2-1 synchronisé audio/visuel, reveal de départ SURVIVE!/SURVIVE THE FUSION!, rails écran colorés, micro-kick caméra additive compatible Reduce Motion, pulse monde au round start, double pulse pour Fusion et pulse orange/rouge au Final Rush. Priorités explicites Final Rush > Round Start > Fusion > Overdrive > countdown, aucun RenderStepped ajouté.
+- [FAIT] Arena reveal resynchronisé avec l'entrée réelle en READY afin que la signature de map soit vue après téléportation ; round-events repositionné sur mobile court pour ne pas recouvrir les cues de danger.
