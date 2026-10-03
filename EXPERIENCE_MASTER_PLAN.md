@@ -103,7 +103,7 @@ PHASE F — RETENTION / FUN
 [FAIT] F2 Mastery persistante catastrophe/arène avec paliers Rookie/Bronze/Silver/Gold/Elite et affichage post-round.
 [FAIT] F3 Weekly challenges persistants : 2 objectifs/semaine, progression serveur-authoritative, récompenses modérées et UI intégrée.
 [FAIT] F4 Collection log : sets, owned/total, sets complétés, milestones Collector 3/6/9/11 et célébration honorifique au franchissement.
-[EN COURS] F5 FIRST CHAOS medal + célébration monde garanties au premier round terminé ; accélération FTUE déjà via rookie coach, QA réelle restante.
+[EN COURS] F5 FIRST CHAOS medal + célébration monde garanties au premier round terminé. FTUE implémenté : boost lobby guidé, vote, placement, survie, marqueur monde contextuel, menus secondaires masqués avant la première manche, challenge newcomer = 1 pad et première manche protégée des Chaos Fusions ; QA réelle Studio/mobile restante.
 [FAIT] F6 Rotation portée à 6 micro-objectifs, toujours un seul challenge affiché : shards, pads, close call, momentum, flow et variété.
 [FAIT] F7 Audit Double Chaos : paires à faible agence bloquées (Freeze + hazards létaux/sol mouvant, JumpShock + ShrinkingArena, Tornado + ShrinkingArena), minimum de 2 partenaires sûrs par catastrophe garanti par test, matrice >=40 paires autorisées, HUD Fusion affiche désormais les deux identités visuelles + nom de fusion.
 [FAIT] F8 AI Survivors hazard-aware : réactions urgentes Meteor/Bomb/plateforme instable évaluées à chaque tick cerveau indépendamment du wander, délai humain par profil conservé, CollapsePhase utilisé comme source de vérité, plateformes/pads mobiles suivis pendant ShrinkingArena et parité dégâts radiaux IA/humains couverte par test.
