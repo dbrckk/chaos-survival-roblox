@@ -38,6 +38,11 @@ local FOLDERS = {
         LowDistance = 105,
         MediumDistance = 165,
     },
+    LobbySurfaceDetailLocal = {
+        LowDistance = 92,
+        MediumDistance = 145,
+        Origin = "Lobby",
+    },
 }
 
 local function cameraPosition()
@@ -130,24 +135,33 @@ local function applyFolder(folder, limits, profile, origin)
     end
 end
 
-local function currentArenaOrigin()
+local function currentOrigins()
     local generated = workspace:FindFirstChild("GeneratedMap")
+
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
-    if base and base:IsA("BasePart") then
-        return base.Position
-    end
-    return Vector3.zero
+    local arenaBase = arena and arena:FindFirstChild("Base")
+    local arenaOrigin = arenaBase and arenaBase:IsA("BasePart")
+        and arenaBase.Position
+        or Vector3.zero
+
+    local lobby = generated and generated:FindFirstChild("Lobby")
+    local lobbyFloor = lobby and lobby:FindFirstChild("Floor")
+    local lobbyOrigin = lobbyFloor and lobbyFloor:IsA("BasePart")
+        and lobbyFloor.Position
+        or arenaOrigin
+
+    return arenaOrigin, lobbyOrigin
 end
 
 task.spawn(function()
     while true do
         local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 
-        local origin = currentArenaOrigin()
+        local arenaOrigin, lobbyOrigin = currentOrigins()
         for folderName, limits in pairs(FOLDERS) do
             local folder = workspace:FindFirstChild(folderName)
             if folder then
+                local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
                 applyFolder(folder, limits, profile, origin)
             end
         end
