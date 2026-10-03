@@ -44,6 +44,11 @@ function UIResponsive.mobileProfile(viewport)
     end
 
     return {
+        narrowWidth = c.narrowWidth,
+        veryNarrow = c.veryNarrow,
+        tinyHeight = c.tinyHeight,
+        compactHeight = c.compactHeight,
+        wide = c.wide,
         topWidthScale = c.veryNarrow and 0.97 or (c.narrowWidth and 0.95 or 0.92),
         topHeight = topHeight,
         timerSize = timerSize,
