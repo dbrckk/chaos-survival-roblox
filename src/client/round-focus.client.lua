@@ -50,6 +50,10 @@ accentRail.BorderSizePixel = 0
 accentRail.Parent = root
 UITheme.addCorner(accentRail, UITheme.Corners.Pill)
 
+local accentGradient = Instance.new("UIGradient")
+accentGradient.Color = ColorSequence.new(UITheme.Colors.Cyan)
+accentGradient.Parent = accentRail
+
 local scale = Instance.new("UIScale")
 scale.Scale = 0.96
 scale.Parent = root
@@ -294,25 +298,37 @@ local function refresh()
         text = "OVERDRIVE  " .. tostring(math.max(1, math.floor(tonumber(state.overdriveSeconds) or 1))) .. "s"
         color = UITheme.Colors.Gold
     elseif state.doubleChaos then
-        text = "CHAOS FUSION"
+        text = tostring(state.fusionName or "CHAOS FUSION")
         color = UITheme.Colors.Violet
     end
     status.Text = text
     status.TextColor3 = color
 
     local primaryId = state.disasterIds and state.disasterIds[1]
+    local secondaryId = state.disasterIds and state.disasterIds[2]
     local disasterAccent = UITheme.disasterAccent(primaryId, UITheme.Colors.Cyan)
+    local secondaryAccent = UITheme.disasterAccent(secondaryId, UITheme.Colors.Violet)
     accentRail.BackgroundColor3 = disasterAccent
     fill.BackgroundColor3 = disasterAccent
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, disasterAccent),
-        ColorSequenceKeypoint.new(0.55, disasterAccent:Lerp(UITheme.Colors.Violet, 0.45)),
-        ColorSequenceKeypoint.new(1, UITheme.Colors.Red),
-    })
+    accentGradient.Color = state.doubleChaos and secondaryId
+        and ColorSequence.new(disasterAccent, secondaryAccent)
+        or ColorSequence.new(disasterAccent)
+    gradient.Color = state.doubleChaos and secondaryId
+        and ColorSequence.new({
+            ColorSequenceKeypoint.new(0, disasterAccent),
+            ColorSequenceKeypoint.new(0.58, secondaryAccent),
+            ColorSequenceKeypoint.new(1, UITheme.Colors.Red),
+        })
+        or ColorSequence.new({
+            ColorSequenceKeypoint.new(0, disasterAccent),
+            ColorSequenceKeypoint.new(0.55, disasterAccent:Lerp(UITheme.Colors.Violet, 0.45)),
+            ColorSequenceKeypoint.new(1, UITheme.Colors.Red),
+        })
 
     if state.finalRush then
         stroke.Color = UITheme.Colors.Red
         accentRail.BackgroundColor3 = UITheme.Colors.Orange
+        accentGradient.Color = ColorSequence.new(UITheme.Colors.Orange)
         shard.TextColor3 = UITheme.Colors.Orange
         gradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, UITheme.Colors.Orange),
@@ -322,6 +338,7 @@ local function refresh()
     elseif state.overdrive then
         stroke.Color = UITheme.Colors.Gold
         accentRail.BackgroundColor3 = UITheme.Colors.Gold
+        accentGradient.Color = ColorSequence.new(UITheme.Colors.Gold)
         shard.TextColor3 = UITheme.Colors.Gold
         gradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, UITheme.Colors.Gold),
