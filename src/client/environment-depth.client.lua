@@ -179,6 +179,78 @@ local function rebuild()
         end
     end
 
+    -- Midground architectural belt. This fills the visual gap between the playable
+    -- arena and the far skyline without adding collision or route clutter.
+    local midCount = tier.Name == "Low" and 6 or (tier.Name == "Medium" and 8 or 10)
+    local midRadius = variant == "Orbital" and 86 or (variant == "Towers" and 92 or 88)
+    for i = 1, midCount do
+        local angle = ((i - 1) / midCount) * math.pi * 2 + math.rad(9)
+        local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        local tangent = angle + math.pi * 0.5
+        local width = variant == "Crossroads" and 14 or (variant == "Towers" and 7 or 10)
+        local height = variant == "Towers" and (22 + ((i * 7) % 18))
+            or (variant == "Orbital" and 12 or (16 + ((i * 5) % 10)))
+        local position = Config.ArenaCenter + radial * midRadius + Vector3.new(0, (height * 0.5) - 4, 0)
+
+        local support = makePart(
+            "MidgroundSupport" .. i,
+            Vector3.new(width, height, width),
+            CFrame.new(position) * CFrame.Angles(0, -tangent, 0),
+            VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, 0.40),
+            VisualTheme.Materials.Structure,
+            tier.Name == "Low" and 0.30 or 0.18
+        )
+
+        if variant == "Orbital" then
+            support.Shape = Enum.PartType.Cylinder
+            support.CFrame = support.CFrame * CFrame.Angles(0, 0, math.rad(90))
+        end
+
+        local capSize = variant == "Towers"
+            and Vector3.new(width + 2, 0.40, width + 2)
+            or Vector3.new(width + 3, 0.34, width + 3)
+        local cap = makePart(
+            "MidgroundAccent" .. i,
+            capSize,
+            CFrame.new(position + Vector3.new(0, (height * 0.5) + 0.25, 0))
+                * CFrame.Angles(0, -tangent, 0),
+            i % 2 == 0 and currentAccent or secondaryAccent,
+            VisualTheme.Materials.Glow,
+            tier.Name == "Low" and 0.62 or 0.38
+        )
+        table.insert(glows, cap)
+
+        if tier.Name ~= "Low" and i % 2 == 0 then
+            local spanLength = variant == "Crossroads" and 24 or 18
+            local span = makePart(
+                "MidgroundSpan" .. i,
+                Vector3.new(spanLength, 0.42, 1.15),
+                CFrame.new(
+                    Config.ArenaCenter
+                        + radial * (midRadius - 7)
+                        + Vector3.new(0, 8 + ((i * 2) % 5), 0)
+                ) * CFrame.Angles(0, -tangent, 0),
+                VisualTheme.World.MetalLight,
+                VisualTheme.Materials.Structure,
+                0.28
+            )
+            span.CastShadow = false
+        end
+    end
+
+    -- A faint outer floor/readability halo visually grounds the arena in its environment.
+    -- It is intentionally non-collidable and mostly transparent.
+    local haloSize = variant == "Orbital" and 180 or 168
+    local halo = makePart(
+        "ArenaGroundHalo",
+        Vector3.new(haloSize, 0.18, haloSize),
+        CFrame.new(Config.ArenaCenter + Vector3.new(0, -6.2, 0)),
+        VisualTheme.World.Deep:Lerp(VisualTheme.World.Surface, 0.28),
+        Enum.Material.SmoothPlastic,
+        tier.Name == "Low" and 0.78 or 0.70
+    )
+    halo.CastShadow = false
+
     -- Variant-specific skyline landmarks. These stay outside the playable arena
     -- so they improve silhouette/readability without affecting collision or routes.
     if variant == "Classic" then
