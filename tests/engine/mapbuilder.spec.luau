@@ -26,6 +26,8 @@ describe("Chaos Survival engine", function()
         expect((lobbyDecor :: Folder):FindFirstChild("CenterPlatform") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("CenterGlow") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("ArenaGateTop") ~= nil).toBe(true)
+        expect((lobbyDecor :: Folder):FindFirstChild("ArenaRunway") ~= nil).toBe(true)
+        expect((lobbyDecor :: Folder):FindFirstChild("ArenaApproachRibTop1") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("ChaosSign") ~= nil).toBe(true)
         expect(#(lobbyDecor :: Folder):GetChildren() >= 12).toBe(true)
 
@@ -47,6 +49,9 @@ describe("Chaos Survival engine", function()
         expect(#(spawns :: Folder):GetChildren() >= 8).toBe(true)
         expect(#(platforms :: Folder):GetChildren() >= 14).toBe(true)
         expect((decor :: Folder):FindFirstChild("CenterBeacon") ~= nil).toBe(true)
+        expect((decor :: Folder):FindFirstChild("PlatformPanel1") ~= nil).toBe(true)
+        expect((decor :: Folder):FindFirstChild("PlatformUnderFrame1") ~= nil).toBe(true)
+        expect((decor :: Folder):FindFirstChild("PlatformSupport1_1") ~= nil).toBe(true)
         expect(#(decor :: Folder):GetChildren() >= 5).toBe(true)
 
         for _, item in ipairs((decor :: Folder):GetDescendants()) do
