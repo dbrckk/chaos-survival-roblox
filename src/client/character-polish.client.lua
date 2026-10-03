@@ -80,21 +80,33 @@ local function applyModel(model)
     local accent = accentFor(model, isLocal, isAI)
 
     local highlight = ensureHighlight(model)
+    local auraHighlight = model:FindFirstChild("ChaosAuraHighlight")
+    local hasAuraHighlight = auraHighlight and auraHighlight:IsA("Highlight")
+
     highlight.FillColor = accent:Lerp(Color3.new(1, 1, 1), 0.08)
     highlight.OutlineColor = accent:Lerp(Color3.new(1, 1, 1), 0.28)
-    highlight.FillTransparency = CharacterPolishRules.fillTransparency(
+
+    local fillTransparency = CharacterPolishRules.fillTransparency(
         quality.Name,
         phase,
         isLocal,
         finalRush
     )
-    highlight.OutlineTransparency = CharacterPolishRules.outlineTransparency(
+    local outlineTransparency = CharacterPolishRules.outlineTransparency(
         quality.Name,
         phase,
         isLocal,
         isAI,
         finalRush
     )
+
+    if hasAuraHighlight then
+        fillTransparency = 1
+        outlineTransparency = math.min(1, outlineTransparency + 0.18)
+    end
+
+    highlight.FillTransparency = fillTransparency
+    highlight.OutlineTransparency = outlineTransparency
 
     local light = ensureLight(model)
     if light then
