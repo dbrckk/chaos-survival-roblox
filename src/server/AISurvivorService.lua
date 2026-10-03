@@ -463,6 +463,9 @@ local function createRig(record)
     record.nextThink = 0
     record.nextJump = os.clock() + 1.2 + math.random()
     record.nextPadAt = 0
+    record.moveDirection = Vector3.zero
+    record.lastMoveTarget = nil
+    record.turnPauseUntil = 0
     record.threat = nil
     record.threatSeenAt = nil
 
@@ -527,6 +530,9 @@ local function sendToLobby(record)
     record.inRound = false
     record.target = nil
     record.targetPart = nil
+    record.moveDirection = Vector3.zero
+    record.lastMoveTarget = nil
+    record.turnPauseUntil = 0
     pivotRecord(record, getLobbyPosition(record.slot))
 end
 
@@ -538,6 +544,9 @@ local function sendToArena(record)
     record.inRound = true
     record.target = nil
     record.targetPart = nil
+    record.moveDirection = Vector3.zero
+    record.lastMoveTarget = nil
+    record.turnPauseUntil = 0
     pivotRecord(record, arenaSpawnPosition(record.slot))
 end
 
@@ -592,6 +601,9 @@ local function newRecord(slot)
         roundTraits = AISurvivorRules.roundTraits(profile, slot, 1),
         nextHesitationAt = 0,
         nextReconsiderAt = 0,
+        moveDirection = Vector3.zero,
+        lastMoveTarget = nil,
+        turnPauseUntil = 0,
     }
 
     record.proxy = {
@@ -1322,6 +1334,76 @@ local function recoverIfStuck(record, humanoid, root, now)
     return true
 end
 
+local function moveHumanLike(record, humanoid, root, target, now, urgent)
+    if not target then
+        humanoid:Move(Vector3.zero)
+        record.moveDirection = Vector3.zero
+        return
+    end
+
+    local delta = target - root.Position
+    local horizontal = Vector3.new(delta.X, 0, delta.Z)
+    if horizontal.Magnitude <= 0.05 then
+        humanoid:MoveTo(target)
+        record.moveDirection = Vector3.zero
+        return
+    end
+
+    local direct = urgent == true
+        or (record.targetIsPad == true and horizontal.Magnitude < 10)
+
+    local previousTarget = record.lastMoveTarget
+    local changedTarget = not previousTarget
+        or (Vector3.new(
+            target.X - previousTarget.X,
+            0,
+            target.Z - previousTarget.Z
+        ).Magnitude > 5)
+
+    if changedTarget then
+        local _, pressure = decisionTraits(record)
+        local pause = AISurvivorRules.turnPauseSeconds(
+            record.moveDirection,
+            horizontal,
+            direct,
+            pressure
+        )
+        record.lastMoveTarget = target
+        if pause > 0 then
+            record.turnPauseUntil = now + pause
+            humanoid:Move(Vector3.zero)
+            return
+        end
+    else
+        record.lastMoveTarget = target
+    end
+
+    if now < (record.turnPauseUntil or 0) then
+        humanoid:Move(Vector3.zero)
+        return
+    end
+
+    local steered = AISurvivorRules.steeredDirection(
+        record.moveDirection,
+        horizontal,
+        direct
+    )
+    if steered.Magnitude <= 0.001 then
+        humanoid:MoveTo(target)
+        return
+    end
+
+    record.moveDirection = steered
+    local stepDistance = math.min(horizontal.Magnitude, direct and 14 or 10)
+    local destination = root.Position + steered * stepDistance
+    destination = Vector3.new(
+        destination.X,
+        horizontal.Magnitude < 10 and target.Y or root.Position.Y,
+        destination.Z
+    )
+    humanoid:MoveTo(clampToArena(destination))
+end
+
 local function maybeSocialGesture(record, humanoid, root, now)
     if now < (record.nextEmoteAt or 0) or currentState.phase == "round" then
         return false
@@ -1497,14 +1579,27 @@ local function stepRecord(record, now)
             if delta.Y > 2.2 and horizontal.Magnitude < 10 then
                 humanoid.Jump = true
             end
+
             local destination = record.target
-            if horizontal.Magnitude > 8 and math.abs(record.strafeBias or 0) > 0.03 then
+            if not urgentTarget
+                and not record.targetIsPad
+                and horizontal.Magnitude > 8
+                and math.abs(record.strafeBias or 0) > 0.03
+            then
                 local direction = horizontal.Unit
                 local tangent = Vector3.new(-direction.Z, 0, direction.X)
                 local curve = math.min(3.2, horizontal.Magnitude * 0.10) * record.strafeBias
                 destination = clampToArena(destination + tangent * curve)
             end
-            humanoid:MoveTo(destination)
+
+            moveHumanLike(
+                record,
+                humanoid,
+                root,
+                destination,
+                now,
+                urgentTarget ~= nil
+            )
         end
     else
         tryLobbyPracticeImpulse(record, root, now)
@@ -1525,7 +1620,7 @@ local function stepRecord(record, now)
             record.nextThink = now + hold
         end
 
-        humanoid:MoveTo(record.target)
+        moveHumanLike(record, humanoid, root, record.target, now, false)
     end
 end
 
