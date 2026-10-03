@@ -18,6 +18,7 @@ DisasterBalance.IncompatiblePairs = {
     Tornado = {
         Freeze = true,
         JumpShock = true,
+        ShrinkingArena = true,
     },
     JumpShock = {
         Freeze = true,
@@ -40,6 +41,7 @@ DisasterBalance.IncompatiblePairs = {
     ShrinkingArena = {
         Freeze = true,
         JumpShock = true,
+        Tornado = true,
     },
 }
 
