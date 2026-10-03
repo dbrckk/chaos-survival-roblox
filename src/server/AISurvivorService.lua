@@ -1574,6 +1574,39 @@ local function stepRecord(record, now)
         return
     end
 
+    if voteActive and not record.inRound then
+        local gatherTarget = config.LobbyCenter
+            + AISurvivorRules.voteGatherOffset(record.slot, voteRoundNumber)
+            + Vector3.new(0, 2.7, 0)
+        local flatDistance = Vector3.new(
+            root.Position.X - gatherTarget.X,
+            0,
+            root.Position.Z - gatherTarget.Z
+        ).Magnitude
+
+        if flatDistance <= 3.8 then
+            record.target = gatherTarget
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.lastProgressPosition = root.Position
+            record.lastProgressAt = now
+            humanoid:Move(Vector3.zero)
+
+            local look = Vector3.new(
+                config.LobbyCenter.X,
+                root.Position.Y,
+                config.LobbyCenter.Z
+            )
+            if (look - root.Position).Magnitude > 0.2 then
+                root.CFrame = root.CFrame:Lerp(
+                    CFrame.lookAt(root.Position, look),
+                    0.30
+                )
+            end
+            return
+        end
+    end
+
     if currentState.phase == "result" then
         if now < (record.resultActionUntil or 0) then
             if record.resultAction == "sidestep" and record.resultTarget then
@@ -1898,9 +1931,15 @@ end
 function AISurvivorService.beginVote(options, roundNumber)
     voteToken += 1
     local token = voteToken
+    table.clear(voteIds)
+
+    if type(options) ~= "table" or #options == 0 then
+        voteActive = false
+        return
+    end
+
     voteActive = true
     voteRoundNumber = math.max(1, math.floor(tonumber(roundNumber) or roundSerial or 1))
-    table.clear(voteIds)
 
     local now = os.clock()
     for _, record in ipairs(records) do
@@ -1911,10 +1950,6 @@ function AISurvivorService.beginVote(options, roundNumber)
         record.targetIsPad = false
         record.lobbyActivity = "vote"
         record.nextThink = now + 1.4 + math.random() * 0.9
-    end
-
-    if type(options) ~= "table" or #options == 0 then
-        return
     end
 
     for index, record in ipairs(records) do
@@ -1944,6 +1979,7 @@ function AISurvivorService.clearVotes()
             record.target = nil
             record.targetPart = nil
             record.nextThink = 0
+            record.nextEmoteAt = os.clock() + 1.5 + math.random() * 2.5
         end
     end
 end
