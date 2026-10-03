@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundFeedback")
@@ -93,9 +94,10 @@ local function celebrate(feedback)
     local tier = profile()
     local survived = feedback.survived == true
     local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
-    local masterRound = survived
-        and feedback.challengeCompleted == true
-        and momentumBest >= 4
+    local resultKind = ResultPresentation.kind(feedback)
+    local intensity = ResultPresentation.intensity(feedback)
+    local masterRound = resultKind == "master"
+    local clutch = resultKind == "clutch"
 
     local firstChaos = false
     if type(feedback.medals) == "table" then
@@ -108,17 +110,39 @@ local function celebrate(feedback)
     end
 
     if survived then
-        local color = masterRound and UITheme.Colors.Gold or UITheme.Colors.Green
-        local ringRadius = masterRound and 22 or 16
-        makeRing(root, color, ringRadius, masterRound and 0.62 or 0.48, -2.3)
+        local color = masterRound
+            and UITheme.Colors.Gold
+            or (clutch and UITheme.Colors.Cyan or UITheme.Colors.Green)
+        local ringRadius = masterRound and 22 or (clutch and 19 or 16)
+        makeRing(
+            root,
+            color,
+            ringRadius,
+            masterRound and 0.62 or (clutch and 0.54 or 0.48),
+            -2.3
+        )
 
         if tier.Name ~= "Low" then
             local count = VfxQuality.particleCount(
                 tier.Name,
-                masterRound and 28 or 18,
+                math.floor((masterRound and 28 or (clutch and 22 or 18)) * intensity),
                 masterRound and 10 or 7
             )
-            makeBurst(root, color, count, masterRound and 8.5 or 6.3)
+            makeBurst(
+                root,
+                color,
+                count,
+                (masterRound and 8.5 or (clutch and 7.2 or 6.3)) * intensity
+            )
+        end
+
+        if clutch and tier.Name == "High" then
+            task.delay(0.08, function()
+                local currentRoot = rootPart()
+                if currentRoot then
+                    makeRing(currentRoot, UITheme.Colors.Blue, 23, 0.60, -2.12)
+                end
+            end)
         end
 
         if masterRound and tier.Name == "High" then
