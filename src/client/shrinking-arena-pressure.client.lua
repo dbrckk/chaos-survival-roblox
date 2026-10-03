@@ -55,6 +55,8 @@ UITheme.addTextConstraint(centerCue, 14, 22)
 local active = false
 local updateClock = 0
 local smoothedPressure = 0
+local renderConnection = nil
+local ensureRenderLoop
 
 local function qualityScale()
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -104,11 +106,26 @@ stateEvent.OnClientEvent:Connect(function(state)
         frame.Visible = false
         centerCue.Visible = false
         frame.BackgroundTransparency = 1
+    elseif ensureRenderLoop then
+        ensureRenderLoop()
     end
 end)
 
-RunService.RenderStepped:Connect(function(dt)
-    if not active
+ensureRenderLoop = function()
+    if renderConnection or not active then
+        return
+    end
+
+    renderConnection = RunService.RenderStepped:Connect(function(dt)
+        if not active then
+            frame.Visible = false
+            centerCue.Visible = false
+            renderConnection:Disconnect()
+            renderConnection = nil
+            return
+        end
+
+        if player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true
     then
@@ -148,4 +165,7 @@ RunService.RenderStepped:Connect(function(dt)
     local pulse = (math.sin(os.clock() * 6.2) + 1) * 0.5
     local alpha = smoothedPressure * scale
     frame.BackgroundTransparency = math.clamp(0.985 - alpha * (0.13 + pulse * 0.05), 0.78, 0.985)
-end)
+    end)
+end
+
+ensureRenderLoop()
