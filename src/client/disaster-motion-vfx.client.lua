@@ -10,6 +10,7 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local activeIds = {}
 local characterEffects = {}
 local shrinkParts = {}
+local shrinkBase = nil
 local blackoutParts = {}
 local clock = 0
 local updateClock = 0
@@ -29,6 +30,7 @@ local function clearCharacterEffects()
 end
 
 local function clearShrink()
+    shrinkBase = nil
     for _, instance in ipairs(shrinkParts) do
         if instance and instance.Parent then
             instance:Destroy()
@@ -165,11 +167,12 @@ local function ensureShrinkVisuals()
         return
     end
 
-    if #shrinkParts == 4 then
+    if #shrinkParts == 4 and shrinkBase == base then
         return
     end
 
     clearShrink()
+    shrinkBase = base
     for i = 1, 4 do
         local p = Instance.new("Part")
         p.Name = "ShrinkPerimeterLocal" .. i
@@ -191,10 +194,8 @@ local function updateShrink()
         return
     end
 
-    local generated = workspace:FindFirstChild("GeneratedMap")
-    local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
-    if not base or not base:IsA("BasePart") then
+    local base = shrinkBase
+    if not base or not base.Parent then
         clearShrink()
         return
     end
