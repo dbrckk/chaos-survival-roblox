@@ -28,6 +28,8 @@ local airborne = false
 local lastY = 0
 local speedSurgeActive = false
 local lowGravityActive = false
+local roundPhase = "waiting"
+local readyPose = 0
 local launchWeight = 0
 local impactWeight = 0
 local jumpWeight = 0
@@ -79,6 +81,7 @@ local function bind(nextCharacter)
     brakePose = 0
     turnPose = 0
     turnSeverityPose = 0
+    readyPose = 0
 
     if not humanoid or not root or humanoid.RigType ~= Enum.HumanoidRigType.R15 then
         return
@@ -130,7 +133,8 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     local surge = false
     local lowGravity = false
-    if state and state.phase == "round" then
+    roundPhase = state and tostring(state.phase or "waiting") or "waiting"
+    if state and roundPhase == "round" then
         for _, id in ipairs(state.disasterIds or {}) do
             if id == "SpeedSurge" then
                 surge = true
@@ -266,6 +270,16 @@ RunService:BindToRenderStep(
         turnPose += (turnTarget - turnPose) * expAlpha(9, dt)
         turnSeverityPose += (turnSeverity - turnSeverityPose) * expAlpha(8, dt)
 
+        local readyTarget = BodyMotionRules.readyStance(
+            roundPhase,
+            grounded,
+            speed
+        )
+        readyPose += (readyTarget - readyPose) * expAlpha(
+            readyTarget > readyPose and 9 or 12,
+            dt
+        )
+
         local strideWeight, strideFrequency = BodyMotionRules.stride(
             speed,
             grounded,
@@ -335,6 +349,7 @@ RunService:BindToRenderStep(
             math.rad(
                 -3.2 * forward * moveWeight
                 - landing * 5.5
+                - readyPose * 5.2
                 - surgeLean
                 + moonFloat
                 + brakePose * 4.0
@@ -356,6 +371,7 @@ RunService:BindToRenderStep(
                 1.4 * forward * moveWeight
                 + landing * 2.4
                 - launchWeight * 3.5
+                + readyPose * 2.8
                 + fallWeight * 2.0
                 - brakePose * 1.8
             ) * scale,
@@ -371,7 +387,11 @@ RunService:BindToRenderStep(
             + turnPose * 1.2
         ) * scale
         local moonLeg = lowGravityActive and not grounded and math.rad(4.5) * scale or 0
-        local tuck = math.rad((jumpWeight * 9.0) + (fallWeight * 5.5)) * scale
+        local tuck = math.rad(
+            (jumpWeight * 9.0)
+            + (fallWeight * 5.5)
+            + (readyPose * 3.6)
+        ) * scale
         local strideTurnScale = 1 - turnSeverityPose * 0.28
         local strideHip = math.rad(3.4) * strideWave * strideTurnScale
         local leftTarget = CFrame.Angles(
@@ -387,6 +407,7 @@ RunService:BindToRenderStep(
 
         local actionArmPitch = math.rad(
             -launchWeight * 24
+            - readyPose * 7.5
             + jumpWeight * 10
             + fallWeight * 18
             - landing * 11
