@@ -392,13 +392,6 @@ local function applyState()
                 child.Color,
                 duration
             )
-            local light = child:FindFirstChild("PracticePadLight")
-            if light and light:IsA("PointLight") then
-                light.Brightness = q.Name == "Low"
-                    and emphasis.Practice * 0.28
-                    or emphasis.Practice * 0.72
-                light.Enabled = emphasis.Practice > 0.10
-            end
         end
     end
 
@@ -462,87 +455,6 @@ local function applyState()
         end
         if stroke and stroke:IsA("UIStroke") then
             stroke.Color = accent
-        end
-    end
-end
-
-local function pulsePracticeUse()
-    if not currentActivities then
-        return
-    end
-
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not root or not root:IsA("BasePart") then
-        return
-    end
-
-    local nearest = nil
-    local nearestDistance = math.huge
-    for _, child in ipairs(practicePads) do
-        if child.Parent then
-            local distance = (root.Position - child.Position).Magnitude
-            if distance < nearestDistance then
-                nearest = child
-                nearestDistance = distance
-            end
-        end
-    end
-
-    if not nearest or nearestDistance > 12 then
-        return
-    end
-
-    local pulse = Instance.new("Part")
-    pulse.Name = "LobbyPracticeUsePulse"
-    pulse.Shape = Enum.PartType.Cylinder
-    pulse.Size = Vector3.new(0.04, 2.4, 2.4)
-    pulse.CFrame = nearest.CFrame
-        * CFrame.new(0, nearest.Size.Y * 0.5 + 0.08, 0)
-        * CFrame.Angles(0, 0, math.rad(90))
-    pulse.Anchored = true
-    pulse.CanCollide = false
-    pulse.CanTouch = false
-    pulse.CanQuery = false
-    pulse.CastShadow = false
-    pulse.Material = Enum.Material.Neon
-    pulse.Color = nearest.Color:Lerp(Color3.new(1, 1, 1), 0.24)
-    pulse.Transparency = 0.24
-    pulse.Parent = folder
-
-    local q = quality()
-    local target = q.Name == "Low" and 7.8 or 9.8
-    TweenService:Create(
-        pulse,
-        TweenInfo.new(
-            player:GetAttribute("ReduceMotion") == true and 0.18 or 0.32,
-            Enum.EasingStyle.Quad,
-            Enum.EasingDirection.Out
-        ),
-        {
-            Size = Vector3.new(0.04, target, target),
-            Transparency = 1,
-        }
-    ):Play()
-
-    task.delay(0.38, function()
-        if pulse.Parent then
-            pulse:Destroy()
-        end
-    end)
-
-    if statusGui and statusGui.Parent then
-        local panel = statusGui:FindFirstChildOfClass("Frame")
-        local subtitle = panel and panel:FindFirstChild("StatusSubtitle")
-        if subtitle and subtitle:IsA("TextLabel") then
-            local previousText = subtitle.Text
-            subtitle.Text = "BOOST TRAINED • MOVEMENT READY"
-            subtitle.TextColor3 = nearest.Color
-            task.delay(0.85, function()
-                if subtitle.Parent and subtitle.Text == "BOOST TRAINED • MOVEMENT READY" then
-                    subtitle.Text = previousText
-                    applyState()
-                end
-            end)
         end
     end
 end
@@ -819,19 +731,3 @@ end
 bindLobby()
 applyState()
 startPulseLoop()
-
-
-local lastPracticeUses = math.max(
-    0,
-    math.floor(tonumber(player:GetAttribute("LobbyPracticeUses")) or 0)
-)
-player:GetAttributeChangedSignal("LobbyPracticeUses"):Connect(function()
-    local nextUses = math.max(
-        0,
-        math.floor(tonumber(player:GetAttribute("LobbyPracticeUses")) or 0)
-    )
-    if nextUses > lastPracticeUses then
-        pulsePracticeUse()
-    end
-    lastPracticeUses = nextUses
-end)
