@@ -19,19 +19,16 @@ local updateClock = 0
 local SUPPORTED = {
     Meteor = true,
     Bomb = true,
-    Freeze = true,
 }
 
 local WARNING_NAMES = {
     MeteorWarning = true,
     BombWarning = true,
-    FreezeWarning = true,
 }
 
 local KIND_COLORS = {
     Meteor = Color3.fromRGB(255, 175, 70),
     Bomb = Color3.fromRGB(255, 75, 75),
-    Freeze = Color3.fromRGB(110, 205, 255),
 }
 
 local function quality()
