@@ -18,23 +18,24 @@ describe("Round event presentation", function()
         expect(math.abs(color.B - 0.5) < 0.01).toBe(true)
     end)
 
-    it("presents single chaos as chaos live without solo prefix", function()
+    it("presents single chaos as an immediate survival reveal", function()
         local main, sub = RoundEventPresentation.roundTitle({
             title = "SOLO RUSH: Meteor Shower",
             doubleChaos = false,
         })
-        expect(main).toBe("CHAOS LIVE")
+        expect(main).toBe("SURVIVE!")
         expect(sub).toBe("Meteor Shower")
     end)
 
-    it("presents double chaos as a fusion reveal", function()
+    it("presents double chaos as an explicit fusion survival reveal", function()
         local main, sub = RoundEventPresentation.roundTitle({
             title = "CHAOS FUSION: Storm Core",
             doubleChaos = true,
             fusionName = "Storm Core",
         })
-        expect(main).toBe("CHAOS FUSION")
-        expect(sub).toBe("Storm Core")
+        expect(main).toBe("SURVIVE THE FUSION!")
+        expect(string.find(sub, "Storm Core", 1, true) ~= nil).toBe(true)
+        expect(string.find(sub, "TWO HAZARDS ACTIVE", 1, true) ~= nil).toBe(true)
     end)
 
     it("only returns ready countdown values inside the last three seconds", function()
@@ -57,6 +58,47 @@ describe("Round event presentation", function()
             phase = "round",
             seconds = 3,
         }, "ready") == nil).toBe(true)
+    end)
+
+    it("gives stronger camera kick to fusion round starts", function()
+        local normal = RoundEventPresentation.cameraKick(
+            "ready",
+            {phase = "round", doubleChaos = false},
+            false,
+            false
+        )
+        local fusion = RoundEventPresentation.cameraKick(
+            "ready",
+            {phase = "round", doubleChaos = true},
+            false,
+            false
+        )
+
+        expect(normal > 0).toBe(true)
+        expect(fusion > normal).toBe(true)
+    end)
+
+    it("only kicks once for final rush and overdrive transitions", function()
+        expect(RoundEventPresentation.cameraKick(
+            "round",
+            {phase = "round", finalRush = true},
+            false,
+            false
+        ) > 0).toBe(true)
+
+        expect(RoundEventPresentation.cameraKick(
+            "round",
+            {phase = "round", finalRush = true},
+            true,
+            false
+        )).toBe(0)
+
+        expect(RoundEventPresentation.cameraKick(
+            "round",
+            {phase = "round", overdrive = true},
+            false,
+            false
+        ) > 0).toBe(true)
     end)
 
     it("keeps final rush above all other transition priorities", function()
