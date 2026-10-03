@@ -30,9 +30,8 @@ P0 — Game feel
 - Les sensations reposent surtout sur VFX/UI ; le corps et la caméra peuvent encore sembler "Roblox de base".
 
 P0 — Audio
-- Beaucoup de cues réutilisent les sons historiques Roblox (collide/swoosh/ping).
-- Peu de spatialisation 3D sur impacts.
-- Pas encore de véritable mix dynamique par phase/danger.
+- Architecture premium en place : mix dynamique, ducking, spatialisation 3D Meteor/Bomb, signatures composites par catastrophe, pad/landing/near-miss/result feedback.
+- Principal écart restant : remplacement progressif des sons historiques Roblox par des assets originaux/Creator Store vérifiés de meilleure qualité.
 
 P0 — Cartes / décor
 - Bonne base sci-fi néon mais langage encore trop homogène.
@@ -48,8 +47,8 @@ P1 — Rétention
 - Manquent objectifs hebdomadaires, collections, mastery par catastrophe/arène et "next goal" très visible après chaque round.
 
 P1 — Animation
-- AI Survivors ont animation R15, mais le joueur réel repose surtout sur animations Roblox standards.
-- Peu de célébrations corporelles, anticipation ou recovery liés aux événements.
+- Couche corporelle R15 procédurale superposée à Animate : lean, SpeedSurge, LowGravity, jump/fall, launch pad, impact, landing, victoire/élimination/Master Round.
+- Principal écart restant : véritables clips authored originaux pour locomotion/launch/landing/celebrations afin de dépasser définitivement le langage Roblox standard.
 
 P1 — UX/UI
 - Fonctionnelle et riche, mais init.client.lua est très dense et plusieurs panneaux se disputent l'espace.
@@ -72,7 +71,7 @@ PHASE B — AUDIO PREMIUM
 [FAIT] B1 Spatialiser météores/bombes/impacts.
 [FAIT] B2 Mix dynamique séparé Music / Hazard / UI / Reward, avec priorité danger en round et Final Rush.
 [FAIT] B3 Ducking musique lors des rounds critiques / Final Rush.
-[EN COURS] B4 Cues critiques + Vote/Reward/Last Survivor/Overdrive/Flow Combo recomposés en couches premium ; remplacement final par assets originaux/Creator Store vérifiés encore à faire.
+[EN COURS] B4 Cues critiques + chaque accent catastrophe + Vote/Reward/Last Survivor/Overdrive/Flow Combo/MobilityPad recomposés en couches distinctes ; loops protégés des accents one-shot, Meteor/Bomb multi-couches spatiales et landing pondéré par airtime. Remplacement final par assets originaux/Creator Store vérifiés encore à faire.
 [EN COURS] B5 Profils tonaux/pitch propres à chaque arène ajoutés ; assets d'ambiance dédiés à sélectionner plus tard.
 
 PHASE C — MAP ART PASS
@@ -88,7 +87,7 @@ PHASE D — VFX / ANIMATION
 [FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle. Lecture de fuite locale réservée aux dangers réellement évitables Meteor/Bomb ; Freeze conserve son télégraphe global. Identifiants aftermath alignés et couverture complète des 11 catastrophes.
 [FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
 [FAIT] D3 11 signatures catastrophe : palettes/atmosphères distinctes + warning geometry dédiée pour Meteor/Bomb/JumpShock/Disappearing Platforms. Disappearing Platforms expose un état Warning/Gone répliqué et un cadre d'effondrement local adaptatif ; Tornado ajoute une traction caméra tangentielle de proximité ; JumpShock émet un impact feedback dédié ; ShrinkingArena ajoute une pression d'écran locale et resserre aussi les vrais pads de mobilité, dont le langage visuel suit désormais la position.
-[FAIT] D4 Feedback monde + poses corporelles procédurales distinctes pour victoire, élimination et Master Round, compatibles Animate/Reduce Motion.
+[FAIT] D4 Feedback monde + poses corporelles procédurales distinctes pour victoire, élimination et Master Round, plus états authored procéduraux jump/fall/pad launch/hazard impact/landing ; compatibles Animate/Reduce Motion.
 [FAIT] D5 Final Rush réduit UI méta + challenge/momentum + auras/lights/trails/highlights non essentiels.
 
 PHASE E — CUSTOMIZATION
