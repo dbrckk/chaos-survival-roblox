@@ -5,7 +5,7 @@ function D.start(ctx)
     local multiplier = profile.SpeedMultiplier or 1.5
 
     local previous = {}
-    for _, p in ipairs(ctx.HazardContestants or ctx.HazardContestants or ctx.Contestants or {}) do
+    for _, p in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
         if ctx.IsContestantActive and not ctx.IsContestantActive(p) then
             continue
         end
