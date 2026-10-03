@@ -121,19 +121,19 @@ local function makeSocialPads()
 end
 
 local function makeStatusGui()
-    local sign = currentDecor and currentDecor:FindFirstChild("ChaosSign")
-    if not sign or not sign:IsA("BasePart") then
+    local anchor = currentDecor and currentDecor:FindFirstChild("CenterGlow")
+    if not anchor or not anchor:IsA("BasePart") then
         return
     end
 
-    local gui = Instance.new("SurfaceGui")
+    local gui = Instance.new("BillboardGui")
     gui.Name = "LobbyLiveStatus"
-    gui.Adornee = sign
-    gui.Face = Enum.NormalId.Front
-    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    gui.PixelsPerStud = 42
+    gui.Adornee = anchor
+    gui.AlwaysOnTop = true
     gui.LightInfluence = 0
-    gui.AlwaysOnTop = false
+    gui.Size = UDim2.fromOffset(300, 72)
+    gui.StudsOffsetWorldSpace = Vector3.new(0, 5.2, 0)
+    gui.MaxDistance = 105
     gui.Parent = player:WaitForChild("PlayerGui")
 
     local panel = Instance.new("Frame")
@@ -142,6 +142,10 @@ local function makeStatusGui()
     panel.BackgroundTransparency = 0.18
     panel.BorderSizePixel = 0
     panel.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = panel
 
     local stroke = Instance.new("UIStroke")
     stroke.Name = "StatusStroke"
@@ -152,8 +156,8 @@ local function makeStatusGui()
 
     local title = Instance.new("TextLabel")
     title.Name = "StatusTitle"
-    title.Position = UDim2.fromScale(0.06, 0.12)
-    title.Size = UDim2.fromScale(0.88, 0.42)
+    title.Position = UDim2.fromScale(0.05, 0.10)
+    title.Size = UDim2.fromScale(0.90, 0.44)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
     title.Text = "LOBBY LIVE"
@@ -163,8 +167,8 @@ local function makeStatusGui()
 
     local subtitle = Instance.new("TextLabel")
     subtitle.Name = "StatusSubtitle"
-    subtitle.Position = UDim2.fromScale(0.06, 0.58)
-    subtitle.Size = UDim2.fromScale(0.88, 0.24)
+    subtitle.Position = UDim2.fromScale(0.05, 0.58)
+    subtitle.Size = UDim2.fromScale(0.90, 0.24)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.GothamBold
     subtitle.Text = "PRACTICE • VOTE • SURVIVE"
@@ -260,6 +264,12 @@ local function applyState()
     end
     if not currentLobby then
         return
+    end
+
+    currentDecor = currentLobby:FindFirstChild("Decor") or currentDecor
+    currentActivities = currentLobby:FindFirstChild("Activities") or currentActivities
+    if not statusGui or not statusGui.Parent then
+        makeStatusGui()
     end
 
     local mode = LobbyPresentationRules.mode(currentState.phase)
