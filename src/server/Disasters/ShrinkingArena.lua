@@ -6,6 +6,12 @@ function D.scaledLocalPosition(localPosition, scale)
     return Vector3.new(offset.X * safeScale, offset.Y, offset.Z * safeScale)
 end
 
+function D.scaledImpulse(originalImpulse, scale)
+    local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
+    local impulse = typeof(originalImpulse) == "Vector3" and originalImpulse or Vector3.zero
+    return Vector3.new(impulse.X * safeScale, impulse.Y, impulse.Z * safeScale)
+end
+
 function D.scaledEdgeTransform(originalSize, localPosition, scale)
     local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
     local size = typeof(originalSize) == "Vector3" and originalSize or Vector3.one
@@ -68,6 +74,11 @@ function D.start(ctx)
                     cframe = item.CFrame,
                     localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(item.Position),
+                    impulse = Vector3.new(
+                        tonumber(item:GetAttribute("ImpulseX")) or 0,
+                        tonumber(item:GetAttribute("ImpulseY")) or 0,
+                        tonumber(item:GetAttribute("ImpulseZ")) or 0
+                    ),
                 }
             end
         end
@@ -120,6 +131,13 @@ function D.start(ctx)
                     local localPosition = D.scaledLocalPosition(state.localPosition, scale)
                     local rotationOnly = state.localCFrame - state.localCFrame.Position
                     part.CFrame = (originalCFrame * CFrame.new(localPosition)) * rotationOnly
+
+                    if state.impulse then
+                        local scaledImpulse = D.scaledImpulse(state.impulse, scale)
+                        part:SetAttribute("ImpulseX", scaledImpulse.X)
+                        part:SetAttribute("ImpulseY", scaledImpulse.Y)
+                        part:SetAttribute("ImpulseZ", scaledImpulse.Z)
+                    end
                 end
             end
 
@@ -145,6 +163,11 @@ function D.start(ctx)
             local part = state.part
             if part and part.Parent then
                 part.CFrame = state.cframe
+                if state.impulse then
+                    part:SetAttribute("ImpulseX", state.impulse.X)
+                    part:SetAttribute("ImpulseY", state.impulse.Y)
+                    part:SetAttribute("ImpulseZ", state.impulse.Z)
+                end
             end
         end
     end
