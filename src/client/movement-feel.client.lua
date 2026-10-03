@@ -26,6 +26,7 @@ local wasAirborne = false
 local lastLandingBurstAt = 0
 local lastHorizontalSpeed = 0
 local accelerationKick = 0
+local speedFovOffset = 0
 
 local function disconnectCharacter()
     for _, connection in ipairs(characterConnections) do
@@ -116,6 +117,7 @@ local function bindCharacter(nextCharacter)
     wasAirborne = false
     lastHorizontalSpeed = 0
     accelerationKick = 0
+    speedFovOffset = 0
 
     if not humanoid or not root then
         return
@@ -202,6 +204,16 @@ RunService:BindToRenderStep(
         local rawAcceleration = (speed - lastHorizontalSpeed) / math.max(dt, 1 / 240)
         lastHorizontalSpeed = speed
         local targetAccelerationKick = math.clamp(rawAcceleration / 420, -0.030, 0.030)
+        local reducedMotion = player:GetAttribute("ReduceMotion") == true
+        local speedExcess = math.max(0, speed - 16)
+        local targetFovOffset = reducedMotion and 0 or math.clamp(speedExcess * 0.12, 0, 2.4)
+        speedFovOffset = exponential(
+            speedFovOffset,
+            targetFovOffset,
+            targetFovOffset > speedFovOffset and 5.5 or 3.2,
+            dt
+        )
+
         accelerationKick = exponential(
             accelerationKick,
             targetAccelerationKick,
@@ -248,5 +260,13 @@ RunService:BindToRenderStep(
         camera.CFrame = camera.CFrame
             * CFrame.new(0, y, 0)
             * CFrame.Angles(pitch, 0, roll)
+
+        local baseFov = tonumber(player:GetAttribute("BaseCameraFov")) or 70
+        if not player:GetAttribute("BaseCameraFov") then
+            player:SetAttribute("BaseCameraFov", camera.FieldOfView)
+            baseFov = camera.FieldOfView
+        end
+        local targetFov = math.clamp(baseFov + speedFovOffset * scale, 60, 90)
+        camera.FieldOfView = exponential(camera.FieldOfView, targetFov, 6, dt)
     end
 )
