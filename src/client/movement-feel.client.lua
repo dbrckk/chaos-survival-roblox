@@ -30,6 +30,7 @@ local accelerationKick = 0
 local speedFovOffset = 0
 local speedSurgeActive = false
 local lowGravityActive = false
+local tornadoModel = nil
 
 local function disconnectCharacter()
     for _, connection in ipairs(characterConnections) do
@@ -152,6 +153,26 @@ if player.Character then
 end
 player.CharacterAdded:Connect(bindCharacter)
 
+local function bindTornado(model)
+    if model and model.Name == "RoundTornado" then
+        tornadoModel = model
+    end
+end
+
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "RoundTornado" then
+        bindTornado(child)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child == tornadoModel then
+        tornadoModel = nil
+    end
+end)
+
+bindTornado(workspace:FindFirstChild("RoundTornado"))
+
 hazardImpactEvent.OnClientEvent:Connect(function(payload)
     if not root or not root.Parent or typeof(payload) ~= "table" then
         return
@@ -259,8 +280,25 @@ RunService:BindToRenderStep(
         local lowGravityDrift = lowGravityActive and not grounded
             and math.sin(shakeClock * 0.28) * 0.010
             or 0
+        local tornadoRoll = 0
+        local tornadoLift = 0
+        if tornadoModel and tornadoModel.Parent then
+            local middle = tornadoModel:FindFirstChild("MiddleFunnel")
+            if middle and middle:IsA("BasePart") then
+                local delta = Vector3.new(root.Position.X - middle.Position.X, 0, root.Position.Z - middle.Position.Z)
+                local distance = delta.Magnitude
+                if distance > 1 and distance < 48 then
+                    local proximity = 1 - math.clamp((distance - 4) / 44, 0, 1)
+                    local tangent = Vector3.new(-delta.Z, 0, delta.X).Unit
+                    local cameraSide = camera.CFrame.RightVector:Dot(tangent)
+                    tornadoRoll = cameraSide * proximity * 0.016
+                    tornadoLift = math.sin(shakeClock * 0.41) * proximity * 0.010
+                end
+            end
+        end
+
         local walkWave = math.sin(shakeClock * 0.62) * 0.010 * bob + surgeWave
-        local walkLift = math.abs(math.cos(shakeClock * 0.62)) * 0.015 * bob + lowGravityDrift
+        local walkLift = math.abs(math.cos(shakeClock * 0.62)) * 0.015 * bob + lowGravityDrift + tornadoLift
 
         local pitch =
             (landingKick * 0.026)
@@ -270,6 +308,7 @@ RunService:BindToRenderStep(
             + (math.sin(shakeClock * 1.91) * impactKick * 0.018)
         local roll =
             lean
+            + tornadoRoll
             + (math.cos(shakeClock * 2.37) * impactKick * 0.014)
             + walkWave
         local y =
