@@ -59,6 +59,17 @@ describe("AI survivor rules", function()
         ).toBe(true)
     end)
 
+    it("narrows route and pad choice width as risk falls", function()
+        expect(AISurvivorRules.routeChoiceWidth(0.20, 8)).toBe(1)
+        expect(AISurvivorRules.routeChoiceWidth(0.50, 8)).toBe(2)
+        expect(AISurvivorRules.routeChoiceWidth(0.80, 8)).toBe(3)
+        expect(AISurvivorRules.routeChoiceWidth(0.80, 2)).toBe(2)
+
+        expect(AISurvivorRules.padChoiceWidth(0.40, 4)).toBe(1)
+        expect(AISurvivorRules.padChoiceWidth(0.75, 4)).toBe(2)
+        expect(AISurvivorRules.padChoiceWidth(0.75, 1)).toBe(1)
+    end)
+
     it("increases bounded survival pressure as health and round danger worsen", function()
         local healthy = AISurvivorRules.survivalPressure(100, 100, false, false)
         local wounded = AISurvivorRules.survivalPressure(45, 100, false, false)
