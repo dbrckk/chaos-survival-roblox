@@ -475,7 +475,18 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local overdriveStartRemaining = math.floor(roundSettings.RoundSeconds * 0.58)
     local overdriveDuration = math.clamp(math.floor(roundSettings.RoundSeconds * 0.16), 5, 7)
     local overdriveEndRemaining = math.max(0, overdriveStartRemaining - overdriveDuration)
-    local roundChallenge = RoundChallenge.forRound(roundNumber)
+    local firstRoundContestant = false
+    for _, player in ipairs(contestants) do
+        if FirstTimeExperience.isFirstRound(player:GetAttribute("Games")) then
+            firstRoundContestant = true
+            break
+        end
+    end
+
+    local roundChallenge = RoundChallenge.forContext(
+        roundNumber,
+        firstRoundContestant
+    )
     local hazardContestants = AISurvivorService.hazardContestants(contestants)
     local cleanup = {}
     local onCleanup = {}
