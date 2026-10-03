@@ -37,9 +37,13 @@ describe("Shrinking Arena mobility integration", function()
         pad.Size = Vector3.new(6.5, 0.35, 6.5)
         pad.Position = (base :: BasePart).Position + Vector3.new(28, 1.7, 28)
         pad:SetAttribute("ArenaMobilityPad", true)
+        pad:SetAttribute("ImpulseX", 40)
+        pad:SetAttribute("ImpulseY", 10)
+        pad:SetAttribute("ImpulseZ", -20)
         pad.Parent = mechanics
 
         local original = pad.CFrame
+        local originalImpulse = Vector3.new(40, 10, -20)
         local originalDistance = (
             Vector3.new(pad.Position.X, 0, pad.Position.Z)
             - Vector3.new((base :: BasePart).Position.X, 0, (base :: BasePart).Position.Z)
@@ -66,9 +70,21 @@ describe("Shrinking Arena mobility integration", function()
         ).Magnitude
         expect(movedDistance < originalDistance).toBe(true)
 
+        local shrunkImpulse = Vector3.new(
+            tonumber(pad:GetAttribute("ImpulseX")) or 0,
+            tonumber(pad:GetAttribute("ImpulseY")) or 0,
+            tonumber(pad:GetAttribute("ImpulseZ")) or 0
+        )
+        expect(math.abs(shrunkImpulse.X) < math.abs(originalImpulse.X)).toBe(true)
+        expect(math.abs(shrunkImpulse.Z) < math.abs(originalImpulse.Z)).toBe(true)
+        expect(shrunkImpulse.Y).toBe(originalImpulse.Y)
+
         active = false
         cleanup(callbacks, objects)
         expect(pad.CFrame).toBe(original)
+        expect(pad:GetAttribute("ImpulseX")).toBe(originalImpulse.X)
+        expect(pad:GetAttribute("ImpulseY")).toBe(originalImpulse.Y)
+        expect(pad:GetAttribute("ImpulseZ")).toBe(originalImpulse.Z)
 
         if generated then
             generated:Destroy()
