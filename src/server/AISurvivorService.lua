@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 
 local AISurvivorRules = require(script.Parent.AISurvivorRules)
+local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
 local ArenaMechanics = require(script.Parent.ArenaMechanics)
 local LobbyActivities = require(script.Parent.LobbyActivities)
 
@@ -154,16 +155,21 @@ local function arenaVariantId()
     return tostring(arena and arena:GetAttribute("VariantId") or "Classic")
 end
 
-local function arenaSpawnPosition(slot)
+local function arenaSpawnCFrame(slot)
     local _, arena = arenaParts()
     local spawns = arena and arena:FindFirstChild("Spawns")
     local list = sortedParts(spawns)
     if #list == 0 then
-        return config.ArenaCenter + Vector3.new((slot - 2) * 7, 4, 0)
+        local position = config.ArenaCenter + Vector3.new((slot - 2) * 7, 4, 0)
+        return ArenaPresentation.spawnCFrame(
+            tostring(arena and arena:GetAttribute("VariantId") or "Classic"),
+            position,
+            config.ArenaCenter
+        )
     end
 
     local spawn = list[((slot - 1) % #list) + 1]
-    return spawn.Position + Vector3.new(0, 4, 0)
+    return spawn.CFrame + Vector3.new(0, 4, 0)
 end
 
 local function destroyTracks(record)
@@ -543,11 +549,12 @@ local function createRig(record)
     return true
 end
 
-local function pivotRecord(record, position)
+local function pivotRecord(record, target)
     if not record.model or not record.model.Parent then
         return
     end
-    record.model:PivotTo(CFrame.new(position))
+    local cframe = typeof(target) == "CFrame" and target or CFrame.new(target)
+    record.model:PivotTo(cframe)
     local root = record.model:FindFirstChild("HumanoidRootPart")
     if root and root:IsA("BasePart") then
         root.AssemblyLinearVelocity = Vector3.zero
@@ -606,7 +613,7 @@ local function sendToArena(record)
     record.resultAction = nil
     record.resultActionUntil = 0
     record.resultTarget = nil
-    pivotRecord(record, arenaSpawnPosition(record.slot))
+    pivotRecord(record, arenaSpawnCFrame(record.slot))
 end
 
 local function destroyRecord(record)
