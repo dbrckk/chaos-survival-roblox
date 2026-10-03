@@ -63,7 +63,7 @@ ROADMAP
 =======
 PHASE A — GAME FEEL CORE
 [FAIT] A1 Caméra réactive légère : landing, impacts, pads, accélération et FOV vitesse plafonné/adaptatif.
-[FAIT] A2 Mouvement : micro-tilt, landing/burst, sensation périphérique de vitesse + lean/compression corporelle R15 locale et compatible Animate.
+[FAIT] A2 Mouvement : micro-tilt, landing/burst, sensation périphérique de vitesse + lean/compression corporelle R15 locale et compatible Animate. SpeedSurge bénéficie maintenant d'un FOV/pitch/lean dédiés ; LowGravity ajoute dérive caméra aérienne et pose flottante corporelle.
 [FAIT] A3 Haptics adaptatifs touch/gamepad : pads, impacts, close calls, shards, Final Rush et résultats.
 [FAIT] A4 Réduction automatique du mouvement caméra sur VFX Low / mobile.
 [EN COURS] A5 Reduce Motion persistant ajouté ; QA réelle motion sickness à effectuer sur appareil.
