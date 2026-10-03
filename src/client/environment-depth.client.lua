@@ -185,7 +185,7 @@ local function addTransitDepth(tier)
     end
 end
 
-local function addHorizonDepth(tier)
+local function addHorizonDepth(tier, variant)
     local budget = WorldDepthRules.budgets(tier.Name)
     local center = WorldDepthRules.worldCenter(
         Config.LobbyCenter,
@@ -197,9 +197,18 @@ local function addHorizonDepth(tier)
         local angle = ((i - 1) / budget.HorizonStructures) * math.pi * 2
             + math.rad(7)
         local radialOffset = radius + ((i * 23) % 31) - 15
-        local height = WorldDepthRules.horizonHeight(i)
-        local width = 10 + ((i * 7) % 13)
-        local depth = 7 + ((i * 5) % 8)
+        local baseHeight = WorldDepthRules.horizonHeight(i)
+        local height = variant == "Towers" and baseHeight * 1.22
+            or (variant == "Crossroads" and baseHeight * 0.68
+                or (variant == "Orbital" and baseHeight * 0.54 or baseHeight))
+        local width = variant == "Towers"
+            and (7 + ((i * 5) % 7))
+            or (variant == "Crossroads"
+                and (18 + ((i * 7) % 16))
+                or (10 + ((i * 7) % 13)))
+        local depth = variant == "Crossroads"
+            and (5 + ((i * 3) % 5))
+            or (7 + ((i * 5) % 8))
         local position = center + Vector3.new(
             math.cos(angle) * radialOffset,
             (height * 0.5) - 12,
@@ -215,6 +224,41 @@ local function addHorizonDepth(tier)
             tier.Name == "Low" and 0.42 or 0.30
         )
         body.CastShadow = false
+
+        if variant == "Orbital" then
+            body.Shape = i % 2 == 0 and Enum.PartType.Ball or Enum.PartType.Cylinder
+            if body.Shape == Enum.PartType.Ball then
+                local diameter = math.max(width, depth)
+                body.Size = Vector3.new(diameter, diameter, diameter)
+            else
+                body.Size = Vector3.new(depth, width * 1.15, width * 1.15)
+                body.CFrame = body.CFrame * CFrame.Angles(0, 0, math.rad(90))
+            end
+        end
+
+        if tier.Name ~= "Low" and variant == "Crossroads" and i % 3 == 0 then
+            local arm = makePart(
+                "HorizonCrossArm" .. i,
+                Vector3.new(width * 1.45, 0.62, 1.6),
+                CFrame.new(position + Vector3.new(0, height * 0.28, 0))
+                    * CFrame.Angles(0, -angle + math.pi * 0.5, 0),
+                VisualTheme.World.MetalLight,
+                VisualTheme.Materials.Structure,
+                0.42
+            )
+            arm.CastShadow = false
+        elseif tier.Name == "High" and variant == "Towers" and i % 3 == 1 then
+            local antenna = makePart(
+                "HorizonAntenna" .. i,
+                Vector3.new(0.45, 12, 0.45),
+                CFrame.new(position + Vector3.new(0, height * 0.5 + 6, 0)),
+                i % 2 == 0 and currentAccent or secondaryAccent,
+                VisualTheme.Materials.Glow,
+                0.54
+            )
+            antenna.CastShadow = false
+            table.insert(glows, antenna)
+        end
 
         if i <= budget.HorizonAccents or i % 3 == 0 then
             local accentHeight = math.max(8, height * 0.56)
@@ -259,9 +303,9 @@ local function rebuild()
     clear()
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    addTransitDepth(tier)
-    addHorizonDepth(tier)
     local variant = arenaVariant()
+    addTransitDepth(tier)
+    addHorizonDepth(tier, variant)
     local count = tier.Name == "Low" and 6 or (tier.Name == "Medium" and 8 or 10)
     local radius = variant == "Orbital" and 142
         or (variant == "Towers" and 136 or 128)
@@ -776,8 +820,9 @@ stateEvent.OnClientEvent:Connect(function(state)
         currentAccent = profile.Accent
         secondaryAccent = secondary and secondary.Accent or VisualTheme.Accents.Violet
     else
-        currentAccent = VisualTheme.Accents.Cyan
-        secondaryAccent = VisualTheme.Accents.Violet
+        local theme = VisualTheme.arena(arenaVariant())
+        currentAccent = theme.Accent
+        secondaryAccent = theme.Secondary
     end
 
     for i, glow in ipairs(glows) do
