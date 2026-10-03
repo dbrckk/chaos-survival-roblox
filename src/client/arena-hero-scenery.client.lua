@@ -77,10 +77,10 @@ local function buildClassic(base, theme, tier)
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
     local positions = {
-        {-hx + 6, -hz + 6, 45},
-        {hx - 6, -hz + 6, -45},
-        {-hx + 6, hz - 6, -45},
-        {hx - 6, hz - 6, 45},
+        {-hx - 8, -hz - 8, 45},
+        {hx + 8, -hz - 8, -45},
+        {-hx - 8, hz + 8, -45},
+        {hx + 8, hz + 8, 45},
     }
 
     for i, item in ipairs(positions) do
@@ -88,24 +88,21 @@ local function buildClassic(base, theme, tier)
     end
 
     if tier.Name ~= "Low" then
-        local span = math.min(base.Size.X, base.Size.Z) * 0.56
-        for i = 1, 4 do
-            local horizontal = i <= 2
-            local offset = (i % 2 == 0 and 1 or -1) * span * 0.42
-            local size = horizontal
-                and Vector3.new(span, 0.55, 1.4)
-                or Vector3.new(1.4, 0.55, span)
-            local cf = horizontal
-                and localFrame(base, 0, 7.2, offset, 0)
-                or localFrame(base, offset, 7.2, 0, 0)
+        local fins = {
+            {-hx - 10, 0, -18, 0},
+            {hx + 10, 0, 18, 0},
+            {-18, 0, hz + 10, 90},
+            {18, 0, -hz - 10, 90},
+        }
+        for i, item in ipairs(fins) do
             makePart(
-                "ClassicSignalRail" .. i,
-                size,
-                cf,
-                theme.Detail,
-                Enum.Material.Metal,
-                0.18,
-                tier.Name == "High"
+                "ClassicSkyFin" .. i,
+                Vector3.new(1.0, 10 + (i % 2) * 3, 6.5),
+                localFrame(base, item[1], 6.0, item[3], item[4]),
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                Enum.Material.Neon,
+                0.48,
+                false
             )
         end
     end
@@ -115,10 +112,10 @@ local function buildTowers(base, theme, tier)
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
     local positions = {
-        {-hx + 9, -hz + 9},
-        {hx - 9, -hz + 9},
-        {-hx + 9, hz - 9},
-        {hx - 9, hz - 9},
+        {-hx - 7, -hz - 7},
+        {hx + 7, -hz - 7},
+        {-hx - 7, hz + 7},
+        {hx + 7, hz + 7},
     }
 
     for i, item in ipairs(positions) do
@@ -233,34 +230,51 @@ end
 local function buildCrossroads(base, theme, tier)
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
-    local edgeX = hx - 7
-    local edgeZ = hz - 7
+    local corners = {
+        {-hx - 7, -hz - 7, 45},
+        {hx + 7, -hz - 7, -45},
+        {-hx - 7, hz + 7, -45},
+        {hx + 7, hz + 7, 45},
+    }
 
-    addCrossroadGate(base, 1, 0, -edgeZ, 0, theme, tier)
-    addCrossroadGate(base, 2, 0, edgeZ, 0, theme, tier)
-    addCrossroadGate(base, 3, -edgeX, 0, 90, theme, tier)
-    addCrossroadGate(base, 4, edgeX, 0, 90, theme, tier)
+    for i, item in ipairs(corners) do
+        local height = tier.Name == "Low" and 13 or 17
+        local body = makePart(
+            "CrossroadHeroMonolith" .. i,
+            Vector3.new(5.2, height, 2.0),
+            localFrame(base, item[1], height * 0.5 + 0.7, item[2], item[3]),
+            theme.Structure:Lerp(VisualTheme.World.Deep, 0.18),
+            Enum.Material.Metal,
+            tier.Name == "Low" and 0.16 or 0.05,
+            tier.Name == "High"
+        )
 
-    if tier.Name == "High" then
-        local offsets = {
-            {-18, -18}, {18, -18}, {-18, 18}, {18, 18},
-        }
-        for i, item in ipairs(offsets) do
+        makePart(
+            "CrossroadHeroSignal" .. i,
+            Vector3.new(4.0, height * 0.52, 0.26),
+            body.CFrame * CFrame.new(0, 1.0, -1.02),
+            i % 2 == 0 and theme.Secondary or theme.Accent,
+            Enum.Material.Neon,
+            tier.Name == "Low" and 0.58 or 0.28,
+            false
+        )
+
+        if tier.Name == "High" then
             makePart(
-                "CrossroadBillboard" .. i,
-                Vector3.new(6.5, 3.8, 0.55),
-                localFrame(base, item[1], 6.8, item[2], i % 2 == 0 and 45 or -45),
-                theme.Secondary:Lerp(theme.Detail, 0.45),
-                Enum.Material.Neon,
-                0.42,
-                false
+                "CrossroadHeroBlade" .. i,
+                Vector3.new(8.0, 0.5, 0.8),
+                body.CFrame * CFrame.new(0, height * 0.5 - 1.1, 0),
+                theme.Detail,
+                Enum.Material.DiamondPlate,
+                0.16,
+                true
             )
         end
     end
 end
 
 local function buildOrbital(base, theme, tier)
-    local radius = math.min(base.Size.X, base.Size.Z) * 0.43
+    local radius = math.min(base.Size.X, base.Size.Z) * 0.56
     local segments = tier.Name == "Low" and 6 or (tier.Name == "Medium" and 10 or 14)
 
     for i = 1, segments do
