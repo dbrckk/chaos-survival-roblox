@@ -30,6 +30,55 @@ describe("Disaster impact", function()
         expect(DisasterImpact.nearMissForDistance(11.6, 8, 3.5)).toBe(false)
     end)
 
+    it("applies radial damage to active AI survivor proxies", function()
+        local function fakeProxy(name, position)
+            local character = Instance.new("Model")
+            character.Name = name .. "Character"
+
+            local root = Instance.new("Part")
+            root.Name = "HumanoidRootPart"
+            root.Position = position
+            root.Anchored = true
+            root.Parent = character
+
+            local humanoid = Instance.new("Humanoid")
+            humanoid.MaxHealth = 100
+            humanoid.Health = 100
+            humanoid.Parent = character
+            character.Parent = workspace
+
+            return {
+                UserId = -1,
+                Name = name,
+                IsAISurvivor = true,
+                Character = character,
+            }, character, humanoid
+        end
+
+        local activeBot, activeCharacter, activeHumanoid = fakeProxy(
+            "ActiveBot",
+            Vector3.new(0, 3, 0)
+        )
+        local inactiveBot, inactiveCharacter, inactiveHumanoid = fakeProxy(
+            "InactiveBot",
+            Vector3.new(0, 3, 0)
+        )
+
+        local hits = DisasterImpact.applyRadialDamage({
+            HazardContestants = {activeBot, inactiveBot},
+            IsContestantActive = function(subject)
+                return subject == activeBot
+            end,
+        }, Vector3.new(0, 3, 0), 8, 50, "Meteor")
+
+        expect(hits).toBe(1)
+        expect(activeHumanoid.Health).toBe(50)
+        expect(inactiveHumanoid.Health).toBe(100)
+
+        activeCharacter:Destroy()
+        inactiveCharacter:Destroy()
+    end)
+
     it("sanitizes negative distance and damage inputs", function()
         expect(DisasterImpact.damageForDistance(-5, 8, 50)).toBe(50)
         expect(DisasterImpact.damageForDistance(0, 8, -10)).toBe(0)
