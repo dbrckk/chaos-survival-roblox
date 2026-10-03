@@ -352,7 +352,8 @@ RunService:BindToRenderStep(
         ) * scale
         local moonLeg = lowGravityActive and not grounded and math.rad(4.5) * scale or 0
         local tuck = math.rad((jumpWeight * 9.0) + (fallWeight * 5.5)) * scale
-        local strideHip = math.rad(3.4) * strideWave
+        local strideTurnScale = 1 - turnSeverityPose * 0.28
+        local strideHip = math.rad(3.4) * strideWave * strideTurnScale
         local leftTarget = CFrame.Angles(
             moonLeg + tuck + strideHip,
             0,
@@ -371,7 +372,7 @@ RunService:BindToRenderStep(
             - landing * 11
         ) * scale
         local impactArmRoll = math.rad(impactWeight * 11) * scale
-        local strideArm = math.rad(4.6) * strideWave
+        local strideArm = math.rad(4.6) * strideWave * strideTurnScale
         local turnArm = math.rad(turnPose * 4.0) * scale
         local leftActionShoulder = CFrame.Angles(
             actionArmPitch - strideArm,
