@@ -1081,12 +1081,17 @@ local function chooseArenaTarget(record, root, now)
     end
 
     local pads = mechanicsPads()
+    local variantId = arenaVariantId()
+    local lowOnMap = root.Position.Y < config.ArenaCenter.Y + 10
+    local padChance = AISurvivorRules.padInterest(
+        record.profile.PadChance,
+        variantId,
+        lowOnMap,
+        hasDisaster("RisingLava")
+    )
     local wantsPad = #pads > 0
         and now >= record.nextPadAt
-        and (
-            math.random() < record.profile.PadChance
-            or (hasDisaster("RisingLava") and math.random() < 0.48)
-        )
+        and math.random() < padChance
 
     if wantsPad then
         local pad = chooseMobilityPad(record, root, pads)
