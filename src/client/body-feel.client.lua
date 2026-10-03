@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local BodyMotionRules = require(ReplicatedStorage.Shared.BodyMotionRules)
+
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local feedbackEvent = remotes:WaitForChild("RoundFeedback")
@@ -30,6 +32,12 @@ local launchWeight = 0
 local impactWeight = 0
 local jumpWeight = 0
 local fallWeight = 0
+local strideClock = 0
+local lastSpeed = 0
+local lastMoveDirection = Vector3.zero
+local brakePose = 0
+local turnPose = 0
+local turnSeverityPose = 0
 
 local function motor(parent, name)
     local item = parent and parent:FindFirstChild(name)
@@ -65,6 +73,12 @@ local function bind(nextCharacter)
     impactWeight = 0
     jumpWeight = 0
     fallWeight = 0
+    strideClock = 0
+    lastSpeed = 0
+    lastMoveDirection = Vector3.zero
+    brakePose = 0
+    turnPose = 0
+    turnSeverityPose = 0
 
     if not humanoid or not root or humanoid.RigType ~= Enum.HumanoidRigType.R15 then
         return
@@ -216,7 +230,35 @@ RunService:BindToRenderStep(
         local moving = humanoid.MoveDirection.Magnitude > 0.05 and speed > 2.5
         local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
         local reduced = player:GetAttribute("ReduceMotion") == true
-        local scale = reduced and 0.18 or 1
+        local scale = BodyMotionRules.motionScale(reduced)
+
+        local acceleration = (speed - lastSpeed) / math.max(dt, 1 / 240)
+        lastSpeed = speed
+
+        local moveDirection = humanoid.MoveDirection
+        local signedTurn, turnSeverity = BodyMotionRules.turnResponse(
+            lastMoveDirection,
+            moveDirection
+        )
+        if moveDirection.Magnitude > 0.05 then
+            lastMoveDirection = moveDirection
+        end
+
+        local brakeTarget = BodyMotionRules.brakeWeight(acceleration, moving)
+        brakePose += (brakeTarget - brakePose) * expAlpha(10, dt)
+        local turnTarget = signedTurn * turnSeverity
+        turnPose += (turnTarget - turnPose) * expAlpha(9, dt)
+        turnSeverityPose += (turnSeverity - turnSeverityPose) * expAlpha(8, dt)
+
+        local strideWeight, strideFrequency = BodyMotionRules.stride(
+            speed,
+            grounded,
+            speedSurgeActive
+        )
+        if strideFrequency > 0 then
+            strideClock += dt * strideFrequency
+        end
+        local strideWave = math.sin(strideClock) * strideWeight * scale
 
         landing *= math.exp(-dt * 11)
         launchWeight *= math.exp(-dt * 4.8)
@@ -270,10 +312,19 @@ RunService:BindToRenderStep(
             * scale
 
         local waistTarget = CFrame.Angles(
-            math.rad(-3.2 * forward * moveWeight - landing * 5.5 - surgeLean + moonFloat) * scale
+            math.rad(
+                -3.2 * forward * moveWeight
+                - landing * 5.5
+                - surgeLean
+                + moonFloat
+                + brakePose * 4.0
+            ) * scale
                 + math.rad(actionPitch),
-            0,
-            math.rad(-3.8 * side * moveWeight) * scale + actionRoll
+            math.rad(turnPose * 3.2) * scale,
+            math.rad(
+                -3.8 * side * moveWeight
+                - turnPose * 1.6
+            ) * scale + actionRoll
         ) * celebrationWaist
         local rootTarget = CFrame.new(
             0,
@@ -286,16 +337,32 @@ RunService:BindToRenderStep(
                 + landing * 2.4
                 - launchWeight * 3.5
                 + fallWeight * 2.0
+                - brakePose * 1.8
             ) * scale,
-            0,
-            math.rad(1.6 * side * moveWeight) * scale
+            math.rad(turnPose * 1.4) * scale,
+            math.rad(
+                1.6 * side * moveWeight
+                + turnPose * 1.1
+            ) * scale
         )
 
-        local hipCounter = math.rad(1.5 * side * moveWeight) * scale
+        local hipCounter = math.rad(
+            1.5 * side * moveWeight
+            + turnPose * 1.2
+        ) * scale
         local moonLeg = lowGravityActive and not grounded and math.rad(4.5) * scale or 0
         local tuck = math.rad((jumpWeight * 9.0) + (fallWeight * 5.5)) * scale
-        local leftTarget = CFrame.Angles(moonLeg + tuck, 0, hipCounter)
-        local rightTarget = CFrame.Angles(-moonLeg + tuck, 0, hipCounter)
+        local strideHip = math.rad(3.4) * strideWave
+        local leftTarget = CFrame.Angles(
+            moonLeg + tuck + strideHip,
+            0,
+            hipCounter
+        )
+        local rightTarget = CFrame.Angles(
+            -moonLeg + tuck - strideHip,
+            0,
+            hipCounter
+        )
 
         local actionArmPitch = math.rad(
             -launchWeight * 24
@@ -304,14 +371,16 @@ RunService:BindToRenderStep(
             - landing * 11
         ) * scale
         local impactArmRoll = math.rad(impactWeight * 11) * scale
+        local strideArm = math.rad(4.6) * strideWave
+        local turnArm = math.rad(turnPose * 4.0) * scale
         local leftActionShoulder = CFrame.Angles(
-            actionArmPitch,
-            0,
+            actionArmPitch - strideArm,
+            turnArm,
             -impactArmRoll
         )
         local rightActionShoulder = CFrame.Angles(
-            actionArmPitch,
-            0,
+            actionArmPitch + strideArm,
+            -turnArm,
             impactArmRoll
         )
 
