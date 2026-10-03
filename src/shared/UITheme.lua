@@ -78,6 +78,17 @@ function UITheme.addCorner(parent, radius)
     return corner
 end
 
+function UITheme.addTextConstraint(parent, minSize, maxSize)
+    local constraint = Instance.new("UITextSizeConstraint")
+    constraint.MinTextSize = math.max(10, math.floor(tonumber(minSize) or 12))
+    constraint.MaxTextSize = math.max(
+        constraint.MinTextSize,
+        math.floor(tonumber(maxSize) or 32)
+    )
+    constraint.Parent = parent
+    return constraint
+end
+
 function UITheme.addPressFeedback(button, pressedScale)
     local scale = button:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
     scale.Scale = 1
