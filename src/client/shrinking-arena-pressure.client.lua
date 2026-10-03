@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -51,6 +52,48 @@ centerCue.Parent = gui
 UITheme.addCorner(centerCue, UITheme.Corners.Pill)
 UITheme.addStroke(centerCue, Color3.fromRGB(235, 95, 235), 2, 0.12)
 UITheme.addTextConstraint(centerCue, 14, 22)
+
+local viewportConnection = nil
+
+local function applyCueLayout()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local profile = UIResponsive.mobileProfile(viewport)
+
+    if profile.compactHeight then
+        centerCue.AnchorPoint = Vector2.new(0.5, 0)
+        centerCue.Position = UDim2.new(
+            profile.veryNarrow and 0.17 or 0.16,
+            0,
+            0,
+            profile.topHeight + (profile.tinyHeight and 8 or 10)
+        )
+        centerCue.Size = UDim2.fromOffset(
+            profile.veryNarrow and 148 or 158,
+            profile.tinyHeight and 34 or 36
+        )
+    else
+        centerCue.AnchorPoint = Vector2.new(0.5, 0)
+        centerCue.Position = UDim2.fromScale(0.5, 0.27)
+        centerCue.Size = UDim2.fromOffset(170, 38)
+    end
+end
+
+local function bindCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyCueLayout)
+    end
+    applyCueLayout()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+bindCamera()
 
 local active = false
 local updateClock = 0
