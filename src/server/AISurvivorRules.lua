@@ -120,6 +120,22 @@ function AISurvivorRules.voteGatherOffset(slot, roundNumber)
     return Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
 end
 
+function AISurvivorRules.lobbyNodeOffset(slot, cycle)
+    local safeSlot = math.max(1, math.floor(tonumber(slot) or 1))
+    local safeCycle = math.max(0, math.floor(tonumber(cycle) or 0))
+    local nodes = {
+        Vector3.new(-13, 0, -13),
+        Vector3.new(13, 0, -13),
+        Vector3.new(-13, 0, 13),
+        Vector3.new(13, 0, 13),
+    }
+    local index = ((safeSlot + safeCycle - 2) % #nodes) + 1
+    local base = nodes[index]
+    local angle = math.rad((safeSlot * 47 + safeCycle * 31) % 360)
+    local micro = Vector3.new(math.cos(angle), 0, math.sin(angle)) * 1.8
+    return base + micro
+end
+
 function AISurvivorRules.socialSpacing(slot, partnerSlot)
     local a = math.max(1, math.floor(tonumber(slot) or 1))
     local b = math.max(1, math.floor(tonumber(partnerSlot) or 1))
