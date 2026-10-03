@@ -101,6 +101,30 @@ describe("Round event presentation", function()
         ) > 0).toBe(true)
     end)
 
+    it("adds camera emphasis only on meaningful phase changes", function()
+        expect(RoundEventPresentation.cameraKick("ready", {
+            phase = "round",
+            doubleChaos = false,
+        }, false, false) > 0).toBe(true)
+
+        expect(RoundEventPresentation.cameraKick("ready", {
+            phase = "round",
+            doubleChaos = true,
+        }, false, false) > RoundEventPresentation.cameraKick("ready", {
+            phase = "round",
+            doubleChaos = false,
+        }, false, false)).toBe(true)
+
+        expect(RoundEventPresentation.cameraKick("round", {
+            phase = "round",
+            finalRush = true,
+        }, false, false) > 0).toBe(true)
+
+        expect(RoundEventPresentation.cameraKick("round", {
+            phase = "round",
+        }, false, false)).toBe(0)
+    end)
+
     it("keeps final rush above all other transition priorities", function()
         expect(
             RoundEventPresentation.priority("finalRush")
