@@ -107,6 +107,7 @@ PHASE F — RETENTION / FUN
 [FAIT] F6 Rotation portée à 6 micro-objectifs, toujours un seul challenge affiché : shards, pads, close call, momentum, flow et variété.
 [FAIT] F7 Audit Double Chaos : paires à faible agence bloquées (Freeze + hazards létaux/sol mouvant, JumpShock + ShrinkingArena, Tornado + ShrinkingArena), minimum de 2 partenaires sûrs par catastrophe garanti par test, matrice >=40 paires autorisées, HUD Fusion affiche désormais les deux identités visuelles + nom de fusion.
 [FAIT] F8 AI Survivors hazard-aware : réactions urgentes Meteor/Bomb/plateforme instable évaluées à chaque tick cerveau indépendamment du wander, délai humain par profil conservé, CollapsePhase utilisé comme source de vérité, plateformes/pads mobiles suivis pendant ShrinkingArena et parité dégâts radiaux IA/humains couverte par test.
+[FAIT] F9 AI Survivors map-aware : sélection de cibles limitée aux hauteurs atteignables à pied, usage des pads pondéré par topologie, approche des pads non décalée par l'anti-regroupement, cibles sociales verticalement atteignables, continuité de route propre à Classic/Towers/Crossroads/Orbital (anneau Orbital, lanes Crossroads, montée locale Towers).
 
 PHASE G — UI/UX
 [EN COURS] G1 Layout responsive + dock tactile + palier compact/tablette <1.50 ajoutés ; validation réelle 16:9/tall/tablet encore requise.
