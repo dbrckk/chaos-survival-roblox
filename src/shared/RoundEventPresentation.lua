@@ -47,6 +47,26 @@ function RoundEventPresentation.countdownValue(state, previousPhase)
     return nil
 end
 
+function RoundEventPresentation.cameraKick(previousPhase, state, lastFinalRush, lastOverdrive)
+    state = type(state) == "table" and state or {}
+
+    local phase = tostring(state.phase or "waiting")
+    local finalRush = phase == "round" and state.finalRush == true
+    local overdrive = phase == "round" and state.overdrive == true
+
+    if phase == "round" and previousPhase ~= "round" then
+        return state.doubleChaos == true and 1.0 or 0.82
+    elseif finalRush and lastFinalRush ~= true then
+        return 0.72
+    elseif overdrive and lastOverdrive ~= true then
+        return 0.50
+    elseif phase == "ready" and previousPhase ~= "ready" and state.doubleChaos == true then
+        return 0.38
+    end
+
+    return 0
+end
+
 function RoundEventPresentation.priority(kind)
     local priorities = {
         finalRush = 50,
