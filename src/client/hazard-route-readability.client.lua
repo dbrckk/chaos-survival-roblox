@@ -282,7 +282,6 @@ ensureRenderLoop = function()
 
         if player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true
-        or next(warningStates) == nil
     then
         cue.Visible = false
         return
