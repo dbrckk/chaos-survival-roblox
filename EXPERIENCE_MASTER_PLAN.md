@@ -156,3 +156,7 @@ Ordre d'exécution immédiat
 
 - [FAIT] Pass hero scenery local : ArenaHeroSceneryLocal, budgets Low/Medium/High, LOD 130/205 studs, silhouettes uniquement en second plan hors routes, aucun impact collision/gameplay.
 - [FAIT] Arena lighting enrichi par Atmosphere local map-specific ; densité/haze/glare fortement réduits en READY/ROUND pour préserver la priorité des télégraphes.
+
+- [FAIT] Composition d'entrée : Spawn CFrames orientés par map (centre Classic, verticalité Towers, lanes Crossroads, tangente Orbital), humains/AI Survivors alignés et chevrons directionnels au sol.
+
+- [FAIT] Identité locale des plateformes : motifs spécifiques Classic/Towers/Crossroads/Orbital, soudés aux plateformes pour suivre ShrinkingArena, densité réduite en Low et LOD 105/165 studs.
