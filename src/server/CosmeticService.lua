@@ -41,12 +41,12 @@ end
 local function applyTrail(root, item)
     local a0 = Instance.new("Attachment")
     a0.Name = "ChaosTrailA0"
-    a0.Position = Vector3.new(0, 1.1, 0)
+    a0.Position = Vector3.new(-0.68, -0.55, 0.46)
     a0.Parent = root
 
     local a1 = Instance.new("Attachment")
     a1.Name = "ChaosTrailA1"
-    a1.Position = Vector3.new(0, -1.1, 0)
+    a1.Position = Vector3.new(0.68, -0.55, 0.46)
     a1.Parent = root
 
     local trail = Instance.new("Trail")
@@ -59,13 +59,13 @@ local function applyTrail(root, item)
     trail.LightEmission = 0.78
     trail.LightInfluence = 0.18
     trail.WidthScale = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.72, 0.62),
+        NumberSequenceKeypoint.new(0, 0.76),
+        NumberSequenceKeypoint.new(0.58, 0.46),
         NumberSequenceKeypoint.new(1, 0),
     })
     trail.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.08),
-        NumberSequenceKeypoint.new(0.75, 0.28),
+        NumberSequenceKeypoint.new(0, 0.16),
+        NumberSequenceKeypoint.new(0.58, 0.36),
         NumberSequenceKeypoint.new(1, 1),
     })
     trail.Color = ColorSequence.new(item.ColorA, item.ColorB)
