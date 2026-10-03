@@ -6,7 +6,9 @@ local TweenService = game:GetService("TweenService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local localPlayer = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local watched = setmetatable({}, {__mode = "k"})
+local finalRush = false
 
 local function localRoot()
     local character = localPlayer.Character
@@ -32,9 +34,25 @@ local function sampleSurface(root)
     )
 end
 
+local function cylinderOnSurface(position, normal)
+    local xAxis = normal.Magnitude > 0.01
+        and normal.Unit
+        or Vector3.new(0, 1, 0)
+    local seed = math.abs(xAxis:Dot(Vector3.new(0, 1, 0))) > 0.95
+        and Vector3.new(0, 0, 1)
+        or Vector3.new(0, 1, 0)
+    local zAxis = xAxis:Cross(seed).Unit
+    local yAxis = zAxis:Cross(xAxis).Unit
+    return CFrame.fromMatrix(position, xAxis, yAxis, zAxis)
+end
+
 local function emitLanding(model, airtime)
     local root = model:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then
+        return
+    end
+
+    if finalRush and model ~= localPlayer.Character then
         return
     end
 
@@ -67,8 +85,10 @@ local function emitLanding(model, airtime)
     ring.Name = "CharacterLandingContact"
     ring.Shape = Enum.PartType.Cylinder
     ring.Size = Vector3.new(0.035, 0.8, 0.8)
-    ring.CFrame = CFrame.new(hit.Position + hit.Normal * 0.045)
-        * CFrame.Angles(0, 0, math.rad(90))
+    ring.CFrame = cylinderOnSurface(
+        hit.Position + hit.Normal * 0.045,
+        hit.Normal
+    )
     ring.Anchored = true
     ring.CanCollide = false
     ring.CanTouch = false
@@ -204,4 +224,10 @@ workspace.ChildAdded:Connect(function(child)
     if child.Name == "AISurvivors" then
         watchBots(child)
     end
+end)
+
+
+stateEvent.OnClientEvent:Connect(function(state)
+    finalRush = tostring(state.phase or "") == "round"
+        and state.finalRush == true
 end)
