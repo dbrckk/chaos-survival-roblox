@@ -17,7 +17,6 @@ folder.Parent = workspace
 
 local phase = "waiting"
 local previousPhase = "waiting"
-local activeIds = {}
 local lastIds = {}
 local roundToken = 0
 
@@ -105,6 +104,7 @@ local function makePart(name, size, cframe, color, material, transparency)
     part.Material = material or Enum.Material.SmoothPlastic
     part.Color = color
     part.Transparency = transparency or 0.45
+    part:SetAttribute("ResidueCreatedAt", os.clock())
     part.Parent = folder
     return part
 end
@@ -190,15 +190,6 @@ local function trimBudget()
     end
 end
 
-local function stampCreationTime()
-    local now = os.clock()
-    for _, child in ipairs(folder:GetChildren()) do
-        if child:GetAttribute("ResidueCreatedAt") == nil then
-            child:SetAttribute("ResidueCreatedAt", now)
-        end
-    end
-end
-
 local function impactResidue(payload)
     if phase ~= "round" or type(payload) ~= "table" then
         return
@@ -241,8 +232,6 @@ local function impactResidue(payload)
             lifetime
         )
     end
-
-    stampCreationTime()
     trimBudget()
 end
 
@@ -297,8 +286,6 @@ local function warningResidue(instance)
                 2.2
             )
         end
-
-        stampCreationTime()
         trimBudget()
     end)
 end
@@ -381,7 +368,6 @@ local function playResultResidue()
     for index, id in ipairs(lastIds) do
         resultResidueFor(id, index, #lastIds, base, quality)
     end
-    stampCreationTime()
     trimBudget()
 end
 
@@ -394,15 +380,12 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     if phase == "round" then
         local ids = {}
-        activeIds = {}
         for _, id in ipairs(state.disasterIds or {}) do
-            activeIds[tostring(id)] = true
             table.insert(ids, tostring(id))
         end
         lastIds = ids
 
         if previousPhase ~= "round" then
-            roundToken += 1
             clearResidue(0.18)
         end
     elseif previousPhase == "round" and phase == "result" then
