@@ -167,3 +167,6 @@ Ordre d'exécution immédiat
 - [FAIT] Traitement audio spectral : profils EQ/réverb par cue catastrophe/mobilité/résultat, appliqués à la source et hérités par les one-shots clonés ; bornes de sécurité couvertes par tests.
 
 - [FAIT] Présentation résultat premium : hiérarchie partagée MASTER / CLUTCH / SURVIVED / ELIMINATED, carte résultat colorée distinctement, célébration clutch dédiée, spotlight monde du joueur local et des survivants humains/AI pour conserver une fin de round crédible même en solo.
+
+- [FAIT] Presentation layer de manche : countdown READY 3-2-1 synchronisé audio/visuel, CHAOS LIVE/CHAOS FUSION au vrai passage en ROUND, rails écran colorés, pulse monde au round start, double pulse pour Fusion et pulse orange/rouge au Final Rush. Priorités explicites Final Rush > Round Start > Fusion > Overdrive > countdown, aucun RenderStepped ajouté.
+- [FAIT] Arena reveal resynchronisé avec l'entrée réelle en READY afin que la signature de map soit vue après téléportation, et round-events repositionné sur mobile court pour ne pas recouvrir les cues de danger.
