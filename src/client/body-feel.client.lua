@@ -194,22 +194,38 @@ end)
 
 local function celebrationTargets(weight)
     if not celebrationKind or weight <= 0.001 then
-        return CFrame.identity, CFrame.identity, CFrame.identity
+        return CFrame.identity,
+            CFrame.identity,
+            CFrame.identity,
+            CFrame.identity,
+            CFrame.identity,
+            CFrame.identity
     end
 
     if celebrationKind == "master" then
-        return CFrame.Angles(math.rad(-6) * weight, 0, 0),
-            CFrame.Angles(math.rad(-58) * weight, 0, math.rad(-24) * weight),
-            CFrame.Angles(math.rad(-58) * weight, 0, math.rad(24) * weight)
+        return CFrame.Angles(math.rad(-7) * weight, 0, 0),
+            CFrame.Angles(math.rad(-62) * weight, 0, math.rad(-26) * weight),
+            CFrame.Angles(math.rad(-62) * weight, 0, math.rad(26) * weight),
+            CFrame.new(0, 0.055 * weight, 0)
+                * CFrame.Angles(math.rad(-2.5) * weight, 0, 0),
+            CFrame.Angles(math.rad(4) * weight, 0, math.rad(-3) * weight),
+            CFrame.Angles(math.rad(-4) * weight, 0, math.rad(3) * weight)
     elseif celebrationKind == "survive" then
-        return CFrame.Angles(math.rad(-3.5) * weight, 0, 0),
-            CFrame.Angles(math.rad(-20) * weight, 0, math.rad(-13) * weight),
-            CFrame.Angles(math.rad(-20) * weight, 0, math.rad(13) * weight)
+        return CFrame.Angles(math.rad(-4) * weight, 0, 0),
+            CFrame.Angles(math.rad(-23) * weight, 0, math.rad(-14) * weight),
+            CFrame.Angles(math.rad(-23) * weight, 0, math.rad(14) * weight),
+            CFrame.new(0, 0.025 * weight, 0),
+            CFrame.Angles(math.rad(2) * weight, 0, math.rad(-1.5) * weight),
+            CFrame.Angles(math.rad(-2) * weight, 0, math.rad(1.5) * weight)
     end
 
-    return CFrame.Angles(math.rad(8) * weight, 0, 0),
-        CFrame.Angles(math.rad(12) * weight, 0, math.rad(8) * weight),
-        CFrame.Angles(math.rad(12) * weight, 0, math.rad(-8) * weight)
+    return CFrame.Angles(math.rad(9) * weight, 0, 0),
+        CFrame.Angles(math.rad(14) * weight, 0, math.rad(9) * weight),
+        CFrame.Angles(math.rad(14) * weight, 0, math.rad(-9) * weight),
+        CFrame.new(0, -0.055 * weight, 0)
+            * CFrame.Angles(math.rad(3) * weight, 0, 0),
+        CFrame.Angles(math.rad(5) * weight, 0, math.rad(3) * weight),
+        CFrame.Angles(math.rad(5) * weight, 0, math.rad(-3) * weight)
 end
 
 RunService:BindToRenderStep(
@@ -293,8 +309,12 @@ RunService:BindToRenderStep(
         end
 
         local celebrationScale = reduced and 0 or celebrationWeight
-        local celebrationWaist, celebrationLeftShoulder, celebrationRightShoulder =
-            celebrationTargets(celebrationScale)
+        local celebrationWaist,
+            celebrationLeftShoulder,
+            celebrationRightShoulder,
+            celebrationRoot,
+            celebrationLeftHip,
+            celebrationRightHip = celebrationTargets(celebrationScale)
 
         local surgeLean = speedSurgeActive and math.min(4.2, speed * 0.12) or 0
         local moonFloat = lowGravityActive and not grounded
@@ -344,7 +364,7 @@ RunService:BindToRenderStep(
                 1.6 * side * moveWeight
                 + turnPose * 1.1
             ) * scale
-        )
+        ) * celebrationRoot
 
         local hipCounter = math.rad(
             1.5 * side * moveWeight
@@ -358,12 +378,12 @@ RunService:BindToRenderStep(
             moonLeg + tuck + strideHip,
             0,
             hipCounter
-        )
+        ) * celebrationLeftHip
         local rightTarget = CFrame.Angles(
             -moonLeg + tuck - strideHip,
             0,
             hipCounter
-        )
+        ) * celebrationRightHip
 
         local actionArmPitch = math.rad(
             -launchWeight * 24
