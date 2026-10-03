@@ -61,6 +61,33 @@ function AISurvivorRules.profileForSlot(slot)
     return AISurvivorRules.Profiles[index]
 end
 
+function AISurvivorRules.roundTraits(profile, slot, roundNumber)
+    local base = profile or {}
+    local safeSlot = math.max(1, math.floor(tonumber(slot) or 1))
+    local safeRound = math.max(1, math.floor(tonumber(roundNumber) or 1))
+
+    local function wave(multiplier, offset)
+        local value = ((safeSlot * multiplier + safeRound * (multiplier + 6) + offset) % 101) / 100
+        return (value - 0.5) * 2
+    end
+
+    local risk = math.clamp((tonumber(base.Risk) or 0.5) + wave(17, 11) * 0.10, 0.12, 0.88)
+    local social = math.clamp((tonumber(base.SocialChance) or 0.2) + wave(23, 7) * 0.09, 0.06, 0.46)
+    local mistake = math.clamp((tonumber(base.MistakeChance) or 0.12) + wave(31, 3) * 0.055, 0.035, 0.27)
+    local padChance = math.clamp((tonumber(base.PadChance) or 0.2) + wave(13, 19) * 0.07, 0.07, 0.52)
+
+    return {
+        Risk = risk,
+        SocialChance = social,
+        MistakeChance = mistake,
+        PadChance = padChance,
+        HesitationChance = math.clamp(0.035 + mistake * 0.55, 0.05, 0.18),
+        ReconsiderChance = math.clamp(0.03 + social * 0.16 + risk * 0.05, 0.05, 0.13),
+        FollowThrough = math.clamp(0.72 + (1 - mistake) * 0.20, 0.76, 0.94),
+        DirectionBias = wave(29, 5),
+    }
+end
+
 function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     local count = math.max(1, math.floor(tonumber(optionCount) or 1))
     local safeSlot = math.max(1, math.floor(tonumber(slot) or 1))
