@@ -13,6 +13,12 @@ describe("UI responsive profiles", function()
         expect(c.aspect > 1.7).toBe(true)
     end)
 
+    it("keeps critical mobile text above a readable floor", function()
+        expect(UIResponsive.criticalTextMin(Vector2.new(640, 360))).toBe(13)
+        expect(UIResponsive.criticalTextMin(Vector2.new(960, 440))).toBe(14)
+        expect(UIResponsive.criticalTextMin(Vector2.new(1280, 720))).toBe(15)
+    end)
+
     it("keeps mobile dock buttons at or above the minimum touch target", function()
         for _, viewport in ipairs({
             Vector2.new(640, 360),
