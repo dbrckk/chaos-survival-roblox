@@ -178,6 +178,99 @@ local function rebuild()
             bridge.CastShadow = false
         end
     end
+
+    -- Variant-specific skyline landmarks. These stay outside the playable arena
+    -- so they improve silhouette/readability without affecting collision or routes.
+    if variant == "Classic" then
+        for side = -1, 1, 2 do
+            local x = side * 104
+            local mast = makePart(
+                "ClassicBroadcastMast" .. tostring(side),
+                Vector3.new(4.2, 54, 4.2),
+                CFrame.new(Config.ArenaCenter + Vector3.new(x, 22, -78)),
+                VisualTheme.World.Metal,
+                VisualTheme.Materials.Structure,
+                0.10
+            )
+            makePart(
+                "ClassicBroadcastCrown" .. tostring(side),
+                Vector3.new(18, 1.1, 5),
+                mast.CFrame + Vector3.new(0, 21, 0),
+                side < 0 and currentAccent or secondaryAccent,
+                VisualTheme.Materials.Glow,
+                tier.Name == "Low" and 0.56 or 0.30
+            )
+        end
+    elseif variant == "Towers" then
+        local skylineOffsets = {
+            Vector3.new(-92, 28, -78),
+            Vector3.new(92, 34, -78),
+            Vector3.new(-92, 40, 78),
+            Vector3.new(92, 31, 78),
+        }
+        for i, offset in ipairs(skylineOffsets) do
+            local body = makePart(
+                "TowerMegastructure" .. i,
+                Vector3.new(13, 72 + (i % 2) * 18, 13),
+                CFrame.new(Config.ArenaCenter + offset),
+                VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, 0.48),
+                VisualTheme.Materials.Structure,
+                0.10
+            )
+            if tier.Name ~= "Low" then
+                makePart(
+                    "TowerVerticalRail" .. i,
+                    Vector3.new(0.7, body.Size.Y * 0.72, 14.0),
+                    body.CFrame + Vector3.new(0, 4, 0),
+                    i % 2 == 0 and currentAccent or secondaryAccent,
+                    VisualTheme.Materials.Glow,
+                    0.42
+                )
+            end
+        end
+    elseif variant == "Crossroads" then
+        for i = 0, 3 do
+            local angle = math.rad(i * 90)
+            local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
+            local position = Config.ArenaCenter + radial * 105 + Vector3.new(0, 18, 0)
+            local gantry = makePart(
+                "CrossroadsSkyGantry" .. i,
+                Vector3.new(i % 2 == 0 and 34 or 5, 4.2, i % 2 == 0 and 5 or 34),
+                CFrame.new(position),
+                VisualTheme.World.Metal,
+                VisualTheme.Materials.Structure,
+                0.12
+            )
+            makePart(
+                "CrossroadsSkySignal" .. i,
+                Vector3.new(i % 2 == 0 and 25 or 1.1, 0.75, i % 2 == 0 and 1.1 or 25),
+                gantry.CFrame + Vector3.new(0, 3.0, 0),
+                i % 2 == 0 and currentAccent or secondaryAccent,
+                VisualTheme.Materials.Glow,
+                tier.Name == "Low" and 0.54 or 0.28
+            )
+        end
+    elseif variant == "Orbital" then
+        local ringRadius = 112
+        local segments = tier.Name == "Low" and 8 or 12
+        for i = 1, segments do
+            local angle = ((i - 1) / segments) * math.pi * 2
+            local tangent = angle + math.pi * 0.5
+            local position = Config.ArenaCenter + Vector3.new(
+                math.cos(angle) * ringRadius,
+                24 + math.sin(angle * 2) * 4,
+                math.sin(angle) * ringRadius
+            )
+            makePart(
+                "OrbitalSkyRing" .. i,
+                Vector3.new(30, 1.2, 3.2),
+                CFrame.new(position) * CFrame.Angles(0, -tangent, math.rad(math.sin(angle) * 7)),
+                i % 3 == 0 and secondaryAccent or currentAccent,
+                i % 2 == 0 and VisualTheme.Materials.Glow or VisualTheme.Materials.Structure,
+                i % 2 == 0 and (tier.Name == "Low" and 0.58 or 0.34) or 0.18
+            )
+        end
+    end
 end
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
