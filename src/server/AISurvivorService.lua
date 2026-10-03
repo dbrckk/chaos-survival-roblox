@@ -1060,7 +1060,7 @@ local function separateTarget(record, target)
     return adjusted
 end
 
-local function chooseMobilityPad(record, root, pads)
+local function chooseMobilityPad(record, root, pads, traits)
     local variantId = arenaVariantId()
     local center = config.ArenaCenter
     local ranked = {}
@@ -1099,7 +1099,7 @@ local function chooseMobilityPad(record, root, pads)
         return a.score > b.score
     end)
 
-    local choiceRange = record.profile.Id == "Bold"
+    local choiceRange = (traits.Risk or record.profile.Risk) >= 0.68
         and math.min(2, #ranked)
         or 1
     return ranked[math.random(1, choiceRange)].pad
@@ -1128,7 +1128,7 @@ local function chooseArenaTarget(record, root, now)
         and math.random() < padChance
 
     if wantsPad then
-        local pad = chooseMobilityPad(record, root, pads)
+        local pad = chooseMobilityPad(record, root, pads, traits)
         record.targetIsPad = true
         record.targetPart = pad
         return pad.Position + Vector3.new(0, 1.8, 0), 1.6
@@ -1153,9 +1153,10 @@ local function chooseArenaTarget(record, root, now)
         return a.score > b.score
     end)
 
-    local choiceRange = record.profile.Id == "Bold"
+    local effectiveRisk = traits.Risk or record.profile.Risk
+    local choiceRange = effectiveRisk >= 0.66
         and math.min(3, #ranked)
-        or (record.profile.Id == "Balanced" and math.min(2, #ranked) or 1)
+        or (effectiveRisk >= 0.36 and math.min(2, #ranked) or 1)
 
     -- Real players do not always choose the mathematically best route.
     if #ranked > choiceRange and math.random() < (traits.MistakeChance or record.profile.MistakeChance or 0) then
