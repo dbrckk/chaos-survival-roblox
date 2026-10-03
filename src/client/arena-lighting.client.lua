@@ -3,6 +3,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
@@ -20,6 +22,9 @@ local MOODS = {
         Outdoor = Color3.fromRGB(104, 120, 154),
         Saturation = 0.025,
         Contrast = 0.018,
+        Diffuse = 0.72,
+        Specular = 0.88,
+        ShadowSoftness = 0.34,
     },
     Towers = {
         Tint = Color3.fromRGB(210, 244, 250),
@@ -27,6 +32,9 @@ local MOODS = {
         Outdoor = Color3.fromRGB(94, 130, 143),
         Saturation = 0.015,
         Contrast = 0.030,
+        Diffuse = 0.66,
+        Specular = 0.94,
+        ShadowSoftness = 0.26,
     },
     Crossroads = {
         Tint = Color3.fromRGB(242, 218, 255),
@@ -34,6 +42,9 @@ local MOODS = {
         Outdoor = Color3.fromRGB(126, 101, 148),
         Saturation = 0.035,
         Contrast = 0.026,
+        Diffuse = 0.68,
+        Specular = 0.84,
+        ShadowSoftness = 0.42,
     },
     Orbital = {
         Tint = Color3.fromRGB(214, 255, 241),
@@ -41,6 +52,9 @@ local MOODS = {
         Outdoor = Color3.fromRGB(91, 137, 132),
         Saturation = 0.030,
         Contrast = 0.022,
+        Diffuse = 0.62,
+        Specular = 1.00,
+        ShadowSoftness = 0.30,
     },
 }
 
@@ -58,9 +72,20 @@ local function applyMood(duration)
     currentVariant = readVariant()
     local mood = MOODS[currentVariant] or MOODS.Classic
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
+    local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local roundScale = phase == "round" and 0.34 or (phase == "ready" and 0.62 or 1)
     local accessibilityScale = reducedMotion and 0.72 or 1
     local scale = roundScale * accessibilityScale
+
+    local materialScale = quality.Name == "Low" and 0.70
+        or (quality.Name == "Medium" and 0.86 or 1)
+    local diffuse = math.clamp((mood.Diffuse or 0.7) * materialScale, 0.35, 1)
+    local specular = math.clamp((mood.Specular or 0.9) * materialScale, 0.30, 1)
+    local shadowSoftness = math.clamp(
+        (mood.ShadowSoftness or 0.35) + (quality.Name == "Low" and 0.20 or 0),
+        0,
+        1
+    )
 
     TweenService:Create(
         effect,
@@ -78,6 +103,9 @@ local function applyMood(duration)
         {
             Ambient = mood.Ambient,
             OutdoorAmbient = mood.Outdoor,
+            EnvironmentDiffuseScale = diffuse,
+            EnvironmentSpecularScale = specular,
+            ShadowSoftness = shadowSoftness,
         }
     ):Play()
 end
@@ -121,6 +149,10 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    applyMood(0.35)
+end)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     applyMood(0.35)
 end)
 
