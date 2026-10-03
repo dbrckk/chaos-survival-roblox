@@ -121,6 +121,17 @@ describe("AI survivor rules", function()
         expect(bodyA ~= bodyB or proportionA ~= proportionB).toBe(true)
     end)
 
+    it("keeps identity-based depth and head scales bounded and varied", function()
+        local depthA, headA = AISurvivorRules.shapeScales(1)
+        local depthB, headB = AISurvivorRules.shapeScales(2)
+
+        expect(depthA >= 0.94 and depthA <= 1.06).toBe(true)
+        expect(headA >= 0.95 and headA <= 1.05).toBe(true)
+        expect(depthB >= 0.94 and depthB <= 1.06).toBe(true)
+        expect(headB >= 0.95 and headB <= 1.05).toBe(true)
+        expect(depthA ~= depthB or headA ~= headB).toBe(true)
+    end)
+
     it("varies result reactions with temperament without changing gameplay stats", function()
         expect(AISurvivorRules.resultReaction(0.05, 0.20)).toBe("jump")
         expect(AISurvivorRules.resultReaction(0.45, 0.20)).toBe("sidestep")
