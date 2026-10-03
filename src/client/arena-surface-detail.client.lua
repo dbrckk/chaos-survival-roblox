@@ -273,8 +273,29 @@ local function refreshSurfaceAccent()
     end
 end
 
+local mapConnection = nil
+
+local function bindGeneratedMap(generated)
+    if mapConnection then
+        mapConnection:Disconnect()
+        mapConnection = nil
+    end
+
+    if generated then
+        mapConnection = generated.ChildAdded:Connect(function(child)
+            if child.Name == "Arena" then
+                task.defer(function()
+                    rebuild()
+                    refreshSurfaceAccent()
+                end)
+            end
+        end)
+    end
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(child)
         task.defer(function()
             rebuild()
             refreshSurfaceAccent()
@@ -284,9 +305,12 @@ end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(nil)
         clear()
     end
 end)
+
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     task.defer(function()
