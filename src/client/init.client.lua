@@ -1976,6 +1976,14 @@ stateEvent.OnClientEvent:Connect(function(state)
     rookieCoach.Visible = coachText ~= nil
     if coachText then
         rookieCoach.Text = coachText
+        if touchDevice then
+            rookieCoach.Position = UDim2.fromScale(
+                0.5,
+                state.phase == "intermission" and state.voteOptions and 0.40 or 0.70
+            )
+        else
+            rookieCoach.Position = UDim2.fromScale(0.5, 0.94)
+        end
     end
 
     if state.phase == "ready" then
