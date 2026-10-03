@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -88,18 +89,75 @@ local scale = Instance.new("UIScale")
 scale.Scale = 0.80
 scale.Parent = card
 
+UITheme.addTextConstraint(title, 15, 30)
+UITheme.addTextConstraint(subtitle, 12, 18)
+
+local countdown = Instance.new("TextLabel")
+countdown.Name = "ReadyCountdown"
+countdown.AnchorPoint = Vector2.new(0.5, 0.5)
+countdown.Position = UDim2.fromScale(0.5, 0.46)
+countdown.Size = UDim2.fromOffset(150, 150)
+countdown.BackgroundTransparency = 1
+countdown.Font = Enum.Font.GothamBlack
+countdown.Text = "3"
+countdown.TextColor3 = UITheme.Colors.Text
+countdown.TextScaled = true
+countdown.TextTransparency = 1
+countdown.Visible = false
+countdown.ZIndex = 4
+countdown.Parent = gui
+UITheme.addTextConstraint(countdown, 42, 92)
+local countdownStroke = Instance.new("UIStroke")
+countdownStroke.Thickness = 3
+countdownStroke.Color = UITheme.Colors.Cyan
+countdownStroke.Transparency = 1
+countdownStroke.Parent = countdown
+local countdownScale = Instance.new("UIScale")
+countdownScale.Scale = 1
+countdownScale.Parent = countdown
+
+local edgeTop = Instance.new("Frame")
+edgeTop.Name = "EventEdgeTop"
+edgeTop.AnchorPoint = Vector2.new(0.5, 0)
+edgeTop.Position = UDim2.fromScale(0.5, 0)
+edgeTop.Size = UDim2.new(0, 0, 0, 4)
+edgeTop.BackgroundColor3 = UITheme.Colors.Cyan
+edgeTop.BackgroundTransparency = 1
+edgeTop.BorderSizePixel = 0
+edgeTop.ZIndex = 3
+edgeTop.Parent = gui
+
+local edgeBottom = edgeTop:Clone()
+edgeBottom.Name = "EventEdgeBottom"
+edgeBottom.AnchorPoint = Vector2.new(0.5, 1)
+edgeBottom.Position = UDim2.fromScale(0.5, 1)
+edgeBottom.Parent = gui
+
 local token = 0
+local countdownToken = 0
+local activePriority = 0
+local activeUntil = 0
 local lastOverdrive = false
 local lastFinalRush = false
 local lastFusionKey = nil
+local previousPhase = "waiting"
+local lastReadySecond = nil
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function show(mainText, subText, color, duration)
+local function show(kind, mainText, subText, color, duration)
+    local priority = RoundEventPresentation.priority(kind)
+    local now = os.clock()
+    if now < activeUntil and priority < activePriority then
+        return false
+    end
+
     token += 1
     local current = token
+    activePriority = priority
+    activeUntil = now + (duration or 1.15) + 0.22
 
     title.Text = mainText
     subtitle.Text = subText
@@ -115,7 +173,26 @@ local function show(mainText, subText, color, duration)
     stroke.Transparency = 1
     title.TextTransparency = 1
     subtitle.TextTransparency = 1
-    scale.Scale = 0.80
+    local reduceMotion = player:GetAttribute("ReduceMotion") == true
+    scale.Scale = reduceMotion and 0.96 or 0.80
+
+    edgeTop.BackgroundColor3 = color
+    edgeBottom.BackgroundColor3 = color
+    edgeTop.BackgroundTransparency = 0.12
+    edgeBottom.BackgroundTransparency = 0.12
+    edgeTop.Size = reduceMotion and UDim2.new(0.86, 0, 0, 3) or UDim2.new(0, 0, 0, 4)
+    edgeBottom.Size = edgeTop.Size
+
+    TweenService:Create(
+        edgeTop,
+        TweenInfo.new(reduceMotion and 0.12 or 0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Size = UDim2.new(0.86, 0, 0, 3)}
+    ):Play()
+    TweenService:Create(
+        edgeBottom,
+        TweenInfo.new(reduceMotion and 0.12 or 0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Size = UDim2.new(0.86, 0, 0, 3)}
+    ):Play()
 
     TweenService:Create(card, TweenInfo.new(0.16), {BackgroundTransparency = 0.06}):Play()
     TweenService:Create(stroke, TweenInfo.new(0.16), {Transparency = 0.16}):Play()
@@ -123,7 +200,9 @@ local function show(mainText, subText, color, duration)
     TweenService:Create(subtitle, TweenInfo.new(0.13), {TextTransparency = 0}):Play()
     TweenService:Create(
         scale,
-        TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        reduceMotion
+            and TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            or TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {Scale = 1}
     ):Play()
 
@@ -144,6 +223,8 @@ local function show(mainText, subText, color, duration)
         end
 
         TweenService:Create(card, TweenInfo.new(0.18), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(edgeTop, TweenInfo.new(0.18), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(edgeBottom, TweenInfo.new(0.18), {BackgroundTransparency = 1}):Play()
         TweenService:Create(stroke, TweenInfo.new(0.18), {Transparency = 1}):Play()
         TweenService:Create(title, TweenInfo.new(0.18), {TextTransparency = 1}):Play()
         TweenService:Create(subtitle, TweenInfo.new(0.18), {TextTransparency = 1}):Play()
@@ -153,6 +234,55 @@ local function show(mainText, subText, color, duration)
         if current == token then
             card.Visible = false
             flash.Visible = false
+            activePriority = 0
+            activeUntil = 0
+        end
+    end)
+
+    return true
+end
+
+local function showCountdown(value, color)
+    countdownToken += 1
+    local current = countdownToken
+    local reduceMotion = player:GetAttribute("ReduceMotion") == true
+
+    countdown.Text = tostring(value)
+    countdown.TextColor3 = UITheme.Colors.Text
+    countdownStroke.Color = color
+    countdown.Visible = true
+    countdown.TextTransparency = 1
+    countdownStroke.Transparency = 1
+    countdownScale.Scale = reduceMotion and 1 or 1.30
+
+    TweenService:Create(
+        countdown,
+        TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {TextTransparency = 0}
+    ):Play()
+    TweenService:Create(
+        countdownStroke,
+        TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Transparency = 0.08}
+    ):Play()
+
+    if not reduceMotion then
+        TweenService:Create(
+            countdownScale,
+            TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = 1}
+        ):Play()
+    end
+
+    task.delay(0.48, function()
+        if current ~= countdownToken then
+            return
+        end
+        TweenService:Create(countdown, TweenInfo.new(0.18), {TextTransparency = 1}):Play()
+        TweenService:Create(countdownStroke, TweenInfo.new(0.18), {Transparency = 1}):Play()
+        task.wait(0.18)
+        if current == countdownToken then
+            countdown.Visible = false
         end
     end)
 end
@@ -163,31 +293,60 @@ stateEvent.OnClientEvent:Connect(function(state)
     local finalRush = phase == "round" and state.finalRush == true
     local fusionName = type(state.fusionName) == "string" and state.fusionName or nil
     local fusionKey = state.doubleChaos and fusionName or nil
+    local eventColor = RoundEventPresentation.accent(
+        state.disasterIds,
+        function(id)
+            return UITheme.disasterAccent(id, UITheme.Colors.Cyan)
+        end
+    )
+
+    local readySecond = RoundEventPresentation.countdownValue(state, previousPhase)
+    if readySecond and readySecond ~= lastReadySecond then
+        showCountdown(readySecond, eventColor)
+        lastReadySecond = readySecond
+    elseif phase ~= "ready" then
+        lastReadySecond = nil
+    end
+
+    local roundStarted = phase == "round" and previousPhase ~= "round"
 
     if finalRush and not lastFinalRush then
         show(
+            "finalRush",
             "FINAL RUSH",
             "LAST 5 SECONDS • PADS RECHARGE FASTER",
             UITheme.Colors.Orange,
             1.05
         )
+    elseif roundStarted then
+        local mainText, subText = RoundEventPresentation.roundTitle(state)
+        show(
+            "roundStart",
+            mainText,
+            subText .. " • SURVIVE",
+            eventColor,
+            state.doubleChaos and 1.20 or 0.95
+        )
     elseif overdrive and not lastOverdrive then
         show(
+            "overdrive",
             "OVERDRIVE",
             "BOOST PADS • SHARD SURGE • GOLDEN SHARD",
             UITheme.Colors.Gold,
             1.20
         )
-    elseif fusionKey and fusionKey ~= lastFusionKey and (phase == "ready" or phase == "round") then
+    elseif fusionKey and fusionKey ~= lastFusionKey and phase == "ready" then
         show(
-            tostring(fusionName),
-            "CHAOS FUSION • TWO HAZARDS • +5 SURVIVAL BONUS",
+            "fusion",
+            "FUSION DETECTED",
+            tostring(fusionName) .. " • TWO HAZARDS • +5 SURVIVAL BONUS",
             UITheme.Colors.Violet,
-            1.35
+            1.25
         )
     end
 
     lastOverdrive = overdrive
     lastFinalRush = finalRush
     lastFusionKey = fusionKey
+    previousPhase = phase
 end)
