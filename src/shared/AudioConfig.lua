@@ -115,6 +115,68 @@ AudioConfig.Composite = {
     },
 }
 
+AudioConfig.Composite.Lava = {
+    {Sound = "Lava", VolumeScale = 0.82, PitchOffset = -0.08},
+    {Sound = "Darkness", Delay = 0.025, VolumeScale = 0.18, PitchOffset = -0.34},
+    {Sound = "Hit", Delay = 0.075, VolumeScale = 0.12, PitchOffset = -0.28},
+}
+AudioConfig.Composite.Meteor = {
+    {Sound = "Meteor", VolumeScale = 0.90, PitchOffset = -0.06},
+    {Sound = "Wind", Delay = 0.018, VolumeScale = 0.18, PitchOffset = 0.18},
+    {Sound = "Hit", Delay = 0.055, VolumeScale = 0.16, PitchOffset = -0.34},
+}
+AudioConfig.Composite.LowGravity = {
+    {Sound = "LowGravity", VolumeScale = 0.72, PitchOffset = -0.08},
+    {Sound = "Speed", Delay = 0.035, VolumeScale = 0.16, PitchOffset = -0.42},
+    {Sound = "UISelect", Delay = 0.095, VolumeScale = 0.12, PitchOffset = 0.28},
+}
+AudioConfig.Composite.PlatformWarning = {
+    {Sound = "PlatformWarning", VolumeScale = 0.88, PitchOffset = -0.05},
+    {Sound = "Countdown", Delay = 0.050, VolumeScale = 0.20, PitchOffset = 0.24},
+}
+AudioConfig.Composite.Tornado = {
+    {Sound = "Tornado", VolumeScale = 0.84, PitchOffset = -0.06},
+    {Sound = "Wind", Delay = 0.015, VolumeScale = 0.26, PitchOffset = -0.18},
+    {Sound = "Speed", Delay = 0.070, VolumeScale = 0.12, PitchOffset = -0.42},
+}
+AudioConfig.Composite.Freeze = {
+    {Sound = "Freeze", VolumeScale = 0.88, PitchOffset = 0.02},
+    {Sound = "PlatformWarning", Delay = 0.035, VolumeScale = 0.18, PitchOffset = 0.34},
+    {Sound = "Darkness", Delay = 0.085, VolumeScale = 0.12, PitchOffset = 0.22},
+}
+AudioConfig.Composite.Bombs = {
+    {Sound = "Bombs", VolumeScale = 0.92, PitchOffset = -0.08},
+    {Sound = "Hit", Delay = 0.030, VolumeScale = 0.22, PitchOffset = -0.42},
+    {Sound = "Countdown", Delay = 0.085, VolumeScale = 0.14, PitchOffset = -0.48},
+}
+AudioConfig.Composite.Speed = {
+    {Sound = "Speed", VolumeScale = 0.88, PitchOffset = 0.02},
+    {Sound = "Wind", Delay = 0.020, VolumeScale = 0.18, PitchOffset = 0.34},
+    {Sound = "UISelect", Delay = 0.075, VolumeScale = 0.12, PitchOffset = 0.38},
+}
+AudioConfig.Composite.Darkness = {
+    {Sound = "Darkness", VolumeScale = 0.90, PitchOffset = -0.06},
+    {Sound = "LowGravity", Delay = 0.030, VolumeScale = 0.16, PitchOffset = -0.34},
+}
+AudioConfig.Composite.Shrink = {
+    {Sound = "Shrink", VolumeScale = 0.88, PitchOffset = -0.10},
+    {Sound = "Countdown", Delay = 0.040, VolumeScale = 0.18, PitchOffset = -0.52},
+    {Sound = "Darkness", Delay = 0.085, VolumeScale = 0.12, PitchOffset = -0.30},
+}
+AudioConfig.Composite.JumpShock = {
+    {Sound = "JumpShock", VolumeScale = 0.90, PitchOffset = 0.02},
+    {Sound = "Speed", Delay = 0.025, VolumeScale = 0.16, PitchOffset = 0.32},
+    {Sound = "Countdown", Delay = 0.070, VolumeScale = 0.12, PitchOffset = 0.40},
+}
+AudioConfig.Composite.MobilityPad = {
+    {Sound = "MobilityPad", VolumeScale = 0.88, PitchOffset = -0.02},
+    {Sound = "Speed", Delay = 0.020, VolumeScale = 0.22, PitchOffset = 0.18},
+}
+AudioConfig.Composite.Hit = {
+    {Sound = "Hit", VolumeScale = 0.90, PitchOffset = -0.03},
+    {Sound = "Darkness", Delay = 0.020, VolumeScale = 0.10, PitchOffset = -0.32},
+}
+
 AudioConfig.DisasterLoop = {
     Tornado = "Wind",
     Meteors = "Wind",
