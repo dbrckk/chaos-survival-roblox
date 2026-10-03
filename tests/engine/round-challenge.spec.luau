@@ -15,6 +15,17 @@ describe("Round challenge", function()
         expect(RoundChallenge.forRound(7).Id).toBe("SHARD_HUNT")
     end)
 
+    it("uses one mobility pad as the newcomer challenge", function()
+        local first = RoundChallenge.forContext(42, true)
+        expect(first.Id).toBe("FIRST_ESCAPE")
+        expect(first.Metric).toBe("pads")
+        expect(first.Target).toBe(1)
+        expect(RoundChallenge.progress(first, 0, 1, 0, 0, 0)).toBe(1)
+        expect(RoundChallenge.completed(first, 0, 1, 0, 0, 0)).toBe(true)
+
+        expect(RoundChallenge.forContext(1, false).Id).toBe("SHARD_HUNT")
+    end)
+
     it("reads only the metric required by the challenge", function()
         local shard = RoundChallenge.Definitions[1]
         local pads = RoundChallenge.Definitions[2]
