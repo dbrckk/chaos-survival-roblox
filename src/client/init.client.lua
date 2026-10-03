@@ -1350,7 +1350,7 @@ local function applyResponsiveLayout()
     questToast.Size = UDim2.new(profile.toastWidthScale, 0, 0, 88)
     achievementToast.Size = UDim2.new(profile.toastWidthScale, 0, 0, 92)
 
-    dataWarning.Position = UDim2.new(0.5, 0, 0, profile.topHeight + 14)
+    dataWarning.Position = UDim2.new(0.5, 0, 0, profile.topHeight + 52)
     dataWarning.Size = UDim2.new(profile.toastWidthScale, 0, 0, 34)
 
     local panelBottom = profile.panelBottomOffset
@@ -1987,6 +1987,8 @@ stateEvent.OnClientEvent:Connect(function(state)
         and supportButton:GetAttribute("MonetizationEnabled") == true
 
     if touchDevice then
+        stats.Visible = not metaControlsSuppressed
+        xpTrack.Visible = not metaControlsSuppressed
         applyResponsiveLayout()
     end
 
@@ -2028,9 +2030,13 @@ stateEvent.OnClientEvent:Connect(function(state)
     if coachText then
         rookieCoach.Text = coachText
         if touchDevice then
+            local camera = workspace.CurrentCamera
+            local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+            local profile = UIResponsive.mobileProfile(viewport)
+            local voteY = profile.tinyHeight and 0.30 or 0.40
             rookieCoach.Position = UDim2.fromScale(
                 0.5,
-                state.phase == "intermission" and state.voteOptions and 0.40 or 0.70
+                state.phase == "intermission" and state.voteOptions and voteY or 0.70
             )
         else
             rookieCoach.Position = UDim2.fromScale(0.5, 0.94)
