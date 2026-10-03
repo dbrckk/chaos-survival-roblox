@@ -9,6 +9,7 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local hazardImpactEvent = remotes:WaitForChild("HazardImpactFeedback")
 local mechanicFeedbackEvent = remotes:WaitForChild("ArenaMechanicFeedback")
+local stateEvent = remotes:WaitForChild("RoundState")
 
 local character = nil
 local humanoid = nil
@@ -27,6 +28,8 @@ local lastLandingBurstAt = 0
 local lastHorizontalSpeed = 0
 local accelerationKick = 0
 local speedFovOffset = 0
+local speedSurgeActive = false
+local lowGravityActive = false
 
 local function disconnectCharacter()
     for _, connection in ipairs(characterConnections) do
@@ -177,6 +180,22 @@ mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
     mechanicKick = math.max(mechanicKick, boost and 0.55 or 0.34)
 end)
 
+stateEvent.OnClientEvent:Connect(function(state)
+    local surge = false
+    local lowGravity = false
+    if state and state.phase == "round" then
+        for _, id in ipairs(state.disasterIds or {}) do
+            if id == "SpeedSurge" then
+                surge = true
+            elseif id == "LowGravity" then
+                lowGravity = true
+            end
+        end
+    end
+    speedSurgeActive = surge
+    lowGravityActive = lowGravity
+end)
+
 local function exponential(current, target, speed, dt)
     local alpha = 1 - math.exp(-math.max(0, speed) * math.max(0, dt))
     return current + (target - current) * alpha
@@ -206,7 +225,8 @@ RunService:BindToRenderStep(
         local targetAccelerationKick = math.clamp(rawAcceleration / 420, -0.030, 0.030)
         local reducedMotion = player:GetAttribute("ReduceMotion") == true
         local speedExcess = math.max(0, speed - 16)
-        local targetFovOffset = reducedMotion and 0 or math.clamp(speedExcess * 0.12, 0, 2.4)
+        local surgeFovBonus = speedSurgeActive and math.clamp(speedExcess * 0.16 + 0.8, 0, 2.2) or 0
+        local targetFovOffset = reducedMotion and 0 or math.clamp(speedExcess * 0.12 + surgeFovBonus, 0, 4.2)
         speedFovOffset = exponential(
             speedFovOffset,
             targetFovOffset,
@@ -235,13 +255,18 @@ RunService:BindToRenderStep(
         mechanicKick *= math.exp(-dt * 7.5)
         shakeClock += dt * (18 + impactKick * 10)
 
-        local walkWave = math.sin(shakeClock * 0.62) * 0.010 * bob
-        local walkLift = math.abs(math.cos(shakeClock * 0.62)) * 0.015 * bob
+        local surgeWave = speedSurgeActive and math.sin(shakeClock * 0.92) * 0.006 * math.clamp(speed / 24, 0, 1) or 0
+        local lowGravityDrift = lowGravityActive and not grounded
+            and math.sin(shakeClock * 0.28) * 0.010
+            or 0
+        local walkWave = math.sin(shakeClock * 0.62) * 0.010 * bob + surgeWave
+        local walkLift = math.abs(math.cos(shakeClock * 0.62)) * 0.015 * bob + lowGravityDrift
 
         local pitch =
             (landingKick * 0.026)
             - (mechanicKick * 0.018)
             - accelerationKick
+            - (speedSurgeActive and math.clamp(speedExcess / 520, 0, 0.010) or 0)
             + (math.sin(shakeClock * 1.91) * impactKick * 0.018)
         local roll =
             lean
