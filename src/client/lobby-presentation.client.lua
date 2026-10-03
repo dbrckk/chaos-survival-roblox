@@ -24,6 +24,11 @@ local currentActivities = nil
 local statusGui = nil
 local socialPads = {}
 local trackedParts = {}
+local haloSegments = {}
+local loopPanels = {}
+local pylonGlows = {}
+local approachRibs = {}
+local practicePads = {}
 local presentationToken = 0
 local pulseCursor = 0
 
@@ -42,6 +47,11 @@ local function clearLocal()
     statusGui = nil
 
     trackedParts = {}
+    haloSegments = {}
+    loopPanels = {}
+    pylonGlows = {}
+    approachRibs = {}
+    practicePads = {}
     currentLobby = nil
     currentDecor = nil
     currentActivities = nil
@@ -62,6 +72,26 @@ local function rememberPart(part)
         Transparency = part.Transparency,
         Color = part.Color,
     }
+end
+
+local function cacheActivities()
+    practicePads = {}
+    currentActivities = currentLobby and currentLobby:FindFirstChild("Activities") or nil
+    if not currentActivities then
+        return
+    end
+
+    for _, child in ipairs(currentActivities:GetChildren()) do
+        if child:IsA("BasePart")
+            and child:GetAttribute("LobbyPracticePad") == true
+        then
+            rememberPart(child)
+            table.insert(practicePads, child)
+        end
+    end
+    table.sort(practicePads, function(a, b)
+        return a.Name < b.Name
+    end)
 end
 
 local function centerPosition()
@@ -203,28 +233,33 @@ local function bindLobby()
         end
 
         for _, descendant in ipairs(currentDecor:GetChildren()) do
-            if descendant:IsA("BasePart")
-                and (
-                    string.find(descendant.Name, "LobbyHaloSegment")
-                    or string.find(descendant.Name, "LobbyLoopPanel")
-                    or string.find(descendant.Name, "PylonGlow")
-                    or string.find(descendant.Name, "ArenaApproachRibTop")
-                )
-            then
-                rememberPart(descendant)
+            if descendant:IsA("BasePart") then
+                if string.find(descendant.Name, "LobbyHaloSegment") then
+                    rememberPart(descendant)
+                    table.insert(haloSegments, descendant)
+                elseif string.find(descendant.Name, "LobbyLoopPanel") then
+                    rememberPart(descendant)
+                    table.insert(loopPanels, descendant)
+                elseif string.find(descendant.Name, "PylonGlow") then
+                    rememberPart(descendant)
+                    table.insert(pylonGlows, descendant)
+                elseif string.find(descendant.Name, "ArenaApproachRibTop") then
+                    rememberPart(descendant)
+                    table.insert(approachRibs, descendant)
+                end
             end
         end
+
+        local function byName(a, b)
+            return a.Name < b.Name
+        end
+        table.sort(haloSegments, byName)
+        table.sort(loopPanels, byName)
+        table.sort(pylonGlows, byName)
+        table.sort(approachRibs, byName)
     end
 
-    if currentActivities then
-        for _, child in ipairs(currentActivities:GetChildren()) do
-            if child:IsA("BasePart")
-                and child:GetAttribute("LobbyPracticePad") == true
-            then
-                rememberPart(child)
-            end
-        end
-    end
+    cacheActivities()
 
     makeSocialPads()
     makeStatusGui()
@@ -269,7 +304,11 @@ local function applyState()
     end
 
     currentDecor = currentLobby:FindFirstChild("Decor") or currentDecor
-    currentActivities = currentLobby:FindFirstChild("Activities") or currentActivities
+    local nextActivities = currentLobby:FindFirstChild("Activities")
+    if nextActivities ~= currentActivities then
+        currentActivities = nextActivities
+        cacheActivities()
+    end
     if not statusGui or not statusGui.Parent then
         makeStatusGui()
     end
@@ -303,57 +342,61 @@ local function applyState()
         end
     end
 
-    if currentDecor then
-        for _, child in ipairs(currentDecor:GetChildren()) do
-            if child:IsA("BasePart") and string.find(child.Name, "LobbyLoopPanel") then
-                local index = tonumber(string.match(child.Name, "(%d+)$")) or 1
-                local focus = mode == "vote" and index == 1
-                    or mode == "launch" and index == 2
-                    or mode == "social" and index == 3
-                tweenPart(
-                    child,
-                    focus and 0.02 or 0.10,
-                    focus and accent or VisualTheme.World.Deep,
-                    duration
-                )
-            elseif child:IsA("BasePart") and string.find(child.Name, "PylonGlow") then
-                tweenPart(
-                    child,
-                    0.52 - emphasis.Center * 0.32,
-                    accent:Lerp(child.Color, 0.24),
-                    duration
-                )
-            elseif child:IsA("BasePart") and string.find(child.Name, "ArenaApproachRibTop") then
-                local index = tonumber(string.match(child.Name, "(%d+)$")) or 1
-                local launchColor = index % 2 == 0
-                    and VisualTheme.Accents.Gold
-                    or VisualTheme.Accents.Cyan
-                tweenPart(
-                    child,
-                    0.66 - emphasis.Runway * 0.52,
-                    mode == "launch" and launchColor or child.Color,
-                    duration
-                )
-            end
+    for _, child in ipairs(loopPanels) do
+        if child.Parent then
+            local index = tonumber(string.match(child.Name, "(%d+)$")) or 1
+            local focus = mode == "vote" and index == 1
+                or mode == "launch" and index == 2
+                or mode == "social" and index == 3
+            tweenPart(
+                child,
+                focus and 0.02 or 0.10,
+                focus and accent or VisualTheme.World.Deep,
+                duration
+            )
         end
     end
 
-    if currentActivities then
-        for _, child in ipairs(currentActivities:GetChildren()) do
-            if child:IsA("BasePart") and child:GetAttribute("LobbyPracticePad") == true then
-                tweenPart(
-                    child,
-                    0.74 - emphasis.Practice * 0.56,
-                    child.Color,
-                    duration
-                )
-                local light = child:FindFirstChild("PracticePadLight")
-                if light and light:IsA("PointLight") then
-                    light.Brightness = q.Name == "Low"
-                        and emphasis.Practice * 0.28
-                        or emphasis.Practice * 0.72
-                    light.Enabled = emphasis.Practice > 0.10
-                end
+    for _, child in ipairs(pylonGlows) do
+        if child.Parent then
+            tweenPart(
+                child,
+                0.52 - emphasis.Center * 0.32,
+                accent:Lerp(child.Color, 0.24),
+                duration
+            )
+        end
+    end
+
+    for _, child in ipairs(approachRibs) do
+        if child.Parent then
+            local index = tonumber(string.match(child.Name, "(%d+)$")) or 1
+            local launchColor = index % 2 == 0
+                and VisualTheme.Accents.Gold
+                or VisualTheme.Accents.Cyan
+            tweenPart(
+                child,
+                0.66 - emphasis.Runway * 0.52,
+                mode == "launch" and launchColor or child.Color,
+                duration
+            )
+        end
+    end
+
+    for _, child in ipairs(practicePads) do
+        if child.Parent then
+            tweenPart(
+                child,
+                0.74 - emphasis.Practice * 0.56,
+                child.Color,
+                duration
+            )
+            local light = child:FindFirstChild("PracticePadLight")
+            if light and light:IsA("PointLight") then
+                light.Brightness = q.Name == "Low"
+                    and emphasis.Practice * 0.28
+                    or emphasis.Practice * 0.72
+                light.Enabled = emphasis.Practice > 0.10
             end
         end
     end
@@ -434,8 +477,8 @@ local function pulsePracticeUse()
 
     local nearest = nil
     local nearestDistance = math.huge
-    for _, child in ipairs(currentActivities:GetChildren()) do
-        if child:IsA("BasePart") and child:GetAttribute("LobbyPracticePad") == true then
+    for _, child in ipairs(practicePads) do
+        if child.Parent then
             local distance = (root.Position - child.Position).Magnitude
             if distance < nearestDistance then
                 nearest = child
@@ -566,18 +609,8 @@ local function ambientRipple(mode, token)
     end
 
     if mode == "social" or mode == "vote" then
-        local halo = {}
-        for _, child in ipairs(currentDecor:GetChildren()) do
-            if child:IsA("BasePart") and string.find(child.Name, "LobbyHaloSegment") then
-                table.insert(halo, child)
-            end
-        end
-        table.sort(halo, function(a, b)
-            return a.Name < b.Name
-        end)
-
-        if #halo > 0 then
-            local segment = halo[((pulseCursor - 1) % #halo) + 1]
+        if #haloSegments > 0 then
+            local segment = haloSegments[((pulseCursor - 1) % #haloSegments) + 1]
             local original = trackedParts[segment]
             local targetColor = mode == "vote"
                 and VisualTheme.Accents.Magenta
