@@ -373,7 +373,165 @@ local function addOrbitalReactorLandmark(base, theme, tier)
     hub.CastShadow = tier.Name == "High"
 end
 
+local function addAsymmetricServiceCluster(base, theme, tier, variant)
+    if tier.Name == "Low" then
+        return
+    end
+
+    local hx = base.Size.X * 0.5
+    local hz = base.Size.Z * 0.5
+
+    if variant == "Towers" then
+        local frame = localFrame(base, -hx - 12, 0, hz * 0.24, 0)
+        local mast = makePart(
+            "TowerMaintenanceCraneMast",
+            Vector3.new(2.0, 17, 2.0),
+            frame * CFrame.new(0, 9.2, 0),
+            theme.Structure:Lerp(VisualTheme.World.Deep, 0.24),
+            Enum.Material.Metal,
+            0.06,
+            tier.Name == "High"
+        )
+        makePart(
+            "TowerMaintenanceCraneArm",
+            Vector3.new(13, 0.90, 1.20),
+            mast.CFrame * CFrame.new(4.8, 7.1, 0),
+            theme.Detail,
+            Enum.Material.DiamondPlate,
+            0.08,
+            tier.Name == "High"
+        )
+        makePart(
+            "TowerMaintenanceCraneCable",
+            Vector3.new(0.20, 7.0, 0.20),
+            mast.CFrame * CFrame.new(10.2, 3.4, 0),
+            theme.Accent,
+            Enum.Material.Neon,
+            0.44,
+            false
+        )
+        makePart(
+            "TowerMaintenanceCounterweight",
+            Vector3.new(4.0, 2.4, 2.4),
+            mast.CFrame * CFrame.new(-3.4, 6.5, 0),
+            theme.Structure,
+            Enum.Material.Metal,
+            0.08,
+            tier.Name == "High"
+        )
+    elseif variant == "Crossroads" then
+        local frame = localFrame(base, hx + 3.0, 0, -hz * 0.34, 90)
+        local amber = Color3.fromRGB(255, 165, 72)
+        for i = 1, 3 do
+            makePart(
+                "CrossroadsClosedLaneBarrier" .. i,
+                Vector3.new(5.2, 0.42, 0.62),
+                frame
+                    * CFrame.new(0, 1.0 + i * 0.58, (i - 2) * 1.35)
+                    * CFrame.Angles(0, 0, math.rad(i % 2 == 0 and 7 or -7)),
+                i == 2 and theme.Secondary or amber,
+                Enum.Material.Neon,
+                0.28,
+                false
+            )
+        end
+        local sign = makePart(
+            "CrossroadsClosedLaneSign",
+            Vector3.new(7.0, 3.2, 0.55),
+            frame * CFrame.new(0, 4.5, 0),
+            VisualTheme.World.Deep,
+            Enum.Material.Metal,
+            0.02,
+            false
+        )
+        makeSurfaceLabel(
+            sign,
+            Enum.NormalId.Front,
+            "LANE C // CLOSED",
+            amber,
+            tier
+        )
+    elseif variant == "Orbital" then
+        local frame = localFrame(base, hx * 0.58, 0, -hz - 10, 0)
+        local arm = makePart(
+            "OrbitalDockingArm",
+            Vector3.new(13.5, 1.1, 2.3),
+            frame * CFrame.new(0, 8.8, -3.8),
+            theme.Structure,
+            Enum.Material.Metal,
+            0.08,
+            tier.Name == "High"
+        )
+        makePart(
+            "OrbitalDockingArmGlow",
+            Vector3.new(9.8, 0.24, 2.45),
+            arm.CFrame * CFrame.new(0, 0.68, 0),
+            theme.Secondary,
+            Enum.Material.Neon,
+            0.34,
+            false
+        )
+        local pod = makePart(
+            "OrbitalDockingPod",
+            Vector3.new(5.0, 5.0, 5.0),
+            frame * CFrame.new(0, 8.8, -11.0),
+            theme.Detail,
+            Enum.Material.SmoothPlastic,
+            0.08,
+            tier.Name == "High"
+        )
+        pod.Shape = Enum.PartType.Ball
+        makePart(
+            "OrbitalDockingNeck",
+            Vector3.new(2.0, 2.0, 7.2),
+            frame * CFrame.new(0, 8.8, -7.3),
+            theme.Structure,
+            Enum.Material.Metal,
+            0.10,
+            tier.Name == "High"
+        )
+    else
+        local frame = localFrame(base, -hx - 10, 0, hz * 0.30, 90)
+        local booth = makePart(
+            "ClassicOpsBooth",
+            Vector3.new(8.0, 5.2, 5.0),
+            frame * CFrame.new(0, 3.5, 0),
+            theme.Structure:Lerp(VisualTheme.World.Deep, 0.30),
+            Enum.Material.Metal,
+            0.05,
+            tier.Name == "High"
+        )
+        local window = makePart(
+            "ClassicOpsWindow",
+            Vector3.new(5.8, 2.2, 0.30),
+            booth.CFrame * CFrame.new(0, 0.4, -2.55),
+            theme.Accent,
+            Enum.Material.Neon,
+            0.42,
+            false
+        )
+        makeSurfaceLabel(
+            window,
+            Enum.NormalId.Front,
+            "CAM 02 // OPS",
+            theme.Secondary,
+            tier
+        )
+        makePart(
+            "ClassicOpsAntenna",
+            Vector3.new(0.32, 6.2, 0.32),
+            booth.CFrame * CFrame.new(2.8, 5.0, 0),
+            theme.Secondary,
+            Enum.Material.Neon,
+            0.38,
+            false
+        )
+    end
+end
+
 local function buildClassic(base, theme, tier)
+    addAsymmetricServiceCluster(base, theme, tier, "Classic")
+
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
     local positions = {
@@ -411,6 +569,8 @@ local function buildClassic(base, theme, tier)
 end
 
 local function buildTowers(base, theme, tier)
+    addAsymmetricServiceCluster(base, theme, tier, "Towers")
+
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
     local positions = {
@@ -532,6 +692,8 @@ local function addCrossroadGate(base, index, x, z, yaw, theme, tier)
 end
 
 local function buildCrossroads(base, theme, tier)
+    addAsymmetricServiceCluster(base, theme, tier, "Crossroads")
+
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
     local corners = {
@@ -580,6 +742,7 @@ local function buildCrossroads(base, theme, tier)
 end
 
 local function buildOrbital(base, theme, tier)
+    addAsymmetricServiceCluster(base, theme, tier, "Orbital")
     addOrbitalReactorLandmark(base, theme, tier)
 
     local radius = math.min(base.Size.X, base.Size.Z) * 0.56
