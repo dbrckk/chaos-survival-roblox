@@ -37,20 +37,72 @@ local function cameraPosition()
     return camera and camera.CFrame.Position or Vector3.zero
 end
 
+local folderCaches = {}
+
+local function classifyDescendant(descendant)
+    if descendant:IsA("BasePart")
+        or descendant:IsA("ParticleEmitter")
+        or descendant:IsA("Light")
+    then
+        return descendant
+    end
+    return nil
+end
+
+local function ensureCache(folder)
+    local cache = folderCaches[folder]
+    if cache then
+        return cache
+    end
+
+    cache = {
+        entries = {},
+        dirty = true,
+    }
+    folderCaches[folder] = cache
+
+    folder.DescendantAdded:Connect(function(descendant)
+        if classifyDescendant(descendant) then
+            cache.dirty = true
+        end
+    end)
+    folder.DescendantRemoving:Connect(function(descendant)
+        if classifyDescendant(descendant) then
+            cache.dirty = true
+        end
+    end)
+
+    return cache
+end
+
+local function refreshCache(folder, cache)
+    table.clear(cache.entries)
+    for _, descendant in ipairs(folder:GetDescendants()) do
+        if classifyDescendant(descendant) then
+            table.insert(cache.entries, descendant)
+        end
+    end
+    cache.dirty = false
+end
+
 local function applyFolder(folder, limits, profile, origin)
     local maxDistance = profile.Name == "Low" and limits.LowDistance
         or (profile.Name == "Medium" and limits.MediumDistance or math.huge)
 
     local distance = (cameraPosition() - origin).Magnitude
     local visible = distance <= maxDistance
+    local cache = ensureCache(folder)
+    if cache.dirty then
+        refreshCache(folder, cache)
+    end
 
-    for _, descendant in ipairs(folder:GetDescendants()) do
+    for _, descendant in ipairs(cache.entries) do
+        if not descendant.Parent then
+            cache.dirty = true
+            continue
+        end
+
         if descendant:IsA("BasePart") then
-            local baseTransparency = descendant:GetAttribute("LodBaseTransparency")
-            if baseTransparency == nil then
-                baseTransparency = descendant.Transparency
-                descendant:SetAttribute("LodBaseTransparency", baseTransparency)
-            end
             descendant.LocalTransparencyModifier = visible and 0 or 1
         elseif descendant:IsA("ParticleEmitter") then
             local baseEnabled = descendant:GetAttribute("LodBaseEnabled")
@@ -70,16 +122,8 @@ local function applyFolder(folder, limits, profile, origin)
     end
 end
 
-local function originFor(folderName)
+local function currentArenaOrigin()
     local generated = workspace:FindFirstChild("GeneratedMap")
-    if folderName == "ChaosEnvironmentDepthLocal" then
-        local arena = generated and generated:FindFirstChild("Arena")
-        local base = arena and arena:FindFirstChild("Base")
-        if base and base:IsA("BasePart") then
-            return base.Position
-        end
-    end
-
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
     if base and base:IsA("BasePart") then
@@ -92,10 +136,11 @@ task.spawn(function()
     while true do
         local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 
+        local origin = currentArenaOrigin()
         for folderName, limits in pairs(FOLDERS) do
             local folder = workspace:FindFirstChild(folderName)
             if folder then
-                applyFolder(folder, limits, profile, originFor(folderName))
+                applyFolder(folder, limits, profile, origin)
             end
         end
 
