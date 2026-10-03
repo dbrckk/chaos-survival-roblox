@@ -5,7 +5,10 @@ local visualThemeModule = shared and shared:FindFirstChild("VisualTheme")
 local VisualTheme = if visualThemeModule
     then require(visualThemeModule)
     else require("../shared/VisualTheme")
-local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
+local arenaPresentationModule = shared and shared:FindFirstChild("ArenaPresentation")
+local ArenaPresentation = if arenaPresentationModule
+    then require(arenaPresentationModule)
+    else require("../shared/ArenaPresentation")
 
 local MapBuilder = {}
 
