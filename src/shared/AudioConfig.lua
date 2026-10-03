@@ -177,6 +177,54 @@ AudioConfig.Composite.Hit = {
     {Sound = "Darkness", Delay = 0.020, VolumeScale = 0.10, PitchOffset = -0.32},
 }
 
+AudioConfig.Treatment = {
+    Meteor = {
+        EQ = {Low = 3.0, Mid = -0.8, High = -2.6},
+        Reverb = {Wet = -20, Dry = 0, Decay = 0.42, Density = 0.72, Diffusion = 0.68},
+    },
+    Bombs = {
+        EQ = {Low = 5.0, Mid = -1.5, High = -4.2},
+        Reverb = {Wet = -17, Dry = 0, Decay = 0.56, Density = 0.82, Diffusion = 0.74},
+    },
+    Tornado = {
+        EQ = {Low = 1.8, Mid = -0.8, High = -1.4},
+        Reverb = {Wet = -22, Dry = 0, Decay = 0.72, Density = 0.64, Diffusion = 0.86},
+    },
+    Freeze = {
+        EQ = {Low = -3.8, Mid = -0.6, High = 3.2},
+        Reverb = {Wet = -18, Dry = 0, Decay = 0.78, Density = 0.58, Diffusion = 0.92},
+    },
+    Lava = {
+        EQ = {Low = 3.6, Mid = -0.5, High = -3.4},
+        Reverb = {Wet = -23, Dry = 0, Decay = 0.40, Density = 0.78, Diffusion = 0.60},
+    },
+    Darkness = {
+        EQ = {Low = 2.8, Mid = -1.2, High = -5.5},
+        Reverb = {Wet = -16, Dry = 0, Decay = 0.92, Density = 0.70, Diffusion = 0.88},
+    },
+    Shrink = {
+        EQ = {Low = 1.6, Mid = 0.4, High = -2.8},
+        Reverb = {Wet = -21, Dry = 0, Decay = 0.48, Density = 0.70, Diffusion = 0.72},
+    },
+    JumpShock = {
+        EQ = {Low = -2.5, Mid = 0.6, High = 3.8},
+        Reverb = {Wet = -24, Dry = 0, Decay = 0.30, Density = 0.52, Diffusion = 0.76},
+    },
+    Speed = {
+        EQ = {Low = -2.0, Mid = -0.4, High = 2.4},
+    },
+    MobilityPad = {
+        EQ = {Low = -1.6, Mid = 0.2, High = 2.0},
+        Reverb = {Wet = -25, Dry = 0, Decay = 0.24, Density = 0.48, Diffusion = 0.70},
+    },
+    Eliminated = {
+        EQ = {Low = 2.4, Mid = -1.0, High = -3.2},
+    },
+    Survived = {
+        EQ = {Low = -1.4, Mid = 0.6, High = 2.6},
+    },
+}
+
 AudioConfig.DisasterLoop = {
     Tornado = "Wind",
     Meteors = "Wind",
