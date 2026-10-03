@@ -1,5 +1,15 @@
 local RoundChallenge = {}
 
+RoundChallenge.FirstRoundDefinition = {
+    Id = "FIRST_ESCAPE",
+    Title = "TRY THE ESCAPE PAD",
+    Short = "USE A PAD",
+    Metric = "pads",
+    Target = 1,
+    Coins = 6,
+    XP = 6,
+}
+
 RoundChallenge.Definitions = {
     {
         Id = "SHARD_HUNT",
@@ -61,6 +71,13 @@ function RoundChallenge.forRound(roundNumber)
     local count = #RoundChallenge.Definitions
     local index = ((math.max(1, math.floor(tonumber(roundNumber) or 1)) - 1) % count) + 1
     return RoundChallenge.Definitions[index]
+end
+
+function RoundChallenge.forContext(roundNumber, firstRound)
+    if firstRound == true then
+        return RoundChallenge.FirstRoundDefinition
+    end
+    return RoundChallenge.forRound(roundNumber)
 end
 
 function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest, flowCoins)
