@@ -93,11 +93,21 @@ local function refresh()
         ColorSequenceKeypoint.new(1, secondaryColor),
     })
 
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
+    local finalRush = state.phase == "round" and state.finalRush == true
     local baseRate = state.phase == "round" and 8 or 4
+
+    if finalRush then
+        baseRate *= 0.28
+    end
+    if reducedMotion then
+        baseRate *= 0.35
+    end
+
     emitter.Rate = math.max(0, baseRate * quality.ParticleScale)
 
     if quality.Name == "Low" then
-        emitter.Rate = math.min(emitter.Rate, 1.5)
+        emitter.Rate = math.min(emitter.Rate, 1.25)
     end
 end
 
@@ -107,6 +117,7 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refresh)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refresh)
 
 player.CharacterAdded:Connect(function()
     task.wait(0.1)
