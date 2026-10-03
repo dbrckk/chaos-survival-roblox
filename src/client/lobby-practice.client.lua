@@ -7,7 +7,6 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local player = Players.LocalPlayer
 local tracked = {}
-local lastTriggeredAt = 0
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "LobbyPracticeFeedback"
@@ -85,11 +84,6 @@ local function showFeedback(color)
     end)
 end
 
-local function isLocalCharacterHit(hit)
-    local character = player.Character
-    return character ~= nil and hit:IsDescendantOf(character)
-end
-
 local function remove(pad)
     local bundle = tracked[pad]
     if not bundle then
@@ -97,9 +91,6 @@ local function remove(pad)
     end
     tracked[pad] = nil
 
-    if bundle.touch then
-        bundle.touch:Disconnect()
-    end
     if bundle.folder and bundle.folder.Parent then
         bundle.folder:Destroy()
     end
@@ -163,29 +154,45 @@ local function attach(pad)
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = folder
 
-    local touch = pad.Touched:Connect(function(hit)
-        if not isLocalCharacterHit(hit) then
-            return
-        end
-
-        local now = os.clock()
-        if now - lastTriggeredAt < 0.65 then
-            return
-        end
-        lastTriggeredAt = now
-
-        showFeedback(pad.Color:Lerp(Color3.new(1, 1, 1), 0.22))
-        emitter:Emit(VfxQuality.particleCount(tier().Name, 16, 4))
-    end)
-
     local bundle = {
         folder = folder,
         emitter = emitter,
         highlight = highlight,
-        touch = touch,
     }
     tracked[pad] = bundle
     refreshBundle(pad, bundle)
+end
+
+local function triggerNearestPractice()
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then
+        return
+    end
+
+    local nearestPad = nil
+    local nearestBundle = nil
+    local nearestDistance = math.huge
+
+    for pad, bundle in pairs(tracked) do
+        if pad and pad.Parent and bundle and bundle.emitter then
+            local distance = (root.Position - pad.Position).Magnitude
+            if distance < nearestDistance then
+                nearestDistance = distance
+                nearestPad = pad
+                nearestBundle = bundle
+            end
+        end
+    end
+
+    if not nearestPad or not nearestBundle or nearestDistance > 12 then
+        return
+    end
+
+    showFeedback(nearestPad.Color:Lerp(Color3.new(1, 1, 1), 0.22))
+    nearestBundle.emitter:Emit(
+        VfxQuality.particleCount(tier().Name, 16, 4)
+    )
 end
 
 local function scan(root)
@@ -219,3 +226,19 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 scan(workspace)
+
+
+local lastPracticeUses = math.max(
+    0,
+    math.floor(tonumber(player:GetAttribute("LobbyPracticeUses")) or 0)
+)
+player:GetAttributeChangedSignal("LobbyPracticeUses"):Connect(function()
+    local nextUses = math.max(
+        0,
+        math.floor(tonumber(player:GetAttribute("LobbyPracticeUses")) or 0)
+    )
+    if nextUses > lastPracticeUses then
+        triggerNearestPractice()
+    end
+    lastPracticeUses = nextUses
+end)
