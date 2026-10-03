@@ -62,6 +62,19 @@ local function qualityScale()
 end
 
 local phaseOffset = 0
+local anyVisible = false
+
+local function hideStreaks()
+    if not anyVisible then
+        return
+    end
+
+    anyVisible = false
+    for _, streak in ipairs(streaks) do
+        streak.Visible = false
+        streak.BackgroundTransparency = 1
+    end
+end
 
 task.spawn(function()
     while true do
@@ -71,20 +84,35 @@ task.spawn(function()
             and player:GetAttribute("RoundEliminated") ~= true
             and root ~= nil
 
-        local intensity = 0
-        if active and root then
-            local velocity = root.AssemblyLinearVelocity
-            local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
-            intensity = math.clamp((speed - 19) / 17, 0, 1) * qualityScale()
+        if not active or not root then
+            hideStreaks()
+            task.wait(0.40)
+            continue
         end
 
+        local velocity = root.AssemblyLinearVelocity
+        local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+        local intensity = math.clamp((speed - 19) / 17, 0, 1) * qualityScale()
+
+        if intensity <= 0.035 then
+            hideStreaks()
+            task.wait(0.12)
+            continue
+        end
+
+        anyVisible = true
         phaseOffset = (phaseOffset + 1) % 6
 
         for index, streak in ipairs(streaks) do
-            local localIntensity = intensity * (0.72 + (((index + phaseOffset) % 3) * 0.11))
+            local localIntensity = intensity
+                * (0.72 + (((index + phaseOffset) % 3) * 0.11))
             streak.Visible = localIntensity > 0.035
             if streak.Visible then
-                streak.BackgroundTransparency = math.clamp(0.94 - localIntensity * 0.55, 0.38, 0.94)
+                streak.BackgroundTransparency = math.clamp(
+                    0.94 - localIntensity * 0.55,
+                    0.38,
+                    0.94
+                )
                 streak.Position = UDim2.new(
                     streak.Position.X.Scale,
                     ((index + phaseOffset) % 2 == 0) and 2 or -2,
@@ -96,6 +124,6 @@ task.spawn(function()
             end
         end
 
-        task.wait(0.05)
+        task.wait(0.08)
     end
 end)
