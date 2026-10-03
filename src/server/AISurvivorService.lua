@@ -1099,9 +1099,10 @@ local function chooseMobilityPad(record, root, pads, traits)
         return a.score > b.score
     end)
 
-    local choiceRange = (traits.Risk or record.profile.Risk) >= 0.68
-        and math.min(2, #ranked)
-        or 1
+    local choiceRange = AISurvivorRules.padChoiceWidth(
+        traits.Risk or record.profile.Risk,
+        #ranked
+    )
     return ranked[math.random(1, choiceRange)].pad
 end
 
@@ -1154,9 +1155,7 @@ local function chooseArenaTarget(record, root, now)
     end)
 
     local effectiveRisk = traits.Risk or record.profile.Risk
-    local choiceRange = effectiveRisk >= 0.66
-        and math.min(3, #ranked)
-        or (effectiveRisk >= 0.36 and math.min(2, #ranked) or 1)
+    local choiceRange = AISurvivorRules.routeChoiceWidth(effectiveRisk, #ranked)
 
     -- Real players do not always choose the mathematically best route.
     if #ranked > choiceRange and math.random() < (traits.MistakeChance or record.profile.MistakeChance or 0) then
