@@ -118,6 +118,19 @@ function ArenaMechanics.impulseFor(impulse, overdrive)
     return impulse * multiplier
 end
 
+function ArenaMechanics.readPadImpulse(pad, fallback)
+    local default = typeof(fallback) == "Vector3" and fallback or Vector3.zero
+    if not pad or not pad:IsA("BasePart") then
+        return default
+    end
+
+    return Vector3.new(
+        tonumber(pad:GetAttribute("ImpulseX")) or default.X,
+        tonumber(pad:GetAttribute("ImpulseY")) or default.Y,
+        tonumber(pad:GetAttribute("ImpulseZ")) or default.Z
+    )
+end
+
 function ArenaMechanics.cooldownFor(finalRush)
     return finalRush == true and 0.65 or 1.1
 end
@@ -180,7 +193,8 @@ function ArenaMechanics.start(ctx, variantId)
             cooldownUntil[player.UserId] = now + ArenaMechanics.cooldownFor(finalRush)
 
             local overdrive = ctx.Overdrive and ctx.Overdrive() == true
-            local appliedImpulse = ArenaMechanics.impulseFor(impulse, overdrive)
+            local currentImpulse = ArenaMechanics.readPadImpulse(pad, impulse)
+            local appliedImpulse = ArenaMechanics.impulseFor(currentImpulse, overdrive)
 
             root.AssemblyLinearVelocity = ArenaMechanics.safeVelocity(
                 root.AssemblyLinearVelocity,
