@@ -72,6 +72,7 @@ shard.TextColor3 = UITheme.Colors.Cyan
 shard.TextScaled = true
 shard.TextXAlignment = Enum.TextXAlignment.Left
 shard.Parent = root
+local shardTextConstraint = UITheme.addTextConstraint(shard, 12, 19)
 UITheme.addCorner(shard, UITheme.Corners.Pill)
 
 local challenge = Instance.new("TextLabel")
@@ -87,6 +88,7 @@ challenge.TextColor3 = UITheme.Colors.Muted
 challenge.TextScaled = true
 challenge.TextWrapped = true
 challenge.Parent = root
+local challengeTextConstraint = UITheme.addTextConstraint(challenge, 12, 18)
 UITheme.addCorner(challenge, UITheme.Corners.Pill)
 
 local status = Instance.new("TextLabel")
@@ -103,6 +105,7 @@ status.TextColor3 = UITheme.Colors.Muted
 status.TextScaled = true
 status.TextXAlignment = Enum.TextXAlignment.Right
 status.Parent = root
+local statusTextConstraint = UITheme.addTextConstraint(status, 12, 18)
 UITheme.addCorner(status, UITheme.Corners.Pill)
 
 local barBg = Instance.new("Frame")
@@ -150,6 +153,10 @@ local function applyResponsiveLayout()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     local profile = UIResponsive.mobileProfile(viewport)
+    local criticalMin = UIResponsive.criticalTextMin(viewport)
+    shardTextConstraint.MinTextSize = math.max(12, criticalMin - 1)
+    challengeTextConstraint.MinTextSize = criticalMin
+    statusTextConstraint.MinTextSize = criticalMin
 
     root.AnchorPoint = Vector2.new(0.5, 1)
     root.Position = UDim2.new(0.5, 0, 1, -profile.roundFocusBottomOffset)
