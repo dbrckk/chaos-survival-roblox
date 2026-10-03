@@ -160,3 +160,6 @@ Ordre d'exécution immédiat
 - [FAIT] Composition d'entrée : Spawn CFrames orientés par map (centre Classic, verticalité Towers, lanes Crossroads, tangente Orbital), humains/AI Survivors alignés et chevrons directionnels au sol.
 
 - [FAIT] Identité locale des plateformes : motifs spécifiques Classic/Towers/Crossroads/Orbital, soudés aux plateformes pour suivre ShrinkingArena, densité réduite en Low et LOD 105/165 studs.
+
+- [FAIT] Pass matériaux/micro-détails : seams de panneaux, repair plates, edge wear arène, paneling lobby/runway et variation d'albédo déterministe sur structures non-Neon. Budgets Low/Medium/High conservés, aucune boucle frame ajoutée.
+- [FAIT] Hot-swap visuel fiabilisé : ArenaSurfaceDetail, ArenaHeroScenery, ArenaPlatformIdentity, MaterialVariation, ArenaEdgeProfile, ArenaUnderstructure et ArenaAmbientProps se reconstruisent désormais lors du remplacement de l'Arena sans recréer GeneratedMap.
