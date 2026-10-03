@@ -1929,7 +1929,10 @@ dailyRewardEvent.OnClientEvent:Connect(function(reward)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    metaControlsSuppressed = state.phase == "round" or state.phase == "ready"
+    local firstLobby = (tonumber(player:GetAttribute("Games")) or 0) <= 0
+    metaControlsSuppressed = state.phase == "round"
+        or state.phase == "ready"
+        or firstLobby
     if metaDock then
         metaDock.Visible = not metaControlsSuppressed
     end
