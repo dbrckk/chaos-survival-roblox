@@ -323,7 +323,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         show(
             "roundStart",
             mainText,
-            subText .. " • SURVIVE",
+            subText,
             eventColor,
             state.doubleChaos and 1.20 or 0.95
         )
