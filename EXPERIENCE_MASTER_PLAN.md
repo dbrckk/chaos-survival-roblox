@@ -81,7 +81,7 @@ PHASE C — MAP ART PASS
 [EN COURS] C3 Crossroads : gantries/signaux, flux directionnel, portiques skyline, cadrage transit, lanes lumineuses, midground urbain et lumière diffuse violette ; QA finale restante.
 [EN COURS] C4 Orbital : reactor nodes/struts, couronne, anneaux skyline, satellites, arcs de surface, sous-structure et ColorShift spatial renforcé ; QA finale restante.
 [FAIT] C5 Lobby hub : couronne, panneaux identité/fair-play, progression personnelle et runway/ribs cadrant clairement le portail arène.
-[EN COURS] C6 Profondeur en 5 couches : surface détaillée, profil de bord, sous-structure, midground architectural et skyline distincte + props animés adaptatifs ; QA visuelle finale restante.
+[EN COURS] C6 Profondeur en 5 couches + horizon/cloud identity calme hors combat, avec surface, bords, sous-structure, midground, skyline et props adaptatifs ; QA visuelle finale restante.
 [FAIT] C7 Signatures animées distinctes + 3 profils de rythme/direction/amplitude alternés à chaque round.
 
 PHASE D — VFX / ANIMATION
