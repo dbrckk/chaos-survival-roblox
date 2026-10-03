@@ -5,6 +5,7 @@ local visualThemeModule = shared and shared:FindFirstChild("VisualTheme")
 local VisualTheme = if visualThemeModule
     then require(visualThemeModule)
     else require("../shared/VisualTheme")
+local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
 
 local MapBuilder = {}
 
@@ -1211,6 +1212,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             spawnPosition,
             theme.Detail:Lerp(Color3.new(1, 1, 1), 0.10),
             VisualTheme.Materials.Structure
+        )
+        s.CFrame = ArenaPresentation.spawnCFrame(
+            variant.Id,
+            spawnPosition,
+            config.ArenaCenter
         )
         s.Transparency = 0.08
 
