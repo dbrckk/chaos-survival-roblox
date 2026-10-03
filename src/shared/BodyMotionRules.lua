@@ -45,6 +45,15 @@ function BodyMotionRules.turnResponse(previousDirection, currentDirection)
     return signed, severity
 end
 
+function BodyMotionRules.readyStance(phase, grounded, speed)
+    if tostring(phase or "waiting") ~= "ready" or grounded ~= true then
+        return 0
+    end
+
+    local safeSpeed = math.max(0, tonumber(speed) or 0)
+    return math.clamp(1 - (safeSpeed / 12), 0, 1)
+end
+
 function BodyMotionRules.motionScale(reduceMotion)
     return reduceMotion == true and 0.18 or 1
 end
