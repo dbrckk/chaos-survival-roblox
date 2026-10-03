@@ -66,6 +66,35 @@ describe("Character polish rules", function()
         expect(rush <= 0.13).toBe(true)
     end)
 
+    it("attenuates spectators and eliminated players during the round", function()
+        local active = CharacterPolishRules.outlineTransparency(
+            "High",
+            "round",
+            false,
+            false,
+            false,
+            true
+        )
+        local inactive = CharacterPolishRules.outlineTransparency(
+            "High",
+            "round",
+            false,
+            false,
+            false,
+            false
+        )
+
+        expect(inactive > active).toBe(true)
+        expect(inactive >= 0.94).toBe(true)
+        expect(CharacterPolishRules.lightBrightness(
+            "High",
+            "round",
+            false,
+            false,
+            false
+        )).toBe(0)
+    end)
+
     it("suppresses extra character lighting during final rush", function()
         expect(CharacterPolishRules.lightBrightness(
             "High",
