@@ -37,6 +37,32 @@ describe("Disaster balance", function()
         expect(DisasterBalance.compatible("Meteors", "Meteors")).toBe(false)
     end)
 
+    it("keeps at least two safe fusion partners for every disaster", function()
+        local ids = {
+            "RisingLava",
+            "Meteors",
+            "LowGravity",
+            "DisappearingPlatforms",
+            "Tornado",
+            "Freeze",
+            "Bombs",
+            "SpeedSurge",
+            "Darkness",
+            "ShrinkingArena",
+            "JumpShock",
+        }
+
+        for _, primary in ipairs(ids) do
+            local compatible = 0
+            for _, candidate in ipairs(ids) do
+                if DisasterBalance.compatible(primary, candidate) then
+                    compatible += 1
+                end
+            end
+            expect(compatible >= 2).toBe(true)
+        end
+    end)
+
     it("uses gentler profiles for low-population sessions", function()
         local solo = DisasterBalance.mobileProfile(1)
         local multi = DisasterBalance.mobileProfile(6)
