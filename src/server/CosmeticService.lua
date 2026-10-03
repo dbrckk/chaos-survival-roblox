@@ -131,16 +131,19 @@ local function applyEffects(player)
     if not root then return end
 
     clearEffects(character)
+    character:SetAttribute("ChaosAccent", Color3.fromRGB(70, 170, 255))
 
     local trailId = player:GetAttribute("EquippedTrail") or ""
     local trailItem = Cosmetics.get(trailId)
     if trailItem and trailItem.Kind == "trail" then
+        character:SetAttribute("ChaosAccent", trailItem.ColorA)
         applyTrail(root, trailItem)
     end
 
     local auraId = player:GetAttribute("EquippedAura") or ""
     local auraItem = Cosmetics.get(auraId)
     if auraItem and auraItem.Kind == "aura" then
+        character:SetAttribute("ChaosAccent", auraItem.ColorA)
         applyAura(character, root, auraItem)
     end
 end
