@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
@@ -142,25 +143,43 @@ local function applyResponsiveLayout()
         root.AnchorPoint = Vector2.new(0.5, 1)
         root.Position = UDim2.new(0.5, 0, 1, -18)
         root.Size = UDim2.new(0.82, 0, 0, 54)
+        sizeConstraint.MinSize = Vector2.new(250, 48)
         return
     end
 
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
-    local aspect = viewport.Y > 0 and (viewport.X / viewport.Y) or 1.78
-    local narrow = aspect < 1.7
-    local wide = aspect > 2.0
+    local profile = UIResponsive.mobileProfile(viewport)
 
-    root.AnchorPoint = Vector2.new(0.5, 0.5)
-    root.Position = UDim2.fromScale(0.5, narrow and 0.75 or 0.77)
+    root.AnchorPoint = Vector2.new(0.5, 1)
+    root.Position = UDim2.new(0.5, 0, 1, -profile.roundFocusBottomOffset)
     root.Size = UDim2.new(
-        narrow and 0.70 or (wide and 0.55 or 0.62),
+        profile.roundFocusWidthScale,
         0,
         0,
-        narrow and 50 or 48
+        profile.roundFocusHeight
     )
-end
+    sizeConstraint.MinSize = Vector2.new(
+        profile.veryNarrow and 220 or 250,
+        profile.roundFocusHeight
+    )
 
+    if profile.tinyHeight then
+        shard.Size = UDim2.fromScale(0.24, 0.43)
+        challenge.Position = UDim2.fromScale(0.275, 0.12)
+        challenge.Size = UDim2.fromScale(0.35, 0.43)
+        status.Size = UDim2.fromScale(0.32, 0.43)
+        barBg.Position = UDim2.fromScale(0.025, 0.70)
+        barBg.Size = UDim2.fromScale(0.95, 0.12)
+    else
+        shard.Size = UDim2.fromScale(0.27, 0.43)
+        challenge.Position = UDim2.fromScale(0.31, 0.12)
+        challenge.Size = UDim2.fromScale(0.32, 0.43)
+        status.Size = UDim2.fromScale(0.36, 0.43)
+        barBg.Position = UDim2.fromScale(0.025, 0.68)
+        barBg.Size = UDim2.fromScale(0.95, 0.14)
+    end
+end
 applyResponsiveLayout()
 
 local responsiveCamera = workspace.CurrentCamera
