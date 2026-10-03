@@ -955,6 +955,11 @@ local function socialArenaTarget(record, root)
             and humanRoot:IsA("BasePart")
             and humanHumanoid
             and humanHumanoid.Health > 0
+            and AISurvivorRules.reachableElevation(
+                root.Position.Y,
+                humanRoot.Position.Y,
+                arenaVariantId()
+            )
         then
             table.insert(eligible, {
                 player = player,
@@ -1087,7 +1092,7 @@ local function chooseArenaTarget(record, root, now)
         local pad = chooseMobilityPad(record, root, pads)
         record.targetIsPad = true
         record.targetPart = pad
-        return separateTarget(record, pad.Position + Vector3.new(0, 1.8, 0)), 1.6
+        return pad.Position + Vector3.new(0, 1.8, 0), 1.6
     end
 
     record.targetIsPad = false
