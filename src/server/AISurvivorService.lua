@@ -895,8 +895,16 @@ local function scoreCandidate(record, root, candidate)
     local center = config.ArenaCenter
     local distanceFromCenter = (Vector3.new(position.X, 0, position.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude
     local travelDistance = (position - root.Position).Magnitude
+    local variantId = arenaVariantId()
     local score = (math.random() * 8) - (travelDistance * 0.035)
-    score += AISurvivorRules.routeAffinity(arenaVariantId(), position, center)
+    score += AISurvivorRules.routeAffinity(variantId, position, center)
+    score += AISurvivorRules.routeContinuity(
+        variantId,
+        root.Position,
+        position,
+        center,
+        record.strafeBias
+    )
 
     if hasDisaster("RisingLava") then
         score += position.Y * (1.45 - record.profile.Risk * 0.45)
