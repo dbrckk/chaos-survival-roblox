@@ -15,6 +15,13 @@ if not effect then
     effect.Parent = Lighting
 end
 
+local atmosphere = Lighting:FindFirstChild("ArenaIdentityAtmosphere")
+if not atmosphere then
+    atmosphere = Instance.new("Atmosphere")
+    atmosphere.Name = "ArenaIdentityAtmosphere"
+    atmosphere.Parent = Lighting
+end
+
 local MOODS = {
     Classic = {
         Tint = Color3.fromRGB(224, 236, 255),
@@ -26,6 +33,11 @@ local MOODS = {
         ColorShiftBottom = Color3.fromRGB(4, 7, 13),
         ShadowSoftness = 0.34,
         CloudColor = Color3.fromRGB(205, 220, 245),
+        AtmosColor = Color3.fromRGB(184, 209, 242),
+        AtmosDecay = Color3.fromRGB(68, 82, 116),
+        Density = 0.18,
+        Haze = 1.20,
+        Glare = 0.10,
     },
     Towers = {
         Tint = Color3.fromRGB(210, 244, 250),
@@ -37,6 +49,11 @@ local MOODS = {
         ColorShiftBottom = Color3.fromRGB(3, 8, 12),
         ShadowSoftness = 0.26,
         CloudColor = Color3.fromRGB(190, 225, 232),
+        AtmosColor = Color3.fromRGB(164, 220, 228),
+        AtmosDecay = Color3.fromRGB(48, 82, 92),
+        Density = 0.20,
+        Haze = 1.35,
+        Glare = 0.08,
     },
     Crossroads = {
         Tint = Color3.fromRGB(242, 218, 255),
@@ -48,6 +65,11 @@ local MOODS = {
         ColorShiftBottom = Color3.fromRGB(8, 4, 13),
         ShadowSoftness = 0.42,
         CloudColor = Color3.fromRGB(226, 198, 238),
+        AtmosColor = Color3.fromRGB(222, 181, 240),
+        AtmosDecay = Color3.fromRGB(78, 48, 96),
+        Density = 0.17,
+        Haze = 1.10,
+        Glare = 0.12,
     },
     Orbital = {
         Tint = Color3.fromRGB(214, 255, 241),
@@ -59,6 +81,11 @@ local MOODS = {
         ColorShiftBottom = Color3.fromRGB(3, 9, 9),
         ShadowSoftness = 0.30,
         CloudColor = Color3.fromRGB(190, 232, 220),
+        AtmosColor = Color3.fromRGB(164, 230, 210),
+        AtmosDecay = Color3.fromRGB(44, 88, 78),
+        Density = 0.19,
+        Haze = 1.25,
+        Glare = 0.09,
     },
 }
 
@@ -110,6 +137,24 @@ local function applyMood(duration)
             ColorShift_Top = colorShiftTop,
             ColorShift_Bottom = colorShiftBottom,
             ShadowSoftness = shadowSoftness,
+        }
+    ):Play()
+
+    TweenService:Create(
+        atmosphere,
+        TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Color = mood.AtmosColor or mood.Tint,
+            Decay = mood.AtmosDecay or mood.Ambient,
+            Density = (mood.Density or 0.18)
+                * (phase == "round" and 0.28 or (phase == "ready" and 0.55 or 1))
+                * (quality.Name == "Low" and 0.58 or 1),
+            Haze = (mood.Haze or 1.0)
+                * (phase == "round" and 0.32 or (phase == "ready" and 0.62 or 1))
+                * (quality.Name == "Low" and 0.55 or 1),
+            Glare = (mood.Glare or 0.08)
+                * (phase == "round" and 0.25 or (phase == "ready" and 0.50 or 1))
+                * (quality.Name == "Low" and 0 or 1),
         }
     ):Play()
 
