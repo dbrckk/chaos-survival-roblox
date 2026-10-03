@@ -72,6 +72,46 @@ describe("AI survivor rules", function()
         expect(pressuredLowGravity < lowGravity).toBe(true)
     end)
 
+    it("smooths ordinary steering but keeps urgent steering direct", function()
+        local previous = Vector3.new(1, 0, 0)
+        local desired = Vector3.new(0, 0, 1)
+
+        local smooth = AISurvivorRules.steeredDirection(previous, desired, false)
+        local urgent = AISurvivorRules.steeredDirection(previous, desired, true)
+
+        expect(smooth.X > 0).toBe(true)
+        expect(smooth.Z > 0).toBe(true)
+        expect((urgent - desired.Unit).Magnitude < 0.001).toBe(true)
+    end)
+
+    it("only inserts a turn pause for sharp non-urgent reversals", function()
+        local forward = Vector3.new(0, 0, -1)
+        local reverse = Vector3.new(0, 0, 1)
+        local side = Vector3.new(1, 0, 0)
+
+        local reversalPause = AISurvivorRules.turnPauseSeconds(
+            forward,
+            reverse,
+            false,
+            0
+        )
+        expect(reversalPause > 0).toBe(true)
+        expect(
+            AISurvivorRules.turnPauseSeconds(forward, reverse, true, 0)
+        ).toBe(0)
+        expect(
+            AISurvivorRules.turnPauseSeconds(forward, side, false, 0)
+        ).toBe(0)
+
+        local pressuredPause = AISurvivorRules.turnPauseSeconds(
+            forward,
+            reverse,
+            false,
+            0.8
+        )
+        expect(pressuredPause < reversalPause).toBe(true)
+    end)
+
     it("narrows route and pad choice width as risk falls", function()
         expect(AISurvivorRules.routeChoiceWidth(0.20, 8)).toBe(1)
         expect(AISurvivorRules.routeChoiceWidth(0.50, 8)).toBe(2)
