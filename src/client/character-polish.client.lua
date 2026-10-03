@@ -79,6 +79,15 @@ local function applyModel(model)
     local quality = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
     local accent = accentFor(model, isLocal, isAI)
 
+    local activeParticipant = true
+    if player then
+        activeParticipant = player:GetAttribute("RoundParticipant") == true
+            and player:GetAttribute("RoundEliminated") ~= true
+    elseif isAI then
+        local hum = model:FindFirstChildOfClass("Humanoid")
+        activeParticipant = hum ~= nil and hum.Health > 0
+    end
+
     local highlight = ensureHighlight(model)
     local auraHighlight = model:FindFirstChild("ChaosAuraHighlight")
     local hasAuraHighlight = auraHighlight and auraHighlight:IsA("Highlight")
@@ -97,7 +106,8 @@ local function applyModel(model)
         phase,
         isLocal,
         isAI,
-        finalRush
+        finalRush,
+        activeParticipant
     )
 
     if hasAuraHighlight then
@@ -114,7 +124,8 @@ local function applyModel(model)
             quality.Name,
             phase,
             isLocal,
-            finalRush
+            finalRush,
+            activeParticipant
         )
         light.Color = accent
         light.Brightness = brightness
@@ -154,6 +165,16 @@ end
 
 local function watchPlayer(player)
     player.CharacterAdded:Connect(watchModel)
+    player:GetAttributeChangedSignal("RoundParticipant"):Connect(function()
+        if player.Character then
+            applyModel(player.Character)
+        end
+    end)
+    player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
+        if player.Character then
+            applyModel(player.Character)
+        end
+    end)
     if player.Character then
         watchModel(player.Character)
     end
