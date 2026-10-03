@@ -282,7 +282,7 @@ local function addPrimitiveAccessory(record, model)
         return
     end
 
-    local style = ((record.slot - 1) % 3) + 1
+    local style = AISurvivorRules.appearanceStyle(record.identityIndex or record.slot)
     local accent = record.identity.Accent
 
     if style == 1 then
@@ -326,7 +326,7 @@ local function addPrimitiveAccessory(record, model)
         )
         band.CFrame = head.CFrame * CFrame.new(0, 0.68, 0)
         weldTo(band, head)
-    elseif torso and torso:IsA("BasePart") then
+    elseif style == 3 and torso and torso:IsA("BasePart") then
         local pack = cosmeticPart(
             model,
             "PlayerBackpack",
@@ -345,6 +345,44 @@ local function addPrimitiveAccessory(record, model)
         strip.Material = Enum.Material.Neon
         strip.CFrame = torso.CFrame * CFrame.new(0, 0.02, 1.00)
         weldTo(strip, torso)
+    elseif style == 4 then
+        local band = cosmeticPart(
+            model,
+            "PlayerHeadband",
+            Vector3.new(2.02, 0.20, 1.08),
+            accent
+        )
+        band.CFrame = head.CFrame * CFrame.new(0, 0.42, 0)
+        weldTo(band, head)
+
+        local badge = cosmeticPart(
+            model,
+            "HeadbandBadge",
+            Vector3.new(0.42, 0.30, 0.10),
+            accent:Lerp(Color3.new(1, 1, 1), 0.35)
+        )
+        badge.Material = Enum.Material.Neon
+        badge.CFrame = head.CFrame * CFrame.new(0.56, 0.42, -0.56)
+        weldTo(badge, head)
+    elseif torso and torso:IsA("BasePart") then
+        local shoulder = cosmeticPart(
+            model,
+            "PlayerShoulderBand",
+            Vector3.new(0.34, 1.10, 0.62),
+            accent:Lerp(record.identity.Torso, 0.28)
+        )
+        shoulder.CFrame = torso.CFrame * CFrame.new(1.02, 0.35, 0)
+        weldTo(shoulder, torso)
+
+        local tag = cosmeticPart(
+            model,
+            "ShoulderGlow",
+            Vector3.new(0.10, 0.56, 0.42),
+            accent
+        )
+        tag.Material = Enum.Material.Neon
+        tag.CFrame = torso.CFrame * CFrame.new(1.20, 0.35, -0.02)
+        weldTo(tag, torso)
     end
 end
 
@@ -581,6 +619,7 @@ local function newRecord(slot)
     local record = {
         slot = slot,
         identity = identity,
+        identityIndex = identityIndex,
         profile = profile,
         model = nil,
         proxy = nil,
@@ -611,6 +650,9 @@ local function newRecord(slot)
         moveDirection = Vector3.zero,
         lastMoveTarget = nil,
         turnPauseUntil = 0,
+        resultAction = nil,
+        resultActionUntil = 0,
+        resultTarget = nil,
     }
 
     record.proxy = {
@@ -1437,11 +1479,11 @@ local function maybeSocialGesture(record, humanoid, root, now)
         return false
     end
 
-    -- A short stop + turn reads like acknowledgement without requiring chat spam.
+    -- A short stop + softer turn reads like acknowledgement without chat spam.
     humanoid:Move(Vector3.zero)
     local look = Vector3.new(humanRoot.Position.X, root.Position.Y, humanRoot.Position.Z)
     if (look - root.Position).Magnitude > 0.2 then
-        root.CFrame = CFrame.lookAt(root.Position, look)
+        root.CFrame = root.CFrame:Lerp(CFrame.lookAt(root.Position, look), 0.55)
     end
     record.idleUntil = now + 0.35 + math.random() * 0.55
     record.target = nil
@@ -1461,7 +1503,35 @@ local function stepRecord(record, now)
     end
 
     if currentState.phase == "result" then
-        humanoid:Move(Vector3.zero)
+        if now < (record.resultActionUntil or 0) then
+            if record.resultAction == "sidestep" and record.resultTarget then
+                moveHumanLike(record, humanoid, root, record.resultTarget, now, false)
+            elseif record.resultAction == "acknowledge" then
+                local nearest = nil
+                local nearestDistance = 28
+                for _, player in ipairs(Players:GetPlayers()) do
+                    local humanRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    if humanRoot and humanRoot:IsA("BasePart") then
+                        local distance = (humanRoot.Position - root.Position).Magnitude
+                        if distance < nearestDistance then
+                            nearest = humanRoot
+                            nearestDistance = distance
+                        end
+                    end
+                end
+                if nearest then
+                    local look = Vector3.new(nearest.Position.X, root.Position.Y, nearest.Position.Z)
+                    if (look - root.Position).Magnitude > 0.2 then
+                        root.CFrame = root.CFrame:Lerp(CFrame.lookAt(root.Position, look), 0.38)
+                    end
+                end
+                humanoid:Move(Vector3.zero)
+            else
+                humanoid:Move(Vector3.zero)
+            end
+        else
+            humanoid:Move(Vector3.zero)
+        end
         return
     end
 
@@ -1716,14 +1786,26 @@ function AISurvivorService.setRoundState(state)
                 if humanoid and humanoid.Health > 0 then
                     record.target = nil
                     record.targetPart = nil
+                    record.moveDirection = Vector3.zero
                     humanoid:Move(Vector3.zero)
 
-                    local roll = math.random()
-                    if roll < 0.42 then
+                    local traits = record.roundTraits or record.profile
+                    local action = AISurvivorRules.resultReaction(
+                        math.random(),
+                        traits.Risk or record.profile.Risk
+                    )
+                    record.resultAction = action
+                    record.resultActionUntil = os.clock() + 0.65 + math.random() * 0.55
+                    record.resultTarget = nil
+
+                    if action == "jump" then
                         humanoid.Jump = true
-                    elseif roll < 0.72 and root and root:IsA("BasePart") then
+                    elseif action == "sidestep" and root and root:IsA("BasePart") then
                         local angle = math.random() * math.pi * 2
-                        humanoid:MoveTo(root.Position + Vector3.new(math.cos(angle) * 5, 0, math.sin(angle) * 5))
+                        record.resultTarget = clampToArena(
+                            root.Position
+                                + Vector3.new(math.cos(angle) * 4.5, 0, math.sin(angle) * 4.5)
+                        )
                     end
                 end
             end
