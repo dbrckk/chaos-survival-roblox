@@ -73,6 +73,20 @@ function D.start(ctx)
         end
     end
 
+    local mechanics = arena:FindFirstChild("Mechanics")
+    if mechanics then
+        for _, item in ipairs(mechanics:GetChildren()) do
+            if item:IsA("BasePart") and item:GetAttribute("ArenaMobilityPad") == true then
+                movableParts[#movableParts+1] = {
+                    part = item,
+                    cframe = item.CFrame,
+                    localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
+                    localPosition = originalCFrame:PointToObjectSpace(item.Position),
+                }
+            end
+        end
+    end
+
     local duration = math.max(
         0.1,
         tonumber(ctx.RoundSeconds or ctx.Config.RoundSeconds) or 1
