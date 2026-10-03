@@ -3,7 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
-local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundFeedback")
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local feedbackEvent = remotes:WaitForChild("RoundFeedback")
+local stateEvent = remotes:WaitForChild("RoundState")
 
 local character = nil
 local humanoid = nil
@@ -20,6 +22,8 @@ local celebrationWeight = 0
 local celebrationUntil = 0
 local airborne = false
 local lastY = 0
+local speedSurgeActive = false
+local lowGravityActive = false
 
 local function motor(parent, name)
     local item = parent and parent:FindFirstChild(name)
@@ -96,6 +100,22 @@ end)
 local function expAlpha(speed, dt)
     return 1 - math.exp(-speed * math.max(0, dt))
 end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    local surge = false
+    local lowGravity = false
+    if state and state.phase == "round" then
+        for _, id in ipairs(state.disasterIds or {}) do
+            if id == "SpeedSurge" then
+                surge = true
+            elseif id == "LowGravity" then
+                lowGravity = true
+            end
+        end
+    end
+    speedSurgeActive = surge
+    lowGravityActive = lowGravity
+end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     if type(feedback) ~= "table" or player:GetAttribute("ReduceMotion") == true then
@@ -174,8 +194,12 @@ RunService:BindToRenderStep(
         local celebrationWaist, celebrationLeftShoulder, celebrationRightShoulder =
             celebrationTargets(celebrationScale)
 
+        local surgeLean = speedSurgeActive and math.min(4.2, speed * 0.12) or 0
+        local moonFloat = lowGravityActive and not grounded
+            and math.sin(os.clock() * 2.0) * 1.4
+            or 0
         local waistTarget = CFrame.Angles(
-            math.rad(-3.2 * forward * moveWeight - landing * 5.5) * scale,
+            math.rad(-3.2 * forward * moveWeight - landing * 5.5 - surgeLean + moonFloat) * scale,
             0,
             math.rad(-3.8 * side * moveWeight) * scale
         ) * celebrationWaist
@@ -190,8 +214,9 @@ RunService:BindToRenderStep(
         )
 
         local hipCounter = math.rad(1.5 * side * moveWeight) * scale
-        local leftTarget = CFrame.Angles(0, 0, hipCounter)
-        local rightTarget = CFrame.Angles(0, 0, hipCounter)
+        local moonLeg = lowGravityActive and not grounded and math.rad(4.5) * scale or 0
+        local leftTarget = CFrame.Angles(moonLeg, 0, hipCounter)
+        local rightTarget = CFrame.Angles(-moonLeg, 0, hipCounter)
 
         local alpha = expAlpha(grounded and 11 or 7, dt)
         if waist then
