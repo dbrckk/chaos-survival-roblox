@@ -5,6 +5,11 @@ DisasterBalance.IncompatiblePairs = {
         SpeedSurge = true,
         Tornado = true,
         JumpShock = true,
+        Meteors = true,
+        Bombs = true,
+        RisingLava = true,
+        DisappearingPlatforms = true,
+        ShrinkingArena = true,
     },
     SpeedSurge = {
         Freeze = true,
@@ -17,9 +22,24 @@ DisasterBalance.IncompatiblePairs = {
     JumpShock = {
         Freeze = true,
         Tornado = true,
+        ShrinkingArena = true,
     },
     DisappearingPlatforms = {
         SpeedSurge = true,
+        Freeze = true,
+    },
+    Meteors = {
+        Freeze = true,
+    },
+    Bombs = {
+        Freeze = true,
+    },
+    RisingLava = {
+        Freeze = true,
+    },
+    ShrinkingArena = {
+        Freeze = true,
+        JumpShock = true,
     },
 }
 
