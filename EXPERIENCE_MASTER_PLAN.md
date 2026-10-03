@@ -187,3 +187,6 @@ Ordre d'exécution immédiat
 - [FAIT] Lobby vivant/premium : presentation locale pilotée par le vrai état serveur (intermission+voteOptions, ready, waiting), hologramme central contextuel, zones sociales, focus vote, practice pads réactifs, corridor/runway qui s'arme pendant READY, ripple halo/social basse fréquence et retour au lobby marqué après RESULT.
 - [FAIT] AI lobby raccordé au décor : les AI Survivors utilisent réellement quatre social nodes cohérents avec les zones visibles, tout en conservant socialisation, vote gathering et practice boosts existants.
 - [FAIT] Game feel lobby : practice boost déclenche pulse visuel local + cue audio composite léger ; caches décor/pads évitent les rescans à chaque pulse, aucun RenderStepped ajouté et les éléments locaux sont masqués pendant ROUND.
+
+- [FAIT] Nettoyage lobby transversal : lobby-practice reste la source unique du feedback visuel practice, mais se déclenche désormais sur LobbyPracticeUses confirmé serveur ; l'ancien swoosh direct a été supprimé et l'audio passe par le cue MobilityPad central.
+- [FAIT] Perf lobby : lobby-core-orbit ne met plus à jour ses nodes pendant ROUND/READY, devient invisible hors lobby et adapte sa cadence à Low/Medium/High + Reduce Motion ; audit des autres lobby-* confirme absence de RenderStepped et time-trial déjà throttlé à 10 Hz uniquement en waiting/intermission.
