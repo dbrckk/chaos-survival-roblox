@@ -175,3 +175,5 @@ Ordre d'exécution immédiat
 
 - [FAIT] Climax progressif des 11 catastrophes : deux paliers visuels déclenchés par RoundIntensity, Overdrive promeut directement au palier critique et Final Rush déclenche le climax maximal. Chaque disaster possède un langage propre (jets, sky streaks, lift beams, fractures, spirale, ice ring/spikes, blast rings, speed lanes, void contraction, shrink contraction, shock rings), joué une seule fois par palier et par disaster. Double Chaos conserve deux climax décalés. Aucun RenderStepped ajouté.
 - [FAIT] Optimisation disaster-motion-vfx : LowGravity/SpeedSurge persistent désormais entre broadcasts et ne sont plus détruits/recréés chaque seconde ; rebuild uniquement lors d'un changement de phase/combinaison.
+
+- [FAIT] Disaster residue / décor marqué : Meteor/Bomb laissent scorch/crater + cracks et fragments temporaires ; Freeze/JumpShock laissent un résidu après pulse ; les 11 catastrophes génèrent un langage de trace spécifique pendant RESULT (char, crater, dust, fracture, scrape, frost, scorch, streak, void, edge, shock), avec raycast vers la vraie surface, budgets Low/Medium/High, fade progressif et nettoyage avant READY.
