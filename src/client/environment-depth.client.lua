@@ -251,6 +251,104 @@ local function rebuild()
     )
     halo.CastShadow = false
 
+    -- Near-skyline framing language unique to each arena.
+    if variant == "Classic" then
+        for side = -1, 1, 2 do
+            local frameX = side * 78
+            local frame = makePart(
+                "ClassicFrameColumn" .. tostring(side),
+                Vector3.new(5, 30, 5),
+                CFrame.new(Config.ArenaCenter + Vector3.new(frameX, 10, 0)),
+                VisualTheme.World.Metal,
+                VisualTheme.Materials.Structure,
+                0.18
+            )
+            local cross = makePart(
+                "ClassicFrameCross" .. tostring(side),
+                Vector3.new(18, 2.2, 4.2),
+                frame.CFrame + Vector3.new(-side * 6.5, 10, 0),
+                side < 0 and currentAccent or secondaryAccent,
+                VisualTheme.Materials.Glow,
+                tier.Name == "Low" and 0.58 or 0.34
+            )
+            cross.CastShadow = false
+        end
+    elseif variant == "Towers" then
+        for i = 0, 3 do
+            local angle = math.rad(i * 90 + 45)
+            local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
+            local position = Config.ArenaCenter + radial * 82 + Vector3.new(0, 22, 0)
+            local spine = makePart(
+                "TowerFrameSpine" .. i,
+                Vector3.new(4.5, 48, 4.5),
+                CFrame.new(position),
+                VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, 0.52),
+                VisualTheme.Materials.Structure,
+                0.14
+            )
+            if tier.Name ~= "Low" then
+                makePart(
+                    "TowerFrameArm" .. i,
+                    Vector3.new(18, 1.1, 2.2),
+                    spine.CFrame
+                        * CFrame.new(radial.X * -6, 10, radial.Z * -6)
+                        * CFrame.Angles(0, -angle + math.pi * 0.5, 0),
+                    i % 2 == 0 and currentAccent or secondaryAccent,
+                    VisualTheme.Materials.Glow,
+                    0.42
+                )
+            end
+        end
+    elseif variant == "Crossroads" then
+        local offsets = {
+            Vector3.new(0, 11, -82),
+            Vector3.new(0, 11, 82),
+            Vector3.new(-82, 11, 0),
+            Vector3.new(82, 11, 0),
+        }
+        for i, offset in ipairs(offsets) do
+            local horizontal = i <= 2
+            local gate = makePart(
+                "CrossroadsFrameGate" .. i,
+                horizontal and Vector3.new(38, 2.5, 4) or Vector3.new(4, 2.5, 38),
+                CFrame.new(Config.ArenaCenter + offset),
+                VisualTheme.World.Metal,
+                VisualTheme.Materials.Structure,
+                0.16
+            )
+            local sign = makePart(
+                "CrossroadsFrameSign" .. i,
+                horizontal and Vector3.new(23, 0.7, 4.3) or Vector3.new(4.3, 0.7, 23),
+                gate.CFrame + Vector3.new(0, 2.2, 0),
+                i % 2 == 0 and secondaryAccent or currentAccent,
+                VisualTheme.Materials.Glow,
+                tier.Name == "Low" and 0.58 or 0.30
+            )
+            sign.CastShadow = false
+        end
+    elseif variant == "Orbital" then
+        local segments = tier.Name == "Low" and 6 or 10
+        local radius = 78
+        for i = 1, segments do
+            local angle = ((i - 1) / segments) * math.pi * 2
+            local tangent = angle + math.pi * 0.5
+            local position = Config.ArenaCenter + Vector3.new(
+                math.cos(angle) * radius,
+                13 + math.sin(angle * 2) * 2,
+                math.sin(angle) * radius
+            )
+            local arc = makePart(
+                "OrbitalInnerArc" .. i,
+                Vector3.new(22, 1.0, 2.6),
+                CFrame.new(position) * CFrame.Angles(0, -tangent, math.rad(math.sin(angle) * 5)),
+                i % 2 == 0 and currentAccent or VisualTheme.World.MetalLight,
+                i % 2 == 0 and VisualTheme.Materials.Glow or VisualTheme.Materials.Structure,
+                i % 2 == 0 and (tier.Name == "Low" and 0.62 or 0.36) or 0.20
+            )
+            arc.CastShadow = false
+        end
+    end
+
     -- Variant-specific skyline landmarks. These stay outside the playable arena
     -- so they improve silhouette/readability without affecting collision or routes.
     if variant == "Classic" then
