@@ -22,6 +22,10 @@ local FOLDERS = {
         LowDistance = 120,
         MediumDistance = 190,
     },
+    ArenaEdgeProfileLocal = {
+        LowDistance = 120,
+        MediumDistance = 190,
+    },
 }
 
 local function cameraPosition()
