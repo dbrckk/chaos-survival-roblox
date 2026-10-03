@@ -170,3 +170,5 @@ Ordre d'exécution immédiat
 
 - [FAIT] Presentation layer de manche : countdown READY 3-2-1 synchronisé audio/visuel, CHAOS LIVE/CHAOS FUSION au vrai passage en ROUND, rails écran colorés, pulse monde au round start, double pulse pour Fusion et pulse orange/rouge au Final Rush. Priorités explicites Final Rush > Round Start > Fusion > Overdrive > countdown, aucun RenderStepped ajouté.
 - [FAIT] Arena reveal resynchronisé avec l'entrée réelle en READY afin que la signature de map soit vue après téléportation, et round-events repositionné sur mobile court pour ne pas recouvrir les cues de danger.
+
+- [FAIT] Presentation layer round : countdown 3-2-1 déjà synchronisé audio/visuel, reveal de départ simplifié en SURVIVE!/SURVIVE THE FUSION!, priorités Final Rush > Round Start > Fusion > Overdrive, micro-kick caméra additive compatible Reduce Motion et pulse monde local sans boucle frame.
