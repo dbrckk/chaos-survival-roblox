@@ -1106,7 +1106,7 @@ local function chooseMobilityPad(record, root, pads)
 end
 
 local function chooseArenaTarget(record, root, now)
-    local traits, pressure = decisionTraits(record)
+    local traits = decisionTraits(record)
     local socialTarget = socialArenaTarget(record, root, traits)
     if socialTarget then
         record.targetIsPad = false
@@ -1173,7 +1173,7 @@ local function chooseArenaTarget(record, root, now)
 
     local hold = record.profile.TargetHoldMin
         + math.random() * (record.profile.TargetHoldMax - record.profile.TargetHoldMin)
-    return target, hold, pressure
+    return target, hold
 end
 
 local function chooseLobbyTarget(record)
