@@ -74,11 +74,6 @@ function D.start(ctx)
                     cframe = item.CFrame,
                     localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(item.Position),
-                    impulse = Vector3.new(
-                        tonumber(item:GetAttribute("ImpulseX")) or 0,
-                        tonumber(item:GetAttribute("ImpulseY")) or 0,
-                        tonumber(item:GetAttribute("ImpulseZ")) or 0
-                    ),
                 }
             end
         end
@@ -93,6 +88,11 @@ function D.start(ctx)
                     cframe = item.CFrame,
                     localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(item.Position),
+                    impulse = Vector3.new(
+                        tonumber(item:GetAttribute("ImpulseX")) or 0,
+                        tonumber(item:GetAttribute("ImpulseY")) or 0,
+                        tonumber(item:GetAttribute("ImpulseZ")) or 0
+                    ),
                 }
             end
         end
