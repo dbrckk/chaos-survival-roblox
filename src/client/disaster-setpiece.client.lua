@@ -19,11 +19,19 @@ local function arenaBase()
 end
 
 local function part(name,size,cf,color,transparency)
-    local p=Instance.new("Part")
-    p.Name=name p.Size=size p.CFrame=cf p.Anchored=true
-    p.CanCollide=false p.CanTouch=false p.CanQuery=false p.CastShadow=false
-    p.Material=Enum.Material.Neon p.Color=color p.Transparency=transparency or 0.3
-    p.Parent=workspace
+    local p = Instance.new("Part")
+    p.Name = name
+    p.Size = size
+    p.CFrame = cf
+    p.Anchored = true
+    p.CanCollide = false
+    p.CanTouch = false
+    p.CanQuery = false
+    p.CastShadow = false
+    p.Material = Enum.Material.Neon
+    p.Color = color
+    p.Transparency = transparency or 0.3
+    p.Parent = workspace
     return p
 end
 
@@ -39,8 +47,6 @@ local function playProfile(profile,base,index,total,current)
     local center=base.Position+Vector3.new(0,base.Size.Y*0.5+0.14,0)
     local span=math.max(base.Size.X,base.Size.Z)
     local duration=reduced and 0.28 or 0.58
-    local offset=(index-(total+1)/2)*0.08
-
     if profile.Kind=="rise" then
         for i=1,(tier.Name=="High" and 4 or 2) do
             local x=((i%2==0) and 1 or -1)*span*0.34
