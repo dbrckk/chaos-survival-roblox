@@ -223,7 +223,11 @@ task.defer(rebuild)
 
 task.spawn(function()
     while true do
-        if currentArena and currentArena.Parent then
+        local active = lastPhase == "ready"
+            or lastPhase == "round"
+            or lastPhase == "result"
+
+        if active and currentArena and currentArena.Parent then
             local _, qualityScale = tierLimits()
             local motionScale = player:GetAttribute("ReduceMotion") == true and 0.25 or 1
             local now = os.clock()
@@ -264,6 +268,6 @@ task.spawn(function()
             end
         end
 
-        task.wait(0.10)
+        task.wait(active and 0.10 or 0.60)
     end
 end)
