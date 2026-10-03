@@ -387,7 +387,8 @@ local function addPrimitiveAccessory(record, model)
 end
 
 local function addCosmeticTrail(record, root)
-    if record.slot == 1 then
+    local style = AISurvivorRules.appearanceStyle(record.identityIndex or record.slot)
+    if style == 1 or style == 4 then
         return
     end
 
@@ -405,7 +406,7 @@ local function addCosmeticTrail(record, root)
     trail.Name = "AISurvivorCosmeticTrail"
     trail.Attachment0 = left
     trail.Attachment1 = right
-    trail.Lifetime = record.slot == 3 and 0.18 or 0.12
+    trail.Lifetime = 0.11 + (((record.identityIndex or record.slot) % 3) * 0.035)
     trail.MinLength = 0.05
     trail.FaceCamera = true
     trail.LightEmission = 0.72
@@ -428,6 +429,10 @@ local function makeDescription(record)
     local identity = record.identity
     local description = Instance.new("HumanoidDescription")
 
+    local bodyScale, proportionScale = AISurvivorRules.bodyScales(
+        record.identityIndex or record.slot
+    )
+
     pcall(function()
         description.HeadColor = identity.Skin
         description.LeftArmColor = identity.Skin
@@ -439,8 +444,8 @@ local function makeDescription(record)
         description.WidthScale = identity.Width
         description.DepthScale = 1
         description.HeadScale = 1
-        description.BodyTypeScale = record.slot == 2 and 0.20 or 0.05
-        description.ProportionScale = record.slot == 3 and 0.28 or 0.10
+        description.BodyTypeScale = bodyScale
+        description.ProportionScale = proportionScale
     end)
 
     return description
@@ -577,6 +582,9 @@ local function sendToLobby(record)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
+    record.resultAction = nil
+    record.resultActionUntil = 0
+    record.resultTarget = nil
     pivotRecord(record, getLobbyPosition(record.slot))
 end
 
@@ -591,6 +599,9 @@ local function sendToArena(record)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
+    record.resultAction = nil
+    record.resultActionUntil = 0
+    record.resultTarget = nil
     pivotRecord(record, arenaSpawnPosition(record.slot))
 end
 
