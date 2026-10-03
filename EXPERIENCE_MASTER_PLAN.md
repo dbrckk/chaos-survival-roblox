@@ -85,9 +85,9 @@ PHASE C — MAP ART PASS
 [FAIT] C7 Signatures animées distinctes + 3 profils de rythme/direction/amplitude alternés à chaque round.
 
 PHASE D — VFX / ANIMATION
-[FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle. Lecture de fuite locale Meteor/Bomb/Freeze + correction des identifiants aftermath pour Meteors/Freeze/Bombs et couverture désormais complète des 11 catastrophes.
+[FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle. Lecture de fuite locale réservée aux dangers réellement évitables Meteor/Bomb ; Freeze conserve son télégraphe global. Identifiants aftermath alignés et couverture complète des 11 catastrophes.
 [FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
-[FAIT] D3 11 signatures catastrophe : palettes/atmosphères distinctes + warning geometry dédiée pour Meteor/Bomb/JumpShock/Disappearing Platforms. Disappearing Platforms expose un état Warning/Gone répliqué et un cadre d'effondrement local adaptatif ; Tornado ajoute une traction caméra tangentielle de proximité ; JumpShock émet un impact feedback dédié ; ShrinkingArena ajoute une pression d'écran locale uniquement à proximité réelle des bords, calculée depuis la taille courante de la base.
+[FAIT] D3 11 signatures catastrophe : palettes/atmosphères distinctes + warning geometry dédiée pour Meteor/Bomb/JumpShock/Disappearing Platforms. Disappearing Platforms expose un état Warning/Gone répliqué et un cadre d'effondrement local adaptatif ; Tornado ajoute une traction caméra tangentielle de proximité ; JumpShock émet un impact feedback dédié ; ShrinkingArena ajoute une pression d'écran locale et resserre aussi les vrais pads de mobilité, dont le langage visuel suit désormais la position.
 [FAIT] D4 Feedback monde + poses corporelles procédurales distinctes pour victoire, élimination et Master Round, compatibles Animate/Reduce Motion.
 [FAIT] D5 Final Rush réduit UI méta + challenge/momentum + auras/lights/trails/highlights non essentiels.
 
@@ -115,7 +115,7 @@ PHASE G — UI/UX
 
 PHASE H — PERFORMANCE
 [EN COURS] H1 Budgets dynamiques appliqués aux world VFX, impacts, lights, cosmétiques + LOD local scenery ; mesures réelles restantes.
-[EN COURS] H2 Boucles catastrophe idle ; world-polish cache centres lobby + CenterBeacon, réutilise profil VFX et réduit motion.
+[EN COURS] H2 Boucles catastrophe idle ; world-polish cache centres lobby + CenterBeacon, réutilise profil VFX et réduit motion. Audit transversal des 11 catastrophes : fallbacks contestants nettoyés, Freeze couvre JumpPower+JumpHeight, RisingLava ne bloque plus la physique, régression ShrinkingArena/pads couverte par test moteur.
 [EN COURS] H3 Budgets VFX/Light étendus aux cosmétiques et ambience ; Low réduit lights/particles/specular, Final Rush supprime du bruit visuel.
 [A FAIRE] H4 Soak Android 30-60 min.
 [A FAIRE] H5 MicroProfiler sur appareil réel.
