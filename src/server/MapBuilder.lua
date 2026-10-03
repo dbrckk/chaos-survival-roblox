@@ -608,6 +608,33 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
         coreMark.CFrame = CFrame.new(coreMark.Position) * CFrame.Angles(0, 0, math.rad(90))
         coreMark.Transparency = 0.58
     end
+
+    local panelOffsetX = math.max(18, (variant.BaseSize.X * 0.5) - 17)
+    local panelOffsetZ = math.max(18, (variant.BaseSize.Z * 0.5) - 17)
+    local panelRotation = variant.Id == "Orbital" and 45
+        or (variant.Id == "Crossroads" and 0 or 8)
+    local panelOffsets = {
+        Vector3.new(-panelOffsetX, 1.17, -panelOffsetZ),
+        Vector3.new(panelOffsetX, 1.17, -panelOffsetZ),
+        Vector3.new(-panelOffsetX, 1.17, panelOffsetZ),
+        Vector3.new(panelOffsetX, 1.17, panelOffsetZ),
+    }
+    for i, offset in ipairs(panelOffsets) do
+        local maintenance = decorPart(
+            decor,
+            "FloorMaintenancePanel" .. i,
+            Vector3.new(15, 0.045, 9),
+            center + offset,
+            theme.Surface:Lerp(theme.Structure, 0.38),
+            theme.PanelMaterial or VisualTheme.Materials.Panel
+        )
+        maintenance.CFrame = CFrame.new(maintenance.Position)
+            * CFrame.Angles(0, math.rad((i % 2 == 0 and -1 or 1) * panelRotation), 0)
+        maintenance.Transparency = 0.32
+        maintenance.CanCollide = false
+        maintenance.CanTouch = false
+        maintenance.CanQuery = false
+    end
 end
 
 local function addPlatformFinish(decor, platform, index, theme)
