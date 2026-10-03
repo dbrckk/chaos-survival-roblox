@@ -95,6 +95,29 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+function AISurvivorRules.appearanceStyle(identityIndex)
+    local index = math.max(1, math.floor(tonumber(identityIndex) or 1))
+    return ((index - 1) % 5) + 1
+end
+
+function AISurvivorRules.resultReaction(roll, risk)
+    local value = math.clamp(tonumber(roll) or 0, 0, 0.999)
+    local r = math.clamp(tonumber(risk) or 0.5, 0, 1)
+
+    local jumpCutoff = 0.24 + r * 0.16
+    local sidestepCutoff = jumpCutoff + 0.27
+    local acknowledgeCutoff = sidestepCutoff + 0.23
+
+    if value < jumpCutoff then
+        return "jump"
+    elseif value < sidestepCutoff then
+        return "sidestep"
+    elseif value < acknowledgeCutoff then
+        return "acknowledge"
+    end
+    return "still"
+end
+
 function AISurvivorRules.steeredDirection(previousDirection, desiredDirection, urgent)
     local desired = typeof(desiredDirection) == "Vector3" and desiredDirection or Vector3.zero
     desired = Vector3.new(desired.X, 0, desired.Z)
