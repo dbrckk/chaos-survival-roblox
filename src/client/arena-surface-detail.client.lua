@@ -34,6 +34,93 @@ local function makePart(name, size, cframe, color, material, transparency)
     return p
 end
 
+local function addPanelLanguage(base, theme, tier, variant)
+    local top = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.042, 0)
+    local halfX = base.Size.X * 0.5
+    local halfZ = base.Size.Z * 0.5
+    local seamAlpha = tier.Name == "Low" and 0.76 or (tier.Name == "Medium" and 0.64 or 0.56)
+
+    local seamCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+    for i = 1, seamCount do
+        local t = (i / (seamCount + 1)) * 2 - 1
+        local horizontal = i % 2 == 0
+        local size = horizontal
+            and Vector3.new(base.Size.X * 0.86, 0.028, 0.08)
+            or Vector3.new(0.08, 0.028, base.Size.Z * 0.86)
+        local offset = horizontal
+            and Vector3.new(0, 0, t * halfZ * 0.86)
+            or Vector3.new(t * halfX * 0.86, 0, 0)
+
+        makePart(
+            "PanelSeam" .. i,
+            size,
+            top * CFrame.new(offset),
+            VisualTheme.World.Deep:Lerp(theme.Structure, 0.35),
+            Enum.Material.Metal,
+            seamAlpha
+        )
+    end
+
+    local patchCount = tier.Name == "Low" and 3 or (tier.Name == "Medium" and 5 or 7)
+    for i = 1, patchCount do
+        local gridX = ((i * 37) % 9) / 8
+        local gridZ = ((i * 53) % 11) / 10
+        local x = (gridX * 2 - 1) * halfX * 0.68
+        local z = (gridZ * 2 - 1) * halfZ * 0.68
+        local long = i % 2 == 0
+
+        local size = long
+            and Vector3.new(4.8 + (i % 3) * 1.4, 0.035, 1.2)
+            or Vector3.new(1.2, 0.035, 4.8 + (i % 3) * 1.4)
+        local patch = makePart(
+            "RepairPlate" .. i,
+            size,
+            top * CFrame.new(x, 0.012, z),
+            theme.Surface:Lerp(theme.Structure, 0.46),
+            i % 3 == 0 and Enum.Material.DiamondPlate or Enum.Material.Metal,
+            tier.Name == "Low" and 0.34 or 0.18
+        )
+        patch:SetAttribute("SurfaceBaseColor", patch.Color)
+
+        if tier.Name == "High" then
+            local insetSize = long
+                and Vector3.new(size.X * 0.74, 0.022, 0.08)
+                or Vector3.new(0.08, 0.022, size.Z * 0.74)
+            makePart(
+                "RepairPlateInset" .. i,
+                insetSize,
+                patch.CFrame * CFrame.new(0, size.Y * 0.5 + 0.02, 0),
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                Enum.Material.Neon,
+                0.72
+            )
+        end
+    end
+
+    if tier.Name ~= "Low" then
+        local edgeDefs = {
+            {Vector3.new(base.Size.X * 0.42, 0.032, 0.10), Vector3.new(0, 0, -halfZ * 0.90)},
+            {Vector3.new(base.Size.X * 0.42, 0.032, 0.10), Vector3.new(0, 0, halfZ * 0.90)},
+            {Vector3.new(0.10, 0.032, base.Size.Z * 0.42), Vector3.new(-halfX * 0.90, 0, 0)},
+            {Vector3.new(0.10, 0.032, base.Size.Z * 0.42), Vector3.new(halfX * 0.90, 0, 0)},
+        }
+
+        for i, def in ipairs(edgeDefs) do
+            local wearColor = variant == "Towers"
+                and theme.Secondary
+                or (variant == "Orbital" and theme.Accent or theme.Detail)
+            makePart(
+                "EdgeWear" .. i,
+                def[1],
+                top * CFrame.new(def[2]),
+                wearColor,
+                Enum.Material.Metal,
+                0.72
+            )
+        end
+    end
+end
+
 local function rebuild()
     clear()
 
@@ -51,6 +138,8 @@ local function rebuild()
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local countScale = tier.Name == "Low" and 0.55 or (tier.Name == "Medium" and 0.78 or 1)
+
+    addPanelLanguage(base, theme, tier, variant)
 
     if variant == "Classic" then
         local lanes = math.max(4, math.floor(8 * countScale))
