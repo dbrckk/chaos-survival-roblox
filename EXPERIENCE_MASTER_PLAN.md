@@ -87,7 +87,7 @@ PHASE C — MAP ART PASS
 PHASE D — VFX / ANIMATION
 [FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle. Lecture de fuite locale Meteor/Bomb/Freeze + correction des identifiants aftermath pour Meteors/Freeze/Bombs et couverture désormais complète des 11 catastrophes.
 [FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
-[FAIT] D3 11 signatures catastrophe : palettes/atmosphères distinctes + warning geometry dédiée pour Meteor/Bomb/JumpShock/Disappearing Platforms. Disappearing Platforms expose maintenant un état Warning/Gone répliqué et un cadre d'effondrement local adaptatif, limité aux plateformes d'arène.
+[FAIT] D3 11 signatures catastrophe : palettes/atmosphères distinctes + warning geometry dédiée pour Meteor/Bomb/JumpShock/Disappearing Platforms. Disappearing Platforms expose un état Warning/Gone répliqué et un cadre d'effondrement local adaptatif ; Tornado ajoute une traction caméra tangentielle de proximité ; JumpShock émet désormais un impact feedback dédié.
 [FAIT] D4 Feedback monde + poses corporelles procédurales distinctes pour victoire, élimination et Master Round, compatibles Animate/Reduce Motion.
 [FAIT] D5 Final Rush réduit UI méta + challenge/momentum + auras/lights/trails/highlights non essentiels.
 
