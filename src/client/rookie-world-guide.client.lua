@@ -120,7 +120,7 @@ local function mark(part, text, color)
     billboard.Size = UDim2.fromOffset(150, 36)
     billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
     billboard.MaxDistance = 60
-    billboard.Parent = markerFolder
+    billboard.Parent = player:WaitForChild("PlayerGui")
 
     local label = Instance.new("TextLabel")
     label.Size = UDim2.fromScale(1, 1)
