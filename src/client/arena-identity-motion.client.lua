@@ -4,10 +4,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local currentArena = nil
 local currentVariant = nil
 local tracked = {}
+local phase = "waiting"
 local rebuildToken = 0
 
 local function clear()
@@ -103,16 +105,25 @@ end)
 
 task.defer(rebuild)
 
+stateEvent.OnClientEvent:Connect(function(state)
+    phase = tostring(state.phase or "waiting")
+end)
+
 task.spawn(function()
     while true do
         if not currentArena or not currentArena.Parent then
             rebuild()
         end
 
+        local active = phase == "ready"
+            or phase == "round"
+            or phase == "result"
+
         local scale = qualityScale()
         local now = os.clock()
 
-        for _, item in ipairs(tracked) do
+        if active then
+            for _, item in ipairs(tracked) do
             local part = item.part
             if not part or not part.Parent then
                 continue
@@ -156,7 +167,12 @@ task.spawn(function()
                 )
             end
         end
+        end
 
-        task.wait(scale < 0.5 and 0.16 or 0.09)
+        task.wait(
+            active
+                and (scale < 0.5 and 0.16 or 0.09)
+                or 0.60
+        )
     end
 end)
