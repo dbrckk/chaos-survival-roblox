@@ -80,7 +80,7 @@ PHASE C — MAP ART PASS
 [EN COURS] C3 Crossroads : gantries/signaux, flux directionnel, portiques skyline, cadrage transit, lanes lumineuses, midground urbain et lumière diffuse violette ; QA finale restante.
 [EN COURS] C4 Orbital : reactor nodes/struts, couronne, anneaux skyline, satellites, arcs de surface, sous-structure et ColorShift spatial renforcé ; QA finale restante.
 [FAIT] C5 Lobby hub : couronne, panneaux identité/fair-play, progression personnelle et runway/ribs cadrant clairement le portail arène.
-[EN COURS] C6 Profondeur en 5 couches + horizon calme + transition reveal d'arène, avec surface, bords, sous-structure, midground, skyline et props adaptatifs. Reveal spécifique à chaque arène + langage de navigation fonctionnel relié aux vrais pads (chevrons directionnels, balises verticales Towers, repères centraux propres à chaque map), avec LOD dédié ; QA visuelle finale restante.
+[EN COURS] C6 Profondeur en 5+ couches + horizon calme + transition reveal d'arène, avec surface, bords, sous-structure, midground, skyline, couronne d'horizon très lointaine et void multicouche. Lobby et arène sont désormais reliés visuellement par un transit non-collidable avec cascade READY ; silhouettes lointaines spécifiques Classic/Towers/Crossroads/Orbital + langage de navigation fonctionnel relié aux vrais pads, avec LOD dédié. QA visuelle finale restante.
 [FAIT] C7 Signatures animées distinctes + 3 profils de rythme/direction/amplitude alternés à chaque round.
 
 PHASE D — VFX / ANIMATION
@@ -122,7 +122,7 @@ PHASE G — UI/UX
 
 PHASE H — PERFORMANCE
 [EN COURS] H1 Budgets dynamiques appliqués aux world VFX, impacts, lights, cosmétiques + LOD local scenery ; mesures réelles restantes.
-[EN COURS] H2 Boucles/scan client optimisés : warnings Meteor/Bomb limités aux enfants directs Workspace, VFX pads limités au dossier Arena/Mechanics, LOD scenery cache ses descendants entre changements, Tornado cache les paramètres de débris et respecte Reduce Motion, ShrinkingArena VFX cache la Base active, world-polish anime seulement l'espace de jeu actif (lobby ou arène). Audit transversal des 11 catastrophes maintenu ; mesures réelles device encore requises.
+[EN COURS] H2 Boucles/scan client optimisés : warnings Meteor/Bomb limités aux enfants directs Workspace, VFX pads limités au dossier Arena/Mechanics, LOD scenery cache ses descendants entre changements, Tornado cache les paramètres de débris et respecte Reduce Motion, ShrinkingArena VFX cache la Base active, world-polish anime seulement l'espace de jeu actif et environment-depth reste entièrement événementiel (0 RenderStepped/Heartbeat/scan continu). Audit transversal des 11 catastrophes maintenu ; mesures réelles device encore requises.
 [EN COURS] H3 Budgets VFX/Light étendus aux cosmétiques et ambience ; Low réduit lights/particles/specular, Final Rush supprime du bruit visuel.
 [A FAIRE] H4 Soak Android 30-60 min.
 [A FAIRE] H5 MicroProfiler sur appareil réel.
@@ -190,3 +190,7 @@ Ordre d'exécution immédiat
 
 - [FAIT] Nettoyage lobby transversal : lobby-practice reste la source unique du feedback visuel practice, mais se déclenche désormais sur LobbyPracticeUses confirmé serveur ; l'ancien swoosh direct a été supprimé et l'audio passe par le cue MobilityPad central.
 - [FAIT] Perf lobby : lobby-core-orbit ne met plus à jour ses nodes pendant ROUND/READY, devient invisible hors lobby et adapte sa cadence à Low/Medium/High + Reduce Motion ; audit des autres lobby-* confirme absence de RenderStepped et time-trial déjà throttlé à 10 Hz uniquement en waiting/intermission.
+
+- [FAIT] World depth premium : corridor/transit visuel lobby→arène, ribs/supports/rails sous le niveau jouable, cascade lumineuse READY, atténuation pendant ROUND, horizon très lointain centré sur l'ensemble du monde et couleurs hors catastrophe alignées sur le thème d'arène.
+- [FAIT] Horizon variant-aware : Classic reste broadcast/industriel équilibré, Towers devient plus vertical avec antennes, Crossroads plus horizontal avec bras/gantries, Orbital utilise volumes sphériques/cylindriques ; parallax obtenu naturellement par vraie géométrie 3D à différentes distances.
+- [FAIT] Void multicouche : cadre intermédiaire vers y=-17, seconde profondeur Medium/High vers y=-36, accents emissifs budgetés et fond distant non-collidable ; aucun RenderStepped/Heartbeat ajouté.
