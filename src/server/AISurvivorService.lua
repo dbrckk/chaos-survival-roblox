@@ -1390,10 +1390,12 @@ local function stepRecord(record, now)
     end
 
     if now >= record.nextJump then
-        local jumpChance = record.profile.JumpChance
-        if hasDisaster("LowGravity") then
-            jumpChance += 0.16
-        end
+        local _, pressure = decisionTraits(record)
+        local jumpChance = AISurvivorRules.freeJumpChance(
+            record.profile.JumpChance,
+            pressure,
+            hasDisaster("LowGravity")
+        )
         if math.random() < jumpChance then
             humanoid.Jump = true
         end
