@@ -5,6 +5,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local WorldDepthRules = require(ReplicatedStorage.Shared.WorldDepthRules)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -52,10 +53,209 @@ local function arenaVariant()
     return tostring(arena and arena:GetAttribute("VariantId") or "Classic")
 end
 
+local function linePart(name, from, to, thickness, color, material, transparency)
+    local delta = to - from
+    local length = math.max(0.1, delta.Magnitude)
+    local midpoint = from + delta * 0.5
+    return makePart(
+        name,
+        Vector3.new(thickness, thickness, length),
+        CFrame.lookAt(midpoint, to),
+        color,
+        material,
+        transparency
+    )
+end
+
+local function addTransitDepth(tier)
+    local budget = WorldDepthRules.budgets(tier.Name)
+    local direction = Config.ArenaCenter - Config.LobbyCenter
+    local horizontal = Vector3.new(direction.X, 0, direction.Z)
+    if horizontal.Magnitude < 0.01 then
+        return
+    end
+
+    local forward = horizontal.Unit
+    local right = Vector3.new(forward.Z, 0, -forward.X)
+    local sideDistance = 17.5
+    local firstPosition = nil
+    local lastPosition = nil
+
+    for i = 1, budget.TransitRibs do
+        local position, alpha = WorldDepthRules.transitionSample(
+            Config.LobbyCenter,
+            Config.ArenaCenter,
+            i,
+            budget.TransitRibs
+        )
+        firstPosition = firstPosition or position
+        lastPosition = position
+
+        local height = 10 + math.sin(alpha * math.pi) * 6
+        local left = position + right * sideDistance + Vector3.new(0, height * 0.5 - 2.5, 0)
+        local rightPos = position - right * sideDistance + Vector3.new(0, height * 0.5 - 2.5, 0)
+
+        local leftSupport = makePart(
+            "TransitSupportL" .. i,
+            Vector3.new(1.2, height, 1.2),
+            CFrame.new(left),
+            VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, 0.46),
+            VisualTheme.Materials.Structure,
+            tier.Name == "Low" and 0.30 or 0.16
+        )
+        leftSupport.CastShadow = false
+
+        local rightSupport = makePart(
+            "TransitSupportR" .. i,
+            Vector3.new(1.2, height, 1.2),
+            CFrame.new(rightPos),
+            VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, 0.46),
+            VisualTheme.Materials.Structure,
+            tier.Name == "Low" and 0.30 or 0.16
+        )
+        rightSupport.CastShadow = false
+
+        local topCenter = position + Vector3.new(0, height - 2.5, 0)
+        local cross = linePart(
+            "TransitCrossbeam" .. i,
+            topCenter + right * sideDistance,
+            topCenter - right * sideDistance,
+            tier.Name == "Low" and 0.55 or 0.70,
+            i % 2 == 0 and currentAccent or secondaryAccent,
+            VisualTheme.Materials.Glow,
+            tier.Name == "Low" and 0.66 or 0.42
+        )
+        cross.CastShadow = false
+        table.insert(glows, cross)
+
+        if tier.Name ~= "Low" then
+            local lower = linePart(
+                "TransitLowerBrace" .. i,
+                position + right * (sideDistance - 1.2) + Vector3.new(0, -5.8, 0),
+                position - right * (sideDistance - 1.2) + Vector3.new(0, -5.8, 0),
+                0.42,
+                VisualTheme.World.MetalLight,
+                VisualTheme.Materials.Structure,
+                0.38
+            )
+            lower.CastShadow = false
+        end
+    end
+
+    if firstPosition and lastPosition then
+        for side = -1, 1, 2 do
+            local offset = right * sideDistance * side
+            local from = firstPosition + offset + Vector3.new(0, -6.2, 0)
+            local to = lastPosition + offset + Vector3.new(0, -6.2, 0)
+            local rail = linePart(
+                side < 0 and "TransitRailLeft" or "TransitRailRight",
+                from,
+                to,
+                0.68,
+                side < 0 and currentAccent or secondaryAccent,
+                VisualTheme.Materials.Glow,
+                tier.Name == "Low" and 0.72 or 0.48
+            )
+            rail.CastShadow = false
+            table.insert(glows, rail)
+        end
+    end
+
+    for i = 1, budget.UnderworldStruts do
+        local position = Config.LobbyCenter:Lerp(
+            Config.ArenaCenter,
+            0.20 + (i / (budget.UnderworldStruts + 1)) * 0.58
+        )
+        local width = 22 + (i % 2) * 10
+        local under = makePart(
+            "UnderworldStrut" .. i,
+            Vector3.new(width, 1.6, 7.5),
+            CFrame.new(position + Vector3.new(0, -13 - (i % 2) * 3, 0))
+                * CFrame.Angles(0, math.rad((i % 2 == 0) and 12 or -12), 0),
+            VisualTheme.World.Void:Lerp(VisualTheme.World.Metal, 0.30),
+            VisualTheme.Materials.Structure,
+            tier.Name == "Low" and 0.42 or 0.26
+        )
+        under.CastShadow = false
+    end
+end
+
+local function addHorizonDepth(tier)
+    local budget = WorldDepthRules.budgets(tier.Name)
+    local center = WorldDepthRules.worldCenter(
+        Config.LobbyCenter,
+        Config.ArenaCenter
+    )
+    local radius = WorldDepthRules.horizonRadius(tier.Name)
+
+    for i = 1, budget.HorizonStructures do
+        local angle = ((i - 1) / budget.HorizonStructures) * math.pi * 2
+            + math.rad(7)
+        local radialOffset = radius + ((i * 23) % 31) - 15
+        local height = WorldDepthRules.horizonHeight(i)
+        local width = 10 + ((i * 7) % 13)
+        local depth = 7 + ((i * 5) % 8)
+        local position = center + Vector3.new(
+            math.cos(angle) * radialOffset,
+            (height * 0.5) - 12,
+            math.sin(angle) * radialOffset
+        )
+
+        local body = makePart(
+            "HorizonMonolith" .. i,
+            Vector3.new(width, height, depth),
+            CFrame.new(position) * CFrame.Angles(0, -angle + math.rad((i % 3 - 1) * 7), 0),
+            VisualTheme.World.Void:Lerp(VisualTheme.World.Metal, 0.24 + (i % 3) * 0.07),
+            VisualTheme.Materials.Structure,
+            tier.Name == "Low" and 0.42 or 0.30
+        )
+        body.CastShadow = false
+
+        if i <= budget.HorizonAccents or i % 3 == 0 then
+            local accentHeight = math.max(8, height * 0.56)
+            local slit = makePart(
+                "HorizonSlit" .. i,
+                Vector3.new(0.38, accentHeight, depth + 0.12),
+                body.CFrame + Vector3.new(0, height * 0.06, 0),
+                i % 2 == 0 and currentAccent or secondaryAccent,
+                VisualTheme.Materials.Glow,
+                tier.Name == "Low" and 0.76 or 0.58
+            )
+            slit.CastShadow = false
+            table.insert(glows, slit)
+        end
+
+        if tier.Name == "High" and i % 4 == 0 then
+            local crown = makePart(
+                "HorizonCrown" .. i,
+                Vector3.new(width + 7, 0.55, depth + 4),
+                body.CFrame + Vector3.new(0, height * 0.5 + 0.8, 0),
+                i % 2 == 0 and secondaryAccent or currentAccent,
+                VisualTheme.Materials.Glow,
+                0.62
+            )
+            crown.CastShadow = false
+            table.insert(glows, crown)
+        end
+    end
+
+    local floor = makePart(
+        "WorldDepthFloor",
+        Vector3.new(radius * 1.55, 1.2, radius * 1.55),
+        CFrame.new(center + Vector3.new(0, -30, 0)),
+        VisualTheme.World.Void,
+        Enum.Material.SmoothPlastic,
+        tier.Name == "Low" and 0.32 or 0.18
+    )
+    floor.CastShadow = false
+end
+
 local function rebuild()
     clear()
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    addTransitDepth(tier)
+    addHorizonDepth(tier)
     local variant = arenaVariant()
     local count = tier.Name == "Low" and 6 or (tier.Name == "Medium" and 8 or 10)
     local radius = variant == "Orbital" and 142
