@@ -14,12 +14,12 @@ local function clear()
     folder:ClearAllChildren()
 end
 
-local function makePart(name, size, cframe, color, material, transparency)
+local function makePart(name, size, cframe, color, material, transparency, anchorPart)
     local part = Instance.new("Part")
     part.Name = name
     part.Size = size
     part.CFrame = cframe
-    part.Anchored = true
+    part.Anchored = anchorPart == nil
     part.CanCollide = false
     part.CanTouch = false
     part.CanQuery = false
@@ -28,6 +28,16 @@ local function makePart(name, size, cframe, color, material, transparency)
     part.Color = color
     part.Transparency = transparency or 0
     part.Parent = folder
+
+    if anchorPart and anchorPart:IsA("BasePart") then
+        part.Massless = true
+        local weld = Instance.new("WeldConstraint")
+        weld.Name = "PlatformIdentityWeld"
+        weld.Part0 = part
+        weld.Part1 = anchorPart
+        weld.Parent = part
+    end
+
     return part
 end
 
@@ -42,7 +52,8 @@ local function decorateClassic(platform, index, theme, tier)
         top,
         index % 2 == 0 and theme.Secondary or theme.Accent,
         Enum.Material.Neon,
-        transparency
+        transparency,
+        platform
     )
 
     if tier.Name == "High" then
@@ -52,7 +63,8 @@ local function decorateClassic(platform, index, theme, tier)
             top,
             theme.Detail,
             Enum.Material.Neon,
-            0.56
+            0.56,
+            platform
         )
     end
 end
@@ -67,7 +79,8 @@ local function decorateTowers(platform, index, theme, tier)
         bottom,
         index % 2 == 0 and theme.Secondary or theme.Accent,
         Enum.Material.Neon,
-        tier.Name == "Low" and 0.66 or 0.40
+        tier.Name == "Low" and 0.66 or 0.40,
+        platform
     )
     core.Shape = Enum.PartType.Cylinder
     core.CFrame = bottom * CFrame.Angles(0, 0, math.rad(90))
@@ -83,14 +96,19 @@ local function decorateTowers(platform, index, theme, tier)
             platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.42, 0),
             theme.Structure:Lerp(theme.Detail, 0.20),
             Enum.Material.DiamondPlate,
-            0.18
+            0.18,
+            platform
         )
     end
 end
 
-local function decorateCrossroads(platform, index, theme, tier)
+local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
     local center = platform.CFrame * CFrame.new(0, platform.Size.Y * 0.5 + 0.075, 0)
-    local arenaDelta = Vector3.new(platform.Position.X, 0, platform.Position.Z)
+    local arenaDelta = Vector3.new(
+        platform.Position.X - arenaCenter.X,
+        0,
+        platform.Position.Z - arenaCenter.Z
+    )
     local alongX = math.abs(arenaDelta.X) >= math.abs(arenaDelta.Z)
     local length = alongX and platform.Size.X or platform.Size.Z
     local size = alongX
@@ -103,7 +121,8 @@ local function decorateCrossroads(platform, index, theme, tier)
         center,
         index % 2 == 0 and theme.Secondary or theme.Accent,
         Enum.Material.Neon,
-        tier.Name == "Low" and 0.70 or 0.48
+        tier.Name == "Low" and 0.70 or 0.48,
+        platform
     )
 
     if tier.Name == "High" then
@@ -125,7 +144,8 @@ local function decorateCrossroads(platform, index, theme, tier)
                 ),
                 theme.Detail,
                 Enum.Material.Neon,
-                0.60
+                0.60,
+                platform
             )
         end
     end
@@ -156,7 +176,8 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
         center,
         index % 3 == 0 and theme.Secondary or theme.Accent,
         Enum.Material.Neon,
-        tier.Name == "Low" and 0.70 or 0.44
+        tier.Name == "Low" and 0.70 or 0.44,
+        platform
     )
 
     if tier.Name ~= "Low" then
@@ -167,7 +188,8 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
             center + innerOffset,
             theme.Detail,
             Enum.Material.Neon,
-            tier.Name == "High" and 0.54 or 0.66
+            tier.Name == "High" and 0.54 or 0.66,
+            platform
         )
     end
 end
@@ -198,7 +220,7 @@ local function rebuild()
             if variant == "Towers" then
                 decorateTowers(platform, index, theme, tier)
             elseif variant == "Crossroads" then
-                decorateCrossroads(platform, index, theme, tier)
+                decorateCrossroads(platform, index, theme, tier, base.Position)
             elseif variant == "Orbital" then
                 decorateOrbital(platform, index, theme, tier, base.Position)
             else
