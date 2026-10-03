@@ -100,6 +100,13 @@ function AISurvivorRules.appearanceStyle(identityIndex)
     return ((index - 1) % 5) + 1
 end
 
+function AISurvivorRules.bodyScales(identityIndex)
+    local index = math.max(1, math.floor(tonumber(identityIndex) or 1))
+    local body = 0.04 + ((index * 17) % 5) * 0.04
+    local proportion = 0.08 + ((index * 13) % 5) * 0.05
+    return math.clamp(body, 0.04, 0.20), math.clamp(proportion, 0.08, 0.28)
+end
+
 function AISurvivorRules.resultReaction(roll, risk)
     local value = math.clamp(tonumber(roll) or 0, 0, 0.999)
     local r = math.clamp(tonumber(risk) or 0.5, 0, 1)
