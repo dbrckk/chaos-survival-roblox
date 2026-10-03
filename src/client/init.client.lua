@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 
 local player = Players.LocalPlayer
@@ -1070,29 +1071,24 @@ local cameraViewportConnection = nil
 local function applyResponsivePanelConstraints()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
-    local compact = viewport.X < 760 or viewport.Y < 500
-    local narrow = viewport.X < 560
+    local class = UIResponsive.classify(viewport, touchDevice)
 
-    questPanelConstraint.MinSize = compact and Vector2.new(220, 205) or Vector2.new(260, 250)
-    cosmeticsPanelConstraint.MinSize = compact and Vector2.new(220, 190) or Vector2.new(270, 220)
-    achievementPanelConstraint.MinSize = compact and Vector2.new(225, 205) or Vector2.new(280, 250)
-    supportPanelConstraint.MinSize = compact and Vector2.new(220, 170) or Vector2.new(270, 190)
-
-    local panelWidth = narrow and 0.94 or (compact and 0.88 or 0.72)
-    local panelBottom = compact and 0.90 or 0.82
-    questPanel.Size = UDim2.fromScale(panelWidth, compact and 0.52 or 0.46)
-    questPanel.Position = UDim2.fromScale(narrow and 0.03 or 0.025, panelBottom)
-
-    cosmeticsPanel.Size = UDim2.fromScale(panelWidth, compact and 0.46 or 0.36)
-    cosmeticsPanel.Position = UDim2.fromScale(narrow and 0.97 or 0.975, panelBottom)
-
-    achievementPanel.Size = UDim2.fromScale(narrow and 0.94 or (compact and 0.90 or 0.82), compact and 0.52 or 0.46)
-    achievementPanel.Position = UDim2.fromScale(0.5, panelBottom)
-
-    supportPanel.Size = UDim2.fromScale(panelWidth, compact and 0.38 or 0.30)
-    supportPanel.Position = UDim2.fromScale(narrow and 0.97 or 0.975, compact and 0.88 or 0.75)
-
-    top.Size = UDim2.fromScale(narrow and 0.95 or 0.88, narrow and 0.115 or 0.13)
+    if class.touch and class.tinyHeight then
+        questPanelConstraint.MinSize = Vector2.new(220, 172)
+        cosmeticsPanelConstraint.MinSize = Vector2.new(220, 160)
+        achievementPanelConstraint.MinSize = Vector2.new(225, 172)
+        supportPanelConstraint.MinSize = Vector2.new(220, 150)
+    elseif class.touch and class.compactHeight then
+        questPanelConstraint.MinSize = Vector2.new(220, 195)
+        cosmeticsPanelConstraint.MinSize = Vector2.new(220, 180)
+        achievementPanelConstraint.MinSize = Vector2.new(225, 195)
+        supportPanelConstraint.MinSize = Vector2.new(220, 165)
+    else
+        questPanelConstraint.MinSize = Vector2.new(260, 250)
+        cosmeticsPanelConstraint.MinSize = Vector2.new(270, 220)
+        achievementPanelConstraint.MinSize = Vector2.new(280, 250)
+        supportPanelConstraint.MinSize = Vector2.new(270, 190)
+    end
 end
 
 local function bindViewportSizing()
@@ -1286,13 +1282,20 @@ resultTip.Parent = resultCard
 local function applyResponsiveLayout()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
-    local aspect = viewport.Y > 0 and (viewport.X / viewport.Y) or 1.78
 
     if not touchDevice then
+        top.Position = UDim2.fromScale(0.5, 0.025)
         top.Size = UDim2.fromScale(0.88, 0.13)
+        timer.Size = UDim2.fromOffset(70, 70)
         votes.Position = UDim2.fromScale(0.5, 0.58)
         votes.Size = UDim2.fromScale(0.88, 0.24)
+        stats.Position = UDim2.fromScale(0.5, 0.975)
+        stats.Size = UDim2.fromScale(0.65, 0.07)
+        xpTrack.Position = UDim2.fromScale(0.5, 0.94)
+        xpTrack.Size = UDim2.fromScale(0.62, 0.012)
         resultCard.Size = UDim2.fromScale(0.80, 0.31)
+        dataWarning.Position = UDim2.fromScale(0.5, 0.17)
+        dataWarning.Size = UDim2.fromScale(0.78, 0.055)
         questPanel.Size = UDim2.fromScale(0.72, 0.46)
         cosmeticsPanel.Size = UDim2.fromScale(0.72, 0.36)
         achievementPanel.Size = UDim2.fromScale(0.82, 0.46)
@@ -1300,55 +1303,79 @@ local function applyResponsiveLayout()
         return
     end
 
-    local compact = aspect < 1.50
-    local narrow = aspect < 1.7
-    local wide = aspect > 2.0
-
-    top.Position = UDim2.fromScale(0.5, narrow and 0.018 or 0.025)
-    top.Size = UDim2.fromScale(narrow and 0.94 or 0.90, narrow and 0.145 or 0.13)
-
-    votes.Position = UDim2.fromScale(0.5, narrow and 0.55 or 0.57)
-    votes.Size = UDim2.fromScale(narrow and 0.96 or 0.92, narrow and 0.30 or 0.27)
-
-    rookieCoach.Position = UDim2.fromScale(0.5, narrow and 0.68 or 0.70)
-    rookieCoach.Size = UDim2.fromScale(narrow and 0.78 or 0.68, narrow and 0.048 or 0.042)
-
-    if metaDock then
-        metaDock.Position = UDim2.fromScale(0.5, narrow and 0.972 or 0.965)
-        metaDock.Size = UDim2.fromScale(narrow and 0.96 or 0.92, narrow and 0.066 or 0.060)
-
-        local dockHeight = narrow and 0.84 or 0.82
-        questButton.Size = UDim2.new(0.225, 0, dockHeight, 0)
-        achievementButton.Size = UDim2.new(0.225, 0, dockHeight, 0)
-        cosmeticsButton.Size = UDim2.new(0.225, 0, dockHeight, 0)
-        supportButton.Size = UDim2.new(0.225, 0, dockHeight, 0)
-    end
-
-    stats.Size = UDim2.fromScale(narrow and 0.74 or 0.65, narrow and 0.064 or 0.07)
-    xpTrack.Size = UDim2.fromScale(narrow and 0.70 or 0.62, 0.012)
-
-    resultCard.Size = UDim2.fromScale(
-        compact and 0.94 or (narrow and 0.90 or (wide and 0.68 or 0.80)),
-        compact and 0.30 or (narrow and 0.34 or 0.31)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local panelHeight = math.max(
+        170,
+        math.min(
+            320,
+            viewport.Y - profile.topHeight - profile.dockHeight - 38
+        )
     )
 
-    dailyToast.Size = UDim2.fromScale(narrow and 0.84 or 0.72, 0.16)
-    questToast.Size = UDim2.fromScale(narrow and 0.86 or 0.76, 0.15)
-    achievementToast.Size = UDim2.fromScale(narrow and 0.88 or 0.78, 0.16)
+    top.Position = UDim2.new(0.5, 0, 0, 7)
+    top.Size = UDim2.new(profile.topWidthScale, 0, 0, profile.topHeight)
+    timer.Size = UDim2.fromOffset(profile.timerSize, profile.timerSize)
+    timer.Position = UDim2.new(1, -10, 0.5, 0)
 
-    questPanel.Position = UDim2.fromScale(0.025, compact and 0.77 or (narrow and 0.80 or 0.82))
-    questPanel.Size = UDim2.fromScale(compact and 0.94 or (narrow and 0.90 or 0.78), compact and 0.40 or (narrow and 0.46 or 0.44))
+    votes.Position = UDim2.fromScale(0.5, profile.voteHeight <= 140 and 0.49 or 0.54)
+    votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
 
-    cosmeticsPanel.Position = UDim2.fromScale(0.975, compact and 0.77 or (narrow and 0.80 or 0.82))
-    cosmeticsPanel.Size = UDim2.fromScale(compact and 0.94 or (narrow and 0.90 or 0.78), compact and 0.30 or (narrow and 0.34 or 0.36))
+    rookieCoach.Size = UDim2.new(profile.coachWidthScale, 0, 0, profile.coachHeight)
 
-    achievementPanel.Position = UDim2.fromScale(0.5, compact and 0.77 or (narrow and 0.80 or 0.82))
-    achievementPanel.Size = UDim2.fromScale(compact and 0.94 or (narrow and 0.92 or 0.84), compact and 0.35 or (narrow and 0.40 or 0.46))
+    if metaDock then
+        metaDock.Position = UDim2.new(0.5, 0, 1, -8)
+        metaDock.Size = UDim2.new(profile.dockWidthScale, 0, 0, profile.dockHeight)
 
-    supportPanel.Position = UDim2.fromScale(0.975, compact and 0.70 or (narrow and 0.73 or 0.75))
-    supportPanel.Size = UDim2.fromScale(compact and 0.92 or (narrow and 0.88 or 0.74), compact and 0.24 or (narrow and 0.27 or 0.30))
+        questButton.Size = UDim2.new(0.225, 0, 0, profile.dockButtonHeight)
+        achievementButton.Size = UDim2.new(0.225, 0, 0, profile.dockButtonHeight)
+        cosmeticsButton.Size = UDim2.new(0.225, 0, 0, profile.dockButtonHeight)
+        supportButton.Size = UDim2.new(0.225, 0, 0, profile.dockButtonHeight)
+    end
+
+    local dockVisible = metaDock and metaDock.Visible
+    local statsBottom = dockVisible and (profile.dockHeight + 18) or 10
+    stats.Position = UDim2.new(0.5, 0, 1, -statsBottom)
+    stats.Size = UDim2.new(profile.narrowWidth and 0.82 or 0.72, 0, 0, 34)
+    xpTrack.Position = UDim2.new(0.5, 0, 1, -(statsBottom + 39))
+    xpTrack.Size = UDim2.new(profile.narrowWidth and 0.78 or 0.68, 0, 0, 5)
+
+    resultCard.Size = UDim2.new(
+        profile.resultWidthScale,
+        0,
+        0,
+        profile.resultHeight
+    )
+
+    dailyToast.Size = UDim2.new(profile.toastWidthScale, 0, 0, 92)
+    questToast.Size = UDim2.new(profile.toastWidthScale, 0, 0, 88)
+    achievementToast.Size = UDim2.new(profile.toastWidthScale, 0, 0, 92)
+
+    dataWarning.Position = UDim2.new(0.5, 0, 0, profile.topHeight + 14)
+    dataWarning.Size = UDim2.new(profile.toastWidthScale, 0, 0, 34)
+
+    local panelBottom = profile.panelBottomOffset
+    questPanel.Position = UDim2.new(0.025, 0, 1, -panelBottom)
+    questPanel.Size = UDim2.new(profile.panelWidthScale, 0, 0, panelHeight)
+
+    cosmeticsPanel.Position = UDim2.new(0.975, 0, 1, -panelBottom)
+    cosmeticsPanel.Size = UDim2.new(
+        profile.panelWidthScale,
+        0,
+        0,
+        math.max(160, panelHeight - 26)
+    )
+
+    achievementPanel.Position = UDim2.new(0.5, 0, 1, -panelBottom)
+    achievementPanel.Size = UDim2.new(profile.panelWidthScale, 0, 0, panelHeight)
+
+    supportPanel.Position = UDim2.new(0.975, 0, 1, -panelBottom)
+    supportPanel.Size = UDim2.new(
+        profile.panelWidthScale,
+        0,
+        0,
+        math.max(150, math.min(220, panelHeight - 36))
+    )
 end
-
 applyResponsiveLayout()
 
 local responsiveCamera = workspace.CurrentCamera
@@ -1941,6 +1968,10 @@ stateEvent.OnClientEvent:Connect(function(state)
     achievementButton.Visible = not metaControlsSuppressed
     supportButton.Visible = (not metaControlsSuppressed)
         and supportButton:GetAttribute("MonetizationEnabled") == true
+
+    if touchDevice then
+        applyResponsiveLayout()
+    end
 
     if metaControlsSuppressed then
         closeAllPanels()
