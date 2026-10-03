@@ -67,6 +67,7 @@ title.TextScaled = true
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Text = "CHAOS SURVIVAL"
 title.Parent = top
+UITheme.addTextConstraint(title, 14, 30)
 
 local hint = Instance.new("TextLabel")
 hint.Size = UDim2.new(1, -100, 0.32, 0)
@@ -78,6 +79,7 @@ hint.TextScaled = true
 hint.TextXAlignment = Enum.TextXAlignment.Left
 hint.Text = ""
 hint.Parent = top
+UITheme.addTextConstraint(hint, 12, 20)
 
 local timer = Instance.new("TextLabel")
 timer.AnchorPoint = Vector2.new(1, 0.5)
@@ -90,6 +92,7 @@ timer.TextScaled = true
 timer.Text = "0"
 timer.BorderSizePixel = 0
 timer.Parent = top
+UITheme.addTextConstraint(timer, 20, 38)
 UITheme.addCorner(timer, UITheme.Corners.Pill)
 UITheme.addStroke(timer, Color3.fromRGB(255, 215, 170), 1.4, 0.28)
 local timerGradient = UITheme.addGradient(
@@ -118,6 +121,7 @@ aliveCounter.Text = ""
 aliveCounter.Visible = false
 aliveCounter.BorderSizePixel = 0
 aliveCounter.Parent = top
+UITheme.addTextConstraint(aliveCounter, 12, 18)
 UITheme.addCorner(aliveCounter, UITheme.Corners.Pill)
 UITheme.addStroke(aliveCounter, UITheme.Colors.Border, 1, 0.45)
 
@@ -134,6 +138,7 @@ stats.TextColor3 = UITheme.Colors.Text
 stats.TextScaled = true
 stats.Text = ""
 stats.Parent = root
+UITheme.addTextConstraint(stats, 12, 20)
 UITheme.addCorner(stats, UITheme.Corners.Large)
 UITheme.addStroke(stats, UITheme.Colors.Border, 1, 0.45)
 UITheme.addGradient(stats, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
@@ -273,6 +278,7 @@ rookieCoach.Text = "SURVIVE UNTIL 0  •  AVOID WARNING COLORS  •  GLOWING PAD
 rookieCoach.Visible = false
 rookieCoach.ZIndex = 12
 rookieCoach.Parent = root
+UITheme.addTextConstraint(rookieCoach, 13, 18)
 UITheme.addCorner(rookieCoach, UITheme.Corners.Medium)
 UITheme.addStroke(rookieCoach, UITheme.Colors.Blue, 1, 0.48)
 
@@ -1168,6 +1174,7 @@ dataWarning.Visible = false
 dataWarning.Text = ""
 dataWarning.ZIndex = 15
 dataWarning.Parent = root
+UITheme.addTextConstraint(dataWarning, 12, 18)
 Instance.new("UICorner", dataWarning).CornerRadius = UDim.new(0, 12)
 
 local function refreshDataStatus()
@@ -1761,6 +1768,7 @@ local function showVotes(options)
         indexBadge.TextColor3 = UITheme.Colors.Text
         indexBadge.TextScaled = true
         indexBadge.Parent = button
+        UITheme.addTextConstraint(indexBadge, 12, 20)
         UITheme.addCorner(indexBadge, UITheme.Corners.Pill)
 
         local statusBadge = Instance.new("TextLabel")
@@ -1782,6 +1790,7 @@ local function showVotes(options)
         statusBadge.TextColor3 = selected and UITheme.Colors.Panel or UITheme.Colors.Text
         statusBadge.TextScaled = true
         statusBadge.Parent = button
+        UITheme.addTextConstraint(statusBadge, compactVote and 10 or 11, 18)
         UITheme.addCorner(statusBadge, UITheme.Corners.Pill)
 
         local name = Instance.new("TextLabel")
@@ -1794,6 +1803,7 @@ local function showVotes(options)
         name.TextScaled = true
         name.TextWrapped = true
         name.Parent = button
+        UITheme.addTextConstraint(name, compactVote and 12 or 13, 24)
 
         local hintLabel = Instance.new("TextLabel")
         hintLabel.Position = UDim2.fromScale(0.08, 0.58)
@@ -1806,6 +1816,7 @@ local function showVotes(options)
         hintLabel.TextWrapped = true
         hintLabel.Visible = not compactVote
         hintLabel.Parent = button
+        UITheme.addTextConstraint(hintLabel, 11, 17)
 
         local votePill = Instance.new("TextLabel")
         votePill.AnchorPoint = Vector2.new(0.5, 1)
@@ -1822,6 +1833,7 @@ local function showVotes(options)
         votePill.TextColor3 = UITheme.Colors.Text
         votePill.TextScaled = true
         votePill.Parent = button
+        UITheme.addTextConstraint(votePill, 11, 18)
         UITheme.addCorner(votePill, UITheme.Corners.Pill)
 
         button.Activated:Connect(function()
