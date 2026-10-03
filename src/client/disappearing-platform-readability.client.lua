@@ -56,13 +56,17 @@ local function ensureState(part)
     local south = makeEdge("CollapseEdgeSouth", colorB)
     local west = makeEdge("CollapseEdgeWest", colorB)
     local east = makeEdge("CollapseEdgeEast", colorA)
+    local crossA = makeEdge("CollapseWarningCrossA", Color3.fromRGB(255, 245, 185))
+    local crossB = makeEdge("CollapseWarningCrossB", Color3.fromRGB(255, 175, 70))
 
     local state = {
-        instances = {north, south, west, east},
+        instances = {north, south, west, east, crossA, crossB},
         north = north,
         south = south,
         west = west,
         east = east,
+        crossA = crossA,
+        crossB = crossB,
     }
     tracked[part] = state
     return state
@@ -84,13 +88,29 @@ local function layout(part, state, phase, now)
     state.west.Size = Vector3.new(thickness, 0.06, part.Size.Z + 0.35)
     state.east.Size = state.west.Size
 
-    state.north.CFrame = CFrame.new(part.Position.X, y, part.Position.Z - halfZ)
-    state.south.CFrame = CFrame.new(part.Position.X, y, part.Position.Z + halfZ)
-    state.west.CFrame = CFrame.new(part.Position.X - halfX, y, part.Position.Z)
-    state.east.CFrame = CFrame.new(part.Position.X + halfX, y, part.Position.Z)
+    local topFrame = part.CFrame * CFrame.new(0, part.Size.Y * 0.5 + 0.08, 0)
+    state.north.CFrame = topFrame * CFrame.new(0, 0, -halfZ)
+    state.south.CFrame = topFrame * CFrame.new(0, 0, halfZ)
+    state.west.CFrame = topFrame * CFrame.new(-halfX, 0, 0)
+    state.east.CFrame = topFrame * CFrame.new(halfX, 0, 0)
 
-    for _, edge in ipairs(state.instances) do
+    for _, edge in ipairs({state.north, state.south, state.west, state.east}) do
         edge.Transparency = alpha
+    end
+
+    local diagonal = math.sqrt(part.Size.X * part.Size.X + part.Size.Z * part.Size.Z) * 0.86
+    state.crossA.Size = Vector3.new(diagonal, 0.055, low and 0.11 or 0.14)
+    state.crossB.Size = state.crossA.Size
+    state.crossA.CFrame = topFrame * CFrame.Angles(0, math.rad(45), 0)
+    state.crossB.CFrame = topFrame * CFrame.Angles(0, math.rad(-45), 0)
+
+    if phase == "Warning" then
+        local crossAlpha = math.clamp((low and 0.56 or 0.34) + pulse * 0.20, 0, 0.88)
+        state.crossA.Transparency = crossAlpha
+        state.crossB.Transparency = math.clamp(crossAlpha + 0.08, 0, 0.9)
+    else
+        state.crossA.Transparency = 1
+        state.crossB.Transparency = 1
     end
 end
 
