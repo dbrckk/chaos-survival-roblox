@@ -16,6 +16,16 @@ describe("World depth rules", function()
         expect(medium.HorizonStructures < high.HorizonStructures).toBe(true)
     end)
 
+    it("keeps underworld structure budgets tiered", function()
+        local low = WorldDepthRules.budgets("Low")
+        local medium = WorldDepthRules.budgets("Medium")
+        local high = WorldDepthRules.budgets("High")
+
+        expect(low.UnderworldStruts < medium.UnderworldStruts).toBe(true)
+        expect(medium.UnderworldStruts < high.UnderworldStruts).toBe(true)
+        expect(low.HorizonAccents < high.HorizonAccents).toBe(true)
+    end)
+
     it("keeps transition samples between lobby and arena", function()
         local lobby = Vector3.new(0, 0, -150)
         local arena = Vector3.new(0, 0, 0)
