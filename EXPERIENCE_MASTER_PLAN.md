@@ -62,7 +62,7 @@ ROADMAP
 =======
 PHASE A — GAME FEEL CORE
 [FAIT] A1 Caméra réactive légère : landing, impacts, pads, accélération et FOV vitesse plafonné/adaptatif.
-[FAIT] A2 Mouvement : micro-tilt, landing/burst, sensation périphérique de vitesse + lean/compression corporelle R15 locale et compatible Animate. SpeedSurge bénéficie maintenant d'un FOV/pitch/lean dédiés ; LowGravity ajoute dérive caméra aérienne et pose flottante corporelle.
+[FAIT] A2 Mouvement : micro-tilt, landing/burst, sensation périphérique de vitesse + lean/compression corporelle R15 locale et compatible Animate. SpeedSurge bénéficie d'un FOV/pitch/lean dédiés ; LowGravity ajoute dérive caméra aérienne et pose flottante ; locomotion additive désormais rythmée par la vitesse avec stride subtil, freinage, réponse de virage et réduction automatique du swing sur demi-tours.
 [FAIT] A3 Haptics adaptatifs touch/gamepad : pads, impacts, close calls, shards, Final Rush et résultats.
 [FAIT] A4 Réduction automatique du mouvement caméra sur VFX Low / mobile.
 [EN COURS] A5 Reduce Motion persistant ajouté ; QA réelle motion sickness à effectuer sur appareil.
@@ -87,7 +87,7 @@ PHASE D — VFX / ANIMATION
 [FAIT] D1 Hiérarchie telegraph -> impact -> aftermath : impacts, shock rings, afterglow, debris et ambiance résiduelle. Lecture de fuite locale réservée aux dangers réellement évitables Meteor/Bomb ; Freeze conserve son télégraphe global. Identifiants aftermath alignés et couverture complète des 11 catastrophes.
 [FAIT] D2 Debris/afterglow adaptatifs sur impacts, avec budget Low/Medium/High.
 [FAIT] D3 11 signatures catastrophe : palettes/atmosphères distinctes + warning geometry dédiée pour Meteor/Bomb/JumpShock/Disappearing Platforms. Disappearing Platforms expose un état Warning/Gone répliqué et un cadre d'effondrement local adaptatif ; Tornado ajoute une traction caméra tangentielle de proximité ; JumpShock émet un impact feedback dédié ; ShrinkingArena ajoute une pression d'écran locale et resserre aussi les vrais pads de mobilité, dont le langage visuel suit désormais la position.
-[FAIT] D4 Feedback monde + poses corporelles procédurales distinctes pour victoire, élimination et Master Round, plus états authored procéduraux jump/fall/pad launch/hazard impact/landing ; compatibles Animate/Reduce Motion.
+[FAIT] D4 Feedback monde + poses corporelles procédurales distinctes pour victoire, élimination et Master Round, plus états authored procéduraux jump/fall/pad launch/hazard impact/landing ; résultat désormais full-body (root+hanches+épaules), locomotion additive testée et compatible Animate/Reduce Motion.
 [FAIT] D5 Final Rush réduit UI méta + challenge/momentum + auras/lights/trails/highlights non essentiels.
 
 PHASE E — CUSTOMIZATION
