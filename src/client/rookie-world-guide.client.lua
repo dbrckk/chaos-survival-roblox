@@ -139,6 +139,11 @@ local function mark(part, text, color)
 end
 
 local function refresh()
+    if player:GetAttribute("DataLoaded") ~= true then
+        clearMarker()
+        return
+    end
+
     local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
     if not FirstTimeExperience.isFirstRound(games) then
         clearMarker()
@@ -181,6 +186,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     refresh()
 end)
 
+player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
 player:GetAttributeChangedSignal("Games"):Connect(refresh)
 player:GetAttributeChangedSignal("LobbyPracticeUses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
