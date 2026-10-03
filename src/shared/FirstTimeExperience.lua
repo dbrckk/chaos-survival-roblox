@@ -8,6 +8,19 @@ function FirstTimeExperience.isRookie(games)
     return math.max(0, math.floor(tonumber(games) or 0)) <= 2
 end
 
+function FirstTimeExperience.allowDoubleChaos(gamesValues)
+    if type(gamesValues) ~= "table" then
+        return true
+    end
+
+    for _, games in ipairs(gamesValues) do
+        if FirstTimeExperience.isFirstRound(games) then
+            return false
+        end
+    end
+    return true
+end
+
 function FirstTimeExperience.coachText(state, metrics)
     state = type(state) == "table" and state or {}
     metrics = type(metrics) == "table" and metrics or {}
