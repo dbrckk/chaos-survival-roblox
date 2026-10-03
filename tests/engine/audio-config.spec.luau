@@ -89,6 +89,36 @@ describe("Audio configuration", function()
         end
     end)
 
+    it("keeps spectral cue treatments within safe effect ranges", function()
+        for cueName, treatment in pairs(AudioConfig.Treatment or {}) do
+            expect(AudioConfig.Sfx[cueName] ~= nil).toBe(true)
+
+            local eq = treatment.EQ
+            if eq then
+                expect((tonumber(eq.Low) or 0) >= -20).toBe(true)
+                expect((tonumber(eq.Low) or 0) <= 10).toBe(true)
+                expect((tonumber(eq.Mid) or 0) >= -20).toBe(true)
+                expect((tonumber(eq.Mid) or 0) <= 10).toBe(true)
+                expect((tonumber(eq.High) or 0) >= -20).toBe(true)
+                expect((tonumber(eq.High) or 0) <= 10).toBe(true)
+            end
+
+            local reverb = treatment.Reverb
+            if reverb then
+                expect((tonumber(reverb.Wet) or -24) >= -80).toBe(true)
+                expect((tonumber(reverb.Wet) or -24) <= 10).toBe(true)
+                expect((tonumber(reverb.Dry) or 0) >= -80).toBe(true)
+                expect((tonumber(reverb.Dry) or 0) <= 10).toBe(true)
+                expect((tonumber(reverb.Decay) or 0.5) >= 0.1).toBe(true)
+                expect((tonumber(reverb.Decay) or 0.5) <= 20).toBe(true)
+                expect((tonumber(reverb.Density) or 0.7) >= 0).toBe(true)
+                expect((tonumber(reverb.Density) or 0.7) <= 1).toBe(true)
+                expect((tonumber(reverb.Diffusion) or 0.8) >= 0).toBe(true)
+                expect((tonumber(reverb.Diffusion) or 0.8) <= 1).toBe(true)
+            end
+        end
+    end)
+
     it("only maps disaster loops to loopable sounds", function()
         for _, cueName in pairs(AudioConfig.DisasterLoop) do
             local cue = AudioConfig.Sfx[cueName]
