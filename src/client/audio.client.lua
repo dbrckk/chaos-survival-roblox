@@ -62,6 +62,35 @@ sfxEq.MidGain = 0
 sfxEq.HighGain = 0
 sfxEq.Parent = sfxGroup
 
+local function applySoundTreatment(sound, name)
+    local treatment = AudioConfig.Treatment and AudioConfig.Treatment[name]
+    if type(treatment) ~= "table" then
+        return
+    end
+
+    local eq = treatment.EQ
+    if type(eq) == "table" then
+        local effect = Instance.new("EqualizerSoundEffect")
+        effect.Name = "CueEQ"
+        effect.LowGain = math.clamp(tonumber(eq.Low) or 0, -20, 10)
+        effect.MidGain = math.clamp(tonumber(eq.Mid) or 0, -20, 10)
+        effect.HighGain = math.clamp(tonumber(eq.High) or 0, -20, 10)
+        effect.Parent = sound
+    end
+
+    local reverb = treatment.Reverb
+    if type(reverb) == "table" then
+        local effect = Instance.new("ReverbSoundEffect")
+        effect.Name = "CueReverb"
+        effect.WetLevel = math.clamp(tonumber(reverb.Wet) or -24, -80, 10)
+        effect.DryLevel = math.clamp(tonumber(reverb.Dry) or 0, -80, 10)
+        effect.DecayTime = math.clamp(tonumber(reverb.Decay) or 0.5, 0.1, 20)
+        effect.Density = math.clamp(tonumber(reverb.Density) or 0.7, 0, 1)
+        effect.Diffusion = math.clamp(tonumber(reverb.Diffusion) or 0.8, 0, 1)
+        effect.Parent = sound
+    end
+end
+
 local function makeSound(name, definition, group)
     local sound = Instance.new("Sound")
     sound.Name = name
@@ -70,6 +99,7 @@ local function makeSound(name, definition, group)
     sound.PlaybackSpeed = definition.PlaybackSpeed or 1
     sound.Looped = definition.Looped == true
     sound.SoundGroup = group
+    applySoundTreatment(sound, name)
     sound.Parent = SoundService
     return sound
 end
