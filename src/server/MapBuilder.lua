@@ -868,6 +868,70 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Glow
     )
 
+    local runwayCenter = config.LobbyCenter + Vector3.new(0, 1.18, 17.5)
+    local runway = decorPart(
+        decor,
+        "ArenaRunway",
+        Vector3.new(14, 0.10, 29),
+        runwayCenter,
+        VisualTheme.World.Deep:Lerp(VisualTheme.World.SurfaceRaised, 0.22),
+        VisualTheme.Materials.Panel
+    )
+    runway.Transparency = 0.02
+    runway.CanCollide = false
+
+    for side = -1, 1, 2 do
+        local rail = decorPart(
+            decor,
+            side < 0 and "ArenaRunwayRailLeft" or "ArenaRunwayRailRight",
+            Vector3.new(0.30, 0.12, 29),
+            runwayCenter + Vector3.new(side * 6.4, 0.10, 0),
+            side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
+            VisualTheme.Materials.Glow
+        )
+        rail.Transparency = 0.16
+        rail.CanCollide = false
+        rail.CanTouch = false
+        rail.CanQuery = false
+    end
+
+    for i = 1, 4 do
+        local z = 7 + (i * 4.7)
+        local height = 6.5 + (i * 0.45)
+        local leftRib = decorPart(
+            decor,
+            "ArenaApproachRibL" .. i,
+            Vector3.new(0.55, height, 0.55),
+            config.LobbyCenter + Vector3.new(-7.2, 1.1 + height * 0.5, z),
+            VisualTheme.World.Metal,
+            VisualTheme.Materials.Structure
+        )
+        leftRib.Transparency = 0.04
+
+        local rightRib = decorPart(
+            decor,
+            "ArenaApproachRibR" .. i,
+            Vector3.new(0.55, height, 0.55),
+            config.LobbyCenter + Vector3.new(7.2, 1.1 + height * 0.5, z),
+            VisualTheme.World.Metal,
+            VisualTheme.Materials.Structure
+        )
+        rightRib.Transparency = 0.04
+
+        local topRib = decorPart(
+            decor,
+            "ArenaApproachRibTop" .. i,
+            Vector3.new(14.9, 0.42, 0.55),
+            config.LobbyCenter + Vector3.new(0, 1.1 + height, z),
+            i % 2 == 0 and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
+            VisualTheme.Materials.Glow
+        )
+        topRib.Transparency = 0.24
+        topRib.CanCollide = false
+        topRib.CanTouch = false
+        topRib.CanQuery = false
+    end
+
     local sign = part(
         decor,
         "ChaosSign",
