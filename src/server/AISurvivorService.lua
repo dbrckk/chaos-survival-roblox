@@ -146,6 +146,11 @@ local function arenaBase()
     return base and base:IsA("BasePart") and base or nil
 end
 
+local function arenaVariantId()
+    local _, arena = arenaParts()
+    return tostring(arena and arena:GetAttribute("VariantId") or "Classic")
+end
+
 local function arenaSpawnPosition(slot)
     local _, arena = arenaParts()
     local spawns = arena and arena:FindFirstChild("Spawns")
@@ -833,7 +838,7 @@ local function mechanicsPads()
     return result
 end
 
-local function arenaCandidates()
+local function arenaCandidates(root)
     local _, arena = arenaParts()
     local result = {}
     if not arena then
@@ -846,15 +851,21 @@ local function arenaCandidates()
     end
 
     local platforms = arena:FindFirstChild("Platforms")
+    local variantId = arenaVariantId()
     for _, part in ipairs(sortedParts(platforms)) do
+        local position = part.Position + Vector3.new(0, part.Size.Y * 0.5 + 2.4, 0)
         if AISurvivorRules.platformAvailable(
             part.CanCollide,
             part.Transparency,
             part:GetAttribute("CollapsePhase")
+        ) and AISurvivorRules.reachableElevation(
+            root and root.Position.Y or position.Y,
+            position.Y,
+            variantId
         ) then
             table.insert(result, {
                 part = part,
-                position = part.Position + Vector3.new(0, part.Size.Y * 0.5 + 2.4, 0),
+                position = position,
             })
         end
     end
@@ -885,6 +896,7 @@ local function scoreCandidate(record, root, candidate)
     local distanceFromCenter = (Vector3.new(position.X, 0, position.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude
     local travelDistance = (position - root.Position).Magnitude
     local score = (math.random() * 8) - (travelDistance * 0.035)
+    score += AISurvivorRules.routeAffinity(arenaVariantId(), position, center)
 
     if hasDisaster("RisingLava") then
         score += position.Y * (1.45 - record.profile.Risk * 0.45)
@@ -1010,6 +1022,51 @@ local function separateTarget(record, target)
     return adjusted
 end
 
+local function chooseMobilityPad(record, root, pads)
+    local variantId = arenaVariantId()
+    local center = config.ArenaCenter
+    local ranked = {}
+
+    for _, pad in ipairs(pads) do
+        local distance = (pad.Position - root.Position).Magnitude
+        local score = (math.random() * 2.5) - distance * 0.07
+
+        if variantId == "Towers" then
+            local lowOnMap = root.Position.Y < center.Y + 10
+            if lowOnMap then
+                score += 5.5
+            end
+            if hasDisaster("RisingLava") then
+                score += 7.0
+            end
+        elseif variantId == "Orbital" then
+            local offset = Vector3.new(
+                root.Position.X - center.X,
+                0,
+                root.Position.Z - center.Z
+            )
+            if offset.Magnitude >= 18 then
+                score += 4.0
+            end
+        elseif variantId == "Crossroads" then
+            score += 2.0
+        elseif hasDisaster("Tornado") then
+            score += 2.5
+        end
+
+        table.insert(ranked, {pad = pad, score = score})
+    end
+
+    table.sort(ranked, function(a, b)
+        return a.score > b.score
+    end)
+
+    local choiceRange = record.profile.Id == "Bold"
+        and math.min(2, #ranked)
+        or 1
+    return ranked[math.random(1, choiceRange)].pad
+end
+
 local function chooseArenaTarget(record, root, now)
     local socialTarget = socialArenaTarget(record, root)
     if socialTarget then
@@ -1027,7 +1084,7 @@ local function chooseArenaTarget(record, root, now)
         )
 
     if wantsPad then
-        local pad = pads[math.random(1, #pads)]
+        local pad = chooseMobilityPad(record, root, pads)
         record.targetIsPad = true
         record.targetPart = pad
         return separateTarget(record, pad.Position + Vector3.new(0, 1.8, 0)), 1.6
@@ -1036,7 +1093,7 @@ local function chooseArenaTarget(record, root, now)
     record.targetIsPad = false
     record.targetPart = nil
 
-    local candidates = arenaCandidates()
+    local candidates = arenaCandidates(root)
     if #candidates == 0 then
         return clampToArena(config.ArenaCenter + Vector3.new(math.random(-18, 18), 3, math.random(-18, 18))), 1.5
     end
