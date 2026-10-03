@@ -122,7 +122,7 @@ PHASE G — UI/UX
 
 PHASE H — PERFORMANCE
 [EN COURS] H1 Budgets dynamiques appliqués aux world VFX, impacts, lights, cosmétiques + LOD local scenery ; mesures réelles restantes.
-[EN COURS] H2 Boucles/scan client optimisés : warnings Meteor/Bomb limités aux enfants directs Workspace, VFX pads limités au dossier Arena/Mechanics, LOD scenery cache ses descendants entre changements, Tornado cache les paramètres de débris et respecte Reduce Motion, ShrinkingArena VFX cache la Base active, world-polish anime seulement l'espace de jeu actif et environment-depth reste entièrement événementiel (0 RenderStepped/Heartbeat/scan continu). Audit transversal des 11 catastrophes maintenu ; mesures réelles device encore requises.
+[EN COURS] H2 Boucles/scan client optimisés : warnings Meteor/Bomb limités aux enfants directs Workspace, VFX pads limités au dossier Arena/Mechanics, LOD scenery cache ses descendants entre changements, Tornado cache les paramètres de débris et respecte Reduce Motion, ShrinkingArena VFX cache la Base active, world-polish anime seulement l'espace de jeu actif, arena-ambient-props et arena-identity-motion dorment désormais hors READY/ROUND/RESULT, et environment-depth reste entièrement événementiel (0 RenderStepped/Heartbeat/scan continu). Audit transversal des 11 catastrophes maintenu ; mesures réelles device encore requises.
 [EN COURS] H3 Budgets VFX/Light étendus aux cosmétiques et ambience ; Low réduit lights/particles/specular, Final Rush supprime du bruit visuel.
 [A FAIRE] H4 Soak Android 30-60 min.
 [A FAIRE] H5 MicroProfiler sur appareil réel.
@@ -194,3 +194,5 @@ Ordre d'exécution immédiat
 - [FAIT] World depth premium : corridor/transit visuel lobby→arène, ribs/supports/rails sous le niveau jouable, cascade lumineuse READY, atténuation pendant ROUND, horizon très lointain centré sur l'ensemble du monde et couleurs hors catastrophe alignées sur le thème d'arène.
 - [FAIT] Horizon variant-aware : Classic reste broadcast/industriel équilibré, Towers devient plus vertical avec antennes, Crossroads plus horizontal avec bras/gantries, Orbital utilise volumes sphériques/cylindriques ; parallax obtenu naturellement par vraie géométrie 3D à différentes distances.
 - [FAIT] Void multicouche : cadre intermédiaire vers y=-17, seconde profondeur Medium/High vers y=-36, accents emissifs budgetés et fond distant non-collidable ; aucun RenderStepped/Heartbeat ajouté.
+
+- [FAIT] Perf micro-vie arène : ArenaAmbientProps et ArenaIdentityMotion conservent toutes leurs animations pendant READY/ROUND/RESULT mais passent à 0,60 s de sommeil au lobby au lieu de mettre à jour les props ~10 Hz hors écran.
