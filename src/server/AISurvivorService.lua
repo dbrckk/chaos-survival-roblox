@@ -1463,7 +1463,7 @@ local function recoverIfStuck(record, humanoid, root, now)
     return true
 end
 
-local function moveHumanLike(record, humanoid, root, target, now, urgent)
+local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaBounded)
     if not target then
         humanoid:Move(Vector3.zero)
         record.moveDirection = Vector3.zero
@@ -1530,7 +1530,9 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent)
         horizontal.Magnitude < 10 and target.Y or root.Position.Y,
         destination.Z
     )
-    humanoid:MoveTo(clampToArena(destination))
+    humanoid:MoveTo(
+        arenaBounded == false and destination or clampToArena(destination)
+    )
 end
 
 local function maybeSocialGesture(record, humanoid, root, now)
@@ -1622,7 +1624,7 @@ local function stepRecord(record, now)
     if currentState.phase == "result" then
         if now < (record.resultActionUntil or 0) then
             if record.resultAction == "sidestep" and record.resultTarget then
-                moveHumanLike(record, humanoid, root, record.resultTarget, now, false)
+                moveHumanLike(record, humanoid, root, record.resultTarget, now, false, true)
             elseif record.resultAction == "acknowledge" then
                 local nearest = nil
                 local nearestDistance = 28
@@ -1792,7 +1794,8 @@ local function stepRecord(record, now)
                 root,
                 destination,
                 now,
-                urgentTarget ~= nil
+                urgentTarget ~= nil,
+                true
             )
         end
     else
@@ -1814,7 +1817,7 @@ local function stepRecord(record, now)
             record.nextThink = now + hold
         end
 
-        moveHumanLike(record, humanoid, root, record.target, now, false)
+        moveHumanLike(record, humanoid, root, record.target, now, false, false)
     end
 end
 
