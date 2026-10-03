@@ -226,7 +226,13 @@ local function attachAnimations(record, humanoid)
                 tracks.walk:Play(0.12)
             end
             if tracks.walk then
-                tracks.walk:AdjustSpeed(math.clamp(speed / 16, 0.72, 1.35))
+                tracks.walk:AdjustSpeed(
+                    math.clamp(
+                        (speed / 16) * (record.gaitScale or 1),
+                        0.70,
+                        1.40
+                    )
+                )
             end
         else
             if tracks.walk and tracks.walk.IsPlaying then
@@ -601,6 +607,7 @@ local function newRecord(slot)
         roundTraits = AISurvivorRules.roundTraits(profile, slot, 1),
         nextHesitationAt = 0,
         nextReconsiderAt = 0,
+        gaitScale = 0.94 + math.random() * 0.12,
         moveDirection = Vector3.zero,
         lastMoveTarget = nil,
         turnPauseUntil = 0,
