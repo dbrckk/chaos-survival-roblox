@@ -95,6 +95,40 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+function AISurvivorRules.lobbyActivity(roll, socialChance, practiceChance, voteActive)
+    if voteActive == true then
+        return "vote"
+    end
+
+    local value = math.clamp(tonumber(roll) or 0, 0, 0.999)
+    local social = math.clamp(tonumber(socialChance) or 0.2, 0, 0.55)
+    local practice = math.clamp(tonumber(practiceChance) or 0.2, 0, 0.45)
+
+    if value < social then
+        return "social"
+    elseif value < social + practice then
+        return "practice"
+    end
+    return "roam"
+end
+
+function AISurvivorRules.voteGatherOffset(slot, roundNumber)
+    local safeSlot = math.max(1, math.floor(tonumber(slot) or 1))
+    local safeRound = math.max(1, math.floor(tonumber(roundNumber) or 1))
+    local angle = math.rad(((safeSlot * 113) + (safeRound * 37)) % 360)
+    local radius = 6 + ((safeSlot * 7 + safeRound * 3) % 5)
+    return Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+end
+
+function AISurvivorRules.socialSpacing(slot, partnerSlot)
+    local a = math.max(1, math.floor(tonumber(slot) or 1))
+    local b = math.max(1, math.floor(tonumber(partnerSlot) or 1))
+    local phase = ((a * 41 + b * 29) % 360)
+    local angle = math.rad(phase)
+    local radius = 4.5 + ((a + b) % 4) * 0.65
+    return Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+end
+
 function AISurvivorRules.appearanceStyle(identityIndex)
     local index = math.max(1, math.floor(tonumber(identityIndex) or 1))
     return ((index - 1) % 5) + 1
