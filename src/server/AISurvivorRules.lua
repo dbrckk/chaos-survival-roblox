@@ -83,7 +83,7 @@ function AISurvivorRules.roundTraits(profile, slot, roundNumber)
         PadChance = padChance,
         HesitationChance = math.clamp(0.035 + mistake * 0.55, 0.05, 0.18),
         ReconsiderChance = math.clamp(0.03 + social * 0.16 + risk * 0.05, 0.05, 0.13),
-        FollowThrough = math.clamp(0.72 + (1 - mistake) * 0.20, 0.76, 0.94),
+        FollowThrough = math.clamp(0.88 + (1 - mistake) * 0.24, 0.92, 1.12),
         DirectionBias = wave(29, 5),
     }
 end
