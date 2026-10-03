@@ -166,7 +166,8 @@ local function playRaw(name, pitchVariance, volumeScale, pitchOffset)
     if not baseSound then return end
 
     local sound = baseSound
-    if baseSound.IsPlaying and not baseSound.Looped then
+    local needsVoice = baseSound.Looped or baseSound.IsPlaying
+    if needsVoice then
         local active = activeVoices[name] or 0
         if active >= 2 then
             return
@@ -191,7 +192,7 @@ local function playRaw(name, pitchVariance, volumeScale, pitchOffset)
         end
 
         sound.Ended:Connect(cleanup)
-        task.delay(3.5, cleanup)
+        task.delay(baseSound.Looped and 1.6 or 3.5, cleanup)
     end
 
     local baseSpeed = basePlaybackSpeeds[name] or 1
@@ -635,11 +636,16 @@ end)
 
 
 local healthConnection = nil
+local stateConnection = nil
 
 local function bindHealthAudio(character)
     if healthConnection then
         healthConnection:Disconnect()
         healthConnection = nil
+    end
+    if stateConnection then
+        stateConnection:Disconnect()
+        stateConnection = nil
     end
 
     local humanoid = character:WaitForChild("Humanoid", 5)
@@ -648,6 +654,35 @@ local function bindHealthAudio(character)
     end
 
     local previousHealth = humanoid.Health
+    local airborneAt = nil
+
+    stateConnection = humanoid.StateChanged:Connect(function(_, state)
+        if state == Enum.HumanoidStateType.Freefall then
+            airborneAt = airborneAt or os.clock()
+        elseif airborneAt and (
+            state == Enum.HumanoidStateType.Landed
+            or state == Enum.HumanoidStateType.Running
+            or state == Enum.HumanoidStateType.RunningNoPhysics
+        ) then
+            local airtime = os.clock() - airborneAt
+            airborneAt = nil
+
+            if airtime >= 0.38 then
+                local volumeScale = math.clamp(
+                    0.10 + (airtime - 0.38) * 0.12,
+                    0.10,
+                    0.24
+                )
+                playRaw(
+                    "Hit",
+                    0.015,
+                    volumeScale,
+                    airtime > 0.85 and -0.42 or -0.26
+                )
+            end
+        end
+    end)
+
     healthConnection = humanoid.HealthChanged:Connect(function(health)
         if health < previousHealth and health > 0 then
             play("Hit")
