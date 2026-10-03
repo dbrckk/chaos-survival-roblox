@@ -36,6 +36,7 @@ describe("Chaos Survival engine", function()
 
         local spawns = arena and arena:FindFirstChild("Spawns")
         local platforms = arena and arena:FindFirstChild("Platforms")
+        local entryGuides = arena and arena:FindFirstChild("EntryGuides")
         local decor = arena and arena:FindFirstChild("Decor")
         local killPlane = arena and arena:FindFirstChild("KillPlane")
 
@@ -45,8 +46,22 @@ describe("Chaos Survival engine", function()
         expect((killPlane :: BasePart).Position.Y < Config.ArenaCenter.Y - 10).toBe(true)
         expect(spawns ~= nil).toBe(true)
         expect(platforms ~= nil).toBe(true)
+        expect(entryGuides ~= nil).toBe(true)
+        expect(#(entryGuides :: Folder):GetChildren()).toBe(#(spawns :: Folder):GetChildren() * 2)
         expect(decor ~= nil).toBe(true)
         expect(#(spawns :: Folder):GetChildren() >= 8).toBe(true)
+        local firstSpawn = (spawns :: Folder):FindFirstChild("Spawn1")
+        expect(firstSpawn ~= nil).toBe(true)
+        if firstSpawn and firstSpawn:IsA("BasePart") then
+            local inward = Vector3.new(
+                Config.ArenaCenter.X - firstSpawn.Position.X,
+                0,
+                Config.ArenaCenter.Z - firstSpawn.Position.Z
+            )
+            if inward.Magnitude > 0.01 then
+                expect(firstSpawn.CFrame.LookVector:Dot(inward.Unit) > 0.15).toBe(true)
+            end
+        end
         expect(#(platforms :: Folder):GetChildren() >= 14).toBe(true)
         expect((decor :: Folder):FindFirstChild("CenterBeacon") ~= nil).toBe(true)
         expect((decor :: Folder):FindFirstChild("PlatformPanel1") ~= nil).toBe(true)
