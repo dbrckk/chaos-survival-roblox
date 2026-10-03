@@ -1,10 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+local currentState = nil
 local folder = Instance.new("Folder")
 folder.Name = "ArenaSurfaceDetailLocal"
 folder.Parent = workspace
@@ -25,6 +28,7 @@ local function makePart(name, size, cframe, color, material, transparency)
     p.CastShadow = false
     p.Material = material
     p.Color = color
+    p:SetAttribute("SurfaceBaseColor", color)
     p.Transparency = transparency or 0
     p.Parent = folder
     return p
@@ -152,9 +156,40 @@ local function rebuild()
     end
 end
 
+local function refreshSurfaceAccent()
+    local state = currentState
+    local profile = state and DisasterVisuals.combine(state.disasterIds or {}) or nil
+    local secondary = state and state.disasterIds and state.disasterIds[2]
+        and DisasterVisuals.get(state.disasterIds[2]) or nil
+    local critical = state and state.phase == "round" and state.finalRush == true
+
+    for index, descendant in ipairs(folder:GetChildren()) do
+        if descendant:IsA("BasePart") then
+            local baseColor = descendant:GetAttribute("SurfaceBaseColor")
+            if typeof(baseColor) ~= "Color3" then
+                baseColor = descendant.Color
+            end
+
+            if state and state.phase == "round" and profile and not critical then
+                local accent = profile.Accent
+                if secondary and index % 2 == 0 then
+                    accent = secondary.Accent
+                end
+                local amount = descendant.Material == Enum.Material.Neon and 0.30 or 0.12
+                descendant.Color = baseColor:Lerp(accent, amount)
+            else
+                descendant.Color = baseColor
+            end
+        end
+    end
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(rebuild)
+        task.defer(function()
+            rebuild()
+            refreshSurfaceAccent()
+        end)
     end
 end)
 
@@ -165,7 +200,16 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
+    task.defer(function()
+        rebuild()
+        refreshSurfaceAccent()
+    end)
+end)
+
+stateEvent.OnClientEvent:Connect(function(state)
+    currentState = state
+    refreshSurfaceAccent()
 end)
 
 rebuild()
+refreshSurfaceAccent()
