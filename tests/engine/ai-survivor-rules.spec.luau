@@ -132,6 +132,13 @@ describe("AI survivor rules", function()
         expect(bodyA ~= bodyB or proportionA ~= proportionB).toBe(true)
     end)
 
+    it("slows the ai brain when idle or showing results", function()
+        expect(AISurvivorRules.brainCadence(0, "waiting")).toBe(0.75)
+        expect(AISurvivorRules.brainCadence(3, "result")).toBe(0.42)
+        expect(AISurvivorRules.brainCadence(3, "round")).toBe(0.18)
+        expect(AISurvivorRules.brainCadence(3, "intermission")).toBe(0.18)
+    end)
+
     it("keeps identity-based depth and head scales bounded and varied", function()
         local depthA, headA = AISurvivorRules.shapeScales(1)
         local depthB, headB = AISurvivorRules.shapeScales(2)
