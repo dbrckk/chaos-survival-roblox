@@ -683,6 +683,7 @@ local function newRecord(slot)
         nextSocialAt = 0,
         nextPracticeAt = 0,
         lastSocialPartnerSlot = nil,
+        lobbyRoamCycle = 0,
     }
 
     record.proxy = {
@@ -1359,6 +1360,18 @@ local function chooseLobbyTarget(record)
     end
 
     record.lobbyActivity = "roam"
+    record.lobbyRoamCycle = (record.lobbyRoamCycle or 0) + 1
+
+    if math.random() < 0.56 then
+        local offset = AISurvivorRules.lobbyNodeOffset(
+            record.slot,
+            record.lobbyRoamCycle
+        )
+        return center + offset + Vector3.new(0, 2.7, 0),
+            1.8 + math.random() * 2.2,
+            nil
+    end
+
     local angle = math.random() * math.pi * 2
     local radius = 8 + math.random() * 20
     local position = center + Vector3.new(
