@@ -543,10 +543,12 @@ RunService.RenderStepped:Connect(function(dt)
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
     local motionScale = reducedMotion and 0.28 or 1
 
-    local coreTier = tier
-    local coreCenter = cachedLobbyCoreCenter
+    local animateLobby = phase == "waiting" or phase == "intermission"
+    if animateLobby then
+        local coreTier = tier
+        local coreCenter = cachedLobbyCoreCenter
 
-    for _, corePart in ipairs(lobbyCoreParts) do
+        for _, corePart in ipairs(lobbyCoreParts) do
         if corePart.Parent then
             local index = tonumber(corePart:GetAttribute("CorePartIndex")) or 0
             local verticalWave = math.sin(clock * 1.8) * 0.22 * motionScale
@@ -590,18 +592,19 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    local lobbySpeed = (phase == "round" and 0.55 or 0.34) * motionScale
-    for i, segment in ipairs(lobbySegments) do
-        if segment.Parent then
-            local baseAngle = segment:GetAttribute("OrbitAngle") or 0
-            local angle = baseAngle + clock * lobbySpeed
-            local center = cachedLobbyCenter
+        local lobbySpeed = 0.34 * motionScale
+        for i, segment in ipairs(lobbySegments) do
+            if segment.Parent then
+                local baseAngle = segment:GetAttribute("OrbitAngle") or 0
+                local angle = baseAngle + clock * lobbySpeed
+                local center = cachedLobbyCenter
 
-            local radius = 15.5
-            local position = center + Vector3.new(math.cos(angle) * radius, 1.0, math.sin(angle) * radius)
-            segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
-            local wave = (math.sin(clock * 2.8 + i * 0.7) + 1) * 0.5
-            segment.Transparency = 0.18 + wave * 0.34
+                local radius = 15.5
+                local position = center + Vector3.new(math.cos(angle) * radius, 1.0, math.sin(angle) * radius)
+                segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
+                local wave = (math.sin(clock * 2.8 + i * 0.7) + 1) * 0.5
+                segment.Transparency = 0.18 + wave * 0.34
+            end
         end
     end
 
@@ -618,8 +621,10 @@ RunService.RenderStepped:Connect(function(dt)
         visualAccent = Color3.fromRGB(255, 205, 85):Lerp(blendedAccent, 0.28)
     end
 
-    local linkTier = tier
-    for _, attachment in ipairs(arenaEnergyLinks) do
+    local animateArena = phase == "ready" or phase == "round" or phase == "result"
+    if animateArena then
+        local linkTier = tier
+        for _, attachment in ipairs(arenaEnergyLinks) do
         if attachment.Parent then
             local beam = attachment:FindFirstChildOfClass("Beam")
             if beam then
@@ -698,16 +703,17 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    for _, attachment in ipairs(beaconEmitters) do
-        if attachment.Parent then
-            local emitter = attachment:FindFirstChildOfClass("ParticleEmitter")
-            if emitter then
-                emitter.Color = ColorSequence.new(visualAccent, Color3.new(1, 1, 1))
-                local baseRate = phase == "round"
-                    and (finalRush and 22 or (overdrive and 18 or 12))
-                    or (phase == "ready" and (7 + readyBoost * 8) or 6)
-                local targetRate = baseRate * tier.ParticleScale * intensity
-                emitter.Rate += (targetRate - emitter.Rate) * math.min(1, elapsed * 6)
+        for _, attachment in ipairs(beaconEmitters) do
+            if attachment.Parent then
+                local emitter = attachment:FindFirstChildOfClass("ParticleEmitter")
+                if emitter then
+                    emitter.Color = ColorSequence.new(visualAccent, Color3.new(1, 1, 1))
+                    local baseRate = phase == "round"
+                        and (finalRush and 22 or (overdrive and 18 or 12))
+                        or (phase == "ready" and (7 + readyBoost * 8) or 6)
+                    local targetRate = baseRate * tier.ParticleScale * intensity
+                    emitter.Rate += (targetRate - emitter.Rate) * math.min(1, elapsed * 6)
+                end
             end
         end
     end
