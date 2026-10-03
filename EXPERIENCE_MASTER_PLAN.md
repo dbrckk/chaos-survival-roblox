@@ -76,12 +76,12 @@ PHASE B — AUDIO PREMIUM
 [EN COURS] B5 Profils tonaux/pitch propres à chaque arène ajoutés ; assets d'ambiance dédiés à sélectionner plus tard.
 
 PHASE C — MAP ART PASS
-[EN COURS] C1 Classic Grid : broadcast fins + grille animée + mâts broadcast skyline + éclairage froid dédié ; QA visuelle finale restante.
-[EN COURS] C2 Towers : machinery/antennes + énergie verticale + mégastructures/rails distants + éclairage acier/cyan ; QA finale restante.
-[EN COURS] C3 Crossroads : gantries/signaux + flux directionnel + grands portiques skyline + éclairage violet urbain ; QA finale restante.
-[EN COURS] C4 Orbital : reactor nodes/struts + couronne + anneau skyline/satellites + éclairage vert-cyan spatial ; QA finale restante.
+[EN COURS] C1 Classic Grid : broadcast fins, grille animée, mâts skyline, cadrage broadcast, surface technique et sous-structure ; QA visuelle finale restante.
+[EN COURS] C2 Towers : machinery/antennes, énergie verticale, mégastructures, rails, cadrage industriel, anneaux de surface et supports profonds ; QA finale restante.
+[EN COURS] C3 Crossroads : gantries/signaux, flux directionnel, portiques skyline, cadrage transit, lanes lumineuses et midground urbain ; QA finale restante.
+[EN COURS] C4 Orbital : reactor nodes/struts, couronne, anneaux skyline, satellites, arcs de surface et sous-structure orbitale ; QA finale restante.
 [FAIT] C5 Lobby hub : couronne, panneaux identité/fair-play, progression personnelle et runway/ribs cadrant clairement le portail arène.
-[EN COURS] C6 Micro-décors animés + skyline architecturale distincte + supports plateformes + couronne Chaos Core, adaptatifs ; QA visuelle finale restante.
+[EN COURS] C6 Profondeur en 4 couches : surface détaillée, sous-structure, midground architectural et skyline distincte + props animés adaptatifs ; QA visuelle finale restante.
 [FAIT] C7 Signatures animées distinctes + 3 profils de rythme/direction/amplitude alternés à chaque round.
 
 PHASE D — VFX / ANIMATION
