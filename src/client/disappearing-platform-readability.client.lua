@@ -103,36 +103,68 @@ local function refreshPart(part)
     ensureState(part)
 end
 
+local bound = setmetatable({}, {__mode = "k"})
+
 local function bindPart(part)
-    if not part:IsA("BasePart") or not part:IsDescendantOf(workspace) then
+    if not part:IsA("BasePart") or bound[part] then
         return
     end
+    bound[part] = true
 
     part:GetAttributeChangedSignal("CollapsePhase"):Connect(function()
         refreshPart(part)
     end)
 
-    if part:GetAttribute("CollapsePhase") ~= nil then
-        refreshPart(part)
-    end
+    refreshPart(part)
 end
 
-workspace.DescendantAdded:Connect(function(instance)
-    if instance:IsA("BasePart") then
-        bindPart(instance)
+local function bindPlatformsFolder(platforms)
+    if not platforms then
+        return
+    end
+
+    for _, child in ipairs(platforms:GetChildren()) do
+        if child:IsA("BasePart") then
+            bindPart(child)
+        end
+    end
+
+    platforms.ChildAdded:Connect(function(child)
+        if child:IsA("BasePart") then
+            bindPart(child)
+        end
+    end)
+end
+
+local function bindGeneratedMap(generated)
+    local arena = generated:FindFirstChild("Arena")
+    if not arena then
+        arena = generated:WaitForChild("Arena", 5)
+    end
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    if not platforms and arena then
+        platforms = arena:WaitForChild("Platforms", 5)
+    end
+    bindPlatformsFolder(platforms)
+end
+
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        task.defer(bindGeneratedMap, child)
     end
 end)
 
-workspace.DescendantRemoving:Connect(function(instance)
-    if tracked[instance] then
-        clearState(instance)
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        for part in pairs(tracked) do
+            clearState(part)
+        end
     end
 end)
 
-for _, descendant in ipairs(workspace:GetDescendants()) do
-    if descendant:IsA("BasePart") and descendant:GetAttribute("CollapsePhase") ~= nil then
-        bindPart(descendant)
-    end
+local existing = workspace:FindFirstChild("GeneratedMap")
+if existing then
+    task.defer(bindGeneratedMap, existing)
 end
 
 RunService.RenderStepped:Connect(function(dt)
