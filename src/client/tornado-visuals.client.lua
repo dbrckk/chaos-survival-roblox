@@ -15,6 +15,8 @@ local debrisFolder = nil
 local debris = {}
 local pulseClock = 0
 local updateClock = 0
+local renderConnection = nil
+local ensureRenderLoop
 
 local bindToken = 0
 
@@ -85,6 +87,10 @@ local function bind(model)
     pulseClock = 0
     updateClock = 0
 
+    if ensureRenderLoop then
+        ensureRenderLoop()
+    end
+
     task.spawn(function()
         local nextDangerZone = model:WaitForChild("DangerZone", 2)
         local nextLower = model:WaitForChild("LowerFunnel", 2)
@@ -138,10 +144,17 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     end
 end)
 
-RunService.RenderStepped:Connect(function(dt)
-    if not activeModel or not activeModel.Parent then
+ensureRenderLoop = function()
+    if renderConnection or not activeModel or not activeModel.Parent then
         return
     end
+
+    renderConnection = RunService.RenderStepped:Connect(function(dt)
+        if not activeModel or not activeModel.Parent then
+            renderConnection:Disconnect()
+            renderConnection = nil
+            return
+        end
 
     pulseClock += dt
     updateClock += dt
@@ -199,4 +212,7 @@ RunService.RenderStepped:Connect(function(dt)
             end
         end
     end
-end)
+    end)
+end
+
+ensureRenderLoop()
