@@ -5,6 +5,8 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local feedbackEvent = remotes:WaitForChild("RoundFeedback")
+local mechanicFeedbackEvent = remotes:WaitForChild("ArenaMechanicFeedback")
+local hazardImpactEvent = remotes:WaitForChild("HazardImpactFeedback")
 local stateEvent = remotes:WaitForChild("RoundState")
 
 local character = nil
@@ -24,6 +26,10 @@ local airborne = false
 local lastY = 0
 local speedSurgeActive = false
 local lowGravityActive = false
+local launchWeight = 0
+local impactWeight = 0
+local jumpWeight = 0
+local fallWeight = 0
 
 local function motor(parent, name)
     local item = parent and parent:FindFirstChild(name)
@@ -55,6 +61,10 @@ local function bind(nextCharacter)
     celebrationUntil = 0
     airborne = false
     lastY = 0
+    launchWeight = 0
+    impactWeight = 0
+    jumpWeight = 0
+    fallWeight = 0
 
     if not humanoid or not root or humanoid.RigType ~= Enum.HumanoidRigType.R15 then
         return
@@ -70,7 +80,9 @@ local function bind(nextCharacter)
     rightShoulder = motor(upper, "RightShoulder")
 
     humanoid.StateChanged:Connect(function(_, state)
-        if state == Enum.HumanoidStateType.Freefall then
+        if state == Enum.HumanoidStateType.Jumping then
+            jumpWeight = math.max(jumpWeight, 1)
+        elseif state == Enum.HumanoidStateType.Freefall then
             airborne = true
         elseif airborne and (
             state == Enum.HumanoidStateType.Landed
@@ -115,6 +127,39 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
     speedSurgeActive = surge
     lowGravityActive = lowGravity
+end)
+
+mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
+    if player:GetAttribute("ReduceMotion") == true then
+        return
+    end
+    launchWeight = math.max(
+        launchWeight,
+        type(payload) == "table" and payload.overdrive == true and 1 or 0.72
+    )
+end)
+
+hazardImpactEvent.OnClientEvent:Connect(function(payload)
+    if player:GetAttribute("ReduceMotion") == true
+        or typeof(payload) ~= "table"
+        or not root
+        or not root.Parent
+    then
+        return
+    end
+
+    local position = payload.position
+    if typeof(position) ~= "Vector3" then
+        return
+    end
+
+    local distance = (root.Position - position).Magnitude
+    local radius = math.clamp(tonumber(payload.radius) or 8, 1, 40)
+    local reach = math.max(20, radius * 4.2)
+    if distance <= reach then
+        local proximity = 1 - math.clamp(distance / reach, 0, 1)
+        impactWeight = math.max(impactWeight, proximity * 0.82)
+    end
 end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
@@ -174,6 +219,21 @@ RunService:BindToRenderStep(
         local scale = reduced and 0.18 or 1
 
         landing *= math.exp(-dt * 11)
+        launchWeight *= math.exp(-dt * 4.8)
+        impactWeight *= math.exp(-dt * 8.5)
+        jumpWeight *= math.exp(-dt * 6.5)
+
+        if not grounded then
+            local downward = math.clamp(-velocity.Y / 46, 0, 1)
+            local upward = math.clamp(velocity.Y / 42, 0, 1)
+            fallWeight = math.max(
+                fallWeight * math.exp(-dt * 4.2),
+                downward * (lowGravityActive and 0.45 or 1)
+            )
+            jumpWeight = math.max(jumpWeight, upward * 0.42)
+        else
+            fallWeight *= math.exp(-dt * 12)
+        end
         local forward = math.clamp(-localVelocity.Z / 42, -1, 1)
         local side = math.clamp(localVelocity.X / 38, -1, 1)
         local moveWeight = moving and math.min(1, speed / 17) or 0
@@ -198,25 +258,62 @@ RunService:BindToRenderStep(
         local moonFloat = lowGravityActive and not grounded
             and math.sin(os.clock() * 2.0) * 1.4
             or 0
+        local actionPitch = (
+            -launchWeight * 8.5
+            - jumpWeight * 4.0
+            + fallWeight * 5.5
+            + impactWeight * 4.2
+        ) * scale
+        local actionRoll = impactWeight
+            * math.sin(os.clock() * 24)
+            * math.rad(5.5)
+            * scale
+
         local waistTarget = CFrame.Angles(
-            math.rad(-3.2 * forward * moveWeight - landing * 5.5 - surgeLean + moonFloat) * scale,
+            math.rad(-3.2 * forward * moveWeight - landing * 5.5 - surgeLean + moonFloat) * scale
+                + math.rad(actionPitch),
             0,
-            math.rad(-3.8 * side * moveWeight) * scale
+            math.rad(-3.8 * side * moveWeight) * scale + actionRoll
         ) * celebrationWaist
         local rootTarget = CFrame.new(
             0,
-            grounded and (-0.035 * moveWeight - landing * 0.075) * scale or 0,
+            grounded and (-0.035 * moveWeight - landing * 0.075) * scale
+                or (-0.03 * jumpWeight + 0.025 * fallWeight) * scale,
             0
         ) * CFrame.Angles(
-            math.rad(1.4 * forward * moveWeight + landing * 2.4) * scale,
+            math.rad(
+                1.4 * forward * moveWeight
+                + landing * 2.4
+                - launchWeight * 3.5
+                + fallWeight * 2.0
+            ) * scale,
             0,
             math.rad(1.6 * side * moveWeight) * scale
         )
 
         local hipCounter = math.rad(1.5 * side * moveWeight) * scale
         local moonLeg = lowGravityActive and not grounded and math.rad(4.5) * scale or 0
-        local leftTarget = CFrame.Angles(moonLeg, 0, hipCounter)
-        local rightTarget = CFrame.Angles(-moonLeg, 0, hipCounter)
+        local tuck = math.rad((jumpWeight * 9.0) + (fallWeight * 5.5)) * scale
+        local leftTarget = CFrame.Angles(moonLeg + tuck, 0, hipCounter)
+        local rightTarget = CFrame.Angles(-moonLeg + tuck, 0, hipCounter)
+
+        local actionArmPitch = math.rad(
+            -launchWeight * 24
+            + jumpWeight * 10
+            + fallWeight * 18
+            - landing * 11
+        ) * scale
+        local impactArmRoll = math.rad(impactWeight * 11) * scale
+        local leftActionShoulder = CFrame.Angles(
+            actionArmPitch,
+            0,
+            -impactArmRoll
+        )
+        local rightActionShoulder = CFrame.Angles(
+            actionArmPitch,
+            0,
+            impactArmRoll
+        )
 
         local alpha = expAlpha(grounded and 11 or 7, dt)
         if waist then
@@ -232,10 +329,16 @@ RunService:BindToRenderStep(
             rightHip.Transform = rightHip.Transform:Lerp(rightTarget, alpha)
         end
         if leftShoulder then
-            leftShoulder.Transform = leftShoulder.Transform:Lerp(celebrationLeftShoulder, alpha)
+            leftShoulder.Transform = leftShoulder.Transform:Lerp(
+                leftActionShoulder * celebrationLeftShoulder,
+                alpha
+            )
         end
         if rightShoulder then
-            rightShoulder.Transform = rightShoulder.Transform:Lerp(celebrationRightShoulder, alpha)
+            rightShoulder.Transform = rightShoulder.Transform:Lerp(
+                rightActionShoulder * celebrationRightShoulder,
+                alpha
+            )
         end
     end
 )
