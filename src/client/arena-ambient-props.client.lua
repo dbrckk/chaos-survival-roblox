@@ -173,18 +173,39 @@ local function rebuild()
     end
 end
 
+local mapConnection = nil
+
+local function bindGeneratedMap(generated)
+    if mapConnection then
+        mapConnection:Disconnect()
+        mapConnection = nil
+    end
+
+    if generated then
+        mapConnection = generated.ChildAdded:Connect(function(child)
+            if child.Name == "Arena" then
+                task.defer(rebuild)
+            end
+        end)
+    end
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(child)
         task.defer(rebuild)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(nil)
         clear()
         currentArena = nil
     end
 end)
+
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     task.defer(rebuild)
