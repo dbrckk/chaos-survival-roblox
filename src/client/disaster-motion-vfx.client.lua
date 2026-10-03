@@ -15,6 +15,7 @@ local blackoutParts = {}
 local clock = 0
 local updateClock = 0
 local currentPhase = "waiting"
+local activeSignature = ""
 
 local function has(id)
     return activeIds[id] == true
@@ -269,13 +270,25 @@ local function ensureBlackoutVisuals()
 end
 
 local function applyState(state)
-    currentPhase = tostring(state.phase or "waiting")
-    table.clear(activeIds)
+    local nextPhase = tostring(state.phase or "waiting")
+    local nextIds = {}
     for _, id in ipairs(state.disasterIds or {}) do
+        table.insert(nextIds, tostring(id))
+    end
+    table.sort(nextIds)
+    local nextSignature = nextPhase .. "|" .. table.concat(nextIds, ",")
+
+    currentPhase = nextPhase
+    table.clear(activeIds)
+    for _, id in ipairs(nextIds) do
         activeIds[id] = true
     end
 
-    rebuildCharacterEffects()
+    if nextSignature ~= activeSignature then
+        activeSignature = nextSignature
+        rebuildCharacterEffects()
+    end
+
     ensureShrinkVisuals()
     ensureBlackoutVisuals()
 end
