@@ -95,6 +95,25 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+function AISurvivorRules.routeChoiceWidth(risk, candidateCount)
+    local count = math.max(1, math.floor(tonumber(candidateCount) or 1))
+    local value = math.clamp(tonumber(risk) or 0.5, 0, 1)
+
+    if value >= 0.66 then
+        return math.min(3, count)
+    elseif value >= 0.36 then
+        return math.min(2, count)
+    end
+
+    return 1
+end
+
+function AISurvivorRules.padChoiceWidth(risk, candidateCount)
+    local count = math.max(1, math.floor(tonumber(candidateCount) or 1))
+    local value = math.clamp(tonumber(risk) or 0.5, 0, 1)
+    return value >= 0.68 and math.min(2, count) or 1
+end
+
 function AISurvivorRules.survivalPressure(health, maxHealth, finalRush, doubleChaos)
     local maximum = math.max(1, tonumber(maxHealth) or 100)
     local ratio = math.clamp((tonumber(health) or maximum) / maximum, 0, 1)
