@@ -141,6 +141,13 @@ function AISurvivorRules.bodyScales(identityIndex)
     return math.clamp(body, 0.04, 0.20), math.clamp(proportion, 0.08, 0.28)
 end
 
+function AISurvivorRules.shapeScales(identityIndex)
+    local index = math.max(1, math.floor(tonumber(identityIndex) or 1))
+    local depth = 0.94 + ((index * 11) % 7) * 0.02
+    local head = 0.95 + ((index * 19) % 6) * 0.02
+    return math.clamp(depth, 0.94, 1.06), math.clamp(head, 0.95, 1.05)
+end
+
 function AISurvivorRules.resultReaction(roll, risk)
     local value = math.clamp(tonumber(roll) or 0, 0, 0.999)
     local r = math.clamp(tonumber(risk) or 0.5, 0, 1)
