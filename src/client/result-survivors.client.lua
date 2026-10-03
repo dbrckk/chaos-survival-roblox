@@ -24,30 +24,43 @@ local function clear()
     table.clear(active)
 end
 
-local function spotlight(target)
-    if active[target.UserId] then
+local function spotlightModel(key, model, labelText, localFocus)
+    if active[key] then
         return
     end
 
-    local character = target.Character
-    local head = character and character:FindFirstChild("Head")
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not character or not head or not head:IsA("BasePart") or not root or not root:IsA("BasePart") then
+    local head = model and model:FindFirstChild("Head")
+    local root = model and model:FindFirstChild("HumanoidRootPart")
+    local humanoid = model and model:FindFirstChildOfClass("Humanoid")
+    if not model
+        or not head
+        or not head:IsA("BasePart")
+        or not root
+        or not root:IsA("BasePart")
+        or not humanoid
+        or humanoid.Health <= 0
+    then
         return
     end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local bundle = {}
+    local accent = localFocus
+        and Color3.fromRGB(95, 215, 255)
+        or Color3.fromRGB(85, 235, 165)
+    local textColor = localFocus
+        and Color3.fromRGB(215, 248, 255)
+        or Color3.fromRGB(175, 255, 205)
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "ResultSurvivorHighlight"
-    highlight.Adornee = character
-    highlight.FillColor = Color3.fromRGB(85, 235, 165)
-    highlight.FillTransparency = 0.88
-    highlight.OutlineColor = Color3.fromRGB(210, 255, 225)
-    highlight.OutlineTransparency = 0.08
+    highlight.Adornee = model
+    highlight.FillColor = accent
+    highlight.FillTransparency = localFocus and 0.80 or 0.88
+    highlight.OutlineColor = accent:Lerp(Color3.new(1, 1, 1), 0.52)
+    highlight.OutlineTransparency = localFocus and 0.02 or 0.08
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-    highlight.Parent = character
+    highlight.Parent = model
     table.insert(bundle, highlight)
 
     local gui = Instance.new("BillboardGui")
@@ -55,20 +68,22 @@ local function spotlight(target)
     gui.Adornee = head
     gui.AlwaysOnTop = true
     gui.LightInfluence = 0
-    gui.Size = UDim2.fromOffset(150, 38)
-    gui.StudsOffsetWorldSpace = Vector3.new(0, 3.3, 0)
+    gui.Size = UDim2.fromOffset(localFocus and 178 or 150, 38)
+    gui.StudsOffsetWorldSpace = Vector3.new(0, localFocus and 3.6 or 3.3, 0)
     gui.MaxDistance = 160
     gui.Parent = folder
     table.insert(bundle, gui)
 
     local label = Instance.new("TextLabel")
     label.Size = UDim2.fromScale(1, 1)
-    label.BackgroundColor3 = Color3.fromRGB(14, 40, 30)
+    label.BackgroundColor3 = localFocus
+        and Color3.fromRGB(15, 38, 52)
+        or Color3.fromRGB(14, 40, 30)
     label.BackgroundTransparency = 0.12
     label.BorderSizePixel = 0
     label.Font = Enum.Font.GothamBlack
-    label.Text = "SURVIVOR"
-    label.TextColor3 = Color3.fromRGB(175, 255, 205)
+    label.Text = labelText or "SURVIVOR"
+    label.TextColor3 = textColor
     label.TextScaled = true
     label.TextTransparency = 1
     label.Parent = gui
@@ -78,9 +93,9 @@ local function spotlight(target)
     corner.Parent = label
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(90, 235, 165)
-    stroke.Thickness = 1.2
-    stroke.Transparency = 0.28
+    stroke.Color = accent
+    stroke.Thickness = localFocus and 1.6 or 1.2
+    stroke.Transparency = localFocus and 0.12 or 0.28
     stroke.Parent = label
 
     TweenService:Create(label, TweenInfo.new(0.18), {TextTransparency = 0}):Play()
@@ -88,21 +103,50 @@ local function spotlight(target)
     if tier.Name ~= "Low" then
         local sparkles = Instance.new("Sparkles")
         sparkles.Name = "ResultSurvivorSparkles"
-        sparkles.SparkleColor = Color3.fromRGB(120, 255, 190)
+        sparkles.SparkleColor = accent
         sparkles.Parent = root
         table.insert(bundle, sparkles)
 
         local light = Instance.new("PointLight")
         light.Name = "ResultSurvivorGlow"
-        light.Color = Color3.fromRGB(100, 245, 175)
-        light.Brightness = 1.2 * tier.Scale
-        light.Range = 10 + 4 * tier.Scale
+        light.Color = accent
+        light.Brightness = (localFocus and 1.5 or 1.2) * tier.Scale
+        light.Range = (localFocus and 13 or 10) + 4 * tier.Scale
         light.Shadows = false
         light.Parent = root
         table.insert(bundle, light)
     end
 
-    active[target.UserId] = bundle
+    active[key] = bundle
+end
+
+local function spotlightPlayer(target)
+    local isLocal = target == player
+    spotlightModel(
+        "player:" .. tostring(target.UserId),
+        target.Character,
+        isLocal and "YOU SURVIVED" or "SURVIVOR",
+        isLocal
+    )
+end
+
+local function spotlightBots(desired)
+    local bots = workspace:FindFirstChild("AISurvivors")
+    if not bots then
+        return
+    end
+
+    for _, model in ipairs(bots:GetChildren()) do
+        if model:IsA("Model") and model:GetAttribute("AISurvivor") == true then
+            local humanoid = model:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local slot = tonumber(model:GetAttribute("AISurvivorSlot")) or 0
+                local key = "ai:" .. tostring(slot)
+                desired[key] = true
+                spotlightModel(key, model, "SURVIVOR", false)
+            end
+        end
+    end
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
@@ -116,34 +160,37 @@ stateEvent.OnClientEvent:Connect(function(state)
     for _, userId in ipairs(ids) do
         local numericId = tonumber(userId)
         if numericId then
-            desired[numericId] = true
+            local key = "player:" .. tostring(numericId)
+            desired[key] = true
             local target = Players:GetPlayerByUserId(numericId)
             if target then
-                spotlight(target)
+                spotlightPlayer(target)
             end
         end
     end
 
-    for userId, bundle in pairs(active) do
-        if not desired[userId] then
+    spotlightBots(desired)
+
+    for key, bundle in pairs(active) do
+        if not desired[key] then
             for _, instance in ipairs(bundle) do
                 if instance and instance.Parent then
                     instance:Destroy()
                 end
             end
-            active[userId] = nil
+            active[key] = nil
         end
     end
 end)
 
 Players.PlayerRemoving:Connect(function(target)
-    local bundle = active[target.UserId]
+    local bundle = active["player:" .. tostring(target.UserId)]
     if bundle then
         for _, instance in ipairs(bundle) do
             if instance and instance.Parent then
                 instance:Destroy()
             end
         end
-        active[target.UserId] = nil
+        active["player:" .. tostring(target.UserId)] = nil
     end
 end)
