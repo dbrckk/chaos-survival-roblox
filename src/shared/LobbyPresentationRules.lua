@@ -62,7 +62,15 @@ function LobbyPresentationRules.statusText(phase, seconds, title, voteOptions)
         clean = clean:gsub("^CHAOS FUSION:%s*", "")
         return "ENTERING ARENA", clean
     elseif mode == "social" then
-        return "LOBBY LIVE", "PRACTICE • VOTE • SURVIVE"
+        if tostring(phase or "") == "waiting" then
+            return "LOBBY OPEN", "PRACTICE WHILE PLAYERS JOIN"
+        end
+
+        local clean = tostring(title or "NEXT ROUND")
+        if clean == "" then
+            clean = "NEXT ROUND"
+        end
+        return clean, "PRACTICE • MOVE • GET READY"
     end
 
     return "ROUND ACTIVE", "ARENA IN PROGRESS"
