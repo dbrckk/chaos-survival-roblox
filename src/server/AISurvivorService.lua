@@ -648,6 +648,19 @@ local function hasDisaster(id)
     return false
 end
 
+local function decisionTraits(record)
+    local traits = record.roundTraits or record.profile
+    local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
+    local pressure = AISurvivorRules.survivalPressure(
+        humanoid and humanoid.Health or 100,
+        humanoid and humanoid.MaxHealth or 100,
+        currentState.finalRush == true,
+        currentState.doubleChaos == true
+    )
+
+    return AISurvivorRules.pressuredTraits(traits, pressure), pressure
+end
+
 local function clampToArena(position)
     local base = arenaBase()
     if not base then
@@ -894,10 +907,9 @@ local function arenaCandidates(root)
     return result
 end
 
-local function scoreCandidate(record, root, candidate)
+local function scoreCandidate(record, root, candidate, traits)
     local position = candidate.position
     local center = config.ArenaCenter
-    local traits = record.roundTraits or record.profile
     local risk = traits.Risk or record.profile.Risk
     local distanceFromCenter = (Vector3.new(position.X, 0, position.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude
     local travelDistance = (position - root.Position).Magnitude
@@ -949,8 +961,7 @@ local function scoreCandidate(record, root, candidate)
     return score
 end
 
-local function socialArenaTarget(record, root)
-    local traits = record.roundTraits or record.profile
+local function socialArenaTarget(record, root, traits)
     if math.random() >= (traits.SocialChance or record.profile.SocialChance or 0) then
         return nil
     end
@@ -1095,7 +1106,8 @@ local function chooseMobilityPad(record, root, pads)
 end
 
 local function chooseArenaTarget(record, root, now)
-    local socialTarget = socialArenaTarget(record, root)
+    local traits, pressure = decisionTraits(record)
+    local socialTarget = socialArenaTarget(record, root, traits)
     if socialTarget then
         record.targetIsPad = false
         record.targetPart = nil
@@ -1106,7 +1118,7 @@ local function chooseArenaTarget(record, root, now)
     local variantId = arenaVariantId()
     local lowOnMap = root.Position.Y < config.ArenaCenter.Y + 10
     local padChance = AISurvivorRules.padInterest(
-        (record.roundTraits and record.roundTraits.PadChance) or record.profile.PadChance,
+        traits.PadChance or record.profile.PadChance,
         variantId,
         lowOnMap,
         hasDisaster("RisingLava")
@@ -1134,7 +1146,7 @@ local function chooseArenaTarget(record, root, now)
     for _, candidate in ipairs(candidates) do
         table.insert(ranked, {
             candidate = candidate,
-            score = scoreCandidate(record, root, candidate),
+            score = scoreCandidate(record, root, candidate, traits),
         })
     end
     table.sort(ranked, function(a, b)
@@ -1146,7 +1158,6 @@ local function chooseArenaTarget(record, root, now)
         or (record.profile.Id == "Balanced" and math.min(2, #ranked) or 1)
 
     -- Real players do not always choose the mathematically best route.
-    local traits = record.roundTraits or record.profile
     if #ranked > choiceRange and math.random() < (traits.MistakeChance or record.profile.MistakeChance or 0) then
         choiceRange = math.min(#ranked, choiceRange + 2)
     end
@@ -1162,7 +1173,7 @@ local function chooseArenaTarget(record, root, now)
 
     local hold = record.profile.TargetHoldMin
         + math.random() * (record.profile.TargetHoldMax - record.profile.TargetHoldMin)
-    return target, hold
+    return target, hold, pressure
 end
 
 local function chooseLobbyTarget(record)
@@ -1438,7 +1449,7 @@ local function stepRecord(record, now)
             and now >= (record.nextReconsiderAt or 0)
         then
             record.nextReconsiderAt = now + 1.4 + math.random() * 2.4
-            local traits = record.roundTraits or record.profile
+            local traits = decisionTraits(record)
             if math.random() < (traits.ReconsiderChance or 0) then
                 record.target = nil
                 record.targetPart = nil
@@ -1450,7 +1461,9 @@ local function stepRecord(record, now)
             record.target = nil
             record.targetPart = nil
             record.targetIsPad = false
-            if math.random() < 0.38 then
+            local _, pressure = decisionTraits(record)
+            local pauseChance = 0.38 * (1 - pressure * 0.58)
+            if math.random() < pauseChance then
                 record.idleUntil = now + 0.35 + math.random() * 1.25
                 humanoid:Move(Vector3.zero)
                 return
@@ -1458,7 +1471,7 @@ local function stepRecord(record, now)
         end
 
         if now >= record.nextThink or not record.target then
-            local traits = record.roundTraits or record.profile
+            local traits = decisionTraits(record)
             if currentState.phase == "round"
                 and not urgentTarget
                 and now >= (record.nextHesitationAt or 0)
