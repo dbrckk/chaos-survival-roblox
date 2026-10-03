@@ -96,6 +96,55 @@ function AISurvivorRules.reachableElevation(currentY, targetY, variantId)
     return rise <= limit
 end
 
+function AISurvivorRules.routeContinuity(variantId, currentPosition, targetPosition, center, directionBias)
+    if typeof(currentPosition) ~= "Vector3"
+        or typeof(targetPosition) ~= "Vector3"
+        or typeof(center) ~= "Vector3"
+    then
+        return 0
+    end
+
+    local currentOffset = Vector3.new(
+        currentPosition.X - center.X,
+        0,
+        currentPosition.Z - center.Z
+    )
+    local targetOffset = Vector3.new(
+        targetPosition.X - center.X,
+        0,
+        targetPosition.Z - center.Z
+    )
+    local travel = Vector3.new(
+        targetPosition.X - currentPosition.X,
+        0,
+        targetPosition.Z - currentPosition.Z
+    )
+
+    if variantId == "Orbital" and currentOffset.Magnitude > 4 and travel.Magnitude > 0.5 then
+        local tangent = Vector3.new(-currentOffset.Z, 0, currentOffset.X).Unit
+        if (tonumber(directionBias) or 0) < 0 then
+            tangent = -tangent
+        end
+        return tangent:Dot(travel.Unit) * 6
+    elseif variantId == "Towers" then
+        local sameX = currentOffset.X == 0
+            or targetOffset.X == 0
+            or math.sign(currentOffset.X) == math.sign(targetOffset.X)
+        local sameZ = currentOffset.Z == 0
+            or targetOffset.Z == 0
+            or math.sign(currentOffset.Z) == math.sign(targetOffset.Z)
+        return (sameX and sameZ) and 3 or -2
+    elseif variantId == "Crossroads" then
+        local currentOnX = math.abs(currentOffset.Z) <= 9
+        local targetOnX = math.abs(targetOffset.Z) <= 9
+        local currentOnZ = math.abs(currentOffset.X) <= 9
+        local targetOnZ = math.abs(targetOffset.X) <= 9
+        return ((currentOnX and targetOnX) or (currentOnZ and targetOnZ)) and 3 or -1
+    end
+
+    return 0
+end
+
 function AISurvivorRules.routeAffinity(variantId, position, center)
     if typeof(position) ~= "Vector3" or typeof(center) ~= "Vector3" then
         return 0
