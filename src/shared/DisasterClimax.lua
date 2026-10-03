@@ -19,12 +19,19 @@ DisasterClimax.Profiles = {
     JumpShock = {Kind="shock", Color=Color3.fromRGB(80,155,255), Secondary=Color3.fromRGB(190,225,255)},
 }
 
-function DisasterClimax.stageFor(intensity, finalRush)
+function DisasterClimax.stageFor(intensity, finalRush, overdrive)
     if finalRush == true then
         return 3
     end
 
     local value = tonumber(intensity) or 0
+    if overdrive == true then
+        return math.max(
+            2,
+            value >= DisasterClimax.StageThresholds.Critical and 2 or 1
+        )
+    end
+
     if value >= DisasterClimax.StageThresholds.Critical then
         return 2
     elseif value >= DisasterClimax.StageThresholds.Surge then
