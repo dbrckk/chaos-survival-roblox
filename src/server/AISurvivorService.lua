@@ -102,6 +102,7 @@ local voteIds = {}
 local started = false
 local brainStarted = false
 local identityOrder = {}
+local roundSerial = 0
 
 local function humanCount()
     return #Players:GetPlayers()
@@ -588,6 +589,9 @@ local function newRecord(slot)
         stuckCount = 0,
         nextEmoteAt = os.clock() + 3 + math.random() * 6,
         emoteUntil = 0,
+        roundTraits = AISurvivorRules.roundTraits(profile, slot, 1),
+        nextHesitationAt = 0,
+        nextReconsiderAt = 0,
     }
 
     record.proxy = {
@@ -750,7 +754,7 @@ local function immediateThreat(record, root, now)
     local nearestDistance = math.huge
     local velocity = root.AssemblyLinearVelocity
     local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
-    local anticipation = 0.18 + (1 - record.profile.Risk) * 0.20
+    local anticipation = 0.18 + (1 - traits.Risk or record.profile.Risk) * 0.20
     local predictedPosition = root.Position + horizontalVelocity * anticipation
 
     for _, warning in ipairs(warningParts()) do
@@ -810,7 +814,7 @@ local function immediateThreat(record, root, now)
     horizontal = horizontal.Unit
 
     local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X)
-    local wobble = (math.random() - 0.5) * (8 + record.profile.Risk * 8)
+    local wobble = (math.random() - 0.5) * (8 + traits.Risk or record.profile.Risk * 8)
     local momentumCorrection = Vector3.new(-horizontalVelocity.X, 0, -horizontalVelocity.Z)
     if momentumCorrection.Magnitude > 8 then
         momentumCorrection = momentumCorrection.Unit * math.min(7, momentumCorrection.Magnitude * 0.22)
@@ -818,7 +822,7 @@ local function immediateThreat(record, root, now)
 
     return clampToArena(
         root.Position
-            + horizontal * (16 + (1 - record.profile.Risk) * 10)
+            + horizontal * (16 + (1 - traits.Risk or record.profile.Risk) * 10)
             + tangent * wobble
             + momentumCorrection
     )
@@ -893,6 +897,7 @@ end
 local function scoreCandidate(record, root, candidate)
     local position = candidate.position
     local center = config.ArenaCenter
+    local traits = record.roundTraits or record.profile
     local distanceFromCenter = (Vector3.new(position.X, 0, position.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude
     local travelDistance = (position - root.Position).Magnitude
     local variantId = arenaVariantId()
@@ -903,19 +908,19 @@ local function scoreCandidate(record, root, candidate)
         root.Position,
         position,
         center,
-        record.strafeBias
+        (record.roundTraits and record.roundTraits.DirectionBias) or record.strafeBias
     )
 
     if hasDisaster("RisingLava") then
-        score += position.Y * (1.45 - record.profile.Risk * 0.45)
+        score += position.Y * (1.45 - traits.Risk or record.profile.Risk * 0.45)
     end
 
     if hasDisaster("Tornado") then
-        score += math.min(distanceFromCenter, 44) * (0.72 - record.profile.Risk * 0.16)
+        score += math.min(distanceFromCenter, 44) * (0.72 - traits.Risk or record.profile.Risk * 0.16)
     end
 
     if hasDisaster("ShrinkingArena") then
-        score -= distanceFromCenter * (0.86 - record.profile.Risk * 0.24)
+        score -= distanceFromCenter * (0.86 - traits.Risk or record.profile.Risk * 0.24)
     end
 
     for _, warning in ipairs(warningParts()) do
@@ -923,7 +928,7 @@ local function scoreCandidate(record, root, candidate)
             local warningDistance = (position - warning.Position).Magnitude
             local radius = math.max(warning.Size.X, warning.Size.Z) * 0.5 + 7
             if warningDistance < radius then
-                score -= 90 * (1 - record.profile.Risk * 0.40)
+                score -= 90 * (1 - traits.Risk or record.profile.Risk * 0.40)
             end
         end
     end
@@ -944,7 +949,8 @@ local function scoreCandidate(record, root, candidate)
 end
 
 local function socialArenaTarget(record, root)
-    if math.random() >= (record.profile.SocialChance or 0) then
+    local traits = record.roundTraits or record.profile
+    if math.random() >= (traits.SocialChance or record.profile.SocialChance or 0) then
         return nil
     end
 
@@ -982,8 +988,15 @@ local function socialArenaTarget(record, root)
 
     local selected = eligible[math.random(1, #eligible)]
     local humanRoot = selected.root
+    local humanVelocity = humanRoot.AssemblyLinearVelocity
+    local lead = Vector3.new(humanVelocity.X, 0, humanVelocity.Z)
+    if lead.Magnitude > 5 then
+        lead = lead.Unit * math.min(5, lead.Magnitude * 0.22)
+    else
+        lead = Vector3.zero
+    end
 
-    local offset = root.Position - humanRoot.Position
+    local offset = root.Position - (humanRoot.Position + lead)
     local horizontal = Vector3.new(offset.X, 0, offset.Z)
     if horizontal.Magnitude < 0.5 then
         local angle = math.random() * math.pi * 2
@@ -992,7 +1005,7 @@ local function socialArenaTarget(record, root)
         horizontal = horizontal.Unit
     end
 
-    return clampToArena(humanRoot.Position + horizontal * (5 + math.random() * 5))
+    return clampToArena(humanRoot.Position + lead + horizontal * (5 + math.random() * 5))
 end
 
 local function separateTarget(record, target)
@@ -1092,7 +1105,7 @@ local function chooseArenaTarget(record, root, now)
     local variantId = arenaVariantId()
     local lowOnMap = root.Position.Y < config.ArenaCenter.Y + 10
     local padChance = AISurvivorRules.padInterest(
-        record.profile.PadChance,
+        (record.roundTraits and record.roundTraits.PadChance) or record.profile.PadChance,
         variantId,
         lowOnMap,
         hasDisaster("RisingLava")
@@ -1132,7 +1145,8 @@ local function chooseArenaTarget(record, root, now)
         or (record.profile.Id == "Balanced" and math.min(2, #ranked) or 1)
 
     -- Real players do not always choose the mathematically best route.
-    if #ranked > choiceRange and math.random() < (record.profile.MistakeChance or 0) then
+    local traits = record.roundTraits or record.profile
+    if #ranked > choiceRange and math.random() < (traits.MistakeChance or record.profile.MistakeChance or 0) then
         choiceRange = math.min(#ranked, choiceRange + 2)
     end
     local selected = ranked[math.random(1, choiceRange)].candidate
@@ -1377,8 +1391,9 @@ local function stepRecord(record, now)
     if record.inRound and (currentState.phase == "ready" or currentState.phase == "round") then
         tryPadImpulse(record, root, now)
 
+        local urgentTarget = nil
         if currentState.phase == "round" then
-            local urgentTarget = disappearingPlatformEscape(record, root, now)
+            urgentTarget = disappearingPlatformEscape(record, root, now)
             if not urgentTarget then
                 urgentTarget = immediateThreat(record, root, now)
             end
@@ -1415,6 +1430,21 @@ local function stepRecord(record, now)
             record.nextThink = 0
         end
 
+        if currentState.phase == "round"
+            and not urgentTarget
+            and record.target
+            and not record.targetIsPad
+            and now >= (record.nextReconsiderAt or 0)
+        then
+            record.nextReconsiderAt = now + 1.4 + math.random() * 2.4
+            local traits = record.roundTraits or record.profile
+            if math.random() < (traits.ReconsiderChance or 0) then
+                record.target = nil
+                record.targetPart = nil
+                record.nextThink = 0
+            end
+        end
+
         if record.target and (root.Position - record.target).Magnitude < 4.2 then
             record.target = nil
             record.targetPart = nil
@@ -1427,9 +1457,22 @@ local function stepRecord(record, now)
         end
 
         if now >= record.nextThink or not record.target then
+            local traits = record.roundTraits or record.profile
+            if currentState.phase == "round"
+                and not urgentTarget
+                and now >= (record.nextHesitationAt or 0)
+            then
+                record.nextHesitationAt = now + 2.5 + math.random() * 4.5
+                if math.random() < (traits.HesitationChance or 0) then
+                    record.idleUntil = now + 0.18 + math.random() * 0.38
+                    humanoid:Move(Vector3.zero)
+                    return
+                end
+            end
+
             local target, hold = chooseArenaTarget(record, root, now)
             record.target = target
-            record.nextThink = now + hold
+            record.nextThink = now + hold * (traits.FollowThrough or 1)
         end
 
         if record.target then
@@ -1531,8 +1574,21 @@ function AISurvivorService.setRoundState(state)
 
     if phase ~= previousPhase then
         if phase == "ready" then
+            roundSerial += 1
             reconcile()
             for _, record in ipairs(records) do
+                record.roundTraits = AISurvivorRules.roundTraits(
+                    record.profile,
+                    record.slot,
+                    roundSerial
+                )
+                record.nextHesitationAt = os.clock() + 0.8 + math.random() * 2.4
+                record.nextReconsiderAt = os.clock() + 1.0 + math.random() * 1.8
+                record.strafeBias = math.clamp(
+                    (record.roundTraits.DirectionBias or 0) * 0.32,
+                    -0.32,
+                    0.32
+                )
                 sendToArena(record)
             end
         elseif phase == "result" then
