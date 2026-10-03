@@ -440,6 +440,9 @@ local function makeDescription(record)
     local bodyScale, proportionScale = AISurvivorRules.bodyScales(
         record.identityIndex or record.slot
     )
+    local depthScale, headScale = AISurvivorRules.shapeScales(
+        record.identityIndex or record.slot
+    )
 
     pcall(function()
         description.HeadColor = identity.Skin
@@ -450,8 +453,8 @@ local function makeDescription(record)
         description.RightLegColor = identity.Legs
         description.HeightScale = identity.Height
         description.WidthScale = identity.Width
-        description.DepthScale = 1
-        description.HeadScale = 1
+        description.DepthScale = depthScale
+        description.HeadScale = headScale
         description.BodyTypeScale = bodyScale
         description.ProportionScale = proportionScale
     end)
