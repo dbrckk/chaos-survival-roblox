@@ -163,7 +163,7 @@ local function addClassicBroadcastLandmark(base, theme, tier)
     )
     makeSurfaceLabel(
         screen,
-        Enum.NormalId.Front,
+        Enum.NormalId.Back,
         "LIVE // CLASSIC GRID",
         theme.Accent,
         tier
@@ -291,7 +291,7 @@ local function addCrossroadsTransitLandmark(base, theme, tier)
     )
     makeSurfaceLabel(
         sign,
-        Enum.NormalId.Front,
+        Enum.NormalId.Back,
         "TRANSIT // SECTOR 04",
         theme.Accent,
         tier
@@ -512,7 +512,7 @@ local function addAsymmetricServiceCluster(base, theme, tier, variant)
         )
         makeSurfaceLabel(
             window,
-            Enum.NormalId.Front,
+            Enum.NormalId.Back,
             "CAM 02 // OPS",
             theme.Secondary,
             tier
