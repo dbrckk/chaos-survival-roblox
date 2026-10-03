@@ -95,6 +95,37 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+function AISurvivorRules.survivalPressure(health, maxHealth, finalRush, doubleChaos)
+    local maximum = math.max(1, tonumber(maxHealth) or 100)
+    local ratio = math.clamp((tonumber(health) or maximum) / maximum, 0, 1)
+
+    local pressure = (1 - ratio) * 0.62
+    if finalRush == true then
+        pressure += 0.20
+    end
+    if doubleChaos == true then
+        pressure += 0.10
+    end
+
+    return math.clamp(pressure, 0, 0.82)
+end
+
+function AISurvivorRules.pressuredTraits(traits, pressure)
+    local source = traits or {}
+    local p = math.clamp(tonumber(pressure) or 0, 0, 1)
+
+    return {
+        Risk = math.clamp((tonumber(source.Risk) or 0.5) * (1 - p * 0.36), 0.10, 0.88),
+        SocialChance = math.clamp((tonumber(source.SocialChance) or 0.2) * (1 - p * 0.58), 0.02, 0.46),
+        MistakeChance = math.clamp((tonumber(source.MistakeChance) or 0.12) * (1 - p * 0.18), 0.03, 0.27),
+        PadChance = math.clamp((tonumber(source.PadChance) or 0.2) + p * 0.08, 0.07, 0.58),
+        HesitationChance = math.clamp((tonumber(source.HesitationChance) or 0.08) * (1 - p * 0.32), 0.035, 0.18),
+        ReconsiderChance = math.clamp((tonumber(source.ReconsiderChance) or 0.08) + p * 0.025, 0.05, 0.15),
+        FollowThrough = math.clamp((tonumber(source.FollowThrough) or 1) - p * 0.05, 0.88, 1.12),
+        DirectionBias = math.clamp(tonumber(source.DirectionBias) or 0, -1, 1),
+    }
+end
+
 function AISurvivorRules.padInterest(baseChance, variantId, lowOnMap, risingLava)
     local chance = math.clamp(tonumber(baseChance) or 0, 0, 1)
 
