@@ -113,6 +113,9 @@ local function layout(part, state, phase, now)
     end
 end
 
+local renderConnection = nil
+local ensureRenderLoop
+
 local function refreshPart(part)
     local phase = part:GetAttribute("CollapsePhase")
     if phase ~= "Warning" and phase ~= "Gone" then
@@ -126,8 +129,6 @@ local function refreshPart(part)
 end
 
 local bound = setmetatable({}, {__mode = "k"})
-local renderConnection = nil
-local ensureRenderLoop
 
 local function bindPart(part)
     if not part:IsA("BasePart") or bound[part] then
