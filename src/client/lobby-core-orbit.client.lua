@@ -15,6 +15,7 @@ folder.Parent = workspace
 local nodes = {}
 local phase = "waiting"
 local center = Config.LobbyCenter + Vector3.new(0, 6.6, 0)
+local tierName = "Medium"
 
 local function clear()
     folder:ClearAllChildren()
@@ -41,6 +42,7 @@ local function rebuild()
     center = findCenter()
 
     local tier = quality()
+    tierName = tier.Name
     local count = tier.Name == "Low" and 3 or (tier.Name == "Medium" and 5 or 7)
     local radius = tier.Name == "Low" and 7.4 or 8.2
 
@@ -68,11 +70,27 @@ local function rebuild()
     end
 end
 
+local function refreshVisibility()
+    local active = phase ~= "round" and phase ~= "ready"
+    for _, entry in ipairs(nodes) do
+        local part = entry.part
+        if part and part.Parent then
+            part.Transparency = active
+                and (tierName == "Low" and 0.36 or 0.16)
+                or 1
+        end
+    end
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
     phase = tostring(state.phase or "waiting")
+    refreshVisibility()
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    rebuild()
+    refreshVisibility()
+end)
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
@@ -90,29 +108,32 @@ task.defer(rebuild)
 
 task.spawn(function()
     while true do
-        local reduced = player:GetAttribute("ReduceMotion") == true
         local active = phase ~= "round" and phase ~= "ready"
-        local speed = reduced and 0.10 or (active and 0.42 or 0.20)
-        local amplitude = reduced and 0.12 or 0.55
-        local now = os.clock()
-        local tier = quality()
 
-        for i, entry in ipairs(nodes) do
-            local part = entry.part
-            if part and part.Parent then
-                local angle = entry.angle + now * speed
-                local y = entry.height + math.sin(now * 1.15 + i) * amplitude
-                part.Position = center + Vector3.new(
-                    math.cos(angle) * entry.radius,
-                    y,
-                    math.sin(angle) * entry.radius
-                )
-                part.Transparency = active
-                    and (tier.Name == "Low" and 0.36 or 0.16)
-                    or 0.62
+        if active then
+            local reduced = player:GetAttribute("ReduceMotion") == true
+            local speed = reduced and 0.10 or 0.42
+            local amplitude = reduced and 0.12 or 0.55
+            local now = os.clock()
+
+            for i, entry in ipairs(nodes) do
+                local part = entry.part
+                if part and part.Parent then
+                    local angle = entry.angle + now * speed
+                    local y = entry.height + math.sin(now * 1.15 + i) * amplitude
+                    part.Position = center + Vector3.new(
+                        math.cos(angle) * entry.radius,
+                        y,
+                        math.sin(angle) * entry.radius
+                    )
+                end
             end
-        end
 
-        task.wait(0.08)
+            local cadence = reduced and 0.22
+                or (tierName == "Low" and 0.16 or 0.10)
+            task.wait(cadence)
+        else
+            task.wait(0.60)
+        end
     end
 end)
