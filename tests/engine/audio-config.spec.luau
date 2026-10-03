@@ -66,6 +66,29 @@ describe("Audio configuration", function()
         end
     end)
 
+    it("gives every disaster accent a layered signature", function()
+        for _, cueName in pairs(AudioConfig.DisasterAccent) do
+            local layers = AudioConfig.Composite[cueName]
+            expect(type(layers)).toBe("table")
+            expect(#layers >= 2).toBe(true)
+
+            for _, layer in ipairs(layers) do
+                expect(AudioConfig.Sfx[layer.Sound] ~= nil).toBe(true)
+                expect((tonumber(layer.VolumeScale) or 1) > 0).toBe(true)
+            end
+        end
+    end)
+
+    it("keeps mobility pad feedback layered but bounded", function()
+        local layers = AudioConfig.Composite.MobilityPad
+        expect(type(layers)).toBe("table")
+        expect(#layers >= 2).toBe(true)
+        expect(#layers <= 4).toBe(true)
+        for _, layer in ipairs(layers) do
+            expect(AudioConfig.Sfx[layer.Sound] ~= nil).toBe(true)
+        end
+    end)
+
     it("only maps disaster loops to loopable sounds", function()
         for _, cueName in pairs(AudioConfig.DisasterLoop) do
             local cue = AudioConfig.Sfx[cueName]
