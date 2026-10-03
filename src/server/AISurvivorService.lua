@@ -1011,20 +1011,6 @@ local function separateTarget(record, target)
 end
 
 local function chooseArenaTarget(record, root, now)
-    local platformEscape = disappearingPlatformEscape(record, root, now)
-    if platformEscape then
-        record.targetIsPad = false
-        record.targetPart = nil
-        return separateTarget(record, platformEscape), 0.55
-    end
-
-    local threatTarget = immediateThreat(record, root, now)
-    if threatTarget then
-        record.targetIsPad = false
-        record.targetPart = nil
-        return separateTarget(record, threatTarget), 0.7
-    end
-
     local socialTarget = socialArenaTarget(record, root)
     if socialTarget then
         record.targetIsPad = false
@@ -1315,6 +1301,20 @@ local function stepRecord(record, now)
 
     if record.inRound and (currentState.phase == "ready" or currentState.phase == "round") then
         tryPadImpulse(record, root, now)
+
+        if currentState.phase == "round" then
+            local urgentTarget = disappearingPlatformEscape(record, root, now)
+            if not urgentTarget then
+                urgentTarget = immediateThreat(record, root, now)
+            end
+
+            if urgentTarget then
+                record.targetIsPad = false
+                record.targetPart = nil
+                record.target = separateTarget(record, urgentTarget)
+                record.nextThink = now + 0.55
+            end
+        end
 
         if record.targetPart and record.targetPart.Parent then
             if record.targetIsPad then
