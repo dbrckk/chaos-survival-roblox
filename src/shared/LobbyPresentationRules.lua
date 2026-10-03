@@ -1,8 +1,13 @@
 local LobbyPresentationRules = {}
 
-function LobbyPresentationRules.mode(phase)
+function LobbyPresentationRules.mode(phase, voteOptions)
     local value = tostring(phase or "waiting")
-    if value == "vote" then
+    if value == "intermission"
+        and type(voteOptions) == "table"
+        and #voteOptions > 0
+    then
+        return "vote"
+    elseif value == "vote" then
         return "vote"
     elseif value == "ready" then
         return "launch"
@@ -12,8 +17,8 @@ function LobbyPresentationRules.mode(phase)
     return "inactive"
 end
 
-function LobbyPresentationRules.emphasis(phase)
-    local mode = LobbyPresentationRules.mode(phase)
+function LobbyPresentationRules.emphasis(phase, voteOptions)
+    local mode = LobbyPresentationRules.mode(phase, voteOptions)
     if mode == "vote" then
         return {
             Center = 1.00,
@@ -45,8 +50,8 @@ function LobbyPresentationRules.emphasis(phase)
     }
 end
 
-function LobbyPresentationRules.statusText(phase, seconds, title)
-    local mode = LobbyPresentationRules.mode(phase)
+function LobbyPresentationRules.statusText(phase, seconds, title, voteOptions)
+    local mode = LobbyPresentationRules.mode(phase, voteOptions)
     local remaining = math.max(0, math.floor(tonumber(seconds) or 0))
 
     if mode == "vote" then
