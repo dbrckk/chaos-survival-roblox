@@ -120,9 +120,14 @@ local function refreshPart(part)
         return
     end
     ensureState(part)
+    if ensureRenderLoop then
+        ensureRenderLoop()
+    end
 end
 
 local bound = setmetatable({}, {__mode = "k"})
+local renderConnection = nil
+local ensureRenderLoop
 
 local function bindPart(part)
     if not part:IsA("BasePart") or bound[part] then
@@ -186,10 +191,17 @@ if existing then
     task.defer(bindGeneratedMap, existing)
 end
 
-RunService.RenderStepped:Connect(function(dt)
-    if next(tracked) == nil then
+ensureRenderLoop = function()
+    if renderConnection or next(tracked) == nil then
         return
     end
+
+    renderConnection = RunService.RenderStepped:Connect(function(dt)
+        if next(tracked) == nil then
+            renderConnection:Disconnect()
+            renderConnection = nil
+            return
+        end
 
     clock += dt
     updateClock += dt
@@ -213,4 +225,7 @@ RunService.RenderStepped:Connect(function(dt)
             end
         end
     end
-end)
+    end)
+end
+
+ensureRenderLoop()
