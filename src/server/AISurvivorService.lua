@@ -1884,16 +1884,10 @@ local function startBrain()
                 stepRecord(record, now)
             end
 
-            local phase = tostring(currentState.phase or "waiting")
-            local cadence
-            if #records == 0 then
-                cadence = 0.75
-            elseif phase == "result" then
-                cadence = 0.42
-            else
-                cadence = 0.18
-            end
-            task.wait(cadence)
+            task.wait(AISurvivorRules.brainCadence(
+                #records,
+                currentState.phase
+            ))
         end
         brainStarted = false
     end)
