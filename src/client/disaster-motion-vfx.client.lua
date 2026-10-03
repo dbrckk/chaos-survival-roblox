@@ -16,6 +16,8 @@ local clock = 0
 local updateClock = 0
 local currentPhase = "waiting"
 local activeSignature = ""
+local renderConnection = nil
+local ensureRenderLoop
 
 local function has(id)
     return activeIds[id] == true
@@ -291,6 +293,10 @@ local function applyState(state)
 
     ensureShrinkVisuals()
     ensureBlackoutVisuals()
+
+    if ensureRenderLoop then
+        ensureRenderLoop()
+    end
 end
 
 stateEvent.OnClientEvent:Connect(applyState)
@@ -302,12 +308,21 @@ player:GetAttributeChangedSignal("RoundParticipant"):Connect(rebuildCharacterEff
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(rebuildCharacterEffects)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildCharacterEffects)
 
-RunService.RenderStepped:Connect(function(dt)
+ensureRenderLoop = function()
     local shrinkActive = currentPhase == "round" and has("ShrinkingArena")
     local blackoutActive = currentPhase == "round" and has("Darkness")
-    if not shrinkActive and not blackoutActive then
+    if renderConnection or (not shrinkActive and not blackoutActive) then
         return
     end
+
+    renderConnection = RunService.RenderStepped:Connect(function(dt)
+        shrinkActive = currentPhase == "round" and has("ShrinkingArena")
+        blackoutActive = currentPhase == "round" and has("Darkness")
+        if not shrinkActive and not blackoutActive then
+            renderConnection:Disconnect()
+            renderConnection = nil
+            return
+        end
 
     clock += dt
     updateClock += dt
@@ -339,4 +354,5 @@ RunService.RenderStepped:Connect(function(dt)
     elseif #blackoutParts > 0 then
         clearBlackout()
     end
-end)
+    end)
+end
