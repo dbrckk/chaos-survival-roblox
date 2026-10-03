@@ -62,6 +62,10 @@ function D.start(ctx)
     lava.Size = lavaSize
     lava.Position = ctx.Config.ArenaCenter + Vector3.new(0, -8, 0)
     lava.Anchored = true
+    lava.CanCollide = false
+    lava.CanTouch = true
+    lava.CanQuery = false
+    lava.CastShadow = false
     lava.Material = Enum.Material.Neon
     lava.Color = Color3.fromRGB(255, 85, 0)
     lava.Parent = workspace
