@@ -579,6 +579,7 @@ local function sendToLobby(record)
     record.inRound = false
     record.target = nil
     record.targetPart = nil
+    record.targetIsPad = false
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -596,6 +597,7 @@ local function sendToArena(record)
     record.inRound = true
     record.target = nil
     record.targetPart = nil
+    record.targetIsPad = false
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -1797,6 +1799,7 @@ function AISurvivorService.setRoundState(state)
                 if humanoid and humanoid.Health > 0 then
                     record.target = nil
                     record.targetPart = nil
+                    record.targetIsPad = false
                     record.moveDirection = Vector3.zero
                     humanoid:Move(Vector3.zero)
 
