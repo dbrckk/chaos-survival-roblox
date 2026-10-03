@@ -272,8 +272,14 @@ local function applyState()
         makeStatusGui()
     end
 
-    local mode = LobbyPresentationRules.mode(currentState.phase)
-    local emphasis = LobbyPresentationRules.emphasis(currentState.phase)
+    local mode = LobbyPresentationRules.mode(
+        currentState.phase,
+        currentState.voteOptions
+    )
+    local emphasis = LobbyPresentationRules.emphasis(
+        currentState.phase,
+        currentState.voteOptions
+    )
     local accent = modeColor(mode)
     local q = quality()
     local duration = player:GetAttribute("ReduceMotion") == true and 0.10 or 0.24
@@ -382,7 +388,8 @@ local function applyState()
         local mainText, subText = LobbyPresentationRules.statusText(
             currentState.phase,
             currentState.seconds,
-            currentState.title
+            currentState.title,
+            currentState.voteOptions
         )
 
         if title and title:IsA("TextLabel") then
@@ -430,7 +437,10 @@ end
 
 local function runwaySweep(token)
     if token ~= presentationToken
-        or LobbyPresentationRules.mode(currentState.phase) ~= "launch"
+        or LobbyPresentationRules.mode(
+            currentState.phase,
+            currentState.voteOptions
+        ) ~= "launch"
         or not currentDecor
     then
         return
@@ -483,7 +493,10 @@ local function startPulseLoop()
 
     task.spawn(function()
         while token == presentationToken do
-            local mode = LobbyPresentationRules.mode(currentState.phase)
+            local mode = LobbyPresentationRules.mode(
+                currentState.phase,
+                currentState.voteOptions
+            )
             local q = quality()
             local cadence = LobbyPresentationRules.pulseCadence(
                 q.Name,
