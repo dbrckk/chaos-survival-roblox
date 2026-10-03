@@ -18,6 +18,7 @@ local currentState = {
     seconds = 0,
     title = "",
 }
+local previousPhase = "waiting"
 local currentLobby = nil
 local currentDecor = nil
 local currentActivities = nil
@@ -721,8 +722,64 @@ local function startPulseLoop()
     end)
 end
 
+local function lobbyReturnPulse()
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then
+        return
+    end
+
+    local q = quality()
+    local reduced = player:GetAttribute("ReduceMotion") == true
+
+    local ring = Instance.new("Part")
+    ring.Name = "LobbyReturnPulse"
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Size = Vector3.new(0.04, 2.6, 2.6)
+    ring.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.6, 0))
+        * CFrame.Angles(0, 0, math.rad(90))
+    ring.Anchored = true
+    ring.CanCollide = false
+    ring.CanTouch = false
+    ring.CanQuery = false
+    ring.CastShadow = false
+    ring.Material = Enum.Material.Neon
+    ring.Color = VisualTheme.Accents.Cyan
+    ring.Transparency = 0.34
+    ring.Parent = folder
+
+    local target = q.Name == "Low" and 8.0 or 11.0
+    TweenService:Create(
+        ring,
+        TweenInfo.new(
+            reduced and 0.20 or 0.38,
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        ),
+        {
+            Size = Vector3.new(0.04, target, target),
+            Transparency = 1,
+        }
+    ):Play()
+
+    task.delay(0.44, function()
+        if ring.Parent then
+            ring:Destroy()
+        end
+    end)
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
-    currentState = state or currentState
+    local nextState = state or currentState
+    local nextPhase = tostring(nextState.phase or "waiting")
+
+    if previousPhase == "result"
+        and (nextPhase == "intermission" or nextPhase == "waiting")
+    then
+        task.delay(0.08, lobbyReturnPulse)
+    end
+
+    currentState = nextState
+    previousPhase = nextPhase
     applyState()
 end)
 
