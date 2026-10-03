@@ -25,6 +25,7 @@ local MOODS = {
         ColorShiftTop = Color3.fromRGB(8, 14, 24),
         ColorShiftBottom = Color3.fromRGB(4, 7, 13),
         ShadowSoftness = 0.34,
+        CloudColor = Color3.fromRGB(205, 220, 245),
     },
     Towers = {
         Tint = Color3.fromRGB(210, 244, 250),
@@ -35,6 +36,7 @@ local MOODS = {
         ColorShiftTop = Color3.fromRGB(4, 18, 22),
         ColorShiftBottom = Color3.fromRGB(3, 8, 12),
         ShadowSoftness = 0.26,
+        CloudColor = Color3.fromRGB(190, 225, 232),
     },
     Crossroads = {
         Tint = Color3.fromRGB(242, 218, 255),
@@ -45,6 +47,7 @@ local MOODS = {
         ColorShiftTop = Color3.fromRGB(18, 7, 24),
         ColorShiftBottom = Color3.fromRGB(8, 4, 13),
         ShadowSoftness = 0.42,
+        CloudColor = Color3.fromRGB(226, 198, 238),
     },
     Orbital = {
         Tint = Color3.fromRGB(214, 255, 241),
@@ -55,6 +58,7 @@ local MOODS = {
         ColorShiftTop = Color3.fromRGB(5, 20, 17),
         ColorShiftBottom = Color3.fromRGB(3, 9, 9),
         ShadowSoftness = 0.30,
+        CloudColor = Color3.fromRGB(190, 232, 220),
     },
 }
 
@@ -108,6 +112,14 @@ local function applyMood(duration)
             ShadowSoftness = shadowSoftness,
         }
     ):Play()
+
+    if phase ~= "round" and phase ~= "ready" then
+        local terrain = workspace.Terrain
+        local clouds = terrain and terrain:FindFirstChildOfClass("Clouds")
+        if clouds then
+            clouds.Color = mood.CloudColor or Color3.fromRGB(210, 220, 240)
+        end
+    end
 end
 
 local function bindMap()
