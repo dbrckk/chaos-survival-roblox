@@ -34,11 +34,29 @@ local PROFILES = {
         Contrast = 0.035,
         Blur = 0,
     },
-    MeteorShower = {
+    Meteors = {
         Tint = Color3.fromRGB(255, 220, 190),
         Saturation = -0.07,
         Contrast = 0.045,
         Blur = 0.7,
+    },
+    LowGravity = {
+        Tint = Color3.fromRGB(210, 220, 255),
+        Saturation = -0.04,
+        Contrast = 0.018,
+        Blur = 0.35,
+    },
+    DisappearingPlatforms = {
+        Tint = Color3.fromRGB(255, 235, 185),
+        Saturation = -0.03,
+        Contrast = 0.028,
+        Blur = 0.20,
+    },
+    SpeedSurge = {
+        Tint = Color3.fromRGB(255, 205, 245),
+        Saturation = -0.02,
+        Contrast = 0.035,
+        Blur = 0.45,
     },
     Tornado = {
         Tint = Color3.fromRGB(210, 225, 235),
@@ -46,13 +64,13 @@ local PROFILES = {
         Contrast = 0.02,
         Blur = 1.2,
     },
-    FreezePulse = {
+    Freeze = {
         Tint = Color3.fromRGB(195, 225, 255),
         Saturation = -0.10,
         Contrast = 0.02,
         Blur = 0.8,
     },
-    BombRain = {
+    Bombs = {
         Tint = Color3.fromRGB(255, 215, 185),
         Saturation = -0.08,
         Contrast = 0.05,
