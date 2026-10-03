@@ -43,6 +43,16 @@ function D.start(ctx)
 
             if not ctx.Active() then break end
 
+            if ctx.OnHazardImpact then
+                pcall(
+                    ctx.OnHazardImpact,
+                    ctx.Config.ArenaCenter + Vector3.new(0, 1, 0),
+                    Color3.fromRGB(80, 155, 255),
+                    warningDiameter * 0.5,
+                    "JumpShock"
+                )
+            end
+
             for _, p in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
                 if ctx.IsContestantActive and not ctx.IsContestantActive(p) then
                     continue
