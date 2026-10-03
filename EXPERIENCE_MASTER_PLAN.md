@@ -177,3 +177,6 @@ Ordre d'exécution immédiat
 - [FAIT] Optimisation disaster-motion-vfx : LowGravity/SpeedSurge persistent désormais entre broadcasts et ne sont plus détruits/recréés chaque seconde ; rebuild uniquement lors d'un changement de phase/combinaison.
 
 - [FAIT] Disaster residue / décor marqué : Meteor/Bomb laissent scorch/crater + cracks et fragments temporaires ; Freeze/JumpShock laissent un résidu après pulse ; les 11 catastrophes génèrent un langage de trace spécifique pendant RESULT (char, crater, dust, fracture, scrape, frost, scorch, streak, void, edge, shock), avec raycast vers la vraie surface, budgets Low/Medium/High, fade progressif et nettoyage avant READY.
+
+- [FAIT] Character polish joueurs/AI : accent cosmétique unifié via ChaosAccent, outline/rim local contextuel sans remplacer l'avatar, lumière discrète Medium/High, spectateurs/éliminés atténués pendant ROUND, doublons d'aura évités et budgets Final Rush/Low stricts.
+- [FAIT] Cosmétiques en mouvement : trails joueurs transformés en rubans horizontaux plus propres, AISurvivorCosmeticTrail soumis aux mêmes budgets VFX/Reduce Motion/Final Rush, contact sol surface-aware pour humains et bots avec culling distance et micro-débris uniquement Medium/High.
