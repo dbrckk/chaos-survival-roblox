@@ -145,6 +145,7 @@ local function watchModel(model)
             or child.Name == "UpperTorso"
             or child.Name == "Torso"
             or child.Name == "HumanoidRootPart"
+            or child.Name == "ChaosAuraHighlight"
         then
             task.defer(applyModel, model)
         end
