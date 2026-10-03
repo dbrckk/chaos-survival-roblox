@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -31,6 +32,11 @@ local speedFovOffset = 0
 local speedSurgeActive = false
 local lowGravityActive = false
 local tornadoModel = nil
+local presentationKick = 0
+local presentationKickTarget = 0
+local previousPhase = "waiting"
+local lastFinalRush = false
+local lastOverdrive = false
 
 local function disconnectCharacter()
     for _, connection in ipairs(characterConnections) do
@@ -122,6 +128,8 @@ local function bindCharacter(nextCharacter)
     lastHorizontalSpeed = 0
     accelerationKick = 0
     speedFovOffset = 0
+    presentationKick = 0
+    presentationKickTarget = 0
 
     if not humanoid or not root then
         return
@@ -204,7 +212,11 @@ end)
 stateEvent.OnClientEvent:Connect(function(state)
     local surge = false
     local lowGravity = false
-    if state and state.phase == "round" then
+    local phase = state and tostring(state.phase or "waiting") or "waiting"
+    local finalRush = phase == "round" and state.finalRush == true
+    local overdrive = phase == "round" and state.overdrive == true
+
+    if state and phase == "round" then
         for _, id in ipairs(state.disasterIds or {}) do
             if id == "SpeedSurge" then
                 surge = true
@@ -213,8 +225,20 @@ stateEvent.OnClientEvent:Connect(function(state)
             end
         end
     end
+
+    local kick = RoundEventPresentation.cameraKick(
+        previousPhase,
+        state,
+        lastFinalRush,
+        lastOverdrive
+    )
+    presentationKickTarget = math.max(presentationKickTarget, kick)
+
     speedSurgeActive = surge
     lowGravityActive = lowGravity
+    previousPhase = phase
+    lastFinalRush = finalRush
+    lastOverdrive = overdrive
 end)
 
 local function exponential(current, target, speed, dt)
@@ -274,6 +298,13 @@ RunService:BindToRenderStep(
         landingKick *= math.exp(-dt * 10.5)
         impactKick *= math.exp(-dt * 8.0)
         mechanicKick *= math.exp(-dt * 7.5)
+        presentationKickTarget *= math.exp(-dt * 7.0)
+        presentationKick = exponential(
+            presentationKick,
+            presentationKickTarget,
+            presentationKickTarget > presentationKick and 14 or 8,
+            dt
+        )
         shakeClock += dt * (18 + impactKick * 10)
 
         local surgeWave = speedSurgeActive and math.sin(shakeClock * 0.92) * 0.006 * math.clamp(speed / 24, 0, 1) or 0
@@ -303,6 +334,7 @@ RunService:BindToRenderStep(
         local pitch =
             (landingKick * 0.026)
             - (mechanicKick * 0.018)
+            - (presentationKick * 0.010)
             - accelerationKick
             - (speedSurgeActive and math.clamp(speedExcess / 520, 0, 0.010) or 0)
             + (math.sin(shakeClock * 1.91) * impactKick * 0.018)
@@ -330,7 +362,13 @@ RunService:BindToRenderStep(
             player:SetAttribute("BaseCameraFov", camera.FieldOfView)
             baseFov = camera.FieldOfView
         end
-        local targetFov = math.clamp(baseFov + speedFovOffset * scale, 60, 90)
+        local targetFov = math.clamp(
+            baseFov
+                + speedFovOffset * scale
+                + presentationKick * 2.4 * scale,
+            60,
+            90
+        )
         camera.FieldOfView = exponential(camera.FieldOfView, targetFov, 6, dt)
     end
 )
