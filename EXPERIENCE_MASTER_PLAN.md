@@ -152,3 +152,7 @@ Ordre d'exécution immédiat
 6. UI simplification.
 7. Android/performance certification.
 8. Assets marketing et RC 1.0.
+
+
+- [FAIT] Pass hero scenery local : ArenaHeroSceneryLocal, budgets Low/Medium/High, LOD 130/205 studs, silhouettes uniquement en second plan hors routes, aucun impact collision/gameplay.
+- [FAIT] Arena lighting enrichi par Atmosphere local map-specific ; densité/haze/glare fortement réduits en READY/ROUND pour préserver la priorité des télégraphes.
