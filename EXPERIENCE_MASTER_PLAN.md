@@ -170,3 +170,5 @@ Ordre d'exécution immédiat
 
 - [FAIT] Presentation layer de manche : countdown READY 3-2-1 synchronisé audio/visuel, reveal de départ SURVIVE!/SURVIVE THE FUSION!, rails écran colorés, micro-kick caméra additive compatible Reduce Motion, pulse monde au round start, double pulse pour Fusion et pulse orange/rouge au Final Rush. Priorités explicites Final Rush > Round Start > Fusion > Overdrive > countdown, aucun RenderStepped ajouté.
 - [FAIT] Arena reveal resynchronisé avec l'entrée réelle en READY afin que la signature de map soit vue après téléportation ; round-events repositionné sur mobile court pour ne pas recouvrir les cues de danger.
+
+- [FAIT] Set-piece d'ouverture des 11 catastrophes : RisingLava rise columns, Meteors skyfall streaks, LowGravity lift beams, DisappearingPlatforms fracture lines, Tornado spiral pillars, Freeze expanding ice ring, Bombs blast rings, SpeedSurge lane streaks, Darkness void contraction, ShrinkingArena collapse ring, JumpShock shock rings. Double Chaos joue les deux signatures avec léger décalage, budgets Low/Medium/High et Reduce Motion conservés.
