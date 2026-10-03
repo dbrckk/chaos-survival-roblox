@@ -41,6 +41,8 @@ function D.start(ctx)
             part.CanCollide = state.canCollide
             part.Color = state.color
             part.Material = state.material
+            part:SetAttribute("CollapsePhase", nil)
+            part:SetAttribute("CollapseWarningStartedAt", nil)
         end
     end
 
@@ -70,6 +72,8 @@ function D.start(ctx)
                     generation = token,
                 }
 
+                p:SetAttribute("CollapseWarningStartedAt", workspace:GetServerTimeNow())
+                p:SetAttribute("CollapsePhase", "Warning")
                 p.Color = Color3.fromRGB(255, 205, 70)
                 p.Material = Enum.Material.Neon
 
@@ -92,6 +96,7 @@ function D.start(ctx)
                 task.wait(0.27)
                 local state = activeStates[p]
                 if ctx.Active() and state and state.generation == token and p.Parent then
+                    p:SetAttribute("CollapsePhase", "Gone")
                     p.Transparency = 1
                     p.CanCollide = false
 
