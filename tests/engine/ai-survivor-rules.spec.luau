@@ -35,6 +35,18 @@ describe("AI survivor rules", function()
         expect(cautious.SocialChance < bold.SocialChance).toBe(true)
     end)
 
+    it("uses mobility pads more often when arena topology calls for them", function()
+        local base = 0.20
+
+        expect(AISurvivorRules.padInterest(base, "Classic", true, false)).toBe(base)
+        expect(AISurvivorRules.padInterest(base, "Towers", true, false) > base).toBe(true)
+        expect(AISurvivorRules.padInterest(base, "Towers", false, false)).toBe(base)
+        expect(AISurvivorRules.padInterest(base, "Orbital", false, false) > base).toBe(true)
+        expect(AISurvivorRules.padInterest(base, "Crossroads", false, false) > base).toBe(true)
+        expect(AISurvivorRules.padInterest(base, "Classic", false, true) > base).toBe(true)
+        expect(AISurvivorRules.padInterest(0.70, "Towers", true, true)).toBe(0.72)
+    end)
+
     it("rejects unreachable vertical targets without a pad route", function()
         expect(AISurvivorRules.reachableElevation(3, 10, "Classic")).toBe(true)
         expect(AISurvivorRules.reachableElevation(3, 11, "Classic")).toBe(false)
