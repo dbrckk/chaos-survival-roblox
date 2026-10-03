@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -57,6 +58,43 @@ cueText.TextXAlignment = Enum.TextXAlignment.Left
 cueText.Text = "MOVE OUT"
 cueText.Parent = cue
 UITheme.addTextConstraint(cueText, 14, 21)
+
+local cameraConnection = nil
+
+local function applyCueLayout()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local compact = profile.compactHeight
+    local cueHeight = profile.tinyHeight and 34 or (compact and 38 or 42)
+    local cueWidth = profile.veryNarrow and 210 or 230
+    local topGap = profile.tinyHeight and 8 or 10
+
+    cue.Position = UDim2.new(0.5, 0, 0, profile.topHeight + topGap)
+    cue.Size = UDim2.fromOffset(cueWidth, cueHeight)
+
+    local badgeSize = math.max(30, cueHeight - 8)
+    cueBadge.Size = UDim2.fromOffset(badgeSize, badgeSize)
+    cueBadge.Position = UDim2.fromOffset(4, math.floor((cueHeight - badgeSize) * 0.5))
+    cueText.Position = UDim2.fromOffset(badgeSize + 12, 3)
+    cueText.Size = UDim2.new(1, -(badgeSize + 18), 1, -6)
+end
+
+local function bindCamera()
+    if cameraConnection then
+        cameraConnection:Disconnect()
+        cameraConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyCueLayout)
+    end
+    applyCueLayout()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+bindCamera()
 
 local currentPhase = "waiting"
 local finalRush = false
