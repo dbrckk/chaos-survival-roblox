@@ -110,17 +110,38 @@ local function rebuild()
     applyFolder(lobby and lobby:FindFirstChild("Decor"), profile)
 end
 
+local mapConnection = nil
+
+local function bindGeneratedMap(generated)
+    if mapConnection then
+        mapConnection:Disconnect()
+        mapConnection = nil
+    end
+
+    if generated then
+        mapConnection = generated.ChildAdded:Connect(function(child)
+            if child.Name == "Arena" then
+                task.delay(0.10, rebuild)
+            end
+        end)
+    end
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(child)
         task.delay(0.12, rebuild)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(nil)
         restore()
     end
 end)
+
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     task.defer(rebuild)
