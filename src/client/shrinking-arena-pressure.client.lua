@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -32,6 +33,24 @@ gradient.Transparency = NumberSequence.new({
 })
 gradient.Rotation = 90
 gradient.Parent = frame
+
+local centerCue = Instance.new("TextLabel")
+centerCue.Name = "CenterEscapeCue"
+centerCue.AnchorPoint = Vector2.new(0.5, 0)
+centerCue.Position = UDim2.fromScale(0.5, 0.27)
+centerCue.Size = UDim2.fromOffset(170, 38)
+centerCue.BackgroundColor3 = UITheme.Colors.Panel
+centerCue.BackgroundTransparency = 0.04
+centerCue.BorderSizePixel = 0
+centerCue.Font = Enum.Font.GothamBlack
+centerCue.Text = "MOVE CENTER"
+centerCue.TextColor3 = UITheme.Colors.Text
+centerCue.TextScaled = true
+centerCue.Visible = false
+centerCue.Parent = gui
+UITheme.addCorner(centerCue, UITheme.Corners.Pill)
+UITheme.addStroke(centerCue, Color3.fromRGB(235, 95, 235), 2, 0.12)
+UITheme.addTextConstraint(centerCue, 14, 22)
 
 local active = false
 local updateClock = 0
@@ -83,12 +102,18 @@ stateEvent.OnClientEvent:Connect(function(state)
     if not active then
         smoothedPressure = 0
         frame.Visible = false
+        centerCue.Visible = false
         frame.BackgroundTransparency = 1
     end
 end)
 
 RunService.RenderStepped:Connect(function(dt)
-    if not active then
+    if not active
+        or player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true
+    then
+        frame.Visible = false
+        centerCue.Visible = false
         return
     end
 
@@ -105,6 +130,7 @@ RunService.RenderStepped:Connect(function(dt)
     local root = rootPart()
     if not base or not root then
         frame.Visible = false
+        centerCue.Visible = false
         return
     end
 
@@ -113,10 +139,12 @@ RunService.RenderStepped:Connect(function(dt)
 
     if smoothedPressure < 0.05 then
         frame.Visible = false
+        centerCue.Visible = false
         return
     end
 
     frame.Visible = true
+    centerCue.Visible = smoothedPressure >= 0.55
     local pulse = (math.sin(os.clock() * 6.2) + 1) * 0.5
     local alpha = smoothedPressure * scale
     frame.BackgroundTransparency = math.clamp(0.985 - alpha * (0.13 + pulse * 0.05), 0.78, 0.985)
