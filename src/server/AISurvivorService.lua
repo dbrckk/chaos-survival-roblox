@@ -99,6 +99,8 @@ local currentState = {
 local previousPhase = "waiting"
 local voteToken = 0
 local voteIds = {}
+local voteActive = false
+local voteRoundNumber = 1
 local started = false
 local brainStarted = false
 local identityOrder = {}
@@ -666,6 +668,9 @@ local function newRecord(slot)
         resultAction = nil,
         resultActionUntil = 0,
         resultTarget = nil,
+        lobbyActivity = "roam",
+        nextSocialAt = 0,
+        nextPracticeAt = 0,
     }
 
     record.proxy = {
@@ -1250,26 +1255,87 @@ local function chooseArenaTarget(record, root, now)
     return target, hold
 end
 
-local function chooseLobbyTarget(record)
-    local center = config.LobbyCenter
+local function lobbySocialTargets(record)
+    local targets = {}
 
-    if math.random() < 0.26 then
-        local players = Players:GetPlayers()
-        if #players > 0 then
-            local player = players[math.random(1, #players)]
-            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if root and root:IsA("BasePart") then
-                local angle = math.random() * math.pi * 2
-                local radius = 6 + math.random() * 8
-                return root.Position + Vector3.new(
-                    math.cos(angle) * radius,
-                    0,
-                    math.sin(angle) * radius
-                ), 1.4 + math.random() * 1.8
+    for _, player in ipairs(Players:GetPlayers()) do
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if root and root:IsA("BasePart") and humanoid and humanoid.Health > 0 then
+            table.insert(targets, {
+                root = root,
+                partnerSlot = 1000 + math.max(1, player.UserId % 97),
+            })
+        end
+    end
+
+    for _, other in ipairs(records) do
+        if other ~= record and other.model and other.model.Parent then
+            local root = other.model:FindFirstChild("HumanoidRootPart")
+            local humanoid = other.model:FindFirstChildOfClass("Humanoid")
+            if root and root:IsA("BasePart") and humanoid and humanoid.Health > 0 then
+                table.insert(targets, {
+                    root = root,
+                    partnerSlot = other.slot,
+                })
             end
         end
     end
 
+    return targets
+end
+
+local function chooseLobbyTarget(record)
+    local center = config.LobbyCenter
+    local now = os.clock()
+
+    if voteActive then
+        record.lobbyActivity = "vote"
+        local offset = AISurvivorRules.voteGatherOffset(record.slot, voteRoundNumber)
+        return center + offset + Vector3.new(0, 2.7, 0), 1.0 + math.random() * 0.8, nil
+    end
+
+    local traits = record.roundTraits or record.profile
+    local socialChance = now >= (record.nextSocialAt or 0)
+        and math.clamp((traits.SocialChance or record.profile.SocialChance or 0.2) * 0.78, 0.08, 0.32)
+        or 0
+    local practiceChance = now >= (record.nextPracticeAt or 0)
+        and math.clamp(0.14 + (traits.Risk or record.profile.Risk or 0.5) * 0.12, 0.14, 0.25)
+        or 0
+
+    local activity = AISurvivorRules.lobbyActivity(
+        math.random(),
+        socialChance,
+        practiceChance,
+        false
+    )
+
+    if activity == "social" then
+        local targets = lobbySocialTargets(record)
+        if #targets > 0 then
+            local selected = targets[math.random(1, #targets)]
+            record.lobbyActivity = "social"
+            record.nextSocialAt = now + 5 + math.random() * 7
+            local offset = AISurvivorRules.socialSpacing(
+                record.slot,
+                selected.partnerSlot
+            )
+            return selected.root.Position + offset, 1.5 + math.random() * 1.8, nil
+        end
+    elseif activity == "practice" then
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local lobby = generated and generated:FindFirstChild("Lobby")
+        local activities = lobby and lobby:FindFirstChild("Activities")
+        local pads = sortedParts(activities)
+        if #pads > 0 then
+            local pad = pads[math.random(1, #pads)]
+            record.lobbyActivity = "practice"
+            record.nextPracticeAt = now + 6 + math.random() * 9
+            return pad.Position + Vector3.new(0, 1.7, 0), 1.5 + math.random() * 1.0, pad
+        end
+    end
+
+    record.lobbyActivity = "roam"
     local angle = math.random() * math.pi * 2
     local radius = 8 + math.random() * 20
     local position = center + Vector3.new(
@@ -1277,18 +1343,6 @@ local function chooseLobbyTarget(record)
         2.7,
         math.sin(angle) * radius
     )
-
-    if math.random() < 0.20 then
-        local generated = workspace:FindFirstChild("GeneratedMap")
-        local lobby = generated and generated:FindFirstChild("Lobby")
-        local activities = lobby and lobby:FindFirstChild("Activities")
-        local pads = sortedParts(activities)
-        if #pads > 0 then
-            local pad = pads[math.random(1, #pads)]
-            return pad.Position + Vector3.new(0, 1.7, 0), 1.6 + math.random() * 1.2, pad
-        end
-    end
-
     return position, 1.8 + math.random() * 2.8, nil
 end
 
@@ -1349,6 +1403,7 @@ local function tryLobbyPracticeImpulse(record, root, now)
         definition.impulse
     )
     record.nextPadAt = now + 1.0
+    record.nextPracticeAt = math.max(record.nextPracticeAt or 0, now + 7.0)
     record.target = nil
     record.targetPart = nil
 end
@@ -1837,7 +1892,20 @@ end
 function AISurvivorService.beginVote(options, roundNumber)
     voteToken += 1
     local token = voteToken
+    voteActive = true
+    voteRoundNumber = math.max(1, math.floor(tonumber(roundNumber) or roundSerial or 1))
     table.clear(voteIds)
+
+    local now = os.clock()
+    for _, record in ipairs(records) do
+        record.target = config.LobbyCenter
+            + AISurvivorRules.voteGatherOffset(record.slot, voteRoundNumber)
+            + Vector3.new(0, 2.7, 0)
+        record.targetPart = nil
+        record.targetIsPad = false
+        record.lobbyActivity = "vote"
+        record.nextThink = now + 1.4 + math.random() * 0.9
+    end
 
     if type(options) ~= "table" or #options == 0 then
         return
@@ -1861,7 +1929,17 @@ end
 
 function AISurvivorService.clearVotes()
     voteToken += 1
+    voteActive = false
     table.clear(voteIds)
+
+    for _, record in ipairs(records) do
+        if record.lobbyActivity == "vote" then
+            record.lobbyActivity = "roam"
+            record.target = nil
+            record.targetPart = nil
+            record.nextThink = 0
+        end
+    end
 end
 
 function AISurvivorService.voteCounts()
