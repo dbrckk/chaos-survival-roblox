@@ -115,8 +115,8 @@ PHASE F — RETENTION / FUN
 [FAIT] F14 Lobby AI vivant : rotation entre roam/practice/social/vote, regroupements bot↔bot ou bot↔humain avec espacement et cooldown, partenaires sociaux alternés, usage des practice pads sans spam, regroupement temporaire distribué autour du centre pendant les votes puis dispersion, orientation douce vers le centre et gestes sociaux suspendus pendant le vote pour éviter le jitter. Steering et recovery utilisent explicitement l'espace lobby hors round afin de ne jamais être clampés vers l'arène.
 
 PHASE G — UI/UX
-[EN COURS] G1 Layout responsive + dock tactile + palier compact/tablette <1.50 ajoutés ; validation réelle 16:9/tall/tablet encore requise.
-[EN COURS] G2 Boutons méta masqués pendant READY/ROUND + dock tactile unique + result/panels compactés sur tablette/mobile ; QA réelle restante.
+[EN COURS] G1 Responsive centralisé via UIResponsive : profils fondés sur dimensions réelles, support 640x360/800x360/1280x720, top HUD/timer/votes/result/panels en hauteurs pixel-safe, cartes de vote simplifiées sur écrans très bas et focus de round dédié ; validation réelle 16:9/tall/tablet encore requise.
+[EN COURS] G2 Dock tactile unique avec cible >=44 px, stats/XP déplacés au-dessus du dock puis masqués pendant READY/ROUND mobile, panels réservés au-dessus du dock, warning data séparé du compteur survivants et menus FTUE masqués avant la première manche ; QA réelle restante.
 [FAIT] G3 Tokens de mouvement UI centralisés : press/release, panel-in, result emphasis et fades cohérents.
 [FAIT] G4 State machine UI : READY/ROUND ferme la méta, masque le dock et invalide tout résultat retardé ; gameplay critique prioritaire.
 [EN COURS] G5 Reduce Motion persistant actif sur caméra/postFX/décors/world polish ; contraste et warnings redondants, QA réelle restante.
