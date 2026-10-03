@@ -5,13 +5,18 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
 folder.Name = "ArenaNavigationLanguageLocal"
 folder.Parent = workspace
 
+local dynamicIndicators = {}
+local shrinkingActive = false
+
 local function clear()
     folder:ClearAllChildren()
+    table.clear(dynamicIndicators)
 end
 
 local function makePart(name, size, cframe, color, material, transparency)
@@ -59,7 +64,7 @@ local function addGroundChevron(position, direction, color, alpha, index)
     local left = position + back * 0.65 - lateral * 0.58
     local right = position + back * 0.65 + lateral * 0.58
 
-    makePart(
+    local leftPart = makePart(
         "RouteChevronL" .. index,
         Vector3.new(1.7, 0.05, 0.18),
         CFrame.new(left) * CFrame.Angles(0, yaw + math.rad(38), 0),
@@ -68,7 +73,7 @@ local function addGroundChevron(position, direction, color, alpha, index)
         alpha
     )
 
-    makePart(
+    local rightPart = makePart(
         "RouteChevronR" .. index,
         Vector3.new(1.7, 0.05, 0.18),
         CFrame.new(right) * CFrame.Angles(0, yaw - math.rad(38), 0),
@@ -76,6 +81,8 @@ local function addGroundChevron(position, direction, color, alpha, index)
         Enum.Material.Neon,
         alpha
     )
+
+    return leftPart, rightPart
 end
 
 local function addVerticalBeacon(pad, color, tier, index)
@@ -90,7 +97,7 @@ local function addVerticalBeacon(pad, color, tier, index)
     )
     beam:SetAttribute("NavBaseTransparency", beam.Transparency)
 
-    makePart(
+    local cap = makePart(
         "VerticalRouteCap" .. index,
         Vector3.new(1.35, 0.10, 1.35),
         CFrame.new(pad.Position + Vector3.new(0, height + 0.4, 0)),
@@ -98,6 +105,8 @@ local function addVerticalBeacon(pad, color, tier, index)
         Enum.Material.Neon,
         tier.Name == "High" and 0.36 or 0.52
     )
+
+    return beam, cap, height
 end
 
 local function addCenterLandmark(base, theme, variant, tier)
@@ -208,24 +217,92 @@ local function rebuild()
 
         if variant == "Towers" then
             if not low then
-                addVerticalBeacon(pad, routeColor, tier, index)
+                local beam, cap, height = addVerticalBeacon(pad, routeColor, tier, index)
+                table.insert(dynamicIndicators, {
+                    kind = "vertical",
+                    pad = pad,
+                    beam = beam,
+                    cap = cap,
+                    height = height,
+                })
             end
         elseif direction.Magnitude > 0.01 then
             local steps = low and 1 or (tier.Name == "Medium" and 2 or 3)
             for step = 1, steps do
                 local distance = 4 + (step - 1) * 3.1
                 local pos = pad.Position - direction * distance + Vector3.new(0, pad.Size.Y * 0.5 + 0.08, 0)
-                addGroundChevron(
+                local left, right = addGroundChevron(
                     pos,
                     direction,
                     routeColor,
                     low and 0.72 or (0.58 + (step - 1) * 0.06),
                     index * 10 + step
                 )
+                table.insert(dynamicIndicators, {
+                    kind = "chevron",
+                    pad = pad,
+                    direction = direction,
+                    step = step,
+                    left = left,
+                    right = right,
+                })
             end
         end
     end
 end
+
+local function updateDynamicIndicators()
+    for _, state in ipairs(dynamicIndicators) do
+        local pad = state.pad
+        if not pad or not pad.Parent then
+            continue
+        end
+
+        if state.kind == "vertical" then
+            local height = state.height
+            if state.beam and state.beam.Parent then
+                state.beam.CFrame = CFrame.new(pad.Position + Vector3.new(0, height * 0.5 + 0.4, 0))
+            end
+            if state.cap and state.cap.Parent then
+                state.cap.CFrame = CFrame.new(pad.Position + Vector3.new(0, height + 0.4, 0))
+            end
+        elseif state.kind == "chevron" then
+            local direction = state.direction
+            local step = state.step
+            local distance = 4 + (step - 1) * 3.1
+            local position = pad.Position - direction * distance + Vector3.new(0, pad.Size.Y * 0.5 + 0.08, 0)
+            local yaw = math.atan2(-direction.X, -direction.Z)
+            local lateral = Vector3.new(direction.Z, 0, -direction.X)
+            local back = -direction
+            local left = position + back * 0.65 - lateral * 0.58
+            local right = position + back * 0.65 + lateral * 0.58
+
+            if state.left and state.left.Parent then
+                state.left.CFrame = CFrame.new(left) * CFrame.Angles(0, yaw + math.rad(38), 0)
+            end
+            if state.right and state.right.Parent then
+                state.right.CFrame = CFrame.new(right) * CFrame.Angles(0, yaw - math.rad(38), 0)
+            end
+        end
+    end
+end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    shrinkingActive = state
+        and state.phase == "round"
+        and table.find(state.disasterIds or {}, "ShrinkingArena") ~= nil
+end)
+
+task.spawn(function()
+    while true do
+        if shrinkingActive and #dynamicIndicators > 0 then
+            updateDynamicIndicators()
+            task.wait(0.12)
+        else
+            task.wait(0.5)
+        end
+    end
+end)
 
 local function bindArena(arena)
     if not arena then
