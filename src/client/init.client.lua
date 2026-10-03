@@ -6,6 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
+local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
@@ -1474,20 +1475,25 @@ local function showRoundFeedback(feedback)
     local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
     local masterRound = survived and feedback.challengeCompleted == true and momentumBest >= 4
 
-    resultTitle.Text = masterRound
-        and "MASTER ROUND!"
-        or (survived and "SURVIVED!" or "ELIMINATED")
-    resultStroke.Color = masterRound
+    local resultKind = ResultPresentation.kind(feedback)
+    resultTitle.Text = ResultPresentation.title(feedback)
+    resultStroke.Color = resultKind == "master"
         and UITheme.Colors.Gold
-        or (survived and UITheme.Colors.Green or UITheme.Colors.Red)
-    resultAccent.BackgroundColor3 = masterRound
+        or (resultKind == "clutch"
+            and UITheme.Colors.Cyan
+            or (survived and UITheme.Colors.Green or UITheme.Colors.Red))
+    resultAccent.BackgroundColor3 = resultKind == "master"
         and UITheme.Colors.Cyan
-        or (survived and UITheme.Colors.Green or UITheme.Colors.Red)
-    resultGradient.Color = masterRound
+        or (resultKind == "clutch"
+            and UITheme.Colors.Blue
+            or (survived and UITheme.Colors.Green or UITheme.Colors.Red))
+    resultGradient.Color = resultKind == "master"
         and ColorSequence.new(Color3.fromRGB(35, 73, 82), Color3.fromRGB(45, 34, 18))
-        or (survived
-            and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
-            or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel))
+        or (resultKind == "clutch"
+            and ColorSequence.new(Color3.fromRGB(24, 60, 78), Color3.fromRGB(18, 38, 48))
+            or (survived
+                and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
+                or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel)))
 
     local streakBonus = tonumber(feedback.streakBonusCoins) or 0
     local shardCoins = tonumber(feedback.shardCoins) or 0
@@ -1626,12 +1632,16 @@ local function showRoundFeedback(feedback)
         resultTip.Text = "TIP: keep moving and react early to warning zones"
     end
 
-    resultCard.BackgroundColor3 = masterRound
+    resultCard.BackgroundColor3 = resultKind == "master"
         and Color3.fromRGB(30, 64, 69)
-        or (survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40))
-    resultFlash.BackgroundColor3 = masterRound
+        or (resultKind == "clutch"
+            and Color3.fromRGB(24, 58, 76)
+            or (survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40)))
+    resultFlash.BackgroundColor3 = resultKind == "master"
         and Color3.fromRGB(255, 220, 95)
-        or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95))
+        or (resultKind == "clutch"
+            and Color3.fromRGB(85, 205, 255)
+            or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95)))
 
     resultCard.Visible = true
     resultCard.BackgroundTransparency = 1
