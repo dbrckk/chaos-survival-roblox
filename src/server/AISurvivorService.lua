@@ -671,6 +671,7 @@ local function newRecord(slot)
         lobbyActivity = "roam",
         nextSocialAt = 0,
         nextPracticeAt = 0,
+        lastSocialPartnerSlot = nil,
     }
 
     record.proxy = {
@@ -1313,7 +1314,18 @@ local function chooseLobbyTarget(record)
     if activity == "social" then
         local targets = lobbySocialTargets(record)
         if #targets > 0 then
-            local selected = targets[math.random(1, #targets)]
+            local pool = {}
+            for _, candidate in ipairs(targets) do
+                if candidate.partnerSlot ~= record.lastSocialPartnerSlot then
+                    table.insert(pool, candidate)
+                end
+            end
+            if #pool == 0 then
+                pool = targets
+            end
+
+            local selected = pool[math.random(1, #pool)]
+            record.lastSocialPartnerSlot = selected.partnerSlot
             record.lobbyActivity = "social"
             record.nextSocialAt = now + 5 + math.random() * 7
             local offset = AISurvivorRules.socialSpacing(
