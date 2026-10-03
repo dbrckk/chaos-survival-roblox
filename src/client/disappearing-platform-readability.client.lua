@@ -77,7 +77,6 @@ local function layout(part, state, phase, now)
     local low = tier.Name == "Low"
     local halfX = part.Size.X * 0.5
     local halfZ = part.Size.Z * 0.5
-    local y = part.Position.Y + part.Size.Y * 0.5 + 0.08
     local thickness = low and 0.12 or 0.16
     local pulse = (math.sin(now * (phase == "Gone" and 4.2 or 7.2)) + 1) * 0.5
     local baseAlpha = phase == "Gone" and 0.62 or (low and 0.48 or 0.28)
