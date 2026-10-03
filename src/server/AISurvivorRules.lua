@@ -408,6 +408,19 @@ function AISurvivorRules.platformAvailable(canCollide, transparency, collapsePha
     return collapsePhase ~= "Warning" and collapsePhase ~= "Gone"
 end
 
+function AISurvivorRules.brainCadence(recordCount, phase)
+    local count = math.max(0, math.floor(tonumber(recordCount) or 0))
+    if count == 0 then
+        return 0.75
+    end
+
+    if tostring(phase or "waiting") == "result" then
+        return 0.42
+    end
+
+    return 0.18
+end
+
 function AISurvivorRules.reactionReady(firstSeenAt, now, reactionSeconds)
     local seen = tonumber(firstSeenAt)
     local current = tonumber(now)
