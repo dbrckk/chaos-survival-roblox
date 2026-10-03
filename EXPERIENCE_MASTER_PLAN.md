@@ -199,3 +199,6 @@ Ordre d'exécution immédiat
 
 - [FAIT] Spatial arena ambience : beds 3D map-specific autour de l'arène, rolloff borné pour rester inaudible au lobby, EQ/réverb propres à chaque map, fade par phase et aucun RenderStepped/Heartbeat.
 - [FAIT] Perf speed-feel : boucle UI passe de 20 Hz permanent à 0,40 s hors participation, 0,12 s sous le seuil de vitesse et 0,08 s seulement quand les streaks sont visibles.
+
+- [FAIT] Render loops catastrophe passés à la demande : disaster-motion-vfx, disaster-premium-vfx, ShrinkingArena pressure, DisappearingPlatforms readability, Meteor/Bomb hazard routes et Tornado ne gardent plus de RenderStepped connecté quand aucun effet correspondant n'est actif.
+- [FAIT] AI server perf : warnings Meteor/Bomb/Freeze/JumpShock indexés via Workspace ChildAdded/ChildRemoved au lieu d'un scan GetChildren toutes les ~0,15 s ; brain cadence = 0,18 s avec bots actifs, 0,42 s pendant RESULT et 0,75 s sans bot.
