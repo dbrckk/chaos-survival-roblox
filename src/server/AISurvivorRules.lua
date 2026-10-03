@@ -95,6 +95,58 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+function AISurvivorRules.steeredDirection(previousDirection, desiredDirection, urgent)
+    local desired = typeof(desiredDirection) == "Vector3" and desiredDirection or Vector3.zero
+    desired = Vector3.new(desired.X, 0, desired.Z)
+    if desired.Magnitude <= 0.001 then
+        return Vector3.zero
+    end
+    desired = desired.Unit
+
+    if urgent == true then
+        return desired
+    end
+
+    local previous = typeof(previousDirection) == "Vector3" and previousDirection or Vector3.zero
+    previous = Vector3.new(previous.X, 0, previous.Z)
+    if previous.Magnitude <= 0.001 then
+        return desired
+    end
+    previous = previous.Unit
+
+    local dot = math.clamp(previous:Dot(desired), -1, 1)
+    local blend = dot < -0.35 and 0.34
+        or (dot < 0.35 and 0.46 or 0.62)
+    local mixed = previous:Lerp(desired, blend)
+    if mixed.Magnitude <= 0.001 then
+        return desired
+    end
+
+    return mixed.Unit
+end
+
+function AISurvivorRules.turnPauseSeconds(previousDirection, desiredDirection, urgent, pressure)
+    if urgent == true then
+        return 0
+    end
+
+    local previous = typeof(previousDirection) == "Vector3" and previousDirection or Vector3.zero
+    local desired = typeof(desiredDirection) == "Vector3" and desiredDirection or Vector3.zero
+    previous = Vector3.new(previous.X, 0, previous.Z)
+    desired = Vector3.new(desired.X, 0, desired.Z)
+    if previous.Magnitude <= 0.001 or desired.Magnitude <= 0.001 then
+        return 0
+    end
+
+    local dot = math.clamp(previous.Unit:Dot(desired.Unit), -1, 1)
+    if dot > -0.15 then
+        return 0
+    end
+
+    local p = math.clamp(tonumber(pressure) or 0, 0, 1)
+    return math.clamp(0.12 + (-dot) * 0.10 - p * 0.08, 0.08, 0.22)
+end
+
 function AISurvivorRules.routeChoiceWidth(risk, candidateCount)
     local count = math.max(1, math.floor(tonumber(candidateCount) or 1))
     local value = math.clamp(tonumber(risk) or 0.5, 0, 1)
