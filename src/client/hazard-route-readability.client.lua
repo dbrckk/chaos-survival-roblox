@@ -22,6 +22,12 @@ local SUPPORTED = {
     Freeze = true,
 }
 
+local WARNING_NAMES = {
+    MeteorWarning = true,
+    BombWarning = true,
+    FreezeWarning = true,
+}
+
 local KIND_COLORS = {
     Meteor = Color3.fromRGB(255, 175, 70),
     Bomb = Color3.fromRGB(255, 75, 75),
@@ -88,7 +94,7 @@ local function createState(warning, kind)
 end
 
 local function maybeBind(instance)
-    if not instance:IsA("BasePart") then
+    if not instance:IsA("BasePart") or not WARNING_NAMES[instance.Name] then
         return
     end
 
