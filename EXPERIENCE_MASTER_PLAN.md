@@ -165,3 +165,5 @@ Ordre d'exécution immédiat
 
 - [FAIT] Locomotion additive authored : cycle stride lié à la vitesse, freinage, virage signé/sévérité, réduction du swing sur demi-tour, poses résultat full-body et règles pures couvertes par tests moteur.
 - [FAIT] Traitement audio spectral : profils EQ/réverb par cue catastrophe/mobilité/résultat, appliqués à la source et hérités par les one-shots clonés ; bornes de sécurité couvertes par tests.
+
+- [FAIT] Présentation résultat premium : hiérarchie partagée MASTER / CLUTCH / SURVIVED / ELIMINATED, carte résultat colorée distinctement, célébration clutch dédiée, spotlight monde du joueur local et des survivants humains/AI pour conserver une fin de round crédible même en solo.
