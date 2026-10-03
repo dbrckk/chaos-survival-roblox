@@ -7,7 +7,10 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local revealToken = 0
+local lastRevealAt = 0
+local previousPhase = "waiting"
 
 local function makeNeonPart(name, size, cframe, color, transparency)
     local part = Instance.new("Part")
@@ -169,10 +172,16 @@ local function spawnVariantSignature(variant, center, base, theme, tier, reduced
     end
 end
 
-local function revealArena(arena)
+local function revealArena(arena, force)
     if not arena or not arena.Parent then
         return
     end
+
+    local now = os.clock()
+    if force ~= true and now - lastRevealAt < 0.75 then
+        return
+    end
+    lastRevealAt = now
 
     local base = arena:FindFirstChild("Base")
     if not base or not base:IsA("BasePart") then
@@ -259,12 +268,12 @@ end
 local function bindGeneratedMap(root)
     local arena = root:FindFirstChild("Arena")
     if arena then
-        task.delay(0.12, revealArena, arena)
+        task.delay(0.12, revealArena, arena, false)
     end
 
     root.ChildAdded:Connect(function(child)
         if child.Name == "Arena" then
-            task.delay(0.12, revealArena, child)
+            task.delay(0.12, revealArena, child, false)
         end
     end)
 end
@@ -279,3 +288,16 @@ local existing = workspace:FindFirstChild("GeneratedMap")
 if existing then
     task.defer(bindGeneratedMap, existing)
 end
+
+
+stateEvent.OnClientEvent:Connect(function(state)
+    local phase = tostring(state.phase or "waiting")
+    if phase == "ready" and previousPhase ~= "ready" then
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        if arena then
+            task.delay(0.08, revealArena, arena, true)
+        end
+    end
+    previousPhase = phase
+end)
