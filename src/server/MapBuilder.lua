@@ -1206,6 +1206,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     spawnFolder.Name = "Spawns"
     spawnFolder.Parent = arena
 
+    local entryGuides = Instance.new("Folder")
+    entryGuides.Name = "EntryGuides"
+    entryGuides.Parent = arena
+
     for i, offset in ipairs(variant.SpawnOffsets) do
         local spawnPosition = config.ArenaCenter + offset
         local s = part(
@@ -1222,6 +1226,22 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             config.ArenaCenter
         )
         s.Transparency = 0.08
+
+        local guideColor = i % 2 == 0 and theme.Secondary or theme.Accent
+        for side = -1, 1, 2 do
+            local guide = decorPart(
+                entryGuides,
+                "EntryChevron" .. i .. "_" .. tostring(side),
+                Vector3.new(2.6, 0.08, 0.24),
+                spawnPosition,
+                guideColor,
+                VisualTheme.Materials.Glow
+            )
+            guide.CFrame = s.CFrame
+                * CFrame.new(side * 0.78, -0.32, -3.0)
+                * CFrame.Angles(0, math.rad(side * 34), 0)
+            guide.Transparency = 0.22
+        end
 
         local glow = part(
             arena,
