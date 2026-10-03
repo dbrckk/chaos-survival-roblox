@@ -169,6 +169,7 @@ local activeLoopName = nil
 local lastPhase = nil
 local lastTitle = nil
 local lastCountdown = nil
+local lastReadyCountdown = nil
 local lastLevel = player:GetAttribute("Level") or 1
 local lastSurvivorCuePlayed = false
 local currentIntensity = 1
@@ -517,8 +518,24 @@ stateEvent.OnClientEvent:Connect(function(state)
         if phase ~= lastPhase or state.title ~= lastTitle then
             play("Ready")
         end
+
+        local readySecond = math.floor(seconds)
+        if readySecond >= 1
+            and readySecond <= 3
+            and readySecond ~= lastReadyCountdown
+        then
+            playRaw(
+                "Countdown",
+                0,
+                readySecond == 1 and 0.34 or 0.24,
+                (3 - readySecond) * 0.10
+            )
+            lastReadyCountdown = readySecond
+        end
+
         musicVolume(0.08, 0.18)
     elseif phase == "round" then
+        lastReadyCountdown = nil
         setDisasterLoop(state.disasterIds)
 
         if phase ~= lastPhase or state.title ~= lastTitle then
@@ -544,10 +561,12 @@ stateEvent.OnClientEvent:Connect(function(state)
         stopDisasterLoop()
         musicVolume(0.09, 0.35)
         lastCountdown = nil
+        lastReadyCountdown = nil
     else
         stopDisasterLoop()
         musicVolume(0.11, 0.4)
         lastCountdown = nil
+        lastReadyCountdown = nil
     end
 
     local alive = tonumber(state.survivorsAlive)
