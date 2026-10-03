@@ -68,6 +68,24 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+function AISurvivorRules.padInterest(baseChance, variantId, lowOnMap, risingLava)
+    local chance = math.clamp(tonumber(baseChance) or 0, 0, 1)
+
+    if variantId == "Towers" and lowOnMap == true then
+        chance += 0.24
+    elseif variantId == "Orbital" then
+        chance += 0.10
+    elseif variantId == "Crossroads" then
+        chance += 0.08
+    end
+
+    if risingLava == true then
+        chance += 0.24
+    end
+
+    return math.clamp(chance, 0, 0.72)
+end
+
 function AISurvivorRules.reachableElevation(currentY, targetY, variantId)
     local rise = (tonumber(targetY) or 0) - (tonumber(currentY) or 0)
     if rise <= 0 then
