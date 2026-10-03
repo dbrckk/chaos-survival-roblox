@@ -648,6 +648,44 @@ local function addPlatformFinish(decor, platform, index, theme)
         VisualTheme.Materials.Glow
     )
     core.Transparency = 0.26
+
+    local platformBottom = platform.Position.Y - (platform.Size.Y * 0.5)
+    local deckTop = 1.15
+    local supportHeight = platformBottom - deckTop
+    if supportHeight >= 3.5 then
+        local supportWidth = math.clamp(math.min(platform.Size.X, platform.Size.Z) * 0.10, 0.72, 1.35)
+        local supportColor = theme.Structure:Lerp(theme.Detail, 0.14)
+        local insetX = math.max(0, (platform.Size.X * 0.5) - 2.0)
+        local insetZ = math.max(0, (platform.Size.Z * 0.5) - 2.0)
+        local supportOffsets = {
+            Vector3.new(-insetX, 0, -insetZ),
+            Vector3.new(insetX, 0, insetZ),
+        }
+
+        if math.min(platform.Size.X, platform.Size.Z) >= 11 then
+            table.insert(supportOffsets, Vector3.new(-insetX, 0, insetZ))
+            table.insert(supportOffsets, Vector3.new(insetX, 0, -insetZ))
+        end
+
+        for supportIndex, offset in ipairs(supportOffsets) do
+            local support = decorPart(
+                decor,
+                "PlatformSupport" .. index .. "_" .. supportIndex,
+                Vector3.new(supportWidth, supportHeight, supportWidth),
+                Vector3.new(
+                    platform.Position.X + offset.X,
+                    deckTop + (supportHeight * 0.5),
+                    platform.Position.Z + offset.Z
+                ),
+                supportColor,
+                VisualTheme.Materials.Structure
+            )
+            support.Transparency = 0.14
+            support.CanCollide = false
+            support.CanTouch = false
+            support.CanQuery = false
+        end
+    end
 end
 
 local function buildLobby(root, config)
