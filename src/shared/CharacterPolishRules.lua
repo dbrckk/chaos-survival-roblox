@@ -1,8 +1,19 @@
 local CharacterPolishRules = {}
 
-function CharacterPolishRules.outlineTransparency(tierName, phase, localCharacter, aiCharacter, finalRush)
+function CharacterPolishRules.outlineTransparency(
+    tierName,
+    phase,
+    localCharacter,
+    aiCharacter,
+    finalRush,
+    activeParticipant
+)
     local tier = tostring(tierName or "Medium")
     local state = tostring(phase or "waiting")
+
+    if state == "round" and activeParticipant == false then
+        return 0.94
+    end
 
     if finalRush == true then
         return localCharacter == true and 0.50 or 0.82
@@ -35,12 +46,21 @@ function CharacterPolishRules.fillTransparency(tierName, phase, localCharacter, 
     return 1
 end
 
-function CharacterPolishRules.lightBrightness(tierName, phase, localCharacter, finalRush)
+function CharacterPolishRules.lightBrightness(
+    tierName,
+    phase,
+    localCharacter,
+    finalRush,
+    activeParticipant
+)
     if finalRush == true or tostring(tierName) == "Low" then
         return 0
     end
 
     local state = tostring(phase or "waiting")
+    if state == "round" and activeParticipant == false then
+        return 0
+    end
     if state ~= "round" and state ~= "ready" then
         return 0
     end
