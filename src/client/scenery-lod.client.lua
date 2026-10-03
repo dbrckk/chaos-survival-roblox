@@ -26,6 +26,10 @@ local FOLDERS = {
         LowDistance = 120,
         MediumDistance = 190,
     },
+    ArenaNavigationLanguageLocal = {
+        LowDistance = 110,
+        MediumDistance = 175,
+    },
 }
 
 local function cameraPosition()
