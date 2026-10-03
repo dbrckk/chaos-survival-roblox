@@ -1,0 +1,129 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+
+local player = Players.LocalPlayer
+
+local tracked = {}
+
+local function hashName(name)
+    local value = 17
+    for i = 1, #name do
+        value = (value * 31 + string.byte(name, i)) % 9973
+    end
+    return value
+end
+
+local function eligible(part)
+    if not part:IsA("BasePart") then
+        return false
+    end
+
+    if part.Material == Enum.Material.Neon then
+        return false
+    end
+
+    if part:GetAttribute("ArenaMobilityPad") == true
+        or part:GetAttribute("CollapsePhase") ~= nil
+    then
+        return false
+    end
+
+    local name = part.Name
+    if string.find(name, "Glow")
+        or string.find(name, "Warning")
+        or string.find(name, "Hazard")
+        or string.find(name, "KillPlane")
+        or string.find(name, "Spawn")
+    then
+        return false
+    end
+
+    return part.Material == Enum.Material.Metal
+        or part.Material == Enum.Material.DiamondPlate
+        or part.Material == Enum.Material.SmoothPlastic
+end
+
+local function applyPart(part, profile)
+    if not eligible(part) then
+        return
+    end
+
+    local base = part:GetAttribute("MaterialPassBaseColor")
+    if typeof(base) ~= "Color3" then
+        base = part.Color
+        part:SetAttribute("MaterialPassBaseColor", base)
+    end
+
+    local hash = hashName(part:GetFullName())
+    local centered = ((hash % 101) / 100) * 2 - 1
+    local maxShift = profile.Name == "Low" and 0.018
+        or (profile.Name == "Medium" and 0.032 or 0.045)
+    local shift = centered * maxShift
+
+    if shift >= 0 then
+        part.Color = base:Lerp(Color3.new(1, 1, 1), shift)
+    else
+        part.Color = base:Lerp(Color3.new(0, 0, 0), -shift)
+    end
+end
+
+local function restore()
+    for part in pairs(tracked) do
+        if part and part.Parent then
+            local base = part:GetAttribute("MaterialPassBaseColor")
+            if typeof(base) == "Color3" then
+                part.Color = base
+            end
+        end
+    end
+    table.clear(tracked)
+end
+
+local function applyFolder(folder, profile)
+    if not folder then
+        return
+    end
+
+    for _, descendant in ipairs(folder:GetDescendants()) do
+        if eligible(descendant) then
+            tracked[descendant] = true
+            applyPart(descendant, profile)
+        end
+    end
+end
+
+local function rebuild()
+    restore()
+
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    if not generated then
+        return
+    end
+
+    local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local arena = generated:FindFirstChild("Arena")
+    local lobby = generated:FindFirstChild("Lobby")
+
+    applyFolder(arena and arena:FindFirstChild("Decor"), profile)
+    applyFolder(lobby and lobby:FindFirstChild("Decor"), profile)
+end
+
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        task.delay(0.12, rebuild)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        restore()
+    end
+end)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    task.defer(rebuild)
+end)
+
+rebuild()
