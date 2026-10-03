@@ -70,6 +70,16 @@ function UIResponsive.mobileProfile(viewport)
     }
 end
 
+function UIResponsive.criticalTextMin(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    if c.tinyHeight then
+        return 13
+    elseif c.compactHeight then
+        return 14
+    end
+    return 15
+end
+
 function UIResponsive.touchTargetSatisfied(height)
     return (tonumber(height) or 0) >= 44
 end
