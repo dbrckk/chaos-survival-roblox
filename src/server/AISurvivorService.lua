@@ -486,6 +486,7 @@ local function createRig(record)
     model:SetAttribute("AISurvivor", true)
     model:SetAttribute("AISurvivorSlot", record.slot)
     model:SetAttribute("AISurvivorProfile", record.profile.Id)
+    model:SetAttribute("ChaosAccent", record.identity.Accent)
 
     local humanoid = model:FindFirstChildOfClass("Humanoid")
     local root = model:FindFirstChild("HumanoidRootPart")
