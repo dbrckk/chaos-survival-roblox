@@ -1,7 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local SoundService = game:GetService("SoundService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
@@ -42,24 +41,6 @@ local token = 0
 
 local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-end
-
-local function playBoostSound()
-    local sound = Instance.new("Sound")
-    sound.Name = "PracticeBoostLocal"
-    sound.SoundId = "rbxasset://sounds/swoosh.wav"
-    sound.Volume = 0.24
-    sound.PlaybackSpeed = 1.42
-    sound.Parent = SoundService
-    sound:Play()
-    sound.Ended:Connect(function()
-        sound:Destroy()
-    end)
-    task.delay(2, function()
-        if sound.Parent then
-            sound:Destroy()
-        end
-    end)
 end
 
 local function showFeedback(color)
@@ -194,7 +175,6 @@ local function attach(pad)
         lastTriggeredAt = now
 
         showFeedback(pad.Color:Lerp(Color3.new(1, 1, 1), 0.22))
-        playBoostSound()
         emitter:Emit(VfxQuality.particleCount(tier().Name, 16, 4))
     end)
 
