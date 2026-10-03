@@ -1522,7 +1522,10 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent)
 end
 
 local function maybeSocialGesture(record, humanoid, root, now)
-    if now < (record.nextEmoteAt or 0) or currentState.phase == "round" then
+    if now < (record.nextEmoteAt or 0)
+        or currentState.phase == "round"
+        or voteActive
+    then
         return false
     end
 
@@ -1531,30 +1534,31 @@ local function maybeSocialGesture(record, humanoid, root, now)
         return false
     end
 
-    local humans = Players:GetPlayers()
-    if #humans == 0 then
-        return false
+    local nearest = nil
+    local nearestDistance = 22
+    for _, candidate in ipairs(lobbySocialTargets(record)) do
+        local candidateRoot = candidate.root
+        local distance = (candidateRoot.Position - root.Position).Magnitude
+        if distance < nearestDistance then
+            nearest = candidateRoot
+            nearestDistance = distance
+        end
     end
 
-    local human = humans[math.random(1, #humans)]
-    local humanRoot = human.Character and human.Character:FindFirstChild("HumanoidRootPart")
-    if not humanRoot or not humanRoot:IsA("BasePart") then
-        return false
-    end
-
-    local distance = (humanRoot.Position - root.Position).Magnitude
-    if distance > 22 then
+    if not nearest then
         return false
     end
 
     -- A short stop + softer turn reads like acknowledgement without chat spam.
     humanoid:Move(Vector3.zero)
-    local look = Vector3.new(humanRoot.Position.X, root.Position.Y, humanRoot.Position.Z)
+    local look = Vector3.new(nearest.Position.X, root.Position.Y, nearest.Position.Z)
     if (look - root.Position).Magnitude > 0.2 then
         root.CFrame = root.CFrame:Lerp(CFrame.lookAt(root.Position, look), 0.55)
     end
     record.idleUntil = now + 0.35 + math.random() * 0.55
     record.target = nil
+    record.targetPart = nil
+    record.lobbyActivity = "social"
 
     if math.random() < 0.28 then
         humanoid.Jump = true
@@ -1830,6 +1834,7 @@ function AISurvivorService.setRoundState(state)
 
     if phase ~= previousPhase then
         if phase == "ready" then
+            voteActive = false
             roundSerial += 1
             reconcile()
             for _, record in ipairs(records) do
@@ -1879,6 +1884,7 @@ function AISurvivorService.setRoundState(state)
                 end
             end
         elseif phase == "intermission" or phase == "waiting" then
+            voteActive = false
             reconcile()
             for _, record in ipairs(records) do
                 sendToLobby(record)
