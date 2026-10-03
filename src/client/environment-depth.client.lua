@@ -288,6 +288,73 @@ local function addHorizonDepth(tier, variant)
         end
     end
 
+    local frameLayers = tier.Name == "Low" and 1 or 2
+    for layer = 1, frameLayers do
+        local frameSize = radius * (layer == 1 and 1.02 or 1.30)
+        local y = layer == 1 and -17 or -36
+        local thickness = layer == 1 and 2.2 or 3.0
+        local frameTransparency = layer == 1
+            and (tier.Name == "Low" and 0.48 or 0.34)
+            or 0.48
+        local layerColor = layer == 1
+            and VisualTheme.World.Deep:Lerp(VisualTheme.World.Metal, 0.34)
+            or VisualTheme.World.Void:Lerp(VisualTheme.World.Metal, 0.20)
+
+        local north = makePart(
+            "VoidFrameNorth" .. layer,
+            Vector3.new(frameSize, thickness, 4.2),
+            CFrame.new(center + Vector3.new(0, y, -frameSize * 0.5)),
+            layerColor,
+            VisualTheme.Materials.Structure,
+            frameTransparency
+        )
+        local south = makePart(
+            "VoidFrameSouth" .. layer,
+            Vector3.new(frameSize, thickness, 4.2),
+            CFrame.new(center + Vector3.new(0, y, frameSize * 0.5)),
+            layerColor,
+            VisualTheme.Materials.Structure,
+            frameTransparency
+        )
+        local west = makePart(
+            "VoidFrameWest" .. layer,
+            Vector3.new(4.2, thickness, frameSize),
+            CFrame.new(center + Vector3.new(-frameSize * 0.5, y, 0)),
+            layerColor,
+            VisualTheme.Materials.Structure,
+            frameTransparency
+        )
+        local east = makePart(
+            "VoidFrameEast" .. layer,
+            Vector3.new(4.2, thickness, frameSize),
+            CFrame.new(center + Vector3.new(frameSize * 0.5, y, 0)),
+            layerColor,
+            VisualTheme.Materials.Structure,
+            frameTransparency
+        )
+        north.CastShadow = false
+        south.CastShadow = false
+        west.CastShadow = false
+        east.CastShadow = false
+
+        if layer == 1 then
+            for index, frame in ipairs({north, south, west, east}) do
+                local accent = makePart(
+                    "VoidFrameAccent" .. index,
+                    frame.Size.X > frame.Size.Z
+                        and Vector3.new(frame.Size.X * 0.52, 0.18, frame.Size.Z + 0.08)
+                        or Vector3.new(frame.Size.X + 0.08, 0.18, frame.Size.Z * 0.52),
+                    frame.CFrame + Vector3.new(0, thickness * 0.5 + 0.16, 0),
+                    index % 2 == 0 and currentAccent or secondaryAccent,
+                    VisualTheme.Materials.Glow,
+                    tier.Name == "Low" and 0.78 or 0.62
+                )
+                accent.CastShadow = false
+                table.insert(glows, accent)
+            end
+        end
+    end
+
     local floor = makePart(
         "WorldDepthFloor",
         Vector3.new(radius * 1.55, 1.2, radius * 1.55),
