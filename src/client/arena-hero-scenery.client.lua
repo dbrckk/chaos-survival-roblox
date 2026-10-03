@@ -179,10 +179,11 @@ local function addCrossroadGate(base, index, x, z, yaw, theme, tier)
     local width = tier.Name == "Low" and 12 or 16
     local height = tier.Name == "Low" and 8 or 11
 
+    local gateFrame = localFrame(base, x, 0, z, yaw)
     local left = makePart(
         "CrossroadGateL" .. index,
         Vector3.new(1.8, height, 2.2),
-        localFrame(base, x - width * 0.5, height * 0.5 + 0.7, z, yaw),
+        gateFrame * CFrame.new(-width * 0.5, height * 0.5 + 0.7, 0),
         theme.Structure,
         Enum.Material.Metal,
         0.06,
@@ -191,7 +192,7 @@ local function addCrossroadGate(base, index, x, z, yaw, theme, tier)
     local right = makePart(
         "CrossroadGateR" .. index,
         Vector3.new(1.8, height, 2.2),
-        localFrame(base, x + width * 0.5, height * 0.5 + 0.7, z, yaw),
+        gateFrame * CFrame.new(width * 0.5, height * 0.5 + 0.7, 0),
         theme.Structure,
         Enum.Material.Metal,
         0.06,
@@ -200,7 +201,7 @@ local function addCrossroadGate(base, index, x, z, yaw, theme, tier)
     makePart(
         "CrossroadGateTop" .. index,
         Vector3.new(width + 1.8, 1.25, 2.2),
-        localFrame(base, x, height + 0.25, z, yaw),
+        gateFrame * CFrame.new(0, height + 0.25, 0),
         theme.Detail,
         Enum.Material.DiamondPlate,
         0.10,
