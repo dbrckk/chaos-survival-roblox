@@ -49,6 +49,7 @@ local ChaosFusion = require(script.ChaosFusion)
 local RoundMomentum = require(script.RoundMomentum)
 local AISurvivorService = require(script.AISurvivorService)
 local Mastery = require(script.Mastery)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -1027,8 +1028,17 @@ while true do
     local upcomingRoundNumber = roundNumber + 1
 
     local selectedSet = {selected}
-    local forceDouble = (upcomingRoundNumber % roundSettings.DoubleChaosEvery == 0)
-    if forceDouble or math.random() < roundSettings.DoubleChaosChance then
+    local contestantGames = {}
+    for _, player in ipairs(contestants) do
+        table.insert(contestantGames, player:GetAttribute("Games"))
+    end
+
+    local allowDoubleChaos = FirstTimeExperience.allowDoubleChaos(contestantGames)
+    local forceDouble = allowDoubleChaos
+        and (upcomingRoundNumber % roundSettings.DoubleChaosEvery == 0)
+    if allowDoubleChaos
+        and (forceDouble or math.random() < roundSettings.DoubleChaosChance)
+    then
         local candidates = DisasterBalance.filterCompatible(selected.Id, disasters)
         if #candidates > 0 then
             table.insert(selectedSet, candidates[math.random(1, #candidates)])
