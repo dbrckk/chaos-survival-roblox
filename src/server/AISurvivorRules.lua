@@ -108,6 +108,18 @@ function AISurvivorRules.routeChoiceWidth(risk, candidateCount)
     return 1
 end
 
+function AISurvivorRules.freeJumpChance(baseChance, pressure, lowGravity)
+    local chance = math.clamp(tonumber(baseChance) or 0, 0, 1)
+    local p = math.clamp(tonumber(pressure) or 0, 0, 1)
+
+    chance *= 1 - p * 0.44
+    if lowGravity == true then
+        chance += 0.16 * (1 - p * 0.35)
+    end
+
+    return math.clamp(chance, 0.04, 0.42)
+end
+
 function AISurvivorRules.padChoiceWidth(risk, candidateCount)
     local count = math.max(1, math.floor(tonumber(candidateCount) or 1))
     local value = math.clamp(tonumber(risk) or 0.5, 0, 1)
