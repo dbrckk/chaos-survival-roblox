@@ -35,6 +35,30 @@ describe("AI survivor rules", function()
         expect(cautious.SocialChance < bold.SocialChance).toBe(true)
     end)
 
+    it("varies temperament between rounds while keeping identity bounded", function()
+        local profile = AISurvivorRules.profileForSlot(2)
+        local roundA = AISurvivorRules.roundTraits(profile, 2, 4)
+        local roundB = AISurvivorRules.roundTraits(profile, 2, 5)
+        local repeatA = AISurvivorRules.roundTraits(profile, 2, 4)
+
+        expect(roundA.Risk >= 0.12 and roundA.Risk <= 0.88).toBe(true)
+        expect(roundA.SocialChance >= 0.06 and roundA.SocialChance <= 0.46).toBe(true)
+        expect(roundA.MistakeChance >= 0.035 and roundA.MistakeChance <= 0.27).toBe(true)
+        expect(roundA.PadChance >= 0.07 and roundA.PadChance <= 0.52).toBe(true)
+        expect(roundA.HesitationChance >= 0.05 and roundA.HesitationChance <= 0.18).toBe(true)
+        expect(roundA.ReconsiderChance >= 0.05 and roundA.ReconsiderChance <= 0.13).toBe(true)
+        expect(roundA.FollowThrough >= 0.92 and roundA.FollowThrough <= 1.12).toBe(true)
+        expect(roundA.DirectionBias >= -1 and roundA.DirectionBias <= 1).toBe(true)
+
+        expect(roundA.Risk).toBe(repeatA.Risk)
+        expect(roundA.SocialChance).toBe(repeatA.SocialChance)
+        expect(
+            roundA.Risk ~= roundB.Risk
+            or roundA.SocialChance ~= roundB.SocialChance
+            or roundA.DirectionBias ~= roundB.DirectionBias
+        ).toBe(true)
+    end)
+
     it("uses mobility pads more often when arena topology calls for them", function()
         local base = 0.20
 
