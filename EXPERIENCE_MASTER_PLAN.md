@@ -180,3 +180,6 @@ Ordre d'exécution immédiat
 
 - [FAIT] Character polish joueurs/AI : accent cosmétique unifié via ChaosAccent, outline/rim local contextuel sans remplacer l'avatar, lumière discrète Medium/High, spectateurs/éliminés atténués pendant ROUND, doublons d'aura évités et budgets Final Rush/Low stricts.
 - [FAIT] Cosmétiques en mouvement : trails joueurs transformés en rubans horizontaux plus propres, AISurvivorCosmeticTrail soumis aux mêmes budgets VFX/Reduce Motion/Final Rush, contact sol surface-aware pour humains et bots avec culling distance et micro-débris uniquement Medium/High.
+
+- [FAIT] Variété silhouette AI renforcée : DepthScale/HeadScale déterministes et bornés en plus des Height/Width/BodyType/Proportion existants, afin de réduire l'effet clones sans modifier gameplay/hitboxes logiques.
+- [FAIT] Contact personnage/environnement finalisé : ring aligné à la normale réelle de la surface ; pendant Final Rush, seuls les impacts du joueur local sont conservés pour préserver lisibilité et budget VFX.
