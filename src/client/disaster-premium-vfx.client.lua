@@ -13,6 +13,8 @@ local lavaState = nil
 local freezeStates = {}
 local clock = 0
 local updateClock = 0
+local renderConnection = nil
+local ensureRenderLoop
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -110,6 +112,10 @@ local function bindLava(lava)
         light = light,
         instances = instances,
     }
+
+    if ensureRenderLoop then
+        ensureRenderLoop()
+    end
 end
 
 local function clearFreeze(warning)
@@ -194,6 +200,10 @@ local function bindFreeze(warning)
         duration = math.max(0.1, tonumber(warning:GetAttribute("WarningDuration")) or 0.7),
         mist = mist,
     }
+
+    if ensureRenderLoop then
+        ensureRenderLoop()
+    end
 end
 
 local function maybeBind(instance)
@@ -226,10 +236,17 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     end
 end)
 
-RunService.RenderStepped:Connect(function(dt)
-    if not lavaState and next(freezeStates) == nil then
+ensureRenderLoop = function()
+    if renderConnection or (not lavaState and next(freezeStates) == nil) then
         return
     end
+
+    renderConnection = RunService.RenderStepped:Connect(function(dt)
+        if not lavaState and next(freezeStates) == nil then
+            renderConnection:Disconnect()
+            renderConnection = nil
+            return
+        end
 
     clock += dt
     updateClock += dt
@@ -307,4 +324,5 @@ RunService.RenderStepped:Connect(function(dt)
             state.center.Transparency = 0.58 + alpha * 0.30
         end
     end
-end)
+    end)
+end
