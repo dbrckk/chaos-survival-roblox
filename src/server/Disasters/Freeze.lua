@@ -41,6 +41,9 @@ function D.start(ctx)
             if humanoid.JumpPower == state.appliedJumpPower then
                 humanoid.JumpPower = state.jumpPower
             end
+            if humanoid.JumpHeight == state.appliedJumpHeight then
+                humanoid.JumpHeight = state.jumpHeight
+            end
         end
     end
 
@@ -84,15 +87,19 @@ function D.start(ctx)
                     restore(hum)
                     local appliedWalkSpeed = 4
                     local appliedJumpPower = 0
+                    local appliedJumpHeight = 0
                     frozen[hum] = {
                         walkSpeed = hum.WalkSpeed,
                         jumpPower = hum.JumpPower,
+                        jumpHeight = hum.JumpHeight,
                         appliedWalkSpeed = appliedWalkSpeed,
                         appliedJumpPower = appliedJumpPower,
+                        appliedJumpHeight = appliedJumpHeight,
                         generation = pulseGeneration,
                     }
                     hum.WalkSpeed = appliedWalkSpeed
                     hum.JumpPower = appliedJumpPower
+                    hum.JumpHeight = appliedJumpHeight
 
                     task.delay(freezeSeconds, function()
                         local state = frozen[hum]
