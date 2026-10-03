@@ -771,29 +771,52 @@ local function clampToArena(position)
     return base.CFrame:PointToWorldSpace(clamped)
 end
 
+local WARNING_PART_NAMES = {
+    MeteorWarning = true,
+    BombWarning = true,
+    FreezeWarning = true,
+    JumpShockWarning = true,
+}
+
+local warningPartSet = setmetatable({}, {__mode = "k"})
 local cachedWarningParts = {}
-local cachedWarningsAt = -math.huge
+local warningCacheDirty = true
+
+local function trackWarningPart(child)
+    if child:IsA("BasePart") and WARNING_PART_NAMES[child.Name] then
+        warningPartSet[child] = true
+        warningCacheDirty = true
+    end
+end
+
+local function untrackWarningPart(child)
+    if warningPartSet[child] then
+        warningPartSet[child] = nil
+        warningCacheDirty = true
+    end
+end
+
+for _, child in ipairs(workspace:GetChildren()) do
+    trackWarningPart(child)
+end
+workspace.ChildAdded:Connect(trackWarningPart)
+workspace.ChildRemoved:Connect(untrackWarningPart)
 
 local function warningParts()
-    local now = os.clock()
-    if now - cachedWarningsAt < 0.15 then
+    if not warningCacheDirty then
         return cachedWarningParts
     end
 
     table.clear(cachedWarningParts)
-    for _, child in ipairs(workspace:GetChildren()) do
-        if child:IsA("BasePart")
-            and (
-                child.Name == "MeteorWarning"
-                or child.Name == "BombWarning"
-                or child.Name == "FreezeWarning"
-                or child.Name == "JumpShockWarning"
-            )
-        then
-            table.insert(cachedWarningParts, child)
+    for part in pairs(warningPartSet) do
+        if part.Parent then
+            table.insert(cachedWarningParts, part)
+        else
+            warningPartSet[part] = nil
         end
     end
-    cachedWarningsAt = now
+
+    warningCacheDirty = false
     return cachedWarningParts
 end
 
@@ -1860,7 +1883,17 @@ local function startBrain()
             for _, record in ipairs(records) do
                 stepRecord(record, now)
             end
-            task.wait(0.18)
+
+            local phase = tostring(currentState.phase or "waiting")
+            local cadence
+            if #records == 0 then
+                cadence = 0.75
+            elseif phase == "result" then
+                cadence = 0.42
+            else
+                cadence = 0.18
+            end
+            task.wait(cadence)
         end
         brainStarted = false
     end)
