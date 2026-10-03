@@ -1940,6 +1940,9 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     if metaControlsSuppressed then
         closeAllPanels()
+        resultToken += 1
+        resultCard.Visible = false
+        resultFlash.BackgroundTransparency = 1
     end
 
     if state.phase == "round" and type(state.hint) == "string" and state.hint ~= "" then
