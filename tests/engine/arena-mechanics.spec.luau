@@ -71,6 +71,22 @@ describe("Arena mechanics", function()
         end
     end)
 
+    it("reads live pad impulse attributes with a safe fallback", function()
+        local pad = Instance.new("Part")
+        pad:SetAttribute("ImpulseX", 12)
+        pad:SetAttribute("ImpulseY", 34)
+        pad:SetAttribute("ImpulseZ", -8)
+
+        local live = ArenaMechanics.readPadImpulse(pad, Vector3.new(1, 2, 3))
+        expect(live).toBe(Vector3.new(12, 34, -8))
+
+        pad:SetAttribute("ImpulseY", nil)
+        local fallback = ArenaMechanics.readPadImpulse(pad, Vector3.new(1, 2, 3))
+        expect(fallback).toBe(Vector3.new(12, 2, -8))
+
+        pad:Destroy()
+    end)
+
     it("boosts pad impulses during overdrive without mutating the base vector", function()
         local base = Vector3.new(20, 10, -12)
         local normal = ArenaMechanics.impulseFor(base, false)
