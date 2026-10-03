@@ -39,7 +39,7 @@ function D.isActiveContestant(player, ctx)
         return ctx.IsContestantActive(player) == true
     end
 
-    for _, contestant in ipairs(ctx.HazardContestants or ctx.HazardContestants or ctx.Contestants or {}) do
+    for _, contestant in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
         if contestant == player then
             return true
         end
@@ -102,7 +102,7 @@ function D.start(ctx)
             local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
             lava.Position = Vector3.new(lava.Position.X, startY + alpha * 25, lava.Position.Z)
 
-            for _, player in ipairs(ctx.HazardContestants or ctx.HazardContestants or ctx.Contestants or {}) do
+            for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
                 if D.isActiveContestant(player, ctx) then
                     local character = player.Character
                     local root = character and character:FindFirstChild("HumanoidRootPart")
