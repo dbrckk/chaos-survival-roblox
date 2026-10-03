@@ -675,6 +675,21 @@ mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
     end
 end)
 
+local lastLobbyPracticeUses = math.max(
+    0,
+    math.floor(tonumber(player:GetAttribute("LobbyPracticeUses")) or 0)
+)
+player:GetAttributeChangedSignal("LobbyPracticeUses"):Connect(function()
+    local nextUses = math.max(
+        0,
+        math.floor(tonumber(player:GetAttribute("LobbyPracticeUses")) or 0)
+    )
+    if nextUses > lastLobbyPracticeUses then
+        play("MobilityPad", 0.02)
+    end
+    lastLobbyPracticeUses = nextUses
+end)
+
 player:GetAttributeChangedSignal("Level"):Connect(function()
     local level = player:GetAttribute("Level") or 1
     if level > lastLevel then
