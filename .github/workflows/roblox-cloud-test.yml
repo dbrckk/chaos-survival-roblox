@@ -77,6 +77,7 @@ jobs:
             "tests/engine/session-streak.spec.luau",
             "tests/engine/solo-rush.spec.luau",
             "tests/engine/survival-feedback.spec.luau",
+            "tests/engine/surface-audio-rules.spec.luau",
             "tests/engine/ui-responsive.spec.luau",
             "tests/engine/vfx-quality.spec.luau",
             "tests/engine/weekly-challenges.spec.luau",
