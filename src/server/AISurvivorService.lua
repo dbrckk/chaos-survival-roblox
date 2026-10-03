@@ -701,7 +701,7 @@ local function disappearingPlatformEscape(record, root, now)
         and part:IsA("BasePart")
         and platforms
         and platforms.Name == "Platforms"
-        and part.Material == Enum.Material.Neon
+        and part:GetAttribute("CollapsePhase") == "Warning"
 
     if not isWarning then
         record.platformThreat = nil
@@ -847,8 +847,15 @@ local function arenaCandidates()
 
     local platforms = arena:FindFirstChild("Platforms")
     for _, part in ipairs(sortedParts(platforms)) do
-        if part.CanCollide and part.Transparency < 0.90 then
-            table.insert(result, {part = part, position = part.Position + Vector3.new(0, part.Size.Y * 0.5 + 2.4, 0)})
+        if AISurvivorRules.platformAvailable(
+            part.CanCollide,
+            part.Transparency,
+            part:GetAttribute("CollapsePhase")
+        ) then
+            table.insert(result, {
+                part = part,
+                position = part.Position + Vector3.new(0, part.Size.Y * 0.5 + 2.4, 0),
+            })
         end
     end
 
@@ -904,9 +911,10 @@ local function scoreCandidate(record, root, candidate)
     if candidate.part
         and candidate.part.Parent
         and candidate.part.Parent.Name == "Platforms"
-        and (
-            not candidate.part.CanCollide
-            or candidate.part.Transparency > 0.65
+        and not AISurvivorRules.platformAvailable(
+            candidate.part.CanCollide,
+            candidate.part.Transparency,
+            candidate.part:GetAttribute("CollapsePhase")
         )
     then
         score -= 120
@@ -1067,10 +1075,18 @@ local function chooseArenaTarget(record, root, now)
         choiceRange = math.min(#ranked, choiceRange + 2)
     end
     local selected = ranked[math.random(1, choiceRange)].candidate
+    local target = separateTarget(record, selected.position)
+
+    if selected.part
+        and selected.part.Parent
+        and selected.part.Parent.Name == "Platforms"
+    then
+        record.targetPart = selected.part
+    end
 
     local hold = record.profile.TargetHoldMin
         + math.random() * (record.profile.TargetHoldMax - record.profile.TargetHoldMin)
-    return separateTarget(record, selected.position), hold
+    return target, hold
 end
 
 local function chooseLobbyTarget(record)
@@ -1299,6 +1315,30 @@ local function stepRecord(record, now)
 
     if record.inRound and (currentState.phase == "ready" or currentState.phase == "round") then
         tryPadImpulse(record, root, now)
+
+        if record.targetPart and record.targetPart.Parent then
+            if record.targetIsPad then
+                record.target = record.targetPart.Position + Vector3.new(0, 1.8, 0)
+            elseif record.targetPart.Parent.Name == "Platforms" then
+                if not AISurvivorRules.platformAvailable(
+                    record.targetPart.CanCollide,
+                    record.targetPart.Transparency,
+                    record.targetPart:GetAttribute("CollapsePhase")
+                ) then
+                    record.target = nil
+                    record.targetPart = nil
+                    record.nextThink = 0
+                elseif hasDisaster("ShrinkingArena") then
+                    record.target = record.targetPart.Position
+                        + Vector3.new(0, record.targetPart.Size.Y * 0.5 + 2.4, 0)
+                end
+            end
+        elseif record.targetPart then
+            record.target = nil
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.nextThink = 0
+        end
 
         if record.target and (root.Position - record.target).Magnitude < 4.2 then
             record.target = nil
