@@ -1456,7 +1456,10 @@ local function recoverIfStuck(record, humanoid, root, now)
 
     if record.stuckCount >= 2 then
         local side = root.CFrame.RightVector * ((math.random() < 0.5) and -6 or 6)
-        humanoid:MoveTo(clampToArena(root.Position + side))
+        local recoveryTarget = root.Position + side
+        humanoid:MoveTo(
+            record.inRound and clampToArena(recoveryTarget) or recoveryTarget
+        )
         record.stuckCount = 0
     end
 
