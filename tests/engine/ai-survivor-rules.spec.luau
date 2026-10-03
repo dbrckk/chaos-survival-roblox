@@ -93,6 +93,17 @@ describe("AI survivor rules", function()
         expect((socialA - socialB).Magnitude > 0.5).toBe(true)
     end)
 
+    it("distributes lobby roam targets across social nodes", function()
+        local a = AISurvivorRules.lobbyNodeOffset(1, 0)
+        local b = AISurvivorRules.lobbyNodeOffset(2, 0)
+        local nextA = AISurvivorRules.lobbyNodeOffset(1, 1)
+
+        expect(a.Magnitude >= 15 and a.Magnitude <= 21).toBe(true)
+        expect(b.Magnitude >= 15 and b.Magnitude <= 21).toBe(true)
+        expect((a - b).Magnitude > 8).toBe(true)
+        expect((a - nextA).Magnitude > 8).toBe(true)
+    end)
+
     it("cycles five avatar styles across survivor identities", function()
         local seen = {}
         for index = 1, 8 do
