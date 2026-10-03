@@ -123,7 +123,7 @@ PHASE G — UI/UX
 
 PHASE H — PERFORMANCE
 [EN COURS] H1 Budgets dynamiques appliqués aux world VFX, impacts, lights, cosmétiques + LOD local scenery ; mesures réelles restantes.
-[EN COURS] H2 Boucles catastrophe idle ; world-polish cache centres lobby + CenterBeacon, réutilise profil VFX et réduit motion. Audit transversal des 11 catastrophes : fallbacks contestants nettoyés, Freeze couvre JumpPower+JumpHeight, RisingLava ne bloque plus la physique, régression ShrinkingArena/pads couverte par test moteur. Les pads lisent désormais leur impulsion live et ShrinkingArena réduit/restaure leur poussée horizontale avec la taille réelle de l'arène afin d'éviter les launches hors-zone.
+[EN COURS] H2 Boucles/scan client optimisés : warnings Meteor/Bomb limités aux enfants directs Workspace, VFX pads limités au dossier Arena/Mechanics, LOD scenery cache ses descendants entre changements, Tornado cache les paramètres de débris et respecte Reduce Motion, ShrinkingArena VFX cache la Base active, world-polish anime seulement l'espace de jeu actif (lobby ou arène). Audit transversal des 11 catastrophes maintenu ; mesures réelles device encore requises.
 [EN COURS] H3 Budgets VFX/Light étendus aux cosmétiques et ambience ; Low réduit lights/particles/specular, Final Rush supprime du bruit visuel.
 [A FAIRE] H4 Soak Android 30-60 min.
 [A FAIRE] H5 MicroProfiler sur appareil réel.
