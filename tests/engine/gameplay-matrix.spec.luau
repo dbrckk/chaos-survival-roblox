@@ -98,7 +98,7 @@ describe("Automated gameplay matrix", function()
             end
         end
 
-        expect(testedPairs >= 30).toBe(true)
+        expect(testedPairs >= 40).toBe(true)
 
         local root = workspace:FindFirstChild("GeneratedMap")
         if root then
