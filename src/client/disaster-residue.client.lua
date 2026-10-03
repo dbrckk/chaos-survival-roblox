@@ -190,6 +190,43 @@ local function trimBudget()
     end
 end
 
+local function makeFragments(position, radius, profile, count, lifetime)
+    local surface, normal = surfaceAt(position)
+    if not surface then
+        return
+    end
+
+    local base = flatCFrame(surface, normal, 0)
+    for i = 1, count do
+        local angle = ((i - 1) / count) * math.pi * 2 + ((i * 17) % 13) * 0.04
+        local distance = radius * (0.24 + ((i * 19) % 36) / 100)
+        local localOffset = Vector3.new(
+            math.cos(angle) * distance,
+            0.06,
+            math.sin(angle) * distance
+        )
+        local shard = makePart(
+            "ResidueFragment" .. i,
+            Vector3.new(
+                0.18 + (i % 3) * 0.07,
+                0.08 + (i % 2) * 0.05,
+                0.26 + (i % 4) * 0.08
+            ),
+            base
+                * CFrame.new(localOffset)
+                * CFrame.Angles(
+                    math.rad((i * 23) % 35),
+                    math.rad((i * 41) % 180),
+                    math.rad((i * 29) % 28)
+                ),
+            profile.Color:Lerp(Color3.fromRGB(28, 30, 36), 0.52),
+            profile.Material,
+            0.20
+        )
+        fadeLater(shard, lifetime)
+    end
+end
+
 local function impactResidue(payload)
     if phase ~= "round" or type(payload) ~= "table" then
         return
@@ -349,6 +386,21 @@ local function resultResidueFor(id, index, count, base, quality)
                     id .. "ResultCrack" .. i .. "_",
                     position,
                     diameter * 0.72,
+                    profile,
+                    3,
+                    lifetime
+                )
+                makeFragments(
+                    position,
+                    diameter * 0.62,
+                    profile,
+                    profile.Kind == "shock" and 2 or 3,
+                    lifetime
+                )
+            elseif quality.Name == "High" and profile.Kind == "frost" then
+                makeFragments(
+                    position,
+                    diameter * 0.50,
                     profile,
                     3,
                     lifetime
