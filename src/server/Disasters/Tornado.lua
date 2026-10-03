@@ -75,7 +75,7 @@ function D.start(ctx)
     task.spawn(function()
         while ctx.Active() do
             local intensity = ctx.Intensity and ctx.Intensity() or 1
-            for _, player in ipairs(ctx.HazardContestants or ctx.HazardContestants or ctx.Contestants or {}) do
+            for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
                 if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
                     continue
                 end
