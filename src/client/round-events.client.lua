@@ -1,9 +1,11 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 
 local player = Players.LocalPlayer
@@ -142,6 +144,28 @@ local lastFinalRush = false
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local lastReadySecond = nil
+local touchDevice = UserInputService.TouchEnabled
+
+local function applyResponsive()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+
+    if touchDevice then
+        local profile = UIResponsive.mobileProfile(viewport)
+        card.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.42 or 0.34)
+        card.Size = UDim2.new(profile.veryNarrow and 0.90 or 0.72, 0, 0, profile.tinyHeight and 66 or 74)
+        countdown.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.58 or 0.50)
+        countdown.Size = UDim2.fromOffset(
+            profile.tinyHeight and 118 or 140,
+            profile.tinyHeight and 118 or 140
+        )
+    else
+        card.Position = UDim2.fromScale(0.5, 0.27)
+        card.Size = UDim2.new(0.54, 0, 0, 74)
+        countdown.Position = UDim2.fromScale(0.5, 0.46)
+        countdown.Size = UDim2.fromOffset(150, 150)
+    end
+end
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -349,4 +373,20 @@ stateEvent.OnClientEvent:Connect(function(state)
     lastFinalRush = finalRush
     lastFusionKey = fusionKey
     previousPhase = phase
+end)
+
+
+applyResponsive()
+
+local responsiveCamera = workspace.CurrentCamera
+if responsiveCamera then
+    responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsive)
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    responsiveCamera = workspace.CurrentCamera
+    if responsiveCamera then
+        applyResponsive()
+        responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsive)
+    end
 end)
