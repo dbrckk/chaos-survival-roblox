@@ -71,7 +71,7 @@ PHASE B — AUDIO PREMIUM
 [FAIT] B1 Spatialiser météores/bombes/impacts.
 [FAIT] B2 Mix dynamique séparé Music / Hazard / UI / Reward, avec priorité danger en round et Final Rush.
 [FAIT] B3 Ducking musique lors des rounds critiques / Final Rush.
-[EN COURS] B4 Cues critiques + chaque accent catastrophe + Vote/Reward/Last Survivor/Overdrive/Flow Combo/MobilityPad recomposés en couches distinctes ; loops protégés des accents one-shot, Meteor/Bomb multi-couches spatiales et landing pondéré par airtime. Remplacement final par assets originaux/Creator Store vérifiés encore à faire.
+[EN COURS] B4 Cues critiques + chaque accent catastrophe + Vote/Reward/Last Survivor/Overdrive/Flow Combo/MobilityPad recomposés en couches distinctes ; loops protégés des accents one-shot, Meteor/Bomb multi-couches spatiales, landing pondéré par airtime, EQ/réverb propres aux cues clés pour réduire l'effet sons Roblox recyclés. Remplacement final par assets originaux/Creator Store vérifiés encore à faire.
 [EN COURS] B5 Profils tonaux/pitch propres à chaque arène ajoutés ; assets d'ambiance dédiés à sélectionner plus tard.
 
 PHASE C — MAP ART PASS
@@ -162,3 +162,6 @@ Ordre d'exécution immédiat
 
 - [FAIT] Pass matériaux/micro-détails : seams de panneaux, repair plates, edge wear arène, paneling lobby/runway et variation d'albédo déterministe sur structures non-Neon. Budgets Low/Medium/High conservés, aucune boucle frame ajoutée.
 - [FAIT] Hot-swap visuel fiabilisé : ArenaSurfaceDetail, ArenaHeroScenery, ArenaPlatformIdentity, MaterialVariation, ArenaEdgeProfile, ArenaUnderstructure et ArenaAmbientProps se reconstruisent désormais lors du remplacement de l'Arena sans recréer GeneratedMap.
+
+- [FAIT] Locomotion additive authored : cycle stride lié à la vitesse, freinage, virage signé/sévérité, réduction du swing sur demi-tour, poses résultat full-body et règles pures couvertes par tests moteur.
+- [FAIT] Traitement audio spectral : profils EQ/réverb par cue catastrophe/mobilité/résultat, appliqués à la source et hérités par les one-shots clonés ; bornes de sécurité couvertes par tests.
