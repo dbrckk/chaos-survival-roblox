@@ -9,6 +9,166 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local player = Players.LocalPlayer
 local revealToken = 0
 
+local function makeNeonPart(name, size, cframe, color, transparency)
+    local part = Instance.new("Part")
+    part.Name = name
+    part.Size = size
+    part.CFrame = cframe
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part.CastShadow = false
+    part.Material = Enum.Material.Neon
+    part.Color = color
+    part.Transparency = transparency
+    part.Parent = workspace
+    return part
+end
+
+local function tweenAndCleanup(part, duration, goal)
+    TweenService:Create(
+        part,
+        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        goal
+    ):Play()
+    Debris:AddItem(part, duration + 0.25)
+end
+
+local function spawnClassicSignature(center, base, theme, tier)
+    local laneCount = tier.Name == "High" and 4 or 2
+    local span = math.max(base.Size.X, base.Size.Z) * 0.62
+
+    for i = 1, laneCount do
+        local alpha = laneCount == 1 and 0.5 or (i - 1) / (laneCount - 1)
+        local offset = (alpha - 0.5) * span
+        local delayTime = (i - 1) * 0.045
+
+        task.delay(delayTime, function()
+            local xLine = makeNeonPart(
+                "LocalArenaRevealClassic",
+                Vector3.new(0.16, 0.05, 1.5),
+                CFrame.new(center + Vector3.new(offset, 0.04, 0)),
+                theme.Accent,
+                0.38
+            )
+            tweenAndCleanup(xLine, 0.44, {
+                Size = Vector3.new(0.16, 0.05, base.Size.Z * 0.78),
+                Transparency = 1,
+            })
+
+            local zLine = makeNeonPart(
+                "LocalArenaRevealClassic",
+                Vector3.new(1.5, 0.05, 0.16),
+                CFrame.new(center + Vector3.new(0, 0.045, offset)),
+                theme.Secondary,
+                0.44
+            )
+            tweenAndCleanup(zLine, 0.44, {
+                Size = Vector3.new(base.Size.X * 0.78, 0.05, 0.16),
+                Transparency = 1,
+            })
+        end)
+    end
+end
+
+local function spawnTowersSignature(center, base, theme, tier)
+    local count = tier.Name == "High" and 4 or 2
+    local radiusX = base.Size.X * 0.34
+    local radiusZ = base.Size.Z * 0.34
+
+    for i = 1, count do
+        local angle = ((i - 1) / count) * math.pi * 2 + math.rad(45)
+        local position = center + Vector3.new(math.cos(angle) * radiusX, 0.2, math.sin(angle) * radiusZ)
+        local column = makeNeonPart(
+            "LocalArenaRevealTower",
+            Vector3.new(0.34, 0.5, 0.34),
+            CFrame.new(position),
+            i % 2 == 0 and theme.Secondary or theme.Accent,
+            0.42
+        )
+        tweenAndCleanup(column, 0.52, {
+            Size = Vector3.new(0.18, 10 + (i % 2) * 5, 0.18),
+            CFrame = CFrame.new(position + Vector3.new(0, 5.2 + (i % 2) * 2.5, 0)),
+            Transparency = 1,
+        })
+    end
+end
+
+local function spawnCrossroadsSignature(center, base, theme, tier)
+    local length = math.max(base.Size.X, base.Size.Z) * 0.76
+    local width = tier.Name == "High" and 0.42 or 0.30
+
+    local xBar = makeNeonPart(
+        "LocalArenaRevealCrossroads",
+        Vector3.new(1.5, 0.06, width),
+        CFrame.new(center + Vector3.new(0, 0.05, 0)),
+        theme.Accent,
+        0.34
+    )
+    tweenAndCleanup(xBar, 0.48, {
+        Size = Vector3.new(length, 0.06, width),
+        Transparency = 1,
+    })
+
+    task.delay(0.07, function()
+        local zBar = makeNeonPart(
+            "LocalArenaRevealCrossroads",
+            Vector3.new(width, 0.06, 1.5),
+            CFrame.new(center + Vector3.new(0, 0.055, 0)),
+            theme.Secondary,
+            0.38
+        )
+        tweenAndCleanup(zBar, 0.48, {
+            Size = Vector3.new(width, 0.06, length),
+            Transparency = 1,
+        })
+    end)
+end
+
+local function spawnOrbitalSignature(center, base, theme, tier)
+    local count = tier.Name == "High" and 3 or 2
+    local radius = math.max(base.Size.X, base.Size.Z) * 0.30
+
+    for i = 1, count do
+        local angle = ((i - 1) / count) * math.pi * 2
+        local plate = makeNeonPart(
+            "LocalArenaRevealOrbital",
+            Vector3.new(2.4, 0.05, 0.18),
+            CFrame.new(center + Vector3.new(math.cos(angle) * radius, 0.07, math.sin(angle) * radius))
+                * CFrame.Angles(0, -angle, 0),
+            i % 2 == 0 and theme.Secondary or theme.Accent,
+            0.34
+        )
+
+        local endAngle = angle + math.rad(tier.Name == "High" and 105 or 82)
+        local endPosition = center
+            + Vector3.new(math.cos(endAngle) * radius * 1.08, 0.07, math.sin(endAngle) * radius * 1.08)
+
+        tweenAndCleanup(plate, 0.56, {
+            CFrame = CFrame.new(endPosition) * CFrame.Angles(0, -endAngle, 0),
+            Size = Vector3.new(4.2, 0.05, 0.10),
+            Transparency = 1,
+        })
+    end
+end
+
+local function spawnVariantSignature(variant, center, base, theme, tier, reducedMotion)
+    if reducedMotion or tier.Name == "Low" then
+        return
+    end
+
+    if variant == "Towers" then
+        spawnTowersSignature(center, base, theme, tier)
+    elseif variant == "Crossroads" then
+        spawnCrossroadsSignature(center, base, theme, tier)
+    elseif variant == "Orbital" then
+        spawnOrbitalSignature(center, base, theme, tier)
+    else
+        spawnClassicSignature(center, base, theme, tier)
+    end
+end
+
 local function revealArena(arena)
     if not arena or not arena.Parent then
         return
@@ -92,6 +252,8 @@ local function revealArena(arena)
         ):Play()
         Debris:AddItem(flash, 0.6)
     end
+
+    spawnVariantSignature(variant, center, base, theme, tier, reducedMotion)
 end
 
 local function bindGeneratedMap(root)
