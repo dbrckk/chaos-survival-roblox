@@ -18,6 +18,7 @@ local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
 local chaosShardCollectedEvent = remotes:WaitForChild("ChaosShardCollected")
 local hazardNearMissEvent = remotes:WaitForChild("HazardNearMiss")
 local hazardImpactFeedbackEvent = remotes:WaitForChild("HazardImpactFeedback")
+local mechanicFeedbackEvent = remotes:WaitForChild("ArenaMechanicFeedback")
 
 local playerGui = player:WaitForChild("PlayerGui")
 local boundButtons = setmetatable({}, {__mode = "k"})
@@ -361,22 +362,83 @@ local function playSpatialImpact(payload)
     holder.Transparency = 1
     holder.Parent = workspace
 
-    local sound = Instance.new("Sound")
-    sound.Name = kind .. "Spatial"
-    sound.SoundId = definition.SoundId
-    sound.Volume = math.max(0.18, (definition.Volume or 0.3) * 0.88)
-    sound.PlaybackSpeed = math.clamp(
-        (definition.PlaybackSpeed or 1) + ((math.random() - 0.5) * 0.08),
-        0.55,
-        2
+    local function addLayer(name, layerDefinition, volumeScale, pitchOffset, delaySeconds)
+        if not layerDefinition then
+            return
+        end
+
+        local sound = Instance.new("Sound")
+        sound.Name = name
+        sound.SoundId = layerDefinition.SoundId
+        sound.Volume = math.max(
+            0.08,
+            (layerDefinition.Volume or 0.3) * math.max(0, volumeScale or 1)
+        )
+        sound.PlaybackSpeed = math.clamp(
+            (layerDefinition.PlaybackSpeed or 1)
+                + ((math.random() - 0.5) * 0.08)
+                + (pitchOffset or 0),
+            0.50,
+            2.3
+        )
+        sound.RollOffMode = Enum.RollOffMode.InverseTapered
+        sound.RollOffMinDistance = 8
+        sound.RollOffMaxDistance = 125
+        sound.EmitterSize = 6
+        sound.SoundGroup = hazardGroup
+        sound.Parent = holder
+
+        local delayValue = math.max(0, delaySeconds or 0)
+        if delayValue > 0 then
+            task.delay(delayValue, function()
+                if sound.Parent then
+                    sound:Play()
+                end
+            end)
+        else
+            sound:Play()
+        end
+    end
+
+    addLayer(
+        kind .. "Spatial",
+        definition,
+        0.88,
+        kind == "Bomb" and -0.04 or 0.02,
+        0
     )
-    sound.RollOffMode = Enum.RollOffMode.InverseTapered
-    sound.RollOffMinDistance = 8
-    sound.RollOffMaxDistance = 125
-    sound.EmitterSize = 6
-    sound.SoundGroup = hazardGroup
-    sound.Parent = holder
-    sound:Play()
+
+    if kind == "Meteor" then
+        addLayer(
+            "MeteorAirTail",
+            AudioConfig.Sfx.Wind,
+            0.18,
+            0.24,
+            0.015
+        )
+        addLayer(
+            "MeteorBody",
+            AudioConfig.Sfx.Hit,
+            0.15,
+            -0.34,
+            0.045
+        )
+    elseif kind == "Bomb" then
+        addLayer(
+            "BombBody",
+            AudioConfig.Sfx.Hit,
+            0.24,
+            -0.46,
+            0.018
+        )
+        addLayer(
+            "BombTail",
+            AudioConfig.Sfx.Darkness,
+            0.12,
+            -0.26,
+            0.070
+        )
+    end
 
     Debris:AddItem(holder, 4)
 end
@@ -553,6 +615,15 @@ hazardNearMissEvent.OnClientEvent:Connect(function()
 end)
 
 hazardImpactFeedbackEvent.OnClientEvent:Connect(playSpatialImpact)
+
+mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
+    play("MobilityPad", 0.025)
+    if type(payload) == "table" and payload.overdrive == true then
+        task.delay(0.045, function()
+            playRaw("Overdrive", 0.02, 0.24, 0.10)
+        end)
+    end
+end)
 
 player:GetAttributeChangedSignal("Level"):Connect(function()
     local level = player:GetAttribute("Level") or 1
