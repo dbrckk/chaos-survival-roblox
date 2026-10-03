@@ -25,6 +25,7 @@ local statusGui = nil
 local socialPads = {}
 local trackedParts = {}
 local presentationToken = 0
+local pulseCursor = 0
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -361,11 +362,15 @@ local function applyState()
         if pad.Parent then
             tweenPart(
                 pad,
-                0.92 - emphasis.Social * 0.30,
+                mode == "inactive" and 1 or (0.92 - emphasis.Social * 0.30),
                 pad.Color,
                 duration
             )
         end
+    end
+
+    if statusGui and statusGui.Parent then
+        statusGui.Enabled = mode ~= "inactive"
     end
 
     for _, name in ipairs({"ArenaRunwayRailLeft", "ArenaRunwayRailRight"}) do
@@ -528,6 +533,79 @@ local function pulseCenter(mode, token)
     end)
 end
 
+local function ambientRipple(mode, token)
+    if token ~= presentationToken or not currentDecor then
+        return
+    end
+
+    pulseCursor += 1
+
+    if mode == "social" and #socialPads > 0 then
+        local pad = socialPads[((pulseCursor - 1) % #socialPads) + 1]
+        if pad and pad.Parent then
+            local baseTransparency = 0.92
+                - LobbyPresentationRules.emphasis(
+                    currentState.phase,
+                    currentState.voteOptions
+                ).Social * 0.30
+            TweenService:Create(
+                pad,
+                TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Transparency = math.max(0.42, baseTransparency - 0.16)}
+            ):Play()
+            task.delay(0.22, function()
+                if token == presentationToken and pad.Parent then
+                    TweenService:Create(
+                        pad,
+                        TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Transparency = baseTransparency}
+                    ):Play()
+                end
+            end)
+        end
+    end
+
+    if mode == "social" or mode == "vote" then
+        local halo = {}
+        for _, child in ipairs(currentDecor:GetChildren()) do
+            if child:IsA("BasePart") and string.find(child.Name, "LobbyHaloSegment") then
+                table.insert(halo, child)
+            end
+        end
+        table.sort(halo, function(a, b)
+            return a.Name < b.Name
+        end)
+
+        if #halo > 0 then
+            local segment = halo[((pulseCursor - 1) % #halo) + 1]
+            local original = trackedParts[segment]
+            local targetColor = mode == "vote"
+                and VisualTheme.Accents.Magenta
+                or VisualTheme.Accents.Cyan
+            TweenService:Create(
+                segment,
+                TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {
+                    Transparency = 0.10,
+                    Color = targetColor,
+                }
+            ):Play()
+            task.delay(0.20, function()
+                if token == presentationToken and segment.Parent then
+                    TweenService:Create(
+                        segment,
+                        TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {
+                            Transparency = original and original.Transparency or 0.20,
+                            Color = original and original.Color or segment.Color,
+                        }
+                    ):Play()
+                end
+            end)
+        end
+    end
+end
+
 local function runwaySweep(token)
     if token ~= presentationToken
         or LobbyPresentationRules.mode(
@@ -599,6 +677,7 @@ local function startPulseLoop()
 
             if mode ~= "inactive" then
                 pulseCenter(mode, token)
+                ambientRipple(mode, token)
                 if mode == "launch" then
                     runwaySweep(token)
                 end
