@@ -256,7 +256,6 @@ local function addHorizonDepth(tier)
 end
 
 local function rebuild()
-applyTransitPhase(currentPhase)
     clear()
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -789,3 +788,4 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 rebuild()
+applyTransitPhase(currentPhase)
