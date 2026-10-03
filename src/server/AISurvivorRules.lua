@@ -68,6 +68,18 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+function AISurvivorRules.platformAvailable(canCollide, transparency, collapsePhase)
+    if canCollide ~= true then
+        return false
+    end
+
+    if (tonumber(transparency) or 0) >= 0.90 then
+        return false
+    end
+
+    return collapsePhase ~= "Warning" and collapsePhase ~= "Gone"
+end
+
 function AISurvivorRules.reactionReady(firstSeenAt, now, reactionSeconds)
     local seen = tonumber(firstSeenAt)
     local current = tonumber(now)
