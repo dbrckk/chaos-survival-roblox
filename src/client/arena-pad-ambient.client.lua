@@ -108,27 +108,81 @@ local function attach(pad)
     end
 end
 
-local function scan(root)
-    for _, descendant in ipairs(root:GetDescendants()) do
-        if descendant:IsA("BasePart") and descendant:GetAttribute("ArenaMobilityPad") == true then
-            attach(descendant)
-        end
+local bindToken = 0
+
+local function clearAll()
+    local pads = {}
+    for pad in pairs(visuals) do
+        table.insert(pads, pad)
+    end
+    for _, pad in ipairs(pads) do
+        destroyVisual(pad)
     end
 end
 
-workspace.DescendantAdded:Connect(function(descendant)
-    if descendant:IsA("BasePart") and descendant:GetAttribute("ArenaMobilityPad") == true then
-        attach(descendant)
+local function bindMechanics(mechanics, token)
+    if not mechanics or token ~= bindToken then
+        return
+    end
+
+    for _, child in ipairs(mechanics:GetChildren()) do
+        attach(child)
+    end
+
+    mechanics.ChildAdded:Connect(function(child)
+        if token == bindToken then
+            attach(child)
+        end
+    end)
+
+    mechanics.ChildRemoved:Connect(function(child)
+        if visuals[child] then
+            destroyVisual(child)
+        end
+    end)
+end
+
+local function bindGeneratedMap(generated)
+    bindToken += 1
+    local token = bindToken
+    clearAll()
+
+    task.defer(function()
+        local arena = generated:FindFirstChild("Arena") or generated:WaitForChild("Arena", 5)
+        if token ~= bindToken or not arena then
+            return
+        end
+
+        local mechanics = arena:FindFirstChild("Mechanics")
+        if mechanics then
+            bindMechanics(mechanics, token)
+        end
+
+        arena.ChildAdded:Connect(function(child)
+            if token == bindToken and child.Name == "Mechanics" then
+                bindMechanics(child, token)
+            end
+        end)
+    end)
+end
+
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        bindGeneratedMap(child)
     end
 end)
 
-workspace.DescendantRemoving:Connect(function(descendant)
-    if visuals[descendant] then
-        destroyVisual(descendant)
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        bindToken += 1
+        clearAll()
     end
 end)
 
-scan(workspace)
+local existing = workspace:FindFirstChild("GeneratedMap")
+if existing then
+    bindGeneratedMap(existing)
+end
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshRates)
 
