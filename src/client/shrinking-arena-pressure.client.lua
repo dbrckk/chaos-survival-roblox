@@ -126,7 +126,6 @@ ensureRenderLoop = function()
         end
 
         if player:GetAttribute("RoundParticipant") ~= true
-        or player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true
     then
         frame.Visible = false
