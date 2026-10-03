@@ -1,7 +1,9 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundFeedback")
 
 local character = nil
 local humanoid = nil
@@ -10,7 +12,12 @@ local waist = nil
 local rootJoint = nil
 local leftHip = nil
 local rightHip = nil
+local leftShoulder = nil
+local rightShoulder = nil
 local landing = 0
+local celebrationKind = nil
+local celebrationWeight = 0
+local celebrationUntil = 0
 local airborne = false
 local lastY = 0
 
@@ -20,7 +27,7 @@ local function motor(parent, name)
 end
 
 local function resetMotors()
-    for _, joint in ipairs({waist, rootJoint, leftHip, rightHip}) do
+    for _, joint in ipairs({waist, rootJoint, leftHip, rightHip, leftShoulder, rightShoulder}) do
         if joint and joint.Parent then
             joint.Transform = CFrame.identity
         end
@@ -36,7 +43,12 @@ local function bind(nextCharacter)
     rootJoint = nil
     leftHip = nil
     rightHip = nil
+    leftShoulder = nil
+    rightShoulder = nil
     landing = 0
+    celebrationKind = nil
+    celebrationWeight = 0
+    celebrationUntil = 0
     airborne = false
     lastY = 0
 
@@ -50,6 +62,8 @@ local function bind(nextCharacter)
     rootJoint = motor(lower, "Root")
     leftHip = motor(lower, "LeftHip")
     rightHip = motor(lower, "RightHip")
+    leftShoulder = motor(upper, "LeftShoulder")
+    rightShoulder = motor(upper, "RightShoulder")
 
     humanoid.StateChanged:Connect(function(_, state)
         if state == Enum.HumanoidStateType.Freefall then
@@ -83,6 +97,42 @@ local function expAlpha(speed, dt)
     return 1 - math.exp(-speed * math.max(0, dt))
 end
 
+feedbackEvent.OnClientEvent:Connect(function(feedback)
+    if type(feedback) ~= "table" or player:GetAttribute("ReduceMotion") == true then
+        return
+    end
+
+    local survived = feedback.survived == true
+    local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
+    local masterRound = survived
+        and feedback.challengeCompleted == true
+        and momentumBest >= 4
+
+    celebrationKind = masterRound and "master" or (survived and "survive" or "eliminated")
+    celebrationWeight = 1
+    celebrationUntil = os.clock() + (masterRound and 1.35 or (survived and 0.95 or 0.65))
+end)
+
+local function celebrationTargets(weight)
+    if not celebrationKind or weight <= 0.001 then
+        return CFrame.identity, CFrame.identity, CFrame.identity
+    end
+
+    if celebrationKind == "master" then
+        return CFrame.Angles(math.rad(-6) * weight, 0, 0),
+            CFrame.Angles(math.rad(-58) * weight, 0, math.rad(-24) * weight),
+            CFrame.Angles(math.rad(-58) * weight, 0, math.rad(24) * weight)
+    elseif celebrationKind == "survive" then
+        return CFrame.Angles(math.rad(-3.5) * weight, 0, 0),
+            CFrame.Angles(math.rad(-20) * weight, 0, math.rad(-13) * weight),
+            CFrame.Angles(math.rad(-20) * weight, 0, math.rad(13) * weight)
+    end
+
+    return CFrame.Angles(math.rad(8) * weight, 0, 0),
+        CFrame.Angles(math.rad(12) * weight, 0, math.rad(8) * weight),
+        CFrame.Angles(math.rad(12) * weight, 0, math.rad(-8) * weight)
+end
+
 RunService:BindToRenderStep(
     "ChaosBodyFeel",
     Enum.RenderPriority.Character.Value + 1,
@@ -108,11 +158,27 @@ RunService:BindToRenderStep(
         local side = math.clamp(localVelocity.X / 38, -1, 1)
         local moveWeight = moving and math.min(1, speed / 17) or 0
 
+        if celebrationKind then
+            if os.clock() <= celebrationUntil then
+                celebrationWeight = math.min(1, celebrationWeight + dt * 8)
+            else
+                celebrationWeight *= math.exp(-dt * 5.5)
+                if celebrationWeight < 0.01 then
+                    celebrationKind = nil
+                    celebrationWeight = 0
+                end
+            end
+        end
+
+        local celebrationScale = reduced and 0 or celebrationWeight
+        local celebrationWaist, celebrationLeftShoulder, celebrationRightShoulder =
+            celebrationTargets(celebrationScale)
+
         local waistTarget = CFrame.Angles(
             math.rad(-3.2 * forward * moveWeight - landing * 5.5) * scale,
             0,
             math.rad(-3.8 * side * moveWeight) * scale
-        )
+        ) * celebrationWaist
         local rootTarget = CFrame.new(
             0,
             grounded and (-0.035 * moveWeight - landing * 0.075) * scale or 0,
@@ -139,6 +205,12 @@ RunService:BindToRenderStep(
         end
         if rightHip then
             rightHip.Transform = rightHip.Transform:Lerp(rightTarget, alpha)
+        end
+        if leftShoulder then
+            leftShoulder.Transform = leftShoulder.Transform:Lerp(celebrationLeftShoulder, alpha)
+        end
+        if rightShoulder then
+            rightShoulder.Transform = rightShoulder.Transform:Lerp(celebrationRightShoulder, alpha)
         end
     end
 )
