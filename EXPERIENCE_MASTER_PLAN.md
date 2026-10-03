@@ -183,3 +183,7 @@ Ordre d'exécution immédiat
 
 - [FAIT] Variété silhouette AI renforcée : DepthScale/HeadScale déterministes et bornés en plus des Height/Width/BodyType/Proportion existants, afin de réduire l'effet clones sans modifier gameplay/hitboxes logiques.
 - [FAIT] Contact personnage/environnement finalisé : ring aligné à la normale réelle de la surface ; pendant Final Rush, seuls les impacts du joueur local sont conservés pour préserver lisibilité et budget VFX.
+
+- [FAIT] Lobby vivant/premium : presentation locale pilotée par le vrai état serveur (intermission+voteOptions, ready, waiting), hologramme central contextuel, zones sociales, focus vote, practice pads réactifs, corridor/runway qui s'arme pendant READY, ripple halo/social basse fréquence et retour au lobby marqué après RESULT.
+- [FAIT] AI lobby raccordé au décor : les AI Survivors utilisent réellement quatre social nodes cohérents avec les zones visibles, tout en conservant socialisation, vote gathering et practice boosts existants.
+- [FAIT] Game feel lobby : practice boost déclenche pulse visuel local + cue audio composite léger ; caches décor/pads évitent les rescans à chaque pulse, aucun RenderStepped ajouté et les éléments locaux sont masqués pendant ROUND.
