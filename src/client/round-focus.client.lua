@@ -189,17 +189,26 @@ local function applyResponsiveLayout()
 end
 applyResponsiveLayout()
 
-local responsiveCamera = workspace.CurrentCamera
-if responsiveCamera then
-    responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
-end
+local responsiveCamera = nil
+local viewportConnection = nil
 
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-    responsiveCamera = workspace.CurrentCamera
+local function bindResponsiveCamera(camera)
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+
+    responsiveCamera = camera
     if responsiveCamera then
         applyResponsiveLayout()
-        responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+        viewportConnection = responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
     end
+end
+
+bindResponsiveCamera(workspace.CurrentCamera)
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    bindResponsiveCamera(workspace.CurrentCamera)
 end)
 
 local currentState = nil
