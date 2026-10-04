@@ -229,3 +229,12 @@ Ordre d'exécution immédiat
 - [FAIT] Anticipation READY procédurale : stance corporelle légère avant départ, relâchée au GO, désactivée progressivement par le mouvement et couverte par BodyMotionRules.
 - [FAIT] UI danger lanes : cue Meteor/Bomb repositionné sous top HUD selon UIResponsive ; MOVE CENTER bascule latéralement sur compact/tiny pour coexister en Double Chaos.
 - [FAIT] Footsteps material-aware : EQ/réverb du son Running local pilotés par FloorMaterial, donnant une signature distincte DiamondPlate/Metal/Slate/SmoothPlastic sans asset supplémentaire ni boucle frame.
+
+- [FAIT] Composition secondaire premium : masses midground distinctes par arène entre deck et skyline (broadcast blocks Classic, cooling towers Towers, transit masses Crossroads, station pods Orbital), budgets Low/Medium/High et zéro boucle frame.
+- [FAIT] Sous-structure variant-aware complète : Classic reçoit châssis/data bays, Crossroads junction + trunks cardinaux, Towers core vertical + braces, Orbital hub + spokes + arcs ; lecture de la map conservée même depuis dessous/en chute.
+- [FAIT] Focal lighting map-specific : 0 spot Low, 2 Medium, 3 High ; zones de landmark ciblées, fort duck pendant ROUND et quasi-extinction Final Rush pour laisser les hazards prioritaires.
+- [FAIT] Matériaux secondaires variant-aware : Classic DiamondPlate, Towers CorrodedMetal, Crossroads Concrete/Slate, Orbital SmoothPlastic sur fraction déterministe Medium/High ; matériaux d'origine conservés/restaurés uniquement en état local Lua.
+- [FAIT] Props de service hors routes : caméras broadcast Classic, crates maintenance Towers, bollards/barriers Crossroads, canisters Orbital ; budget 2/4/6 selon qualité.
+- [FAIT] AI animation blend : idle/walk/run/jump/fall avec seuils et playback speed liés à la vitesse/gait ; évite le simple walk accéléré des bots rapides et conserve les réactions résultat existantes.
+- [FAIT] Surface audio étendu : footsteps + landing locaux partagent désormais le profil EQ/réverb de FloorMaterial, pour cohérence entre matériau visible et contact sonore.
+- [FAIT] CI moteur : 56 specs actuellement assignées exactement une fois aux shards Open Cloud ; Build Validation vert sur les derniers commits de cette passe.
