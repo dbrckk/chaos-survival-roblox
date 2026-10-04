@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AISurvivorRules = require(script.Parent.AISurvivorRules)
 local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
