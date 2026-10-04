@@ -34,6 +34,18 @@ local FOLDERS = {
         LowDistance = 130,
         MediumDistance = 205,
     },
+    ArenaMidgroundMassLocal = {
+        LowDistance = 145,
+        MediumDistance = 215,
+    },
+    ArenaServicePropsLocal = {
+        LowDistance = 105,
+        MediumDistance = 165,
+    },
+    ArenaFocalLightingLocal = {
+        LowDistance = 135,
+        MediumDistance = 195,
+    },
     ArenaPlatformIdentityLocal = {
         LowDistance = 105,
         MediumDistance = 165,
