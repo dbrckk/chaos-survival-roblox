@@ -3,8 +3,18 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local AISurvivorRules = require("../../src/server/AISurvivorRules")
+local AISurvivorService = require("../../src/server/AISurvivorService")
 
 describe("AI survivor rules", function()
+    it("loads the runtime AI survivor service contract in Roblox", function()
+        expect(type(AISurvivorService)).toBe("table")
+        expect(type(AISurvivorService.start)).toBe("function")
+        expect(type(AISurvivorService.setRoundState)).toBe("function")
+        expect(type(AISurvivorService.visibleCount)).toBe("function")
+        expect(type(AISurvivorService.aliveRoundCount)).toBe("function")
+        expect(type(AISurvivorService.names)).toBe("function")
+    end)
+
     it("fills a small server toward four visible participants", function()
         expect(AISurvivorRules.desiredBotCount(0)).toBe(0)
         expect(AISurvivorRules.desiredBotCount(1)).toBe(3)
