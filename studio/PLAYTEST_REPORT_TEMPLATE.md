@@ -70,6 +70,9 @@ Copy this file for each release-candidate certification run.
 - Menu tap targets comfortable: yes / no
 - Vote buttons comfortable: yes / no
 - HUD readable during Double Chaos: yes / no
+- Meteor/Bomb cue and MOVE CENTER never overlap: yes / no
+- Coyote jump feels helpful without creating double jumps: yes / no
+- Buffered jump feels responsive on touch: yes / no
 - Spectator controls/readability: PASS / FAIL
 - Low VFX mode readable: yes / no
 - Blackout playable on device brightness: yes / no
