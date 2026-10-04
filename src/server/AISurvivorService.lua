@@ -468,6 +468,39 @@ local function addCosmeticTrail(record, root)
     trail.Parent = root
 end
 
+local function addNameplate(record, model)
+    local head = model:FindFirstChild("Head")
+    if not head or not head:IsA("BasePart") then
+        return
+    end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "SurvivorNameplate"
+    billboard.Adornee = head
+    billboard.AlwaysOnTop = false
+    billboard.MaxDistance = 90
+    billboard.Size = UDim2.fromOffset(126, 28)
+    billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.2, 0)
+    billboard.Parent = head
+
+    local label = Instance.new("TextLabel")
+    label.Name = "DisplayName"
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamSemibold
+    label.Text = record.identity.DisplayName
+    label.TextColor3 = Color3.fromRGB(245, 248, 255)
+    label.TextStrokeColor3 = Color3.fromRGB(10, 14, 20)
+    label.TextStrokeTransparency = 0.38
+    label.TextScaled = true
+    label.Parent = billboard
+
+    local constraint = Instance.new("UITextSizeConstraint")
+    constraint.MinTextSize = 11
+    constraint.MaxTextSize = 16
+    constraint.Parent = label
+end
+
 local function makeDescription(record)
     local identity = record.identity
     local description = Instance.new("HumanoidDescription")
@@ -538,7 +571,7 @@ local function createRig(record)
     humanoid.DisplayName = record.identity.DisplayName
     humanoid.WalkSpeed = record.profile.WalkSpeed
     humanoid.AutoRotate = true
-    humanoid.NameDisplayDistance = 72
+    humanoid.NameDisplayDistance = 0
     humanoid.HealthDisplayDistance = 42
     humanoid.MaxHealth = 100
     humanoid.Health = 100
@@ -567,6 +600,7 @@ local function createRig(record)
 
     addPrimitiveAccessory(record, model)
     addCosmeticTrail(record, root)
+    addNameplate(record, model)
     attachAnimations(record, humanoid)
 
     table.insert(record.connections, humanoid.Died:Connect(function()
@@ -753,14 +787,23 @@ local function reconcile()
     end
 
     for slot = 1, desired do
-        if not records[slot] then
-            records[slot] = newRecord(slot)
-            if createRig(records[slot]) then
-                if currentState.phase == "ready" then
-                    sendToArena(records[slot])
-                else
-                    sendToLobby(records[slot])
-                end
+        local record = records[slot]
+        if not record then
+            record = newRecord(slot)
+            records[slot] = record
+        end
+
+        local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
+        local missingRig = not record.model
+            or not record.model.Parent
+            or not humanoid
+            or humanoid.Health <= 0
+
+        if missingRig then
+            if currentState.phase == "ready" then
+                sendToArena(record)
+            else
+                sendToLobby(record)
             end
         end
     end
@@ -1913,8 +1956,16 @@ local function startBrain()
     brainStarted = true
 
     task.spawn(function()
+        local nextPresenceCheck = 0
+
         while started do
             local now = os.clock()
+
+            if currentState.phase ~= "round" and now >= nextPresenceCheck then
+                reconcile()
+                nextPresenceCheck = now + 2.5
+            end
+
             for _, record in ipairs(records) do
                 stepRecord(record, now)
             end
