@@ -286,6 +286,7 @@ local function refresh()
     local count = shardCount()
     shard.Text = count == 1 and "SHARD  1" or ("SHARDS  " .. count)
 
+    local rookieRound = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0)) <= 1
     local challengeId = state.challengeId
     local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
     local progress = math.min(challengeTarget, challengeProgress(state))
@@ -293,6 +294,11 @@ local function refresh()
         challenge.Text = "SURVIVE"
         challenge.TextColor3 = UITheme.Colors.Orange
         challenge.BackgroundColor3 = UITheme.Colors.Red:Lerp(UITheme.Colors.PanelSoft, 0.82)
+        completedChallengeId = nil
+    elseif rookieRound then
+        challenge.Text = "STAY ALIVE"
+        challenge.TextColor3 = UITheme.Colors.Text
+        challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
         completedChallengeId = nil
     elseif challengeId then
         local completed = progress >= challengeTarget
@@ -335,6 +341,9 @@ local function refresh()
     elseif state.doubleChaos then
         text = tostring(state.fusionName or "CHAOS FUSION")
         color = UITheme.Colors.Violet
+    elseif rookieRound then
+        text = "SURVIVE  " .. tostring(math.max(0, math.floor(tonumber(state.seconds) or 0))) .. "s"
+        color = UITheme.Colors.Text
     end
     status.Text = text
     status.TextColor3 = color
