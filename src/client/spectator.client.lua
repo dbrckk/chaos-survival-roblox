@@ -128,7 +128,7 @@ local function localHumanoid()
     return character and character:FindFirstChildOfClass("Humanoid")
 end
 
-local function validTarget(other)
+local function validPlayerTarget(other)
     if other == player then return false end
     if other:GetAttribute("RoundParticipant") ~= true then return false end
     if other:GetAttribute("RoundEliminated") == true then return false end
@@ -138,15 +138,45 @@ local function validTarget(other)
     return hum ~= nil and hum.Health > 0
 end
 
+local function addBotTargets()
+    local folder = workspace:FindFirstChild("AISurvivors")
+    if not folder then
+        return
+    end
+
+    for _, model in ipairs(folder:GetChildren()) do
+        if model:IsA("Model") and model:GetAttribute("AISurvivor") == true then
+            local hum = model:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                table.insert(targets, {
+                    Character = model,
+                    DisplayName = hum.DisplayName ~= "" and hum.DisplayName or model.Name,
+                    SortKey = 1000000 + math.max(
+                        0,
+                        math.floor(tonumber(model:GetAttribute("AISurvivorSlot")) or 0)
+                    ),
+                })
+            end
+        end
+    end
+end
+
 local function rebuildTargets()
     targets = {}
     for _, other in ipairs(Players:GetPlayers()) do
-        if validTarget(other) then
-            table.insert(targets, other)
+        if validPlayerTarget(other) then
+            table.insert(targets, {
+                Character = other.Character,
+                DisplayName = other.DisplayName,
+                SortKey = other.UserId,
+            })
         end
     end
+
+    addBotTargets()
+
     table.sort(targets, function(a, b)
-        return a.UserId < b.UserId
+        return (a.SortKey or 0) < (b.SortKey or 0)
     end)
 end
 
@@ -200,16 +230,18 @@ local function spectateIndex(index)
 
     targetIndex = ((index - 1) % #targets) + 1
     local target = targets[targetIndex]
-    local hum = target.Character and target.Character:FindFirstChildOfClass("Humanoid")
+    local character = target and target.Character
+    local hum = character and character:FindFirstChildOfClass("Humanoid")
 
     if hum and workspace.CurrentCamera then
         workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
         workspace.CurrentCamera.CameraSubject = hum
         local summary = roundSummary()
+        local displayName = tostring(target.DisplayName or "SURVIVOR")
         if player:GetAttribute("RoundParticipant") == true then
-            label.Text = "SPECTATING  " .. target.DisplayName
+            label.Text = "SPECTATING  " .. displayName
         else
-            label.Text = "JOINING NEXT ROUND  •  " .. target.DisplayName
+            label.Text = "JOINING NEXT ROUND  •  " .. displayName
         end
         if summary ~= "" then
             label.Text ..= "\n" .. summary
