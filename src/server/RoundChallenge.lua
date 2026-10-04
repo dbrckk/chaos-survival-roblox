@@ -1,13 +1,13 @@
 local RoundChallenge = {}
 
 RoundChallenge.FirstRoundDefinition = {
-    Id = "FIRST_ESCAPE",
-    Title = "TRY THE ESCAPE PAD",
-    Short = "USE A PAD",
-    Metric = "pads",
+    Id = "FIRST_SURVIVAL",
+    Title = "SURVIVE YOUR FIRST CHAOS",
+    Short = "STAY ALIVE",
+    Metric = "survive",
     Target = 1,
-    Coins = 6,
-    XP = 6,
+    Coins = 8,
+    XP = 8,
 }
 
 RoundChallenge.Definitions = {
@@ -80,7 +80,7 @@ function RoundChallenge.forContext(roundNumber, firstRound)
     return RoundChallenge.forRound(roundNumber)
 end
 
-function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest, flowCoins)
+function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest, flowCoins, survived)
     if not definition then
         return 0
     end
@@ -96,6 +96,8 @@ function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumB
         value = momentumBest
     elseif definition.Metric == "flow" then
         value = (tonumber(flowCoins) or 0) > 0 and 1 or 0
+    elseif definition.Metric == "survive" then
+        value = survived == true and 1 or 0
     elseif definition.Metric == "variety" then
         value = 0
         if (tonumber(shards) or 0) > 0 then value += 1 end
@@ -107,8 +109,16 @@ function RoundChallenge.progress(definition, shards, pads, nearMisses, momentumB
     return math.clamp(math.floor(tonumber(value) or 0), 0, definition.Target)
 end
 
-function RoundChallenge.completed(definition, shards, pads, nearMisses, momentumBest, flowCoins)
-    return RoundChallenge.progress(definition, shards, pads, nearMisses, momentumBest, flowCoins) >= (definition and definition.Target or math.huge)
+function RoundChallenge.completed(definition, shards, pads, nearMisses, momentumBest, flowCoins, survived)
+    return RoundChallenge.progress(
+        definition,
+        shards,
+        pads,
+        nearMisses,
+        momentumBest,
+        flowCoins,
+        survived
+    ) >= (definition and definition.Target or math.huge)
 end
 
 return RoundChallenge
