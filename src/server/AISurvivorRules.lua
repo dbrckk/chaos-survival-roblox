@@ -408,6 +408,21 @@ function AISurvivorRules.platformAvailable(canCollide, transparency, collapsePha
     return collapsePhase ~= "Warning" and collapsePhase ~= "Gone"
 end
 
+function AISurvivorRules.locomotionAnimation(speed, airborne, gaitScale)
+    local safeSpeed = math.max(0, tonumber(speed) or 0)
+    local gait = math.clamp(tonumber(gaitScale) or 1, 0.80, 1.20)
+
+    if airborne == true then
+        return "fall", 1
+    elseif safeSpeed <= 0.75 then
+        return "idle", 1
+    elseif safeSpeed < 12.5 then
+        return "walk", math.clamp((safeSpeed / 10) * gait, 0.70, 1.25)
+    end
+
+    return "run", math.clamp((safeSpeed / 16) * gait, 0.78, 1.32)
+end
+
 function AISurvivorRules.brainCadence(recordCount, phase)
     local count = math.max(0, math.floor(tonumber(recordCount) or 0))
     if count == 0 then
