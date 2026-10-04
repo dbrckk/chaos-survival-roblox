@@ -72,6 +72,7 @@ jobs:
             "tests/engine/game-analytics.spec.luau",
             "tests/engine/lobby-presentation-rules.spec.luau",
             "tests/engine/mastery.spec.luau",
+            "tests/engine/movement-assist-rules.spec.luau",
             "tests/engine/rate-limiter.spec.luau",
             "tests/engine/remote-registry.spec.luau",
             "tests/engine/result-presentation.spec.luau",
