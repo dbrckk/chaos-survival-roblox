@@ -2,7 +2,7 @@ local Config = {
     MinimumPlayers = 1,
     IntermissionSeconds = 12,
     VoteSeconds = 8,
-    ReadySeconds = 3,
+    ReadySeconds = 4,
     RoundSeconds = 45,
     PostRoundSeconds = 8,
 
@@ -17,7 +17,7 @@ local Config = {
     Solo = {
         IntermissionSeconds = 6,
         VoteSeconds = 4,
-        ReadySeconds = 2,
+        ReadySeconds = 4,
         RoundSeconds = 30,
         PostRoundSeconds = 4,
         WinCoinMultiplier = 1.4,
