@@ -1784,10 +1784,11 @@ local function showRoundFeedback(feedback)
         end
     end
 
-    if firstChaos then
-        resultTip.Text = survived
-            and "FIRST CHAOS CLEARED • survive again to build your streak"
-            or "FIRST CHAOS LEARNED • watch the warning cue and try again"
+    if not survived then
+        local _, eliminationTip = ResultPresentation.eliminationCopy(feedback)
+        resultTip.Text = "NEXT TRY • " .. eliminationTip
+    elseif firstChaos then
+        resultTip.Text = "FIRST CHAOS CLEARED • survive again to build your streak"
     elseif masterRound then
         resultTip.Text = "MASTER ROUND • challenge complete • momentum x" .. tostring(momentumBest)
     elseif fusionBonusCoins > 0 and feedback.fusionName then
