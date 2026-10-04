@@ -2080,6 +2080,7 @@ local currentHudPhase = "waiting"
 local pendingQuestCompletion = nil
 local pendingAchievement = nil
 local pendingDailyReward = nil
+local metaNotificationShownThisIntermission = false
 
 local function shouldDeferMetaNotification()
     return currentHudPhase == "ready"
@@ -2145,20 +2146,24 @@ end
 
 local function showOnePendingMetaNotification()
     if currentHudPhase ~= "intermission"
+        or metaNotificationShownThisIntermission
         or (tonumber(player:GetAttribute("Games")) or 0) <= 0
     then
         return
     end
 
     if pendingAchievement then
+        metaNotificationShownThisIntermission = true
         local item = pendingAchievement
         pendingAchievement = nil
         showAchievement(item)
     elseif pendingQuestCompletion then
+        metaNotificationShownThisIntermission = true
         local quest = pendingQuestCompletion
         pendingQuestCompletion = nil
         showQuestCompletion(quest)
     elseif pendingDailyReward then
+        metaNotificationShownThisIntermission = true
         local reward = pendingDailyReward
         pendingDailyReward = nil
         showDailyReward(reward)
@@ -2282,7 +2287,14 @@ end)
 stateEvent.OnClientEvent:Connect(function(state)
     presentCountdown(state)
 
+    local previousHudPhase = currentHudPhase
     currentHudPhase = tostring(state.phase or "waiting")
+    if currentHudPhase ~= "intermission" and previousHudPhase == "intermission" then
+        metaNotificationShownThisIntermission = false
+    elseif currentHudPhase == "intermission" and previousHudPhase ~= "intermission" then
+        metaNotificationShownThisIntermission = false
+    end
+
     local firstLobby = (tonumber(player:GetAttribute("Games")) or 0) <= 0
     local activeGameplay = state.phase == "round" or state.phase == "ready"
     metaControlsSuppressed = activeGameplay
