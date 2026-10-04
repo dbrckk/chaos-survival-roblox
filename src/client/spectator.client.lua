@@ -151,7 +151,8 @@ local function addBotTargets()
                 table.insert(targets, {
                     Character = model,
                     DisplayName = hum.DisplayName ~= "" and hum.DisplayName or model.Name,
-                    SortKey = 1000000 + math.max(
+                    IsBot = true,
+                    SortKey = math.max(
                         0,
                         math.floor(tonumber(model:GetAttribute("AISurvivorSlot")) or 0)
                     ),
@@ -168,6 +169,7 @@ local function rebuildTargets()
             table.insert(targets, {
                 Character = other.Character,
                 DisplayName = other.DisplayName,
+                IsBot = false,
                 SortKey = other.UserId,
             })
         end
@@ -176,6 +178,9 @@ local function rebuildTargets()
     addBotTargets()
 
     table.sort(targets, function(a, b)
+        if a.IsBot ~= b.IsBot then
+            return a.IsBot ~= true
+        end
         return (a.SortKey or 0) < (b.SortKey or 0)
     end)
 end
