@@ -58,6 +58,22 @@ local function insideViewport(guiObject)
         and pos.Y + size.Y <= viewport.Y + 1
 end
 
+local function rectsOverlap(a, b)
+    if not a or not b then
+        return false
+    end
+
+    local aPos = a.AbsolutePosition
+    local aSize = a.AbsoluteSize
+    local bPos = b.AbsolutePosition
+    local bSize = b.AbsoluteSize
+
+    return aPos.X < bPos.X + bSize.X
+        and aPos.X + aSize.X > bPos.X
+        and aPos.Y < bPos.Y + bSize.Y
+        and aPos.Y + aSize.Y > bPos.Y
+end
+
 local function click(button)
     local virtualInput = UserInputService:CreateVirtualInput()
     if not virtualInput then
@@ -78,10 +94,18 @@ local playerGui = player:WaitForChild("PlayerGui")
 local hud = playerGui:WaitForChild("ChaosHUD", 10)
 local juice = playerGui:WaitForChild("ChaosJuice", 10)
 local spectator = playerGui:WaitForChild("ChaosSpectator", 10)
+local roundFocusGui = playerGui:WaitForChild("ChaosRoundFocus", 10)
+local roundEventsGui = playerGui:WaitForChild("ChaosRoundEvents", 10)
+local hazardGui = playerGui:WaitForChild("HazardReadabilityCue", 10)
+local shrinkGui = playerGui:WaitForChild("ShrinkPressure", 10)
 
 check(hud ~= nil, "ChaosHUD missing")
 check(juice ~= nil, "ChaosJuice missing")
 check(spectator ~= nil, "ChaosSpectator missing")
+check(roundFocusGui ~= nil, "ChaosRoundFocus missing")
+check(roundEventsGui ~= nil, "ChaosRoundEvents missing")
+check(hazardGui ~= nil, "HazardReadabilityCue missing")
+check(shrinkGui ~= nil, "ShrinkPressure missing")
 
 if hud then
     local top = hud:FindFirstChild("TopHUD", true)
@@ -144,6 +168,45 @@ if hud then
                 click(voteButtons[1])
             end
         end
+    end
+end
+
+do
+    task.wait(0.10)
+
+    local focusBar = roundFocusGui and roundFocusGui:FindFirstChild("FocusBar", true)
+    local eventCard = roundEventsGui and roundEventsGui:FindFirstChild("EventCard", true)
+    local hazardCue = hazardGui and hazardGui:FindFirstChild("NearestHazardCue", true)
+    local centerCue = shrinkGui and shrinkGui:FindFirstChild("CenterEscapeCue", true)
+
+    check(focusBar ~= nil, "round focus bar missing")
+    check(eventCard ~= nil, "round event card missing")
+    check(hazardCue ~= nil, "hazard readability cue missing")
+    check(centerCue ~= nil, "shrink center cue missing")
+
+    for _, item in ipairs({
+        focusBar,
+        eventCard,
+        hazardCue,
+        centerCue,
+    }) do
+        if item and item:IsA("GuiObject") then
+            check(
+                item.AbsoluteSize.X > 0 and item.AbsoluteSize.Y > 0,
+                item.Name .. " has invalid size"
+            )
+            check(insideViewport(item), item.Name .. " outside viewport")
+        end
+    end
+
+    if hazardCue and centerCue
+        and hazardCue:IsA("GuiObject")
+        and centerCue:IsA("GuiObject")
+    then
+        check(
+            not rectsOverlap(hazardCue, centerCue),
+            "hazard and shrink escape cues overlap"
+        )
     end
 end
 
