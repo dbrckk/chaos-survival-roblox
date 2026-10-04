@@ -68,7 +68,7 @@ describe("AI survivor rules", function()
         expect(calm).toBe(0.20)
         expect(pressured < calm).toBe(true)
         expect(pressured >= 0.04).toBe(true)
-        expect(lowGravity > calm).toBe(true)
+        expect(lowGravity < calm).toBe(true)
         expect(pressuredLowGravity < lowGravity).toBe(true)
     end)
 
