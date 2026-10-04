@@ -244,3 +244,4 @@ Ordre d'exécution immédiat
 - [FAIT] Studio E2E renforcé : vérifie désormais ChaosRoundFocus, ChaosRoundEvents, HazardReadabilityCue et ShrinkPressure, bounds viewport, taille valide et non-chevauchement Meteor/Bomb ↔ MOVE CENTER.
 - [FAIT] Release packaging : README synchronisé avec les 17 cosmetics, AI Survivors, mastery, weekly challenges, 4 arènes nommées, nouvelle composition visuelle, material audio et game-feel ; protocole playtest mobile enrichi avec hazard lanes + coyote/buffer.
 - [FAIT] Audit production : aucun TODO/FIXME/HACK, aucun rbxassetid://0 ni print() debug détecté ; Game Pass IDs restent volontairement externes via DataModel attributes SupporterPassId/NeonPackPassId.
+- [FAIT] Storytelling micro-décor : les props de service Medium/High portent désormais des marquages diégétiques map-specific (CAM, MAINT, lanes, AUX) via SurfaceGui local, sans collision, sans asset externe et sans coût en Low.
