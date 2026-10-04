@@ -101,7 +101,147 @@ local function rebuild()
         end
     end
 
+    if variant == "Classic" then
+        local chassisY = bottomY - 4.4
+        local beamX = makePart(
+            "UnderClassicChassisX",
+            Vector3.new(base.Size.X * 0.62, 2.2, 6.0),
+            CFrame.new(center.X, chassisY, center.Z),
+            theme.Structure:Lerp(VisualTheme.World.Deep, 0.30),
+            Enum.Material.DiamondPlate,
+            tier.Name == "Low" and 0.30 or 0.14
+        )
+        local beamZ = makePart(
+            "UnderClassicChassisZ",
+            Vector3.new(6.0, 2.2, base.Size.Z * 0.62),
+            CFrame.new(center.X, chassisY - 0.35, center.Z),
+            theme.Structure:Lerp(VisualTheme.World.Deep, 0.36),
+            Enum.Material.Metal,
+            tier.Name == "Low" and 0.32 or 0.16
+        )
+        beamX.CastShadow = false
+        beamZ.CastShadow = false
+
+        if tier.Name ~= "Low" then
+            for side = -1, 1, 2 do
+                local bay = makePart(
+                    side < 0 and "UnderClassicDataBayL" or "UnderClassicDataBayR",
+                    Vector3.new(13, 4.2, 8.0),
+                    CFrame.new(
+                        center + Vector3.new(side * halfX * 0.30, -6.7, halfZ * 0.14)
+                    ),
+                    theme.Detail:Lerp(VisualTheme.World.Deep, 0.24),
+                    Enum.Material.DiamondPlate,
+                    0.16
+                )
+                makePart(
+                    side < 0 and "UnderClassicDataGlowL" or "UnderClassicDataGlowR",
+                    Vector3.new(8.5, 0.30, 8.12),
+                    bay.CFrame * CFrame.new(0, 2.26, 0),
+                    side < 0 and theme.Accent or theme.Secondary,
+                    Enum.Material.Neon,
+                    0.52
+                )
+            end
+        end
+    elseif variant == "Crossroads" then
+        local junction = makePart(
+            "UnderCrossroadsJunction",
+            Vector3.new(15, 4.5, 15),
+            CFrame.new(center + Vector3.new(0, -6.0, 0)),
+            theme.Structure:Lerp(VisualTheme.World.Deep, 0.26),
+            Enum.Material.Concrete,
+            tier.Name == "Low" and 0.28 or 0.12
+        )
+        junction.CastShadow = false
+
+        local trunks = {
+            {
+                name = "North",
+                size = Vector3.new(7.0, 2.0, halfZ * 0.84),
+                offset = Vector3.new(0, -4.9, -halfZ * 0.42),
+            },
+            {
+                name = "South",
+                size = Vector3.new(7.0, 2.0, halfZ * 0.84),
+                offset = Vector3.new(0, -4.9, halfZ * 0.42),
+            },
+            {
+                name = "West",
+                size = Vector3.new(halfX * 0.84, 2.0, 7.0),
+                offset = Vector3.new(-halfX * 0.42, -4.9, 0),
+            },
+            {
+                name = "East",
+                size = Vector3.new(halfX * 0.84, 2.0, 7.0),
+                offset = Vector3.new(halfX * 0.42, -4.9, 0),
+            },
+        }
+        for i, def in ipairs(trunks) do
+            local trunk = makePart(
+                "UnderCrossroadsTrunk" .. def.name,
+                def.size,
+                CFrame.new(center + def.offset),
+                theme.Structure,
+                Enum.Material.Concrete,
+                tier.Name == "Low" and 0.34 or 0.18
+            )
+            trunk.CastShadow = false
+
+            if tier.Name ~= "Low" then
+                local glowSize = def.size.X > def.size.Z
+                    and Vector3.new(def.size.X * 0.70, 0.24, 7.15)
+                    or Vector3.new(7.15, 0.24, def.size.Z * 0.70)
+                makePart(
+                    "UnderCrossroadsTrunkGlow" .. i,
+                    glowSize,
+                    trunk.CFrame * CFrame.new(0, 1.12, 0),
+                    i % 2 == 0 and theme.Secondary or theme.Accent,
+                    Enum.Material.Neon,
+                    0.56
+                )
+            end
+        end
+    end
+
     if variant == "Orbital" then
+        local hub = makePart(
+            "UnderOrbitalHub",
+            Vector3.new(
+                tier.Name == "Low" and 10 or 14,
+                tier.Name == "Low" and 10 or 14,
+                tier.Name == "Low" and 10 or 14
+            ),
+            CFrame.new(center + Vector3.new(0, -7.5, 0)),
+            theme.Structure,
+            Enum.Material.SmoothPlastic,
+            tier.Name == "Low" and 0.24 or 0.10
+        )
+        hub.Shape = Enum.PartType.Ball
+        hub.CastShadow = false
+
+        if tier.Name ~= "Low" then
+            local spokeCount = tier.Name == "High" and 6 or 4
+            for i = 1, spokeCount do
+                local angle = ((i - 1) / spokeCount) * math.pi * 2
+                local radius = math.min(halfX, halfZ) * 0.34
+                local pos = center + Vector3.new(
+                    math.cos(angle) * radius * 0.5,
+                    -7.5,
+                    math.sin(angle) * radius * 0.5
+                )
+                makePart(
+                    "UnderOrbitalSpoke" .. i,
+                    Vector3.new(radius, 0.70, 1.30),
+                    CFrame.new(pos)
+                        * CFrame.Angles(0, -(angle + math.pi * 0.5), 0),
+                    i % 2 == 0 and theme.Secondary or theme.Detail,
+                    i % 2 == 0 and Enum.Material.Neon or Enum.Material.Metal,
+                    i % 2 == 0 and 0.52 or 0.18
+                )
+            end
+        end
+
         local segments = tier.Name == "Low" and 6 or 10
         local radius = math.min(halfX, halfZ) * 0.64
         for i = 1, segments do
@@ -121,22 +261,50 @@ local function rebuild()
                 i % 2 == 0 and 0.50 or 0.18
             )
         end
-    elseif variant == "Towers" and tier.Name ~= "Low" then
-        for i = 1, 4 do
+    elseif variant == "Towers" then
+        local coreDepth = tier.Name == "Low" and 12 or 18
+        local core = makePart(
+            "UnderTowerCore",
+            Vector3.new(10, coreDepth, 10),
+            CFrame.new(
+                center + Vector3.new(
+                    0,
+                    -(base.Size.Y * 0.5) - coreDepth * 0.5 + 0.2,
+                    0
+                )
+            ),
+            theme.Structure:Lerp(VisualTheme.World.Deep, 0.30),
+            Enum.Material.CorrodedMetal,
+            tier.Name == "Low" and 0.26 or 0.10
+        )
+        core.CastShadow = false
+
+        if tier.Name ~= "Low" then
+            makePart(
+                "UnderTowerCoreGlow",
+                Vector3.new(0.42, coreDepth * 0.72, 10.15),
+                core.CFrame,
+                theme.Accent,
+                Enum.Material.Neon,
+                0.46
+            )
+
+            for i = 1, 4 do
             local angle = math.rad(45 + (i - 1) * 90)
             local pos = center + Vector3.new(
                 math.cos(angle) * halfX * 0.56,
                 -(base.Size.Y * 0.5) - 4.0,
                 math.sin(angle) * halfZ * 0.56
             )
-            makePart(
-                "UnderTowerBrace" .. i,
+                makePart(
+                    "UnderTowerBrace" .. i,
                 Vector3.new(2.2, 10, 2.2),
                 CFrame.new(pos) * CFrame.Angles(math.rad(22), 0, math.rad(22)),
                 theme.Detail,
                 Enum.Material.Metal,
-                0.22
-            )
+                    0.22
+                )
+            end
         end
     end
 end
