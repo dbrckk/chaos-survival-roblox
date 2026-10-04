@@ -17,18 +17,21 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Server-side vote rate limiting
 - Persistent cosmetic inventory with level unlocks
 - Coin-funded cosmetic shop with server-authoritative purchases
-- Nine earnable trails/auras plus two optional premium cosmetic rewards
+- 17-item cosmetic catalogue with rarity tiers, four arena-mastery GOLD rewards, Founder cosmetics and Hyper Neon cosmetics
 - Independent persistent trail + aura loadout slots with automatic migration from legacy saves
 - Server-authoritative cosmetic equipment with combinable trails, auras, lighting and highlights
 - Persistent long-term achievements with server-side rewards
+- Persistent disaster + arena mastery with Rookie/Bronze/Silver/Gold/Elite tiers
+- Weekly challenges, collection log and visible post-round next-goal progression
 - Mobile achievements progress panel and unlock notifications
-- Solo Rush mode with faster rounds, solo reward bonus, and instant round end on elimination
+- Solo Rush mode with faster rounds, solo reward bonus, instant round end on elimination and AI Survivors that fill sparse servers
 - Elimination tracking that prevents respawns from being counted as survival
 - Server-side retention and gameplay analytics segmented by Solo/Multiplayer
 - Economy analytics for Coins sources, daily rewards, quests and achievements
 - Onboarding funnel tracking from join to first survival and first Chaos Shard pickup
 - Contextual first-session coach covering vote, positioning, survival and optional shard collection
-- Four rotating arena layouts with no immediate repeat
+- Four rotating arena layouts with no immediate repeat: Classic Grid, Tower Run, Crossroads and Orbital Ring
+- Variant-specific hero landmarks, midground masses, understructures, focal lighting, material language and functional service props
 - Animated personal round-result feedback with survival, streak, shard and close-call breakdown
 - Compact live round-focus HUD with Chaos intensity and shard count
 - Final-five-second danger timer feedback
@@ -40,6 +43,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Procedural premium lobby hub with neon gate and title signage
 - Premium procedural arena treatment with metal spawn pads, neon platform underglow and edge beacons
 - Adaptive client-side world polish that rebuilds correctly across arena swaps and scales down on weaker devices
+- Responsive body/camera game feel with landing, impact, launch, turn/brake feedback, READY anticipation, coyote time and jump buffering
 - Live multiplayer vote counts and leading-choice highlight
 - Mobile spectator mode after elimination with live survivor/time context
 - Chaos Shards: optional server-authoritative risk/reward pickups with daily-quest integration
@@ -49,9 +53,12 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Session survival streaks with capped coin bonuses
 - First-session onboarding banner
 - Reactive music and SFX with a distinct audio cue for every disaster
+- Map-specific 3D ambience plus material-aware local footsteps and landing treatment
 - Automatic countdown, victory, elimination, reward, level-up and UI sounds
 - Real-engine gameplay matrix: every arena × every disaster + every allowed Double Chaos pair
 - Four-client Studio E2E harness with virtual UI clicks, movement, voting, joins and leaves
+- AI Survivor animation state blending (idle/walk/run/jump/fall) and map-aware/hazard-aware navigation
+- 57 engine specs assigned exactly once across Open Cloud CI shards
 - No paid assets required
 
 ## Current disasters
@@ -89,7 +96,7 @@ For DataStore tests in Studio, use a test experience and enable:
 
 ## Product direction
 
-Automated Roblox-engine coverage validates the core gameplay matrix on every push. The project is in release-candidate hardening: the remaining launch gate is a graphical/touch-device Studio pass from an authenticated Studio session, a real-device performance/data persistence pass, and fixes from those passes.
+Automated Roblox-engine coverage validates the core gameplay matrix on every push. The project is in release-candidate hardening: the remaining launch gates are an authenticated Studio visual/touch pass, Android + desktop soak/performance validation, persistence/rejoin validation, a small real-player alpha, and final public-page assets.
 
 Monetization infrastructure is now present but remains opt-in and cosmetic-only. Paid offers stay hidden until real Roblox Game Pass IDs are configured as DataModel attributes named `SupporterPassId` and `NeonPackPassId`. The paid service never modifies survival power, movement, health, round rewards or progression rates.
 
