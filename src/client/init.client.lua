@@ -351,6 +351,7 @@ local function cleanReadyTitle(value)
     local text = tostring(value or "CHAOS")
     text = string.gsub(text, "^READY:%s*", "")
     text = string.gsub(text, "^SOLO RUSH:%s*", "")
+    text = string.gsub(text, "^QUICK RUSH:%s*", "")
     return text
 end
 
@@ -1704,7 +1705,7 @@ local function showRoundFeedback(feedback)
     if feedback.doubleChaos then
         table.insert(tags, feedback.fusionName and ("FUSION: " .. tostring(feedback.fusionName)) or "DOUBLE CHAOS")
     end
-    if feedback.soloMode then table.insert(tags, "SOLO RUSH") end
+    if feedback.soloMode then table.insert(tags, "RUSH BONUS") end
     if feedback.criticalSurvival then
         table.insert(tags, "CLUTCH SURVIVAL")
     end
