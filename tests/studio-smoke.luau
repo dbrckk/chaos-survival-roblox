@@ -27,6 +27,25 @@ check(mapBuilderModule ~= nil, "MapBuilder module missing")
 local MapBuilder = require(mapBuilderModule)
 check(type(MapBuilder.build) == "function", "MapBuilder.build missing")
 
+local aiServiceModule = server:FindFirstChild("AISurvivorService")
+check(aiServiceModule ~= nil, "AISurvivorService module missing")
+local aiOk, AISurvivorService = pcall(require, aiServiceModule)
+check(aiOk, "Cannot require AISurvivorService: " .. tostring(AISurvivorService))
+check(type(AISurvivorService) == "table", "AISurvivorService did not return a table")
+for _, methodName in ipairs({
+    "start",
+    "setRoundState",
+    "aliveRoundCount",
+    "visibleCount",
+    "activeCount",
+    "names",
+}) do
+    check(
+        type(AISurvivorService[methodName]) == "function",
+        "AISurvivorService." .. methodName .. " missing"
+    )
+end
+
 local disastersFolder = server:FindFirstChild("Disasters")
 check(disastersFolder ~= nil, "Disasters folder missing")
 
