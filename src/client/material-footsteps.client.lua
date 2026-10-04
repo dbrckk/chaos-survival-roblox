@@ -4,53 +4,60 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SurfaceAudioRules = require(ReplicatedStorage.Shared.SurfaceAudioRules)
 
 local player = Players.LocalPlayer
-local humanoidConnection = nil
-local childConnection = nil
+local floorConnection = nil
+local childAddedConnection = nil
+local childRemovedConnection = nil
+local boundSounds = {}
+
+local SURFACE_SOUND_NAMES = {
+    Running = true,
+    Landing = true,
+}
 
 local function disconnect()
-    if humanoidConnection then
-        humanoidConnection:Disconnect()
-        humanoidConnection = nil
+    if floorConnection then
+        floorConnection:Disconnect()
+        floorConnection = nil
     end
-    if childConnection then
-        childConnection:Disconnect()
-        childConnection = nil
+    if childAddedConnection then
+        childAddedConnection:Disconnect()
+        childAddedConnection = nil
     end
+    if childRemovedConnection then
+        childRemovedConnection:Disconnect()
+        childRemovedConnection = nil
+    end
+    table.clear(boundSounds)
 end
 
-local function applyToRunningSound(humanoid, running)
-    if not running or not running:IsA("Sound") then
-        return
-    end
-
-    local eq = running:FindFirstChild("ChaosFootstepEQ")
+local function ensureEffects(sound)
+    local eq = sound:FindFirstChild("ChaosSurfaceEQ")
     if not eq then
         eq = Instance.new("EqualizerSoundEffect")
-        eq.Name = "ChaosFootstepEQ"
-        eq.Parent = running
+        eq.Name = "ChaosSurfaceEQ"
+        eq.Parent = sound
     end
 
-    local reverb = running:FindFirstChild("ChaosFootstepReverb")
+    local reverb = sound:FindFirstChild("ChaosSurfaceReverb")
     if not reverb then
         reverb = Instance.new("ReverbSoundEffect")
-        reverb.Name = "ChaosFootstepReverb"
+        reverb.Name = "ChaosSurfaceReverb"
         reverb.DryLevel = 0
         reverb.Density = 0.54
         reverb.Diffusion = 0.72
-        reverb.Parent = running
+        reverb.Parent = sound
     end
 
-    local function refresh()
-        local profile = SurfaceAudioRules.profile(humanoid.FloorMaterial)
-        eq.LowGain = profile.Low
-        eq.MidGain = profile.Mid
-        eq.HighGain = profile.High
-        reverb.WetLevel = profile.Wet
-        reverb.DecayTime = profile.Decay
-    end
+    return eq, reverb
+end
 
-    refresh()
-    humanoidConnection = humanoid:GetPropertyChangedSignal("FloorMaterial"):Connect(refresh)
+local function applyProfile(sound, profile)
+    local eq, reverb = ensureEffects(sound)
+    eq.LowGain = profile.Low
+    eq.MidGain = profile.Mid
+    eq.HighGain = profile.High
+    reverb.WetLevel = profile.Wet
+    reverb.DecayTime = profile.Decay
 end
 
 local function bindCharacter(character)
@@ -62,28 +69,35 @@ local function bindCharacter(character)
         return
     end
 
-    local running = root:FindFirstChild("Running")
-    if running and running:IsA("Sound") then
-        applyToRunningSound(humanoid, running)
-        return
+    local function refresh()
+        local profile = SurfaceAudioRules.profile(humanoid.FloorMaterial)
+        for sound in pairs(boundSounds) do
+            if sound.Parent then
+                applyProfile(sound, profile)
+            else
+                boundSounds[sound] = nil
+            end
+        end
     end
 
-    childConnection = root.ChildAdded:Connect(function(child)
-        if child.Name == "Running" and child:IsA("Sound") then
-            if childConnection then
-                childConnection:Disconnect()
-                childConnection = nil
-            end
-            applyToRunningSound(humanoid, child)
+    local function maybeBindSound(child)
+        if child:IsA("Sound") and SURFACE_SOUND_NAMES[child.Name] then
+            boundSounds[child] = true
+            refresh()
         end
-    end)
+    end
 
-    task.delay(4, function()
-        if childConnection and childConnection.Connected then
-            childConnection:Disconnect()
-            childConnection = nil
-        end
+    for _, child in ipairs(root:GetChildren()) do
+        maybeBindSound(child)
+    end
+
+    childAddedConnection = root.ChildAdded:Connect(maybeBindSound)
+    childRemovedConnection = root.ChildRemoved:Connect(function(child)
+        boundSounds[child] = nil
     end)
+    floorConnection = humanoid:GetPropertyChangedSignal("FloorMaterial"):Connect(refresh)
+
+    refresh()
 end
 
 if player.Character then
