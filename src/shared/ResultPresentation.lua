@@ -1,5 +1,45 @@
 local ResultPresentation = {}
 
+local ELIMINATION_COPY = {
+    Meteor = {
+        title = "HIT BY METEOR",
+        tip = "Move as soon as the orange warning circle appears",
+    },
+    Bomb = {
+        title = "CAUGHT IN BOMB BLAST",
+        tip = "Leave red markers before they detonate",
+    },
+    Lava = {
+        title = "CAUGHT BY LAVA",
+        tip = "Climb early and keep gaining height",
+    },
+    Tornado = {
+        title = "THROWN BY TORNADO",
+        tip = "Keep more distance from the tornado",
+    },
+    JumpShock = {
+        title = "KNOCKED OFF BY SHOCKWAVE",
+        tip = "Give the blue shockwave extra space",
+    },
+    LowGravity = {
+        title = "DRIFTED OFF THE ARENA",
+        tip = "Use short jumps and steer back toward the center",
+    },
+    Fall = {
+        title = "FELL FROM THE ARENA",
+        tip = "Use shorter jumps and recover toward the center",
+    },
+}
+
+function ResultPresentation.eliminationCopy(feedback)
+    feedback = type(feedback) == "table" and feedback or {}
+    local copy = ELIMINATION_COPY[tostring(feedback.eliminationCause or "")]
+    if copy then
+        return copy.title, copy.tip
+    end
+    return "ELIMINATED", "React early to the hazard warning and keep a safe route"
+end
+
 function ResultPresentation.kind(feedback)
     feedback = type(feedback) == "table" and feedback or {}
 
@@ -28,7 +68,8 @@ function ResultPresentation.title(feedback)
     elseif kind == "survived" then
         return "SURVIVED!"
     end
-    return "ELIMINATED"
+    local title = ResultPresentation.eliminationCopy(feedback)
+    return title
 end
 
 function ResultPresentation.worldLabel(feedback, isLocal)
