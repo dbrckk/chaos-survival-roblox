@@ -64,16 +64,26 @@ describe("Disaster impact", function()
             Vector3.new(0, 3, 0)
         )
 
+        local reportedKind = nil
+        local reportedDamage = 0
         local hits = DisasterImpact.applyRadialDamage({
             HazardContestants = {activeBot, inactiveBot},
             IsContestantActive = function(subject)
                 return subject == activeBot
+            end,
+            OnHazardDamage = function(subject, kind, damage)
+                if subject == activeBot then
+                    reportedKind = kind
+                    reportedDamage = damage
+                end
             end,
         }, Vector3.new(0, 3, 0), 8, 50, "Meteor")
 
         expect(hits).toBe(1)
         expect(activeHumanoid.Health).toBe(50)
         expect(inactiveHumanoid.Health).toBe(100)
+        expect(reportedKind).toBe("Meteor")
+        expect(reportedDamage).toBe(50)
 
         activeCharacter:Destroy()
         inactiveCharacter:Destroy()
