@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local ArenaMaterialRules = require(ReplicatedStorage.Shared.ArenaMaterialRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -45,7 +46,7 @@ local function eligible(part)
         or part.Material == Enum.Material.SmoothPlastic
 end
 
-local function applyPart(part, profile)
+local function applyPart(part, profile, variant, allowMaterialSwap)
     if not eligible(part) then
         return
     end
@@ -56,11 +57,29 @@ local function applyPart(part, profile)
         part:SetAttribute("MaterialPassBaseColor", base)
     end
 
+    local baseMaterial = part:GetAttribute("MaterialPassBaseMaterial")
+    if typeof(baseMaterial) ~= "EnumItem" then
+        baseMaterial = part.Material
+        part:SetAttribute("MaterialPassBaseMaterial", baseMaterial)
+    end
+
     local hash = hashName(part:GetFullName())
     local centered = ((hash % 101) / 100) * 2 - 1
     local maxShift = profile.Name == "Low" and 0.018
         or (profile.Name == "Medium" and 0.032 or 0.045)
     local shift = centered * maxShift
+
+    if allowMaterialSwap == true then
+        local bucket = hash % 100
+        part.Material = ArenaMaterialRules.targetMaterial(
+            variant,
+            baseMaterial,
+            bucket,
+            profile.Name
+        )
+    else
+        part.Material = baseMaterial
+    end
 
     if shift >= 0 then
         part.Color = base:Lerp(Color3.new(1, 1, 1), shift)
@@ -76,12 +95,17 @@ local function restore()
             if typeof(base) == "Color3" then
                 part.Color = base
             end
+
+            local baseMaterial = part:GetAttribute("MaterialPassBaseMaterial")
+            if typeof(baseMaterial) == "EnumItem" then
+                part.Material = baseMaterial
+            end
         end
     end
     table.clear(tracked)
 end
 
-local function applyFolder(folder, profile)
+local function applyFolder(folder, profile, variant, allowMaterialSwap)
     if not folder then
         return
     end
@@ -89,7 +113,7 @@ local function applyFolder(folder, profile)
     for _, descendant in ipairs(folder:GetDescendants()) do
         if eligible(descendant) then
             tracked[descendant] = true
-            applyPart(descendant, profile)
+            applyPart(descendant, profile, variant, allowMaterialSwap)
         end
     end
 end
@@ -105,9 +129,10 @@ local function rebuild()
     local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local arena = generated:FindFirstChild("Arena")
     local lobby = generated:FindFirstChild("Lobby")
+    local variant = tostring(arena and arena:GetAttribute("VariantId") or "Classic")
 
-    applyFolder(arena and arena:FindFirstChild("Decor"), profile)
-    applyFolder(lobby and lobby:FindFirstChild("Decor"), profile)
+    applyFolder(arena and arena:FindFirstChild("Decor"), profile, variant, true)
+    applyFolder(lobby and lobby:FindFirstChild("Decor"), profile, nil, false)
 end
 
 local mapConnection = nil
