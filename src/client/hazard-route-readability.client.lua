@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
@@ -58,6 +59,24 @@ cueText.TextXAlignment = Enum.TextXAlignment.Left
 cueText.Text = "MOVE OUT"
 cueText.Parent = cue
 UITheme.addTextConstraint(cueText, 14, 21)
+
+local offscreenArrow = Instance.new("TextLabel")
+offscreenArrow.Name = "OffscreenHazardArrow"
+offscreenArrow.AnchorPoint = Vector2.new(0.5, 0.5)
+offscreenArrow.Size = UDim2.fromOffset(42, 42)
+offscreenArrow.BackgroundColor3 = UITheme.Colors.Panel
+offscreenArrow.BackgroundTransparency = 0.14
+offscreenArrow.BorderSizePixel = 0
+offscreenArrow.Font = Enum.Font.GothamBlack
+offscreenArrow.Text = "▲"
+offscreenArrow.TextColor3 = UITheme.Colors.Red
+offscreenArrow.TextScaled = true
+offscreenArrow.Visible = false
+offscreenArrow.ZIndex = 4
+offscreenArrow.Parent = cueGui
+UITheme.addCorner(offscreenArrow, UITheme.Corners.Pill)
+local offscreenStroke = UITheme.addStroke(offscreenArrow, UITheme.Colors.Red, 1.4, 0.24)
+UITheme.addTextConstraint(offscreenArrow, 18, 28)
 
 local cameraConnection = nil
 
@@ -294,6 +313,7 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     if currentPhase ~= "round" then
         cue.Visible = false
+        offscreenArrow.Visible = false
         for _, warningState in pairs(warningStates) do
             hideState(warningState)
         end
@@ -313,6 +333,7 @@ ensureRenderLoop = function()
     renderConnection = RunService.RenderStepped:Connect(function(dt)
         if currentPhase ~= "round" or next(warningStates) == nil then
             cue.Visible = false
+            offscreenArrow.Visible = false
             renderConnection:Disconnect()
             renderConnection = nil
             return
@@ -322,6 +343,7 @@ ensureRenderLoop = function()
         or player:GetAttribute("RoundEliminated") == true
     then
         cue.Visible = false
+        offscreenArrow.Visible = false
         return
     end
 
@@ -373,6 +395,49 @@ ensureRenderLoop = function()
         cueBadge.BackgroundColor3 = color
         cueBadge.Text = KIND_BADGES[kind] or "!"
         cueText.Text = KIND_LABELS[kind] or "DANGER  •  MOVE OUT"
+    end
+
+    offscreenArrow.Visible = false
+    local camera = workspace.CurrentCamera
+    if camera
+        and nearestWarning
+        and nearestState
+        and nearestClearance <= 14
+    then
+        local viewportPoint, onScreen = camera:WorldToViewportPoint(nearestWarning.Position)
+        if not onScreen or viewportPoint.Z <= 0 then
+            local viewport = camera.ViewportSize
+            local center = viewport * 0.5
+            local point = Vector2.new(viewportPoint.X, viewportPoint.Y)
+            local direction = point - center
+
+            if viewportPoint.Z <= 0 then
+                direction = -direction
+            end
+            if direction.Magnitude < 0.01 then
+                direction = Vector2.new(0, -1)
+            else
+                direction = direction.Unit
+            end
+
+            local sideMargin = 54
+            local topMargin = 78
+            local bottomMargin = UserInputService.TouchEnabled and 138 or 62
+            local maxX = math.max(sideMargin, viewport.X - sideMargin)
+            local maxY = math.max(topMargin, viewport.Y - bottomMargin)
+            local edgeDistance = math.min(viewport.X, viewport.Y) * 0.44
+            local candidate = center + direction * edgeDistance
+            local x = math.clamp(candidate.X, sideMargin, maxX)
+            local y = math.clamp(candidate.Y, topMargin, maxY)
+
+            local kind = nearestState.kind
+            local color = KIND_COLORS[kind] or UITheme.Colors.Red
+            offscreenArrow.Position = UDim2.fromOffset(x, y)
+            offscreenArrow.Rotation = math.deg(math.atan2(direction.Y, direction.X)) + 90
+            offscreenArrow.TextColor3 = color
+            offscreenStroke.Color = color
+            offscreenArrow.Visible = true
+        end
     end
     end)
 end
