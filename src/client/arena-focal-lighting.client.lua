@@ -79,8 +79,6 @@ local function rebuild()
     local definitions = ArenaFocalLightingRules.definitions(variant)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
-    local target = base.Position + Vector3.new(0, 4.0, 0)
-
     for i = 1, math.min(count, #definitions) do
         local definition = definitions[i]
         local offset = definition.Offset
@@ -89,6 +87,12 @@ local function rebuild()
             offset.Y,
             offset.Z * halfZ
         ))
+        local focusLocal = Vector3.new(
+            math.clamp(offset.X, -1, 1) * halfX * 0.42,
+            4.0,
+            math.clamp(offset.Z, -1, 1) * halfZ * 0.42
+        )
+        local target = base.CFrame:PointToWorldSpace(focusLocal)
 
         local anchor = Instance.new("Part")
         anchor.Name = "ArenaFocalLightAnchor" .. i
