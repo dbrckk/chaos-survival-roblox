@@ -242,15 +242,35 @@ local function challengeProgress(state)
     return 0
 end
 
-local function intensityLabel(value, seconds)
+local DANGER_LABELS = {
+    Meteors = "METEORS INCOMING",
+    Bombs = "BOMBS INCOMING",
+    Darkness = "BLACKOUT",
+    DisappearingPlatforms = "PLATFORMS UNSTABLE",
+    Freeze = "FREEZE PULSE",
+    JumpShock = "SHOCKWAVE",
+    LowGravity = "LOW GRAVITY",
+    RisingLava = "LAVA RISING",
+    ShrinkingArena = "ARENA SHRINKING",
+    SpeedSurge = "SPEED SURGE",
+    Tornado = "TORNADO MOVING",
+}
+
+local function dangerStatusLabel(disasterId, value, seconds)
     if seconds <= 5 then
-        return "FINAL RUSH", Color3.fromRGB(255, 105, 92)
-    elseif value >= 1.18 then
-        return "MAX CHAOS", Color3.fromRGB(245, 115, 190)
-    elseif value >= 1.08 then
-        return "DANGER RISING", Color3.fromRGB(235, 175, 105)
+        return "SURVIVE  " .. tostring(math.max(0, math.floor(seconds))) .. "s",
+            Color3.fromRGB(255, 105, 92)
     end
-    return "CHAOS BUILDING", Color3.fromRGB(205, 220, 240)
+
+    local base = DANGER_LABELS[tostring(disasterId or "")]
+        or "STAY ALERT"
+
+    if value >= 1.18 then
+        return base .. " • INTENSE", Color3.fromRGB(245, 115, 190)
+    elseif value >= 1.08 then
+        return base .. " • FASTER", Color3.fromRGB(235, 175, 105)
+    end
+    return base, Color3.fromRGB(205, 220, 240)
 end
 
 local function refresh()
@@ -331,7 +351,12 @@ local function refresh()
         {Size = UDim2.fromScale(normalized, 1)}
     ):Play()
 
-    local text, color = intensityLabel(intensity, tonumber(state.seconds) or 0)
+    local primaryId = state.disasterIds and state.disasterIds[1]
+    local text, color = dangerStatusLabel(
+        primaryId,
+        intensity,
+        tonumber(state.seconds) or 0
+    )
     if state.finalRush then
         text = "FINAL RUSH  " .. tostring(math.max(0, math.floor(tonumber(state.seconds) or 0))) .. "s"
         color = UITheme.Colors.Red
@@ -348,7 +373,6 @@ local function refresh()
     status.Text = text
     status.TextColor3 = color
 
-    local primaryId = state.disasterIds and state.disasterIds[1]
     local secondaryId = state.disasterIds and state.disasterIds[2]
     local disasterAccent = UITheme.disasterAccent(primaryId, UITheme.Colors.Cyan)
     local secondaryAccent = UITheme.disasterAccent(secondaryId, UITheme.Colors.Violet)
