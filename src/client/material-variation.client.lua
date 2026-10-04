@@ -51,17 +51,17 @@ local function applyPart(part, profile, variant, allowMaterialSwap)
         return
     end
 
-    local base = part:GetAttribute("MaterialPassBaseColor")
-    if typeof(base) ~= "Color3" then
-        base = part.Color
-        part:SetAttribute("MaterialPassBaseColor", base)
+    local state = tracked[part]
+    if type(state) ~= "table" then
+        state = {
+            Color = part.Color,
+            Material = part.Material,
+        }
+        tracked[part] = state
     end
 
-    local baseMaterial = part:GetAttribute("MaterialPassBaseMaterial")
-    if typeof(baseMaterial) ~= "EnumItem" then
-        baseMaterial = part.Material
-        part:SetAttribute("MaterialPassBaseMaterial", baseMaterial)
-    end
+    local base = state.Color
+    local baseMaterial = state.Material
 
     local hash = hashName(part:GetFullName())
     local centered = ((hash % 101) / 100) * 2 - 1
@@ -89,17 +89,10 @@ local function applyPart(part, profile, variant, allowMaterialSwap)
 end
 
 local function restore()
-    for part in pairs(tracked) do
-        if part and part.Parent then
-            local base = part:GetAttribute("MaterialPassBaseColor")
-            if typeof(base) == "Color3" then
-                part.Color = base
-            end
-
-            local baseMaterial = part:GetAttribute("MaterialPassBaseMaterial")
-            if typeof(baseMaterial) == "EnumItem" then
-                part.Material = baseMaterial
-            end
+    for part, state in pairs(tracked) do
+        if part and part.Parent and type(state) == "table" then
+            part.Color = state.Color
+            part.Material = state.Material
         end
     end
     table.clear(tracked)
@@ -112,7 +105,6 @@ local function applyFolder(folder, profile, variant, allowMaterialSwap)
 
     for _, descendant in ipairs(folder:GetDescendants()) do
         if eligible(descendant) then
-            tracked[descendant] = true
             applyPart(descendant, profile, variant, allowMaterialSwap)
         end
     end
