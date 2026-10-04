@@ -2076,6 +2076,95 @@ end
 
 
 
+local currentHudPhase = "waiting"
+local pendingQuestCompletion = nil
+local pendingAchievement = nil
+local pendingDailyReward = nil
+
+local function shouldDeferMetaNotification()
+    return currentHudPhase == "ready"
+        or currentHudPhase == "round"
+        or currentHudPhase == "result"
+        or (tonumber(player:GetAttribute("Games")) or 0) <= 0
+end
+
+local function showQuestCompletion(quest)
+    if not quest then
+        return
+    end
+
+    local weekly = quest.scope == "weekly"
+    questToastTitle.Text = weekly and "WEEKLY COMPLETE" or "QUEST COMPLETE"
+    questToastBody.Text = string.format(
+        "%s   +%d coins   +%d XP",
+        quest.title or (weekly and "Weekly challenge" or "Daily quest"),
+        quest.coins or 0,
+        quest.xp or 0
+    )
+    questToast.Visible = true
+
+    task.delay(weekly and 4.6 or 4, function()
+        questToast.Visible = false
+    end)
+end
+
+local function showAchievement(item)
+    if not item then
+        return
+    end
+
+    achievementToastTitle.Text = "ACHIEVEMENT UNLOCKED"
+    achievementToastBody.Text = string.format(
+        "%s   +%d coins   +%d XP",
+        item.title or "Achievement",
+        item.coins or 0,
+        item.xp or 0
+    )
+    achievementToast.Visible = true
+    task.delay(4, function()
+        achievementToast.Visible = false
+    end)
+end
+
+local function showDailyReward(reward)
+    if not reward then
+        return
+    end
+
+    local streak = tonumber(reward.streak) or 1
+    local coins = tonumber(reward.coins) or 0
+    local xp = tonumber(reward.xp) or 0
+    dailyTitle.Text = "DAY " .. streak .. " STREAK"
+    dailyBody.Text = string.format("+%d coins   +%d XP", coins, xp)
+    dailyToast.Visible = true
+
+    task.delay(4, function()
+        dailyToast.Visible = false
+    end)
+end
+
+local function showOnePendingMetaNotification()
+    if currentHudPhase ~= "intermission"
+        or (tonumber(player:GetAttribute("Games")) or 0) <= 0
+    then
+        return
+    end
+
+    if pendingAchievement then
+        local item = pendingAchievement
+        pendingAchievement = nil
+        showAchievement(item)
+    elseif pendingQuestCompletion then
+        local quest = pendingQuestCompletion
+        pendingQuestCompletion = nil
+        showQuestCompletion(quest)
+    elseif pendingDailyReward then
+        local reward = pendingDailyReward
+        pendingDailyReward = nil
+        showDailyReward(reward)
+    end
+end
+
 roundFeedbackEvent.OnClientEvent:Connect(function(feedback)
     showRoundFeedback(feedback)
 end)
@@ -2090,12 +2179,11 @@ achievementEvent.OnClientEvent:Connect(function(payload)
         local unlockedId = unlockedNow[1]
         for _, item in ipairs(payload.state.achievements) do
             if item.id == unlockedId then
-                achievementToastTitle.Text = "ACHIEVEMENT UNLOCKED"
-                achievementToastBody.Text = string.format("%s   +%d coins   +%d XP", item.title or "Achievement", item.coins or 0, item.xp or 0)
-                achievementToast.Visible = true
-                task.delay(4, function()
-                    achievementToast.Visible = false
-                end)
+                if shouldDeferMetaNotification() then
+                    pendingAchievement = item
+                else
+                    showAchievement(item)
+                end
                 break
             end
         end
@@ -2175,42 +2263,30 @@ questEvent.OnClientEvent:Connect(function(payload)
     local completed = payload.completed or {}
     if #completed > 0 then
         local quest = completed[1]
-        local weekly = quest.scope == "weekly"
-        questToastTitle.Text = weekly and "WEEKLY COMPLETE" or "QUEST COMPLETE"
-        questToastBody.Text = string.format(
-            "%s   +%d coins   +%d XP",
-            quest.title or (weekly and "Weekly challenge" or "Daily quest"),
-            quest.coins or 0,
-            quest.xp or 0
-        )
-        questToast.Visible = true
-
-        task.delay(weekly and 4.6 or 4, function()
-            questToast.Visible = false
-        end)
+        if shouldDeferMetaNotification() then
+            pendingQuestCompletion = quest
+        else
+            showQuestCompletion(quest)
+        end
     end
 end)
 
 dailyRewardEvent.OnClientEvent:Connect(function(reward)
-    local streak = tonumber(reward.streak) or 1
-    local coins = tonumber(reward.coins) or 0
-    local xp = tonumber(reward.xp) or 0
-
-    dailyTitle.Text = "DAY " .. streak .. " STREAK"
-    dailyBody.Text = string.format("+%d coins   +%d XP", coins, xp)
-    dailyToast.Visible = true
-
-    task.delay(4, function()
-        dailyToast.Visible = false
-    end)
+    if shouldDeferMetaNotification() then
+        pendingDailyReward = reward
+    else
+        showDailyReward(reward)
+    end
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     presentCountdown(state)
 
+    currentHudPhase = tostring(state.phase or "waiting")
     local firstLobby = (tonumber(player:GetAttribute("Games")) or 0) <= 0
-    metaControlsSuppressed = state.phase == "round"
-        or state.phase == "ready"
+    local activeGameplay = state.phase == "round" or state.phase == "ready"
+    metaControlsSuppressed = activeGameplay
+        or state.phase == "result"
         or firstLobby
     if metaDock then
         metaDock.Visible = not metaControlsSuppressed
@@ -2229,9 +2305,16 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     if metaControlsSuppressed then
         closeAllPanels()
+    end
+
+    if activeGameplay or firstLobby then
         resultToken += 1
         resultCard.Visible = false
         resultFlash.BackgroundTransparency = 1
+    end
+
+    if state.phase == "intermission" then
+        task.defer(showOnePendingMetaNotification)
     end
 
     if state.phase == "round" and type(state.hint) == "string" and state.hint ~= "" then
