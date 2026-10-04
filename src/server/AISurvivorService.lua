@@ -159,8 +159,12 @@ local function arenaSpawnCFrame(slot)
     local _, arena = arenaParts()
     local spawns = arena and arena:FindFirstChild("Spawns")
     local list = sortedParts(spawns)
+    local humanSlots = math.max(1, humanCount())
+    local botSpawnIndex = slot + humanSlots
+
     if #list == 0 then
-        local position = config.ArenaCenter + Vector3.new((slot - 2) * 7, 4, 0)
+        local position = config.ArenaCenter
+            + Vector3.new((botSpawnIndex - 2) * 7, 4, 0)
         return ArenaPresentation.spawnCFrame(
             tostring(arena and arena:GetAttribute("VariantId") or "Classic"),
             position,
@@ -168,7 +172,7 @@ local function arenaSpawnCFrame(slot)
         )
     end
 
-    local spawn = list[((slot - 1) % #list) + 1]
+    local spawn = list[((botSpawnIndex - 1) % #list) + 1]
     return spawn.CFrame + Vector3.new(0, 4, 0)
 end
 
