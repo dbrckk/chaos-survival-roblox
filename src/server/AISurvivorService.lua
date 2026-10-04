@@ -217,44 +217,79 @@ local function attachAnimations(record, humanoid)
     local tracks = {
         idle = loadTrack(animator, 507766666, Enum.AnimationPriority.Idle, true),
         walk = loadTrack(animator, 507777826, Enum.AnimationPriority.Movement, true),
+        run = loadTrack(animator, 507767714, Enum.AnimationPriority.Movement, true),
         jump = loadTrack(animator, 507765000, Enum.AnimationPriority.Action, false),
+        fall = loadTrack(animator, 507767968, Enum.AnimationPriority.Movement, true),
     }
     record.tracks = tracks
 
-    if tracks.idle then
-        pcall(tracks.idle.Play, tracks.idle, 0.15)
+    local airborne = false
+    local locomotionKind = nil
+
+    local function stopTrack(name, fade)
+        local track = tracks[name]
+        if track and track.IsPlaying then
+            track:Stop(fade or 0.10)
+        end
     end
 
+    local function playLocomotion(speed)
+        local kind, playbackSpeed = AISurvivorRules.locomotionAnimation(
+            speed,
+            airborne,
+            record.gaitScale
+        )
+
+        if kind ~= locomotionKind then
+            for _, name in ipairs({"idle", "walk", "run", "fall"}) do
+                if name ~= kind then
+                    stopTrack(name, 0.10)
+                end
+            end
+
+            local track = tracks[kind]
+            if track and not track.IsPlaying then
+                track:Play(0.10)
+            end
+            locomotionKind = kind
+        end
+
+        local track = tracks[kind]
+        if track and (kind == "walk" or kind == "run") then
+            track:AdjustSpeed(playbackSpeed)
+        end
+    end
+
+    playLocomotion(0)
+
     table.insert(record.connections, humanoid.Running:Connect(function(speed)
-        if speed > 0.75 then
-            if tracks.idle and tracks.idle.IsPlaying then
-                tracks.idle:Stop(0.12)
-            end
-            if tracks.walk and not tracks.walk.IsPlaying then
-                tracks.walk:Play(0.12)
-            end
-            if tracks.walk then
-                tracks.walk:AdjustSpeed(
-                    math.clamp(
-                        (speed / 16) * (record.gaitScale or 1),
-                        0.70,
-                        1.40
-                    )
-                )
-            end
-        else
-            if tracks.walk and tracks.walk.IsPlaying then
-                tracks.walk:Stop(0.12)
-            end
-            if tracks.idle and not tracks.idle.IsPlaying then
-                tracks.idle:Play(0.12)
-            end
+        if not airborne then
+            playLocomotion(speed)
         end
     end))
 
-    table.insert(record.connections, humanoid.Jumping:Connect(function(active)
-        if active and tracks.jump then
-            tracks.jump:Play(0.05)
+    table.insert(record.connections, humanoid.StateChanged:Connect(function(_, state)
+        if state == Enum.HumanoidStateType.Jumping then
+            airborne = true
+            stopTrack("walk", 0.06)
+            stopTrack("run", 0.06)
+            stopTrack("idle", 0.06)
+            stopTrack("fall", 0.04)
+            if tracks.jump then
+                tracks.jump:Play(0.04)
+            end
+        elseif state == Enum.HumanoidStateType.Freefall then
+            airborne = true
+            playLocomotion(0)
+        elseif state == Enum.HumanoidStateType.Landed
+            or state == Enum.HumanoidStateType.Running
+            or state == Enum.HumanoidStateType.RunningNoPhysics
+        then
+            airborne = false
+            stopTrack("fall", 0.08)
+            playLocomotion(
+                humanoid.MoveDirection.Magnitude * humanoid.WalkSpeed
+            )
         end
     end))
 end
