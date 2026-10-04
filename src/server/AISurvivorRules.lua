@@ -253,7 +253,10 @@ function AISurvivorRules.freeJumpChance(baseChance, pressure, lowGravity)
 
     chance *= 1 - p * 0.44
     if lowGravity == true then
-        chance += 0.16 * (1 - p * 0.35)
+        -- Low gravity magnifies every jump. Realistic survivors become more
+        -- conservative instead of repeatedly launching themselves off-map.
+        chance *= 0.32
+        return math.clamp(chance, 0.02, 0.14)
     end
 
     return math.clamp(chance, 0.04, 0.42)
