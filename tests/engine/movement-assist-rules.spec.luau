@@ -21,6 +21,15 @@ describe("Movement assist rules", function()
         )).toBe(false)
     end)
 
+    it("does not turn a normal jump into a double jump", function()
+        expect(MovementAssistRules.canCoyoteJump(
+            false,
+            0.04,
+            Enum.HumanoidStateType.Jumping,
+            true
+        )).toBe(false)
+    end)
+
     it("never adds a second jump while already grounded", function()
         expect(MovementAssistRules.canCoyoteJump(
             true,
