@@ -801,6 +801,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end
 
         local roundHint = roundSettings.Solo and ("Solo bonus active • " .. hint) or hint
+        if firstRoundContestant then
+            roundHint = "SURVIVE UNTIL 0 • " .. hint .. " • SHARDS = BONUS"
+        end
         if finalRushActive then
             roundHint = "FINAL RUSH • Pads recharge faster • " .. roundHint
         elseif overdriveActive then
@@ -939,7 +942,7 @@ while true do
         broadcast({
             phase = "intermission",
             title = options and "VOTE FOR THE NEXT CHAOS" or (intermissionSettings.Solo and "SOLO RUSH" or "NEXT ROUND"),
-            hint = options and "Choose one" or ((arenaDefinition and arenaDefinition.Name or "ARENA") .. " • " .. (intermissionSettings.Solo and "Fast rounds • bonus rewards" or "Get ready")),
+            hint = options and "Choose one" or ("SURVIVE UNTIL 0 • SHARDS = BONUS • " .. (arenaDefinition and arenaDefinition.Name or "ARENA")),
             seconds = remainingIntermission,
             voteOptions = options,
             soloMode = intermissionSettings.Solo,
@@ -1040,8 +1043,13 @@ while true do
 
     local selectedSet = {selected}
     local contestantGames = {}
+    local firstRoundBriefing = false
     for _, player in ipairs(contestants) do
-        table.insert(contestantGames, player:GetAttribute("Games"))
+        local games = player:GetAttribute("Games")
+        table.insert(contestantGames, games)
+        if FirstTimeExperience.isFirstRound(games) then
+            firstRoundBriefing = true
+        end
     end
 
     local allowDoubleChaos = FirstTimeExperience.allowDoubleChaos(contestantGames)
@@ -1074,7 +1082,12 @@ while true do
     end
 
     local readyCancelled = false
-    for t = roundSettings.ReadySeconds, 1, -1 do
+    local readySeconds = roundSettings.ReadySeconds
+    if firstRoundBriefing then
+        readySeconds = math.max(readySeconds, 5)
+    end
+
+    for t = readySeconds, 1, -1 do
         local readyCount = 0
         for _, p in ipairs(contestants) do
             if p.Parent == Players
@@ -1104,7 +1117,9 @@ while true do
         broadcast({
             phase = "ready",
             title = "READY: " .. displayTitle,
-            hint = "Find your position • " .. readyHint,
+            hint = firstRoundBriefing
+                and ("SURVIVE UNTIL 0 • " .. readyHint .. " • SHARDS = BONUS")
+                or ("SURVIVE UNTIL 0 • " .. readyHint),
             seconds = t,
             doubleChaos = #selectedSet > 1,
             fusionName = fusionName,
