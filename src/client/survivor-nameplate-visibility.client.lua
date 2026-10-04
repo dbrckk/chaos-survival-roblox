@@ -6,6 +6,7 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 
 local phase = "waiting"
 local folderConnection = nil
+local descendantConnection = nil
 
 local function shouldEmphasize()
     if phase == "ready" or phase == "intermission" then
@@ -55,6 +56,10 @@ local function bindFolder(folder)
         folderConnection:Disconnect()
         folderConnection = nil
     end
+    if descendantConnection then
+        descendantConnection:Disconnect()
+        descendantConnection = nil
+    end
 
     if not folder then
         return
@@ -66,6 +71,18 @@ local function bindFolder(folder)
                 applyModel(child)
             end
         end)
+    end)
+
+    descendantConnection = folder.DescendantAdded:Connect(function(descendant)
+        if descendant.Name ~= "SurvivorNameplate" then
+            return
+        end
+
+        local head = descendant.Parent
+        local model = head and head.Parent
+        if model and model:IsA("Model") then
+            task.defer(applyModel, model)
+        end
     end)
 
     refreshAll()
