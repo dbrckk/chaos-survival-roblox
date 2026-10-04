@@ -285,6 +285,153 @@ UITheme.addTextConstraint(rookieCoach, 13, 18)
 UITheme.addCorner(rookieCoach, UITheme.Corners.Medium)
 UITheme.addStroke(rookieCoach, UITheme.Colors.Blue, 1, 0.48)
 
+local countdownCard = Instance.new("Frame")
+countdownCard.Name = "RoundCountdown"
+countdownCard.AnchorPoint = Vector2.new(0.5, 0.5)
+countdownCard.Position = UDim2.fromScale(0.5, 0.46)
+countdownCard.Size = touchDevice
+    and UDim2.new(0.50, 0, 0, 122)
+    or UDim2.new(0.34, 0, 0, 136)
+countdownCard.BackgroundColor3 = UITheme.Colors.Panel
+countdownCard.BackgroundTransparency = 0.04
+countdownCard.BorderSizePixel = 0
+countdownCard.Visible = false
+countdownCard.ZIndex = 40
+countdownCard.Parent = root
+UITheme.addCorner(countdownCard, UDim.new(0, 22))
+local countdownStroke = UITheme.addStroke(countdownCard, UITheme.Colors.Cyan, 1.8, 0.20)
+UITheme.addGradient(countdownCard, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+
+local countdownScale = Instance.new("UIScale")
+countdownScale.Scale = 1
+countdownScale.Parent = countdownCard
+
+local countdownKicker = Instance.new("TextLabel")
+countdownKicker.Size = UDim2.new(1, -28, 0.22, 0)
+countdownKicker.Position = UDim2.new(0, 14, 0.08, 0)
+countdownKicker.BackgroundTransparency = 1
+countdownKicker.Font = Enum.Font.GothamBold
+countdownKicker.TextColor3 = UITheme.Colors.Cyan
+countdownKicker.TextScaled = true
+countdownKicker.Text = "CHAOS SELECTED"
+countdownKicker.ZIndex = 41
+countdownKicker.Parent = countdownCard
+UITheme.addTextConstraint(countdownKicker, 12, 18)
+
+local countdownMain = Instance.new("TextLabel")
+countdownMain.Size = UDim2.new(1, -28, 0.43, 0)
+countdownMain.Position = UDim2.new(0, 14, 0.29, 0)
+countdownMain.BackgroundTransparency = 1
+countdownMain.Font = Enum.Font.GothamBlack
+countdownMain.TextColor3 = UITheme.Colors.Text
+countdownMain.TextScaled = true
+countdownMain.TextWrapped = true
+countdownMain.Text = "3"
+countdownMain.ZIndex = 41
+countdownMain.Parent = countdownCard
+UITheme.addTextConstraint(countdownMain, 22, 44)
+
+local countdownSub = Instance.new("TextLabel")
+countdownSub.Size = UDim2.new(1, -28, 0.18, 0)
+countdownSub.Position = UDim2.new(0, 14, 0.75, 0)
+countdownSub.BackgroundTransparency = 1
+countdownSub.Font = Enum.Font.GothamMedium
+countdownSub.TextColor3 = UITheme.Colors.Muted
+countdownSub.TextScaled = true
+countdownSub.Text = "SURVIVE UNTIL 0"
+countdownSub.ZIndex = 41
+countdownSub.Parent = countdownCard
+UITheme.addTextConstraint(countdownSub, 11, 17)
+
+local countdownToken = 0
+local previousRoundPhase = nil
+
+local function cleanReadyTitle(value)
+    local text = tostring(value or "CHAOS")
+    text = string.gsub(text, "^READY:%s*", "")
+    text = string.gsub(text, "^SOLO RUSH:%s*", "")
+    return text
+end
+
+local function presentCountdown(state)
+    local phase = tostring(state.phase or "")
+    local seconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
+
+    if phase == "ready" then
+        countdownToken += 1
+        countdownCard.Visible = true
+        countdownCard.BackgroundTransparency = 0.04
+        countdownScale.Scale = 0.90
+
+        local accent = UITheme.disasterAccent(
+            state.disasterIds and state.disasterIds[1],
+            UITheme.Colors.Cyan
+        )
+        countdownStroke.Color = state.doubleChaos and UITheme.Colors.Violet or accent
+        countdownKicker.TextColor3 = accent
+
+        if seconds > 3 then
+            countdownKicker.Text = state.soloMode and "YOUR CHAOS IS READY" or "CHAOS SELECTED"
+            countdownMain.Text = cleanReadyTitle(state.title)
+            countdownSub.Text = "SURVIVE UNTIL 0"
+        else
+            countdownKicker.Text = "GET READY"
+            countdownMain.Text = tostring(math.max(1, seconds))
+            countdownSub.Text = "SURVIVE UNTIL 0"
+        end
+
+        TweenService:Create(
+            countdownScale,
+            TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = 1}
+        ):Play()
+        return
+    end
+
+    if previousRoundPhase == "ready" and phase == "round" then
+        countdownToken += 1
+        local token = countdownToken
+        countdownCard.Visible = true
+        countdownCard.BackgroundTransparency = 0.02
+        countdownKicker.Text = "SURVIVE"
+        countdownKicker.TextColor3 = UITheme.Colors.Green
+        countdownMain.Text = "GO!"
+        countdownSub.Text = "REACT • MOVE • STAY ALIVE"
+        countdownScale.Scale = 0.82
+        TweenService:Create(
+            countdownScale,
+            TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = 1.08}
+        ):Play()
+
+        task.delay(0.58, function()
+            if token ~= countdownToken then
+                return
+            end
+            TweenService:Create(
+                countdownCard,
+                TweenInfo.new(0.18),
+                {BackgroundTransparency = 1}
+            ):Play()
+            TweenService:Create(
+                countdownScale,
+                TweenInfo.new(0.18),
+                {Scale = 0.92}
+            ):Play()
+            task.delay(0.20, function()
+                if token == countdownToken then
+                    countdownCard.Visible = false
+                    countdownCard.BackgroundTransparency = 0.04
+                end
+            end)
+        end)
+        return
+    end
+
+    countdownToken += 1
+    countdownCard.Visible = false
+end
+
 local dailyToast = Instance.new("Frame")
 dailyToast.AnchorPoint = Vector2.new(0.5, 0.5)
 dailyToast.Position = UDim2.fromScale(0.5, 0.32)
@@ -1339,6 +1486,13 @@ local function applyResponsiveLayout()
     votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
 
     rookieCoach.Size = UDim2.new(profile.coachWidthScale, 0, 0, profile.coachHeight)
+    countdownCard.Size = UDim2.new(
+        profile.wide and 0.44 or (profile.veryNarrow and 0.72 or 0.56),
+        0,
+        0,
+        profile.tinyHeight and 104 or 122
+    )
+    countdownCard.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.46 or 0.44)
 
     if metaDock then
         metaDock.Position = UDim2.new(0.5, 0, 1, -8)
@@ -1814,8 +1968,8 @@ local function showVotes(options)
         UITheme.addCorner(statusBadge, UITheme.Corners.Pill)
 
         local name = Instance.new("TextLabel")
-        name.Position = UDim2.fromScale(0.07, compactVote and 0.29 or 0.34)
-        name.Size = UDim2.fromScale(0.86, compactVote and 0.32 or 0.23)
+        name.Position = UDim2.fromScale(0.07, compactVote and 0.27 or 0.34)
+        name.Size = UDim2.fromScale(0.86, compactVote and 0.25 or 0.23)
         name.BackgroundTransparency = 1
         name.Font = Enum.Font.GothamBlack
         name.Text = string.upper(tostring(option.name or "CHAOS"))
@@ -1826,24 +1980,24 @@ local function showVotes(options)
         UITheme.addTextConstraint(name, compactVote and 12 or 13, 24)
 
         local hintLabel = Instance.new("TextLabel")
-        hintLabel.Position = UDim2.fromScale(0.08, 0.58)
-        hintLabel.Size = UDim2.fromScale(0.84, 0.17)
+        hintLabel.Position = UDim2.fromScale(0.08, compactVote and 0.52 or 0.58)
+        hintLabel.Size = UDim2.fromScale(0.84, compactVote and 0.20 or 0.17)
         hintLabel.BackgroundTransparency = 1
         hintLabel.Font = Enum.Font.GothamMedium
         hintLabel.Text = tostring(option.hint or "")
         hintLabel.TextColor3 = UITheme.Colors.Muted
         hintLabel.TextScaled = true
         hintLabel.TextWrapped = true
-        hintLabel.Visible = not compactVote
+        hintLabel.Visible = true
         hintLabel.Parent = button
-        UITheme.addTextConstraint(hintLabel, 11, 17)
+        UITheme.addTextConstraint(hintLabel, compactVote and 9 or 11, compactVote and 13 or 17)
 
         local votePill = Instance.new("TextLabel")
         votePill.AnchorPoint = Vector2.new(0.5, 1)
         votePill.Position = UDim2.fromScale(0.5, compactVote and 0.92 or 0.94)
         votePill.Size = UDim2.fromScale(
             compactVote and 0.62 or 0.70,
-            compactVote and 0.18 or 0.15
+            compactVote and 0.16 or 0.15
         )
         votePill.BackgroundColor3 = selected and accentColor or UITheme.Colors.PanelSoft
         votePill.BackgroundTransparency = selected and 0.02 or 0.08
@@ -2005,6 +2159,8 @@ dailyRewardEvent.OnClientEvent:Connect(function(reward)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    presentCountdown(state)
+
     local firstLobby = (tonumber(player:GetAttribute("Games")) or 0) <= 0
     metaControlsSuppressed = state.phase == "round"
         or state.phase == "ready"
@@ -2045,7 +2201,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         aliveCounter.Visible = true
         if total == 1 then
             if state.phase == "ready" and state.soloMode == true then
-                aliveCounter.Text = "AI JOINING"
+                aliveCounter.Text = "SURVIVORS JOINING"
             else
                 aliveCounter.Text = "SOLO"
             end
@@ -2117,6 +2273,8 @@ stateEvent.OnClientEvent:Connect(function(state)
         selectedVote = nil
         showVotes(nil)
     end
+
+    previousRoundPhase = tostring(state.phase or "")
 end)
 
 
