@@ -491,10 +491,28 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local cleanup = {}
     local onCleanup = {}
     local eliminated = {}
+    local eliminationCauses = {}
+    local recentHazards = {}
     local deathConnections = {}
     local lastMechanicAt = {}
     local flowComboClaimed = {}
     local momentumLastAt = {}
+
+    local activeHazards = {}
+    for _, disaster in ipairs(selected) do
+        activeHazards[tostring(disaster.Id)] = true
+    end
+
+    local function fallCause()
+        if activeHazards.Tornado then
+            return "Tornado"
+        elseif activeHazards.JumpShock then
+            return "JumpShock"
+        elseif activeHazards.LowGravity then
+            return "LowGravity"
+        end
+        return "Fall"
+    end
 
     for _, player in ipairs(contestants) do
         eliminated[player.UserId] = false
@@ -513,6 +531,25 @@ local function runDisasterSet(selected, contestants, roundSettings)
         if hum then
             deathConnections[player.UserId] = hum.Died:Connect(function()
                 eliminated[player.UserId] = true
+
+                local cause = nil
+                local recent = recentHazards[player.UserId]
+                if recent and (os.clock() - recent.at) <= 2.25 then
+                    cause = recent.kind
+                end
+
+                if not cause then
+                    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    if root
+                        and root:IsA("BasePart")
+                        and root.Position.Y < (Config.ArenaCenter.Y - 14)
+                    then
+                        cause = fallCause()
+                    end
+                end
+
+                eliminationCauses[player.UserId] = tostring(cause or "Unknown")
+
                 if player.Parent == Players then
                     player:SetAttribute("RoundEliminated", true)
                 end
@@ -601,6 +638,31 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 roundSettings.Solo,
                 #selected > 1
             )
+        end,
+        OnHazardDamage = function(subject, kind, damage)
+            if AISurvivorService.isBotSubject(subject) then
+                return
+            end
+            if subject
+                and subject.Parent == Players
+                and (tonumber(damage) or 0) > 0
+            then
+                recentHazards[subject.UserId] = {
+                    kind = tostring(kind or "Unknown"),
+                    at = os.clock(),
+                }
+            end
+        end,
+        OnFatalHazard = function(subject, kind)
+            if AISurvivorService.isBotSubject(subject) then
+                return
+            end
+            if subject and subject.Parent == Players then
+                recentHazards[subject.UserId] = {
+                    kind = tostring(kind or "Unknown"),
+                    at = os.clock(),
+                }
+            end
         end,
         OnHazardImpact = function(position, color, radius, kind)
             for _, player in ipairs(Players:GetPlayers()) do
@@ -888,7 +950,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         warn("Round cleanup completed with failures:", cleanupFailures)
     end
 
-    return eliminated, endedEarly, roundElapsed
+    return eliminated, endedEarly, roundElapsed, eliminationCauses
 end
 
 while true do
@@ -1217,7 +1279,8 @@ while true do
         GameAnalytics.roundStarted(p, roundNumber, roundSettings.Solo, selected.Id, #selectedSet > 1)
     end
 
-    local eliminated, endedEarly, roundElapsed = runDisasterSet(selectedSet, contestants, roundSettings)
+    local eliminated, endedEarly, roundElapsed, eliminationCauses =
+        runDisasterSet(selectedSet, contestants, roundSettings)
 
     local survivors = 0
     local survivorUserIds = {}
@@ -1339,6 +1402,7 @@ while true do
                 overdriveUses = roundOverdriveUses,
                 momentumBest = roundMomentumBest,
                 criticalSurvival = criticalSurvival,
+                eliminationCause = survived and nil or eliminationCauses[p.UserId],
                 arenaMastery = arenaMasteryState,
                 arenaMasteryName = roundSettings.ArenaName,
                 disasterMastery = disasterMasteryState,
