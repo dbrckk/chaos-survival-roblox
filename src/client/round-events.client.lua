@@ -324,15 +324,10 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
     )
 
-    local readySecond = RoundEventPresentation.countdownValue(state, previousPhase)
-    if readySecond and readySecond ~= lastReadySecond then
-        showCountdown(readySecond, eventColor)
-        lastReadySecond = readySecond
-    elseif phase ~= "ready" then
-        lastReadySecond = nil
-    end
-
-    local roundStarted = phase == "round" and previousPhase ~= "round"
+    -- The primary ready countdown/reveal is owned by ChaosHUD.
+    -- Keep this layer reserved for mid-round escalation events so mobile
+    -- never receives stacked countdowns or duplicate round-start cards.
+    lastReadySecond = nil
 
     if finalRush and not lastFinalRush then
         show(
@@ -342,15 +337,6 @@ stateEvent.OnClientEvent:Connect(function(state)
             UITheme.Colors.Orange,
             1.05
         )
-    elseif roundStarted then
-        local mainText, subText = RoundEventPresentation.roundTitle(state)
-        show(
-            "roundStart",
-            mainText,
-            subText,
-            eventColor,
-            state.doubleChaos and 1.20 or 0.95
-        )
     elseif overdrive and not lastOverdrive then
         show(
             "overdrive",
@@ -358,14 +344,6 @@ stateEvent.OnClientEvent:Connect(function(state)
             "BOOST PADS • SHARD SURGE • GOLDEN SHARD",
             UITheme.Colors.Gold,
             1.20
-        )
-    elseif fusionKey and fusionKey ~= lastFusionKey and phase == "ready" then
-        show(
-            "fusion",
-            "FUSION DETECTED",
-            tostring(fusionName) .. " • TWO HAZARDS • +5 SURVIVAL BONUS",
-            UITheme.Colors.Violet,
-            1.25
         )
     end
 
@@ -378,15 +356,24 @@ end)
 
 applyResponsive()
 
-local responsiveCamera = workspace.CurrentCamera
-if responsiveCamera then
-    responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsive)
-end
+local responsiveCamera = nil
+local viewportConnection = nil
 
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-    responsiveCamera = workspace.CurrentCamera
+local function bindResponsiveCamera(camera)
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+
+    responsiveCamera = camera
     if responsiveCamera then
         applyResponsive()
-        responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsive)
+        viewportConnection = responsiveCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsive)
     end
+end
+
+bindResponsiveCamera(workspace.CurrentCamera)
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    bindResponsiveCamera(workspace.CurrentCamera)
 end)
