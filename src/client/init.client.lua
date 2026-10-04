@@ -1847,7 +1847,8 @@ local function showRoundFeedback(feedback)
         TweenService:Create(resultFlash, UITheme.Motion.StandardFade, {BackgroundTransparency = 1}):Play()
     end)
 
-    task.delay(3.4, function()
+    local resultHoldSeconds = touchDevice and 5.2 or 4.2
+    task.delay(resultHoldSeconds, function()
         if token ~= resultToken then return end
         TweenService:Create(resultCard, UITheme.Motion.StandardFade, {BackgroundTransparency = 1}):Play()
         TweenService:Create(resultScale, UITheme.Motion.StandardFade, {Scale = 0.90}):Play()
