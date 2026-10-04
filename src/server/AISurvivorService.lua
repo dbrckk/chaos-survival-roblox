@@ -1317,7 +1317,8 @@ local function chooseArenaTarget(record, root, now)
         lowOnMap,
         hasDisaster("RisingLava")
     )
-    local wantsPad = #pads > 0
+    local wantsPad = not hasDisaster("LowGravity")
+        and #pads > 0
         and now >= record.nextPadAt
         and math.random() < padChance
 
