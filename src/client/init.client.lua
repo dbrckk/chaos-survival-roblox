@@ -2258,6 +2258,13 @@ stateEvent.OnClientEvent:Connect(function(state)
         mechanicUses = player:GetAttribute("RoundMechanicUses"),
         shards = player:GetAttribute("RoundChaosShards"),
     })
+    if touchDevice
+        and firstLobby
+        and state.phase == "intermission"
+        and not state.voteOptions
+    then
+        coachText = "LEFT STICK = MOVE  •  RIGHT BUTTON = JUMP  •  SURVIVE UNTIL 0"
+    end
     rookieCoach.Visible = coachText ~= nil
     if coachText then
         rookieCoach.Text = coachText
