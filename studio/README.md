@@ -9,6 +9,8 @@ It verifies in a real Studio client/server simulation:
 - required remotes;
 - HUD, visual-effects and spectator GUIs;
 - viewport bounds for critical HUD elements;
+- critical overlay presence/layout for round focus, round events, Meteor/Bomb escape cue and Shrinking Arena center cue;
+- non-overlap between simultaneous hazard escape cues;
 - minimum tap-target sizes;
 - exclusive Quest/Cosmetics/Achievements panels;
 - real virtual mouse clicks on menu buttons;
