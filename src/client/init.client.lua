@@ -138,6 +138,7 @@ stats.Font = Enum.Font.GothamBold
 stats.TextColor3 = UITheme.Colors.Text
 stats.TextScaled = true
 stats.Text = ""
+stats.Visible = not touchDevice
 stats.Parent = root
 UITheme.addTextConstraint(stats, 12, 20)
 UITheme.addCorner(stats, UITheme.Corners.Large)
@@ -153,6 +154,7 @@ xpTrack.Size = UDim2.fromScale(0.62, 0.012)
 xpTrack.BackgroundColor3 = UITheme.Colors.PanelSoft
 xpTrack.BackgroundTransparency = 0.08
 xpTrack.BorderSizePixel = 0
+xpTrack.Visible = not touchDevice
 xpTrack.Parent = root
 Instance.new("UICorner", xpTrack).CornerRadius = UDim.new(1, 0)
 
@@ -726,7 +728,7 @@ end
 
 -- cosmetics navigation is wired after all panels are created
 
-local metaControlsSuppressed = false
+local metaControlsSuppressed = true
 
 local supportButton = Instance.new("TextButton")
 supportButton.Name = "SupportButton"
@@ -1028,6 +1030,7 @@ if touchDevice then
     metaDock.BackgroundColor3 = UITheme.Colors.Panel
     metaDock.BackgroundTransparency = 0.12
     metaDock.BorderSizePixel = 0
+    metaDock.Visible = false
     metaDock.Parent = root
     UITheme.addCorner(metaDock, UITheme.Corners.Large)
     UITheme.addStroke(metaDock, UITheme.Colors.Cyan, 1, 0.72)
@@ -1323,7 +1326,14 @@ local function applyResponsiveLayout()
     top.Position = UDim2.new(0.5, 0, 0, 7)
     top.Size = UDim2.new(profile.topWidthScale, 0, 0, profile.topHeight)
     timer.Size = UDim2.fromOffset(profile.timerSize, profile.timerSize)
-    timer.Position = UDim2.new(1, -10, 0.5, 0)
+    timer.Position = UDim2.new(1, -8, 0.5, 0)
+    aliveCounter.Size = UDim2.fromOffset(math.max(88, profile.timerSize + 36), 24)
+    aliveCounter.Position = UDim2.new(1, -8, 1, 5)
+
+    title.Position = UDim2.fromOffset(14, 4)
+    title.Size = UDim2.new(1, -(profile.timerSize + 32), 0.56, 0)
+    hint.Position = UDim2.new(0, 14, 0.60, 0)
+    hint.Size = UDim2.new(1, -(profile.timerSize + 40), 0.32, 0)
 
     votes.Position = UDim2.fromScale(0.5, profile.voteHeight <= 140 and 0.49 or 0.54)
     votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
@@ -2034,7 +2044,13 @@ stateEvent.OnClientEvent:Connect(function(state)
     if (state.phase == "round" or state.phase == "ready") and alive and total and total > 0 then
         aliveCounter.Visible = true
         if total == 1 then
-            aliveCounter.Text = "SOLO"
+            if state.phase == "ready" and state.soloMode == true then
+                aliveCounter.Text = "AI JOINING"
+            else
+                aliveCounter.Text = "SOLO"
+            end
+        elseif state.phase == "ready" and (tonumber(state.aiSurvivors) or 0) > 0 then
+            aliveCounter.Text = string.format("%d SURVIVORS", total)
         else
             aliveCounter.Text = string.format("%d / %d ALIVE", alive, total)
         end
