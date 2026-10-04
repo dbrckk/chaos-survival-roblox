@@ -21,7 +21,7 @@ local label = Instance.new("TextLabel")
 label.Name = "Reward"
 label.AnchorPoint = Vector2.new(0.5, 0.5)
 label.Position = UDim2.fromScale(0.5, 0.66)
-label.Size = UDim2.fromOffset(260, 54)
+label.Size = UDim2.fromOffset(300, 54)
 label.BackgroundColor3 = UITheme.Colors.Panel
 label.BackgroundTransparency = 1
 label.BorderSizePixel = 0
@@ -154,9 +154,14 @@ local function show(reward, total, goldenFlag, flowBonus)
 
     local golden = goldenFlag == true or (tonumber(reward) or 1) >= 3
     local flow = math.max(0, math.floor(tonumber(flowBonus) or 0))
-    label.Text = golden
-        and ("+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD")
-        or ("+" .. tostring(reward) .. " COIN  •  CHAOS SHARD " .. tostring(total))
+    local shardTotal = math.max(1, math.floor(tonumber(total) or 1))
+    if golden then
+        label.Text = "+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD"
+    elseif shardTotal == 1 then
+        label.Text = "SHARD +1  •  BONUS COIN  •  OPTIONAL"
+    else
+        label.Text = "+" .. tostring(reward) .. " COIN  •  CHAOS SHARD " .. tostring(shardTotal)
+    end
     if flow > 0 then
         label.Text ..= "  •  FLOW COMBO +" .. tostring(flow)
     end
@@ -178,7 +183,8 @@ local function show(reward, total, goldenFlag, flowBonus)
         {Scale = 1}
     ):Play()
 
-    task.delay(1.05, function()
+    local holdSeconds = (not golden and shardTotal == 1) and 1.65 or 1.05
+    task.delay(holdSeconds, function()
         if current ~= token then
             return
         end
