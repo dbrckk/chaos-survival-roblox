@@ -345,6 +345,7 @@ UITheme.addTextConstraint(countdownSub, 11, 17)
 
 local countdownToken = 0
 local previousRoundPhase = nil
+local revealedPlayerChoice = nil
 
 local function cleanReadyTitle(value)
     local text = tostring(value or "CHAOS")
@@ -358,6 +359,10 @@ local function presentCountdown(state)
     local seconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
 
     if phase == "ready" then
+        if previousRoundPhase ~= "ready" then
+            revealedPlayerChoice = selectedVote
+        end
+
         countdownToken += 1
         countdownCard.Visible = true
         countdownCard.BackgroundTransparency = 0.04
@@ -371,7 +376,10 @@ local function presentCountdown(state)
         countdownKicker.TextColor3 = accent
 
         if seconds > 3 then
-            countdownKicker.Text = state.soloMode and "YOUR CHAOS IS READY" or "CHAOS SELECTED"
+            local primaryDisasterId = state.disasterIds and state.disasterIds[1]
+            local playerChoiceWon = revealedPlayerChoice ~= nil
+                and tostring(revealedPlayerChoice) == tostring(primaryDisasterId)
+            countdownKicker.Text = playerChoiceWon and "YOUR CHOICE WON" or "CHAOS SELECTED"
             countdownMain.Text = cleanReadyTitle(state.title)
             countdownSub.Text = "SURVIVE UNTIL 0"
         else
@@ -1809,8 +1817,12 @@ local function showRoundFeedback(feedback)
         if feedback.criticalSurvival then
             resultTip.Text = "CLUTCH: you survived at critical health"
         elseif streakCount >= 2 then
-            resultTip.Text = "STREAK x" .. tostring(streakCount) .. " • "
-                .. (masteryGoalText(feedback) or nextLevelGoalText())
+            local nextStreakBonus = math.min(10, streakCount * 2)
+            resultTip.Text = string.format(
+                "STREAK x%d • survive again for +%d streak coins",
+                streakCount,
+                nextStreakBonus
+            )
         else
             resultTip.Text = masteryGoalText(feedback) or nextLevelGoalText()
         end
