@@ -44,15 +44,15 @@ function FirstTimeExperience.coachText(state, metrics)
         end
 
         if games == 0 and practiceUses <= 0 then
-            return "TRY A GLOWING BOOST PAD  •  STEP ON IT TO LAUNCH"
+            return "HOW TO PLAY  •  SURVIVE UNTIL 0  •  MOVE + JUMP  •  SHARDS = BONUS"
         elseif games == 0 then
-            return "BOOST LEARNED  •  THE ROUND STARTS SOON"
+            return "ROUND GOAL  •  SURVIVE UNTIL 0  •  AVOID RED/ORANGE WARNINGS"
         end
         return nil
     elseif phase == "ready" then
         return firstRound
-            and "GET POSITIONED  •  GLOWING PADS ARE FAST ESCAPE ROUTES"
-            or "GET READY  •  WATCH THE DISASTER TELEGRAPH"
+            and "ROUND GOAL  •  SURVIVE UNTIL 0  •  AVOID THE HAZARD  •  SHARDS = BONUS"
+            or "GET READY  •  SURVIVE UNTIL 0  •  WATCH THE HAZARD WARNING"
     elseif phase == "round" then
         if not firstRound then
             return nil
@@ -67,7 +67,7 @@ function FirstTimeExperience.coachText(state, metrics)
             return "FINAL SECONDS  •  STAY ALIVE  •  DON'T GREED FOR SHARDS"
         end
 
-        return "SURVIVE UNTIL 0  •  WARNING COLORS = DANGER  •  KEEP MOVING"
+        return "SURVIVE UNTIL 0  •  RED/ORANGE = DANGER  •  SHARDS = OPTIONAL BONUS"
     end
 
     return nil
