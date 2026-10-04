@@ -7,6 +7,9 @@ on:
         description: 'Type PUBLISH to deploy the current main branch to Roblox'
         required: true
         default: ''
+  push:
+    branches:
+      - publish-roblox
 
 concurrency:
   group: roblox-place-publish
@@ -17,7 +20,7 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ inputs.confirm == 'PUBLISH' }}
+    if: ${{ github.event_name == 'push' || inputs.confirm == 'PUBLISH' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
