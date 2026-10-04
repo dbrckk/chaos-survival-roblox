@@ -1686,7 +1686,7 @@ local function showRoundFeedback(feedback)
     end
 
     resultReward.Text = string.format("+%d COINS   +%d XP", shownCoins, shownXP)
-    if #extras > 0 then
+    if #extras > 0 and not touchDevice then
         resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")
     end
 
@@ -1754,18 +1754,41 @@ local function showRoundFeedback(feedback)
     end
     table.insert(tags, tostring(feedback.elapsedSeconds or 0) .. "s")
 
-    if touchDevice and #tags > 7 then
-        local compactTags = {}
-        for i = 1, 6 do
-            table.insert(compactTags, tags[i])
+    if touchDevice then
+        local compactTags = {
+            tostring(feedback.arenaName or "ARENA"),
+            tostring(feedback.disasterName or "CHAOS"),
+        }
+
+        if feedback.challengeCompleted then
+            table.insert(compactTags, "CHALLENGE COMPLETE")
+        elseif feedback.criticalSurvival then
+            table.insert(compactTags, "CLUTCH")
+        elseif survived and streakCount >= 2 then
+            table.insert(compactTags, "STREAK x" .. tostring(streakCount))
+        elseif shardCount > 0 then
+            table.insert(compactTags, "SHARDS x" .. tostring(shardCount))
         end
-        table.insert(compactTags, "+" .. tostring(#tags - 6) .. " MORE")
+
+        table.insert(compactTags, tostring(feedback.elapsedSeconds or 0) .. "s")
         tags = compactTags
     end
 
     resultMeta.Text = table.concat(tags, "  •  ")
 
-    if masterRound then
+    local firstChaos = false
+    for _, medal in ipairs(medals) do
+        if medal == "FIRST CHAOS" then
+            firstChaos = true
+            break
+        end
+    end
+
+    if firstChaos then
+        resultTip.Text = survived
+            and "FIRST CHAOS CLEARED • survive again to build your streak"
+            or "FIRST CHAOS LEARNED • watch the warning cue and try again"
+    elseif masterRound then
         resultTip.Text = "MASTER ROUND • challenge complete • momentum x" .. tostring(momentumBest)
     elseif fusionBonusCoins > 0 and feedback.fusionName then
         resultTip.Text = tostring(feedback.fusionName) .. " SURVIVED • FUSION BONUS +" .. tostring(fusionBonusCoins)
