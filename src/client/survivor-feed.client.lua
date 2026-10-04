@@ -64,7 +64,7 @@ scale.Parent = card
 
 local phase = "waiting"
 local token = 0
-local watchedHumanoids = {}
+local watchedHumanoids = setmetatable({}, {__mode = "k"})
 local playerCharacterConnections = {}
 local botFolderConnection = nil
 
