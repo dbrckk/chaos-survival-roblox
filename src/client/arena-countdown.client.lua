@@ -149,14 +149,15 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = tostring(state.phase or "waiting")
-    local second = math.max(0, math.floor(tonumber(state.seconds) or 0))
     local accent = accentFor(state)
 
-    if phase == "ready" and second > 0 and second ~= lastSecond then
-        pulse(tostring(second), accent, 0.64)
-        lastSecond = second
-    elseif phase == "round" and lastPhase == "ready" then
-        pulse("GO!", state.doubleChaos and UITheme.Colors.Magenta or accent, 0.72)
+    -- ChaosHUD owns the only readable 3-2-1-GO sequence. This world layer
+    -- contributes just a launch wave so the arena still reacts at GO without
+    -- presenting a second countdown on mobile.
+    if phase == "round" and lastPhase == "ready" then
+        token += 1
+        gui.Enabled = false
+        goWave(state.doubleChaos and UITheme.Colors.Magenta or accent)
         lastSecond = nil
     elseif phase ~= "ready" and phase ~= "round" then
         token += 1
