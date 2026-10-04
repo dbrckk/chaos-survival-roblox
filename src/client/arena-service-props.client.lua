@@ -36,6 +36,43 @@ local function makePart(name, size, cframe, color, material, transparency, shape
     return part
 end
 
+
+local function addSurfaceLabel(part, text, color, tier, face)
+    if tier.Name == "Low" then
+        return
+    end
+
+    local gui = Instance.new("SurfaceGui")
+    gui.Name = "DiegeticLabel"
+    gui.Adornee = part
+    gui.Face = face or Enum.NormalId.Front
+    gui.AlwaysOnTop = false
+    gui.LightInfluence = 0.62
+    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    gui.PixelsPerStud = tier.Name == "High" and 38 or 28
+    gui.Parent = part
+
+    local label = Instance.new("TextLabel")
+    label.Name = "Marking"
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.fromScale(1, 1)
+    label.Text = text
+    label.TextColor3 = color
+    label.TextTransparency = tier.Name == "High" and 0.12 or 0.24
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+    label.TextStrokeTransparency = 0.54
+    label.Font = Enum.Font.GothamBold
+    label.TextScaled = true
+    label.Parent = gui
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0.12, 0)
+    padding.PaddingRight = UDim.new(0.12, 0)
+    padding.PaddingTop = UDim.new(0.22, 0)
+    padding.PaddingBottom = UDim.new(0.22, 0)
+    padding.Parent = label
+end
+
 local function localFrame(base, x, y, z, yaw)
     return base.CFrame
         * CFrame.new(x, y, z)
@@ -91,6 +128,7 @@ local function addClassic(base, theme, tier)
             0.28,
             Enum.PartType.Cylinder
         )
+        addSurfaceLabel(camera, string.format("CAM %02d", i), theme.Accent, tier, Enum.NormalId.Top)
     end
 end
 
@@ -116,6 +154,8 @@ local function addTowers(base, theme, tier)
             Enum.Material.CorrodedMetal,
             0.08
         )
+
+        addSurfaceLabel(crate, string.format("MAINT %02d", i), theme.Secondary, tier, Enum.NormalId.Front)
 
         if tier.Name ~= "Low" then
             makePart(
@@ -153,6 +193,7 @@ local function addCrossroads(base, theme, tier)
             Enum.Material.Concrete,
             0.08
         )
+        addSurfaceLabel(post, string.format("L%02d", i), theme.Accent, tier, Enum.NormalId.Front)
         makePart(
             "CrossroadsBollardCap" .. i,
             Vector3.new(1.05, 0.26, 1.05),
@@ -203,6 +244,7 @@ local function addOrbital(base, theme, tier)
             Enum.Material.Neon,
             tier.Name == "Low" and 0.64 or 0.38
         )
+        addSurfaceLabel(body, string.format("AUX-%02d", i), theme.Accent, tier, Enum.NormalId.Top)
     end
 end
 
