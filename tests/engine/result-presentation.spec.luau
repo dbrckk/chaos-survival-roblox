@@ -33,6 +33,35 @@ describe("Result presentation", function()
         expect(ResultPresentation.title({survived = false})).toBe("ELIMINATED")
     end)
 
+    it("explains known elimination causes", function()
+        local meteorTitle, meteorTip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "Meteor",
+        })
+        expect(meteorTitle).toBe("HIT BY METEOR")
+        expect(string.find(meteorTip, "orange warning circle", 1, true) ~= nil).toBe(true)
+        expect(ResultPresentation.title({
+            survived = false,
+            eliminationCause = "Meteor",
+        })).toBe("HIT BY METEOR")
+
+        local fallTitle, fallTip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "Fall",
+        })
+        expect(fallTitle).toBe("FELL FROM THE ARENA")
+        expect(string.find(fallTip, "shorter jumps", 1, true) ~= nil).toBe(true)
+    end)
+
+    it("falls back to useful generic elimination guidance", function()
+        local title, tip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "Unknown",
+        })
+        expect(title).toBe("ELIMINATED")
+        expect(#tip > 10).toBe(true)
+    end)
+
     it("orders presentation intensity by result importance", function()
         local master = ResultPresentation.intensity({
             survived = true,
