@@ -376,17 +376,26 @@ local function presentCountdown(state)
         countdownStroke.Color = state.doubleChaos and UITheme.Colors.Violet or accent
         countdownKicker.TextColor3 = accent
 
+        local survivorCount = math.max(
+            1,
+            math.floor(tonumber(state.contestantCount) or 1)
+        )
+
         if seconds > 3 then
             local primaryDisasterId = state.disasterIds and state.disasterIds[1]
             local playerChoiceWon = revealedPlayerChoice ~= nil
                 and tostring(revealedPlayerChoice) == tostring(primaryDisasterId)
             countdownKicker.Text = playerChoiceWon and "YOUR CHOICE WON" or "CHAOS SELECTED"
             countdownMain.Text = cleanReadyTitle(state.title)
-            countdownSub.Text = "SURVIVE UNTIL 0"
+            countdownSub.Text = survivorCount > 1
+                and (tostring(survivorCount) .. " SURVIVORS READY  •  SURVIVE UNTIL 0")
+                or "SURVIVE UNTIL 0"
         else
             countdownKicker.Text = "GET READY"
             countdownMain.Text = tostring(math.max(1, seconds))
-            countdownSub.Text = "SURVIVE UNTIL 0"
+            countdownSub.Text = survivorCount > 1
+                and (tostring(survivorCount) .. " SURVIVORS  •  SURVIVE UNTIL 0")
+                or "SURVIVE UNTIL 0"
         end
 
         TweenService:Create(
