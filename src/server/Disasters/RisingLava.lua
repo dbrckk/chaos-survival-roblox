@@ -88,6 +88,9 @@ function D.start(ctx)
 
         local hum = character and character:FindFirstChildOfClass("Humanoid")
         if hum and hum.Health > 0 and D.isActiveContestant(player, ctx) then
+            if ctx.OnFatalHazard then
+                pcall(ctx.OnFatalHazard, player, "Lava")
+            end
             hum.Health = 0
         end
     end)
@@ -117,6 +120,9 @@ function D.start(ctx)
                         and hum.Health > 0
                         and D.rootInsideLava(root.Position, lava.Position, lava.Size, 2.5)
                     then
+                        if ctx.OnFatalHazard then
+                            pcall(ctx.OnFatalHazard, player, "Lava")
+                        end
                         hum.Health = 0
                     end
                 end
