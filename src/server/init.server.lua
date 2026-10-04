@@ -889,8 +889,21 @@ while true do
     local arenaDefinition = ArenaVariants.get(currentArenaVariant)
     local intermissionSettings = SoloRules.resolve(Config, readyPlayerCount())
 
+    local firstSessionVote = false
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player:GetAttribute("DataLoaded") == true
+            and math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0)) <= 0
+        then
+            firstSessionVote = true
+            break
+        end
+    end
+
     local intermissionCancelled = false
     local remainingIntermission = intermissionSettings.IntermissionSeconds
+    if firstSessionVote then
+        remainingIntermission = math.max(remainingIntermission, 9)
+    end
     local previousSoloMode = intermissionSettings.Solo
 
     while remainingIntermission >= 1 do
@@ -918,7 +931,10 @@ while true do
         end
 
         local options = nil
-        if remainingIntermission <= intermissionSettings.VoteSeconds then
+        local voteWindowSeconds = firstSessionVote
+            and math.max(intermissionSettings.VoteSeconds, 8)
+            or intermissionSettings.VoteSeconds
+        if remainingIntermission <= voteWindowSeconds then
             voteOpen = true
             if not botVoteStarted then
                 botVoteStarted = true
@@ -942,7 +958,9 @@ while true do
         broadcast({
             phase = "intermission",
             title = options and "VOTE FOR THE NEXT CHAOS" or (intermissionSettings.Solo and "SOLO RUSH" or "NEXT ROUND"),
-            hint = options and "Choose one" or ("SURVIVE UNTIL 0 • SHARDS = BONUS • " .. (arenaDefinition and arenaDefinition.Name or "ARENA")),
+            hint = options
+                and (intermissionSettings.Solo and "YOUR VOTE DECIDES • TAP A CHAOS" or "TAP A CHAOS TO VOTE")
+                or ("SURVIVE UNTIL 0 • SHARDS = BONUS • " .. (arenaDefinition and arenaDefinition.Name or "ARENA")),
             seconds = remainingIntermission,
             voteOptions = options,
             soloMode = intermissionSettings.Solo,
@@ -1282,7 +1300,8 @@ while true do
                 roundMechanicUses,
                 roundNearMissCount,
                 roundMomentumBest,
-                roundFlowCoins
+                roundFlowCoins,
+                survived
             )
             local challengeCompleted = challengeProgress >= roundChallenge.Target
             local challengeCoins = challengeCompleted and roundChallenge.Coins or 0
