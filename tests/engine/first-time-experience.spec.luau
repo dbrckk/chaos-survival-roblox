@@ -21,14 +21,14 @@ describe("First time experience", function()
         expect(FirstTimeExperience.allowDoubleChaos({2, 8, 20})).toBe(true)
     end)
 
-    it("starts with a physical practice action before the first vote", function()
+    it("explains the core objective before the first vote", function()
         local text = FirstTimeExperience.coachText({
             phase = "intermission",
         }, {
             games = 0,
             practiceUses = 0,
         })
-        expect(text).toBe("TRY A GLOWING BOOST PAD  •  STEP ON IT TO LAUNCH")
+        expect(text).toBe("HOW TO PLAY  •  SURVIVE UNTIL 0  •  MOVE + JUMP  •  SHARDS = BONUS")
 
         local learned = FirstTimeExperience.coachText({
             phase = "intermission",
@@ -36,7 +36,16 @@ describe("First time experience", function()
             games = 0,
             practiceUses = 1,
         })
-        expect(learned).toBe("BOOST LEARNED  •  THE ROUND STARTS SOON")
+        expect(learned).toBe("ROUND GOAL  •  SURVIVE UNTIL 0  •  AVOID RED/ORANGE WARNINGS")
+    end)
+
+    it("states the survival goal clearly during the ready phase", function()
+        local text = FirstTimeExperience.coachText({
+            phase = "ready",
+        }, {
+            games = 1,
+        })
+        expect(text).toBe("ROUND GOAL  •  SURVIVE UNTIL 0  •  AVOID THE HAZARD  •  SHARDS = BONUS")
     end)
 
     it("prioritizes voting when vote options are open", function()
@@ -59,7 +68,7 @@ describe("First time experience", function()
             mechanicUses = 0,
             shards = 0,
         })
-        expect(base).toBe("SURVIVE UNTIL 0  •  WARNING COLORS = DANGER  •  KEEP MOVING")
+        expect(base).toBe("SURVIVE UNTIL 0  •  RED/ORANGE = DANGER  •  SHARDS = OPTIONAL BONUS")
 
         local shard = FirstTimeExperience.coachText({
             phase = "round",
