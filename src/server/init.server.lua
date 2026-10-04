@@ -782,6 +782,30 @@ local function runDisasterSet(selected, contestants, roundSettings)
         local survivorsAlive = humanSurvivorsAlive + aiSurvivorsAlive
         if humanSurvivorsAlive <= 0 then
             endedEarly = true
+
+            if aiSurvivorsAlive > 0 then
+                local spectateDisasterIds = {}
+                for _, disaster in ipairs(selected) do
+                    table.insert(spectateDisasterIds, disaster.Id)
+                end
+
+                broadcast({
+                    phase = "round",
+                    title = "YOU WERE ELIMINATED",
+                    hint = "WATCH THE SURVIVORS • NEXT ROUND SOON",
+                    seconds = math.min(3, t),
+                    doubleChaos = #selected > 1,
+                    fusionName = fusionName,
+                    soloMode = roundSettings.Solo,
+                    arenaName = roundSettings.ArenaName or currentArenaVariant,
+                    disasterIds = spectateDisasterIds,
+                    survivorsAlive = aiSurvivorsAlive,
+                    contestantCount = #contestants + AISurvivorService.visibleCount(),
+                    aiSurvivors = aiSurvivorsAlive,
+                    spectating = true,
+                })
+                task.wait(2.25)
+            end
             break
         end
 
