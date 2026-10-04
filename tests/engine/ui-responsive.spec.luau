@@ -54,6 +54,16 @@ describe("UI responsive profiles", function()
         expect(wide.roundFocusWidthScale < normal.roundFocusWidthScale).toBe(true)
     end)
 
+    it("keeps the HUD compact on a wide Android landscape viewport", function()
+        local profile = UIResponsive.mobileProfile(Vector2.new(1536, 688))
+
+        expect(profile.wide).toBe(true)
+        expect(profile.topWidthScale <= 0.82).toBe(true)
+        expect(profile.roundFocusWidthScale <= 0.52).toBe(true)
+        expect(profile.roundFocusBottomOffset >= 96).toBe(true)
+        expect(profile.topHeight <= 68).toBe(true)
+    end)
+
     it("reserves panel space above the bottom dock", function()
         local tiny = UIResponsive.mobileProfile(Vector2.new(640, 360))
         local regular = UIResponsive.mobileProfile(Vector2.new(1280, 720))
