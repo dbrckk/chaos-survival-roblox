@@ -238,3 +238,9 @@ Ordre d'exécution immédiat
 - [FAIT] AI animation blend : idle/walk/run/jump/fall avec seuils et playback speed liés à la vitesse/gait ; évite le simple walk accéléré des bots rapides et conserve les réactions résultat existantes.
 - [FAIT] Surface audio étendu : footsteps + landing locaux partagent désormais le profil EQ/réverb de FloorMaterial, pour cohérence entre matériau visible et contact sonore.
 - [FAIT] CI moteur : 56 specs actuellement assignées exactement une fois aux shards Open Cloud ; Build Validation vert sur les derniers commits de cette passe.
+
+- [FAIT] Game feel saut : coyote time 100 ms + jump buffer 120 ms via JumpRequest commun clavier/manette/tactile ; coyote limité à vraie Freefall pour empêcher tout double jump, compatibilité Freeze conservée via JumpPower/JumpHeight.
+- [FAIT] LOD composition étendu : ArenaMidgroundMassLocal, ArenaServicePropsLocal et ArenaFocalLightingLocal intégrés au scenery LOD avec distances Low/Medium dédiées ; High conserve la composition complète.
+- [FAIT] Studio E2E renforcé : vérifie désormais ChaosRoundFocus, ChaosRoundEvents, HazardReadabilityCue et ShrinkPressure, bounds viewport, taille valide et non-chevauchement Meteor/Bomb ↔ MOVE CENTER.
+- [FAIT] Release packaging : README synchronisé avec les 17 cosmetics, AI Survivors, mastery, weekly challenges, 4 arènes nommées, nouvelle composition visuelle, material audio et game-feel ; protocole playtest mobile enrichi avec hazard lanes + coyote/buffer.
+- [FAIT] Audit production : aucun TODO/FIXME/HACK, aucun rbxassetid://0 ni print() debug détecté ; Game Pass IDs restent volontairement externes via DataModel attributes SupporterPassId/NeonPackPassId.
