@@ -878,7 +878,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             title = "CHAOS FUSION: " .. tostring(fusionName)
             hint = selected[1].Name .. " + " .. selected[2].Name .. " • " .. selected[1].Hint .. " / " .. selected[2].Hint
         elseif roundSettings.Solo then
-            title = "SOLO RUSH: " .. title
+            title = "QUICK RUSH: " .. title
         end
 
         local disasterIds = {}
@@ -886,7 +886,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             table.insert(disasterIds, disaster.Id)
         end
 
-        local roundHint = roundSettings.Solo and ("Solo bonus active • " .. hint) or hint
+        local roundHint = roundSettings.Solo and ("Rush bonus active • " .. hint) or hint
         if firstRoundContestant then
             roundHint = "SURVIVE UNTIL 0 • " .. hint .. " • SHARDS = BONUS"
         end
@@ -1043,7 +1043,7 @@ while true do
 
         broadcast({
             phase = "intermission",
-            title = options and "VOTE FOR THE NEXT CHAOS" or (intermissionSettings.Solo and "SOLO RUSH" or "NEXT ROUND"),
+            title = options and "VOTE FOR THE NEXT CHAOS" or (intermissionSettings.Solo and "QUICK RUSH" or "NEXT ROUND"),
             hint = options
                 and (intermissionSettings.Solo and "YOUR VOTE DECIDES • TAP A CHAOS" or "TAP A CHAOS TO VOTE")
                 or ("SURVIVE UNTIL 0 • SHARDS = BONUS • " .. (arenaDefinition and arenaDefinition.Name or "ARENA")),
@@ -1177,7 +1177,7 @@ while true do
         readyTitle = "CHAOS FUSION: " .. tostring(fusionName)
         readyHint = selectedSet[1].Name .. " + " .. selectedSet[2].Name .. " • " .. selectedSet[1].Hint .. " / " .. selectedSet[2].Hint
     elseif roundSettings.Solo then
-        readyTitle = "SOLO RUSH: " .. readyTitle
+        readyTitle = "QUICK RUSH: " .. readyTitle
     end
 
     local readyDisasterIds = {}
@@ -1214,8 +1214,8 @@ while true do
         end
 
         local displayTitle = readyTitle
-        if readyCount == 1 and #selectedSet == 1 and not string.find(displayTitle, "SOLO RUSH:", 1, true) then
-            displayTitle = "SOLO RUSH: " .. selectedSet[1].Name
+        if readyCount == 1 and #selectedSet == 1 and not string.find(displayTitle, "QUICK RUSH:", 1, true) then
+            displayTitle = "QUICK RUSH: " .. selectedSet[1].Name
         end
 
         broadcast({
