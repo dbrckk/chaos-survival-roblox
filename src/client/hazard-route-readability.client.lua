@@ -423,12 +423,29 @@ ensureRenderLoop = function()
             local sideMargin = 54
             local topMargin = 78
             local bottomMargin = UserInputService.TouchEnabled and 138 or 62
-            local maxX = math.max(sideMargin, viewport.X - sideMargin)
-            local maxY = math.max(topMargin, viewport.Y - bottomMargin)
-            local edgeDistance = math.min(viewport.X, viewport.Y) * 0.44
+            local minX = sideMargin
+            local minY = topMargin
+            local maxX = math.max(minX, viewport.X - sideMargin)
+            local maxY = math.max(minY, viewport.Y - bottomMargin)
+
+            local tx = math.huge
+            if math.abs(direction.X) > 0.001 then
+                tx = direction.X > 0
+                    and ((maxX - center.X) / direction.X)
+                    or ((minX - center.X) / direction.X)
+            end
+
+            local ty = math.huge
+            if math.abs(direction.Y) > 0.001 then
+                ty = direction.Y > 0
+                    and ((maxY - center.Y) / direction.Y)
+                    or ((minY - center.Y) / direction.Y)
+            end
+
+            local edgeDistance = math.max(0, math.min(tx, ty))
             local candidate = center + direction * edgeDistance
-            local x = math.clamp(candidate.X, sideMargin, maxX)
-            local y = math.clamp(candidate.Y, topMargin, maxY)
+            local x = math.clamp(candidate.X, minX, maxX)
+            local y = math.clamp(candidate.Y, minY, maxY)
 
             local kind = nearestState.kind
             local color = KIND_COLORS[kind] or UITheme.Colors.Red
