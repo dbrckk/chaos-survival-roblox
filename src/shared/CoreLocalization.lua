@@ -252,6 +252,80 @@ local HAZARDS = {
     },
 }
 
+local ARENA_COPY = {
+    en = {
+        Classic = {
+            name = "CLASSIC GRID",
+            strategy = "Balanced routes • switch height when danger closes in",
+            mechanicName = "ESCAPE PADS",
+            mechanicHint = "Blue pads launch you away from the center when a route collapses",
+        },
+        Towers = {
+            name = "TOWER RUN",
+            strategy = "Vertical arena • high ground helps until escape routes narrow",
+            mechanicName = "UPDRAFT PADS",
+            mechanicHint = "Cyan pads launch you upward to reopen vertical escape routes",
+        },
+        Crossroads = {
+            name = "CROSSROADS",
+            strategy = "Four escape lanes • avoid committing to a dead end too early",
+            mechanicName = "LANE BOOSTERS",
+            mechanicHint = "Pink pads accelerate you along a lane so you can switch routes quickly",
+        },
+        Orbital = {
+            name = "ORBITAL RING",
+            strategy = "Circular routes • keep moving around the ring instead of getting boxed in",
+            mechanicName = "ORBIT BOOSTERS",
+            mechanicHint = "Green pads push you around the ring to keep circular routes flowing",
+        },
+    },
+    fr = {
+        Classic = {
+            name = "GRILLE CLASSIQUE",
+            strategy = "Routes équilibrées • change de hauteur quand le danger se referme",
+            mechanicName = "PADS D'ÉVASION",
+            mechanicHint = "Les pads bleus t'éloignent du centre quand une route devient dangereuse",
+        },
+        Towers = {
+            name = "TOURS",
+            strategy = "Arène verticale • prends de la hauteur sans te faire enfermer",
+            mechanicName = "PADS ASCENDANTS",
+            mechanicHint = "Les pads cyan te propulsent vers le haut pour rouvrir des voies de fuite",
+        },
+        Crossroads = {
+            name = "CARREFOUR",
+            strategy = "Quatre voies de fuite • ne t'engage pas trop tôt dans une impasse",
+            mechanicName = "BOOSTERS DE VOIE",
+            mechanicHint = "Les pads roses t'accélèrent le long d'une voie pour changer vite de route",
+        },
+        Orbital = {
+            name = "ANNEAU ORBITAL",
+            strategy = "Routes circulaires • continue de tourner pour éviter d'être bloqué",
+            mechanicName = "BOOSTERS ORBITAUX",
+            mechanicHint = "Les pads verts te poussent autour de l'anneau pour maintenir ton mouvement",
+        },
+    },
+}
+
+local ARENA_ALIASES = {
+    ["Classic"] = "Classic",
+    ["CLASSIC GRID"] = "Classic",
+    ["Towers"] = "Towers",
+    ["TOWER RUN"] = "Towers",
+    ["Crossroads"] = "Crossroads",
+    ["CROSSROADS"] = "Crossroads",
+    ["Orbital"] = "Orbital",
+    ["ORBITAL RING"] = "Orbital",
+}
+
+local function arenaRecord(localeId, arenaIdOrName)
+    local language = CoreLocalization.language(localeId)
+    local raw = tostring(arenaIdOrName or "")
+    local id = ARENA_ALIASES[raw] or raw
+    local record = ARENA_COPY[language] and ARENA_COPY[language][id]
+    return record or ARENA_COPY.en[id]
+end
+
 local QUEST_TITLES = {
     en = {
         PLAY_3 = "Play 3 rounds",
@@ -393,6 +467,26 @@ function CoreLocalization.hazardTitle(localeId, disasterIds, fallback)
         )
     end
     return table.concat(names, " + ")
+end
+
+function CoreLocalization.arenaName(localeId, arenaIdOrName, fallback)
+    local record = arenaRecord(localeId, arenaIdOrName)
+    return record and record.name or fallback
+end
+
+function CoreLocalization.arenaStrategy(localeId, arenaIdOrName, fallback)
+    local record = arenaRecord(localeId, arenaIdOrName)
+    return record and record.strategy or fallback
+end
+
+function CoreLocalization.arenaMechanicName(localeId, arenaIdOrName, fallback)
+    local record = arenaRecord(localeId, arenaIdOrName)
+    return record and record.mechanicName or fallback
+end
+
+function CoreLocalization.arenaMechanicHint(localeId, arenaIdOrName, fallback)
+    local record = arenaRecord(localeId, arenaIdOrName)
+    return record and record.mechanicHint or fallback
 end
 
 function CoreLocalization.questTitle(localeId, questId, fallback)
