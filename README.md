@@ -122,3 +122,12 @@ src/
 The default CI uses Roblox Open Cloud Engine Tests and currently covers all arena/disaster combinations plus every allowed Double Chaos pair in a real Roblox DataModel.
 
 A separate four-client Studio E2E harness is included under `studio/`. It automates UI clicks, voting, movement, staggered joins and client leave behavior using StudioTestService and VirtualInput. Roblox Studio requires a logged-in user session, so the GitHub Studio workflow is manual and targets an authenticated self-hosted Windows runner.
+
+
+## AAA specialist review system
+
+Professional quality governance lives in [docs/aaa/README.md](docs/aaa/README.md).
+
+It covers creative direction, level/gameplay design, balance, game feel, animation, VFX, audio, UX/UI, accessibility, mobile, AI, social, retention, economy, monetization, engineering, networking/security, persistence, performance, analytics, QA, live ops, store presentation and final release harmonization.
+
+The project should prioritize the weakest evidence-backed department rather than adding features indiscriminately.
