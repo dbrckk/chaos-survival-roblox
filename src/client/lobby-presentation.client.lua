@@ -1,12 +1,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 
 local player = Players.LocalPlayer
+local frenchLocale = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
@@ -450,8 +452,8 @@ local function applyState()
             and currentState.phase == "intermission"
             and currentState.voteOptions == nil
         then
-            mainText = "MOVE + JUMP"
-            subText = "SURVIVE UNTIL 0"
+            mainText = frenchLocale and "BOUGE + SAUTE" or "MOVE + JUMP"
+            subText = frenchLocale and "SURVIS JUSQU'À 0" or "SURVIVE UNTIL 0"
         end
 
         if title and title:IsA("TextLabel") then
