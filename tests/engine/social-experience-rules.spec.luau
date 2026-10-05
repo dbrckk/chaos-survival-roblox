@@ -28,6 +28,13 @@ describe("Social experience rules", function()
         expect(SocialExperienceRules.promptKey(false)).toBe("INVITE_PROMPT_LOSS")
     end)
 
+    it("accepts only valid crew invite launch metadata", function()
+        expect(SocialExperienceRules.inviterUserId({source = "chaos_crew", inviter = 42}, 99)).toBe(42)
+        expect(SocialExperienceRules.inviterUserId({source = "other", inviter = 42}, 99)).toBe(nil)
+        expect(SocialExperienceRules.inviterUserId({source = "chaos_crew", inviter = 99}, 99)).toBe(nil)
+        expect(SocialExperienceRules.inviterUserId({source = "chaos_crew", inviter = -2}, 99)).toBe(nil)
+    end)
+
     it("emphasizes the crew beacon most strongly at the end of a round", function()
         expect(SocialExperienceRules.beaconEmphasis("result")).toBe(1)
         expect(SocialExperienceRules.beaconEmphasis("intermission")).toBe(0.72)
