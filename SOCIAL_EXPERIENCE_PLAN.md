@@ -171,7 +171,7 @@ Target: reduce dead time.
 2. Lightweight "crew streak" presentation for humans playing together, without economic advantage.
 3. Shared end-of-round photo composition / survivor lineup.
 4. Optional one-tap re-invite from the lobby, never during danger.
-5. Analytics: invite-control exposure, activation, friend join, first shared round, shared-session length.
+5. [STARTED] Analytics: invite-control exposure and prompt activation are instrumented server-side; friend join, first shared round and shared-session length remain to add.
 
 ---
 
