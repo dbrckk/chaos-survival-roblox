@@ -2483,12 +2483,13 @@ stateEvent.OnClientEvent:Connect(function(state)
         mechanicUses = player:GetAttribute("RoundMechanicUses"),
         shards = player:GetAttribute("RoundChaosShards"),
     })
-    if touchDevice
-        and firstLobby
+    if firstLobby
         and state.phase == "intermission"
         and not state.voteOptions
     then
-        coachText = CoreLocalization.text(localeId, "TOUCH_CONTROLS")
+        local controlsKey = touchDevice and "TOUCH_CONTROLS"
+            or (UserInputService.GamepadEnabled and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS")
+        coachText = CoreLocalization.text(localeId, controlsKey)
     elseif touchDevice
         and state.phase == "intermission"
         and state.voteOptions
