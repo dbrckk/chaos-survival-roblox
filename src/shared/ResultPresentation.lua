@@ -39,11 +39,59 @@ local ELIMINATION_COPY = {
     },
 }
 
-function ResultPresentation.eliminationCopy(feedback)
+local ELIMINATION_COPY_FR = {
+    Meteor = {
+        title = "FRAPPÉ PAR UN MÉTÉORE",
+        tip = "Bouge dès que le cercle d'alerte orange apparaît",
+    },
+    Bomb = {
+        title = "PRIS DANS UNE EXPLOSION",
+        tip = "Quitte les zones rouges avant l'explosion",
+    },
+    Lava = {
+        title = "RATTRAPÉ PAR LA LAVE",
+        tip = "Monte tôt et continue à prendre de la hauteur",
+    },
+    Tornado = {
+        title = "PROJETÉ PAR LA TORNADE",
+        tip = "Garde davantage de distance avec la tornade",
+    },
+    JumpShock = {
+        title = "ÉJECTÉ PAR L'ONDE DE CHOC",
+        tip = "Laisse plus d'espace autour de l'onde bleue",
+    },
+    LowGravity = {
+        title = "SORTI DE L'ARÈNE",
+        tip = "Fais de petits sauts et reviens vers le centre",
+    },
+    DisappearingPlatforms = {
+        title = "PLATEFORME EFFONDRÉE",
+        tip = "Quitte les plateformes qui clignotent avant leur disparition",
+    },
+    ShrinkingArena = {
+        title = "RATTRAPÉ PAR L'ARÈNE",
+        tip = "Rejoins le centre avant que la limite se referme",
+    },
+    Fall = {
+        title = "TOMBÉ DE L'ARÈNE",
+        tip = "Fais des sauts plus courts et reviens vers le centre",
+    },
+}
+
+local function french(localeId)
+    return string.sub(string.lower(tostring(localeId or "")), 1, 2) == "fr"
+end
+
+function ResultPresentation.eliminationCopy(feedback, localeId)
     feedback = type(feedback) == "table" and feedback or {}
-    local copy = ELIMINATION_COPY[tostring(feedback.eliminationCause or "")]
+    local source = french(localeId) and ELIMINATION_COPY_FR or ELIMINATION_COPY
+    local copy = source[tostring(feedback.eliminationCause or "")]
     if copy then
         return copy.title, copy.tip
+    end
+
+    if french(localeId) then
+        return "ÉLIMINÉ", "Réagis tôt à l'alerte du danger et garde une route sûre"
     end
     return "ELIMINATED", "React early to the hazard warning and keep a safe route"
 end
@@ -67,16 +115,27 @@ function ResultPresentation.kind(feedback)
     return "eliminated"
 end
 
-function ResultPresentation.title(feedback)
+function ResultPresentation.title(feedback, localeId)
     local kind = ResultPresentation.kind(feedback)
-    if kind == "master" then
-        return "MASTER ROUND!"
-    elseif kind == "clutch" then
-        return "CLUTCH SURVIVAL!"
-    elseif kind == "survived" then
-        return "SURVIVED!"
+    if french(localeId) then
+        if kind == "master" then
+            return "MANCHE MAÎTRISÉE !"
+        elseif kind == "clutch" then
+            return "SURVIE EXTRÊME !"
+        elseif kind == "survived" then
+            return "SURVÉCU !"
+        end
+    else
+        if kind == "master" then
+            return "MASTER ROUND!"
+        elseif kind == "clutch" then
+            return "CLUTCH SURVIVAL!"
+        elseif kind == "survived" then
+            return "SURVIVED!"
+        end
     end
-    local title = ResultPresentation.eliminationCopy(feedback)
+
+    local title = ResultPresentation.eliminationCopy(feedback, localeId)
     return title
 end
 
