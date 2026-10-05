@@ -138,13 +138,14 @@ local function addClassic(base, theme, tier)
             tier.Name == "High"
         )
 
+        local litInset = tier.Name == "High" and i % 2 == 1
         makePart(
             "ClassicReliefHatchInset" .. i,
             Vector3.new(5.4, 0.08, 0.22),
             hatch.CFrame * CFrame.new(0, 0.13, 0),
-            i % 2 == 0 and theme.Secondary or theme.Accent,
-            Enum.Material.Neon,
-            tier.Name == "High" and 0.54 or 0.68,
+            litInset and theme.Accent or theme.Detail,
+            litInset and Enum.Material.Neon or Enum.Material.Metal,
+            litInset and 0.62 or 0.26,
             false
         )
     end
@@ -240,14 +241,16 @@ local function addOrbital(base, theme, tier)
             tier.Name == "High"
         )
 
-        if i % 3 == 0 then
+        local litSegment = tier.Name == "High" and i % 4 == 0
+            or tier.Name == "Medium" and i == 4
+        if litSegment then
             makePart(
                 "OrbitalReliefGlow" .. i,
                 Vector3.new(3.2, 0.08, 0.18),
                 segment.CFrame * CFrame.new(0, 0.15, 0),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
-                0.48,
+                tier.Name == "High" and 0.58 or 0.68,
                 false
             )
         end
