@@ -80,6 +80,7 @@ jobs:
             "tests/engine/result-presentation.spec.luau",
             "tests/engine/round-event-presentation.spec.luau",
             "tests/engine/session-streak.spec.luau",
+            "tests/engine/share-moment-rules.spec.luau",
             "tests/engine/social-experience-rules.spec.luau",
             "tests/engine/solo-rush.spec.luau",
             "tests/engine/survival-feedback.spec.luau",
