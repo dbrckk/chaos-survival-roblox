@@ -6,15 +6,19 @@ This checklist defines the minimum evidence required before calling the experien
 
 All items below must be green on the exact release commit:
 
-- [ ] Build Validation succeeds.
-- [ ] Roblox Open Cloud Engine Tests succeed.
-- [ ] Every engine spec is assigned to exactly one Open Cloud shard.
-- [ ] Rojo produces a non-empty place file.
-- [ ] Luau syntax validation succeeds.
-- [ ] Fair-play monetization guard succeeds.
-- [ ] Client/server protocol guards succeed.
-- [ ] Server service export contract audit succeeds.
-- [ ] Production source contains no TODO/FIXME/HACK markers or obvious placeholder IDs.
+- [x] Build Validation succeeds.
+- [x] Roblox Open Cloud Engine Tests succeed.
+- [x] Every engine spec is assigned to exactly one Open Cloud shard.
+- [x] Rojo produces a non-empty place file.
+- [x] Luau syntax validation succeeds.
+- [x] Fair-play monetization guard succeeds.
+- [x] Client/server protocol guards succeed.
+- [x] Server service export contract audit succeeds.
+- [x] Production source contains no TODO/FIXME/HACK markers or obvious placeholder IDs.
+
+Automated gate certified on commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` on 2026-10-05. Both **Build Validation** and **Roblox Open Cloud Engine Tests** completed successfully on that exact commit. The production-source placeholder scan is also clean.
+
+> Any commit after this certification must re-run both automated workflows before a release tag is cut.
 
 ## Authenticated Roblox Studio gate
 
