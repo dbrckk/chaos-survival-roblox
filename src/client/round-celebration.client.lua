@@ -92,6 +92,7 @@ local function celebrate(feedback)
     end
 
     local tier = profile()
+    local reduced = player:GetAttribute("ReduceMotion") == true
     local survived = feedback.survived == true
     local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
     local resultKind = ResultPresentation.kind(feedback)
@@ -113,16 +114,18 @@ local function celebrate(feedback)
         local color = masterRound
             and UITheme.Colors.Gold
             or (clutch and UITheme.Colors.Cyan or UITheme.Colors.Green)
-        local ringRadius = masterRound and 22 or (clutch and 19 or 16)
+        local ringRadius = reduced
+            and 12
+            or (masterRound and 22 or (clutch and 19 or 16))
         makeRing(
             root,
             color,
             ringRadius,
-            masterRound and 0.62 or (clutch and 0.54 or 0.48),
+            reduced and 0.30 or (masterRound and 0.62 or (clutch and 0.54 or 0.48)),
             -2.3
         )
 
-        if tier.Name ~= "Low" then
+        if tier.Name ~= "Low" and not reduced then
             local count = VfxQuality.particleCount(
                 tier.Name,
                 math.floor((masterRound and 28 or (clutch and 22 or 18)) * intensity),
@@ -136,7 +139,7 @@ local function celebrate(feedback)
             )
         end
 
-        if clutch and tier.Name == "High" then
+        if clutch and tier.Name == "High" and not reduced then
             task.delay(0.08, function()
                 local currentRoot = rootPart()
                 if currentRoot then
@@ -145,7 +148,7 @@ local function celebrate(feedback)
             end)
         end
 
-        if masterRound and tier.Name == "High" then
+        if masterRound and tier.Name == "High" and not reduced then
             task.delay(0.10, function()
                 local currentRoot = rootPart()
                 if currentRoot then
@@ -155,9 +158,15 @@ local function celebrate(feedback)
         end
     else
         local color = UITheme.Colors.Red
-        makeRing(root, color, tier.Name == "Low" and 8 or 11, 0.36, -2.3)
+        makeRing(
+            root,
+            color,
+            reduced and 7 or (tier.Name == "Low" and 8 or 11),
+            reduced and 0.22 or 0.36,
+            -2.3
+        )
 
-        if tier.Name == "High" then
+        if tier.Name == "High" and not reduced then
             makeBurst(
                 root,
                 color:Lerp(UITheme.Colors.Panel, 0.40),
@@ -167,7 +176,7 @@ local function celebrate(feedback)
         end
     end
 
-    if firstChaos then
+    if firstChaos and not reduced then
         task.delay(0.08, function()
             local currentRoot = rootPart()
             if not currentRoot then
