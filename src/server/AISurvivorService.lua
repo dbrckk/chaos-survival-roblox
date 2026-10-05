@@ -2020,7 +2020,7 @@ function AISurvivorService.start(gameConfig)
     botsFolder.Parent = workspace
 
     Players.PlayerAdded:Connect(function()
-        task.delay(1.0, reconcile)
+        task.defer(reconcile)
     end)
     Players.PlayerRemoving:Connect(function()
         task.delay(0.25, reconcile)
