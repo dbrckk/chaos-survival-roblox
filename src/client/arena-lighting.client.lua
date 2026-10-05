@@ -22,6 +22,16 @@ if not atmosphere then
     atmosphere.Parent = Lighting
 end
 
+local bloom = Lighting:FindFirstChild("ArenaIdentityBloom")
+if not bloom then
+    bloom = Instance.new("BloomEffect")
+    bloom.Name = "ArenaIdentityBloom"
+    bloom.Intensity = 0
+    bloom.Size = 18
+    bloom.Threshold = 1.22
+    bloom.Parent = Lighting
+end
+
 local MOODS = {
     Classic = {
         Tint = Color3.fromRGB(224, 236, 255),
@@ -110,6 +120,15 @@ local function applyMood(duration)
 
     local colorShiftScale = quality.Name == "Low" and 0.42
         or (quality.Name == "Medium" and 0.72 or 1)
+    local bloomBase = quality.Name == "Low" and 0.045
+        or (quality.Name == "Medium" and 0.11 or 0.18)
+    local bloomPhaseScale = phase == "round" and 0.34
+        or (phase == "ready" and 0.68 or 1)
+    local bloomIntensity = bloomBase * bloomPhaseScale
+    local bloomSize = quality.Name == "Low" and 12
+        or (quality.Name == "Medium" and 18 or 24)
+    local bloomThreshold = phase == "round" and 1.42
+        or (phase == "ready" and 1.30 or 1.18)
     local shadowSoftness = math.clamp(
         (mood.ShadowSoftness or 0.35) + (quality.Name == "Low" and 0.20 or 0),
         0,
@@ -137,6 +156,16 @@ local function applyMood(duration)
             ColorShift_Top = colorShiftTop,
             ColorShift_Bottom = colorShiftBottom,
             ShadowSoftness = shadowSoftness,
+        }
+    ):Play()
+
+    TweenService:Create(
+        bloom,
+        TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Intensity = bloomIntensity,
+            Size = bloomSize,
+            Threshold = bloomThreshold,
         }
     ):Play()
 
