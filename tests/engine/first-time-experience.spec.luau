@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local FirstTimeExperience = require("../../src/shared/FirstTimeExperience")
+local CoreLocalization = require("../../src/shared/CoreLocalization")
 
 describe("First time experience", function()
     it("distinguishes the first round from the lightweight rookie window", function()
@@ -71,6 +72,19 @@ describe("First time experience", function()
             })
             expect(text == nil).toBe(true)
         end
+    end)
+
+    it("localizes essential onboarding and hazard guidance in French", function()
+        expect(CoreLocalization.language("fr-fr")).toBe("fr")
+        expect(CoreLocalization.text("fr-fr", "SURVIVE_ZERO")).toBe("SURVIS JUSQU'À 0")
+        expect(CoreLocalization.hazardName("fr-fr", "Meteors")).toBe("PLUIE DE MÉTÉORES")
+        expect(CoreLocalization.hazardHint("fr-fr", "Meteors")).toBe("ÉVITE LES CERCLES D'ALERTE ORANGE")
+
+        local localized = CoreLocalization.coach(
+            "fr-fr",
+            "VOTE  •  TAP THE CHAOS YOU WANT TO FACE"
+        )
+        expect(localized).toBe("VOTE  •  TOUCHE LE CHAOS QUE TU VEUX AFFRONTER")
     end)
 
     it("stops strong round coaching after the first game", function()
