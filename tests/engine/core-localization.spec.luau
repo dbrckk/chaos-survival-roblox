@@ -44,6 +44,13 @@ describe("Core localization", function()
         expect(CoreLocalization.challengeShort("en-us", "DANGER_DANCE", "CLOSE CALL")).toBe("CLOSE CALL")
     end)
 
+    it("localizes accessibility and save-status feedback", function()
+        expect(CoreLocalization.text("en-us", "SOUND_ON")).toBe("SOUND • ON")
+        expect(CoreLocalization.text("fr-fr", "SOUND_OFF")).toBe("SON • COUPÉ")
+        expect(CoreLocalization.text("fr-fr", "TEMP_SESSION_TITLE")).toBe("SESSION TEMPORAIRE")
+        expect(CoreLocalization.text("en-us", "SAVE_PAUSED_SHORT")).toBe("PROGRESS NOT SAVING")
+    end)
+
     it("localizes first-time coaching without altering unknown copy", function()
         local source = "VOTE  •  TAP THE CHAOS YOU WANT TO FACE"
         expect(CoreLocalization.coach("fr-fr", source)).toBe(
