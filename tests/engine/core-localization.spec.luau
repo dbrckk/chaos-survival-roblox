@@ -51,6 +51,16 @@ describe("Core localization", function()
         expect(CoreLocalization.text("en-us", "SAVE_PAUSED_SHORT")).toBe("PROGRESS NOT SAVING")
     end)
 
+    it("localizes device controls and compact settings", function()
+        expect(CoreLocalization.text("fr-fr", "SETTINGS")).toBe("RÉGLAGES")
+        expect(
+            CoreLocalization.text("fr-fr", "KEYBOARD_CONTROLS")
+        ).toBe("WASD = BOUGER  •  ESPACE = SAUTER  •  SURVIS JUSQU'À 0")
+        expect(
+            CoreLocalization.text("en-us", "GAMEPAD_CONTROLS")
+        ).toBe("LEFT STICK = MOVE  •  A = JUMP  •  SURVIVE UNTIL 0")
+    end)
+
     it("localizes first-time coaching without altering unknown copy", function()
         local source = "VOTE  •  TAP THE CHAOS YOU WANT TO FACE"
         expect(CoreLocalization.coach("fr-fr", source)).toBe(
