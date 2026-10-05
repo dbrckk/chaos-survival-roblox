@@ -64,6 +64,7 @@ jobs:
             "tests/engine/body-motion-rules.spec.luau",
             "tests/engine/character-polish-rules.spec.luau",
             "tests/engine/cosmetics.spec.luau",
+            "tests/engine/core-localization.spec.luau",
             "tests/engine/daily-quests.spec.luau",
             "tests/engine/daily-rewards.spec.luau",
             "tests/engine/data-schema.spec.luau",
