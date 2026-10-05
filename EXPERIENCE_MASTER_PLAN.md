@@ -257,3 +257,15 @@ RE-AUDIT UX — 2026-10-05
 [CONFIRMÉ] Solo social : jusqu'à 3 AI Survivors R15 restent intégrés comme survivants crédibles (noms, vote, lobby, hazards, spectateur, résultat) sans badge "BOT".
 [A VALIDER] Les changements ci-dessus restent soumis aux workflows Build Validation/Open Cloud du HEAD et au contrôle Android physique avant publication.
 
+SOCIAL / CAPTIVATION PASS — 2026-10-05
+======================================
+[FAIT] Stratégie complète ajoutée dans SOCIAL_EXPERIENCE_PLAN.md : présence sociale, synchronie, agency, statut non-P2W, mémoire collective, revanche et lobby "third place".
+[FAIT] Boucle d'invitation native Roblox : CTA uniquement après au moins une manche et uniquement aux moments calmes (RESULT / pré-vote), jamais en danger ou pendant le vote.
+[FAIT] Framing contextuel : victoire = INVITE FRIENDS ; défaite = BRING BACKUP, avec texte FR/EN.
+[FAIT] Crew Signal : nouveau landmark social diégétique dans le lobby, lié à l'action d'invitation plutôt qu'à une publicité flottante permanente.
+[FAIT] Last Chaos board : le lobby conserve une mémoire visuelle courte de la manche précédente (danger, arène, survivants) pour créer continuité et histoire partagée.
+[FAIT] Payload résultat enrichi avec arenaId/disasterIds/survivorsAlive/contestantCount afin que les présentations sociales restent basées sur des identifiants fiables.
+[FAIT] Rendu néon : BloomEffect adaptatif par qualité et phase, fort hors combat puis fortement atténué pendant ROUND afin de préserver les télégraphes.
+[A VALIDER] Composition Crew Signal + Last Chaos board sur vrai Android et différentes tailles d'écran.
+[A SUIVRE] Reconnaissance d'arrivée d'un ami invité, crew streak purement social, photo/lineup de groupe, analytics funnel social.
+
