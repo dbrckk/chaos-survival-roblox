@@ -53,6 +53,7 @@ PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 [QA]   3.5 Ajouter particules d'ambiance adaptatives.
 [QA]   3.6 Améliorer transitions visuelles entre lobby, vote, ready, round et result.
 [TODO] 3.7 QA confort visuel 30 minutes.
+[QA]   3.8 Ajouter une couche de profondeur cinématique adaptative : skyline lointaine, silhouettes héro, balises atmosphériques et trafic énergétique discret.
 
 PHASE 4 — VFX CATASTROPHES
 ---------------------------
@@ -157,5 +158,5 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - Jeu fonctionnel et déjà jouable sur Android.
 - HUD mobile récemment corrigé pour limiter les chevauchements.
 - Freeze glare réduit.
-- Base néon cohérente mais encore trop simple.
+- Base néon cohérente enrichie par une couche de profondeur cinématique locale, adaptative High/Medium/Low et respectant ReduceMotion.
 - Priorité actuelle : QA des AI Survivors + Android réel, puis équilibrage final et certification.
