@@ -2,12 +2,15 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local gui = Instance.new("ScreenGui")
@@ -260,33 +263,24 @@ local function challengeProgress(state)
     return 0
 end
 
-local DANGER_LABELS = {
-    Meteors = "METEORS INCOMING",
-    Bombs = "BOMBS INCOMING",
-    Darkness = "BLACKOUT",
-    DisappearingPlatforms = "PLATFORMS UNSTABLE",
-    Freeze = "FREEZE PULSE",
-    JumpShock = "SHOCKWAVE",
-    LowGravity = "LOW GRAVITY",
-    RisingLava = "LAVA RISING",
-    ShrinkingArena = "ARENA SHRINKING",
-    SpeedSurge = "SPEED SURGE",
-    Tornado = "TORNADO MOVING",
-}
-
 local function dangerStatusLabel(disasterId, value, seconds)
     if seconds <= 5 then
-        return "SURVIVE  " .. tostring(math.max(0, math.floor(seconds))) .. "s",
+        return CoreLocalization.text(localeId, "SURVIVE")
+            .. "  "
+            .. tostring(math.max(0, math.floor(seconds)))
+            .. "s",
             Color3.fromRGB(255, 105, 92)
     end
 
-    local base = DANGER_LABELS[tostring(disasterId or "")]
-        or "STAY ALERT"
+    local base = CoreLocalization.hazardName(localeId, disasterId)
+        or CoreLocalization.text(localeId, "STAY_ALERT")
 
     if value >= 1.18 then
-        return base .. " • INTENSE", Color3.fromRGB(245, 115, 190)
+        return base .. "  •  " .. CoreLocalization.text(localeId, "INTENSE"),
+            Color3.fromRGB(245, 115, 190)
     elseif value >= 1.08 then
-        return base .. " • FASTER", Color3.fromRGB(235, 175, 105)
+        return base .. "  •  " .. CoreLocalization.text(localeId, "FASTER"),
+            Color3.fromRGB(235, 175, 105)
     end
     return base, Color3.fromRGB(205, 220, 240)
 end
@@ -323,7 +317,9 @@ local function refresh()
     end
 
     local count = shardCount()
-    shard.Text = count == 1 and "SHARD  1" or ("SHARDS  " .. count)
+    shard.Text = count == 1
+        and CoreLocalization.text(localeId, "SHARD_ONE")
+        or CoreLocalization.text(localeId, "SHARDS_COUNT", count)
 
     local rookieRound = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0)) <= 1
     setRookieCompactMode(rookieRound and count <= 0)
@@ -331,12 +327,12 @@ local function refresh()
     local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
     local progress = math.min(challengeTarget, challengeProgress(state))
     if state.finalRush then
-        challenge.Text = "SURVIVE"
+        challenge.Text = CoreLocalization.text(localeId, "SURVIVE")
         challenge.TextColor3 = UITheme.Colors.Orange
         challenge.BackgroundColor3 = UITheme.Colors.Red:Lerp(UITheme.Colors.PanelSoft, 0.82)
         completedChallengeId = nil
     elseif rookieRound then
-        challenge.Text = "STAY ALIVE"
+        challenge.Text = CoreLocalization.text(localeId, "STAY_ALIVE")
         challenge.TextColor3 = UITheme.Colors.Text
         challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
         completedChallengeId = nil
