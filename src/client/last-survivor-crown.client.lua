@@ -2,10 +2,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local localPlayer = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local gui = Instance.new("BillboardGui")
@@ -25,7 +28,7 @@ label.BackgroundColor3 = Color3.fromRGB(30, 24, 10)
 label.BackgroundTransparency = 0.10
 label.BorderSizePixel = 0
 label.Font = Enum.Font.GothamBlack
-label.Text = "★  LAST SURVIVOR"
+label.Text = "★  " .. CoreLocalization.text(localeId, "RESULT_SOLE_SURVIVOR")
 label.TextColor3 = Color3.fromRGB(255, 225, 100)
 label.TextScaled = true
 label.TextStrokeColor3 = Color3.fromRGB(60, 34, 5)
