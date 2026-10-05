@@ -46,6 +46,7 @@ end
 
 local function meteorSignature(warning)
     local tier = profile()
+    local reduced = player:GetAttribute("ReduceMotion") == true
     local duration = warningDuration(warning, 0.9)
 
     local column = localPart(
@@ -60,13 +61,15 @@ local function meteorSignature(warning)
         column,
         TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
         {
-            Size = Vector3.new(0.75, 28, 0.75),
-            Transparency = 0.88,
+            Size = reduced
+                and Vector3.new(0.55, 21, 0.55)
+                or Vector3.new(0.75, 28, 0.75),
+            Transparency = reduced and 0.74 or 0.88,
         }
     ):Play()
     Debris:AddItem(column, duration + 0.08)
 
-    if tier.Name ~= "Low" then
+    if tier.Name ~= "Low" and not reduced then
         local cap = localPart(
             "MeteorIncomingCap",
             Vector3.new(2.4, 0.20, 2.4),
@@ -89,6 +92,7 @@ end
 
 local function bombSignature(warning)
     local tier = profile()
+    local reduced = player:GetAttribute("ReduceMotion") == true
     local duration = warningDuration(warning, 1.25)
     local length = tier.Name == "Low" and 6.5 or 8.5
 
@@ -101,7 +105,7 @@ local function bombSignature(warning)
     )
     local arms = {armA}
 
-    if tier.Name ~= "Low" then
+    if tier.Name ~= "Low" and not reduced then
         local armB = localPart(
             "BombCrossB",
             Vector3.new(0.55, 0.11, length),
@@ -113,24 +117,33 @@ local function bombSignature(warning)
     end
 
     for index, arm in ipairs(arms) do
-        TweenService:Create(
-            arm,
-            TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
-            {
-                Size = index == 1
-                    and Vector3.new(length * 0.42, 0.11, 0.55)
-                    or Vector3.new(0.55, 0.11, length * 0.42),
-                Transparency = 0.76,
-            }
-        ):Play()
+        if reduced then
+            TweenService:Create(
+                arm,
+                TweenInfo.new(duration, Enum.EasingStyle.Linear),
+                {Transparency = 0.58}
+            ):Play()
+        else
+            TweenService:Create(
+                arm,
+                TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+                {
+                    Size = index == 1
+                        and Vector3.new(length * 0.42, 0.11, 0.55)
+                        or Vector3.new(0.55, 0.11, length * 0.42),
+                    Transparency = 0.76,
+                }
+            ):Play()
+        end
         Debris:AddItem(arm, duration + 0.08)
     end
 end
 
 local function jumpShockSignature(warning)
     local tier = profile()
+    local reduced = player:GetAttribute("ReduceMotion") == true
     local duration = warningDuration(warning, 0.65)
-    local count = tier.Name == "Low" and 1 or 2
+    local count = reduced and 1 or (tier.Name == "Low" and 1 or 2)
 
     for i = 1, count do
         local ring = localPart(
