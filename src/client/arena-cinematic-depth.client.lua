@@ -113,19 +113,23 @@ local function addHorizonArchitecture(base, variant, theme, tier)
         local crownSize = variant == "Towers"
             and Vector3.new(width + 1.6, 0.44, depth + 1.6)
             or Vector3.new(math.max(5, width * 0.72), 0.36, math.max(3, depth * 0.72))
+        local crownLit = tier.Name ~= "Low" and i % 3 == 0
         local crown = makePart(
             "CinemaHorizonCrown" .. i,
             crownSize,
             CFrame.new(position + Vector3.new(0, (height * 0.5) + 0.28, 0))
                 * CFrame.Angles(0, -tangent, 0),
-            currentAccent or accent,
-            Enum.Material.Neon,
-            phaseTransparency(tier.Name == "Low" and 0.68 or 0.46),
+            crownLit and (currentAccent or accent) or theme.Detail,
+            crownLit and Enum.Material.Neon or Enum.Material.Metal,
+            phaseTransparency(
+                tier.Name == "Low" and 0.60
+                    or (crownLit and 0.54 or 0.24)
+            ),
             false
         )
         crown:SetAttribute("BaseAccentIndex", i)
 
-        if tier.Name == "High" and i % 2 == 1 then
+        if tier.Name == "High" and i % 4 == 1 then
             local slit = makePart(
                 "CinemaHorizonSlit" .. i,
                 Vector3.new(0.34, math.max(7, height * 0.58), depth + 0.18),
@@ -237,9 +241,9 @@ local function addHeroSilhouette(base, variant, theme, tier)
                 "CinemaOrbitalHalo" .. i,
                 Vector3.new(34, 1.5, 3.6),
                 CFrame.new(pos) * CFrame.Angles(0, -tangent, math.rad(math.sin(angle) * 7)),
-                i % 3 == 0 and theme.Secondary or theme.Accent,
-                i % 2 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-                phaseTransparency(i % 2 == 0 and 0.48 or 0.22),
+                i % 4 == 0 and theme.Secondary or (i % 3 == 0 and theme.Accent or theme.Detail),
+                i % 4 == 0 and Enum.Material.Neon or Enum.Material.Metal,
+                phaseTransparency(i % 4 == 0 and 0.56 or 0.22),
                 false
             )
         end
@@ -251,7 +255,7 @@ local function addAtmosphericBeacons(base, variant, theme, tier)
         return
     end
 
-    local count = tier.Name == "High" and 6 or 4
+    local count = tier.Name == "High" and 5 or 3
     local radius = variant == "Orbital" and 100 or 94
     for i = 1, count do
         local angle = ((i - 1) / count) * math.pi * 2 + math.rad(22)
@@ -269,8 +273,8 @@ local function addAtmosphericBeacons(base, variant, theme, tier)
         local light = Instance.new("PointLight")
         light.Name = "CinemaBeaconLight"
         light.Color = beam.Color
-        light.Brightness = tier.Name == "High" and 0.42 or 0.24
-        light.Range = tier.Name == "High" and 17 or 12
+        light.Brightness = tier.Name == "High" and 0.32 or 0.18
+        light.Range = tier.Name == "High" and 15 or 10
         light.Shadows = false
         light.Parent = beam
     end
