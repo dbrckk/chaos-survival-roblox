@@ -150,9 +150,15 @@ end
 local function bindMap()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local lobby = generated and generated:FindFirstChild("Lobby")
+    local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
     anchor.Position = Config.LobbyCenter + Vector3.new(0, 8.5, -18.5)
-    billboard.Enabled = lobby ~= nil
+    billboard.Enabled = lobby ~= nil and games >= 1
 end
+
+player:GetAttributeChangedSignal("Games"):Connect(function()
+    refresh()
+    bindMap()
+end)
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
