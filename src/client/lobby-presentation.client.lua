@@ -445,6 +445,14 @@ local function applyState()
             currentState.title,
             currentState.voteOptions
         )
+        local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
+        if games <= 0
+            and currentState.phase == "intermission"
+            and currentState.voteOptions == nil
+        then
+            mainText = "MOVE + JUMP"
+            subText = "SURVIVE UNTIL 0"
+        end
 
         if title and title:IsA("TextLabel") then
             title.Text = mainText
