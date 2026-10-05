@@ -72,6 +72,13 @@ local TEXT = {
         QUEST_COMPLETE = "QUEST COMPLETE",
         ACHIEVEMENT_UNLOCKED = "ACHIEVEMENT UNLOCKED",
         REWARD_LINE = "%s   +%d coins   +%d XP",
+        COINS_XP = "+%d coins   +%d XP",
+        QUEST_ROW = "  %s  •  %s  •  +%d coins",
+        WEEKLY_ROW = "  %s  •  %s  •  +%d coins +%d XP",
+        ACHIEVEMENT_ROW = "%s  •  %s  •  +%d coins",
+        NO_DAILY_QUEST = "No daily quest",
+        NO_WEEKLY_CHALLENGE = "No weekly challenge",
+        DAY_STREAK = "DAY %d STREAK",
         SOUND_ON = "SOUND • ON",
         SOUND_OFF = "SOUND • OFF",
         TEMP_SESSION_TITLE = "TEMPORARY SESSION",
@@ -165,6 +172,13 @@ local TEXT = {
         QUEST_COMPLETE = "QUÊTE TERMINÉE",
         ACHIEVEMENT_UNLOCKED = "SUCCÈS DÉBLOQUÉ",
         REWARD_LINE = "%s   +%d pièces   +%d XP",
+        COINS_XP = "+%d pièces   +%d XP",
+        QUEST_ROW = "  %s  •  %s  •  +%d pièces",
+        WEEKLY_ROW = "  %s  •  %s  •  +%d pièces +%d XP",
+        ACHIEVEMENT_ROW = "%s  •  %s  •  +%d pièces",
+        NO_DAILY_QUEST = "Aucune quête quotidienne",
+        NO_WEEKLY_CHALLENGE = "Aucun défi hebdomadaire",
+        DAY_STREAK = "SÉRIE DE %d JOURS",
         SOUND_ON = "SON • ACTIVÉ",
         SOUND_OFF = "SON • COUPÉ",
         TEMP_SESSION_TITLE = "SESSION TEMPORAIRE",
@@ -215,6 +229,56 @@ local HAZARDS = {
         Darkness = {name = "BLACKOUT", action = "SUIS LA LUMIÈRE", hint = "SUIS LES ROUTES LUMINEUSES"},
         ShrinkingArena = {name = "ARÈNE QUI RÉTRÉCIT", action = "CENTRE", hint = "REJOINS LE CENTRE PENDANT QUE L'ARÈNE RÉTRÉCIT"},
         JumpShock = {name = "ONDE DE CHOC", action = "ÉCARTE-TOI", hint = "GARDE TES DISTANCES AVEC L'ONDE BLEUE"},
+    },
+}
+
+local QUEST_TITLES = {
+    en = {
+        PLAY_3 = "Play 3 rounds",
+        SURVIVE_2 = "Survive 2 rounds",
+        DOUBLE_CHAOS = "Survive a Double Chaos",
+        EARN_75 = "Earn 75 round coins",
+        PLAY_5 = "Play 5 rounds",
+        SURVIVE_3 = "Survive 3 rounds",
+        COLLECT_6 = "Collect 6 Chaos Shards",
+        PLAY_20 = "Play 20 rounds",
+        SURVIVE_10 = "Survive 10 rounds",
+        COLLECT_30 = "Collect 30 Chaos Shards",
+        DOUBLE_3 = "Survive 3 Double Chaos rounds",
+        EARN_500 = "Earn 500 round coins",
+    },
+    fr = {
+        PLAY_3 = "Joue 3 manches",
+        SURVIVE_2 = "Survis à 2 manches",
+        DOUBLE_CHAOS = "Survis à un Double Chaos",
+        EARN_75 = "Gagne 75 pièces en manche",
+        PLAY_5 = "Joue 5 manches",
+        SURVIVE_3 = "Survis à 3 manches",
+        COLLECT_6 = "Ramasse 6 éclats du Chaos",
+        PLAY_20 = "Joue 20 manches",
+        SURVIVE_10 = "Survis à 10 manches",
+        COLLECT_30 = "Ramasse 30 éclats du Chaos",
+        DOUBLE_3 = "Survis à 3 manches Double Chaos",
+        EARN_500 = "Gagne 500 pièces en manche",
+    },
+}
+
+local ACHIEVEMENT_COPY = {
+    en = {
+        FIRST_SURVIVOR = {"First Survivor", "Survive your first round"},
+        VETERAN_10 = {"Getting Serious", "Play 10 rounds"},
+        SURVIVOR_10 = {"Hard To Kill", "Survive 10 rounds"},
+        CHAOS_TAMER = {"Chaos Tamer", "Survive 3 Double Chaos rounds"},
+        LEVEL_5 = {"Rising Star", "Reach level 5"},
+        STREAK_7 = {"Seven Days Strong", "Reach a 7-day login streak"},
+    },
+    fr = {
+        FIRST_SURVIVOR = {"Premier survivant", "Survis à ta première manche"},
+        VETERAN_10 = {"Ça devient sérieux", "Joue 10 manches"},
+        SURVIVOR_10 = {"Dur à éliminer", "Survis à 10 manches"},
+        CHAOS_TAMER = {"Maître du Chaos", "Survis à 3 manches Double Chaos"},
+        LEVEL_5 = {"Étoile montante", "Atteins le niveau 5"},
+        STREAK_7 = {"Sept jours d'affilée", "Atteins une série de connexion de 7 jours"},
     },
 }
 
@@ -309,6 +373,30 @@ function CoreLocalization.hazardTitle(localeId, disasterIds, fallback)
         )
     end
     return table.concat(names, " + ")
+end
+
+function CoreLocalization.questTitle(localeId, questId, fallback)
+    local language = CoreLocalization.language(localeId)
+    local id = tostring(questId or "")
+    return (QUEST_TITLES[language] and QUEST_TITLES[language][id])
+        or QUEST_TITLES.en[id]
+        or fallback
+end
+
+function CoreLocalization.achievementTitle(localeId, achievementId, fallback)
+    local language = CoreLocalization.language(localeId)
+    local id = tostring(achievementId or "")
+    local record = ACHIEVEMENT_COPY[language] and ACHIEVEMENT_COPY[language][id]
+    record = record or ACHIEVEMENT_COPY.en[id]
+    return record and record[1] or fallback
+end
+
+function CoreLocalization.achievementDescription(localeId, achievementId, fallback)
+    local language = CoreLocalization.language(localeId)
+    local id = tostring(achievementId or "")
+    local record = ACHIEVEMENT_COPY[language] and ACHIEVEMENT_COPY[language][id]
+    record = record or ACHIEVEMENT_COPY.en[id]
+    return record and record[2] or fallback
 end
 
 function CoreLocalization.challengeShort(localeId, challengeId, fallback)
