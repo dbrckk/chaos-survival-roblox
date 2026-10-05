@@ -54,6 +54,38 @@ function SocialExperienceRules.inviterUserId(payload, joiningUserId)
     return inviter
 end
 
+function SocialExperienceRules.crewParticipantIds(entries)
+    local present = {}
+    local linked = {}
+
+    for _, entry in ipairs(type(entries) == "table" and entries or {}) do
+        local userId = math.floor(tonumber(entry.userId) or 0)
+        if userId > 0 then
+            present[userId] = true
+        end
+    end
+
+    for _, entry in ipairs(type(entries) == "table" and entries or {}) do
+        local userId = math.floor(tonumber(entry.userId) or 0)
+        local inviterId = math.floor(tonumber(entry.inviterUserId) or 0)
+        if userId > 0
+            and inviterId > 0
+            and userId ~= inviterId
+            and present[inviterId]
+        then
+            linked[userId] = true
+            linked[inviterId] = true
+        end
+    end
+
+    local result = {}
+    for userId in pairs(linked) do
+        table.insert(result, userId)
+    end
+    table.sort(result)
+    return result
+end
+
 function SocialExperienceRules.reactionKey(reactionId)
     return REACTION_KEYS[tostring(reactionId or "")]
 end
