@@ -14,7 +14,7 @@ local activeBursts = 0
 local function maxConcurrentBursts(profile)
     if profile.Name == "Low" then
         return 6
-    elseif profile.Name == "Medium" then
+    elseif profile.Name == "Medium" and not reduced then
         return 10
     end
     return 14
@@ -24,7 +24,7 @@ local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function makeAftermath(position, color, radius, kind, profile)
+local function makeAftermath(position, color, radius, kind, profile, reduced)
     local afterglow = Instance.new("Part")
     afterglow.Name = "LocalHazardAfterglow"
     afterglow.Shape = Enum.PartType.Cylinder
@@ -53,7 +53,7 @@ local function makeAftermath(position, color, radius, kind, profile)
     ):Play()
     Debris:AddItem(afterglow, 1.25)
 
-    if profile.Name == "Low" then
+    if profile.Name == "Low" or reduced then
         return
     end
 
@@ -119,7 +119,10 @@ local function renderBurst(payload)
     end
 
     local profile = tier()
-    if activeBursts >= maxConcurrentBursts(profile) then
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local concurrentLimit = reduced and math.min(4, maxConcurrentBursts(profile))
+        or maxConcurrentBursts(profile)
+    if activeBursts >= concurrentLimit then
         return
     end
     activeBursts += 1
@@ -156,7 +159,7 @@ local function renderBurst(payload)
     ring.Parent = workspace
 
     local core = nil
-    if profile.Name ~= "Low" then
+    if profile.Name ~= "Low" and not reduced then
         core = Instance.new("Part")
         core.Name = "LocalHazardImpactCore"
         core.Shape = Enum.PartType.Ball
@@ -176,7 +179,7 @@ local function renderBurst(payload)
     end
 
     local light
-    if profile.Name ~= "Low" then
+    if profile.Name ~= "Low" and not reduced then
         light = Instance.new("PointLight")
         light.Color = color
         light.Brightness = 2.2 * profile.Scale
@@ -185,8 +188,9 @@ local function renderBurst(payload)
         light.Parent = burst
     end
 
-    local duration = profile.Name == "Low" and 0.18 or 0.24
-    local targetDiameter = radius * 2 * (0.85 + (0.15 * profile.Scale))
+    local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
+    local targetDiameter = radius * 2
+        * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
     TweenService:Create(
         burst,
         TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -224,7 +228,7 @@ local function renderBurst(payload)
         ):Play()
     end
 
-    if profile.Name == "High" then
+    if profile.Name == "High" and not reduced then
         local emitter = Instance.new("ParticleEmitter")
         emitter.Name = "ImpactSparks"
         emitter.Rate = 0
@@ -260,7 +264,7 @@ local function renderBurst(payload)
         emitter:Emit(VfxQuality.particleCount("Medium", 14, 6))
     end
 
-    makeAftermath(position, color, radius, kind, profile)
+    makeAftermath(position, color, radius, kind, profile, reduced)
 
     local lifetime = duration * 1.35 + 0.08
     Debris:AddItem(burst, lifetime)
