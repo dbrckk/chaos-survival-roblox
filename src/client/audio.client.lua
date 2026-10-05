@@ -351,6 +351,13 @@ local function setMix(phase, overdrive, finalRush)
         rewardTarget = 1
     end
 
+    local userScale = player:GetAttribute("AudioMuted") == true and 0 or 1
+    musicTarget *= userScale
+    sfxTarget *= userScale
+    uiTarget *= userScale
+    hazardTarget *= userScale
+    rewardTarget *= userScale
+
     TweenService:Create(musicGroup, TweenInfo.new(0.18), {Volume = musicTarget}):Play()
     TweenService:Create(sfxGroup, TweenInfo.new(0.12), {Volume = sfxTarget}):Play()
     TweenService:Create(uiGroup, TweenInfo.new(0.12), {Volume = uiTarget}):Play()
@@ -584,6 +591,10 @@ stateEvent.OnClientEvent:Connect(function(state)
     lastOverdrive = overdrive
     lastPhase = phase
     lastTitle = state.title
+end)
+
+player:GetAttributeChangedSignal("AudioMuted"):Connect(function()
+    setMix(lastPhase or "waiting", lastOverdrive, lastFinalRush)
 end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
