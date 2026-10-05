@@ -2,13 +2,16 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local gui = Instance.new("ScreenGui")
@@ -71,7 +74,7 @@ title.Size = UDim2.new(1, -24, 0.52, 0)
 title.Position = UDim2.fromOffset(12, 7)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBlack
-title.Text = "OVERDRIVE"
+title.Text = CoreLocalization.text(localeId, "OVERDRIVE")
 title.TextColor3 = UITheme.Colors.Text
 title.TextScaled = true
 title.Parent = card
@@ -81,7 +84,7 @@ subtitle.Size = UDim2.new(1, -28, 0.28, 0)
 subtitle.Position = UDim2.new(0, 14, 0.64, 0)
 subtitle.BackgroundTransparency = 1
 subtitle.Font = Enum.Font.GothamBold
-subtitle.Text = "BOOST PADS • SHARD SURGE"
+subtitle.Text = CoreLocalization.text(localeId, "OVERDRIVE_SUB")
 subtitle.TextColor3 = UITheme.Colors.Muted
 subtitle.TextScaled = true
 subtitle.TextWrapped = true
@@ -253,16 +256,16 @@ stateEvent.OnClientEvent:Connect(function(state)
     if finalRush and not lastFinalRush then
         show(
             "finalRush",
-            "FINAL RUSH",
-            "LAST 5 SECONDS • PADS RECHARGE FASTER",
+            CoreLocalization.text(localeId, "FINAL_RUSH"),
+            CoreLocalization.text(localeId, "FINAL_RUSH_SUB"),
             UITheme.Colors.Orange,
             1.05
         )
     elseif overdrive and not lastOverdrive then
         show(
             "overdrive",
-            "OVERDRIVE",
-            "BOOST PADS • SHARD SURGE • GOLDEN SHARD",
+            CoreLocalization.text(localeId, "OVERDRIVE"),
+            CoreLocalization.text(localeId, "OVERDRIVE_SUB"),
             UITheme.Colors.Gold,
             1.20
         )
