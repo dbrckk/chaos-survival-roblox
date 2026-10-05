@@ -1765,19 +1765,34 @@ local function masteryProgressText(state, name)
 end
 
 local function masteryGoalText(feedback)
+    local arenaName = feedback and CoreLocalization.arenaName(
+        localeId,
+        feedback.arenaId or feedback.arenaMasteryName,
+        feedback.arenaMasteryName
+    )
+    local primaryDisasterId = feedback
+        and type(feedback.disasterIds) == "table"
+        and feedback.disasterIds[1]
+        or nil
+    local disasterName = feedback and (
+        CoreLocalization.hazardName(localeId, primaryDisasterId)
+        or feedback.disasterMasteryName
+    )
+
     local arenaText = masteryProgressText(
         feedback and feedback.arenaMastery,
-        feedback and feedback.arenaMasteryName
+        arenaName
     )
     local disasterText = masteryProgressText(
         feedback and feedback.disasterMastery,
-        feedback and feedback.disasterMasteryName
+        disasterName
     )
+    local masteryLabel = CoreLocalization.text(localeId, "RESULT_MASTERY")
 
     if arenaText and disasterText then
-        return "MASTERY • " .. arenaText .. " • " .. disasterText
+        return masteryLabel .. " • " .. arenaText .. " • " .. disasterText
     elseif arenaText or disasterText then
-        return "MASTERY • " .. tostring(arenaText or disasterText)
+        return masteryLabel .. " • " .. tostring(arenaText or disasterText)
     end
     return nil
 end
@@ -1789,11 +1804,12 @@ local function nextLevelGoalText()
     local remaining = math.max(0, math.floor(nextXP - xp))
 
     if remaining <= 0 then
-        return "NEXT GOAL • LEVEL " .. tostring(level + 1) .. " READY"
+        return CoreLocalization.text(localeId, "RESULT_NEXT_GOAL_READY", level + 1)
     end
 
-    return string.format(
-        "NEXT GOAL • LEVEL %d • %d XP TO GO",
+    return CoreLocalization.text(
+        localeId,
+        "RESULT_NEXT_GOAL",
         level + 1,
         remaining
     )
@@ -1838,19 +1854,19 @@ local function showRoundFeedback(feedback)
 
     local extras = {}
     if streakBonus > 0 then
-        table.insert(extras, "STREAK +" .. tostring(streakBonus))
+        table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_STREAK", streakBonus))
     end
     if shardCoins > 0 then
-        table.insert(extras, "SHARDS +" .. tostring(shardCoins))
+        table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_SHARDS", shardCoins))
     end
     if feedback.challengeCompleted then
-        table.insert(extras, "CHALLENGE +" .. tostring(challengeCoins))
+        table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_CHALLENGE", challengeCoins))
     end
     if flowCoins > 0 then
-        table.insert(extras, "FLOW +" .. tostring(flowCoins))
+        table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_FLOW", flowCoins))
     end
     if fusionBonusCoins > 0 then
-        table.insert(extras, "FUSION +" .. tostring(fusionBonusCoins))
+        table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_FUSION", fusionBonusCoins))
     end
 
     resultReward.Text = CoreLocalization.text(localeId, "COINS_XP", shownCoins, shownXP)
@@ -1870,22 +1886,38 @@ local function showRoundFeedback(feedback)
             )
         )
     )
-    table.insert(tags, tostring(feedback.disasterName or "CHAOS"))
+    local localizedDisasterName = CoreLocalization.hazardTitle(
+        localeId,
+        feedback.disasterIds,
+        feedback.disasterName or "CHAOS"
+    )
+    table.insert(tags, tostring(localizedDisasterName))
     if feedback.doubleChaos then
-        table.insert(tags, feedback.fusionName and ("FUSION: " .. tostring(feedback.fusionName)) or "DOUBLE CHAOS")
+        table.insert(
+            tags,
+            feedback.fusionName
+                and (CoreLocalization.text(localeId, "CHAOS_FUSION") .. ": " .. tostring(feedback.fusionName))
+                or CoreLocalization.text(localeId, "CHAOS_FUSION")
+        )
     end
-    if feedback.soloMode then table.insert(tags, "RUSH BONUS") end
+    if feedback.soloMode then table.insert(tags, CoreLocalization.text(localeId, "RESULT_RUSH_BONUS")) end
     if feedback.criticalSurvival then
-        table.insert(tags, "CLUTCH SURVIVAL")
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_CLUTCH_TAG"))
     end
     if feedback.challengeCompleted then
-        table.insert(tags, "CHALLENGE COMPLETE")
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_CHALLENGE_TAG"))
     elseif feedback.challengeTitle then
         table.insert(
             tags,
             string.format(
                 "%s %d/%d",
-                tostring(feedback.challengeTitle),
+                tostring(
+                    CoreLocalization.challengeShort(
+                        localeId,
+                        feedback.challengeId,
+                        feedback.challengeTitle
+                    )
+                ),
                 tonumber(feedback.challengeProgress) or 0,
                 tonumber(feedback.challengeTarget) or 1
             )
@@ -1893,30 +1925,38 @@ local function showRoundFeedback(feedback)
     end
     local shardCount = math.max(0, math.floor(tonumber(feedback.shardCount) or 0))
     if shardCount > 0 then
-        table.insert(tags, "SHARDS x" .. tostring(shardCount))
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_SHARDS_TAG", shardCount))
     end
     local nearMissCount = math.max(0, math.floor(tonumber(feedback.nearMissCount) or 0))
     if nearMissCount > 0 then
-        table.insert(tags, "CLOSE CALLS x" .. tostring(nearMissCount))
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_CLOSE_CALLS_TAG", nearMissCount))
     end
     if momentumBest >= 2 then
-        table.insert(tags, "MOMENTUM x" .. tostring(momentumBest))
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_MOMENTUM_TAG", momentumBest))
     end
 
     local medals = type(feedback.medals) == "table" and feedback.medals or {}
+    local localizedMedals = {}
+    for _, medal in ipairs(medals) do
+        table.insert(localizedMedals, CoreLocalization.medal(localeId, medal))
+    end
     if #medals > 0 then
-        table.insert(tags, "MEDALS x" .. tostring(#medals))
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_MEDALS_TAG", #medals))
     end
 
     local streakCount = tonumber(feedback.streak) or 0
     if survived and streakCount >= 2 then
-        table.insert(tags, "STREAK x" .. tostring(streakCount))
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_STREAK_TAG", streakCount))
     end
     local arenaMastery = feedback.arenaMastery
     if type(arenaMastery) == "table" and feedback.arenaMasteryName then
         table.insert(
             tags,
-            string.upper(tostring(feedback.arenaMasteryName))
+            string.upper(tostring(CoreLocalization.arenaName(
+                localeId,
+                feedback.arenaId or feedback.arenaMasteryName,
+                feedback.arenaMasteryName
+            )))
                 .. " "
                 .. tostring(arenaMastery.tier or "ROOKIE")
         )
@@ -1925,7 +1965,12 @@ local function showRoundFeedback(feedback)
     if type(disasterMastery) == "table" and feedback.disasterMasteryName then
         table.insert(
             tags,
-            string.upper(tostring(feedback.disasterMasteryName))
+            string.upper(tostring(
+                CoreLocalization.hazardName(
+                    localeId,
+                    type(feedback.disasterIds) == "table" and feedback.disasterIds[1] or nil
+                ) or feedback.disasterMasteryName
+            ))
                 .. " "
                 .. tostring(disasterMastery.tier or "ROOKIE")
         )
@@ -1934,18 +1979,22 @@ local function showRoundFeedback(feedback)
 
     if touchDevice then
         local compactTags = {
-            tostring(feedback.arenaName or "ARENA"),
-            tostring(feedback.disasterName or "CHAOS"),
+            tostring(CoreLocalization.arenaName(
+                localeId,
+                feedback.arenaId or feedback.arenaName,
+                feedback.arenaName or "ARENA"
+            )),
+            tostring(localizedDisasterName),
         }
 
         if feedback.challengeCompleted then
-            table.insert(compactTags, "CHALLENGE COMPLETE")
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CHALLENGE_TAG"))
         elseif feedback.criticalSurvival then
-            table.insert(compactTags, "CLUTCH")
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CLUTCH_TAG"))
         elseif survived and streakCount >= 2 then
-            table.insert(compactTags, "STREAK x" .. tostring(streakCount))
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_STREAK_TAG", streakCount))
         elseif shardCount > 0 then
-            table.insert(compactTags, "SHARDS x" .. tostring(shardCount))
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_SHARDS_TAG", shardCount))
         end
 
         table.insert(compactTags, tostring(feedback.elapsedSeconds or 0) .. "s")
@@ -1964,32 +2013,46 @@ local function showRoundFeedback(feedback)
 
     if not survived then
         local _, eliminationTip = ResultPresentation.eliminationCopy(feedback, localeId)
-        resultTip.Text = "NEXT TRY • " .. eliminationTip
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_NEXT_TRY", eliminationTip)
     elseif firstChaos then
-        resultTip.Text = "FIRST CHAOS CLEARED • survive again to build your streak"
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_FIRST_CHAOS")
     elseif masterRound then
-        resultTip.Text = "MASTER ROUND • challenge complete • momentum x" .. tostring(momentumBest)
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_MASTER", momentumBest)
     elseif fusionBonusCoins > 0 and feedback.fusionName then
-        resultTip.Text = tostring(feedback.fusionName) .. " SURVIVED • FUSION BONUS +" .. tostring(fusionBonusCoins)
+        resultTip.Text = CoreLocalization.text(
+            localeId,
+            "RESULT_FUSION_SURVIVED",
+            tostring(feedback.fusionName),
+            fusionBonusCoins
+        )
     elseif flowCoins > 0 and feedback.challengeCompleted then
-        resultTip.Text = "FLOW COMBO +" .. tostring(flowCoins) .. " • CHALLENGE COMPLETE"
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_FLOW_CHALLENGE", flowCoins)
     elseif flowCoins > 0 then
-        resultTip.Text = "FLOW COMBO • pad → shard chain completed"
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_FLOW")
     elseif feedback.challengeCompleted then
         if #medals > 0 then
-            resultTip.Text = "CHALLENGE COMPLETE • " .. table.concat(medals, " • ")
+            resultTip.Text = CoreLocalization.text(
+                localeId,
+                "RESULT_CHALLENGE_MEDALS",
+                table.concat(localizedMedals, " • ")
+            )
         else
-            resultTip.Text = "ROUND CHALLENGE COMPLETE • bonus secured"
+            resultTip.Text = CoreLocalization.text(localeId, "RESULT_CHALLENGE")
         end
     elseif #medals > 0 then
-        resultTip.Text = "MEDALS • " .. table.concat(medals, " • ")
+        resultTip.Text = CoreLocalization.text(
+            localeId,
+            "RESULT_MEDALS",
+            table.concat(localizedMedals, " • ")
+        )
     elseif survived then
         if feedback.criticalSurvival then
-            resultTip.Text = "CLUTCH: you survived at critical health"
+            resultTip.Text = CoreLocalization.text(localeId, "RESULT_CLUTCH")
         elseif streakCount >= 2 then
             local nextStreakBonus = math.min(10, streakCount * 2)
-            resultTip.Text = string.format(
-                "STREAK x%d • survive again for +%d streak coins",
+            resultTip.Text = CoreLocalization.text(
+                localeId,
+                "RESULT_STREAK",
                 streakCount,
                 nextStreakBonus
             )
@@ -1997,9 +2060,9 @@ local function showRoundFeedback(feedback)
             resultTip.Text = masteryGoalText(feedback) or nextLevelGoalText()
         end
     elseif lastRoundHint ~= "" then
-        resultTip.Text = "TIP: " .. lastRoundHint
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_TIP", lastRoundHint)
     else
-        resultTip.Text = "TIP: keep moving and react early to warning zones"
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_DEFAULT_TIP")
     end
 
     resultCard.BackgroundColor3 = resultKind == "master"
@@ -2045,8 +2108,9 @@ local function refreshStats()
     local xp = player:GetAttribute("XP") or 0
     local progress, nextXP = xpProgressForLevel(level, xp)
 
-    stats.Text = string.format(
-        "LVL %d    🪙 %d    🏆 %d    XP %d/%d",
+    stats.Text = CoreLocalization.text(
+        localeId,
+        "STATS_LINE",
         level,
         player:GetAttribute("Coins") or 0,
         player:GetAttribute("Wins") or 0,
