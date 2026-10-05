@@ -159,6 +159,48 @@ local function renderBurst(payload)
     ring.Transparency = 0.18
     ring.Parent = workspace
 
+    local secondaryRing = nil
+    local plume = nil
+    if profile.Name ~= "Low" and not reduced then
+        secondaryRing = Instance.new("Part")
+        secondaryRing.Name = "LocalHazardSecondaryShockRing"
+        secondaryRing.Shape = Enum.PartType.Cylinder
+        secondaryRing.Size = Vector3.new(0.08, 1, 1)
+        secondaryRing.CFrame = CFrame.new(position + Vector3.new(0, 0.22, 0))
+            * CFrame.Angles(0, 0, math.rad(90))
+        secondaryRing.Anchored = true
+        secondaryRing.CanCollide = false
+        secondaryRing.CanTouch = false
+        secondaryRing.CanQuery = false
+        secondaryRing.CastShadow = false
+        secondaryRing.Material = Enum.Material.Neon
+        secondaryRing.Color = kind == "Meteor"
+            and Color3.fromRGB(255, 205, 95)
+            or color:Lerp(Color3.new(1, 1, 1), 0.22)
+        secondaryRing.Transparency = 0.34
+        secondaryRing.Parent = workspace
+
+        plume = Instance.new("Part")
+        plume.Name = "LocalHazardImpactPlume"
+        plume.Size = Vector3.new(
+            math.max(0.8, radius * 0.15),
+            math.max(2.8, radius * 0.45),
+            math.max(0.8, radius * 0.15)
+        )
+        plume.CFrame = CFrame.new(position + Vector3.new(0, plume.Size.Y * 0.5, 0))
+        plume.Anchored = true
+        plume.CanCollide = false
+        plume.CanTouch = false
+        plume.CanQuery = false
+        plume.CastShadow = false
+        plume.Material = Enum.Material.Neon
+        plume.Color = kind == "Meteor"
+            and Color3.fromRGB(255, 160, 62)
+            or color
+        plume.Transparency = 0.55
+        plume.Parent = workspace
+    end
+
     local core = nil
     if profile.Name ~= "Low" and not reduced then
         core = Instance.new("Part")
@@ -210,6 +252,37 @@ local function renderBurst(payload)
         }
     ):Play()
 
+    if secondaryRing then
+        TweenService:Create(
+            secondaryRing,
+            TweenInfo.new(duration * 1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Size = Vector3.new(
+                    0.08,
+                    targetDiameter * 1.52,
+                    targetDiameter * 1.52
+                ),
+                Transparency = 1,
+            }
+        ):Play()
+    end
+
+    if plume then
+        TweenService:Create(
+            plume,
+            TweenInfo.new(duration * 1.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Size = Vector3.new(
+                    plume.Size.X * 0.55,
+                    math.max(5, radius * 1.45),
+                    plume.Size.Z * 0.55
+                ),
+                Position = plume.Position + Vector3.new(0, math.max(2.5, radius * 0.42), 0),
+                Transparency = 1,
+            }
+        ):Play()
+    end
+
     if core then
         TweenService:Create(
             core,
@@ -248,6 +321,31 @@ local function renderBurst(payload)
         })
         emitter.Parent = burst
         emitter:Emit(VfxQuality.particleCount("High", 18, 8))
+
+        local dust = Instance.new("ParticleEmitter")
+        dust.Name = "ImpactDust"
+        dust.Rate = 0
+        dust.Lifetime = NumberRange.new(0.28, 0.55)
+        dust.Speed = NumberRange.new(math.max(2, radius * 0.45), math.max(4, radius * 0.85))
+        dust.Acceleration = Vector3.new(0, 1.5, 0)
+        dust.SpreadAngle = Vector2.new(180, 180)
+        dust.LightEmission = 0.28
+        dust.LightInfluence = 0.45
+        dust.Color = ColorSequence.new(
+            color:Lerp(Color3.fromRGB(88, 82, 78), 0.65),
+            Color3.fromRGB(48, 45, 46)
+        )
+        dust.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, math.max(0.35, radius * 0.05)),
+            NumberSequenceKeypoint.new(0.45, math.max(0.65, radius * 0.09)),
+            NumberSequenceKeypoint.new(1, 0),
+        })
+        dust.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.42),
+            NumberSequenceKeypoint.new(1, 1),
+        })
+        dust.Parent = burst
+        dust:Emit(VfxQuality.particleCount("High", 14, 6))
     elseif profile.Name == "Medium" then
         local emitter = Instance.new("ParticleEmitter")
         emitter.Name = "ImpactSparks"
@@ -270,6 +368,12 @@ local function renderBurst(payload)
     local lifetime = duration * 1.35 + 0.08
     Debris:AddItem(burst, lifetime)
     Debris:AddItem(ring, lifetime)
+    if secondaryRing then
+        Debris:AddItem(secondaryRing, lifetime * 1.4)
+    end
+    if plume then
+        Debris:AddItem(plume, lifetime * 1.4)
+    end
     if core then
         Debris:AddItem(core, lifetime)
     end
