@@ -30,6 +30,7 @@ local viewportConnection = nil
 local operationToken = 0
 local awaitingCapture = false
 local sharePromptOpen = false
+local resultSceneReady = false
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosMomentShare"
@@ -101,7 +102,8 @@ local function currentReason()
 end
 
 local function shouldShow()
-    return not shareBusy
+    return resultSceneReady
+        and not shareBusy
         and ShareMomentRules.shouldShow(
             lastFeedback,
             currentState,
@@ -248,7 +250,20 @@ local function promptShare(content, launchData, token)
     if not ok then
         sharePromptOpen = false
         showUnavailable(token)
+        return
     end
+
+    task.delay(90, function()
+        if token ~= operationToken or not sharePromptOpen then
+            return
+        end
+
+        operationToken += 1
+        sharePromptOpen = false
+        shareBusy = false
+        title.Text = CoreLocalization.text(localeId, "SHARE_MOMENT")
+        refresh()
+    end)
 end
 
 local function tryLegacyScreenshot(launchData, token)
@@ -350,7 +365,19 @@ stateEvent.OnClientEvent:Connect(function(state)
     currentState = type(state) == "table" and state or currentState
 
     local phase = tostring(currentState.phase or "waiting")
-    if phase ~= "result" then
+    if phase == "result" and previousPhase ~= "result" then
+        resultSceneReady = false
+        local stateAtEntry = currentState
+        task.delay(0.35, function()
+            if currentState == stateAtEntry
+                and tostring(currentState.phase or "") == "result"
+            then
+                resultSceneReady = true
+                refresh()
+            end
+        end)
+    elseif phase ~= "result" then
+        resultSceneReady = false
         exposureSentThisResult = false
         if previousPhase == "result" then
             if awaitingCapture then
