@@ -1,8 +1,10 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -23,6 +25,12 @@ card.BackgroundTransparency = 0.05
 card.BorderSizePixel = 0
 card.Visible = false
 card.Parent = gui
+
+local cardConstraint = Instance.new("UISizeConstraint")
+cardConstraint.MinSize = Vector2.new(280, 62)
+cardConstraint.MaxSize = Vector2.new(620, 86)
+cardConstraint.Parent = card
+
 UITheme.addCorner(card, UITheme.Corners.Large)
 local cardStroke = UITheme.addStroke(card, UITheme.Colors.Blue, 1.3, 0.28)
 UITheme.addGradient(card, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
@@ -91,6 +99,48 @@ local targetIndex = 0
 local targetHealthConnection = nil
 local targetDiedConnection = nil
 local spectateIndex
+local viewportConnection = nil
+
+local function applyResponsive()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+
+    if UserInputService.TouchEnabled then
+        local profile = UIResponsive.mobileProfile(viewport)
+        local cardHeight = profile.tinyHeight and 64 or 72
+        card.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.76 or 0.82)
+        card.Size = UDim2.new(profile.veryNarrow and 0.92 or 0.78, 0, 0, cardHeight)
+
+        nextButton.Size = UDim2.fromOffset(profile.tinyHeight and 88 or 98, 44)
+        nextButton.Position = UDim2.new(1, -8, 0.5, 0)
+
+        label.Size = UDim2.new(1, -(profile.tinyHeight and 112 or 122), 0.64, -4)
+        healthTrack.Size = UDim2.new(1, -(profile.tinyHeight and 124 or 136), 0.10, 0)
+    else
+        card.Position = UDim2.fromScale(0.5, 0.88)
+        card.Size = UDim2.fromScale(0.58, 0.105)
+        nextButton.Size = UDim2.new(0.28, 0, 0.72, 0)
+        nextButton.Position = UDim2.new(1, -8, 0.5, 0)
+        label.Size = UDim2.new(0.68, -14, 0.64, -4)
+        healthTrack.Size = UDim2.fromScale(0.62, 0.10)
+    end
+end
+
+local function bindCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsive)
+    end
+    applyResponsive()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+bindCamera()
 
 local function clearTargetHealth()
     if targetHealthConnection then
