@@ -2,11 +2,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local gui = Instance.new("ScreenGui")
@@ -68,7 +71,7 @@ nextButton.BackgroundColor3 = UITheme.Colors.Blue
 nextButton.Font = Enum.Font.GothamBlack
 nextButton.TextColor3 = UITheme.Colors.Text
 nextButton.TextScaled = true
-nextButton.Text = "NEXT"
+nextButton.Text = CoreLocalization.text(localeId, "NEXT")
 nextButton.Parent = card
 UITheme.addCorner(nextButton, UITheme.Corners.Medium)
 UITheme.addStroke(nextButton, UITheme.Colors.Cyan, 1.1, 0.35)
@@ -268,7 +271,14 @@ local function roundSummary()
     local pieces = {}
 
     if alive then
-        table.insert(pieces, tostring(math.max(0, math.floor(alive))) .. " ALIVE")
+        table.insert(
+            pieces,
+            CoreLocalization.text(
+                localeId,
+                "ALIVE_SHORT",
+                math.max(0, math.floor(alive))
+            )
+        )
     end
     if seconds then
         table.insert(pieces, tostring(math.max(0, math.floor(seconds))) .. "s")
@@ -283,9 +293,9 @@ spectateIndex = function(index)
     if #targets == 0 then
         local summary = roundSummary()
         if player:GetAttribute("RoundParticipant") == true then
-            label.Text = "ELIMINATED • WAITING FOR NEXT ROUND"
+            label.Text = CoreLocalization.text(localeId, "ELIMINATED_WAITING")
         else
-            label.Text = "JOINING NEXT ROUND • WAITING FOR SURVIVORS"
+            label.Text = CoreLocalization.text(localeId, "JOINING_WAITING")
         end
         if summary ~= "" then
             label.Text ..= "\n" .. summary
@@ -305,11 +315,13 @@ spectateIndex = function(index)
         workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
         workspace.CurrentCamera.CameraSubject = hum
         local summary = roundSummary()
-        local displayName = tostring(target.DisplayName or "SURVIVOR")
+        local displayName = tostring(
+            target.DisplayName or CoreLocalization.text(localeId, "SURVIVOR_LABEL")
+        )
         if player:GetAttribute("RoundParticipant") == true then
-            label.Text = "SPECTATING  " .. displayName
+            label.Text = CoreLocalization.text(localeId, "SPECTATING", displayName)
         else
-            label.Text = "JOINING NEXT ROUND  •  " .. displayName
+            label.Text = CoreLocalization.text(localeId, "JOINING_NEXT", displayName)
         end
         if summary ~= "" then
             label.Text ..= "\n" .. summary
