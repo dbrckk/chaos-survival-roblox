@@ -394,8 +394,9 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 for _, attribute in ipairs({"Games", "DataLoaded"}) do
-    player:GetAttributeChangedSignal(attribute):Connect(function()
-        if attribute == "DataLoaded" and player:GetAttribute("DataLoaded") == true then
+    local attributeName = attribute
+    player:GetAttributeChangedSignal(attributeName):Connect(function()
+        if attributeName == "DataLoaded" and player:GetAttribute("DataLoaded") == true then
             checkInviteAvailability()
         end
         refresh()
