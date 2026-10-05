@@ -94,6 +94,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local hud = playerGui:WaitForChild("ChaosHUD", 10)
 local juice = playerGui:WaitForChild("ChaosJuice", 10)
 local spectator = playerGui:WaitForChild("ChaosSpectator", 10)
+local accessibilityGui = playerGui:WaitForChild("AccessibilityQuickSettings", 10)
 local roundFocusGui = playerGui:WaitForChild("ChaosRoundFocus", 10)
 local roundEventsGui = playerGui:WaitForChild("ChaosRoundEvents", 10)
 local hazardGui = playerGui:WaitForChild("HazardReadabilityCue", 10)
@@ -102,6 +103,18 @@ local shrinkGui = playerGui:WaitForChild("ShrinkPressure", 10)
 check(hud ~= nil, "ChaosHUD missing")
 check(juice ~= nil, "ChaosJuice missing")
 check(spectator ~= nil, "ChaosSpectator missing")
+check(accessibilityGui ~= nil, "AccessibilityQuickSettings missing")
+if accessibilityGui then
+    local motionToggle = accessibilityGui:FindFirstChild("ReduceMotionToggle", true)
+    check(motionToggle ~= nil, "ReduceMotionToggle missing")
+    if motionToggle and motionToggle:IsA("GuiObject") then
+        check(
+            motionToggle.AbsoluteSize.X >= 44 and motionToggle.AbsoluteSize.Y >= 44,
+            "ReduceMotionToggle tap target too small"
+        )
+        check(insideViewport(motionToggle), "ReduceMotionToggle outside viewport")
+    end
+end
 if spectator then
     local spectatorNext = spectator:FindFirstChild("NextSpectator", true)
     check(spectatorNext ~= nil, "spectator NEXT control missing")
