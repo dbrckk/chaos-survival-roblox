@@ -1,12 +1,15 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local gui = Instance.new("ScreenGui")
@@ -44,7 +47,7 @@ centerCue.BackgroundColor3 = UITheme.Colors.Panel
 centerCue.BackgroundTransparency = 0.04
 centerCue.BorderSizePixel = 0
 centerCue.Font = Enum.Font.GothamBlack
-centerCue.Text = "MOVE CENTER"
+centerCue.Text = CoreLocalization.text(localeId, "MOVE_CENTER")
 centerCue.TextColor3 = UITheme.Colors.Text
 centerCue.TextScaled = true
 centerCue.Visible = false
