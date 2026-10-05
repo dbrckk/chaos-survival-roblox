@@ -2101,7 +2101,11 @@ local function showVotes(options)
         local action = CoreLocalization.hazardAction(localeId, option.id)
         local localizedHint = CoreLocalization.hazardHint(localeId, option.id)
             or tostring(option.hint or "")
-        hintLabel.Text = action and (action .. "  •  " .. localizedHint) or localizedHint
+        if compactVote and action then
+            hintLabel.Text = action
+        else
+            hintLabel.Text = action and (action .. "  •  " .. localizedHint) or localizedHint
+        end
         hintLabel.TextColor3 = UITheme.Colors.Muted
         hintLabel.TextScaled = true
         hintLabel.TextWrapped = true
