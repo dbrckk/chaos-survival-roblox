@@ -49,11 +49,11 @@ scale.Parent = label
 local activeHighlight = nil
 local activeAura = nil
 local activeCharacter = nil
-local activeUserId = nil
+local activeKey = nil
 local pulseClock = 0
 
 local function clear()
-    activeUserId = nil
+    activeKey = nil
     activeCharacter = nil
     gui.Enabled = false
     gui.Adornee = nil
@@ -69,26 +69,26 @@ local function clear()
     end
 end
 
-local function bind(userId)
-    if not userId then
-        clear()
-        return
-    end
-
-    local target = Players:GetPlayerByUserId(userId)
-    local character = target and target.Character
+local function bindCharacter(key, character)
     local head = character and character:FindFirstChild("Head")
-    if not target or not character or not head or not head:IsA("BasePart") then
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not key
+        or not character
+        or not head
+        or not head:IsA("BasePart")
+        or not humanoid
+        or humanoid.Health <= 0
+    then
         clear()
         return
     end
 
-    if activeUserId == userId and activeCharacter == character then
+    if activeKey == key and activeCharacter == character then
         return
     end
 
     clear()
-    activeUserId = userId
+    activeKey = key
     activeCharacter = character
     gui.Adornee = head
     gui.Enabled = true
@@ -167,22 +167,67 @@ local function bind(userId)
     activeAura = aura
 end
 
+local function bindPlayer(userId)
+    local target = userId and Players:GetPlayerByUserId(userId)
+    bindCharacter(
+        target and ("player:" .. tostring(target.UserId)) or nil,
+        target and target.Character or nil
+    )
+end
+
+local function bindLastAI()
+    local folder = workspace:FindFirstChild("AISurvivors")
+    if not folder then
+        clear()
+        return
+    end
+
+    local candidate = nil
+    local candidateSlot = nil
+    local aliveCount = 0
+
+    for _, model in ipairs(folder:GetChildren()) do
+        if model:IsA("Model") and model:GetAttribute("AISurvivor") == true then
+            local humanoid = model:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                aliveCount += 1
+                candidate = model
+                candidateSlot = math.max(
+                    0,
+                    math.floor(tonumber(model:GetAttribute("AISurvivorSlot")) or 0)
+                )
+                if aliveCount > 1 then
+                    break
+                end
+            end
+        end
+    end
+
+    if aliveCount == 1 and candidate then
+        bindCharacter("ai:" .. tostring(candidateSlot), candidate)
+    else
+        clear()
+    end
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
-    if state.phase ~= "round" then
+    if state.phase ~= "round" or tonumber(state.survivorsAlive) ~= 1 then
         clear()
         return
     end
 
     local userId = tonumber(state.lastSurvivorUserId)
     if userId then
-        bind(userId)
+        bindPlayer(userId)
+    elseif tonumber(state.aiSurvivors) == 1 then
+        bindLastAI()
     else
         clear()
     end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-    if activeUserId == player.UserId then
+    if activeKey == "player:" .. tostring(player.UserId) then
         clear()
     end
 end)
