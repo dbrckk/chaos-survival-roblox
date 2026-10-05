@@ -102,6 +102,17 @@ local shrinkGui = playerGui:WaitForChild("ShrinkPressure", 10)
 check(hud ~= nil, "ChaosHUD missing")
 check(juice ~= nil, "ChaosJuice missing")
 check(spectator ~= nil, "ChaosSpectator missing")
+if spectator then
+    local spectatorNext = spectator:FindFirstChild("NextSpectator", true)
+    check(spectatorNext ~= nil, "spectator NEXT control missing")
+    if spectatorNext and spectatorNext:IsA("GuiObject") then
+        check(
+            spectatorNext.AbsoluteSize.X >= 44 and spectatorNext.AbsoluteSize.Y >= 44,
+            "spectator NEXT tap target too small"
+        )
+        check(insideViewport(spectatorNext), "spectator NEXT outside viewport")
+    end
+end
 check(roundFocusGui ~= nil, "ChaosRoundFocus missing")
 check(roundEventsGui ~= nil, "ChaosRoundEvents missing")
 check(hazardGui ~= nil, "HazardReadabilityCue missing")
