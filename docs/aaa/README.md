@@ -26,6 +26,13 @@ This directory is the professional review system for the project.
 10. [Physical Device Certification](10_DEVICE_CERTIFICATION_PROTOCOL.md)
 11. [Public Alpha & Player Research](11_PUBLIC_ALPHA_RESEARCH_PROTOCOL.md)
 
+## Cross-discipline control tools
+
+12. [Specialist Role Prompts](12_SPECIALIST_ROLE_PROMPTS.md)
+13. [Attention & Sensory Budget](13_ATTENTION_AND_SENSORY_BUDGET.md)
+14. [Red Team & Innovation Backlog](14_RED_TEAM_AND_INNOVATION_BACKLOG.md)
+15. [System Conflict Matrix](15_SYSTEM_CONFLICT_MATRIX.md)
+
 ## Existing deep implementation guides
 
 - `/AAA_VISUALS_ANIMATION_GUIDE.txt`
