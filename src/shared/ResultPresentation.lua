@@ -25,6 +25,14 @@ local ELIMINATION_COPY = {
         title = "DRIFTED OFF THE ARENA",
         tip = "Use short jumps and steer back toward the center",
     },
+    DisappearingPlatforms = {
+        title = "PLATFORM COLLAPSED",
+        tip = "Leave flashing platforms before they disappear",
+    },
+    ShrinkingArena = {
+        title = "CAUGHT BY THE SHRINK",
+        tip = "Move toward the center before the boundary closes",
+    },
     Fall = {
         title = "FELL FROM THE ARENA",
         tip = "Use shorter jumps and recover toward the center",
