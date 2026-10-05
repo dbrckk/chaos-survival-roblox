@@ -77,6 +77,7 @@ local function rebuildCharacterEffects()
     end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local reduced = player:GetAttribute("ReduceMotion") == true
 
     if has("LowGravity") then
         local top = makeAttachment(root, "MoonTrailTop", Vector3.new(0, 1.15, 0))
@@ -86,7 +87,7 @@ local function rebuildCharacterEffects()
         trail.Name = "MoonGravityTrail"
         trail.Attachment0 = top
         trail.Attachment1 = bottom
-        trail.Lifetime = 0.24 * tier.Scale
+        trail.Lifetime = (reduced and 0.10 or 0.24) * tier.Scale
         trail.MinLength = 0.1
         trail.FaceCamera = true
         trail.LightEmission = 0.8
@@ -105,7 +106,7 @@ local function rebuildCharacterEffects()
         trail.Parent = root
         table.insert(characterEffects, trail)
 
-        if tier.Name ~= "Low" then
+        if tier.Name ~= "Low" and not reduced then
             local motes = Instance.new("ParticleEmitter")
             motes.Name = "MoonMotes"
             motes.Rate = 5 * tier.ParticleScale
@@ -135,7 +136,7 @@ local function rebuildCharacterEffects()
         trail.Name = "SpeedSurgeRibbon"
         trail.Attachment0 = left
         trail.Attachment1 = right
-        trail.Lifetime = 0.22 * tier.Scale
+        trail.Lifetime = (reduced and 0.09 or 0.22) * tier.Scale
         trail.MinLength = 0.05
         trail.FaceCamera = true
         trail.LightEmission = 1
@@ -148,7 +149,7 @@ local function rebuildCharacterEffects()
             NumberSequenceKeypoint.new(1, 1),
         })
         trail.WidthScale = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.48),
+            NumberSequenceKeypoint.new(0, reduced and 0.24 or 0.48),
             NumberSequenceKeypoint.new(1, 0),
         })
         trail.Parent = root
@@ -207,7 +208,8 @@ local function updateShrink()
     local halfZ = base.Size.Z * 0.5
     local thickness = 0.24
     local y = base.Position.Y + (base.Size.Y * 0.5) + 0.18
-    local pulse = (math.sin(clock * 5.4) + 1) * 0.5
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local pulse = reduced and 0.5 or ((math.sin(clock * 5.4) + 1) * 0.5)
 
     local defs = {
         {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y - base.Position.Y, -halfZ)},
@@ -307,6 +309,7 @@ end)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(rebuildCharacterEffects)
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(rebuildCharacterEffects)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildCharacterEffects)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(rebuildCharacterEffects)
 
 ensureRenderLoop = function()
     local shrinkActive = currentPhase == "round" and has("ShrinkingArena")
@@ -342,7 +345,8 @@ ensureRenderLoop = function()
 
     if blackoutActive then
         ensureBlackoutVisuals()
-        local pulse = (math.sin(clock * 2.6) + 1) * 0.5
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        local pulse = reduced and 0.5 or ((math.sin(clock * 2.6) + 1) * 0.5)
         for i, beacon in ipairs(blackoutParts) do
             if beacon.Parent then
                 beacon.Transparency = 0.34 + pulse * 0.30
