@@ -1,22 +1,11 @@
-local HapticService = game:GetService("HapticService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
-local AudioConfig = require(ReplicatedStorage.Shared.AudioConfig)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArenaMechanicFeedback")
-
-local soundGroup = game:GetService("SoundService"):FindFirstChild("ChaosSFX")
-local sound = Instance.new("Sound")
-sound.Name = "MobilityPadLocal"
-sound.SoundId = AudioConfig.Sfx.MobilityPad.SoundId
-sound.Volume = AudioConfig.Sfx.MobilityPad.Volume or 0.34
-sound.PlaybackSpeed = AudioConfig.Sfx.MobilityPad.PlaybackSpeed or 1.25
-sound.SoundGroup = soundGroup
-sound.Parent = game:GetService("SoundService")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ArenaMechanicFeedback"
@@ -72,20 +61,11 @@ local function currentVfxTier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function pulseHaptics()
-    pcall(function()
-        if HapticService:IsVibrationSupported(Enum.UserInputType.Gamepad1) then
-            HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, 0.5)
-            task.delay(0.08, function()
-                pcall(function()
-                    HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, 0)
-                end)
-            end)
-        end
-    end)
-end
-
 local function pulseCamera()
+    if player:GetAttribute("ReduceMotion") == true then
+        return
+    end
+
     local camera = workspace.CurrentCamera
     if not camera then
         return
@@ -135,7 +115,14 @@ local function pulseCharacter(accent)
     })
     emitter.Parent = root
     local tierName = player:GetAttribute("VfxQualityTier")
-    emitter:Emit(VfxQuality.particleCount(tierName, 18, 6))
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    emitter:Emit(
+        VfxQuality.particleCount(
+            tierName,
+            reduced and 7 or 18,
+            reduced and 3 or 6
+        )
+    )
 
     task.delay(0.45, function()
         if emitter.Parent then
@@ -156,19 +143,21 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         and Color3.fromRGB(255, 210, 90)
         or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))
     local tier = currentVfxTier()
+    local reduced = player:GetAttribute("ReduceMotion") == true
     flash.BackgroundColor3 = accent
-    flash.BackgroundTransparency = 0.91 + ((1 - tier.Scale) * 0.04)
-    TweenService:Create(flash, TweenInfo.new(0.22), {BackgroundTransparency = 1}):Play()
-
-    sound.PlaybackSpeed = (AudioConfig.Sfx.MobilityPad.PlaybackSpeed or 1.25) + ((math.random() - 0.5) * 0.08)
-    sound.TimePosition = 0
-    sound:Play()
+    flash.BackgroundTransparency = reduced
+        and 0.97
+        or (0.91 + ((1 - tier.Scale) * 0.04))
+    TweenService:Create(
+        flash,
+        TweenInfo.new(reduced and 0.12 or 0.22),
+        {BackgroundTransparency = 1}
+    ):Play()
 
     if tier.Name ~= "Low" then
         pulseCamera()
     end
     pulseCharacter(accent)
-    pulseHaptics()
 
     if overdrive then
         overdriveLabel.Visible = true
