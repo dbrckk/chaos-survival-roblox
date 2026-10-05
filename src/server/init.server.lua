@@ -452,6 +452,46 @@ clientReadyEvent.OnServerEvent:Connect(function(player)
     syncInitialClientState(player)
 end)
 
+local function markCrewRound(contestants)
+    local entries = {}
+    local playersById = {}
+
+    for _, contestant in ipairs(contestants or {}) do
+        if contestant and contestant.Parent == Players then
+            playersById[contestant.UserId] = contestant
+            table.insert(entries, {
+                userId = contestant.UserId,
+                inviterUserId = contestant:GetAttribute("InvitedByUserId"),
+            })
+        end
+    end
+
+    local participantIds = SocialExperienceRules.crewParticipantIds(entries)
+    if #participantIds < 2 then
+        return 0
+    end
+
+    for _, userId in ipairs(participantIds) do
+        local target = playersById[userId]
+        if target then
+            local nextRounds = math.max(
+                0,
+                math.floor(tonumber(target:GetAttribute("SessionCrewRounds")) or 0)
+            ) + 1
+            target:SetAttribute("SessionCrewRounds", nextRounds)
+            GameAnalytics.custom(
+                target,
+                "CrewRound",
+                nextRounds,
+                "CrewSize:" .. tostring(#participantIds),
+                "Round:" .. tostring(roundNumber + 1)
+            )
+        end
+    end
+
+    return #participantIds
+end
+
 local function processInviteJoinData(player)
     task.spawn(function()
         for _ = 1, 10 do
@@ -508,6 +548,7 @@ end
 Players.PlayerAdded:Connect(function(player)
     player:SetAttribute("RoundParticipant", false)
     player:SetAttribute("RoundEliminated", false)
+    player:SetAttribute("SessionCrewRounds", 0)
     GameAnalytics.sessionStarted(player, #Players:GetPlayers())
     processInviteJoinData(player)
 end)
@@ -520,6 +561,9 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
+    if player:GetAttribute("SessionCrewRounds") == nil then
+        player:SetAttribute("SessionCrewRounds", 0)
+    end
     GameAnalytics.sessionStarted(player, #Players:GetPlayers())
     processInviteJoinData(player)
 end
@@ -1408,6 +1452,8 @@ while true do
     roundSettings = SoloRules.resolve(Config, #contestants)
     roundSettings.ArenaName = arenaName
 
+    markCrewRound(contestants)
+
     roundNumber = upcomingRoundNumber
     recentArenaVariantIds = ArenaVariants.pushRecent(recentArenaVariantIds, currentArenaVariant, 2)
     recentPrimaryDisasterIds = RoundVariety.pushRecent(recentPrimaryDisasterIds, selected.Id, 2)
@@ -1606,6 +1652,10 @@ while true do
                 medals = medals,
                 momentumBest = roundMomentumBest,
                 bestSessionStreak = bestSessionStreak,
+                crewRounds = math.max(
+                    0,
+                    math.floor(tonumber(p:GetAttribute("SessionCrewRounds")) or 0)
+                ),
                 arenaName = roundSettings.ArenaName,
                 arenaId = currentArenaVariant,
                 disasterName = feedbackDisasterName,
