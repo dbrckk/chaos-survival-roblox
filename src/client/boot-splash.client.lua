@@ -149,7 +149,11 @@ status.TextScaled = true
 status.Parent = card
 UITheme.addTextConstraint(status, 9, 13)
 
-local reduceMotion = player:GetAttribute("ReduceMotion") == true
+-- Until persisted preferences are loaded, prefer the calmer path.
+-- This avoids flashing a returning reduced-motion player with an animation
+-- before their saved setting reaches the client.
+local reduceMotion = player:GetAttribute("DataLoaded") ~= true
+    or player:GetAttribute("ReduceMotion") == true
 local startedAt = os.clock()
 local finished = false
 
