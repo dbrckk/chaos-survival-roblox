@@ -94,30 +94,6 @@ scale.Parent = card
 UITheme.addTextConstraint(title, 15, 30)
 UITheme.addTextConstraint(subtitle, 12, 18)
 
-local countdown = Instance.new("TextLabel")
-countdown.Name = "ReadyCountdown"
-countdown.AnchorPoint = Vector2.new(0.5, 0.5)
-countdown.Position = UDim2.fromScale(0.5, 0.46)
-countdown.Size = UDim2.fromOffset(150, 150)
-countdown.BackgroundTransparency = 1
-countdown.Font = Enum.Font.GothamBlack
-countdown.Text = "3"
-countdown.TextColor3 = UITheme.Colors.Text
-countdown.TextScaled = true
-countdown.TextTransparency = 1
-countdown.Visible = false
-countdown.ZIndex = 4
-countdown.Parent = gui
-UITheme.addTextConstraint(countdown, 42, 92)
-local countdownStroke = Instance.new("UIStroke")
-countdownStroke.Thickness = 3
-countdownStroke.Color = UITheme.Colors.Cyan
-countdownStroke.Transparency = 1
-countdownStroke.Parent = countdown
-local countdownScale = Instance.new("UIScale")
-countdownScale.Scale = 1
-countdownScale.Parent = countdown
-
 local edgeTop = Instance.new("Frame")
 edgeTop.Name = "EventEdgeTop"
 edgeTop.AnchorPoint = Vector2.new(0.5, 0)
@@ -136,14 +112,12 @@ edgeBottom.Position = UDim2.fromScale(0.5, 1)
 edgeBottom.Parent = gui
 
 local token = 0
-local countdownToken = 0
 local activePriority = 0
 local activeUntil = 0
 local lastOverdrive = false
 local lastFinalRush = false
 local lastFusionKey = nil
 local previousPhase = "waiting"
-local lastReadySecond = nil
 local touchDevice = UserInputService.TouchEnabled
 
 local function applyResponsive()
@@ -154,16 +128,9 @@ local function applyResponsive()
         local profile = UIResponsive.mobileProfile(viewport)
         card.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.42 or 0.34)
         card.Size = UDim2.new(profile.veryNarrow and 0.90 or 0.72, 0, 0, profile.tinyHeight and 66 or 74)
-        countdown.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.58 or 0.50)
-        countdown.Size = UDim2.fromOffset(
-            profile.tinyHeight and 118 or 140,
-            profile.tinyHeight and 118 or 140
-        )
     else
         card.Position = UDim2.fromScale(0.5, 0.27)
         card.Size = UDim2.new(0.54, 0, 0, 74)
-        countdown.Position = UDim2.fromScale(0.5, 0.46)
-        countdown.Size = UDim2.fromOffset(150, 150)
     end
 end
 
@@ -266,51 +233,6 @@ local function show(kind, mainText, subText, color, duration)
     return true
 end
 
-local function showCountdown(value, color)
-    countdownToken += 1
-    local current = countdownToken
-    local reduceMotion = player:GetAttribute("ReduceMotion") == true
-
-    countdown.Text = tostring(value)
-    countdown.TextColor3 = UITheme.Colors.Text
-    countdownStroke.Color = color
-    countdown.Visible = true
-    countdown.TextTransparency = 1
-    countdownStroke.Transparency = 1
-    countdownScale.Scale = reduceMotion and 1 or 1.30
-
-    TweenService:Create(
-        countdown,
-        TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {TextTransparency = 0}
-    ):Play()
-    TweenService:Create(
-        countdownStroke,
-        TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Transparency = 0.08}
-    ):Play()
-
-    if not reduceMotion then
-        TweenService:Create(
-            countdownScale,
-            TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            {Scale = 1}
-        ):Play()
-    end
-
-    task.delay(0.48, function()
-        if current ~= countdownToken then
-            return
-        end
-        TweenService:Create(countdown, TweenInfo.new(0.18), {TextTransparency = 1}):Play()
-        TweenService:Create(countdownStroke, TweenInfo.new(0.18), {Transparency = 1}):Play()
-        task.wait(0.18)
-        if current == countdownToken then
-            countdown.Visible = false
-        end
-    end)
-end
-
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = tostring(state.phase or "waiting")
     local overdrive = phase == "round" and state.overdrive == true
@@ -327,7 +249,6 @@ stateEvent.OnClientEvent:Connect(function(state)
     -- The primary ready countdown/reveal is owned by ChaosHUD.
     -- Keep this layer reserved for mid-round escalation events so mobile
     -- never receives stacked countdowns or duplicate round-start cards.
-    lastReadySecond = nil
 
     if finalRush and not lastFinalRush then
         show(
