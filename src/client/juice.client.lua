@@ -479,6 +479,9 @@ player:GetAttributeChangedSignal("RoundEliminated"):Connect(refreshParticipantMo
 
 stateEvent.OnClientEvent:Connect(function(state)
     currentState = state
+    if tostring(state.phase or "waiting") ~= "result" then
+        streak.Visible = false
+    end
     currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     setMood(state)
 
@@ -717,12 +720,18 @@ task.spawn(function()
 
     if (player:GetAttribute("Games") or 0) == 0 then
         task.wait(0.8)
-        showBanner(
-            CoreLocalization.text(localeId, "JUICE_FIRST_TITLE"),
-            CoreLocalization.text(localeId, "JUICE_FIRST_SUB"),
-            Color3.fromRGB(28, 42, 64),
-            3.2
-        )
+        local phase = currentState and tostring(currentState.phase or "waiting") or "waiting"
+        local voteActive = currentState
+            and type(currentState.voteOptions) == "table"
+            and #currentState.voteOptions > 0
+        if phase == "waiting" or (phase == "intermission" and not voteActive) then
+            showBanner(
+                CoreLocalization.text(localeId, "JUICE_FIRST_TITLE"),
+                CoreLocalization.text(localeId, "JUICE_FIRST_SUB"),
+                Color3.fromRGB(28, 42, 64),
+                3.2
+            )
+        end
     end
 end)
 
