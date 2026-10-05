@@ -1454,8 +1454,8 @@ resultMeta.Text = ""
 resultMeta.Parent = resultCard
 
 local resultTip = Instance.new("TextLabel")
-resultTip.Size = UDim2.new(1, -28, 0.13, 0)
-resultTip.Position = UDim2.new(0, 14, 0.84, 0)
+resultTip.Size = UDim2.new(1, -28, 0.10, 0)
+resultTip.Position = UDim2.new(0, 14, 0.78, 0)
 resultTip.BackgroundTransparency = 1
 resultTip.Font = Enum.Font.GothamMedium
 resultTip.TextColor3 = UITheme.Colors.Muted
@@ -1464,6 +1464,19 @@ resultTip.TextWrapped = true
 resultTip.ZIndex = 22
 resultTip.Text = ""
 resultTip.Parent = resultCard
+
+local resultNext = Instance.new("TextLabel")
+resultNext.Name = "NextRoundCountdown"
+resultNext.Size = UDim2.new(1, -28, 0.075, 0)
+resultNext.Position = UDim2.new(0, 14, 0.90, 0)
+resultNext.BackgroundTransparency = 1
+resultNext.Font = Enum.Font.GothamBold
+resultNext.TextColor3 = UITheme.Colors.Cyan
+resultNext.TextScaled = true
+resultNext.Text = ""
+resultNext.ZIndex = 22
+resultNext.Parent = resultCard
+UITheme.addTextConstraint(resultNext, 10, 15)
 
 local function applyResponsiveLayout()
     local camera = workspace.CurrentCamera
@@ -1721,6 +1734,7 @@ local function showRoundFeedback(feedback)
     end
 
     resultReward.Text = string.format("+%d COINS   +%d XP", shownCoins, shownXP)
+    resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_SOON")
     if #extras > 0 and not touchDevice then
         resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")
     end
@@ -2399,6 +2413,13 @@ stateEvent.OnClientEvent:Connect(function(state)
     title.Text = displayTitle
     hint.Text = displayHint
     timer.Text = tostring(state.seconds or 0)
+
+    if state.phase == "result" and resultCard.Visible then
+        local nextSeconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
+        resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_IN", nextSeconds)
+    elseif state.phase ~= "result" then
+        resultNext.Text = ""
+    end
 
     local alive = tonumber(state.survivorsAlive)
     local total = tonumber(state.contestantCount)
