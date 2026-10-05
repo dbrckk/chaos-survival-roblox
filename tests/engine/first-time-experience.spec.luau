@@ -59,7 +59,7 @@ describe("First time experience", function()
         expect(text).toBe("VOTE  •  TAP THE CHAOS YOU WANT TO FACE")
     end)
 
-    it("adapts first-round coaching to demonstrated actions", function()
+    it("keeps the action phase clear until the final seconds", function()
         local base = FirstTimeExperience.coachText({
             phase = "round",
             seconds = 20,
@@ -68,7 +68,7 @@ describe("First time experience", function()
             mechanicUses = 0,
             shards = 0,
         })
-        expect(base).toBe("SURVIVE UNTIL 0  •  RED/ORANGE = DANGER  •  SHARDS = OPTIONAL BONUS")
+        expect(base == nil).toBe(true)
 
         local shard = FirstTimeExperience.coachText({
             phase = "round",
@@ -78,17 +78,17 @@ describe("First time experience", function()
             mechanicUses = 0,
             shards = 1,
         })
-        expect(shard).toBe("SHARD COLLECTED  •  BONUS COINS ARE OPTIONAL  •  STAY ALIVE")
+        expect(shard == nil).toBe(true)
 
-        local escape = FirstTimeExperience.coachText({
+        local final = FirstTimeExperience.coachText({
             phase = "round",
-            seconds = 20,
+            seconds = 7,
         }, {
             games = 1,
             mechanicUses = 1,
             shards = 1,
         })
-        expect(escape).toBe("NICE ESCAPE  •  SURVIVE UNTIL THE TIMER HITS 0")
+        expect(final).toBe("FINAL SECONDS  •  STAY ALIVE  •  IGNORE OPTIONAL SHARDS")
     end)
 
     it("stops strong round coaching after the first game", function()
