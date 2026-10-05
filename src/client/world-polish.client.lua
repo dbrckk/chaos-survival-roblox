@@ -1,12 +1,15 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local Config = require(ReplicatedStorage.Shared.Config)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local localFolder = Instance.new("Folder")
@@ -27,6 +30,7 @@ local doubleChaos = false
 local overdrive = false
 local finalRush = false
 local fusionName = nil
+local currentDisasterIds = {}
 local intensity = 1
 local previousPhase = "waiting"
 local readyPulseStartedAt = nil
@@ -38,6 +42,7 @@ local cachedLobbyCenter = Config.LobbyCenter
 local cachedLobbyCoreCenter = Config.LobbyCenter + Vector3.new(0, 6.65, 0)
 local cachedArenaBeacon = nil
 local secondaryLights = {}
+local refreshArenaHologramText = nil
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -428,7 +433,7 @@ workspace.ChildRemoved:Connect(function(child)
     end
 end)
 
-local function refreshArenaHologramText()
+refreshArenaHologramText = function()
     if not currentMap then
         return
     end
@@ -449,21 +454,38 @@ local function refreshArenaHologramText()
         return
     end
 
-    local titleText = tostring(title:GetAttribute("BaseText") or "CHAOS ARENA")
-    local hintText = tostring(hint:GetAttribute("BaseText") or "ADAPT • MOVE • SURVIVE")
+    local variantId = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local titleText = CoreLocalization.arenaName(
+        localeId,
+        variantId,
+        tostring(title:GetAttribute("BaseText") or CoreLocalization.text(localeId, "WAYFIND_ARENA"))
+    )
+    local hintText = CoreLocalization.arenaStrategy(
+        localeId,
+        variantId,
+        tostring(hint:GetAttribute("BaseText") or CoreLocalization.text(localeId, "SURVIVE_ADAPT_ESCAPE"))
+    )
     local eventColor = nil
 
     if phase == "round" and finalRush then
-        titleText = "FINAL RUSH"
-        hintText = "LAST 5 SECONDS • PADS RECHARGE FASTER"
+        titleText = CoreLocalization.text(localeId, "FINAL_RUSH")
+        hintText = CoreLocalization.text(localeId, "FINAL_RUSH_SUB")
         eventColor = Color3.fromRGB(255, 92, 58)
     elseif phase == "round" and overdrive then
-        titleText = "OVERDRIVE"
-        hintText = "BOOST PADS • SHARD SURGE • GOLDEN SHARD"
+        titleText = CoreLocalization.text(localeId, "OVERDRIVE")
+        hintText = CoreLocalization.text(localeId, "OVERDRIVE_SUB")
         eventColor = Color3.fromRGB(255, 205, 85)
-    elseif doubleChaos and fusionName then
-        titleText = tostring(fusionName)
-        hintText = "CHAOS FUSION • SURVIVE BOTH HAZARDS"
+    elseif doubleChaos then
+        titleText = CoreLocalization.text(localeId, "CHAOS_FUSION")
+        local hazardTitle = CoreLocalization.hazardTitle(
+            localeId,
+            currentDisasterIds,
+            tostring(fusionName or "")
+        )
+        hintText = CoreLocalization.text(localeId, "CHAOS_FUSION_SUB")
+        if hazardTitle and hazardTitle ~= "" then
+            hintText ..= "  •  " .. tostring(hazardTitle)
+        end
         eventColor = Color3.fromRGB(185, 100, 255)
     end
 
@@ -510,6 +532,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     overdrive = state.phase == "round" and state.overdrive == true
     finalRush = state.phase == "round" and state.finalRush == true
     fusionName = type(state.fusionName) == "string" and state.fusionName or nil
+    currentDisasterIds = type(state.disasterIds) == "table" and state.disasterIds or {}
     intensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
 
     local ids = state.disasterIds or {}
