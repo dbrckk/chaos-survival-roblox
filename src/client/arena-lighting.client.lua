@@ -53,6 +53,17 @@ if not sunRays then
     sunRays.Parent = Lighting
 end
 
+local terrain = workspace:FindFirstChildOfClass("Terrain")
+local clouds = terrain and terrain:FindFirstChildOfClass("Clouds")
+if terrain and not clouds then
+    clouds = Instance.new("Clouds")
+    clouds.Name = "ArenaIdentityClouds"
+    clouds.Enabled = true
+    clouds.Cover = 0.38
+    clouds.Density = 0.18
+    clouds.Parent = terrain
+end
+
 local MOODS = {
     Classic = {
         Tint = Color3.fromRGB(224, 236, 255),
@@ -74,6 +85,10 @@ local MOODS = {
         EnvironmentDiffuse = 0.34,
         EnvironmentSpecular = 0.78,
         SunRays = 0.030,
+        AtmosOffset = 0.10,
+        CloudCover = 0.34,
+        CloudDensity = 0.16,
+        Wind = Vector3.new(6, 0, -3),
     },
     Towers = {
         Tint = Color3.fromRGB(210, 244, 250),
@@ -95,6 +110,10 @@ local MOODS = {
         EnvironmentDiffuse = 0.38,
         EnvironmentSpecular = 0.84,
         SunRays = 0.026,
+        AtmosOffset = 0.14,
+        CloudCover = 0.48,
+        CloudDensity = 0.22,
+        Wind = Vector3.new(9, 0, -5),
     },
     Crossroads = {
         Tint = Color3.fromRGB(242, 218, 255),
@@ -116,6 +135,10 @@ local MOODS = {
         EnvironmentDiffuse = 0.30,
         EnvironmentSpecular = 0.72,
         SunRays = 0.036,
+        AtmosOffset = 0.08,
+        CloudCover = 0.42,
+        CloudDensity = 0.20,
+        Wind = Vector3.new(5, 0, 7),
     },
     Orbital = {
         Tint = Color3.fromRGB(214, 255, 241),
@@ -137,6 +160,10 @@ local MOODS = {
         EnvironmentDiffuse = 0.42,
         EnvironmentSpecular = 0.88,
         SunRays = 0.032,
+        AtmosOffset = 0.18,
+        CloudCover = 0.26,
+        CloudDensity = 0.13,
+        Wind = Vector3.new(7, 0, 4),
     },
 }
 
@@ -272,16 +299,32 @@ local function applyMood(duration)
             Glare = (mood.Glare or 0.08)
                 * (phase == "round" and 0.25 or (phase == "ready" and 0.50 or 1))
                 * (quality.Name == "Low" and 0 or 1),
+            Offset = (mood.AtmosOffset or 0.10)
+                * (quality.Name == "Low" and 0.55 or 1),
         }
     ):Play()
 
-    if phase ~= "round" and phase ~= "ready" then
-        local terrain = workspace.Terrain
-        local clouds = terrain and terrain:FindFirstChildOfClass("Clouds")
-        if clouds then
-            clouds.Color = mood.CloudColor or Color3.fromRGB(210, 220, 240)
-        end
+    if clouds then
+        clouds.Enabled = quality.Name ~= "Low"
+        clouds.Color = mood.CloudColor or Color3.fromRGB(210, 220, 240)
+        clouds.Cover = math.clamp(
+            (mood.CloudCover or 0.35)
+                * (phase == "round" and 0.72 or 1),
+            0,
+            1
+        )
+        clouds.Density = math.clamp(
+            (mood.CloudDensity or 0.18)
+                * (quality.Name == "Medium" and 0.82 or 1),
+            0,
+            1
+        )
     end
+
+    pcall(function()
+        local wind = mood.Wind or Vector3.new(5, 0, -3)
+        workspace.GlobalWind = wind * (quality.Name == "Low" and 0.45 or 1)
+    end)
 end
 
 local function bindMap()
