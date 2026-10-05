@@ -35,6 +35,19 @@ describe("Social experience rules", function()
         expect(SocialExperienceRules.inviterUserId({source = "chaos_crew", inviter = -2}, 99)).toBe(nil)
     end)
 
+    it("detects only invited players who are actually together in the round", function()
+        local ids = SocialExperienceRules.crewParticipantIds({
+            {userId = 10},
+            {userId = 20, inviterUserId = 10},
+            {userId = 30, inviterUserId = 99},
+            {userId = 40, inviterUserId = 20},
+        })
+        expect(#ids).toBe(3)
+        expect(ids[1]).toBe(10)
+        expect(ids[2]).toBe(20)
+        expect(ids[3]).toBe(40)
+    end)
+
     it("allows one-click social reactions only in multiplayer result moments", function()
         expect(SocialExperienceRules.reactionKey("gg")).toBe("SOCIAL_REACTION_GG")
         expect(SocialExperienceRules.reactionKey("again")).toBe("SOCIAL_REACTION_AGAIN")
