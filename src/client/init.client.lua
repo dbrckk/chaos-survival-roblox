@@ -2365,6 +2365,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     local previousHudPhase = currentHudPhase
     currentHudPhase = tostring(state.phase or "waiting")
     compactRoundTop = touchDevice and currentHudPhase == "round"
+    top.Visible = currentHudPhase ~= "result"
     if currentHudPhase ~= "intermission" and previousHudPhase == "intermission" then
         metaNotificationShownThisIntermission = false
     elseif currentHudPhase == "intermission" and previousHudPhase ~= "intermission" then
