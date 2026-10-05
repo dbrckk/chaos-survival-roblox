@@ -23,6 +23,8 @@ describe("Core localization", function()
     it("localizes hazard names and actionable hints", function()
         expect(CoreLocalization.hazardName("en-us", "Meteors")).toBe("METEOR SHOWER")
         expect(CoreLocalization.hazardName("fr-fr", "Meteors")).toBe("PLUIE DE MÉTÉORES")
+        expect(CoreLocalization.hazardAction("en-us", "Meteors")).toBe("DODGE")
+        expect(CoreLocalization.hazardAction("fr-fr", "Meteors")).toBe("ESQUIVE")
         expect(
             string.find(
                 CoreLocalization.hazardHint("fr-fr", "Bombs") or "",
