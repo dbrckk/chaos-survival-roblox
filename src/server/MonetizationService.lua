@@ -1,5 +1,7 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
+
+local MonetizationRules = require(script.Parent.MonetizationRules)
 local RemoteRegistry = require(script.Parent.RemoteRegistry)
 
 local PlayerReadiness = require(script.Parent.PlayerReadiness)
@@ -110,7 +112,7 @@ local function stateFor(player)
     local dataAvailable = player:GetAttribute("DataPersistenceAvailable") == true
     return {
         offers = result,
-        enabled = dataAvailable and #result > 0,
+        enabled = MonetizationRules.offersEnabled(dataAvailable, #result),
         dataAvailable = dataAvailable,
         fairPlay = "COSMETIC ONLY • NO GAMEPLAY ADVANTAGE",
     }
