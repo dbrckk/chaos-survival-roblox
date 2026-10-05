@@ -878,10 +878,23 @@ local function renderCosmetics(state)
         local unlockLevel = tonumber(item.unlockLevel)
         local arenaMasteryId = item.arenaMasteryId and tostring(item.arenaMasteryId) or nil
         local arenaMasteryPoints = tonumber(item.arenaMasteryPoints)
-        local kindLabel = string.upper(tostring(item.kind or "cosmetic"))
+        local kindLabel = CoreLocalization.cosmeticKind(
+            localeId,
+            item.kind,
+            string.upper(tostring(item.kind or "cosmetic"))
+        )
         local rarity = tostring(item.rarity or "Common")
-        local rarityLabel = string.upper(rarity)
+        local rarityLabel = CoreLocalization.cosmeticRarity(
+            localeId,
+            rarity,
+            string.upper(rarity)
+        )
         local collection = tostring(item.collection or "")
+        local itemName = CoreLocalization.cosmeticName(
+            localeId,
+            item.id,
+            item.name
+        )
         local kindAccent = item.kind == "trail" and UITheme.Colors.Cyan or UITheme.Colors.Magenta
         local rarityAccent = RARITY_COLORS[rarity] or kindAccent
 
@@ -891,7 +904,7 @@ local function renderCosmetics(state)
         if isEquipped then
             button.Text = string.format(
                 "%s   •   %s   •   %s   •   %s",
-                item.name,
+                itemName,
                 rarityLabel,
                 kindLabel,
                 CoreLocalization.text(localeId, "EQUIPPED")
@@ -900,7 +913,7 @@ local function renderCosmetics(state)
         elseif isOwned then
             button.Text = string.format(
                 "%s   •   %s   •   %s   •   %s",
-                item.name,
+                itemName,
                 rarityLabel,
                 kindLabel,
                 CoreLocalization.text(localeId, "EQUIP")
@@ -908,7 +921,7 @@ local function renderCosmetics(state)
         elseif coinPrice and coinPrice > 0 then
             button.Text = string.format(
                 "%s   •   %s   •   %s   •   %s",
-                item.name,
+                itemName,
                 rarityLabel,
                 kindLabel,
                 CoreLocalization.text(localeId, "COSMETIC_PRICE_COINS", coinPrice)
@@ -917,7 +930,7 @@ local function renderCosmetics(state)
         elseif unlockLevel then
             button.Text = string.format(
                 "%s   •   %s   •   %s   •   %s",
-                item.name,
+                itemName,
                 rarityLabel,
                 kindLabel,
                 CoreLocalization.text(localeId, "COSMETIC_UNLOCK_LEVEL", unlockLevel)
@@ -926,18 +939,22 @@ local function renderCosmetics(state)
         elseif arenaMasteryId and arenaMasteryPoints then
             button.Text = string.format(
                 "%s   •   %s   •   %s   •   %s",
-                item.name,
+                itemName,
                 rarityLabel,
                 kindLabel,
                 CoreLocalization.text(
                     localeId,
                     "COSMETIC_MASTERY_GOLD",
-                    string.upper(arenaMasteryId)
+                    CoreLocalization.arenaName(
+                        localeId,
+                        arenaMasteryId,
+                        string.upper(arenaMasteryId)
+                    )
                 )
             )
             button.BackgroundColor3 = UITheme.Colors.Violet:Lerp(UITheme.Colors.Panel, 0.74)
         else
-            button.Text = string.format("%s   •   %s   •   %s", item.name, rarityLabel, kindLabel)
+            button.Text = string.format("%s   •   %s   •   %s", itemName, rarityLabel, kindLabel)
             button.BackgroundColor3 = Color3.fromRGB(48, 49, 58)
         end
 
