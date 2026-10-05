@@ -1675,7 +1675,7 @@ local function showRoundFeedback(feedback)
     local masterRound = survived and feedback.challengeCompleted == true and momentumBest >= 4
 
     local resultKind = ResultPresentation.kind(feedback)
-    resultTitle.Text = ResultPresentation.title(feedback)
+    resultTitle.Text = ResultPresentation.title(feedback, localeId)
     resultStroke.Color = resultKind == "master"
         and UITheme.Colors.Gold
         or (resultKind == "clutch"
@@ -1820,7 +1820,7 @@ local function showRoundFeedback(feedback)
     end
 
     if not survived then
-        local _, eliminationTip = ResultPresentation.eliminationCopy(feedback)
+        local _, eliminationTip = ResultPresentation.eliminationCopy(feedback, localeId)
         resultTip.Text = "NEXT TRY • " .. eliminationTip
     elseif firstChaos then
         resultTip.Text = "FIRST CHAOS CLEARED • survive again to build your streak"
