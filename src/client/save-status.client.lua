@@ -15,7 +15,7 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosSaveStatus"
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
+gui.IgnoreGuiInset = false
 gui.DisplayOrder = 24
 gui.Parent = player:WaitForChild("PlayerGui")
 
