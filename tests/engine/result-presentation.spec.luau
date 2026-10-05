@@ -45,6 +45,20 @@ describe("Result presentation", function()
             eliminationCause = "Meteor",
         })).toBe("HIT BY METEOR")
 
+        local platformTitle, platformTip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "DisappearingPlatforms",
+        })
+        expect(platformTitle).toBe("PLATFORM COLLAPSED")
+        expect(string.find(platformTip, "flashing platforms", 1, true) ~= nil).toBe(true)
+
+        local shrinkTitle, shrinkTip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "ShrinkingArena",
+        })
+        expect(shrinkTitle).toBe("CAUGHT BY THE SHRINK")
+        expect(string.find(shrinkTip, "center", 1, true) ~= nil).toBe(true)
+
         local fallTitle, fallTip = ResultPresentation.eliminationCopy({
             survived = false,
             eliminationCause = "Fall",
