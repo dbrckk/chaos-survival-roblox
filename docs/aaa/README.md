@@ -42,6 +42,9 @@ This directory is the professional review system for the project.
 20. [Community, Trust & Safety Review](20_COMMUNITY_TRUST_SAFETY_REVIEW.md)
 21. [Live Ops & Incident Runbook](21_LIVEOPS_INCIDENT_RUNBOOK.md)
 22. [Localization & Internationalization Review](22_LOCALIZATION_INTERNATIONALIZATION_REVIEW.md)
+23. [Asset License & Provenance Register](23_ASSET_LICENSE_REGISTER.md)
+24. [Brand & Terminology Bible](24_BRAND_AND_TERMINOLOGY_BIBLE.md)
+25. [Global Phase State Contract](25_PHASE_STATE_CONTRACT.md)
 
 ## Existing deep implementation guides
 
