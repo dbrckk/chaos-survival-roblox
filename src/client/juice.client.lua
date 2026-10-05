@@ -689,7 +689,22 @@ RunService.RenderStepped:Connect(function(dt)
     end
 
     local targetTransparency = 1
-    if roundDanger then
+    local finalRushActive = currentState
+        and currentState.phase == "round"
+        and currentState.finalRush == true
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+
+    if finalRushActive then
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        local finalWave = reduced
+            and 0.5
+            or ((math.sin(pulseClock * 6.6) + 1) * 0.5)
+        targetTransparency = 0.865 + finalWave * 0.055
+        criticalStroke.Color = activeAccent:Lerp(UITheme.Colors.Red, 0.46)
+        criticalStroke.Thickness = 5 + finalWave * 2.5
+        criticalStroke.Transparency = 0.44 + finalWave * 0.22
+    elseif roundDanger then
         targetTransparency = 0.91 + math.sin(pulseClock * 8) * 0.035
     end
 
@@ -700,10 +715,11 @@ RunService.RenderStepped:Connect(function(dt)
         and healthRatio > 0
         and healthRatio <= 0.30
 
-    if criticalHealth then
+    if criticalHealth and not finalRushActive then
+        criticalStroke.Color = UITheme.Colors.Red
         criticalStroke.Transparency = 0.54 + wave * 0.24
         criticalStroke.Thickness = 4 + wave * 2
-    else
+    elseif not finalRushActive then
         criticalStroke.Transparency += (1 - criticalStroke.Transparency) * math.min(1, dt * 10)
     end
 
@@ -747,14 +763,39 @@ local function bindDamageFeedback(character)
         healthRatio = humanoid.MaxHealth > 0 and math.clamp(health / humanoid.MaxHealth, 0, 1) or 1
         if health < previousHealth and health > 0 then
             local lost = previousHealth - health
-            damageFlash.BackgroundTransparency = math.clamp(0.88 - (lost / 250), 0.66, 0.88)
+            local damageRatio = humanoid.MaxHealth > 0
+                and math.clamp(lost / humanoid.MaxHealth, 0, 1)
+                or 0
+            local criticalHit = damageRatio >= 0.22
+            damageFlash.BackgroundColor3 = criticalHit
+                and Color3.fromRGB(255, 74, 54)
+                or Color3.fromRGB(210, 35, 35)
+            damageGradient.Rotation = (damageGradient.Rotation + 37) % 360
+            damageFlash.BackgroundTransparency = math.clamp(
+                0.90 - damageRatio * 0.82,
+                0.58,
+                0.88
+            )
             TweenService:Create(
                 damageFlash,
                 TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {BackgroundTransparency = 1}
             ):Play()
 
-            tweenCamera(math.min(84, (camera and camera.FieldOfView or 72) + 2.5), 0.06)
+            local fovKick = 1.4 + damageRatio * 4.6
+            tweenCamera(
+                math.min(84, (camera and camera.FieldOfView or 72) + fovKick),
+                0.06
+            )
+
+            if criticalHit and vfxTier.Name ~= "Low" then
+                bloom.Intensity = math.min(1.15, bloom.Intensity + 0.22 * vfxTier.Scale)
+                task.delay(0.10, function()
+                    if currentState then
+                        setMood(currentState)
+                    end
+                end)
+            end
         end
         previousHealth = health
     end)
