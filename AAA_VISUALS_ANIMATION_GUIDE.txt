@@ -1,0 +1,803 @@
+CHAOS SURVIVAL — GUIDE DE PRODUCTION VISUELLE / ANIMATION PREMIUM AAA
+=====================================================================
+
+But
+---
+Ce document définit la méthode à suivre pour toute modification touchant :
+- graphismes 3D ;
+- matériaux / textures ;
+- lighting / atmosphère ;
+- VFX ;
+- animation personnage / bot / décor ;
+- caméra ;
+- composition des maps ;
+- UI visuelle ;
+- optimisation graphique Android / desktop.
+
+Objectif visuel : atteindre une qualité "AAA-like dans Roblox", c'est-à-dire une expérience cohérente, lisible,
+mémorable, techniquement propre et très travaillée. Il ne s'agit PAS d'ajouter toujours plus de bloom,
+de néon, de particules ou de Parts.
+
+Règle fondamentale :
+QUALITÉ = DIRECTION ARTISTIQUE + SILHOUETTE + MATÉRIAUX + ÉCLAIRAGE + MOUVEMENT + COMPOSITION + PERFORMANCE.
+Un effet spectaculaire qui réduit la lisibilité ou les FPS est une régression.
+
+=====================================================================
+1. ARCHITECTURE VISUELLE DU REPO À RESPECTER
+=====================================================================
+
+Avant d'ajouter un nouveau système, inspecter et réutiliser l'existant.
+
+Sources principales :
+- src/shared/VisualTheme.lua
+  Palette, accents, couleurs de surfaces et identité des arènes.
+- src/shared/VfxQuality.lua
+  High / Medium / Low et cadence de mise à jour.
+- src/shared/UITheme.lua
+  Design system UI.
+- src/client/arena-lighting.client.lua
+  Lighting, Atmosphere, Bloom, DOF, SunRays, Clouds, exposition.
+- src/client/arena-hero-scenery.client.lua
+  Landmarks héro et silhouette macro des arènes.
+- src/client/arena-cinematic-depth.client.lua
+  Horizon, midground, silhouettes lointaines, trafic léger.
+- src/client/arena-surface-relief.client.lua
+  Micro-géométrie / détails proches.
+- src/client/arena-hero-motion.client.lua
+  Animation des landmarks.
+- src/client/arena-cinematic-disaster-atmosphere.client.lua
+  Atmosphère catastrophe, particules, shafts, beacons.
+- src/client/disaster-signature-vfx.client.lua
+  Signatures visuelles propres aux catastrophes.
+- src/client/world-polish.client.lua
+  Cohérence monde / accents / hologrammes.
+- src/client/character-motion-polish.client.lua
+  Motion polish joueur.
+- src/client/bot-motion-polish.client.lua
+  Motion polish AI Survivors.
+- src/client/juice.client.lua
+  Feedback écran / caméra / victoire / danger.
+- src/client/near-miss.client.lua
+  Close-call feedback.
+- VISUAL_OVERHAUL_PLAN.txt
+  Avancement du chantier visuel.
+
+Interdiction :
+- créer un second système qui fait déjà la même chose ;
+- créer un nouveau RenderStepped uniquement pour un petit effet si un système existant peut le porter ;
+- coder une palette locale indépendante ;
+- modifier le gameplay pour justifier un décor ;
+- ajouter des collisions à un objet purement décoratif.
+
+=====================================================================
+2. RÈGLE DE DIRECTION ARTISTIQUE
+=====================================================================
+
+Chaque scène doit être lisible en 1 seconde.
+
+Ordre visuel obligatoire :
+1. joueur ;
+2. danger létal ;
+3. route / zone de déplacement utile ;
+4. landmark héro de l'arène ;
+5. architecture secondaire ;
+6. micro-détails ;
+7. skyline / fond.
+
+Un élément de rang inférieur ne doit jamais dominer un élément supérieur.
+
+Chaque arène doit être identifiable sans HUD par :
+- silhouette ;
+- composition spatiale ;
+- rythme architectural ;
+- palette ;
+- matériau dominant ;
+- landmark principal ;
+- type de mouvement ambiant.
+
+Identité cible :
+
+CLASSIC GRID
+- langage : broadcast / compétition / arène technique ;
+- formes : grille, cadres, écrans, mâts ;
+- matériaux : métal propre + DiamondPlate ;
+- lumière : cyan / bleu froid ;
+- mouvement : tally, scan, antennes, écrans.
+
+TOWER RUN
+- langage : complexe vertical industriel ;
+- formes : piliers, ascenseurs, gaines, grues, câbles ;
+- matériaux : métal / CorrodedMetal ;
+- lumière : cyan froid, blanc industriel ;
+- mouvement : lift, câble, lumière de maintenance.
+
+CROSSROADS
+- langage : transit / échangeur néon ;
+- formes : lanes, portiques, flèches, signalétique ;
+- matériaux : béton / métal / panneaux ;
+- lumière : violet / magenta / cyan ;
+- mouvement : signaux directionnels, pulses de voie.
+
+ORBITAL RING
+- langage : station / réacteur orbital ;
+- formes : anneaux, arcs, noyau, modules radiaux ;
+- matériaux : panneaux lisses / métal technique ;
+- lumière : vert-cyan / turquoise ;
+- mouvement : reactor pulse, bras, halo orbital.
+
+=====================================================================
+3. PIPELINE EXACT POUR CRÉER UN ASSET 3D PREMIUM
+=====================================================================
+
+ÉTAPE A — BRIEF AVANT MODÉLISATION
+Pour chaque asset, écrire avant création :
+- fonction visuelle ;
+- distance moyenne de vue ;
+- silhouette attendue ;
+- matériau réel simulé ;
+- arène concernée ;
+- importance : Hero / Midground / Prop / Micro-detail ;
+- qualité minimum où il doit exister : Low / Medium / High ;
+- collision nécessaire ? oui/non ;
+- animation nécessaire ? oui/non.
+
+Si aucune réponse claire : ne pas créer l'asset.
+
+ÉTAPE B — RÉFÉRENCES
+Utiliser 3 à 8 références visuelles maximum par asset :
+- architecture réelle ;
+- machines industrielles ;
+- science-fiction crédible ;
+- surfaces réelles ;
+- éclairage cinématographique.
+
+Ne pas copier une œuvre identifiable.
+Extraire :
+- proportions ;
+- logique de construction ;
+- usure ;
+- type de matériau ;
+- joints / fixations ;
+- distribution des détails.
+
+ÉTAPE C — MODÉLISATION
+Dans Blender ou outil équivalent :
+- travailler à une échelle cohérente avec un avatar Roblox ;
+- silhouette lisible avant tout détail ;
+- ajouter de petits bevels aux arêtes importantes pour capter les highlights ;
+- éviter les surfaces totalement planes pour les objets Hero ;
+- supprimer faces invisibles / internes inutiles ;
+- pivots propres ;
+- orientation cohérente ;
+- noms explicites ;
+- UV propres dans l'espace 0–1 ;
+- éviter les micro-détails géométriques qui seraient invisibles sur mobile.
+
+Budget de projet recommandé :
+- Hero proche : géométrie détaillée mais justifiée visuellement ;
+- Midground : 30–50 % du détail d'un Hero ;
+- Background : silhouette avant détail ;
+- petits props : très faible géométrie, détail porté par texture / matériau.
+
+Ne pas viser un nombre de triangles arbitrairement élevé.
+La silhouette et les normales donnent plus de qualité qu'un maillage inutilement dense.
+
+ÉTAPE D — PBR
+Pour les MeshParts premium, préférer SurfaceAppearance lorsque le gain est visible.
+
+Maps utiles :
+- Color / Albedo ;
+- Normal ;
+- Roughness ;
+- Metalness ;
+- Emissive mask si nécessaire.
+
+Règles matériau :
+- métal = metalness proche du comportement d'un vrai métal ;
+- plastique / béton / bois = non métallique ;
+- ne jamais mettre tous les matériaux brillants ;
+- la Roughness doit varier ;
+- l'usure doit suivre les zones logiques : bords, impacts, joints, passages ;
+- ne pas peindre directement les ombres fortes dans l'albedo ;
+- emissive uniquement sur zones réellement lumineuses.
+
+Budget texture projet :
+- petits props : 512 ou inférieur si possible ;
+- props importants : 1024 ;
+- Hero réellement proche : 1024–2048 si le gain est visible ;
+- 4K uniquement si un test réel prouve qu'une résolution inférieure est insuffisante.
+
+Roblox supporte les workflows PBR via SurfaceAppearance ; les maps doivent être préparées avant runtime.
+Les normales doivent suivre le format attendu par Roblox.
+Toujours vérifier le rendu sous plusieurs niveaux de qualité graphique.
+
+ÉTAPE E — IMPORT ROBLOX
+Après import :
+- vérifier l'échelle avec un R15 ;
+- vérifier pivot / orientation ;
+- RenderFidelity = Automatic par défaut ;
+- utiliser Performance pour des objets complexes qui n'ont pas besoin d'une silhouette exacte à distance ;
+- utiliser Precise uniquement si la silhouette du Hero l'exige réellement ;
+- CollisionFidelity simple dès que possible ;
+- CanCollide = false pour décor pur ;
+- CanTouch = false si non utilisé ;
+- CanQuery = false si aucune requête spatiale n'en a besoin ;
+- CastShadow = false sur petits objets décoratifs / emissifs si l'ombre ne contribue pas à la scène.
+
+ÉTAPE F — INTÉGRATION
+Ne jamais poser un Hero "au hasard".
+Vérifier :
+- vue depuis chaque spawn ;
+- vue pendant READY ;
+- vue depuis les routes principales ;
+- vue pendant RESULT ;
+- silhouettes avec Darkness / Lava / Freeze / Double Chaos.
+
+=====================================================================
+4. RÉALISME VISUEL : CE QUI FAIT VRAIMENT PREMIUM
+=====================================================================
+
+Le réalisme n'est pas "plus de détails".
+Il vient principalement de :
+
+1. ÉCHELLE
+Une rambarde, un écran, une porte ou un pylône doit avoir une taille crédible par rapport au joueur.
+
+2. MATÉRIAUX
+Deux pièces de même couleur mais de roughness différente doivent réagir différemment à la lumière.
+
+3. CONTACT
+Les éléments doivent sembler posés / fixés :
+- socle ;
+- support ;
+- boulons ou attaches visibles sur Hero ;
+- ombres de contact ;
+- jonctions crédibles.
+
+4. BEVELS / NORMALES
+Une arête parfaitement mathématique réfléchit mal la lumière et fait "low poly".
+Un bevel discret sur les pièces importantes produit immédiatement un aspect plus manufacturé.
+
+5. IMPERFECTIONS
+Ajouter avec parcimonie :
+- variation de roughness ;
+- légère saleté ;
+- rayures cohérentes ;
+- décoloration ;
+- traces près des zones mécaniques.
+
+Éviter la saleté aléatoire uniforme.
+
+6. HIÉRARCHIE DE DÉTAIL
+Grandes formes -> moyennes formes -> petits détails.
+Si le joueur ne comprend pas la grande forme, les micro-détails ne servent à rien.
+
+7. COULEUR
+Limiter la palette.
+Le néon est un accent, pas le matériau principal de toute la scène.
+
+=====================================================================
+5. LIGHTING AAA-LIKE
+=====================================================================
+
+Le lighting doit être conçu comme un système narratif.
+
+Ordre :
+1. rendre le joueur lisible ;
+2. rendre le danger lisible ;
+3. donner une identité d'arène ;
+4. créer profondeur / atmosphère ;
+5. ajouter spectacle.
+
+Utiliser l'architecture existante dans arena-lighting.client.lua.
+
+Règles :
+- une ambiance principale par arène ;
+- Ambient / OutdoorAmbient doivent soutenir les volumes ;
+- ExposureCompensation ne doit pas écraser les détails clairs ;
+- Atmosphere sert à donner profondeur et silhouette ;
+- Clouds servent au ciel, jamais à masquer la lecture de la map ;
+- Bloom = accent, pas voile permanent ;
+- DepthOfField = lobby / READY / RESULT uniquement ou très faible ;
+- DOF = 0 en gameplay actif ;
+- SunRays faibles et adaptatifs ;
+- ColorCorrection subtile ;
+- aucun flash plein écran prolongé.
+
+Principe de contraste :
+- fond légèrement moins contrasté ;
+- aire jouable claire ;
+- warning létal = contraste maximal ;
+- éléments décoratifs = saturation / luminance inférieures aux hazards.
+
+Pendant ROUND :
+- réduire bloom ;
+- réduire DOF ;
+- réduire shafts ;
+- réduire saturation décorative si danger intense ;
+- privilégier la lisibilité.
+
+Pendant RESULT :
+- on peut remonter la qualité cinématique :
+  bloom + profondeur + accents + constellation + lumière des survivants.
+
+=====================================================================
+6. COMPOSITION ET PROFONDEUR DES MAPS
+=====================================================================
+
+Chaque map doit contenir au minimum 5 couches :
+1. surface jouable ;
+2. edge / understructure ;
+3. architecture périphérique proche ;
+4. midground / skyline ;
+5. horizon / void / ciel.
+
+Pour chaque spawn :
+- prendre une capture sans HUD ;
+- la map doit être identifiable ;
+- le Hero doit être visible ou suggéré ;
+- la route immédiate doit rester claire ;
+- aucune structure lointaine ne doit ressembler à une plateforme jouable.
+
+Créer des lignes de force :
+- Classic : grille / verticales broadcast ;
+- Towers : fortes verticales ;
+- Crossroads : lignes horizontales et directions ;
+- Orbital : arcs / cercles / radialité.
+
+Éviter la symétrie parfaite partout.
+Une composition premium utilise des asymétries contrôlées.
+
+=====================================================================
+7. VFX CATASTROPHES
+=====================================================================
+
+Chaque catastrophe doit avoir une signature immédiatement identifiable.
+
+Structure VFX d'un événement :
+A. TELEGRAPH
+- annonce du danger ;
+- emplacement ou direction ;
+- couleur spécifique ;
+- son clair ;
+- durée suffisante pour réagir.
+
+B. ANTICIPATION
+- tension avant impact ;
+- mouvement / lumière qui converge ;
+- jamais plus lumineux que l'impact final trop tôt.
+
+C. IMPACT
+- forme principale ;
+- shockwave ;
+- particules ;
+- son ;
+- petite caméra si approprié ;
+- feedback world-space.
+
+D. AFTERMATH
+- fumée / résidu / lumière dissipée ;
+- très court ;
+- ne pas accumuler les emitters.
+
+Règle :
+le joueur doit pouvoir identifier le danger à la forme même en désactivant la couleur.
+
+Double Chaos :
+- ne pas superposer simplement deux VFX au maximum ;
+- choisir un hazard primaire et un secondaire ;
+- réduire l'opacité des effets secondaires ;
+- éviter deux flashes plein écran simultanés ;
+- préserver les deux télégraphes.
+
+=====================================================================
+8. ANIMATIONS PERSONNAGES PREMIUM
+=====================================================================
+
+Le polish procédural actuel ne remplace pas de vraies animations authored.
+
+Set minimum cible R15 :
+- idle neutre ;
+- idle variation A/B ;
+- walk ;
+- run ;
+- sprint / boost ;
+- jump anticipation ;
+- takeoff ;
+- apex / fall ;
+- landing léger ;
+- landing lourd ;
+- stop / deceleration ;
+- turn gauche / droite si faisable ;
+- hit react léger ;
+- hit react lourd ;
+- élimination ;
+- victory ;
+- clutch victory ;
+- emotes sociaux courts.
+
+Principes d'animation :
+- anticipation avant action ;
+- poids dans le bassin ;
+- arcs naturels des bras ;
+- overlap / follow-through ;
+- tête moins mécanique ;
+- épaules non figées ;
+- appui clair des pieds ;
+- landing avec compression puis récupération ;
+- mouvement asymétrique subtil ;
+- variation entre bots.
+
+Transitions recommandées projet :
+- idle -> locomotion : 0.10–0.18 s ;
+- walk -> run : 0.12–0.22 s ;
+- run -> stop : 0.10–0.18 s ;
+- impact / hit react : très court, ne jamais bloquer le contrôle ;
+- landing compression : ~0.08–0.14 s ;
+- landing recovery : ~0.15–0.28 s.
+
+Ne jamais retirer la réactivité du joueur pour rendre une animation "plus jolie".
+
+=====================================================================
+9. PIPELINE D'ANIMATION
+=====================================================================
+
+Option A — Animation Editor Roblox
+1. créer / charger rig R15 ;
+2. définir poses clés ;
+3. travailler bassin / torse avant bras ;
+4. ajouter overlap ;
+5. vérifier boucle ;
+6. créer markers ;
+7. publier animation ;
+8. intégrer via Animator ;
+9. tester avec différentes vitesses réelles.
+
+Option B — Capture vidéo / mocap
+Utiliser Animation Capture pour générer une base réaliste, puis :
+- nettoyer keyframes ;
+- amplifier les poses utiles pour lisibilité Roblox ;
+- retirer tremblements ;
+- corriger pieds ;
+- simplifier le bruit ;
+- adapter aux proportions R15.
+
+Option C — Blender
+Utiliser si besoin d'un contrôle poussé :
+- rig compatible ;
+- exporter proprement ;
+- vérifier orientation / retarget ;
+- toujours tester dans Studio.
+
+=====================================================================
+10. IK ET CONTACTS
+=====================================================================
+
+IKControl peut être utilisé pour :
+- placement des pieds sur pente ;
+- regard tête/torse vers un point ;
+- interaction main/objet ;
+- poses contextuelles.
+
+Règles :
+- IK en couche légère ;
+- Weight progressif ;
+- ne pas écraser l'animation entière ;
+- désactiver si le résultat produit des jambes cassées ;
+- ne jamais faire de raycasts coûteux par membre à chaque frame sur mobile.
+
+Foot IK :
+- seulement Medium/High si nécessaire ;
+- fréquence limitée ;
+- lissage ;
+- désactivation pendant jump/fall ;
+- conserver les pieds dans des limites anatomiques.
+
+=====================================================================
+11. MARKERS D'ANIMATION
+=====================================================================
+
+Synchroniser les feedbacks avec des markers Animation Editor et GetMarkerReachedSignal().
+
+Markers conseillés :
+- FootL ;
+- FootR ;
+- Takeoff ;
+- Land ;
+- Impact ;
+- VictoryBeat ;
+- EmoteBeat.
+
+Les markers doivent déclencher :
+- son de pas selon surface ;
+- petit dust puff ;
+- impact ;
+- VFX ;
+- audio de victoire.
+
+Ne jamais utiliser des task.wait() approximatifs pour synchroniser un son important avec une animation authored si un marker est possible.
+
+=====================================================================
+12. CAMÉRA ET MOUVEMENT
+=====================================================================
+
+La caméra doit renforcer, jamais gêner.
+
+Actions autorisées :
+- FOV kick faible sur boost / dégâts ;
+- micro-shake court sur impact proche ;
+- léger FOV relax après round ;
+- reveal d'arène court si le joueur conserve sa compréhension spatiale.
+
+Règles :
+- ReduceMotion réduit fortement ou supprime les effets ;
+- aucune caméra secouée en continu ;
+- pas de rotation forcée durant survie ;
+- pas de cutscene longue entre deux rounds ;
+- pas de blur gameplay ;
+- pas de FOV extrême.
+
+Amplitude :
+- petit événement : presque imperceptible ;
+- gros impact proche : lisible mais < sensation de perte de contrôle ;
+- Final Rush : rythme visuel, pas nausée.
+
+=====================================================================
+13. UI VISUELLE PREMIUM
+=====================================================================
+
+UI = même direction artistique que le monde.
+
+Règles :
+- panels sombres, accents contrôlés ;
+- typographie courte / forte ;
+- un accent de couleur principal par information ;
+- corners/strokes cohérents via UITheme ;
+- pas d'emoji aléatoire comme icône premium ;
+- préférer symboles simples et cohérents ;
+- animation UI < 300 ms en général ;
+- aucun panneau modal en ROUND ;
+- mobile : texte lisible sans zoom.
+
+Hiérarchie ROUND :
+1. hazard / action ;
+2. timer ;
+3. survivants ;
+4. challenge secondaire ;
+5. progression meta hors combat.
+
+=====================================================================
+14. QUALITÉ HIGH / MEDIUM / LOW
+=====================================================================
+
+Toute feature visuelle coûteuse doit définir les 3 niveaux.
+
+LOW
+- gameplay complet ;
+- silhouettes essentielles ;
+- telegraphs complets ;
+- presque aucun décor animé ;
+- peu/pas de lights décoratives ;
+- particules fortement réduites ;
+- pas de DOF gameplay ;
+- pas de micro-géométrie inutile.
+
+MEDIUM
+- cible Android normale ;
+- plupart des éléments structurants ;
+- animation décorative limitée ;
+- particules modérées ;
+- quelques lights ;
+- depth modérée.
+
+HIGH
+- desktop / appareils puissants ;
+- détails complets ;
+- silhouettes lointaines ;
+- lights secondaires ;
+- particules supplémentaires ;
+- relief ;
+- mouvement atmosphérique.
+
+Un joueur Low doit toujours comprendre le jeu aussi bien qu'un joueur High.
+
+=====================================================================
+15. BUDGET POUR TOUT NOUVEL EFFET
+=====================================================================
+
+Avant merge, répondre :
+- combien de Parts ajoutées en Low/Medium/High ?
+- combien de MeshParts ?
+- combien de Lights ?
+- combien d'Emitters ?
+- combien de Beams / Trails ?
+- boucle RenderStepped ?
+- fréquence réelle de mise à jour ?
+- cleanup garanti ?
+- comportement quand GeneratedMap disparaît ?
+- respect ReduceMotion ?
+- respect VfxQuality ?
+
+Règles pratiques :
+- aucune boucle RenderStepped supplémentaire si un update 10–30 Hz suffit ;
+- update interval via VfxQuality ;
+- pas de GetDescendants() chaque frame ;
+- pas de FindFirstChild en masse chaque frame ;
+- cache des références ;
+- détruire tous les effets temporaires ;
+- particles = Rate 0 hors phase utile ;
+- Light.Enabled=false ou Brightness=0 hors besoin ;
+- objets décoratifs : CanCollide/Touch/Query=false.
+
+=====================================================================
+16. PERFORMANCE : CRITÈRES D'ACCEPTATION
+=====================================================================
+
+Priorité : vrai Android milieu de gamme.
+
+Cibles projet :
+- 30 FPS stable = plancher acceptable ;
+- 45–60 FPS souhaité si l'appareil le permet ;
+- stabilité > pic de FPS ;
+- aucun gros stutter récurrent ;
+- pas de montée mémoire continue sur 30–60 minutes ;
+- température/batterie observées ;
+- pas de dégradation après plusieurs changements d'arène.
+
+Mesurer :
+- Performance Summary ;
+- MicroProfiler ;
+- PerformancePulse du jeu ;
+- mémoire ;
+- frame-time ;
+- spikes pendant disaster impact ;
+- Double Chaos ;
+- changement map ;
+- RESULT avec survivants/VFX.
+
+Repères frame time :
+- 60 FPS ≈ 16,67 ms ;
+- 30 FPS ≈ 33,33 ms.
+
+Un effet visuel doit être supprimé ou simplifié s'il crée un spike visible récurrent.
+
+=====================================================================
+17. CHECKLIST D'UN ASSET "AAA-LIKE"
+=====================================================================
+
+[ ] Silhouette identifiable.
+[ ] Échelle crédible.
+[ ] Matériau physiquement cohérent.
+[ ] Roughness variée.
+[ ] Bevel / normales propres.
+[ ] Pas de faces inutiles visibles.
+[ ] UV propre.
+[ ] PBR uniquement si le gain est réel.
+[ ] LOD/RenderFidelity adapté.
+[ ] Collision simplifiée.
+[ ] Éclairage cohérent.
+[ ] Ombre utile.
+[ ] N'obstrue aucune route.
+[ ] Lisible en Low.
+[ ] Mobile testé.
+[ ] Cleanup correct.
+[ ] Aucun safe spot involontaire.
+[ ] Aucun pay-to-win visuel.
+
+=====================================================================
+18. CHECKLIST D'UNE ANIMATION "AAA-LIKE"
+=====================================================================
+
+[ ] Poses clés fortes.
+[ ] Anticipation.
+[ ] Poids bassin/torse.
+[ ] Bras non robotiques.
+[ ] Contact pieds propre.
+[ ] Landing avec compression.
+[ ] Transition fluide.
+[ ] Pas de contrôle joueur bloqué.
+[ ] Markers ajoutés.
+[ ] Sons/VFX synchronisés aux markers.
+[ ] Vitesse gameplay testée.
+[ ] ReduceMotion respecté pour couches procédurales.
+[ ] Bot et joueur restent cohérents.
+[ ] Test Android.
+[ ] Test 30 min sans fuite / accumulation.
+
+=====================================================================
+19. CHECKLIST D'UNE SCÈNE
+=====================================================================
+
+Tester sans HUD :
+[ ] Je reconnais l'arène.
+[ ] Je sais où est le centre jouable.
+[ ] Je vois le landmark.
+[ ] Le fond a de la profondeur.
+[ ] Aucun élément décoratif ressemble à un danger.
+[ ] Aucun élément décoratif ressemble à une route jouable s'il ne l'est pas.
+
+Tester avec gameplay :
+[ ] warning visible ;
+[ ] joueur visible ;
+[ ] danger lisible ;
+[ ] pas de bloom excessif ;
+[ ] pas de particules devant la caméra ;
+[ ] aucune perte de FPS brutale ;
+[ ] Double Chaos encore compréhensible.
+
+=====================================================================
+20. ORDRE DES PROCHAINES AMÉLIORATIONS VISUELLES
+=====================================================================
+
+Priorité 1 — QA réel
+- Android quatre arènes ;
+- screenshots spawn / READY / ROUND / FINAL RUSH / RESULT ;
+- profiler.
+
+Priorité 2 — animations authored
+- locomotion R15 ;
+- landing ;
+- victoire ;
+- élimination ;
+- transitions.
+
+Priorité 3 — assets Hero PBR
+- 1 à 3 assets Hero par arène ;
+- remplacer progressivement les assemblages de Parts les plus "prototype".
+
+Priorité 4 — matériaux
+- SurfaceAppearance sur Hero ;
+- variations de roughness ;
+- meilleure séparation métal / béton / plastique / verre.
+
+Priorité 5 — VFX
+- corriger seulement les catastrophes encore faibles après capture réelle.
+
+Priorité 6 — marketing
+- icon / thumbnails / trailer uniquement à partir du rendu réel final.
+
+=====================================================================
+21. CE QU'IL NE FAUT PAS FAIRE
+=====================================================================
+
+NE PAS :
+- mettre du Bloom partout ;
+- mettre tous les matériaux en Neon ;
+- multiplier les particules pour masquer une géométrie faible ;
+- faire du DOF pendant la survie ;
+- créer des assets 4K partout ;
+- utiliser Precise sur tous les MeshParts ;
+- mettre des PointLights sur tous les props ;
+- ajouter une boucle RenderStepped par détail ;
+- secouer la caméra en permanence ;
+- rendre l'animation plus lente que la commande ;
+- faire des bots "parfaits" ;
+- augmenter le contraste décoratif pendant une alerte ;
+- sacrifier 30 FPS pour un détail invisible sur smartphone.
+
+=====================================================================
+22. DÉFINITION DE "TERMINÉ"
+=====================================================================
+
+Une amélioration visuelle n'est FINIE que si :
+1. elle est intégrée au design system ;
+2. elle fonctionne High/Medium/Low ;
+3. elle respecte ReduceMotion ;
+4. elle ne change pas la collision/gameplay involontairement ;
+5. Luau compile ;
+6. Build Validation passe ;
+7. tests moteur concernés passent ;
+8. capture Android réelle vérifiée ;
+9. aucun overlap / warning masqué ;
+10. aucune baisse perceptible de fluidité ;
+11. VISUAL_OVERHAUL_PLAN.txt est mis à jour.
+
+Références techniques Roblox à consulter avant changement moteur majeur :
+- PBR / SurfaceAppearance : Roblox Creator Hub, "PBR textures" / "SurfaceAppearance".
+- Lighting / Atmosphere : Roblox Creator Hub, "Lighting and effects".
+- Animation : Roblox Creator Hub, "Animation", "Animation Editor", "Animation Capture".
+- IK : Roblox Creator Hub, "Inverse Kinematics" / "IKControl".
+- Animation markers : Roblox Creator Hub, "Animation events".
+- Performance : Roblox Creator Hub, "Performance optimization" et "MicroProfiler".
+
+FIN DU GUIDE
