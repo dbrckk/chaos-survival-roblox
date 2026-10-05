@@ -2075,8 +2075,10 @@ local function showVotes(options)
         hintLabel.Size = UDim2.fromScale(0.84, compactVote and 0.20 or 0.17)
         hintLabel.BackgroundTransparency = 1
         hintLabel.Font = Enum.Font.GothamMedium
-        hintLabel.Text = CoreLocalization.hazardHint(localeId, option.id)
+        local action = CoreLocalization.hazardAction(localeId, option.id)
+        local localizedHint = CoreLocalization.hazardHint(localeId, option.id)
             or tostring(option.hint or "")
+        hintLabel.Text = action and (action .. "  •  " .. localizedHint) or localizedHint
         hintLabel.TextColor3 = UITheme.Colors.Muted
         hintLabel.TextScaled = true
         hintLabel.TextWrapped = true
