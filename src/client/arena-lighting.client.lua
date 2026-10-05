@@ -44,6 +44,15 @@ if not depth then
     depth.Parent = Lighting
 end
 
+local sunRays = Lighting:FindFirstChild("ArenaIdentitySunRays")
+if not sunRays then
+    sunRays = Instance.new("SunRaysEffect")
+    sunRays.Name = "ArenaIdentitySunRays"
+    sunRays.Intensity = 0
+    sunRays.Spread = 0.78
+    sunRays.Parent = Lighting
+end
+
 local MOODS = {
     Classic = {
         Tint = Color3.fromRGB(224, 236, 255),
@@ -60,6 +69,11 @@ local MOODS = {
         Density = 0.18,
         Haze = 1.20,
         Glare = 0.10,
+        ClockTime = 18.45,
+        Exposure = -0.10,
+        EnvironmentDiffuse = 0.34,
+        EnvironmentSpecular = 0.78,
+        SunRays = 0.030,
     },
     Towers = {
         Tint = Color3.fromRGB(210, 244, 250),
@@ -76,6 +90,11 @@ local MOODS = {
         Density = 0.20,
         Haze = 1.35,
         Glare = 0.08,
+        ClockTime = 17.85,
+        Exposure = -0.08,
+        EnvironmentDiffuse = 0.38,
+        EnvironmentSpecular = 0.84,
+        SunRays = 0.026,
     },
     Crossroads = {
         Tint = Color3.fromRGB(242, 218, 255),
@@ -92,6 +111,11 @@ local MOODS = {
         Density = 0.17,
         Haze = 1.10,
         Glare = 0.12,
+        ClockTime = 19.10,
+        Exposure = -0.14,
+        EnvironmentDiffuse = 0.30,
+        EnvironmentSpecular = 0.72,
+        SunRays = 0.036,
     },
     Orbital = {
         Tint = Color3.fromRGB(214, 255, 241),
@@ -108,6 +132,11 @@ local MOODS = {
         Density = 0.19,
         Haze = 1.25,
         Glare = 0.09,
+        ClockTime = 18.20,
+        Exposure = -0.06,
+        EnvironmentDiffuse = 0.42,
+        EnvironmentSpecular = 0.88,
+        SunRays = 0.032,
     },
 }
 
@@ -148,6 +177,15 @@ local function applyMood(duration)
     local depthMotionScale = reducedMotion and 0.45 or 1
     local farIntensity = 0.12 * depthQualityScale * depthPhaseScale * depthMotionScale
     local nearIntensity = 0.035 * depthQualityScale * depthPhaseScale * depthMotionScale
+    local renderScale = quality.Name == "Low" and 0.48
+        or (quality.Name == "Medium" and 0.76 or 1)
+    local environmentDiffuse = (mood.EnvironmentDiffuse or 0.30) * renderScale
+    local environmentSpecular = (mood.EnvironmentSpecular or 0.70) * renderScale
+    local exposure = (mood.Exposure or 0) * (quality.Name == "Low" and 0.45 or 1)
+    local sunRayIntensity = (mood.SunRays or 0.025)
+        * (phase == "round" and 0.30 or (phase == "ready" and 0.62 or 1))
+        * (quality.Name == "Low" and 0 or 1)
+        * accessibilityScale
     local shadowSoftness = math.clamp(
         (mood.ShadowSoftness or 0.35) + (quality.Name == "Low" and 0.20 or 0),
         0,
@@ -166,6 +204,12 @@ local function applyMood(duration)
         }
     ):Play()
 
+    pcall(function()
+        Lighting.LightingStyle = Enum.LightingStyle.Realistic
+        Lighting.PrioritizeLightingQuality = quality.Name ~= "Low"
+        Lighting.GlobalShadows = true
+    end)
+
     TweenService:Create(
         Lighting,
         TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -175,6 +219,10 @@ local function applyMood(duration)
             ColorShift_Top = colorShiftTop,
             ColorShift_Bottom = colorShiftBottom,
             ShadowSoftness = shadowSoftness,
+            ClockTime = mood.ClockTime or 18,
+            ExposureCompensation = exposure,
+            EnvironmentDiffuseScale = environmentDiffuse,
+            EnvironmentSpecularScale = environmentSpecular,
         }
     ):Play()
 
@@ -185,6 +233,15 @@ local function applyMood(duration)
             Intensity = bloomIntensity,
             Size = bloomSize,
             Threshold = bloomThreshold,
+        }
+    ):Play()
+
+    TweenService:Create(
+        sunRays,
+        TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Intensity = sunRayIntensity,
+            Spread = quality.Name == "High" and 0.82 or 0.70,
         }
     ):Play()
 
