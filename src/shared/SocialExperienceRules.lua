@@ -30,6 +30,24 @@ function SocialExperienceRules.promptKey(lastSurvived)
         or "INVITE_PROMPT_WIN"
 end
 
+function SocialExperienceRules.inviterUserId(payload, joiningUserId)
+    if type(payload) ~= "table" or payload.source ~= "chaos_crew" then
+        return nil
+    end
+
+    local inviter = tonumber(payload.inviter)
+    local joining = tonumber(joiningUserId)
+    if not inviter or inviter <= 0 or inviter % 1 ~= 0 then
+        return nil
+    end
+    inviter = math.floor(inviter)
+
+    if joining and inviter == joining then
+        return nil
+    end
+    return inviter
+end
+
 function SocialExperienceRules.beaconEmphasis(phase)
     local current = tostring(phase or "waiting")
     if current == "result" then
