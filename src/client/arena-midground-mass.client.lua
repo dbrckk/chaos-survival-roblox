@@ -65,14 +65,16 @@ local function buildClassic(base, theme, tier)
             tier.Name == "Low" and 0.34 or 0.18
         )
 
-        if tier.Name ~= "Low" then
+        local glowEnabled = tier.Name == "High" and i <= 3
+            or tier.Name == "Medium" and i == 1
+        if glowEnabled then
             makePart(
                 "ClassicBroadcastMassGlow" .. i,
                 Vector3.new(body.Size.X * 0.66, 0.28, body.Size.Z + 0.10),
                 body.CFrame * CFrame.new(0, body.Size.Y * 0.5 + 0.18, 0),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
-                0.58
+                tier.Name == "High" and 0.62 or 0.70
             )
         end
     end
@@ -101,14 +103,16 @@ local function buildTowers(base, theme, tier)
             tier.Name == "Low" and 0.32 or 0.15
         )
 
-        if tier.Name ~= "Low" then
+        local stripEnabled = tier.Name == "High" and i % 2 == 1
+            or tier.Name == "Medium" and i == 1
+        if stripEnabled then
             makePart(
                 "TowerCoolingMassStrip" .. i,
                 Vector3.new(0.42, body.Size.Y * 0.68, body.Size.Z + 0.10),
                 body.CFrame * CFrame.new(0, 0, -body.Size.Z * 0.5 - 0.08),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
-                0.52
+                tier.Name == "High" and 0.58 or 0.68
             )
         end
     end
@@ -136,7 +140,9 @@ local function buildCrossroads(base, theme, tier)
             tier.Name == "Low" and 0.36 or 0.18
         )
 
-        if tier.Name ~= "Low" then
+        local railEnabled = tier.Name == "High" and i % 2 == 1
+            or tier.Name == "Medium" and i == 1
+        if railEnabled then
             makePart(
                 "CrossroadsTransitMassRail" .. i,
                 Vector3.new(
@@ -147,7 +153,7 @@ local function buildCrossroads(base, theme, tier)
                 body.CFrame * CFrame.new(0, body.Size.Y * 0.5 + 0.20, 0),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
-                0.54
+                tier.Name == "High" and 0.60 or 0.70
             )
         end
     end
@@ -176,13 +182,14 @@ local function buildOrbital(base, theme, tier)
 
         if tier.Name ~= "Low" then
             local tangent = angle + math.pi * 0.5
+            local glowing = tier.Name == "High" and i % 3 == 0
             makePart(
                 "OrbitalStationMassArm" .. i,
                 Vector3.new(14 + (i % 2) * 4, 0.60, 1.15),
                 body.CFrame * CFrame.Angles(0, -tangent, 0),
-                i % 2 == 0 and theme.Secondary or theme.Detail,
-                i % 2 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-                i % 2 == 0 and 0.54 or 0.20
+                glowing and theme.Secondary or theme.Detail,
+                glowing and Enum.Material.Neon or Enum.Material.Metal,
+                glowing and 0.60 or 0.20
             )
         end
     end
