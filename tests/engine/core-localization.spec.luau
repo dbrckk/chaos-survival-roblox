@@ -20,6 +20,10 @@ describe("Core localization", function()
         expect(CoreLocalization.text("fr-fr", "NEXT")).toBe("SUIVANT")
         expect(CoreLocalization.text("fr-fr", "YOU_SURVIVED")).toBe("TU AS SURVÉCU")
         expect(CoreLocalization.text("fr-fr", "ELIMINATED_FEED", "Nova")).toBe("Nova a été éliminé")
+        expect(CoreLocalization.text("fr-fr", "RESULT_STREAK_TAG", 3)).toBe("SÉRIE x3")
+        expect(CoreLocalization.text("fr-fr", "RESULT_NEXT_GOAL", 5, 120)).toBe(
+            "PROCHAIN OBJECTIF • NIVEAU 5 • 120 XP RESTANTS"
+        )
     end)
 
     it("localizes hazard names and actionable hints", function()
@@ -86,6 +90,8 @@ describe("Core localization", function()
         expect(CoreLocalization.arenaMechanicName("fr-fr", "Orbital", "fallback")).toBe(
             "BOOSTERS ORBITAUX"
         )
+        expect(CoreLocalization.medal("fr-fr", "SHARD HUNTER")).toBe("CHASSEUR D'ÉCLATS")
+        expect(CoreLocalization.medal("fr-fr", "UNKNOWN")).toBe("UNKNOWN")
     end)
 
     it("localizes first-time coaching without altering unknown copy", function()
