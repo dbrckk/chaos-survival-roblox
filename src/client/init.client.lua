@@ -1622,6 +1622,31 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindResponsiveCamera
 local resultToken = 0
 local lastRoundHint = ""
 
+local function dismissResultCard()
+    if not resultCard.Visible then
+        return
+    end
+
+    resultToken += 1
+    local token = resultToken
+    TweenService:Create(
+        resultCard,
+        UITheme.Motion.StandardFade,
+        {BackgroundTransparency = 1}
+    ):Play()
+    TweenService:Create(
+        resultScale,
+        UITheme.Motion.StandardFade,
+        {Scale = 0.90}
+    ):Play()
+
+    task.delay(0.25, function()
+        if token == resultToken then
+            resultCard.Visible = false
+        end
+    end)
+end
+
 local function masteryProgressText(state, name)
     if type(state) ~= "table" or not name then
         return nil
@@ -1901,14 +1926,12 @@ local function showRoundFeedback(feedback)
         TweenService:Create(resultFlash, UITheme.Motion.StandardFade, {BackgroundTransparency = 1}):Play()
     end)
 
-    local resultHoldSeconds = touchDevice and 5.2 or 4.2
-    task.delay(resultHoldSeconds, function()
-        if token ~= resultToken then return end
-        TweenService:Create(resultCard, UITheme.Motion.StandardFade, {BackgroundTransparency = 1}):Play()
-        TweenService:Create(resultScale, UITheme.Motion.StandardFade, {Scale = 0.90}):Play()
-        task.wait(0.24)
+    -- Phase transitions own the normal dismissal so the result never
+    -- disappears early on longer multiplayer post-round screens. Keep only a
+    -- generous fallback in case a state update is lost.
+    task.delay(10, function()
         if token == resultToken then
-            resultCard.Visible = false
+            dismissResultCard()
         end
     end)
 end
@@ -2368,6 +2391,10 @@ stateEvent.OnClientEvent:Connect(function(state)
     currentHudPhase = tostring(state.phase or "waiting")
     compactRoundTop = touchDevice and currentHudPhase == "round"
     top.Visible = currentHudPhase ~= "result"
+
+    if previousHudPhase == "result" and currentHudPhase ~= "result" then
+        dismissResultCard()
+    end
     if currentHudPhase ~= "intermission" and previousHudPhase == "intermission" then
         metaNotificationShownThisIntermission = false
     elseif currentHudPhase == "intermission" and previousHudPhase ~= "intermission" then
@@ -2399,8 +2426,11 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 
     if activeGameplay or firstLobby then
-        resultToken += 1
-        resultCard.Visible = false
+        if resultCard.Visible then
+            dismissResultCard()
+        else
+            resultToken += 1
+        end
         resultFlash.BackgroundTransparency = 1
     end
 
