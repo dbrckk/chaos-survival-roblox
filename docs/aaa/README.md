@@ -33,6 +33,16 @@ This directory is the professional review system for the project.
 14. [Red Team & Innovation Backlog](14_RED_TEAM_AND_INNOVATION_BACKLOG.md)
 15. [System Conflict Matrix](15_SYSTEM_CONFLICT_MATRIX.md)
 
+## Specialist production backlogs
+
+16. [Audio Asset Audit](16_AUDIO_ASSET_AUDIT.md)
+17. [Authored Animation Manifest](17_AUTHORED_ANIMATION_MANIFEST.md)
+18. [PBR Hero Asset Backlog](18_PBR_HERO_ASSET_BACKLOG.md)
+19. [Store & Marketing Creative Review](19_STORE_MARKETING_CREATIVE_REVIEW.md)
+20. [Community, Trust & Safety Review](20_COMMUNITY_TRUST_SAFETY_REVIEW.md)
+21. [Live Ops & Incident Runbook](21_LIVEOPS_INCIDENT_RUNBOOK.md)
+22. [Localization & Internationalization Review](22_LOCALIZATION_INTERNATIONALIZATION_REVIEW.md)
+
 ## Existing deep implementation guides
 
 - `/AAA_VISUALS_ANIMATION_GUIDE.txt`
