@@ -490,6 +490,91 @@ local function arenaRecord(localeId, arenaIdOrName)
     return record or ARENA_COPY.en[id]
 end
 
+local COSMETIC_COPY = {
+    en = {
+        names = {
+            trail_blue = "Blue Pulse",
+            trail_gold = "Golden Rush",
+            trail_void = "Void Rift",
+            trail_plasma = "Plasma Wake",
+            trail_inferno = "Inferno",
+            trail_prism = "Prism Shift",
+            aura_emerald = "Emerald Core",
+            aura_solar = "Solar Crown",
+            aura_cosmic = "Cosmic Storm",
+            aura_supporter = "Founder Glow",
+            trail_founder = "Founder Comet",
+            trail_neon = "Hyper Neon",
+            aura_neon = "Hyper Neon Halo",
+            trail_gridmaster = "Gridmaster",
+            aura_towercore = "Tower Core",
+            trail_nexus = "Nexus Runner",
+            aura_orbital = "Orbital Halo",
+        },
+        collections = {
+            ["Core Pulse"] = "CORE PULSE",
+            ["Cosmic Rift"] = "COSMIC RIFT",
+            ["Neon Circuit"] = "NEON CIRCUIT",
+            ["Elemental Core"] = "ELEMENTAL CORE",
+            ["Founder"] = "FOUNDER",
+            ["Arena Masters"] = "ARENA MASTERS",
+        },
+        rarities = {
+            Common = "COMMON",
+            Rare = "RARE",
+            Epic = "EPIC",
+            Legendary = "LEGENDARY",
+            Premium = "PREMIUM",
+        },
+        kinds = {
+            trail = "TRAIL",
+            aura = "AURA",
+            cosmetic = "COSMETIC",
+        },
+    },
+    fr = {
+        names = {
+            trail_blue = "Impulsion bleue",
+            trail_gold = "Ruée dorée",
+            trail_void = "Faille du vide",
+            trail_plasma = "Sillage plasma",
+            trail_inferno = "Brasier",
+            trail_prism = "Prisme changeant",
+            aura_emerald = "Cœur émeraude",
+            aura_solar = "Couronne solaire",
+            aura_cosmic = "Tempête cosmique",
+            aura_supporter = "Éclat fondateur",
+            trail_founder = "Comète fondatrice",
+            trail_neon = "Hyper néon",
+            aura_neon = "Halo hyper néon",
+            trail_gridmaster = "Maître de la grille",
+            aura_towercore = "Cœur des tours",
+            trail_nexus = "Coureur Nexus",
+            aura_orbital = "Halo orbital",
+        },
+        collections = {
+            ["Core Pulse"] = "PULSATION CENTRALE",
+            ["Cosmic Rift"] = "FAILLE COSMIQUE",
+            ["Neon Circuit"] = "CIRCUIT NÉON",
+            ["Elemental Core"] = "CŒUR ÉLÉMENTAIRE",
+            ["Founder"] = "FONDATEUR",
+            ["Arena Masters"] = "MAÎTRES D'ARÈNE",
+        },
+        rarities = {
+            Common = "COMMUN",
+            Rare = "RARE",
+            Epic = "ÉPIQUE",
+            Legendary = "LÉGENDAIRE",
+            Premium = "PREMIUM",
+        },
+        kinds = {
+            trail = "TRAÎNÉE",
+            aura = "AURA",
+            cosmetic = "COSMÉTIQUE",
+        },
+    },
+}
+
 local QUEST_TITLES = {
     en = {
         PLAY_3 = "Play 3 rounds",
@@ -672,6 +757,38 @@ end
 function CoreLocalization.arenaMechanicHint(localeId, arenaIdOrName, fallback)
     local record = arenaRecord(localeId, arenaIdOrName)
     return record and record.mechanicHint or fallback
+end
+
+function CoreLocalization.cosmeticName(localeId, cosmeticId, fallback)
+    local language = CoreLocalization.language(localeId)
+    local id = tostring(cosmeticId or "")
+    return (COSMETIC_COPY[language] and COSMETIC_COPY[language].names[id])
+        or COSMETIC_COPY.en.names[id]
+        or fallback
+end
+
+function CoreLocalization.cosmeticCollection(localeId, collectionName, fallback)
+    local language = CoreLocalization.language(localeId)
+    local key = tostring(collectionName or "")
+    return (COSMETIC_COPY[language] and COSMETIC_COPY[language].collections[key])
+        or COSMETIC_COPY.en.collections[key]
+        or fallback
+end
+
+function CoreLocalization.cosmeticRarity(localeId, rarity, fallback)
+    local language = CoreLocalization.language(localeId)
+    local key = tostring(rarity or "")
+    return (COSMETIC_COPY[language] and COSMETIC_COPY[language].rarities[key])
+        or COSMETIC_COPY.en.rarities[key]
+        or fallback
+end
+
+function CoreLocalization.cosmeticKind(localeId, kind, fallback)
+    local language = CoreLocalization.language(localeId)
+    local key = tostring(kind or "cosmetic")
+    return (COSMETIC_COPY[language] and COSMETIC_COPY[language].kinds[key])
+        or COSMETIC_COPY.en.kinds[key]
+        or fallback
 end
 
 function CoreLocalization.questTitle(localeId, questId, fallback)
