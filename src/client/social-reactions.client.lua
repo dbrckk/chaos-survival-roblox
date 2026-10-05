@@ -152,7 +152,7 @@ local function showReactionBubble(target, reactionId)
     bubble.Size = UDim2.fromOffset(138, 38)
     bubble.StudsOffsetWorldSpace = Vector3.new(0, 3.7, 0)
     bubble.MaxDistance = 120
-    bubble.Parent = gui
+    bubble.Parent = player:WaitForChild("PlayerGui")
 
     local label = Instance.new("TextLabel")
     label.Size = UDim2.fromScale(1, 1)
