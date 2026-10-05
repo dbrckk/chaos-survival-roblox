@@ -70,7 +70,8 @@ PHASE 4 — VFX CATASTROPHES
 [QA]   4.9 Blackout : ambiance sombre + balises d'urgence périphériques.
 [QA]   4.10 Shrinking Arena : périmètre énergétique pulsant synchronisé avec la base.
 [QA]   4.11 Jump Shock : double front d'onde énergétique.
-[TODO] 4.12 QA Double Chaos : lisibilité de toutes les combinaisons autorisées.
+[QA]   4.12 Ajouter atmosphère catastrophe à l'échelle de l'arène : balises périphériques, particules contextuelles, shafts lumineux et renforcement FINAL RUSH.
+[TODO] 4.13 QA Double Chaos : lisibilité de toutes les combinaisons autorisées.
 
 PHASE 5 — UI / UX PREMIUM
 --------------------------
