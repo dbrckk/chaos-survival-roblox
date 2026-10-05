@@ -264,6 +264,7 @@ layout.Padding = UDim.new(0.018, 0)
 layout.Parent = votes
 
 local selectedVote = nil
+local compactRoundTop = false
 
 local rookieCoach = Instance.new("TextLabel")
 rookieCoach.Name = "RookieCoach"
@@ -1495,10 +1496,17 @@ local function applyResponsiveLayout()
     aliveCounter.Size = UDim2.fromOffset(math.max(88, profile.timerSize + 36), 24)
     aliveCounter.Position = UDim2.new(1, -8, 1, 5)
 
-    title.Position = UDim2.fromOffset(14, 4)
-    title.Size = UDim2.new(1, -(profile.timerSize + 32), 0.56, 0)
-    hint.Position = UDim2.new(0, 14, 0.60, 0)
-    hint.Size = UDim2.new(1, -(profile.timerSize + 40), 0.32, 0)
+    if compactRoundTop then
+        title.Position = UDim2.new(0, 14, 0.14, 0)
+        title.Size = UDim2.new(1, -(profile.timerSize + 32), 0.70, 0)
+        hint.Visible = false
+    else
+        title.Position = UDim2.fromOffset(14, 4)
+        title.Size = UDim2.new(1, -(profile.timerSize + 32), 0.56, 0)
+        hint.Position = UDim2.new(0, 14, 0.60, 0)
+        hint.Size = UDim2.new(1, -(profile.timerSize + 40), 0.32, 0)
+        hint.Visible = true
+    end
 
     votes.Position = UDim2.fromScale(0.5, profile.voteHeight <= 140 and 0.49 or 0.54)
     votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
@@ -2289,6 +2297,7 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     local previousHudPhase = currentHudPhase
     currentHudPhase = tostring(state.phase or "waiting")
+    compactRoundTop = touchDevice and currentHudPhase == "round"
     if currentHudPhase ~= "intermission" and previousHudPhase == "intermission" then
         metaNotificationShownThisIntermission = false
     elseif currentHudPhase == "intermission" and previousHudPhase ~= "intermission" then
