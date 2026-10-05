@@ -161,3 +161,18 @@ Only after retention/device UX are acceptable:
 ## Definition of done
 
 Chaos Survival 1.0 is ready only when automated CI, authenticated Studio E2E, physical-device UX/performance, persistence/rejoin and public-alpha gates have all passed on the same release lineage.
+
+
+## AAA specialist review gate
+
+- [ ] Current specialist audit updated for the exact release lineage.
+- [ ] No department score below 8/10.
+- [ ] Gameplay, Game Feel, UX, Visual, Audio, Performance and QA are >=9/10 or have an explicit evidence-backed exception.
+- [ ] Every remaining low-confidence score has been resolved with device/playtest/profile evidence.
+- [ ] Authored asset/license manifest is complete.
+- [ ] Physical device certification protocol completed.
+- [ ] Public alpha/player research protocol completed.
+- [ ] Final harmonization pass completed.
+- [ ] Final subtraction review completed.
+- [ ] No duplicated major system remains.
+- [ ] Perfect-Candidate decision recorded before RC tag.
