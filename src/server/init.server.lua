@@ -992,7 +992,9 @@ while true do
     local intermissionCancelled = false
     local remainingIntermission = intermissionSettings.IntermissionSeconds
     if firstSessionVote then
-        remainingIntermission = math.max(remainingIntermission, 9)
+        -- Give a brand-new touch player a calm four-second control-reading
+        -- window before the eight-second vote opens.
+        remainingIntermission = math.max(remainingIntermission, 12)
     end
     local previousSoloMode = intermissionSettings.Solo
 
