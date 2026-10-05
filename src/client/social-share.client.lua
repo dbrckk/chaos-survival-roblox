@@ -28,6 +28,7 @@ local shareBusy = false
 local exposureSentThisResult = false
 local viewportConnection = nil
 local operationToken = 0
+local awaitingCapture = false
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosMomentShare"
@@ -213,6 +214,8 @@ local function promptShare(content, launchData, token)
         return
     end
 
+    awaitingCapture = false
+
     local ok = pcall(function()
         CaptureService:PromptShareCapture(
             content,
@@ -270,6 +273,7 @@ local function captureAndShare()
 
     operationToken += 1
     local token = operationToken
+    awaitingCapture = true
     setBusy(true)
     socialSignalEvent:FireServer("share_capture_requested")
 
@@ -316,7 +320,8 @@ local function captureAndShare()
     end
 
     task.delay(10, function()
-        if token == operationToken and shareBusy then
+        if token == operationToken and shareBusy and awaitingCapture then
+            awaitingCapture = false
             showUnavailable(token)
         end
     end)
@@ -340,6 +345,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         exposureSentThisResult = false
         if previousPhase == "result" then
             operationToken += 1
+            awaitingCapture = false
             shareBusy = false
             title.Text = CoreLocalization.text(localeId, "SHARE_MOMENT")
         end
