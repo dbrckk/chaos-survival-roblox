@@ -59,15 +59,14 @@ function FirstTimeExperience.coachText(state, metrics)
         end
 
         local seconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
-        if mechanicUses > 0 then
-            return "NICE ESCAPE  •  SURVIVE UNTIL THE TIMER HITS 0"
-        elseif shards > 0 then
-            return "SHARD COLLECTED  •  BONUS COINS ARE OPTIONAL  •  STAY ALIVE"
-        elseif seconds <= 7 then
-            return "FINAL SECONDS  •  STAY ALIVE  •  DON'T GREED FOR SHARDS"
+        if seconds <= 7 then
+            return "FINAL SECONDS  •  STAY ALIVE  •  IGNORE OPTIONAL SHARDS"
         end
 
-        return "SURVIVE UNTIL 0  •  RED/ORANGE = DANGER  •  SHARDS = OPTIONAL BONUS"
+        -- READY already teaches the objective, shard pickup has its own
+        -- feedback, and mechanic use has a dedicated cue. Keep the action
+        -- phase visually quiet so hazard telegraphs remain the priority.
+        return nil
     end
 
     return nil
