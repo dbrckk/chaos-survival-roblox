@@ -2350,6 +2350,7 @@ end
 
 
 local currentHudPhase = "waiting"
+local currentVoteActive = false
 local pendingQuestCompletion = nil
 local pendingAchievement = nil
 local pendingDailyReward = nil
@@ -2359,6 +2360,7 @@ local function shouldDeferMetaNotification()
     return currentHudPhase == "ready"
         or currentHudPhase == "round"
         or currentHudPhase == "result"
+        or currentVoteActive
         or (tonumber(player:GetAttribute("Games")) or 0) <= 0
 end
 
@@ -2437,6 +2439,7 @@ end
 
 local function showOnePendingMetaNotification()
     if currentHudPhase ~= "intermission"
+        or currentVoteActive
         or metaNotificationShownThisIntermission
         or (tonumber(player:GetAttribute("Games")) or 0) <= 0
     then
@@ -2622,6 +2625,9 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     local previousHudPhase = currentHudPhase
     currentHudPhase = tostring(state.phase or "waiting")
+    currentVoteActive = currentHudPhase == "intermission"
+        and type(state.voteOptions) == "table"
+        and #state.voteOptions > 0
     compactRoundTop = touchDevice and currentHudPhase == "round"
     top.Visible = currentHudPhase ~= "result"
 
