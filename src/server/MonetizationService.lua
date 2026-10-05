@@ -107,9 +107,11 @@ local function stateFor(player)
         end
     end
 
+    local dataAvailable = player:GetAttribute("DataPersistenceAvailable") == true
     return {
         offers = result,
-        enabled = #result > 0,
+        enabled = dataAvailable and #result > 0,
+        dataAvailable = dataAvailable,
         fairPlay = "COSMETIC ONLY • NO GAMEPLAY ADVANTAGE",
     }
 end
