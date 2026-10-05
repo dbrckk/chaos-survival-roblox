@@ -73,6 +73,8 @@ describe("Core localization", function()
             CoreLocalization.achievementDescription("fr-fr", "LEVEL_5", "fallback")
         ).toBe("Atteins le niveau 5")
         expect(CoreLocalization.text("fr-fr", "DAY_STREAK", 7)).toBe("SÉRIE DE 7 JOURS")
+        expect(CoreLocalization.text("fr-fr", "PRACTICE_BOOST")).toBe("ESSAIE LE BOOST")
+        expect(CoreLocalization.text("fr-fr", "ESCAPE_PAD")).toBe("PAD D'ÉVASION")
     end)
 
     it("localizes first-time coaching without altering unknown copy", function()
