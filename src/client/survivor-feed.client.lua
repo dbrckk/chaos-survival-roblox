@@ -2,10 +2,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local touchDevice = UserInputService.TouchEnabled
 
@@ -73,14 +76,14 @@ local function showElimination(displayName)
         return
     end
 
-    local safeName = tostring(displayName or "Survivor")
+    local safeName = tostring(displayName or CoreLocalization.text(localeId, "SURVIVOR_LABEL"))
     if safeName == "" then
-        safeName = "Survivor"
+        safeName = CoreLocalization.text(localeId, "SURVIVOR_LABEL")
     end
 
     token += 1
     local current = token
-    label.Text = safeName .. " was eliminated"
+    label.Text = CoreLocalization.text(localeId, "ELIMINATED_FEED", safeName)
     card.Visible = true
     card.BackgroundTransparency = 1
     scale.Scale = 0.90
