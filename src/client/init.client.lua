@@ -1948,6 +1948,11 @@ local function showRoundFeedback(feedback)
     if survived and streakCount >= 2 then
         table.insert(tags, CoreLocalization.text(localeId, "RESULT_STREAK_TAG", streakCount))
     end
+
+    local crewRounds = math.max(0, math.floor(tonumber(feedback.crewRounds) or 0))
+    if crewRounds >= 1 then
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_CREW_ROUNDS", crewRounds))
+    end
     local arenaMastery = feedback.arenaMastery
     if type(arenaMastery) == "table" and feedback.arenaMasteryName then
         table.insert(
@@ -1993,6 +1998,8 @@ local function showRoundFeedback(feedback)
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CLUTCH_TAG"))
         elseif survived and streakCount >= 2 then
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_STREAK_TAG", streakCount))
+        elseif crewRounds >= 1 then
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CREW_ROUNDS", crewRounds))
         elseif shardCount > 0 then
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_SHARDS_TAG", shardCount))
         end
