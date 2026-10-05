@@ -1,5 +1,11 @@
 local SocialExperienceRules = {}
 
+local REACTION_KEYS = {
+    gg = "SOCIAL_REACTION_GG",
+    again = "SOCIAL_REACTION_AGAIN",
+    wow = "SOCIAL_REACTION_WOW",
+}
+
 function SocialExperienceRules.shouldShow(phase, voteOptions, games, dataLoaded)
     if dataLoaded ~= true or math.max(0, math.floor(tonumber(games) or 0)) < 1 then
         return false
@@ -46,6 +52,16 @@ function SocialExperienceRules.inviterUserId(payload, joiningUserId)
         return nil
     end
     return inviter
+end
+
+function SocialExperienceRules.reactionKey(reactionId)
+    return REACTION_KEYS[tostring(reactionId or "")]
+end
+
+function SocialExperienceRules.canReact(phase, humanPlayers, games)
+    return tostring(phase or "") == "result"
+        and math.max(0, math.floor(tonumber(humanPlayers) or 0)) >= 2
+        and math.max(0, math.floor(tonumber(games) or 0)) >= 1
 end
 
 function SocialExperienceRules.beaconEmphasis(phase)
