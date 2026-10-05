@@ -98,10 +98,7 @@ local function available()
     local criticalPhase = currentPhase == "ready"
         or currentPhase == "round"
         or currentPhase == "result"
-    local experienced = math.max(0, tonumber(player:GetAttribute("Games")) or 0) > 0
-
     return player:GetAttribute("DataLoaded") == true
-        and experienced
         and not criticalPhase
         and not voteVisible
 end
