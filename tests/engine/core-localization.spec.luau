@@ -33,6 +33,10 @@ describe("Core localization", function()
         )
         expect(CoreLocalization.text("fr-fr", "CHAOS_RUN")).toBe("TA COURSE CHAOS")
         expect(CoreLocalization.text("fr-fr", "RUN_LEVEL_READY", 5)).toBe("NIVEAU 5 PRÊT")
+        expect(CoreLocalization.text("fr-fr", "RESULT_CREW_ROUNDS", 3)).toBe(
+            "ÉQUIPE • 3 MANCHES ENSEMBLE"
+        )
+        expect(CoreLocalization.text("fr-fr", "CHAOS_FUSION_SUB")).toBe("SURVIS AUX DEUX DANGERS")
         expect(CoreLocalization.text("fr-fr", "YOU_SURVIVED")).toBe("TU AS SURVÉCU")
         expect(CoreLocalization.text("fr-fr", "ELIMINATED_FEED", "Nova")).toBe("Nova a été éliminé")
         expect(CoreLocalization.text("fr-fr", "RESULT_STREAK_TAG", 3)).toBe("SÉRIE x3")
