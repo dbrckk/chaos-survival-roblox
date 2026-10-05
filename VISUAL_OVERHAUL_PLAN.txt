@@ -45,6 +45,7 @@ PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 [QA]   2.5 Ajouter variations de décor propres à chaque arène.
 [QA]   2.6 Vérifier qu'aucun décor ne crée de nouveau safe spot ou collision parasite — garde-fou moteur ajouté.
 [TODO] 2.7 QA Android / desktop des 4 arènes.
+[QA]   2.8 Casser les silhouettes trop symétriques avec des clusters asymétriques sobres Medium/High.
 
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 -------------------------------------------
@@ -59,6 +60,8 @@ PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 [QA]   3.9 Activer rendu réaliste adaptatif : réflexions environnementales, exposition, rayons solaires, nuages dynamiques et vent.
 [QA]   3.10 Ajouter relief/micro-géométrie locale premium sur les surfaces des 4 arènes.
 [QA]   3.11 Animer les landmarks héro : lift Towers, réacteur Orbital, signalisation Crossroads, broadcast Classic.
+[QA]   3.12 Hiérarchiser les focal lights en key/fill/rim au lieu de sources de puissance uniforme.
+[QA]   3.13 Finaliser le langage matériau Orbital : métal dominant sur masses, hub et docking pod.
 
 PHASE 4 — VFX CATASTROPHES
 ---------------------------
