@@ -1,10 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local Config = require(ReplicatedStorage.Shared.Config)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local cosmeticStateEvent = remotes:WaitForChild("CosmeticState")
@@ -70,21 +73,28 @@ local function refresh()
     local progress = math.clamp((xp - fromXP) / span, 0, 1)
     local remaining = math.max(0, toXP - xp)
 
-    statsLabel.Text = string.format("LVL %d  •  %d WINS  •  %d COINS", level, wins, coins)
+    statsLabel.Text = CoreLocalization.text(
+        localeId,
+        "PROFILE_STATS",
+        level,
+        wins,
+        coins
+    )
     progressLabel.Text = remaining > 0
-        and string.format("NEXT LEVEL  •  %d XP TO GO", remaining)
-        or "NEXT LEVEL READY"
+        and CoreLocalization.text(localeId, "NEXT_LEVEL_XP", remaining)
+        or CoreLocalization.text(localeId, "NEXT_LEVEL_READY_SHORT")
     xpFill.Size = UDim2.fromScale(progress, 1)
 
     if collectionLabel then
         if collectionOwned ~= nil and collectionTotal ~= nil then
-            collectionLabel.Text = string.format(
-                "COLLECTION  %d / %d",
+            collectionLabel.Text = CoreLocalization.text(
+                localeId,
+                "COLLECTION_PROGRESS",
                 collectionOwned,
                 collectionTotal
             )
         else
-            collectionLabel.Text = "COLLECTION  •  SYNCING"
+            collectionLabel.Text = CoreLocalization.text(localeId, "COLLECTION_SYNCING")
         end
     end
 
@@ -149,7 +159,7 @@ local function build()
     title.Size = UDim2.fromScale(0.90, 0.19)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
-    title.Text = "YOUR CHAOS PROFILE"
+    title.Text = CoreLocalization.text(localeId, "CHAOS_PROFILE")
     title.TextColor3 = UITheme.Colors.Cyan
     title.TextScaled = true
     title.TextXAlignment = Enum.TextXAlignment.Left
