@@ -114,9 +114,10 @@ local function rebuild()
         light.Range = math.clamp(tonumber(definition.Range) or 48, 8, 80)
         light.Shadows = tier.Name == "High"
         light.Brightness = 0
+        local hierarchyScale = math.clamp(tonumber(definition.Intensity) or 1, 0.20, 1.25)
         light:SetAttribute(
             "BaseBrightness",
-            tier.Name == "High" and 1.22 or 0.82
+            (tier.Name == "High" and 1.22 or 0.82) * hierarchyScale
         )
         light.Parent = anchor
         table.insert(lights, light)
