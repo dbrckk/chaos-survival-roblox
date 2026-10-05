@@ -79,6 +79,13 @@ describe("Core localization", function()
         expect(CoreLocalization.text("fr-fr", "ESCAPE_PAD")).toBe("PAD D'ÉVASION")
         expect(CoreLocalization.text("fr-fr", "WAYFIND_ARENA")).toBe("ARÈNE")
         expect(CoreLocalization.text("fr-fr", "WAYFIND_PRACTICE")).toBe("ENTRAÎNEMENT")
+        expect(CoreLocalization.arenaName("fr-fr", "Classic", "fallback")).toBe("GRILLE CLASSIQUE")
+        expect(CoreLocalization.arenaStrategy("fr-fr", "Towers", "fallback")).toBe(
+            "Arène verticale • prends de la hauteur sans te faire enfermer"
+        )
+        expect(CoreLocalization.arenaMechanicName("fr-fr", "Orbital", "fallback")).toBe(
+            "BOOSTERS ORBITAUX"
+        )
     end)
 
     it("localizes first-time coaching without altering unknown copy", function()
