@@ -29,6 +29,7 @@ local exposureSentThisResult = false
 local viewportConnection = nil
 local operationToken = 0
 local awaitingCapture = false
+local sharePromptOpen = false
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosMomentShare"
@@ -182,6 +183,8 @@ local function showUnavailable(token)
         return
     end
 
+    awaitingCapture = false
+    sharePromptOpen = false
     socialSignalEvent:FireServer("share_failed")
     title.Text = CoreLocalization.text(localeId, "SHARE_UNAVAILABLE")
     reasonLabel.Text = ""
@@ -215,6 +218,7 @@ local function promptShare(content, launchData, token)
     end
 
     awaitingCapture = false
+    sharePromptOpen = true
 
     local ok = pcall(function()
         CaptureService:PromptShareCapture(
@@ -224,6 +228,7 @@ local function promptShare(content, launchData, token)
                 if token ~= operationToken then
                     return
                 end
+                sharePromptOpen = false
                 socialSignalEvent:FireServer("share_accepted")
                 setBusy(false)
             end,
@@ -231,6 +236,7 @@ local function promptShare(content, launchData, token)
                 if token ~= operationToken then
                     return
                 end
+                sharePromptOpen = false
                 socialSignalEvent:FireServer("share_denied")
                 setBusy(false)
             end
@@ -238,6 +244,7 @@ local function promptShare(content, launchData, token)
     end)
 
     if not ok then
+        sharePromptOpen = false
         showUnavailable(token)
     end
 end
@@ -250,7 +257,7 @@ local function tryLegacyScreenshot(launchData, token)
             end
 
             local contentOk, content = pcall(function()
-                return Content.fromUri(contentId)
+                return Content.fromUri(tostring(contentId))
             end)
             if not contentOk or not content then
                 showUnavailable(token)
@@ -344,9 +351,13 @@ stateEvent.OnClientEvent:Connect(function(state)
     if phase ~= "result" then
         exposureSentThisResult = false
         if previousPhase == "result" then
-            operationToken += 1
-            awaitingCapture = false
-            shareBusy = false
+            if awaitingCapture then
+                operationToken += 1
+                awaitingCapture = false
+                shareBusy = false
+            elseif not sharePromptOpen then
+                shareBusy = false
+            end
             title.Text = CoreLocalization.text(localeId, "SHARE_MOMENT")
         end
     end
