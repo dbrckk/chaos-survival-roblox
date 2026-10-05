@@ -58,14 +58,16 @@ local function addVariantEdgeLanguage(base, theme, tier, variant)
                 Enum.Material.Metal,
                 low and 0.28 or 0.12
             )
-            if not low then
+            local allowGlow = tier.Name == "High" and i % 2 == 1
+                or tier.Name == "Medium" and (i == 1 or i == 5)
+            if allowGlow then
                 makePart(
                     "TowerEdgeButtressGlow" .. i,
                     Vector3.new(0.26, 3.0, 2.5),
                     buttress.CFrame * CFrame.new(0, 0.35, 0),
                     i % 2 == 0 and theme.Secondary or theme.Accent,
                     Enum.Material.Neon,
-                    0.46
+                    tier.Name == "High" and 0.50 or 0.60
                 )
             end
         end
@@ -83,13 +85,14 @@ local function addVariantEdgeLanguage(base, theme, tier, variant)
             {x = halfX + length * 0.5, z = 7.0, sx = length, sz = 0.34},
         }
         for i, def in ipairs(gates) do
+            local lit = i % 2 == 1
             makePart(
                 "CrossroadsExitRail" .. i,
                 Vector3.new(def.sx, 0.20, def.sz),
                 base.CFrame * CFrame.new(def.x, surfaceY, def.z),
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                alpha
+                lit and theme.Accent or theme.Detail,
+                lit and Enum.Material.Neon or Enum.Material.Metal,
+                lit and alpha or math.min(0.58, alpha + 0.14)
             )
         end
 
@@ -128,9 +131,9 @@ local function addVariantEdgeLanguage(base, theme, tier, variant)
                 base.CFrame
                     * CFrame.new(pos)
                     * CFrame.Angles(0, -tangent, 0),
-                i % 3 == 0 and theme.Secondary or theme.Accent,
-                i % 2 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-                low and 0.68 or 0.42
+                i % 4 == 0 and theme.Secondary or (i % 3 == 0 and theme.Accent or theme.Detail),
+                (not low and i % 3 == 0) and Enum.Material.Neon or Enum.Material.Metal,
+                low and 0.68 or ((i % 3 == 0) and 0.50 or 0.28)
             )
         end
     else
@@ -147,9 +150,9 @@ local function addVariantEdgeLanguage(base, theme, tier, variant)
                 "ClassicEdgeTick" .. i,
                 size,
                 base.CFrame * CFrame.new(x, surfaceY, z),
-                i % 3 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                low and 0.66 or 0.44
+                i % 4 == 0 and theme.Secondary or (i % 3 == 0 and theme.Accent or theme.Detail),
+                (not low and i % 3 == 0) and Enum.Material.Neon or Enum.Material.Metal,
+                low and 0.66 or ((i % 3 == 0) and 0.52 or 0.30)
             )
         end
     end
@@ -218,13 +221,16 @@ local function rebuild()
         )
 
         if tier.Name ~= "Low" then
+            local keyEdge = i == 1 or i == 4
             local trim = makePart(
                 "ArenaEdgeTrim" .. side.name,
                 side.trimSize,
                 CFrame.new(center.X + side.trimPos.X, side.trimPos.Y, center.Z + side.trimPos.Z),
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                tier.Name == "Medium" and 0.52 or 0.38
+                keyEdge and (i == 1 and theme.Accent or theme.Secondary) or theme.Detail,
+                keyEdge and Enum.Material.Neon or Enum.Material.Metal,
+                keyEdge
+                    and (tier.Name == "Medium" and 0.56 or 0.44)
+                    or 0.28
             )
             trim:SetAttribute("EdgeBaseColor", trim.Color)
         end
