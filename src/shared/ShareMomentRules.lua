@@ -1,5 +1,3 @@
-local ResultPresentation = require("./ResultPresentation")
-
 local ShareMomentRules = {}
 
 local REASON_KEYS = {
@@ -28,8 +26,9 @@ function ShareMomentRules.reason(feedback, state)
         return "last_survivor"
     end
 
-    local kind = ResultPresentation.kind(feedback)
-    if kind == "master" then
+    local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
+    local master = feedback.challengeCompleted == true and momentumBest >= 4
+    if master then
         return "master"
     end
 
@@ -37,7 +36,7 @@ function ShareMomentRules.reason(feedback, state)
         return "double_chaos"
     end
 
-    if kind == "clutch" then
+    if feedback.criticalSurvival == true then
         return "clutch"
     end
 
