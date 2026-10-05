@@ -476,7 +476,7 @@ local function addAsymmetricServiceCluster(base, theme, tier, variant)
             Vector3.new(5.0, 5.0, 5.0),
             frame * CFrame.new(0, 8.8, -11.0),
             theme.Detail,
-            Enum.Material.SmoothPlastic,
+            Enum.Material.Metal,
             0.08,
             tier.Name == "High"
         )
