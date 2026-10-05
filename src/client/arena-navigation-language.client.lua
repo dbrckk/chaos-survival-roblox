@@ -124,9 +124,9 @@ local function addCenterLandmark(base, theme, variant, tier)
                 "CenterOrbitMark" .. i,
                 Vector3.new(2.6, 0.05, 0.16),
                 CFrame.new(pos) * CFrame.Angles(0, -tangent, 0),
-                i % 3 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                0.62
+                i % 4 == 0 and theme.Secondary or (i % 3 == 0 and theme.Accent or theme.Detail),
+                i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
+                i % 3 == 0 and 0.66 or 0.30
             )
         end
     elseif variant == "Crossroads" then
@@ -137,15 +137,15 @@ local function addCenterLandmark(base, theme, variant, tier)
             CFrame.new(center),
             theme.Accent,
             Enum.Material.Neon,
-            0.62
+            0.66
         )
         makePart(
             "CenterCrossZ",
             Vector3.new(0.22, 0.05, arm),
             CFrame.new(center),
-            theme.Secondary,
-            Enum.Material.Neon,
-            0.62
+            theme.Detail,
+            Enum.Material.Metal,
+            0.26
         )
     elseif variant == "Towers" then
         local radius = span * 0.10
@@ -156,9 +156,9 @@ local function addCenterLandmark(base, theme, variant, tier)
                 "CenterTowerAnchor" .. i,
                 Vector3.new(1.6, 0.05, 1.6),
                 CFrame.new(pos) * CFrame.Angles(0, -angle, 0),
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                0.62
+                i == 1 and theme.Accent or theme.Detail,
+                i == 1 and Enum.Material.Neon or Enum.Material.Metal,
+                i == 1 and 0.64 or 0.24
             )
         end
     else
@@ -175,9 +175,9 @@ local function addCenterLandmark(base, theme, variant, tier)
             "CenterGridZ",
             Vector3.new(0.18, 0.05, half * 2),
             CFrame.new(center),
-            theme.Secondary,
-            Enum.Material.Neon,
-            0.66
+            theme.Detail,
+            Enum.Material.Metal,
+            0.28
         )
     end
 end
