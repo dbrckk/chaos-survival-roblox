@@ -2,11 +2,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local LocalizationService = game:GetService("LocalizationService")
+local UserInputService = game:GetService("UserInputService")
 
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
+local touchDevice = UserInputService.TouchEnabled
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local arenaMetadata = ReplicatedStorage:WaitForChild("ArenaMetadata")
 
@@ -22,6 +25,12 @@ card.Name = "StrategyCard"
 card.AnchorPoint = Vector2.new(0.5, 0)
 card.Position = UDim2.fromScale(0.5, 0.165)
 card.Size = UDim2.fromScale(0.76, 0.105)
+
+local cardConstraint = Instance.new("UISizeConstraint")
+cardConstraint.MinSize = Vector2.new(260, 58)
+cardConstraint.MaxSize = Vector2.new(700, 92)
+cardConstraint.Parent = card
+
 card.BackgroundColor3 = Color3.fromRGB(18, 22, 31)
 card.BackgroundTransparency = 1
 card.Visible = false
@@ -45,6 +54,47 @@ label.TextWrapped = true
 label.Text = ""
 label.TextTransparency = 1
 label.Parent = card
+
+local textConstraint = Instance.new("UITextSizeConstraint")
+textConstraint.MinTextSize = 10
+textConstraint.MaxTextSize = 18
+textConstraint.Parent = label
+
+local viewportConnection = nil
+
+local function applyResponsiveLayout()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+
+    if touchDevice then
+        local profile = UIResponsive.mobileProfile(viewport)
+        card.Position = UDim2.new(0.5, 0, 0, profile.topHeight + 12)
+        card.Size = UDim2.new(profile.veryNarrow and 0.94 or 0.84, 0, 0, profile.tinyHeight and 62 or 74)
+        cardConstraint.MinSize = Vector2.new(profile.veryNarrow and 240 or 280, profile.tinyHeight and 58 or 64)
+        textConstraint.MinTextSize = profile.tinyHeight and 10 or 11
+    else
+        card.Position = UDim2.fromScale(0.5, 0.165)
+        card.Size = UDim2.fromScale(0.76, 0.105)
+        cardConstraint.MinSize = Vector2.new(260, 58)
+        textConstraint.MinTextSize = 10
+    end
+end
+
+local function bindCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+    end
+    applyResponsiveLayout()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+bindCamera()
 
 local token = 0
 
