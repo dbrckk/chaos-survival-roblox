@@ -183,6 +183,8 @@ local function showUnavailable(token)
         return
     end
 
+    operationToken += 1
+    local recoveryToken = operationToken
     awaitingCapture = false
     sharePromptOpen = false
     socialSignalEvent:FireServer("share_failed")
@@ -190,7 +192,7 @@ local function showUnavailable(token)
     reasonLabel.Text = ""
 
     task.delay(1.6, function()
-        if token ~= operationToken then
+        if recoveryToken ~= operationToken then
             return
         end
         setBusy(false)
