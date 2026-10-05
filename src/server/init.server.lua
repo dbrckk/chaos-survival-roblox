@@ -1482,7 +1482,15 @@ while true do
                 momentumBest = roundMomentumBest,
                 bestSessionStreak = bestSessionStreak,
                 arenaName = roundSettings.ArenaName,
+                arenaId = currentArenaVariant,
                 disasterName = feedbackDisasterName,
+                disasterIds = (function()
+                    local ids = {}
+                    for _, disaster in ipairs(selectedSet) do
+                        table.insert(ids, disaster.Id)
+                    end
+                    return ids
+                end)(),
                 doubleChaos = #selectedSet > 1,
                 soloMode = roundSettings.Solo,
                 elapsedSeconds = math.floor(roundElapsed + 0.5),
