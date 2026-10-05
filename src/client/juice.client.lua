@@ -24,11 +24,8 @@ if not clouds then
     clouds.Name = "ChaosClouds"
     clouds.Parent = terrain
 end
-clouds.Enabled = true
-clouds.Cover = 0.28
-clouds.Density = 0.32
-clouds.Color = Color3.fromRGB(210, 220, 240)
-
+-- Arena identity owns the baseline sky. This controller only overrides it
+-- while a disaster is preparing or active.
 local function getOrCreateLightingEffect(name, className)
     local existing = Lighting:FindFirstChild(name)
     if existing and not existing:IsA(className) then
@@ -42,15 +39,7 @@ local function getOrCreateLightingEffect(name, className)
     return effect
 end
 
-Lighting.Brightness = 2
-Lighting.ExposureCompensation = 0.05
-Lighting.EnvironmentDiffuseScale = 0.38
-Lighting.EnvironmentSpecularScale = 0.72
 Lighting.GlobalShadows = true
-Lighting.ShadowSoftness = 0.22
-Lighting.ClockTime = 15.8
-Lighting.Ambient = Color3.fromRGB(78, 86, 112)
-Lighting.OutdoorAmbient = Color3.fromRGB(105, 116, 145)
 
 local bloom = getOrCreateLightingEffect("ChaosBloom", "BloomEffect")
 bloom.Intensity = 0.32
@@ -298,6 +287,7 @@ local function setMood(state)
     local primaryId = ids[1]
 
     if phase == "round" or phase == "ready" then
+        clouds.Enabled = vfxTier.Name ~= "Low"
         if primaryId == "Tornado" then
             clouds.Cover = 0.72
             clouds.Density = 0.58
@@ -327,22 +317,6 @@ local function setMood(state)
             clouds.Density = 0.34
             clouds.Color = Color3.fromRGB(205, 215, 235)
         end
-    elseif phase == "intermission" then
-        clouds.Cover = 0.20
-        clouds.Density = 0.24
-        clouds.Color = Color3.fromRGB(215, 228, 246)
-    elseif phase == "vote" then
-        clouds.Cover = 0.26
-        clouds.Density = 0.30
-        clouds.Color = Color3.fromRGB(195, 210, 242)
-    elseif phase == "result" then
-        clouds.Cover = 0.30
-        clouds.Density = 0.30
-        clouds.Color = Color3.fromRGB(208, 220, 238)
-    else
-        clouds.Cover = 0.24
-        clouds.Density = 0.28
-        clouds.Color = Color3.fromRGB(215, 225, 242)
     end
 
     if phase == "round" then
@@ -353,10 +327,6 @@ local function setMood(state)
         Lighting.ExposureCompensation = 0.04
         Lighting.EnvironmentDiffuseScale = 0.38
         Lighting.EnvironmentSpecularScale = 0.72
-    else
-        Lighting.ExposureCompensation = 0.07
-        Lighting.EnvironmentDiffuseScale = 0.42
-        Lighting.EnvironmentSpecularScale = 0.68
     end
 
     if phase == "round" or phase == "ready" then
@@ -443,9 +413,6 @@ local function setMood(state)
             lastRoundTitle = state.title
         end
     elseif phase == "result" then
-        Lighting.ExposureCompensation = 0.08
-        Lighting.EnvironmentDiffuseScale = 0.44
-        Lighting.EnvironmentSpecularScale = 0.66
         resetActiveBeacon()
         roundDanger = false
         activeDoubleChaos = false
@@ -461,11 +428,8 @@ local function setMood(state)
         tweenCamera(72, 0.35)
     else
         if phase == "vote" then
-            Lighting.ExposureCompensation = 0.10
             color.Contrast = 0.08
             color.Saturation = 0.10
-        elseif phase == "intermission" then
-            Lighting.ExposureCompensation = 0.09
         end
 
         resetActiveBeacon()
