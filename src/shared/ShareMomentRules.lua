@@ -26,14 +26,14 @@ function ShareMomentRules.reason(feedback, state)
         return "last_survivor"
     end
 
+    if feedback.doubleChaos == true then
+        return "double_chaos"
+    end
+
     local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
     local master = feedback.challengeCompleted == true and momentumBest >= 4
     if master then
         return "master"
-    end
-
-    if feedback.doubleChaos == true then
-        return "double_chaos"
     end
 
     if feedback.criticalSurvival == true then
