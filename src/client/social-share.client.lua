@@ -31,6 +31,7 @@ local operationToken = 0
 local awaitingCapture = false
 local sharePromptOpen = false
 local resultSceneReady = false
+local resultSceneToken = 0
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosMomentShare"
@@ -367,9 +368,10 @@ stateEvent.OnClientEvent:Connect(function(state)
     local phase = tostring(currentState.phase or "waiting")
     if phase == "result" and previousPhase ~= "result" then
         resultSceneReady = false
-        local stateAtEntry = currentState
+        resultSceneToken += 1
+        local token = resultSceneToken
         task.delay(0.35, function()
-            if currentState == stateAtEntry
+            if token == resultSceneToken
                 and tostring(currentState.phase or "") == "result"
             then
                 resultSceneReady = true
@@ -377,6 +379,7 @@ stateEvent.OnClientEvent:Connect(function(state)
             end
         end)
     elseif phase ~= "result" then
+        resultSceneToken += 1
         resultSceneReady = false
         exposureSentThisResult = false
         if previousPhase == "result" then
