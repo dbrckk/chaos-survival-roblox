@@ -101,30 +101,30 @@ local TEXT = {
 
 local HAZARDS = {
     en = {
-        Meteors = {name = "METEOR SHOWER", hint = "AVOID THE ORANGE WARNING CIRCLES"},
-        Bombs = {name = "BOMB RAIN", hint = "LEAVE RED MARKERS BEFORE THEY EXPLODE"},
-        RisingLava = {name = "RISING LAVA", hint = "CLIMB EARLY AND STAY ABOVE THE LAVA"},
-        LowGravity = {name = "MOON GRAVITY", hint = "USE SHORT JUMPS AND STAY OVER THE ARENA"},
-        DisappearingPlatforms = {name = "VANISHING PLATFORMS", hint = "MOVE BEFORE FLASHING PLATFORMS DISAPPEAR"},
-        Tornado = {name = "TORNADO", hint = "KEEP YOUR DISTANCE FROM THE TORNADO"},
-        Freeze = {name = "FREEZE", hint = "KEEP MOVING BETWEEN FREEZE PULSES"},
-        SpeedSurge = {name = "SPEED SURGE", hint = "CONTROL YOUR SPEED NEAR THE EDGES"},
-        Darkness = {name = "BLACKOUT", hint = "FOLLOW THE BRIGHT SAFE ROUTES"},
-        ShrinkingArena = {name = "SHRINKING ARENA", hint = "MOVE TOWARD THE CENTER AS THE ARENA SHRINKS"},
-        JumpShock = {name = "SHOCKWAVE", hint = "GIVE THE BLUE SHOCKWAVE EXTRA SPACE"},
+        Meteors = {name = "METEOR SHOWER", action = "DODGE", hint = "AVOID THE ORANGE WARNING CIRCLES"},
+        Bombs = {name = "BOMB RAIN", action = "MOVE OUT", hint = "LEAVE RED MARKERS BEFORE THEY EXPLODE"},
+        RisingLava = {name = "RISING LAVA", action = "CLIMB", hint = "CLIMB EARLY AND STAY ABOVE THE LAVA"},
+        LowGravity = {name = "MOON GRAVITY", action = "SHORT JUMPS", hint = "USE SHORT JUMPS AND STAY OVER THE ARENA"},
+        DisappearingPlatforms = {name = "VANISHING PLATFORMS", action = "KEEP MOVING", hint = "MOVE BEFORE FLASHING PLATFORMS DISAPPEAR"},
+        Tornado = {name = "TORNADO", action = "KEEP DISTANCE", hint = "KEEP YOUR DISTANCE FROM THE TORNADO"},
+        Freeze = {name = "FREEZE", action = "KEEP MOVING", hint = "KEEP MOVING BETWEEN FREEZE PULSES"},
+        SpeedSurge = {name = "SPEED SURGE", action = "CONTROL", hint = "CONTROL YOUR SPEED NEAR THE EDGES"},
+        Darkness = {name = "BLACKOUT", action = "FOLLOW LIGHT", hint = "FOLLOW THE BRIGHT SAFE ROUTES"},
+        ShrinkingArena = {name = "SHRINKING ARENA", action = "CENTER", hint = "MOVE TOWARD THE CENTER AS THE ARENA SHRINKS"},
+        JumpShock = {name = "SHOCKWAVE", action = "BACK OFF", hint = "GIVE THE BLUE SHOCKWAVE EXTRA SPACE"},
     },
     fr = {
-        Meteors = {name = "PLUIE DE MÉTÉORES", hint = "ÉVITE LES CERCLES D'ALERTE ORANGE"},
-        Bombs = {name = "PLUIE DE BOMBES", hint = "QUITTE LES ZONES ROUGES AVANT L'EXPLOSION"},
-        RisingLava = {name = "LAVE MONTANTE", hint = "MONTE VITE ET RESTE AU-DESSUS DE LA LAVE"},
-        LowGravity = {name = "GRAVITÉ LUNAIRE", hint = "FAIS DE PETITS SAUTS ET RESTE AU-DESSUS DE L'ARÈNE"},
-        DisappearingPlatforms = {name = "PLATEFORMES INSTABLES", hint = "BOUGE AVANT QUE LES PLATEFORMES CLIGNOTANTES DISPARAISSENT"},
-        Tornado = {name = "TORNADE", hint = "GARDE TES DISTANCES AVEC LA TORNADE"},
-        Freeze = {name = "GEL", hint = "CONTINUE DE BOUGER ENTRE LES IMPULSIONS DE GEL"},
-        SpeedSurge = {name = "ACCÉLÉRATION", hint = "CONTRÔLE TA VITESSE PRÈS DES BORDS"},
-        Darkness = {name = "BLACKOUT", hint = "SUIS LES ROUTES LUMINEUSES"},
-        ShrinkingArena = {name = "ARÈNE QUI RÉTRÉCIT", hint = "REJOINS LE CENTRE PENDANT QUE L'ARÈNE RÉTRÉCIT"},
-        JumpShock = {name = "ONDE DE CHOC", hint = "GARDE TES DISTANCES AVEC L'ONDE BLEUE"},
+        Meteors = {name = "PLUIE DE MÉTÉORES", action = "ESQUIVE", hint = "ÉVITE LES CERCLES D'ALERTE ORANGE"},
+        Bombs = {name = "PLUIE DE BOMBES", action = "ÉCARTE-TOI", hint = "QUITTE LES ZONES ROUGES AVANT L'EXPLOSION"},
+        RisingLava = {name = "LAVE MONTANTE", action = "MONTE", hint = "MONTE VITE ET RESTE AU-DESSUS DE LA LAVE"},
+        LowGravity = {name = "GRAVITÉ LUNAIRE", action = "PETITS SAUTS", hint = "FAIS DE PETITS SAUTS ET RESTE AU-DESSUS DE L'ARÈNE"},
+        DisappearingPlatforms = {name = "PLATEFORMES INSTABLES", action = "BOUGE", hint = "BOUGE AVANT QUE LES PLATEFORMES CLIGNOTANTES DISPARAISSENT"},
+        Tornado = {name = "TORNADE", action = "GARDE TES DISTANCES", hint = "GARDE TES DISTANCES AVEC LA TORNADE"},
+        Freeze = {name = "GEL", action = "BOUGE", hint = "CONTINUE DE BOUGER ENTRE LES IMPULSIONS DE GEL"},
+        SpeedSurge = {name = "ACCÉLÉRATION", action = "CONTRÔLE", hint = "CONTRÔLE TA VITESSE PRÈS DES BORDS"},
+        Darkness = {name = "BLACKOUT", action = "SUIS LA LUMIÈRE", hint = "SUIS LES ROUTES LUMINEUSES"},
+        ShrinkingArena = {name = "ARÈNE QUI RÉTRÉCIT", action = "CENTRE", hint = "REJOINS LE CENTRE PENDANT QUE L'ARÈNE RÉTRÉCIT"},
+        JumpShock = {name = "ONDE DE CHOC", action = "ÉCARTE-TOI", hint = "GARDE TES DISTANCES AVEC L'ONDE BLEUE"},
     },
 }
 
@@ -167,6 +167,14 @@ function CoreLocalization.hazardName(localeId, disasterId)
     local record = HAZARDS[language] and HAZARDS[language][id]
     record = record or HAZARDS.en[id]
     return record and record.name or nil
+end
+
+function CoreLocalization.hazardAction(localeId, disasterId)
+    local language = CoreLocalization.language(localeId)
+    local id = tostring(disasterId or "")
+    local record = HAZARDS[language] and HAZARDS[language][id]
+    record = record or HAZARDS.en[id]
+    return record and record.action or nil
 end
 
 function CoreLocalization.hazardHint(localeId, disasterId)
