@@ -56,6 +56,7 @@ PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 [QA]   3.8 Ajouter une couche de profondeur cinématique adaptative : skyline lointaine, silhouettes héro, balises atmosphériques et trafic énergétique discret.
 [QA]   3.9 Activer rendu réaliste adaptatif : réflexions environnementales, exposition, rayons solaires, nuages dynamiques et vent.
 [QA]   3.10 Ajouter relief/micro-géométrie locale premium sur les surfaces des 4 arènes.
+[QA]   3.11 Animer les landmarks héro : lift Towers, réacteur Orbital, signalisation Crossroads, broadcast Classic.
 
 PHASE 4 — VFX CATASTROPHES
 ---------------------------
@@ -71,7 +72,8 @@ PHASE 4 — VFX CATASTROPHES
 [QA]   4.10 Shrinking Arena : périmètre énergétique pulsant synchronisé avec la base.
 [QA]   4.11 Jump Shock : double front d'onde énergétique.
 [QA]   4.12 Ajouter atmosphère catastrophe à l'échelle de l'arène : balises périphériques, particules contextuelles, shafts lumineux et renforcement FINAL RUSH.
-[TODO] 4.13 QA Double Chaos : lisibilité de toutes les combinaisons autorisées.
+[QA]   4.13 Ajouter signatures cinématiques dédiées pour Tornado, Meteors, Rising Lava et Darkness.
+[TODO] 4.14 QA Double Chaos : lisibilité de toutes les combinaisons autorisées.
 
 PHASE 5 — UI / UX PREMIUM
 --------------------------
