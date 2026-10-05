@@ -1,0 +1,1209 @@
+CHAOS SURVIVAL — GUIDE GAME FEEL / UX / EXPÉRIENCE JOUEUR
+========================================================
+
+But
+---
+Ce document définit comment concevoir, modifier et évaluer tout ce qui influence :
+- plaisir immédiat ;
+- sensation de contrôle ;
+- compréhension ;
+- rythme ;
+- tension / soulagement ;
+- social ;
+- envie de rejouer ;
+- envie d'inviter / partager ;
+- onboarding ;
+- rétention ;
+- expérience solo avec AI Survivors ;
+- expérience multijoueur ;
+- mobile Android ;
+- accessibilité ;
+- perception de qualité.
+
+Principe :
+UN BON GAME FEEL EST UNE CHAÎNE CAUSE -> ACTION -> FEEDBACK -> CONSÉQUENCE -> ÉMOTION.
+Si le joueur appuie, agit ou prend un risque, le jeu doit répondre immédiatement et de façon compréhensible.
+
+Objectif :
+faire de chaque manche une petite histoire que le joueur comprend, ressent et peut raconter.
+
+Boucle émotionnelle cible :
+ARRIVER -> COMPRENDRE -> CHOISIR -> ANTICIPER -> AGIR -> ÉVITER -> RISQUER -> SURVIVRE/ÉCHOUER -> COMPRENDRE POURQUOI -> CÉLÉBRER -> REJOUER -> PARTAGER.
+
+========================================================
+1. ARCHITECTURE UX DU REPO À RESPECTER
+========================================================
+
+Avant toute nouvelle feature, inspecter l'existant.
+
+Systèmes importants :
+- src/client/init.client.lua
+  HUD principal, vote, résultats, meta UI.
+- src/shared/FirstTimeExperience.lua
+  logique première session.
+- src/shared/UIResponsive.lua
+  layout mobile.
+- src/shared/CoreLocalization.lua
+  textes FR/EN.
+- src/client/accessibility.client.lua
+  ReduceMotion / son.
+- src/client/round-focus.client.lua
+  priorités visuelles pendant round.
+- src/client/rookie-world-guide.client.lua
+  apprentissage monde.
+- src/client/ArenaGuide.client.lua
+  stratégie arène.
+- src/client/spectator.client.lua
+  post-élimination.
+- src/client/result-survivors.client.lua
+  survivants résultat.
+- src/client/result-constellation.client.lua
+  présentation collective résultat.
+- src/client/social-invite.client.lua
+  invitation / Crew Signal.
+- src/client/social-reactions.client.lua
+  réactions post-round.
+- src/shared/SocialExperienceRules.lua
+  règles sociales.
+- src/shared/ResultPresentation.lua
+  hiérarchie résultat.
+- src/server/AISurvivorService.lua
+  AI Survivors.
+- src/server/AISurvivorRules.lua
+  règles de population / comportement.
+- src/server/GameAnalytics.lua
+  analytics.
+- EXPERIENCE_MASTER_PLAN.md
+  plan global.
+- SOCIAL_EXPERIENCE_PLAN.md
+  logique sociale.
+
+Règle :
+ne jamais créer une deuxième UI ou une deuxième logique pour un problème déjà couvert.
+
+========================================================
+2. CE QUE LE JOUEUR DOIT RESSENTIR
+========================================================
+
+Le joueur doit ressentir successivement :
+
+1. "JE SAIS QUOI FAIRE"
+Clarté.
+
+2. "C'EST MOI QUI AI CHOISI / AGI"
+Agency.
+
+3. "J'AI FAILLI Y PASSER"
+Tension.
+
+4. "JE L'AI ÉVITÉ GRÂCE À MON ACTION"
+Compétence.
+
+5. "LES AUTRES ONT VÉCU LE MÊME MOMENT"
+Présence sociale.
+
+6. "JE VEUX TENTER ENCORE UNE FOIS"
+Revanche / flow.
+
+7. "ÇA SERAIT FUN AVEC UN AMI"
+Partage naturel.
+
+Ne pas essayer de créer la rétention uniquement avec :
+- notifications ;
+- monnaies ;
+- streak artificiel ;
+- récompenses journalières ;
+- timers.
+
+La rétention principale doit venir de la qualité de la boucle de jeu.
+
+========================================================
+3. STRUCTURE IDÉALE D'UNE SESSION
+========================================================
+
+PHASE 0 — JOIN
+Objectif : joueur en contrôle presque immédiatement.
+
+À éviter :
+- écran long ;
+- tuto texte ;
+- 5 popups ;
+- shop au démarrage.
+
+Le joueur doit pouvoir :
+- bouger ;
+- sauter ;
+- voir le lobby ;
+- identifier la prochaine action.
+
+PHASE 1 — LOBBY / RESPIRATION
+Objectif : préparer sans ennuyer.
+
+Le lobby doit permettre :
+- voir d'autres survivants ;
+- bouger ;
+- tester boost / movement ;
+- voir progression ;
+- comprendre qu'une manche approche ;
+- inviter un ami après avoir déjà joué.
+
+Temps mort = temps interactif.
+
+PHASE 2 — VOTE
+Objectif : vraie décision.
+
+Chaque option doit donner :
+- nom ;
+- identité visuelle ;
+- danger principal ;
+- comportement conseillé.
+
+Le joueur ne doit jamais voter pour un mot dont il ne comprend pas la conséquence.
+
+PHASE 3 — READY
+Objectif : anticipation.
+
+Montrer :
+- arène ;
+- hazard ;
+- action à faire ;
+- éventuellement mécanique d'arène.
+
+Ne pas remplacer l'instruction par un simple "3...2...1".
+
+PHASE 4 — ROUND
+Objectif : décision / déplacement / risque.
+
+Le joueur ne doit pas lire de longs textes.
+
+Hiérarchie :
+1. warning ;
+2. monde ;
+3. timer ;
+4. survivants ;
+5. challenge secondaire ;
+6. meta masqué.
+
+PHASE 5 — FINAL RUSH
+Objectif : climax.
+
+Le joueur doit sentir :
+- accélération ;
+- urgence ;
+- synchronisation collective.
+
+Mais :
+- pas de flash illisible ;
+- pas de caméra incontrôlable ;
+- pas d'accélération injuste sans warning.
+
+PHASE 6 — RESULT
+Objectif : transformer l'émotion en histoire.
+
+Ordre :
+1. gagné/perdu ;
+2. moment clé ;
+3. reward ;
+4. maîtrise/progression ;
+5. objectif suivant ;
+6. option sociale.
+
+PHASE 7 — RETURN
+Objectif : "une autre".
+
+Retour rapide.
+Pas 15 secondes d'attente statique.
+
+========================================================
+4. GAME FEEL : LATENCE PERÇUE
+========================================================
+
+Le jeu doit répondre avant que le joueur se demande si son input a été pris.
+
+Pour une action :
+INPUT -> FEEDBACK IMMÉDIAT -> ANIMATION -> CONSÉQUENCE.
+
+Exemple boost :
+T0      toucher pad ;
+T+0     son court + couleur ;
+T+20ms  impulsion visible ;
+T+50ms  FOV kick léger ;
+T+80ms  trail ;
+puis retour progressif.
+
+Ne pas attendre la fin d'une animation pour appliquer l'action réelle.
+
+Le gameplay commande l'animation, pas l'inverse.
+
+========================================================
+5. RÈGLE DES 6 COUCHES DE FEEDBACK
+========================================================
+
+Une action importante peut utiliser plusieurs couches :
+
+1. PHYSIQUE
+vitesse / impulsion / déplacement.
+
+2. ANIMATION
+pose, lean, landing.
+
+3. WORLD VFX
+burst / ring / trail.
+
+4. AUDIO
+impact / whoosh / confirmation.
+
+5. CAMÉRA
+FOV / shake très léger.
+
+6. UI
+texte uniquement si nécessaire.
+
+Tous les événements n'ont pas besoin des 6.
+Plus l'action est fréquente, plus le feedback doit être discret.
+
+Exemple :
+pas de caméra shake pour chaque petit Shard.
+
+========================================================
+6. GRAMMAIRE DE FEEDBACK PAR ACTION
+========================================================
+
+JUMP
+- réponse immédiate ;
+- takeoff clair ;
+- son léger ;
+- aucune lourdeur artificielle.
+
+LANDING
+petit :
+- animation compression faible ;
+- son surface ;
+- dust minimal.
+
+gros :
+- compression plus forte ;
+- impact sonore ;
+- micro camera impulse ;
+- world puff ;
+- jamais stun long.
+
+BOOST PAD
+- anticipation visuelle avant contact ;
+- impulsion immédiate ;
+- trail ;
+- audio directionnel ;
+- FOV kick ;
+- couleur cohérente.
+
+SHARD
+- pickup instantané ;
+- burst court ;
+- son positif ;
+- compteur réagit ;
+- pas de popup plein écran.
+
+NEAR MISS
+- pulse monde ;
+- son ;
+- message très court ;
+- peut nourrir momentum ;
+- cooldown pour éviter spam.
+
+DAMAGE
+- source compréhensible ;
+- flash très court ;
+- son ;
+- FOV / vignette proportionnels ;
+- pas de rouge plein écran durable.
+
+ELIMINATION
+- cause si possible ;
+- disparition / chute compréhensible ;
+- passage spectator rapide ;
+- tip actionnable.
+
+VICTORY
+- monde + avatar + résultat ;
+- son ;
+- reward ;
+- survivants visibles ;
+- option sociale seulement ensuite.
+
+========================================================
+7. MOUVEMENT : SENSATION DE CONTRÔLE
+========================================================
+
+Le mouvement est plus important que n'importe quel shader.
+
+Le joueur doit sentir :
+- direction précise ;
+- vitesse prévisible ;
+- saut cohérent ;
+- boost contrôlable ;
+- caméra stable.
+
+Ne pas ajouter :
+- inertie excessive ;
+- délai input ;
+- animation qui verrouille ;
+- rotation automatique agressive ;
+- friction variable non expliquée.
+
+Les erreurs du joueur doivent paraître :
+"j'ai mal anticipé"
+et non :
+"le jeu n'a pas répondu".
+
+========================================================
+8. LISIBILITÉ DU DANGER
+========================================================
+
+Tout danger létal doit avoir :
+- origine ;
+- zone ;
+- timing ;
+- langage visuel ;
+- langage sonore ;
+- possibilité raisonnable de réaction.
+
+Un warning réussi répond à :
+QUOI ?
+OÙ ?
+QUAND ?
+QUE FAIRE ?
+
+Ne jamais créer de difficulté avec :
+- warning invisible ;
+- couleur trop proche du décor ;
+- impact hors caméra impossible à anticiper ;
+- spawn sous le joueur sans délai ;
+- deux effets qui se cachent ;
+- texte en remplacement d'un telegraph.
+
+========================================================
+9. DIFFICULTÉ JUSTE
+========================================================
+
+La tension vient d'une décision serrée, pas d'une mort arbitraire.
+
+Pour chaque hazard vérifier :
+- temps de warning ;
+- distance moyenne vers sécurité ;
+- vitesse joueur ;
+- possibilité de récupérer d'une petite erreur ;
+- comportement solo ;
+- comportement avec 4+ participants ;
+- compatibilité Double Chaos.
+
+Double Chaos :
+deux hazards doivent créer une décision intéressante.
+Pas une combinaison mathématiquement impossible.
+
+Une fusion réussie :
+"je dois changer ma route"
+pas :
+"aucun endroit n'est sûr".
+
+========================================================
+10. FLOW
+========================================================
+
+Le joueur entre en flow quand :
+- objectif clair ;
+- feedback rapide ;
+- difficulté adaptée ;
+- temps mort faible ;
+- compétence compte.
+
+À surveiller :
+- trop facile = ennui ;
+- trop aléatoire = frustration ;
+- trop de texte = rupture ;
+- trop de récompenses = distraction ;
+- trop de VFX = confusion.
+
+La bonne question :
+"À quoi le joueur pense-t-il maintenant ?"
+
+Pendant ROUND la réponse doit être :
+"où je vais / quand je bouge / quel risque je prends ?"
+
+Pas :
+"quel menu dois-je fermer ?"
+
+========================================================
+11. RYTHME DE MANCHE
+========================================================
+
+Une bonne manche possède une courbe :
+
+0–20 %
+lecture / prise de position.
+
+20–55 %
+danger stable + apprentissage du pattern.
+
+55–80 %
+variation / pression.
+
+80–100 %
+climax / Final Rush.
+
+Éviter un round où :
+- tout arrive immédiatement ;
+- rien ne change ;
+- la difficulté baisse à la fin ;
+- le climax dure trop longtemps.
+
+========================================================
+12. MICRO-RÉCOMPENSES
+========================================================
+
+Récompenser :
+- prise de risque intelligente ;
+- mobilité ;
+- survie ;
+- maîtrise ;
+- close call ;
+- challenge ;
+- exploration sûre.
+
+Ne pas transformer chaque action en monnaie.
+
+Types de récompense :
+1. sensorielle ;
+2. sociale ;
+3. progression ;
+4. économique.
+
+Préférer d'abord 1 + 2.
+
+Exemple :
+Close Call peut être satisfaisant sans donner 20 coins.
+
+========================================================
+13. SOCIOLOGIE / PRÉSENCE SOCIALE
+========================================================
+
+Les joueurs partagent plus un événement qu'un système.
+
+Créer :
+- compte à rebours commun ;
+- vote commun ;
+- climax commun ;
+- survivants visibles ;
+- reactions ;
+- Crew Signal ;
+- Last Chaos ;
+- constellation de résultat ;
+- moments partageables.
+
+Les autres joueurs doivent être des témoins.
+
+Un jeu devient social quand :
+"j'ai vécu ça AVEC eux".
+
+========================================================
+14. AI SURVIVORS
+========================================================
+
+But :
+éviter qu'un joueur seul ait l'impression d'un serveur mort.
+
+Les AI doivent :
+- bouger naturellement ;
+- hésiter ;
+- parfois se tromper ;
+- utiliser les mêmes règles ;
+- subir les mêmes hazards ;
+- avoir personnalités ;
+- voter sans écraser les humains ;
+- réagir aux résultats.
+
+Elles ne doivent pas :
+- tricher ;
+- savoir l'avenir ;
+- téléporter ;
+- avoir réflexe parfait ;
+- gagner toujours ;
+- être utilisées pour annoncer de faux chiffres de joueurs en ligne.
+
+Priorité :
+elles doivent rendre le monde vivant, pas gagner la manche.
+
+========================================================
+15. SOCIAL : INVITATION ET PARTAGE
+========================================================
+
+Règle sociologique :
+ne pas demander de partager avant d'avoir créé quelque chose à partager.
+
+Invitation :
+- après au moins une manche ;
+- dans un moment calme ;
+- jamais ROUND ;
+- jamais popup automatique.
+
+Partage :
+- uniquement moment significatif ;
+- volontaire ;
+- capture du vrai gameplay ;
+- aucun bonus monétaire pour partager ;
+- pas de spam.
+
+Bon déclencheur :
+- dernier survivant ;
+- Double Chaos survécu ;
+- clutch ;
+- master round ;
+- moment d'équipe.
+
+Mauvais déclencheur :
+- login ;
+- première seconde ;
+- défaite banale ;
+- chaque résultat.
+
+========================================================
+16. ONBOARDING
+========================================================
+
+Objectif :
+apprendre en jouant.
+
+Priorité :
+ACTION > TEXTE.
+
+Première session :
+- mouvement ;
+- boost ;
+- vote ;
+- READY clair ;
+- premier hazard simple ;
+- résultat.
+
+Ne pas montrer immédiatement :
+- toutes les monnaies ;
+- toutes les quêtes ;
+- toutes les pages ;
+- monétisation ;
+- systèmes avancés.
+
+Révéler progressivement.
+
+Test :
+un joueur qui ne lit rien doit pouvoir survivre sa première minute.
+
+========================================================
+17. UI : CHARGE COGNITIVE
+========================================================
+
+Le cerveau du joueur est une ressource.
+
+Pendant ROUND :
+maximum 3 informations réellement saillantes à la fois.
+
+Question pour chaque UI :
+"Le joueur doit-il agir grâce à cette information MAINTENANT ?"
+
+Si non :
+- diminuer ;
+- déplacer ;
+- masquer ;
+- reporter au résultat/lobby.
+
+Ne pas confondre disponibilité et visibilité permanente.
+
+========================================================
+18. MOBILE ANDROID
+========================================================
+
+Le mobile est une cible principale, pas un port secondaire.
+
+Tester :
+- une main ;
+- deux pouces ;
+- écran étroit ;
+- écran haut ;
+- UI Roblox système ;
+- pouces masquant bas écran.
+
+Règles :
+- cible tactile importante : ~44–48 px minimum lorsque possible ;
+- espace entre boutons ;
+- pas d'action critique dans un petit coin ;
+- texte court ;
+- pas de hover indispensable ;
+- pas de double-tap ambigu ;
+- aucun CTA social au-dessus du jump/movement control ;
+- aucune UI importante sous la zone du pouce.
+
+Tester :
+- vote ;
+- settings ;
+- reactions ;
+- share ;
+- spectator ;
+- result ;
+- cosmetics ;
+- quests.
+
+========================================================
+19. AUDIO / FEEL
+========================================================
+
+L'audio transmet la physique.
+
+Chaque action doit avoir une signature :
+- jump ;
+- land ;
+- boost ;
+- shard ;
+- warning ;
+- impact ;
+- damage ;
+- near miss ;
+- death ;
+- victory.
+
+Principes :
+- attack clair ;
+- pas trop long ;
+- basses pour poids ;
+- hautes fréquences pour confirmation ;
+- spatial audio pour danger monde ;
+- UI sound non spatial.
+
+Mixer :
+danger > action joueur > objectif > ambiance > décor.
+
+Pendant Double Chaos :
+duck décor/ambience si nécessaire.
+
+========================================================
+20. CAMÉRA / MOTION
+========================================================
+
+Caméra = amplifier une sensation déjà réelle.
+
+NE PAS utiliser caméra pour inventer une sensation absente.
+
+FOV :
+- accélération -> légèrement plus large ;
+- impact -> kick très court ;
+- victoire -> relax.
+
+Shake :
+- uniquement événements importants ;
+- amplitude selon distance ;
+- fréquence selon masse.
+
+ReduceMotion :
+- réduit/supprime shake ;
+- réduit pulse ;
+- réduit animations décoratives ;
+- conserve toutes les infos gameplay.
+
+========================================================
+21. ACCESSIBILITÉ
+========================================================
+
+Minimum :
+- Reduce Motion ;
+- Sound ;
+- warnings non dépendants uniquement de couleur ;
+- contraste ;
+- texte lisible ;
+- pas de strobe agressif ;
+- états importants avec forme + couleur + son.
+
+Une option d'accessibilité ne doit jamais diminuer l'information disponible.
+
+Low VFX n'est pas un mode difficile.
+ReduceMotion n'est pas un handicap gameplay.
+
+========================================================
+22. RÉSULTAT / PSYCHOLOGIE DE LA REVANCHE
+========================================================
+
+Après une défaite, répondre :
+1. qu'est-ce qui m'a tué ?
+2. qu'aurais-je pu faire ?
+3. quand puis-je réessayer ?
+
+Éviter :
+- "YOU LOST" puis attente ;
+- blâme ;
+- trop de stats ;
+- shop immédiatement après défaite.
+
+Après victoire :
+1. résultat ;
+2. moment fort ;
+3. progression ;
+4. prochain objectif ;
+5. interaction sociale.
+
+Le joueur doit sortir du résultat avec une direction.
+
+========================================================
+23. SPECTATOR
+========================================================
+
+Mort ≠ sortie de l'expérience.
+
+Spectator doit :
+- démarrer vite ;
+- montrer humain ou AI vivant ;
+- montrer état de manche ;
+- permettre NEXT ;
+- conserver tension ;
+- préparer le résultat.
+
+Ne pas :
+- laisser caméra sur cadavre ;
+- afficher menu plein écran ;
+- forcer le joueur à attendre dans le vide.
+
+========================================================
+24. RÉTENTION SAINE
+========================================================
+
+Construire rétention autour de :
+- variété ;
+- maîtrise ;
+- histoires ;
+- social ;
+- progression visible ;
+- cosmetics.
+
+Éviter dépendance à :
+- FOMO extrême ;
+- pénalités de connexion ;
+- streak qui punit absence ;
+- popup de dépense après échec ;
+- dark patterns.
+
+Le joueur doit revenir parce que le jeu est bon.
+
+========================================================
+25. MONÉTISATION
+========================================================
+
+Principe :
+payer = identité / confort / expression.
+Pas puissance.
+
+Autorisé :
+- cosmetics ;
+- trails ;
+- styles ;
+- animations sociales ;
+- suppression d'éléments publicitaires si applicable ;
+- bundles esthétiques.
+
+À éviter :
+- vitesse ;
+- HP ;
+- warning amélioré payant ;
+- revive compétitif ;
+- meilleure chance ;
+- protection hazard.
+
+Ne jamais faire ressentir :
+"j'ai perdu parce que je n'ai pas payé".
+
+========================================================
+26. ANALYTICS UX
+========================================================
+
+Mesurer le funnel :
+JOIN
+-> DataLoaded
+-> première action
+-> vote
+-> READY
+-> premier round
+-> première élimination/survie
+-> second round
+-> 10 minutes
+-> invitation
+-> partage
+-> ami rejoint.
+
+Événements utiles :
+- première manche terminée ;
+- raison d'élimination ;
+- rage quit juste après mort ;
+- nombre de rounds/session ;
+- temps lobby ;
+- choix vote ;
+- VfxQuality ;
+- FPS ;
+- invite CTA shown/opened ;
+- invite-driven join ;
+- share shown/accepted ;
+- share-driven join.
+
+Ne pas mesurer seulement "DAU".
+Chercher où l'expérience casse.
+
+========================================================
+27. TEST UX STRUCTURÉ
+========================================================
+
+Pour chaque build, tester 5 profils mentaux :
+
+A. NOUVEAU JOUEUR
+Ne sait rien.
+
+B. JOUEUR MOBILE PRESSÉ
+Ne lit presque rien.
+
+C. JOUEUR SOLO
+Aucun humain.
+
+D. GROUPE D'AMIS
+Cherche rire / chaos / revanche.
+
+E. JOUEUR EXPÉRIMENTÉ
+Cherche maîtrise / vitesse / challenge.
+
+Pour chacun :
+- comprend-il ?
+- agit-il ?
+- s'ennuie-t-il ?
+- meurt-il injustement ?
+- a-t-il un objectif ?
+- veut-il refaire une manche ?
+
+========================================================
+28. TEST DE LA PREMIÈRE MINUTE
+========================================================
+
+Chronométrer.
+
+0–5 s
+- identité du jeu ;
+- contrôle.
+
+5–15 s
+- mouvement ;
+- lobby vivant.
+
+15–30 s
+- choix / vote ou préparation.
+
+30–45 s
+- anticipation.
+
+45–60 s
+- première décision de survie.
+
+Échec UX si à 60 s le joueur demande :
+"je dois faire quoi ?"
+
+========================================================
+29. TEST D'UNE MANCHE COMPLÈTE
+========================================================
+
+Observer :
+- combien de fois le joueur arrête de bouger pour lire ;
+- combien de morts non comprises ;
+- combien de warnings vus trop tard ;
+- combien de secondes sans décision ;
+- si Final Rush est ressenti ;
+- si résultat raconte quelque chose.
+
+Objectif :
+une décision intéressante toutes les quelques secondes,
+pas nécessairement un nouvel effet.
+
+========================================================
+30. GAME FEEL : BARÈME DE NOTATION
+========================================================
+
+Noter /10 :
+
+CONTRÔLE
+- input ;
+- mouvement ;
+- caméra.
+
+IMPACT
+- son ;
+- animation ;
+- VFX ;
+- physique.
+
+LISIBILITÉ
+- hazards ;
+- UI ;
+- routes.
+
+RYTHME
+- temps morts ;
+- climax ;
+- transitions.
+
+FAIRNESS
+- warnings ;
+- récupérabilité ;
+- Double Chaos.
+
+SOCIAL
+- présence ;
+- moments communs ;
+- reactions ;
+- invitation.
+
+MOTIVATION
+- prochain objectif ;
+- progression ;
+- revanche.
+
+MOBILE
+- touch ;
+- overlap ;
+- performance.
+
+ACCESSIBILITÉ
+- ReduceMotion ;
+- contraste ;
+- audio.
+
+Une feature ne doit pas augmenter une note en en détruisant deux autres.
+
+========================================================
+31. BUDGET DE "JUICE"
+========================================================
+
+Fréquence élevée -> feedback petit.
+Fréquence faible -> feedback fort.
+
+Action fréquente :
+walk / jump / shard normal
+= petit son + petit visuel.
+
+Action moyenne :
+pad / near miss / damage
+= plusieurs couches.
+
+Action rare :
+clutch / master / last survivor / Double Chaos win
+= traitement complet.
+
+Sinon le jeu devient constamment "à 100 %" et plus rien ne semble important.
+
+========================================================
+32. CONTRASTE ÉMOTIONNEL
+========================================================
+
+Le calme rend le chaos plus fort.
+
+Lobby :
+- respiration ;
+- social ;
+- lumière stable.
+
+READY :
+- montée tension.
+
+ROUND :
+- danger.
+
+FINAL RUSH :
+- climax.
+
+RESULT :
+- relâchement / célébration.
+
+Ne pas garder musique, bloom, caméra et VFX au maximum tout le temps.
+
+========================================================
+33. MICRO-INTERACTIONS UI
+========================================================
+
+Bouton :
+- press scale 0.94–0.97 ;
+- confirmation immédiate ;
+- pas de délai artificiel.
+
+Carte vote :
+- sélection claire ;
+- accent visible ;
+- état voté persistant.
+
+Reward :
+- compteur peut animer ;
+- pas plus de 1–2 secondes pour une petite récompense.
+
+Toast :
+- court ;
+- ne couvre pas hazard ;
+- file limitée.
+
+========================================================
+34. ERREURS À ÉVITER
+========================================================
+
+NE PAS :
+- ajouter une feature parce que "les jeux populaires l'ont" ;
+- ajouter des menus avant d'améliorer la boucle principale ;
+- créer un tuto long ;
+- cacher un danger dans un effet ;
+- rendre les bots trop bons ;
+- rendre chaque seconde spectaculaire ;
+- faire durer le RESULT trop longtemps ;
+- forcer social/share ;
+- utiliser récompense économique pour spam social ;
+- sacrifier la vitesse de contrôle à l'animation ;
+- mettre une info secondaire au centre de l'écran pendant ROUND ;
+- augmenter la difficulté en réduisant la lisibilité.
+
+========================================================
+35. ORDRE DE PRIORITÉ POUR AMÉLIORER LE JEU
+========================================================
+
+Toujours résoudre dans cet ordre :
+
+P0
+- crash / blocage ;
+- input cassé ;
+- mort injuste ;
+- warning absent ;
+- UI inaccessible ;
+- FPS critique.
+
+P1
+- confusion ;
+- temps mort ;
+- mauvaise caméra ;
+- mauvais feedback ;
+- mauvaise transition.
+
+P2
+- manque de fun ;
+- répétition ;
+- variété ;
+- social.
+
+P3
+- progression ;
+- cosmetics ;
+- meta.
+
+P4
+- features secondaires.
+
+Ne jamais polir P4 si P0/P1 est mauvais.
+
+========================================================
+36. PROCÉDURE AVANT D'AJOUTER UNE FEATURE
+========================================================
+
+Écrire :
+1. problème joueur ;
+2. comportement actuel ;
+3. comportement cible ;
+4. émotion cible ;
+5. métrique ;
+6. coût UI ;
+7. coût performance ;
+8. risque mobile ;
+9. risque accessibilité ;
+10. comment retirer la feature si elle ne fonctionne pas.
+
+Si le problème ne peut pas être formulé :
+ne pas coder.
+
+========================================================
+37. PROCÉDURE APRÈS AJOUT
+========================================================
+
+Vérifier :
+[ ] première session ;
+[ ] joueur expérimenté ;
+[ ] solo ;
+[ ] multi ;
+[ ] touch ;
+[ ] desktop ;
+[ ] Low VFX ;
+[ ] ReduceMotion ;
+[ ] FR ;
+[ ] EN ;
+[ ] spectator ;
+[ ] rejoin ;
+[ ] 30 min session ;
+[ ] analytics.
+
+========================================================
+38. DÉFINITION DE "FUN"
+========================================================
+
+Pour Chaos Survival, "fun" n'est pas seulement gagner.
+
+Fun =
+- comprendre juste assez ;
+- prendre une décision ;
+- presque échouer ;
+- réussir ou mourir de façon spectaculaire ;
+- voir les autres réagir ;
+- recommencer rapidement.
+
+Chercher :
+"moments que le joueur raconte".
+
+Exemples :
+- "j'ai sauté au dernier dixième" ;
+- "la météorite est tombée juste derrière moi" ;
+- "on était deux et il est mort à 1 seconde" ;
+- "Double Chaos était impossible mais on l'a fait" ;
+- "mon ami a rejoint et on a tenu 4 manches".
+
+========================================================
+39. PROCHAINES PRIORITÉS GAME FEEL / UX
+========================================================
+
+1. Test Android réel complet.
+2. Test solo avec 3 AI Survivors.
+3. Test 2–4 humains.
+4. Mesurer confusion première minute.
+5. Vérifier toutes morts "je comprends pourquoi".
+6. Ajuster telegraphs.
+7. Ajuster durée intermission/result.
+8. Valider Final Rush.
+9. Valider social reactions.
+10. Valider share capture.
+11. Ajouter animations authored locomotion/landing/victory.
+12. Faire petit alpha public avant monétisation plus visible.
+
+========================================================
+40. DÉFINITION DE "TERMINÉ"
+========================================================
+
+Une amélioration UX/game feel n'est FINIE que si :
+
+1. problème utilisateur défini ;
+2. comportement cible clair ;
+3. feedback immédiat ;
+4. mobile fonctionnel ;
+5. aucune obstruction hazard ;
+6. solo fonctionnel ;
+7. multi fonctionnel ;
+8. accessibilité respectée ;
+9. performance acceptable ;
+10. analytics si nécessaire ;
+11. Build Validation vert ;
+12. tests moteur verts ;
+13. test réel Android effectué ;
+14. le joueur comprend sans explication externe.
+
+Question finale obligatoire :
+"Cette modification donne-t-elle au joueur plus de contrôle, plus de compréhension ou une meilleure émotion ?"
+
+Si la réponse est non :
+la modification n'est probablement pas prioritaire.
+
+FIN DU GUIDE
