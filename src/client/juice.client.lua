@@ -4,12 +4,15 @@ local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local feedbackEvent = remotes:WaitForChild("RoundFeedback")
@@ -432,9 +435,21 @@ local function setMood(state)
         end
 
         if phase ~= lastPhase or state.title ~= lastRoundTitle then
+            local localizedTitle = CoreLocalization.hazardTitle(
+                localeId,
+                state.disasterIds,
+                state.title or "CHAOS!"
+            )
+            local localizedSub = phase == "ready"
+                and CoreLocalization.text(localeId, "POSITION_YOURSELF")
+                or CoreLocalization.arenaName(
+                    localeId,
+                    state.arenaId or state.arenaName,
+                    state.arenaName or ""
+                )
             showBanner(
-                state.title or "CHAOS!",
-                phase == "ready" and "POSITION YOURSELF" or (state.arenaName or ""),
+                localizedTitle,
+                localizedSub,
                 doubleChaos
                     and UITheme.Colors.Violet
                     or (profile and profile.Accent or UITheme.Colors.Blue),
@@ -510,8 +525,8 @@ stateEvent.OnClientEvent:Connect(function(state)
         if not lastSurvivorAnnounced then
             lastSurvivorAnnounced = true
             showBanner(
-                "LAST SURVIVOR",
-                "One player remains",
+                CoreLocalization.text(localeId, "RESULT_SOLE_SURVIVOR"),
+                CoreLocalization.text(localeId, "ONE_PLAYER_REMAINS"),
                 Color3.fromRGB(115, 38, 38),
                 1.6
             )
@@ -557,7 +572,7 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
     local survivalStreak = tonumber(feedback.streak) or 0
 
     if survivalStreak >= 2 then
-        streak.Text = "SURVIVAL STREAK x" .. survivalStreak
+        streak.Text = CoreLocalization.text(localeId, "RESULT_STREAK_TAG", survivalStreak)
         streak.Visible = true
         streak.TextTransparency = 1
         streak.BackgroundTransparency = 1
@@ -576,29 +591,33 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
 
         if masterRound then
             showBanner(
-                "MASTER ROUND",
-                "Challenge complete • Momentum x" .. tostring(momentumBest),
+                CoreLocalization.text(localeId, "JUICE_MASTER_TITLE"),
+                CoreLocalization.text(localeId, "JUICE_MASTER_SUB", momentumBest),
                 Color3.fromRGB(80, 205, 235),
                 2.2
             )
         elseif feedback.criticalSurvival then
             showBanner(
-                "LAST-BREATH SURVIVAL",
-                "You escaped with almost no health left",
+                CoreLocalization.text(localeId, "JUICE_LAST_BREATH_TITLE"),
+                CoreLocalization.text(localeId, "JUICE_LAST_BREATH_SUB"),
                 Color3.fromRGB(125, 42, 38),
                 1.9
             )
         elseif survivalStreak >= 5 then
             showBanner(
-                "UNSTOPPABLE x" .. survivalStreak,
-                "Survival streak bonus +" .. tostring(feedback.streakBonusCoins or 0) .. " coins",
+                CoreLocalization.text(localeId, "JUICE_UNSTOPPABLE", survivalStreak),
+                CoreLocalization.text(
+                    localeId,
+                    "JUICE_STREAK_BONUS",
+                    tonumber(feedback.streakBonusCoins) or 0
+                ),
                 Color3.fromRGB(115, 72, 18),
                 2.0
             )
         elseif survivalStreak >= 3 then
             showBanner(
-                "HOT STREAK x" .. survivalStreak,
-                "Keep the run alive",
+                CoreLocalization.text(localeId, "JUICE_HOT_STREAK", survivalStreak),
+                CoreLocalization.text(localeId, "JUICE_KEEP_RUN"),
                 Color3.fromRGB(82, 48, 18),
                 1.7
             )
@@ -735,8 +754,8 @@ task.spawn(function()
     if (player:GetAttribute("Games") or 0) == 0 then
         task.wait(0.8)
         showBanner(
-            "SURVIVE THE CHAOS",
-            "Vote • Move • Climb • Stay alive until the timer hits 0",
+            CoreLocalization.text(localeId, "JUICE_FIRST_TITLE"),
+            CoreLocalization.text(localeId, "JUICE_FIRST_SUB"),
             Color3.fromRGB(28, 42, 64),
             3.2
         )
