@@ -32,6 +32,7 @@ local inviteCheckInFlight = false
 local inviteBusy = false
 local ctaExposureSent = false
 local pendingFriendName = nil
+local pendingArrivalKind = nil
 local friendMessageToken = 0
 local viewportConnection = nil
 
@@ -325,8 +326,10 @@ local function refresh()
 
     if visible and pendingFriendName and showFriendArrival then
         local displayName = pendingFriendName
+        local arrivalKind = pendingArrivalKind
         pendingFriendName = nil
-        task.defer(showFriendArrival, displayName)
+        pendingArrivalKind = nil
+        task.defer(showFriendArrival, displayName, arrivalKind)
     end
 end
 
@@ -353,7 +356,7 @@ local function pulseSocialMoment()
     end
 end
 
-showFriendArrival = function(displayName)
+showFriendArrival = function(displayName, arrivalKind)
     local safeName = tostring(displayName or "")
     if safeName == "" then
         return
@@ -369,6 +372,7 @@ showFriendArrival = function(displayName)
 
     if not calm then
         pendingFriendName = safeName
+        pendingArrivalKind = tostring(arrivalKind or "friend")
         return
     end
 
@@ -377,14 +381,18 @@ showFriendArrival = function(displayName)
     end
     if not beaconSubtitle then
         pendingFriendName = safeName
+        pendingArrivalKind = tostring(arrivalKind or "friend")
         return
     end
 
     friendMessageToken += 1
     local token = friendMessageToken
+    local arrivalKey = tostring(arrivalKind or "friend") == "share"
+        and "SHARE_JOINED"
+        or "FRIEND_JOINED_CREW"
     beaconSubtitle.Text = CoreLocalization.text(
         localeId,
-        "FRIEND_JOINED_CREW",
+        arrivalKey,
         safeName
     )
     beaconSubtitle.TextColor3 = UITheme.Colors.Green
@@ -400,10 +408,15 @@ showFriendArrival = function(displayName)
 end
 
 socialSignalEvent.OnClientEvent:Connect(function(payload)
-    if type(payload) ~= "table" or payload.kind ~= "friend_joined" then
+    if type(payload) ~= "table" then
         return
     end
-    showFriendArrival(payload.displayName)
+
+    if payload.kind == "friend_joined" then
+        showFriendArrival(payload.displayName, "friend")
+    elseif payload.kind == "share_joined" then
+        showFriendArrival(payload.displayName, "share")
+    end
 end)
 
 local function checkInviteAvailability()
