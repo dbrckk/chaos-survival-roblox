@@ -2,12 +2,15 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
@@ -56,7 +59,7 @@ cueText.Font = Enum.Font.GothamBlack
 cueText.TextColor3 = UITheme.Colors.Text
 cueText.TextScaled = true
 cueText.TextXAlignment = Enum.TextXAlignment.Left
-cueText.Text = "MOVE OUT"
+cueText.Text = CoreLocalization.text(localeId, "DANGER")
 cueText.Parent = cue
 UITheme.addTextConstraint(cueText, 14, 21)
 
@@ -137,10 +140,19 @@ local KIND_COLORS = {
     Bomb = Color3.fromRGB(255, 75, 75),
 }
 
-local KIND_LABELS = {
-    Meteor = "METEOR  •  MOVE OUT",
-    Bomb = "BOMB  •  MOVE OUT",
+local KIND_DISASTER_IDS = {
+    Meteor = "Meteors",
+    Bomb = "Bombs",
 }
+
+local function localizedHazardCue(kind)
+    local disasterId = KIND_DISASTER_IDS[kind]
+    local name = CoreLocalization.hazardName(localeId, disasterId)
+        or CoreLocalization.text(localeId, "DANGER")
+    local action = CoreLocalization.hazardAction(localeId, disasterId)
+        or CoreLocalization.text(localeId, "STAY_ALERT")
+    return name .. "  •  " .. action
+end
 
 local KIND_BADGES = {
     Meteor = "M",
@@ -394,7 +406,7 @@ ensureRenderLoop = function()
         cueStroke.Color = color
         cueBadge.BackgroundColor3 = color
         cueBadge.Text = KIND_BADGES[kind] or "!"
-        cueText.Text = KIND_LABELS[kind] or "DANGER  •  MOVE OUT"
+        cueText.Text = localizedHazardCue(kind)
     end
 
     offscreenArrow.Visible = false
