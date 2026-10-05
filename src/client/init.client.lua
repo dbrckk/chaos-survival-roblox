@@ -342,6 +342,7 @@ countdownSub.BackgroundTransparency = 1
 countdownSub.Font = Enum.Font.GothamMedium
 countdownSub.TextColor3 = UITheme.Colors.Muted
 countdownSub.TextScaled = true
+countdownSub.TextWrapped = true
 countdownSub.Text = "SURVIVE UNTIL 0"
 countdownSub.ZIndex = 41
 countdownSub.Parent = countdownCard
@@ -357,6 +358,39 @@ local function cleanReadyTitle(value)
     text = string.gsub(text, "^SOLO RUSH:%s*", "")
     text = string.gsub(text, "^QUICK RUSH:%s*", "")
     return text
+end
+
+local function hazardGuidance(state, compact)
+    local disasterIds = type(state.disasterIds) == "table" and state.disasterIds or {}
+    local guidance = {}
+
+    for index, disasterId in ipairs(disasterIds) do
+        if index > 2 then
+            break
+        end
+
+        local action = CoreLocalization.hazardAction(localeId, disasterId)
+        local hazardHint = CoreLocalization.hazardHint(localeId, disasterId)
+        local copy = nil
+
+        if compact then
+            copy = action or hazardHint
+        elseif action and hazardHint then
+            copy = action .. "  •  " .. hazardHint
+        else
+            copy = action or hazardHint
+        end
+
+        if copy and copy ~= "" then
+            table.insert(guidance, copy)
+        end
+    end
+
+    if #guidance == 0 then
+        return nil
+    end
+
+    return table.concat(guidance, state.doubleChaos and "   +   " or "   •   ")
 end
 
 local function presentCountdown(state)
@@ -397,15 +431,17 @@ local function presentCountdown(state)
                 state.disasterIds,
                 cleanReadyTitle(state.title)
             )
-            countdownSub.Text = survivorCount > 1
-                and CoreLocalization.text(localeId, "SURVIVORS_READY", survivorCount)
-                or CoreLocalization.text(localeId, "SURVIVE_ZERO")
+            countdownSub.Text = hazardGuidance(state, false)
+                or (survivorCount > 1
+                    and CoreLocalization.text(localeId, "SURVIVORS_READY", survivorCount)
+                    or CoreLocalization.text(localeId, "SURVIVE_ZERO"))
         else
             countdownKicker.Text = CoreLocalization.text(localeId, "GET_READY")
             countdownMain.Text = tostring(math.max(1, seconds))
-            countdownSub.Text = survivorCount > 1
-                and CoreLocalization.text(localeId, "SURVIVORS", survivorCount)
-                or CoreLocalization.text(localeId, "SURVIVE_ZERO")
+            countdownSub.Text = hazardGuidance(state, true)
+                or (survivorCount > 1
+                    and CoreLocalization.text(localeId, "SURVIVORS", survivorCount)
+                    or CoreLocalization.text(localeId, "SURVIVE_ZERO"))
         end
 
         TweenService:Create(
@@ -2456,7 +2492,11 @@ local function localizedStateCopy(state)
             displayTitle
         )
         local primary = state.disasterIds and state.disasterIds[1]
-        displayHint = CoreLocalization.hazardHint(localeId, primary) or displayHint
+        if state.doubleChaos then
+            displayHint = hazardGuidance(state, true) or displayHint
+        else
+            displayHint = CoreLocalization.hazardHint(localeId, primary) or displayHint
+        end
     end
 
     return displayTitle, displayHint
