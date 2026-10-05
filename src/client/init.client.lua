@@ -634,10 +634,23 @@ local function renderQuestState(state)
     for i = 1, 3 do
         local quest = quests[i]
         if quest then
-            local marker = quest.claimed and "DONE" or string.format("%d/%d", quest.progress or 0, quest.target or 0)
-            questRows[i].Text = string.format("  %s  •  %s  •  +%d", quest.title or "Quest", marker, quest.coins or 0)
+            local marker = quest.claimed
+                and CoreLocalization.text(localeId, "DONE")
+                or string.format("%d/%d", quest.progress or 0, quest.target or 0)
+            local questTitle = CoreLocalization.questTitle(
+                localeId,
+                quest.id,
+                quest.title or CoreLocalization.text(localeId, "QUESTS")
+            )
+            questRows[i].Text = CoreLocalization.text(
+                localeId,
+                "QUEST_ROW",
+                questTitle,
+                marker,
+                quest.coins or 0
+            )
         else
-            questRows[i].Text = "  No daily quest"
+            questRows[i].Text = "  " .. CoreLocalization.text(localeId, "NO_DAILY_QUEST")
         end
     end
 
@@ -645,18 +658,25 @@ local function renderQuestState(state)
     for i = 1, 2 do
         local challenge = weekly[i]
         if challenge then
-            local marker = challenge.claimed and "DONE"
+            local marker = challenge.claimed
+                and CoreLocalization.text(localeId, "DONE")
                 or string.format("%d/%d", challenge.progress or 0, challenge.target or 0)
-            weeklyRows[i].Text = string.format(
-                "  %s  •  %s  •  +%d coins +%d XP",
-                challenge.title or "Weekly",
+            local challengeTitle = CoreLocalization.questTitle(
+                localeId,
+                challenge.id,
+                challenge.title or CoreLocalization.text(localeId, "WEEKLY_CHALLENGES")
+            )
+            weeklyRows[i].Text = CoreLocalization.text(
+                localeId,
+                "WEEKLY_ROW",
+                challengeTitle,
                 marker,
                 challenge.coins or 0,
                 challenge.xp or 0
             )
             weeklyRows[i].TextColor3 = challenge.claimed and UITheme.Colors.Green or UITheme.Colors.Text
         else
-            weeklyRows[i].Text = "  No weekly challenge"
+            weeklyRows[i].Text = "  " .. CoreLocalization.text(localeId, "NO_WEEKLY_CHALLENGE")
             weeklyRows[i].TextColor3 = UITheme.Colors.Muted
         end
     end
@@ -1199,7 +1219,11 @@ local function renderAchievements(state)
         rowTitle.TextColor3 = UITheme.Colors.Text
         rowTitle.TextScaled = true
         rowTitle.TextXAlignment = Enum.TextXAlignment.Left
-        rowTitle.Text = item.title or "Achievement"
+        rowTitle.Text = CoreLocalization.achievementTitle(
+            localeId,
+            item.id,
+            item.title or CoreLocalization.text(localeId, "ACHIEVEMENTS")
+        )
         rowTitle.Parent = row
 
         local rowBody = Instance.new("TextLabel")
@@ -1211,8 +1235,21 @@ local function renderAchievements(state)
         rowBody.TextScaled = true
         rowBody.TextXAlignment = Enum.TextXAlignment.Left
 
-        local status = item.unlocked and "DONE" or string.format("%d/%d", item.progress or 0, item.target or 0)
-        rowBody.Text = string.format("%s  •  %s  •  +%d coins", item.description or "", status, item.coins or 0)
+        local status = item.unlocked
+            and CoreLocalization.text(localeId, "DONE")
+            or string.format("%d/%d", item.progress or 0, item.target or 0)
+        local description = CoreLocalization.achievementDescription(
+            localeId,
+            item.id,
+            item.description or ""
+        )
+        rowBody.Text = CoreLocalization.text(
+            localeId,
+            "ACHIEVEMENT_ROW",
+            description,
+            status,
+            item.coins or 0
+        )
         rowBody.Parent = row
     end
 end
@@ -2242,8 +2279,8 @@ local function showDailyReward(reward)
     local streak = tonumber(reward.streak) or 1
     local coins = tonumber(reward.coins) or 0
     local xp = tonumber(reward.xp) or 0
-    dailyTitle.Text = "DAY " .. streak .. " STREAK"
-    dailyBody.Text = string.format("+%d coins   +%d XP", coins, xp)
+    dailyTitle.Text = CoreLocalization.text(localeId, "DAY_STREAK", streak)
+    dailyBody.Text = CoreLocalization.text(localeId, "COINS_XP", coins, xp)
     dailyToast.Visible = true
 
     task.delay(4, function()
