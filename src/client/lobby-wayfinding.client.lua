@@ -1,10 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalizationService = game:GetService("LocalizationService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
@@ -16,20 +19,23 @@ local phase = "waiting"
 
 local definitions = {
     {
-        name = "ARENA",
-        subtitle = "VOTE • SURVIVE • ADAPT",
+        id = "Arena",
+        nameKey = "WAYFIND_ARENA",
+        subtitleKey = "WAYFIND_ARENA_SUB",
         offset = Vector3.new(0, 8.5, 38),
         color = UITheme.Colors.Cyan,
     },
     {
-        name = "PRACTICE",
-        subtitle = "BOOST PADS",
+        id = "Practice",
+        nameKey = "WAYFIND_PRACTICE",
+        subtitleKey = "WAYFIND_PRACTICE_SUB",
         offset = Vector3.new(-28, 6.5, 0),
         color = UITheme.Colors.Violet,
     },
     {
-        name = "TIME TRIAL",
-        subtitle = "4 CHECKPOINTS",
+        id = "TimeTrial",
+        nameKey = "WAYFIND_TIME_TRIAL",
+        subtitleKey = "WAYFIND_TIME_TRIAL_SUB",
         offset = Vector3.new(28, 6.5, 0),
         color = UITheme.Colors.Gold,
     },
@@ -37,7 +43,7 @@ local definitions = {
 
 local function makeMarker(definition)
     local anchor = Instance.new("Part")
-    anchor.Name = "Wayfinding_" .. string.gsub(definition.name, " ", "")
+    anchor.Name = "Wayfinding_" .. tostring(definition.id or "Marker")
     anchor.Size = Vector3.new(0.25, 0.25, 0.25)
     anchor.Position = Config.LobbyCenter + definition.offset
     anchor.Anchored = true
@@ -70,7 +76,7 @@ local function makeMarker(definition)
     title.Position = UDim2.fromOffset(6, 2)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
-    title.Text = definition.name
+    title.Text = CoreLocalization.text(localeId, definition.nameKey)
     title.TextColor3 = definition.color:Lerp(Color3.new(1, 1, 1), 0.30)
     title.TextScaled = true
     title.Parent = panel
@@ -80,7 +86,7 @@ local function makeMarker(definition)
     subtitle.Position = UDim2.new(0, 6, 0.66, 0)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.GothamBold
-    subtitle.Text = definition.subtitle
+    subtitle.Text = CoreLocalization.text(localeId, definition.subtitleKey)
     subtitle.TextColor3 = UITheme.Colors.Muted
     subtitle.TextScaled = true
     subtitle.Parent = panel
