@@ -8,6 +8,8 @@ mémorable, lisible sur mobile, cohérente, performante et suffisamment premium 
 
 Règles du chantier
 ------------------
+- Référence obligatoire : AAA_VISUALS_ANIMATION_GUIDE.txt avant toute modification de rendu, matériau, animation, VFX, caméra ou décor.
+- Toute nouvelle feature visuelle doit préciser son comportement High / Medium / Low et son coût Android.
 - Priorité à la qualité visuelle sans réduire la lisibilité gameplay.
 - Aucun asset payant requis.
 - Aucun ajout visuel ne doit créer de pay-to-win.
