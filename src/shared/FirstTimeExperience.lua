@@ -54,18 +54,9 @@ function FirstTimeExperience.coachText(state, metrics)
             and "ROUND GOAL  •  SURVIVE UNTIL 0  •  AVOID THE HAZARD  •  SHARDS = BONUS"
             or "GET READY  •  SURVIVE UNTIL 0  •  WATCH THE HAZARD WARNING"
     elseif phase == "round" then
-        if not firstRound then
-            return nil
-        end
-
-        local seconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
-        if seconds <= 7 then
-            return "FINAL SECONDS  •  STAY ALIVE  •  IGNORE OPTIONAL SHARDS"
-        end
-
-        -- READY already teaches the objective, shard pickup has its own
-        -- feedback, and mechanic use has a dedicated cue. Keep the action
-        -- phase visually quiet so hazard telegraphs remain the priority.
+        -- The round focus bar owns the live survival objective/timer.
+        -- READY teaches the rules, shard/mechanic actions have dedicated
+        -- feedback, so the coach stays out of active gameplay entirely.
         return nil
     end
 
