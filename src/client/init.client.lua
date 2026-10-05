@@ -2023,8 +2023,20 @@ local function showVotes(options)
         statusBadge.BorderSizePixel = 0
         statusBadge.Font = Enum.Font.GothamBold
         statusBadge.Text = compactVote
-            and (selected and "VOTED" or (leading and "TOP" or "TAP"))
-            or (selected and "YOUR VOTE" or (leading and "LEADING" or "CHOOSE"))
+            and (
+                selected and CoreLocalization.text(localeId, "VOTED")
+                or (
+                    leading and CoreLocalization.text(localeId, "TOP")
+                    or CoreLocalization.text(localeId, "TAP")
+                )
+            )
+            or (
+                selected and CoreLocalization.text(localeId, "YOUR_VOTE")
+                or (
+                    leading and CoreLocalization.text(localeId, "LEADING")
+                    or CoreLocalization.text(localeId, "CHOOSE")
+                )
+            )
         statusBadge.TextColor3 = selected and UITheme.Colors.Panel or UITheme.Colors.Text
         statusBadge.TextScaled = true
         statusBadge.Parent = button
@@ -2036,7 +2048,8 @@ local function showVotes(options)
         name.Size = UDim2.fromScale(0.86, compactVote and 0.25 or 0.23)
         name.BackgroundTransparency = 1
         name.Font = Enum.Font.GothamBlack
-        name.Text = string.upper(tostring(option.name or "CHAOS"))
+        name.Text = CoreLocalization.hazardName(localeId, option.id)
+            or string.upper(tostring(option.name or "CHAOS"))
         name.TextColor3 = UITheme.Colors.Text
         name.TextScaled = true
         name.TextWrapped = true
@@ -2048,7 +2061,8 @@ local function showVotes(options)
         hintLabel.Size = UDim2.fromScale(0.84, compactVote and 0.20 or 0.17)
         hintLabel.BackgroundTransparency = 1
         hintLabel.Font = Enum.Font.GothamMedium
-        hintLabel.Text = tostring(option.hint or "")
+        hintLabel.Text = CoreLocalization.hazardHint(localeId, option.id)
+            or tostring(option.hint or "")
         hintLabel.TextColor3 = UITheme.Colors.Muted
         hintLabel.TextScaled = true
         hintLabel.TextWrapped = true
@@ -2068,8 +2082,12 @@ local function showVotes(options)
         votePill.BorderSizePixel = 0
         votePill.Font = Enum.Font.GothamBold
         votePill.Text = selected
-            and "VOTE SAVED"
-            or string.format("%d VOTE%s", optionVotes, optionVotes == 1 and "" or "S")
+            and CoreLocalization.text(localeId, "VOTE_SAVED")
+            or CoreLocalization.text(
+                localeId,
+                optionVotes == 1 and "VOTE_ONE" or "VOTE_MANY",
+                optionVotes
+            )
         votePill.TextColor3 = UITheme.Colors.Text
         votePill.TextScaled = true
         votePill.Parent = button
