@@ -54,6 +54,8 @@ PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 [QA]   3.6 Améliorer transitions visuelles entre lobby, vote, ready, round et result.
 [TODO] 3.7 QA confort visuel 30 minutes.
 [QA]   3.8 Ajouter une couche de profondeur cinématique adaptative : skyline lointaine, silhouettes héro, balises atmosphériques et trafic énergétique discret.
+[QA]   3.9 Activer rendu réaliste adaptatif : réflexions environnementales, exposition, rayons solaires, nuages dynamiques et vent.
+[QA]   3.10 Ajouter relief/micro-géométrie locale premium sur les surfaces des 4 arènes.
 
 PHASE 4 — VFX CATASTROPHES
 ---------------------------
