@@ -1,8 +1,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
+
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local arenaMetadata = ReplicatedStorage:WaitForChild("ArenaMetadata")
 
@@ -45,6 +49,7 @@ label.Parent = card
 local token = 0
 
 local function replicatedHints()
+    local variantId = arenaMetadata:GetAttribute("VariantId")
     local strategy = arenaMetadata:GetAttribute("StrategyHint")
     local mechanicName = arenaMetadata:GetAttribute("MechanicName")
     local mechanicHint = arenaMetadata:GetAttribute("MechanicHint")
@@ -59,7 +64,7 @@ local function replicatedHints()
         mechanicHint = nil
     end
 
-    return strategy, mechanicName, mechanicHint
+    return variantId, strategy, mechanicName, mechanicHint
 end
 
 local function hide()
@@ -89,14 +94,40 @@ local function reveal(arenaName, hint, mechanicName, mechanicHint)
 end
 
 local function show(arenaName, stateHint)
-    local replicatedStrategy, mechanicName, mechanicHint = replicatedHints()
-    local hint = stateHint
-    if type(hint) ~= "string" or hint == "" then
-        hint = replicatedStrategy
+    local variantId, replicatedStrategy, mechanicName, mechanicHint = replicatedHints()
+    local fallbackStrategy = stateHint
+    if type(fallbackStrategy) ~= "string" or fallbackStrategy == "" then
+        fallbackStrategy = replicatedStrategy
     end
 
-    if hint then
-        reveal(arenaName, hint, mechanicName, mechanicHint)
+    local localizedArenaName = CoreLocalization.arenaName(
+        localeId,
+        variantId or arenaName,
+        arenaName
+    )
+    local localizedStrategy = CoreLocalization.arenaStrategy(
+        localeId,
+        variantId or arenaName,
+        fallbackStrategy
+    )
+    local localizedMechanicName = CoreLocalization.arenaMechanicName(
+        localeId,
+        variantId or arenaName,
+        mechanicName
+    )
+    local localizedMechanicHint = CoreLocalization.arenaMechanicHint(
+        localeId,
+        variantId or arenaName,
+        mechanicHint
+    )
+
+    if localizedStrategy then
+        reveal(
+            localizedArenaName,
+            localizedStrategy,
+            localizedMechanicName,
+            localizedMechanicHint
+        )
     else
         hide()
     end
