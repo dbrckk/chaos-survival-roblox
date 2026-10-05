@@ -153,6 +153,26 @@ function ResultPresentation.worldLabel(feedback, isLocal)
     return isLocal and "ELIMINATED" or nil
 end
 
+function ResultPresentation.constellationBudget(tierName)
+    local tier = tostring(tierName or "Medium")
+    if tier == "Low" then
+        return 3
+    elseif tier == "High" then
+        return 8
+    end
+    return 6
+end
+
+function ResultPresentation.constellationRadius(tierName)
+    local tier = tostring(tierName or "Medium")
+    if tier == "Low" then
+        return 10
+    elseif tier == "High" then
+        return 16
+    end
+    return 13
+end
+
 function ResultPresentation.intensity(feedback)
     local kind = ResultPresentation.kind(feedback)
     if kind == "master" then
