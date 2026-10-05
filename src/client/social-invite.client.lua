@@ -324,7 +324,7 @@ local function refresh()
 
     updateBeacon(visible)
 
-    if visible and pendingFriendName and showFriendArrival then
+    if pendingFriendName and showFriendArrival then
         local displayName = pendingFriendName
         local arrivalKind = pendingArrivalKind
         pendingFriendName = nil
@@ -333,8 +333,8 @@ local function refresh()
     end
 end
 
-local function pulseSocialMoment()
-    if not shouldShow() or player:GetAttribute("ReduceMotion") == true then
+local function pulseSocialMoment(force)
+    if (not force and not shouldShow()) or player:GetAttribute("ReduceMotion") == true then
         return
     end
 
@@ -396,7 +396,8 @@ showFriendArrival = function(displayName, arrivalKind)
         safeName
     )
     beaconSubtitle.TextColor3 = UITheme.Colors.Green
-    pulseSocialMoment()
+    updateBeacon(true)
+    pulseSocialMoment(true)
 
     task.delay(4, function()
         if token ~= friendMessageToken or not beaconSubtitle or not beaconSubtitle.Parent then
@@ -404,6 +405,7 @@ showFriendArrival = function(displayName, arrivalKind)
         end
         beaconSubtitle.Text = CoreLocalization.text(localeId, "PLAY_TOGETHER")
         beaconSubtitle.TextColor3 = UITheme.Colors.Muted
+        updateBeacon(shouldShow())
     end)
 end
 
@@ -493,7 +495,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     refresh()
 
     if tostring(currentState.phase or "") == "result" and previousPhase ~= "result" then
-        task.defer(pulseSocialMoment)
+        task.defer(pulseSocialMoment, false)
     end
 end)
 
