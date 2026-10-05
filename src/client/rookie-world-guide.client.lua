@@ -1,9 +1,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalizationService = game:GetService("LocalizationService")
 
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local currentState = {
@@ -119,7 +122,7 @@ local function mark(part, text, color)
     billboard.AlwaysOnTop = true
     billboard.Size = UDim2.fromOffset(150, 36)
     billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
-    billboard.MaxDistance = 60
+    billboard.MaxDistance = 72
     billboard.Parent = player:WaitForChild("PlayerGui")
 
     local label = Instance.new("TextLabel")
@@ -131,6 +134,7 @@ local function mark(part, text, color)
     label.Text = text
     label.TextColor3 = color:Lerp(Color3.new(1, 1, 1), 0.42)
     label.TextScaled = true
+    label.TextWrapped = true
     label.Parent = billboard
 
     local corner = Instance.new("UICorner")
@@ -163,7 +167,7 @@ local function refresh()
     then
         mark(
             nearestPart(practicePads()),
-            "TRY BOOST",
+            CoreLocalization.text(localeId, "PRACTICE_BOOST"),
             Color3.fromRGB(80, 220, 255)
         )
         return
@@ -172,7 +176,7 @@ local function refresh()
     if currentState.phase == "ready" then
         mark(
             nearestPart(arenaPads()),
-            "ESCAPE PAD",
+            CoreLocalization.text(localeId, "ESCAPE_PAD"),
             Color3.fromRGB(120, 225, 255)
         )
         return
