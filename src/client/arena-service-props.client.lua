@@ -124,8 +124,8 @@ local function addClassic(base, theme, tier)
             Vector3.new(0.72, 0.72, 0.18),
             camera.CFrame * CFrame.new(0, 0, -0.62),
             i % 2 == 0 and theme.Secondary or theme.Accent,
-            Enum.Material.Neon,
-            0.28,
+            Enum.Material.Glass,
+            tier.Name == "High" and 0.18 or 0.28,
             Enum.PartType.Cylinder
         )
         addSurfaceLabel(camera, string.format("CAM %02d", i), theme.Accent, tier, Enum.NormalId.Top)
@@ -157,16 +157,16 @@ local function addTowers(base, theme, tier)
 
         addSurfaceLabel(crate, string.format("MAINT %02d", i), theme.Secondary, tier, Enum.NormalId.Front)
 
-        if tier.Name ~= "Low" then
-            makePart(
-                "TowerMaintenanceLatch" .. i,
-                Vector3.new(2.0, 0.22, 2.92),
-                crate.CFrame * CFrame.new(0, 1.18, 0),
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                0.48
-            )
-        end
+        local litLatch = tier.Name == "High" and i % 2 == 1
+            or tier.Name == "Medium" and i == 1
+        makePart(
+            "TowerMaintenanceLatch" .. i,
+            Vector3.new(2.0, 0.22, 2.92),
+            crate.CFrame * CFrame.new(0, 1.18, 0),
+            litLatch and theme.Accent or theme.Detail,
+            litLatch and Enum.Material.Neon or Enum.Material.Metal,
+            litLatch and 0.58 or 0.18
+        )
     end
 end
 
@@ -194,13 +194,14 @@ local function addCrossroads(base, theme, tier)
             0.08
         )
         addSurfaceLabel(post, string.format("L%02d", i), theme.Accent, tier, Enum.NormalId.Front)
+        local litCap = tier.Name ~= "Low" and i % 2 == 1
         makePart(
             "CrossroadsBollardCap" .. i,
             Vector3.new(1.05, 0.26, 1.05),
             post.CFrame * CFrame.new(0, 1.0, 0),
-            i % 2 == 0 and theme.Secondary or theme.Accent,
-            Enum.Material.Neon,
-            tier.Name == "Low" and 0.62 or 0.34
+            litCap and theme.Accent or theme.Detail,
+            litCap and Enum.Material.Neon or Enum.Material.Metal,
+            litCap and 0.48 or (tier.Name == "Low" and 0.42 or 0.20)
         )
 
         if tier.Name == "High" and i <= 4 then
@@ -231,18 +232,20 @@ local function addOrbital(base, theme, tier)
                 * CFrame.new(x, 1.7, z)
                 * CFrame.Angles(0, -angle, math.rad(90)),
             theme.Structure,
-            Enum.Material.SmoothPlastic,
+            Enum.Material.Metal,
             0.08,
             Enum.PartType.Cylinder
         )
 
+        local litBand = tier.Name == "High" and i % 3 == 1
+            or tier.Name == "Medium" and i == 1
         makePart(
             "OrbitalServiceCanisterBand" .. i,
             Vector3.new(0.28, 3.30, 2.10),
             body.CFrame,
-            i % 2 == 0 and theme.Secondary or theme.Accent,
-            Enum.Material.Neon,
-            tier.Name == "Low" and 0.64 or 0.38
+            litBand and theme.Secondary or theme.Detail,
+            litBand and Enum.Material.Neon or Enum.Material.Metal,
+            litBand and 0.52 or 0.16
         )
         addSurfaceLabel(body, string.format("AUX-%02d", i), theme.Accent, tier, Enum.NormalId.Top)
     end
