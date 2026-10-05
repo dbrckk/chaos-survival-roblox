@@ -48,6 +48,18 @@ local TEXT = {
         SURVIVOR_LABEL = "SURVIVOR",
         MOTION_REDUCED = "MOTION • REDUCED",
         MOTION_FULL = "MOTION • FULL",
+        MOVE_CENTER = "MOVE CENTER",
+        DANGER = "DANGER",
+        ROUND_CHALLENGE = "ROUND CHALLENGE",
+        DONE = "DONE",
+        FINAL_RUSH = "FINAL RUSH",
+        FINAL_RUSH_SECONDS = "FINAL RUSH  %ds",
+        FINAL_RUSH_SUB = "LAST 5 SECONDS • PADS RECHARGE FASTER",
+        OVERDRIVE = "OVERDRIVE",
+        OVERDRIVE_SECONDS = "OVERDRIVE  %ds",
+        OVERDRIVE_SUB = "BOOST PADS • SHARD SURGE • GOLDEN SHARD",
+        CHAOS_FUSION = "CHAOS FUSION",
+        SURVIVE_SECONDS = "SURVIVE  %ds",
     },
     fr = {
         ENTER_ARENA = "ENTRE DANS L'ARÈNE",
@@ -96,6 +108,18 @@ local TEXT = {
         SURVIVOR_LABEL = "SURVIVANT",
         MOTION_REDUCED = "MOUVEMENT • RÉDUIT",
         MOTION_FULL = "MOUVEMENT • COMPLET",
+        MOVE_CENTER = "REJOINS LE CENTRE",
+        DANGER = "DANGER",
+        ROUND_CHALLENGE = "DÉFI DE MANCHE",
+        DONE = "RÉUSSI",
+        FINAL_RUSH = "SPRINT FINAL",
+        FINAL_RUSH_SECONDS = "SPRINT FINAL  %ds",
+        FINAL_RUSH_SUB = "5 DERNIÈRES SECONDES • PADS PLUS RAPIDES",
+        OVERDRIVE = "SURCHARGE",
+        OVERDRIVE_SECONDS = "SURCHARGE  %ds",
+        OVERDRIVE_SUB = "PADS BOOSTÉS • PLUS D'ÉCLATS • ÉCLAT DORÉ",
+        CHAOS_FUSION = "FUSION CHAOS",
+        SURVIVE_SECONDS = "SURVIS  %ds",
     },
 }
 
@@ -125,6 +149,27 @@ local HAZARDS = {
         Darkness = {name = "BLACKOUT", action = "SUIS LA LUMIÈRE", hint = "SUIS LES ROUTES LUMINEUSES"},
         ShrinkingArena = {name = "ARÈNE QUI RÉTRÉCIT", action = "CENTRE", hint = "REJOINS LE CENTRE PENDANT QUE L'ARÈNE RÉTRÉCIT"},
         JumpShock = {name = "ONDE DE CHOC", action = "ÉCARTE-TOI", hint = "GARDE TES DISTANCES AVEC L'ONDE BLEUE"},
+    },
+}
+
+local CHALLENGE_SHORT = {
+    en = {
+        FIRST_SURVIVAL = "STAY ALIVE",
+        SHARD_HUNT = "SHARDS",
+        MOBILITY_MASTER = "PADS",
+        DANGER_DANCE = "CLOSE CALL",
+        MOMENTUM_3 = "MOMENTUM",
+        FLOW_CHAIN = "FLOW",
+        MIX_IT_UP = "VARIETY",
+    },
+    fr = {
+        FIRST_SURVIVAL = "RESTE EN VIE",
+        SHARD_HUNT = "ÉCLATS",
+        MOBILITY_MASTER = "PADS",
+        DANGER_DANCE = "RISQUE",
+        MOMENTUM_3 = "ÉLAN",
+        FLOW_CHAIN = "FLUIDITÉ",
+        MIX_IT_UP = "VARIÉTÉ",
     },
 }
 
@@ -198,6 +243,14 @@ function CoreLocalization.hazardTitle(localeId, disasterIds, fallback)
         )
     end
     return table.concat(names, " + ")
+end
+
+function CoreLocalization.challengeShort(localeId, challengeId, fallback)
+    local language = CoreLocalization.language(localeId)
+    local id = tostring(challengeId or "")
+    return (CHALLENGE_SHORT[language] and CHALLENGE_SHORT[language][id])
+        or CHALLENGE_SHORT.en[id]
+        or fallback
 end
 
 function CoreLocalization.coach(localeId, value)
