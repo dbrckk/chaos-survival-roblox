@@ -26,6 +26,7 @@ local previousPhase = "waiting"
 local lastSurvived = nil
 local canInvite = false
 local inviteCheckFinished = false
+local inviteCheckInFlight = false
 local inviteBusy = false
 local viewportConnection = nil
 
@@ -336,16 +337,25 @@ local function pulseSocialMoment()
 end
 
 local function checkInviteAvailability()
-    if inviteCheckFinished then
+    if inviteCheckFinished or inviteCheckInFlight then
         return
     end
-    inviteCheckFinished = true
+    inviteCheckInFlight = true
 
     task.spawn(function()
         local ok, result = pcall(function()
             return SocialService:CanSendGameInviteAsync(player)
         end)
-        canInvite = ok and result == true
+        inviteCheckInFlight = false
+
+        if ok then
+            inviteCheckFinished = true
+            canInvite = result == true
+        else
+            canInvite = false
+            task.delay(8, checkInviteAvailability)
+        end
+
         refresh()
     end)
 end
