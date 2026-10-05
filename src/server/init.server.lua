@@ -64,6 +64,7 @@ local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNea
 local chaosShardCollectedEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ChaosShardCollected")
 local performancePulseEvent = RemoteRegistry.ensureRemoteEvent(remotes, "PerformancePulse")
 local accessibilitySettingsEvent = RemoteRegistry.ensureRemoteEvent(remotes, "AccessibilitySettings")
+local socialSignalEvent = RemoteRegistry.ensureRemoteEvent(remotes, "SocialSignal")
 
 PlayerData.init()
 CosmeticService.init(remotes, RateLimiter)
@@ -150,6 +151,7 @@ local botVoteStarted = false
 local allowVote = RateLimiter.new(0.2)
 local allowHazardNearMiss = RateLimiter.new(0.9)
 local allowPerformancePulse = RateLimiter.new(45)
+local allowSocialSignal = RateLimiter.new(1.5)
 local lastRoundState = {
     phase = "waiting",
     title = "WAITING FOR PLAYERS",
@@ -189,6 +191,31 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         "VFX:" .. tier,
         "Device:" .. deviceClass,
         "Round:" .. tostring(roundNumber)
+    )
+end)
+
+
+local allowedSocialSignals = {
+    invite_cta_shown = true,
+    invite_prompt_opened = true,
+}
+
+socialSignalEvent.OnServerEvent:Connect(function(player, action)
+    local signal = tostring(action or "")
+    if not allowedSocialSignals[signal] then
+        return
+    end
+    if not allowSocialSignal(player.UserId .. ":" .. signal) then
+        return
+    end
+
+    GameAnalytics.custom(
+        player,
+        "SocialInvite",
+        1,
+        "Action:" .. signal,
+        "Games:" .. tostring(math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))),
+        "Players:" .. tostring(#Players:GetPlayers())
     )
 end)
 
