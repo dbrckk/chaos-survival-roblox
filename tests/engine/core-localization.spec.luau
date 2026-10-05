@@ -61,6 +61,20 @@ describe("Core localization", function()
         ).toBe("LEFT STICK = MOVE  •  A = JUMP  •  SURVIVE UNTIL 0")
     end)
 
+    it("localizes progression content by stable ids", function()
+        expect(CoreLocalization.questTitle("fr-fr", "PLAY_3", "fallback")).toBe("Joue 3 manches")
+        expect(CoreLocalization.questTitle("fr-fr", "DOUBLE_3", "fallback")).toBe(
+            "Survis à 3 manches Double Chaos"
+        )
+        expect(
+            CoreLocalization.achievementTitle("fr-fr", "FIRST_SURVIVOR", "fallback")
+        ).toBe("Premier survivant")
+        expect(
+            CoreLocalization.achievementDescription("fr-fr", "LEVEL_5", "fallback")
+        ).toBe("Atteins le niveau 5")
+        expect(CoreLocalization.text("fr-fr", "DAY_STREAK", 7)).toBe("SÉRIE DE 7 JOURS")
+    end)
+
     it("localizes first-time coaching without altering unknown copy", function()
         local source = "VOTE  •  TAP THE CHAOS YOU WANT TO FACE"
         expect(CoreLocalization.coach("fr-fr", source)).toBe(
