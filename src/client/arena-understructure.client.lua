@@ -88,14 +88,16 @@ local function rebuild()
             tier.Name == "Low" and 0.28 or 0.14
         )
 
-        if tier.Name ~= "Low" then
+        local supportGlow = tier.Name == "High" and i % 2 == 1
+            or tier.Name == "Medium" and i == 1
+        if supportGlow then
             local glow = makePart(
                 "UnderSupportGlow" .. i,
                 Vector3.new(0.32, depth * 0.62, 2.95),
                 support.CFrame,
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
-                0.48
+                tier.Name == "High" and 0.54 or 0.62
             )
             glow.CastShadow = false
         end
@@ -134,14 +136,16 @@ local function rebuild()
                     Enum.Material.DiamondPlate,
                     0.16
                 )
-                makePart(
-                    side < 0 and "UnderClassicDataGlowL" or "UnderClassicDataGlowR",
-                    Vector3.new(8.5, 0.30, 8.12),
-                    bay.CFrame * CFrame.new(0, 2.26, 0),
-                    side < 0 and theme.Accent or theme.Secondary,
-                    Enum.Material.Neon,
-                    0.52
-                )
+                if tier.Name == "High" or side < 0 then
+                    makePart(
+                        side < 0 and "UnderClassicDataGlowL" or "UnderClassicDataGlowR",
+                        Vector3.new(8.5, 0.30, 8.12),
+                        bay.CFrame * CFrame.new(0, 2.26, 0),
+                        side < 0 and theme.Accent or theme.Secondary,
+                        Enum.Material.Neon,
+                        tier.Name == "High" and 0.58 or 0.66
+                    )
+                end
             end
         end
     elseif variant == "Crossroads" then
@@ -188,7 +192,9 @@ local function rebuild()
             )
             trunk.CastShadow = false
 
-            if tier.Name ~= "Low" then
+            local trunkGlow = tier.Name == "High" and i % 2 == 1
+                or tier.Name == "Medium" and i == 1
+            if trunkGlow then
                 local glowSize = def.size.X > def.size.Z
                     and Vector3.new(def.size.X * 0.70, 0.24, 7.15)
                     or Vector3.new(7.15, 0.24, def.size.Z * 0.70)
@@ -198,7 +204,7 @@ local function rebuild()
                     trunk.CFrame * CFrame.new(0, 1.12, 0),
                     i % 2 == 0 and theme.Secondary or theme.Accent,
                     Enum.Material.Neon,
-                    0.56
+                    tier.Name == "High" and 0.60 or 0.68
                 )
             end
         end
@@ -235,9 +241,9 @@ local function rebuild()
                     Vector3.new(radius, 0.70, 1.30),
                     CFrame.new(pos)
                         * CFrame.Angles(0, -(angle + math.pi * 0.5), 0),
-                    i % 2 == 0 and theme.Secondary or theme.Detail,
-                    i % 2 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-                    i % 2 == 0 and 0.52 or 0.18
+                    i % 3 == 0 and theme.Secondary or theme.Detail,
+                    i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
+                    i % 3 == 0 and 0.58 or 0.18
                 )
             end
         end
@@ -256,9 +262,9 @@ local function rebuild()
                 "UnderOrbitalArc" .. i,
                 Vector3.new(radius * 0.34, 0.45, 1.15),
                 CFrame.new(pos) * CFrame.Angles(0, -tangent, 0),
-                i % 2 == 0 and theme.Accent or theme.Structure,
-                i % 2 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-                i % 2 == 0 and 0.50 or 0.18
+                i % 3 == 0 and theme.Accent or theme.Structure,
+                i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
+                i % 3 == 0 and 0.58 or 0.18
             )
         end
     elseif variant == "Towers" then
