@@ -67,7 +67,7 @@ VisualTheme.Arenas = {
         Detail = Color3.fromRGB(156, 115, 188),
     },
     Orbital = {
-        FloorMaterial = Enum.Material.SmoothPlastic,
+        FloorMaterial = Enum.Material.Metal,
         StructureMaterial = Enum.Material.Metal,
         PanelMaterial = Enum.Material.SmoothPlastic,
         Surface = Color3.fromRGB(23, 43, 48),
