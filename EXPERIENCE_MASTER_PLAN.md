@@ -273,3 +273,10 @@ SOCIAL / CAPTIVATION PASS — 2026-10-05
 [FAIT] Rituel social résultat : réactions GG / ENCORE / INCROYABLE réservées au multijoueur, une seule par joueur et par résultat, rendues au-dessus des avatars et absentes du gameplay actif.
 [FAIT] Analytics social funnel : exposition CTA, ouverture prompt, arrivée via invitation et réaction résultat sont maintenant distinguables.
 
+
+
+GUIDES DE PRODUCTION — 2026-10-05
+================================
+[FAIT] AAA_VISUALS_ANIMATION_GUIDE.txt : standard obligatoire pour graphismes, PBR, lighting, maps, VFX, animation, caméra et optimisation visuelle.
+[FAIT] GAME_FEEL_UX_GUIDE.txt : standard obligatoire pour contrôle, feedback, rythme, onboarding, social, rétention saine, mobile et accessibilité.
+[RÈGLE] Toute future amélioration doit être évaluée contre ces deux guides avant validation finale.
