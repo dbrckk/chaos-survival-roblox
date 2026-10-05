@@ -37,6 +37,23 @@ describe("Core localization", function()
             "ÉQUIPE • 3 MANCHES ENSEMBLE"
         )
         expect(CoreLocalization.text("fr-fr", "CHAOS_FUSION_SUB")).toBe("SURVIS AUX DEUX DANGERS")
+        expect(CoreLocalization.text("fr-fr", "SHARE_MOMENT")).toBe("PARTAGER CE MOMENT")
+        expect(CoreLocalization.text("fr-fr", "SHARE_REASON_LAST_SURVIVOR")).toBe(
+            "DERNIER SURVIVANT"
+        )
+        expect(CoreLocalization.text("fr-fr", "SHARE_JOINED", "Nova")).toBe(
+            "Nova A REJOINT TON MOMENT PARTAGÉ"
+        )
+        expect(CoreLocalization.text("fr-fr", "POSITION_YOURSELF")).toBe("PLACE-TOI")
+        expect(CoreLocalization.text("fr-fr", "JUICE_MASTER_SUB", 4)).toBe(
+            "Défi terminé • Élan x4"
+        )
+        expect(CoreLocalization.text("fr-fr", "JUICE_UNSTOPPABLE", 5)).toBe("INARRÊTABLE x5")
+        expect(CoreLocalization.text("fr-fr", "NEAR_MISS_TITLE")).toBe("C'ÉTAIT JUSTE !")
+        expect(CoreLocalization.text("fr-fr", "NEAR_MISS_COMBO", 3)).toBe(
+            "DE JUSTESSE  x3"
+        )
+        expect(CoreLocalization.text("fr-fr", "NEAR_MISS_EDGE", 0.8)).toBe("0.8x LIMITE")
         expect(CoreLocalization.text("fr-fr", "YOU_SURVIVED")).toBe("TU AS SURVÉCU")
         expect(CoreLocalization.text("fr-fr", "ELIMINATED_FEED", "Nova")).toBe("Nova a été éliminé")
         expect(CoreLocalization.text("fr-fr", "RESULT_STREAK_TAG", 3)).toBe("SÉRIE x3")
