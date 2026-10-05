@@ -166,12 +166,17 @@ Target: reduce dead time.
 - Uses Roblox SocialService eligibility before displaying the control.
 - Lobby receives a physical **Crew Signal** beacon so the social system belongs to the world rather than feeling like an ad overlay.
 
+### Implemented social layers
+- Friend-arrival recognition using invite LaunchData, with server validation and no gameplay reward.
+- Friend arrival is deferred to a calm presentation moment when necessary.
+- One-tap multiplayer result reactions: GG / AGAIN / WOW, server-authoritative and limited to one per player per result.
+- Analytics now cover invite CTA exposure, prompt activation, invite-driven join and result reactions.
+
 ### Next social layers
-1. Friend-arrival recognition when a player actually joins through an invite.
-2. Lightweight "crew streak" presentation for humans playing together, without economic advantage.
-3. Shared end-of-round photo composition / survivor lineup.
-4. Optional one-tap re-invite from the lobby, never during danger.
-5. [STARTED] Analytics: invite-control exposure and prompt activation are instrumented server-side; friend join, first shared round and shared-session length remain to add.
+1. Lightweight "crew streak" presentation for humans playing together, without economic advantage or blame-heavy resets.
+2. Shared end-of-round photo composition / survivor lineup.
+3. First shared-round and shared-session-length analytics.
+4. Optional customized Roblox invite notification asset once final public branding is locked.
 
 ---
 
