@@ -49,6 +49,8 @@ PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 [QA]   2.9 Différencier le langage de surface : Classic grille, Towers industriel, Crossroads directionnel, Orbital radial.
 [QA]   2.10 Réduire les répétitions de glow : accents hiérarchisés sur bords, sous-structures et masses midground.
 [QA]   2.11 Donner aux props secondaires une vraie hiérarchie matériau : verre/métal dominants, emissive seulement sur points fonctionnels.
+[QA]   2.12 Séparer cues de navigation et décor : pads/chevrons prioritaires, centres/plateformes plus sobres.
+[QA]   2.13 Réduire l'émissif des micro-reliefs proches pour préserver warnings et hazards.
 
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 -------------------------------------------
