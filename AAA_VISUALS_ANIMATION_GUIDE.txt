@@ -108,10 +108,10 @@ Ordre visuel obligatoire :
 1. joueur ;
 2. danger létal ;
 3. route / zone de déplacement utile ;
-23. landmark héro de l'arène ;
-23. architecture secondaire ;
-23. micro-détails ;
-23. skyline / fond.
+4. landmark héro de l'arène ;
+5. architecture secondaire ;
+6. micro-détails ;
+7. skyline / fond.
 
 Un élément de rang inférieur ne doit jamais dominer un élément supérieur.
 
@@ -155,7 +155,7 @@ ORBITAL RING
 - mouvement : reactor pulse, bras, halo orbital.
 
 =====================================================================
-23. PIPELINE EXACT POUR CRÉER UN ASSET 3D PREMIUM
+4. PIPELINE EXACT POUR CRÉER UN ASSET 3D PREMIUM
 =====================================================================
 
 ÉTAPE A — BRIEF AVANT MODÉLISATION
@@ -263,7 +263,7 @@ Vérifier :
 - silhouettes avec Darkness / Lava / Freeze / Double Chaos.
 
 =====================================================================
-23. RÉALISME VISUEL : CE QUI FAIT VRAIMENT PREMIUM
+5. RÉALISME VISUEL : CE QUI FAIT VRAIMENT PREMIUM
 =====================================================================
 
 Le réalisme n'est pas "plus de détails".
@@ -283,11 +283,11 @@ Les éléments doivent sembler posés / fixés :
 - ombres de contact ;
 - jonctions crédibles.
 
-23. BEVELS / NORMALES
+4. BEVELS / NORMALES
 Une arête parfaitement mathématique réfléchit mal la lumière et fait "low poly".
 Un bevel discret sur les pièces importantes produit immédiatement un aspect plus manufacturé.
 
-23. IMPERFECTIONS
+5. IMPERFECTIONS
 Ajouter avec parcimonie :
 - variation de roughness ;
 - légère saleté ;
@@ -297,16 +297,16 @@ Ajouter avec parcimonie :
 
 Éviter la saleté aléatoire uniforme.
 
-23. HIÉRARCHIE DE DÉTAIL
+6. HIÉRARCHIE DE DÉTAIL
 Grandes formes -> moyennes formes -> petits détails.
 Si le joueur ne comprend pas la grande forme, les micro-détails ne servent à rien.
 
-23. COULEUR
+7. COULEUR
 Limiter la palette.
 Le néon est un accent, pas le matériau principal de toute la scène.
 
 =====================================================================
-23. LIGHTING AAA-LIKE
+6. LIGHTING AAA-LIKE
 =====================================================================
 
 Le lighting doit être conçu comme un système narratif.
@@ -315,8 +315,8 @@ Ordre :
 1. rendre le joueur lisible ;
 2. rendre le danger lisible ;
 3. donner une identité d'arène ;
-23. créer profondeur / atmosphère ;
-23. ajouter spectacle.
+4. créer profondeur / atmosphère ;
+5. ajouter spectacle.
 
 Utiliser l'architecture existante dans arena-lighting.client.lua.
 
@@ -351,15 +351,15 @@ Pendant RESULT :
   bloom + profondeur + accents + constellation + lumière des survivants.
 
 =====================================================================
-23. COMPOSITION ET PROFONDEUR DES MAPS
+7. COMPOSITION ET PROFONDEUR DES MAPS
 =====================================================================
 
 Chaque map doit contenir au minimum 5 couches :
 1. surface jouable ;
 2. edge / understructure ;
 3. architecture périphérique proche ;
-23. midground / skyline ;
-23. horizon / void / ciel.
+4. midground / skyline ;
+5. horizon / void / ciel.
 
 Pour chaque spawn :
 - prendre une capture sans HUD ;
@@ -378,7 +378,7 @@ Créer des lignes de force :
 Une composition premium utilise des asymétries contrôlées.
 
 =====================================================================
-23. VFX CATASTROPHES
+8. VFX CATASTROPHES
 =====================================================================
 
 Chaque catastrophe doit avoir une signature immédiatement identifiable.
@@ -420,7 +420,7 @@ Double Chaos :
 - préserver les deux télégraphes.
 
 =====================================================================
-23. ANIMATIONS PERSONNAGES PREMIUM
+9. ANIMATIONS PERSONNAGES PREMIUM
 =====================================================================
 
 Le polish procédural actuel ne remplace pas de vraies animations authored.
@@ -468,19 +468,19 @@ Transitions recommandées projet :
 Ne jamais retirer la réactivité du joueur pour rendre une animation "plus jolie".
 
 =====================================================================
-23. PIPELINE D'ANIMATION
+10. PIPELINE D'ANIMATION
 =====================================================================
 
 Option A — Animation Editor Roblox
 1. créer / charger rig R15 ;
 2. définir poses clés ;
 3. travailler bassin / torse avant bras ;
-23. ajouter overlap ;
-23. vérifier boucle ;
-23. créer markers ;
-23. publier animation ;
-23. intégrer via Animator ;
-23. tester avec différentes vitesses réelles.
+4. ajouter overlap ;
+5. vérifier boucle ;
+6. créer markers ;
+7. publier animation ;
+8. intégrer via Animator ;
+9. tester avec différentes vitesses réelles.
 
 Option B — Capture vidéo / mocap
 Utiliser Animation Capture pour générer une base réaliste, puis :
@@ -499,7 +499,7 @@ Utiliser si besoin d'un contrôle poussé :
 - toujours tester dans Studio.
 
 =====================================================================
-23. IK ET CONTACTS
+11. IK ET CONTACTS
 =====================================================================
 
 IKControl peut être utilisé pour :
@@ -523,7 +523,7 @@ Foot IK :
 - conserver les pieds dans des limites anatomiques.
 
 =====================================================================
-23. MARKERS D'ANIMATION
+12. MARKERS D'ANIMATION
 =====================================================================
 
 Synchroniser les feedbacks avec des markers Animation Editor et GetMarkerReachedSignal().
@@ -547,7 +547,7 @@ Les markers doivent déclencher :
 Ne jamais utiliser des task.wait() approximatifs pour synchroniser un son important avec une animation authored si un marker est possible.
 
 =====================================================================
-23. CAMÉRA ET MOUVEMENT
+13. CAMÉRA ET MOUVEMENT
 =====================================================================
 
 La caméra doit renforcer, jamais gêner.
@@ -572,7 +572,7 @@ Amplitude :
 - Final Rush : rythme visuel, pas nausée.
 
 =====================================================================
-23. UI VISUELLE PREMIUM
+14. UI VISUELLE PREMIUM
 =====================================================================
 
 UI = même direction artistique que le monde.
@@ -592,11 +592,11 @@ Hiérarchie ROUND :
 1. hazard / action ;
 2. timer ;
 3. survivants ;
-23. challenge secondaire ;
-23. progression meta hors combat.
+4. challenge secondaire ;
+5. progression meta hors combat.
 
 =====================================================================
-23. QUALITÉ HIGH / MEDIUM / LOW
+15. QUALITÉ HIGH / MEDIUM / LOW
 =====================================================================
 
 Toute feature visuelle coûteuse doit définir les 3 niveaux.
@@ -631,7 +631,7 @@ HIGH
 Un joueur Low doit toujours comprendre le jeu aussi bien qu'un joueur High.
 
 =====================================================================
-23. BUDGET POUR TOUT NOUVEL EFFET
+16. BUDGET POUR TOUT NOUVEL EFFET
 =====================================================================
 
 Avant merge, répondre :
@@ -659,7 +659,7 @@ Règles pratiques :
 - objets décoratifs : CanCollide/Touch/Query=false.
 
 =====================================================================
-23. PERFORMANCE : CRITÈRES D'ACCEPTATION
+17. PERFORMANCE : CRITÈRES D'ACCEPTATION
 =====================================================================
 
 Priorité : vrai Android milieu de gamme.
@@ -691,7 +691,7 @@ Repères frame time :
 Un effet visuel doit être supprimé ou simplifié s'il crée un spike visible récurrent.
 
 =====================================================================
-23. CHECKLIST D'UN ASSET "AAA-LIKE"
+18. CHECKLIST D'UN ASSET "AAA-LIKE"
 =====================================================================
 
 [ ] Silhouette identifiable.
@@ -714,7 +714,7 @@ Un effet visuel doit être supprimé ou simplifié s'il crée un spike visible r
 [ ] Aucun pay-to-win visuel.
 
 =====================================================================
-23. CHECKLIST D'UNE ANIMATION "AAA-LIKE"
+19. CHECKLIST D'UNE ANIMATION "AAA-LIKE"
 =====================================================================
 
 [ ] Poses clés fortes.
@@ -734,7 +734,7 @@ Un effet visuel doit être supprimé ou simplifié s'il crée un spike visible r
 [ ] Test 30 min sans fuite / accumulation.
 
 =====================================================================
-23. CHECKLIST D'UNE SCÈNE
+20. CHECKLIST D'UNE SCÈNE
 =====================================================================
 
 Tester sans HUD :
@@ -755,7 +755,7 @@ Tester avec gameplay :
 [ ] Double Chaos encore compréhensible.
 
 =====================================================================
-23. ORDRE DES PROCHAINES AMÉLIORATIONS VISUELLES
+21. ORDRE DES PROCHAINES AMÉLIORATIONS VISUELLES
 =====================================================================
 
 Priorité 1 — QA réel
@@ -786,7 +786,7 @@ Priorité 6 — marketing
 - icon / thumbnails / trailer uniquement à partir du rendu réel final.
 
 =====================================================================
-23. CE QU'IL NE FAUT PAS FAIRE
+22. CE QU'IL NE FAUT PAS FAIRE
 =====================================================================
 
 NE PAS :
@@ -812,14 +812,14 @@ Une amélioration visuelle n'est FINIE que si :
 1. elle est intégrée au design system ;
 2. elle fonctionne High/Medium/Low ;
 3. elle respecte ReduceMotion ;
-23. elle ne change pas la collision/gameplay involontairement ;
-23. Luau compile ;
-23. Build Validation passe ;
-23. tests moteur concernés passent ;
-23. capture Android réelle vérifiée ;
-23. aucun overlap / warning masqué ;
-23. aucune baisse perceptible de fluidité ;
-23. VISUAL_OVERHAUL_PLAN.txt est mis à jour.
+4. elle ne change pas la collision/gameplay involontairement ;
+5. Luau compile ;
+6. Build Validation passe ;
+7. tests moteur concernés passent ;
+8. capture Android réelle vérifiée ;
+9. aucun overlap / warning masqué ;
+10. aucune baisse perceptible de fluidité ;
+11. VISUAL_OVERHAUL_PLAN.txt est mis à jour.
 
 Références techniques Roblox à consulter avant changement moteur majeur :
 - PBR / SurfaceAppearance : Roblox Creator Hub, "PBR textures" / "SurfaceAppearance".
