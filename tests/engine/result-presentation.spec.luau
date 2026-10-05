@@ -76,6 +76,14 @@ describe("Result presentation", function()
         expect(#tip > 10).toBe(true)
     end)
 
+    it("scales survivor constellation complexity with device quality", function()
+        expect(ResultPresentation.constellationBudget("Low")).toBe(3)
+        expect(ResultPresentation.constellationBudget("Medium")).toBe(6)
+        expect(ResultPresentation.constellationBudget("High")).toBe(8)
+        expect(ResultPresentation.constellationRadius("Low")).toBe(10)
+        expect(ResultPresentation.constellationRadius("High")).toBe(16)
+    end)
+
     it("orders presentation intensity by result importance", function()
         local master = ResultPresentation.intensity({
             survived = true,
