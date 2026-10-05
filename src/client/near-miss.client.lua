@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardNearMiss")
@@ -95,6 +96,83 @@ local combo = 0
 local lastNearMissAt = 0
 local token = 0
 
+local function quality()
+    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+end
+
+local function pulseWorld(color, severity)
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then
+        return
+    end
+
+    local profile = quality()
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local strength = math.clamp(tonumber(severity) or 0.5, 0.2, 1)
+
+    local ring = Instance.new("Part")
+    ring.Name = "NearMissWorldPulse"
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Size = Vector3.new(0.05, 2.6, 2.6)
+    ring.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.65, 0))
+        * CFrame.Angles(0, 0, math.rad(90))
+    ring.Anchored = true
+    ring.CanCollide = false
+    ring.CanTouch = false
+    ring.CanQuery = false
+    ring.CastShadow = false
+    ring.Material = Enum.Material.Neon
+    ring.Color = color
+    ring.Transparency = 0.62
+    ring.Parent = workspace
+
+    TweenService:Create(
+        ring,
+        TweenInfo.new(
+            reduced and 0.12 or (profile.Name == "Low" and 0.16 or 0.24),
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        ),
+        {
+            Size = Vector3.new(
+                0.05,
+                4.8 + 4.0 * strength,
+                4.8 + 4.0 * strength
+            ),
+            Transparency = 1,
+        }
+    ):Play()
+
+    task.delay(0.34, function()
+        if ring.Parent then
+            ring:Destroy()
+        end
+    end)
+
+    if profile.Name == "High" and not reduced then
+        local light = Instance.new("PointLight")
+        light.Name = "NearMissPulseLight"
+        light.Color = color
+        light.Brightness = 0.65 + 0.75 * strength
+        light.Range = 10 + 6 * strength
+        light.Shadows = false
+        light.Parent = root
+
+        TweenService:Create(
+            light,
+            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Brightness = 0}
+        ):Play()
+
+        task.delay(0.22, function()
+            if light.Parent then
+                light:Destroy()
+            end
+        end)
+    end
+end
+
 local function readableKind(kind)
     local value = tostring(kind or "HAZARD")
     value = value:gsub("([a-z])([A-Z])", "%1 %2")
@@ -120,11 +198,26 @@ local function show(payload)
         dangerRatio = math.clamp(distance / radius, 0, 2)
     end
 
+    local accent = UITheme.disasterAccent(payload.kind, UITheme.Colors.Orange)
+    if payload.kind == "Meteor" then
+        accent = UITheme.DisasterAccents.Meteors
+    elseif payload.kind == "Bomb" then
+        accent = UITheme.DisasterAccents.Bombs
+    end
+
     title.Text = combo >= 2 and ("CLOSE CALL  x" .. tostring(combo)) or "CLOSE CALL!"
+    title.TextColor3 = accent:Lerp(UITheme.Colors.Text, 0.18)
+    stroke.Color = accent
+    accentLine.BackgroundColor3 = accent
+    flash.BackgroundColor3 = accent
     detail.Text = readableKind(payload.kind)
+    local severity = 0.55
     if dangerRatio then
         detail.Text ..= string.format("  •  %.1fx EDGE", dangerRatio)
+        severity = math.clamp(1.35 - dangerRatio, 0.25, 1)
     end
+
+    pulseWorld(accent, severity)
 
     card.Visible = true
     card.BackgroundTransparency = 1
