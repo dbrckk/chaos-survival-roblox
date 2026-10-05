@@ -1853,7 +1853,7 @@ local function showRoundFeedback(feedback)
         table.insert(extras, "FUSION +" .. tostring(fusionBonusCoins))
     end
 
-    resultReward.Text = string.format("+%d COINS   +%d XP", shownCoins, shownXP)
+    resultReward.Text = CoreLocalization.text(localeId, "COINS_XP", shownCoins, shownXP)
     resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_SOON")
     if #extras > 0 and not touchDevice then
         resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")
@@ -2274,10 +2274,18 @@ local function showQuestCompletion(quest)
         localeId,
         weekly and "WEEKLY_COMPLETE" or "QUEST_COMPLETE"
     )
+    local questTitle = CoreLocalization.questTitle(
+        localeId,
+        quest.id,
+        quest.title or CoreLocalization.text(
+            localeId,
+            weekly and "WEEKLY_CHALLENGES" or "DAILY_QUESTS"
+        )
+    )
     questToastBody.Text = CoreLocalization.text(
         localeId,
         "REWARD_LINE",
-        quest.title or (weekly and "Weekly challenge" or "Daily quest"),
+        questTitle,
         quest.coins or 0,
         quest.xp or 0
     )
@@ -2294,10 +2302,15 @@ local function showAchievement(item)
     end
 
     achievementToastTitle.Text = CoreLocalization.text(localeId, "ACHIEVEMENT_UNLOCKED")
+    local achievementTitle = CoreLocalization.achievementTitle(
+        localeId,
+        item.id,
+        item.title or CoreLocalization.text(localeId, "ACHIEVEMENTS")
+    )
     achievementToastBody.Text = CoreLocalization.text(
         localeId,
         "REWARD_LINE",
-        item.title or CoreLocalization.text(localeId, "ACHIEVEMENTS"),
+        achievementTitle,
         item.coins or 0,
         item.xp or 0
     )
