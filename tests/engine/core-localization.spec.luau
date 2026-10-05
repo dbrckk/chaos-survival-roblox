@@ -43,6 +43,16 @@ describe("Core localization", function()
         expect(CoreLocalization.text("fr-fr", "RESULT_NEXT_GOAL", 5, 120)).toBe(
             "PROCHAIN OBJECTIF • NIVEAU 5 • 120 XP RESTANTS"
         )
+        expect(CoreLocalization.text("fr-fr", "LEVEL_REACHED", 6)).toBe("NIVEAU 6 !")
+        expect(CoreLocalization.text("fr-fr", "LOADOUT_TRAIL_AURA")).toBe(
+            "ÉQUIPEMENT • TRAÎNÉE + AURA"
+        )
+        expect(CoreLocalization.text("fr-fr", "COSMETIC_PRICE_COINS", 75)).toBe("75 PIÈCES")
+        expect(CoreLocalization.text("fr-fr", "THANK_YOU")).toBe("MERCI")
+        expect(CoreLocalization.text("fr-fr", "COSMETIC_UNLOCKED")).toBe("COSMÉTIQUE DÉBLOQUÉ")
+        expect(CoreLocalization.text("fr-fr", "DATA_SAVE_DELAYED_WARNING")).toBe(
+            "SAUVEGARDE RETARDÉE • ROBLOX RÉESSAIE LE DATASTORE"
+        )
     end)
 
     it("localizes hazard names and actionable hints", function()
