@@ -70,7 +70,7 @@ shard.BackgroundColor3 = UITheme.Colors.PanelSoft
 shard.BackgroundTransparency = 0.16
 shard.BorderSizePixel = 0
 shard.Font = Enum.Font.GothamBlack
-shard.Text = "SHARDS  0"
+shard.Text = CoreLocalization.text(localeId, "SHARDS_COUNT", 0)
 shard.TextColor3 = UITheme.Colors.Cyan
 shard.TextScaled = true
 shard.TextXAlignment = Enum.TextXAlignment.Left
@@ -86,7 +86,7 @@ challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
 challenge.BackgroundTransparency = 0.18
 challenge.BorderSizePixel = 0
 challenge.Font = Enum.Font.GothamBold
-challenge.Text = "ROUND CHALLENGE"
+challenge.Text = CoreLocalization.text(localeId, "ROUND_CHALLENGE")
 challenge.TextColor3 = UITheme.Colors.Muted
 challenge.TextScaled = true
 challenge.TextWrapped = true
@@ -338,9 +338,14 @@ local function refresh()
         completedChallengeId = nil
     elseif challengeId then
         local completed = progress >= challengeTarget
+        local challengeShort = CoreLocalization.challengeShort(
+            localeId,
+            state.challengeId,
+            tostring(state.challengeShort or CoreLocalization.text(localeId, "ROUND_CHALLENGE"))
+        )
         challenge.Text = completed
-            and ("DONE  " .. tostring(state.challengeShort or "CHALLENGE"))
-            or string.format("%s  %d/%d", tostring(state.challengeShort or "CHALLENGE"), progress, challengeTarget)
+            and (CoreLocalization.text(localeId, "DONE") .. "  " .. challengeShort)
+            or string.format("%s  %d/%d", challengeShort, progress, challengeTarget)
         challenge.TextColor3 = completed and UITheme.Colors.Green or UITheme.Colors.Text
 
         if completed and completedChallengeId ~= challengeId then
@@ -353,7 +358,7 @@ local function refresh()
             challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
         end
     else
-        challenge.Text = "ROUND CHALLENGE"
+        challenge.Text = CoreLocalization.text(localeId, "ROUND_CHALLENGE")
         challenge.TextColor3 = UITheme.Colors.Muted
         challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
         completedChallengeId = nil
@@ -374,16 +379,28 @@ local function refresh()
         tonumber(state.seconds) or 0
     )
     if state.finalRush then
-        text = "FINAL RUSH  " .. tostring(math.max(0, math.floor(tonumber(state.seconds) or 0))) .. "s"
+        text = CoreLocalization.text(
+            localeId,
+            "FINAL_RUSH_SECONDS",
+            math.max(0, math.floor(tonumber(state.seconds) or 0))
+        )
         color = UITheme.Colors.Red
     elseif state.overdrive then
-        text = "OVERDRIVE  " .. tostring(math.max(1, math.floor(tonumber(state.overdriveSeconds) or 1))) .. "s"
+        text = CoreLocalization.text(
+            localeId,
+            "OVERDRIVE_SECONDS",
+            math.max(1, math.floor(tonumber(state.overdriveSeconds) or 1))
+        )
         color = UITheme.Colors.Gold
     elseif state.doubleChaos then
-        text = tostring(state.fusionName or "CHAOS FUSION")
+        text = tostring(state.fusionName or CoreLocalization.text(localeId, "CHAOS_FUSION"))
         color = UITheme.Colors.Violet
     elseif rookieRound then
-        text = "SURVIVE  " .. tostring(math.max(0, math.floor(tonumber(state.seconds) or 0))) .. "s"
+        text = CoreLocalization.text(
+            localeId,
+            "SURVIVE_SECONDS",
+            math.max(0, math.floor(tonumber(state.seconds) or 0))
+        )
         color = UITheme.Colors.Text
     end
     status.Text = text
