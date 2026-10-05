@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -21,7 +22,7 @@ button.Name = "ReduceMotionToggle"
 button.AnchorPoint = Vector2.new(1, 0)
 button.Position = UDim2.fromScale(0.985, 0.03)
 button.Size = UserInputService.TouchEnabled
-    and UDim2.fromScale(0.26, 0.045)
+    and UDim2.fromOffset(190, 44)
     or UDim2.fromScale(0.17, 0.04)
 button.BackgroundColor3 = UITheme.Colors.PanelRaised
 button.BackgroundTransparency = 0.06
@@ -36,7 +37,44 @@ UITheme.addCorner(button, UITheme.Corners.Pill)
 local stroke = UITheme.addStroke(button, UITheme.Colors.Cyan, 1.0, 0.45)
 UITheme.addPressFeedback(button, 0.96)
 
+local sizeConstraint = Instance.new("UISizeConstraint")
+sizeConstraint.MinSize = Vector2.new(150, UserInputService.TouchEnabled and 44 or 30)
+sizeConstraint.MaxSize = Vector2.new(220, 48)
+sizeConstraint.Parent = button
+
 local currentPhase = "waiting"
+local voteVisible = false
+local viewportConnection = nil
+
+local function applyResponsive()
+    if not UserInputService.TouchEnabled then
+        button.Position = UDim2.fromScale(0.985, 0.03)
+        return
+    end
+
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local profile = UIResponsive.mobileProfile(viewport)
+
+    button.Size = UDim2.fromOffset(profile.veryNarrow and 168 or 190, 44)
+    button.Position = UDim2.new(1, -10, 0, profile.topHeight + 18)
+end
+
+local function bindCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsive)
+    end
+    applyResponsive()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+bindCamera()
 
 local function refresh()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -47,7 +85,9 @@ local function refresh()
         or UITheme.Colors.PanelRaised
 
     local criticalPhase = currentPhase == "ready" or currentPhase == "round"
-    button.Visible = player:GetAttribute("DataLoaded") == true and not criticalPhase
+    button.Visible = player:GetAttribute("DataLoaded") == true
+        and not criticalPhase
+        and not voteVisible
 end
 
 button.Activated:Connect(function()
@@ -62,6 +102,7 @@ player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
 
 stateEvent.OnClientEvent:Connect(function(state)
     currentPhase = tostring(state.phase or "waiting")
+    voteVisible = state.voteOptions ~= nil
     refresh()
 end)
 
