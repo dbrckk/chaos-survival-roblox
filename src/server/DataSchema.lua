@@ -1,6 +1,6 @@
 local DataSchema = {}
 
-DataSchema.Version = 5
+DataSchema.Version = 6
 
 DataSchema.Defaults = {
     DataVersion = DataSchema.Version,
@@ -44,6 +44,7 @@ DataSchema.Defaults = {
     DisasterMastery = "",
 
     ReduceMotion = false,
+    AudioMuted = false,
 }
 
 function DataSchema.cloneDefaults()
