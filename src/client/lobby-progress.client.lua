@@ -1,10 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalizationService = game:GetService("LocalizationService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 
 local folder = Instance.new("Folder")
 folder.Name = "LobbyPersonalProgressLocal"
@@ -49,7 +52,7 @@ title.Font = Enum.Font.GothamBlack
 title.TextColor3 = UITheme.Colors.Cyan
 title.TextScaled = true
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.Text = "YOUR CHAOS RUN"
+title.Text = CoreLocalization.text(localeId, "CHAOS_RUN")
 title.Parent = panel
 
 local stats = Instance.new("TextLabel")
@@ -60,7 +63,7 @@ stats.Font = Enum.Font.GothamBold
 stats.TextColor3 = UITheme.Colors.Text
 stats.TextScaled = true
 stats.TextXAlignment = Enum.TextXAlignment.Left
-stats.Text = "LVL 1 • 0 WINS • COLLECTION 0/0"
+stats.Text = CoreLocalization.text(localeId, "RUN_STATS", 1, 0, 0, 0)
 stats.Parent = panel
 
 local goal = Instance.new("TextLabel")
@@ -71,7 +74,7 @@ goal.Font = Enum.Font.GothamMedium
 goal.TextColor3 = UITheme.Colors.Muted
 goal.TextScaled = true
 goal.TextXAlignment = Enum.TextXAlignment.Left
-goal.Text = "NEXT LEVEL • 0 XP"
+goal.Text = CoreLocalization.text(localeId, "RUN_NEXT_LEVEL", 2, 0)
 goal.Parent = panel
 
 local barBack = Instance.new("Frame")
@@ -121,24 +124,25 @@ local function refresh()
     local progress = math.clamp((xp - currentXP) / span, 0, 1)
     local remaining = math.max(0, nextXP - xp)
 
-    stats.Text = string.format(
-        "LVL %d  •  %d WINS  •  COLLECTION %d/%d",
+    stats.Text = CoreLocalization.text(
+        localeId,
+        "RUN_STATS",
         level,
         wins,
         owned,
         total
     )
     goal.Text = remaining > 0
-        and string.format("NEXT • LEVEL %d • %d XP TO GO", level + 1, remaining)
-        or string.format("LEVEL %d READY", level + 1)
+        and CoreLocalization.text(localeId, "RUN_NEXT_LEVEL", level + 1, remaining)
+        or CoreLocalization.text(localeId, "RUN_LEVEL_READY", level + 1)
     bar.Size = UDim2.fromScale(progress, 1)
 
     local complete = total > 0 and owned >= total
     if complete then
-        title.Text = "YOUR CHAOS RUN • COLLECTION COMPLETE"
+        title.Text = CoreLocalization.text(localeId, "CHAOS_RUN_COMPLETE")
         title.TextColor3 = UITheme.Colors.Gold
     else
-        title.Text = "YOUR CHAOS RUN"
+        title.Text = CoreLocalization.text(localeId, "CHAOS_RUN")
         title.TextColor3 = UITheme.Colors.Cyan
     end
 end
