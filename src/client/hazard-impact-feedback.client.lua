@@ -11,10 +11,12 @@ local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Ha
 local MAX_DISTANCE = 150
 local activeBursts = 0
 
-local function maxConcurrentBursts(profile)
-    if profile.Name == "Low" then
+local function maxConcurrentBursts(profile, reduced)
+    if reduced then
+        return profile.Name == "Low" and 3 or 4
+    elseif profile.Name == "Low" then
         return 6
-    elseif profile.Name == "Medium" and not reduced then
+    elseif profile.Name == "Medium" then
         return 10
     end
     return 14
@@ -120,8 +122,7 @@ local function renderBurst(payload)
 
     local profile = tier()
     local reduced = player:GetAttribute("ReduceMotion") == true
-    local concurrentLimit = reduced and math.min(4, maxConcurrentBursts(profile))
-        or maxConcurrentBursts(profile)
+    local concurrentLimit = maxConcurrentBursts(profile, reduced)
     if activeBursts >= concurrentLimit then
         return
     end
