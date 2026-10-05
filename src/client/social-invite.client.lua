@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SocialService = game:GetService("SocialService")
+local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local LocalizationService = game:GetService("LocalizationService")
@@ -30,6 +31,8 @@ local inviteCheckFinished = false
 local inviteCheckInFlight = false
 local inviteBusy = false
 local ctaExposureSent = false
+local pendingFriendName = nil
+local friendMessageToken = 0
 local viewportConnection = nil
 
 local gui = Instance.new("ScreenGui")
@@ -298,6 +301,8 @@ local function updateBeacon(visible)
     end
 end
 
+local showFriendArrival = nil
+
 local function refresh()
     local visible = shouldShow()
     button.Visible = visible
@@ -317,6 +322,12 @@ local function refresh()
     buttonStroke.Color = accentColor
 
     updateBeacon(visible)
+
+    if visible and pendingFriendName and showFriendArrival then
+        local displayName = pendingFriendName
+        pendingFriendName = nil
+        task.defer(showFriendArrival, displayName)
+    end
 end
 
 local function pulseSocialMoment()
@@ -341,6 +352,59 @@ local function pulseSocialMoment()
         ):Play()
     end
 end
+
+showFriendArrival = function(displayName)
+    local safeName = tostring(displayName or "")
+    if safeName == "" then
+        return
+    end
+
+    local phase = tostring(currentState.phase or "waiting")
+    local voteActive = phase == "intermission"
+        and type(currentState.voteOptions) == "table"
+        and #currentState.voteOptions > 0
+    local calm = phase == "result"
+        or phase == "waiting"
+        or (phase == "intermission" and not voteActive)
+
+    if not calm then
+        pendingFriendName = safeName
+        return
+    end
+
+    if not beaconSubtitle or not beaconSubtitle.Parent then
+        buildBeacon()
+    end
+    if not beaconSubtitle then
+        pendingFriendName = safeName
+        return
+    end
+
+    friendMessageToken += 1
+    local token = friendMessageToken
+    beaconSubtitle.Text = CoreLocalization.text(
+        localeId,
+        "FRIEND_JOINED_CREW",
+        safeName
+    )
+    beaconSubtitle.TextColor3 = UITheme.Colors.Green
+    pulseSocialMoment()
+
+    task.delay(4, function()
+        if token ~= friendMessageToken or not beaconSubtitle or not beaconSubtitle.Parent then
+            return
+        end
+        beaconSubtitle.Text = CoreLocalization.text(localeId, "PLAY_TOGETHER")
+        beaconSubtitle.TextColor3 = UITheme.Colors.Muted
+    end)
+end
+
+socialSignalEvent.OnClientEvent:Connect(function(payload)
+    if type(payload) ~= "table" or payload.kind ~= "friend_joined" then
+        return
+    end
+    showFriendArrival(payload.displayName)
+end)
 
 local function checkInviteAvailability()
     if inviteCheckFinished or inviteCheckInFlight then
@@ -380,6 +444,16 @@ button.Activated:Connect(function()
         localeId,
         SocialExperienceRules.promptKey(lastSurvived)
     )
+
+    local launchOk, launchData = pcall(function()
+        return HttpService:JSONEncode({
+            source = "chaos_crew",
+            inviter = player.UserId,
+        })
+    end)
+    if launchOk and type(launchData) == "string" and #launchData <= 200 then
+        options.LaunchData = launchData
+    end
 
     pcall(function()
         SocialService:PromptGameInvite(player, options)
