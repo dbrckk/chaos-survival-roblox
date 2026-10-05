@@ -46,6 +46,7 @@ PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 [QA]   2.6 Vérifier qu'aucun décor ne crée de nouveau safe spot ou collision parasite — garde-fou moteur ajouté.
 [TODO] 2.7 QA Android / desktop des 4 arènes.
 [QA]   2.8 Casser les silhouettes trop symétriques avec des clusters asymétriques sobres Medium/High.
+[QA]   2.9 Différencier le langage de surface : Classic grille, Towers industriel, Crossroads directionnel, Orbital radial.
 
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 -------------------------------------------
