@@ -39,7 +39,7 @@ describe("Core localization", function()
         expect(CoreLocalization.text("fr-fr", "CHAOS_FUSION_SUB")).toBe("SURVIS AUX DEUX DANGERS")
         expect(CoreLocalization.text("fr-fr", "SHARE_MOMENT")).toBe("PARTAGER CE MOMENT")
         expect(CoreLocalization.text("fr-fr", "SHARE_REASON_LAST_SURVIVOR")).toBe(
-            "DERNIER SURVIVANT • À PARTAGER"
+            "DERNIER SURVIVANT"
         )
         expect(CoreLocalization.text("fr-fr", "SHARE_JOINED", "Nova")).toBe(
             "Nova A REJOINT TON MOMENT PARTAGÉ"
