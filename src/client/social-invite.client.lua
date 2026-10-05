@@ -17,6 +17,7 @@ local touchDevice = UserInputService.TouchEnabled
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local feedbackEvent = remotes:WaitForChild("RoundFeedback")
+local socialSignalEvent = remotes:WaitForChild("SocialSignal")
 
 local currentState = {
     phase = "waiting",
@@ -28,6 +29,7 @@ local canInvite = false
 local inviteCheckFinished = false
 local inviteCheckInFlight = false
 local inviteBusy = false
+local ctaExposureSent = false
 local viewportConnection = nil
 
 local gui = Instance.new("ScreenGui")
@@ -299,6 +301,10 @@ end
 local function refresh()
     local visible = shouldShow()
     button.Visible = visible
+    if visible and not ctaExposureSent then
+        ctaExposureSent = true
+        socialSignalEvent:FireServer("invite_cta_shown")
+    end
     button.Text = CoreLocalization.text(
         localeId,
         SocialExperienceRules.buttonKey(lastSurvived)
@@ -367,6 +373,7 @@ button.Activated:Connect(function()
 
     inviteBusy = true
     button.Active = false
+    socialSignalEvent:FireServer("invite_prompt_opened")
 
     local options = Instance.new("ExperienceInviteOptions")
     options.PromptMessage = CoreLocalization.text(
