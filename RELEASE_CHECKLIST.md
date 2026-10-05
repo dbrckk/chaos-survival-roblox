@@ -69,6 +69,10 @@ Test at minimum one Android phone and one desktop client.
 - [ ] Blackout remains playable.
 - [ ] Freeze, Bomb, Meteor and Jump Shock warnings remain readable during Double Chaos.
 - [ ] Low VFX mode remains visually clear.
+- [ ] Crew Signal and Last Chaos board do not overlap critical lobby UI or Roblox touch controls.
+- [ ] Friend invite CTA appears only after a completed round and opens the native Roblox invite prompt.
+- [ ] Invite CTA stays hidden during vote, READY and ROUND.
+- [ ] Adaptive bloom improves presentation without softening hazard warnings during active rounds.
 
 ### Performance
 
