@@ -16,7 +16,7 @@ local accessibilityEvent = remotes:WaitForChild("AccessibilitySettings")
 local gui = Instance.new("ScreenGui")
 gui.Name = "AccessibilityQuickSettings"
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
+gui.IgnoreGuiInset = false
 gui.DisplayOrder = 17
 gui.Parent = player:WaitForChild("PlayerGui")
 
