@@ -35,6 +35,15 @@ describe("Core localization", function()
         ).toBe(true)
     end)
 
+    it("localizes critical round actions and challenge labels", function()
+        expect(CoreLocalization.text("fr-fr", "MOVE_CENTER")).toBe("REJOINS LE CENTRE")
+        expect(CoreLocalization.text("fr-fr", "FINAL_RUSH")).toBe("SPRINT FINAL")
+        expect(CoreLocalization.text("fr-fr", "OVERDRIVE")).toBe("SURCHARGE")
+        expect(CoreLocalization.text("fr-fr", "SURVIVE_SECONDS", 5)).toBe("SURVIS  5s")
+        expect(CoreLocalization.challengeShort("fr-fr", "SHARD_HUNT", "SHARDS")).toBe("ÉCLATS")
+        expect(CoreLocalization.challengeShort("en-us", "DANGER_DANCE", "CLOSE CALL")).toBe("CLOSE CALL")
+    end)
+
     it("localizes first-time coaching without altering unknown copy", function()
         local source = "VOTE  •  TAP THE CHAOS YOU WANT TO FACE"
         expect(CoreLocalization.coach("fr-fr", source)).toBe(
