@@ -2377,19 +2377,19 @@ stateEvent.OnClientEvent:Connect(function(state)
         and not state.voteOptions
     then
         coachText = "LEFT STICK = MOVE  •  RIGHT BUTTON = JUMP  •  SURVIVE UNTIL 0"
+    elseif touchDevice
+        and state.phase == "intermission"
+        and state.voteOptions
+    then
+        -- The top HUD already says exactly what to tap. Hiding the rookie
+        -- coach prevents it from colliding with vote cards on short phones.
+        coachText = nil
     end
     rookieCoach.Visible = coachText ~= nil
     if coachText then
         rookieCoach.Text = coachText
         if touchDevice then
-            local camera = workspace.CurrentCamera
-            local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
-            local profile = UIResponsive.mobileProfile(viewport)
-            local voteY = profile.tinyHeight and 0.30 or 0.40
-            rookieCoach.Position = UDim2.fromScale(
-                0.5,
-                state.phase == "intermission" and state.voteOptions and voteY or 0.70
-            )
+            rookieCoach.Position = UDim2.fromScale(0.5, 0.70)
         else
             rookieCoach.Position = UDim2.fromScale(0.5, 0.94)
         end
