@@ -27,6 +27,12 @@ describe("Core localization", function()
         expect(CoreLocalization.text("fr-fr", "SOCIAL_REACTION_WOW")).toBe("INCROYABLE !")
         expect(CoreLocalization.text("fr-fr", "RESULT_SURVIVOR_COUNT", 3)).toBe("3 SURVIVANTS")
         expect(CoreLocalization.text("fr-fr", "RESULT_SOLE_SURVIVOR")).toBe("DERNIER SURVIVANT")
+        expect(CoreLocalization.text("fr-fr", "CHAOS_PROFILE")).toBe("TON PROFIL CHAOS")
+        expect(CoreLocalization.text("fr-fr", "PROFILE_STATS", 4, 9, 120)).toBe(
+            "NIV 4  •  9 VICTOIRES  •  120 PIÈCES"
+        )
+        expect(CoreLocalization.text("fr-fr", "CHAOS_RUN")).toBe("TA COURSE CHAOS")
+        expect(CoreLocalization.text("fr-fr", "RUN_LEVEL_READY", 5)).toBe("NIVEAU 5 PRÊT")
         expect(CoreLocalization.text("fr-fr", "YOU_SURVIVED")).toBe("TU AS SURVÉCU")
         expect(CoreLocalization.text("fr-fr", "ELIMINATED_FEED", "Nova")).toBe("Nova a été éliminé")
         expect(CoreLocalization.text("fr-fr", "RESULT_STREAK_TAG", 3)).toBe("SÉRIE x3")
