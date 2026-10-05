@@ -210,9 +210,10 @@ local function applyMood(duration)
     local environmentSpecular = (mood.EnvironmentSpecular or 0.70) * renderScale
     local exposure = (mood.Exposure or 0) * (quality.Name == "Low" and 0.45 or 1)
     local sunRayIntensity = (mood.SunRays or 0.025)
-        * (phase == "round" and 0.30 or (phase == "ready" and 0.62 or 1))
+        * (phase == "round" and 0 or (phase == "ready" and 0.35 or 1))
         * (quality.Name == "Low" and 0 or 1)
         * accessibilityScale
+    local disasterOwnsEnvironment = phase == "round" or phase == "ready"
     local shadowSoftness = math.clamp(
         (mood.ShadowSoftness or 0.35) + (quality.Name == "Low" and 0.20 or 0),
         0,
@@ -237,20 +238,24 @@ local function applyMood(duration)
         Lighting.GlobalShadows = true
     end)
 
+    local lightingGoal = {
+        Ambient = mood.Ambient,
+        OutdoorAmbient = mood.Outdoor,
+        ColorShift_Top = colorShiftTop,
+        ColorShift_Bottom = colorShiftBottom,
+        ShadowSoftness = shadowSoftness,
+        ClockTime = mood.ClockTime or 18,
+    }
+    if not disasterOwnsEnvironment then
+        lightingGoal.ExposureCompensation = exposure
+        lightingGoal.EnvironmentDiffuseScale = environmentDiffuse
+        lightingGoal.EnvironmentSpecularScale = environmentSpecular
+    end
+
     TweenService:Create(
         Lighting,
         TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            Ambient = mood.Ambient,
-            OutdoorAmbient = mood.Outdoor,
-            ColorShift_Top = colorShiftTop,
-            ColorShift_Bottom = colorShiftBottom,
-            ShadowSoftness = shadowSoftness,
-            ClockTime = mood.ClockTime or 18,
-            ExposureCompensation = exposure,
-            EnvironmentDiffuseScale = environmentDiffuse,
-            EnvironmentSpecularScale = environmentSpecular,
-        }
+        lightingGoal
     ):Play()
 
     TweenService:Create(
@@ -304,15 +309,10 @@ local function applyMood(duration)
         }
     ):Play()
 
-    if clouds then
+    if clouds and not disasterOwnsEnvironment then
         clouds.Enabled = quality.Name ~= "Low"
         clouds.Color = mood.CloudColor or Color3.fromRGB(210, 220, 240)
-        clouds.Cover = math.clamp(
-            (mood.CloudCover or 0.35)
-                * (phase == "round" and 0.72 or 1),
-            0,
-            1
-        )
+        clouds.Cover = math.clamp(mood.CloudCover or 0.35, 0, 1)
         clouds.Density = math.clamp(
             (mood.CloudDensity or 0.18)
                 * (quality.Name == "Medium" and 0.82 or 1),
