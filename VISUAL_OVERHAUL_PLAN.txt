@@ -91,6 +91,8 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
 [QA]   6.1 Feedback dégâts plus premium.
 [QA]   6.1b Renforcer impacts proches : double shockwave, plume verticale et poussière/débris directionnels.
+[QA]   6.2 Ajouter motion polish personnages : lean/bob/landing/sprint trail adaptatifs.
+[QA]   6.3 Différencier davantage les bots : cadence visuelle, trails et pulses lumineux subtils.
 [QA]   6.2 Clutch Survival plus spectaculaire mais bref.
 [QA]   6.3 Close Call plus lisible et moins intrusif.
 [QA]   6.4 Shard pickup world burst.
