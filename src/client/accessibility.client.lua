@@ -1,11 +1,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local accessibilityEvent = remotes:WaitForChild("AccessibilitySettings")
@@ -78,7 +81,10 @@ bindCamera()
 
 local function refresh()
     local reduced = player:GetAttribute("ReduceMotion") == true
-    button.Text = reduced and "MOTION • REDUCED" or "MOTION • FULL"
+    button.Text = CoreLocalization.text(
+        localeId,
+        reduced and "MOTION_REDUCED" or "MOTION_FULL"
+    )
     stroke.Color = reduced and UITheme.Colors.Green or UITheme.Colors.Cyan
     button.BackgroundColor3 = reduced
         and UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.72)
