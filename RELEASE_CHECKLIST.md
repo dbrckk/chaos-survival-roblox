@@ -22,6 +22,16 @@ Automated gate certified on commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` on
 
 Evidence for the automated gate: commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` passed Build Validation run #1391 and Roblox Open Cloud Engine Tests run #1390 on 2026-10-05.
 
+## Current published candidate
+
+- Published commit: `35123d31672acbd5b7ec6e385a1020007db4eb4b`
+- Build Validation: PASS (run #1396)
+- Roblox Open Cloud Engine Tests: PASS (run #1395)
+- Roblox place publication: PASS (Publish Roblox Place run #7)
+- Universe: `8998396328`
+- Place: `101933452561772`
+- Remaining release evidence: authenticated Studio E2E, physical Android/desktop device checks, persistence/rejoin checks, then small public alpha.
+
 ## Authenticated Roblox Studio gate
 
 Run the four-client Chaos E2E harness from an authenticated Studio session.
@@ -134,7 +144,7 @@ Only after retention/device UX are acceptable:
 
 - [ ] README matches current feature/map count.
 - [ ] Roadmap reflects remaining launch blockers.
-- [ ] No placeholder production IDs or temporary debug code remain.
+- [x] No placeholder production IDs or temporary debug code remain.
 - [ ] Create release candidate tag.
 - [ ] Write changelog.
 - [ ] Keep last known-good commit/tag for rollback.
