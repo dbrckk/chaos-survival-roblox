@@ -1518,6 +1518,10 @@ while true do
         fusionName = fusionName,
         soloMode = roundSettings.Solo,
         arenaName = roundSettings.ArenaName,
+        arenaId = currentArenaVariant,
+        disasterIds = readyDisasterIds,
+        survivorsAlive = displayedSurvivors,
+        contestantCount = #contestants + AISurvivorService.activeCount(),
         survivorUserIds = survivorUserIds,
     })
 
@@ -1531,6 +1535,10 @@ while true do
             fusionName = fusionName,
             soloMode = roundSettings.Solo,
             arenaName = roundSettings.ArenaName,
+            arenaId = currentArenaVariant,
+            disasterIds = readyDisasterIds,
+            survivorsAlive = displayedSurvivors,
+            contestantCount = #contestants + AISurvivorService.activeCount(),
             survivorUserIds = survivorUserIds,
         })
         task.wait(1)
