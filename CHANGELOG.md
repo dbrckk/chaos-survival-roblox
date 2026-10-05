@@ -86,3 +86,7 @@ A `v1.0.0` tag should not be created until `RELEASE_CHECKLIST.md` passes for the
 - Added adaptive phase-aware bloom: stronger for presentation, reduced during active gameplay.
 - Added SocialExperienceRules and engine coverage; Open Cloud shard mapping updated.
 
+- Crew invites now carry validated LaunchData so a real invite-driven friend arrival can be recognized and celebrated without gameplay rewards.
+- Added server-authoritative one-tap multiplayer result reactions (GG / AGAIN / WOW), limited to one reaction per player per result.
+- Added social funnel analytics for CTA exposure, prompt activation, invite-driven joins and result reactions.
+
