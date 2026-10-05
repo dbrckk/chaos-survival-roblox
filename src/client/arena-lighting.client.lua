@@ -32,6 +32,18 @@ if not bloom then
     bloom.Parent = Lighting
 end
 
+local depth = Lighting:FindFirstChild("ArenaIdentityDepth")
+if not depth then
+    depth = Instance.new("DepthOfFieldEffect")
+    depth.Name = "ArenaIdentityDepth"
+    depth.Enabled = true
+    depth.FocusDistance = 55
+    depth.InFocusRadius = 45
+    depth.NearIntensity = 0
+    depth.FarIntensity = 0
+    depth.Parent = Lighting
+end
+
 local MOODS = {
     Classic = {
         Tint = Color3.fromRGB(224, 236, 255),
@@ -129,6 +141,13 @@ local function applyMood(duration)
         or (quality.Name == "Medium" and 18 or 24)
     local bloomThreshold = phase == "round" and 1.42
         or (phase == "ready" and 1.30 or 1.18)
+    local depthQualityScale = quality.Name == "Low" and 0
+        or (quality.Name == "Medium" and 0.45 or 1)
+    local depthPhaseScale = phase == "round" and 0
+        or (phase == "ready" and 0.36 or (phase == "result" and 0.72 or 1))
+    local depthMotionScale = reducedMotion and 0.45 or 1
+    local farIntensity = 0.12 * depthQualityScale * depthPhaseScale * depthMotionScale
+    local nearIntensity = 0.035 * depthQualityScale * depthPhaseScale * depthMotionScale
     local shadowSoftness = math.clamp(
         (mood.ShadowSoftness or 0.35) + (quality.Name == "Low" and 0.20 or 0),
         0,
@@ -166,6 +185,18 @@ local function applyMood(duration)
             Intensity = bloomIntensity,
             Size = bloomSize,
             Threshold = bloomThreshold,
+        }
+    ):Play()
+
+    TweenService:Create(
+        depth,
+        TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            FocusDistance = currentVariant == "Towers" and 62
+                or (currentVariant == "Orbital" and 58 or 54),
+            InFocusRadius = phase == "round" and 72 or 46,
+            NearIntensity = nearIntensity,
+            FarIntensity = farIntensity,
         }
     ):Play()
 
