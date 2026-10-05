@@ -20,6 +20,8 @@ Automated gate certified on commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` on
 
 > Any commit after this certification must re-run both automated workflows before a release tag is cut.
 
+Evidence for the automated gate: commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` passed Build Validation run #1391 and Roblox Open Cloud Engine Tests run #1390 on 2026-10-05.
+
 ## Authenticated Roblox Studio gate
 
 Run the four-client Chaos E2E harness from an authenticated Studio session.
