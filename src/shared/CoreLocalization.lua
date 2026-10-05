@@ -83,6 +83,36 @@ local TEXT = {
         ACHIEVEMENT_UNLOCKED = "ACHIEVEMENT UNLOCKED",
         REWARD_LINE = "%s   +%d coins   +%d XP",
         COINS_XP = "+%d coins   +%d XP",
+        RESULT_EXTRA_STREAK = "STREAK +%d",
+        RESULT_EXTRA_SHARDS = "SHARDS +%d",
+        RESULT_EXTRA_CHALLENGE = "CHALLENGE +%d",
+        RESULT_EXTRA_FLOW = "FLOW +%d",
+        RESULT_EXTRA_FUSION = "FUSION +%d",
+        RESULT_RUSH_BONUS = "RUSH BONUS",
+        RESULT_CLUTCH_TAG = "CLUTCH SURVIVAL",
+        RESULT_CHALLENGE_TAG = "CHALLENGE COMPLETE",
+        RESULT_SHARDS_TAG = "SHARDS x%d",
+        RESULT_CLOSE_CALLS_TAG = "CLOSE CALLS x%d",
+        RESULT_MOMENTUM_TAG = "MOMENTUM x%d",
+        RESULT_MEDALS_TAG = "MEDALS x%d",
+        RESULT_STREAK_TAG = "STREAK x%d",
+        RESULT_NEXT_TRY = "NEXT TRY • %s",
+        RESULT_FIRST_CHAOS = "FIRST CHAOS CLEARED • survive again to build your streak",
+        RESULT_MASTER = "MASTER ROUND • challenge complete • momentum x%d",
+        RESULT_FUSION_SURVIVED = "%s SURVIVED • FUSION BONUS +%d",
+        RESULT_FLOW_CHALLENGE = "FLOW COMBO +%d • CHALLENGE COMPLETE",
+        RESULT_FLOW = "FLOW COMBO • pad → shard chain completed",
+        RESULT_CHALLENGE_MEDALS = "CHALLENGE COMPLETE • %s",
+        RESULT_CHALLENGE = "ROUND CHALLENGE COMPLETE • bonus secured",
+        RESULT_MEDALS = "MEDALS • %s",
+        RESULT_CLUTCH = "CLUTCH • you survived at critical health",
+        RESULT_STREAK = "STREAK x%d • survive again for +%d streak coins",
+        RESULT_TIP = "TIP: %s",
+        RESULT_DEFAULT_TIP = "TIP: keep moving and react early to warning zones",
+        RESULT_MASTERY = "MASTERY",
+        RESULT_NEXT_GOAL_READY = "NEXT GOAL • LEVEL %d READY",
+        RESULT_NEXT_GOAL = "NEXT GOAL • LEVEL %d • %d XP TO GO",
+        STATS_LINE = "LVL %d    🪙 %d    🏆 %d    XP %d/%d",
         QUEST_ROW = "  %s  •  %s  •  +%d coins",
         WEEKLY_ROW = "  %s  •  %s  •  +%d coins +%d XP",
         ACHIEVEMENT_ROW = "%s  •  %s  •  +%d coins",
@@ -193,6 +223,36 @@ local TEXT = {
         ACHIEVEMENT_UNLOCKED = "SUCCÈS DÉBLOQUÉ",
         REWARD_LINE = "%s   +%d pièces   +%d XP",
         COINS_XP = "+%d pièces   +%d XP",
+        RESULT_EXTRA_STREAK = "SÉRIE +%d",
+        RESULT_EXTRA_SHARDS = "ÉCLATS +%d",
+        RESULT_EXTRA_CHALLENGE = "DÉFI +%d",
+        RESULT_EXTRA_FLOW = "FLUIDITÉ +%d",
+        RESULT_EXTRA_FUSION = "FUSION +%d",
+        RESULT_RUSH_BONUS = "BONUS RUSH",
+        RESULT_CLUTCH_TAG = "SURVIE EXTRÊME",
+        RESULT_CHALLENGE_TAG = "DÉFI TERMINÉ",
+        RESULT_SHARDS_TAG = "ÉCLATS x%d",
+        RESULT_CLOSE_CALLS_TAG = "RISQUES x%d",
+        RESULT_MOMENTUM_TAG = "ÉLAN x%d",
+        RESULT_MEDALS_TAG = "MÉDAILLES x%d",
+        RESULT_STREAK_TAG = "SÉRIE x%d",
+        RESULT_NEXT_TRY = "PROCHAIN ESSAI • %s",
+        RESULT_FIRST_CHAOS = "PREMIER CHAOS RÉUSSI • survis encore pour construire ta série",
+        RESULT_MASTER = "MANCHE MAÎTRISÉE • défi terminé • élan x%d",
+        RESULT_FUSION_SURVIVED = "FUSION %s RÉUSSIE • BONUS +%d",
+        RESULT_FLOW_CHALLENGE = "COMBO FLUIDITÉ +%d • DÉFI TERMINÉ",
+        RESULT_FLOW = "COMBO FLUIDITÉ • chaîne pad → éclat réussie",
+        RESULT_CHALLENGE_MEDALS = "DÉFI TERMINÉ • %s",
+        RESULT_CHALLENGE = "DÉFI DE MANCHE TERMINÉ • bonus obtenu",
+        RESULT_MEDALS = "MÉDAILLES • %s",
+        RESULT_CLUTCH = "SURVIE EXTRÊME • tu as survécu avec très peu de vie",
+        RESULT_STREAK = "SÉRIE x%d • survis encore pour +%d pièces de série",
+        RESULT_TIP = "CONSEIL : %s",
+        RESULT_DEFAULT_TIP = "CONSEIL : continue de bouger et réagis tôt aux zones d'alerte",
+        RESULT_MASTERY = "MAÎTRISE",
+        RESULT_NEXT_GOAL_READY = "PROCHAIN OBJECTIF • NIVEAU %d PRÊT",
+        RESULT_NEXT_GOAL = "PROCHAIN OBJECTIF • NIVEAU %d • %d XP RESTANTS",
+        STATS_LINE = "NIV %d    🪙 %d    🏆 %d    XP %d/%d",
         QUEST_ROW = "  %s  •  %s  •  +%d pièces",
         WEEKLY_ROW = "  %s  •  %s  •  +%d pièces +%d XP",
         ACHIEVEMENT_ROW = "%s  •  %s  •  +%d pièces",
@@ -376,6 +436,27 @@ local ACHIEVEMENT_COPY = {
     },
 }
 
+local MEDAL_COPY = {
+    en = {
+        ["FIRST CHAOS"] = "FIRST CHAOS",
+        ["SHARD HUNTER"] = "SHARD HUNTER",
+        ["MOBILITY ACE"] = "MOBILITY ACE",
+        ["DAREDEVIL"] = "DAREDEVIL",
+        ["OVERDRIVE RIDER"] = "OVERDRIVE RIDER",
+        ["MOMENTUM MASTER"] = "MOMENTUM MASTER",
+        ["CLUTCH"] = "CLUTCH",
+    },
+    fr = {
+        ["FIRST CHAOS"] = "PREMIER CHAOS",
+        ["SHARD HUNTER"] = "CHASSEUR D'ÉCLATS",
+        ["MOBILITY ACE"] = "AS DE LA MOBILITÉ",
+        ["DAREDEVIL"] = "CASSE-COU",
+        ["OVERDRIVE RIDER"] = "PILOTE SURCHARGE",
+        ["MOMENTUM MASTER"] = "MAÎTRE DE L'ÉLAN",
+        ["CLUTCH"] = "SURVIE EXTRÊME",
+    },
+}
+
 local CHALLENGE_SHORT = {
     en = {
         FIRST_SURVIVAL = "STAY ALIVE",
@@ -511,6 +592,14 @@ function CoreLocalization.achievementDescription(localeId, achievementId, fallba
     local record = ACHIEVEMENT_COPY[language] and ACHIEVEMENT_COPY[language][id]
     record = record or ACHIEVEMENT_COPY.en[id]
     return record and record[2] or fallback
+end
+
+function CoreLocalization.medal(localeId, medalName)
+    local language = CoreLocalization.language(localeId)
+    local key = tostring(medalName or "")
+    return (MEDAL_COPY[language] and MEDAL_COPY[language][key])
+        or MEDAL_COPY.en[key]
+        or key
 end
 
 function CoreLocalization.challengeShort(localeId, challengeId, fallback)
