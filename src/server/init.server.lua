@@ -75,20 +75,23 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
     if not allowAccessibilityChange(player.UserId) then
         return
     end
-    if setting ~= "ReduceMotion" or type(value) ~= "boolean" then
+    if type(setting) ~= "string" or type(value) ~= "boolean" then
+        return
+    end
+    if setting ~= "ReduceMotion" and setting ~= "AudioMuted" then
         return
     end
     if not PlayerData.canMutate(player) then
         return
     end
 
-    player:SetAttribute("ReduceMotion", value)
+    player:SetAttribute(setting, value)
     task.spawn(PlayerData.save, player, true)
     GameAnalytics.custom(
         player,
         "AccessibilitySettingChanged",
         value and 1 or 0,
-        "Setting:ReduceMotion",
+        "Setting:" .. setting,
         "Device:" .. (player:GetAttribute("ClientDeviceClass") or "Unknown")
     )
 end)
