@@ -1860,7 +1860,16 @@ local function showRoundFeedback(feedback)
     end
 
     local tags = {}
-    table.insert(tags, tostring(feedback.arenaName or "ARENA"))
+    table.insert(
+        tags,
+        tostring(
+            CoreLocalization.arenaName(
+                localeId,
+                feedback.arenaName,
+                feedback.arenaName or "ARENA"
+            )
+        )
+    )
     table.insert(tags, tostring(feedback.disasterName or "CHAOS"))
     if feedback.doubleChaos then
         table.insert(tags, feedback.fusionName and ("FUSION: " .. tostring(feedback.fusionName)) or "DOUBLE CHAOS")
