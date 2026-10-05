@@ -19,25 +19,12 @@ local function accent(model)
     return typeof(value) == "Color3" and value or Color3.fromRGB(105, 220, 185)
 end
 
-local function ensureChestPulse(model, index)
-    local torso = model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso")
-    if not torso or not torso:IsA("BasePart") then
-        return nil
-    end
-
-    local light = torso:FindFirstChild("AISurvivorMotionLight")
-    if not light then
-        light = Instance.new("PointLight")
-        light.Name = "AISurvivorMotionLight"
-        light.Color = accent(model)
-        light.Brightness = 0
-        light.Range = 5
-        light.Shadows = false
-        light.Parent = torso
-    end
-    return light
+local function ensureChestPulse()
+    -- CharacterPolish already owns the character PointLight budget.
+    -- Keep this layer focused on gait/trail differentiation to avoid
+    -- double-lighting AI rigs.
+    return nil
 end
-
 local function watch(model)
     if bots[model] then
         return
