@@ -62,8 +62,8 @@ local function decorateClassic(platform, index, theme, tier)
             Vector3.new(0.16, 0.045, length),
             top,
             theme.Detail,
-            Enum.Material.Neon,
-            0.56,
+            Enum.Material.Metal,
+            0.28,
             platform
         )
     end
@@ -78,8 +78,8 @@ local function decorateTowers(platform, index, theme, tier)
         Vector3.new(radius, 0.24, radius),
         bottom,
         index % 2 == 0 and theme.Secondary or theme.Accent,
-        Enum.Material.Neon,
-        tier.Name == "Low" and 0.66 or 0.40,
+        tier.Name == "High" and index % 3 == 1 and Enum.Material.Neon or Enum.Material.Metal,
+        tier.Name == "High" and index % 3 == 1 and 0.48 or (tier.Name == "Low" and 0.36 or 0.22),
         platform
     )
     core.Shape = Enum.PartType.Cylinder
@@ -143,8 +143,8 @@ local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
                     capOffset.Z * side
                 ),
                 theme.Detail,
-                Enum.Material.Neon,
-                0.60,
+                Enum.Material.Metal,
+                0.30,
                 platform
             )
         end
@@ -174,9 +174,9 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
         "OrbitalPlatformTangent" .. index,
         Vector3.new(length, 0.05, 0.22),
         center,
-        index % 3 == 0 and theme.Secondary or theme.Accent,
-        Enum.Material.Neon,
-        tier.Name == "Low" and 0.70 or 0.44,
+        index % 3 == 0 and theme.Secondary or (index % 2 == 0 and theme.Accent or theme.Detail),
+        index % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
+        index % 3 == 0 and (tier.Name == "Low" and 0.72 or 0.54) or 0.24,
         platform
     )
 
@@ -187,8 +187,8 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
             Vector3.new(length * 0.56, 0.045, 0.12),
             center + innerOffset,
             theme.Detail,
-            Enum.Material.Neon,
-            tier.Name == "High" and 0.54 or 0.66,
+            Enum.Material.Glass,
+            tier.Name == "High" and 0.40 or 0.52,
             platform
         )
     end
