@@ -984,7 +984,9 @@ local function renderMonetization(state)
 
     local enabled = state and state.enabled == true
     supportButton:SetAttribute("MonetizationEnabled", enabled)
-    supportButton.Visible = enabled and not metaControlsSuppressed
+    supportButton.Visible = enabled
+        and player:GetAttribute("DataPersistenceAvailable") == true
+        and not metaControlsSuppressed
     if not enabled then
         supportPanel.Visible = false
         return
@@ -2275,6 +2277,16 @@ achievementEvent.OnClientEvent:Connect(function(payload)
     end
 end)
 
+player:GetAttributeChangedSignal("DataPersistenceAvailable"):Connect(function()
+    local available = player:GetAttribute("DataPersistenceAvailable") == true
+    if not available then
+        supportPanel.Visible = false
+    end
+    supportButton.Visible = available
+        and not metaControlsSuppressed
+        and supportButton:GetAttribute("MonetizationEnabled") == true
+end)
+
 monetizationStateEvent.OnClientEvent:Connect(function(payload)
     if payload.state then
         renderMonetization(payload.state)
@@ -2417,6 +2429,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     cosmeticsButton.Visible = not metaControlsSuppressed
     achievementButton.Visible = not metaControlsSuppressed
     supportButton.Visible = (not metaControlsSuppressed)
+        and player:GetAttribute("DataPersistenceAvailable") == true
         and supportButton:GetAttribute("MonetizationEnabled") == true
 
     if touchDevice then
