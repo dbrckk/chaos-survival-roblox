@@ -72,6 +72,9 @@ Test at minimum one Android phone and one desktop client.
 - [ ] Crew Signal and Last Chaos board do not overlap critical lobby UI or Roblox touch controls.
 - [ ] Friend invite CTA appears only after a completed round and opens the native Roblox invite prompt.
 - [ ] Invite CTA stays hidden during vote, READY and ROUND.
+- [ ] Joining from a crew invite is recognized without changing gameplay rewards or spawn fairness.
+- [ ] Friend-arrival feedback waits for a calm phase if the invitee joins during active gameplay.
+- [ ] Multiplayer result reactions are touch-friendly, limited to one per player per result, and never appear during ROUND.
 - [ ] Adaptive bloom improves presentation without softening hazard warnings during active rounds.
 
 ### Performance
