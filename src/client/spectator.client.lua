@@ -89,12 +89,17 @@ local latestState = nil
 local targets = {}
 local targetIndex = 0
 local targetHealthConnection = nil
-
+local targetDiedConnection = nil
+local spectateIndex
 
 local function clearTargetHealth()
     if targetHealthConnection then
         targetHealthConnection:Disconnect()
         targetHealthConnection = nil
+    end
+    if targetDiedConnection then
+        targetDiedConnection:Disconnect()
+        targetDiedConnection = nil
     end
     healthFill.Size = UDim2.fromScale(0, 1)
 end
@@ -121,6 +126,13 @@ local function bindTargetHealth(humanoid)
 
     update()
     targetHealthConnection = humanoid.HealthChanged:Connect(update)
+    targetDiedConnection = humanoid.Died:Connect(function()
+        task.delay(0.08, function()
+            if roundActive and card.Visible and spectateIndex then
+                spectateIndex(targetIndex + 1)
+            end
+        end)
+    end)
 end
 
 local function localHumanoid()
@@ -214,7 +226,7 @@ local function roundSummary()
     return table.concat(pieces, "  •  ")
 end
 
-local function spectateIndex(index)
+spectateIndex = function(index)
     rebuildTargets()
 
     if #targets == 0 then
