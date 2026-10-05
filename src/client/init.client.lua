@@ -2058,7 +2058,9 @@ local function showVotes(options)
         votePill.BackgroundTransparency = selected and 0.02 or 0.08
         votePill.BorderSizePixel = 0
         votePill.Font = Enum.Font.GothamBold
-        votePill.Text = string.format("%d VOTE%s", optionVotes, optionVotes == 1 and "" or "S")
+        votePill.Text = selected
+            and "VOTE SAVED"
+            or string.format("%d VOTE%s", optionVotes, optionVotes == 1 and "" or "S")
         votePill.TextColor3 = UITheme.Colors.Text
         votePill.TextScaled = true
         votePill.Parent = button
