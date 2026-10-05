@@ -203,6 +203,11 @@ end)
 local allowedSocialSignals = {
     invite_cta_shown = true,
     invite_prompt_opened = true,
+    share_cta_shown = true,
+    share_capture_requested = true,
+    share_accepted = true,
+    share_denied = true,
+    share_failed = true,
 }
 
 socialSignalEvent.OnServerEvent:Connect(function(player, action)
@@ -214,9 +219,13 @@ socialSignalEvent.OnServerEvent:Connect(function(player, action)
         return
     end
 
+    local analyticsEvent = string.sub(signal, 1, 6) == "share_"
+        and "SocialShare"
+        or "SocialInvite"
+
     GameAnalytics.custom(
         player,
-        "SocialInvite",
+        analyticsEvent,
         1,
         "Action:" .. signal,
         "Games:" .. tostring(math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))),
@@ -461,7 +470,8 @@ local function markCrewRound(contestants)
             playersById[contestant.UserId] = contestant
             table.insert(entries, {
                 userId = contestant.UserId,
-                inviterUserId = contestant:GetAttribute("InvitedByUserId"),
+                inviterUserId = contestant:GetAttribute("CrewSourceUserId")
+                    or contestant:GetAttribute("InvitedByUserId"),
             })
         end
     end
@@ -506,9 +516,13 @@ local function processInviteJoinData(player)
                 local inviterUserId = okDecode
                     and SocialExperienceRules.inviterUserId(payload, player.UserId)
                     or nil
+                local shareUserId = okDecode
+                    and SocialExperienceRules.shareSourceUserId(payload, player.UserId)
+                    or nil
 
                 if inviterUserId then
                     player:SetAttribute("InvitedByUserId", inviterUserId)
+                    player:SetAttribute("CrewSourceUserId", inviterUserId)
                     local inviter = Players:GetPlayerByUserId(inviterUserId)
 
                     GameAnalytics.custom(
@@ -533,6 +547,32 @@ local function processInviteJoinData(player)
                         )
                         socialSignalEvent:FireClient(inviter, {
                             kind = "friend_joined",
+                            displayName = player.DisplayName,
+                        })
+                    end
+                elseif shareUserId then
+                    player:SetAttribute("CrewSourceUserId", shareUserId)
+                    local sharer = Players:GetPlayerByUserId(shareUserId)
+                    local shareReason = SocialExperienceRules.shareReason(payload) or "highlight"
+
+                    GameAnalytics.custom(
+                        player,
+                        "ShareJoin",
+                        1,
+                        "SharerPresent:" .. tostring(sharer ~= nil),
+                        "Reason:" .. tostring(shareReason)
+                    )
+
+                    if sharer and sharer.Parent == Players then
+                        GameAnalytics.custom(
+                            sharer,
+                            "SharedMomentPlayerArrived",
+                            1,
+                            "Reason:" .. tostring(shareReason),
+                            "Players:" .. tostring(#Players:GetPlayers())
+                        )
+                        socialSignalEvent:FireClient(sharer, {
+                            kind = "share_joined",
                             displayName = player.DisplayName,
                         })
                     end
