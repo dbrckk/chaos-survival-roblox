@@ -1,10 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
@@ -82,7 +85,7 @@ local function spotlightModel(key, model, labelText, localFocus)
     label.BackgroundTransparency = 0.12
     label.BorderSizePixel = 0
     label.Font = Enum.Font.GothamBlack
-    label.Text = labelText or "SURVIVOR"
+    label.Text = labelText or CoreLocalization.text(localeId, "SURVIVOR_LABEL")
     label.TextColor3 = textColor
     label.TextScaled = true
     label.TextTransparency = 1
@@ -125,7 +128,9 @@ local function spotlightPlayer(target)
     spotlightModel(
         "player:" .. tostring(target.UserId),
         target.Character,
-        isLocal and "YOU SURVIVED" or "SURVIVOR",
+        isLocal
+            and CoreLocalization.text(localeId, "YOU_SURVIVED")
+            or CoreLocalization.text(localeId, "SURVIVOR_LABEL"),
         isLocal
     )
 end
@@ -143,7 +148,12 @@ local function spotlightBots(desired)
                 local slot = tonumber(model:GetAttribute("AISurvivorSlot")) or 0
                 local key = "ai:" .. tostring(slot)
                 desired[key] = true
-                spotlightModel(key, model, "SURVIVOR", false)
+                spotlightModel(
+                    key,
+                    model,
+                    CoreLocalization.text(localeId, "SURVIVOR_LABEL"),
+                    false
+                )
             end
         end
     end
