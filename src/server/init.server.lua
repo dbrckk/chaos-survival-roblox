@@ -510,6 +510,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
             return "JumpShock"
         elseif activeHazards.LowGravity then
             return "LowGravity"
+        elseif activeHazards.DisappearingPlatforms then
+            return "DisappearingPlatforms"
+        elseif activeHazards.ShrinkingArena then
+            return "ShrinkingArena"
         end
         return "Fall"
     end
