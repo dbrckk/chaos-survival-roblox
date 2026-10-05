@@ -47,7 +47,10 @@ local function ensureRenderLoop()
             state.clock = 0
 
             local alpha = math.clamp((workspace:GetServerTimeNow() - state.startedAt) / state.duration, 0, 1)
-            local pulse = (math.sin(alpha * math.pi * 6) + 1) * 0.5
+            local reduced = player:GetAttribute("ReduceMotion") == true
+            local pulse = reduced
+                and 0.5
+                or ((math.sin(alpha * math.pi * 6) + 1) * 0.5)
 
             if state.kind == "Freeze" then
                 local freezePeak = 0.18 * currentTier.Scale
@@ -74,7 +77,7 @@ local function ensureRenderLoop()
                 part.Transparency = 0.12 + (pulse * 0.24)
 
                 if state.ring and state.ring.Parent then
-                    local ringScale = 1.10 + (pulse * 0.12)
+                    local ringScale = reduced and 1.12 or (1.10 + (pulse * 0.12))
                     state.ring.Size = Vector3.new(0.10, diameter * ringScale, diameter * ringScale)
                     state.ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.06, 0))
                         * CFrame.Angles(0, 0, math.rad(90))
@@ -83,7 +86,11 @@ local function ensureRenderLoop()
             end
 
             if state.label and state.label.Parent then
-                state.label.StudsOffsetWorldSpace = Vector3.new(0, 2.6 + pulse * 0.18, 0)
+                state.label.StudsOffsetWorldSpace = Vector3.new(
+                    0,
+                    reduced and 2.66 or (2.6 + pulse * 0.18),
+                    0
+                )
                 local text = state.label:FindFirstChild("WarningText")
                 if text and text:IsA("TextLabel") then
                     text.TextTransparency = math.clamp(0.02 + alpha * 0.22, 0, 1)
