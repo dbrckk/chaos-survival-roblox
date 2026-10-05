@@ -269,3 +269,7 @@ SOCIAL / CAPTIVATION PASS — 2026-10-05
 [A VALIDER] Composition Crew Signal + Last Chaos board sur vrai Android et différentes tailles d'écran.
 [A SUIVRE] Reconnaissance d'arrivée d'un ami invité, crew streak purement social, photo/lineup de groupe, analytics funnel social.
 
+[FAIT] Invite LaunchData : une arrivée réellement issue du Crew Signal est reconnue côté serveur, sans modifier spawn/récompenses/puissance ; conversion analytique enregistrée.
+[FAIT] Rituel social résultat : réactions GG / ENCORE / INCROYABLE réservées au multijoueur, une seule par joueur et par résultat, rendues au-dessus des avatars et absentes du gameplay actif.
+[FAIT] Analytics social funnel : exposition CTA, ouverture prompt, arrivée via invitation et réaction résultat sont maintenant distinguables.
+
