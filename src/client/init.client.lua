@@ -480,7 +480,7 @@ dailyTitle.BackgroundTransparency = 1
 dailyTitle.Font = Enum.Font.GothamBlack
 dailyTitle.TextColor3 = Color3.new(1, 1, 1)
 dailyTitle.TextScaled = true
-dailyTitle.Text = "DAILY REWARD"
+dailyTitle.Text = CoreLocalization.text(localeId, "DAILY_REWARD")
 dailyTitle.Parent = dailyToast
 
 local dailyBody = Instance.new("TextLabel")
@@ -506,7 +506,7 @@ questButton.BorderSizePixel = 0
 questButton.TextColor3 = UITheme.Colors.Text
 questButton.Font = Enum.Font.GothamBold
 questButton.TextScaled = true
-questButton.Text = "QUESTS"
+questButton.Text = CoreLocalization.text(localeId, "QUESTS")
 questButton.Parent = root
 UITheme.addCorner(questButton, UITheme.Corners.Medium)
 UITheme.addStroke(questButton, UITheme.Colors.Cyan, 1.2, 0.38)
@@ -540,7 +540,7 @@ questHeader.Font = Enum.Font.GothamBlack
 questHeader.TextColor3 = Color3.new(1, 1, 1)
 questHeader.TextScaled = true
 questHeader.TextXAlignment = Enum.TextXAlignment.Left
-questHeader.Text = "DAILY QUESTS"
+questHeader.Text = CoreLocalization.text(localeId, "DAILY_QUESTS")
 questHeader.Parent = questPanel
 
 local questRows = {}
@@ -571,7 +571,7 @@ weeklyHeader.Font = Enum.Font.GothamBlack
 weeklyHeader.TextColor3 = UITheme.Colors.Gold
 weeklyHeader.TextScaled = true
 weeklyHeader.TextXAlignment = Enum.TextXAlignment.Left
-weeklyHeader.Text = "WEEKLY CHALLENGES"
+weeklyHeader.Text = CoreLocalization.text(localeId, "WEEKLY_CHALLENGES")
 weeklyHeader.Parent = questPanel
 
 local weeklyRows = {}
@@ -675,7 +675,7 @@ cosmeticsButton.BorderSizePixel = 0
 cosmeticsButton.TextColor3 = UITheme.Colors.Text
 cosmeticsButton.Font = Enum.Font.GothamBold
 cosmeticsButton.TextScaled = true
-cosmeticsButton.Text = "COSMETICS"
+cosmeticsButton.Text = CoreLocalization.text(localeId, "COSMETICS")
 cosmeticsButton.Parent = root
 UITheme.addCorner(cosmeticsButton, UITheme.Corners.Medium)
 UITheme.addStroke(cosmeticsButton, UITheme.Colors.Magenta, 1.2, 0.38)
@@ -831,10 +831,22 @@ local function renderCosmetics(state)
             or (item.kind == "aura" and equippedAura == item.id)
 
         if isEquipped then
-            button.Text = string.format("%s   •   %s   •   %s   •   EQUIPPED", item.name, rarityLabel, kindLabel)
+            button.Text = string.format(
+                "%s   •   %s   •   %s   •   %s",
+                item.name,
+                rarityLabel,
+                kindLabel,
+                CoreLocalization.text(localeId, "EQUIPPED")
+            )
             button.BackgroundColor3 = UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.58)
         elseif isOwned then
-            button.Text = string.format("%s   •   %s   •   %s   •   EQUIP", item.name, rarityLabel, kindLabel)
+            button.Text = string.format(
+                "%s   •   %s   •   %s   •   %s",
+                item.name,
+                rarityLabel,
+                kindLabel,
+                CoreLocalization.text(localeId, "EQUIP")
+            )
         elseif coinPrice and coinPrice > 0 then
             button.Text = string.format("%s   •   %s   •   %s   •   %d COINS", item.name, rarityLabel, kindLabel, coinPrice)
             button.BackgroundColor3 = UITheme.Colors.Gold:Lerp(UITheme.Colors.Panel, 0.72)
@@ -916,7 +928,7 @@ supportButton.BorderSizePixel = 0
 supportButton.TextColor3 = UITheme.Colors.Text
 supportButton.Font = Enum.Font.GothamBold
 supportButton.TextScaled = true
-supportButton.Text = "SUPPORT"
+supportButton.Text = CoreLocalization.text(localeId, "SUPPORT")
 supportButton.Visible = false
 supportButton.Parent = root
 UITheme.addCorner(supportButton, UITheme.Corners.Medium)
@@ -951,7 +963,7 @@ supportHeader.Font = Enum.Font.GothamBlack
 supportHeader.TextColor3 = Color3.new(1, 1, 1)
 supportHeader.TextScaled = true
 supportHeader.TextXAlignment = Enum.TextXAlignment.Left
-supportHeader.Text = "SUPPORT THE GAME"
+supportHeader.Text = CoreLocalization.text(localeId, "SUPPORT_GAME")
 supportHeader.Parent = supportPanel
 
 local supportFairPlay = Instance.new("TextLabel")
@@ -962,7 +974,7 @@ supportFairPlay.Font = Enum.Font.GothamBold
 supportFairPlay.TextColor3 = Color3.fromRGB(175, 235, 195)
 supportFairPlay.TextScaled = true
 supportFairPlay.TextXAlignment = Enum.TextXAlignment.Left
-supportFairPlay.Text = "COSMETIC ONLY • NO GAMEPLAY ADVANTAGE"
+supportFairPlay.Text = CoreLocalization.text(localeId, "FAIR_PLAY")
 supportFairPlay.Parent = supportPanel
 
 local supportList = Instance.new("Frame")
@@ -992,7 +1004,7 @@ local function renderMonetization(state)
         return
     end
 
-    supportFairPlay.Text = state.fairPlay or "COSMETIC ONLY • NO GAMEPLAY ADVANTAGE"
+    supportFairPlay.Text = CoreLocalization.text(localeId, "FAIR_PLAY")
 
     for _, offer in ipairs(state.offers or {}) do
         local button = Instance.new("TextButton")
@@ -1007,12 +1019,20 @@ local function renderMonetization(state)
         button.TextScaled = true
         button.TextWrapped = true
         local itemCount = math.max(1, math.floor(tonumber(offer.itemCount) or 1))
-        local tagline = tostring(offer.tagline or (tostring(itemCount) .. " COSMETICS • PERMANENT"))
+        local tagline = tostring(
+            offer.tagline
+                or CoreLocalization.text(localeId, "COSMETICS_PERMANENT", itemCount)
+        )
         button.Text = offer.owned
-            and string.format("%s\n%s • OWNED", offer.name or "Support Pack", tagline)
+            and string.format(
+                "%s\n%s • %s",
+                offer.name or CoreLocalization.text(localeId, "SUPPORT_PACK"),
+                tagline,
+                CoreLocalization.text(localeId, "OWNED")
+            )
             or string.format(
                 "%s\n%s • %d ROBUX",
-                offer.name or "Support Pack",
+                offer.name or CoreLocalization.text(localeId, "SUPPORT_PACK"),
                 tagline,
                 offer.price or 0
             )
@@ -1046,7 +1066,7 @@ achievementButton.BorderSizePixel = 0
 achievementButton.TextColor3 = UITheme.Colors.Text
 achievementButton.Font = Enum.Font.GothamBold
 achievementButton.TextScaled = true
-achievementButton.Text = "ACHIEVEMENTS"
+achievementButton.Text = CoreLocalization.text(localeId, "ACHIEVEMENTS")
 achievementButton.Parent = root
 UITheme.addCorner(achievementButton, UITheme.Corners.Medium)
 UITheme.addStroke(achievementButton, UITheme.Colors.Gold, 1.2, 0.38)
@@ -1082,7 +1102,7 @@ achievementHeader.Font = Enum.Font.GothamBlack
 achievementHeader.TextColor3 = Color3.new(1, 1, 1)
 achievementHeader.TextScaled = true
 achievementHeader.TextXAlignment = Enum.TextXAlignment.Left
-achievementHeader.Text = "ACHIEVEMENTS"
+achievementHeader.Text = CoreLocalization.text(localeId, "ACHIEVEMENTS")
 achievementHeader.Parent = achievementPanel
 
 local achievementList = Instance.new("ScrollingFrame")
@@ -1234,10 +1254,10 @@ if touchDevice then
     cosmeticsButton.Size = UDim2.new(0.225, 0, 0.82, 0)
     supportButton.Size = UDim2.new(0.225, 0, 0.82, 0)
 
-    questButton.Text = "QUESTS"
-    achievementButton.Text = "AWARDS"
-    cosmeticsButton.Text = "STYLE"
-    supportButton.Text = "SUPPORT"
+    questButton.Text = CoreLocalization.text(localeId, "QUESTS")
+    achievementButton.Text = CoreLocalization.text(localeId, "AWARDS")
+    cosmeticsButton.Text = CoreLocalization.text(localeId, "STYLE")
+    supportButton.Text = CoreLocalization.text(localeId, "SUPPORT")
 
     questButton.Parent = metaDock
     achievementButton.Parent = metaDock
@@ -2177,9 +2197,13 @@ local function showQuestCompletion(quest)
     end
 
     local weekly = quest.scope == "weekly"
-    questToastTitle.Text = weekly and "WEEKLY COMPLETE" or "QUEST COMPLETE"
-    questToastBody.Text = string.format(
-        "%s   +%d coins   +%d XP",
+    questToastTitle.Text = CoreLocalization.text(
+        localeId,
+        weekly and "WEEKLY_COMPLETE" or "QUEST_COMPLETE"
+    )
+    questToastBody.Text = CoreLocalization.text(
+        localeId,
+        "REWARD_LINE",
         quest.title or (weekly and "Weekly challenge" or "Daily quest"),
         quest.coins or 0,
         quest.xp or 0
@@ -2196,10 +2220,11 @@ local function showAchievement(item)
         return
     end
 
-    achievementToastTitle.Text = "ACHIEVEMENT UNLOCKED"
-    achievementToastBody.Text = string.format(
-        "%s   +%d coins   +%d XP",
-        item.title or "Achievement",
+    achievementToastTitle.Text = CoreLocalization.text(localeId, "ACHIEVEMENT_UNLOCKED")
+    achievementToastBody.Text = CoreLocalization.text(
+        localeId,
+        "REWARD_LINE",
+        item.title or CoreLocalization.text(localeId, "ACHIEVEMENTS"),
         item.coins or 0,
         item.xp or 0
     )
