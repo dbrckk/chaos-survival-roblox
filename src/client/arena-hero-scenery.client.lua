@@ -529,8 +529,266 @@ local function addAsymmetricServiceCluster(base, theme, tier, variant)
     end
 end
 
+local function addMacroSilhouette(base, theme, tier, variant)
+    local hx = base.Size.X * 0.5
+    local hz = base.Size.Z * 0.5
+
+    if variant == "Classic" then
+        local frame = localFrame(base, 0, 0, -hz - 27, 0)
+        local height = tier.Name == "Low" and 20 or (tier.Name == "Medium" and 27 or 34)
+
+        for side = -1, 1, 2 do
+            local mast = makePart(
+                side < 0 and "ClassicMegaMastL" or "ClassicMegaMastR",
+                Vector3.new(2.8, height, 3.4),
+                frame * CFrame.new(side * 12.5, height * 0.5 + 0.8, 0),
+                theme.Structure:Lerp(VisualTheme.World.Deep, 0.28),
+                Enum.Material.Metal,
+                tier.Name == "Low" and 0.14 or 0.04,
+                tier.Name == "High"
+            )
+            makePart(
+                side < 0 and "ClassicMegaMastGlowL" or "ClassicMegaMastGlowR",
+                Vector3.new(0.30, height * 0.68, 3.55),
+                mast.CFrame,
+                side < 0 and theme.Accent or theme.Secondary,
+                Enum.Material.Neon,
+                tier.Name == "Low" and 0.64 or 0.34,
+                false
+            )
+        end
+
+        makePart(
+            "ClassicMegaCrown",
+            Vector3.new(29, 1.6, 3.4),
+            frame * CFrame.new(0, height + 0.45, 0),
+            theme.Detail,
+            Enum.Material.DiamondPlate,
+            0.08,
+            tier.Name == "High"
+        )
+
+        local screen = makePart(
+            "ClassicMegaScreen",
+            Vector3.new(18, 5.8, 0.62),
+            frame * CFrame.new(0, height - 5.4, -1.95),
+            VisualTheme.World.Deep,
+            Enum.Material.Metal,
+            0.02,
+            false
+        )
+        makeSurfaceLabel(
+            screen,
+            Enum.NormalId.Back,
+            "CHAOS // LIVE",
+            theme.Accent,
+            tier
+        )
+
+        if tier.Name == "High" then
+            makePart(
+                "ClassicMegaAntenna",
+                Vector3.new(0.42, 11, 0.42),
+                frame * CFrame.new(0, height + 6.2, 0),
+                theme.Secondary,
+                Enum.Material.Neon,
+                0.44,
+                false
+            )
+        end
+    elseif variant == "Towers" then
+        local frame = localFrame(base, 0, 0, -hz - 29, 0)
+        local height = tier.Name == "Low" and 30 or (tier.Name == "Medium" and 38 or 46)
+        local spread = tier.Name == "Low" and 9.5 or 11.5
+
+        for side = -1, 1, 2 do
+            local shaft = makePart(
+                side < 0 and "TowerMegaShaftL" or "TowerMegaShaftR",
+                Vector3.new(4.2, height, 5.0),
+                frame * CFrame.new(side * spread, height * 0.5 + 0.8, 0),
+                theme.Structure:Lerp(VisualTheme.World.Deep, 0.32),
+                Enum.Material.Metal,
+                tier.Name == "Low" and 0.16 or 0.05,
+                tier.Name == "High"
+            )
+            makePart(
+                side < 0 and "TowerMegaRailL" or "TowerMegaRailR",
+                Vector3.new(0.38, height * 0.78, 5.15),
+                shaft.CFrame,
+                side < 0 and theme.Accent or theme.Secondary,
+                Enum.Material.Neon,
+                tier.Name == "Low" and 0.66 or 0.38,
+                false
+            )
+        end
+
+        makePart(
+            "TowerMegaGantry",
+            Vector3.new(spread * 2 + 8, 2.0, 5.2),
+            frame * CFrame.new(0, height + 0.25, 0),
+            theme.Detail,
+            Enum.Material.DiamondPlate,
+            0.08,
+            tier.Name == "High"
+        )
+
+        local lift = makePart(
+            "TowerMegaLift",
+            Vector3.new(10, 6.0, 4.6),
+            frame * CFrame.new(0, height * 0.58, -0.3),
+            theme.Detail:Lerp(VisualTheme.World.Deep, 0.12),
+            Enum.Material.Metal,
+            0.08,
+            tier.Name == "High"
+        )
+        makeSurfaceLabel(
+            lift,
+            Enum.NormalId.Back,
+            "VERTICAL // LIFT",
+            theme.Secondary,
+            tier
+        )
+
+        if tier.Name ~= "Low" then
+            for side = -1, 1, 2 do
+                makePart(
+                    side < 0 and "TowerMegaCableL" or "TowerMegaCableR",
+                    Vector3.new(0.18, height * 0.36, 0.18),
+                    frame * CFrame.new(side * 3.7, height * 0.79, -0.4),
+                    theme.Accent,
+                    Enum.Material.Neon,
+                    0.52,
+                    false
+                )
+            end
+        end
+    elseif variant == "Crossroads" then
+        local frame = localFrame(base, 0, 0, hz + 27, 180)
+        local height = tier.Name == "Low" and 18 or (tier.Name == "Medium" and 25 or 31)
+        local spread = tier.Name == "Low" and 12 or 15
+
+        for side = -1, 1, 2 do
+            makePart(
+                side < 0 and "CrossroadsMegaPylonL" or "CrossroadsMegaPylonR",
+                Vector3.new(3.0, height, 3.8),
+                frame * CFrame.new(side * spread, height * 0.5 + 0.8, 0),
+                theme.Structure:Lerp(VisualTheme.World.Deep, 0.22),
+                Enum.Material.Metal,
+                tier.Name == "Low" and 0.15 or 0.05,
+                tier.Name == "High"
+            )
+        end
+
+        makePart(
+            "CrossroadsMegaHeader",
+            Vector3.new(spread * 2 + 8, 1.6, 3.8),
+            frame * CFrame.new(0, height + 0.25, 0),
+            theme.Detail,
+            Enum.Material.DiamondPlate,
+            0.08,
+            tier.Name == "High"
+        )
+
+        for direction = -1, 1, 2 do
+            local arm = makePart(
+                direction < 0 and "CrossroadsSkyDirectionL" or "CrossroadsSkyDirectionR",
+                Vector3.new(tier.Name == "Low" and 13 or 18, 0.78, 1.6),
+                frame
+                    * CFrame.new(direction * 6.8, height - 4.5, -1.7)
+                    * CFrame.Angles(0, 0, math.rad(direction * 14)),
+                direction < 0 and theme.Accent or theme.Secondary,
+                Enum.Material.Neon,
+                tier.Name == "Low" and 0.58 or 0.30,
+                false
+            )
+
+            if tier.Name == "High" then
+                makeWedge(
+                    direction < 0 and "CrossroadsSkyArrowL" or "CrossroadsSkyArrowR",
+                    Vector3.new(4.8, 1.8, 1.7),
+                    arm.CFrame
+                        * CFrame.new(direction * ((arm.Size.X * 0.5) + 2.0), 0, 0)
+                        * CFrame.Angles(0, direction < 0 and math.pi or 0, 0),
+                    arm.Color,
+                    Enum.Material.Neon,
+                    0.22,
+                    false
+                )
+            end
+        end
+
+        local sign = makePart(
+            "CrossroadsMegaSign",
+            Vector3.new(15.5, 4.4, 0.62),
+            frame * CFrame.new(0, height - 9.2, -2.05),
+            VisualTheme.World.Deep,
+            Enum.Material.Metal,
+            0.02,
+            false
+        )
+        makeSurfaceLabel(
+            sign,
+            Enum.NormalId.Back,
+            "JUNCTION // 04",
+            theme.Accent,
+            tier
+        )
+    elseif variant == "Orbital" then
+        local radius = math.max(base.Size.X, base.Size.Z) * 0.74
+        local segments = tier.Name == "Low" and 6 or (tier.Name == "Medium" and 9 or 12)
+        local height = tier.Name == "Low" and 18 or (tier.Name == "Medium" and 24 or 28)
+
+        for i = 1, segments do
+            local angle = ((i - 1) / segments) * math.pi * 2
+            local tangent = angle + math.pi * 0.5
+            local x = math.cos(angle) * radius
+            local z = math.sin(angle) * radius
+            local segmentLength = (2 * math.pi * radius / segments) * 0.72
+            local ringSegment = makePart(
+                "OrbitalSkyRing" .. i,
+                Vector3.new(segmentLength, tier.Name == "Low" and 0.8 or 1.15, 2.8),
+                localFrame(
+                    base,
+                    x,
+                    height + math.sin(angle * 2) * 2.2,
+                    z,
+                    -math.deg(tangent)
+                ) * CFrame.Angles(math.rad(12), 0, 0),
+                theme.Structure:Lerp(VisualTheme.World.Deep, 0.12),
+                Enum.Material.Metal,
+                tier.Name == "Low" and 0.22 or 0.08,
+                tier.Name == "High"
+            )
+
+            if tier.Name ~= "Low" then
+                makePart(
+                    "OrbitalSkyRingGlow" .. i,
+                    Vector3.new(segmentLength * 0.72, 0.22, 2.95),
+                    ringSegment.CFrame * CFrame.new(0, 0.72, 0),
+                    i % 3 == 0 and theme.Secondary or theme.Accent,
+                    Enum.Material.Neon,
+                    0.38,
+                    false
+                )
+            end
+        end
+
+        local crown = makePart(
+            "OrbitalSkyCrown",
+            Vector3.new(7.0, 7.0, 7.0),
+            localFrame(base, 0, height + 8.0, -radius * 0.92, 0),
+            theme.Accent,
+            Enum.Material.Neon,
+            tier.Name == "Low" and 0.58 or 0.36,
+            false
+        )
+        crown.Shape = Enum.PartType.Ball
+    end
+end
+
 local function buildClassic(base, theme, tier)
     addAsymmetricServiceCluster(base, theme, tier, "Classic")
+    addMacroSilhouette(base, theme, tier, "Classic")
 
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
@@ -570,6 +828,7 @@ end
 
 local function buildTowers(base, theme, tier)
     addAsymmetricServiceCluster(base, theme, tier, "Towers")
+    addMacroSilhouette(base, theme, tier, "Towers")
 
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
@@ -693,6 +952,7 @@ end
 
 local function buildCrossroads(base, theme, tier)
     addAsymmetricServiceCluster(base, theme, tier, "Crossroads")
+    addMacroSilhouette(base, theme, tier, "Crossroads")
 
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
@@ -743,6 +1003,7 @@ end
 
 local function buildOrbital(base, theme, tier)
     addAsymmetricServiceCluster(base, theme, tier, "Orbital")
+    addMacroSilhouette(base, theme, tier, "Orbital")
     addOrbitalReactorLandmark(base, theme, tier)
 
     local radius = math.min(base.Size.X, base.Size.Z) * 0.56
