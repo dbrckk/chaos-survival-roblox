@@ -50,6 +50,16 @@ describe("Core localization", function()
         expect(CoreLocalization.text("fr-fr", "RESULT_NEXT_GOAL", 5, 120)).toBe(
             "PROCHAIN OBJECTIF • NIVEAU 5 • 120 XP RESTANTS"
         )
+        expect(CoreLocalization.text("fr-fr", "POSITION_YOURSELF")).toBe("PLACE-TOI")
+        expect(CoreLocalization.text("fr-fr", "JUICE_MASTER_SUB", 4)).toBe(
+            "Défi terminé • Élan x4"
+        )
+        expect(CoreLocalization.text("fr-fr", "JUICE_UNSTOPPABLE", 5)).toBe("INARRÊTABLE x5")
+        expect(CoreLocalization.text("fr-fr", "NEAR_MISS_TITLE")).toBe("C'ÉTAIT JUSTE !")
+        expect(CoreLocalization.text("fr-fr", "NEAR_MISS_COMBO", 3)).toBe(
+            "DE JUSTESSE  x3"
+        )
+        expect(CoreLocalization.text("fr-fr", "NEAR_MISS_EDGE", 0.8)).toBe("0.8x LIMITE")
     end)
 
     it("localizes hazard names and actionable hints", function()
