@@ -103,19 +103,22 @@ describe("Player data schema", function()
         expect(snapshot.DataVersion).toBe(DataSchema.Version)
     end)
 
-    it("persists reduce motion accessibility preference", function()
+    it("persists accessibility preferences", function()
         local data = DataSchema.normalize({
             ReduceMotion = true,
+            AudioMuted = true,
         })
         expect(data.ReduceMotion).toBe(true)
+        expect(data.AudioMuted).toBe(true)
 
         local snapshot = DataSchema.snapshot(function(key)
-            if key == "ReduceMotion" then
+            if key == "ReduceMotion" or key == "AudioMuted" then
                 return true
             end
             return nil
         end)
         expect(snapshot.ReduceMotion).toBe(true)
+        expect(snapshot.AudioMuted).toBe(true)
     end)
 
     it("uses bounded exponential retry delays", function()
