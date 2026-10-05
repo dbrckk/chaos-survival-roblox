@@ -169,7 +169,7 @@ local function buildOrbital(base, theme, tier)
             Vector3.new(size, size, size),
             frame(base, x, 10 + (i % 2) * 4, z, 0),
             theme.Structure:Lerp(VisualTheme.World.Deep, 0.20),
-            Enum.Material.SmoothPlastic,
+            Enum.Material.Metal,
             tier.Name == "Low" and 0.34 or 0.16,
             Enum.PartType.Ball
         )
