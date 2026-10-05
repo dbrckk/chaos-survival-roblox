@@ -16,7 +16,7 @@ permissions:
 jobs:
   engine:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
@@ -174,23 +174,49 @@ jobs:
         run: |
           run_suite() {
             suite="$1"
-            log="/tmp/lest-$suite.log"
+            max_attempts=3
+            attempt=1
 
             echo "::group::Open Cloud suite: $suite"
-            set +e
-            lest run --config lest.ci.toml "$suite" 2>&1 | tee "$log"
-            status=${PIPESTATUS[0]}
-            set -e
 
-            if [ "$status" -ne 0 ] && grep -Eq 'did not finish within the deadline|last state: PROCESSING' "$log"; then
-              echo "Transient Roblox Open Cloud timeout detected for $suite; retrying once."
-              sleep 8
-              lest run --config lest.ci.toml "$suite"
-              status=$?
-            fi
+            while [ "$attempt" -le "$max_attempts" ]; do
+              log="/tmp/lest-$suite-attempt-$attempt.log"
+
+              set +e
+              lest run --config lest.ci.toml "$suite" 2>&1 | tee "$log"
+              status=${PIPESTATUS[0]}
+              set -e
+
+              if [ "$status" -eq 0 ]; then
+                echo "Open Cloud suite $suite passed on attempt $attempt."
+                echo "::endgroup::"
+                return 0
+              fi
+
+              transient=false
+              if grep -Eq                 'did not finish within the deadline|last state: PROCESSING|HTTP 429|Too Many Requests'                 "$log"; then
+                transient=true
+              fi
+
+              if [ "$transient" != true ] || [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Open Cloud suite $suite failed with a non-transient error or exhausted retries."
+                echo "::endgroup::"
+                return "$status"
+              fi
+
+              if [ "$attempt" -eq 1 ]; then
+                delay=12
+              else
+                delay=35
+              fi
+
+              echo "Transient Roblox Open Cloud failure detected for $suite on attempt $attempt; retrying after ${delay}s."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+            done
 
             echo "::endgroup::"
-            return "$status"
+            return 1
           }
 
           run_suite core
