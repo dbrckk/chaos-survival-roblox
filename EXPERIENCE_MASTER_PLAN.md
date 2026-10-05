@@ -245,3 +245,15 @@ Ordre d'exécution immédiat
 - [FAIT] Release packaging : README synchronisé avec les 17 cosmetics, AI Survivors, mastery, weekly challenges, 4 arènes nommées, nouvelle composition visuelle, material audio et game-feel ; protocole playtest mobile enrichi avec hazard lanes + coyote/buffer.
 - [FAIT] Audit production : aucun TODO/FIXME/HACK, aucun rbxassetid://0 ni print() debug détecté ; Game Pass IDs restent volontairement externes via DataModel attributes SupporterPassId/NeonPackPassId.
 - [FAIT] Storytelling micro-décor : les props de service Medium/High portent désormais des marquages diégétiques map-specific (CAM, MAINT, lanes, AUX) via SurfaceGui local, sans collision, sans asset externe et sans coût en Low.
+
+RE-AUDIT UX — 2026-10-05
+=========================
+[FAIT] Continuité vote → READY → GO : l'action à effectuer face au danger reste visible jusqu'au départ, au lieu de disparaître après le vote.
+[FAIT] Double Chaos : le HUD affiche maintenant une consigne courte pour chacun des deux dangers actifs.
+[FAIT] Accessibilité FTUE : Reduce Motion / Sound sont accessibles dès la première session hors phase critique, sans exiger une manche déjà jouée.
+[FAIT] Guidage rookie monde : boost lobby et pad d'évasion localisés FR/EN, portée augmentée et texte compatible petits écrans.
+[FAIT] Guidage arène : noms, stratégie et fonction des pads localisés par VariantId ; carte READY passée en dimensions pixel-safe sur mobile.
+[FAIT] Boucle après élimination/résultat : feed d'élimination, badges survivants humains/IA, wayfinding lobby, récompenses, maîtrise, médailles, séries et next goal alignés sur la langue du joueur.
+[CONFIRMÉ] Solo social : jusqu'à 3 AI Survivors R15 restent intégrés comme survivants crédibles (noms, vote, lobby, hazards, spectateur, résultat) sans badge "BOT".
+[A VALIDER] Les changements ci-dessus restent soumis aux workflows Build Validation/Open Cloud du HEAD et au contrôle Android physique avant publication.
+
