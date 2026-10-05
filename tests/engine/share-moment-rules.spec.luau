@@ -30,6 +30,8 @@ describe("Share moment rules", function()
         expect(ShareMomentRules.reason({
             survived = true,
             doubleChaos = true,
+            challengeCompleted = true,
+            momentumBest = 5,
         }, {
             phase = "result",
             survivorsAlive = 2,
