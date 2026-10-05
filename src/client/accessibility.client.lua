@@ -90,7 +90,9 @@ local function refresh()
         and UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.72)
         or UITheme.Colors.PanelRaised
 
-    local criticalPhase = currentPhase == "ready" or currentPhase == "round"
+    local criticalPhase = currentPhase == "ready"
+        or currentPhase == "round"
+        or currentPhase == "result"
     button.Visible = player:GetAttribute("DataLoaded") == true
         and not criticalPhase
         and not voteVisible
