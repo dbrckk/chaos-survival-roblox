@@ -45,6 +45,8 @@ This directory is the professional review system for the project.
 23. [Asset License & Provenance Register](23_ASSET_LICENSE_REGISTER.md)
 24. [Brand & Terminology Bible](24_BRAND_AND_TERMINOLOGY_BIBLE.md)
 25. [Global Phase State Contract](25_PHASE_STATE_CONTRACT.md)
+26. [Player Personas & Test Scenarios](26_PLAYER_PERSONAS_AND_TEST_SCENARIOS.md)
+27. [Complexity & Subtraction Register](27_COMPLEXITY_AND_SUBTRACTION_REGISTER.md)
 
 ## Existing deep implementation guides
 
