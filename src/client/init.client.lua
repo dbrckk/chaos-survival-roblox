@@ -2,14 +2,17 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
+local localeId = LocalizationService.RobloxLocaleId
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local voteEvent = remotes:WaitForChild("VoteDisaster")
@@ -386,17 +389,23 @@ local function presentCountdown(state)
             local primaryDisasterId = state.disasterIds and state.disasterIds[1]
             local playerChoiceWon = revealedPlayerChoice ~= nil
                 and tostring(revealedPlayerChoice) == tostring(primaryDisasterId)
-            countdownKicker.Text = playerChoiceWon and "YOUR CHOICE WON" or "CHAOS SELECTED"
-            countdownMain.Text = cleanReadyTitle(state.title)
+            countdownKicker.Text = playerChoiceWon
+                and CoreLocalization.text(localeId, "YOUR_CHOICE_WON")
+                or CoreLocalization.text(localeId, "CHAOS_SELECTED")
+            countdownMain.Text = CoreLocalization.hazardTitle(
+                localeId,
+                state.disasterIds,
+                cleanReadyTitle(state.title)
+            )
             countdownSub.Text = survivorCount > 1
-                and (tostring(survivorCount) .. " SURVIVORS READY  •  SURVIVE UNTIL 0")
-                or "SURVIVE UNTIL 0"
+                and CoreLocalization.text(localeId, "SURVIVORS_READY", survivorCount)
+                or CoreLocalization.text(localeId, "SURVIVE_ZERO")
         else
-            countdownKicker.Text = "GET READY"
+            countdownKicker.Text = CoreLocalization.text(localeId, "GET_READY")
             countdownMain.Text = tostring(math.max(1, seconds))
             countdownSub.Text = survivorCount > 1
-                and (tostring(survivorCount) .. " SURVIVORS  •  SURVIVE UNTIL 0")
-                or "SURVIVE UNTIL 0"
+                and CoreLocalization.text(localeId, "SURVIVORS", survivorCount)
+                or CoreLocalization.text(localeId, "SURVIVE_ZERO")
         end
 
         TweenService:Create(
@@ -412,10 +421,10 @@ local function presentCountdown(state)
         local token = countdownToken
         countdownCard.Visible = true
         countdownCard.BackgroundTransparency = 0.02
-        countdownKicker.Text = "SURVIVE"
+        countdownKicker.Text = CoreLocalization.text(localeId, "SURVIVE")
         countdownKicker.TextColor3 = UITheme.Colors.Green
         countdownMain.Text = "GO!"
-        countdownSub.Text = "REACT • MOVE • STAY ALIVE"
+        countdownSub.Text = CoreLocalization.text(localeId, "GO_SUB")
         countdownScale.Scale = 0.82
         TweenService:Create(
             countdownScale,
@@ -2294,6 +2303,30 @@ dailyRewardEvent.OnClientEvent:Connect(function(reward)
     end
 end)
 
+local function localizedStateCopy(state)
+    local displayTitle = state.title or "CHAOS SURVIVAL"
+    local displayHint = state.hint or ""
+    local phase = tostring(state.phase or "")
+
+    if phase == "intermission" and state.voteOptions then
+        displayTitle = CoreLocalization.text(localeId, "VOTE_TITLE")
+        displayHint = CoreLocalization.text(
+            localeId,
+            state.soloMode == true and "VOTE_SOLO" or "VOTE_MULTI"
+        )
+    elseif phase == "ready" or phase == "round" then
+        displayTitle = CoreLocalization.hazardTitle(
+            localeId,
+            state.disasterIds,
+            displayTitle
+        )
+        local primary = state.disasterIds and state.disasterIds[1]
+        displayHint = CoreLocalization.hazardHint(localeId, primary) or displayHint
+    end
+
+    return displayTitle, displayHint
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
     presentCountdown(state)
 
@@ -2340,12 +2373,13 @@ stateEvent.OnClientEvent:Connect(function(state)
         task.defer(showOnePendingMetaNotification)
     end
 
-    if state.phase == "round" and type(state.hint) == "string" and state.hint ~= "" then
-        lastRoundHint = state.hint
+    local displayTitle, displayHint = localizedStateCopy(state)
+    if state.phase == "round" and displayHint ~= "" then
+        lastRoundHint = displayHint
     end
 
-    title.Text = state.title or "CHAOS SURVIVAL"
-    hint.Text = state.hint or ""
+    title.Text = displayTitle
+    hint.Text = displayHint
     timer.Text = tostring(state.seconds or 0)
 
     local alive = tonumber(state.survivorsAlive)
@@ -2354,14 +2388,14 @@ stateEvent.OnClientEvent:Connect(function(state)
         aliveCounter.Visible = true
         if total == 1 then
             if state.phase == "ready" and state.soloMode == true then
-                aliveCounter.Text = "SURVIVORS JOINING"
+                aliveCounter.Text = CoreLocalization.text(localeId, "SURVIVORS_JOINING")
             else
                 aliveCounter.Text = "SOLO"
             end
         elseif state.phase == "ready" and (tonumber(state.aiSurvivors) or 0) > 0 then
-            aliveCounter.Text = string.format("%d SURVIVORS", total)
+            aliveCounter.Text = CoreLocalization.text(localeId, "SURVIVOR_COUNT", total)
         else
-            aliveCounter.Text = string.format("%d / %d ALIVE", alive, total)
+            aliveCounter.Text = CoreLocalization.text(localeId, "ALIVE_COUNT", alive, total)
         end
     else
         aliveCounter.Visible = false
@@ -2378,7 +2412,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         and state.phase == "intermission"
         and not state.voteOptions
     then
-        coachText = "LEFT STICK = MOVE  •  RIGHT BUTTON = JUMP  •  SURVIVE UNTIL 0"
+        coachText = CoreLocalization.text(localeId, "TOUCH_CONTROLS")
     elseif touchDevice
         and state.phase == "intermission"
         and state.voteOptions
@@ -2387,6 +2421,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         -- coach prevents it from colliding with vote cards on short phones.
         coachText = nil
     end
+    coachText = CoreLocalization.coach(localeId, coachText)
     rookieCoach.Visible = coachText ~= nil
     if coachText then
         rookieCoach.Text = coachText
