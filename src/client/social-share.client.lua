@@ -32,6 +32,9 @@ local awaitingCapture = false
 local sharePromptOpen = false
 local resultSceneReady = false
 local resultSceneToken = 0
+local resultSerial = 0
+local activeShareResultSerial = 0
+local sharedResultSerial = -1
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosMomentShare"
@@ -105,6 +108,7 @@ end
 local function shouldShow()
     return resultSceneReady
         and not shareBusy
+        and sharedResultSerial ~= resultSerial
         and ShareMomentRules.shouldShow(
             lastFeedback,
             currentState,
@@ -149,8 +153,13 @@ end
 
 local function refresh()
     local reason = currentReason()
-    local visible = shouldShow()
 
+    if shareBusy then
+        button.Visible = tostring(currentState.phase or "") == "result"
+        return
+    end
+
+    local visible = shouldShow()
     button.Visible = visible
     if reason then
         local reasonKey = ShareMomentRules.reasonKey(reason)
@@ -234,6 +243,9 @@ local function promptShare(content, launchData, token)
                     return
                 end
                 sharePromptOpen = false
+                if activeShareResultSerial == resultSerial then
+                    sharedResultSerial = resultSerial
+                end
                 socialSignalEvent:FireServer("share_accepted")
                 setBusy(false)
             end,
@@ -298,6 +310,7 @@ local function captureAndShare()
 
     operationToken += 1
     local token = operationToken
+    activeShareResultSerial = resultSerial
     awaitingCapture = true
     setBusy(true)
     socialSignalEvent:FireServer("share_capture_requested")
@@ -367,6 +380,7 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     local phase = tostring(currentState.phase or "waiting")
     if phase == "result" and previousPhase ~= "result" then
+        resultSerial += 1
         resultSceneReady = false
         resultSceneToken += 1
         local token = resultSceneToken
