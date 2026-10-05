@@ -75,3 +75,14 @@ A `v1.0.0` tag should not be created until `RELEASE_CHECKLIST.md` passes for the
 - Added stable arena/disaster IDs to round feedback so client presentation does not depend on English server copy.
 - Expanded CoreLocalization engine coverage for the new UX copy.
 
+## 2026-10-05 — Social loop and visual identity
+
+- Added `SOCIAL_EXPERIENCE_PLAN.md` to define the session as a social ritual: staging → vote → anticipation → shared danger → result story → replay/invite.
+- Added a native Roblox friend-invite affordance after completed rounds, hidden during first-time onboarding, voting, READY and active survival.
+- Added contextual win/loss social framing and FR/EN invite copy.
+- Added an in-world Crew Signal landmark in the lobby.
+- Added a persistent Last Chaos recap board showing the previous hazards, arena and survivor count during the next lobby phase.
+- Expanded result RoundState payload with stable arena/disaster IDs and survivor counts for presentation systems.
+- Added adaptive phase-aware bloom: stronger for presentation, reduced during active gameplay.
+- Added SocialExperienceRules and engine coverage; Open Cloud shard mapping updated.
+
