@@ -16,7 +16,7 @@ permissions:
 jobs:
   engine:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     env:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
