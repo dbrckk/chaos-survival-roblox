@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
@@ -50,6 +51,7 @@ local RoundMomentum = require(script.RoundMomentum)
 local AISurvivorService = require(script.AISurvivorService)
 local Mastery = require(script.Mastery)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
+local SocialExperienceRules = require(ReplicatedStorage.Shared.SocialExperienceRules)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -410,10 +412,64 @@ clientReadyEvent.OnServerEvent:Connect(function(player)
     syncInitialClientState(player)
 end)
 
+local function processInviteJoinData(player)
+    task.spawn(function()
+        for _ = 1, 10 do
+            if player.Parent ~= Players then
+                return
+            end
+
+            local okJoin, joinData = pcall(player.GetJoinData, player)
+            local launchData = okJoin and type(joinData) == "table" and joinData.LaunchData or nil
+            if type(launchData) == "string" and launchData ~= "" then
+                local okDecode, payload = pcall(HttpService.JSONDecode, HttpService, launchData)
+                local inviterUserId = okDecode
+                    and SocialExperienceRules.inviterUserId(payload, player.UserId)
+                    or nil
+
+                if inviterUserId then
+                    player:SetAttribute("InvitedByUserId", inviterUserId)
+                    local inviter = Players:GetPlayerByUserId(inviterUserId)
+
+                    GameAnalytics.custom(
+                        player,
+                        "InviteJoin",
+                        1,
+                        "InviterPresent:" .. tostring(inviter ~= nil),
+                        "Players:" .. tostring(#Players:GetPlayers())
+                    )
+
+                    if inviter and inviter.Parent == Players then
+                        inviter:SetAttribute(
+                            "SessionFriendJoins",
+                            math.max(0, math.floor(tonumber(inviter:GetAttribute("SessionFriendJoins")) or 0)) + 1
+                        )
+                        GameAnalytics.custom(
+                            inviter,
+                            "InviteFriendArrived",
+                            1,
+                            "SameServer:true",
+                            "Players:" .. tostring(#Players:GetPlayers())
+                        )
+                        socialSignalEvent:FireClient(inviter, {
+                            kind = "friend_joined",
+                            displayName = player.DisplayName,
+                        })
+                    end
+                end
+                return
+            end
+
+            task.wait(1)
+        end
+    end)
+end
+
 Players.PlayerAdded:Connect(function(player)
     player:SetAttribute("RoundParticipant", false)
     player:SetAttribute("RoundEliminated", false)
     GameAnalytics.sessionStarted(player, #Players:GetPlayers())
+    processInviteJoinData(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
@@ -424,6 +480,7 @@ end)
 
 for _, player in ipairs(Players:GetPlayers()) do
     GameAnalytics.sessionStarted(player, #Players:GetPlayers())
+    processInviteJoinData(player)
 end
 
 voteEvent.OnServerEvent:Connect(function(player, disasterId)
