@@ -1031,7 +1031,10 @@ while true do
                 AISurvivorService.beginVote(currentOptions, roundNumber + 1)
             end
             options = {}
-            local voteCounts = currentVoteCounts()
+            -- Display only player votes. AI votes remain a fallback when no
+            -- human votes, but showing them here would make the visible
+            -- "leading" card disagree with the human-authoritative winner.
+            local voteCounts = humanVoteCounts()
 
             for _, d in ipairs(currentOptions) do
                 table.insert(options, {
