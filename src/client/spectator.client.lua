@@ -60,6 +60,7 @@ label.Text = "SPECTATING"
 label.Parent = card
 
 local nextButton = Instance.new("TextButton")
+nextButton.Name = "NextSpectator"
 nextButton.AnchorPoint = Vector2.new(1, 0.5)
 nextButton.Position = UDim2.new(1, -8, 0.5, 0)
 nextButton.Size = UDim2.new(0.28, 0, 0.72, 0)
