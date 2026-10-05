@@ -47,6 +47,7 @@ PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 [TODO] 2.7 QA Android / desktop des 4 arènes.
 [QA]   2.8 Casser les silhouettes trop symétriques avec des clusters asymétriques sobres Medium/High.
 [QA]   2.9 Différencier le langage de surface : Classic grille, Towers industriel, Crossroads directionnel, Orbital radial.
+[QA]   2.10 Réduire les répétitions de glow : accents hiérarchisés sur bords, sous-structures et masses midground.
 
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 -------------------------------------------
