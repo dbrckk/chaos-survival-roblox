@@ -370,6 +370,8 @@ local function setMix(phase, overdrive, finalRush)
     }):Play()
 end
 
+setMix(lastPhase or "waiting", lastOverdrive, lastFinalRush)
+
 local lastSpatialImpactAt = 0
 local function playSpatialImpact(payload)
     local position = payload and payload.position
