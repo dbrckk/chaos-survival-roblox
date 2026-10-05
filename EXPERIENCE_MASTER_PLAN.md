@@ -280,3 +280,13 @@ GUIDES DE PRODUCTION — 2026-10-05
 [FAIT] AAA_VISUALS_ANIMATION_GUIDE.txt : standard obligatoire pour graphismes, PBR, lighting, maps, VFX, animation, caméra et optimisation visuelle.
 [FAIT] GAME_FEEL_UX_GUIDE.txt : standard obligatoire pour contrôle, feedback, rythme, onboarding, social, rétention saine, mobile et accessibilité.
 [RÈGLE] Toute future amélioration doit être évaluée contre ces deux guides avant validation finale.
+
+
+AAA SPECIALIST GOVERNANCE
+=========================
+[FAIT] Le projet dispose désormais d'un système de revue multi-disciplinaire sous docs/aaa/.
+[FAIT] Chaque amélioration importante doit avoir un spécialiste principal + un reviewer transverse.
+[FAIT] Le score courant est suivi dans docs/aaa/CURRENT_SPECIALIST_AUDIT.md.
+[RÈGLE] Toujours viser d'abord le département au score/confiance le plus faible avant d'ajouter une feature secondaire.
+[RÈGLE] L'état PERFECT-CANDIDATE exige les validations automatisées, Studio, Android/desktop, persistence/rejoin, alpha réel et harmonisation finale.
+[RÈGLE] Une fois tous les domaines suffisamment élevés, arrêter l'expansion et exécuter docs/aaa/08_HARMONIZATION_AND_PERFECT_CANDIDATE.md.
