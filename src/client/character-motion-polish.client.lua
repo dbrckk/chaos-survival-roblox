@@ -12,6 +12,7 @@ local phase = "waiting"
 local finalRush = false
 local clock = 0
 local updateClock = 0
+local modelSequence = 0
 
 local function qualityScale()
     local tier = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
@@ -115,6 +116,9 @@ local function watchModel(model)
         return
     end
 
+    modelSequence += 1
+    local isAI = model:GetAttribute("AISurvivor") == true
+
     local state = {
         model = model,
         humanoid = humanoid,
@@ -125,15 +129,19 @@ local function watchModel(model)
         airborne = false,
         airborneAt = nil,
         landingKick = 0,
-        isAI = model:GetAttribute("AISurvivor") == true,
-        phaseOffset = ((#watched + 1) * 0.73) % 6.28,
+        isAI = isAI,
+        phaseOffset = (modelSequence * 0.73) % 6.28,
     }
 
     if state.rootJoint then
         state.baseTransform = state.rootJoint.Transform
     end
 
-    state.trail = ensureTrail(root, accentFor(model))
+    -- AI survivors already own a dedicated cosmetic trail managed by
+    -- bot-motion-polish; avoid stacking a second trail on the same rig.
+    if not isAI then
+        state.trail = ensureTrail(root, accentFor(model))
+    end
     watched[model] = state
 
     humanoid.StateChanged:Connect(function(_, newState)
