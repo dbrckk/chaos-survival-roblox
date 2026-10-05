@@ -176,3 +176,13 @@ Chaos Survival 1.0 is ready only when automated CI, authenticated Studio E2E, ph
 - [ ] Final subtraction review completed.
 - [ ] No duplicated major system remains.
 - [ ] Perfect-Candidate decision recorded before RC tag.
+
+
+## CI infrastructure interpretation
+
+- [ ] Distinguish assertion/test failures from external runner/Open Cloud failures.
+- [ ] HTTP 429, PROCESSING deadline/timeouts and runner shutdowns are treated as transient infrastructure failures unless an assertion also failed.
+- [ ] Re-run the exact same SHA after a transient infrastructure failure.
+- [ ] Never label a commit "engine-tested" if the suite did not actually complete.
+- [ ] Never patch gameplay merely to make an infrastructure timeout disappear.
+- [ ] Keep retry/backoff bounded so persistent external outages remain visible.
