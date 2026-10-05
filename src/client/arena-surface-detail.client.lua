@@ -40,7 +40,14 @@ local function addPanelLanguage(base, theme, tier, variant)
     local halfZ = base.Size.Z * 0.5
     local seamAlpha = tier.Name == "Low" and 0.76 or (tier.Name == "Medium" and 0.64 or 0.56)
 
-    local seamCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+    local seamCount
+    if variant == "Orbital" then
+        seamCount = tier.Name == "High" and 2 or 0
+    elseif variant == "Crossroads" then
+        seamCount = tier.Name == "Low" and 2 or 4
+    else
+        seamCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+    end
     for i = 1, seamCount do
         local t = (i / (seamCount + 1)) * 2 - 1
         local horizontal = i % 2 == 0
@@ -61,7 +68,14 @@ local function addPanelLanguage(base, theme, tier, variant)
         )
     end
 
-    local patchCount = tier.Name == "Low" and 3 or (tier.Name == "Medium" and 5 or 7)
+    local patchCount
+    if variant == "Orbital" then
+        patchCount = tier.Name == "Low" and 1 or (tier.Name == "Medium" and 2 or 3)
+    elseif variant == "Crossroads" then
+        patchCount = tier.Name == "Low" and 2 or (tier.Name == "Medium" and 3 or 4)
+    else
+        patchCount = tier.Name == "Low" and 3 or (tier.Name == "Medium" and 5 or 7)
+    end
     for i = 1, patchCount do
         local gridX = ((i * 37) % 9) / 8
         local gridZ = ((i * 53) % 11) / 10
@@ -242,6 +256,26 @@ local function rebuild()
         )
         core.Shape = Enum.PartType.Cylinder
         core.CFrame = core.CFrame * CFrame.Angles(0, 0, math.rad(90))
+
+        local spokeCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+        for i = 1, spokeCount do
+            local angle = ((i - 1) / spokeCount) * math.pi * 2
+            local length = radius * 0.62
+            local midpoint = center + Vector3.new(
+                math.cos(angle) * radius * 0.31,
+                0.01,
+                math.sin(angle) * radius * 0.31
+            )
+            makePart(
+                "OrbitalRadialSeam" .. i,
+                Vector3.new(length, 0.028, 0.08),
+                CFrame.new(midpoint)
+                    * CFrame.Angles(0, -(angle + math.pi * 0.5), 0),
+                VisualTheme.World.Deep:Lerp(theme.Structure, 0.28),
+                Enum.Material.Metal,
+                tier.Name == "Low" and 0.74 or 0.62
+            )
+        end
     end
 end
 
