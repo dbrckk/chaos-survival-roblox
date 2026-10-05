@@ -1,11 +1,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local localeId = LocalizationService.RobloxLocaleId
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosBootSplash"
@@ -82,7 +85,7 @@ kicker.Position = UDim2.fromScale(0.07, 0.10)
 kicker.Size = UDim2.fromScale(0.86, 0.14)
 kicker.BackgroundTransparency = 1
 kicker.Font = Enum.Font.GothamBold
-kicker.Text = "ENTER THE ARENA"
+kicker.Text = CoreLocalization.text(localeId, "ENTER_ARENA")
 kicker.TextColor3 = UITheme.Colors.Cyan
 kicker.TextScaled = true
 kicker.Parent = card
@@ -106,7 +109,7 @@ subtitle.Position = UDim2.fromScale(0.08, 0.59)
 subtitle.Size = UDim2.fromScale(0.84, 0.12)
 subtitle.BackgroundTransparency = 1
 subtitle.Font = Enum.Font.GothamMedium
-subtitle.Text = "SURVIVE  •  ADAPT  •  ESCAPE"
+subtitle.Text = CoreLocalization.text(localeId, "SURVIVE_ADAPT_ESCAPE")
 subtitle.TextColor3 = UITheme.Colors.Muted
 subtitle.TextScaled = true
 subtitle.Parent = card
@@ -140,7 +143,7 @@ status.Position = UDim2.fromScale(0.10, 0.845)
 status.Size = UDim2.fromScale(0.80, 0.09)
 status.BackgroundTransparency = 1
 status.Font = Enum.Font.GothamBold
-status.Text = "SYNCING PROGRESS"
+status.Text = CoreLocalization.text(localeId, "SYNCING_PROGRESS")
 status.TextColor3 = UITheme.Colors.Muted
 status.TextScaled = true
 status.Parent = card
@@ -176,7 +179,7 @@ local function fadeOut()
         task.wait(minimumHold - elapsed)
     end
 
-    status.Text = "READY"
+    status.Text = CoreLocalization.text(localeId, "READY")
     status.TextColor3 = UITheme.Colors.Green
     TweenService:Create(
         fill,
@@ -236,7 +239,7 @@ else
             connection:Disconnect()
             connection = nil
         end
-        status.Text = "ENTERING ARENA"
+        status.Text = CoreLocalization.text(localeId, "ENTERING_ARENA")
         task.spawn(fadeOut)
     end)
 end
