@@ -53,6 +53,18 @@ describe("Core localization", function()
         expect(CoreLocalization.text("fr-fr", "DATA_SAVE_DELAYED_WARNING")).toBe(
             "SAUVEGARDE RETARDÉE • ROBLOX RÉESSAIE LE DATASTORE"
         )
+        expect(CoreLocalization.cosmeticName("fr-fr", "trail_blue", "fallback")).toBe(
+            "Impulsion bleue"
+        )
+        expect(CoreLocalization.cosmeticRarity("fr-fr", "Legendary", "fallback")).toBe(
+            "LÉGENDAIRE"
+        )
+        expect(CoreLocalization.cosmeticKind("fr-fr", "trail", "fallback")).toBe(
+            "TRAÎNÉE"
+        )
+        expect(CoreLocalization.cosmeticCollection("fr-fr", "Neon Circuit", "fallback")).toBe(
+            "CIRCUIT NÉON"
+        )
     end)
 
     it("localizes hazard names and actionable hints", function()
