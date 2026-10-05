@@ -54,6 +54,41 @@ function SocialExperienceRules.inviterUserId(payload, joiningUserId)
     return inviter
 end
 
+function SocialExperienceRules.shareSourceUserId(payload, joiningUserId)
+    if type(payload) ~= "table" or payload.source ~= "chaos_share" then
+        return nil
+    end
+
+    local sharer = tonumber(payload.sharer)
+    local joining = tonumber(joiningUserId)
+    if not sharer or sharer <= 0 or sharer % 1 ~= 0 then
+        return nil
+    end
+    sharer = math.floor(sharer)
+
+    if joining and sharer == joining then
+        return nil
+    end
+    return sharer
+end
+
+function SocialExperienceRules.shareReason(payload)
+    if type(payload) ~= "table" or payload.source ~= "chaos_share" then
+        return nil
+    end
+
+    local reason = tostring(payload.reason or "")
+    local allowed = {
+        last_survivor = true,
+        master = true,
+        double_chaos = true,
+        clutch = true,
+        crew = true,
+        highlight = true,
+    }
+    return allowed[reason] and reason or "highlight"
+end
+
 function SocialExperienceRules.crewParticipantIds(entries)
     local present = {}
     local linked = {}
