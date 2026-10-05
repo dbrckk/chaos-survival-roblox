@@ -214,7 +214,7 @@ local function rebuild()
             ),
             CFrame.new(center + Vector3.new(0, -7.5, 0)),
             theme.Structure,
-            Enum.Material.SmoothPlastic,
+            Enum.Material.Metal,
             tier.Name == "Low" and 0.24 or 0.10
         )
         hub.Shape = Enum.PartType.Ball
