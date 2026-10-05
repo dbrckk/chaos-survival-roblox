@@ -62,3 +62,16 @@ All notable changes to Chaos Survival are documented here.
 ## Release policy
 
 A `v1.0.0` tag should not be created until `RELEASE_CHECKLIST.md` passes for the release lineage, including authenticated Studio E2E, physical Android/desktop QA, persistence/rejoin testing and a small public alpha.
+
+## 2026-10-05 — UX clarity and localization pass
+
+- Preserved actionable hazard guidance from voting through READY and the 3/2/1 countdown.
+- Added combined guidance for both hazards during Double Chaos.
+- Exposed accessibility controls on a player's first session outside critical gameplay phases.
+- Localized first-time world markers, lobby wayfinding, survivor elimination feed and result survivor badges.
+- Localized arena names, strategies and mobility-pad explanations from stable arena IDs.
+- Made the pre-round arena strategy card use pixel-safe mobile sizing.
+- Localized round-result rewards, mastery, medals, streaks, challenge feedback, next goals and persistent lobby stats.
+- Added stable arena/disaster IDs to round feedback so client presentation does not depend on English server copy.
+- Expanded CoreLocalization engine coverage for the new UX copy.
+
