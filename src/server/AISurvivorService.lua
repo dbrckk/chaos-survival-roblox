@@ -1,10 +1,18 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local AISurvivorRules = require(script.Parent.AISurvivorRules)
-local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
-local ArenaMechanics = require(script.Parent.ArenaMechanics)
-local LobbyActivities = require(script.Parent.LobbyActivities)
+local AISurvivorRules = if script
+    then require(script.Parent.AISurvivorRules)
+    else require("./AISurvivorRules")
+local ArenaPresentation = if script
+    then require(ReplicatedStorage.Shared.ArenaPresentation)
+    else require("../shared/ArenaPresentation")
+local ArenaMechanics = if script
+    then require(script.Parent.ArenaMechanics)
+    else require("./ArenaMechanics")
+local LobbyActivities = if script
+    then require(script.Parent.LobbyActivities)
+    else require("./LobbyActivities")
 
 local AISurvivorService = {}
 
