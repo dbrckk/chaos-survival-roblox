@@ -158,7 +158,7 @@ Only after retention/device UX are acceptable:
 
 ## Release packaging
 
-- [ ] README matches current feature/map count.
+- [x] README source counts are CI-enforced for disasters, arenas, cosmetics and engine specs.
 - [ ] Roadmap reflects remaining launch blockers.
 - [x] No placeholder production IDs or temporary debug code remain.
 - [ ] Run Release Candidate Gate on the exact candidate SHA and archive its evidence artifact.
