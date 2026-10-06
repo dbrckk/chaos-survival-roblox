@@ -144,7 +144,8 @@ local function rebuild()
                 Vector3.new(i <= 2 and 0.8 or 3.5, 0.8, i <= 2 and 3.5 or 0.8),
                 i % 2 == 0 and secondary or accent,
                 center + laneOffsets[i],
-                Enum.Material.Neon
+                i == 1 and Enum.Material.Neon
+                    or (i % 2 == 0 and Enum.Material.Glass or Enum.Material.Metal)
             )
             tracked[#tracked + 1] = {part = p, base = p.Position, index = i}
         end
