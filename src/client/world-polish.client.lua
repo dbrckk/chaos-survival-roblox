@@ -553,7 +553,7 @@ bindGeneratedMap()
 task.spawn(function()
     while true do
         local tier = quality()
-        local elapsed = task.wait(math.max(0.025, tier.UpdateInterval))
+        local elapsed = task.wait(tier.DecorUpdateInterval or math.max(0.025, tier.UpdateInterval))
         clock += elapsed
 
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
