@@ -1,6 +1,6 @@
 local DataSchema = {}
 
-DataSchema.Version = 6
+DataSchema.Version = 7
 
 DataSchema.Defaults = {
     DataVersion = DataSchema.Version,
@@ -45,6 +45,7 @@ DataSchema.Defaults = {
 
     ReduceMotion = false,
     AudioMuted = false,
+    HapticsDisabled = false,
 }
 
 function DataSchema.cloneDefaults()
