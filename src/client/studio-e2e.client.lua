@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local StudioTestService = game:GetService("StudioTestService")
 
+local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+
 local player = Players.LocalPlayer
 if not player then return end
 
@@ -265,21 +267,50 @@ do
     }
 
     local auditedFolders = 0
+    local metrics = {
+        Parts = 0,
+        Lights = 0,
+        Effects = 0,
+    }
+
     for _, folderName in ipairs(visualFolders) do
         local folder = workspace:FindFirstChild(folderName)
         if folder then
             auditedFolders += 1
             for _, descendant in ipairs(folder:GetDescendants()) do
                 if descendant:IsA("BasePart") then
+                    metrics.Parts += 1
                     check(not descendant.CanCollide, folderName .. ": decorative part can collide")
                     check(not descendant.CanTouch, folderName .. ": decorative part can touch")
                     check(not descendant.CanQuery, folderName .. ": decorative part can query")
+                elseif descendant:IsA("PointLight")
+                    or descendant:IsA("SpotLight")
+                    or descendant:IsA("SurfaceLight")
+                then
+                    metrics.Lights += 1
+                elseif descendant:IsA("ParticleEmitter")
+                    or descendant:IsA("Trail")
+                    or descendant:IsA("Beam")
+                then
+                    metrics.Effects += 1
                 end
             end
         end
     end
 
     check(auditedFolders >= 4, "visual decorator folders did not initialize")
+
+    local tierName = tostring(player:GetAttribute("VfxQualityTier") or "High")
+    check(
+        VisualBudgetRules.withinBudget(tierName, metrics),
+        string.format(
+            "visual budget exceeded for %s: parts=%d lights=%d effects=%d",
+            tierName,
+            metrics.Parts,
+            metrics.Lights,
+            metrics.Effects
+        )
+    )
 end
 
 local character = player.Character or player.CharacterAdded:Wait()
