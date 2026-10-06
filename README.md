@@ -30,7 +30,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Economy analytics for Coins sources, daily rewards, quests and achievements
 - Onboarding funnel tracking from join to first survival and first Chaos Shard pickup
 - Contextual first-session coach covering vote, positioning, survival and optional shard collection
-- Four rotating arena layouts with no immediate repeat: Classic Grid, Tower Run, Crossroads and Orbital Ring
+- 4 rotating arena layouts with no immediate repeat: Classic Grid, Tower Run, Crossroads and Orbital Ring
 - Variant-specific hero landmarks, midground masses, understructures, focal lighting, material language and functional service props
 - Animated personal round-result feedback with survival, streak, shard and close-call breakdown
 - Compact live round-focus HUD with Chaos intensity and shard count
