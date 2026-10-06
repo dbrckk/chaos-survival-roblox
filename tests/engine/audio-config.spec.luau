@@ -156,6 +156,32 @@ describe("Audio configuration", function()
         end
     end)
 
+    it("uses deterministic disaster loop priorities", function()
+        local seen = {}
+        for disasterId, cueName in pairs(AudioConfig.DisasterLoop) do
+            local priority = AudioConfig.DisasterLoopPriority[disasterId]
+            expect(type(priority)).toBe("number")
+            expect(priority > 0).toBe(true)
+            expect(seen[priority] == nil).toBe(true)
+            seen[priority] = disasterId
+
+            local cue = AudioConfig.Sfx[cueName]
+            expect(cue ~= nil).toBe(true)
+            expect(cue.Looped).toBe(true)
+        end
+    end)
+
+    it("keeps double-chaos accent layering deliberately lightweight", function()
+        local policy = AudioConfig.DoubleChaosAccent
+        expect(type(policy)).toBe("table")
+        expect((tonumber(policy.VolumeScale) or 0) > 0).toBe(true)
+        expect((tonumber(policy.VolumeScale) or 1) <= 0.60).toBe(true)
+        expect((tonumber(policy.PitchVariance) or 0) >= 0).toBe(true)
+        expect((tonumber(policy.PitchVariance) or 1) <= 0.04).toBe(true)
+        expect((tonumber(policy.StaggerSeconds) or 0) >= 0.03).toBe(true)
+        expect((tonumber(policy.StaggerSeconds) or 1) <= 0.10).toBe(true)
+    end)
+
     it("only maps disaster loops to loopable sounds", function()
         for _, cueName in pairs(AudioConfig.DisasterLoop) do
             local cue = AudioConfig.Sfx[cueName]
