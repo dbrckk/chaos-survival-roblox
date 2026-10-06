@@ -25,6 +25,8 @@ All notable changes to Chaos Survival are documented here.
 - Near-miss, critical-health, streak and result feedback.
 
 ### Reliability
+- Persistent cosmetic/premium mutations now share the authoritative `PlayerData.canMutate()` active-session guard.
+- Rapid session handoff tests cover forced takeover, stale save/release rejection, clean save/release and subsequent rejoin.
 - DataStore retry/backoff, schema normalization, dirty-aware autosaves and shutdown saving.
 - Temporary-session protection when persistence is unavailable.
 - Cross-server session ownership / stale-save protection and handoff lifecycle.
