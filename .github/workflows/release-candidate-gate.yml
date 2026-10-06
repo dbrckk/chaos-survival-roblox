@@ -14,11 +14,18 @@ permissions:
 
 jobs:
   certify:
-    if: ${{ inputs.confirm == 'CERTIFY' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
+      - name: Validate certification confirmation
+        shell: bash
+        run: |
+          test "${{ inputs.confirm }}" = "CERTIFY" || {
+            echo "Type CERTIFY to run the release candidate gate."
+            exit 1
+          }
+
       - name: Checkout exact candidate
         uses: actions/checkout@v4
 
