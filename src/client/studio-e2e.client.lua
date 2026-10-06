@@ -34,6 +34,7 @@ local auditedFolders = 0
 local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
+local readyUxProbed = false
 
 local function sendVisualPhaseProbe(phase)
     if phase ~= "ready" and phase ~= "round" and phase ~= "result" then
@@ -217,6 +218,45 @@ do
             end
         end
     end
+end
+
+if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
+    roundStateEvent.OnClientEvent:Connect(function(state)
+        if type(state) ~= "table" or tostring(state.phase or "") ~= "ready" then
+            return
+        end
+
+        task.delay(0.25, function()
+            if not hud or not hud.Parent then
+                return
+            end
+
+            local countdown = hud:FindFirstChild("RoundCountdown", true)
+            local kicker = countdown and countdown:FindFirstChild("CountdownKicker", true)
+            local main = countdown and countdown:FindFirstChild("CountdownMain", true)
+            local guidance = countdown and countdown:FindFirstChild("CountdownGuidance", true)
+
+            check(countdown ~= nil, "READY countdown card missing")
+            if countdown and countdown:IsA("GuiObject") then
+                check(countdown.Visible == true, "READY countdown card not visible")
+                check(insideViewport(countdown), "READY countdown outside viewport")
+            end
+
+            for _, label in ipairs({kicker, main, guidance}) do
+                check(label ~= nil, "READY countdown text field missing")
+                if label and label:IsA("TextLabel") then
+                    check(label.Text ~= "", label.Name .. " is empty during READY")
+                    check(label.AbsoluteSize.X > 0 and label.AbsoluteSize.Y > 0, label.Name .. " has invalid size")
+                end
+            end
+
+            if guidance and guidance:IsA("TextLabel") then
+                check(#guidance.Text >= 3, "READY guidance is too short to be actionable")
+            end
+
+            readyUxProbed = true
+        end)
+    end)
 end
 
 if hud then
@@ -429,6 +469,7 @@ while not roundStateReceived and os.clock() < roundStateDeadline do
     task.wait(0.1)
 end
 check(roundStateReceived, "no RoundState snapshot received after client bootstrap")
+check(readyUxProbed, "READY UX probe never completed")
 
 reportEvent:FireServer({
     ok = #failures == 0,
