@@ -159,6 +159,8 @@ PHASE 6C — AI SURVIVORS SOLO
 [FAIT] 6C.11 Ajouter séparation entre bots, évitement de cibles communes et récupération anti-blocage.
 [FAIT] 6C.12 Ajouter anticipation courte des warnings selon vélocité, sans réflexes parfaits.
 [FAIT] 6C.13 Ajouter variation persistante par serveur (vitesse, réaction, risque, sauts).
+[QA]   6C.14 Polish animation bots : blending idle/walk/run/fall distinct, jump/fall sans chevauchement, tempo individuel borné.
+[FAIT] 6C.15 Centraliser les clips R15 fallback dans AnimationCatalog pour préparer les futures animations authored.
 
 PHASE 7 — OPTIMISATION VISUELLE
 --------------------------------
@@ -175,6 +177,9 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.11 Throttler ShrinkingArena/Darkness hors RenderStepped ; garder RenderStepped seulement pour les hazards où la fluidité le justifie.
 [QA]   7.12 Rendre les cues DisappearingPlatforms motion-safe et conserver l'animation cosmétique côté client.
 [QA]   7.13 Réserver les trails/motes LowGravity aux tiers Medium/High ; aucun cosmétique mobile Low/ReduceMotion.
+[QA]   7.14 Budgéter les VFX d'atterrissage par tier/proximité : Low local-only, Medium rayon réduit.
+[QA]   7.15 Restaurer explicitement les états baseline de arena-identity-motion hors phases actives.
+[FAIT] 7.16 Ajouter garde-fou CI : juice.client.lua reste l'unique propriétaire client du FieldOfView.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
@@ -189,6 +194,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 ---------------------------------------
 [TODO] 9.1 Refaire analyse visuelle globale complète.
 [TODO] 9.2 Comparer avec captures Android avant/après.
+[QA]   9.2b CI animation/caméra : catalogue d'assets testé, sharding Open Cloud exhaustif, propriété FOV contrôlée.
 [TODO] 9.3 Corriger les incohérences restantes.
 [TODO] 9.4 Studio E2E authentifié.
 [TODO] 9.5 Android final.
