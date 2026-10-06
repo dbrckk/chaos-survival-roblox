@@ -44,6 +44,27 @@ describe("Lobby presentation rules", function()
         expect(readySub).toBe("Storm Core")
     end)
 
+    it("exposes semantic status tokens for localized clients", function()
+        local vote = LobbyPresentationRules.statusPresentation(
+            "intermission",
+            6,
+            "VOTE FOR THE NEXT CHAOS",
+            {{id = "Meteors"}}
+        )
+        expect(vote.mode).toBe("vote")
+        expect(vote.titleKey).toBe("LOBBY_VOTE_NOW")
+        expect(vote.subtitleText).toBe("6s")
+
+        local waiting = LobbyPresentationRules.statusPresentation(
+            "waiting",
+            0,
+            "WAITING FOR PLAYERS",
+            nil
+        )
+        expect(waiting.titleKey).toBe("LOBBY_OPEN")
+        expect(waiting.subtitleKey).toBe("LOBBY_PRACTICE_JOIN")
+    end)
+
     it("uses a waiting-specific lobby message", function()
         local title, subtitle = LobbyPresentationRules.statusText(
             "waiting",
