@@ -234,6 +234,54 @@ do
     end
 end
 
+do
+    local camera = workspace.CurrentCamera
+    check(camera ~= nil, "CurrentCamera missing")
+    if camera then
+        check(
+            camera.FieldOfView >= 60 and camera.FieldOfView <= 90,
+            "camera FOV outside safe presentation bounds"
+        )
+    end
+
+    local cloudCount = 0
+    for _, child in ipairs(workspace.Terrain:GetChildren()) do
+        if child:IsA("Clouds") then
+            cloudCount += 1
+        end
+    end
+    check(cloudCount <= 1, "multiple Clouds instances are competing")
+
+    local visualFolders = {
+        "ArenaCinematicDepthLocal",
+        "ArenaSurfaceReliefLocal",
+        "ArenaSilhouetteBreakupLocal",
+        "ArenaMidgroundMassLocal",
+        "ArenaUnderstructureLocal",
+        "ArenaHeroSceneryLocal",
+        "ArenaEdgeProfileLocal",
+        "ArenaServicePropsLocal",
+        "ArenaNavigationLanguageLocal",
+    }
+
+    local auditedFolders = 0
+    for _, folderName in ipairs(visualFolders) do
+        local folder = workspace:FindFirstChild(folderName)
+        if folder then
+            auditedFolders += 1
+            for _, descendant in ipairs(folder:GetDescendants()) do
+                if descendant:IsA("BasePart") then
+                    check(not descendant.CanCollide, folderName .. ": decorative part can collide")
+                    check(not descendant.CanTouch, folderName .. ": decorative part can touch")
+                    check(not descendant.CanQuery, folderName .. ": decorative part can query")
+                end
+            end
+        end
+    end
+
+    check(auditedFolders >= 4, "visual decorator folders did not initialize")
+end
+
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart", 6)
 if rootPart then
