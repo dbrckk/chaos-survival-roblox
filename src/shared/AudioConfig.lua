@@ -232,6 +232,19 @@ AudioConfig.DisasterLoop = {
     LowGravity = "LowGravity",
 }
 
+AudioConfig.DisasterLoopPriority = {
+    Tornado = 4,
+    LowGravity = 3,
+    Meteors = 2,
+    SpeedSurge = 1,
+}
+
+AudioConfig.DoubleChaosAccent = {
+    VolumeScale = 0.52,
+    PitchVariance = 0.018,
+    StaggerSeconds = 0.055,
+}
+
 AudioConfig.DisasterAccent = {
     RisingLava = "Lava",
     Meteors = "Meteor",
