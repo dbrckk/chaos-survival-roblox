@@ -58,6 +58,23 @@ VisualBudgetRules.Budgets = {
     },
 }
 
+function VisualBudgetRules.isLight(instance)
+    return instance ~= nil and instance:IsA("Light")
+end
+
+function VisualBudgetRules.isEffect(instance)
+    return instance ~= nil
+        and (
+            instance:IsA("ParticleEmitter")
+            or instance:IsA("Trail")
+            or instance:IsA("Beam")
+            or instance:IsA("Highlight")
+            or instance:IsA("Smoke")
+            or instance:IsA("Fire")
+            or instance:IsA("Sparkles")
+        )
+end
+
 function VisualBudgetRules.collect(root)
     local metrics = {
         Parts = 0,
@@ -77,19 +94,9 @@ function VisualBudgetRules.collect(root)
             for _, descendant in ipairs(folder:GetDescendants()) do
                 if descendant:IsA("BasePart") then
                     metrics.Parts += 1
-                elseif descendant:IsA("PointLight")
-                    or descendant:IsA("SpotLight")
-                    or descendant:IsA("SurfaceLight")
-                then
+                elseif VisualBudgetRules.isLight(descendant) then
                     metrics.Lights += 1
-                elseif descendant:IsA("ParticleEmitter")
-                    or descendant:IsA("Trail")
-                    or descendant:IsA("Beam")
-                    or descendant:IsA("Highlight")
-                    or descendant:IsA("Smoke")
-                    or descendant:IsA("Fire")
-                    or descendant:IsA("Sparkles")
-                then
+                elseif VisualBudgetRules.isEffect(descendant) then
                     metrics.Effects += 1
                 end
             end
