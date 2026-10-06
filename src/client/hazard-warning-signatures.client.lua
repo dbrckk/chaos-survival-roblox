@@ -137,6 +137,51 @@ local function bombSignature(warning)
         end
         Debris:AddItem(arm, duration + 0.08)
     end
+
+    -- Purely visual falling bomb: the server warning remains authoritative for
+    -- timing/damage while this closes the anticipation gap before impact.
+    local body = localPart(
+        "BombIncomingBody",
+        Vector3.new(2.2, 2.2, 2.2),
+        CFrame.new(warning.Position + Vector3.new(0, tier.Name == "Low" and 18 or 26, 0)),
+        Color3.fromRGB(62, 66, 76),
+        0.06
+    )
+    body.Shape = Enum.PartType.Ball
+    body.Material = Enum.Material.Metal
+
+    local target = warning.Position + Vector3.new(0, 1.7, 0)
+    TweenService:Create(
+        body,
+        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {
+            Position = target,
+            Transparency = reduced and 0.18 or 0.02,
+        }
+    ):Play()
+    Debris:AddItem(body, duration + 0.06)
+
+    if tier.Name ~= "Low" then
+        local band = localPart(
+            "BombIncomingBand",
+            Vector3.new(2.55, 0.28, 2.55),
+            body.CFrame,
+            Color3.fromRGB(255, 72, 58),
+            0.30
+        )
+        band.Shape = Enum.PartType.Cylinder
+        band.CFrame = band.CFrame * CFrame.Angles(0, 0, math.rad(90))
+
+        TweenService:Create(
+            band,
+            TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            {
+                Position = target,
+                Transparency = 0.68,
+            }
+        ):Play()
+        Debris:AddItem(band, duration + 0.06)
+    end
 end
 
 local function jumpShockSignature(warning)
