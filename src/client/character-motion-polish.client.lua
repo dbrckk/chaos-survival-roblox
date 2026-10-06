@@ -9,7 +9,6 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local watched = setmetatable({}, {__mode = "k"})
 local phase = "waiting"
 local finalRush = false
-local modelSequence = 0
 
 local function qualityScale()
     local tier = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
@@ -79,9 +78,6 @@ local function accentFor(model)
     if typeof(accent) == "Color3" then
         return accent
     end
-    if model:GetAttribute("AISurvivor") == true then
-        return Color3.fromRGB(110, 225, 190)
-    end
     return Color3.fromRGB(90, 190, 255)
 end
 
@@ -101,8 +97,9 @@ local function watchModel(model)
         return
     end
 
-    modelSequence += 1
-    local isAI = model:GetAttribute("AISurvivor") == true
+    if model:GetAttribute("AISurvivor") == true then
+        return
+    end
 
     local state = {
         model = model,
@@ -110,15 +107,9 @@ local function watchModel(model)
         root = root,
         trail = nil,
         airborne = false,
-        isAI = isAI,
-        phaseOffset = (modelSequence * 0.73) % 6.28,
     }
 
-    -- AI survivors already own a dedicated cosmetic trail managed by
-    -- bot-motion-polish; avoid stacking a second trail on the same rig.
-    if not isAI then
-        state.trail = ensureTrail(root, accentFor(model))
-    end
+    state.trail = ensureTrail(root, accentFor(model))
     watched[model] = state
 
     humanoid.StateChanged:Connect(function(_, newState)
@@ -146,29 +137,6 @@ for _, p in ipairs(Players:GetPlayers()) do
     watchPlayer(p)
 end
 Players.PlayerAdded:Connect(watchPlayer)
-
-local function watchBots(folder)
-    for _, child in ipairs(folder:GetChildren()) do
-        if child:IsA("Model") then
-            watchModel(child)
-        end
-    end
-    folder.ChildAdded:Connect(function(child)
-        if child:IsA("Model") then
-            task.defer(watchModel, child)
-        end
-    end)
-end
-
-local bots = workspace:FindFirstChild("AISurvivors")
-if bots then
-    watchBots(bots)
-end
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "AISurvivors" then
-        watchBots(child)
-    end
-end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     phase = tostring(state.phase or "waiting")
