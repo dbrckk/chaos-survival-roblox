@@ -84,7 +84,9 @@ local function roleFor(id)
 end
 
 local function emitterFor(anchor, id, color, tier)
-    if tier.Name == "Low" then
+    -- Tornado already owns orbiting debris around the authoritative RoundTornado
+    -- model in tornado-visuals.client.lua; do not duplicate debris at the arena edge.
+    if tier.Name == "Low" or id == "Tornado" then
         return nil
     end
 
