@@ -48,11 +48,17 @@ describe("visual budget rules", function()
         local emitter = Instance.new("ParticleEmitter")
         emitter.Parent = attachment
 
+        local highlight = Instance.new("Highlight")
+        highlight.Parent = layer
+
+        local smoke = Instance.new("Smoke")
+        smoke.Parent = part
+
         local metrics, audited = VisualBudgetRules.collect(root)
         expect(audited).toBe(1)
         expect(metrics.Parts).toBe(1)
         expect(metrics.Lights).toBe(1)
-        expect(metrics.Effects).toBe(1)
+        expect(metrics.Effects).toBe(3)
 
         root:Destroy()
     end)
