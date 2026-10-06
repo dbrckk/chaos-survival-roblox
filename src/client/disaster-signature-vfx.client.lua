@@ -150,42 +150,6 @@ local function bindExistingMeteors()
     end
 end
 
-local function addLava(base, profile)
-    local q = tier()
-    local count = q.Name == "Low" and 4 or (q.Name == "Medium" and 6 or 8)
-    local hx = base.Size.X * 0.5
-    local hz = base.Size.Z * 0.5
-
-    for i = 1, count do
-        local side = i % 4
-        local pos
-        if side == 0 then
-            pos = Vector3.new(-hx * 0.85, 1, (-0.6 + ((i * 17) % 100) / 100 * 1.2) * hz)
-        elseif side == 1 then
-            pos = Vector3.new(hx * 0.85, 1, (-0.6 + ((i * 19) % 100) / 100 * 1.2) * hz)
-        elseif side == 2 then
-            pos = Vector3.new((-0.6 + ((i * 23) % 100) / 100 * 1.2) * hx, 1, -hz * 0.85)
-        else
-            pos = Vector3.new((-0.6 + ((i * 29) % 100) / 100 * 1.2) * hx, 1, hz * 0.85)
-        end
-
-        local vent = part(
-            "LavaHeatVent" .. i,
-            Vector3.new(0.45, 4.8, 0.45),
-            base.CFrame * CFrame.new(pos),
-            i % 2 == 0 and profile.Accent or profile.Tint,
-            Enum.Material.Neon,
-            q.Name == "Low" and 0.62 or 0.48
-        )
-        states[#states + 1] = {
-            kind = "lava",
-            part = vent,
-            index = i,
-            baseCFrame = vent.CFrame,
-        }
-    end
-end
-
 local function addDarkness(base, profile)
     local q = tier()
     if q.Name == "Low" then
