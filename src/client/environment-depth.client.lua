@@ -376,11 +376,11 @@ local function rebuild()
     local variant = arenaVariant()
     addTransitDepth(tier)
     addHorizonDepth(tier, variant)
-    local count = tier.Name == "Low" and 6 or (tier.Name == "Medium" and 8 or 10)
+    local count = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
     local radius = variant == "Orbital" and 142
         or (variant == "Towers" and 136 or 128)
 
-    local lobbyCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+    local lobbyCount = tier.Name == "Low" and 3 or (tier.Name == "Medium" and 5 or 6)
     local lobbyRadius = 72
     for i = 1, lobbyCount do
         local angle = ((i - 1) / lobbyCount) * math.pi * 2 + math.rad(22.5)
@@ -500,7 +500,7 @@ local function rebuild()
 
     -- Midground architectural belt. This fills the visual gap between the playable
     -- arena and the far skyline without adding collision or route clutter.
-    local midCount = tier.Name == "Low" and 6 or (tier.Name == "Medium" and 8 or 10)
+    local midCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
     local midRadius = variant == "Orbital" and 86 or (variant == "Towers" and 92 or 88)
     for i = 1, midCount do
         local angle = ((i - 1) / midCount) * math.pi * 2 + math.rad(9)
