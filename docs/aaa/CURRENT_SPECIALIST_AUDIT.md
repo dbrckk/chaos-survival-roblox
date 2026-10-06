@@ -1,3 +1,5 @@
+> **Snapshot status:** retained as a specialist baseline recovered from an earlier review branch. For current evidence-backed release prioritization, use `/CURRENT_QUALITY_AUDIT_2026-10-06.txt` and `/DOCUMENTATION_INDEX.md`. This file is not release certification.
+
 # Chaos Survival — Current Specialist Audit
 
 ## Method
