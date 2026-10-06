@@ -85,7 +85,7 @@ PHASE 4 — VFX CATASTROPHES
 [QA]   4.11 Jump Shock : double front d'onde énergétique.
 [QA]   4.12 Ajouter atmosphère catastrophe à l'échelle de l'arène : balises périphériques, particules contextuelles, shafts lumineux et renforcement FINAL RUSH.
 [QA]   4.13 Signatures cinématiques : Tornado lié au vrai RoundTornado, Meteors liés aux vrais RoundMeteor, Lava/Darkness ambiants sans faux télégraphe.
-[TODO] 4.14 QA Double Chaos : lisibilité de toutes les combinaisons autorisées.
+[EN COURS] 4.14 QA Double Chaos : 43 paires autorisées testées automatiquement pour séparation d'accent + limites visuelles ; validation réelle appareil encore requise.
 [QA]   4.15 Rééquilibrer Meteors/Bombs/Freeze/Lava : anticipation claire, impact distinct, résidu séparé, moins de doublons.
 [QA]   4.16 Bombs : ajouter bombe descendante liée au vrai warning ; Meteor = trail du vrai RoundMeteor.
 [QA]   4.17 Freeze : réduire densité de segments et passer le centre en Glass.
