@@ -61,6 +61,41 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce client frame-loop ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed = {
+              Path("src/client/body-feel.client.lua"): {"BindToRenderStep"},
+              Path("src/client/juice.client.lua"): {"RenderStepped"},
+          }
+          markers = (
+              "RenderStepped",
+              "BindToRenderStep",
+              "Heartbeat:Connect",
+              "Stepped:Connect",
+          )
+
+          violations = []
+          for path in sorted(Path("src/client").glob("*.lua")):
+              source = path.read_text()
+              found = {marker for marker in markers if marker in source}
+              permitted = allowed.get(path, set())
+              unexpected = sorted(found - permitted)
+              if unexpected:
+                  violations.append((path.as_posix(), unexpected))
+
+          if violations:
+              print("Unexpected client frame-loop ownership:")
+              for path, markers_found in violations:
+                  print(f" - {path}: {', '.join(markers_found)}")
+              raise SystemExit(1)
+
+          print("Client frame-loop ownership verified.")
+          PY
+
       - name: Enforce performance telemetry isolation
         shell: bash
         run: |
