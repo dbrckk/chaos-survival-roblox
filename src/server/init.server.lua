@@ -197,6 +197,21 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         0,
         99
     )
+    local visualParts = math.clamp(
+        math.floor(tonumber(payload.visualParts) or 0),
+        0,
+        5000
+    )
+    local visualLights = math.clamp(
+        math.floor(tonumber(payload.visualLights) or 0),
+        0,
+        1000
+    )
+    local visualEffects = math.clamp(
+        math.floor(tonumber(payload.visualEffects) or 0),
+        0,
+        2000
+    )
 
     GameAnalytics.custom(
         player,
@@ -204,7 +219,11 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         math.floor(fps + 0.5),
         "VFX:" .. tier,
         "Device:" .. deviceClass,
-        "Round:" .. tostring(roundNumber) .. "|TierChanges:" .. tostring(tierTransitions)
+        "Round:" .. tostring(roundNumber)
+            .. "|TierChanges:" .. tostring(tierTransitions)
+            .. "|Visual:" .. tostring(visualParts)
+            .. "/" .. tostring(visualLights)
+            .. "/" .. tostring(visualEffects)
     )
 end)
 
