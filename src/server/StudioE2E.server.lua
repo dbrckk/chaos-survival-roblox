@@ -32,6 +32,10 @@ local visualPhaseProbeReports = {
     round = 0,
     result = 0,
 }
+local uxPhaseProbeReports = {
+    ready = 0,
+    result = 0,
+}
 local failures = {}
 local removedUserId = nil
 
@@ -52,6 +56,26 @@ end
 reportEvent.OnServerEvent:Connect(function(player, report)
     if type(report) ~= "table" then
         fail("invalid report from " .. player.Name)
+        return
+    end
+
+    if report.kind == "ux_phase_probe" then
+        local phase = tostring(report.phase or "")
+        if uxPhaseProbeReports[phase] == nil then
+            fail(player.Name .. ": invalid UX phase probe: " .. phase)
+            return
+        end
+        if report.ok ~= true then
+            fail(
+                player.Name
+                    .. ": "
+                    .. phase
+                    .. " UX probe failed: "
+                    .. tostring(report.error or "unknown")
+            )
+            return
+        end
+        uxPhaseProbeReports[phase] += 1
         return
     end
 
@@ -250,7 +274,9 @@ task.spawn(function()
             end
         end
 
-        if reported >= expectedTotal and played and visualPhasesReady() then
+        local uxReady = uxPhaseProbeReports.ready >= 1
+            and uxPhaseProbeReports.result >= 1
+        if reported >= expectedTotal and played and visualPhasesReady() and uxReady then
             break
         end
 
@@ -266,6 +292,12 @@ task.spawn(function()
     for _, phase in ipairs({"ready", "round", "result"}) do
         if visualPhaseProbeReports[phase] < 1 then
             fail("missing visual phase probe: " .. phase)
+        end
+    end
+
+    for _, phase in ipairs({"ready", "result"}) do
+        if uxPhaseProbeReports[phase] < 1 then
+            fail("missing UX phase probe: " .. phase)
         end
     end
 
