@@ -1,7 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -18,9 +16,8 @@ local phase = "waiting"
 local finalRush = false
 local disasterIds = {}
 local clock = 0
-local updateClock = 0
 local mapConnection = nil
-local renderConnection = nil
+local loopStarted = false
 local beaconParts = {}
 local beamStates = {}
 local emitters = {}
@@ -227,8 +224,9 @@ local function rebuild()
 
     local tier = quality()
     local profile = DisasterVisuals.combine(disasterIds)
+    local secondaryProfile = disasterIds[2] and DisasterVisuals.get(disasterIds[2]) or nil
     local accent = profile and profile.Accent or theme.Accent
-    local secondary = profile and profile.Secondary or theme.Secondary
+    local secondary = secondaryProfile and secondaryProfile.Accent or theme.Secondary
 
     local radius = math.max(base.Size.X, base.Size.Z) * 0.52
     local beaconCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
@@ -295,23 +293,21 @@ local function refreshRates()
 end
 
 local function ensureRenderLoop()
-    if renderConnection then
+    if loopStarted then
         return
     end
+    loopStarted = true
 
-    renderConnection = RunService.RenderStepped:Connect(function(dt)
-        if #beaconParts == 0 and #beamStates == 0 then
-            return
-        end
+    task.spawn(function()
+        while true do
+            local tier = quality()
+            local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
 
-        clock += dt
-        updateClock += dt
+            if #beaconParts == 0 and #beamStates == 0 then
+                continue
+            end
 
-        local tier = quality()
-        if updateClock < math.max(1 / 30, tier.UpdateInterval) then
-            return
-        end
-        updateClock = 0
+            clock += dt
 
         local reduced = player:GetAttribute("ReduceMotion") == true
         local motion = reduced and 0.16 or 1
@@ -349,6 +345,7 @@ local function ensureRenderLoop()
                     and (finalRush and 0.78 or 0.84)
                     or 0.93
             end
+        end
         end
     end)
 end
