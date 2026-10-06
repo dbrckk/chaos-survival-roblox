@@ -55,6 +55,84 @@ local FOLDERS = {
         MediumDistance = 145,
         Origin = "Lobby",
     },
+    ArenaCinematicDepthLocal = {
+        LowDistance = 165,
+        MediumDistance = 245,
+    },
+    ArenaSurfaceReliefLocal = {
+        LowDistance = 105,
+        MediumDistance = 160,
+    },
+    ArenaSilhouetteBreakupLocal = {
+        LowDistance = 145,
+        MediumDistance = 215,
+    },
+    ChaosWorldPolishLocal = {
+        LowDistance = 135,
+        MediumDistance = 205,
+    },
+    ArenaCinematicDisasterAtmosphereLocal = {
+        LowDistance = 155,
+        MediumDistance = 230,
+    },
+    LobbyCoreOrbitLocal = {
+        LowDistance = 105,
+        MediumDistance = 155,
+        Origin = "Lobby",
+    },
+    LobbyCrewBeaconLocal = {
+        LowDistance = 105,
+        MediumDistance = 160,
+        Origin = "Lobby",
+    },
+    LobbyPresentationLocal = {
+        LowDistance = 110,
+        MediumDistance = 165,
+        Origin = "Lobby",
+    },
+    LobbyProfileHologramLocal = {
+        LowDistance = 100,
+        MediumDistance = 150,
+        Origin = "Lobby",
+    },
+    LobbyRoundRecapLocal = {
+        LowDistance = 105,
+        MediumDistance = 160,
+        Origin = "Lobby",
+    },
+    LobbyPersonalProgressLocal = {
+        LowDistance = 100,
+        MediumDistance = 150,
+        Origin = "Lobby",
+    },
+    LobbyTimeTrialLocal = {
+        LowDistance = 105,
+        MediumDistance = 160,
+        Origin = "Lobby",
+    },
+    LobbyWayfindingLocal = {
+        LowDistance = 120,
+        MediumDistance = 175,
+        Origin = "Lobby",
+    },
+    PracticePadPolishLocal = {
+        LowDistance = 100,
+        MediumDistance = 150,
+        Origin = "Lobby",
+    },
+    ResultConstellationLocal = {
+        LowDistance = 145,
+        MediumDistance = 215,
+    },
+    ResultSurvivorSpotlightsLocal = {
+        LowDistance = 135,
+        MediumDistance = 205,
+    },
+    RookieWorldGuideLocal = {
+        LowDistance = 115,
+        MediumDistance = 170,
+        Origin = "Lobby",
+    },
 }
 
 local function cameraPosition()
@@ -62,7 +140,7 @@ local function cameraPosition()
     return camera and camera.CFrame.Position or Vector3.zero
 end
 
-local folderCaches = {}
+local folderCaches = setmetatable({}, {__mode = "k"})
 
 local function classifyDescendant(descendant)
     if descendant:IsA("BasePart")
