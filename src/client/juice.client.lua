@@ -789,6 +789,9 @@ local function bindDamageFeedback(character)
             ):Play()
 
             local fovKick = 1.4 + damageRatio * 4.6
+            if player:GetAttribute("ReduceMotion") == true then
+                fovKick *= 0.16
+            end
             damageFovKick = math.max(
                 damageFovKick,
                 math.min(6.0, fovKick)
