@@ -74,6 +74,34 @@ describe("Result presentation", function()
         expect(string.find(fallTip, "shorter jumps", 1, true) ~= nil).toBe(true)
     end)
 
+    it("gives every known elimination cause useful EN/FR revenge guidance", function()
+        local causes = {
+            "Meteor",
+            "Bomb",
+            "Lava",
+            "Tornado",
+            "JumpShock",
+            "LowGravity",
+            "DisappearingPlatforms",
+            "ShrinkingArena",
+            "Fall",
+        }
+
+        for _, localeId in ipairs({"en-us", "fr-fr"}) do
+            for _, cause in ipairs(causes) do
+                local title, tip = ResultPresentation.eliminationCopy({
+                    survived = false,
+                    eliminationCause = cause,
+                }, localeId)
+
+                expect(type(title)).toBe("string")
+                expect(#title >= 4).toBe(true)
+                expect(type(tip)).toBe("string")
+                expect(#tip >= 12).toBe(true)
+            end
+        end
+    end)
+
     it("falls back to useful generic elimination guidance", function()
         local title, tip = ResultPresentation.eliminationCopy({
             survived = false,
