@@ -7,16 +7,9 @@ local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
-local folder = Instance.new("Folder")
-folder.Name = "DisasterSignatureVfxLocal"
-folder.Parent = workspace
-
 local phase = "waiting"
 local ids = {}
 local activeSignature = ""
-local clock = 0
-local states = {}
-local mapConnection = nil
 local meteorTrails = setmetatable({}, {__mode = "k"})
 
 local function tier()
@@ -32,36 +25,23 @@ local function has(id)
     return false
 end
 
-local function clear()
-    table.clear(states)
-    folder:ClearAllChildren()
-end
-
-local function arenaBase()
-    local generated = workspace:FindFirstChild("GeneratedMap")
-    local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
-    return base and base:IsA("BasePart") and base or nil
-end
-
-local function part(name, size, cf, color, material, transparency, shape)
-    local p = Instance.new("Part")
-    p.Name = name
-    p.Size = size
-    p.CFrame = cf
-    p.Anchored = true
-    p.CanCollide = false
-    p.CanTouch = false
-    p.CanQuery = false
-    p.CastShadow = false
-    p.Color = color
-    p.Material = material or Enum.Material.Neon
-    p.Transparency = transparency or 0
-    if shape then
-        p.Shape = shape
+local function clearMeteorTrail(meteor)
+    local trail = meteor:FindFirstChild("SignatureMeteorTrail")
+    if trail then
+        trail:Destroy()
     end
-    p.Parent = folder
-    return p
+
+    local left = meteor:FindFirstChild("SignatureMeteorTrailLeft")
+    if left then
+        left:Destroy()
+    end
+
+    local right = meteor:FindFirstChild("SignatureMeteorTrailRight")
+    if right then
+        right:Destroy()
+    end
+
+    meteorTrails[meteor] = nil
 end
 
 local function addMeteorTrail(meteor)
@@ -72,8 +52,8 @@ local function addMeteorTrail(meteor)
         return
     end
 
-    local q = tier()
-    if q.Name == "Low" or player:GetAttribute("ReduceMotion") == true then
+    local quality = tier()
+    if quality.Name == "Low" or player:GetAttribute("ReduceMotion") == true then
         return
     end
 
@@ -98,7 +78,7 @@ local function addMeteorTrail(meteor)
     trail.FaceCamera = true
     trail.LightEmission = 0.82
     trail.LightInfluence = 0
-    trail.Lifetime = q.Name == "High" and 0.24 or 0.16
+    trail.Lifetime = quality.Name == "High" and 0.24 or 0.16
     trail.MinLength = 0.08
     trail.Color = ColorSequence.new(accent, tint)
     trail.Transparency = NumberSequence.new({
@@ -114,26 +94,7 @@ local function addMeteorTrail(meteor)
     meteorTrails[meteor] = true
 end
 
-local function clearMeteorTrail(meteor)
-    local trail = meteor:FindFirstChild("SignatureMeteorTrail")
-    if trail then
-        trail:Destroy()
-    end
-
-    local left = meteor:FindFirstChild("SignatureMeteorTrailLeft")
-    if left then
-        left:Destroy()
-    end
-
-    local right = meteor:FindFirstChild("SignatureMeteorTrailRight")
-    if right then
-        right:Destroy()
-    end
-
-    meteorTrails[meteor] = nil
-end
-
-local function bindExistingMeteors()
+local function refreshMeteorTrails()
     local enabled = phase == "round"
         and has("Meteors")
         and tier().Name ~= "Low"
@@ -150,105 +111,14 @@ local function bindExistingMeteors()
     end
 end
 
-local function addDarkness(base, profile)
-    local q = tier()
-    if q.Name == "Low" then
-        return
-    end
-
-    local count = q.Name == "High" and 8 or 4
-    local radius = math.min(base.Size.X, base.Size.Z) * 0.42
-
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local orb = part(
-            "VoidMote" .. i,
-            Vector3.new(1.6, 1.6, 1.6),
-            CFrame.new(
-                base.Position
-                    + Vector3.new(
-                        math.cos(angle) * radius,
-                        4 + (i % 3) * 2,
-                        math.sin(angle) * radius
-                    )
-            ),
-            profile.Accent,
-            Enum.Material.Neon,
-            0.58,
-            Enum.PartType.Ball
-        )
-        states[#states + 1] = {
-            kind = "darkness",
-            part = orb,
-            index = i,
-            base = base,
-            angle = angle,
-            radius = radius,
-        }
-    end
-end
-
-local function rebuild()
-    clear()
-    if phase ~= "round" then
-        return
-    end
-
-    local base = arenaBase()
-    if not base then
-        return
-    end
-
-    -- Tornado is intentionally not duplicated here. The real RoundTornado model
-    -- is already enhanced by tornado-visuals.client.lua.
-    if has("Meteors") then
-        bindExistingMeteors()
-    end
-    if has("Darkness") then
-        addDarkness(base, DisasterVisuals.get("Darkness"))
-    end
-end
-
-local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
-    end
-
-    local generated = workspace:FindFirstChild("GeneratedMap")
-    if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.08, rebuild)
-            end
-        end)
-    end
-end
-
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bindMap()
-        task.delay(0.08, rebuild)
-    elseif child.Name == "RoundMeteor" and phase == "round" and has("Meteors") then
+    if child.Name == "RoundMeteor" and phase == "round" and has("Meteors") then
         task.defer(addMeteorTrail, child)
     end
 end)
 
-workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        clear()
-        bindMap()
-    end
-end)
-
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    rebuild()
-    bindExistingMeteors()
-end)
-
-player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
-    bindExistingMeteors()
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshMeteorTrails)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshMeteorTrails)
 
 stateEvent.OnClientEvent:Connect(function(state)
     local nextPhase = tostring(state.phase or "waiting")
@@ -264,54 +134,8 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     if nextSignature ~= activeSignature then
         activeSignature = nextSignature
-        rebuild()
-    elseif phase == "round" and has("Meteors") then
-        bindExistingMeteors()
+        refreshMeteorTrails()
     end
 end)
 
-task.spawn(function()
-    while true do
-        local q = tier()
-        local dt = task.wait(math.max(1 / 30, q.UpdateInterval))
-
-        if #states == 0 then
-            continue
-        end
-
-        clock += dt
-        local reduced = player:GetAttribute("ReduceMotion") == true
-        local motion = reduced and 0.16 or 1
-
-        for _, state in ipairs(states) do
-            local p = state.part
-            if not p or not p.Parent then
-                continue
-            end
-
-            if state.kind == "lava" then
-                local pulse = (math.sin(clock * (2.6 + state.index * 0.05)) + 1) * 0.5
-                p.Size = Vector3.new(0.45, 4.4 + pulse * 3.2 * motion, 0.45)
-                p.CFrame = state.baseCFrame * CFrame.new(0, (p.Size.Y - 4.8) * 0.5, 0)
-                p.Transparency = 0.42 + pulse * 0.20
-            elseif state.kind == "darkness" and state.base and state.base.Parent then
-                local direction = state.index % 2 == 0 and 1 or -1
-                local angle = state.angle + clock * 0.12 * motion * direction
-                local y = 5 + math.sin(clock * 0.9 + state.index) * 1.6 * motion
-                p.CFrame = CFrame.new(
-                    state.base.Position
-                        + Vector3.new(
-                            math.cos(angle) * state.radius,
-                            y,
-                            math.sin(angle) * state.radius
-                        )
-                )
-                p.Transparency = 0.50
-                    + ((math.sin(clock * 1.4 + state.index) + 1) * 0.5) * 0.28
-            end
-        end
-    end
-end)
-
-bindMap()
-rebuild()
+refreshMeteorTrails()
