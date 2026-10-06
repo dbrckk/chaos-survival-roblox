@@ -164,7 +164,7 @@ Only after retention/device UX are acceptable:
 - [ ] Run Release Candidate Gate on the exact candidate SHA and archive its evidence artifact.
 - [ ] Create release candidate tag.
 - [ ] Write changelog.
-- [ ] Keep last known-good commit/tag for rollback.
+- [x] Keep a documented rollback path via `ROLLBACK_RUNBOOK.md`; select and record the last known-good certified SHA before release.
 - [ ] Verify Roblox experience icon, thumbnails, description and screenshots.
 - [x] Publish Roblox Place workflow refuses uncertified SHAs unless exact-SHA Build Validation + Open Cloud are green.
 - [ ] Archive the publish artifact containing place file + publish-metadata.txt.
