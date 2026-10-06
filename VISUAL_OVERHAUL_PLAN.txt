@@ -187,6 +187,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.20 Reporter dans Studio E2E le tier, FOV et budgets parts/lights/effects pour chaque client.
 [QA]   7.21 Désactiver GlobalShadows en Low pour compléter la dégradation GPU adaptative.
 [QA]   7.22 Arena Reveal respecte ReduceMotion : aucun core flash expansif.
+[QA]   7.23 Throttler world-polish via cadence décorative dédiée : 30 Hz High / 24 Hz Medium / 15 Hz Low.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
