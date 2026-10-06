@@ -70,7 +70,7 @@ local function bindLava(lava)
 
     local embers = Instance.new("ParticleEmitter")
     embers.Name = "LavaEmbers"
-    embers.Rate = 14 * tier.ParticleScale
+    embers.Rate = 10 * tier.ParticleScale
     embers.Lifetime = NumberRange.new(0.7, 1.5)
     embers.Speed = NumberRange.new(2.5, 6.5)
     embers.Acceleration = Vector3.new(0, 4.5, 0)
@@ -159,10 +159,10 @@ local function bindFreeze(warning)
         "FreezeCenterMist",
         Vector3.new(3.5, 0.12, 3.5),
         Color3.fromRGB(175, 235, 255),
-        Enum.Material.Neon
+        Enum.Material.Glass
     )
     center.Shape = Enum.PartType.Cylinder
-    center.Transparency = 0.62
+    center.Transparency = 0.54
     table.insert(instances, center)
 
     local attachment = Instance.new("Attachment")
@@ -273,7 +273,7 @@ ensureRenderLoop = function()
             surface.Transparency = 0.22 + pulse * (reduceMotion and 0.05 or 0.16)
         end
         if lavaState.embers and lavaState.embers.Parent then
-            lavaState.embers.Rate = 14 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
+            lavaState.embers.Rate = 10 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
         end
         if lavaState.light and lavaState.light.Parent then
             lavaState.light.Brightness = (
@@ -310,7 +310,7 @@ ensureRenderLoop = function()
         end
 
         if state.mist and state.mist.Parent then
-            state.mist.Rate = 10 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
+            state.mist.Rate = 8 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
         end
 
         if state.center and state.center.Parent then
