@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -13,10 +12,9 @@ local shrinkParts = {}
 local shrinkBase = nil
 local blackoutParts = {}
 local clock = 0
-local updateClock = 0
 local currentPhase = "waiting"
 local activeSignature = ""
-local renderConnection = nil
+local loopStarted = false
 local ensureRenderLoop
 
 local function has(id)
@@ -312,29 +310,23 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildCharacterEffec
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(rebuildCharacterEffects)
 
 ensureRenderLoop = function()
-    local shrinkActive = currentPhase == "round" and has("ShrinkingArena")
-    local blackoutActive = currentPhase == "round" and has("Darkness")
-    if renderConnection or (not shrinkActive and not blackoutActive) then
+    if loopStarted then
         return
     end
+    loopStarted = true
 
-    renderConnection = RunService.RenderStepped:Connect(function(dt)
-        shrinkActive = currentPhase == "round" and has("ShrinkingArena")
-        blackoutActive = currentPhase == "round" and has("Darkness")
-        if not shrinkActive and not blackoutActive then
-            renderConnection:Disconnect()
-            renderConnection = nil
-            return
-        end
+    task.spawn(function()
+        while true do
+            local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+            local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
+            local shrinkActive = currentPhase == "round" and has("ShrinkingArena")
+            local blackoutActive = currentPhase == "round" and has("Darkness")
 
-    clock += dt
-    updateClock += dt
+            if not shrinkActive and not blackoutActive then
+                continue
+            end
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    if updateClock < math.max(1 / 30, tier.UpdateInterval) then
-        return
-    end
-    updateClock = 0
+            clock += dt
 
     if shrinkActive then
         ensureShrinkVisuals()
@@ -358,6 +350,7 @@ ensureRenderLoop = function()
     elseif #blackoutParts > 0 then
         clearBlackout()
     end
+        end
     end)
 end
 
