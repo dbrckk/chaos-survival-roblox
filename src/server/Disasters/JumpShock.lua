@@ -71,6 +71,9 @@ function D.start(ctx)
                         -55,
                         58
                     )
+                    if ctx.OnHazardContact then
+                        pcall(ctx.OnHazardContact, p, "JumpShock")
+                    end
                 end
             end
         end
