@@ -2270,6 +2270,7 @@ local function showVotes(options)
         UITheme.addCorner(statusBadge, UITheme.Corners.Pill)
 
         local name = Instance.new("TextLabel")
+        name.Name = "VoteHazardName"
         name.Position = UDim2.fromScale(0.07, compactVote and 0.27 or 0.34)
         name.Size = UDim2.fromScale(0.86, compactVote and 0.25 or 0.23)
         name.BackgroundTransparency = 1
@@ -2283,6 +2284,7 @@ local function showVotes(options)
         UITheme.addTextConstraint(name, compactVote and 12 or 13, 24)
 
         local hintLabel = Instance.new("TextLabel")
+        hintLabel.Name = "VoteHazardHint"
         hintLabel.Position = UDim2.fromScale(0.08, compactVote and 0.52 or 0.58)
         hintLabel.Size = UDim2.fromScale(0.84, compactVote and 0.20 or 0.17)
         hintLabel.BackgroundTransparency = 1
