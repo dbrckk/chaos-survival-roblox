@@ -40,6 +40,7 @@ local lastMoveDirection = Vector3.zero
 local brakePose = 0
 local turnPose = 0
 local turnSeverityPose = 0
+local baseC0 = setmetatable({}, {__mode = "k"})
 
 local function motor(parent, name)
     local item = parent and parent:FindFirstChild(name)
@@ -48,9 +49,19 @@ end
 
 local function resetMotors()
     for _, joint in ipairs({waist, rootJoint, leftHip, rightHip, leftShoulder, rightShoulder}) do
-        if joint and joint.Parent then
-            joint.Transform = CFrame.identity
+        if joint then
+            local original = baseC0[joint]
+            if original and joint.Parent then
+                joint.C0 = original
+            end
+            baseC0[joint] = nil
         end
+    end
+end
+
+local function rememberBaseC0(joint)
+    if joint and not baseC0[joint] then
+        baseC0[joint] = joint.C0
     end
 end
 
@@ -95,6 +106,17 @@ local function bind(nextCharacter)
     rightHip = motor(lower, "RightHip")
     leftShoulder = motor(upper, "LeftShoulder")
     rightShoulder = motor(upper, "RightShoulder")
+
+    for _, joint in ipairs({
+        waist,
+        rootJoint,
+        leftHip,
+        rightHip,
+        leftShoulder,
+        rightShoulder,
+    }) do
+        rememberBaseC0(joint)
+    end
 
     humanoid.StateChanged:Connect(function(_, state)
         if state == Enum.HumanoidStateType.Jumping then
@@ -427,29 +449,25 @@ RunService:BindToRenderStep(
         )
 
         local alpha = expAlpha(grounded and 11 or 7, dt)
-        if waist then
-            waist.Transform = waist.Transform:Lerp(waistTarget, alpha)
+
+        local function applyOffset(joint, offset)
+            local original = joint and baseC0[joint]
+            if joint and original then
+                joint.C0 = joint.C0:Lerp(original * offset, alpha)
+            end
         end
-        if rootJoint then
-            rootJoint.Transform = rootJoint.Transform:Lerp(rootTarget, alpha)
-        end
-        if leftHip then
-            leftHip.Transform = leftHip.Transform:Lerp(leftTarget, alpha)
-        end
-        if rightHip then
-            rightHip.Transform = rightHip.Transform:Lerp(rightTarget, alpha)
-        end
-        if leftShoulder then
-            leftShoulder.Transform = leftShoulder.Transform:Lerp(
-                leftActionShoulder * celebrationLeftShoulder,
-                alpha
-            )
-        end
-        if rightShoulder then
-            rightShoulder.Transform = rightShoulder.Transform:Lerp(
-                rightActionShoulder * celebrationRightShoulder,
-                alpha
-            )
-        end
+
+        applyOffset(waist, waistTarget)
+        applyOffset(rootJoint, rootTarget)
+        applyOffset(leftHip, leftTarget)
+        applyOffset(rightHip, rightTarget)
+        applyOffset(
+            leftShoulder,
+            leftActionShoulder * celebrationLeftShoulder
+        )
+        applyOffset(
+            rightShoulder,
+            rightActionShoulder * celebrationRightShoulder
+        )
     end
 )
