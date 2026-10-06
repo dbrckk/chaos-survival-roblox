@@ -8,6 +8,8 @@ local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local watchedCharacters = setmetatable({}, {__mode = "k"})
 local finalRush = false
+local botFolder = nil
+local botFolderConnection = nil
 
 local function profile()
     return VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
@@ -135,25 +137,40 @@ local function refreshAll()
 end
 
 local function watchBotFolder(folder)
+    if botFolderConnection then
+        botFolderConnection:Disconnect()
+        botFolderConnection = nil
+    end
+    botFolder = folder
+
+    if not folder then
+        return
+    end
+
     for _, model in ipairs(folder:GetChildren()) do
         if model:IsA("Model") then
             watchCharacter(model)
         end
     end
-    folder.ChildAdded:Connect(function(model)
+
+    botFolderConnection = folder.ChildAdded:Connect(function(model)
         if model:IsA("Model") then
             task.defer(watchCharacter, model)
         end
     end)
 end
 
-local bots = workspace:FindFirstChild("AISurvivors")
-if bots then
-    watchBotFolder(bots)
-end
+watchBotFolder(workspace:FindFirstChild("AISurvivors"))
+
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "AISurvivors" then
+    if child.Name == "AISurvivors" and child ~= botFolder then
         watchBotFolder(child)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child == botFolder then
+        watchBotFolder(nil)
     end
 end)
 
