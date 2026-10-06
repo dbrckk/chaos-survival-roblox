@@ -8,7 +8,7 @@ All items below must be green on the **exact release commit**. The checkboxes de
 
 - [ ] Build Validation succeeds on release SHA.
 - [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
-- [ ] Every engine spec is assigned to exactly one Open Cloud shard.
+- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 63 specs).
 - [ ] Rojo produces a non-empty place file.
 - [ ] Luau syntax validation succeeds.
 - [ ] Fair-play monetization guard succeeds.
@@ -16,9 +16,11 @@ All items below must be green on the **exact release commit**. The checkboxes de
 - [ ] Server service export contract audit succeeds.
 - [ ] Production source contains no TODO/FIXME/HACK markers or obvious placeholder IDs.
 
-Last historical full automated certification: commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` on 2026-10-05 (Build #1391 + Open Cloud #1390). This is historical evidence only and does **not** certify later commits.
+Latest historical full automated certification: commit `70681aabc40c493467ffbc13ca0078b63eb90f56` on 2026-10-06 (Build Validation run `37454113205` + Roblox Open Cloud Engine Tests run `37454113207`). Both completed successfully on the exact SHA. This is historical evidence only and does **not** certify later commits.
 
 > Every candidate SHA must re-run both automated workflows. A later code/doc commit invalidates the automated certification until the new exact SHA is green.
+
+Use the manual **Release Candidate Gate** workflow only after both required workflows are green on the candidate SHA. It verifies the exact SHA, checks release metadata consistency, and uploads a `release-evidence.md` artifact. This gate never publishes the Roblox place and never replaces the manual Studio/device/persistence/alpha gates.
 
 ### CI infrastructure failures
 
@@ -159,6 +161,7 @@ Only after retention/device UX are acceptable:
 - [ ] README matches current feature/map count.
 - [ ] Roadmap reflects remaining launch blockers.
 - [x] No placeholder production IDs or temporary debug code remain.
+- [ ] Run Release Candidate Gate on the exact candidate SHA and archive its evidence artifact.
 - [ ] Create release candidate tag.
 - [ ] Write changelog.
 - [ ] Keep last known-good commit/tag for rollback.
