@@ -106,6 +106,9 @@ local roundFocusGui = playerGui:WaitForChild("ChaosRoundFocus", 10)
 local roundEventsGui = playerGui:WaitForChild("ChaosRoundEvents", 10)
 local hazardGui = playerGui:WaitForChild("HazardReadabilityCue", 10)
 local shrinkGui = playerGui:WaitForChild("ShrinkPressure", 10)
+local inviteGui = playerGui:WaitForChild("ChaosSocialInvite", 10)
+local shareGui = playerGui:WaitForChild("ChaosMomentShare", 10)
+local reactionsGui = playerGui:WaitForChild("ChaosSocialReactions", 10)
 
 check(hud ~= nil, "ChaosHUD missing")
 check(juice ~= nil, "ChaosJuice missing")
@@ -145,6 +148,43 @@ check(roundFocusGui ~= nil, "ChaosRoundFocus missing")
 check(roundEventsGui ~= nil, "ChaosRoundEvents missing")
 check(hazardGui ~= nil, "HazardReadabilityCue missing")
 check(shrinkGui ~= nil, "ShrinkPressure missing")
+check(inviteGui ~= nil, "ChaosSocialInvite missing")
+check(shareGui ~= nil, "ChaosMomentShare missing")
+check(reactionsGui ~= nil, "ChaosSocialReactions missing")
+
+do
+    local minHeight = UserInputService.TouchEnabled and 44 or 36
+    local socialButtons = {
+        inviteGui and inviteGui:FindFirstChild("InviteFriendsButton", true),
+        shareGui and shareGui:FindFirstChild("ShareMomentButton", true),
+    }
+
+    for _, socialButton in ipairs(socialButtons) do
+        check(socialButton ~= nil, "social CTA missing")
+        if socialButton and socialButton:IsA("GuiButton") then
+            check(
+                socialButton.AbsoluteSize.X >= 44
+                    and socialButton.AbsoluteSize.Y >= minHeight,
+                socialButton.Name .. " tap target too small"
+            )
+            check(insideViewport(socialButton), socialButton.Name .. " outside viewport")
+        end
+    end
+
+    if reactionsGui then
+        for _, reactionId in ipairs({"gg", "again", "wow"}) do
+            local reaction = reactionsGui:FindFirstChild("Reaction_" .. reactionId, true)
+            check(reaction ~= nil, "reaction button missing: " .. reactionId)
+            if reaction and reaction:IsA("GuiButton") then
+                check(
+                    reaction.AbsoluteSize.X >= 44
+                        and reaction.AbsoluteSize.Y >= minHeight,
+                    reaction.Name .. " tap target too small"
+                )
+            end
+        end
+    end
+end
 
 if hud then
     local top = hud:FindFirstChild("TopHUD", true)
