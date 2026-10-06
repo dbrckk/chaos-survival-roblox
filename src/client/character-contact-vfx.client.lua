@@ -9,6 +9,7 @@ local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local watched = setmetatable({}, {__mode = "k"})
 local finalRush = false
+local botFolderConnection = nil
 
 local function localRoot()
     local character = localPlayer.Character
@@ -209,12 +210,21 @@ end
 Players.PlayerAdded:Connect(watchPlayer)
 
 local function watchBots(folder)
+    if botFolderConnection then
+        botFolderConnection:Disconnect()
+        botFolderConnection = nil
+    end
+
+    if not folder then
+        return
+    end
+
     for _, model in ipairs(folder:GetChildren()) do
         if model:IsA("Model") then
             watchModel(model)
         end
     end
-    folder.ChildAdded:Connect(function(model)
+    botFolderConnection = folder.ChildAdded:Connect(function(model)
         if model:IsA("Model") then
             task.defer(watchModel, model)
         end
@@ -232,6 +242,11 @@ workspace.ChildAdded:Connect(function(child)
     end
 end)
 
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "AISurvivors" then
+        watchBots(nil)
+    end
+end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     finalRush = tostring(state.phase or "") == "round"
