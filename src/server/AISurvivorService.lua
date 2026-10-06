@@ -274,8 +274,14 @@ local function attachAnimations(record, humanoid)
         end
 
         local track = tracks[kind]
-        if track and (kind == "walk" or kind == "run") then
-            track:AdjustSpeed(playbackSpeed)
+        if track then
+            track:AdjustSpeed(
+                AISurvivorRules.animationPlaybackScale(
+                    kind,
+                    playbackSpeed,
+                    record.gaitScale
+                )
+            )
         end
     end
 
@@ -296,6 +302,13 @@ local function attachAnimations(record, humanoid)
             stopTrack("idle", 0.06)
             stopTrack("fall", 0.04)
             if tracks.jump then
+                tracks.jump:AdjustSpeed(
+                    AISurvivorRules.animationPlaybackScale(
+                        "jump",
+                        1,
+                        record.gaitScale
+                    )
+                )
                 tracks.jump:Play(0.04)
             end
         elseif state == Enum.HumanoidStateType.Freefall then
