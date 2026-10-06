@@ -132,6 +132,81 @@ jobs:
           print("Performance telemetry isolation verified.")
           PY
 
+      - name: Enforce README source-count consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          readme = Path("README.md").read_text()
+          arena_source = Path("src/server/ArenaVariants.lua").read_text()
+          cosmetics_source = Path("src/server/CosmeticsCatalog.lua").read_text()
+
+          disaster_count = len(list(Path("src/server/Disasters").glob("*.lua")))
+          spec_count = len(list(Path("tests/engine").glob("*.spec.luau")))
+
+          order_match = re.search(r"ArenaVariants\.Order\s*=\s*\{([^}]*)\}", arena_source, re.S)
+          if not order_match:
+              raise SystemExit("ArenaVariants.Order not found.")
+          arena_count = len(re.findall(r'"[^"]+"', order_match.group(1)))
+
+          definitions = cosmetics_source.split("Cosmetics.Order", 1)[0]
+          cosmetic_count = len(re.findall(r'\bId\s*=\s*"[^"]+"', definitions))
+
+          expected = {
+              "disasters": (
+                  disaster_count,
+                  re.search(r"- (\d+) modular disasters", readme),
+              ),
+              "arenas": (
+                  arena_count,
+                  re.search(r"- (\d+) rotating arena layouts", readme),
+              ),
+              "cosmetics": (
+                  cosmetic_count,
+                  re.search(r"- (\d+)-item cosmetic catalogue", readme),
+              ),
+              "engine specs": (
+                  spec_count,
+                  re.search(r"- (\d+) engine specs assigned exactly once", readme),
+              ),
+          }
+
+          failures = []
+          for label, (actual, match) in expected.items():
+              documented = int(match.group(1)) if match else None
+              if documented != actual:
+                  failures.append(
+                      f"{label}: README={documented!r}, source={actual}"
+                  )
+
+          disaster_section = readme.split("## Current disasters", 1)
+          if len(disaster_section) != 2:
+              failures.append("README Current disasters section missing")
+          else:
+              body = disaster_section[1].split("\n## ", 1)[0]
+              listed = len(re.findall(r"^\d+\.\s+", body, re.M))
+              if listed != disaster_count:
+                  failures.append(
+                      f"Current disasters list has {listed}, source has {disaster_count}"
+                  )
+
+          if failures:
+              print("README/source metadata mismatch:")
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+
+          print(
+              "README metadata verified:",
+              f"{disaster_count} disasters,",
+              f"{arena_count} arenas,",
+              f"{cosmetic_count} cosmetics,",
+              f"{spec_count} engine specs",
+          )
+          PY
+
       - name: Enforce production release hygiene
         shell: bash
         run: |
