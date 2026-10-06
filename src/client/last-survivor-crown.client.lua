@@ -244,11 +244,14 @@ task.spawn(function()
         end
 
         local tier = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
-        local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
+        local reduced = localPlayer:GetAttribute("ReduceMotion") == true
+        local cadence = tier.DecorUpdateInterval or math.max(1 / 30, tier.UpdateInterval)
+        if reduced then
+            cadence = math.max(cadence, 0.18)
+        end
+        local dt = task.wait(cadence)
         pulseClock += dt
         emitClock += dt
-
-        local reduced = localPlayer:GetAttribute("ReduceMotion") == true
         local pulse = reduced
             and 0.5
             or ((math.sin(pulseClock * 3.4) + 1) * 0.5)
