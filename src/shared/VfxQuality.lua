@@ -28,12 +28,14 @@ function VfxQuality.initialTier(isTouchDevice)
     return isTouchDevice == true and "Medium" or "High"
 end
 
-function VfxQuality.nextTier(currentTier, averageFps)
+function VfxQuality.nextTier(currentTier, averageFps, isTouchDevice)
     local fps = tonumber(averageFps) or 60
     local current = VfxQuality.Tiers[currentTier] and currentTier or "High"
+    local touch = isTouchDevice == true
 
     if current == "High" then
-        if fps < 42 then
+        local degradeThreshold = touch and 48 or 42
+        if fps < degradeThreshold then
             return "Medium"
         end
         return "High"
@@ -42,13 +44,17 @@ function VfxQuality.nextTier(currentTier, averageFps)
     if current == "Medium" then
         if fps < 32 then
             return "Low"
-        elseif fps > 54 then
+        end
+
+        local upgradeThreshold = touch and 58 or 54
+        if fps > upgradeThreshold then
             return "High"
         end
         return "Medium"
     end
 
-    if fps > 44 then
+    local recoveryThreshold = touch and 46 or 44
+    if fps > recoveryThreshold then
         return "Medium"
     end
     return "Low"
