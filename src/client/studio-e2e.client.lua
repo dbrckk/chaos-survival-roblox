@@ -418,6 +418,30 @@ if hud then
                 end
             end
             check(#voteButtons == 3, "expected three vote buttons")
+
+            for _, voteButton in ipairs(voteButtons) do
+                check(insideViewport(voteButton), voteButton.Name .. " outside viewport")
+                if UserInputService.TouchEnabled then
+                    check(
+                        voteButton.AbsoluteSize.X >= 44 and voteButton.AbsoluteSize.Y >= 44,
+                        voteButton.Name .. " tap target too small"
+                    )
+                end
+
+                local hazardName = voteButton:FindFirstChild("VoteHazardName", true)
+                local hazardHint = voteButton:FindFirstChild("VoteHazardHint", true)
+
+                check(hazardName ~= nil, voteButton.Name .. " hazard name missing")
+                check(hazardHint ~= nil, voteButton.Name .. " hazard hint missing")
+
+                if hazardName and hazardName:IsA("TextLabel") then
+                    check(hazardName.Text ~= "", voteButton.Name .. " hazard name empty")
+                end
+                if hazardHint and hazardHint:IsA("TextLabel") then
+                    check(#hazardHint.Text >= 3, voteButton.Name .. " hazard guidance too short")
+                end
+            end
+
             if voteButtons[1] then
                 click(voteButtons[1])
             end
