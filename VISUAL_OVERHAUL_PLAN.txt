@@ -68,6 +68,7 @@ PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 [QA]   3.12 Hiérarchiser les focal lights en key/fill/rim au lieu de sources de puissance uniforme.
 [QA]   3.13 Finaliser le langage matériau Orbital : métal dominant sur masses, hub et docking pod.
 [QA]   3.14 Réduire l'émissif du skyline et les balises atmosphériques pour préserver la profondeur et la lisibilité gameplay.
+[QA]   3.15 Tamiser automatiquement world-depth et props ambiants pendant ROUND, avec restauration après changement de phase/map.
 
 PHASE 4 — VFX CATASTROPHES
 ---------------------------
