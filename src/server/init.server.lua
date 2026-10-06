@@ -910,6 +910,17 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 #selected > 1
             )
         end,
+        OnHazardContact = function(subject, kind)
+            if AISurvivorService.isBotSubject(subject) then
+                return
+            end
+            if subject and subject.Parent == Players then
+                recentHazards[subject.UserId] = {
+                    kind = tostring(kind or "Unknown"),
+                    at = os.clock(),
+                }
+            end
+        end,
         OnHazardDamage = function(subject, kind, damage)
             if AISurvivorService.isBotSubject(subject) then
                 return
