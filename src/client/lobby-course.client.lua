@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -63,7 +62,6 @@ local currentIndex = 1
 local startedAt = nil
 local bestTime = nil
 local activePhase = false
-local updateClock = 0
 local completedToken = 0
 
 local function quality()
@@ -225,35 +223,34 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     end
 end)
 
-RunService.Heartbeat:Connect(function(dt)
-    if not activePhase then
-        return
-    end
+task.spawn(function()
+    while true do
+        if not activePhase then
+            task.wait(0.25)
+            continue
+        end
 
-    updateClock += dt
-    if updateClock < 0.10 then
-        return
-    end
-    updateClock = 0
+        task.wait(0.10)
 
-    local character = player.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    local bundle = checkpointParts[currentIndex]
-    if not root or not root:IsA("BasePart") or not bundle then
-        return
-    end
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        local bundle = checkpointParts[currentIndex]
+        if not root or not root:IsA("BasePart") or not bundle then
+            continue
+        end
 
-    local distance = (root.Position - bundle.part.Position).Magnitude
-    if distance <= 5.4 then
-        completeCheckpoint()
-    elseif startedAt then
-        local elapsed = os.clock() - startedAt
-        label.Text = string.format(
-            "PRACTICE COURSE  •  %d/%d  •  %.2fs",
-            currentIndex,
-            #checkpointParts,
-            elapsed
-        )
+        local distance = (root.Position - bundle.part.Position).Magnitude
+        if distance <= 5.4 then
+            completeCheckpoint()
+        elseif startedAt then
+            local elapsed = os.clock() - startedAt
+            label.Text = string.format(
+                "PRACTICE COURSE  •  %d/%d  •  %.2fs",
+                currentIndex,
+                #checkpointParts,
+                elapsed
+            )
+        end
     end
 end)
 
