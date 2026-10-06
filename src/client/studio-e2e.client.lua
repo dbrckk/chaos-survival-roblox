@@ -33,12 +33,44 @@ local visualMetrics = {
 local auditedFolders = 0
 local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
+local visualPhaseProbed = {}
+
+local function sendVisualPhaseProbe(phase)
+    if phase ~= "ready" and phase ~= "round" and phase ~= "result" then
+        return
+    end
+    if visualPhaseProbed[phase] then
+        return
+    end
+    visualPhaseProbed[phase] = true
+
+    task.delay(0.35, function()
+        if not player.Parent then
+            return
+        end
+
+        local metrics, folders = VisualBudgetRules.collect(workspace)
+        local tierName = tostring(player:GetAttribute("VfxQualityTier") or "High")
+        local camera = workspace.CurrentCamera
+
+        reportEvent:FireServer({
+            kind = "visual_phase_probe",
+            phase = phase,
+            vfxTier = tierName,
+            fieldOfView = camera and camera.FieldOfView or 0,
+            auditedFolders = folders,
+            visualMetrics = metrics,
+            withinBudget = VisualBudgetRules.withinBudget(tierName, metrics),
+        })
+    end)
+end
 
 if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
     roundStateEvent.OnClientEvent:Connect(function(state)
         if type(state) == "table" then
             roundStateReceived = true
             lastRoundPhase = state.phase
+            sendVisualPhaseProbe(tostring(state.phase or ""))
         end
     end)
 else
