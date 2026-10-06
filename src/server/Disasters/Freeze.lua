@@ -35,6 +35,7 @@ function D.start(ctx)
 
         frozen[humanoid] = nil
         if humanoid and humanoid.Parent then
+            humanoid:SetAttribute("ChaosFrozen", false)
             if humanoid.WalkSpeed == state.appliedWalkSpeed then
                 humanoid.WalkSpeed = state.walkSpeed
             end
@@ -97,6 +98,7 @@ function D.start(ctx)
                         appliedJumpHeight = appliedJumpHeight,
                         generation = pulseGeneration,
                     }
+                    hum:SetAttribute("ChaosFrozen", true)
                     hum.WalkSpeed = appliedWalkSpeed
                     hum.JumpPower = appliedJumpPower
                     hum.JumpHeight = appliedJumpHeight
