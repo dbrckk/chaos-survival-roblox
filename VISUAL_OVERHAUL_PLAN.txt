@@ -214,7 +214,7 @@ PHASE 8 — PRESENTATION PUBLIQUE
 
 PHASE 9 — CERTIFICATION VISUELLE FINALE
 ---------------------------------------
-[TODO] 9.1 Refaire analyse visuelle globale complète.
+[QA]   9.1 Analyse globale code/rendu/performance/lifecycle refaite ; validation visuelle sur captures et appareil réel restante.
 [TODO] 9.2 Comparer avec captures Android avant/après.
 [QA]   9.2b CI animation/caméra : catalogue d'assets testé, sharding Open Cloud exhaustif, propriété FOV contrôlée.
 [QA]   9.2c Studio E2E étendu : FOV borné, Clouds unique, décor non-collidable et budget visuel par tier.
@@ -222,7 +222,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [QA]   9.2e Studio E2E multi-phase : READY/ROUND/RESULT doivent chacun fournir une probe budget/FOV valide avant PASS.
 [FAIT] 9.2e Ajouter Release Candidate Gate exact-SHA : vérifie Build/Open Cloud verts et génère une preuve automatisée sans publier.
 [FAIT] 9.2f Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
-[TODO] 9.3 Corriger les incohérences restantes.
+[EN COURS] 9.3 Corriger les incohérences restantes révélées par CI/E2E puis par captures/appareil.
 [TODO] 9.4 Studio E2E authentifié.
 [TODO] 9.5 Android final.
 [TODO] 9.6 Desktop final.
