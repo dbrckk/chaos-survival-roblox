@@ -10,6 +10,8 @@ local watched = setmetatable({}, {__mode = "k"})
 local phase = "waiting"
 local finalRush = false
 local modelSequence = 0
+local botsFolder = nil
+local botsConnection = nil
 
 local function qualityScale()
     local tier = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
@@ -148,25 +150,40 @@ end
 Players.PlayerAdded:Connect(watchPlayer)
 
 local function watchBots(folder)
+    if botsConnection then
+        botsConnection:Disconnect()
+        botsConnection = nil
+    end
+    botsFolder = folder
+
+    if not folder then
+        return
+    end
+
     for _, child in ipairs(folder:GetChildren()) do
         if child:IsA("Model") then
             watchModel(child)
         end
     end
-    folder.ChildAdded:Connect(function(child)
+
+    botsConnection = folder.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
             task.defer(watchModel, child)
         end
     end)
 end
 
-local bots = workspace:FindFirstChild("AISurvivors")
-if bots then
-    watchBots(bots)
-end
+watchBots(workspace:FindFirstChild("AISurvivors"))
+
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "AISurvivors" then
+    if child.Name == "AISurvivors" and child ~= botsFolder then
         watchBots(child)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child == botsFolder then
+        watchBots(nil)
     end
 end)
 
