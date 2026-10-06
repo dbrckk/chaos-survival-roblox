@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -12,8 +11,7 @@ localFolder.Parent = workspace
 local lavaState = nil
 local freezeStates = {}
 local clock = 0
-local updateClock = 0
-local renderConnection = nil
+local loopStarted = false
 local ensureRenderLoop
 
 local function quality()
@@ -237,27 +235,24 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 ensureRenderLoop = function()
-    if renderConnection or (not lavaState and next(freezeStates) == nil) then
+    if loopStarted then
         return
     end
+    loopStarted = true
 
-    renderConnection = RunService.RenderStepped:Connect(function(dt)
-        if not lavaState and next(freezeStates) == nil then
-            renderConnection:Disconnect()
-            renderConnection = nil
-            return
-        end
+    task.spawn(function()
+        while true do
+            local tier = quality()
+            local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
 
-    clock += dt
-    updateClock += dt
+            if not lavaState and next(freezeStates) == nil then
+                continue
+            end
 
-    local tier = quality()
-    local reduceMotion = player:GetAttribute("ReduceMotion") == true
-    local motionScale = reduceMotion and 0.18 or 1
-    if updateClock < math.max(1 / 30, tier.UpdateInterval) then
-        return
-    end
-    updateClock = 0
+            clock += dt
+
+            local reduceMotion = player:GetAttribute("ReduceMotion") == true
+            local motionScale = reduceMotion and 0.18 or 1
 
     if lavaState and lavaState.lava and lavaState.lava.Parent then
         local lava = lavaState.lava
@@ -324,6 +319,7 @@ ensureRenderLoop = function()
             state.center.Transparency = 0.58 + alpha * 0.30
         end
     end
+        end
     end)
 end
 
