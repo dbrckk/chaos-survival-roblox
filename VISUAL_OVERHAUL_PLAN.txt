@@ -194,6 +194,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.26 Étendre le budget E2E aux couches lobby/sociales/résultat et atmosphère catastrophe.
 [QA]   7.27 PerformancePulse remonte aussi parts/lights/effects des 19 couches pour détecter l'accumulation pendant soak Android.
 [QA]   7.28 Nettoyer le rebinding lobby presentation à chaque GeneratedMap ; une seule connexion map active.
+[FAIT] 7.29 Garde-fou CI Clouds : toute création client hors CloudLayer.lua fait échouer le build.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
