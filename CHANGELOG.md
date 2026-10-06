@@ -24,6 +24,11 @@ All notable changes to Chaos Survival are documented here.
 - Rising Lava includes deterministic contact fallback inside the real lava footprint.
 - Near-miss, critical-health, streak and result feedback.
 
+### Accessibility
+- Added an independent persisted Haptics toggle alongside Reduce Motion and Audio.
+- Accessibility touch controls now meet the 44 px mobile target.
+- Disabling haptics immediately stops active motors; ReduceMotion also lowers haptic frequency/intensity.
+
 ### Reliability
 - Persistent cosmetic/premium mutations now share the authoritative `PlayerData.canMutate()` active-session guard.
 - Rapid session handoff tests cover forced takeover, stale save/release rejection, clean save/release and subsequent rejoin.
