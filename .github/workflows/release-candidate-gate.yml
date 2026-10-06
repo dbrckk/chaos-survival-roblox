@@ -79,8 +79,15 @@ jobs:
                   continue
               if latest_seen[name] is None:
                   latest_seen[name] = run
+              trusted = run.get("head_branch") == "main"
+              if name == "Build Validation":
+                  trusted = trusted and run.get("event") == "push"
+              else:
+                  trusted = trusted and run.get("event") in {"push", "workflow_dispatch"}
+
               if (
                   required[name] is None
+                  and trusted
                   and run.get("status") == "completed"
                   and run.get("conclusion") == "success"
               ):
@@ -94,8 +101,11 @@ jobs:
                       failures.append(f"{name}: no run found for {sha}")
                   else:
                       failures.append(
-                          f"{name}: no successful run; latest status={latest.get('status')} "
-                          f"conclusion={latest.get('conclusion')}"
+                          f"{name}: no trusted successful main run; "
+                          f"latest status={latest.get('status')} "
+                          f"conclusion={latest.get('conclusion')} "
+                          f"event={latest.get('event')} "
+                          f"branch={latest.get('head_branch')}"
                       )
 
           spec_paths = sorted(Path("tests/engine").glob("*.spec.luau"))
