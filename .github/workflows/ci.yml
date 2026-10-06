@@ -61,6 +61,82 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce client frame-loop ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed = {
+              Path("src/client/body-feel.client.lua"): {"BindToRenderStep"},
+              Path("src/client/movement-feel.client.lua"): {"BindToRenderStep"},
+              Path("src/client/juice.client.lua"): {"RunService.RenderStepped"},
+          }
+          markers = (
+              "RunService.RenderStepped",
+              "BindToRenderStep",
+              "RunService.Heartbeat:Connect",
+              "RunService.Stepped:Connect",
+          )
+
+          violations = []
+          for path in sorted(Path("src/client").glob("*.lua")):
+              source = path.read_text()
+              found = {marker for marker in markers if marker in source}
+              permitted = allowed.get(path, set())
+              unexpected = sorted(found - permitted)
+              if unexpected:
+                  violations.append((path.as_posix(), unexpected))
+
+          if violations:
+              print("Unexpected client frame-loop ownership:")
+              for path, markers_found in violations:
+                  print(f" - {path}: {', '.join(markers_found)}")
+              raise SystemExit(1)
+
+          print("Client frame-loop ownership verified.")
+          PY
+
+      - name: Enforce camera property ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          violations = []
+          for path in sorted(Path("src/client").glob("*.lua")):
+              source = path.read_text()
+
+              if path != Path("src/client/juice.client.lua"):
+                  if re.search(r"\.FieldOfView\s*=", source):
+                      violations.append(
+                          f"{path.as_posix()}: FieldOfView writes belong to juice.client.lua"
+                      )
+                  if re.search(
+                      r"TweenService\s*:\s*Create\s*\(\s*(?:camera|workspace\.CurrentCamera)",
+                      source,
+                      re.S,
+                  ):
+                      violations.append(
+                          f"{path.as_posix()}: camera FOV tweens belong to juice.client.lua"
+                      )
+
+              if path != Path("src/client/movement-feel.client.lua"):
+                  if re.search(r"\bcamera\.CFrame\s*=", source):
+                      violations.append(
+                          f"{path.as_posix()}: camera CFrame writes belong to movement-feel.client.lua"
+                      )
+
+          if violations:
+              print("Camera ownership violations:")
+              for violation in violations:
+                  print(" -", violation)
+              raise SystemExit(1)
+
+          print("Camera property ownership verified.")
+          PY
+
       - name: Enforce performance telemetry isolation
         shell: bash
         run: |

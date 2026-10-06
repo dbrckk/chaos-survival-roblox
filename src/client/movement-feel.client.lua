@@ -28,7 +28,6 @@ local wasAirborne = false
 local lastLandingBurstAt = 0
 local lastHorizontalSpeed = 0
 local accelerationKick = 0
-local speedFovOffset = 0
 local speedSurgeActive = false
 local lowGravityActive = false
 local tornadoModel = nil
@@ -127,7 +126,6 @@ local function bindCharacter(nextCharacter)
     wasAirborne = false
     lastHorizontalSpeed = 0
     accelerationKick = 0
-    speedFovOffset = 0
     presentationKick = 0
     presentationKickTarget = 0
 
@@ -268,17 +266,6 @@ RunService:BindToRenderStep(
         local rawAcceleration = (speed - lastHorizontalSpeed) / math.max(dt, 1 / 240)
         lastHorizontalSpeed = speed
         local targetAccelerationKick = math.clamp(rawAcceleration / 420, -0.030, 0.030)
-        local reducedMotion = player:GetAttribute("ReduceMotion") == true
-        local speedExcess = math.max(0, speed - 16)
-        local surgeFovBonus = speedSurgeActive and math.clamp(speedExcess * 0.16 + 0.8, 0, 2.2) or 0
-        local targetFovOffset = reducedMotion and 0 or math.clamp(speedExcess * 0.12 + surgeFovBonus, 0, 4.2)
-        speedFovOffset = exponential(
-            speedFovOffset,
-            targetFovOffset,
-            targetFovOffset > speedFovOffset and 5.5 or 3.2,
-            dt
-        )
-
         accelerationKick = exponential(
             accelerationKick,
             targetAccelerationKick,
@@ -336,7 +323,6 @@ RunService:BindToRenderStep(
             - (mechanicKick * 0.018)
             - (presentationKick * 0.010)
             - accelerationKick
-            - (speedSurgeActive and math.clamp(speedExcess / 520, 0, 0.010) or 0)
             + (math.sin(shakeClock * 1.91) * impactKick * 0.018)
         local roll =
             lean
@@ -357,18 +343,5 @@ RunService:BindToRenderStep(
             * CFrame.new(0, y, 0)
             * CFrame.Angles(pitch, 0, roll)
 
-        local baseFov = tonumber(player:GetAttribute("BaseCameraFov")) or 70
-        if not player:GetAttribute("BaseCameraFov") then
-            player:SetAttribute("BaseCameraFov", camera.FieldOfView)
-            baseFov = camera.FieldOfView
-        end
-        local targetFov = math.clamp(
-            baseFov
-                + speedFovOffset * scale
-                + presentationKick * 2.4 * scale,
-            60,
-            90
-        )
-        camera.FieldOfView = exponential(camera.FieldOfView, targetFov, 6, dt)
     end
 )

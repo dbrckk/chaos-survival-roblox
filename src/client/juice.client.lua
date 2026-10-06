@@ -13,6 +13,7 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local feedbackEvent = remotes:WaitForChild("RoundFeedback")
+local mechanicFeedbackEvent = remotes:WaitForChild("ArenaMechanicFeedback")
 local performancePulseEvent = remotes:WaitForChild("PerformancePulse")
 
 local camera = workspace.CurrentCamera
@@ -191,6 +192,10 @@ local visualUpdateClock = 0
 local performancePulseClock = 0
 local performanceFrameCount = 0
 local healthRatio = 1
+local baseFovTarget = camera and camera.FieldOfView or 70
+local speedFovOffset = 0
+local fovImpulse = 0
+local lastMechanicFovAt = 0
 player:SetAttribute("VfxQualityTier", vfxTierName)
 
 local function setActiveBeacon(beacon, light)
@@ -230,14 +235,24 @@ local function resetActiveBeacon()
     activeBeaconDefaults = nil
 end
 
-local function tweenCamera(targetFov, duration)
-    camera = workspace.CurrentCamera or camera
-    if camera then
-        TweenService:Create(
-            camera,
-            TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {FieldOfView = targetFov}
-        ):Play()
+local function setBaseFov(targetFov)
+    local resolved = math.clamp(tonumber(targetFov) or 70, 60, 90)
+    if player:GetAttribute("ReduceMotion") == true then
+        resolved = 70 + (resolved - 70) * 0.35
+    end
+    baseFovTarget = resolved
+end
+
+local function pushFovImpulse(amount)
+    local value = math.clamp(tonumber(amount) or 0, -8, 10)
+    if player:GetAttribute("ReduceMotion") == true then
+        value *= 0.25
+    end
+
+    if value >= 0 then
+        fovImpulse = math.max(fovImpulse, value)
+    else
+        fovImpulse = math.min(fovImpulse, value)
     end
 end
 
@@ -359,7 +374,7 @@ local function setMood(state)
             elseif roundDanger then
                 targetFov = profile.Fov + 3
             end
-            tweenCamera(targetFov, 0.24)
+            setBaseFov(targetFov)
         elseif doubleChaos then
             atmosphere.Density = 0.23
             atmosphere.Haze = 1.15
@@ -369,7 +384,7 @@ local function setMood(state)
             color.Saturation = 0.22
             color.TintColor = Color3.fromRGB(245, 225, 255)
             vignette.BackgroundColor3 = Color3.fromRGB(115, 15, 160)
-            tweenCamera(roundDanger and 82 or 78, 0.24)
+            setBaseFov(roundDanger and 82 or 78)
         else
             atmosphere.Density = 0.18
             atmosphere.Haze = 0.82
@@ -379,7 +394,7 @@ local function setMood(state)
             color.Saturation = 0.14
             color.TintColor = Color3.new(1, 1, 1)
             vignette.BackgroundColor3 = Color3.fromRGB(255, 70, 35)
-            tweenCamera(roundDanger and 79 or 75, 0.24)
+            setBaseFov(roundDanger and 79 or 75)
         end
 
         local generatedMap = workspace:FindFirstChild("GeneratedMap")
@@ -425,7 +440,7 @@ local function setMood(state)
         color.Saturation = 0.10
         color.TintColor = Color3.new(1, 1, 1)
         atmosphere.Color = Color3.fromRGB(205, 215, 235)
-        tweenCamera(72, 0.35)
+        setBaseFov(72)
     else
         if phase == "vote" then
             color.Contrast = 0.08
@@ -444,7 +459,7 @@ local function setMood(state)
         color.Saturation = 0.06
         color.TintColor = Color3.new(1, 1, 1)
         atmosphere.Color = Color3.fromRGB(205, 215, 235)
-        tweenCamera(70, 0.4)
+        setBaseFov(70)
     end
 
     rays.Enabled = vfxTier.RaysEnabled
@@ -461,6 +476,7 @@ end
 
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refreshParticipantMood)
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refreshParticipantMood)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshParticipantMood)
 
 stateEvent.OnClientEvent:Connect(function(state)
     currentState = state
@@ -517,6 +533,21 @@ local function celebrateCharacter(masterRound)
     end)
 end
 
+mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
+    if vfxTier.Name == "Low" then
+        return
+    end
+
+    local now = os.clock()
+    if now - lastMechanicFovAt < 0.18 then
+        return
+    end
+    lastMechanicFovAt = now
+
+    local overdrive = type(payload) == "table" and payload.overdrive == true
+    pushFovImpulse((overdrive and 4.4 or 3.4) * vfxTier.Scale)
+end)
+
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     local survivalStreak = tonumber(feedback.streak) or 0
 
@@ -568,15 +599,9 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
             )
         end
 
-        tweenCamera(67, 0.12)
-        task.delay(0.13, function()
-            tweenCamera(72, 0.28)
-        end)
+        pushFovImpulse(-5)
     else
-        tweenCamera(76, 0.10)
-        task.delay(0.12, function()
-            tweenCamera(72, 0.30)
-        end)
+        pushFovImpulse(4)
     end
 end)
 
@@ -612,7 +637,11 @@ RunService.RenderStepped:Connect(function(dt)
     if qualitySampleClock >= 2.5 and frameSampleCount > 0 then
         local averageDt = frameTimeAccumulator / frameSampleCount
         local averageFps = averageDt > 0 and (1 / averageDt) or 60
-        local nextTierName = VfxQuality.nextTier(vfxTierName, averageFps)
+        local nextTierName = VfxQuality.nextTier(
+            vfxTierName,
+            averageFps,
+            UserInputService.TouchEnabled
+        )
 
         if nextTierName ~= vfxTierName then
             vfxTierName = nextTierName
@@ -624,6 +653,55 @@ RunService.RenderStepped:Connect(function(dt)
         frameTimeAccumulator = 0
         frameSampleCount = 0
         qualitySampleClock = 0
+    end
+
+    camera = workspace.CurrentCamera or camera
+    if camera then
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        local speed = 0
+        if root and root:IsA("BasePart") then
+            local velocity = root.AssemblyLinearVelocity
+            speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+        end
+
+        local speedSurge = currentState
+            and currentState.phase == "round"
+            and table.find(currentState.disasterIds or {}, "SpeedSurge") ~= nil
+        local speedExcess = math.max(0, speed - 16)
+        local surgeBonus = speedSurge
+            and math.clamp(speedExcess * 0.16 + 0.8, 0, 2.2)
+            or 0
+        local targetSpeedOffset = math.clamp(
+            speedExcess * 0.12 + surgeBonus,
+            0,
+            4.2
+        )
+
+        local motionScale = vfxTier.Name == "Low"
+            and 0.48
+            or (vfxTier.Name == "Medium" and 0.76 or 1)
+        if UserInputService.TouchEnabled then
+            motionScale *= 0.78
+        end
+        if player:GetAttribute("ReduceMotion") == true then
+            motionScale *= 0.18
+        end
+
+        local speedRate = targetSpeedOffset > speedFovOffset and 5.5 or 3.2
+        local speedAlpha = 1 - math.exp(-speedRate * math.max(0, dt))
+        speedFovOffset += (targetSpeedOffset - speedFovOffset) * speedAlpha
+
+        local impulseAlpha = 1 - math.exp(-7.0 * math.max(0, dt))
+        fovImpulse += (0 - fovImpulse) * impulseAlpha
+
+        local targetFov = math.clamp(
+            baseFovTarget + speedFovOffset * motionScale + fovImpulse,
+            60,
+            90
+        )
+        local fovAlpha = 1 - math.exp(-6.0 * math.max(0, dt))
+        camera.FieldOfView += (targetFov - camera.FieldOfView) * fovAlpha
     end
 
     visualUpdateClock += dt
@@ -747,10 +825,7 @@ local function bindDamageFeedback(character)
             ):Play()
 
             local fovKick = 1.4 + damageRatio * 4.6
-            tweenCamera(
-                math.min(84, (camera and camera.FieldOfView or 72) + fovKick),
-                0.06
-            )
+            pushFovImpulse(fovKick)
 
             if criticalHit and vfxTier.Name ~= "Low" then
                 bloom.Intensity = math.min(1.15, bloom.Intensity + 0.22 * vfxTier.Scale)

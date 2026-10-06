@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -59,35 +60,6 @@ local lastTrigger = 0
 
 local function currentVfxTier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-end
-
-local function pulseCamera()
-    if player:GetAttribute("ReduceMotion") == true then
-        return
-    end
-
-    local camera = workspace.CurrentCamera
-    if not camera then
-        return
-    end
-
-    local base = camera.FieldOfView
-    TweenService:Create(
-        camera,
-        TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {FieldOfView = math.min(86, base + 4)}
-    ):Play()
-
-    task.delay(0.09, function()
-        camera = workspace.CurrentCamera
-        if camera then
-            TweenService:Create(
-                camera,
-                TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {FieldOfView = base}
-            ):Play()
-        end
-    end)
 end
 
 local function pulseCharacter(accent)
@@ -154,12 +126,9 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         {BackgroundTransparency = 1}
     ):Play()
 
-    if tier.Name ~= "Low" then
-        pulseCamera()
-    end
     pulseCharacter(accent)
 
-    if overdrive then
+    if overdrive and not UserInputService.TouchEnabled then
         overdriveLabel.Visible = true
         overdriveLabel.TextTransparency = 1
         overdriveLabel.BackgroundTransparency = 1
