@@ -126,33 +126,6 @@ local function rebuildCharacterEffects()
         end
     end
 
-    if has("SpeedSurge") then
-        local left = makeAttachment(root, "SpeedTrailLeft", Vector3.new(-0.85, -0.7, 0.5))
-        local right = makeAttachment(root, "SpeedTrailRight", Vector3.new(0.85, -0.7, 0.5))
-
-        local trail = Instance.new("Trail")
-        trail.Name = "SpeedSurgeRibbon"
-        trail.Attachment0 = left
-        trail.Attachment1 = right
-        trail.Lifetime = (reduced and 0.09 or 0.22) * tier.Scale
-        trail.MinLength = 0.05
-        trail.FaceCamera = true
-        trail.LightEmission = 1
-        trail.Color = ColorSequence.new(
-            Color3.fromRGB(255, 82, 205),
-            Color3.fromRGB(110, 155, 255)
-        )
-        trail.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.18),
-            NumberSequenceKeypoint.new(1, 1),
-        })
-        trail.WidthScale = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, reduced and 0.24 or 0.48),
-            NumberSequenceKeypoint.new(1, 0),
-        })
-        trail.Parent = root
-        table.insert(characterEffects, trail)
-    end
 end
 
 local function ensureShrinkVisuals()
