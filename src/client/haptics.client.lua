@@ -17,6 +17,9 @@ local lastPulseAt = 0
 local lastFinalRush = false
 local pulseToken = 0
 
+local DEFAULT_MIN_PULSE_INTERVAL = 0.075
+local REDUCED_MOTION_MIN_PULSE_INTERVAL = 0.12
+
 local candidateInputs = {
     Enum.UserInputType.Gamepad1,
     Enum.UserInputType.Touch,
@@ -52,48 +55,69 @@ local function setMotor(inputType, motor, strength)
 end
 
 local function pulse(strength, duration, large)
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
     local now = os.clock()
-    if now - lastPulseAt < 0.045 then
+    local minInterval = reducedMotion
+        and REDUCED_MOTION_MIN_PULSE_INTERVAL
+        or DEFAULT_MIN_PULSE_INTERVAL
+
+    if now - lastPulseAt < minInterval then
         return
     end
-    lastPulseAt = now
 
-    local scale = player:GetAttribute("ReduceMotion") == true and 0.55 or 1
+    local scale = reducedMotion and 0.40 or 1
     local amount = math.clamp((tonumber(strength) or 0) * scale, 0, 1)
     if amount <= 0 then
         return
     end
 
-    pulseToken += 1
-    local token = pulseToken
-    local motor = large and Enum.VibrationMotor.Large or Enum.VibrationMotor.Small
+    local requestedMotor = large and Enum.VibrationMotor.Large or Enum.VibrationMotor.Small
+    local targets = {}
 
-    local pulsed = {}
     for _, inputType in ipairs(candidateInputs) do
-        local relevant = inputType == Enum.UserInputType.Touch
-            and UserInputService.TouchEnabled
-            or inputType == Enum.UserInputType.Gamepad1
+        local relevant = (inputType == Enum.UserInputType.Touch and UserInputService.TouchEnabled)
+            or (inputType == Enum.UserInputType.Gamepad1 and UserInputService.GamepadEnabled)
 
-        if relevant and supported(inputType, motor) then
-            setMotor(inputType, motor, amount)
-            table.insert(pulsed, inputType)
+        if relevant and supported(inputType, requestedMotor) then
+            table.insert(targets, {
+                inputType = inputType,
+                motor = requestedMotor,
+                amount = amount,
+            })
         elseif relevant and large and supported(inputType, Enum.VibrationMotor.Small) then
-            setMotor(inputType, Enum.VibrationMotor.Small, amount * 0.86)
-            table.insert(pulsed, inputType)
+            table.insert(targets, {
+                inputType = inputType,
+                motor = Enum.VibrationMotor.Small,
+                amount = amount * 0.86,
+            })
         end
     end
 
-    if #pulsed == 0 then
+    -- Do not invalidate the cleanup token of an active pulse unless this pulse
+    -- can actually drive at least one motor.
+    if #targets == 0 then
         return
     end
 
-    task.delay(math.clamp(tonumber(duration) or 0.08, 0.03, 0.30), function()
+    lastPulseAt = now
+    pulseToken += 1
+    local token = pulseToken
+
+    for _, target in ipairs(targets) do
+        -- Explicitly stop either motor before switching intensity/type so a
+        -- previous overlapping pulse cannot leave a motor latched on.
+        setMotor(target.inputType, Enum.VibrationMotor.Large, 0)
+        setMotor(target.inputType, Enum.VibrationMotor.Small, 0)
+        setMotor(target.inputType, target.motor, target.amount)
+    end
+
+    task.delay(math.clamp(tonumber(duration) or 0.08, 0.03, 0.22), function()
         if token ~= pulseToken then
             return
         end
-        for _, inputType in ipairs(pulsed) do
-            setMotor(inputType, motor, 0)
-            setMotor(inputType, Enum.VibrationMotor.Small, 0)
+        for _, target in ipairs(targets) do
+            setMotor(target.inputType, Enum.VibrationMotor.Large, 0)
+            setMotor(target.inputType, Enum.VibrationMotor.Small, 0)
         end
     end)
 end
@@ -135,9 +159,11 @@ end)
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     if feedback.survived == true then
         pulse(0.30, 0.10, false)
-        task.delay(0.12, function()
-            pulse(0.20, 0.07, false)
-        end)
+        if player:GetAttribute("ReduceMotion") ~= true then
+            task.delay(0.12, function()
+                pulse(0.20, 0.07, false)
+            end)
+        end
     else
         pulse(0.34, 0.10, true)
     end
