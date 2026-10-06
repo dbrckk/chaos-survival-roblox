@@ -153,6 +153,7 @@ if hud then
     local questButton = hud:FindFirstChild("QuestButton", true)
     local cosmeticButton = hud:FindFirstChild("CosmeticsButton", true)
     local achievementButton = hud:FindFirstChild("AchievementButton", true)
+    local supportButton = hud:FindFirstChild("SupportButton", true)
     local questPanel = hud:FindFirstChild("QuestPanel", true)
     local cosmeticPanel = hud:FindFirstChild("CosmeticsPanel", true)
     local achievementPanel = hud:FindFirstChild("AchievementPanel", true)
@@ -162,12 +163,25 @@ if hud then
     check(stats ~= nil and insideViewport(stats), "stats HUD outside viewport")
     check(xpTrack ~= nil and insideViewport(xpTrack), "XP bar outside viewport")
 
+    local minTouchHeight = UserInputService.TouchEnabled and 44 or 36
     for _, button in ipairs({questButton, cosmeticButton, achievementButton}) do
         check(button ~= nil, "menu button missing")
         if button and button:IsA("GuiButton") then
-            check(button.AbsoluteSize.X >= 44 and button.AbsoluteSize.Y >= 36, button.Name .. " tap target too small")
+            check(
+                button.AbsoluteSize.X >= 44 and button.AbsoluteSize.Y >= minTouchHeight,
+                button.Name .. " tap target too small"
+            )
             check(insideViewport(button), button.Name .. " outside viewport")
         end
+    end
+
+    if supportButton and supportButton:IsA("GuiButton") and supportButton.Visible then
+        check(
+            supportButton.AbsoluteSize.X >= 44
+                and supportButton.AbsoluteSize.Y >= minTouchHeight,
+            "SupportButton tap target too small"
+        )
+        check(insideViewport(supportButton), "SupportButton outside viewport")
     end
 
     if questButton and questPanel and cosmeticPanel and achievementPanel then
