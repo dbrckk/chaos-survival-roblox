@@ -291,8 +291,19 @@ end
 
 local function setDisasterLoop(disasterIds)
     local targetName = nil
+    local bestPriority = -math.huge
+
     for _, id in ipairs(disasterIds or {}) do
-        targetName = AudioConfig.DisasterLoop[id] or targetName
+        local candidate = AudioConfig.DisasterLoop[id]
+        local priority = tonumber(
+            AudioConfig.DisasterLoopPriority
+                and AudioConfig.DisasterLoopPriority[id]
+        ) or 0
+
+        if candidate and priority > bestPriority then
+            targetName = candidate
+            bestPriority = priority
+        end
     end
 
     if targetName == activeLoopName then return end
@@ -550,11 +561,24 @@ stateEvent.OnClientEvent:Connect(function(state)
         if phase ~= lastPhase or state.title ~= lastTitle then
             play(state.doubleChaos and "DoubleChaos" or "RoundStart")
 
-            for _, id in ipairs(state.disasterIds or {}) do
+            for index, id in ipairs(state.disasterIds or {}) do
                 local accent = AudioConfig.DisasterAccent[id]
                 if accent then
-                    task.delay(0.10, function()
-                        play(accent)
+                    local doublePolicy = AudioConfig.DoubleChaosAccent or {}
+                    local delaySeconds = 0.10
+                        + ((index - 1) * (tonumber(doublePolicy.StaggerSeconds) or 0.055))
+
+                    task.delay(delaySeconds, function()
+                        if state.doubleChaos == true then
+                            playRaw(
+                                accent,
+                                tonumber(doublePolicy.PitchVariance) or 0.018,
+                                tonumber(doublePolicy.VolumeScale) or 0.52,
+                                index == 1 and -0.015 or 0.025
+                            )
+                        else
+                            play(accent)
+                        end
                     end)
                 end
             end
