@@ -220,7 +220,7 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         Effects = visualEffects,
     })
 
-    local phase = tostring(payload.phase or "unknown")
+    local phase = tostring(lastRoundState.phase or "unknown")
     local allowedPhases = {
         waiting = true,
         intermission = true,
@@ -232,8 +232,8 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
     if not allowedPhases[phase] then
         phase = "unknown"
     end
-    local chaosCount = payload.doubleChaos == true and 2 or 1
-    local finalRush = payload.finalRush == true and 1 or 0
+    local chaosCount = lastRoundState.doubleChaos == true and 2 or 1
+    local finalRush = phase == "round" and lastRoundState.finalRush == true and 1 or 0
 
     GameAnalytics.custom(
         player,
