@@ -1,5 +1,27 @@
 local VisualBudgetRules = {}
 
+VisualBudgetRules.LocalFolders = {
+    "ArenaCinematicDepthLocal",
+    "ArenaSurfaceReliefLocal",
+    "ArenaSilhouetteBreakupLocal",
+    "ArenaMidgroundMassLocal",
+    "ArenaUnderstructureLocal",
+    "ArenaHeroSceneryLocal",
+    "ArenaEdgeProfileLocal",
+    "ArenaServicePropsLocal",
+    "ArenaNavigationLanguageLocal",
+    "ArenaPlatformIdentityLocal",
+    "ArenaAmbientPropsLocal",
+    "ArenaFocalLightingLocal",
+    "ArenaSurfaceDetailLocal",
+    "ChaosEnvironmentDepthLocal",
+    "ChaosWorldPolishLocal",
+    "ArenaCinematicDisasterAtmosphereLocal",
+    "LobbyCoreOrbitLocal",
+    "LobbyCrewBeaconLocal",
+    "ResultConstellationLocal",
+}
+
 VisualBudgetRules.Budgets = {
     High = {
         Parts = 900,
@@ -17,6 +39,43 @@ VisualBudgetRules.Budgets = {
         Effects = 56,
     },
 }
+
+function VisualBudgetRules.collect(root)
+    local metrics = {
+        Parts = 0,
+        Lights = 0,
+        Effects = 0,
+    }
+    local auditedFolders = 0
+
+    if not root then
+        return metrics, auditedFolders
+    end
+
+    for _, folderName in ipairs(VisualBudgetRules.LocalFolders) do
+        local folder = root:FindFirstChild(folderName)
+        if folder then
+            auditedFolders += 1
+            for _, descendant in ipairs(folder:GetDescendants()) do
+                if descendant:IsA("BasePart") then
+                    metrics.Parts += 1
+                elseif descendant:IsA("PointLight")
+                    or descendant:IsA("SpotLight")
+                    or descendant:IsA("SurfaceLight")
+                then
+                    metrics.Lights += 1
+                elseif descendant:IsA("ParticleEmitter")
+                    or descendant:IsA("Trail")
+                    or descendant:IsA("Beam")
+                then
+                    metrics.Effects += 1
+                end
+            end
+        end
+    end
+
+    return metrics, auditedFolders
+end
 
 function VisualBudgetRules.forTier(tierName)
     return VisualBudgetRules.Budgets[tierName] or VisualBudgetRules.Budgets.High
