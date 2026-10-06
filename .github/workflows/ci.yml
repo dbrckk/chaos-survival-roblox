@@ -39,6 +39,81 @@ jobs:
           find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
             xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
 
+      - name: Enforce persistent purchase session guards
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          cosmetic = Path("src/server/CosmeticService.lua").read_text()
+          monetization = Path("src/server/MonetizationService.lua").read_text()
+
+          def between(source, start, end=None):
+              a = source.find(start)
+              if a < 0:
+                  raise SystemExit(f"Missing guarded section: {start}")
+              b = source.find(end, a + len(start)) if end else len(source)
+              if end and b < 0:
+                  raise SystemExit(f"Missing section terminator: {end}")
+              return source[a:b]
+
+          guarded = [
+              (
+                  "Cosmetic equip",
+                  between(
+                      cosmetic,
+                      "local function equipCosmetic",
+                      "local function buyCosmetic",
+                  ),
+              ),
+              (
+                  "Cosmetic coin purchase",
+                  between(
+                      cosmetic,
+                      "local function buyCosmetic",
+                      "function CosmeticService.grant",
+                  ),
+              ),
+              (
+                  "Cosmetic premium grant",
+                  between(
+                      cosmetic,
+                      "function CosmeticService.grant",
+                      "function CosmeticService.sync",
+                  ),
+              ),
+              (
+                  "Premium purchase prompt",
+                  between(
+                      monetization,
+                      'if action ~= "buy_pass"',
+                      "MarketplaceService.PromptGamePassPurchaseFinished",
+                  ),
+              ),
+              (
+                  "Premium purchase completion",
+                  between(
+                      monetization,
+                      "MarketplaceService.PromptGamePassPurchaseFinished",
+                      "Players.PlayerAdded",
+                  ),
+              ),
+          ]
+
+          failures = []
+          for label, section in guarded:
+              if "PlayerData.canMutate(player)" not in section:
+                  failures.append(label)
+
+          if failures:
+              print("Persistent mutation path missing active-session guard:")
+              for label in failures:
+                  print(" -", label)
+              raise SystemExit(1)
+
+          print("Persistent purchase/grant session guards verified.")
+          PY
+
       - name: Enforce fair-play monetization boundary
         shell: bash
         run: |
