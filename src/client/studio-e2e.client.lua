@@ -269,6 +269,12 @@ do
         "ArenaEdgeProfileLocal",
         "ArenaServicePropsLocal",
         "ArenaNavigationLanguageLocal",
+        "ArenaPlatformIdentityLocal",
+        "ArenaAmbientPropsLocal",
+        "ArenaFocalLightingLocal",
+        "ArenaSurfaceDetailLocal",
+        "ChaosEnvironmentDepthLocal",
+        "ChaosWorldPolishLocal",
     }
 
     local auditedFolders = 0
