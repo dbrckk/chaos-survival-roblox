@@ -130,6 +130,7 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.8 Vérifier fatigue visuelle et accessibilité — ReduceMotion renforcé sur plateformes, LowGravity et landing contact.
 [QA]   6.9 Centraliser strictement le FOV de round dans juice ; arena-mechanic-feedback ne modifie plus directement la caméra.
 [FAIT] 6.10 Transmettre eliminationCause dans RoundFeedback pour afficher le conseil de revanche spécifique au vrai danger.
+[QA]   6.11 Attribuer les knockbacks réels Tornado/JumpShock avant une chute pour éviter les mauvaises causes en Double Chaos.
 
 PHASE 6B — GAMEPLAY / FUN
 --------------------------
