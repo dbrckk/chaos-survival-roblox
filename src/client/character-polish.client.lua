@@ -10,6 +10,8 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local phase = "waiting"
 local finalRush = false
 local watched = setmetatable({}, {__mode = "k"})
+local botFolder = nil
+local botFolderConnection = nil
 
 local function accentFor(model, isLocal, isAI)
     local accent = model:GetAttribute("ChaosAccent")
@@ -186,30 +188,40 @@ end
 Players.PlayerAdded:Connect(watchPlayer)
 
 local function watchBotFolder(folder)
+    if botFolderConnection then
+        botFolderConnection:Disconnect()
+        botFolderConnection = nil
+    end
+    botFolder = folder
+
     if not folder then
         return
     end
 
-    for _, child in ipairs(folder:GetChildren()) do
-        if child:IsA("Model") then
-            watchModel(child)
+    for _, model in ipairs(folder:GetChildren()) do
+        if model:IsA("Model") then
+            watchModel(model)
         end
     end
 
-    folder.ChildAdded:Connect(function(child)
-        if child:IsA("Model") then
-            task.defer(watchModel, child)
+    botFolderConnection = folder.ChildAdded:Connect(function(model)
+        if model:IsA("Model") then
+            task.defer(watchModel, model)
         end
     end)
 end
 
-local existingBots = workspace:FindFirstChild("AISurvivors")
-if existingBots then
-    watchBotFolder(existingBots)
-end
+watchBotFolder(workspace:FindFirstChild("AISurvivors"))
+
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "AISurvivors" then
+    if child.Name == "AISurvivors" and child ~= botFolder then
         watchBotFolder(child)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child == botFolder then
+        watchBotFolder(nil)
     end
 end)
 
