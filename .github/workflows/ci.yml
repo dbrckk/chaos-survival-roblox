@@ -224,6 +224,31 @@ jobs:
           print("AI survivor folder lifecycle listeners verified.")
           PY
 
+      - name: Audit high-frequency client loops
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          patterns = {
+              "RenderStepped": re.compile(r"RunService\.RenderStepped:Connect|\.RenderStepped:Connect"),
+              "Heartbeat": re.compile(r"RunService\.Heartbeat:Connect|\.Heartbeat:Connect"),
+              "BindToRenderStep": re.compile(r"BindToRenderStep"),
+          }
+
+          found = []
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              kinds = [name for name, pattern in patterns.items() if pattern.search(source)]
+              if kinds:
+                  found.append((str(path), kinds))
+
+          print("High-frequency client loop inventory:", len(found))
+          for path, kinds in sorted(found):
+              print(" -", path, "[" + ",".join(kinds) + "]")
+          PY
+
       - name: Enforce scenery LOD registry consistency
         shell: bash
         run: |
