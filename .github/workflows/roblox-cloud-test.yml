@@ -16,7 +16,7 @@ permissions:
 jobs:
   engine:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
@@ -205,7 +205,11 @@ jobs:
                 return "$status"
               fi
 
-              delay=$((8 * attempt * attempt))
+              if [ "$attempt" -eq 1 ]; then
+                delay=12
+              else
+                delay=35
+              fi
               echo "Transient Roblox Open Cloud failure detected for $suite; retrying in ${delay}s."
               sleep "$delay"
               attempt=$((attempt + 1))
