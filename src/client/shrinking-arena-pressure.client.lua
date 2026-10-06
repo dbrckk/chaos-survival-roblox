@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -99,9 +98,8 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 bindCamera()
 
 local active = false
-local updateClock = 0
 local smoothedPressure = 0
-local renderConnection = nil
+local loopStarted = false
 local ensureRenderLoop
 
 local function qualityScale()
@@ -158,58 +156,63 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 ensureRenderLoop = function()
-    if renderConnection or not active then
+    if loopStarted then
         return
     end
+    loopStarted = true
 
-    renderConnection = RunService.RenderStepped:Connect(function(dt)
-        if not active then
-            frame.Visible = false
-            centerCue.Visible = false
-            renderConnection:Disconnect()
-            renderConnection = nil
-            return
+    task.spawn(function()
+        while true do
+            if not active then
+                frame.Visible = false
+                centerCue.Visible = false
+                task.wait(0.24)
+                continue
+            end
+
+            local scale, tier = qualityScale()
+            local cadence = tier.Name == "Low" and 0.12 or 0.075
+            local elapsed = task.wait(cadence)
+
+            if player:GetAttribute("RoundParticipant") ~= true
+                or player:GetAttribute("RoundEliminated") == true
+            then
+                frame.Visible = false
+                centerCue.Visible = false
+                continue
+            end
+
+            local base = arenaBase()
+            local root = rootPart()
+            if not base or not root then
+                frame.Visible = false
+                centerCue.Visible = false
+                continue
+            end
+
+            local pressure = edgePressure(base, root)
+            smoothedPressure += (pressure - smoothedPressure)
+                * math.clamp(elapsed * 12, 0, 1)
+
+            if smoothedPressure < 0.05 then
+                frame.Visible = false
+                centerCue.Visible = false
+                continue
+            end
+
+            frame.Visible = true
+            centerCue.Visible = smoothedPressure >= 0.55
+            local reduced = player:GetAttribute("ReduceMotion") == true
+            local pulse = reduced
+                and 0.5
+                or ((math.sin(os.clock() * 6.2) + 1) * 0.5)
+            local alpha = smoothedPressure * scale
+            frame.BackgroundTransparency = math.clamp(
+                0.985 - alpha * (0.13 + pulse * 0.05),
+                0.78,
+                0.985
+            )
         end
-
-        if player:GetAttribute("RoundParticipant") ~= true
-        or player:GetAttribute("RoundEliminated") == true
-    then
-        frame.Visible = false
-        centerCue.Visible = false
-        return
-    end
-
-    local scale, tier = qualityScale()
-    updateClock += dt
-    local cadence = tier.Name == "Low" and 0.12 or 0.075
-    if updateClock < cadence then
-        return
-    end
-    local elapsed = updateClock
-    updateClock = 0
-
-    local base = arenaBase()
-    local root = rootPart()
-    if not base or not root then
-        frame.Visible = false
-        centerCue.Visible = false
-        return
-    end
-
-    local pressure = edgePressure(base, root)
-    smoothedPressure += (pressure - smoothedPressure) * math.clamp(elapsed * 12, 0, 1)
-
-    if smoothedPressure < 0.05 then
-        frame.Visible = false
-        centerCue.Visible = false
-        return
-    end
-
-    frame.Visible = true
-    centerCue.Visible = smoothedPressure >= 0.55
-    local pulse = (math.sin(os.clock() * 6.2) + 1) * 0.5
-    local alpha = smoothedPressure * scale
-    frame.BackgroundTransparency = math.clamp(0.985 - alpha * (0.13 + pulse * 0.05), 0.78, 0.985)
     end)
 end
 
