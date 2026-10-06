@@ -72,6 +72,7 @@ PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 [QA]   3.16 Centraliser le Clouds client : arena-lighting et juice partagent une seule couche, vérifiée par Studio E2E.
 [QA]   3.17 Centraliser toute la pile post-process : Color/Bloom/SunRays/Atmosphere/Depth uniques, baseline arena-lighting et override juice seulement READY/ROUND.
 [QA]   3.18 Dédupliquer automatiquement Clouds et post-process persistants au runtime pour résister aux hot reloads/courses de démarrage.
+[QA]   3.19 Sérialiser les overlays temporaires Freeze/Aftermath : singleton robuste + annulation des tweens concurrents.
 
 PHASE 4 — VFX CATASTROPHES
 ---------------------------
