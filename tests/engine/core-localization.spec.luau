@@ -125,6 +125,13 @@ describe("Core localization", function()
         ).toBe("Atteins le niveau 5")
         expect(CoreLocalization.text("fr-fr", "DAY_STREAK", 7)).toBe("SÉRIE DE 7 JOURS")
         expect(CoreLocalization.text("fr-fr", "PRACTICE_BOOST")).toBe("ESSAIE LE BOOST")
+        expect(CoreLocalization.text("fr-fr", "PRACTICE_COURSE_PROGRESS", 2, 4)).toBe(
+            "PARCOURS  •  2/4"
+        )
+        expect(CoreLocalization.text("fr-fr", "PRACTICE_CHECK", 3)).toBe("POINT 3")
+        expect(CoreLocalization.text("fr-fr", "PRACTICE_NEW_BEST", 4.25)).toBe(
+            "NOUVEAU RECORD  •  4.25s"
+        )
         expect(CoreLocalization.text("fr-fr", "ESCAPE_PAD")).toBe("PAD D'ÉVASION")
         expect(CoreLocalization.text("fr-fr", "WAYFIND_ARENA")).toBe("ARÈNE")
         expect(CoreLocalization.text("fr-fr", "WAYFIND_PRACTICE")).toBe("ENTRAÎNEMENT")
