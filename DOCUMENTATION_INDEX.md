@@ -27,6 +27,8 @@ When two documents disagree, use this order:
 
 5. **MULTI_EXPERT_PREMIUM_REVIEW.txt**
    - Source of truth for specialist review roles and veto questions.
+   - The detailed department manuals under **docs/aaa/** implement these roles and protocols.
+   - If a docs/aaa document conflicts with this index or a higher-ranked standard, the higher-ranked standard wins.
 
 6. **EXPERIENCE_MASTER_PLAN.md**
    - Source of truth for overall experience roadmap and integrated product direction.
@@ -187,8 +189,11 @@ Examples:
 
 ### SNAPSHOT
 Represents a dated assessment and must eventually be superseded.
-Example:
+Examples:
 - CURRENT_QUALITY_AUDIT_2026-10-06.txt
+- docs/aaa/CURRENT_SPECIALIST_AUDIT.md
+
+The root dated audit is the current evidence-oriented snapshot. The docs/aaa audit is retained as a richer specialist comparison baseline, not as release certification.
 
 ## 4. Anti-drift rules
 
@@ -239,3 +244,33 @@ As of 2026-10-06, the project should prioritize:
 - player evidence over internal assumptions.
 
 This index must be updated whenever a new canonical production document is added.
+
+
+## 7. Detailed specialist library
+
+The `docs/aaa/` directory is the deep operating library for specialist execution. It contains:
+
+- seven department review manuals;
+- final harmonization / Perfect-Candidate protocol;
+- authored asset pipeline;
+- physical device certification protocol;
+- public alpha research protocol;
+- specialist role prompts;
+- attention and sensory budget;
+- red-team / innovation backlog;
+- system conflict matrix;
+- audio asset audit;
+- authored animation manifest;
+- PBR Hero asset backlog;
+- store/marketing creative review;
+- community/trust/safety review;
+- live-ops incident runbook;
+- localization/internationalization review;
+- asset licence/provenance register;
+- brand/terminology bible;
+- global phase-state contract;
+- player personas/test scenarios;
+- complexity/subtraction register;
+- scorecard template.
+
+These documents add implementation depth. They do not override the canonical ordering in this index.
