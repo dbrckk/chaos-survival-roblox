@@ -162,3 +162,102 @@ Audio source quality is release-grade when:
 - phone-speaker test passes;
 - 30-minute fatigue test passes;
 - source/license manifest is complete.
+
+
+## Replacement manifest fields
+
+For every production audio replacement record:
+
+| Field | Requirement |
+|---|---|
+| Semantic cue | stable game-facing cue ID |
+| Source file | original file/version |
+| Source URL / recording session | provenance |
+| Author | creator/recordist/designer |
+| License | explicit commercial-use basis |
+| Roblox asset ID | runtime reference |
+| Owner | account/group owning uploaded asset |
+| Spatial | yes/no |
+| Loop | yes/no |
+| Loudness review | PASS/FAIL |
+| Phone speaker | PASS/FAIL |
+| Headphones | PASS/FAIL |
+| Double Chaos overlap | PASS/FAIL |
+| 30-min fatigue | PASS/FAIL |
+
+Unknown provenance = NOT RELEASE-APPROVED.
+
+## Sonic palette contract
+
+Avoid solving identity by pitch-shifting one source repeatedly.
+
+Each hazard gets:
+- warning motif;
+- movement/continuous texture where relevant;
+- impact/consequence signature;
+- optional aftermath tail.
+
+Shared game language may reuse processing chains, but the primary source identity of lethal hazards should remain distinguishable.
+
+Suggested contrast axes:
+- transient hardness;
+- tonal vs noisy;
+- rising vs falling pitch;
+- pulse rhythm;
+- stereo/spatial movement;
+- tail length;
+- spectral center.
+
+## Mix target workflow
+
+For each new asset:
+1. audition dry;
+2. normalize/edit source;
+3. integrate at conservative gain;
+4. compare against lethal-warning reference;
+5. test alone;
+6. test over music/ambience;
+7. test Double Chaos;
+8. test phone speaker;
+9. test low volume;
+10. test 30-minute repetition.
+
+Do not set a universal numeric loudness target without measuring the real Roblox playback chain. The project target is consistent perceived hierarchy, not an arbitrary file meter value.
+
+## Phone-speaker failure criteria
+
+FAIL if:
+- cue disappears when bass response is weak;
+- warning relies on stereo width only;
+- attack is too soft to localize/notice;
+- two lethal cues collapse into the same timbre;
+- music masks the first warning beat.
+
+Mitigation:
+- add mid/high-frequency identity;
+- strengthen transient;
+- simplify competing ambience;
+- duck lower-priority layers.
+
+## First replacement milestone
+
+Replace only a small critical set first:
+1. Meteor warning/impact;
+2. Bomb warning/impact;
+3. MobilityPad;
+4. NearMiss;
+5. Survived/Eliminated.
+
+Run blind A/B against current audio.
+
+Scale replacement only when listeners consistently prefer the new set and hazard recognition does not worsen.
+
+## Audio release blocker rule
+
+A beautiful mix does not compensate for weak source identity.
+
+Audio cannot score release-premium while:
+- primary lethal cues remain recognizably generic;
+- provenance is unknown;
+- phone-speaker validation is missing;
+- repeated cues become fatiguing.
