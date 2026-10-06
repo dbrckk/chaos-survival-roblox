@@ -38,10 +38,10 @@ describe("Arena material rules", function()
 
         expect(ArenaMaterialRules.targetMaterial(
             "Orbital",
-            Enum.Material.Metal,
+            Enum.Material.SmoothPlastic,
             0,
             "High"
-        )).toBe(Enum.Material.SmoothPlastic)
+        )).toBe(Enum.Material.Metal)
     end)
 
     it("only swaps the deterministic budgeted fraction", function()
