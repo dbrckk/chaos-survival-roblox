@@ -98,6 +98,7 @@ PHASE 5 — UI / UX PREMIUM
 [QA]   5.7 Harmoniser ombres, strokes, corners, animations et micro-interactions.
 [QA]   5.8 Adapter automatiquement l'UI aux formats Android étroits / larges.
 [EN COURS] 5.9 QA tactile complète.
+[QA]   5.10 Séparer spatialement Near-Miss / annonces de round sur les formats Android compacts.
 
 PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
@@ -163,6 +164,10 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.9 Réduire les boucles RenderStepped décoratives : signature VFX et atmosphère catastrophe throttled via task.wait/VfxQuality.
 [QA]   7.10 Sortir disaster-premium-vfx de RenderStepped et respecter ReduceMotion sur les trails Meteors.
 [QA]   7.11 Throttler ShrinkingArena/Darkness hors RenderStepped ; garder RenderStepped seulement pour les hazards où la fluidité le justifie.
+[QA]   7.12 Limiter les propriétaires per-frame : body-feel/movement-feel/juice seulement ; Tornado et décor sur cadence VfxQuality.
+[QA]   7.13 Centraliser caméra : juice seul propriétaire FOV, movement-feel seul propriétaire CFrame, garde-fous CI anti-régression.
+[QA]   7.14 Ajouter hystérésis VFX tactile plus stricte : Medium stable, High réservé aux appareils tenant réellement ~60 FPS.
+[QA]   7.15 Supprimer le suivi IA inutile de character-motion-polish ; bot-motion-polish reste propriétaire des trails bots.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
