@@ -166,6 +166,8 @@ Only after retention/device UX are acceptable:
 - [ ] Write changelog.
 - [ ] Keep last known-good commit/tag for rollback.
 - [ ] Verify Roblox experience icon, thumbnails, description and screenshots.
+- [x] Publish Roblox Place workflow refuses uncertified SHAs unless exact-SHA Build Validation + Open Cloud are green.
+- [ ] Archive the publish artifact containing place file + publish-metadata.txt.
 - [ ] Run a final smoke test immediately after publication.
 
 ## Definition of done
