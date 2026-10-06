@@ -45,7 +45,7 @@ local panel = Instance.new("Frame")
 panel.Name = "SettingsPanel"
 panel.AnchorPoint = Vector2.new(1, 0)
 panel.Position = UDim2.fromScale(0.985, 0.09)
-panel.Size = UDim2.fromOffset(190, 100)
+panel.Size = UDim2.fromOffset(190, 160)
 panel.BackgroundColor3 = UITheme.Colors.Panel
 panel.BackgroundTransparency = 0.03
 panel.BorderSizePixel = 0
@@ -71,7 +71,7 @@ padding.Parent = panel
 local function makeSettingButton(name)
     local button = Instance.new("TextButton")
     button.Name = name
-    button.Size = UDim2.new(1, 0, 0, UserInputService.TouchEnabled and 38 or 34)
+    button.Size = UDim2.new(1, 0, 0, UserInputService.TouchEnabled and 44 or 36)
     button.BackgroundColor3 = UITheme.Colors.PanelRaised
     button.BackgroundTransparency = 0.06
     button.BorderSizePixel = 0
@@ -89,6 +89,7 @@ end
 
 local motionButton, motionStroke = makeSettingButton("ReduceMotionToggle")
 local soundButton, soundStroke = makeSettingButton("AudioToggle")
+local hapticsButton, hapticsStroke = makeSettingButton("HapticsToggle")
 
 local currentPhase = "waiting"
 local voteVisible = false
@@ -112,12 +113,12 @@ local function applyResponsive()
         local width = profile.veryNarrow and 156 or 168
         toggle.Size = UDim2.fromOffset(width, 44)
         toggle.Position = UDim2.new(1, -10, 0, profile.topHeight + 18)
-        panel.Size = UDim2.fromOffset(math.max(176, width + 18), 100)
+        panel.Size = UDim2.fromOffset(math.max(176, width + 18), 160)
         panel.Position = UDim2.new(1, -10, 0, profile.topHeight + 68)
     else
         toggle.Size = UDim2.fromOffset(150, 36)
         toggle.Position = UDim2.fromScale(0.985, 0.03)
-        panel.Size = UDim2.fromOffset(178, 92)
+        panel.Size = UDim2.fromOffset(178, 136)
         panel.Position = UDim2.fromScale(0.985, 0.085)
     end
 end
@@ -125,6 +126,7 @@ end
 local function refresh()
     local reduced = player:GetAttribute("ReduceMotion") == true
     local muted = player:GetAttribute("AudioMuted") == true
+    local hapticsDisabled = player:GetAttribute("HapticsDisabled") == true
 
     toggle.Text = CoreLocalization.text(localeId, "SETTINGS")
 
@@ -143,6 +145,15 @@ local function refresh()
     )
     soundStroke.Color = muted and UITheme.Colors.Orange or UITheme.Colors.Green
     soundButton.BackgroundColor3 = muted
+        and UITheme.Colors.Orange:Lerp(UITheme.Colors.Panel, 0.78)
+        or UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.78)
+
+    hapticsButton.Text = CoreLocalization.text(
+        localeId,
+        hapticsDisabled and "HAPTICS_OFF" or "HAPTICS_ON"
+    )
+    hapticsStroke.Color = hapticsDisabled and UITheme.Colors.Orange or UITheme.Colors.Green
+    hapticsButton.BackgroundColor3 = hapticsDisabled
         and UITheme.Colors.Orange:Lerp(UITheme.Colors.Panel, 0.78)
         or UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.78)
 
@@ -193,9 +204,17 @@ soundButton.Activated:Connect(function()
     refresh()
 end)
 
+hapticsButton.Activated:Connect(function()
+    local nextValue = player:GetAttribute("HapticsDisabled") ~= true
+    player:SetAttribute("HapticsDisabled", nextValue)
+    accessibilityEvent:FireServer("HapticsDisabled", nextValue)
+    refresh()
+end)
+
 for _, attribute in ipairs({
     "ReduceMotion",
     "AudioMuted",
+    "HapticsDisabled",
     "Games",
     "DataLoaded",
 }) do
