@@ -182,7 +182,7 @@ local function applyMood(duration)
     local mood = MOODS[currentVariant] or MOODS.Classic
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
     local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    local roundScale = phase == "round" and 0.34 or (phase == "ready" and 0.62 or 1)
+    local roundScale = phase == "round" and 0.14 or (phase == "ready" and 0.50 or 1)
     local accessibilityScale = reducedMotion and 0.72 or 1
     local scale = roundScale * accessibilityScale
 
@@ -190,8 +190,8 @@ local function applyMood(duration)
         or (quality.Name == "Medium" and 0.72 or 1)
     local bloomBase = quality.Name == "Low" and 0.045
         or (quality.Name == "Medium" and 0.11 or 0.18)
-    local bloomPhaseScale = phase == "round" and 0.34
-        or (phase == "ready" and 0.68 or 1)
+    local bloomPhaseScale = phase == "round" and 0.16
+        or (phase == "ready" and 0.52 or 1)
     local bloomIntensity = bloomBase * bloomPhaseScale
     local bloomSize = quality.Name == "Low" and 12
         or (quality.Name == "Medium" and 18 or 24)
