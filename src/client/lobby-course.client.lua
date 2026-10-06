@@ -7,6 +7,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -217,7 +218,10 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = tostring(state.phase or "waiting")
-    local shouldBeActive = phase == "waiting" or phase == "intermission"
+    local shouldBeActive = LobbyPresentationRules.mode(
+        phase,
+        state.voteOptions
+    ) == "social"
     if shouldBeActive ~= activePhase then
         setActive(shouldBeActive)
     end
