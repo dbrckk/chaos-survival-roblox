@@ -84,7 +84,7 @@ PHASE 4 — VFX CATASTROPHES
 [QA]   4.10 Shrinking Arena : périmètre énergétique pulsant synchronisé avec la base.
 [QA]   4.11 Jump Shock : double front d'onde énergétique.
 [QA]   4.12 Ajouter atmosphère catastrophe à l'échelle de l'arène : balises périphériques, particules contextuelles, shafts lumineux et renforcement FINAL RUSH.
-[QA]   4.13 Ajouter signatures cinématiques dédiées pour Tornado, Meteors, Rising Lava et Darkness.
+[QA]   4.13 Signatures cinématiques : Tornado lié au vrai RoundTornado, Meteors liés aux vrais RoundMeteor, Lava/Darkness ambiants sans faux télégraphe.
 [TODO] 4.14 QA Double Chaos : lisibilité de toutes les combinaisons autorisées.
 
 PHASE 5 — UI / UX PREMIUM
@@ -160,6 +160,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [EN COURS] 7.6 Mesurer FPS via PerformancePulse et corriger les points faibles — calcul FPS réel corrigé, mesures Android encore requises.
 [QA]   7.7 Réduire la redondance world-depth/cinematic-depth : budgets horizon, transit et midground abaissés surtout en Medium/Low.
 [QA]   7.8 Stabiliser les animations héros : base immuable, aucun drift périodique, boucle décorative hors RenderStepped.
+[QA]   7.9 Réduire les boucles RenderStepped décoratives : signature VFX et atmosphère catastrophe throttled via task.wait/VfxQuality.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
