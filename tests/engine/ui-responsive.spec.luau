@@ -34,6 +34,19 @@ describe("UI responsive profiles", function()
         end
     end)
 
+    it("keeps padded social reaction buttons at least 44px tall", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1280, 720),
+        }) do
+            local profile = UIResponsive.mobileProfile(viewport)
+            local reactionButtonHeight = profile.dockHeight - 8
+            expect(UIResponsive.touchTargetSatisfied(reactionButtonHeight)).toBe(true)
+        end
+    end)
+
     it("reduces vertical density on short screens without shrinking tap targets", function()
         local tiny = UIResponsive.mobileProfile(Vector2.new(640, 360))
         local regular = UIResponsive.mobileProfile(Vector2.new(1280, 720))
