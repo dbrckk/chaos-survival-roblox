@@ -190,15 +190,28 @@ jobs:
                   if match:
                       discovered.add(match.group(1))
 
-          missing = sorted(discovered - registered)
+          ignored_non_visual = {
+              "ArenaSpatialAudioLocal",
+          }
+          missing = sorted(discovered - registered - ignored_non_visual)
           print("Registered visual budget folders:", len(registered))
           print("Persistent Local folders discovered:", len(discovered))
+          print("Explicit non-visual Local folders:", len(ignored_non_visual))
+
           if missing:
-              print("Persistent Local folders not covered by VisualBudgetRules:")
+              print("Persistent visual Local folders not covered by VisualBudgetRules:")
               for name in missing:
                   print(" -", name)
-          else:
-              print("All persistent Local folders are covered by VisualBudgetRules.")
+              raise SystemExit(1)
+
+          unexpected_ignored = sorted(ignored_non_visual - discovered)
+          if unexpected_ignored:
+              print("Stale non-visual Local-folder allowlist entries:")
+              for name in unexpected_ignored:
+                  print(" -", name)
+              raise SystemExit(1)
+
+          print("Persistent visual Local-folder coverage verified.")
           PY
 
       - name: Enforce single client cloud owner
