@@ -198,6 +198,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [FAIT] 7.30 Garde-fou CI registre visuel : toute nouvelle couche *Local persistante doit être budgétée ou explicitement non visuelle.
 [QA]   7.31 Classifier chaque PerformancePulse visuel en Budget:OK/OVER/UNKNOWN côté serveur, sans modifier le gameplay.
 [FAIT] 7.32 Garde-fou CI lifecycle : tout listener ChildAdded de map doit avoir un ownership/Disconnect explicite.
+[QA]   7.33 Contextualiser PerformancePulse avec phase, Double Chaos et Final Rush pour interpréter les pics de coût.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
