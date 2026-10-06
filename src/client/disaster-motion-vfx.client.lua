@@ -77,7 +77,7 @@ local function rebuildCharacterEffects()
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced = player:GetAttribute("ReduceMotion") == true
 
-    if has("LowGravity") then
+    if has("LowGravity") and tier.Name ~= "Low" and not reduced then
         local top = makeAttachment(root, "MoonTrailTop", Vector3.new(0, 1.15, 0))
         local bottom = makeAttachment(root, "MoonTrailBottom", Vector3.new(0, -1.15, 0))
 
@@ -85,7 +85,7 @@ local function rebuildCharacterEffects()
         trail.Name = "MoonGravityTrail"
         trail.Attachment0 = top
         trail.Attachment1 = bottom
-        trail.Lifetime = (reduced and 0.10 or 0.24) * tier.Scale
+        trail.Lifetime = 0.24 * tier.Scale
         trail.MinLength = 0.1
         trail.FaceCamera = true
         trail.LightEmission = 0.8
@@ -104,7 +104,7 @@ local function rebuildCharacterEffects()
         trail.Parent = root
         table.insert(characterEffects, trail)
 
-        if tier.Name ~= "Low" and not reduced then
+        if tier.Name == "High" then
             local motes = Instance.new("ParticleEmitter")
             motes.Name = "MoonMotes"
             motes.Rate = 5 * tier.ParticleScale
