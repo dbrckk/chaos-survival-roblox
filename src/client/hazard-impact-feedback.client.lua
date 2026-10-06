@@ -158,11 +158,18 @@ local function renderBurst(payload)
 
         plume = Instance.new("Part")
         plume.Name = "LocalHazardImpactPlume"
-        plume.Size = Vector3.new(
-            math.max(0.8, radius * 0.15),
-            math.max(2.8, radius * 0.45),
-            math.max(0.8, radius * 0.15)
-        )
+        local meteorPlume = kind == "Meteor"
+        plume.Size = meteorPlume
+            and Vector3.new(
+                math.max(0.7, radius * 0.12),
+                math.max(3.6, radius * 0.62),
+                math.max(0.7, radius * 0.12)
+            )
+            or Vector3.new(
+                math.max(1.8, radius * 0.42),
+                math.max(1.2, radius * 0.22),
+                math.max(1.8, radius * 0.42)
+            )
         plume.CFrame = CFrame.new(position + Vector3.new(0, plume.Size.Y * 0.5, 0))
         plume.Anchored = true
         plume.CanCollide = false
@@ -172,8 +179,8 @@ local function renderBurst(payload)
         plume.Material = Enum.Material.Neon
         plume.Color = kind == "Meteor"
             and Color3.fromRGB(255, 160, 62)
-            or color
-        plume.Transparency = 0.55
+            or color:Lerp(Color3.fromRGB(255, 150, 95), 0.18)
+        plume.Transparency = kind == "Meteor" and 0.55 or 0.62
         plume.Parent = workspace
     end
 
@@ -244,16 +251,29 @@ local function renderBurst(payload)
     end
 
     if plume then
+        local meteorPlume = kind == "Meteor"
         TweenService:Create(
             plume,
             TweenInfo.new(duration * 1.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
-                Size = Vector3.new(
-                    plume.Size.X * 0.55,
-                    math.max(5, radius * 1.45),
-                    plume.Size.Z * 0.55
+                Size = meteorPlume
+                    and Vector3.new(
+                        plume.Size.X * 0.55,
+                        math.max(5.5, radius * 1.55),
+                        plume.Size.Z * 0.55
+                    )
+                    or Vector3.new(
+                        math.max(radius * 1.35, plume.Size.X * 1.9),
+                        math.max(0.7, plume.Size.Y * 0.55),
+                        math.max(radius * 1.35, plume.Size.Z * 1.9)
+                    ),
+                Position = plume.Position + Vector3.new(
+                    0,
+                    meteorPlume
+                        and math.max(2.8, radius * 0.48)
+                        or math.max(0.4, radius * 0.08),
+                    0
                 ),
-                Position = plume.Position + Vector3.new(0, math.max(2.5, radius * 0.42), 0),
                 Transparency = 1,
             }
         ):Play()
