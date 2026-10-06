@@ -1,0 +1,840 @@
+CHAOS SURVIVAL — MANUEL DE REVUE MULTI-EXPERTS PREMIUM
+=======================================================
+
+MISSION
+-------
+Chaque aspect du jeu doit être évalué comme s'il avait un responsable senior spécialisé.
+Une feature n'est pas "premium" parce qu'elle fonctionne. Elle est premium lorsqu'elle :
+1. remplit son objectif joueur ;
+2. est cohérente avec toutes les autres disciplines ;
+3. reste excellente sur Android ;
+4. reste lisible sous pression ;
+5. résiste à une session longue ;
+6. possède des preuves de validation ;
+7. ne crée pas de dette cachée.
+
+Ce document complète :
+- EXPERIENCE_MASTER_PLAN.md
+- GAME_FEEL_UX_GUIDE.txt
+- AAA_VISUALS_ANIMATION_GUIDE.txt
+- VISUAL_OVERHAUL_PLAN.txt
+- RELEASE_CHECKLIST.md
+
+RÈGLE DE GOUVERNANCE
+--------------------
+Pour toute modification importante, simuler les revues spécialisées ci-dessous.
+Chaque expert rend :
+- PASS ;
+- PASS AVEC RÉSERVE ;
+- FAIL ;
+- NON TESTÉ.
+
+"NON TESTÉ" n'est jamais équivalent à PASS.
+Une version ne peut pas être déclarée finale si un P0/P1 est FAIL ou NON TESTÉ.
+
+======================================================================
+01 — DIRECTEUR CRÉATIF / CREATIVE DIRECTOR
+======================================================================
+
+Question centrale :
+"Le jeu a-t-il une identité immédiatement reconnaissable et une promesse cohérente ?"
+
+Vérifie :
+- fantasy centrale : survivre ensemble à un chaos spectaculaire ;
+- cohérence sci-fi / broadcast / compétition ;
+- identité propre des quatre arènes ;
+- ton des textes, sons, couleurs, récompenses ;
+- absence de features contradictoires ;
+- qualité perçue dès les 30 premières secondes ;
+- cohérence entre jeu, icon, thumbnails, trailer et store page.
+
+Refuse :
+- feature tendance sans rapport avec la fantasy ;
+- mélange de styles visuels arbitraires ;
+- surcharge méta qui dilue la survie ;
+- copie évidente d'un autre jeu.
+
+Preuves :
+- capture première minute ;
+- planches de quatre arènes ;
+- capture lobby/READY/ROUND/RESULT ;
+- phrase de pitch compréhensible sans explication.
+
+======================================================================
+02 — GAME DIRECTOR
+======================================================================
+
+Question :
+"Chaque système renforce-t-il la boucle principale ?"
+
+Vérifie :
+- vote -> anticipation -> survie -> résultat -> revanche ;
+- temps mort ;
+- variété réelle des catastrophes ;
+- agency ;
+- tension ;
+- Final Rush ;
+- Double Chaos ;
+- progression sans détourner du gameplay.
+
+Mesures :
+- délai join -> première action ;
+- délai join -> premier round ;
+- durée moyenne d'intermission ;
+- nombre de décisions significatives par round ;
+- taux de second round.
+
+======================================================================
+03 — LEAD GAME DESIGNER
+======================================================================
+
+Question :
+"Les règles créent-elles des décisions intéressantes et apprenables ?"
+
+Vérifie chaque catastrophe :
+- télégraphe ;
+- fenêtre de réaction ;
+- contre-jeu ;
+- récupération après petite erreur ;
+- skill ceiling ;
+- interaction avec map ;
+- interaction Double Chaos ;
+- solo vs multi.
+
+Refuse :
+- RNG sans contre-jeu ;
+- safe spot permanent ;
+- combinaison impossible ;
+- règle uniquement expliquée par texte.
+
+======================================================================
+04 — LEVEL DESIGNER
+======================================================================
+
+Question :
+"Le joueur lit-il l'espace et prend-il des routes intéressantes ?"
+
+Pour chaque map :
+- spawn lisible ;
+- centre identifiable ;
+- 2+ choix de route ;
+- verticalité utile ;
+- pads utiles ;
+- lignes de vue ;
+- refuge temporaire mais pas permanent ;
+- landmarks ;
+- pas de cul-de-sac injuste ;
+- hazards compatibles avec topologie.
+
+Test :
+- capture depuis chaque spawn ;
+- parcours sans HUD ;
+- Meteor/Bomb/Lava/Shrink/Freeze/Double Chaos.
+
+======================================================================
+05 — ENVIRONMENT ART DIRECTOR
+======================================================================
+
+Question :
+"Cette map raconte-t-elle quelque chose avant même de jouer ?"
+
+Vérifie :
+- silhouette macro ;
+- Hero asset ;
+- midground ;
+- background ;
+- matériaux ;
+- storytelling environnemental ;
+- répétition des modules ;
+- densité ;
+- asymétrie contrôlée ;
+- contact au sol ;
+- crédibilité structurelle.
+
+Refuse :
+- décor flottant ;
+- néon utilisé partout ;
+- même architecture recolorée ;
+- détail qui ressemble à une plateforme jouable.
+
+======================================================================
+06 — LIGHTING ARTIST
+======================================================================
+
+Question :
+"Le lighting donne-t-il profondeur et émotion sans diminuer le gameplay ?"
+
+Vérifie :
+- contraste joueur/fond ;
+- warning > décor ;
+- exposition ;
+- bloom ;
+- atmosphere ;
+- shadows ;
+- transitions ;
+- Darkness ;
+- Final Rush ;
+- RESULT.
+
+Test obligatoire :
+- Low/Medium/High ;
+- écran mobile lumineux ;
+- écran mobile sombre ;
+- Double Chaos.
+
+======================================================================
+07 — MATERIAL / PBR ARTIST
+======================================================================
+
+Question :
+"Les surfaces ont-elles une réponse physique crédible ?"
+
+Vérifie :
+- albedo ;
+- roughness ;
+- metalness ;
+- normal ;
+- emissive ;
+- texel density ;
+- UV ;
+- répétition ;
+- usure logique ;
+- résolution utile.
+
+Refuse :
+- tout brillant ;
+- faux métal ;
+- 4K invisible sur mobile ;
+- ombres peintes agressivement dans l'albedo.
+
+======================================================================
+08 — TECHNICAL ARTIST
+======================================================================
+
+Question :
+"Le rendu premium respecte-t-il le budget ?"
+
+Vérifie :
+- instance count ;
+- lights ;
+- particles ;
+- beams ;
+- trails ;
+- textures ;
+- MeshPart RenderFidelity ;
+- collisions ;
+- RenderStepped ;
+- cleanup ;
+- High/Medium/Low ;
+- ReduceMotion.
+
+Preuve :
+MicroProfiler + session Android longue.
+
+======================================================================
+09 — ANIMATION DIRECTOR
+======================================================================
+
+Question :
+"Le personnage possède-t-il poids, intention et personnalité ?"
+
+Vérifie :
+- idle ;
+- walk/run ;
+- acceleration ;
+- stop ;
+- jump ;
+- fall ;
+- landing ;
+- boost ;
+- hit react ;
+- elimination ;
+- victory ;
+- social emotes ;
+- transitions ;
+- markers.
+
+Priorité :
+clips R15 authored > ajout supplémentaire de procédural.
+
+Refuse :
+- animation qui retarde le contrôle ;
+- foot sliding évident ;
+- bras mécaniques ;
+- bots parfaitement synchronisés.
+
+======================================================================
+10 — CHARACTER / MOTION TECHNICAL DESIGNER
+======================================================================
+
+Vérifie :
+- compatibilité Animator ;
+- additive motion ;
+- IK ;
+- rig proportions ;
+- réseau ;
+- remote characters ;
+- AI Survivors ;
+- ReduceMotion ;
+- coût CPU.
+
+Règle :
+le polish visuel ne modifie jamais secrètement WalkSpeed/JumpPower/fairness.
+
+======================================================================
+11 — VFX DIRECTOR
+======================================================================
+
+Question :
+"Chaque catastrophe est-elle identifiable par sa forme et son timing ?"
+
+Pipeline :
+TELEGRAPH -> ANTICIPATION -> IMPACT -> AFTERMATH.
+
+Vérifie :
+- silhouette ;
+- palette ;
+- timing ;
+- distance ;
+- occlusion ;
+- particules ;
+- shockwave ;
+- cleanup ;
+- Double Chaos.
+
+Refuse :
+- flash plein écran ;
+- particules qui masquent la route ;
+- deux hazards visuellement identiques.
+
+======================================================================
+12 — AUDIO DIRECTOR
+======================================================================
+
+Question :
+"Peut-on comprendre la physique et le danger les yeux presque fermés ?"
+
+Vérifie :
+- identité sonore de chaque catastrophe ;
+- spatialisation ;
+- priorité du mix ;
+- ducking ;
+- footsteps ;
+- landing ;
+- boost ;
+- close call ;
+- result ;
+- ambience arène ;
+- fatigue sur 30 min.
+
+Priorité restante :
+remplacer les sons historiques génériques par assets originaux/licenciés vérifiés.
+
+======================================================================
+13 — GAME FEEL DESIGNER
+======================================================================
+
+Question :
+"Chaque action paraît-elle immédiate, physique et satisfaisante ?"
+
+Évalue :
+- input latency perçue ;
+- jump ;
+- landing ;
+- boost ;
+- shard ;
+- damage ;
+- near miss ;
+- impact ;
+- victory.
+
+Utilise les six couches :
+physique / animation / world VFX / audio / caméra / UI.
+
+Refuse :
+- feedback disproportionné à la fréquence ;
+- caméra qui combat le joueur ;
+- délai pour attendre une animation.
+
+======================================================================
+14 — UX DIRECTOR
+======================================================================
+
+Question :
+"Le joueur sait-il toujours quoi faire ensuite ?"
+
+Vérifie :
+- première minute ;
+- vote ;
+- READY ;
+- ROUND ;
+- élimination ;
+- spectator ;
+- RESULT ;
+- retour lobby ;
+- next goal.
+
+Test aveugle :
+une personne qui ne lit presque aucun texte doit comprendre la boucle.
+
+======================================================================
+15 — MOBILE UX SPECIALIST
+======================================================================
+
+Cible prioritaire : Android.
+
+Vérifie :
+- pouces ;
+- safe areas ;
+- Roblox controls ;
+- touch target ;
+- portrait d'appareil très haut/étroit ;
+- texte ;
+- panels ;
+- clavier éventuel ;
+- orientation ;
+- chaleur ;
+- batterie.
+
+Aucun desktop PASS ne remplace un test mobile.
+
+======================================================================
+16 — ACCESSIBILITY SPECIALIST
+======================================================================
+
+Vérifie :
+- ReduceMotion ;
+- son coupé ;
+- information non uniquement colorée ;
+- contraste ;
+- taille texte ;
+- strobe ;
+- haptics ;
+- fatigue ;
+- warnings multimodaux.
+
+Principe :
+réduire l'effet ne doit jamais réduire l'information.
+
+======================================================================
+17 — COGNITIVE / HUMAN FACTORS SPECIALIST
+======================================================================
+
+Question :
+"Combien d'informations concurrentes le cerveau doit-il traiter ?"
+
+ROUND :
+3 éléments saillants maximum.
+
+Cherche :
+- change blindness ;
+- inattentional blindness ;
+- surcharge ;
+- conflit couleur ;
+- texte trop long ;
+- choix trop nombreux ;
+- feedback simultanés.
+
+Final Rush :
+supprimer davantage de méta au lieu d'ajouter davantage de spectacle.
+
+======================================================================
+18 — SOCIOLOGUE / SOCIAL DESIGNER
+======================================================================
+
+Question :
+"Les joueurs ont-ils de vraies raisons de se sentir ensemble ?"
+
+Vérifie :
+- vote partagé ;
+- synchronisation ;
+- témoins ;
+- survivants visibles ;
+- reactions ;
+- Crew Signal ;
+- Last Chaos ;
+- invitations ;
+- partage de moments ;
+- arrivée d'amis.
+
+Principe :
+un événement partagé vaut plus qu'un bouton social.
+
+Refuse :
+- faux nombre de joueurs ;
+- récompense P2W pour inviter ;
+- spam de partage ;
+- interruption sociale pendant ROUND.
+
+======================================================================
+19 — AI / NPC DESIGNER
+======================================================================
+
+Question :
+"Un serveur solo paraît-il vivant sans que les bots trichent ?"
+
+Vérifie :
+- délai de réaction ;
+- erreurs ;
+- personnalité ;
+- votes ;
+- lobby ;
+- danger ;
+- route ;
+- verticalité ;
+- résultat ;
+- variété.
+
+Test :
+regarder un bot 5 minutes sans jouer.
+S'il semble scripté ou omniscient : FAIL.
+
+======================================================================
+20 — ECONOMY DESIGNER
+======================================================================
+
+Question :
+"Chaque monnaie et récompense a-t-elle une fonction claire ?"
+
+Vérifie :
+- sources/sinks ;
+- inflation ;
+- prix cosmetics ;
+- progression ;
+- daily/weekly ;
+- mastery ;
+- collection ;
+- reward pacing.
+
+Refuse :
+- monnaie ajoutée sans sink ;
+- récompense qui remplace le fun ;
+- économie qui exige grind excessif.
+
+======================================================================
+21 — MONETIZATION / ETHICAL DESIGN REVIEW
+======================================================================
+
+Principe :
+payer = expression, identité, confort raisonnable.
+Jamais avantage compétitif.
+
+Vérifie :
+- pas de P2W ;
+- prix compréhensible ;
+- ownership restauré ;
+- pas de popup après défaite ;
+- pas de pression artificielle ;
+- pas de faux rabais ;
+- achats persistants.
+
+======================================================================
+22 — RETENTION / LIVE-OPS DESIGNER
+======================================================================
+
+Question :
+"Pourquoi revenir demain si aucune récompense quotidienne n'existait ?"
+
+Réponses attendues :
+- maîtrise ;
+- variété ;
+- amis ;
+- moments ;
+- cosmetics ;
+- progression.
+
+Daily/weekly complètent la boucle ; ils ne la remplacent pas.
+
+======================================================================
+23 — DATA / PRODUCT ANALYST
+======================================================================
+
+Funnel minimum :
+join -> loaded -> vote -> ready -> round -> result -> second round -> 10 min.
+
+Segmenter :
+- nouveau/ancien ;
+- solo/multi ;
+- mobile/desktop ;
+- Low/Medium/High ;
+- survie/défaite ;
+- ami présent/non.
+
+Chercher les ruptures, pas seulement les moyennes.
+
+======================================================================
+24 — PERFORMANCE ENGINEER
+======================================================================
+
+Vérifie :
+- client frame time ;
+- serveur ;
+- mémoire ;
+- GC ;
+- network ;
+- instances ;
+- particles ;
+- render ;
+- scripts ;
+- 30–60 min ;
+- map swaps ;
+- Double Chaos.
+
+Règle :
+une feature non profilée sur Android est NON TESTÉE.
+
+======================================================================
+25 — NETWORK / SERVER ENGINEER
+======================================================================
+
+Vérifie :
+- server authority ;
+- RemoteEvents ;
+- validation ;
+- rate limits ;
+- joins tardifs ;
+- disconnect ;
+- replication ;
+- AI ;
+- cleanup ;
+- latency.
+
+Aucune information client non fiable ne doit accorder une récompense.
+
+======================================================================
+26 — DATA / PERSISTENCE ENGINEER
+======================================================================
+
+Vérifie :
+- session ownership ;
+- stale writes ;
+- retries ;
+- shutdown ;
+- rapid rejoin ;
+- migration ;
+- unknown fields ;
+- purchase persistence ;
+- temporary session.
+
+Preuve obligatoire :
+vrais quit/rejoin.
+
+======================================================================
+27 — SECURITY / FAIR-PLAY REVIEW
+======================================================================
+
+Vérifie :
+- remote abuse ;
+- impossible values ;
+- client trust ;
+- economy exploit ;
+- duplicate rewards ;
+- purchase spoof ;
+- movement exploit impact ;
+- analytics abuse.
+
+But :
+protéger l'expérience, pas construire un anti-cheat intrusif.
+
+======================================================================
+28 — QA LEAD
+======================================================================
+
+Maintient une matrice :
+- feature ;
+- plateforme ;
+- qualité ;
+- phase ;
+- résultat ;
+- SHA ;
+- preuve.
+
+Priorité :
+reproduction déterministe avant correction.
+
+Aucun "ça devrait marcher".
+
+======================================================================
+29 — RELEASE MANAGER
+======================================================================
+
+Une release exige sur la même lignée :
+- Build Validation ;
+- Open Cloud ;
+- Studio E2E ;
+- Android ;
+- desktop ;
+- persistence ;
+- alpha ;
+- rollback.
+
+Distinguer :
+CODE FAILURE
+vs
+INFRA FAILURE.
+
+Open Cloud timeout/429 après specs vertes = infrastructure externe.
+Ne jamais masquer le rouge ; documenter et relancer.
+
+======================================================================
+30 — MARKETING ART DIRECTOR
+======================================================================
+
+Ne produit les assets finaux qu'après verrouillage visuel.
+
+Vérifie :
+- icon lisible petit ;
+- thumbnail raconte un moment ;
+- vraie image du jeu ;
+- pas de promesse impossible ;
+- diversité des catastrophes ;
+- présence sociale ;
+- contraste mobile.
+
+======================================================================
+31 — COMMUNITY / TRUST & SAFETY REVIEW
+======================================================================
+
+Vérifie :
+- textes joueurs ;
+- réactions ;
+- noms bots ;
+- contenu social ;
+- signalement Roblox ;
+- absence de mécanique encourageant harcèlement ;
+- communication claire achats/partage.
+
+======================================================================
+32 — LOCALIZATION / COPY EDITOR
+======================================================================
+
+Vérifie :
+- FR/EN ;
+- stable IDs ;
+- texte court ;
+- verbes d'action ;
+- pas d'anglais hardcodé visible ;
+- longueur mobile ;
+- terminologie stable.
+
+Pendant ROUND :
+verbe > phrase.
+
+======================================================================
+33 — FRESH-EYES REVIEWER
+======================================================================
+
+Rôle volontairement non spécialiste.
+
+Consigne :
+jouer sans lire la documentation.
+
+Noter uniquement :
+- ce qui est confus ;
+- ce qui semble cheap ;
+- ce qui surprend positivement ;
+- ce qui paraît lent ;
+- ce qui paraît injuste ;
+- ce qui donne envie de partager.
+
+Ce rôle évite qu'une équipe experte devienne aveugle à ses propres habitudes.
+
+======================================================================
+34 — RED TEAM UX
+======================================================================
+
+Mission :
+essayer de casser l'expérience.
+
+Tester :
+- ne jamais voter ;
+- spam boutons ;
+- rejoindre en plein round ;
+- quitter pendant sauvegarde ;
+- mourir immédiatement ;
+- rester AFK ;
+- réseau lent ;
+- VFX Low ;
+- son 0 ;
+- ReduceMotion ;
+- écran très petit ;
+- solo ;
+- serveur plein ;
+- Double Chaos difficile.
+
+Le jeu doit dégrader élégamment.
+
+======================================================================
+35 — HARMONIZATION DIRECTOR
+======================================================================
+
+Intervient quand les disciplines sont individuellement bonnes.
+
+Question :
+"Le tout est-il meilleur que la somme des parties ?"
+
+Cherche les conflits :
+- VFX premium vs lisibilité ;
+- animation premium vs contrôle ;
+- décor premium vs performance ;
+- progression riche vs charge cognitive ;
+- social vs interruption ;
+- audio riche vs warning ;
+- AI réaliste vs fairness ;
+- monetization vs confiance.
+
+Peut demander de SUPPRIMER une feature pourtant bonne isolément.
+
+======================================================================
+PROCESSUS DE REVUE
+======================================================================
+
+ÉTAPE 1 — AUDIT VERTICAL
+Un spécialiste examine sa discipline.
+
+ÉTAPE 2 — AUDIT HORIZONTAL
+Suivre une manche complète et observer les interactions entre disciplines.
+
+ÉTAPE 3 — AUDIT CONTRADICTOIRE
+Un second rôle cherche pourquoi la solution est mauvaise.
+
+ÉTAPE 4 — DEVICE
+Android + desktop.
+
+ÉTAPE 5 — LONG SESSION
+30–60 minutes.
+
+ÉTAPE 6 — FRESH EYES
+Joueur sans contexte.
+
+ÉTAPE 7 — HARMONISATION
+Retirer redondances, uniformiser timings, couleurs, sons, densité.
+
+ÉTAPE 8 — RELEASE EVIDENCE
+Associer chaque PASS au SHA et à une preuve.
+
+======================================================================
+DÉFINITION PREMIUM AAA-LIKE
+======================================================================
+
+Le projet peut viser la mention "premium AAA-like dans Roblox" seulement si :
+- aucun P0 FAIL/NON TESTÉ ;
+- aucun P1 FAIL ;
+- les quatre arènes ont une identité propre ;
+- les 11 catastrophes sont lisibles ;
+- solo est amusant ;
+- multi est meilleur que solo sans rendre solo incomplet ;
+- Android reste fluide/lisible ;
+- animation ne semble plus stock Roblox sur les moments clés ;
+- audio ne semble plus générique sur les moments clés ;
+- résultat donne envie de rejouer ;
+- social reste volontaire ;
+- économie reste équitable ;
+- aucune feature critique ne dépend d'un seul canal sensoriel ;
+- release checklist est entièrement prouvée.
+
+"Parfait" signifie ici :
+aucun défaut connu à fort impact + cohérence globale + preuves réelles.
+Cela ne signifie jamais "plus aucune amélioration imaginable".
+
+FIN
