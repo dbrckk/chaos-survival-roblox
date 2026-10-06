@@ -44,10 +44,10 @@ local function applyFrozenVisual(character, frozen)
         tint,
         TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         frozen and {
-            TintColor = Color3.fromRGB(214, 239, 255),
-            Saturation = -0.10,
-            Contrast = 0.035,
-            Brightness = -0.015,
+            TintColor = Color3.fromRGB(232, 246, 255),
+            Saturation = -0.045,
+            Contrast = 0.015,
+            Brightness = 0,
         } or {
             TintColor = Color3.new(1, 1, 1),
             Saturation = 0,
