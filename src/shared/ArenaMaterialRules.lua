@@ -27,10 +27,10 @@ function ArenaMaterialRules.targetMaterial(variant, originalMaterial, bucket, ti
             return Enum.Material.Slate
         end
     elseif id == "Orbital" then
-        if originalMaterial == Enum.Material.DiamondPlate
-            or originalMaterial == Enum.Material.SmoothPlastic
+        if originalMaterial == Enum.Material.Metal
+            or originalMaterial == Enum.Material.DiamondPlate
         then
-            return Enum.Material.Metal
+            return Enum.Material.SmoothPlastic
         end
     else
         if originalMaterial == Enum.Material.Metal then
