@@ -1764,6 +1764,9 @@ while true do
                 soloMode = roundSettings.Solo,
                 elapsedSeconds = math.floor(roundElapsed + 0.5),
                 criticalSurvival = criticalSurvival,
+                eliminationCause = survived
+                    and nil
+                    or tostring(eliminationCauses[p.UserId] or "Unknown"),
                 arenaMastery = arenaMasteryState,
                 arenaMasteryName = roundSettings.ArenaName,
                 disasterMastery = disasterMasteryState,
