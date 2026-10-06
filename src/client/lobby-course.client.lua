@@ -1,12 +1,15 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
@@ -41,7 +44,7 @@ local label = Instance.new("TextLabel")
 label.Size = UDim2.fromScale(1, 1)
 label.BackgroundTransparency = 1
 label.Font = Enum.Font.GothamBlack
-label.Text = "PRACTICE COURSE  •  1/4"
+label.Text = CoreLocalization.text(localeId, "PRACTICE_COURSE_PROGRESS", 1, 4)
 label.TextColor3 = UITheme.Colors.Text
 label.TextScaled = true
 label.Parent = card
@@ -101,7 +104,7 @@ local function makeCheckpoint(index, offset)
     text.BackgroundTransparency = 0.18
     text.BorderSizePixel = 0
     text.Font = Enum.Font.GothamBlack
-    text.Text = "CHECK " .. index
+    text.Text = CoreLocalization.text(localeId, "PRACTICE_CHECK", index)
     text.TextColor3 = part.Color
     text.TextScaled = true
     text.Parent = billboard
@@ -126,12 +129,14 @@ local function resetCourse()
         bundle.part.Color = index == 1 and UITheme.Colors.Cyan or UITheme.Colors.Violet
         bundle.part.Transparency = index == 1 and 0.34 or 0.78
         bundle.text.TextColor3 = bundle.part.Color
-        bundle.text.Text = index == 1 and "START" or ("CHECK " .. index)
+        bundle.text.Text = index == 1
+            and CoreLocalization.text(localeId, "PRACTICE_START")
+            or CoreLocalization.text(localeId, "PRACTICE_CHECK", index)
     end
 
     label.Text = bestTime
-        and string.format("PRACTICE COURSE  •  START  •  BEST %.2fs", bestTime)
-        or "PRACTICE COURSE  •  TOUCH START"
+        and CoreLocalization.text(localeId, "PRACTICE_COURSE_START_BEST", bestTime)
+        or CoreLocalization.text(localeId, "PRACTICE_COURSE_TOUCH_START")
 end
 
 local function pulseCard(color)
@@ -154,7 +159,7 @@ local function completeCheckpoint()
     local bundle = checkpointParts[currentIndex]
     if bundle then
         bundle.part.Transparency = 0.88
-        bundle.text.Text = "DONE"
+        bundle.text.Text = CoreLocalization.text(localeId, "DONE")
         bundle.text.TextColor3 = UITheme.Colors.Green
     end
 
@@ -162,10 +167,15 @@ local function completeCheckpoint()
         local elapsed = startedAt and math.max(0, now - startedAt) or 0
         if not bestTime or elapsed < bestTime then
             bestTime = elapsed
-            label.Text = string.format("NEW BEST  •  %.2fs", elapsed)
+            label.Text = CoreLocalization.text(localeId, "PRACTICE_NEW_BEST", elapsed)
             pulseCard(UITheme.Colors.Gold)
         else
-            label.Text = string.format("FINISH  •  %.2fs  •  BEST %.2fs", elapsed, bestTime)
+            label.Text = CoreLocalization.text(
+                localeId,
+                "PRACTICE_FINISH_BEST",
+                elapsed,
+                bestTime
+            )
             pulseCard(UITheme.Colors.Green)
         end
 
@@ -183,7 +193,7 @@ local function completeCheckpoint()
     local nextBundle = checkpointParts[currentIndex]
     nextBundle.part.Color = UITheme.Colors.Cyan
     nextBundle.part.Transparency = 0.32
-    nextBundle.text.Text = "NEXT"
+    nextBundle.text.Text = CoreLocalization.text(localeId, "NEXT")
     nextBundle.text.TextColor3 = UITheme.Colors.Cyan
     pulseCard(UITheme.Colors.Cyan)
 end
@@ -244,8 +254,9 @@ task.spawn(function()
             completeCheckpoint()
         elseif startedAt then
             local elapsed = os.clock() - startedAt
-            label.Text = string.format(
-                "PRACTICE COURSE  •  %d/%d  •  %.2fs",
+            label.Text = CoreLocalization.text(
+                localeId,
+                "PRACTICE_COURSE_TIMER",
                 currentIndex,
                 #checkpointParts,
                 elapsed
