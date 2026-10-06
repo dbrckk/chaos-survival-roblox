@@ -202,7 +202,7 @@ levelToastText.BackgroundTransparency = 1
 levelToastText.Font = Enum.Font.GothamBlack
 levelToastText.TextColor3 = Color3.fromRGB(245, 250, 255)
 levelToastText.TextScaled = true
-levelToastText.Text = "LEVEL UP!"
+levelToastText.Text = CoreLocalization.text(localeId, "LEVEL_REACHED", 1)
 levelToastText.ZIndex = 31
 levelToastText.Parent = levelToast
 
@@ -218,7 +218,7 @@ local function xpProgressForLevel(level, xp)
 end
 
 local function showLevelUp(level)
-    levelToastText.Text = "LEVEL " .. tostring(level) .. "!"
+    levelToastText.Text = CoreLocalization.text(localeId, "LEVEL_REACHED", level)
     levelToast.Visible = true
     levelToast.BackgroundTransparency = 1
     levelToastScale.Scale = 0.78
@@ -765,7 +765,7 @@ cosmeticsHeader.Font = Enum.Font.GothamBlack
 cosmeticsHeader.TextColor3 = Color3.new(1, 1, 1)
 cosmeticsHeader.TextScaled = true
 cosmeticsHeader.TextXAlignment = Enum.TextXAlignment.Left
-cosmeticsHeader.Text = "LOADOUT • TRAIL + AURA"
+cosmeticsHeader.Text = CoreLocalization.text(localeId, "LOADOUT_TRAIL_AURA")
 cosmeticsHeader.Parent = cosmeticsPanel
 
 local cosmeticsList = Instance.new("ScrollingFrame")
@@ -787,10 +787,10 @@ local previousCosmeticOwnedCount = nil
 local pendingCollectorMilestone = nil
 
 local COLLECTOR_MILESTONES = {
-    [3] = "COLLECTOR I",
-    [6] = "COLLECTOR II",
-    [9] = "COLLECTOR III",
-    [11] = "COLLECTION COMPLETE",
+    [3] = "COLLECTOR_I",
+    [6] = "COLLECTOR_II",
+    [9] = "COLLECTOR_III",
+    [11] = "COLLECTOR_COMPLETE",
 }
 
 local RARITY_COLORS = {
@@ -812,7 +812,7 @@ local function renderCosmetics(state)
                 if previousCosmeticOwnedCount < threshold and ownedNow >= threshold then
                     pendingCollectorMilestone = {
                         threshold = threshold,
-                        label = label,
+                        labelKey = label,
                     }
                 end
             end
@@ -825,8 +825,9 @@ local function renderCosmetics(state)
         local completedSets = math.max(0, math.floor(tonumber(collectionLog.completedCollections) or 0))
         local totalSets = math.max(0, math.floor(tonumber(collectionLog.totalCollections) or 0))
         if collectionLog.maxed == true then
-            cosmeticsHeader.Text = string.format(
-                "COLLECTION COMPLETE • %d/%d • SETS %d/%d",
+            cosmeticsHeader.Text = CoreLocalization.text(
+                localeId,
+                "COLLECTION_COMPLETE_SETS",
                 owned,
                 total,
                 completedSets,
@@ -834,8 +835,9 @@ local function renderCosmetics(state)
             )
         else
             local nextMilestone = math.max(owned, math.floor(tonumber(collectionLog.nextMilestone) or owned))
-            cosmeticsHeader.Text = string.format(
-                "LOADOUT • %d/%d • SETS %d/%d • NEXT %d",
+            cosmeticsHeader.Text = CoreLocalization.text(
+                localeId,
+                "LOADOUT_COLLECTION_NEXT",
                 owned,
                 total,
                 completedSets,
@@ -844,7 +846,7 @@ local function renderCosmetics(state)
             )
         end
     else
-        cosmeticsHeader.Text = "LOADOUT • TRAIL + AURA"
+        cosmeticsHeader.Text = CoreLocalization.text(localeId, "LOADOUT_TRAIL_AURA")
     end
 
     for _, child in ipairs(cosmeticsList:GetChildren()) do
@@ -876,10 +878,23 @@ local function renderCosmetics(state)
         local unlockLevel = tonumber(item.unlockLevel)
         local arenaMasteryId = item.arenaMasteryId and tostring(item.arenaMasteryId) or nil
         local arenaMasteryPoints = tonumber(item.arenaMasteryPoints)
-        local kindLabel = string.upper(tostring(item.kind or "cosmetic"))
+        local kindLabel = CoreLocalization.cosmeticKind(
+            localeId,
+            item.kind,
+            string.upper(tostring(item.kind or "cosmetic"))
+        )
         local rarity = tostring(item.rarity or "Common")
-        local rarityLabel = string.upper(rarity)
+        local rarityLabel = CoreLocalization.cosmeticRarity(
+            localeId,
+            rarity,
+            string.upper(rarity)
+        )
         local collection = tostring(item.collection or "")
+        local itemName = CoreLocalization.cosmeticName(
+            localeId,
+            item.id,
+            item.name
+        )
         local kindAccent = item.kind == "trail" and UITheme.Colors.Cyan or UITheme.Colors.Magenta
         local rarityAccent = RARITY_COLORS[rarity] or kindAccent
 
@@ -889,7 +904,7 @@ local function renderCosmetics(state)
         if isEquipped then
             button.Text = string.format(
                 "%s   •   %s   •   %s   •   %s",
-                item.name,
+                itemName,
                 rarityLabel,
                 kindLabel,
                 CoreLocalization.text(localeId, "EQUIPPED")
@@ -898,28 +913,48 @@ local function renderCosmetics(state)
         elseif isOwned then
             button.Text = string.format(
                 "%s   •   %s   •   %s   •   %s",
-                item.name,
+                itemName,
                 rarityLabel,
                 kindLabel,
                 CoreLocalization.text(localeId, "EQUIP")
             )
         elseif coinPrice and coinPrice > 0 then
-            button.Text = string.format("%s   •   %s   •   %s   •   %d COINS", item.name, rarityLabel, kindLabel, coinPrice)
+            button.Text = string.format(
+                "%s   •   %s   •   %s   •   %s",
+                itemName,
+                rarityLabel,
+                kindLabel,
+                CoreLocalization.text(localeId, "COSMETIC_PRICE_COINS", coinPrice)
+            )
             button.BackgroundColor3 = UITheme.Colors.Gold:Lerp(UITheme.Colors.Panel, 0.72)
         elseif unlockLevel then
-            button.Text = string.format("%s   •   %s   •   %s   •   LVL %d", item.name, rarityLabel, kindLabel, unlockLevel)
+            button.Text = string.format(
+                "%s   •   %s   •   %s   •   %s",
+                itemName,
+                rarityLabel,
+                kindLabel,
+                CoreLocalization.text(localeId, "COSMETIC_UNLOCK_LEVEL", unlockLevel)
+            )
             button.BackgroundColor3 = UITheme.Colors.PanelSoft
         elseif arenaMasteryId and arenaMasteryPoints then
             button.Text = string.format(
-                "%s   •   %s   •   %s   •   %s GOLD",
-                item.name,
+                "%s   •   %s   •   %s   •   %s",
+                itemName,
                 rarityLabel,
                 kindLabel,
-                string.upper(arenaMasteryId)
+                CoreLocalization.text(
+                    localeId,
+                    "COSMETIC_MASTERY_GOLD",
+                    CoreLocalization.arenaName(
+                        localeId,
+                        arenaMasteryId,
+                        string.upper(arenaMasteryId)
+                    )
+                )
             )
             button.BackgroundColor3 = UITheme.Colors.Violet:Lerp(UITheme.Colors.Panel, 0.74)
         else
-            button.Text = string.format("%s   •   %s   •   %s", item.name, rarityLabel, kindLabel)
+            button.Text = string.format("%s   •   %s   •   %s", itemName, rarityLabel, kindLabel)
             button.BackgroundColor3 = Color3.fromRGB(48, 49, 58)
         end
 
@@ -1458,13 +1493,13 @@ local function refreshDataStatus()
     end
 
     if player:GetAttribute("DataSaveConflict") == true then
-        dataWarning.Text = "NEWER SESSION DETECTED • THIS SESSION WILL NOT SAVE • REJOIN HERE TO CONTINUE"
+        dataWarning.Text = CoreLocalization.text(localeId, "DATA_CONFLICT_WARNING")
         dataWarning.Visible = true
     elseif player:GetAttribute("DataPersistenceAvailable") ~= true then
-        dataWarning.Text = "TEMPORARY SESSION • PROGRESS WILL NOT SAVE • REJOIN LATER"
+        dataWarning.Text = CoreLocalization.text(localeId, "DATA_TEMPORARY_WARNING")
         dataWarning.Visible = true
     elseif player:GetAttribute("LastSaveFailed") == true then
-        dataWarning.Text = "SAVE DELAYED • ROBLOX DATASTORE RETRYING"
+        dataWarning.Text = CoreLocalization.text(localeId, "DATA_SAVE_DELAYED_WARNING")
         dataWarning.Visible = true
     else
         dataWarning.Visible = false
@@ -2332,6 +2367,7 @@ end
 
 
 local currentHudPhase = "waiting"
+local currentVoteActive = false
 local pendingQuestCompletion = nil
 local pendingAchievement = nil
 local pendingDailyReward = nil
@@ -2341,6 +2377,7 @@ local function shouldDeferMetaNotification()
     return currentHudPhase == "ready"
         or currentHudPhase == "round"
         or currentHudPhase == "result"
+        or currentVoteActive
         or (tonumber(player:GetAttribute("Games")) or 0) <= 0
 end
 
@@ -2419,6 +2456,7 @@ end
 
 local function showOnePendingMetaNotification()
     if currentHudPhase ~= "intermission"
+        or currentVoteActive
         or metaNotificationShownThisIntermission
         or (tonumber(player:GetAttribute("Games")) or 0) <= 0
     then
@@ -2484,15 +2522,15 @@ monetizationStateEvent.OnClientEvent:Connect(function(payload)
     end
 
     if payload.notice == "purchase_complete" then
-        questToastTitle.Text = "THANK YOU"
-        questToastBody.Text = "Premium cosmetic unlocked • no gameplay advantage"
+        questToastTitle.Text = CoreLocalization.text(localeId, "THANK_YOU")
+        questToastBody.Text = CoreLocalization.text(localeId, "PREMIUM_COSMETIC_UNLOCKED")
         questToast.Visible = true
         task.delay(3.4, function()
             questToast.Visible = false
         end)
     elseif payload.notice == "data_unavailable" then
-        questToastTitle.Text = "PURCHASE TEMPORARILY PAUSED"
-        questToastBody.Text = "Your progress cannot be saved right now • rejoin before purchasing"
+        questToastTitle.Text = CoreLocalization.text(localeId, "PURCHASE_PAUSED")
+        questToastBody.Text = CoreLocalization.text(localeId, "PURCHASE_PAUSED_BODY")
         questToast.Visible = true
         task.delay(3.4, function()
             questToast.Visible = false
@@ -2512,30 +2550,34 @@ cosmeticStateEvent.OnClientEvent:Connect(function(payload)
 
     if payload.notice == "purchased" then
         if pendingCollectorMilestone then
-            questToastTitle.Text = pendingCollectorMilestone.label
-            questToastBody.Text = string.format(
-                "%d cosmetics collected • milestone reached",
+            questToastTitle.Text = CoreLocalization.text(
+                localeId,
+                pendingCollectorMilestone.labelKey
+            )
+            questToastBody.Text = CoreLocalization.text(
+                localeId,
+                "COLLECTOR_MILESTONE",
                 pendingCollectorMilestone.threshold
             )
             pendingCollectorMilestone = nil
         else
-            questToastTitle.Text = "COSMETIC UNLOCKED"
-            questToastBody.Text = "Equipped instantly • yours permanently"
+            questToastTitle.Text = CoreLocalization.text(localeId, "COSMETIC_UNLOCKED")
+            questToastBody.Text = CoreLocalization.text(localeId, "COSMETIC_UNLOCKED_BODY")
         end
         questToast.Visible = true
         task.delay(3.4, function()
             questToast.Visible = false
         end)
     elseif payload.notice == "insufficient_coins" then
-        questToastTitle.Text = "MORE COINS NEEDED"
-        questToastBody.Text = "Survive rounds and complete quests to earn more"
+        questToastTitle.Text = CoreLocalization.text(localeId, "MORE_COINS_NEEDED")
+        questToastBody.Text = CoreLocalization.text(localeId, "MORE_COINS_BODY")
         questToast.Visible = true
         task.delay(2.6, function()
             questToast.Visible = false
         end)
     elseif payload.notice == "data_unavailable" then
-        questToastTitle.Text = "SHOP TEMPORARILY PAUSED"
-        questToastBody.Text = "Your progress cannot be saved right now • try again later"
+        questToastTitle.Text = CoreLocalization.text(localeId, "SHOP_PAUSED")
+        questToastBody.Text = CoreLocalization.text(localeId, "SHOP_PAUSED_BODY")
         questToast.Visible = true
         task.delay(3.2, function()
             questToast.Visible = false
@@ -2600,6 +2642,9 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     local previousHudPhase = currentHudPhase
     currentHudPhase = tostring(state.phase or "waiting")
+    currentVoteActive = currentHudPhase == "intermission"
+        and type(state.voteOptions) == "table"
+        and #state.voteOptions > 0
     compactRoundTop = touchDevice and currentHudPhase == "round"
     top.Visible = currentHudPhase ~= "result"
 
