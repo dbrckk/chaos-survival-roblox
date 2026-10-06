@@ -528,6 +528,36 @@ do
         )
     end
 
+    for _, legacyName in ipairs({
+        "ChaosColor",
+        "ChaosAtmosphere",
+        "ChaosBloom",
+        "ChaosRays",
+    }) do
+        check(
+            Lighting:FindFirstChild(legacyName) == nil,
+            legacyName .. " legacy post-process should not exist"
+        )
+    end
+
+    for _, className in ipairs({
+        "Atmosphere",
+        "BloomEffect",
+        "DepthOfFieldEffect",
+        "SunRaysEffect",
+    }) do
+        local total = 0
+        for _, child in ipairs(Lighting:GetChildren()) do
+            if child.ClassName == className then
+                total += 1
+            end
+        end
+        check(
+            total == 1,
+            string.format("%s expected exactly once in Lighting, found %d", className, total)
+        )
+    end
+
     visualMetrics, auditedFolders = VisualBudgetRules.collect(workspace)
 
     for _, folderName in ipairs(VisualBudgetRules.LocalFolders) do
