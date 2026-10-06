@@ -113,6 +113,7 @@ Duration target: 30–60 minutes.
 - Visual budget warning observed: yes / no
 - Latest PerformancePulse Visual: P/L/E:
 - Latest PerformancePulse Budget status: OK / OVER / UNKNOWN
+- Latest PerformancePulse context: phase / chaos count / final rush
 - Device heat/battery notes:
 
 ## Visual / animation regression
