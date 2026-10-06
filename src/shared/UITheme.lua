@@ -30,7 +30,7 @@ UITheme.DisasterAccents = {
     SpeedSurge = Color3.fromRGB(245, 82, 205),
     Darkness = Color3.fromRGB(108, 96, 205),
     ShrinkingArena = Color3.fromRGB(190, 82, 245),
-    JumpShock = Color3.fromRGB(82, 155, 255),
+    JumpShock = Color3.fromRGB(55, 225, 255),
 }
 
 UITheme.Corners = {
