@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -10,8 +9,6 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local watched = setmetatable({}, {__mode = "k"})
 local phase = "waiting"
 local finalRush = false
-local clock = 0
-local updateClock = 0
 local modelSequence = 0
 
 local function qualityScale()
@@ -77,18 +74,6 @@ local function ensureTrail(root, accent)
     return trail
 end
 
-local function ensureLeanMotor(model)
-    local lower = model:FindFirstChild("LowerTorso")
-    local root = model:FindFirstChild("HumanoidRootPart")
-    if lower and root then
-        local rootJoint = lower:FindFirstChild("Root")
-        if rootJoint and rootJoint:IsA("Motor6D") then
-            return rootJoint
-        end
-    end
-    return nil
-end
-
 local function accentFor(model)
     local accent = model:GetAttribute("ChaosAccent")
     if typeof(accent) == "Color3" then
@@ -123,19 +108,11 @@ local function watchModel(model)
         model = model,
         humanoid = humanoid,
         root = root,
-        rootJoint = ensureLeanMotor(model),
-        baseTransform = CFrame.identity,
         trail = nil,
         airborne = false,
-        airborneAt = nil,
-        landingKick = 0,
         isAI = isAI,
         phaseOffset = (modelSequence * 0.73) % 6.28,
     }
-
-    if state.rootJoint then
-        state.baseTransform = state.rootJoint.Transform
-    end
 
     -- AI survivors already own a dedicated cosmetic trail managed by
     -- bot-motion-polish; avoid stacking a second trail on the same rig.
@@ -149,17 +126,11 @@ local function watchModel(model)
             or newState == Enum.HumanoidStateType.Freefall
         then
             state.airborne = true
-            state.airborneAt = state.airborneAt or os.clock()
         elseif newState == Enum.HumanoidStateType.Landed
             or newState == Enum.HumanoidStateType.Running
             or newState == Enum.HumanoidStateType.RunningNoPhysics
         then
-            if state.airborneAt then
-                local airtime = os.clock() - state.airborneAt
-                state.landingKick = math.clamp((airtime - 0.2) / 0.8, 0, 1)
-            end
             state.airborne = false
-            state.airborneAt = nil
         end
     end)
 end
@@ -204,82 +175,46 @@ stateEvent.OnClientEvent:Connect(function(state)
     finalRush = phase == "round" and state.finalRush == true
 end)
 
-RunService.RenderStepped:Connect(function(dt)
-    clock += dt
-    updateClock += dt
+task.spawn(function()
+    while true do
+        local scale, tier = qualityScale()
+        task.wait(math.max(1 / 30, tier.UpdateInterval))
 
-    local scale, tier = qualityScale()
-    if updateClock < math.max(1 / 45, tier.UpdateInterval) then
-        return
-    end
-    updateClock = 0
+        for model, state in pairs(watched) do
+            if not activeModel(model) then
+                if state.trail and state.trail.Parent then
+                    state.trail.Enabled = false
+                end
+                continue
+            end
 
-    for model, state in pairs(watched) do
-        if not activeModel(model) then
+            local root = state.root
+            local humanoid = state.humanoid
+            if not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
+                continue
+            end
+
+            local localVelocity = root.CFrame:VectorToObjectSpace(root.AssemblyLinearVelocity)
+            local horizontalSpeed = Vector3.new(localVelocity.X, 0, localVelocity.Z).Magnitude
+            local normalized = math.clamp(horizontalSpeed / math.max(1, humanoid.WalkSpeed), 0, 1.35)
+
             if state.trail and state.trail.Parent then
-                state.trail.Enabled = false
-            end
-            if state.rootJoint and state.rootJoint.Parent then
-                state.rootJoint.Transform = state.baseTransform
-            end
-            continue
-        end
+                local shouldTrail = phase == "round"
+                    and not finalRush
+                    and not state.airborne
+                    and normalized > 0.82
+                    and tier.Name ~= "Low"
 
-        local root = state.root
-        local humanoid = state.humanoid
-        if not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
-            continue
-        end
-
-        local localVelocity = root.CFrame:VectorToObjectSpace(root.AssemblyLinearVelocity)
-        local horizontalSpeed = Vector3.new(localVelocity.X, 0, localVelocity.Z).Magnitude
-        local normalized = math.clamp(horizontalSpeed / math.max(1, humanoid.WalkSpeed), 0, 1.35)
-
-        if state.rootJoint and state.rootJoint.Parent then
-            local pitch = math.rad(math.clamp(localVelocity.Z * 0.45, -8, 8))
-            local roll = math.rad(math.clamp(-localVelocity.X * 0.48, -7, 7))
-            local bob = 0
-
-            if not state.airborne and normalized > 0.12 then
-                bob = math.sin(clock * (7.2 + normalized * 2.4) + state.phaseOffset)
-                    * 0.035
-                    * normalized
-            end
-
-            if state.isAI then
-                pitch *= 0.92
-                roll *= 1.08
-            end
-
-            if state.airborne then
-                pitch *= 0.45
-                roll *= 0.55
-            end
-
-            local landing = state.landingKick
-            state.landingKick = math.max(0, state.landingKick - dt * 4.5)
-
-            state.rootJoint.Transform = state.baseTransform
-                * CFrame.new(0, -bob - landing * 0.06 * scale, 0)
-                * CFrame.Angles(
-                    (pitch - landing * math.rad(4.5)) * scale,
-                    0,
-                    roll * scale
-                )
-        end
-
-        if state.trail and state.trail.Parent then
-            local shouldTrail = phase == "round"
-                and not finalRush
-                and not state.airborne
-                and normalized > (state.isAI and 0.72 or 0.82)
-                and tier.Name ~= "Low"
-
-            state.trail.Enabled = shouldTrail
-            if shouldTrail then
-                state.trail.Lifetime = (state.isAI and 0.11 or 0.14)
-                    * (tier.Name == "High" and 1 or 0.78)
-                    * (localPlayer:GetAttribute("ReduceMotion") == true and 0.35 or 1)
+                state.trail.Enabled = shouldTrail
+                if shouldTrail then
+                    state.trail.Lifetime = 0.14
+                        * (tier.Name == "High" and 1 or 0.78)
+                        * (localPlayer:GetAttribute("ReduceMotion") == true and 0.35 or 1)
+                    state.trail.WidthScale = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0.34 * scale),
+                        NumberSequenceKeypoint.new(1, 0),
+                    })
+                end
             end
         end
     end
