@@ -61,35 +61,6 @@ local function currentVfxTier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function pulseCamera()
-    if player:GetAttribute("ReduceMotion") == true then
-        return
-    end
-
-    local camera = workspace.CurrentCamera
-    if not camera then
-        return
-    end
-
-    local base = camera.FieldOfView
-    TweenService:Create(
-        camera,
-        TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {FieldOfView = math.min(86, base + 4)}
-    ):Play()
-
-    task.delay(0.09, function()
-        camera = workspace.CurrentCamera
-        if camera then
-            TweenService:Create(
-                camera,
-                TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {FieldOfView = base}
-            ):Play()
-        end
-    end)
-end
-
 local function pulseCharacter(accent)
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -154,9 +125,6 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         {BackgroundTransparency = 1}
     ):Play()
 
-    if tier.Name ~= "Low" then
-        pulseCamera()
-    end
     pulseCharacter(accent)
 
     if overdrive then
