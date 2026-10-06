@@ -25,6 +25,11 @@ local reportEvent = ReplicatedStorage:WaitForChild("ChaosE2EReport")
 local failures = {}
 local roundStateReceived = false
 local lastRoundPhase = nil
+local visualMetrics = {
+    Parts = 0,
+    Lights = 0,
+    Effects = 0,
+}
 local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 
@@ -267,19 +272,13 @@ do
     }
 
     local auditedFolders = 0
-    local metrics = {
-        Parts = 0,
-        Lights = 0,
-        Effects = 0,
-    }
-
     for _, folderName in ipairs(visualFolders) do
         local folder = workspace:FindFirstChild(folderName)
         if folder then
             auditedFolders += 1
             for _, descendant in ipairs(folder:GetDescendants()) do
                 if descendant:IsA("BasePart") then
-                    metrics.Parts += 1
+                    visualMetrics.Parts += 1
                     check(not descendant.CanCollide, folderName .. ": decorative part can collide")
                     check(not descendant.CanTouch, folderName .. ": decorative part can touch")
                     check(not descendant.CanQuery, folderName .. ": decorative part can query")
@@ -287,12 +286,12 @@ do
                     or descendant:IsA("SpotLight")
                     or descendant:IsA("SurfaceLight")
                 then
-                    metrics.Lights += 1
+                    visualMetrics.Lights += 1
                 elseif descendant:IsA("ParticleEmitter")
                     or descendant:IsA("Trail")
                     or descendant:IsA("Beam")
                 then
-                    metrics.Effects += 1
+                    visualMetrics.Effects += 1
                 end
             end
         end
@@ -302,13 +301,13 @@ do
 
     local tierName = tostring(player:GetAttribute("VfxQualityTier") or "High")
     check(
-        VisualBudgetRules.withinBudget(tierName, metrics),
+        VisualBudgetRules.withinBudget(tierName, visualMetrics),
         string.format(
             "visual budget exceeded for %s: parts=%d lights=%d effects=%d",
             tierName,
-            metrics.Parts,
-            metrics.Lights,
-            metrics.Effects
+            visualMetrics.Parts,
+            visualMetrics.Lights,
+            visualMetrics.Effects
         )
     )
 end
@@ -345,6 +344,9 @@ reportEvent:FireServer({
     roundPhase = lastRoundPhase,
     roundParticipant = player:GetAttribute("RoundParticipant") == true,
     roundEliminated = player:GetAttribute("RoundEliminated") == true,
+    vfxTier = tostring(player:GetAttribute("VfxQualityTier") or "Unknown"),
+    fieldOfView = workspace.CurrentCamera and workspace.CurrentCamera.FieldOfView or 0,
+    visualMetrics = visualMetrics,
 })
 
 local function runSpectatorProbe()
