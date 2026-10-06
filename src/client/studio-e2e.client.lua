@@ -112,14 +112,22 @@ check(juice ~= nil, "ChaosJuice missing")
 check(spectator ~= nil, "ChaosSpectator missing")
 check(accessibilityGui ~= nil, "AccessibilityQuickSettings missing")
 if accessibilityGui then
-    local motionToggle = accessibilityGui:FindFirstChild("ReduceMotionToggle", true)
-    check(motionToggle ~= nil, "ReduceMotionToggle missing")
-    if motionToggle and motionToggle:IsA("GuiObject") then
-        check(
-            motionToggle.AbsoluteSize.X >= 44 and motionToggle.AbsoluteSize.Y >= 44,
-            "ReduceMotionToggle tap target too small"
-        )
-        check(insideViewport(motionToggle), "ReduceMotionToggle outside viewport")
+    for _, controlName in ipairs({
+        "ReduceMotionToggle",
+        "AudioToggle",
+        "HapticsToggle",
+    }) do
+        local control = accessibilityGui:FindFirstChild(controlName, true)
+        check(control ~= nil, controlName .. " missing")
+        if control and control:IsA("GuiObject") then
+            local minimumHeight = UserInputService.TouchEnabled and 44 or 34
+            check(
+                control.AbsoluteSize.X >= 44
+                    and control.AbsoluteSize.Y >= minimumHeight,
+                controlName .. " tap target too small"
+            )
+            check(insideViewport(control), controlName .. " outside viewport")
+        end
     end
 end
 if spectator then
