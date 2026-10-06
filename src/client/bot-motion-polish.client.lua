@@ -78,7 +78,7 @@ end)
 task.spawn(function()
     while true do
         local q = tier()
-        task.wait(math.max(1 / 30, q.UpdateInterval))
+        task.wait(q.DecorUpdateInterval or math.max(1 / 30, q.UpdateInterval))
 
         local reduceMotion = player:GetAttribute("ReduceMotion") == true
 
