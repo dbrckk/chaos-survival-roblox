@@ -118,11 +118,19 @@ jobs:
         shell: bash
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-          ROBLOX_UNIVERSE_ID: "8998396328"
-          ROBLOX_PLACE_ID: "101933452561772"
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
         run: |
           test -n "$ROBLOX_API_KEY" || {
             echo "ROBLOX_API_KEY secret is missing."
+            exit 1
+          }
+          test -n "$ROBLOX_UNIVERSE_ID" || {
+            echo "ROBLOX_UNIVERSE_ID repository variable is missing."
+            exit 1
+          }
+          test -n "$ROBLOX_PLACE_ID" || {
+            echo "ROBLOX_PLACE_ID repository variable is missing."
             exit 1
           }
 
