@@ -21,11 +21,19 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ github.event_name == 'push' || inputs.confirm == 'PUBLISH' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
+      - name: Validate publish confirmation
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          test "${{ inputs.confirm }}" = "PUBLISH" || {
+            echo "Type PUBLISH to deploy the selected main commit."
+            exit 1
+          }
+
       - uses: actions/checkout@v4
 
       - name: Require safe publish ref
