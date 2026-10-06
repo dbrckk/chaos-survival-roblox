@@ -535,7 +535,9 @@ local questButton = Instance.new("TextButton")
 questButton.Name = "QuestButton"
 questButton.AnchorPoint = Vector2.new(0, 1)
 questButton.Position = UDim2.fromScale(0.025, touchDevice and 0.88 or 0.90)
-questButton.Size = UDim2.fromScale(touchDevice and 0.20 or 0.22, touchDevice and 0.055 or 0.065)
+questButton.Size = touchDevice
+    and UDim2.new(0.20, 0, 0, 44)
+    or UDim2.fromScale(0.22, 0.065)
 questButton.BackgroundColor3 = UITheme.Colors.PanelRaised
 questButton.BackgroundTransparency = 0.04
 questButton.BorderSizePixel = 0
@@ -724,7 +726,9 @@ local cosmeticsButton = Instance.new("TextButton")
 cosmeticsButton.Name = "CosmeticsButton"
 cosmeticsButton.AnchorPoint = Vector2.new(1, 1)
 cosmeticsButton.Position = UDim2.fromScale(0.975, touchDevice and 0.88 or 0.90)
-cosmeticsButton.Size = UDim2.fromScale(touchDevice and 0.23 or 0.26, touchDevice and 0.055 or 0.065)
+cosmeticsButton.Size = touchDevice
+    and UDim2.new(0.23, 0, 0, 44)
+    or UDim2.fromScale(0.26, 0.065)
 cosmeticsButton.BackgroundColor3 = UITheme.Colors.PanelRaised
 cosmeticsButton.BackgroundTransparency = 0.04
 cosmeticsButton.BorderSizePixel = 0
@@ -977,7 +981,9 @@ local supportButton = Instance.new("TextButton")
 supportButton.Name = "SupportButton"
 supportButton.AnchorPoint = Vector2.new(1, 1)
 supportButton.Position = UDim2.fromScale(0.975, 0.825)
-supportButton.Size = UDim2.fromScale(0.26, 0.055)
+supportButton.Size = touchDevice
+    and UDim2.new(0.26, 0, 0, 44)
+    or UDim2.fromScale(0.26, 0.055)
 supportButton.BackgroundColor3 = UITheme.Colors.PanelRaised
 supportButton.BackgroundTransparency = 0.04
 supportButton.BorderSizePixel = 0
@@ -1115,7 +1121,9 @@ local achievementButton = Instance.new("TextButton")
 achievementButton.Name = "AchievementButton"
 achievementButton.AnchorPoint = Vector2.new(0.5, 1)
 achievementButton.Position = UDim2.fromScale(0.5, touchDevice and 0.88 or 0.90)
-achievementButton.Size = UDim2.fromScale(touchDevice and 0.27 or 0.30, touchDevice and 0.055 or 0.065)
+achievementButton.Size = touchDevice
+    and UDim2.new(0.27, 0, 0, 44)
+    or UDim2.fromScale(0.30, 0.065)
 achievementButton.BackgroundColor3 = UITheme.Colors.PanelRaised
 achievementButton.BackgroundTransparency = 0.04
 achievementButton.BorderSizePixel = 0
