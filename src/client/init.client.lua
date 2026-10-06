@@ -311,6 +311,7 @@ countdownScale.Scale = 1
 countdownScale.Parent = countdownCard
 
 local countdownKicker = Instance.new("TextLabel")
+countdownKicker.Name = "CountdownKicker"
 countdownKicker.Size = UDim2.new(1, -28, 0.22, 0)
 countdownKicker.Position = UDim2.new(0, 14, 0.08, 0)
 countdownKicker.BackgroundTransparency = 1
@@ -323,6 +324,7 @@ countdownKicker.Parent = countdownCard
 UITheme.addTextConstraint(countdownKicker, 12, 18)
 
 local countdownMain = Instance.new("TextLabel")
+countdownMain.Name = "CountdownMain"
 countdownMain.Size = UDim2.new(1, -28, 0.43, 0)
 countdownMain.Position = UDim2.new(0, 14, 0.29, 0)
 countdownMain.BackgroundTransparency = 1
@@ -336,6 +338,7 @@ countdownMain.Parent = countdownCard
 UITheme.addTextConstraint(countdownMain, 22, 44)
 
 local countdownSub = Instance.new("TextLabel")
+countdownSub.Name = "CountdownGuidance"
 countdownSub.Size = UDim2.new(1, -28, 0.18, 0)
 countdownSub.Position = UDim2.new(0, 14, 0.75, 0)
 countdownSub.BackgroundTransparency = 1
