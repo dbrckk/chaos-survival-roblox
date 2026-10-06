@@ -1,0 +1,373 @@
+CHAOS SURVIVAL — MATRICE DE PERFECTION ET HARMONISATION
+=======================================================
+
+Usage
+-----
+Ce fichier est le tableau de bord de qualité final.
+Échelle :
+0 = absent/cassé
+1 = prototype
+2 = fonctionnel
+3 = bon
+4 = premium
+5 = référence / excellent dans le contexte Roblox
+
+IMPORTANT :
+Une note sans preuve est provisoire.
+Les notes visuelles/tactiles ne peuvent pas atteindre 5 sans test réel appareil/Studio.
+
+Seuils :
+- RELEASE BLOCKER : <3 sur une discipline P0.
+- PREMIUM BLOCKER : <4 sur une discipline principale.
+- "FINAL" : aucune note <4 sur les disciplines principales + preuves release complètes.
+
+======================================================================
+A. CORE EXPERIENCE
+======================================================================
+
+[ ] Clarté première minute ............. /5
+[ ] Contrôle / responsiveness .......... /5
+[ ] Fun boucle principale .............. /5
+[ ] Tension / relief ................... /5
+[ ] Fairness ........................... /5
+[ ] Variété catastrophes ............... /5
+[ ] Double Chaos ....................... /5
+[ ] Final Rush ......................... /5
+[ ] Revanche / one-more-round .......... /5
+
+Questions d'harmonisation :
+- Le round démarre-t-il assez vite ?
+- Les effets aident-ils la décision ?
+- Les systèmes secondaires disparaissent-ils sous pression ?
+
+======================================================================
+B. LEVELS / WORLD
+======================================================================
+
+Pour chaque arène : Classic / Towers / Crossroads / Orbital
+
+[ ] Silhouette ......................... /5
+[ ] Landmark ........................... /5
+[ ] Routes ............................. /5
+[ ] Verticalité ........................ /5
+[ ] Lisibilité hazards ................. /5
+[ ] Profondeur 5 couches ............... /5
+[ ] Storytelling environnemental ....... /5
+[ ] Matériaux .......................... /5
+[ ] Lighting ........................... /5
+[ ] Performance ........................ /5
+
+Aucune arène ne doit être "la faible".
+
+======================================================================
+C. VISUALS
+======================================================================
+
+[ ] Direction artistique ............... /5
+[ ] PBR / matériaux .................... /5
+[ ] Lighting ........................... /5
+[ ] VFX ................................ /5
+[ ] Character readability .............. /5
+[ ] Animation authored ................. /5
+[ ] Camera ............................. /5
+[ ] UI visual design ................... /5
+[ ] Low VFX ............................ /5
+[ ] Medium VFX ......................... /5
+[ ] High VFX ........................... /5
+
+Garde-fou :
+spectacle ne peut pas noter 5 si lisibilité <4.
+
+======================================================================
+D. AUDIO
+======================================================================
+
+[ ] Hazard signatures .................. /5
+[ ] Spatial audio ...................... /5
+[ ] Mix / ducking ...................... /5
+[ ] Movement feedback .................. /5
+[ ] Result feedback .................... /5
+[ ] Arena ambience ..................... /5
+[ ] Asset originality/quality .......... /5
+[ ] Fatigue 30 min ..................... /5
+
+======================================================================
+E. UX
+======================================================================
+
+[ ] Join ............................... /5
+[ ] Lobby .............................. /5
+[ ] Vote ............................... /5
+[ ] READY .............................. /5
+[ ] ROUND .............................. /5
+[ ] Elimination ....................... /5
+[ ] Spectator .......................... /5
+[ ] RESULT ............................. /5
+[ ] Return loop ........................ /5
+[ ] Menus .............................. /5
+[ ] Localization FR/EN ................. /5
+
+======================================================================
+F. MOBILE
+======================================================================
+
+[ ] Touch controls ..................... /5
+[ ] Safe areas ......................... /5
+[ ] Text ............................... /5
+[ ] Warning visibility ................. /5
+[ ] Camera comfort ..................... /5
+[ ] FPS/frame pacing ................... /5
+[ ] Heat/battery ....................... /5
+[ ] 30–60 min stability ................ /5
+
+Tant que vrai Android non testé :
+notes maximum = 3, statut = NON TESTÉ.
+
+======================================================================
+G. SOCIAL
+======================================================================
+
+[ ] Presence of others ................. /5
+[ ] Vote social ........................ /5
+[ ] Shared climax ...................... /5
+[ ] Survivor presentation .............. /5
+[ ] Reactions .......................... /5
+[ ] Crew continuity .................... /5
+[ ] Invite flow ........................ /5
+[ ] Share flow ......................... /5
+[ ] Friend arrival ..................... /5
+[ ] No interruption/spam ............... /5
+
+======================================================================
+H. SOLO / AI
+======================================================================
+
+[ ] Lobby life ......................... /5
+[ ] Human-like motion .................. /5
+[ ] Human-like mistakes ................ /5
+[ ] Hazard awareness ................... /5
+[ ] Map awareness ...................... /5
+[ ] Vote behavior ...................... /5
+[ ] Result reactions ................... /5
+[ ] Fairness ........................... /5
+[ ] Spectator value .................... /5
+
+======================================================================
+I. META / RETENTION
+======================================================================
+
+[ ] Next goal .......................... /5
+[ ] XP/level ........................... /5
+[ ] Mastery ............................ /5
+[ ] Daily quests ....................... /5
+[ ] Weekly ............................. /5
+[ ] Achievements ....................... /5
+[ ] Collection ......................... /5
+[ ] Cosmetics desirability ............. /5
+[ ] Return motivation .................. /5
+[ ] No grind fatigue ................... /5
+
+======================================================================
+J. ECONOMY / MONETIZATION
+======================================================================
+
+[ ] Economy clarity .................... /5
+[ ] Sources/sinks ...................... /5
+[ ] Cosmetic value ..................... /5
+[ ] Fair pricing ....................... /5
+[ ] No P2W ............................. /5
+[ ] No dark patterns ................... /5
+[ ] Purchase persistence ............... /5
+
+======================================================================
+K. ENGINEERING
+======================================================================
+
+[ ] Architecture ....................... /5
+[ ] Server authority ................... /5
+[ ] Remote validation .................. /5
+[ ] Cleanup ............................ /5
+[ ] Performance budgets ................ /5
+[ ] Data persistence ................... /5
+[ ] Session ownership .................. /5
+[ ] Tests .............................. /5
+[ ] CI reliability ..................... /5
+[ ] Observability ...................... /5
+
+======================================================================
+L. ACCESSIBILITY
+======================================================================
+
+[ ] ReduceMotion ....................... /5
+[ ] Muted audio playable ............... /5
+[ ] Non-color-only information ......... /5
+[ ] Contrast ........................... /5
+[ ] Text ............................... /5
+[ ] Haptics comfort .................... /5
+[ ] Flash/strobe safety ................ /5
+
+======================================================================
+M. PUBLIC PRESENTATION
+======================================================================
+
+[ ] Icon ............................... /5
+[ ] Thumbnail 1 ........................ /5
+[ ] Thumbnail set ...................... /5
+[ ] Description ........................ /5
+[ ] Trailer ............................ /5
+[ ] Screenshots ........................ /5
+[ ] Store promise matches game ......... /5
+
+======================================================================
+N. RELEASE EVIDENCE
+======================================================================
+
+[ ] Build exact SHA
+[ ] Open Cloud exact SHA
+[ ] Studio E2E exact lineage
+[ ] Android exact lineage
+[ ] Desktop exact lineage
+[ ] Persistence/rejoin
+[ ] 30–60 min soak
+[ ] Public alpha
+[ ] Monetization validation
+[ ] Rollback tag
+[ ] Post-publish smoke
+
+======================================================================
+HARMONISATION PASS — À FAIRE APRÈS CHAQUE GROS CHANTIER
+======================================================================
+
+1. SUPPRIMER
+- doublons ;
+- VFX sans fonction ;
+- texte inutile ;
+- systèmes qui ne servent plus ;
+- accents visuels concurrents.
+
+2. NORMALISER
+- timing animations ;
+- easing ;
+- UI spacing ;
+- corner radius ;
+- strokes ;
+- couleurs ;
+- volume audio ;
+- haptics ;
+- terminology.
+
+3. RÉÉQUILIBRER
+- densité par phase ;
+- lumière ;
+- audio ;
+- particles ;
+- rewards ;
+- durée intermission/result.
+
+4. COMPARER LES 4 ARÈNES
+Si une arène paraît clairement moins finie :
+elle devient priorité absolue.
+
+5. COMPARER LES 11 CATASTROPHES
+Si une catastrophe paraît moins lisible/mémorable :
+elle devient priorité.
+
+6. COMPARER SOLO / MULTI
+Solo doit être complet.
+Multi doit être plus riche socialement, pas mécaniquement obligatoire.
+
+7. COMPARER MOBILE / DESKTOP
+Le mobile ne doit pas recevoir une version "pauvre" du gameplay.
+Il peut recevoir moins de décor, jamais moins d'information.
+
+8. TESTER SANS SON
+9. TESTER VFX LOW
+10. TESTER REDUCE MOTION
+11. TESTER PREMIÈRE SESSION
+12. TESTER JOUEUR EXPÉRIMENTÉ
+13. TESTER 30 MIN
+14. TESTER APRÈS FATIGUE VISUELLE
+
+======================================================================
+PASS "PENSER DIFFÉREMMENT"
+======================================================================
+
+Après avoir résolu les défauts évidents, poser systématiquement :
+
+- Et si on supprimait cette feature ?
+- Et si le joueur ne lisait aucun texte ?
+- Et si le joueur était seul ?
+- Et s'il jouait avec trois amis ?
+- Et s'il perdait cinq fois ?
+- Et s'il gagnait cinq fois ?
+- Et s'il avait le son coupé ?
+- Et si son téléphone chauffait ?
+- Et s'il était daltonien ?
+- Et s'il rejoignait à 5 secondes de la fin ?
+- Et s'il ne revenait qu'une semaine plus tard ?
+- Et s'il ne voulait jamais ouvrir le shop ?
+- Et si le serveur laggait ?
+- Et si deux hazards produisaient le même signal ?
+- Et si la meilleure amélioration était de réduire plutôt qu'ajouter ?
+- Quelle est la chose la plus "cheap" encore visible ?
+- Quelle est la chose la plus confuse encore visible ?
+- Quelle est la chose la plus générique encore audible ?
+- Quel moment mérite d'être partagé mais ne l'est pas ?
+- Quel moment est trop long pour sa valeur émotionnelle ?
+
+======================================================================
+BACKLOG "PLAFOND DE QUALITÉ" ACTUEL
+======================================================================
+
+P0 — PREUVES RÉELLES
+- Android physique.
+- Studio authentifié.
+- persistence/rejoin.
+- long soak.
+- petit alpha.
+
+P1 — ANIMATION
+- clips authored originaux R15 ;
+- locomotion ;
+- landing ;
+- launch ;
+- hit ;
+- victory/clutch ;
+- social.
+
+P1 — AUDIO
+- assets originaux/Creator Store vérifiés pour remplacer sons génériques restants.
+
+P1 — ASSETS HERO
+- vrais MeshParts/PBR pour les objets les plus proches/identitaires ;
+- QA de matériaux.
+
+P1 — HARMONISATION
+- captures comparatives quatre arènes ;
+- réduire tout effet redondant ;
+- cohérence complète UI/VFX/audio/camera.
+
+P2 — PUBLIC
+- icon ;
+- thumbnails ;
+- trailer ;
+- screenshots.
+
+======================================================================
+RÈGLE DE FIN
+======================================================================
+
+Ne jamais écrire "5/5" parce qu'une feature existe.
+Écrire 5/5 uniquement après preuve.
+
+Quand toutes les disciplines principales sont >=4 :
+1. arrêter d'ajouter des features ;
+2. faire une passe de suppression ;
+3. faire une passe d'harmonisation ;
+4. faire une passe fresh-eyes ;
+5. certifier devices ;
+6. lancer alpha ;
+7. corriger uniquement les problèmes observés ;
+8. geler release candidate.
+
+FIN
