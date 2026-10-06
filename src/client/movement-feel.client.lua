@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
+local CameraFeelBus = require(script.Parent.CameraFeelBus)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -130,6 +131,7 @@ local function bindCharacter(nextCharacter)
     speedFovOffset = 0
     presentationKick = 0
     presentationKickTarget = 0
+    CameraFeelBus.reset()
 
     if not humanoid or not root then
         return
@@ -252,6 +254,7 @@ RunService:BindToRenderStep(
     function(dt)
         local camera = workspace.CurrentCamera
         if not camera or not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
+            CameraFeelBus.reset()
             return
         end
 
@@ -259,6 +262,7 @@ RunService:BindToRenderStep(
 
         local scale = qualityScale()
         if scale <= 0 then
+            CameraFeelBus.reset()
             return
         end
 
@@ -357,18 +361,9 @@ RunService:BindToRenderStep(
             * CFrame.new(0, y, 0)
             * CFrame.Angles(pitch, 0, roll)
 
-        local baseFov = tonumber(player:GetAttribute("BaseCameraFov")) or 70
-        if not player:GetAttribute("BaseCameraFov") then
-            player:SetAttribute("BaseCameraFov", camera.FieldOfView)
-            baseFov = camera.FieldOfView
-        end
-        local targetFov = math.clamp(
-            baseFov
-                + speedFovOffset * scale
-                + presentationKick * 2.4 * scale,
-            60,
-            90
+        CameraFeelBus.setMovementFovOffset(
+            speedFovOffset * scale
+                + presentationKick * 2.4 * scale
         )
-        camera.FieldOfView = exponential(camera.FieldOfView, targetFov, 6, dt)
     end
 )
