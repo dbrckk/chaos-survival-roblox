@@ -10,6 +10,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local SocialExperienceRules = require(ReplicatedStorage.Shared.SocialExperienceRules)
+local ShareMomentRules = require(ReplicatedStorage.Shared.ShareMomentRules)
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local player = Players.LocalPlayer
@@ -26,6 +27,7 @@ local currentState = {
 }
 local previousPhase = "waiting"
 local lastSurvived = nil
+local lastFeedback = nil
 local canInvite = false
 local inviteCheckFinished = false
 local inviteCheckInFlight = false
@@ -262,12 +264,27 @@ local function buildBeacon()
 end
 
 local function shouldShow()
-    return canInvite and SocialExperienceRules.shouldShow(
+    local games = player:GetAttribute("Games")
+    local inviteVisible = canInvite and SocialExperienceRules.shouldShow(
         currentState.phase,
         currentState.voteOptions,
-        player:GetAttribute("Games"),
+        games,
         player:GetAttribute("DataLoaded")
     )
+
+    if not inviteVisible then
+        return false
+    end
+
+    -- Exceptional result moments get one primary social CTA: Share.
+    -- Invite returns during the following calm intermission.
+    if tostring(currentState.phase or "") == "result"
+        and ShareMomentRules.shouldShow(lastFeedback, currentState, games)
+    then
+        return false
+    end
+
+    return true
 end
 
 local function updateBeacon(visible)
@@ -484,6 +501,7 @@ end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     if type(feedback) == "table" then
+        lastFeedback = feedback
         lastSurvived = feedback.survived == true
         refresh()
     end
