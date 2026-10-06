@@ -223,6 +223,21 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         }) and "OK" or "OVER"
     end
 
+    local phase = tostring(payload.phase or "unknown")
+    local allowedPhases = {
+        waiting = true,
+        intermission = true,
+        vote = true,
+        ready = true,
+        round = true,
+        result = true,
+    }
+    if not allowedPhases[phase] then
+        phase = "unknown"
+    end
+    local chaosCount = payload.doubleChaos == true and 2 or 1
+    local finalRush = payload.finalRush == true and 1 or 0
+
     GameAnalytics.custom(
         player,
         "ClientPerformancePulse",
@@ -235,6 +250,9 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
             .. "/" .. tostring(visualLights)
             .. "/" .. tostring(visualEffects)
             .. "|Budget:" .. budgetStatus
+            .. "|Phase:" .. phase
+            .. "|Chaos:" .. tostring(chaosCount)
+            .. "|Rush:" .. tostring(finalRush)
     )
 end)
 
