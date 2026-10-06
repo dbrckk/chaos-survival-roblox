@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local StudioTestService = game:GetService("StudioTestService")
+local Lighting = game:GetService("Lighting")
 
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 
@@ -52,6 +53,8 @@ local function sendVisualPhaseProbe(phase)
         local metrics, folders = VisualBudgetRules.collect(workspace)
         local tierName = tostring(player:GetAttribute("VfxQualityTier") or "High")
         local camera = workspace.CurrentCamera
+        local depth = Lighting:FindFirstChild("ArenaIdentityDepth")
+        local sunRays = Lighting:FindFirstChild("ArenaIdentitySunRays")
 
         reportEvent:FireServer({
             kind = "visual_phase_probe",
@@ -61,6 +64,16 @@ local function sendVisualPhaseProbe(phase)
             auditedFolders = folders,
             visualMetrics = metrics,
             withinBudget = VisualBudgetRules.withinBudget(tierName, metrics),
+            postProcess = {
+                depthNearIntensity = depth and depth:IsA("DepthOfFieldEffect")
+                    and depth.NearIntensity or -1,
+                depthFarIntensity = depth and depth:IsA("DepthOfFieldEffect")
+                    and depth.FarIntensity or -1,
+                sunRaysEnabled = sunRays and sunRays:IsA("SunRaysEffect")
+                    and sunRays.Enabled or false,
+                sunRaysIntensity = sunRays and sunRays:IsA("SunRaysEffect")
+                    and sunRays.Intensity or -1,
+            },
         })
     end)
 end
