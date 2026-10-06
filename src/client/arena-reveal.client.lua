@@ -235,7 +235,7 @@ local function revealArena(arena, force)
         end)
     end
 
-    if tier.Name ~= "Low" then
+    if tier.Name ~= "Low" and not reducedMotion then
         local flash = Instance.new("Part")
         flash.Name = "LocalArenaRevealCore"
         flash.Shape = Enum.PartType.Cylinder
