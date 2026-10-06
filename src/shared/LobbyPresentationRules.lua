@@ -76,6 +76,49 @@ function LobbyPresentationRules.statusText(phase, seconds, title, voteOptions)
     return "ROUND ACTIVE", "ARENA IN PROGRESS"
 end
 
+function LobbyPresentationRules.statusPresentation(phase, seconds, title, voteOptions)
+    local mode = LobbyPresentationRules.mode(phase, voteOptions)
+    local remaining = math.max(0, math.floor(tonumber(seconds) or 0))
+
+    if mode == "vote" then
+        return {
+            mode = mode,
+            titleKey = "LOBBY_VOTE_NOW",
+            subtitleText = remaining > 0 and (tostring(remaining) .. "s") or nil,
+            subtitleKey = remaining > 0 and nil or "LOBBY_CHOOSE_CHAOS",
+        }
+    elseif mode == "launch" then
+        local clean = tostring(title or "")
+        clean = clean:gsub("^SOLO RUSH:%s*", "")
+        clean = clean:gsub("^CHAOS FUSION:%s*", "")
+        return {
+            mode = mode,
+            titleKey = "ENTERING_ARENA",
+            subtitleText = clean ~= "" and clean or nil,
+            subtitleKey = clean == "" and "NEXT_ROUND" or nil,
+        }
+    elseif mode == "social" then
+        if tostring(phase or "") == "waiting" then
+            return {
+                mode = mode,
+                titleKey = "LOBBY_OPEN",
+                subtitleKey = "LOBBY_PRACTICE_JOIN",
+            }
+        end
+        return {
+            mode = mode,
+            titleKey = "NEXT_ROUND",
+            subtitleKey = "LOBBY_PRACTICE_READY",
+        }
+    end
+
+    return {
+        mode = mode,
+        titleKey = "ROUND_ACTIVE",
+        subtitleKey = "ARENA_IN_PROGRESS",
+    }
+end
+
 function LobbyPresentationRules.pulseCadence(tierName, reduceMotion, mode)
     if reduceMotion == true then
         return 0.90
