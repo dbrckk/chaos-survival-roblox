@@ -2,11 +2,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
 
 local gui = Instance.new("ScreenGui")
@@ -155,14 +158,27 @@ local function show(reward, total, goldenFlag, flowBonus)
     local flow = math.max(0, math.floor(tonumber(flowBonus) or 0))
     local shardTotal = math.max(1, math.floor(tonumber(total) or 1))
     if golden then
-        label.Text = "+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD"
+        label.Text = CoreLocalization.text(
+            localeId,
+            "SHARD_GOLDEN_PICKUP",
+            tonumber(reward) or 0
+        )
     elseif shardTotal == 1 then
-        label.Text = "SHARD +1  •  BONUS COIN  •  OPTIONAL"
+        label.Text = CoreLocalization.text(localeId, "SHARD_FIRST_PICKUP")
     else
-        label.Text = "+" .. tostring(reward) .. " COIN  •  CHAOS SHARD " .. tostring(shardTotal)
+        label.Text = CoreLocalization.text(
+            localeId,
+            "SHARD_PICKUP",
+            tonumber(reward) or 0,
+            shardTotal
+        )
     end
     if flow > 0 then
-        label.Text ..= "  •  FLOW COMBO +" .. tostring(flow)
+        label.Text ..= "  •  " .. CoreLocalization.text(
+            localeId,
+            "RESULT_EXTRA_FLOW",
+            flow
+        )
     end
     label.TextColor3 = golden and Color3.fromRGB(255, 225, 105) or UITheme.Colors.Cyan
     stroke.Color = golden and Color3.fromRGB(255, 165, 55) or UITheme.Colors.Violet
