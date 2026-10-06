@@ -151,6 +151,28 @@ local TEXT = {
         WEEKLY_COMPLETE = "WEEKLY COMPLETE",
         QUEST_COMPLETE = "QUEST COMPLETE",
         ACHIEVEMENT_UNLOCKED = "ACHIEVEMENT UNLOCKED",
+        LEVEL_REACHED = "LEVEL %d!",
+        LOADOUT_TRAIL_AURA = "LOADOUT • TRAIL + AURA",
+        COLLECTION_COMPLETE_SETS = "COLLECTION COMPLETE • %d/%d • SETS %d/%d",
+        LOADOUT_COLLECTION_NEXT = "LOADOUT • %d/%d • SETS %d/%d • NEXT %d",
+        COSMETIC_PRICE_COINS = "%d COINS",
+        COSMETIC_UNLOCK_LEVEL = "LVL %d",
+        COSMETIC_MASTERY_GOLD = "%s GOLD",
+        COLLECTOR_I = "COLLECTOR I",
+        COLLECTOR_II = "COLLECTOR II",
+        COLLECTOR_III = "COLLECTOR III",
+        COLLECTOR_COMPLETE = "COLLECTION COMPLETE",
+        COLLECTOR_MILESTONE = "%d cosmetics collected • milestone reached",
+        THANK_YOU = "THANK YOU",
+        PREMIUM_COSMETIC_UNLOCKED = "Premium cosmetic unlocked • no gameplay advantage",
+        PURCHASE_PAUSED = "PURCHASE TEMPORARILY PAUSED",
+        PURCHASE_PAUSED_BODY = "Your progress cannot be saved right now • rejoin before purchasing",
+        COSMETIC_UNLOCKED = "COSMETIC UNLOCKED",
+        COSMETIC_UNLOCKED_BODY = "Equipped instantly • yours permanently",
+        MORE_COINS_NEEDED = "MORE COINS NEEDED",
+        MORE_COINS_BODY = "Survive rounds and complete quests to earn more",
+        SHOP_PAUSED = "SHOP TEMPORARILY PAUSED",
+        SHOP_PAUSED_BODY = "Your progress cannot be saved right now • try again later",
         REWARD_LINE = "%s   +%d coins   +%d XP",
         COINS_XP = "+%d coins   +%d XP",
         RESULT_EXTRA_STREAK = "STREAK +%d",
@@ -201,6 +223,9 @@ local TEXT = {
         SAVE_FAILED_TITLE = "SAVE RETRY NEEDED",
         SAVE_FAILED_BODY = "Keep playing • the game will retry automatically",
         SAVE_PAUSED_SHORT = "PROGRESS NOT SAVING",
+        DATA_CONFLICT_WARNING = "NEWER SESSION DETECTED • THIS SESSION WILL NOT SAVE • REJOIN HERE TO CONTINUE",
+        DATA_TEMPORARY_WARNING = "TEMPORARY SESSION • PROGRESS WILL NOT SAVE • REJOIN LATER",
+        DATA_SAVE_DELAYED_WARNING = "SAVE DELAYED • ROBLOX DATASTORE RETRYING",
         MOVE_CENTER = "MOVE CENTER",
         DANGER = "DANGER",
         ROUND_CHALLENGE = "ROUND CHALLENGE",
@@ -366,6 +391,28 @@ local TEXT = {
         WEEKLY_COMPLETE = "DÉFI HEBDOMADAIRE TERMINÉ",
         QUEST_COMPLETE = "QUÊTE TERMINÉE",
         ACHIEVEMENT_UNLOCKED = "SUCCÈS DÉBLOQUÉ",
+        LEVEL_REACHED = "NIVEAU %d !",
+        LOADOUT_TRAIL_AURA = "ÉQUIPEMENT • TRAÎNÉE + AURA",
+        COLLECTION_COMPLETE_SETS = "COLLECTION TERMINÉE • %d/%d • ENSEMBLES %d/%d",
+        LOADOUT_COLLECTION_NEXT = "ÉQUIPEMENT • %d/%d • ENSEMBLES %d/%d • SUIVANT %d",
+        COSMETIC_PRICE_COINS = "%d PIÈCES",
+        COSMETIC_UNLOCK_LEVEL = "NIV %d",
+        COSMETIC_MASTERY_GOLD = "%s OR",
+        COLLECTOR_I = "COLLECTEUR I",
+        COLLECTOR_II = "COLLECTEUR II",
+        COLLECTOR_III = "COLLECTEUR III",
+        COLLECTOR_COMPLETE = "COLLECTION TERMINÉE",
+        COLLECTOR_MILESTONE = "%d cosmétiques obtenus • palier atteint",
+        THANK_YOU = "MERCI",
+        PREMIUM_COSMETIC_UNLOCKED = "Cosmétique premium débloqué • aucun avantage de jeu",
+        PURCHASE_PAUSED = "ACHAT TEMPORAIREMENT EN PAUSE",
+        PURCHASE_PAUSED_BODY = "Ta progression ne peut pas être sauvegardée • reconnecte-toi avant d'acheter",
+        COSMETIC_UNLOCKED = "COSMÉTIQUE DÉBLOQUÉ",
+        COSMETIC_UNLOCKED_BODY = "Équipé immédiatement • acquis définitivement",
+        MORE_COINS_NEEDED = "PAS ASSEZ DE PIÈCES",
+        MORE_COINS_BODY = "Survis aux manches et termine des quêtes pour en gagner",
+        SHOP_PAUSED = "BOUTIQUE TEMPORAIREMENT EN PAUSE",
+        SHOP_PAUSED_BODY = "Ta progression ne peut pas être sauvegardée • réessaie plus tard",
         REWARD_LINE = "%s   +%d pièces   +%d XP",
         COINS_XP = "+%d pièces   +%d XP",
         RESULT_EXTRA_STREAK = "SÉRIE +%d",
@@ -416,6 +463,9 @@ local TEXT = {
         SAVE_FAILED_TITLE = "NOUVEL ESSAI DE SAUVEGARDE",
         SAVE_FAILED_BODY = "Continue de jouer • le jeu réessaiera automatiquement",
         SAVE_PAUSED_SHORT = "PROGRESSION NON SAUVEGARDÉE",
+        DATA_CONFLICT_WARNING = "SESSION PLUS RÉCENTE DÉTECTÉE • CETTE SESSION NE SERA PAS SAUVEGARDÉE • RECONNECTE-TOI ICI",
+        DATA_TEMPORARY_WARNING = "SESSION TEMPORAIRE • PROGRESSION NON SAUVEGARDÉE • RECONNECTE-TOI PLUS TARD",
+        DATA_SAVE_DELAYED_WARNING = "SAUVEGARDE RETARDÉE • ROBLOX RÉESSAIE LE DATASTORE",
         MOVE_CENTER = "REJOINS LE CENTRE",
         DANGER = "DANGER",
         ROUND_CHALLENGE = "DÉFI DE MANCHE",
@@ -535,6 +585,91 @@ local function arenaRecord(localeId, arenaIdOrName)
     local record = ARENA_COPY[language] and ARENA_COPY[language][id]
     return record or ARENA_COPY.en[id]
 end
+
+local COSMETIC_COPY = {
+    en = {
+        names = {
+            trail_blue = "Blue Pulse",
+            trail_gold = "Golden Rush",
+            trail_void = "Void Rift",
+            trail_plasma = "Plasma Wake",
+            trail_inferno = "Inferno",
+            trail_prism = "Prism Shift",
+            aura_emerald = "Emerald Core",
+            aura_solar = "Solar Crown",
+            aura_cosmic = "Cosmic Storm",
+            aura_supporter = "Founder Glow",
+            trail_founder = "Founder Comet",
+            trail_neon = "Hyper Neon",
+            aura_neon = "Hyper Neon Halo",
+            trail_gridmaster = "Gridmaster",
+            aura_towercore = "Tower Core",
+            trail_nexus = "Nexus Runner",
+            aura_orbital = "Orbital Halo",
+        },
+        collections = {
+            ["Core Pulse"] = "CORE PULSE",
+            ["Cosmic Rift"] = "COSMIC RIFT",
+            ["Neon Circuit"] = "NEON CIRCUIT",
+            ["Elemental Core"] = "ELEMENTAL CORE",
+            ["Founder"] = "FOUNDER",
+            ["Arena Masters"] = "ARENA MASTERS",
+        },
+        rarities = {
+            Common = "COMMON",
+            Rare = "RARE",
+            Epic = "EPIC",
+            Legendary = "LEGENDARY",
+            Premium = "PREMIUM",
+        },
+        kinds = {
+            trail = "TRAIL",
+            aura = "AURA",
+            cosmetic = "COSMETIC",
+        },
+    },
+    fr = {
+        names = {
+            trail_blue = "Impulsion bleue",
+            trail_gold = "Ruée dorée",
+            trail_void = "Faille du vide",
+            trail_plasma = "Sillage plasma",
+            trail_inferno = "Brasier",
+            trail_prism = "Prisme changeant",
+            aura_emerald = "Cœur émeraude",
+            aura_solar = "Couronne solaire",
+            aura_cosmic = "Tempête cosmique",
+            aura_supporter = "Éclat fondateur",
+            trail_founder = "Comète fondatrice",
+            trail_neon = "Hyper néon",
+            aura_neon = "Halo hyper néon",
+            trail_gridmaster = "Maître de la grille",
+            aura_towercore = "Cœur des tours",
+            trail_nexus = "Coureur Nexus",
+            aura_orbital = "Halo orbital",
+        },
+        collections = {
+            ["Core Pulse"] = "PULSATION CENTRALE",
+            ["Cosmic Rift"] = "FAILLE COSMIQUE",
+            ["Neon Circuit"] = "CIRCUIT NÉON",
+            ["Elemental Core"] = "CŒUR ÉLÉMENTAIRE",
+            ["Founder"] = "FONDATEUR",
+            ["Arena Masters"] = "MAÎTRES D'ARÈNE",
+        },
+        rarities = {
+            Common = "COMMUN",
+            Rare = "RARE",
+            Epic = "ÉPIQUE",
+            Legendary = "LÉGENDAIRE",
+            Premium = "PREMIUM",
+        },
+        kinds = {
+            trail = "TRAÎNÉE",
+            aura = "AURA",
+            cosmetic = "COSMÉTIQUE",
+        },
+    },
+}
 
 local QUEST_TITLES = {
     en = {
@@ -718,6 +853,38 @@ end
 function CoreLocalization.arenaMechanicHint(localeId, arenaIdOrName, fallback)
     local record = arenaRecord(localeId, arenaIdOrName)
     return record and record.mechanicHint or fallback
+end
+
+function CoreLocalization.cosmeticName(localeId, cosmeticId, fallback)
+    local language = CoreLocalization.language(localeId)
+    local id = tostring(cosmeticId or "")
+    return (COSMETIC_COPY[language] and COSMETIC_COPY[language].names[id])
+        or COSMETIC_COPY.en.names[id]
+        or fallback
+end
+
+function CoreLocalization.cosmeticCollection(localeId, collectionName, fallback)
+    local language = CoreLocalization.language(localeId)
+    local key = tostring(collectionName or "")
+    return (COSMETIC_COPY[language] and COSMETIC_COPY[language].collections[key])
+        or COSMETIC_COPY.en.collections[key]
+        or fallback
+end
+
+function CoreLocalization.cosmeticRarity(localeId, rarity, fallback)
+    local language = CoreLocalization.language(localeId)
+    local key = tostring(rarity or "")
+    return (COSMETIC_COPY[language] and COSMETIC_COPY[language].rarities[key])
+        or COSMETIC_COPY.en.rarities[key]
+        or fallback
+end
+
+function CoreLocalization.cosmeticKind(localeId, kind, fallback)
+    local language = CoreLocalization.language(localeId)
+    local key = tostring(kind or "cosmetic")
+    return (COSMETIC_COPY[language] and COSMETIC_COPY[language].kinds[key])
+        or COSMETIC_COPY.en.kinds[key]
+        or fallback
 end
 
 function CoreLocalization.questTitle(localeId, questId, fallback)
