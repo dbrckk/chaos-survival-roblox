@@ -367,6 +367,38 @@ jobs:
           print("Persistent visual Local-folder coverage verified.")
           PY
 
+      - name: Audit client post-process creators
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          classes = (
+              "ColorCorrectionEffect",
+              "Atmosphere",
+              "BloomEffect",
+              "DepthOfFieldEffect",
+              "SunRaysEffect",
+              "BlurEffect",
+          )
+
+          found = {}
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              created = [
+                  class_name
+                  for class_name in classes
+                  if f'Instance.new("{class_name}")' in source
+              ]
+              if created:
+                  found[str(path)] = created
+
+          print("Client post-process creator inventory:", len(found))
+          for path, created in sorted(found.items()):
+              print(" -", path, "[" + ",".join(created) + "]")
+          PY
+
       - name: Enforce single client cloud owner
         shell: bash
         run: |
