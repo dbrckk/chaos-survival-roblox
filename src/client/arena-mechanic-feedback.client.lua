@@ -8,7 +8,9 @@ local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
-local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArenaMechanicFeedback")
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local feedbackEvent = remotes:WaitForChild("ArenaMechanicFeedback")
+local stateEvent = remotes:WaitForChild("RoundState")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ArenaMechanicFeedback"
@@ -59,6 +61,7 @@ overdriveStroke.Transparency = 0.25
 overdriveStroke.Parent = overdriveLabel
 
 local lastTrigger = 0
+local finalRushActive = false
 
 local function currentVfxTier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -162,7 +165,7 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     end
     pulseCharacter(accent)
 
-    if overdrive then
+    if overdrive and not finalRushActive then
         overdriveLabel.Visible = true
         overdriveLabel.TextTransparency = 1
         overdriveLabel.BackgroundTransparency = 1
@@ -179,5 +182,16 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
                 overdriveLabel.Visible = false
             end)
         end)
+    end
+end)
+
+
+stateEvent.OnClientEvent:Connect(function(state)
+    local nextFinalRush = state.phase == "round" and state.finalRush == true
+    if nextFinalRush ~= finalRushActive then
+        finalRushActive = nextFinalRush
+        if finalRushActive then
+            overdriveLabel.Visible = false
+        end
     end
 end)
