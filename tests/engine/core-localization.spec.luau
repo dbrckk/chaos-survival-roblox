@@ -77,6 +77,37 @@ describe("Core localization", function()
         ).toBe(true)
     end)
 
+    it("gives every hazard a complete actionable EN/FR contract", function()
+        local hazardIds = {
+            "RisingLava",
+            "Meteors",
+            "LowGravity",
+            "DisappearingPlatforms",
+            "Tornado",
+            "Freeze",
+            "Bombs",
+            "SpeedSurge",
+            "Darkness",
+            "ShrinkingArena",
+            "JumpShock",
+        }
+
+        for _, localeId in ipairs({"en-us", "fr-fr"}) do
+            for _, hazardId in ipairs(hazardIds) do
+                local name = CoreLocalization.hazardName(localeId, hazardId)
+                local action = CoreLocalization.hazardAction(localeId, hazardId)
+                local hint = CoreLocalization.hazardHint(localeId, hazardId)
+
+                expect(type(name)).toBe("string")
+                expect(#name >= 3).toBe(true)
+                expect(type(action)).toBe("string")
+                expect(#action >= 2).toBe(true)
+                expect(type(hint)).toBe("string")
+                expect(#hint >= 8).toBe(true)
+            end
+        end
+    end)
+
     it("localizes critical round actions and challenge labels", function()
         expect(CoreLocalization.text("fr-fr", "MOVE_CENTER")).toBe("REJOINS LE CENTRE")
         expect(CoreLocalization.text("fr-fr", "FINAL_RUSH")).toBe("SPRINT FINAL")
