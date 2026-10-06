@@ -61,6 +61,38 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce single round FOV owner
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed = Path("src/client/juice.client.lua")
+          offenders = []
+
+          for path in Path("src/client").rglob("*.lua"):
+              if path == allowed:
+                  continue
+              source = path.read_text()
+              if "FieldOfView" in source:
+                  offenders.append(str(path))
+
+          for path in Path("src/client").rglob("*.luau"):
+              if path == allowed:
+                  continue
+              source = path.read_text()
+              if "FieldOfView" in source:
+                  offenders.append(str(path))
+
+          if offenders:
+              print("Round FOV ownership must remain centralized in juice.client.lua:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("Single round FOV owner verified.")
+          PY
+
       - name: Enforce performance telemetry isolation
         shell: bash
         run: |
