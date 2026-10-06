@@ -137,7 +137,7 @@ local function bindFreeze(warning)
     end
 
     local tier = quality()
-    local count = tier.Name == "Low" and 8 or (tier.Name == "Medium" and 12 or 16)
+    local count = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 8 or 10)
     local radius = math.max(warning.Size.Y, warning.Size.Z) * 0.5
     local instances = {}
     local segments = {}
