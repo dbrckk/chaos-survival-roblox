@@ -201,6 +201,29 @@ jobs:
           print("Client map lifecycle listener ownership verified.")
           PY
 
+      - name: Audit AI survivor folder lifecycle listeners
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          offenders = []
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              if "AISurvivors" not in source or ".ChildAdded:Connect" not in source:
+                  continue
+              if "ChildRemoved:Connect" not in source or ":Disconnect()" not in source:
+                  offenders.append(str(path))
+
+          if offenders:
+              print("AISurvivors listeners must explicitly disconnect/rebind:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("AI survivor folder lifecycle listeners verified.")
+          PY
+
       - name: Enforce scenery LOD registry consistency
         shell: bash
         run: |
