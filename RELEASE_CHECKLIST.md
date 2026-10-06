@@ -14,6 +14,10 @@ All items below must be green on the **exact release commit**. The checkboxes de
 - [ ] Fair-play monetization guard succeeds.
 - [ ] Client/server protocol guards succeed.
 - [ ] Server service export contract audit succeeds.
+- [ ] Persistent visual-layer registry coverage succeeds (all visual `*Local` folders budgeted; explicit non-visual exceptions only).
+- [ ] Client map-listener lifecycle ownership audit succeeds.
+- [ ] Scenery LOD registry/weak-cache guard succeeds.
+- [ ] Single client Clouds owner guard succeeds.
 - [ ] Production source contains no TODO/FIXME/HACK markers or obvious placeholder IDs.
 
 Latest historical full automated certification: commit `70681aabc40c493467ffbc13ca0078b63eb90f56` on 2026-10-06 (Build Validation run `37454113205` + Roblox Open Cloud Engine Tests run `37454113207`). Both completed successfully on the exact SHA. This is historical evidence only and does **not** certify later commits.
@@ -49,6 +53,10 @@ Run the four-client Chaos E2E harness from an authenticated Studio session.
 - [ ] All 4 arena variants can be entered.
 - [ ] Critical HUD elements remain within viewport bounds.
 - [ ] Touch targets meet the E2E minimum size.
+- [ ] READY visual phase probe passes tier budget + FOV bounds.
+- [ ] ROUND visual phase probe passes tier budget + FOV bounds.
+- [ ] RESULT visual phase probe passes tier budget + FOV bounds.
+- [ ] `CHAOS_E2E_VISUAL_PHASE` logs include tier, parts, lights, effects, FOV and audited-folder count.
 - [ ] Quest, Cosmetics and Achievements panels remain mutually exclusive.
 - [ ] Disaster vote accepts real virtual input.
 - [ ] Movement works through virtual input.
@@ -92,6 +100,9 @@ Run at least 30 minutes continuously.
 
 - [ ] No progressive FPS degradation.
 - [ ] No visible instance/particle accumulation.
+- [ ] PerformancePulse visual counts (parts/lights/effects) do not trend upward without a phase/map reason.
+- [ ] PerformancePulse budget status remains OK for the settled VFX tier.
+- [ ] VFX tier transitions stabilize instead of oscillating throughout the soak.
 - [ ] Arena swaps do not cause unacceptable freezes.
 - [ ] Bomb Rain + another disaster remains playable.
 - [ ] Meteor Shower + another disaster remains playable.
