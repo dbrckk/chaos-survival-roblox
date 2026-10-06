@@ -214,14 +214,11 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         2000
     )
 
-    local budgetStatus = "UNKNOWN"
-    if tier ~= "Unknown" then
-        budgetStatus = VisualBudgetRules.withinBudget(tier, {
-            Parts = visualParts,
-            Lights = visualLights,
-            Effects = visualEffects,
-        }) and "OK" or "OVER"
-    end
+    local budgetStatus = VisualBudgetRules.status(tier, {
+        Parts = visualParts,
+        Lights = visualLights,
+        Effects = visualEffects,
+    })
 
     local phase = tostring(payload.phase or "unknown")
     local allowedPhases = {
