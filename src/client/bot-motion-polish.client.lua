@@ -5,6 +5,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local folder = nil
+local folderConnection = nil
 local bots = setmetatable({}, {__mode = "k"})
 
 local function tier()
@@ -46,7 +47,12 @@ local function watch(model)
 end
 
 local function bind(newFolder)
+    if folderConnection then
+        folderConnection:Disconnect()
+        folderConnection = nil
+    end
     folder = newFolder
+
     if not folder then
         return
     end
@@ -57,21 +63,24 @@ local function bind(newFolder)
         end
     end
 
-    folder.ChildAdded:Connect(function(child)
+    folderConnection = folder.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
             task.defer(watch, child)
         end
     end)
 end
 
-local existing = workspace:FindFirstChild("AISurvivors")
-if existing then
-    bind(existing)
-end
+bind(workspace:FindFirstChild("AISurvivors"))
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "AISurvivors" then
+    if child.Name == "AISurvivors" and child ~= folder then
         bind(child)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child == folder then
+        bind(nil)
     end
 end)
 
