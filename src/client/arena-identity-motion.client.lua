@@ -12,7 +12,19 @@ local tracked = {}
 local phase = "waiting"
 local rebuildToken = 0
 
+local function restoreTracked()
+    for _, item in ipairs(tracked) do
+        local part = item.part
+        if part and part.Parent then
+            part.CFrame = item.baseCFrame
+            part.Transparency = item.baseTransparency
+            part.Color = item.baseColor
+        end
+    end
+end
+
 local function clear()
+    restoreTracked()
     table.clear(tracked)
     currentArena = nil
     currentVariant = nil
@@ -106,7 +118,19 @@ end)
 task.defer(rebuild)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    local previousPhase = phase
     phase = tostring(state.phase or "waiting")
+
+    local wasActive = previousPhase == "ready"
+        or previousPhase == "round"
+        or previousPhase == "result"
+    local isActive = phase == "ready"
+        or phase == "round"
+        or phase == "result"
+
+    if wasActive and not isActive then
+        restoreTracked()
+    end
 end)
 
 task.spawn(function()
