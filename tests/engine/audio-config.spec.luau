@@ -182,6 +182,12 @@ describe("Audio configuration", function()
         expect((tonumber(policy.StaggerSeconds) or 1) <= 0.10).toBe(true)
     end)
 
+    it("keeps disaster ambience crossfades short and readable", function()
+        local seconds = tonumber(AudioConfig.LoopCrossfadeSeconds) or 0
+        expect(seconds >= 0.05).toBe(true)
+        expect(seconds <= 0.40).toBe(true)
+    end)
+
     it("only maps disaster loops to loopable sounds", function()
         for _, cueName in pairs(AudioConfig.DisasterLoop) do
             local cue = AudioConfig.Sfx[cueName]
