@@ -142,32 +142,30 @@ local function ensureShrinkVisuals()
         return
     end
 
-    if #shrinkParts == 5 and shrinkBase == base then
+    if #shrinkParts == 4 and shrinkBase == base then
         return
     end
 
     clearShrink()
     shrinkBase = base
-    for i = 1, 5 do
+    for i = 1, 4 do
         local p = Instance.new("Part")
-        p.Name = i <= 4 and ("ShrinkPerimeterLocal" .. i) or "ShrinkCenterAnchorLocal"
+        p.Name = "ShrinkPerimeterLocal" .. i
         p.Anchored = true
         p.CanCollide = false
         p.CanTouch = false
         p.CanQuery = false
         p.CastShadow = false
         p.Material = Enum.Material.Neon
-        p.Color = i <= 4
-            and (i % 2 == 0 and Color3.fromRGB(220, 85, 255) or Color3.fromRGB(255, 110, 195))
-            or Color3.fromRGB(125, 220, 255)
-        p.Transparency = i <= 4 and 0.28 or 0.66
+        p.Color = i % 2 == 0 and Color3.fromRGB(220, 85, 255) or Color3.fromRGB(255, 110, 195)
+        p.Transparency = 0.28
         p.Parent = workspace
         table.insert(shrinkParts, p)
     end
 end
 
 local function updateShrink()
-    if #shrinkParts ~= 5 then
+    if #shrinkParts ~= 4 then
         return
     end
 
@@ -200,17 +198,6 @@ local function updateShrink()
         end
     end
 
-    -- Stable center reference: not a "safe zone", only a spatial anchor while
-    -- the authoritative arena edge moves inward.
-    local center = shrinkParts[5]
-    if center and center.Parent then
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-        local markerSize = tier.Name == "Low" and 2.2 or 3.0
-        center.Size = Vector3.new(markerSize, 0.055, markerSize)
-        center.CFrame = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.075, 0)
-        center.Material = tier.Name == "High" and Enum.Material.Glass or Enum.Material.Neon
-        center.Transparency = tier.Name == "Low" and 0.78 or (reduced and 0.72 or 0.62 + pulse * 0.08)
-    end
 end
 
 
