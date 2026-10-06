@@ -35,6 +35,7 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
 local readyUxProbed = false
+local resultUxProbed = false
 
 local function sendVisualPhaseProbe(phase)
     if phase ~= "ready" and phase ~= "round" and phase ~= "result" then
@@ -218,6 +219,66 @@ do
             end
         end
     end
+end
+
+if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
+    roundStateEvent.OnClientEvent:Connect(function(state)
+        if type(state) ~= "table" or tostring(state.phase or "") ~= "result" then
+            return
+        end
+
+        task.spawn(function()
+            local deadline = os.clock() + 2.0
+            local resultCard = nil
+            local title = nil
+            local reward = nil
+            local tip = nil
+            local nextRound = nil
+
+            repeat
+                if hud and hud.Parent then
+                    resultCard = hud:FindFirstChild("ResultCard", true)
+                    title = resultCard and resultCard:FindFirstChild("ResultTitle", true)
+                    reward = resultCard and resultCard:FindFirstChild("ResultReward", true)
+                    tip = resultCard and resultCard:FindFirstChild("ResultTip", true)
+                    nextRound = resultCard and resultCard:FindFirstChild("NextRoundCountdown", true)
+                end
+
+                local complete = resultCard
+                    and resultCard:IsA("GuiObject")
+                    and resultCard.Visible
+                    and title and title:IsA("TextLabel") and title.Text ~= ""
+                    and reward and reward:IsA("TextLabel") and reward.Text ~= ""
+                    and tip and tip:IsA("TextLabel") and tip.Text ~= ""
+                    and nextRound and nextRound:IsA("TextLabel") and nextRound.Text ~= ""
+
+                if complete then
+                    break
+                end
+                task.wait(0.10)
+            until os.clock() >= deadline
+
+            check(resultCard ~= nil, "RESULT card missing")
+            if resultCard and resultCard:IsA("GuiObject") then
+                check(resultCard.Visible == true, "RESULT card not visible")
+                check(insideViewport(resultCard), "RESULT card outside viewport")
+            end
+
+            for _, item in ipairs({
+                {label = title, name = "ResultTitle"},
+                {label = reward, name = "ResultReward"},
+                {label = tip, name = "ResultTip"},
+                {label = nextRound, name = "NextRoundCountdown"},
+            }) do
+                check(item.label ~= nil, item.name .. " missing")
+                if item.label and item.label:IsA("TextLabel") then
+                    check(item.label.Text ~= "", item.name .. " is empty during RESULT")
+                end
+            end
+
+            resultUxProbed = true
+        end)
+    end)
 end
 
 if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
@@ -481,6 +542,12 @@ while not readyUxProbed and os.clock() < readyUxDeadline do
     task.wait(0.1)
 end
 check(readyUxProbed, "READY UX probe never completed")
+
+local resultUxDeadline = os.clock() + 30
+while not resultUxProbed and os.clock() < resultUxDeadline do
+    task.wait(0.1)
+end
+check(resultUxProbed, "RESULT UX probe never completed")
 
 reportEvent:FireServer({
     ok = #failures == 0,
