@@ -35,6 +35,26 @@ describe("Social experience rules", function()
         expect(SocialExperienceRules.inviterUserId({source = "chaos_crew", inviter = -2}, 99)).toBe(nil)
     end)
 
+    it("validates share-link source metadata without self-attribution", function()
+        expect(SocialExperienceRules.shareSourceUserId({
+            source = "chaos_share",
+            sharer = 42,
+            reason = "master",
+        }, 99)).toBe(42)
+        expect(SocialExperienceRules.shareSourceUserId({
+            source = "chaos_share",
+            sharer = 42,
+        }, 42)).toBe(nil)
+        expect(SocialExperienceRules.shareReason({
+            source = "chaos_share",
+            reason = "double_chaos",
+        })).toBe("double_chaos")
+        expect(SocialExperienceRules.shareReason({
+            source = "chaos_share",
+            reason = "unknown",
+        })).toBe("highlight")
+    end)
+
     it("detects only invited players who are actually together in the round", function()
         local ids = SocialExperienceRules.crewParticipantIds({
             {userId = 10},
