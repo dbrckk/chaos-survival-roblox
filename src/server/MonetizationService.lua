@@ -5,6 +5,7 @@ local MonetizationRules = require(script.Parent.MonetizationRules)
 local RemoteRegistry = require(script.Parent.RemoteRegistry)
 
 local PlayerReadiness = require(script.Parent.PlayerReadiness)
+local PlayerData = require(script.Parent.PlayerData)
 
 local GameAnalytics = require(script.Parent.GameAnalytics)
 
@@ -109,7 +110,7 @@ local function stateFor(player)
         end
     end
 
-    local dataAvailable = player:GetAttribute("DataPersistenceAvailable") == true
+    local dataAvailable = PlayerData.canMutate(player)
     return {
         offers = result,
         enabled = MonetizationRules.offersEnabled(dataAvailable, #result),
@@ -180,7 +181,7 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
             return
         end
 
-        if player:GetAttribute("DataPersistenceAvailable") ~= true then
+        if not PlayerData.canMutate(player) then
             sendState(player, "data_unavailable")
             return
         end
@@ -221,7 +222,7 @@ function MonetizationService.init(remotes, rateLimiterFactory, cosmetics)
             return
         end
 
-        if player:GetAttribute("DataPersistenceAvailable") ~= true then
+        if not PlayerData.canMutate(player) then
             sendState(player, "data_unavailable")
             return
         end
