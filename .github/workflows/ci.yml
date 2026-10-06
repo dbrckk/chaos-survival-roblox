@@ -277,6 +277,32 @@ jobs:
           print("AI survivor folder lifecycle listeners verified.")
           PY
 
+      - name: Enforce Animator-safe Motor6D polish
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          offenders = []
+
+          for pattern in ("*.lua", "*.luau"):
+              for path in Path("src/client").rglob(pattern):
+                  source = path.read_text()
+                  if "Motor6D" not in source:
+                      continue
+                  if re.search(r"\.[Tt]ransform\s*=", source):
+                      offenders.append(str(path))
+
+          if offenders:
+              print("Client Motor6D.Transform writes can fight the Animator:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("Animator-safe Motor6D client polish verified.")
+          PY
+
       - name: Enforce high-frequency client loop allowlist
         shell: bash
         run: |
