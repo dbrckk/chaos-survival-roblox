@@ -161,6 +161,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.7 Réduire la redondance world-depth/cinematic-depth : budgets horizon, transit et midground abaissés surtout en Medium/Low.
 [QA]   7.8 Stabiliser les animations héros : base immuable, aucun drift périodique, boucle décorative hors RenderStepped.
 [QA]   7.9 Réduire les boucles RenderStepped décoratives : signature VFX et atmosphère catastrophe throttled via task.wait/VfxQuality.
+[QA]   7.10 Sortir disaster-premium-vfx de RenderStepped et respecter ReduceMotion sur les trails Meteors.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
@@ -188,3 +189,8 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - Freeze glare réduit.
 - Base néon cohérente enrichie par une couche de profondeur cinématique locale, adaptative High/Medium/Low et respectant ReduceMotion.
 - Priorité actuelle : QA des AI Survivors + Android réel, puis équilibrage final et certification.
+
+[QA]   4.15 Rééquilibrer Meteors/Bombs/Freeze/Lava : anticipation claire, impact distinct, résidu séparé, moins de doublons.
+[QA]   4.16 Bombs : ajouter bombe descendante liée au vrai warning ; Meteor = trail du vrai RoundMeteor.
+[QA]   4.17 Freeze : réduire densité de segments et passer le centre en Glass.
+[QA]   4.18 Lava : supprimer les vents synthétiques redondants et réduire l'ambiance persistante.
