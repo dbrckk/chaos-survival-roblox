@@ -224,7 +224,7 @@ jobs:
           print("AI survivor folder lifecycle listeners verified.")
           PY
 
-      - name: Audit high-frequency client loops
+      - name: Enforce high-frequency client loop allowlist
         shell: bash
         run: |
           python - <<'PY'
@@ -237,16 +237,37 @@ jobs:
               "BindToRenderStep": re.compile(r"BindToRenderStep"),
           }
 
-          found = []
+          allowed = {
+              "src/client/body-feel.client.lua",
+              "src/client/juice.client.lua",
+              "src/client/movement-feel.client.lua",
+          }
+
+          found = {}
           for path in Path("src/client").rglob("*.lua"):
               source = path.read_text()
               kinds = [name for name, pattern in patterns.items() if pattern.search(source)]
               if kinds:
-                  found.append((str(path), kinds))
+                  found[str(path)] = kinds
 
-          print("High-frequency client loop inventory:", len(found))
-          for path, kinds in sorted(found):
-              print(" -", path, "[" + ",".join(kinds) + "]")
+          offenders = sorted(set(found) - allowed)
+          stale = sorted(allowed - set(found))
+
+          if offenders:
+              print("Unapproved high-frequency client loops:")
+              for path in offenders:
+                  print(" -", path, "[" + ",".join(found[path]) + "]")
+              raise SystemExit(1)
+
+          if stale:
+              print("Stale high-frequency allowlist entries:")
+              for path in stale:
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("High-frequency client loop allowlist verified:")
+          for path in sorted(found):
+              print(" -", path, "[" + ",".join(found[path]) + "]")
           PY
 
       - name: Enforce scenery LOD registry consistency
