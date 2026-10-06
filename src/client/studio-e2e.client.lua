@@ -271,8 +271,14 @@ if hud then
     local cosmeticPanel = hud:FindFirstChild("CosmeticsPanel", true)
     local achievementPanel = hud:FindFirstChild("AchievementPanel", true)
     local votePanel = hud:FindFirstChild("VotePanel", true)
+    local rookieCoach = hud:FindFirstChild("RookieCoach", true)
 
     check(top ~= nil and insideViewport(top), "top HUD outside viewport")
+    check(rookieCoach ~= nil, "rookie coach missing")
+    if rookieCoach and rookieCoach:IsA("TextLabel") and rookieCoach.Visible then
+        check(rookieCoach.Text ~= "", "rookie coach visible without guidance")
+        check(insideViewport(rookieCoach), "rookie coach outside viewport")
+    end
     check(stats ~= nil and insideViewport(stats), "stats HUD outside viewport")
     check(xpTrack ~= nil and insideViewport(xpTrack), "XP bar outside viewport")
 
@@ -469,6 +475,11 @@ while not roundStateReceived and os.clock() < roundStateDeadline do
     task.wait(0.1)
 end
 check(roundStateReceived, "no RoundState snapshot received after client bootstrap")
+
+local readyUxDeadline = os.clock() + 20
+while not readyUxProbed and os.clock() < readyUxDeadline do
+    task.wait(0.1)
+end
 check(readyUxProbed, "READY UX probe never completed")
 
 reportEvent:FireServer({
