@@ -54,6 +54,15 @@ describe("Core localization", function()
             "DE JUSTESSE  x3"
         )
         expect(CoreLocalization.text("fr-fr", "NEAR_MISS_EDGE", 0.8)).toBe("0.8x LIMITE")
+        expect(CoreLocalization.text("fr-fr", "SHARD_GOLDEN_PICKUP", 3)).toBe(
+            "+3 PIÈCES  •  ÉCLAT DORÉ"
+        )
+        expect(CoreLocalization.text("fr-fr", "SHARD_FIRST_PICKUP")).toBe(
+            "ÉCLAT +1  •  PIÈCE BONUS  •  OPTIONNEL"
+        )
+        expect(CoreLocalization.text("fr-fr", "SHARD_PICKUP", 1, 2)).toBe(
+            "+1 PIÈCE  •  ÉCLAT CHAOS 2"
+        )
         expect(CoreLocalization.text("fr-fr", "YOU_SURVIVED")).toBe("TU AS SURVÉCU")
         expect(CoreLocalization.text("fr-fr", "ELIMINATED_FEED", "Nova")).toBe("Nova a été éliminé")
         expect(CoreLocalization.text("fr-fr", "RESULT_STREAK_TAG", 3)).toBe("SÉRIE x3")
