@@ -125,7 +125,8 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.5 Level up / reward / streak polish.
 [QA]   6.6 Round start / round end transitions.
 [QA]   6.7 Spectator polish.
-[QA]   6.8 Vérifier fatigue visuelle et accessibilité.
+[QA]   6.8 Vérifier fatigue visuelle et accessibilité — ReduceMotion renforcé sur plateformes, LowGravity et landing contact.
+[QA]   6.9 Centraliser strictement le FOV de round dans juice ; arena-mechanic-feedback ne modifie plus directement la caméra.
 
 PHASE 6B — GAMEPLAY / FUN
 --------------------------
