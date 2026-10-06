@@ -83,7 +83,20 @@ jobs:
 
           for run in payload.get("workflow_runs", []):
               name = run.get("name")
-              if name in required and run.get("status") == "completed" and run.get("conclusion") == "success":
+              if name not in required:
+                  continue
+
+              trusted = run.get("head_branch") == "main"
+              if name == "Build Validation":
+                  trusted = trusted and run.get("event") == "push"
+              else:
+                  trusted = trusted and run.get("event") in {"push", "workflow_dispatch"}
+
+              if (
+                  trusted
+                  and run.get("status") == "completed"
+                  and run.get("conclusion") == "success"
+              ):
                   required[name] = True
 
           missing = [name for name, ok in required.items() if not ok]
