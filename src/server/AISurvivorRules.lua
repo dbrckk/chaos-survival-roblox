@@ -426,6 +426,33 @@ function AISurvivorRules.locomotionAnimation(speed, airborne, gaitScale)
     return "run", math.clamp((safeSpeed / 16) * gait, 0.78, 1.32)
 end
 
+function AISurvivorRules.locomotionTransition(previousKind, nextKind)
+    local previous = tostring(previousKind or "")
+    local nextValue = tostring(nextKind or "")
+
+    if previous == nextValue then
+        return 0
+    end
+
+    if nextValue == "fall" then
+        return 0.06
+    elseif previous == "fall" then
+        return 0.10
+    elseif (previous == "idle" and nextValue == "walk")
+        or (previous == "walk" and nextValue == "idle")
+    then
+        return 0.14
+    elseif (previous == "walk" and nextValue == "run")
+        or (previous == "run" and nextValue == "walk")
+    then
+        return 0.16
+    elseif previous == "run" and nextValue == "idle" then
+        return 0.12
+    end
+
+    return 0.10
+end
+
 function AISurvivorRules.brainCadence(recordCount, phase)
     local count = math.max(0, math.floor(tonumber(recordCount) or 0))
     if count == 0 then
