@@ -1,8 +1,10 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -49,6 +51,45 @@ local sizeConstraint = Instance.new("UISizeConstraint")
 sizeConstraint.MinSize = Vector2.new(220, 54)
 sizeConstraint.MaxSize = Vector2.new(420, 72)
 sizeConstraint.Parent = card
+
+local viewportConnection = nil
+
+local function applyResponsiveLayout()
+    if not UserInputService.TouchEnabled then
+        card.Position = UDim2.fromScale(0.5, 0.34)
+        card.Size = UDim2.new(0.48, 0, 0, 62)
+        sizeConstraint.MinSize = Vector2.new(220, 54)
+        sizeConstraint.MaxSize = Vector2.new(420, 72)
+        return
+    end
+
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local profile = UIResponsive.mobileProfile(viewport)
+
+    local y = profile.tinyHeight and 0.56
+        or (profile.compactHeight and 0.50 or 0.44)
+    card.Position = UDim2.fromScale(0.5, y)
+    card.Size = UDim2.new(profile.veryNarrow and 0.84 or 0.70, 0, 0, profile.tinyHeight and 54 or 60)
+    sizeConstraint.MinSize = Vector2.new(profile.veryNarrow and 210 or 220, profile.tinyHeight and 50 or 54)
+    sizeConstraint.MaxSize = Vector2.new(440, 68)
+end
+
+local function bindResponsiveCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+    end
+    applyResponsiveLayout()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindResponsiveCamera)
+bindResponsiveCamera()
 
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UITheme.Corners.Large
