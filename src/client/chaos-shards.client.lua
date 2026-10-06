@@ -1,7 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -216,7 +215,6 @@ end)
 
 local shardVisuals = {}
 local pulseClock = 0
-local updateClock = 0
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -312,64 +310,75 @@ end)
 
 scanShards(workspace)
 
-RunService.RenderStepped:Connect(function(dt)
-    if next(shardVisuals) == nil then
-        return
-    end
+task.spawn(function()
+    while true do
+        if next(shardVisuals) == nil then
+            task.wait(0.20)
+            continue
+        end
 
-    pulseClock += dt
-    updateClock += dt
+        local tier = quality()
+        local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
+        pulseClock += dt
 
-    local tier = quality()
-    if updateClock < math.max(1 / 30, tier.UpdateInterval) then
-        return
-    end
-    updateClock = 0
+        local character = player.Character
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 
-    local character = player.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        for shardPart, folder in pairs(shardVisuals) do
+            if not shardPart.Parent or not folder.Parent then
+                removeVisual(shardPart)
+            else
+                local distance = rootPart
+                    and (rootPart.Position - shardPart.Position).Magnitude
+                    or 999
+                local closeDistance = 24 * tier.Scale
+                local close = distance <= closeDistance
+                local golden = shardPart:GetAttribute("ChaosShardGolden") == true
+                local pulseSpeed = golden
+                    and (close and 8.2 or 5.2)
+                    or (close and 6.5 or 3.8)
+                local pulse = (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
 
-    for shardPart, folder in pairs(shardVisuals) do
-        if not shardPart.Parent or not folder.Parent then
-            removeVisual(shardPart)
-        else
-            local distance = rootPart and (rootPart.Position - shardPart.Position).Magnitude or 999
-            local closeDistance = 24 * tier.Scale
-            local close = distance <= closeDistance
-            local golden = shardPart:GetAttribute("ChaosShardGolden") == true
-            local pulseSpeed = golden and (close and 8.2 or 5.2) or (close and 6.5 or 3.8)
-            local pulse = (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
+                local highlight = folder:FindFirstChild("ShardHighlight")
+                if highlight and highlight:IsA("Highlight") then
+                    local detailScale = tier.Scale
+                    highlight.FillTransparency = math.clamp(
+                        (close and 0.42 or 0.66)
+                            + pulse * 0.08
+                            + ((1 - detailScale) * 0.12),
+                        0,
+                        1
+                    )
+                    highlight.OutlineTransparency = math.clamp(
+                        (close and 0.04 or 0.18)
+                            + ((1 - detailScale) * 0.22),
+                        0,
+                        1
+                    )
+                end
 
-            local highlight = folder:FindFirstChild("ShardHighlight")
-            if highlight and highlight:IsA("Highlight") then
-                local detailScale = tier.Scale
-                highlight.FillTransparency = math.clamp(
-                    (close and 0.42 or 0.66) + pulse * 0.08 + ((1 - detailScale) * 0.12),
-                    0,
-                    1
-                )
-                highlight.OutlineTransparency = math.clamp(
-                    (close and 0.04 or 0.18) + ((1 - detailScale) * 0.22),
-                    0,
-                    1
-                )
-            end
+                local ring = folder:FindFirstChild("ShardRing")
+                if ring and ring:IsA("SelectionSphere") then
+                    ring.Transparency = (close and 0.46 or 0.68) + pulse * 0.12
+                end
 
-            local ring = folder:FindFirstChild("ShardRing")
-            if ring and ring:IsA("SelectionSphere") then
-                ring.Transparency = (close and 0.46 or 0.68) + pulse * 0.12
-            end
-
-            local facetTier = tier.Name
-            for i = 1, 3 do
-                local facet = folder:FindFirstChild("ShardFacet" .. i)
-                if facet and facet:IsA("BasePart") then
-                    local angle = pulseClock * (golden and 1.85 or (close and 1.45 or 0.75)) + math.rad((i - 1) * 60)
-                    facet.CFrame = shardPart.CFrame
-                        * CFrame.Angles(0, angle, math.rad(22 + math.sin(pulseClock * 2 + i) * 4))
-                    facet.Transparency = facetTier == "Low"
-                        and 1
-                        or ((close and 0.12 or 0.26) + pulse * 0.08)
+                local facetTier = tier.Name
+                for i = 1, 3 do
+                    local facet = folder:FindFirstChild("ShardFacet" .. i)
+                    if facet and facet:IsA("BasePart") then
+                        local angle = pulseClock
+                            * (golden and 1.85 or (close and 1.45 or 0.75))
+                            + math.rad((i - 1) * 60)
+                        facet.CFrame = shardPart.CFrame
+                            * CFrame.Angles(
+                                0,
+                                angle,
+                                math.rad(22 + math.sin(pulseClock * 2 + i) * 4)
+                            )
+                        facet.Transparency = facetTier == "Low"
+                            and 1
+                            or ((close and 0.12 or 0.26) + pulse * 0.08)
+                    end
                 end
             end
         end
