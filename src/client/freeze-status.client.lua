@@ -4,7 +4,14 @@ local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 
-local tint = Lighting:FindFirstChild("FreezeStatusTint") or Instance.new("ColorCorrectionEffect")
+local tint = Lighting:FindFirstChild("FreezeStatusTint")
+if tint and not tint:IsA("ColorCorrectionEffect") then
+    tint:Destroy()
+    tint = nil
+end
+if not tint then
+    tint = Instance.new("ColorCorrectionEffect")
+end
 tint.Name = "FreezeStatusTint"
 tint.Enabled = true
 tint.Brightness = 0
@@ -16,6 +23,7 @@ tint.Parent = Lighting
 local activeHighlight = nil
 local humanoidConnection = nil
 local characterToken = 0
+local tintTween = nil
 
 local function clearHighlight()
     if activeHighlight and activeHighlight.Parent then
@@ -40,7 +48,12 @@ local function applyFrozenVisual(character, frozen)
         activeHighlight = highlight
     end
 
-    TweenService:Create(
+    if tintTween then
+        tintTween:Cancel()
+        tintTween = nil
+    end
+
+    tintTween = TweenService:Create(
         tint,
         TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         frozen and {
@@ -54,7 +67,8 @@ local function applyFrozenVisual(character, frozen)
             Contrast = 0,
             Brightness = 0,
         }
-    ):Play()
+    )
+    tintTween:Play()
 end
 
 local function bindCharacter(character)
