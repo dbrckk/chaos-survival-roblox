@@ -93,6 +93,7 @@ For DataStore tests in Studio, use a test experience and enable:
 - Final certification checklist: [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
 - Authenticated Studio/device report template: [studio/PLAYTEST_REPORT_TEMPLATE.md](studio/PLAYTEST_REPORT_TEMPLATE.md)
 - Change history: [CHANGELOG.md](CHANGELOG.md)
+- Rollback procedure: [ROLLBACK_RUNBOOK.md](ROLLBACK_RUNBOOK.md)
 - Manual **Release Candidate Gate** workflow: verifies Build Validation + Open Cloud on the exact SHA and emits a release-evidence artifact without publishing.
 - Roblox publication workflow refuses uncertified SHAs and archives publish metadata.
 
