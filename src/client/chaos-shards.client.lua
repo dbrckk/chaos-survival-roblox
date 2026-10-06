@@ -10,7 +10,9 @@ local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
-local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local event = remotes:WaitForChild("ChaosShardCollected")
+local stateEvent = remotes:WaitForChild("RoundState")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosShardFeedback"
@@ -51,6 +53,7 @@ scale.Scale = 0.78
 scale.Parent = label
 
 local token = 0
+local finalRushActive = false
 
 local function worldBurst(position, reward)
     if typeof(position) ~= "Vector3" then
@@ -224,8 +227,21 @@ end
 
 event.OnClientEvent:Connect(function(payload)
     local reward = tonumber(payload.reward) or 1
-    show(reward, tonumber(payload.total) or 1, payload.golden == true, payload.flowBonus)
+    if not finalRushActive then
+        show(reward, tonumber(payload.total) or 1, payload.golden == true, payload.flowBonus)
+    end
     worldBurst(payload.position, reward)
+end)
+
+stateEvent.OnClientEvent:Connect(function(state)
+    local nextFinalRush = state.phase == "round" and state.finalRush == true
+    if nextFinalRush ~= finalRushActive then
+        finalRushActive = nextFinalRush
+        if finalRushActive then
+            token += 1
+            label.Visible = false
+        end
+    end
 end)
 
 
