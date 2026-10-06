@@ -320,7 +320,29 @@ do
             cloudCount += 1
         end
     end
-    check(cloudCount <= 1, "multiple Clouds instances are competing")
+    check(cloudCount == 1, "expected exactly one Clouds instance")
+
+    local Lighting = game:GetService("Lighting")
+    local expectedLightingEffects = {
+        ArenaIdentityColor = "ColorCorrectionEffect",
+        ArenaIdentityAtmosphere = "Atmosphere",
+        ArenaIdentityBloom = "BloomEffect",
+        ArenaIdentityDepth = "DepthOfFieldEffect",
+        ArenaIdentitySunRays = "SunRaysEffect",
+    }
+
+    for effectName, className in pairs(expectedLightingEffects) do
+        local count = 0
+        for _, child in ipairs(Lighting:GetChildren()) do
+            if child.Name == effectName and child.ClassName == className then
+                count += 1
+            end
+        end
+        check(
+            count == 1,
+            string.format("%s expected exactly once, found %d", effectName, count)
+        )
+    end
 
     visualMetrics, auditedFolders = VisualBudgetRules.collect(workspace)
 
