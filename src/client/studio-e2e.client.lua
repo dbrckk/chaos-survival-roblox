@@ -30,6 +30,7 @@ local visualMetrics = {
     Lights = 0,
     Effects = 0,
 }
+local auditedFolders = 0
 local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 
@@ -321,49 +322,16 @@ do
     end
     check(cloudCount <= 1, "multiple Clouds instances are competing")
 
-    local visualFolders = {
-        "ArenaCinematicDepthLocal",
-        "ArenaSurfaceReliefLocal",
-        "ArenaSilhouetteBreakupLocal",
-        "ArenaMidgroundMassLocal",
-        "ArenaUnderstructureLocal",
-        "ArenaHeroSceneryLocal",
-        "ArenaEdgeProfileLocal",
-        "ArenaServicePropsLocal",
-        "ArenaNavigationLanguageLocal",
-        "ArenaPlatformIdentityLocal",
-        "ArenaAmbientPropsLocal",
-        "ArenaFocalLightingLocal",
-        "ArenaSurfaceDetailLocal",
-        "ChaosEnvironmentDepthLocal",
-        "ChaosWorldPolishLocal",
-        "ArenaCinematicDisasterAtmosphereLocal",
-        "LobbyCoreOrbitLocal",
-        "LobbyCrewBeaconLocal",
-        "ResultConstellationLocal",
-    }
+    visualMetrics, auditedFolders = VisualBudgetRules.collect(workspace)
 
-    local auditedFolders = 0
-    for _, folderName in ipairs(visualFolders) do
+    for _, folderName in ipairs(VisualBudgetRules.LocalFolders) do
         local folder = workspace:FindFirstChild(folderName)
         if folder then
-            auditedFolders += 1
             for _, descendant in ipairs(folder:GetDescendants()) do
                 if descendant:IsA("BasePart") then
-                    visualMetrics.Parts += 1
                     check(not descendant.CanCollide, folderName .. ": decorative part can collide")
                     check(not descendant.CanTouch, folderName .. ": decorative part can touch")
                     check(not descendant.CanQuery, folderName .. ": decorative part can query")
-                elseif descendant:IsA("PointLight")
-                    or descendant:IsA("SpotLight")
-                    or descendant:IsA("SurfaceLight")
-                then
-                    visualMetrics.Lights += 1
-                elseif descendant:IsA("ParticleEmitter")
-                    or descendant:IsA("Trail")
-                    or descendant:IsA("Beam")
-                then
-                    visualMetrics.Effects += 1
                 end
             end
         end
