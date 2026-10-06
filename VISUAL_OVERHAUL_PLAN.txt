@@ -120,7 +120,7 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.3 Différencier davantage les bots : cadence visuelle, trails et pulses lumineux subtils.
 [QA]   6.4 Renforcer near-miss spatial : pulse au sol, flash catastrophe et lumière brève.
 [QA]   6.5 Renforcer Final Rush/dégâts : vignette, bord critique, FOV kick proportionnel et bloom court.
-[QA]   6.6 Harmoniser les propriétaires visuels : arena-lighting = baseline, juice = override ready/round.
+[QA]   6.6 Harmoniser les propriétaires visuels : arena-lighting = baseline + GlobalShadows, juice = override catastrophe READY/ROUND uniquement.
 [QA]   6.7 Supprimer les doublons de trails/lumières sur les bots et réduire le coût mobile.
 [QA]   6.8 Réduire l'aspect plastique d'Orbital avec une dominante métal technique.
 [QA]   6.2 Clutch Survival plus spectaculaire mais bref.
@@ -208,6 +208,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.36 Limiter les boucles haute fréquence aux seuls systèmes caméra/mouvement ; Tornado passe hors RenderStepped.
 [FAIT] 7.37 Garde-fou CI haute fréquence : body-feel, movement-feel et juice sont les seuls scripts autorisés.
 [FAIT] 7.38 Garde-fou CI post-process : pile persistante unique + overlays temporaires aftermath/freeze explicitement autorisés.
+[FAIT] 7.39 Garde-fou CI GlobalShadows : seul arena-lighting.client.lua peut modifier la propriété.
 [FAIT] 7.36 Garde-fou CI LOD : chaque couche LOD doit être enregistrée dans le budget visuel et le cache doit rester weak-keyed.
 
 PHASE 8 — PRESENTATION PUBLIQUE
