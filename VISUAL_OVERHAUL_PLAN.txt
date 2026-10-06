@@ -203,6 +203,8 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.33 Contextualiser PerformancePulse avec phase, Double Chaos et Final Rush dérivés du lastRoundState serveur autoritatif.
 [QA]   7.34 Compter Highlights/Smoke/Fire/Sparkles dans le budget Effects pour une mesure GPU plus fidèle.
 [QA]   7.35 Étendre scenery-lod aux couches décoratives lobby/arène/résultat, caches faibles, culling Trail/Beam/Highlight/Smoke/Fire/Sparkles et restauration owner-safe après hide/show.
+[QA]   7.36 Limiter les boucles haute fréquence aux seuls systèmes caméra/mouvement ; Tornado passe hors RenderStepped.
+[FAIT] 7.37 Garde-fou CI haute fréquence : body-feel, movement-feel et juice sont les seuls scripts autorisés.
 [FAIT] 7.36 Garde-fou CI LOD : chaque couche LOD doit être enregistrée dans le budget visuel et le cache doit rester weak-keyed.
 
 PHASE 8 — PRESENTATION PUBLIQUE
