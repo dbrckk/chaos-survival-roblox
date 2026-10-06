@@ -245,6 +245,8 @@ AudioConfig.DoubleChaosAccent = {
     StaggerSeconds = 0.055,
 }
 
+AudioConfig.LoopCrossfadeSeconds = 0.18
+
 AudioConfig.DisasterAccent = {
     RisingLava = "Lava",
     Meteors = "Meteor",
