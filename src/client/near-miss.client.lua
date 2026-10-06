@@ -2,12 +2,15 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardNearMiss")
 
 local gui = Instance.new("ScreenGui")
@@ -118,7 +121,7 @@ title.Size = UDim2.new(1, -24, 0.55, 0)
 title.Position = UDim2.fromOffset(12, 5)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBlack
-title.Text = "CLOSE CALL!"
+title.Text = CoreLocalization.text(localeId, "NEAR_MISS_TITLE")
 title.TextColor3 = UITheme.Colors.Gold
 title.TextScaled = true
 title.Parent = card
@@ -216,6 +219,15 @@ end
 
 local function readableKind(kind)
     local value = tostring(kind or "HAZARD")
+    local hazardId = ({
+        Meteor = "Meteors",
+        Bomb = "Bombs",
+    })[value]
+
+    if hazardId then
+        return CoreLocalization.hazardTitle(localeId, {hazardId}, value)
+    end
+
     value = value:gsub("([a-z])([A-Z])", "%1 %2")
     return string.upper(value)
 end
@@ -246,7 +258,9 @@ local function show(payload)
         accent = UITheme.DisasterAccents.Bombs
     end
 
-    title.Text = combo >= 2 and ("CLOSE CALL  x" .. tostring(combo)) or "CLOSE CALL!"
+    title.Text = combo >= 2
+        and CoreLocalization.text(localeId, "NEAR_MISS_COMBO", combo)
+        or CoreLocalization.text(localeId, "NEAR_MISS_TITLE")
     title.TextColor3 = accent:Lerp(UITheme.Colors.Text, 0.18)
     stroke.Color = accent
     accentLine.BackgroundColor3 = accent
@@ -254,7 +268,11 @@ local function show(payload)
     detail.Text = readableKind(payload.kind)
     local severity = 0.55
     if dangerRatio then
-        detail.Text ..= string.format("  •  %.1fx EDGE", dangerRatio)
+        detail.Text ..= "  •  " .. CoreLocalization.text(
+            localeId,
+            "NEAR_MISS_EDGE",
+            dangerRatio
+        )
         severity = math.clamp(1.35 - dangerRatio, 0.25, 1)
     end
 
