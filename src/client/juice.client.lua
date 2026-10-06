@@ -202,6 +202,7 @@ local qualityCandidateSamples = 0
 local visualUpdateClock = 0
 local performancePulseClock = 0
 local performanceFrameCount = 0
+local vfxTierTransitions = 0
 local healthRatio = 1
 player:SetAttribute("VfxQualityTier", vfxTierName)
 
@@ -646,6 +647,7 @@ RunService.RenderStepped:Connect(function(dt)
                 averageFps = math.floor(averageFps + 0.5),
                 vfxTier = vfxTierName,
                 deviceClass = deviceClass,
+                tierTransitions = vfxTierTransitions,
             })
 
             performancePulseClock = 0
@@ -677,6 +679,7 @@ RunService.RenderStepped:Connect(function(dt)
 
             if qualityCandidateSamples >= requiredSamples then
                 vfxTierName = nextTierName
+                vfxTierTransitions += 1
                 vfxTier = VfxQuality.get(vfxTierName)
                 player:SetAttribute("VfxQualityTier", vfxTierName)
                 rays.Enabled = vfxTier.RaysEnabled
