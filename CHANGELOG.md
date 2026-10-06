@@ -35,6 +35,10 @@ All notable changes to Chaos Survival are documented here.
 - Idempotent player/service setup and serialized player data loads.
 - Class-safe RemoteEvent registry.
 
+### Visual readability
+- Meteors now use a more amber primary accent and Jump Shock a more electric-cyan accent to reduce overlap with Lava/Low Gravity.
+- Every allowed Double Chaos pair is engine-tested for minimum primary-accent separation and bounded combined post-processing.
+
 ### Performance
 - VFX quality promotions require stable FPS samples (2 desktop / 3 touch), while downgrades remain immediate.
 - PerformancePulse records VFX tier-transition counts to identify oscillation/thermal instability.
