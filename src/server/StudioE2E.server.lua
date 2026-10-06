@@ -115,6 +115,34 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             ))
         end
 
+        local post = report.postProcess
+        if type(post) ~= "table"
+            or type(post.depthNearIntensity) ~= "number"
+            or type(post.depthFarIntensity) ~= "number"
+            or type(post.sunRaysEnabled) ~= "boolean"
+            or type(post.sunRaysIntensity) ~= "number"
+        then
+            fail(player.Name .. ": " .. phase .. " invalid post-process probe")
+        else
+            if post.depthNearIntensity < 0 or post.depthNearIntensity > 1
+                or post.depthFarIntensity < 0 or post.depthFarIntensity > 1
+                or post.sunRaysIntensity < 0 or post.sunRaysIntensity > 1
+            then
+                fail(player.Name .. ": " .. phase .. " post-process values out of bounds")
+            end
+
+            if phase == "round" then
+                if post.depthNearIntensity > 0.005
+                    or post.depthFarIntensity > 0.005
+                then
+                    fail(player.Name .. ": ROUND depth of field must be effectively disabled")
+                end
+                if post.sunRaysEnabled or post.sunRaysIntensity > 0.005 then
+                    fail(player.Name .. ": ROUND sun rays must be disabled for hazard readability")
+                end
+            end
+        end
+
         visualPhaseProbeReports[phase] += 1
         print(
             "CHAOS_E2E_VISUAL_PHASE",
@@ -122,12 +150,20 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             phase,
             tierName,
             string.format(
-                "parts=%d lights=%d effects=%d fov=%.1f folders=%d",
+                "parts=%d lights=%d effects=%d fov=%.1f folders=%d depth=%.3f/%.3f rays=%s/%.3f",
                 metrics.Parts,
                 metrics.Lights,
                 metrics.Effects,
                 fieldOfView,
-                tonumber(report.auditedFolders) or 0
+                tonumber(report.auditedFolders) or 0,
+                type(report.postProcess) == "table"
+                    and tonumber(report.postProcess.depthNearIntensity) or -1,
+                type(report.postProcess) == "table"
+                    and tonumber(report.postProcess.depthFarIntensity) or -1,
+                type(report.postProcess) == "table"
+                    and tostring(report.postProcess.sunRaysEnabled) or "invalid",
+                type(report.postProcess) == "table"
+                    and tonumber(report.postProcess.sunRaysIntensity) or -1
             )
         )
         return
