@@ -16,6 +16,7 @@ Copy this file for each release-candidate certification run.
 - Final VFX tier:
 - VFX tier transitions:
 - ReduceMotion state:
+- Haptics disabled state:
 
 ## Automated Studio E2E
 
@@ -78,6 +79,9 @@ Copy this file for each release-candidate certification run.
 - Coyote jump feels helpful without creating double jumps: yes / no
 - Buffered jump feels responsive on touch: yes / no
 - Spectator controls/readability: PASS / FAIL
+- Motion / Sound / Haptics toggles have comfortable touch targets: yes / no
+- Haptics toggle stops active vibration immediately: yes / no
+- Haptics preference survives quit/rejoin: yes / no
 - Low VFX mode readable: yes / no
 - Blackout playable on device brightness: yes / no
 - FOV remains comfortable and within 60–90: yes / no
@@ -144,6 +148,7 @@ Duration target: 30–60 minutes.
 - Camera motion comfortable: yes / no
 - VFX fatigue after soak: yes / no
 - Haptics excessive: yes / no
+- Haptics can be disabled independently of ReduceMotion: yes / no
 
 ## Blocking issues
 
