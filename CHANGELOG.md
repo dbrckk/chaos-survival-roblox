@@ -49,6 +49,7 @@ All notable changes to Chaos Survival are documented here.
 ### Testing / CI
 - 63 engine specs assigned exactly once across Open Cloud shards.
 - Exact-SHA Release Candidate Gate that verifies green Build Validation + real-engine Open Cloud results and emits a release-evidence artifact.
+- Publish workflow now refuses any SHA without green Build Validation + Open Cloud results and archives publication metadata with the built place.
 - Studio E2E visual contracts for FOV bounds, unique Clouds, non-collidable decorative geometry and tier-specific visual budgets.
 - Centralized FOV composition with CI enforcement that only `juice.client.lua` writes Camera.FieldOfView.
 - AI animation catalog + locomotion blend/tempo tests.
