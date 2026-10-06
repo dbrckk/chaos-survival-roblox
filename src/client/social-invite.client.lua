@@ -36,6 +36,8 @@ local ctaExposureSent = false
 local pendingFriendName = nil
 local pendingArrivalKind = nil
 local friendMessageToken = 0
+local resultSocialReady = false
+local resultReadyToken = 0
 local viewportConnection = nil
 
 local gui = Instance.new("ScreenGui")
@@ -276,6 +278,10 @@ local function shouldShow()
         return false
     end
 
+    if tostring(currentState.phase or "") == "result" and not resultSocialReady then
+        return false
+    end
+
     -- Exceptional result moments get one primary social CTA: Share.
     -- Invite returns during the following calm intermission.
     if tostring(currentState.phase or "") == "result"
@@ -383,7 +389,7 @@ showFriendArrival = function(displayName, arrivalKind)
     local voteActive = phase == "intermission"
         and type(currentState.voteOptions) == "table"
         and #currentState.voteOptions > 0
-    local calm = phase == "result"
+    local calm = (phase == "result" and resultSocialReady)
         or phase == "waiting"
         or (phase == "intermission" and not voteActive)
 
@@ -510,11 +516,27 @@ end)
 stateEvent.OnClientEvent:Connect(function(state)
     previousPhase = tostring(currentState.phase or "waiting")
     currentState = state or currentState
-    refresh()
 
-    if tostring(currentState.phase or "") == "result" and previousPhase ~= "result" then
-        task.defer(pulseSocialMoment, false)
+    local phase = tostring(currentState.phase or "waiting")
+    if phase == "result" and previousPhase ~= "result" then
+        resultSocialReady = false
+        resultReadyToken += 1
+        local token = resultReadyToken
+        task.delay(1.25, function()
+            if token == resultReadyToken
+                and tostring(currentState.phase or "") == "result"
+            then
+                resultSocialReady = true
+                refresh()
+                pulseSocialMoment(false)
+            end
+        end)
+    elseif phase ~= "result" then
+        resultReadyToken += 1
+        resultSocialReady = false
     end
+
+    refresh()
 end)
 
 for _, attribute in ipairs({"Games", "DataLoaded"}) do
