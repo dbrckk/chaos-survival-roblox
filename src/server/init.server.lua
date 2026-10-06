@@ -82,7 +82,10 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
     if type(setting) ~= "string" or type(value) ~= "boolean" then
         return
     end
-    if setting ~= "ReduceMotion" and setting ~= "AudioMuted" then
+    if setting ~= "ReduceMotion"
+        and setting ~= "AudioMuted"
+        and setting ~= "HapticsDisabled"
+    then
         return
     end
     if not PlayerData.canMutate(player) then
