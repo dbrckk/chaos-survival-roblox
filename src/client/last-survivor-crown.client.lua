@@ -1,7 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -237,40 +236,50 @@ end)
 
 
 local emitClock = 0
-RunService.RenderStepped:Connect(function(dt)
-    if not activeAura or not activeAura.Parent or not activeHighlight then
-        return
-    end
+task.spawn(function()
+    while true do
+        if not activeAura or not activeAura.Parent or not activeHighlight then
+            task.wait(0.18)
+            continue
+        end
 
-    pulseClock += dt
-    emitClock += dt
+        local tier = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
+        local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
+        pulseClock += dt
+        emitClock += dt
 
-    local tier = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
-    local pulse = (math.sin(pulseClock * 3.4) + 1) * 0.5
+        local reduced = localPlayer:GetAttribute("ReduceMotion") == true
+        local pulse = reduced
+            and 0.5
+            or ((math.sin(pulseClock * 3.4) + 1) * 0.5)
 
-    activeHighlight.FillTransparency = math.clamp(
-        0.91 - (pulse * 0.07 * tier.Scale),
-        0.78,
-        0.95
-    )
-    activeHighlight.OutlineTransparency = math.clamp(
-        0.15 - (pulse * 0.08 * tier.Scale),
-        0.02,
-        0.24
-    )
-    stroke.Transparency = math.clamp(0.24 - pulse * 0.12, 0.06, 0.28)
+        activeHighlight.FillTransparency = math.clamp(
+            0.91 - (pulse * 0.07 * tier.Scale),
+            0.78,
+            0.95
+        )
+        activeHighlight.OutlineTransparency = math.clamp(
+            0.15 - (pulse * 0.08 * tier.Scale),
+            0.02,
+            0.24
+        )
+        stroke.Transparency = math.clamp(0.24 - pulse * 0.12, 0.06, 0.28)
 
-    local light = activeAura:FindFirstChild("CrownLight")
-    if light and light:IsA("PointLight") then
-        light.Enabled = tier.Name == "High"
-        light.Brightness = 0.72 + pulse * 0.42
-    end
+        local light = activeAura:FindFirstChild("CrownLight")
+        if light and light:IsA("PointLight") then
+            light.Enabled = tier.Name == "High" and not reduced
+            light.Brightness = reduced and 0.72 or (0.72 + pulse * 0.42)
+        end
 
-    if tier.Name ~= "Low" and emitClock >= math.max(0.45, 0.72 / tier.Scale) then
-        emitClock = 0
-        local emitter = activeAura:FindFirstChild("CrownMotes")
-        if emitter and emitter:IsA("ParticleEmitter") then
-            emitter:Emit(VfxQuality.particleCount(tier.Name, 5, 2))
+        if tier.Name ~= "Low"
+            and not reduced
+            and emitClock >= math.max(0.45, 0.72 / tier.Scale)
+        then
+            emitClock = 0
+            local emitter = activeAura:FindFirstChild("CrownMotes")
+            if emitter and emitter:IsA("ParticleEmitter") then
+                emitter:Emit(VfxQuality.particleCount(tier.Name, 5, 2))
+            end
         end
     end
 end)
