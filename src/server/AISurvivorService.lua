@@ -254,15 +254,18 @@ local function attachAnimations(record, humanoid)
         )
 
         if kind ~= locomotionKind then
+            local previousKind = locomotionKind
+            local fade = AISurvivorRules.locomotionTransition(previousKind, kind)
+
             for _, name in ipairs({"idle", "walk", "run", "fall"}) do
                 if name ~= kind then
-                    stopTrack(name, 0.10)
+                    stopTrack(name, fade)
                 end
             end
 
             local track = tracks[kind]
             if track and not track.IsPlaying then
-                track:Play(0.10)
+                track:Play(fade)
             end
             locomotionKind = kind
         end
@@ -284,6 +287,7 @@ local function attachAnimations(record, humanoid)
     table.insert(record.connections, humanoid.StateChanged:Connect(function(_, state)
         if state == Enum.HumanoidStateType.Jumping then
             airborne = true
+            locomotionKind = nil
             stopTrack("walk", 0.06)
             stopTrack("run", 0.06)
             stopTrack("idle", 0.06)
@@ -293,13 +297,17 @@ local function attachAnimations(record, humanoid)
             end
         elseif state == Enum.HumanoidStateType.Freefall then
             airborne = true
+            stopTrack("jump", 0.07)
+            locomotionKind = nil
             playLocomotion(0)
         elseif state == Enum.HumanoidStateType.Landed
             or state == Enum.HumanoidStateType.Running
             or state == Enum.HumanoidStateType.RunningNoPhysics
         then
             airborne = false
+            stopTrack("jump", 0.06)
             stopTrack("fall", 0.08)
+            locomotionKind = nil
             playLocomotion(
                 humanoid.MoveDirection.Magnitude * humanoid.WalkSpeed
             )
