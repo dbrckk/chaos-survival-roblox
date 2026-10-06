@@ -1525,6 +1525,7 @@ resultScale.Scale = 0.82
 resultScale.Parent = resultCard
 
 local resultTitle = Instance.new("TextLabel")
+resultTitle.Name = "ResultTitle"
 resultTitle.Size = UDim2.new(1, -28, 0.34, 0)
 resultTitle.Position = UDim2.fromOffset(14, 10)
 resultTitle.BackgroundTransparency = 1
@@ -1536,6 +1537,7 @@ resultTitle.Text = "ROUND COMPLETE"
 resultTitle.Parent = resultCard
 
 local resultReward = Instance.new("TextLabel")
+resultReward.Name = "ResultReward"
 resultReward.Size = UDim2.new(1, -28, 0.24, 0)
 resultReward.Position = UDim2.new(0, 14, 0.40, 0)
 resultReward.BackgroundTransparency = 1
@@ -1560,6 +1562,7 @@ resultMeta.Text = ""
 resultMeta.Parent = resultCard
 
 local resultTip = Instance.new("TextLabel")
+resultTip.Name = "ResultTip"
 resultTip.Size = UDim2.new(1, -28, 0.10, 0)
 resultTip.Position = UDim2.new(0, 14, 0.78, 0)
 resultTip.BackgroundTransparency = 1
