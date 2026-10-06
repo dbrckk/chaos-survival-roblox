@@ -40,6 +40,15 @@ local function fail(message)
     warn("CHAOS_E2E_FAIL", message)
 end
 
+local function visualPhasesReady()
+    for _, phase in ipairs({"ready", "round", "result"}) do
+        if visualPhaseProbeReports[phase] < 1 then
+            return false
+        end
+    end
+    return true
+end
+
 reportEvent.OnServerEvent:Connect(function(player, report)
     if type(report) ~= "table" then
         fail("invalid report from " .. player.Name)
@@ -241,7 +250,7 @@ task.spawn(function()
             end
         end
 
-        if reported >= expectedTotal and played then
+        if reported >= expectedTotal and played and visualPhasesReady() then
             break
         end
 
