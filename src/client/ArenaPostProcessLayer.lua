@@ -2,11 +2,19 @@ local Lighting = game:GetService("Lighting")
 
 local ArenaPostProcessLayer = {}
 
-local function getOrCreate(name, className)
-    local existing = Lighting:FindFirstChild(name)
-    if existing and not existing:IsA(className) then
-        existing:Destroy()
-        existing = nil
+local function getOrCreate(name, className, exclusiveClass)
+    local existing = nil
+
+    for _, child in ipairs(Lighting:GetChildren()) do
+        if child.Name == name then
+            if child:IsA(className) and not existing then
+                existing = child
+            else
+                child:Destroy()
+            end
+        elseif exclusiveClass and child:IsA(className) then
+            child:Destroy()
+        end
     end
 
     local effect = existing or Instance.new(className)
@@ -17,14 +25,15 @@ end
 
 function ArenaPostProcessLayer.get()
     local layer = {
-        Color = getOrCreate("ArenaIdentityColor", "ColorCorrectionEffect"),
-        Atmosphere = getOrCreate("ArenaIdentityAtmosphere", "Atmosphere"),
-        Bloom = getOrCreate("ArenaIdentityBloom", "BloomEffect"),
-        Depth = getOrCreate("ArenaIdentityDepth", "DepthOfFieldEffect"),
-        SunRays = getOrCreate("ArenaIdentitySunRays", "SunRaysEffect"),
+        -- ColorCorrection is not class-exclusive because Freeze/aftermath use
+        -- temporary overlays. The four other persistent classes are exclusive.
+        Color = getOrCreate("ArenaIdentityColor", "ColorCorrectionEffect", false),
+        Atmosphere = getOrCreate("ArenaIdentityAtmosphere", "Atmosphere", true),
+        Bloom = getOrCreate("ArenaIdentityBloom", "BloomEffect", true),
+        Depth = getOrCreate("ArenaIdentityDepth", "DepthOfFieldEffect", true),
+        SunRays = getOrCreate("ArenaIdentitySunRays", "SunRaysEffect", true),
     }
 
-    -- Remove superseded duplicate owners from older client builds / hot reloads.
     for _, legacyName in ipairs({
         "ChaosColor",
         "ChaosAtmosphere",
