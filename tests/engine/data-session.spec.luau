@@ -52,6 +52,59 @@ describe("Data session ownership", function()
         expect((merged :: any)[DataSession.SavedAtKey]).toBe(202)
     end)
 
+    it("survives rapid handoff without allowing stale overwrite or release", function()
+        local initial = {
+            Coins = 25,
+            XP = 100,
+        }
+
+        local oldSession = DataSession.claim(initial, "session-old", 100)
+        expect(oldSession ~= nil).toBe(true)
+
+        local takeover = DataSession.claim(oldSession, "session-new", 108, true)
+        expect(takeover ~= nil).toBe(true)
+        expect((takeover :: any)[DataSession.TokenKey]).toBe("session-new")
+
+        local staleSave = DataSession.merge(
+            takeover,
+            {Coins = 999, XP = 9999},
+            "session-old",
+            109
+        )
+        expect(staleSave == nil).toBe(true)
+
+        local staleRelease = DataSession.release(takeover, "session-old", 110)
+        expect(staleRelease == nil).toBe(true)
+
+        local currentSave = DataSession.merge(
+            takeover,
+            {Coins = 40, XP = 160},
+            "session-new",
+            111
+        )
+        expect(currentSave ~= nil).toBe(true)
+        expect((currentSave :: any).Coins).toBe(40)
+        expect((currentSave :: any).XP).toBe(160)
+
+        local released = DataSession.release(currentSave, "session-new", 112)
+        expect(released ~= nil).toBe(true)
+        expect((released :: any)[DataSession.TokenKey]).toBe("")
+
+        local rejoined = DataSession.claim(released, "session-next", 113)
+        expect(rejoined ~= nil).toBe(true)
+        expect((rejoined :: any).Coins).toBe(40)
+        expect((rejoined :: any).XP).toBe(160)
+        expect((rejoined :: any)[DataSession.TokenKey]).toBe("session-next")
+    end)
+
+    it("refuses writes after a session has been released", function()
+        local current = DataSession.claim({Coins = 10}, "session-a", 100)
+        local released = DataSession.release(current, "session-a", 101)
+
+        expect(released ~= nil).toBe(true)
+        expect(DataSession.merge(released, {Coins = 20}, "session-a", 102) == nil).toBe(true)
+    end)
+
     it("preserves unknown fields while saving the current schema snapshot", function()
         local current = DataSession.claim({
             Coins = 10,
