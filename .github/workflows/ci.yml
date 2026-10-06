@@ -193,11 +193,12 @@ jobs:
                   candidates.append((str(path), non_workspace))
 
           if candidates:
-              print("Map-lifecycle listeners requiring manual review:")
+              print("Unowned map-lifecycle ChildAdded listeners detected:")
               for path, receivers in candidates:
                   print(" -", path, "receivers=" + ",".join(receivers))
-          else:
-              print("No unowned map ChildAdded listeners detected.")
+              raise SystemExit(1)
+
+          print("Client map lifecycle listener ownership verified.")
           PY
 
       - name: Audit persistent local visual folders
