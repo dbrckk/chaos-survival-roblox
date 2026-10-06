@@ -77,23 +77,12 @@ function D.start(ctx)
                 p.Color = Color3.fromRGB(255, 205, 70)
                 p.Material = Enum.Material.Neon
 
-                for pulse = 1, 3 do
-                    if not ctx.Active() then
-                        break
-                    end
-                    local state = activeStates[p]
-                    if not state or state.generation ~= token or not p.Parent then
-                        break
-                    end
-
-                    p.Transparency = pulse % 2 == 1 and 0.18 or 0.42
-                    p.Color = pulse % 2 == 1
-                        and Color3.fromRGB(255, 225, 95)
-                        or Color3.fromRGB(255, 155, 35)
-                    task.wait(0.16)
-                end
-
-                task.wait(0.27)
+                -- Keep one authoritative replicated fallback cue. The animated
+                -- edge/cross pulse is client-owned by disappearing-platform-readability,
+                -- avoiding repeated server property replication for cosmetic motion.
+                p.Transparency = math.min(p.Transparency, 0.24)
+                p.Color = Color3.fromRGB(255, 205, 70)
+                task.wait(0.75)
                 local state = activeStates[p]
                 if ctx.Active() and state and state.generation == token and p.Parent then
                     p:SetAttribute("CollapsePhase", "Gone")
