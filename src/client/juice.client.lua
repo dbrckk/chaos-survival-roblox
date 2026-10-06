@@ -9,6 +9,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local CloudLayer = require(script.Parent.CloudLayer)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
@@ -29,12 +30,7 @@ baseFovValue.Value = camera and camera.FieldOfView or 70
 local baseFovTween = nil
 local damageFovKick = 0
 
-local clouds = terrain:FindFirstChildOfClass("Clouds")
-if not clouds then
-    clouds = Instance.new("Clouds")
-    clouds.Name = "ChaosClouds"
-    clouds.Parent = terrain
-end
+local clouds = CloudLayer.getOrCreate()
 -- Arena identity owns the baseline sky. This controller only overrides it
 -- while a disaster is preparing or active.
 local function getOrCreateLightingEffect(name, className)
