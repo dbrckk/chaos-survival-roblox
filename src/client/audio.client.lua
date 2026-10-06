@@ -166,6 +166,7 @@ local lobbyMusic = makeSound("LobbyMusic", AudioConfig.Music.Lobby, musicGroup)
 lobbyMusic:Play()
 
 local activeLoopName = nil
+local loopVolumeTweens = {}
 local lastPhase = nil
 local lastTitle = nil
 local lastCountdown = nil
@@ -279,13 +280,49 @@ end
 
 playerGui.DescendantAdded:Connect(bindButton)
 
-local function stopDisasterLoop()
-    if activeLoopName then
-        local sound = sfx[activeLoopName]
-        if sound and sound.Looped then
-            sound:Stop()
+local function tweenLoopVolume(name, sound, targetVolume, duration)
+    local previousTween = loopVolumeTweens[name]
+    if previousTween then
+        previousTween:Cancel()
+    end
+
+    local tween = TweenService:Create(
+        sound,
+        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Volume = targetVolume}
+    )
+    loopVolumeTweens[name] = tween
+    tween:Play()
+
+    task.delay(duration + 0.03, function()
+        if loopVolumeTweens[name] == tween then
+            loopVolumeTweens[name] = nil
         end
-        activeLoopName = nil
+    end)
+end
+
+local function stopDisasterLoop()
+    if not activeLoopName then
+        return
+    end
+
+    local previousName = activeLoopName
+    local sound = sfx[previousName]
+    activeLoopName = nil
+
+    if sound and sound.Looped then
+        local duration = math.clamp(
+            tonumber(AudioConfig.LoopCrossfadeSeconds) or 0.18,
+            0.05,
+            0.40
+        )
+        tweenLoopVolume(previousName, sound, 0, duration)
+        task.delay(duration + 0.02, function()
+            if activeLoopName ~= previousName and sound.Parent then
+                sound:Stop()
+                sound.Volume = baseVolumes[previousName] or sound.Volume
+            end
+        end)
     end
 end
 
@@ -311,12 +348,28 @@ local function setDisasterLoop(disasterIds)
     stopDisasterLoop()
     if targetName and sfx[targetName] then
         activeLoopName = targetName
-        sfx[targetName].PlaybackSpeed = math.clamp(
+        local sound = sfx[targetName]
+        local duration = math.clamp(
+            tonumber(AudioConfig.LoopCrossfadeSeconds) or 0.18,
+            0.05,
+            0.40
+        )
+
+        sound.PlaybackSpeed = math.clamp(
             (basePlaybackSpeeds[targetName] or 1) * (0.96 + (currentIntensity * 0.04)),
             0.6,
             1.5
         )
-        sfx[targetName]:Play()
+        sound.Volume = 0
+        if not sound.IsPlaying then
+            sound:Play()
+        end
+        tweenLoopVolume(
+            targetName,
+            sound,
+            baseVolumes[targetName] or 0.2,
+            duration
+        )
     end
 end
 
