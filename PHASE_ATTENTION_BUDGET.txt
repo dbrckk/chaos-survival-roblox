@@ -1,0 +1,392 @@
+CHAOS SURVIVAL — CONSTITUTION DE PHASE / BUDGET D'ATTENTION
+===========================================================
+
+But
+---
+Empêcher l'empilement de systèmes individuellement bons mais collectivement bruyants.
+Chaque phase possède un budget d'attention.
+
+Règle absolue :
+UNE INFORMATION N'A PAS LE DROIT D'ÊTRE SAILLANTE SIMPLEMENT PARCE QU'ELLE EST UTILE.
+Elle doit être utile MAINTENANT.
+
+Niveaux :
+A = critique / priorité maximale
+B = utile / secondaire
+C = disponible mais discret
+OFF = masqué/interdit
+
+======================================================================
+BOOT
+======================================================================
+
+A
+- marque / identité ;
+- état de chargement réel.
+
+B
+- statut court.
+
+OFF
+- shop ;
+- quests ;
+- social ;
+- progression détaillée ;
+- hazard ;
+- camera spectacle.
+
+Durée :
+aussi courte que possible ; ne pas simuler un faux chargement long.
+
+======================================================================
+LOBBY CALME
+======================================================================
+
+A
+- prochaine action / prochain round ;
+- monde interactif.
+
+B
+- progression ;
+- pratique ;
+- social/invite après première manche.
+
+C
+- cosmetics ;
+- achievements ;
+- dailies.
+
+OFF
+- warning hazard ;
+- combat camera ;
+- result celebration.
+
+Budget :
+maximum 1 CTA social saillant.
+
+======================================================================
+VOTE
+======================================================================
+
+A
+- options vote ;
+- conséquence/action des hazards ;
+- temps restant.
+
+B
+- identité arène si utile.
+
+C
+- monde lobby.
+
+OFF
+- invite CTA ;
+- shop modal ;
+- quests modal ;
+- progression popups ;
+- réactions.
+
+Question joueur unique :
+"Quel chaos je choisis ?"
+
+======================================================================
+READY
+======================================================================
+
+A
+- hazard(s) ;
+- action ;
+- placement ;
+- arène.
+
+B
+- mechanic arène.
+
+C
+- décor/cinématique.
+
+OFF
+- social ;
+- shop ;
+- meta ;
+- reward.
+
+Question :
+"Où dois-je me placer et que vais-je devoir faire ?"
+
+======================================================================
+ROUND NORMAL
+======================================================================
+
+A
+- danger ;
+- avatar ;
+- espace ;
+- timer/survie.
+
+B
+- challenge compact ;
+- shards ;
+- intensité.
+
+C
+- décor.
+
+OFF
+- invite/share ;
+- shop ;
+- achievements ;
+- progression longue ;
+- onboarding long ;
+- modal.
+
+Budget cognitif :
+3 éléments saillants maximum.
+
+======================================================================
+ROUND HIGH PRESSURE / FINAL RUSH
+======================================================================
+
+A
+- danger ;
+- espace ;
+- timer.
+
+B
+- survivants si lisible.
+
+C
+- avatar cosmetics fortement atténués.
+
+OFF
+- challenge non critique ;
+- progression ;
+- social ;
+- décor lumineux concurrent ;
+- DOF ;
+- camera shake décoratif ;
+- aura/lights/trails non essentiels.
+
+Règle :
+FINAL RUSH doit RETIRER plus de bruit qu'il n'en ajoute.
+
+======================================================================
+ELIMINATION
+======================================================================
+
+A
+- compréhension de l'échec ;
+- transition spectator.
+
+B
+- tip actionnable court.
+
+C
+- progression obtenue si nécessaire.
+
+OFF
+- achat ;
+- culpabilisation ;
+- longue animation bloquante.
+
+Délai cible :
+spectator utile presque immédiatement.
+
+======================================================================
+SPECTATOR
+======================================================================
+
+A
+- cible ;
+- état round ;
+- NEXT.
+
+B
+- health / timer.
+
+C
+- autres infos.
+
+OFF
+- menus lourds ;
+- CTA achat ;
+- interruption sociale.
+
+Objectif :
+continuer à ressentir la manche.
+
+======================================================================
+RESULT — 0 À ~1.5 S
+======================================================================
+
+A
+- victoire/défaite ;
+- survivants ;
+- moment émotionnel.
+
+B
+- reward principal.
+
+OFF
+- invite ;
+- share ;
+- shop ;
+- stats longues.
+
+======================================================================
+RESULT — ~1.5 À 4 S
+======================================================================
+
+A
+- progression / mastery / next goal.
+
+B
+- réactions sociales ;
+- reward secondaire.
+
+C
+- stats.
+
+Social :
+réactions possibles car le gameplay critique est terminé.
+
+======================================================================
+RESULT — APRÈS MOMENT PRINCIPAL
+======================================================================
+
+A
+- prochaine action / retour.
+
+B
+- invite/share si moment éligible ;
+- progression secondaire.
+
+C
+- cosmetics / collection.
+
+Règle :
+jamais invite + share + shop tous saillants simultanément.
+Choisir une intention principale.
+
+======================================================================
+RETURN / INTERMISSION
+======================================================================
+
+A
+- prochaine manche.
+
+B
+- social ;
+- next goal.
+
+C
+- menus.
+
+Le joueur doit pouvoir repartir sans fermer plusieurs couches.
+
+======================================================================
+AUDIO BUDGET PAR PHASE
+======================================================================
+
+BOOT
+UI > ambience.
+
+LOBBY
+ambience > social > UI.
+
+VOTE
+UI choice > ambience.
+
+READY
+hazard identity > countdown > ambience.
+
+ROUND
+hazard > player action > objective > ambience > decoration.
+
+FINAL RUSH
+hazard > timer > player > music > ambience.
+
+RESULT
+result sting > reward > social > ambience.
+
+Interdit :
+deux stingers importants exactement simultanés sans ducking.
+
+======================================================================
+CAMERA BUDGET
+======================================================================
+
+BOOT
+aucune caméra gameplay.
+
+LOBBY
+stable.
+
+VOTE
+stable.
+
+READY
+petit reveal autorisé, court.
+
+ROUND
+contrôle joueur prioritaire.
+
+FINAL RUSH
+FOV/impulsions limitées, aucun contrôle forcé.
+
+RESULT
+cinématique légère autorisée.
+
+ReduceMotion
+supprime/réduit toutes couches non informatives.
+
+======================================================================
+VFX BUDGET
+======================================================================
+
+A = telegraph/hazard.
+B = player action.
+C = atmosphere/decor.
+
+Si A augmente :
+réduire C.
+
+Double Chaos :
+A1 hazard primaire + A2 hazard secondaire.
+Réduire B/C si nécessaire.
+
+======================================================================
+RÈGLE DE CONFLIT
+======================================================================
+
+Quand deux systèmes veulent être saillants :
+1. sécurité/danger gagne ;
+2. contrôle gagne ;
+3. objectif phase gagne ;
+4. résultat émotionnel gagne ;
+5. social ;
+6. progression ;
+7. monétisation ;
+8. décor.
+
+Le niveau inférieur attend.
+
+======================================================================
+AUDIT À CHAQUE NOUVELLE FEATURE
+======================================================================
+
+Déclarer :
+- phase(s) ;
+- priorité A/B/C ;
+- durée ;
+- canal : world/UI/audio/camera/haptic ;
+- systèmes concurrents ;
+- règle d'atténuation ;
+- ReduceMotion ;
+- Low VFX ;
+- mobile.
+
+Si une feature ne peut pas déclarer son budget :
+ne pas l'intégrer.
+
+FIN
