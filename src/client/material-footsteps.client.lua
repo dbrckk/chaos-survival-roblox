@@ -8,6 +8,7 @@ local floorConnection = nil
 local childAddedConnection = nil
 local childRemovedConnection = nil
 local boundSounds = {}
+local baseVolumes = setmetatable({}, {__mode = "k"})
 
 local SURFACE_SOUND_NAMES = {
     Running = true,
@@ -28,6 +29,7 @@ local function disconnect()
         childRemovedConnection = nil
     end
     table.clear(boundSounds)
+    table.clear(baseVolumes)
 end
 
 local function ensureEffects(sound)
@@ -58,6 +60,13 @@ local function applyProfile(sound, profile)
     eq.HighGain = profile.High
     reverb.WetLevel = profile.Wet
     reverb.DecayTime = profile.Decay
+
+    local baseVolume = baseVolumes[sound]
+    if baseVolume == nil then
+        baseVolume = sound.Volume
+        baseVolumes[sound] = baseVolume
+    end
+    sound.Volume = player:GetAttribute("AudioMuted") == true and 0 or baseVolume
 end
 
 local function bindCharacter(character)
@@ -83,6 +92,9 @@ local function bindCharacter(character)
     local function maybeBindSound(child)
         if child:IsA("Sound") and SURFACE_SOUND_NAMES[child.Name] then
             boundSounds[child] = true
+            if baseVolumes[child] == nil then
+                baseVolumes[child] = child.Volume
+            end
             refresh()
         end
     end
@@ -94,6 +106,7 @@ local function bindCharacter(character)
     childAddedConnection = root.ChildAdded:Connect(maybeBindSound)
     childRemovedConnection = root.ChildRemoved:Connect(function(child)
         boundSounds[child] = nil
+        baseVolumes[child] = nil
     end)
     floorConnection = humanoid:GetPropertyChangedSignal("FloorMaterial"):Connect(refresh)
 
@@ -106,3 +119,19 @@ end
 
 player.CharacterAdded:Connect(bindCharacter)
 player.CharacterRemoving:Connect(disconnect)
+
+
+player:GetAttributeChangedSignal("AudioMuted"):Connect(function()
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        return
+    end
+
+    local profile = SurfaceAudioRules.profile(humanoid.FloorMaterial)
+    for sound in pairs(boundSounds) do
+        if sound.Parent then
+            applyProfile(sound, profile)
+        end
+    end
+end)
