@@ -106,7 +106,7 @@ local function applyResponsive()
         )
         button.Size = UDim2.fromOffset(
             profile.veryNarrow and 164 or 188,
-            profile.tinyHeight and 44 or 48
+            profile.dockButtonHeight
         )
     else
         button.Position = UDim2.fromOffset(18, 112)
