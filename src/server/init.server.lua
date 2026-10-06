@@ -76,9 +76,6 @@ AchievementService.init(remotes)
 
 local allowAccessibilityChange = RateLimiter.new(0.35)
 accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value)
-    if not allowAccessibilityChange(player.UserId) then
-        return
-    end
     if type(setting) ~= "string" or type(value) ~= "boolean" then
         return
     end
@@ -86,6 +83,9 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
         and setting ~= "AudioMuted"
         and setting ~= "HapticsDisabled"
     then
+        return
+    end
+    if not allowAccessibilityChange(tostring(player.UserId) .. ":" .. setting) then
         return
     end
     if not PlayerData.canMutate(player) then
