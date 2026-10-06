@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local DisasterVisuals = require("../../src/shared/DisasterVisuals")
+local UITheme = require("../../src/shared/UITheme")
 local DisasterBalance = require("../../src/server/DisasterBalance")
 
 describe("Disaster visual identities", function()
@@ -104,6 +105,10 @@ describe("Disaster visual identities", function()
                     -- Prevent two simultaneously playable hazards from collapsing
                     -- into nearly the same primary warning/accent language.
                     expect(accentDistance((a :: any).Accent, (b :: any).Accent) >= 60).toBe(true)
+
+                    local uiA = UITheme.disasterAccent(aId)
+                    local uiB = UITheme.disasterAccent(bId)
+                    expect(accentDistance(uiA, uiB) >= 50).toBe(true)
 
                     expect((combined :: any).Bloom <= 0.9).toBe(true)
                     expect((combined :: any).Contrast <= 0.22).toBe(true)
