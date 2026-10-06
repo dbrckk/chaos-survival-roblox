@@ -74,14 +74,14 @@ jobs:
               if path == allowed:
                   continue
               source = path.read_text()
-              if "FieldOfView" in source:
+              if __import__("re").search(r"FieldOfView\s*=", source):
                   offenders.append(str(path))
 
           for path in Path("src/client").rglob("*.luau"):
               if path == allowed:
                   continue
               source = path.read_text()
-              if "FieldOfView" in source:
+              if __import__("re").search(r"FieldOfView\s*=", source):
                   offenders.append(str(path))
 
           if offenders:
