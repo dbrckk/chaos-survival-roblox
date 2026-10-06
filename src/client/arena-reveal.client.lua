@@ -11,6 +11,7 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local revealToken = 0
 local lastRevealAt = 0
 local previousPhase = "waiting"
+local mapConnection = nil
 
 local function makeNeonPart(name, size, cframe, color, transparency)
     local part = Instance.new("Part")
@@ -266,12 +267,22 @@ local function revealArena(arena, force)
 end
 
 local function bindGeneratedMap(root)
+    if mapConnection then
+        mapConnection:Disconnect()
+        mapConnection = nil
+    end
+
+    if not root then
+        revealToken += 1
+        return
+    end
+
     local arena = root:FindFirstChild("Arena")
     if arena then
         task.delay(0.12, revealArena, arena, false)
     end
 
-    root.ChildAdded:Connect(function(child)
+    mapConnection = root.ChildAdded:Connect(function(child)
         if child.Name == "Arena" then
             task.delay(0.12, revealArena, child, false)
         end
@@ -281,6 +292,12 @@ end
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         task.defer(bindGeneratedMap, child)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        bindGeneratedMap(nil)
     end
 end)
 
