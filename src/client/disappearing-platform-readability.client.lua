@@ -76,7 +76,9 @@ local function layout(part, state, phase, now)
     local halfX = part.Size.X * 0.5
     local halfZ = part.Size.Z * 0.5
     local thickness = low and 0.12 or 0.16
-    local pulse = (math.sin(now * (phase == "Gone" and 4.2 or 7.2)) + 1) * 0.5
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local pulse = reduced and 0.5
+        or (math.sin(now * (phase == "Gone" and 4.2 or 7.2)) + 1) * 0.5
     local baseAlpha = phase == "Gone" and 0.62 or (low and 0.48 or 0.28)
     local alpha = math.clamp(baseAlpha + pulse * (phase == "Gone" and 0.18 or 0.24), 0, 0.9)
 
@@ -204,7 +206,7 @@ ensureRenderLoop = function()
             end
 
             local tier = profile()
-            local cadence = tier.Name == "Low" and 0.12 or 0.075
+            local cadence = math.max(tier.UpdateInterval, tier.Name == "Low" and 0.12 or 0.075)
             local dt = task.wait(cadence)
             clock += dt
 
