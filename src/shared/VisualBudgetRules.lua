@@ -100,7 +100,14 @@ function VisualBudgetRules.collect(root)
 end
 
 function VisualBudgetRules.forTier(tierName)
-    return VisualBudgetRules.Budgets[tierName] or VisualBudgetRules.Budgets.High
+    function VisualBudgetRules.status(tierName, metrics)
+    if tierName ~= "High" and tierName ~= "Medium" and tierName ~= "Low" then
+        return "UNKNOWN"
+    end
+    return VisualBudgetRules.withinBudget(tierName, metrics) and "OK" or "OVER"
+end
+
+return VisualBudgetRules.Budgets[tierName] or VisualBudgetRules.Budgets.High
 end
 
 function VisualBudgetRules.withinBudget(tierName, metrics)
