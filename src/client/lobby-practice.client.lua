@@ -6,10 +6,13 @@ local LocalizationService = game:GetService("LocalizationService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local tracked = {}
+local practiceAllowed = false
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "LobbyPracticeFeedback"
@@ -101,13 +104,20 @@ end
 
 local function refreshBundle(pad, bundle)
     local quality = tier()
-    bundle.emitter.Rate = quality.Name == "Low" and 0.8 or (4 * quality.ParticleScale)
-    bundle.highlight.FillTransparency = quality.Name == "Low" and 1 or 0.90
-    bundle.highlight.OutlineTransparency = quality.Name == "Low" and 0.45 or 0.18
+
+    if not practiceAllowed then
+        bundle.emitter.Rate = 0
+        bundle.highlight.FillTransparency = 1
+        bundle.highlight.OutlineTransparency = 1
+    else
+        bundle.emitter.Rate = quality.Name == "Low" and 0.8 or (4 * quality.ParticleScale)
+        bundle.highlight.FillTransparency = quality.Name == "Low" and 1 or 0.90
+        bundle.highlight.OutlineTransparency = quality.Name == "Low" and 0.45 or 0.18
+    end
 
     local light = pad:FindFirstChild("PracticePadLight")
     if light and light:IsA("PointLight") then
-        light.Enabled = quality.Name ~= "Low"
+        light.Enabled = practiceAllowed and quality.Name ~= "Low"
         light.Brightness = 0.50 + 0.18 * quality.Scale
     end
 end
@@ -167,6 +177,10 @@ local function attach(pad)
 end
 
 local function triggerNearestPractice()
+    if not practiceAllowed then
+        return
+    end
+
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then
@@ -230,6 +244,18 @@ end)
 
 scan(workspace)
 
+stateEvent.OnClientEvent:Connect(function(state)
+    practiceAllowed = LobbyPresentationRules.mode(
+        tostring(state.phase or "waiting"),
+        state.voteOptions
+    ) == "social"
+
+    for pad, bundle in pairs(tracked) do
+        if pad.Parent then
+            refreshBundle(pad, bundle)
+        end
+    end
+end)
 
 local lastPracticeUses = math.max(
     0,
