@@ -649,6 +649,12 @@ RunService.RenderStepped:Connect(function(dt)
                 visualParts = visualMetrics.Parts,
                 visualLights = visualMetrics.Lights,
                 visualEffects = visualMetrics.Effects,
+                phase = currentState and tostring(currentState.phase or "waiting") or "waiting",
+                doubleChaos = currentState and currentState.doubleChaos == true or false,
+                finalRush = currentState
+                    and currentState.phase == "round"
+                    and currentState.finalRush == true
+                    or false,
             })
 
             performancePulseClock = 0
