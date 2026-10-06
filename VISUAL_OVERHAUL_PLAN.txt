@@ -162,6 +162,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.8 Stabiliser les animations héros : base immuable, aucun drift périodique, boucle décorative hors RenderStepped.
 [QA]   7.9 Réduire les boucles RenderStepped décoratives : signature VFX et atmosphère catastrophe throttled via task.wait/VfxQuality.
 [QA]   7.10 Sortir disaster-premium-vfx de RenderStepped et respecter ReduceMotion sur les trails Meteors.
+[QA]   7.11 Throttler ShrinkingArena/Darkness hors RenderStepped ; garder RenderStepped seulement pour les hazards où la fluidité le justifie.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
@@ -194,3 +195,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [QA]   4.16 Bombs : ajouter bombe descendante liée au vrai warning ; Meteor = trail du vrai RoundMeteor.
 [QA]   4.17 Freeze : réduire densité de segments et passer le centre en Glass.
 [QA]   4.18 Lava : supprimer les vents synthétiques redondants et réduire l'ambiance persistante.
+[QA]   4.19 Freeze : état ChaosFrozen autoritaire + feedback local clair pendant le ralentissement.
+[QA]   4.20 JumpShock : supprimer la troisième couche d'anneaux redondants.
+[QA]   4.21 SpeedSurge : supprimer le ribbon spécifique redondant avec speed-feel + sprint trail.
+[QA]   4.22 Darkness/Tornado : supprimer void motes synthétiques et debris périphériques dupliqués.
