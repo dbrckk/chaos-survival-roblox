@@ -11,7 +11,9 @@ local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
-local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardNearMiss")
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local event = remotes:WaitForChild("HazardNearMiss")
+local stateEvent = remotes:WaitForChild("RoundState")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosNearMiss"
@@ -139,6 +141,7 @@ detail.Parent = card
 local combo = 0
 local lastNearMissAt = 0
 local token = 0
+local finalRushActive = false
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -278,6 +281,10 @@ local function show(payload)
 
     pulseWorld(accent, severity)
 
+    if finalRushActive then
+        return
+    end
+
     card.Visible = true
     card.BackgroundTransparency = 1
     scale.Scale = 0.82
@@ -325,3 +332,15 @@ local function show(payload)
 end
 
 event.OnClientEvent:Connect(show)
+
+stateEvent.OnClientEvent:Connect(function(state)
+    local nextFinalRush = state.phase == "round" and state.finalRush == true
+    if nextFinalRush ~= finalRushActive then
+        finalRushActive = nextFinalRush
+        if finalRushActive then
+            token += 1
+            card.Visible = false
+            flash.Visible = false
+        end
+    end
+end)
