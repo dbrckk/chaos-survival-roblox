@@ -40,7 +40,6 @@ local atmosphere = post.Atmosphere
 
 -- Arena identity owns baseline post-processing. This controller only overrides
 -- the shared layer while a disaster is preparing or active.
-Lighting.GlobalShadows = true
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosJuice"
