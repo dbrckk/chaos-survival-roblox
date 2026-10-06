@@ -206,17 +206,41 @@ local function applyFolder(folder, limits, profile, origin)
             continue
         end
 
+        local lodHidden = descendant:GetAttribute("SceneryLodHidden") == true
+
         if descendant:IsA("BasePart") then
-            descendant.LocalTransparencyModifier = visible and 0 or 1
+            if visible then
+                if lodHidden then
+                    local baseTransparency = descendant:GetAttribute("SceneryLodBaseTransparency")
+                    descendant.LocalTransparencyModifier = tonumber(baseTransparency) or 0
+                    descendant:SetAttribute("SceneryLodHidden", false)
+                end
+            elseif not lodHidden then
+                descendant:SetAttribute(
+                    "SceneryLodBaseTransparency",
+                    descendant.LocalTransparencyModifier
+                )
+                descendant:SetAttribute("SceneryLodHidden", true)
+                descendant.LocalTransparencyModifier = 1
+            else
+                descendant.LocalTransparencyModifier = 1
+            end
         elseif VisualBudgetRules.isEffect(descendant)
             or VisualBudgetRules.isLight(descendant)
         then
-            local baseEnabled = descendant:GetAttribute("LodBaseEnabled")
-            if baseEnabled == nil then
-                descendant:SetAttribute("LodBaseEnabled", descendant.Enabled)
-                baseEnabled = descendant.Enabled
+            if visible then
+                if lodHidden then
+                    local baseEnabled = descendant:GetAttribute("SceneryLodBaseEnabled")
+                    descendant.Enabled = baseEnabled ~= false
+                    descendant:SetAttribute("SceneryLodHidden", false)
+                end
+            elseif not lodHidden then
+                descendant:SetAttribute("SceneryLodBaseEnabled", descendant.Enabled)
+                descendant:SetAttribute("SceneryLodHidden", true)
+                descendant.Enabled = false
+            else
+                descendant.Enabled = false
             end
-            descendant.Enabled = visible and baseEnabled == true
         end
     end
 end
