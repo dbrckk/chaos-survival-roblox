@@ -8,7 +8,14 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
-local tint = Lighting:FindFirstChild("ChaosAftermathTint") or Instance.new("ColorCorrectionEffect")
+local tint = Lighting:FindFirstChild("ChaosAftermathTint")
+if tint and not tint:IsA("ColorCorrectionEffect") then
+    tint:Destroy()
+    tint = nil
+end
+if not tint then
+    tint = Instance.new("ColorCorrectionEffect")
+end
 tint.Name = "ChaosAftermathTint"
 tint.Enabled = true
 tint.Brightness = 0
@@ -17,7 +24,14 @@ tint.Saturation = 0
 tint.TintColor = Color3.new(1, 1, 1)
 tint.Parent = Lighting
 
-local blur = Lighting:FindFirstChild("ChaosAftermathBlur") or Instance.new("BlurEffect")
+local blur = Lighting:FindFirstChild("ChaosAftermathBlur")
+if blur and not blur:IsA("BlurEffect") then
+    blur:Destroy()
+    blur = nil
+end
+if not blur then
+    blur = Instance.new("BlurEffect")
+end
 blur.Name = "ChaosAftermathBlur"
 blur.Enabled = true
 blur.Size = 0
@@ -26,6 +40,8 @@ blur.Parent = Lighting
 local lastPhase = "waiting"
 local lastDisasters = {}
 local token = 0
+local tintTween = nil
+local blurTween = nil
 
 local PROFILES = {
     RisingLava = {
@@ -96,8 +112,21 @@ local PROFILES = {
     },
 }
 
+local function cancelTweens()
+    if tintTween then
+        tintTween:Cancel()
+        tintTween = nil
+    end
+    if blurTween then
+        blurTween:Cancel()
+        blurTween = nil
+    end
+end
+
 local function reset(duration)
-    TweenService:Create(
+    cancelTweens()
+
+    tintTween = TweenService:Create(
         tint,
         TweenInfo.new(duration or 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
@@ -106,12 +135,14 @@ local function reset(duration)
             Saturation = 0,
             TintColor = Color3.new(1, 1, 1),
         }
-    ):Play()
-    TweenService:Create(
+    )
+    blurTween = TweenService:Create(
         blur,
         TweenInfo.new(duration or 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {Size = 0}
-    ):Play()
+    )
+    tintTween:Play()
+    blurTween:Play()
 end
 
 local function strongestProfile(ids)
@@ -150,12 +181,13 @@ local function playAftermath(ids)
         scale *= 0.28
     end
 
+    cancelTweens()
     tint.TintColor = Color3.new(1, 1, 1)
     tint.Saturation = 0
     tint.Contrast = 0
     blur.Size = 0
 
-    TweenService:Create(
+    tintTween = TweenService:Create(
         tint,
         TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
@@ -163,12 +195,14 @@ local function playAftermath(ids)
             Saturation = (profile.Saturation or 0) * scale,
             Contrast = (profile.Contrast or 0) * scale,
         }
-    ):Play()
-    TweenService:Create(
+    )
+    blurTween = TweenService:Create(
         blur,
         TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {Size = reducedMotion and 0 or ((profile.Blur or 0) * scale)}
-    ):Play()
+    )
+    tintTween:Play()
+    blurTween:Play()
 
     task.delay(quality.Name == "Low" and 0.45 or 0.85, function()
         if current == token then
