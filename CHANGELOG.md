@@ -34,6 +34,9 @@ All notable changes to Chaos Survival are documented here.
 - Class-safe RemoteEvent registry.
 
 ### Performance
+- VFX quality promotions require stable FPS samples (2 desktop / 3 touch), while downgrades remain immediate.
+- PerformancePulse records VFX tier-transition counts to identify oscillation/thermal instability.
+- Tier-specific visual complexity budgets cover local Parts, Lights and ParticleEmitter/Trail/Beam effects.
 - Adaptive High / Medium / Low VFX quality.
 - Client-local hazard visuals and warning animation.
 - Distant hazard impact network culling.
@@ -44,6 +47,11 @@ All notable changes to Chaos Survival are documented here.
 - Autosaves are distributed over time.
 
 ### Testing / CI
+- 63 engine specs assigned exactly once across Open Cloud shards.
+- Exact-SHA Release Candidate Gate that verifies green Build Validation + real-engine Open Cloud results and emits a release-evidence artifact.
+- Studio E2E visual contracts for FOV bounds, unique Clouds, non-collidable decorative geometry and tier-specific visual budgets.
+- Centralized FOV composition with CI enforcement that only `juice.client.lua` writes Camera.FieldOfView.
+- AI animation catalog + locomotion blend/tempo tests.
 - Luau syntax validation and Rojo place build.
 - Real Roblox Open Cloud engine tests, sharded into core / gameplay / matrix suites.
 - Every arena × disaster combination and allowed Double Chaos pair covered.
