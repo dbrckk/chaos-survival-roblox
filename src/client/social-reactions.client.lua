@@ -95,7 +95,7 @@ local function applyResponsive()
         dock.Position = UDim2.new(0.5, 0, 1, -(profile.tinyHeight and 8 or 12))
         dock.Size = UDim2.fromOffset(
             profile.veryNarrow and 286 or 316,
-            52
+            profile.dockHeight
         )
     else
         dock.Position = UDim2.new(0.5, 0, 1, -16)
