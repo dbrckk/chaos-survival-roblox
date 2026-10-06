@@ -192,7 +192,7 @@ local function normalizeSlot(player, slotAttribute, expectedKind, fallbackId)
 end
 
 local function syncUnlocks(player)
-    if player:GetAttribute("DataPersistenceAvailable") ~= true then
+    if not PlayerData.canMutate(player) then
         sendState(player, {})
         applyEffects(player)
         return
@@ -258,10 +258,7 @@ local function setupPlayer(player)
 end
 
 local function equipCosmetic(player, cosmeticId)
-    if player.Parent ~= Players
-        or player:GetAttribute("DataLoaded") ~= true
-        or player:GetAttribute("DataPersistenceAvailable") ~= true
-    then
+    if not PlayerData.canMutate(player) then
         return false
     end
 
@@ -296,11 +293,11 @@ local function equipCosmetic(player, cosmeticId)
 end
 
 local function buyCosmetic(player, cosmeticId)
-    if player.Parent ~= Players or player:GetAttribute("DataLoaded") ~= true then
+    if not player or player.Parent ~= Players then
         return
     end
 
-    if player:GetAttribute("DataPersistenceAvailable") ~= true then
+    if not PlayerData.canMutate(player) then
         sendState(player, nil, "data_unavailable")
         return
     end
@@ -343,10 +340,7 @@ local function buyCosmetic(player, cosmeticId)
 end
 
 function CosmeticService.grant(player, cosmeticId)
-    if not player
-        or player.Parent ~= Players
-        or player:GetAttribute("DataLoaded") ~= true
-        or player:GetAttribute("DataPersistenceAvailable") ~= true
+    if not PlayerData.canMutate(player)
         or type(cosmeticId) ~= "string"
     then
         return false
