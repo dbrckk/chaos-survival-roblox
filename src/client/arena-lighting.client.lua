@@ -235,7 +235,7 @@ local function applyMood(duration)
     pcall(function()
         Lighting.LightingStyle = Enum.LightingStyle.Realistic
         Lighting.PrioritizeLightingQuality = quality.Name ~= "Low"
-        Lighting.GlobalShadows = true
+        Lighting.GlobalShadows = quality.Name ~= "Low"
     end)
 
     local lightingGoal = {
