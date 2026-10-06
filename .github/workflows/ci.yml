@@ -168,6 +168,38 @@ jobs:
           print("Single round FOV owner verified.")
           PY
 
+      - name: Audit client map lifecycle listeners
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = []
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              if "GeneratedMap" not in source or ".ChildAdded:Connect" not in source:
+                  continue
+
+              receivers = sorted(set(re.findall(
+                  r'([A-Za-z_][A-Za-z0-9_]*)\.ChildAdded:Connect',
+                  source
+              )))
+              non_workspace = [
+                  receiver for receiver in receivers
+                  if receiver not in {"workspace"}
+              ]
+              if non_workspace and ":Disconnect()" not in source:
+                  candidates.append((str(path), non_workspace))
+
+          if candidates:
+              print("Map-lifecycle listeners requiring manual review:")
+              for path, receivers in candidates:
+                  print(" -", path, "receivers=" + ",".join(receivers))
+          else:
+              print("No unowned map ChildAdded listeners detected.")
+          PY
+
       - name: Audit persistent local visual folders
         shell: bash
         run: |
