@@ -33,6 +33,13 @@ describe("Result presentation", function()
         expect(ResultPresentation.title({survived = false})).toBe("ELIMINATED")
     end)
 
+    it("normalizes elimination causes for round feedback", function()
+        expect(ResultPresentation.feedbackEliminationCause(true, "Meteor")).toBe(nil)
+        expect(ResultPresentation.feedbackEliminationCause(false, "Meteor")).toBe("Meteor")
+        expect(ResultPresentation.feedbackEliminationCause(false, nil)).toBe("Unknown")
+        expect(ResultPresentation.feedbackEliminationCause(false, "")).toBe("Unknown")
+    end)
+
     it("explains known elimination causes", function()
         local meteorTitle, meteorTip = ResultPresentation.eliminationCopy({
             survived = false,
