@@ -73,7 +73,7 @@ local function addMeteorTrail(meteor)
     end
 
     local q = tier()
-    if q.Name == "Low" then
+    if q.Name == "Low" or player:GetAttribute("ReduceMotion") == true then
         return
     end
 
