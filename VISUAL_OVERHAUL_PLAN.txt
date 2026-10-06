@@ -183,6 +183,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [FAIT] 7.17 Stabiliser les promotions VFX : downgrade immédiat, promotion après 2 samples desktop / 3 tactile.
 [QA]   7.18 Ajouter budgets parts/lights/effects par tier et contrôle automatique Studio E2E.
 [FAIT] 7.19 Télémétrie PerformancePulse : compter les transitions de tier VFX pour repérer oscillation/chauffe.
+[QA]   7.20 Reporter dans Studio E2E le tier, FOV et budgets parts/lights/effects pour chaque client.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
@@ -199,6 +200,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [TODO] 9.2 Comparer avec captures Android avant/après.
 [QA]   9.2b CI animation/caméra : catalogue d'assets testé, sharding Open Cloud exhaustif, propriété FOV contrôlée.
 [QA]   9.2c Studio E2E étendu : FOV borné, Clouds unique, décor non-collidable et budget visuel par tier.
+[QA]   9.2d Logs E2E exploitables : CHAOS_E2E_VISUAL avec tier, FOV, parts, lights et effects.
 [TODO] 9.3 Corriger les incohérences restantes.
 [TODO] 9.4 Studio E2E authentifié.
 [TODO] 9.5 Android final.
