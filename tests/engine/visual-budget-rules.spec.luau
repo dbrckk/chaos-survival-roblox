@@ -63,7 +63,8 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
-    it("classifies live visual budget status", function()
+    it("classifies live visual budget status before any tier lookup", function()
+        expect(type(VisualBudgetRules.status)).toBe("function")
         expect(VisualBudgetRules.status("High", {
             Parts = 1,
             Lights = 1,
