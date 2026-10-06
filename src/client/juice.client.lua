@@ -317,6 +317,13 @@ local function setMood(state)
         rays.Intensity = phase == "ready" and (0.018 * vfxTier.Scale) or 0
         rays.Spread = 0.78
 
+        bloom.Enabled = true
+        bloom.Size = 22
+        bloom.Threshold = phase == "round" and 1.22 or 1.26
+
+        atmosphere.Glare = 0
+        atmosphere.Offset = 0.08
+
         roundDanger = phase == "round" and (tonumber(state.seconds) or 99) <= 5
 
         local profile = DisasterVisuals.combine(ids)
