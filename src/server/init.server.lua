@@ -52,6 +52,7 @@ local AISurvivorService = require(script.AISurvivorService)
 local Mastery = require(script.Mastery)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local SocialExperienceRules = require(ReplicatedStorage.Shared.SocialExperienceRules)
+local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -213,6 +214,15 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         2000
     )
 
+    local budgetStatus = "UNKNOWN"
+    if tier ~= "Unknown" then
+        budgetStatus = VisualBudgetRules.withinBudget(tier, {
+            Parts = visualParts,
+            Lights = visualLights,
+            Effects = visualEffects,
+        }) and "OK" or "OVER"
+    end
+
     GameAnalytics.custom(
         player,
         "ClientPerformancePulse",
@@ -224,6 +234,7 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
             .. "|Visual:" .. tostring(visualParts)
             .. "/" .. tostring(visualLights)
             .. "/" .. tostring(visualEffects)
+            .. "|Budget:" .. budgetStatus
     )
 end)
 
