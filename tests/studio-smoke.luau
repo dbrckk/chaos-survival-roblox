@@ -22,6 +22,14 @@ local Config = require(configModule)
 check(type(Config.RoundSeconds) == "number" and Config.RoundSeconds > 0, "Invalid RoundSeconds")
 check(type(Config.IntermissionSeconds) == "number" and Config.IntermissionSeconds >= 0, "Invalid IntermissionSeconds")
 
+local animationCatalogModule = shared:FindFirstChild("AnimationCatalog")
+check(animationCatalogModule ~= nil, "AnimationCatalog module missing")
+local AnimationCatalog = require(animationCatalogModule)
+for name, id in pairs(AnimationCatalog.AISurvivor or {}) do
+    check(type(id) == "number" and id > 0, "Invalid AI animation id: " .. tostring(name))
+    check(AnimationCatalog.assetId(id) == "rbxassetid://" .. tostring(id), "Invalid animation asset URI: " .. tostring(name))
+end
+
 local mapBuilderModule = server:FindFirstChild("MapBuilder")
 check(mapBuilderModule ~= nil, "MapBuilder module missing")
 local MapBuilder = require(mapBuilderModule)
@@ -96,6 +104,11 @@ for _, remoteName in ipairs({
     "ArenaMechanicFeedback",
     "HazardImpactFeedback",
     "HazardNearMiss",
+    "ChaosShardCollected",
+    "PerformancePulse",
+    "AccessibilitySettings",
+    "SocialSignal",
+    "SocialReaction",
     "CosmeticState",
     "CosmeticAction",
     "MonetizationState",
