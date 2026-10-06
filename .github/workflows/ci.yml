@@ -201,6 +201,57 @@ jobs:
           print("Client map lifecycle listener ownership verified.")
           PY
 
+      - name: Enforce scenery LOD registry consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          lod_source = Path("src/client/scenery-lod.client.lua").read_text()
+          visual_source = Path("src/shared/VisualBudgetRules.lua").read_text()
+
+          table_start = lod_source.find("local FOLDERS = {")
+          table_end = lod_source.find("\n}\n\nlocal function cameraPosition", table_start)
+          if table_start < 0 or table_end < 0:
+              raise SystemExit("Unable to locate scenery LOD folder registry.")
+
+          lod_block = lod_source[table_start:table_end]
+          lod_folders = set(re.findall(
+              r'^\s{4}([A-Za-z0-9_]+Local)\s*=\s*\{',
+              lod_block,
+              re.MULTILINE,
+          ))
+          registered = set(re.findall(
+              r'"([A-Za-z0-9_]+Local)"',
+              visual_source,
+          ))
+
+          missing = sorted(lod_folders - registered)
+          if missing:
+              print("Scenery LOD folders missing from VisualBudgetRules:")
+              for name in missing:
+                  print(" -", name)
+              raise SystemExit(1)
+
+          weak_cache_markers = [
+              'folderCaches = setmetatable({}, {__mode = "k"})',
+          ]
+          absent = [marker for marker in weak_cache_markers if marker not in lod_source]
+          if absent:
+              raise SystemExit(
+                  "Scenery LOD cache must remain weak-keyed to avoid retaining destroyed map folders."
+              )
+
+          print(
+              "Scenery LOD registry verified:",
+              len(lod_folders),
+              "LOD folders covered by",
+              len(registered),
+              "visual budget folders.",
+          )
+          PY
+
       - name: Audit persistent local visual folders
         shell: bash
         run: |
