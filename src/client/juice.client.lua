@@ -10,6 +10,7 @@ local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local CloudLayer = require(script.Parent.CloudLayer)
+local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
@@ -31,46 +32,15 @@ local baseFovTween = nil
 local damageFovKick = 0
 
 local clouds = CloudLayer.getOrCreate()
--- Arena identity owns the baseline sky. This controller only overrides it
--- while a disaster is preparing or active.
-local function getOrCreateLightingEffect(name, className)
-    local existing = Lighting:FindFirstChild(name)
-    if existing and not existing:IsA(className) then
-        existing:Destroy()
-        existing = nil
-    end
+local post = ArenaPostProcessLayer.get()
+local bloom = post.Bloom
+local color = post.Color
+local rays = post.SunRays
+local atmosphere = post.Atmosphere
 
-    local effect = existing or Instance.new(className)
-    effect.Name = name
-    effect.Parent = Lighting
-    return effect
-end
-
+-- Arena identity owns baseline post-processing. This controller only overrides
+-- the shared layer while a disaster is preparing or active.
 Lighting.GlobalShadows = true
-
-local bloom = getOrCreateLightingEffect("ChaosBloom", "BloomEffect")
-bloom.Intensity = 0.32
-bloom.Size = 22
-bloom.Threshold = 1.18
-
-local color = getOrCreateLightingEffect("ChaosColor", "ColorCorrectionEffect")
-color.Brightness = 0
-color.Contrast = 0.06
-color.Saturation = 0.08
-color.TintColor = Color3.new(1, 1, 1)
-
-local rays = getOrCreateLightingEffect("ChaosRays", "SunRaysEffect")
-rays.Intensity = 0.035
-rays.Spread = 0.82
-
-local atmosphere = getOrCreateLightingEffect("ChaosAtmosphere", "Atmosphere")
-atmosphere.Density = 0.16
-atmosphere.Offset = 0.18
-atmosphere.Color = Color3.fromRGB(185, 205, 235)
-atmosphere.Decay = Color3.fromRGB(58, 72, 105)
-atmosphere.Glare = 0.03
-atmosphere.Haze = 0.72
-atmosphere.Parent = Lighting
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosJuice"
@@ -343,6 +313,10 @@ local function setMood(state)
     end
 
     if phase == "round" or phase == "ready" then
+        rays.Enabled = phase == "ready" and vfxTier.RaysEnabled
+        rays.Intensity = phase == "ready" and (0.018 * vfxTier.Scale) or 0
+        rays.Spread = 0.78
+
         roundDanger = phase == "round" and (tonumber(state.seconds) or 99) <= 5
 
         local profile = DisasterVisuals.combine(ids)
@@ -442,37 +416,14 @@ local function setMood(state)
         roundDanger = false
         activeDoubleChaos = false
         secondaryAccent = nil
-        atmosphere.Density = 0.15
-        atmosphere.Haze = 0.65
-        bloom.Intensity = 0.42 * vfxTier.Scale
-        color.Brightness = 0
-        color.Contrast = 0.08
-        color.Saturation = 0.10
-        color.TintColor = Color3.new(1, 1, 1)
-        atmosphere.Color = Color3.fromRGB(205, 215, 235)
         tweenCamera(72, 0.35)
     else
-        if phase == "vote" then
-            color.Contrast = 0.08
-            color.Saturation = 0.10
-        end
-
         resetActiveBeacon()
         roundDanger = false
         activeDoubleChaos = false
         secondaryAccent = nil
-        atmosphere.Density = 0.14
-        atmosphere.Haze = 0.55
-        bloom.Intensity = 0.30 * vfxTier.Scale
-        color.Brightness = 0
-        color.Contrast = 0.05
-        color.Saturation = 0.06
-        color.TintColor = Color3.new(1, 1, 1)
-        atmosphere.Color = Color3.fromRGB(205, 215, 235)
         tweenCamera(70, 0.4)
     end
-
-    rays.Enabled = vfxTier.RaysEnabled
     lastPhase = phase
 end
 
@@ -683,7 +634,12 @@ RunService.RenderStepped:Connect(function(dt)
                 vfxTierTransitions += 1
                 vfxTier = VfxQuality.get(vfxTierName)
                 player:SetAttribute("VfxQualityTier", vfxTierName)
-                rays.Enabled = vfxTier.RaysEnabled
+                if currentState and (
+                    currentState.phase == "ready"
+                    or currentState.phase == "round"
+                ) then
+                    setMood(currentState)
+                end
                 qualityCandidate = nil
                 qualityCandidateSamples = 0
             end
