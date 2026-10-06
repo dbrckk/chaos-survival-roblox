@@ -82,6 +82,18 @@ local function french(localeId)
     return string.sub(string.lower(tostring(localeId or "")), 1, 2) == "fr"
 end
 
+function ResultPresentation.feedbackEliminationCause(survived, cause)
+    if survived == true then
+        return nil
+    end
+
+    local normalized = tostring(cause or "Unknown")
+    if normalized == "" then
+        return "Unknown"
+    end
+    return normalized
+end
+
 function ResultPresentation.eliminationCopy(feedback, localeId)
     feedback = type(feedback) == "table" and feedback or {}
     local source = french(localeId) and ELIMINATION_COPY_FR or ELIMINATION_COPY
