@@ -12,6 +12,10 @@ Copy this file for each release-candidate certification run.
 - Screen resolution / viewport:
 - Network conditions:
 - Tester:
+- Initial VFX tier:
+- Final VFX tier:
+- VFX tier transitions:
+- ReduceMotion state:
 
 ## Automated Studio E2E
 
@@ -76,6 +80,11 @@ Copy this file for each release-candidate certification run.
 - Spectator controls/readability: PASS / FAIL
 - Low VFX mode readable: yes / no
 - Blackout playable on device brightness: yes / no
+- FOV remains comfortable and within 60–90: yes / no
+- No visible FOV tug-of-war during SpeedSurge / damage / Final Rush: yes / no
+- LowGravity cosmetics disappear correctly in Low / ReduceMotion: yes / no
+- Landing VFX remain local/lightweight in Low: yes / no
+- Animated arena decor returns to baseline after the round: yes / no
 - Notes:
 
 ## Performance soak
@@ -92,7 +101,25 @@ Duration target: 30–60 minutes.
 - Arena-swap spike:
 - Bomb + Double Chaos performance:
 - Meteor + Double Chaos performance:
+- VFX tier transitions during soak:
+- Final settled VFX tier:
+- Visual budget warning observed: yes / no
 - Device heat/battery notes:
+
+## Visual / animation regression
+
+| Check | PASS / FAIL | Notes |
+| --- | --- | --- |
+| Only one Clouds instance |  |  |
+| Decorative local parts are non-collidable/non-touch/non-query |  |  |
+| High / Medium / Low remain visually coherent |  |  |
+| No excessive decorative neon vs hazard cues |  |  |
+| AI idle/walk/run transitions blend naturally |  |  |
+| AI jump → fall → landing has no visible track overlap |  |  |
+| AI bots do not look perfectly synchronized |  |  |
+| No obvious foot sliding at normal bot speeds |  |  |
+| Arena identity motion restores cleanly after active phases |  |  |
+| Camera FOV has no competing controller behavior |  |  |
 
 ## Persistence pass
 
