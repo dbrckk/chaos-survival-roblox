@@ -136,7 +136,7 @@ local function renderBurst(payload)
     ring.Parent = workspace
 
     local secondaryRing = nil
-    local plume = nil
+    local plumeAnchor = nil
     if profile.Name ~= "Low" and not reduced then
         secondaryRing = Instance.new("Part")
         secondaryRing.Name = "LocalHazardSecondaryShockRing"
@@ -156,32 +156,74 @@ local function renderBurst(payload)
         secondaryRing.Transparency = 0.34
         secondaryRing.Parent = workspace
 
-        plume = Instance.new("Part")
-        plume.Name = "LocalHazardImpactPlume"
-        local meteorPlume = kind == "Meteor"
-        plume.Size = meteorPlume
-            and Vector3.new(
-                math.max(0.7, radius * 0.12),
-                math.max(3.6, radius * 0.62),
-                math.max(0.7, radius * 0.12)
+        plumeAnchor = Instance.new("Part")
+        plumeAnchor.Name = "LocalHazardImpactPlumeAnchor"
+        plumeAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
+        plumeAnchor.Position = position + Vector3.new(0, 0.22, 0)
+        plumeAnchor.Anchored = true
+        plumeAnchor.CanCollide = false
+        plumeAnchor.CanTouch = false
+        plumeAnchor.CanQuery = false
+        plumeAnchor.CastShadow = false
+        plumeAnchor.Transparency = 1
+        plumeAnchor.Parent = workspace
+
+        local attachment = Instance.new("Attachment")
+        attachment.Name = "ImpactPlumeAttachment"
+        attachment.Parent = plumeAnchor
+
+        local plumeEmitter = Instance.new("ParticleEmitter")
+        plumeEmitter.Name = kind == "Meteor"
+            and "MeteorImpactColumn"
+            or "BombBlastCloud"
+        plumeEmitter.Rate = 0
+        plumeEmitter.LightEmission = kind == "Meteor" and 0.78 or 0.38
+        plumeEmitter.LightInfluence = kind == "Meteor" and 0.08 or 0.42
+        plumeEmitter.Color = kind == "Meteor"
+            and ColorSequence.new(
+                Color3.fromRGB(255, 220, 120),
+                Color3.fromRGB(255, 110, 48)
             )
-            or Vector3.new(
-                math.max(1.8, radius * 0.42),
-                math.max(1.2, radius * 0.22),
-                math.max(1.8, radius * 0.42)
+            or ColorSequence.new(
+                color:Lerp(Color3.fromRGB(165, 120, 105), 0.50),
+                Color3.fromRGB(58, 54, 60)
             )
-        plume.CFrame = CFrame.new(position + Vector3.new(0, plume.Size.Y * 0.5, 0))
-        plume.Anchored = true
-        plume.CanCollide = false
-        plume.CanTouch = false
-        plume.CanQuery = false
-        plume.CastShadow = false
-        plume.Material = Enum.Material.Neon
-        plume.Color = kind == "Meteor"
-            and Color3.fromRGB(255, 160, 62)
-            or color:Lerp(Color3.fromRGB(255, 150, 95), 0.18)
-        plume.Transparency = kind == "Meteor" and 0.55 or 0.62
-        plume.Parent = workspace
+        plumeEmitter.Lifetime = kind == "Meteor"
+            and NumberRange.new(0.30, 0.56)
+            or NumberRange.new(0.36, 0.68)
+        plumeEmitter.Speed = kind == "Meteor"
+            and NumberRange.new(math.max(6, radius * 0.65), math.max(10, radius * 1.05))
+            or NumberRange.new(math.max(3, radius * 0.36), math.max(6, radius * 0.72))
+        plumeEmitter.Acceleration = kind == "Meteor"
+            and Vector3.new(0, 7.5, 0)
+            or Vector3.new(0, 2.0, 0)
+        plumeEmitter.SpreadAngle = kind == "Meteor"
+            and Vector2.new(26, 26)
+            or Vector2.new(170, 170)
+        plumeEmitter.Size = kind == "Meteor"
+            and NumberSequence.new({
+                NumberSequenceKeypoint.new(0, math.max(0.34, radius * 0.055)),
+                NumberSequenceKeypoint.new(0.45, math.max(0.70, radius * 0.11)),
+                NumberSequenceKeypoint.new(1, 0),
+            })
+            or NumberSequence.new({
+                NumberSequenceKeypoint.new(0, math.max(0.42, radius * 0.07)),
+                NumberSequenceKeypoint.new(0.50, math.max(0.90, radius * 0.15)),
+                NumberSequenceKeypoint.new(1, 0),
+            })
+        plumeEmitter.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, kind == "Meteor" and 0.18 or 0.36),
+            NumberSequenceKeypoint.new(0.72, 0.58),
+            NumberSequenceKeypoint.new(1, 1),
+        })
+        plumeEmitter.Parent = attachment
+        plumeEmitter:Emit(
+            VfxQuality.particleCount(
+                profile.Name,
+                kind == "Meteor" and 18 or 22,
+                kind == "Meteor" and 8 or 10
+            )
+        )
     end
 
     local core = nil
@@ -244,35 +286,6 @@ local function renderBurst(payload)
                     0.08,
                     targetDiameter * 1.52,
                     targetDiameter * 1.52
-                ),
-                Transparency = 1,
-            }
-        ):Play()
-    end
-
-    if plume then
-        local meteorPlume = kind == "Meteor"
-        TweenService:Create(
-            plume,
-            TweenInfo.new(duration * 1.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {
-                Size = meteorPlume
-                    and Vector3.new(
-                        plume.Size.X * 0.55,
-                        math.max(5.5, radius * 1.55),
-                        plume.Size.Z * 0.55
-                    )
-                    or Vector3.new(
-                        math.max(radius * 1.35, plume.Size.X * 1.9),
-                        math.max(0.7, plume.Size.Y * 0.55),
-                        math.max(radius * 1.35, plume.Size.Z * 1.9)
-                    ),
-                Position = plume.Position + Vector3.new(
-                    0,
-                    meteorPlume
-                        and math.max(2.8, radius * 0.48)
-                        or math.max(0.4, radius * 0.08),
-                    0
                 ),
                 Transparency = 1,
             }
@@ -367,8 +380,8 @@ local function renderBurst(payload)
     if secondaryRing then
         Debris:AddItem(secondaryRing, lifetime * 1.4)
     end
-    if plume then
-        Debris:AddItem(plume, lifetime * 1.4)
+    if plumeAnchor then
+        Debris:AddItem(plumeAnchor, math.max(0.85, lifetime * 2.2))
     end
     if core then
         Debris:AddItem(core, lifetime)
