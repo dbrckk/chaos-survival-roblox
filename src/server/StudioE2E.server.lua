@@ -7,6 +7,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StudioTestService = game:GetService("StudioTestService")
 
+local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+
 local okArgs, args = pcall(StudioTestService.GetTestArgs, StudioTestService)
 if not okArgs or type(args) ~= "table" or args.suite ~= "ChaosE2E" then
     return
@@ -25,6 +27,11 @@ reportEvent.Parent = ReplicatedStorage
 
 local reports = {}
 local spectatorProbeReports = {}
+local visualPhaseProbeReports = {
+    ready = 0,
+    round = 0,
+    result = 0,
+}
 local failures = {}
 local removedUserId = nil
 
@@ -36,6 +43,60 @@ end
 reportEvent.OnServerEvent:Connect(function(player, report)
     if type(report) ~= "table" then
         fail("invalid report from " .. player.Name)
+        return
+    end
+
+    if report.kind == "visual_phase_probe" then
+        local phase = tostring(report.phase or "")
+        if visualPhaseProbeReports[phase] == nil then
+            fail(player.Name .. ": invalid visual phase probe " .. phase)
+            return
+        end
+
+        local metrics = report.visualMetrics
+        local fieldOfView = tonumber(report.fieldOfView) or 0
+        local tierName = tostring(report.vfxTier or "High")
+
+        if type(metrics) ~= "table"
+            or type(metrics.Parts) ~= "number"
+            or type(metrics.Lights) ~= "number"
+            or type(metrics.Effects) ~= "number"
+        then
+            fail(player.Name .. ": invalid " .. phase .. " visual metrics")
+            return
+        end
+
+        if fieldOfView < 60 or fieldOfView > 90 then
+            fail(player.Name .. ": " .. phase .. " FOV outside safe bounds")
+        end
+
+        if not VisualBudgetRules.withinBudget(tierName, metrics) then
+            fail(string.format(
+                "%s: %s visual budget exceeded for %s (parts=%d lights=%d effects=%d)",
+                player.Name,
+                phase,
+                tierName,
+                metrics.Parts,
+                metrics.Lights,
+                metrics.Effects
+            ))
+        end
+
+        visualPhaseProbeReports[phase] += 1
+        print(
+            "CHAOS_E2E_VISUAL_PHASE",
+            player.Name,
+            phase,
+            tierName,
+            string.format(
+                "parts=%d lights=%d effects=%d fov=%.1f folders=%d",
+                metrics.Parts,
+                metrics.Lights,
+                metrics.Effects,
+                fieldOfView,
+                tonumber(report.auditedFolders) or 0
+            )
+        )
         return
     end
 
@@ -193,6 +254,12 @@ task.spawn(function()
         fail(string.format("only %d/%d clients reported", reportCount, expectedTotal))
     end
 
+    for _, phase in ipairs({"ready", "round", "result"}) do
+        if visualPhaseProbeReports[phase] < 1 then
+            fail("missing visual phase probe: " .. phase)
+        end
+    end
+
     local players = Players:GetPlayers()
     if #players > 1 then
         local probePlayer = players[#players]
@@ -243,7 +310,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, UI/input/vote/movement/round-state/spectator/join-leave verified",
+            "PASS: %d clients, UI/input/vote/movement/round-state/visual-phases/spectator/join-leave verified",
             expectedTotal
         ))
     end
