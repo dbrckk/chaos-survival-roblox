@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -10,7 +9,7 @@ local localDecor = Instance.new("Folder")
 localDecor.Name = "ChaosHazardWarningDecorLocal"
 localDecor.Parent = workspace
 local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-local renderConnection = nil
+local loopStarted = false
 local warningNames = {
     BombWarning = true,
     MeteorWarning = true,
@@ -23,95 +22,121 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 local function ensureRenderLoop()
-    if renderConnection or next(tracked) == nil then
+    if loopStarted then
         return
     end
+    loopStarted = true
 
-    renderConnection = RunService.RenderStepped:Connect(function(dt)
-        for part, state in pairs(tracked) do
-            if not part.Parent then
-                if state.ring and state.ring.Parent then
-                    state.ring:Destroy()
-                end
-                if state.label and state.label.Parent then
-                    state.label:Destroy()
-                end
-                tracked[part] = nil
+    task.spawn(function()
+        while true do
+            if next(tracked) == nil then
+                task.wait(0.18)
                 continue
             end
 
-            state.clock += dt
-            if state.clock < currentTier.UpdateInterval then
-                continue
-            end
-            state.clock = 0
+            currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+            task.wait(math.max(1 / 30, currentTier.UpdateInterval))
 
-            local alpha = math.clamp((workspace:GetServerTimeNow() - state.startedAt) / state.duration, 0, 1)
-            local reduced = player:GetAttribute("ReduceMotion") == true
-            local pulse = reduced
-                and 0.5
-                or ((math.sin(alpha * math.pi * 6) + 1) * 0.5)
-
-            if state.kind == "Freeze" then
-                local freezePeak = 0.18 * currentTier.Scale
-                part.Transparency = math.clamp(
-                    0.84 - (freezePeak * math.sin(alpha * math.pi)),
-                    0.60,
-                    0.92
-                )
-            elseif state.kind == "JumpShock" then
-                local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
-                part.Size = Vector3.new(part.Size.X, diameter, diameter)
-                part.Transparency = 0.30 + (0.58 * alpha)
-
-                if state.ring and state.ring.Parent then
-                    local trailingDiameter = math.max(state.startSize, diameter * 0.82)
-                    state.ring.Size = Vector3.new(0.08, trailingDiameter, trailingDiameter)
-                    state.ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.08, 0))
-                        * CFrame.Angles(0, 0, math.rad(90))
-                    state.ring.Transparency = 0.38 + (0.54 * alpha)
+            for part, state in pairs(tracked) do
+                if not part.Parent then
+                    if state.ring and state.ring.Parent then
+                        state.ring:Destroy()
+                    end
+                    if state.label and state.label.Parent then
+                        state.label:Destroy()
+                    end
+                    tracked[part] = nil
+                    continue
                 end
-            else
-                local diameter = state.startSize + ((state.endSize - state.startSize) * alpha)
-                part.Size = Vector3.new(diameter, part.Size.Y, diameter)
-                part.Transparency = 0.12 + (pulse * 0.24)
 
-                if state.ring and state.ring.Parent then
-                    local ringScale = reduced and 1.12 or (1.10 + (pulse * 0.12))
-                    state.ring.Size = Vector3.new(0.10, diameter * ringScale, diameter * ringScale)
-                    state.ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.06, 0))
-                        * CFrame.Angles(0, 0, math.rad(90))
-                    state.ring.Transparency = 0.42 + (0.28 * alpha) + (pulse * 0.08)
-                end
-            end
-
-            if state.label and state.label.Parent then
-                state.label.StudsOffsetWorldSpace = Vector3.new(
+                local alpha = math.clamp(
+                    (workspace:GetServerTimeNow() - state.startedAt) / state.duration,
                     0,
-                    reduced and 2.66 or (2.6 + pulse * 0.18),
-                    0
+                    1
                 )
-                local text = state.label:FindFirstChild("WarningText")
-                if text and text:IsA("TextLabel") then
-                    text.TextTransparency = math.clamp(0.02 + alpha * 0.22, 0, 1)
-                    text.TextStrokeTransparency = math.clamp(0.42 + alpha * 0.30, 0, 1)
-                end
-            end
+                local reduced = player:GetAttribute("ReduceMotion") == true
+                local pulse = reduced
+                    and 0.5
+                    or ((math.sin(alpha * math.pi * 6) + 1) * 0.5)
 
-            if alpha >= 1 then
-                if state.ring and state.ring.Parent then
-                    state.ring:Destroy()
+                if state.kind == "Freeze" then
+                    local freezePeak = 0.18 * currentTier.Scale
+                    part.Transparency = math.clamp(
+                        0.84 - (freezePeak * math.sin(alpha * math.pi)),
+                        0.60,
+                        0.92
+                    )
+                elseif state.kind == "JumpShock" then
+                    local diameter = state.startSize
+                        + ((state.endSize - state.startSize) * alpha)
+                    part.Size = Vector3.new(part.Size.X, diameter, diameter)
+                    part.Transparency = 0.30 + (0.58 * alpha)
+
+                    if state.ring and state.ring.Parent then
+                        local trailingDiameter = math.max(state.startSize, diameter * 0.82)
+                        state.ring.Size = Vector3.new(
+                            0.08,
+                            trailingDiameter,
+                            trailingDiameter
+                        )
+                        state.ring.CFrame = CFrame.new(
+                            part.Position + Vector3.new(0, 0.08, 0)
+                        ) * CFrame.Angles(0, 0, math.rad(90))
+                        state.ring.Transparency = 0.38 + (0.54 * alpha)
+                    end
+                else
+                    local diameter = state.startSize
+                        + ((state.endSize - state.startSize) * alpha)
+                    part.Size = Vector3.new(diameter, part.Size.Y, diameter)
+                    part.Transparency = 0.12 + (pulse * 0.24)
+
+                    if state.ring and state.ring.Parent then
+                        local ringScale = reduced and 1.12 or (1.10 + pulse * 0.12)
+                        state.ring.Size = Vector3.new(
+                            0.10,
+                            diameter * ringScale,
+                            diameter * ringScale
+                        )
+                        state.ring.CFrame = CFrame.new(
+                            part.Position + Vector3.new(0, 0.06, 0)
+                        ) * CFrame.Angles(0, 0, math.rad(90))
+                        state.ring.Transparency = 0.42
+                            + (0.28 * alpha)
+                            + (pulse * 0.08)
+                    end
                 end
+
                 if state.label and state.label.Parent then
-                    state.label:Destroy()
+                    state.label.StudsOffsetWorldSpace = Vector3.new(
+                        0,
+                        reduced and 2.66 or (2.6 + pulse * 0.18),
+                        0
+                    )
+                    local text = state.label:FindFirstChild("WarningText")
+                    if text and text:IsA("TextLabel") then
+                        text.TextTransparency = math.clamp(
+                            0.02 + alpha * 0.22,
+                            0,
+                            1
+                        )
+                        text.TextStrokeTransparency = math.clamp(
+                            0.42 + alpha * 0.30,
+                            0,
+                            1
+                        )
+                    end
                 end
-                tracked[part] = nil
-            end
-        end
 
-        if next(tracked) == nil and renderConnection then
-            renderConnection:Disconnect()
-            renderConnection = nil
+                if alpha >= 1 then
+                    if state.ring and state.ring.Parent then
+                        state.ring:Destroy()
+                    end
+                    if state.label and state.label.Parent then
+                        state.label:Destroy()
+                    end
+                    tracked[part] = nil
+                end
+            end
         end
     end)
 end
@@ -196,7 +221,6 @@ local function register(part)
         duration = math.max(0.05, tonumber(part:GetAttribute("WarningDuration")) or 0.05),
         startSize = math.max(0.1, tonumber(part:GetAttribute("WarningStartSize")) or part.Size.X),
         endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
-        clock = 0,
         ring = ring,
         label = label,
     }
