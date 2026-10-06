@@ -197,6 +197,8 @@ local vfxTier = VfxQuality.get(vfxTierName)
 local frameTimeAccumulator = 0
 local frameSampleCount = 0
 local qualitySampleClock = 0
+local qualityCandidate = nil
+local qualityCandidateSamples = 0
 local visualUpdateClock = 0
 local performancePulseClock = 0
 local performanceFrameCount = 0
@@ -656,11 +658,31 @@ RunService.RenderStepped:Connect(function(dt)
         local averageFps = averageDt > 0 and (1 / averageDt) or 60
         local nextTierName = VfxQuality.nextTier(vfxTierName, averageFps)
 
-        if nextTierName ~= vfxTierName then
-            vfxTierName = nextTierName
-            vfxTier = VfxQuality.get(vfxTierName)
-            player:SetAttribute("VfxQualityTier", vfxTierName)
-            rays.Enabled = vfxTier.RaysEnabled
+        if nextTierName == vfxTierName then
+            qualityCandidate = nil
+            qualityCandidateSamples = 0
+        else
+            if qualityCandidate == nextTierName then
+                qualityCandidateSamples += 1
+            else
+                qualityCandidate = nextTierName
+                qualityCandidateSamples = 1
+            end
+
+            local requiredSamples = VfxQuality.requiredStableSamples(
+                vfxTierName,
+                nextTierName,
+                UserInputService.TouchEnabled
+            )
+
+            if qualityCandidateSamples >= requiredSamples then
+                vfxTierName = nextTierName
+                vfxTier = VfxQuality.get(vfxTierName)
+                player:SetAttribute("VfxQualityTier", vfxTierName)
+                rays.Enabled = vfxTier.RaysEnabled
+                qualityCandidate = nil
+                qualityCandidateSamples = 0
+            end
         end
 
         frameTimeAccumulator = 0
