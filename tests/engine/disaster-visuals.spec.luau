@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local DisasterVisuals = require("../../src/shared/DisasterVisuals")
+local DisasterBalance = require("../../src/server/DisasterBalance")
 
 describe("Disaster visual identities", function()
     it("defines a profile for every disaster", function()
@@ -60,6 +61,63 @@ describe("Disaster visual identities", function()
         local brightness = (combined :: any).Brightness
         expect(brightness < 0).toBe(true)
         expect(brightness > -0.28).toBe(true)
+    end)
+
+    it("keeps every allowed Double Chaos pair visually distinct and bounded", function()
+        local ids = {
+            "RisingLava",
+            "Meteors",
+            "LowGravity",
+            "DisappearingPlatforms",
+            "Tornado",
+            "Freeze",
+            "Bombs",
+            "SpeedSurge",
+            "Darkness",
+            "ShrinkingArena",
+            "JumpShock",
+        }
+
+        local testedPairs = 0
+
+        local function accentDistance(a, b)
+            local dr = (a.R - b.R) * 255
+            local dg = (a.G - b.G) * 255
+            local db = (a.B - b.B) * 255
+            return math.sqrt((dr * dr) + (dg * dg) + (db * db))
+        end
+
+        for i = 1, #ids do
+            for j = i + 1, #ids do
+                local aId = ids[i]
+                local bId = ids[j]
+
+                if DisasterBalance.compatible(aId, bId) then
+                    local a = DisasterVisuals.get(aId)
+                    local b = DisasterVisuals.get(bId)
+                    local combined = DisasterVisuals.combine({aId, bId})
+
+                    expect(a ~= nil).toBe(true)
+                    expect(b ~= nil).toBe(true)
+                    expect(combined ~= nil).toBe(true)
+
+                    -- Prevent two simultaneously playable hazards from collapsing
+                    -- into nearly the same primary warning/accent language.
+                    expect(accentDistance((a :: any).Accent, (b :: any).Accent) >= 60).toBe(true)
+
+                    expect((combined :: any).Bloom <= 0.9).toBe(true)
+                    expect((combined :: any).Contrast <= 0.22).toBe(true)
+                    expect((combined :: any).Saturation <= 0.32).toBe(true)
+                    expect((combined :: any).Density <= 0.28).toBe(true)
+                    expect((combined :: any).Haze <= 1.5).toBe(true)
+                    expect((combined :: any).Fov <= 84).toBe(true)
+
+                    testedPairs += 1
+                end
+            end
+        end
+
+        expect(testedPairs >= 40).toBe(true)
     end)
 
     it("blends two disasters within safe visual limits", function()
