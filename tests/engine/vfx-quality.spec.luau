@@ -41,6 +41,23 @@ describe("Adaptive VFX quality", function()
         expect(VfxQuality.particleCount("Low", 2, 4)).toBe(4)
     end)
 
+    it("runs decorative motion below gameplay VFX frequency", function()
+        local high = VfxQuality.get("High")
+        local medium = VfxQuality.get("Medium")
+        local low = VfxQuality.get("Low")
+
+        expect(high.DecorUpdateInterval >= (1 / 30)).toBe(true)
+        expect(medium.DecorUpdateInterval >= (1 / 24)).toBe(true)
+        expect(low.DecorUpdateInterval >= (1 / 15)).toBe(true)
+
+        expect(high.DecorUpdateInterval > high.UpdateInterval).toBe(true)
+        expect(medium.DecorUpdateInterval > medium.UpdateInterval).toBe(true)
+        expect(low.DecorUpdateInterval > low.UpdateInterval).toBe(true)
+
+        expect(high.DecorUpdateInterval < medium.DecorUpdateInterval).toBe(true)
+        expect(medium.DecorUpdateInterval < low.DecorUpdateInterval).toBe(true)
+    end)
+
     it("exposes bounded quality scales", function()
         for _, tierName in ipairs({"High", "Medium", "Low"}) do
             local tier = VfxQuality.get(tierName)
