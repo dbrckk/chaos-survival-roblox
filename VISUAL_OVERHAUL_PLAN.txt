@@ -199,6 +199,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.31 Classifier chaque PerformancePulse visuel en Budget:OK/OVER/UNKNOWN côté serveur, sans modifier le gameplay.
 [FAIT] 7.32 Garde-fou CI lifecycle : tout listener ChildAdded de map doit avoir un ownership/Disconnect explicite.
 [QA]   7.33 Contextualiser PerformancePulse avec phase, Double Chaos et Final Rush pour interpréter les pics de coût.
+[QA]   7.34 Compter Highlights/Smoke/Fire/Sparkles dans le budget Effects pour une mesure GPU plus fidèle.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
