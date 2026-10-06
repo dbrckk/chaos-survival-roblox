@@ -1,8 +1,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
+
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local finalRushActive = false
 
@@ -51,7 +55,7 @@ local label = Instance.new("TextLabel")
 label.Size = UDim2.fromScale(1, 1)
 label.BackgroundTransparency = 1
 label.Font = Enum.Font.GothamBlack
-label.Text = "MOMENTUM x2"
+label.Text = CoreLocalization.text(localeId, "RESULT_MOMENTUM_TAG", 2)
 label.TextColor3 = Color3.fromRGB(225, 245, 255)
 label.TextScaled = true
 label.TextTransparency = 1
@@ -114,7 +118,7 @@ local function refresh()
     local current = token
 
     local elite = combo >= 4
-    label.Text = "MOMENTUM x" .. tostring(combo)
+    label.Text = CoreLocalization.text(localeId, "RESULT_MOMENTUM_TAG", combo)
     label.TextColor3 = elite and Color3.fromRGB(255, 225, 105) or Color3.fromRGB(225, 245, 255)
     stroke.Color = elite and Color3.fromRGB(255, 190, 65) or Color3.fromRGB(85, 220, 255)
 
