@@ -70,6 +70,7 @@ PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 [QA]   3.14 Réduire l'émissif du skyline et les balises atmosphériques pour préserver la profondeur et la lisibilité gameplay.
 [QA]   3.15 Tamiser automatiquement world-depth et props ambiants pendant ROUND, avec restauration après changement de phase/map.
 [QA]   3.16 Centraliser le Clouds client : arena-lighting et juice partagent une seule couche, vérifiée par Studio E2E.
+[QA]   3.17 Centraliser toute la pile post-process : Color/Bloom/SunRays/Atmosphere/Depth uniques, baseline arena-lighting et override juice seulement READY/ROUND.
 
 PHASE 4 — VFX CATASTROPHES
 ---------------------------
@@ -205,6 +206,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.35 Étendre scenery-lod aux couches décoratives lobby/arène/résultat, caches faibles, culling Trail/Beam/Highlight/Smoke/Fire/Sparkles et restauration owner-safe après hide/show.
 [QA]   7.36 Limiter les boucles haute fréquence aux seuls systèmes caméra/mouvement ; Tornado passe hors RenderStepped.
 [FAIT] 7.37 Garde-fou CI haute fréquence : body-feel, movement-feel et juice sont les seuls scripts autorisés.
+[FAIT] 7.38 Garde-fou CI post-process : pile persistante unique + overlays temporaires aftermath/freeze explicitement autorisés.
 [FAIT] 7.36 Garde-fou CI LOD : chaque couche LOD doit être enregistrée dans le budget visuel et le cache doit rester weak-keyed.
 
 PHASE 8 — PRESENTATION PUBLIQUE
