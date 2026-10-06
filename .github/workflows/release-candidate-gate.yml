@@ -1,0 +1,165 @@
+name: Release Candidate Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type CERTIFY to verify the selected main commit'
+        required: true
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  certify:
+    if: ${{ inputs.confirm == 'CERTIFY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+
+      - name: Require main branch
+        shell: bash
+        run: |
+          test "$GITHUB_REF_NAME" = "main" || {
+            echo "Release Candidate Gate must be dispatched from main."
+            exit 1
+          }
+
+      - name: Verify required workflows on exact SHA
+        id: evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+          from pathlib import Path
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          sha = os.environ["GITHUB_SHA"]
+          token = os.environ["GH_TOKEN"]
+
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/actions/runs?head_sha={sha}&per_page=100",
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = json.load(response)
+
+          required = {
+              "Build Validation": None,
+              "Roblox Open Cloud Engine Tests": None,
+          }
+
+          for run in payload.get("workflow_runs", []):
+              name = run.get("name")
+              if name in required and required[name] is None:
+                  required[name] = run
+
+          failures = []
+          for name, run in required.items():
+              if run is None:
+                  failures.append(f"{name}: no run found for {sha}")
+              elif run.get("status") != "completed" or run.get("conclusion") != "success":
+                  failures.append(
+                      f"{name}: status={run.get('status')} conclusion={run.get('conclusion')}"
+                  )
+
+          spec_paths = sorted(Path("tests/engine").glob("*.spec.luau"))
+          if not spec_paths:
+              failures.append("No engine specs found.")
+
+          if failures:
+              print("Release candidate automated gate FAILED:")
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+
+          evidence = Path("release-evidence.md")
+          build = required["Build Validation"]
+          cloud = required["Roblox Open Cloud Engine Tests"]
+
+          evidence.write_text(
+              "\n".join([
+                  "# Chaos Survival — Automated Release Evidence",
+                  "",
+                  f"- Commit SHA: `{sha}`",
+                  f"- Git ref: `{os.environ.get('GITHUB_REF_NAME', '')}`",
+                  f"- Build Validation: PASS (run {build['id']})",
+                  f"- Roblox Open Cloud Engine Tests: PASS (run {cloud['id']})",
+                  f"- Engine spec files: {len(spec_paths)}",
+                  "",
+                  "## Automated status",
+                  "",
+                  "- PASS — exact SHA has green Build Validation.",
+                  "- PASS — exact SHA has green real-engine Open Cloud tests.",
+                  "- PASS — Open Cloud run implies shard coverage verification passed.",
+                  "",
+                  "## Manual gates still required",
+                  "",
+                  "- Authenticated four-client Roblox Studio E2E.",
+                  "- Physical Android UX/performance soak.",
+                  "- Physical desktop UX/performance pass.",
+                  "- Persistence/rejoin validation with API Services.",
+                  "- Small real-player public alpha.",
+                  "- Final icon/thumbnails/screenshots/page review.",
+                  "",
+                  "This artifact certifies automated gates only; it does not declare 1.0 release-ready by itself.",
+                  "",
+              ]),
+              encoding="utf-8",
+          )
+
+          print(evidence.read_text())
+          PY
+
+      - name: Verify release metadata consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          readme = Path("README.md").read_text()
+          count = len(list(Path("tests/engine").glob("*.spec.luau")))
+          match = re.search(r"(\d+) engine specs assigned exactly once", readme)
+          if not match:
+              raise SystemExit("README engine spec count statement missing.")
+          if int(match.group(1)) != count:
+              raise SystemExit(
+                  f"README engine spec count is {match.group(1)} but repository has {count}."
+              )
+
+          checklist = Path("RELEASE_CHECKLIST.md").read_text()
+          required_sections = [
+              "## Automated gate",
+              "## Authenticated Roblox Studio gate",
+              "## Physical device gate",
+              "## Data persistence gate",
+              "## Public alpha gate",
+              "## Definition of done",
+          ]
+          missing = [section for section in required_sections if section not in checklist]
+          if missing:
+              raise SystemExit("Missing release checklist sections: " + ", ".join(missing))
+
+          print(f"Release metadata consistent: {count} engine specs.")
+          PY
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-release-evidence-${{ github.sha }}
+          path: release-evidence.md
+          if-no-files-found: error
