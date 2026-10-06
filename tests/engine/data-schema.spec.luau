@@ -107,18 +107,36 @@ describe("Player data schema", function()
         local data = DataSchema.normalize({
             ReduceMotion = true,
             AudioMuted = true,
+            HapticsDisabled = true,
         })
         expect(data.ReduceMotion).toBe(true)
         expect(data.AudioMuted).toBe(true)
+        expect(data.HapticsDisabled).toBe(true)
 
         local snapshot = DataSchema.snapshot(function(key)
-            if key == "ReduceMotion" or key == "AudioMuted" then
+            if key == "ReduceMotion"
+                or key == "AudioMuted"
+                or key == "HapticsDisabled"
+            then
                 return true
             end
             return nil
         end)
         expect(snapshot.ReduceMotion).toBe(true)
         expect(snapshot.AudioMuted).toBe(true)
+        expect(snapshot.HapticsDisabled).toBe(true)
+    end)
+
+    it("defaults legacy saves to enabled haptics", function()
+        local data = DataSchema.normalize({
+            DataVersion = 6,
+            ReduceMotion = false,
+            AudioMuted = false,
+        })
+
+        expect(data.HapticsDisabled).toBe(false)
+        expect(data.DataVersion).toBe(DataSchema.Version)
+        expect(DataSchema.Version).toBe(7)
     end)
 
     it("uses bounded exponential retry delays", function()
