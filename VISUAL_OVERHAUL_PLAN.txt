@@ -132,6 +132,7 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.7 Spectator polish.
 [QA]   6.8 Vérifier fatigue visuelle et accessibilité — ReduceMotion renforcé sur plateformes, LowGravity et landing contact.
 [QA]   6.9 Centraliser strictement le FOV de round dans juice ; arena-mechanic-feedback ne modifie plus directement la caméra.
+[QA]   6.10 Body feel additif via C0 : ne jamais écraser Motor6D.Transform piloté par l'Animator R15.
 [FAIT] 6.10 Transmettre eliminationCause dans RoundFeedback pour afficher le conseil de revanche spécifique au vrai danger.
 [QA]   6.11 Attribuer les knockbacks réels Tornado/JumpShock avant une chute pour éviter les mauvaises causes en Double Chaos.
 
@@ -210,6 +211,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [FAIT] 7.37 Garde-fou CI haute fréquence : body-feel, movement-feel et juice sont les seuls scripts autorisés.
 [FAIT] 7.38 Garde-fou CI post-process : pile persistante unique + overlays temporaires aftermath/freeze explicitement autorisés.
 [FAIT] 7.39 Garde-fou CI GlobalShadows : seul arena-lighting.client.lua peut modifier la propriété.
+[FAIT] 7.40 Garde-fou CI Motor6D.Transform : aucun polish client ne peut prendre la propriété de l'Animator.
 [FAIT] 7.36 Garde-fou CI LOD : chaque couche LOD doit être enregistrée dans le budget visuel et le cache doit rester weak-keyed.
 
 PHASE 8 — PRESENTATION PUBLIQUE
