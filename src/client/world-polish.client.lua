@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local LocalizationService = game:GetService("LocalizationService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
@@ -35,7 +34,6 @@ local intensity = 1
 local previousPhase = "waiting"
 local readyPulseStartedAt = nil
 local clock = 0
-local updateClock = 0
 local currentMap = nil
 local currentMapConnection = nil
 local cachedLobbyCenter = Config.LobbyCenter
@@ -552,16 +550,11 @@ end)
 
 bindGeneratedMap()
 
-RunService.RenderStepped:Connect(function(dt)
-    clock += dt
-    updateClock += dt
-
-    local tier = quality()
-    if updateClock < math.max(0.025, tier.UpdateInterval) then
-        return
-    end
-    local elapsed = updateClock
-    updateClock = 0
+task.spawn(function()
+    while true do
+        local tier = quality()
+        local elapsed = task.wait(math.max(0.025, tier.UpdateInterval))
+        clock += elapsed
 
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
     local motionScale = reducedMotion and 0.28 or 1
@@ -739,5 +732,6 @@ RunService.RenderStepped:Connect(function(dt)
                 end
             end
         end
+    end
     end
 end)
