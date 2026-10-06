@@ -898,7 +898,11 @@ local function bindMap()
     if generated then
         mapConnection = generated.ChildAdded:Connect(function(child)
             if child.Name == "Arena" then
-                task.defer(rebuild)
+                task.defer(function()
+                    rebuild()
+                    applyTransitPhase(currentPhase)
+                    applyGlobalGlowPhase(0)
+                end)
             end
         end)
     end
@@ -909,6 +913,8 @@ workspace.ChildAdded:Connect(function(child)
         task.defer(function()
             bindMap()
             rebuild()
+            applyTransitPhase(currentPhase)
+            applyGlobalGlowPhase(0)
         end)
     end
 end)
