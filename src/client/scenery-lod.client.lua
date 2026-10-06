@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 
 local player = Players.LocalPlayer
 
@@ -144,8 +145,8 @@ local folderCaches = setmetatable({}, {__mode = "k"})
 
 local function classifyDescendant(descendant)
     if descendant:IsA("BasePart")
-        or descendant:IsA("ParticleEmitter")
-        or descendant:IsA("Light")
+        or VisualBudgetRules.isLight(descendant)
+        or VisualBudgetRules.isEffect(descendant)
     then
         return descendant
     end
@@ -207,14 +208,9 @@ local function applyFolder(folder, limits, profile, origin)
 
         if descendant:IsA("BasePart") then
             descendant.LocalTransparencyModifier = visible and 0 or 1
-        elseif descendant:IsA("ParticleEmitter") then
-            local baseEnabled = descendant:GetAttribute("LodBaseEnabled")
-            if baseEnabled == nil then
-                descendant:SetAttribute("LodBaseEnabled", descendant.Enabled)
-                baseEnabled = descendant.Enabled
-            end
-            descendant.Enabled = visible and baseEnabled == true
-        elseif descendant:IsA("Light") then
+        elseif VisualBudgetRules.isEffect(descendant)
+            or VisualBudgetRules.isLight(descendant)
+        then
             local baseEnabled = descendant:GetAttribute("LodBaseEnabled")
             if baseEnabled == nil then
                 descendant:SetAttribute("LodBaseEnabled", descendant.Enabled)
