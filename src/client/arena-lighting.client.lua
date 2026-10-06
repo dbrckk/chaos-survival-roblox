@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CloudLayer = require(script.Parent.CloudLayer)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -54,15 +55,7 @@ if not sunRays then
 end
 
 local terrain = workspace:FindFirstChildOfClass("Terrain")
-local clouds = terrain and terrain:FindFirstChildOfClass("Clouds")
-if terrain and not clouds then
-    clouds = Instance.new("Clouds")
-    clouds.Name = "ArenaIdentityClouds"
-    clouds.Enabled = true
-    clouds.Cover = 0.38
-    clouds.Density = 0.18
-    clouds.Parent = terrain
-end
+local clouds = CloudLayer.getOrCreate()
 
 local MOODS = {
     Classic = {
