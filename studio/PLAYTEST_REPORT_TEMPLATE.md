@@ -101,6 +101,9 @@ Duration target: 30–60 minutes.
 - Visible stutter:
 - Memory at start:
 - Memory at end:
+- Visual metrics at start (parts/lights/effects):
+- Visual metrics at end (parts/lights/effects):
+- Visual instance growth without map/phase reason: yes / no
 - Progressive degradation: yes / no
 - Arena-swap spike:
 - Bomb + Double Chaos performance:
@@ -108,6 +111,7 @@ Duration target: 30–60 minutes.
 - VFX tier transitions during soak:
 - Final settled VFX tier:
 - Visual budget warning observed: yes / no
+- Latest PerformancePulse Visual: P/L/E:
 - Device heat/battery notes:
 
 ## Visual / animation regression
