@@ -26,11 +26,20 @@ local function motionScale()
     return 1
 end
 
-local function track(part, role, index)
+local function track(nextTracked, part, role, index)
     if not part or not part:IsA("BasePart") then
         return
     end
-    tracked[part] = {
+
+    local state = tracked[part]
+    if state then
+        state.role = role
+        state.index = index or 1
+        nextTracked[part] = state
+        return
+    end
+
+    nextTracked[part] = {
         role = role,
         index = index or 1,
         baseCFrame = part.CFrame,
@@ -49,20 +58,21 @@ local function scan()
         end
     end
 
-    table.clear(tracked)
+    local nextTracked = {}
 
-    track(source:FindFirstChild("TowerServiceCar"), "lift", 1)
-    track(source:FindFirstChild("TowerServiceCrown"), "pulse", 2)
-    track(source:FindFirstChild("TowerMaintenanceCraneCable"), "cable", 3)
+    track(nextTracked, source:FindFirstChild("TowerServiceCar"), "lift", 1)
+    track(nextTracked, source:FindFirstChild("TowerServiceCrown"), "pulse", 2)
+    track(nextTracked, source:FindFirstChild("TowerMaintenanceCraneCable"), "cable", 3)
 
-    track(source:FindFirstChild("OrbitalReactorCore"), "reactorCore", 1)
+    track(nextTracked, source:FindFirstChild("OrbitalReactorCore"), "reactorCore", 1)
     for i = 1, 6 do
-        track(source:FindFirstChild("OrbitalReactorArm" .. i), "reactorArm", i)
+        track(nextTracked, source:FindFirstChild("OrbitalReactorArm" .. i), "reactorArm", i)
     end
 
-    track(source:FindFirstChild("ClassicBroadcastTally"), "scan", 1)
+    track(nextTracked, source:FindFirstChild("ClassicBroadcastTally"), "scan", 1)
     for i = 1, 2 do
         track(
+            nextTracked,
             source:FindFirstChild(i == 1 and "ClassicBroadcastAntennaL" or "ClassicBroadcastAntennaR"),
             "antenna",
             i
@@ -70,8 +80,19 @@ local function scan()
     end
 
     for i = 1, 3 do
-        track(source:FindFirstChild("CrossroadsTransitSignal" .. i), "signal", i)
+        track(nextTracked, source:FindFirstChild("CrossroadsTransitSignal" .. i), "signal", i)
     end
+
+    for part, state in pairs(tracked) do
+        if not nextTracked[part] and part.Parent then
+            part.CFrame = state.baseCFrame
+            part.Transparency = state.baseTransparency
+            part.Color = state.baseColor
+            part.Size = state.baseSize
+        end
+    end
+
+    tracked = nextTracked
 end
 
 workspace.ChildAdded:Connect(function(child)
