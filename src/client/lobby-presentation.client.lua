@@ -715,29 +715,47 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     applyState()
 end)
 
+local function bindGeneratedMap(generated)
+    if mapConnection then
+        mapConnection:Disconnect()
+        mapConnection = nil
+    end
+
+    if generated then
+        mapConnection = generated.ChildAdded:Connect(function(child)
+            if child.Name == "Lobby" then
+                task.delay(0.08, function()
+                    if generated.Parent then
+                        bindLobby()
+                        applyState()
+                        startPulseLoop()
+                    end
+                end)
+            end
+        end)
+    end
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(child)
         task.delay(0.12, function()
-            bindLobby()
-            applyState()
-            startPulseLoop()
+            if child.Parent then
+                bindLobby()
+                applyState()
+                startPulseLoop()
+            end
         end)
     end
 end)
 
-local generated = workspace:FindFirstChild("GeneratedMap")
-if generated then
-    generated.ChildAdded:Connect(function(child)
-        if child.Name == "Lobby" then
-            task.delay(0.08, function()
-                bindLobby()
-                applyState()
-                startPulseLoop()
-            end)
-        end
-    end)
-end
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        bindGeneratedMap(nil)
+    end
+end)
 
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 bindLobby()
 applyState()
 startPulseLoop()
