@@ -30,6 +30,16 @@ for name, id in pairs(AnimationCatalog.AISurvivor or {}) do
     check(AnimationCatalog.assetId(id) == "rbxassetid://" .. tostring(id), "Invalid animation asset URI: " .. tostring(name))
 end
 
+local visualBudgetModule = shared:FindFirstChild("VisualBudgetRules")
+check(visualBudgetModule ~= nil, "VisualBudgetRules module missing")
+local VisualBudgetRules = require(visualBudgetModule)
+for _, tierName in ipairs({"High", "Medium", "Low"}) do
+    local budget = VisualBudgetRules.forTier(tierName)
+    check(type(budget.Parts) == "number" and budget.Parts > 0, "Invalid parts budget: " .. tierName)
+    check(type(budget.Lights) == "number" and budget.Lights > 0, "Invalid lights budget: " .. tierName)
+    check(type(budget.Effects) == "number" and budget.Effects > 0, "Invalid effects budget: " .. tierName)
+end
+
 local mapBuilderModule = server:FindFirstChild("MapBuilder")
 check(mapBuilderModule ~= nil, "MapBuilder module missing")
 local MapBuilder = require(mapBuilderModule)
