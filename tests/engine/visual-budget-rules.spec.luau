@@ -30,6 +30,28 @@ describe("visual budget rules", function()
         end
     end)
 
+    it("classifies every managed GPU effect type consistently", function()
+        local managed = {
+            Instance.new("ParticleEmitter"),
+            Instance.new("Trail"),
+            Instance.new("Beam"),
+            Instance.new("Highlight"),
+            Instance.new("Smoke"),
+            Instance.new("Fire"),
+            Instance.new("Sparkles"),
+        }
+
+        for _, instance in ipairs(managed) do
+            expect(VisualBudgetRules.isEffect(instance)).toBe(true)
+            instance:Destroy()
+        end
+
+        local light = Instance.new("PointLight")
+        expect(VisualBudgetRules.isLight(light)).toBe(true)
+        expect(VisualBudgetRules.isEffect(light)).toBe(false)
+        light:Destroy()
+    end)
+
     it("collects parts lights and effects from registered visual folders", function()
         local root = Instance.new("Folder")
         local layer = Instance.new("Folder")
