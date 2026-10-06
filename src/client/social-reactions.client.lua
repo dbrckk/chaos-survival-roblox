@@ -19,6 +19,8 @@ local reactionEvent = remotes:WaitForChild("SocialReaction")
 
 local currentPhase = "waiting"
 local sentThisResult = false
+local resultSocialReady = false
+local resultReadyToken = 0
 local viewportConnection = nil
 
 local gui = Instance.new("ScreenGui")
@@ -116,7 +118,9 @@ local function bindCamera()
 end
 
 local function refresh()
-    dock.Visible = not sentThisResult and SocialExperienceRules.canReact(
+    dock.Visible = resultSocialReady
+        and not sentThisResult
+        and SocialExperienceRules.canReact(
         currentPhase,
         #Players:GetPlayers(),
         player:GetAttribute("Games")
@@ -196,7 +200,9 @@ end
 for reactionId, button in pairs(buttons) do
     local id = reactionId
     button.Activated:Connect(function()
-        if sentThisResult or not SocialExperienceRules.canReact(
+        if sentThisResult
+            or not resultSocialReady
+            or not SocialExperienceRules.canReact(
             currentPhase,
             #Players:GetPlayers(),
             player:GetAttribute("Games")
@@ -228,13 +234,27 @@ reactionEvent.OnClientEvent:Connect(function(payload)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    local previousPhase = currentPhase
     local nextPhase = tostring(state.phase or "waiting")
-    if nextPhase == "result" and currentPhase ~= "result" then
+    currentPhase = nextPhase
+
+    if nextPhase == "result" and previousPhase ~= "result" then
         sentThisResult = false
+        resultSocialReady = false
+        resultReadyToken += 1
+        local token = resultReadyToken
+        task.delay(1.25, function()
+            if token == resultReadyToken and currentPhase == "result" then
+                resultSocialReady = true
+                refresh()
+            end
+        end)
     elseif nextPhase ~= "result" then
+        resultReadyToken += 1
+        resultSocialReady = false
         sentThisResult = false
     end
-    currentPhase = nextPhase
+
     refresh()
 end)
 
