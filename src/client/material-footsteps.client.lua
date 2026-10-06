@@ -15,6 +15,18 @@ local SURFACE_SOUND_NAMES = {
     Landing = true,
 }
 
+local CHARACTER_SOUND_NAMES = {
+    Running = true,
+    Landing = true,
+    Jumping = true,
+    FreeFalling = true,
+    Climbing = true,
+    Swimming = true,
+    Splash = true,
+    Died = true,
+    GettingUp = true,
+}
+
 local function disconnect()
     if floorConnection then
         floorConnection:Disconnect()
@@ -54,12 +66,14 @@ local function ensureEffects(sound)
 end
 
 local function applyProfile(sound, profile)
-    local eq, reverb = ensureEffects(sound)
-    eq.LowGain = profile.Low
-    eq.MidGain = profile.Mid
-    eq.HighGain = profile.High
-    reverb.WetLevel = profile.Wet
-    reverb.DecayTime = profile.Decay
+    if SURFACE_SOUND_NAMES[sound.Name] then
+        local eq, reverb = ensureEffects(sound)
+        eq.LowGain = profile.Low
+        eq.MidGain = profile.Mid
+        eq.HighGain = profile.High
+        reverb.WetLevel = profile.Wet
+        reverb.DecayTime = profile.Decay
+    end
 
     local baseVolume = baseVolumes[sound]
     if baseVolume == nil then
@@ -90,7 +104,7 @@ local function bindCharacter(character)
     end
 
     local function maybeBindSound(child)
-        if child:IsA("Sound") and SURFACE_SOUND_NAMES[child.Name] then
+        if child:IsA("Sound") and CHARACTER_SOUND_NAMES[child.Name] then
             boundSounds[child] = true
             if baseVolumes[child] == nil then
                 baseVolumes[child] = child.Volume
