@@ -13,6 +13,9 @@ folder.Parent = workspace
 
 local dynamicIndicators = {}
 local shrinkingActive = false
+local rootConnection = nil
+local arenaAddedConnection = nil
+local arenaRemovedConnection = nil
 
 local function clear()
     folder:ClearAllChildren()
@@ -305,6 +308,15 @@ task.spawn(function()
 end)
 
 local function bindArena(arena)
+    if arenaAddedConnection then
+        arenaAddedConnection:Disconnect()
+        arenaAddedConnection = nil
+    end
+    if arenaRemovedConnection then
+        arenaRemovedConnection:Disconnect()
+        arenaRemovedConnection = nil
+    end
+
     if not arena then
         return
     end
@@ -314,13 +326,13 @@ local function bindArena(arena)
         task.defer(rebuild)
     end
 
-    arena.ChildAdded:Connect(function(child)
+    arenaAddedConnection = arena.ChildAdded:Connect(function(child)
         if child.Name == "Mechanics" then
             task.defer(rebuild)
         end
     end)
 
-    arena.ChildRemoved:Connect(function(child)
+    arenaRemovedConnection = arena.ChildRemoved:Connect(function(child)
         if child.Name == "Mechanics" then
             clear()
         end
@@ -328,12 +340,23 @@ local function bindArena(arena)
 end
 
 local function bindGeneratedMap(root)
+    if rootConnection then
+        rootConnection:Disconnect()
+        rootConnection = nil
+    end
+    bindArena(nil)
+
+    if not root then
+        clear()
+        return
+    end
+
     local arena = root:FindFirstChild("Arena")
     if arena then
         bindArena(arena)
     end
 
-    root.ChildAdded:Connect(function(child)
+    rootConnection = root.ChildAdded:Connect(function(child)
         if child.Name == "Arena" then
             bindArena(child)
         end
@@ -348,7 +371,7 @@ end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        clear()
+        bindGeneratedMap(nil)
     end
 end)
 
