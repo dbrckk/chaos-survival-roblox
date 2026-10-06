@@ -6,9 +6,10 @@ local LocalizationService = game:GetService("LocalizationService")
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
-local frenchLocale = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
+local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
@@ -194,7 +195,7 @@ local function makeStatusGui()
     title.Size = UDim2.fromScale(0.90, 0.44)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
-    title.Text = "LOBBY LIVE"
+    title.Text = CoreLocalization.text(localeId, "LOBBY_LIVE")
     title.TextColor3 = Color3.fromRGB(244, 248, 255)
     title.TextScaled = true
     title.Parent = panel
@@ -205,7 +206,7 @@ local function makeStatusGui()
     subtitle.Size = UDim2.fromScale(0.90, 0.24)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.GothamBold
-    subtitle.Text = "PRACTICE • VOTE • SURVIVE"
+    subtitle.Text = CoreLocalization.text(localeId, "LOBBY_LIVE_SUB")
     subtitle.TextColor3 = VisualTheme.Accents.Cyan
     subtitle.TextScaled = true
     subtitle.TextWrapped = true
@@ -441,19 +442,37 @@ local function applyState()
         local title = panel and panel:FindFirstChild("StatusTitle")
         local subtitle = panel and panel:FindFirstChild("StatusSubtitle")
         local stroke = panel and panel:FindFirstChild("StatusStroke")
-        local mainText, subText = LobbyPresentationRules.statusText(
+        local presentation = LobbyPresentationRules.statusPresentation(
             currentState.phase,
             currentState.seconds,
             currentState.title,
             currentState.voteOptions
         )
+        local mainText = presentation.titleKey
+            and CoreLocalization.text(localeId, presentation.titleKey)
+            or tostring(presentation.titleText or "")
+        local subText
+        if presentation.mode == "launch" and type(currentState.disasterIds) == "table" then
+            subText = CoreLocalization.hazardTitle(
+                localeId,
+                currentState.disasterIds,
+                presentation.subtitleText or ""
+            )
+        elseif presentation.subtitleText then
+            subText = tostring(presentation.subtitleText)
+        elseif presentation.subtitleKey then
+            subText = CoreLocalization.text(localeId, presentation.subtitleKey)
+        else
+            subText = ""
+        end
+
         local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
         if games <= 0
             and currentState.phase == "intermission"
             and currentState.voteOptions == nil
         then
-            mainText = frenchLocale and "BOUGE + SAUTE" or "MOVE + JUMP"
-            subText = frenchLocale and "SURVIS JUSQU'À 0" or "SURVIVE UNTIL 0"
+            mainText = CoreLocalization.text(localeId, "MOVE_JUMP")
+            subText = CoreLocalization.text(localeId, "SURVIVE_UNTIL_ZERO")
         end
 
         if title and title:IsA("TextLabel") then
