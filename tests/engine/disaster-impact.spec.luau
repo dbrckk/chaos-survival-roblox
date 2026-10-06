@@ -89,6 +89,50 @@ describe("Disaster impact", function()
         inactiveCharacter:Destroy()
     end)
 
+    it("records a fatal hazard cause before applying lethal damage", function()
+        local character = Instance.new("Model")
+        character.Name = "FatalImpactCharacter"
+
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Position = Vector3.new(0, 3, 0)
+        root.Anchored = true
+        root.Parent = character
+
+        local humanoid = Instance.new("Humanoid")
+        humanoid.MaxHealth = 20
+        humanoid.Health = 20
+        humanoid.Parent = character
+        character.Parent = workspace
+
+        local subject = {
+            UserId = 123,
+            Name = "FatalImpactSubject",
+            Character = character,
+        }
+
+        local healthWhenCauseRecorded = nil
+        local reportedKind = nil
+
+        local hits = DisasterImpact.applyRadialDamage({
+            HazardContestants = {subject},
+            IsContestantActive = function()
+                return true
+            end,
+            OnHazardDamage = function(_, kind)
+                reportedKind = kind
+                healthWhenCauseRecorded = humanoid.Health
+            end,
+        }, Vector3.new(0, 3, 0), 8, 50, "Meteor")
+
+        expect(hits).toBe(1)
+        expect(reportedKind).toBe("Meteor")
+        expect(healthWhenCauseRecorded).toBe(20)
+        expect(humanoid.Health).toBe(0)
+
+        character:Destroy()
+    end)
+
     it("sanitizes negative distance and damage inputs", function()
         expect(DisasterImpact.damageForDistance(-5, 8, 50)).toBe(50)
         expect(DisasterImpact.damageForDistance(0, 8, -10)).toBe(0)
