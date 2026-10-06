@@ -200,6 +200,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [FAIT] 7.32 Garde-fou CI lifecycle : tout listener ChildAdded de map doit avoir un ownership/Disconnect explicite.
 [QA]   7.33 Contextualiser PerformancePulse avec phase, Double Chaos et Final Rush pour interpréter les pics de coût.
 [QA]   7.34 Compter Highlights/Smoke/Fire/Sparkles dans le budget Effects pour une mesure GPU plus fidèle.
+[QA]   7.35 Étendre scenery-lod aux couches décoratives lobby/arène/résultat et rendre les caches de dossiers faibles pour éviter l'accumulation après swaps.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
