@@ -8,6 +8,7 @@ local LocalizationService = game:GetService("LocalizationService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
@@ -643,11 +644,15 @@ RunService.RenderStepped:Connect(function(dt)
             )
             local deviceClass = UserInputService.TouchEnabled and "Touch" or "Desktop"
 
+            local visualMetrics = VisualBudgetRules.collect(workspace)
             performancePulseEvent:FireServer({
                 averageFps = math.floor(averageFps + 0.5),
                 vfxTier = vfxTierName,
                 deviceClass = deviceClass,
                 tierTransitions = vfxTierTransitions,
+                visualParts = visualMetrics.Parts,
+                visualLights = visualMetrics.Lights,
+                visualEffects = visualMetrics.Effects,
             })
 
             performancePulseClock = 0
