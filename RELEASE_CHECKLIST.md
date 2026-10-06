@@ -139,6 +139,8 @@ Manual evidence is still required with the production/test experience and API Se
 - [ ] No essential instruction relies only on color.
 - [ ] Camera/VFX do not become excessively fatiguing over a 30-minute session.
 - [ ] Haptics do not trigger excessively.
+- [ ] Haptics can be disabled independently of ReduceMotion and stop immediately.
+- [ ] Motion, audio and haptics accessibility preferences survive quit/rejoin.
 
 ## Public alpha gate
 
