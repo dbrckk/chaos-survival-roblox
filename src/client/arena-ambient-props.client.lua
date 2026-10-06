@@ -41,6 +41,7 @@ local function makeProp(name, size, color, position, material)
     part.Material = material or Enum.Material.Neon
     part.Color = color
     part.Transparency = 0.18
+    part:SetAttribute("AmbientBaseTransparency", part.Transparency)
     part.Parent = folder
     return part
 end
@@ -108,7 +109,7 @@ local function rebuild()
                 Vector3.new(1.4, 0.22, 1.8),
                 i % 2 == 0 and accent or secondary,
                 p.Position + Vector3.new(0, 0, -0.2),
-                Enum.Material.Neon
+                i % 2 == 1 and Enum.Material.Glass or Enum.Material.Metal
             )
             tracked[#tracked + 1] = {part = p, glow = eye, base = p.Position, index = i}
         end
@@ -159,7 +160,7 @@ local function rebuild()
                     13 + math.sin(angle * 2) * 2,
                     math.sin(angle) * (math.max(halfX, halfZ) + 11)
                 ),
-                Enum.Material.Neon
+                i % 3 == 1 and Enum.Material.Glass or Enum.Material.Metal
             )
             p.Shape = Enum.PartType.Ball
             tracked[#tracked + 1] = {
@@ -217,6 +218,20 @@ stateEvent.OnClientEvent:Connect(function(state)
         roundVisualMode = (roundVisualMode % 3) + 1
     end
     lastPhase = phase
+
+    local roundDim = phase == "round" and 0.16
+        or (phase == "ready" and 0.06 or 0)
+    for _, item in ipairs(tracked) do
+        local p = item.part
+        if p and p.Parent then
+            local baseTransparency = tonumber(p:GetAttribute("AmbientBaseTransparency")) or 0.18
+            p.Transparency = math.clamp(baseTransparency + roundDim, 0, 0.86)
+        end
+        if item.glow and item.glow.Parent then
+            local glowBase = tonumber(item.glow:GetAttribute("AmbientBaseTransparency")) or 0.18
+            item.glow.Transparency = math.clamp(glowBase + (phase == "round" and 0.22 or 0.06), 0, 0.90)
+        end
+    end
 end)
 
 task.defer(rebuild)
@@ -244,8 +259,14 @@ task.spawn(function()
                         p.Position = item.base + Vector3.new(0, hover, 0)
                         if item.glow and item.glow.Parent then
                             item.glow.Position = p.Position + Vector3.new(0, 0, -0.2)
-                            item.glow.Transparency = 0.14
-                                + ((math.sin(now * 2 * modeSpeed + item.index * modeDirection) + 1) * 0.5) * 0.22
+                            local roundBias = lastPhase == "round" and 0.24 or 0
+                            item.glow.Transparency = math.clamp(
+                                0.18
+                                    + roundBias
+                                    + ((math.sin(now * 2 * modeSpeed + item.index * modeDirection) + 1) * 0.5) * 0.18,
+                                0,
+                                0.90
+                            )
                         end
                     elseif currentVariant == "Towers" then
                         local travel = math.sin(now * 0.72 * modeSpeed + item.index * 0.85 * modeDirection)
@@ -253,7 +274,8 @@ task.spawn(function()
                         p.Position = item.base + Vector3.new(0, travel, 0)
                     elseif currentVariant == "Crossroads" then
                         local pulse = (math.sin(now * 2.2 * modeSpeed + item.index * 0.9 * modeDirection) + 1) * 0.5
-                        p.Transparency = 0.14 + pulse * 0.30
+                        local roundBias = lastPhase == "round" and 0.18 or 0
+                        p.Transparency = math.clamp(0.22 + roundBias + pulse * 0.20, 0, 0.84)
                     elseif currentVariant == "Orbital" then
                         local angle = item.angle + now * 0.15 * motionScale * modeSpeed * modeDirection
                         local lift = math.sin(now * 0.9 * modeSpeed + item.index)
