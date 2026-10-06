@@ -54,7 +54,19 @@ local function setMotor(inputType, motor, strength)
     )
 end
 
+local function stopAllMotors()
+    pulseToken += 1
+    for _, inputType in ipairs(candidateInputs) do
+        setMotor(inputType, Enum.VibrationMotor.Large, 0)
+        setMotor(inputType, Enum.VibrationMotor.Small, 0)
+    end
+end
+
 local function pulse(strength, duration, large)
+    if player:GetAttribute("HapticsDisabled") == true then
+        return
+    end
+
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
     local now = os.clock()
     local minInterval = reducedMotion
@@ -175,4 +187,11 @@ stateEvent.OnClientEvent:Connect(function(state)
         pulse(0.30, 0.08, false)
     end
     lastFinalRush = finalRush
+end)
+
+
+player:GetAttributeChangedSignal("HapticsDisabled"):Connect(function()
+    if player:GetAttribute("HapticsDisabled") == true then
+        stopAllMotors()
+    end
 end)
