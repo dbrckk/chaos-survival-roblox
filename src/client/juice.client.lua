@@ -13,6 +13,7 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local stateEvent = remotes:WaitForChild("RoundState")
 local feedbackEvent = remotes:WaitForChild("RoundFeedback")
+local mechanicFeedbackEvent = remotes:WaitForChild("ArenaMechanicFeedback")
 local performancePulseEvent = remotes:WaitForChild("PerformancePulse")
 
 local camera = workspace.CurrentCamera
@@ -194,6 +195,7 @@ local healthRatio = 1
 local baseFovTarget = camera and camera.FieldOfView or 70
 local speedFovOffset = 0
 local fovImpulse = 0
+local lastMechanicFovAt = 0
 player:SetAttribute("VfxQualityTier", vfxTierName)
 
 local function setActiveBeacon(beacon, light)
@@ -530,6 +532,21 @@ local function celebrateCharacter(masterRound)
         if glow.Parent then glow:Destroy() end
     end)
 end
+
+mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
+    if vfxTier.Name == "Low" then
+        return
+    end
+
+    local now = os.clock()
+    if now - lastMechanicFovAt < 0.18 then
+        return
+    end
+    lastMechanicFovAt = now
+
+    local overdrive = type(payload) == "table" and payload.overdrive == true
+    pushFovImpulse((overdrive and 4.4 or 3.4) * vfxTier.Scale)
+end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     local survivalStreak = tonumber(feedback.streak) or 0
