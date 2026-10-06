@@ -637,7 +637,11 @@ RunService.RenderStepped:Connect(function(dt)
     if qualitySampleClock >= 2.5 and frameSampleCount > 0 then
         local averageDt = frameTimeAccumulator / frameSampleCount
         local averageFps = averageDt > 0 and (1 / averageDt) or 60
-        local nextTierName = VfxQuality.nextTier(vfxTierName, averageFps)
+        local nextTierName = VfxQuality.nextTier(
+            vfxTierName,
+            averageFps,
+            UserInputService.TouchEnabled
+        )
 
         if nextTierName ~= vfxTierName then
             vfxTierName = nextTierName
