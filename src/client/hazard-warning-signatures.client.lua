@@ -187,39 +187,6 @@ local function bombSignature(warning)
     end
 end
 
-local function jumpShockSignature(warning)
-    local tier = profile()
-    local reduced = player:GetAttribute("ReduceMotion") == true
-    local duration = warningDuration(warning, 0.65)
-    local count = reduced and 1 or (tier.Name == "Low" and 1 or 2)
-
-    for i = 1, count do
-        local ring = localPart(
-            "JumpShockSignature" .. i,
-            Vector3.new(0.10, 8 + (i - 1) * 4, 8 + (i - 1) * 4),
-            CFrame.new(warning.Position + Vector3.new(0, 0.08 + i * 0.04, 0))
-                * CFrame.Angles(0, 0, math.rad(90)),
-            i == 1 and Color3.fromRGB(75, 165, 255) or Color3.fromRGB(170, 220, 255),
-            0.34 + (i - 1) * 0.12
-        )
-        ring.Shape = Enum.PartType.Cylinder
-
-        TweenService:Create(
-            ring,
-            TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {
-                Size = Vector3.new(
-                    0.10,
-                    90 + (i - 1) * 18,
-                    90 + (i - 1) * 18
-                ),
-                Transparency = 0.90,
-            }
-        ):Play()
-        Debris:AddItem(ring, duration + 0.08)
-    end
-end
-
 local function bindWarning(instance)
     if not instance:IsA("BasePart") then
         return
@@ -235,12 +202,6 @@ local function bindWarning(instance)
         task.defer(function()
             if instance.Parent then
                 bombSignature(instance)
-            end
-        end)
-    elseif instance.Name == "JumpShockWarning" then
-        task.defer(function()
-            if instance.Parent then
-                jumpShockSignature(instance)
             end
         end)
     end
