@@ -1,12 +1,9 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
 local player = Players.LocalPlayer
 local source = workspace:WaitForChild("ArenaHeroSceneryLocal", 10)
 
 local tracked = {}
 local clock = 0
-local updateClock = 0
 local lastScan = 0
 
 local function tierName()
@@ -114,16 +111,12 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(scan)
 
 scan()
 
-RunService.RenderStepped:Connect(function(dt)
-    clock += dt
-    updateClock += dt
-
-    local tier = tierName()
-    local interval = tier == "Low" and 0.16 or (tier == "Medium" and 0.09 or 0.055)
-    if updateClock < interval then
-        return
-    end
-    updateClock = 0
+task.spawn(function()
+    while true do
+        local tier = tierName()
+        local interval = tier == "Low" and 0.16 or (tier == "Medium" and 0.09 or 0.055)
+        local dt = task.wait(interval)
+        clock += dt
 
     if clock - lastScan > 2.5 then
         lastScan = clock
@@ -190,5 +183,6 @@ RunService.RenderStepped:Connect(function(dt)
                 and state.baseColor:Lerp(Color3.new(1, 1, 1), 0.16 * scale)
                 or state.baseColor
         end
+    end
     end
 end)
