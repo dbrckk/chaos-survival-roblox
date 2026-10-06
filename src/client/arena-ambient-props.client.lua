@@ -67,6 +67,28 @@ local function arenaTheme()
     return Color3.fromRGB(90, 185, 255), Color3.fromRGB(120, 100, 255)
 end
 
+local function applyPhaseVisibility()
+    local roundDim = lastPhase == "round" and 0.16
+        or (lastPhase == "ready" and 0.06 or 0)
+
+    for _, item in ipairs(tracked) do
+        local p = item.part
+        if p and p.Parent then
+            local baseTransparency = tonumber(p:GetAttribute("AmbientBaseTransparency")) or 0.18
+            p.Transparency = math.clamp(baseTransparency + roundDim, 0, 0.86)
+        end
+
+        if item.glow and item.glow.Parent then
+            local glowBase = tonumber(item.glow:GetAttribute("AmbientBaseTransparency")) or 0.18
+            item.glow.Transparency = math.clamp(
+                glowBase + (lastPhase == "round" and 0.22 or 0.06),
+                0,
+                0.90
+            )
+        end
+    end
+end
+
 local function rebuild()
     clear()
 
@@ -173,6 +195,8 @@ local function rebuild()
             }
         end
     end
+
+    applyPhaseVisibility()
 end
 
 local mapConnection = nil
@@ -220,19 +244,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
     lastPhase = phase
 
-    local roundDim = phase == "round" and 0.16
-        or (phase == "ready" and 0.06 or 0)
-    for _, item in ipairs(tracked) do
-        local p = item.part
-        if p and p.Parent then
-            local baseTransparency = tonumber(p:GetAttribute("AmbientBaseTransparency")) or 0.18
-            p.Transparency = math.clamp(baseTransparency + roundDim, 0, 0.86)
-        end
-        if item.glow and item.glow.Parent then
-            local glowBase = tonumber(item.glow:GetAttribute("AmbientBaseTransparency")) or 0.18
-            item.glow.Transparency = math.clamp(glowBase + (phase == "round" and 0.22 or 0.06), 0, 0.90)
-        end
-    end
+    applyPhaseVisibility()
 end)
 
 task.defer(rebuild)
