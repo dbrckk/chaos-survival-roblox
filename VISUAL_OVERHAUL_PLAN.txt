@@ -202,6 +202,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [QA]   9.2c Studio E2E étendu : FOV borné, Clouds unique, décor non-collidable et budget visuel par tier.
 [QA]   9.2d Logs E2E exploitables : CHAOS_E2E_VISUAL avec tier, FOV, parts, lights et effects.
 [FAIT] 9.2e Ajouter Release Candidate Gate exact-SHA : vérifie Build/Open Cloud verts et génère une preuve automatisée sans publier.
+[FAIT] 9.2f Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
 [TODO] 9.3 Corriger les incohérences restantes.
 [TODO] 9.4 Studio E2E authentifié.
 [TODO] 9.5 Android final.
