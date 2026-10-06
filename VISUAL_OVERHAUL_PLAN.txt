@@ -222,6 +222,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [QA]   9.2e Studio E2E multi-phase : READY/ROUND/RESULT doivent chacun fournir une probe budget/FOV valide avant PASS.
 [QA]   9.2f Studio E2E READY/rookie UX : carte READY visible, titre + guidance non vides/actionnables, RookieCoach valide quand affiché.
 [QA]   9.2g Studio E2E RESULT/READY : probes UX indépendantes, RESULT exige titre/récompense/conseil/prochain round avant PASS.
+[QA]   9.2h Studio E2E vote : 3 cartes visibles/tactiles avec nom de hazard + guidance actionnable non vide.
 [FAIT] 9.2e Ajouter Release Candidate Gate exact-SHA : vérifie Build/Open Cloud verts et génère une preuve automatisée sans publier.
 [FAIT] 9.2f Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
 [EN COURS] 9.3 Corriger les incohérences restantes révélées par CI/E2E puis par captures/appareil.
