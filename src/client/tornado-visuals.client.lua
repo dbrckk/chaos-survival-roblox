@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -14,8 +13,7 @@ local light = nil
 local debrisFolder = nil
 local debris = {}
 local pulseClock = 0
-local updateClock = 0
-local renderConnection = nil
+local loopStarted = false
 local ensureRenderLoop
 
 local bindToken = 0
@@ -41,7 +39,9 @@ local function buildDebris()
     end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    local count = tier.Name == "Low" and 5 or (tier.Name == "Medium" and 8 or 12)
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local count = reduced and 3
+        or (tier.Name == "Low" and 5 or (tier.Name == "Medium" and 8 or 12))
 
     debrisFolder = Instance.new("Folder")
     debrisFolder.Name = "TornadoDebrisLocal"
@@ -85,7 +85,6 @@ local function bind(model)
     local token = bindToken
     activeModel = model
     pulseClock = 0
-    updateClock = 0
 
     if ensureRenderLoop then
         ensureRenderLoop()
@@ -138,80 +137,81 @@ end)
 
 findExisting()
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+local function refreshDebris()
     if activeModel and activeModel.Parent and middle then
         buildDebris()
     end
-end)
+end
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshDebris)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshDebris)
 
 ensureRenderLoop = function()
-    if renderConnection or not activeModel or not activeModel.Parent then
+    if loopStarted then
         return
     end
+    loopStarted = true
 
-    renderConnection = RunService.RenderStepped:Connect(function(dt)
-        if not activeModel or not activeModel.Parent then
-            renderConnection:Disconnect()
-            renderConnection = nil
-            return
-        end
+    task.spawn(function()
+        while true do
+            if not activeModel or not activeModel.Parent then
+                task.wait(0.18)
+                continue
+            end
 
-    pulseClock += dt
-    updateClock += dt
+            local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+            local dt = task.wait(math.max(1 / 60, tier.UpdateInterval))
+            pulseClock += dt
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    if updateClock < tier.UpdateInterval then
-        return
-    end
-    updateClock = 0
+            local reduceMotion = player:GetAttribute("ReduceMotion") == true
+            local motionScale = reduceMotion and 0.18 or 1
+            local pulse = (
+                math.sin(pulseClock * (reduceMotion and 1.1 or 4)) + 1
+            ) * 0.5
 
-    local reduceMotion = player:GetAttribute("ReduceMotion") == true
-    local motionScale = reduceMotion and 0.18 or 1
-    local pulse = (
-        math.sin(pulseClock * (reduceMotion and 1.1 or 4)) + 1
-    ) * 0.5
+            local pulseScale = reduceMotion and 0.32 or 1
+            if dangerZone and dangerZone.Parent then
+                dangerZone.Transparency = 0.90 + pulse * 0.05 * pulseScale
+            end
+            if lower and lower.Parent then
+                lower.Transparency = 0.34 + pulse * 0.12 * pulseScale
+            end
+            if middle and middle.Parent then
+                middle.Transparency = 0.44 + pulse * 0.11 * pulseScale
+            end
+            if upper and upper.Parent then
+                upper.Transparency = 0.54 + pulse * 0.10 * pulseScale
+            end
+            if light and light.Parent then
+                light.Brightness = (1.0 + pulse * 0.9 * pulseScale) * tier.Scale
+                light.Range = 20 + (6 * tier.Scale)
+            end
 
-    local pulseScale = reduceMotion and 0.32 or 1
-    if dangerZone and dangerZone.Parent then
-        dangerZone.Transparency = 0.90 + pulse * 0.05 * pulseScale
-    end
-    if lower and lower.Parent then
-        lower.Transparency = 0.34 + pulse * 0.12 * pulseScale
-    end
-    if middle and middle.Parent then
-        middle.Transparency = 0.44 + pulse * 0.11 * pulseScale
-    end
-    if upper and upper.Parent then
-        upper.Transparency = 0.54 + pulse * 0.10 * pulseScale
-    end
-    if light and light.Parent then
-        light.Brightness = (1.0 + pulse * 0.9 * pulseScale) * tier.Scale
-        light.Range = 20 + (6 * tier.Scale)
-    end
-
-    if middle and middle.Parent then
-        local center = middle.Position
-        for i, state in ipairs(debris) do
-            local piece = state.part
-            if piece and piece.Parent then
-                local angle = state.angle + pulseClock * state.speed * motionScale
-                local wobble = math.sin(
-                    pulseClock * 3.4 * motionScale + i
-                ) * 0.55 * motionScale
-                local position = center + Vector3.new(
-                    math.cos(angle) * state.radius,
-                    -5 + state.height + wobble,
-                    math.sin(angle) * state.radius
-                )
-                piece.CFrame = CFrame.new(position)
-                    * CFrame.Angles(
-                        pulseClock * 2.2 * motionScale + i,
-                        -angle,
-                        pulseClock * 1.3 * motionScale
-                    )
+            if middle and middle.Parent then
+                local center = middle.Position
+                for i, state in ipairs(debris) do
+                    local piece = state.part
+                    if piece and piece.Parent then
+                        local angle = state.angle
+                            + pulseClock * state.speed * motionScale
+                        local wobble = math.sin(
+                            pulseClock * 3.4 * motionScale + i
+                        ) * 0.55 * motionScale
+                        local position = center + Vector3.new(
+                            math.cos(angle) * state.radius,
+                            -5 + state.height + wobble,
+                            math.sin(angle) * state.radius
+                        )
+                        piece.CFrame = CFrame.new(position)
+                            * CFrame.Angles(
+                                pulseClock * 2.2 * motionScale + i,
+                                -angle,
+                                pulseClock * 1.3 * motionScale
+                            )
+                    end
+                end
             end
         end
-    end
     end)
 end
 
