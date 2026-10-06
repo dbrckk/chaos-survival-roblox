@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -127,7 +128,7 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
 
     pulseCharacter(accent)
 
-    if overdrive then
+    if overdrive and not UserInputService.TouchEnabled then
         overdriveLabel.Visible = true
         overdriveLabel.TextTransparency = 1
         overdriveLabel.BackgroundTransparency = 1
