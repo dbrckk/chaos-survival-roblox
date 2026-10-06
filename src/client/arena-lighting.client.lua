@@ -5,54 +5,30 @@ local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CloudLayer = require(script.Parent.CloudLayer)
+local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
-local effect = Lighting:FindFirstChild("ArenaIdentityColor")
-if not effect then
-    effect = Instance.new("ColorCorrectionEffect")
-    effect.Name = "ArenaIdentityColor"
-    effect.Parent = Lighting
-end
+local post = ArenaPostProcessLayer.get()
+local effect = post.Color
+local atmosphere = post.Atmosphere
+local bloom = post.Bloom
+local depth = post.Depth
+local sunRays = post.SunRays
 
-local atmosphere = Lighting:FindFirstChild("ArenaIdentityAtmosphere")
-if not atmosphere then
-    atmosphere = Instance.new("Atmosphere")
-    atmosphere.Name = "ArenaIdentityAtmosphere"
-    atmosphere.Parent = Lighting
-end
+bloom.Intensity = bloom.Intensity or 0
+bloom.Size = bloom.Size > 0 and bloom.Size or 18
+bloom.Threshold = bloom.Threshold > 0 and bloom.Threshold or 1.22
 
-local bloom = Lighting:FindFirstChild("ArenaIdentityBloom")
-if not bloom then
-    bloom = Instance.new("BloomEffect")
-    bloom.Name = "ArenaIdentityBloom"
-    bloom.Intensity = 0
-    bloom.Size = 18
-    bloom.Threshold = 1.22
-    bloom.Parent = Lighting
-end
+depth.Enabled = true
+depth.FocusDistance = depth.FocusDistance > 0 and depth.FocusDistance or 55
+depth.InFocusRadius = depth.InFocusRadius > 0 and depth.InFocusRadius or 45
+depth.NearIntensity = depth.NearIntensity or 0
+depth.FarIntensity = depth.FarIntensity or 0
 
-local depth = Lighting:FindFirstChild("ArenaIdentityDepth")
-if not depth then
-    depth = Instance.new("DepthOfFieldEffect")
-    depth.Name = "ArenaIdentityDepth"
-    depth.Enabled = true
-    depth.FocusDistance = 55
-    depth.InFocusRadius = 45
-    depth.NearIntensity = 0
-    depth.FarIntensity = 0
-    depth.Parent = Lighting
-end
-
-local sunRays = Lighting:FindFirstChild("ArenaIdentitySunRays")
-if not sunRays then
-    sunRays = Instance.new("SunRaysEffect")
-    sunRays.Name = "ArenaIdentitySunRays"
-    sunRays.Intensity = 0
-    sunRays.Spread = 0.78
-    sunRays.Parent = Lighting
-end
+sunRays.Intensity = sunRays.Intensity or 0
+sunRays.Spread = sunRays.Spread > 0 and sunRays.Spread or 0.78
 
 local terrain = workspace:FindFirstChildOfClass("Terrain")
 local clouds = CloudLayer.getOrCreate()
@@ -207,6 +183,7 @@ local function applyMood(duration)
         * (quality.Name == "Low" and 0 or 1)
         * accessibilityScale
     local disasterOwnsEnvironment = phase == "round" or phase == "ready"
+    local disasterOwnsPostProcess = disasterOwnsEnvironment
     local shadowSoftness = math.clamp(
         (mood.ShadowSoftness or 0.35) + (quality.Name == "Low" and 0.20 or 0),
         0,
@@ -215,15 +192,17 @@ local function applyMood(duration)
     local colorShiftTop = Color3.new():Lerp(mood.ColorShiftTop or Color3.new(), colorShiftScale)
     local colorShiftBottom = Color3.new():Lerp(mood.ColorShiftBottom or Color3.new(), colorShiftScale)
 
-    TweenService:Create(
-        effect,
-        TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            TintColor = Color3.new(1, 1, 1):Lerp(mood.Tint, 0.34 * scale),
-            Saturation = mood.Saturation * scale,
-            Contrast = mood.Contrast * scale,
-        }
-    ):Play()
+    if not disasterOwnsPostProcess then
+        TweenService:Create(
+            effect,
+            TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                TintColor = Color3.new(1, 1, 1):Lerp(mood.Tint, 0.34 * scale),
+                Saturation = mood.Saturation * scale,
+                Contrast = mood.Contrast * scale,
+            }
+        ):Play()
+    end
 
     pcall(function()
         Lighting.LightingStyle = Enum.LightingStyle.Realistic
@@ -251,24 +230,29 @@ local function applyMood(duration)
         lightingGoal
     ):Play()
 
-    TweenService:Create(
-        bloom,
-        TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            Intensity = bloomIntensity,
-            Size = bloomSize,
-            Threshold = bloomThreshold,
-        }
-    ):Play()
+    if not disasterOwnsPostProcess then
+        bloom.Enabled = true
+        sunRays.Enabled = quality.Name ~= "Low"
 
-    TweenService:Create(
-        sunRays,
-        TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            Intensity = sunRayIntensity,
-            Spread = quality.Name == "High" and 0.82 or 0.70,
-        }
-    ):Play()
+        TweenService:Create(
+            bloom,
+            TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Intensity = bloomIntensity,
+                Size = bloomSize,
+                Threshold = bloomThreshold,
+            }
+        ):Play()
+
+        TweenService:Create(
+            sunRays,
+            TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Intensity = sunRayIntensity,
+                Spread = quality.Name == "High" and 0.82 or 0.70,
+            }
+        ):Play()
+    end
 
     TweenService:Create(
         depth,
@@ -282,25 +266,24 @@ local function applyMood(duration)
         }
     ):Play()
 
-    TweenService:Create(
-        atmosphere,
-        TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            Color = mood.AtmosColor or mood.Tint,
-            Decay = mood.AtmosDecay or mood.Ambient,
-            Density = (mood.Density or 0.18)
-                * (phase == "round" and 0.28 or (phase == "ready" and 0.55 or 1))
-                * (quality.Name == "Low" and 0.58 or 1),
-            Haze = (mood.Haze or 1.0)
-                * (phase == "round" and 0.32 or (phase == "ready" and 0.62 or 1))
-                * (quality.Name == "Low" and 0.55 or 1),
-            Glare = (mood.Glare or 0.08)
-                * (phase == "round" and 0.25 or (phase == "ready" and 0.50 or 1))
-                * (quality.Name == "Low" and 0 or 1),
-            Offset = (mood.AtmosOffset or 0.10)
-                * (quality.Name == "Low" and 0.55 or 1),
-        }
-    ):Play()
+    if not disasterOwnsPostProcess then
+        TweenService:Create(
+            atmosphere,
+            TweenInfo.new(duration or 0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Color = mood.AtmosColor or mood.Tint,
+                Decay = mood.AtmosDecay or mood.Ambient,
+                Density = (mood.Density or 0.18)
+                    * (quality.Name == "Low" and 0.58 or 1),
+                Haze = (mood.Haze or 1.0)
+                    * (quality.Name == "Low" and 0.55 or 1),
+                Glare = (mood.Glare or 0.08)
+                    * (quality.Name == "Low" and 0 or 1),
+                Offset = (mood.AtmosOffset or 0.10)
+                    * (quality.Name == "Low" and 0.55 or 1),
+            }
+        ):Play()
+    end
 
     if clouds and not disasterOwnsEnvironment then
         clouds.Enabled = quality.Name ~= "Low"
