@@ -1,10 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArenaMechanicFeedback")
 
 local gui = Instance.new("ScreenGui")
@@ -37,7 +40,7 @@ overdriveLabel.BackgroundColor3 = Color3.fromRGB(35, 28, 14)
 overdriveLabel.BackgroundTransparency = 1
 overdriveLabel.BorderSizePixel = 0
 overdriveLabel.Font = Enum.Font.GothamBlack
-overdriveLabel.Text = "OVERDRIVE BOOST"
+overdriveLabel.Text = CoreLocalization.text(localeId, "OVERDRIVE_BOOST")
 overdriveLabel.TextColor3 = Color3.fromRGB(255, 225, 115)
 overdriveLabel.TextScaled = true
 overdriveLabel.TextTransparency = 1
