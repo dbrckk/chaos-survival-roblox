@@ -219,6 +219,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [QA]   9.2b CI animation/caméra : catalogue d'assets testé, sharding Open Cloud exhaustif, propriété FOV contrôlée.
 [QA]   9.2c Studio E2E étendu : FOV borné, Clouds unique, décor non-collidable et budget visuel par tier.
 [QA]   9.2d Logs E2E exploitables : CHAOS_E2E_VISUAL avec tier, FOV, parts, lights et effects.
+[QA]   9.2e Studio E2E multi-phase : READY/ROUND/RESULT doivent chacun fournir une probe budget/FOV valide avant PASS.
 [FAIT] 9.2e Ajouter Release Candidate Gate exact-SHA : vérifie Build/Open Cloud verts et génère une preuve automatisée sans publier.
 [FAIT] 9.2f Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
 [TODO] 9.3 Corriger les incohérences restantes.
