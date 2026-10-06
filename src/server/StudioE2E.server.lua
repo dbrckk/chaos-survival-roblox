@@ -64,6 +64,33 @@ reportEvent.OnServerEvent:Connect(function(player, report)
     if typeof(report.viewport) ~= "Vector2" or report.viewport.X <= 0 or report.viewport.Y <= 0 then
         fail(player.Name .. ": invalid viewport reported")
     end
+
+    local fieldOfView = tonumber(report.fieldOfView) or 0
+    if fieldOfView < 60 or fieldOfView > 90 then
+        fail(player.Name .. ": reported FOV outside safe bounds")
+    end
+
+    local metrics = report.visualMetrics
+    if type(metrics) ~= "table"
+        or type(metrics.Parts) ~= "number"
+        or type(metrics.Lights) ~= "number"
+        or type(metrics.Effects) ~= "number"
+    then
+        fail(player.Name .. ": invalid visual metrics")
+    else
+        print(
+            "CHAOS_E2E_VISUAL",
+            player.Name,
+            tostring(report.vfxTier or "Unknown"),
+            string.format(
+                "parts=%d lights=%d effects=%d fov=%.1f",
+                metrics.Parts,
+                metrics.Lights,
+                metrics.Effects,
+                fieldOfView
+            )
+        )
+    end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
