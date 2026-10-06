@@ -56,13 +56,19 @@ local function emitLanding(model, airtime)
         return
     end
 
-    local observerRoot = localRoot()
-    if observerRoot and (observerRoot.Position - root.Position).Magnitude > 90 then
+    local quality = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
+    local reduced = localPlayer:GetAttribute("ReduceMotion") == true
+
+    if quality.Name == "Low" and model ~= localPlayer.Character then
         return
     end
 
-    local quality = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
-    local reduced = localPlayer:GetAttribute("ReduceMotion") == true
+    local observerRoot = localRoot()
+    local maxDistance = quality.Name == "High" and 90 or 58
+    if observerRoot and (observerRoot.Position - root.Position).Magnitude > maxDistance then
+        return
+    end
+
     if quality.Name == "Low" and airtime < 0.65 then
         return
     end
