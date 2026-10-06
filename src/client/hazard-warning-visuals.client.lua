@@ -165,7 +165,7 @@ local function register(part)
         ring.Color = kind == "Meteor"
             and Color3.fromRGB(255, 190, 78)
             or (kind == "JumpShock"
-                and Color3.fromRGB(115, 190, 255)
+                and Color3.fromRGB(70, 230, 255)
                 or Color3.fromRGB(255, 72, 72))
         ring.Transparency = 0.48
         ring.Size = Vector3.new(0.10, part.Size.X * 1.12, part.Size.Z * 1.12)
