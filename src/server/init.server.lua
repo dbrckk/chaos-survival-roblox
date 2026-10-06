@@ -189,13 +189,19 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         deviceClass = string.sub(deviceClass, 1, 24)
     end
 
+    local tierTransitions = math.clamp(
+        math.floor(tonumber(payload.tierTransitions) or 0),
+        0,
+        99
+    )
+
     GameAnalytics.custom(
         player,
         "ClientPerformancePulse",
         math.floor(fps + 0.5),
         "VFX:" .. tier,
         "Device:" .. deviceClass,
-        "Round:" .. tostring(roundNumber)
+        "Round:" .. tostring(roundNumber) .. "|TierChanges:" .. tostring(tierTransitions)
     )
 end)
 
