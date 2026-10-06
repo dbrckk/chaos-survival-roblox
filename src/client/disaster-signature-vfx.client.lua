@@ -215,9 +215,6 @@ local function rebuild()
     if has("Meteors") then
         bindExistingMeteors()
     end
-    if has("RisingLava") then
-        addLava(base, DisasterVisuals.get("RisingLava"))
-    end
     if has("Darkness") then
         addDarkness(base, DisasterVisuals.get("Darkness"))
     end
