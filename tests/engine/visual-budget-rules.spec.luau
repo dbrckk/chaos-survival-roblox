@@ -20,7 +20,7 @@ describe("visual budget rules", function()
 
     it("keeps local visual folder coverage unique and comprehensive", function()
         local seen = {}
-        expect(#VisualBudgetRules.LocalFolders >= 19).toBe(true)
+        expect(#VisualBudgetRules.LocalFolders >= 37).toBe(true)
 
         for _, folderName in ipairs(VisualBudgetRules.LocalFolders) do
             expect(type(folderName)).toBe("string")
