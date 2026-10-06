@@ -188,6 +188,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.21 Désactiver GlobalShadows en Low pour compléter la dégradation GPU adaptative.
 [QA]   7.22 Arena Reveal respecte ReduceMotion : aucun core flash expansif.
 [QA]   7.23 Throttler world-polish via cadence décorative dédiée : 30 Hz High / 24 Hz Medium / 15 Hz Low.
+[QA]   7.24 Throttler les présentations cosmétiques secondaires (bots, atmosphère catastrophe, Last Survivor Crown) avec la cadence décorative.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
