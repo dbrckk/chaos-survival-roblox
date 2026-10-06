@@ -1,0 +1,688 @@
+CHAOS SURVIVAL — AUDIT QUALITÉ COURANT
+======================================
+
+Date d'audit : 2026-10-06
+Base auditée : main 27555362d2947b182ac2a3953739b18333bed1ec
+Méthode : MULTI_EXPERT_PREMIUM_REVIEW.txt + PERFECTION_HARMONIZATION_MATRIX.txt
+
+Règle :
+- la note ci-dessous est une NOTE CERTIFIABLE PAR LES PREUVES ACTUELLES ;
+- un domaine visuel/tactile/performance non validé réellement sur appareil ne dépasse pas 3/5 ;
+- "potentiel supérieur" signifie que le code paraît plus mûr que la preuve disponible.
+
+======================================================================
+SYNTHÈSE
+======================================================================
+
+État global : PREMIUM CANDIDATE, PAS ENCORE FINAL.
+
+Le jeu ne souffre plus principalement d'un manque de systèmes.
+Les plafonds actuels sont :
+1. preuves réelles Android/Studio ;
+2. animations authored originales ;
+3. audio original / moins générique ;
+4. Hero assets PBR réellement produits/importés ;
+5. harmonisation finale de la densité ;
+6. publication/marketing ;
+7. persistence/rejoin + alpha réels.
+
+Le code possède déjà une profondeur fonctionnelle élevée :
+- 11 catastrophes ;
+- Double Chaos ;
+- Final Rush / Overdrive ;
+- 4 arènes ;
+- AI Survivors ;
+- progression ;
+- cosmetics ;
+- social ;
+- accessibilité ;
+- qualité VFX adaptative ;
+- analytics ;
+- CI Roblox réelle.
+
+Le risque principal n'est donc plus :
+"le jeu manque de features".
+
+Le risque principal devient :
+"le jeu possède trop de couches de polish non encore observées ensemble sur un vrai téléphone".
+
+======================================================================
+01 — CREATIVE DIRECTION
+======================================================================
+
+NOTE CERTIFIÉE : 3/5
+POTENTIEL CODE/DESIGN : 4/5
+STATUT : PASS AVEC RÉSERVE
+
+Forces :
+- fantasy claire : survivre à un chaos spectaculaire ;
+- identité sci-fi/broadcast cohérente ;
+- quatre arènes désormais différenciées ;
+- social intégré à la fantasy de survivants ;
+- progression non P2W.
+
+Réserves :
+- aucune planche de captures finales validée ;
+- identité publique icon/thumbnails/trailer non verrouillée ;
+- assets Hero encore majoritairement procéduraux/Parts.
+
+Pour passer 4 :
+- captures Studio finales des 4 maps ;
+- comparaison visuelle côte-à-côte ;
+- vérifier qu'aucune map n'a l'air d'une variation recolorée.
+
+Pour passer 5 :
+- identité instantanément reconnaissable hors contexte Roblox ;
+- icon/thumbnail/trailer parfaitement cohérents avec le jeu réel.
+
+======================================================================
+02 — GAME DIRECTION / CORE LOOP
+======================================================================
+
+NOTE : 4/5
+STATUT : PASS
+
+Forces :
+- boucle courte ;
+- vote significatif ;
+- READY ;
+- survival ;
+- Final Rush ;
+- RESULT ;
+- retour rapide ;
+- solo et multi couverts.
+
+Réserve :
+- besoin d'observation réelle de la première heure de joueurs externes.
+
+Pour passer 5 :
+- alpha montre une forte conversion second round / 10 min ;
+- aucun temps mort fréquemment cité.
+
+======================================================================
+03 — GAME DESIGN / FAIRNESS
+======================================================================
+
+NOTE : 4/5
+STATUT : PASS
+
+Forces :
+- warnings server-authoritative ;
+- Double Chaos filtré ;
+- first round protégée ;
+- mouvement assist léger ;
+- challenges secondaires ;
+- safe pairs testées.
+
+Risque :
+- fairness réelle dépend encore de la caméra/device/FPS.
+
+Pour passer 5 :
+- zéro mort fréquemment classée "je ne pouvais pas savoir" en alpha.
+
+======================================================================
+04 — LEVEL DESIGN
+======================================================================
+
+NOTE CERTIFIÉE : 3/5
+POTENTIEL : 4/5
+STATUT : PASS AVEC RÉSERVE
+
+Forces :
+- quatre topologies ;
+- pads contextuels ;
+- routes ;
+- profondeur ;
+- spawn framing ;
+- hazard bounds dérivés.
+
+Manque :
+- traversal réel sur device ;
+- validation safe spots ;
+- captures depuis chaque spawn.
+
+======================================================================
+05 — ENVIRONMENT ART
+======================================================================
+
+NOTE CERTIFIÉE : 3/5
+POTENTIEL : 4/5
+
+Forces :
+- Hero scenery ;
+- skyline ;
+- understructure ;
+- midground ;
+- micro-detail ;
+- silhouettes macro ;
+- asymétrie.
+
+Plafond :
+- décor surtout généré par primitives / runtime ;
+- Hero MeshParts/PBR originaux insuffisants.
+
+Priorité :
+produire 1–3 vrais Hero assets PBR par arène.
+
+======================================================================
+06 — LIGHTING
+======================================================================
+
+NOTE CERTIFIÉE : 3/5
+POTENTIEL : 4/5
+
+Forces :
+- profils par arène ;
+- bloom adaptatif ;
+- DOF réduit en gameplay ;
+- focal lights ;
+- Final Rush atténue décor ;
+- VFX tiers.
+
+Manque :
+- validation exposition sur écrans mobiles réels ;
+- Darkness + Double Chaos réel.
+
+======================================================================
+07 — MATERIAL / PBR
+======================================================================
+
+NOTE : 2/5
+STATUT : PREMIUM BLOCKER
+
+Forces :
+- langage matériau défini ;
+- material rules ;
+- guide SurfaceAppearance/PBR.
+
+Faiblesse :
+- manque d'assets PBR authored réellement intégrés sur les éléments Hero.
+
+Action :
+- créer/importer vrais MeshParts ;
+- albedo/normal/roughness/metalness ;
+- comparer avant/après sur Studio.
+
+======================================================================
+08 — TECHNICAL ART
+======================================================================
+
+NOTE : 4/5
+STATUT : PASS
+
+Forces :
+- VfxQuality ;
+- ReduceMotion ;
+- LOD ;
+- throttling ;
+- cleanup ;
+- qualité Low/Medium/High ;
+- lights/particles réduites en Low.
+
+Réserve :
+- absence de profiling physique long.
+
+======================================================================
+09 — ANIMATION
+======================================================================
+
+NOTE : 2/5
+STATUT : PREMIUM BLOCKER
+
+Forces :
+- body motion procédural très riche ;
+- jump/fall/landing ;
+- lean ;
+- braking ;
+- anticipation ;
+- bot variation ;
+- Reduced Motion.
+
+Faiblesse structurante :
+- manque de vrais clips R15 authored originaux.
+
+Action prioritaire :
+1. idle ;
+2. walk ;
+3. run ;
+4. jump/takeoff ;
+5. fall ;
+6. landing léger/lourd ;
+7. boost launch ;
+8. hit react ;
+9. victory/clutch ;
+10. elimination.
+
+Le procédural actuel devient une couche additive, pas la source principale de qualité.
+
+======================================================================
+10 — VFX
+======================================================================
+
+NOTE CERTIFIÉE : 3/5
+POTENTIEL : 4/5
+
+Forces :
+- 11 signatures ;
+- telegraph -> impact -> aftermath ;
+- warning geometry ;
+- residues ;
+- quality tiers ;
+- Double Chaos.
+
+À vérifier :
+- accumulation réelle ;
+- occlusion ;
+- densité sur petit écran ;
+- strobe/fatigue.
+
+======================================================================
+11 — AUDIO
+======================================================================
+
+NOTE : 3/5
+STATUT : PASS AVEC RÉSERVE
+
+Forces :
+- mix ;
+- ducking ;
+- spatial ;
+- arena ambience ;
+- footsteps ;
+- layered signatures ;
+- result/near-miss/pad feedback.
+
+Faiblesse :
+- certains sons historiques/génériques Roblox restent le plafond de qualité.
+
+Action :
+remplacement progressif par assets originaux/licenciés.
+
+======================================================================
+12 — GAME FEEL
+======================================================================
+
+NOTE CERTIFIÉE : 3/5
+POTENTIEL : 4/5
+
+Forces :
+- camera impulses ;
+- FOV ;
+- haptics ;
+- landing ;
+- near-miss ;
+- damage ;
+- boost ;
+- body motion.
+
+Réserve :
+- confort caméra/tactile réel non certifié.
+
+======================================================================
+13 — UX
+======================================================================
+
+NOTE CODE : 4/5
+NOTE CERTIFIABLE ACTUELLE : 3/5
+STATUT : PASS AVEC RÉSERVE
+
+Forces :
+- FTUE ;
+- phase hierarchy ;
+- rookie guide ;
+- round focus ;
+- spectator ;
+- result feedback ;
+- localization ;
+- responsive helpers.
+
+Risque actuel :
+densité cumulative de systèmes.
+
+Action :
+appliquer PHASE_ATTENTION_BUDGET.txt.
+Premier conflit identifié :
+Share doit prendre priorité sur Invite pendant résultat exceptionnel.
+
+======================================================================
+14 — MOBILE UX
+======================================================================
+
+NOTE : 3/5 MAXIMUM PAR RÈGLE
+STATUT : NON TESTÉ PHYSIQUEMENT
+
+Le code est responsive mais la preuve manque.
+
+Bloqueurs :
+- touch overlap ;
+- chaleur ;
+- frame pacing ;
+- lisibilité ;
+- motion comfort.
+
+P0 avant release.
+
+======================================================================
+15 — ACCESSIBILITY
+======================================================================
+
+NOTE CODE : 4/5
+NOTE CERTIFIÉE : 3/5
+
+Forces :
+- ReduceMotion ;
+- Low VFX ;
+- son configurable ;
+- dangers non uniquement texte ;
+- final rush suppression décorative.
+
+Manque :
+- test utilisateur réel ;
+- vérification muted + Low + ReduceMotion simultanément.
+
+======================================================================
+16 — SOCIAL DESIGN
+======================================================================
+
+NOTE MAIN ACTUEL : 3/5
+POTENTIEL APRÈS LOT EN VALIDATION : 4/5
+
+Déjà présent :
+- Crew Signal ;
+- invite ;
+- reactions ;
+- Last Chaos ;
+- result constellation ;
+- crew rounds.
+
+En validation :
+- partage natif moment fort ;
+- joins issus du partage ;
+- analytics share ;
+- priorité Share/Invite à harmoniser.
+
+Pour 5 :
+- données alpha montrent que le social augmente session sans spam.
+
+======================================================================
+17 — AI SURVIVORS
+======================================================================
+
+NOTE : 4/5
+
+Forces :
+- personalities ;
+- reaction delay ;
+- erreurs ;
+- route affinities ;
+- map awareness ;
+- pressure adaptation ;
+- vote ;
+- lobby ;
+- result reaction ;
+- pas de badge bot volontaire.
+
+Risque :
+- "human-likeness" ne peut pas être certifiée par unit tests.
+
+Pour 5 :
+fresh-eyes observe les bots sans les identifier immédiatement comme scripts.
+
+======================================================================
+18 — RETENTION / PROGRESSION
+======================================================================
+
+NOTE : 4/5
+
+Présent :
+- level/XP ;
+- dailies ;
+- weeklies ;
+- achievements ;
+- mastery ;
+- collection ;
+- cosmetics ;
+- next goal.
+
+Risque :
+- richesse trop grande pour première session.
+
+Mitigation :
+FTUE masque secondaires.
+
+Pour 5 :
+alpha confirme que progression renforce et ne distrait pas.
+
+======================================================================
+19 — ECONOMY
+======================================================================
+
+NOTE : 4/5
+
+Forces :
+- cosmetics ;
+- coin validation serveur ;
+- progression claire ;
+- no P2W.
+
+À mesurer :
+- vitesse d'acquisition ;
+- prix ;
+- sinks à long terme.
+
+======================================================================
+20 — MONETIZATION
+======================================================================
+
+NOTE DESIGN : 4/5
+NOTE RELEASE : 2/5
+
+Design :
+cosmetic-only.
+
+Bloqueurs release :
+- IDs/prix réels ;
+- purchase flow ;
+- restore ownership ;
+- rejoin ;
+- device validation.
+
+======================================================================
+21 — ANALYTICS
+======================================================================
+
+NOTE : 4/5
+
+Forces :
+- sessions ;
+- solo/multi ;
+- performance pulse ;
+- social funnel ;
+- custom fields bornés.
+
+Manque :
+- dashboard / lecture alpha réelle.
+
+======================================================================
+22 — PERFORMANCE
+======================================================================
+
+NOTE CODE : 4/5
+NOTE CERTIFIÉE : 3/5
+
+Forces :
+- tiers ;
+- throttling ;
+- Low mode ;
+- cleanup ;
+- quality auto.
+
+Bloqueur :
+30–60 min Android soak réel.
+
+======================================================================
+23 — SERVER / NETWORK
+======================================================================
+
+NOTE : 4/5
+
+Forces :
+- server authority ;
+- rate limiting ;
+- remote registry ;
+- late join state ;
+- AI server logic ;
+- reward validation.
+
+======================================================================
+24 — PERSISTENCE
+======================================================================
+
+NOTE CODE : 4/5
+NOTE CERTIFIÉE : 3/5
+
+Forces :
+- schema ;
+- migration ;
+- session ownership ;
+- stale save protection ;
+- retries ;
+- temporary session.
+
+Bloqueur :
+vraie séquence quit/rejoin/rapid rejoin.
+
+======================================================================
+25 — SECURITY / FAIR PLAY
+======================================================================
+
+NOTE : 4/5
+
+Forces :
+- client data non fiable ;
+- remote validation ;
+- rate limit ;
+- monetization guard ;
+- no P2W.
+
+Reste :
+red-team réel pendant alpha.
+
+======================================================================
+26 — QA / CI
+======================================================================
+
+NOTE : 4/5
+
+Forces :
+- Build Validation ;
+- Open Cloud engine ;
+- spec coverage audit ;
+- gameplay matrix ;
+- release checklist.
+
+Faiblesse découverte :
+Open Cloud transient PROCESSING + HTTP 429 peut créer faux rouge.
+
+Correction préparée :
+retry borné des erreurs infra uniquement, jamais des assertion failures.
+
+======================================================================
+27 — LOCALIZATION
+======================================================================
+
+NOTE MAIN : 3/5
+POTENTIEL APRÈS LOT EN VALIDATION : 4/5
+
+Forces :
+- FR/EN ;
+- stable IDs ;
+- critical flow traduit.
+
+Restes identifiés :
+- certains feedbacks juice/near-miss codés en anglais sur main actuel ;
+- correction consolidée en validation.
+
+======================================================================
+28 — PUBLIC PRESENTATION
+======================================================================
+
+NOTE : 1/5
+STATUT : PREMIUM BLOCKER POUR LANCEMENT PUBLIC FINAL
+
+Manque :
+- icon finale ;
+- thumbnails finales ;
+- trailer ;
+- screenshots certifiés ;
+- store description verrouillée.
+
+Ne pas produire avant certification visuelle du jeu.
+
+======================================================================
+29 — RELEASE READINESS
+======================================================================
+
+NOTE : 2/5
+
+Automatisation forte, mais preuves réelles manquent :
+- Studio E2E ;
+- Android ;
+- desktop ;
+- persistence ;
+- soak ;
+- alpha ;
+- monetization réel.
+
+======================================================================
+CLASSEMENT DES PRIORITÉS
+======================================================================
+
+P0 — PREUVE
+1. Android réel.
+2. Studio E2E.
+3. persistence/rejoin.
+4. 30–60 min soak.
+
+P1 — QUALITÉ PERCEPTUELLE
+5. animations authored R15.
+6. Hero assets PBR.
+7. audio original.
+8. harmonisation phase attention.
+
+P1 — SOCIAL
+9. intégrer proprement le partage moment fort.
+10. mesurer invite/share/join.
+
+P2 — PUBLIC
+11. icon.
+12. thumbnails.
+13. trailer.
+14. store copy.
+
+P2 — VALIDATION PRODUIT
+15. alpha public.
+16. analyse funnels.
+17. corrections issues réelles.
+
+======================================================================
+VERDICT DES EXPERTS
+======================================================================
+
+Le projet n'est plus un prototype.
+Il est au stade "premium candidate".
+
+La meilleure stratégie n'est PAS :
+"ajouter encore beaucoup de systèmes".
+
+La meilleure stratégie est :
+1. intégrer les quelques systèmes utiles encore bloqués ;
+2. améliorer les plafonds authored (animation/PBR/audio) ;
+3. tester réellement ;
+4. supprimer tout ce qui se concurrence ;
+5. harmoniser ;
+6. alpha ;
+7. corriger seulement les défauts observés ;
+8. freeze.
+
+FIN
