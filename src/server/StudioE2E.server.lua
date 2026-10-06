@@ -125,6 +125,11 @@ task.spawn(function()
             "ArenaMechanicFeedback",
             "HazardImpactFeedback",
             "HazardNearMiss",
+            "ChaosShardCollected",
+            "PerformancePulse",
+            "AccessibilitySettings",
+            "SocialSignal",
+            "SocialReaction",
             "MonetizationState",
             "MonetizationAction",
         }) do
