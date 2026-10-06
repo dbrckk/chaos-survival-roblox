@@ -280,3 +280,12 @@ GUIDES DE PRODUCTION — 2026-10-05
 [FAIT] AAA_VISUALS_ANIMATION_GUIDE.txt : standard obligatoire pour graphismes, PBR, lighting, maps, VFX, animation, caméra et optimisation visuelle.
 [FAIT] GAME_FEEL_UX_GUIDE.txt : standard obligatoire pour contrôle, feedback, rythme, onboarding, social, rétention saine, mobile et accessibilité.
 [RÈGLE] Toute future amélioration doit être évaluée contre ces deux guides avant validation finale.
+
+
+GOUVERNANCE QUALITÉ MULTI-EXPERTS — 2026-10-06
+================================================
+[FAIT] MULTI_EXPERT_PREMIUM_REVIEW.txt définit 35 revues spécialisées : creative/game direction, game/level design, environment art, lighting, PBR, technical art, animation, VFX, audio, game feel, UX/mobile/accessibilité, cognition, sociologie/social, AI, économie/monétisation, retention/live-ops, analytics, performance, réseau/data/security, QA/release, marketing/community/localization, fresh-eyes, red-team UX et harmonisation.
+[FAIT] PERFECTION_HARMONIZATION_MATRIX.txt impose une note 0–5 avec preuves et interdit de considérer NON TESTÉ comme PASS.
+[RÈGLE] Une version ne peut pas être dite finale si un P0/P1 reste FAIL ou NON TESTÉ.
+[RÈGLE] Lorsque les disciplines principales atteignent >=4/5, arrêter l'expansion fonctionnelle et passer en suppression -> harmonisation -> fresh-eyes -> certification device -> alpha -> release freeze.
+[RÈGLE] Toute qualité "5/5" exige une preuve réelle, particulièrement Android/Studio pour visuel, tactile et performance.
