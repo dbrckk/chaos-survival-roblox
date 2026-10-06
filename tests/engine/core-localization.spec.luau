@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local CoreLocalization = require("../../src/shared/CoreLocalization")
+local DisasterVisuals = require("../../src/shared/DisasterVisuals")
 
 describe("Core localization", function()
     it("selects French and English from Roblox locale ids", function()
@@ -78,19 +79,12 @@ describe("Core localization", function()
     end)
 
     it("gives every hazard a complete actionable EN/FR contract", function()
-        local hazardIds = {
-            "RisingLava",
-            "Meteors",
-            "LowGravity",
-            "DisappearingPlatforms",
-            "Tornado",
-            "Freeze",
-            "Bombs",
-            "SpeedSurge",
-            "Darkness",
-            "ShrinkingArena",
-            "JumpShock",
-        }
+        local hazardIds = {}
+        for hazardId in pairs(DisasterVisuals.Profiles) do
+            table.insert(hazardIds, hazardId)
+        end
+        table.sort(hazardIds)
+        expect(#hazardIds).toBe(11)
 
         for _, localeId in ipairs({"en-us", "fr-fr"}) do
             for _, hazardId in ipairs(hazardIds) do
