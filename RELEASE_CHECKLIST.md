@@ -100,7 +100,14 @@ Run at least 30 minutes continuously.
 
 ## Data persistence gate
 
-Use the production/test experience with API Services enabled.
+Automated evidence already required by CI / engine tests:
+
+- [x] Session takeover rejects stale saves and stale releases.
+- [x] Rapid handoff can save/release under the new owner and be claimed again.
+- [x] Cosmetic purchases, equipment and premium grants require `PlayerData.canMutate()`.
+- [x] CI rejects persistent purchase/grant paths that lose the active-session guard.
+
+Manual evidence is still required with the production/test experience and API Services enabled.
 
 - [ ] Coins survive quit/rejoin.
 - [ ] XP/Level survive quit/rejoin.
