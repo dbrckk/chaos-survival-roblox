@@ -282,6 +282,48 @@ jobs:
           )
           PY
 
+      - name: Enforce accessibility setting consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          schema = Path("src/server/DataSchema.lua").read_text()
+          server = Path("src/server/init.server.lua").read_text()
+          client = Path("src/client/accessibility.client.lua").read_text()
+          haptics = Path("src/client/haptics.client.lua").read_text()
+          localization = Path("src/shared/CoreLocalization.lua").read_text()
+
+          settings = {
+              "ReduceMotion": ("MOTION_REDUCED", "MOTION_FULL"),
+              "AudioMuted": ("SOUND_OFF", "SOUND_ON"),
+              "HapticsDisabled": ("HAPTICS_OFF", "HAPTICS_ON"),
+          }
+
+          failures = []
+          for key, copy_keys in settings.items():
+              if f"{key} = false" not in schema:
+                  failures.append(f"{key}: missing persisted schema default")
+              if f'setting ~= "{key}"' not in server:
+                  failures.append(f"{key}: missing server allow-list entry")
+              if f'FireServer("{key}", nextValue)' not in client:
+                  failures.append(f"{key}: missing client persistence event")
+              for copy_key in copy_keys:
+                  if localization.count(copy_key) < 2:
+                      failures.append(f"{key}: localization key {copy_key} missing EN/FR")
+
+          if 'GetAttribute("HapticsDisabled") == true' not in haptics:
+              failures.append("HapticsDisabled: haptics runtime guard missing")
+
+          if failures:
+              print("Accessibility setting contract mismatch:")
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+
+          print("Accessibility setting persistence/runtime contract verified.")
+          PY
+
       - name: Enforce production release hygiene
         shell: bash
         run: |
