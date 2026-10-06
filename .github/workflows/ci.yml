@@ -168,6 +168,39 @@ jobs:
           print("Single round FOV owner verified.")
           PY
 
+      - name: Audit persistent local visual folders
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          registered_source = Path("src/shared/VisualBudgetRules.lua").read_text()
+          registered = set(re.findall(r'"([A-Za-z0-9_]+Local)"', registered_source))
+
+          discovered = set()
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              lines = source.splitlines()
+              for index, line in enumerate(lines):
+                  if 'Instance.new("Folder")' not in line:
+                      continue
+                  window = "\n".join(lines[index:index + 8])
+                  match = re.search(r'\.Name\s*=\s*"([A-Za-z0-9_]+Local)"', window)
+                  if match:
+                      discovered.add(match.group(1))
+
+          missing = sorted(discovered - registered)
+          print("Registered visual budget folders:", len(registered))
+          print("Persistent Local folders discovered:", len(discovered))
+          if missing:
+              print("Persistent Local folders not covered by VisualBudgetRules:")
+              for name in missing:
+                  print(" -", name)
+          else:
+              print("All persistent Local folders are covered by VisualBudgetRules.")
+          PY
+
       - name: Enforce single client cloud owner
         shell: bash
         run: |
