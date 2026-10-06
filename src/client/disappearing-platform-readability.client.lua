@@ -129,6 +129,7 @@ local function refreshPart(part)
 end
 
 local bound = setmetatable({}, {__mode = "k"})
+local platformsConnection = nil
 
 local function bindPart(part)
     if not part:IsA("BasePart") or bound[part] then
@@ -144,6 +145,11 @@ local function bindPart(part)
 end
 
 local function bindPlatformsFolder(platforms)
+    if platformsConnection then
+        platformsConnection:Disconnect()
+        platformsConnection = nil
+    end
+
     if not platforms then
         return
     end
@@ -154,7 +160,7 @@ local function bindPlatformsFolder(platforms)
         end
     end
 
-    platforms.ChildAdded:Connect(function(child)
+    platformsConnection = platforms.ChildAdded:Connect(function(child)
         if child:IsA("BasePart") then
             bindPart(child)
         end
@@ -181,6 +187,7 @@ end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindPlatformsFolder(nil)
         for part in pairs(tracked) do
             clearState(part)
         end
