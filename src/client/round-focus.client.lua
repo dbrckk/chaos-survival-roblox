@@ -217,17 +217,17 @@ end)
 local currentState = nil
 local visibleToken = 0
 local completedChallengeId = nil
-local rookieCompactMode = false
+local compactFocusMode = false
 
 local function shardCount()
     return math.max(0, math.floor(tonumber(player:GetAttribute("RoundChaosShards")) or 0))
 end
 
-local function setRookieCompactMode(enabled)
-    if rookieCompactMode == enabled then
+local function setCompactFocusMode(enabled)
+    if compactFocusMode == enabled then
         return
     end
-    rookieCompactMode = enabled
+    compactFocusMode = enabled
 
     if enabled then
         shard.Visible = false
@@ -291,7 +291,7 @@ local function refresh()
     local isEliminated = player:GetAttribute("RoundEliminated") == true
 
     if not state or state.phase ~= "round" or not isParticipant or isEliminated then
-        setRookieCompactMode(false)
+        setCompactFocusMode(false)
         if root.Visible then
             visibleToken += 1
             local token = visibleToken
@@ -322,7 +322,8 @@ local function refresh()
         or CoreLocalization.text(localeId, "SHARDS_COUNT", count)
 
     local rookieRound = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0)) <= 1
-    setRookieCompactMode(rookieRound and count <= 0)
+    local finalRush = state.finalRush == true
+    setCompactFocusMode(finalRush or (rookieRound and count <= 0))
     local challengeId = state.challengeId
     local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
     local progress = math.min(challengeTarget, challengeProgress(state))
