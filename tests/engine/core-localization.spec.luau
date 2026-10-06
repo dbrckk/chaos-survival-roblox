@@ -129,6 +129,12 @@ describe("Core localization", function()
             "PARCOURS  •  2/4"
         )
         expect(CoreLocalization.text("fr-fr", "PRACTICE_CHECK", 3)).toBe("POINT 3")
+        expect(CoreLocalization.text("fr-fr", "LOBBY_LIVE")).toBe("LOBBY EN DIRECT")
+        expect(CoreLocalization.text("fr-fr", "LOBBY_VOTE_NOW")).toBe("VOTE MAINTENANT")
+        expect(CoreLocalization.text("fr-fr", "LOBBY_PRACTICE_JOIN")).toBe(
+            "ENTRAÎNE-TOI PENDANT LES ARRIVÉES"
+        )
+        expect(CoreLocalization.text("fr-fr", "MOVE_JUMP")).toBe("BOUGE + SAUTE")
         expect(CoreLocalization.text("fr-fr", "PRACTICE_NEW_BEST", 4.25)).toBe(
             "NOUVEAU RECORD  •  4.25s"
         )
