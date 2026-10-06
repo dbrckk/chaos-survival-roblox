@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -11,7 +10,6 @@ folder.Parent = workspace
 
 local tracked = {}
 local clock = 0
-local updateClock = 0
 
 local function profile()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -113,7 +111,7 @@ local function layout(part, state, phase, now)
     end
 end
 
-local renderConnection = nil
+local loopStarted = false
 local ensureRenderLoop
 
 local function refreshPart(part)
@@ -193,39 +191,36 @@ if existing then
 end
 
 ensureRenderLoop = function()
-    if renderConnection or next(tracked) == nil then
+    if loopStarted then
         return
     end
+    loopStarted = true
 
-    renderConnection = RunService.RenderStepped:Connect(function(dt)
-        if next(tracked) == nil then
-            renderConnection:Disconnect()
-            renderConnection = nil
-            return
-        end
+    task.spawn(function()
+        while true do
+            if next(tracked) == nil then
+                task.wait(0.18)
+                continue
+            end
 
-    clock += dt
-    updateClock += dt
+            local tier = profile()
+            local cadence = tier.Name == "Low" and 0.12 or 0.075
+            local dt = task.wait(cadence)
+            clock += dt
 
-    local tier = profile()
-    local cadence = tier.Name == "Low" and 0.12 or 0.075
-    if updateClock < cadence then
-        return
-    end
-    updateClock = 0
-
-    for part, state in pairs(tracked) do
-        if not part.Parent then
-            clearState(part)
-        else
-            local phase = part:GetAttribute("CollapsePhase")
-            if phase == "Warning" or phase == "Gone" then
-                layout(part, state, phase, clock)
-            else
-                clearState(part)
+            for part, state in pairs(tracked) do
+                if not part.Parent then
+                    clearState(part)
+                else
+                    local phase = part:GetAttribute("CollapsePhase")
+                    if phase == "Warning" or phase == "Gone" then
+                        layout(part, state, phase, clock)
+                    else
+                        clearState(part)
+                    end
+                end
             end
         end
-    end
     end)
 end
 
