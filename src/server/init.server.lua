@@ -53,6 +53,7 @@ local Mastery = require(script.Mastery)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local SocialExperienceRules = require(ReplicatedStorage.Shared.SocialExperienceRules)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
 local stateEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundState")
@@ -1764,9 +1765,10 @@ while true do
                 soloMode = roundSettings.Solo,
                 elapsedSeconds = math.floor(roundElapsed + 0.5),
                 criticalSurvival = criticalSurvival,
-                eliminationCause = survived
-                    and nil
-                    or tostring(eliminationCauses[p.UserId] or "Unknown"),
+                eliminationCause = ResultPresentation.feedbackEliminationCause(
+                    survived,
+                    eliminationCauses[p.UserId]
+                ),
                 arenaMastery = arenaMasteryState,
                 arenaMasteryName = roundSettings.ArenaName,
                 disasterMastery = disasterMasteryState,
