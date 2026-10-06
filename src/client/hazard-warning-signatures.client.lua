@@ -143,7 +143,10 @@ local function bombSignature(warning)
     local body = localPart(
         "BombIncomingBody",
         Vector3.new(2.2, 2.2, 2.2),
-        CFrame.new(warning.Position + Vector3.new(0, tier.Name == "Low" and 18 or 26, 0)),
+        CFrame.new(
+            warning.Position
+                + Vector3.new(0, reduced and 8 or (tier.Name == "Low" and 18 or 26), 0)
+        ),
         Color3.fromRGB(62, 66, 76),
         0.06
     )
@@ -161,7 +164,7 @@ local function bombSignature(warning)
     ):Play()
     Debris:AddItem(body, duration + 0.06)
 
-    if tier.Name ~= "Low" then
+    if tier.Name ~= "Low" and not reduced then
         local band = localPart(
             "BombIncomingBand",
             Vector3.new(2.55, 0.28, 2.55),
