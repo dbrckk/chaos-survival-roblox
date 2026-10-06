@@ -86,6 +86,15 @@ PHASE 4 — VFX CATASTROPHES
 [QA]   4.12 Ajouter atmosphère catastrophe à l'échelle de l'arène : balises périphériques, particules contextuelles, shafts lumineux et renforcement FINAL RUSH.
 [QA]   4.13 Signatures cinématiques : Tornado lié au vrai RoundTornado, Meteors liés aux vrais RoundMeteor, Lava/Darkness ambiants sans faux télégraphe.
 [TODO] 4.14 QA Double Chaos : lisibilité de toutes les combinaisons autorisées.
+[QA]   4.15 Rééquilibrer Meteors/Bombs/Freeze/Lava : anticipation claire, impact distinct, résidu séparé, moins de doublons.
+[QA]   4.16 Bombs : ajouter bombe descendante liée au vrai warning ; Meteor = trail du vrai RoundMeteor.
+[QA]   4.17 Freeze : réduire densité de segments et passer le centre en Glass.
+[QA]   4.18 Lava : supprimer les vents synthétiques redondants et réduire l'ambiance persistante.
+[QA]   4.19 Freeze : état ChaosFrozen autoritaire + feedback local clair pendant le ralentissement.
+[QA]   4.20 JumpShock : supprimer la troisième couche d'anneaux redondants.
+[QA]   4.21 SpeedSurge : supprimer le ribbon spécifique redondant avec speed-feel + sprint trail.
+[QA]   4.22 Darkness/Tornado : supprimer void motes synthétiques et debris périphériques dupliqués.
+
 
 PHASE 5 — UI / UX PREMIUM
 --------------------------
@@ -163,6 +172,8 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.9 Réduire les boucles RenderStepped décoratives : signature VFX et atmosphère catastrophe throttled via task.wait/VfxQuality.
 [QA]   7.10 Sortir disaster-premium-vfx de RenderStepped et respecter ReduceMotion sur les trails Meteors.
 [QA]   7.11 Throttler ShrinkingArena/Darkness hors RenderStepped ; garder RenderStepped seulement pour les hazards où la fluidité le justifie.
+[QA]   7.12 Rendre les cues DisappearingPlatforms motion-safe et conserver l'animation cosmétique côté client.
+[QA]   7.13 Réserver les trails/motes LowGravity aux tiers Medium/High ; aucun cosmétique mobile Low/ReduceMotion.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
@@ -190,12 +201,3 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 - Freeze glare réduit.
 - Base néon cohérente enrichie par une couche de profondeur cinématique locale, adaptative High/Medium/Low et respectant ReduceMotion.
 - Priorité actuelle : QA des AI Survivors + Android réel, puis équilibrage final et certification.
-
-[QA]   4.15 Rééquilibrer Meteors/Bombs/Freeze/Lava : anticipation claire, impact distinct, résidu séparé, moins de doublons.
-[QA]   4.16 Bombs : ajouter bombe descendante liée au vrai warning ; Meteor = trail du vrai RoundMeteor.
-[QA]   4.17 Freeze : réduire densité de segments et passer le centre en Glass.
-[QA]   4.18 Lava : supprimer les vents synthétiques redondants et réduire l'ambiance persistante.
-[QA]   4.19 Freeze : état ChaosFrozen autoritaire + feedback local clair pendant le ralentissement.
-[QA]   4.20 JumpShock : supprimer la troisième couche d'anneaux redondants.
-[QA]   4.21 SpeedSurge : supprimer le ribbon spécifique redondant avec speed-feel + sprint trail.
-[QA]   4.22 Darkness/Tornado : supprimer void motes synthétiques et debris périphériques dupliqués.
