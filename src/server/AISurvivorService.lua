@@ -13,6 +13,9 @@ local ArenaMechanics = if script
 local LobbyActivities = if script
     then require(script.Parent.LobbyActivities)
     else require("./LobbyActivities")
+local AnimationCatalog = if script
+    then require(ReplicatedStorage.Shared.AnimationCatalog)
+    else require("../shared/AnimationCatalog")
 
 local AISurvivorService = {}
 
@@ -206,7 +209,7 @@ end
 
 local function loadTrack(animator, animationId, priority, looped)
     local animation = Instance.new("Animation")
-    animation.AnimationId = "rbxassetid://" .. tostring(animationId)
+    animation.AnimationId = AnimationCatalog.assetId(animationId)
 
     local ok, track = pcall(animator.LoadAnimation, animator, animation)
     animation:Destroy()
@@ -228,11 +231,11 @@ local function attachAnimations(record, humanoid)
     end
 
     local tracks = {
-        idle = loadTrack(animator, 507766666, Enum.AnimationPriority.Idle, true),
-        walk = loadTrack(animator, 507777826, Enum.AnimationPriority.Movement, true),
-        run = loadTrack(animator, 507767714, Enum.AnimationPriority.Movement, true),
-        jump = loadTrack(animator, 507765000, Enum.AnimationPriority.Action, false),
-        fall = loadTrack(animator, 507767968, Enum.AnimationPriority.Movement, true),
+        idle = loadTrack(animator, AnimationCatalog.AISurvivor.Idle, Enum.AnimationPriority.Idle, true),
+        walk = loadTrack(animator, AnimationCatalog.AISurvivor.Walk, Enum.AnimationPriority.Movement, true),
+        run = loadTrack(animator, AnimationCatalog.AISurvivor.Run, Enum.AnimationPriority.Movement, true),
+        jump = loadTrack(animator, AnimationCatalog.AISurvivor.Jump, Enum.AnimationPriority.Action, false),
+        fall = loadTrack(animator, AnimationCatalog.AISurvivor.Fall, Enum.AnimationPriority.Movement, true),
     }
     record.tracks = tracks
 
