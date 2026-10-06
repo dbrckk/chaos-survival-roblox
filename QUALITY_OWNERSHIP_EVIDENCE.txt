@@ -1,0 +1,198 @@
+CHAOS SURVIVAL — REGISTRE D'OWNERSHIP QUALITÉ / EVIDENCE
+========================================================
+
+But
+---
+Attribuer chaque domaine à un rôle explicite et définir la preuve minimale.
+Ce registre doit être rempli pour chaque Release Candidate.
+
+Statuts autorisés :
+- PASS
+- PASS AVEC RÉSERVE
+- FAIL
+- NON TESTÉ
+
+Release SHA : ______________________________
+Date : ____________________________________
+Studio version : ___________________________
+Android device : ___________________________
+Desktop device : ___________________________
+
+DOMAINE | OWNER | STATUT | PREUVE
+---------------------------------
+
+Vision / cohérence
+Creative Director | __________ | __________
+
+Boucle / rythme
+Game Director | __________ | __________
+
+Règles / balance
+Lead Game Designer | __________ | __________
+
+Maps / routes
+Level Designer | __________ | __________
+
+Décor / storytelling
+Environment Art Director | __________ | __________
+
+Lighting
+Lighting Artist | __________ | __________
+
+PBR / matériaux
+Material Artist | __________ | __________
+
+Budget rendu
+Technical Artist | __________ | __________
+
+Animation
+Animation Director | __________ | __________
+
+Motion / rig / IK
+Character Technical Designer | __________ | __________
+
+VFX
+VFX Director | __________ | __________
+
+Audio
+Audio Director | __________ | __________
+
+Game feel
+Game Feel Designer | __________ | __________
+
+UX générale
+UX Director | __________ | __________
+
+Mobile
+Mobile UX Specialist | __________ | __________
+
+Accessibilité
+Accessibility Specialist | __________ | __________
+
+Charge cognitive
+Human Factors Specialist | __________ | __________
+
+Social
+Social Designer / Sociologist | __________ | __________
+
+AI Survivors
+AI/NPC Designer | __________ | __________
+
+Économie
+Economy Designer | __________ | __________
+
+Monétisation
+Ethical Monetization Review | __________ | __________
+
+Rétention
+Retention/Live-Ops Designer | __________ | __________
+
+Analytics
+Product/Data Analyst | __________ | __________
+
+Performance
+Performance Engineer | __________ | __________
+
+Réseau
+Network Engineer | __________ | __________
+
+Persistence
+Data Engineer | __________ | __________
+
+Fair-play / sécurité
+Security Review | __________ | __________
+
+QA
+QA Lead | __________ | __________
+
+Release
+Release Manager | __________ | __________
+
+Marketing
+Marketing Art Director | __________ | __________
+
+Community / safety
+Community Review | __________ | __________
+
+Localization
+Localization Editor | __________ | __________
+
+Fresh eyes
+Fresh-Eyes Reviewer | __________ | __________
+
+Abuse / edge cases
+Red-Team UX | __________ | __________
+
+Harmonisation
+Harmonization Director | __________ | __________
+
+
+PREUVES MINIMALES PAR TYPE
+==========================
+
+CODE
+- SHA exact ;
+- Build Validation ;
+- tests moteur concernés.
+
+VISUEL
+- captures réelles ;
+- Low/Medium/High ;
+- au moins Android + desktop.
+
+TACTILE
+- vidéo/capture appareil ;
+- boutons ;
+- mouvement ;
+- overlap.
+
+PERFORMANCE
+- device ;
+- durée ;
+- FPS/frame time ;
+- mémoire ;
+- température qualitative ;
+- scénario stress.
+
+PERSISTENCE
+- compte/test ;
+- quit/rejoin ;
+- valeurs avant/après ;
+- rapid rejoin.
+
+SOCIAL
+- solo ;
+- 2 humains ;
+- 4 humains si possible ;
+- invite/share réel si API disponible.
+
+ACCESSIBILITÉ
+- ReduceMotion ;
+- muted ;
+- Low VFX ;
+- contraste.
+
+ALPHA
+- taille échantillon ;
+- durée ;
+- funnel ;
+- quit points ;
+- bugs ;
+- verbatims anonymisés.
+
+
+RÈGLES
+======
+
+1. Le même rôle peut être simulé par la même équipe/agent, mais la revue doit rester séparée.
+2. Une preuve d'un ancien SHA ne certifie pas automatiquement un nouveau SHA.
+3. Une modification documentaire seule nécessite Build Validation mais ne remplace pas les preuves device existantes.
+4. Une modification visuelle invalide les captures visuelles concernées.
+5. Une modification de mouvement/caméra invalide la certification confort correspondante.
+6. Une modification data invalide les tests persistence correspondants.
+7. Une modification social/invite/share invalide les tests sociaux concernés.
+8. Un infra timeout/429 n'efface pas les specs passées, mais le gate reste ouvert jusqu'à un run vert.
+9. Toute réserve doit devenir une issue/backlog explicite avant release.
+10. Aucun champ critique vide lors du release freeze.
+
+FIN
