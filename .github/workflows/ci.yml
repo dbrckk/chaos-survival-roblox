@@ -136,29 +136,57 @@ jobs:
             exit 1
           fi
 
-      - name: Enforce global shadow ownership
+      - name: Enforce Lighting property ownership
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
-          allowed = Path("src/client/arena-lighting.client.lua")
+          arena = Path("src/client/arena-lighting.client.lua")
+          juice = Path("src/client/juice.client.lua")
+
+          arena_only = {
+              "GlobalShadows",
+              "LightingStyle",
+              "PrioritizeLightingQuality",
+              "Ambient",
+              "OutdoorAmbient",
+              "ColorShift_Top",
+              "ColorShift_Bottom",
+              "ShadowSoftness",
+              "ClockTime",
+          }
+          shared_active = {
+              "ExposureCompensation",
+              "EnvironmentDiffuseScale",
+              "EnvironmentSpecularScale",
+          }
+
           offenders = []
 
           for pattern in ("*.lua", "*.luau"):
               for path in Path("src/client").rglob(pattern):
                   source = path.read_text()
-                  if re.search(r"GlobalShadows\s*=", source) and path != allowed:
-                      offenders.append(str(path))
+
+                  for prop in arena_only:
+                      if re.search(rf"Lighting\.{prop}\s*=", source) and path != arena:
+                          offenders.append(f"{path}: Lighting.{prop}")
+
+                  for prop in shared_active:
+                      if re.search(rf"Lighting\.{prop}\s*=", source) and path not in {arena, juice}:
+                          offenders.append(f"{path}: Lighting.{prop}")
 
           if offenders:
-              print("Lighting.GlobalShadows must remain owned by arena-lighting.client.lua:")
-              for path in sorted(offenders):
-                  print(" -", path)
+              print("Client Lighting ownership violations:")
+              for item in sorted(offenders):
+                  print(" -", item)
               raise SystemExit(1)
 
-          print("Global shadow ownership verified.")
+          print(
+              "Lighting ownership verified:",
+              "arena baseline; juice active exposure/diffuse/specular only.",
+          )
           PY
 
       - name: Enforce single round FOV owner
