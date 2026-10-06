@@ -426,6 +426,22 @@ function AISurvivorRules.locomotionAnimation(speed, airborne, gaitScale)
     return "run", math.clamp((safeSpeed / 16) * gait, 0.78, 1.32)
 end
 
+function AISurvivorRules.animationPlaybackScale(kind, locomotionSpeed, gaitScale)
+    local name = tostring(kind or "")
+    local gait = math.clamp(tonumber(gaitScale) or 1, 0.80, 1.20)
+    local speed = math.max(0.05, tonumber(locomotionSpeed) or 1)
+
+    if name == "idle" then
+        return math.clamp(0.98 + (gait - 1) * 0.65, 0.94, 1.06)
+    elseif name == "fall" then
+        return math.clamp(1 + (gait - 1) * 0.42, 0.96, 1.04)
+    elseif name == "jump" then
+        return math.clamp(1 + (gait - 1) * 0.55, 0.95, 1.05)
+    end
+
+    return speed
+end
+
 function AISurvivorRules.locomotionTransition(previousKind, nextKind)
     local previous = tostring(previousKind or "")
     local nextValue = tostring(nextKind or "")
