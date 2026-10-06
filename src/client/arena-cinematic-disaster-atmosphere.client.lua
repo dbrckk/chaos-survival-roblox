@@ -303,7 +303,9 @@ local function ensureRenderLoop()
     task.spawn(function()
         while true do
             local tier = quality()
-            local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
+            local dt = task.wait(
+                tier.DecorUpdateInterval or math.max(1 / 30, tier.UpdateInterval)
+            )
 
             if #beaconParts == 0 and #beamStates == 0 then
                 continue
