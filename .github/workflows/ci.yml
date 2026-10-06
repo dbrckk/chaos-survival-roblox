@@ -69,13 +69,14 @@ jobs:
 
           allowed = {
               Path("src/client/body-feel.client.lua"): {"BindToRenderStep"},
-              Path("src/client/juice.client.lua"): {"RenderStepped"},
+              Path("src/client/movement-feel.client.lua"): {"BindToRenderStep"},
+              Path("src/client/juice.client.lua"): {"RunService.RenderStepped"},
           }
           markers = (
-              "RenderStepped",
+              "RunService.RenderStepped",
               "BindToRenderStep",
-              "Heartbeat:Connect",
-              "Stepped:Connect",
+              "RunService.Heartbeat:Connect",
+              "RunService.Stepped:Connect",
           )
 
           violations = []
