@@ -63,6 +63,27 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("classifies live visual budget status", function()
+        expect(VisualBudgetRules.status("High", {
+            Parts = 1,
+            Lights = 1,
+            Effects = 1,
+        })).toBe("OK")
+
+        local high = VisualBudgetRules.forTier("High")
+        expect(VisualBudgetRules.status("High", {
+            Parts = high.Parts + 1,
+            Lights = 0,
+            Effects = 0,
+        })).toBe("OVER")
+
+        expect(VisualBudgetRules.status("Unknown", {
+            Parts = 0,
+            Lights = 0,
+            Effects = 0,
+        })).toBe("UNKNOWN")
+    end)
+
     it("detects over-budget visual scenes", function()
         expect(VisualBudgetRules.withinBudget("Medium", {
             Parts = 400,
