@@ -34,8 +34,6 @@ local auditedFolders = 0
 local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
-local readyUxProbed = false
-local resultUxProbed = false
 
 local function sendVisualPhaseProbe(phase)
     if phase ~= "ready" and phase ~= "round" and phase ~= "result" then
@@ -258,10 +256,17 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                 task.wait(0.10)
             until os.clock() >= deadline
 
-            check(resultCard ~= nil, "RESULT card missing")
+            local issues = {}
+            local function uxCheck(condition, message)
+                if not condition then
+                    table.insert(issues, message)
+                end
+            end
+
+            uxCheck(resultCard ~= nil, "RESULT card missing")
             if resultCard and resultCard:IsA("GuiObject") then
-                check(resultCard.Visible == true, "RESULT card not visible")
-                check(insideViewport(resultCard), "RESULT card outside viewport")
+                uxCheck(resultCard.Visible == true, "RESULT card not visible")
+                uxCheck(insideViewport(resultCard), "RESULT card outside viewport")
             end
 
             for _, item in ipairs({
@@ -270,13 +275,18 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                 {label = tip, name = "ResultTip"},
                 {label = nextRound, name = "NextRoundCountdown"},
             }) do
-                check(item.label ~= nil, item.name .. " missing")
+                uxCheck(item.label ~= nil, item.name .. " missing")
                 if item.label and item.label:IsA("TextLabel") then
-                    check(item.label.Text ~= "", item.name .. " is empty during RESULT")
+                    uxCheck(item.label.Text ~= "", item.name .. " is empty during RESULT")
                 end
             end
 
-            resultUxProbed = true
+            reportEvent:FireServer({
+                kind = "ux_phase_probe",
+                phase = "result",
+                ok = #issues == 0,
+                error = table.concat(issues, " | "),
+            })
         end)
     end)
 end
@@ -288,34 +298,45 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
         end
 
         task.delay(0.25, function()
-            if not hud or not hud.Parent then
-                return
+            local issues = {}
+            local function uxCheck(condition, message)
+                if not condition then
+                    table.insert(issues, message)
+                end
             end
 
-            local countdown = hud:FindFirstChild("RoundCountdown", true)
+            local countdown = hud and hud:FindFirstChild("RoundCountdown", true)
             local kicker = countdown and countdown:FindFirstChild("CountdownKicker", true)
             local main = countdown and countdown:FindFirstChild("CountdownMain", true)
             local guidance = countdown and countdown:FindFirstChild("CountdownGuidance", true)
 
-            check(countdown ~= nil, "READY countdown card missing")
+            uxCheck(countdown ~= nil, "READY countdown card missing")
             if countdown and countdown:IsA("GuiObject") then
-                check(countdown.Visible == true, "READY countdown card not visible")
-                check(insideViewport(countdown), "READY countdown outside viewport")
+                uxCheck(countdown.Visible == true, "READY countdown card not visible")
+                uxCheck(insideViewport(countdown), "READY countdown outside viewport")
             end
 
             for _, label in ipairs({kicker, main, guidance}) do
-                check(label ~= nil, "READY countdown text field missing")
+                uxCheck(label ~= nil, "READY countdown text field missing")
                 if label and label:IsA("TextLabel") then
-                    check(label.Text ~= "", label.Name .. " is empty during READY")
-                    check(label.AbsoluteSize.X > 0 and label.AbsoluteSize.Y > 0, label.Name .. " has invalid size")
+                    uxCheck(label.Text ~= "", label.Name .. " is empty during READY")
+                    uxCheck(
+                        label.AbsoluteSize.X > 0 and label.AbsoluteSize.Y > 0,
+                        label.Name .. " has invalid size"
+                    )
                 end
             end
 
             if guidance and guidance:IsA("TextLabel") then
-                check(#guidance.Text >= 3, "READY guidance is too short to be actionable")
+                uxCheck(#guidance.Text >= 3, "READY guidance is too short to be actionable")
             end
 
-            readyUxProbed = true
+            reportEvent:FireServer({
+                kind = "ux_phase_probe",
+                phase = "ready",
+                ok = #issues == 0,
+                error = table.concat(issues, " | "),
+            })
         end)
     end)
 end
@@ -536,18 +557,6 @@ while not roundStateReceived and os.clock() < roundStateDeadline do
     task.wait(0.1)
 end
 check(roundStateReceived, "no RoundState snapshot received after client bootstrap")
-
-local readyUxDeadline = os.clock() + 20
-while not readyUxProbed and os.clock() < readyUxDeadline do
-    task.wait(0.1)
-end
-check(readyUxProbed, "READY UX probe never completed")
-
-local resultUxDeadline = os.clock() + 30
-while not resultUxProbed and os.clock() < resultUxDeadline do
-    task.wait(0.1)
-end
-check(resultUxProbed, "RESULT UX probe never completed")
 
 reportEvent:FireServer({
     ok = #failures == 0,
