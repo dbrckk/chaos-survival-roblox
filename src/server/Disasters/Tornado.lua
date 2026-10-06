@@ -95,6 +95,9 @@ function D.start(ctx)
                             -55,
                             58
                         )
+                        if strength >= 0.12 and ctx.OnHazardContact then
+                            pcall(ctx.OnHazardContact, player, "Tornado")
+                        end
                     end
                 end
             end
