@@ -45,6 +45,9 @@ local function makePart(name, size, cframe, color, material, transparency)
     p.Color = color
     p.Material = material
     p.Transparency = transparency or 0
+    if material == VisualTheme.Materials.Glow then
+        p:SetAttribute("DepthBaseTransparency", p.Transparency)
+    end
     p.Parent = folder
     table.insert(structures, p)
     return p
@@ -762,6 +765,47 @@ end
 local transitionToken = 0
 local currentPhase = "waiting"
 
+local function isTransitGlow(part)
+    for _, transit in ipairs(transitGlows) do
+        if transit == part then
+            return true
+        end
+    end
+    return false
+end
+
+local function applyGlobalGlowPhase(duration)
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local phaseBias
+    if currentPhase == "round" then
+        phaseBias = tier.Name == "Low" and 0.18 or 0.24
+    elseif currentPhase == "ready" then
+        phaseBias = -0.04
+    elseif currentPhase == "result" then
+        phaseBias = 0.04
+    else
+        phaseBias = 0
+    end
+
+    for _, glow in ipairs(glows) do
+        if glow and glow.Parent and not isTransitGlow(glow) then
+            local baseTransparency = tonumber(glow:GetAttribute("DepthBaseTransparency"))
+                or glow.Transparency
+            local target = math.clamp(baseTransparency + phaseBias, 0, 0.92)
+            TweenService:Create(
+                glow,
+                TweenInfo.new(
+                    reduced and 0.08 or (duration or 0.32),
+                    Enum.EasingStyle.Quad,
+                    Enum.EasingDirection.Out
+                ),
+                {Transparency = target}
+            ):Play()
+        end
+    end
+end
+
 local function applyTransitPhase(phase)
     currentPhase = tostring(phase or "waiting")
     transitionToken += 1
@@ -834,10 +878,12 @@ end
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     rebuild()
     applyTransitPhase(currentPhase)
+    applyGlobalGlowPhase(0.18)
 end)
 
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     applyTransitPhase(currentPhase)
+    applyGlobalGlowPhase(0.12)
 end)
 
 local mapConnection = nil
@@ -878,6 +924,7 @@ bindMap()
 
 stateEvent.OnClientEvent:Connect(function(state)
     applyTransitPhase(state.phase)
+    applyGlobalGlowPhase(state.phase == "round" and 0.22 or 0.34)
 
     local ids = state.disasterIds or {}
     local profile = DisasterVisuals.combine(ids)
@@ -901,3 +948,4 @@ end)
 
 rebuild()
 applyTransitPhase(currentPhase)
+applyGlobalGlowPhase(0)
