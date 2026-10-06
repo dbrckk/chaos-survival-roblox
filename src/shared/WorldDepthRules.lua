@@ -4,25 +4,25 @@ function WorldDepthRules.budgets(tierName)
     local tier = tostring(tierName or "Medium")
     if tier == "Low" then
         return {
-            TransitRibs = 4,
-            HorizonStructures = 8,
-            HorizonAccents = 4,
-            UnderworldStruts = 3,
+            TransitRibs = 3,
+            HorizonStructures = 6,
+            HorizonAccents = 2,
+            UnderworldStruts = 2,
         }
     elseif tier == "High" then
         return {
-            TransitRibs = 8,
-            HorizonStructures = 16,
-            HorizonAccents = 10,
-            UnderworldStruts = 6,
+            TransitRibs = 6,
+            HorizonStructures = 12,
+            HorizonAccents = 7,
+            UnderworldStruts = 5,
         }
     end
 
     return {
-        TransitRibs = 6,
-        HorizonStructures = 12,
-        HorizonAccents = 7,
-        UnderworldStruts = 4,
+        TransitRibs = 4,
+        HorizonStructures = 8,
+        HorizonAccents = 4,
+        UnderworldStruts = 3,
     }
 end
 
