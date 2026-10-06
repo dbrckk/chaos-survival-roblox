@@ -100,14 +100,7 @@ function VisualBudgetRules.collect(root)
 end
 
 function VisualBudgetRules.forTier(tierName)
-    function VisualBudgetRules.status(tierName, metrics)
-    if tierName ~= "High" and tierName ~= "Medium" and tierName ~= "Low" then
-        return "UNKNOWN"
-    end
-    return VisualBudgetRules.withinBudget(tierName, metrics) and "OK" or "OVER"
-end
-
-return VisualBudgetRules.Budgets[tierName] or VisualBudgetRules.Budgets.High
+    return VisualBudgetRules.Budgets[tierName] or VisualBudgetRules.Budgets.High
 end
 
 function VisualBudgetRules.withinBudget(tierName, metrics)
@@ -117,6 +110,13 @@ function VisualBudgetRules.withinBudget(tierName, metrics)
     return (tonumber(values.Parts) or 0) <= budget.Parts
         and (tonumber(values.Lights) or 0) <= budget.Lights
         and (tonumber(values.Effects) or 0) <= budget.Effects
+end
+
+function VisualBudgetRules.status(tierName, metrics)
+    if tierName ~= "High" and tierName ~= "Medium" and tierName ~= "Low" then
+        return "UNKNOWN"
+    end
+    return VisualBudgetRules.withinBudget(tierName, metrics) and "OK" or "OVER"
 end
 
 function VisualBudgetRules.overages(tierName, metrics)
