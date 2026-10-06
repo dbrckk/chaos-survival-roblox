@@ -337,6 +337,10 @@ do
         "ArenaSurfaceDetailLocal",
         "ChaosEnvironmentDepthLocal",
         "ChaosWorldPolishLocal",
+        "ArenaCinematicDisasterAtmosphereLocal",
+        "LobbyCoreOrbitLocal",
+        "LobbyCrewBeaconLocal",
+        "ResultConstellationLocal",
     }
 
     local auditedFolders = 0
