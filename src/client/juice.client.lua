@@ -10,6 +10,7 @@ local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local CameraFeelBus = require(script.Parent.CameraFeelBus)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -20,6 +21,12 @@ local performancePulseEvent = remotes:WaitForChild("PerformancePulse")
 
 local camera = workspace.CurrentCamera
 local terrain = workspace.Terrain
+
+local baseFovValue = Instance.new("NumberValue")
+baseFovValue.Name = "ChaosBaseFovDriver"
+baseFovValue.Value = camera and camera.FieldOfView or 70
+local baseFovTween = nil
+local damageFovKick = 0
 
 local clouds = terrain:FindFirstChildOfClass("Clouds")
 if not clouds then
@@ -234,14 +241,17 @@ local function resetActiveBeacon()
 end
 
 local function tweenCamera(targetFov, duration)
-    camera = workspace.CurrentCamera or camera
-    if camera then
-        TweenService:Create(
-            camera,
-            TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {FieldOfView = targetFov}
-        ):Play()
+    if baseFovTween then
+        baseFovTween:Cancel()
+        baseFovTween = nil
     end
+
+    baseFovTween = TweenService:Create(
+        baseFovValue,
+        TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Value = math.clamp(tonumber(targetFov) or 70, 60, 90)}
+    )
+    baseFovTween:Play()
 end
 
 local function showBanner(mainText, subText, accent, duration)
@@ -600,6 +610,19 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
 end)
 
 RunService.RenderStepped:Connect(function(dt)
+    camera = workspace.CurrentCamera or camera
+    damageFovKick *= math.exp(-math.max(0, dt) * 11.5)
+
+    if camera then
+        camera.FieldOfView = math.clamp(
+            baseFovValue.Value
+                + CameraFeelBus.getMovementFovOffset()
+                + damageFovKick,
+            60,
+            90
+        )
+    end
+
     pulseClock += dt
     frameTimeAccumulator += dt
     frameSampleCount += 1
@@ -766,9 +789,9 @@ local function bindDamageFeedback(character)
             ):Play()
 
             local fovKick = 1.4 + damageRatio * 4.6
-            tweenCamera(
-                math.min(84, (camera and camera.FieldOfView or 72) + fovKick),
-                0.06
+            damageFovKick = math.max(
+                damageFovKick,
+                math.min(6.0, fovKick)
             )
 
             if criticalHit and vfxTier.Name ~= "Low" then
