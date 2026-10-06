@@ -54,6 +54,33 @@ function VfxQuality.nextTier(currentTier, averageFps)
     return "Low"
 end
 
+local TIER_RANK = {
+    Low = 1,
+    Medium = 2,
+    High = 3,
+}
+
+function VfxQuality.requiredStableSamples(currentTier, nextTier, isTouchDevice)
+    local current = VfxQuality.Tiers[currentTier] and currentTier or "High"
+    local nextValue = VfxQuality.Tiers[nextTier] and nextTier or current
+
+    if nextValue == current then
+        return 0
+    end
+
+    local currentRank = TIER_RANK[current] or 3
+    local nextRank = TIER_RANK[nextValue] or currentRank
+    if nextRank < currentRank then
+        -- Performance drops should react immediately.
+        return 1
+    end
+
+    -- Promotions are intentionally slower so short FPS spikes do not push a
+    -- device back into a heavier visual tier before thermal/performance state
+    -- has actually stabilized.
+    return isTouchDevice == true and 3 or 2
+end
+
 function VfxQuality.get(tier)
     return VfxQuality.Tiers[tier] or VfxQuality.Tiers.High
 end
