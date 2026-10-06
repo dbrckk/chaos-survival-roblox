@@ -18,6 +18,45 @@ describe("visual budget rules", function()
         expect(medium.Effects > low.Effects).toBe(true)
     end)
 
+    it("keeps local visual folder coverage unique and comprehensive", function()
+        local seen = {}
+        expect(#VisualBudgetRules.LocalFolders >= 19).toBe(true)
+
+        for _, folderName in ipairs(VisualBudgetRules.LocalFolders) do
+            expect(type(folderName)).toBe("string")
+            expect(folderName ~= "").toBe(true)
+            expect(seen[folderName] ~= true).toBe(true)
+            seen[folderName] = true
+        end
+    end)
+
+    it("collects parts lights and effects from registered visual folders", function()
+        local root = Instance.new("Folder")
+        local layer = Instance.new("Folder")
+        layer.Name = VisualBudgetRules.LocalFolders[1]
+        layer.Parent = root
+
+        local part = Instance.new("Part")
+        part.Parent = layer
+
+        local light = Instance.new("PointLight")
+        light.Parent = part
+
+        local attachment = Instance.new("Attachment")
+        attachment.Parent = part
+
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Parent = attachment
+
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(1)
+        expect(metrics.Parts).toBe(1)
+        expect(metrics.Lights).toBe(1)
+        expect(metrics.Effects).toBe(1)
+
+        root:Destroy()
+    end)
+
     it("detects over-budget visual scenes", function()
         expect(VisualBudgetRules.withinBudget("Medium", {
             Parts = 400,
