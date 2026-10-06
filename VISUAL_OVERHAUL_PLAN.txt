@@ -159,6 +159,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [TODO] 7.5 Soak test Android 30–60 minutes.
 [EN COURS] 7.6 Mesurer FPS via PerformancePulse et corriger les points faibles — calcul FPS réel corrigé, mesures Android encore requises.
 [QA]   7.7 Réduire la redondance world-depth/cinematic-depth : budgets horizon, transit et midground abaissés surtout en Medium/Low.
+[QA]   7.8 Stabiliser les animations héros : base immuable, aucun drift périodique, boucle décorative hors RenderStepped.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
