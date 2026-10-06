@@ -158,6 +158,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [QA]   7.4 Ajuster High / Medium / Low VFX.
 [TODO] 7.5 Soak test Android 30–60 minutes.
 [EN COURS] 7.6 Mesurer FPS via PerformancePulse et corriger les points faibles — calcul FPS réel corrigé, mesures Android encore requises.
+[QA]   7.7 Réduire la redondance world-depth/cinematic-depth : budgets horizon, transit et midground abaissés surtout en Medium/Low.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
