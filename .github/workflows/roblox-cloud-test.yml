@@ -174,23 +174,45 @@ jobs:
         run: |
           run_suite() {
             suite="$1"
-            log="/tmp/lest-$suite.log"
+            max_attempts=3
+            attempt=1
 
             echo "::group::Open Cloud suite: $suite"
-            set +e
-            lest run --config lest.ci.toml "$suite" 2>&1 | tee "$log"
-            status=${PIPESTATUS[0]}
-            set -e
 
-            if [ "$status" -ne 0 ] && grep -Eq 'did not finish within the deadline|last state: PROCESSING' "$log"; then
-              echo "Transient Roblox Open Cloud timeout detected for $suite; retrying once."
-              sleep 8
-              lest run --config lest.ci.toml "$suite"
-              status=$?
-            fi
+            while [ "$attempt" -le "$max_attempts" ]; do
+              log="/tmp/lest-$suite-attempt-$attempt.log"
+              echo "Running $suite (attempt $attempt/$max_attempts)"
+
+              set +e
+              lest run --config lest.ci.toml "$suite" 2>&1 | tee "$log"
+              status=${PIPESTATUS[0]}
+              set -e
+
+              if [ "$status" -eq 0 ]; then
+                echo "::endgroup::"
+                return 0
+              fi
+
+              if ! grep -Eqi 'did not finish within the deadline|last state: PROCESSING|HTTP (429|5[0-9][0-9])|shutdown signal|temporar(il)?y unavailable|rate.?limit' "$log"; then
+                echo "Non-transient test failure detected for $suite; not retrying."
+                echo "::endgroup::"
+                return "$status"
+              fi
+
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Transient Open Cloud failure persisted after $max_attempts attempts."
+                echo "::endgroup::"
+                return "$status"
+              fi
+
+              delay=$((8 * attempt * attempt))
+              echo "Transient Roblox Open Cloud failure detected for $suite; retrying in ${delay}s."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+            done
 
             echo "::endgroup::"
-            return "$status"
+            return 1
           }
 
           run_suite core
