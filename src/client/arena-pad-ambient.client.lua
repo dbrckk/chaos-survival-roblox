@@ -109,6 +109,9 @@ local function attach(pad)
 end
 
 local bindToken = 0
+local arenaConnection = nil
+local mechanicsAddedConnection = nil
+local mechanicsRemovedConnection = nil
 
 local function clearAll()
     local pads = {}
@@ -121,6 +124,15 @@ local function clearAll()
 end
 
 local function bindMechanics(mechanics, token)
+    if mechanicsAddedConnection then
+        mechanicsAddedConnection:Disconnect()
+        mechanicsAddedConnection = nil
+    end
+    if mechanicsRemovedConnection then
+        mechanicsRemovedConnection:Disconnect()
+        mechanicsRemovedConnection = nil
+    end
+
     if not mechanics or token ~= bindToken then
         return
     end
@@ -129,13 +141,13 @@ local function bindMechanics(mechanics, token)
         attach(child)
     end
 
-    mechanics.ChildAdded:Connect(function(child)
+    mechanicsAddedConnection = mechanics.ChildAdded:Connect(function(child)
         if token == bindToken then
             attach(child)
         end
     end)
 
-    mechanics.ChildRemoved:Connect(function(child)
+    mechanicsRemovedConnection = mechanics.ChildRemoved:Connect(function(child)
         if visuals[child] then
             destroyVisual(child)
         end
@@ -145,7 +157,18 @@ end
 local function bindGeneratedMap(generated)
     bindToken += 1
     local token = bindToken
+
+    if arenaConnection then
+        arenaConnection:Disconnect()
+        arenaConnection = nil
+    end
+    bindMechanics(nil, token)
+
     clearAll()
+
+    if not generated then
+        return
+    end
 
     task.defer(function()
         local arena = generated:FindFirstChild("Arena") or generated:WaitForChild("Arena", 5)
@@ -158,7 +181,7 @@ local function bindGeneratedMap(generated)
             bindMechanics(mechanics, token)
         end
 
-        arena.ChildAdded:Connect(function(child)
+        arenaConnection = arena.ChildAdded:Connect(function(child)
             if token == bindToken and child.Name == "Mechanics" then
                 bindMechanics(child, token)
             end
@@ -174,8 +197,7 @@ end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        bindToken += 1
-        clearAll()
+        bindGeneratedMap(nil)
     end
 end)
 
