@@ -14,7 +14,7 @@ DisasterVisuals.Profiles = {
     },
     Meteors = {
         Tint = Color3.fromRGB(255, 205, 170),
-        Accent = Color3.fromRGB(255, 105, 40),
+        Accent = Color3.fromRGB(255, 145, 30),
         Atmosphere = Color3.fromRGB(225, 150, 115),
         Bloom = 0.78,
         Contrast = 0.17,
@@ -114,7 +114,7 @@ DisasterVisuals.Profiles = {
     },
     JumpShock = {
         Tint = Color3.fromRGB(190, 220, 255),
-        Accent = Color3.fromRGB(80, 155, 255),
+        Accent = Color3.fromRGB(55, 225, 255),
         Atmosphere = Color3.fromRGB(135, 175, 225),
         Bloom = 0.68,
         Contrast = 0.14,
