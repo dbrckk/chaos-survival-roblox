@@ -132,3 +132,180 @@ Run:
 - import/material workflow review.
 
 Only scale authored production after the benchmark proves a meaningful quality gain.
+
+
+## Project asset budgets
+
+These are starting budgets, not engine hard limits. Final approval comes from measured device cost and visual benefit.
+
+### Hero asset
+- typical visible triangle target: ~5k–12k;
+- stretch above target only for silhouette-critical geometry;
+- one 1024 PBR set by default;
+- 2048 only when a unique close Hero demonstrably benefits;
+- no routine 4K textures;
+- simple collision proxy;
+- avoid per-asset dynamic lights unless the lighting review explicitly approves them.
+
+### Secondary authored prop
+- ~1k–5k visible triangles;
+- 512–1024 texture set;
+- shared material atlas/trim sheet preferred when practical;
+- collision disabled unless gameplay needs it.
+
+### Repeated prop
+- silhouette-first;
+- aggressively shared materials;
+- minimal collision/query/touch;
+- avoid unique texture memory per copy.
+
+## Naming convention
+
+Mesh source:
+- `env_<arena>_<asset>_v###`
+
+Examples:
+- `env_towers_lift_assembly_v001`
+- `env_orbital_reactor_housing_v002`
+
+Roblox instances:
+- `Hero_<Arena>_<Asset>`
+- `Prop_<Arena>_<Asset>`
+
+Material source maps:
+- `<asset>_basecolor`
+- `<asset>_normal`
+- `<asset>_roughness`
+- `<asset>_metalness`
+- `<asset>_emissive` when justified.
+
+## Modeling checklist
+
+Before high detail:
+- compare scale beside R15;
+- verify silhouette from gameplay distance;
+- verify support/load logic;
+- verify service/access logic;
+- identify the 3–5 large forms;
+- identify the 5–10 medium forms;
+- decide which small detail belongs in texture rather than geometry.
+
+Bevel only where it changes highlight quality.
+Delete hidden/internal geometry that cannot contribute.
+Use weighted/clean normals where appropriate.
+Keep pivots meaningful for placement/animation.
+
+## PBR checklist
+
+Base Color:
+- contains material color, not baked strong lighting;
+- controlled dirt/wear;
+- no arbitrary noise.
+
+Roughness:
+- primary realism channel;
+- must distinguish paint, exposed metal, rubber/polymer, glass and worn zones.
+
+Metalness:
+- physically coherent binary-ish behavior;
+- painted metal surface reads primarily as paint until exposed.
+
+Normal:
+- supports manufactured seams, panel relief and wear;
+- does not fake large silhouette changes.
+
+Emissive:
+- only motivated indicators/screens/energy elements;
+- limited area;
+- never used to hide weak material definition.
+
+## Arena Hero benchmark briefs
+
+### Benchmark A — Tower Industrial Lift
+
+Gameplay-space role:
+non-collidable/peripheral Hero unless a later level-design review explicitly makes it traversable.
+
+Readable from:
+- Tower spawn;
+- READY framing;
+- common vertical route;
+- RESULT.
+
+Large forms:
+- twin guide rails;
+- lift carriage;
+- overhead machinery;
+- counterweight/cable enclosure.
+
+Medium forms:
+- service hatch;
+- hydraulic/electrical modules;
+- warning plates;
+- maintenance ladder/handholds.
+
+Material split:
+- worn steel structure;
+- painted industrial panels;
+- rubber/cable;
+- limited emissive status strips.
+
+Failure if:
+- it resembles a generic sci-fi tower;
+- small detail disappears on Medium while no strong silhouette remains;
+- it suggests climbable geometry that is not gameplay.
+
+### Benchmark B — Orbital Reactor Housing
+
+Large forms:
+- circular/radial shell;
+- service couplers;
+- central energy aperture;
+- structural segmentation.
+
+Material split:
+- clean technical alloy;
+- ceramic/polymer panel;
+- dark optical glass;
+- controlled turquoise emissive.
+
+Failure if:
+- it becomes another neon ring;
+- emissive dominates material response;
+- material language collapses back into generic metal.
+
+## Roblox import checklist
+
+After import:
+- scale verified against R15;
+- pivot/orientation verified;
+- SurfaceAppearance maps assigned correctly;
+- RenderFidelity starts at Automatic;
+- CollisionFidelity simplified;
+- CanCollide/CanTouch/CanQuery disabled when decorative;
+- CastShadow reviewed rather than assumed;
+- asset visible in High/Medium;
+- Low receives either the same essential silhouette or a cheaper fallback;
+- no route/hazard occlusion;
+- no unintended safe spot.
+
+## Benchmark decision
+
+The first authored Hero is an experiment, not a commitment to rebuild all maps.
+
+Compare screenshots:
+- current procedural scene;
+- authored Hero integrated;
+- High;
+- Medium;
+- Low.
+
+Record:
+- perceived-quality gain;
+- instance reduction/increase;
+- memory/texture cost;
+- frame-time effect;
+- authoring/import effort;
+- maintenance complexity.
+
+Scale the pipeline only if the authored Hero creates a meaningful quality step.
