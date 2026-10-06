@@ -112,6 +112,7 @@ Duration target: 30–60 minutes.
 - Final settled VFX tier:
 - Visual budget warning observed: yes / no
 - Latest PerformancePulse Visual: P/L/E:
+- Latest PerformancePulse Budget status: OK / OVER / UNKNOWN
 - Device heat/battery notes:
 
 ## Visual / animation regression
