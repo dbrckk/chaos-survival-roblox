@@ -79,6 +79,43 @@ describe("Audio configuration", function()
         end
     end)
 
+    it("keeps every disaster primary cue audibly distinguishable", function()
+        local seenCueNames = {}
+        local entries = {}
+
+        for disasterId, cueName in pairs(AudioConfig.DisasterAccent) do
+            expect(type(disasterId)).toBe("string")
+            expect(type(cueName)).toBe("string")
+            expect(seenCueNames[cueName] == nil).toBe(true)
+            seenCueNames[cueName] = disasterId
+
+            local cue = AudioConfig.Sfx[cueName]
+            expect(cue ~= nil).toBe(true)
+
+            table.insert(entries, {
+                disasterId = disasterId,
+                cueName = cueName,
+                soundId = cue.SoundId,
+                playbackSpeed = tonumber(cue.PlaybackSpeed) or 1,
+            })
+        end
+
+        expect(#entries).toBe(11)
+
+        for i = 1, #entries do
+            for j = i + 1, #entries do
+                local a = entries[i]
+                local b = entries[j]
+
+                if a.soundId == b.soundId then
+                    -- Shared stock source files are acceptable only when their
+                    -- primary pitch identity stays clearly separated.
+                    expect(math.abs(a.playbackSpeed - b.playbackSpeed) >= 0.12).toBe(true)
+                end
+            end
+        end
+    end)
+
     it("keeps mobility pad feedback layered but bounded", function()
         local layers = AudioConfig.Composite.MobilityPad
         expect(type(layers)).toBe("table")
