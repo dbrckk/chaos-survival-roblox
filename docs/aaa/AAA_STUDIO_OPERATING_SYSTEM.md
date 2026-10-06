@@ -184,6 +184,10 @@ After the normal roadmap, run the "different lens" audit:
 
 ## Documentation hierarchy
 
+The canonical precedence is defined by `/DOCUMENTATION_INDEX.md`. This file is an execution manual beneath that hierarchy; it does not override release/evidence standards.
+
+Within the `docs/aaa/` library:
+
 1. `AAA_STUDIO_OPERATING_SYSTEM.md` — overall production process.
 2. Specialist department guides in `docs/aaa/`.
 3. `AAA_VISUALS_ANIMATION_GUIDE.txt` — detailed visual/animation implementation.
