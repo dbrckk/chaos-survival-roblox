@@ -1,11 +1,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local tracked = {}
 
 local gui = Instance.new("ScreenGui")
@@ -23,7 +26,7 @@ label.BackgroundColor3 = UITheme.Colors.Panel
 label.BackgroundTransparency = 1
 label.BorderSizePixel = 0
 label.Font = Enum.Font.GothamBlack
-label.Text = "PRACTICE BOOST"
+label.Text = CoreLocalization.text(localeId, "PRACTICE_BOOST")
 label.TextColor3 = UITheme.Colors.Cyan
 label.TextScaled = true
 label.TextTransparency = 1
