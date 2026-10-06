@@ -4,23 +4,30 @@ This checklist defines the minimum evidence required before calling the experien
 
 ## Automated gate
 
-All items below must be green on the exact release commit:
+All items below must be green on the **exact release commit**. The checkboxes describe the gate definition; they do not certify the current HEAD by themselves.
 
-- [x] Build Validation succeeds.
-- [x] Roblox Open Cloud Engine Tests succeed.
-- [x] Every engine spec is assigned to exactly one Open Cloud shard.
-- [x] Rojo produces a non-empty place file.
-- [x] Luau syntax validation succeeds.
-- [x] Fair-play monetization guard succeeds.
-- [x] Client/server protocol guards succeed.
-- [x] Server service export contract audit succeeds.
-- [x] Production source contains no TODO/FIXME/HACK markers or obvious placeholder IDs.
+- [ ] Build Validation succeeds on release SHA.
+- [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
+- [ ] Every engine spec is assigned to exactly one Open Cloud shard.
+- [ ] Rojo produces a non-empty place file.
+- [ ] Luau syntax validation succeeds.
+- [ ] Fair-play monetization guard succeeds.
+- [ ] Client/server protocol guards succeed.
+- [ ] Server service export contract audit succeeds.
+- [ ] Production source contains no TODO/FIXME/HACK markers or obvious placeholder IDs.
 
-Automated gate certified on commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` on 2026-10-05. Both **Build Validation** and **Roblox Open Cloud Engine Tests** completed successfully on that exact commit. The production-source placeholder scan is also clean.
+Last historical full automated certification: commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` on 2026-10-05 (Build #1391 + Open Cloud #1390). This is historical evidence only and does **not** certify later commits.
 
-> Any commit after this certification must re-run both automated workflows before a release tag is cut.
+> Every candidate SHA must re-run both automated workflows. A later code/doc commit invalidates the automated certification until the new exact SHA is green.
 
-Evidence for the automated gate: commit `2bb9038ca78d9e77599cf49a0ef096b92bfa83ac` passed Build Validation run #1391 and Roblox Open Cloud Engine Tests run #1390 on 2026-10-05.
+### CI infrastructure failures
+
+Classify failures before changing production code:
+
+- **CODE/TEST FAILURE:** a spec assertion, compile/build guard, protocol guard, or deterministic validation fails -> investigate/fix code.
+- **INFRA FAILURE:** Roblox Open Cloud remains PROCESSING past deadline, returns HTTP 429/5xx, or runner infrastructure stops after otherwise passing specs -> preserve the evidence, retry, and do not mislabel it as a gameplay regression.
+- A timeout/429 is still a red gate until a retry succeeds on the release lineage; it is never silently treated as PASS.
+- Record passed test counts, failed shard, workflow/run number and exact SHA.
 
 ## Current published candidate
 
