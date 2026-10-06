@@ -384,7 +384,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         resultSceneReady = false
         resultSceneToken += 1
         local token = resultSceneToken
-        task.delay(0.35, function()
+        task.delay(1.25, function()
             if token == resultSceneToken
                 and tostring(currentState.phase or "") == "result"
             then
