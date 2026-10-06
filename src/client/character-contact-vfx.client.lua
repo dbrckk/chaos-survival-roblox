@@ -99,11 +99,11 @@ local function emitLanding(model, airtime)
     ring.Transparency = 0.58
     ring.Parent = workspace
 
-    local target = 2.2 + strength * 2.8
+    local target = reduced and 0.95 or (2.2 + strength * 2.8)
     TweenService:Create(
         ring,
         TweenInfo.new(
-            quality.Name == "Low" and 0.18 or 0.28,
+            reduced and 0.12 or (quality.Name == "Low" and 0.18 or 0.28),
             Enum.EasingStyle.Quad,
             Enum.EasingDirection.Out
         ),
