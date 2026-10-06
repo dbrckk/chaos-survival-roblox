@@ -85,6 +85,10 @@ function VisualBudgetRules.collect(root)
                 elseif descendant:IsA("ParticleEmitter")
                     or descendant:IsA("Trail")
                     or descendant:IsA("Beam")
+                    or descendant:IsA("Highlight")
+                    or descendant:IsA("Smoke")
+                    or descendant:IsA("Fire")
+                    or descendant:IsA("Sparkles")
                 then
                     metrics.Effects += 1
                 end
