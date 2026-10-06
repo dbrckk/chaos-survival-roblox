@@ -114,13 +114,38 @@ local function addMeteorTrail(meteor)
     meteorTrails[meteor] = true
 end
 
-local function bindExistingMeteors()
-    if phase ~= "round" or not has("Meteors") then
-        return
+local function clearMeteorTrail(meteor)
+    local trail = meteor:FindFirstChild("SignatureMeteorTrail")
+    if trail then
+        trail:Destroy()
     end
+
+    local left = meteor:FindFirstChild("SignatureMeteorTrailLeft")
+    if left then
+        left:Destroy()
+    end
+
+    local right = meteor:FindFirstChild("SignatureMeteorTrailRight")
+    if right then
+        right:Destroy()
+    end
+
+    meteorTrails[meteor] = nil
+end
+
+local function bindExistingMeteors()
+    local enabled = phase == "round"
+        and has("Meteors")
+        and tier().Name ~= "Low"
+        and player:GetAttribute("ReduceMotion") ~= true
+
     for _, child in ipairs(workspace:GetChildren()) do
         if child.Name == "RoundMeteor" and child:IsA("BasePart") then
-            addMeteorTrail(child)
+            if enabled then
+                addMeteorTrail(child)
+            else
+                clearMeteorTrail(child)
+            end
         end
     end
 end
@@ -254,6 +279,10 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     rebuild()
+    bindExistingMeteors()
+end)
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     bindExistingMeteors()
 end)
 
