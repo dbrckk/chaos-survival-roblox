@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalizationService = game:GetService("LocalizationService")
 
@@ -121,8 +120,7 @@ bindCamera()
 local currentPhase = "waiting"
 local finalRush = false
 local warningStates = {}
-local updateClock = 0
-local renderConnection = nil
+local loopStarted = false
 local ensureRenderLoop
 
 local SUPPORTED = {
@@ -335,139 +333,138 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 ensureRenderLoop = function()
-    if renderConnection
-        or currentPhase ~= "round"
-        or next(warningStates) == nil
-    then
+    if loopStarted then
         return
     end
+    loopStarted = true
 
-    renderConnection = RunService.RenderStepped:Connect(function(dt)
-        if currentPhase ~= "round" or next(warningStates) == nil then
-            cue.Visible = false
+    task.spawn(function()
+        while true do
+            if currentPhase ~= "round" or next(warningStates) == nil then
+                cue.Visible = false
+                offscreenArrow.Visible = false
+                task.wait(0.18)
+                continue
+            end
+
+            local tier = quality()
+            local cadence = tier.Name == "Low" and 0.12 or 0.075
+            task.wait(cadence)
+
+            if player:GetAttribute("RoundParticipant") ~= true
+                or player:GetAttribute("RoundEliminated") == true
+            then
+                cue.Visible = false
+                offscreenArrow.Visible = false
+                continue
+            end
+
+            local root = rootPart()
+            if not root then
+                cue.Visible = false
+                offscreenArrow.Visible = false
+                continue
+            end
+
+            local now = os.clock()
+            local nearestWarning = nil
+            local nearestState = nil
+            local nearestClearance = math.huge
+
+            for warning, state in pairs(warningStates) do
+                if warning.Parent then
+                    local clearance = updateState(warning, state, root, tier, now)
+                    if clearance < nearestClearance then
+                        nearestClearance = clearance
+                        nearestWarning = warning
+                        nearestState = state
+                    end
+                else
+                    destroyState(warning)
+                end
+            end
+
+            if finalRush or tier.Name == "Low" then
+                for warning, state in pairs(warningStates) do
+                    if warning ~= nearestWarning then
+                        hideState(state)
+                    end
+                end
+            end
+
+            local showCue = nearestState ~= nil and nearestClearance <= 5
+            cue.Visible = showCue
+            if showCue then
+                local kind = nearestState.kind
+                local color = KIND_COLORS[kind] or UITheme.Colors.Red
+                cueStroke.Color = color
+                cueBadge.BackgroundColor3 = color
+                cueBadge.Text = KIND_BADGES[kind] or "!"
+                cueText.Text = localizedHazardCue(kind)
+            end
+
             offscreenArrow.Visible = false
-            renderConnection:Disconnect()
-            renderConnection = nil
-            return
+            local camera = workspace.CurrentCamera
+            if camera
+                and nearestWarning
+                and nearestState
+                and nearestClearance <= 14
+            then
+                local viewportPoint, onScreen =
+                    camera:WorldToViewportPoint(nearestWarning.Position)
+                if not onScreen or viewportPoint.Z <= 0 then
+                    local viewport = camera.ViewportSize
+                    local center = viewport * 0.5
+                    local point = Vector2.new(viewportPoint.X, viewportPoint.Y)
+                    local direction = point - center
+
+                    if viewportPoint.Z <= 0 then
+                        direction = -direction
+                    end
+                    if direction.Magnitude < 0.01 then
+                        direction = Vector2.new(0, -1)
+                    else
+                        direction = direction.Unit
+                    end
+
+                    local sideMargin = 54
+                    local topMargin = 78
+                    local bottomMargin = UserInputService.TouchEnabled and 138 or 62
+                    local minX = sideMargin
+                    local minY = topMargin
+                    local maxX = math.max(minX, viewport.X - sideMargin)
+                    local maxY = math.max(minY, viewport.Y - bottomMargin)
+
+                    local tx = math.huge
+                    if math.abs(direction.X) > 0.001 then
+                        tx = direction.X > 0
+                            and ((maxX - center.X) / direction.X)
+                            or ((minX - center.X) / direction.X)
+                    end
+
+                    local ty = math.huge
+                    if math.abs(direction.Y) > 0.001 then
+                        ty = direction.Y > 0
+                            and ((maxY - center.Y) / direction.Y)
+                            or ((minY - center.Y) / direction.Y)
+                    end
+
+                    local edgeDistance = math.max(0, math.min(tx, ty))
+                    local candidate = center + direction * edgeDistance
+                    local x = math.clamp(candidate.X, minX, maxX)
+                    local y = math.clamp(candidate.Y, minY, maxY)
+
+                    local kind = nearestState.kind
+                    local color = KIND_COLORS[kind] or UITheme.Colors.Red
+                    offscreenArrow.Position = UDim2.fromOffset(x, y)
+                    offscreenArrow.Rotation =
+                        math.deg(math.atan2(direction.Y, direction.X)) + 90
+                    offscreenArrow.TextColor3 = color
+                    offscreenStroke.Color = color
+                    offscreenArrow.Visible = true
+                end
+            end
         end
-
-        if player:GetAttribute("RoundParticipant") ~= true
-        or player:GetAttribute("RoundEliminated") == true
-    then
-        cue.Visible = false
-        offscreenArrow.Visible = false
-        return
-    end
-
-    updateClock += dt
-    local tier = quality()
-    local cadence = tier.Name == "Low" and 0.12 or 0.075
-    if updateClock < cadence then
-        return
-    end
-    updateClock = 0
-
-    local root = rootPart()
-    if not root then
-        return
-    end
-
-    local now = os.clock()
-    local nearestWarning = nil
-    local nearestState = nil
-    local nearestClearance = math.huge
-
-    for warning, state in pairs(warningStates) do
-        if warning.Parent then
-            local clearance = updateState(warning, state, root, tier, now)
-            if clearance < nearestClearance then
-                nearestClearance = clearance
-                nearestWarning = warning
-                nearestState = state
-            end
-        else
-            destroyState(warning)
-        end
-    end
-
-    if finalRush or tier.Name == "Low" then
-        for warning, state in pairs(warningStates) do
-            if warning ~= nearestWarning then
-                hideState(state)
-            end
-        end
-    end
-
-    local showCue = nearestState ~= nil and nearestClearance <= 5
-    cue.Visible = showCue
-    if showCue then
-        local kind = nearestState.kind
-        local color = KIND_COLORS[kind] or UITheme.Colors.Red
-        cueStroke.Color = color
-        cueBadge.BackgroundColor3 = color
-        cueBadge.Text = KIND_BADGES[kind] or "!"
-        cueText.Text = localizedHazardCue(kind)
-    end
-
-    offscreenArrow.Visible = false
-    local camera = workspace.CurrentCamera
-    if camera
-        and nearestWarning
-        and nearestState
-        and nearestClearance <= 14
-    then
-        local viewportPoint, onScreen = camera:WorldToViewportPoint(nearestWarning.Position)
-        if not onScreen or viewportPoint.Z <= 0 then
-            local viewport = camera.ViewportSize
-            local center = viewport * 0.5
-            local point = Vector2.new(viewportPoint.X, viewportPoint.Y)
-            local direction = point - center
-
-            if viewportPoint.Z <= 0 then
-                direction = -direction
-            end
-            if direction.Magnitude < 0.01 then
-                direction = Vector2.new(0, -1)
-            else
-                direction = direction.Unit
-            end
-
-            local sideMargin = 54
-            local topMargin = 78
-            local bottomMargin = UserInputService.TouchEnabled and 138 or 62
-            local minX = sideMargin
-            local minY = topMargin
-            local maxX = math.max(minX, viewport.X - sideMargin)
-            local maxY = math.max(minY, viewport.Y - bottomMargin)
-
-            local tx = math.huge
-            if math.abs(direction.X) > 0.001 then
-                tx = direction.X > 0
-                    and ((maxX - center.X) / direction.X)
-                    or ((minX - center.X) / direction.X)
-            end
-
-            local ty = math.huge
-            if math.abs(direction.Y) > 0.001 then
-                ty = direction.Y > 0
-                    and ((maxY - center.Y) / direction.Y)
-                    or ((minY - center.Y) / direction.Y)
-            end
-
-            local edgeDistance = math.max(0, math.min(tx, ty))
-            local candidate = center + direction * edgeDistance
-            local x = math.clamp(candidate.X, minX, maxX)
-            local y = math.clamp(candidate.Y, minY, maxY)
-
-            local kind = nearestState.kind
-            local color = KIND_COLORS[kind] or UITheme.Colors.Red
-            offscreenArrow.Position = UDim2.fromOffset(x, y)
-            offscreenArrow.Rotation = math.deg(math.atan2(direction.Y, direction.X)) + 90
-            offscreenArrow.TextColor3 = color
-            offscreenStroke.Color = color
-            offscreenArrow.Visible = true
-        end
-    end
     end)
 end
 
