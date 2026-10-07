@@ -144,7 +144,7 @@ jobs:
               elif name == "Roblox Open Cloud Engine Tests":
                   trusted = trusted and run.get("event") in {"push", "workflow_dispatch"}
               else:
-                  trusted = trusted and run.get("event") == "workflow_dispatch"
+                  trusted = trusted and run.get("event") in {"workflow_dispatch", "push"}
 
               if (
                   required[name] is None
