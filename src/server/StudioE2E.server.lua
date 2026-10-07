@@ -38,6 +38,12 @@ local visualPhaseProbeReports = {
     round = 0,
     result = 0,
 }
+local roundArenaVisualReports = {
+    Classic = false,
+    Towers = false,
+    Crossroads = false,
+    Orbital = false,
+}
 local uxPhaseProbeReports = {
     ready = 0,
     result = 0,
@@ -62,6 +68,15 @@ end
 local function arenaCoverageReady()
     for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
         if arenaProbeReports[arenaId] ~= true then
+            return false
+        end
+    end
+    return true
+end
+
+local function roundArenaVisualCoverageReady()
+    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        if roundArenaVisualReports[arenaId] ~= true then
             return false
         end
     end
@@ -127,6 +142,7 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         local metrics = report.visualMetrics
         local fieldOfView = tonumber(report.fieldOfView) or 0
         local tierName = tostring(report.vfxTier or "High")
+        local arenaId = tostring(report.arenaId or "")
 
         if type(metrics) ~= "table"
             or type(metrics.Parts) ~= "number"
@@ -182,10 +198,19 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         end
 
         visualPhaseProbeReports[phase] += 1
+        if phase == "round" then
+            if roundArenaVisualReports[arenaId] == nil then
+                fail(player.Name .. ": ROUND visual probe has invalid arenaId " .. arenaId)
+            else
+                roundArenaVisualReports[arenaId] = true
+            end
+        end
+
         print(
             "CHAOS_E2E_VISUAL_PHASE",
             player.Name,
             phase,
+            arenaId,
             tierName,
             string.format(
                 "parts=%d lights=%d effects=%d fov=%.1f folders=%d depth=%.3f/%.3f rays=%s/%.3f",
@@ -355,6 +380,7 @@ task.spawn(function()
             and visualPhasesReady()
             and uxReady
             and arenaCoverageReady()
+            and roundArenaVisualCoverageReady()
         then
             break
         end
@@ -377,6 +403,12 @@ task.spawn(function()
     for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
         if arenaProbeReports[arenaId] ~= true then
             fail("missing arena coverage probe: " .. arenaId)
+        end
+    end
+
+    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        if roundArenaVisualReports[arenaId] ~= true then
+            fail("missing ROUND visual budget probe: " .. arenaId)
         end
     end
 
@@ -436,7 +468,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, 4 arenas + UI/input/vote/movement/round-state/visual-phases/spectator/join-leave verified",
+            "PASS: %d clients, 4 arenas + per-arena ROUND visual budgets + UI/input/vote/movement/round-state/visual-phases/spectator/join-leave verified",
             expectedTotal
         ))
     end
