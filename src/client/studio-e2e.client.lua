@@ -41,15 +41,21 @@ local function sendVisualPhaseProbe(phase)
     if phase ~= "ready" and phase ~= "round" and phase ~= "result" then
         return
     end
-    if visualPhaseProbed[phase] then
-        return
-    end
-    visualPhaseProbed[phase] = true
 
     task.delay(0.35, function()
         if not player.Parent then
             return
         end
+
+        local root = workspace:FindFirstChild("GeneratedMap")
+        local arena = root and root:FindFirstChild("Arena")
+        local arenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
+        local probeKey = phase .. "|" .. arenaId
+
+        if arenaId == "" or visualPhaseProbed[probeKey] then
+            return
+        end
+        visualPhaseProbed[probeKey] = true
 
         local metrics, folders = VisualBudgetRules.collect(workspace)
         local tierName = tostring(player:GetAttribute("VfxQualityTier") or "High")
@@ -60,6 +66,7 @@ local function sendVisualPhaseProbe(phase)
         reportEvent:FireServer({
             kind = "visual_phase_probe",
             phase = phase,
+            arenaId = arenaId,
             vfxTier = tierName,
             fieldOfView = camera and camera.FieldOfView or 0,
             auditedFolders = folders,
