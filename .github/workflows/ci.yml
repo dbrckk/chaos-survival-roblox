@@ -538,7 +538,10 @@ jobs:
           path = Path("VISUAL_OVERHAUL_PLAN.txt")
           labels = []
           for line_number, line in enumerate(path.read_text().splitlines(), start=1):
-              match = re.match(r"^\[(?:TODO|EN COURS|FAIT|QA)\]\s+(\S+)", line)
+              match = re.match(
+                  r"^\[(?:TODO|EN COURS|FAIT|QA)\]\s+((?:\d+[A-Z]?)(?:\.\d+[A-Z]?)*)\b",
+                  line,
+              )
               if match:
                   labels.append((match.group(1), line_number))
 
