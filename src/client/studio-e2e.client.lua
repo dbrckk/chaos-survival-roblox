@@ -119,55 +119,75 @@ local function sendArenaEntryProbe(state)
         return
     end
 
-    task.delay(0.25, function()
-        if not player.Parent then
+    local expectedArenaId = tostring(state.arenaId or "")
+    if expectedArenaId == "" or arenaEntryProbed[expectedArenaId] then
+        return
+    end
+
+    task.spawn(function()
+        local deadline = os.clock() + 1.25
+        local finalReport = nil
+
+        while player.Parent and os.clock() < deadline do
+            local generated = workspace:FindFirstChild("GeneratedMap")
+            local arena = generated and generated:FindFirstChild("Arena")
+            local worldArenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
+
+            local base = arena and arena:FindFirstChild("Base")
+            local character = player.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local humanoidRoot = character and character:FindFirstChild("HumanoidRootPart")
+            local characterReady = humanoid ~= nil
+                and humanoid.Health > 0
+                and humanoidRoot ~= nil
+            local insideFootprint = false
+
+            if base and base:IsA("BasePart")
+                and humanoidRoot and humanoidRoot:IsA("BasePart")
+            then
+                local localPosition = base.CFrame:PointToObjectSpace(humanoidRoot.Position)
+                insideFootprint = math.abs(localPosition.X) <= (base.Size.X * 0.5 + 10)
+                    and math.abs(localPosition.Z) <= (base.Size.Z * 0.5 + 10)
+            end
+
+            local arenaMatches = worldArenaId == expectedArenaId
+            local ok = characterReady
+                and base ~= nil
+                and insideFootprint
+                and arenaMatches
+
+            finalReport = {
+                kind = "arena_entry_probe",
+                arenaId = expectedArenaId,
+                worldArenaId = worldArenaId,
+                ok = ok,
+                characterReady = characterReady,
+                insideFootprint = insideFootprint,
+                arenaMatches = arenaMatches,
+                error = ok and "" or string.format(
+                    "characterReady=%s inside=%s expected=%s world=%s",
+                    tostring(characterReady),
+                    tostring(insideFootprint),
+                    expectedArenaId,
+                    worldArenaId
+                ),
+            }
+
+            if ok then
+                break
+            end
+
+            task.wait(0.10)
+        end
+
+        if arenaEntryProbed[expectedArenaId] or not finalReport then
             return
         end
 
-        local root = workspace:FindFirstChild("GeneratedMap")
-        local arena = root and root:FindFirstChild("Arena")
-        local arenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
-        if arenaId == "" or arenaEntryProbed[arenaId] then
-            return
-        end
-        arenaEntryProbed[arenaId] = true
-
-        local base = arena and arena:FindFirstChild("Base")
-        local character = player.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        local humanoidRoot = character and character:FindFirstChild("HumanoidRootPart")
-        local characterReady = humanoid ~= nil
-            and humanoid.Health > 0
-            and humanoidRoot ~= nil
-        local insideFootprint = false
-
-        if base and base:IsA("BasePart")
-            and humanoidRoot and humanoidRoot:IsA("BasePart")
-        then
-            local localPosition = base.CFrame:PointToObjectSpace(humanoidRoot.Position)
-            insideFootprint = math.abs(localPosition.X) <= (base.Size.X * 0.5 + 10)
-                and math.abs(localPosition.Z) <= (base.Size.Z * 0.5 + 10)
-        end
-
-        local ok = characterReady
-            and base ~= nil
-            and insideFootprint
-
-        reportEvent:FireServer({
-            kind = "arena_entry_probe",
-            arenaId = arenaId,
-            ok = ok,
-            characterReady = characterReady,
-            insideFootprint = insideFootprint,
-            error = ok and "" or string.format(
-                "characterReady=%s inside=%s",
-                tostring(characterReady),
-                tostring(insideFootprint)
-            ),
-        })
+        arenaEntryProbed[expectedArenaId] = true
+        reportEvent:FireServer(finalReport)
     end)
 end
-
 if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
     roundStateEvent.OnClientEvent:Connect(function(state)
         if type(state) == "table" then
