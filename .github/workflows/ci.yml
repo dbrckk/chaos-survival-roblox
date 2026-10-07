@@ -543,7 +543,7 @@ jobs:
                   continue
 
               label = match.group(1)
-              if re.fullmatch(r"(?:\d+[A-Z]?)(?:\.\d+[A-Z]?)*)", label):
+              if re.fullmatch(r"\d+[A-Z]?(?:\.\d+[A-Z]?)+", label):
                   labels.append((label, line_number))
 
           seen = {}
