@@ -124,17 +124,17 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.6 Harmoniser les propriétaires visuels : arena-lighting = baseline + GlobalShadows, juice = override catastrophe READY/ROUND uniquement.
 [QA]   6.7 Supprimer les doublons de trails/lumières sur les bots et réduire le coût mobile.
 [QA]   6.8 Réduire l'aspect plastique d'Orbital avec une dominante métal technique.
-[QA]   6.2 Clutch Survival plus spectaculaire mais bref.
-[QA]   6.3 Close Call plus lisible et moins intrusif.
-[QA]   6.4 Shard pickup world burst.
-[QA]   6.5 Level up / reward / streak polish.
-[QA]   6.6 Round start / round end transitions.
-[QA]   6.7 Spectator polish.
-[QA]   6.8 Vérifier fatigue visuelle et accessibilité — ReduceMotion renforcé sur plateformes, LowGravity et landing contact.
-[QA]   6.9 Centraliser strictement le FOV de round dans juice ; arena-mechanic-feedback ne modifie plus directement la caméra.
-[QA]   6.10 Body feel additif via C0 : ne jamais écraser Motor6D.Transform piloté par l'Animator R15.
-[FAIT] 6.10 Transmettre eliminationCause dans RoundFeedback pour afficher le conseil de revanche spécifique au vrai danger.
-[QA]   6.11 Attribuer les knockbacks réels Tornado/JumpShock avant une chute — fallback ne crédite plus ces hazards sans contact récent ; règles moteur testées.
+[QA]   6.9 Clutch Survival plus spectaculaire mais bref.
+[QA]   6.10 Close Call plus lisible et moins intrusif.
+[QA]   6.11 Shard pickup world burst.
+[QA]   6.12 Level up / reward / streak polish.
+[QA]   6.13 Round start / round end transitions.
+[QA]   6.14 Spectator polish.
+[QA]   6.15 Vérifier fatigue visuelle et accessibilité — ReduceMotion renforcé sur plateformes, LowGravity et landing contact.
+[QA]   6.16 Centraliser strictement le FOV de round dans juice ; arena-mechanic-feedback ne modifie plus directement la caméra.
+[QA]   6.17 Body feel additif via C0 : ne jamais écraser Motor6D.Transform piloté par l'Animator R15.
+[FAIT] 6.18 Transmettre eliminationCause dans RoundFeedback pour afficher le conseil de revanche spécifique au vrai danger.
+[QA]   6.19 Attribuer les knockbacks réels Tornado/JumpShock avant une chute — fallback ne crédite plus ces hazards sans contact récent ; règles moteur testées.
 
 PHASE 6B — GAMEPLAY / FUN
 --------------------------
@@ -212,7 +212,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [FAIT] 7.38 Garde-fou CI post-process : pile persistante unique + overlays temporaires aftermath/freeze explicitement autorisés.
 [FAIT] 7.39 Garde-fou CI GlobalShadows : seul arena-lighting.client.lua peut modifier la propriété.
 [FAIT] 7.40 Garde-fou CI Motor6D.Transform : aucun polish client ne peut prendre la propriété de l'Animator.
-[FAIT] 7.36 Garde-fou CI LOD : chaque couche LOD doit être enregistrée dans le budget visuel et le cache doit rester weak-keyed.
+[FAIT] 7.41 Garde-fou CI LOD : chaque couche LOD doit être enregistrée dans le budget visuel et le cache doit rester weak-keyed.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
@@ -235,8 +235,8 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [QA]   9.2g Studio E2E RESULT/READY : probes UX indépendantes, RESULT exige titre/récompense/conseil/prochain round avant PASS.
 [QA]   9.2h Studio E2E vote : 3 cartes visibles/tactiles avec nom de hazard + guidance actionnable non vide.
 [QA]   9.2i Studio E2E post-process : ROUND exige DoF near/far ≈0 et SunRays désactivés ; valeurs loggées par phase.
-[FAIT] 9.2e Ajouter Release Candidate Gate exact-SHA : vérifie Build/Open Cloud verts et génère une preuve automatisée sans publier.
-[FAIT] 9.2f Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
+[FAIT] 9.2j Ajouter Release Candidate Gate exact-SHA : vérifie Build/Open Cloud/Studio E2E verts et génère une preuve automatisée sans publier.
+[FAIT] 9.2k Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
 [EN COURS] 9.3 Corriger les incohérences restantes révélées par CI/E2E puis par captures/appareil.
 [TODO] 9.4 Studio E2E authentifié — le Release Candidate Gate exige désormais un run Studio E2E PASS sur le même SHA.
 [TODO] 9.5 Android final.
