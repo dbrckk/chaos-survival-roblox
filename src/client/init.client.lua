@@ -212,6 +212,7 @@ local currentHudPhase = "waiting"
 local currentHudVoteOptions = nil
 local pendingLevelUp = nil
 local shouldDeferMetaNotification = nil
+local metaNotificationShownThisIntermission = false
 
 local levelToastToken = 0
 local questToastToken = 0
@@ -2164,13 +2165,18 @@ local function refreshStats()
     ):Play()
 
     if level > lastKnownLevel then
-        if shouldDeferMetaNotification and shouldDeferMetaNotification() then
+        local canShowNow = shouldDeferMetaNotification
+            and not shouldDeferMetaNotification()
+            and not metaNotificationShownThisIntermission
+
+        if canShowNow then
+            metaNotificationShownThisIntermission = true
+            showLevelUp(level)
+        else
             pendingLevelUp = math.max(
                 tonumber(pendingLevelUp) or 0,
                 tonumber(level) or 1
             )
-        else
-            showLevelUp(level)
         end
     end
     lastKnownLevel = level
@@ -2372,11 +2378,10 @@ end
 
 
 
-local pendingQuestCompletion = nil
-local pendingAchievement = nil
-local pendingDailyReward = nil
-local pendingGenericMetaNotification = nil
-local metaNotificationShownThisIntermission = false
+local pendingQuestCompletions = {}
+local pendingAchievements = {}
+local pendingDailyRewards = {}
+local pendingGenericMetaNotifications = {}
 
 shouldDeferMetaNotification = function()
     return not AttentionBudgetRules.canShowMetaNotification(
@@ -2489,16 +2494,31 @@ local function showGenericMetaNotification(item)
     end)
 end
 
+local function reserveMetaNotificationSlot()
+    if shouldDeferMetaNotification()
+        or metaNotificationShownThisIntermission
+    then
+        return false
+    end
+
+    metaNotificationShownThisIntermission = true
+    return true
+end
+
+local function enqueueMeta(queue, item)
+    AttentionBudgetRules.enqueueBounded(queue, item, 8)
+end
+
 local function queueOrShowGenericMetaNotification(titleText, bodyText, duration)
     local item = {
         title = titleText,
         body = bodyText,
         duration = duration,
     }
-    if shouldDeferMetaNotification() then
-        pendingGenericMetaNotification = item
-    else
+    if reserveMetaNotificationSlot() then
         showGenericMetaNotification(item)
+    else
+        enqueueMeta(pendingGenericMetaNotifications, item)
     end
 end
 
@@ -2524,30 +2544,38 @@ local function showOnePendingMetaNotification()
         return
     end
 
-    if pendingGenericMetaNotification then
+    local generic = AttentionBudgetRules.popFirst(pendingGenericMetaNotifications)
+    if generic then
         metaNotificationShownThisIntermission = true
-        local item = pendingGenericMetaNotification
-        pendingGenericMetaNotification = nil
-        showGenericMetaNotification(item)
-    elseif pendingAchievement then
+        showGenericMetaNotification(generic)
+        return
+    end
+
+    local achievement = AttentionBudgetRules.popFirst(pendingAchievements)
+    if achievement then
         metaNotificationShownThisIntermission = true
-        local item = pendingAchievement
-        pendingAchievement = nil
-        showAchievement(item)
-    elseif pendingLevelUp then
+        showAchievement(achievement)
+        return
+    end
+
+    if pendingLevelUp then
         metaNotificationShownThisIntermission = true
         local level = pendingLevelUp
         pendingLevelUp = nil
         showLevelUp(level)
-    elseif pendingQuestCompletion then
+        return
+    end
+
+    local quest = AttentionBudgetRules.popFirst(pendingQuestCompletions)
+    if quest then
         metaNotificationShownThisIntermission = true
-        local quest = pendingQuestCompletion
-        pendingQuestCompletion = nil
         showQuestCompletion(quest)
-    elseif pendingDailyReward then
+        return
+    end
+
+    local reward = AttentionBudgetRules.popFirst(pendingDailyRewards)
+    if reward then
         metaNotificationShownThisIntermission = true
-        local reward = pendingDailyReward
-        pendingDailyReward = nil
         showDailyReward(reward)
     end
 end
@@ -2563,15 +2591,19 @@ achievementEvent.OnClientEvent:Connect(function(payload)
 
     local unlockedNow = payload.unlockedNow or {}
     if #unlockedNow > 0 and payload.state and payload.state.achievements then
-        local unlockedId = unlockedNow[1]
+        local byId = {}
         for _, item in ipairs(payload.state.achievements) do
-            if item.id == unlockedId then
-                if shouldDeferMetaNotification() then
-                    pendingAchievement = item
-                else
+            byId[item.id] = item
+        end
+
+        for _, unlockedId in ipairs(unlockedNow) do
+            local item = byId[unlockedId]
+            if item then
+                if reserveMetaNotificationSlot() then
                     showAchievement(item)
+                else
+                    enqueueMeta(pendingAchievements, item)
                 end
-                break
             end
         end
     end
@@ -2658,21 +2690,20 @@ questEvent.OnClientEvent:Connect(function(payload)
     end
 
     local completed = payload.completed or {}
-    if #completed > 0 then
-        local quest = completed[1]
-        if shouldDeferMetaNotification() then
-            pendingQuestCompletion = quest
-        else
+    for _, quest in ipairs(completed) do
+        if reserveMetaNotificationSlot() then
             showQuestCompletion(quest)
+        else
+            enqueueMeta(pendingQuestCompletions, quest)
         end
     end
 end)
 
 dailyRewardEvent.OnClientEvent:Connect(function(reward)
-    if shouldDeferMetaNotification() then
-        pendingDailyReward = reward
-    else
+    if reserveMetaNotificationSlot() then
         showDailyReward(reward)
+    else
+        enqueueMeta(pendingDailyRewards, reward)
     end
 end)
 
