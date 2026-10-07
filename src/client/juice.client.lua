@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalizationService = game:GetService("LocalizationService")
+local Stats = game:GetService("Stats")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -598,6 +599,14 @@ RunService.RenderStepped:Connect(function(dt)
             local deviceClass = UserInputService.TouchEnabled and "Touch" or "Desktop"
 
             local visualMetrics = VisualBudgetRules.collect(workspace)
+            local totalMemoryMb = 0
+            local okMemory, measuredMemory = pcall(function()
+                return Stats:GetTotalMemoryUsageMb()
+            end)
+            if okMemory then
+                totalMemoryMb = tonumber(measuredMemory) or 0
+            end
+
             performancePulseEvent:FireServer({
                 averageFps = math.floor(averageFps + 0.5),
                 vfxTier = vfxTierName,
@@ -606,6 +615,11 @@ RunService.RenderStepped:Connect(function(dt)
                 visualParts = visualMetrics.Parts,
                 visualLights = visualMetrics.Lights,
                 visualEffects = visualMetrics.Effects,
+                totalMemoryMb = totalMemoryMb,
+                instanceCount = Stats.InstanceCount,
+                frameTimeMs = Stats.FrameTime * 1000,
+                renderCpuMs = Stats.RenderCPUFrameTime * 1000,
+                renderGpuMs = Stats.RenderGPUFrameTime * 1000,
             })
 
             performancePulseClock = 0
