@@ -24,7 +24,7 @@ Latest historical full automated certification: commit `70681aabc40c493467ffbc13
 
 > Every candidate SHA must re-run both automated workflows. A later code/doc commit invalidates the automated certification until the new exact SHA is green.
 
-Use the manual **Release Candidate Gate** workflow only after Build Validation, Open Cloud **and the authenticated Studio E2E workflow** are green on the exact candidate SHA, and all remaining manual gates have actually passed. The workflow verifies the exact-SHA Studio run automatically and requires `CERTIFY` plus explicit `PASS` attestations for Android, desktop, persistence, gameplay/fairness, accessibility, public alpha and final store/page assets. It checks release metadata consistency and uploads a `release-evidence.md` artifact. This gate never publishes the Roblox place.
+Use the manual **Release Candidate Gate** workflow only after Build Validation, Open Cloud **and the authenticated Studio E2E workflow** are green on the exact candidate SHA, and all remaining manual gates have actually passed. The workflow verifies the exact-SHA Studio run automatically **and downloads its `roblox-studio-e2e` artifact to validate the PASS manifest against the same commit/run** before certification. It requires `CERTIFY` plus explicit `PASS` attestations for Android, desktop, persistence, gameplay/fairness, accessibility, public alpha and final store/page assets. It checks release metadata consistency and uploads a `release-evidence.md` artifact. This gate never publishes the Roblox place.
 
 ### CI infrastructure failures
 
