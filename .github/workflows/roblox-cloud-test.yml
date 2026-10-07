@@ -51,7 +51,7 @@ jobs:
         shell: bash
         run: |
           cat > lest.ci.toml <<EOF
-          [suites.core]
+          [suites.core_a]
           include = [
             "tests/engine/achievements.spec.luau",
             "tests/engine/ai-survivor-rules.spec.luau",
@@ -72,6 +72,12 @@ jobs:
             "tests/engine/data-session.spec.luau",
             "tests/engine/first-time-experience.spec.luau",
             "tests/engine/game-analytics.spec.luau",
+          ]
+          backend = "cloud"
+          default = false
+
+          [suites.core_b]
+          include = [
             "tests/engine/lobby-presentation-rules.spec.luau",
             "tests/engine/mastery.spec.luau",
             "tests/engine/monetization-rules.spec.luau",
@@ -152,7 +158,7 @@ jobs:
               config = tomllib.load(handle)
 
           assigned = []
-          for suite in ("core", "gameplay", "matrix"):
+          for suite in ("core_a", "core_b", "gameplay", "matrix"):
               assigned.extend(config["suites"][suite]["include"])
 
           actual = sorted(glob.glob("tests/engine/**/*.spec.luau", recursive=True))
@@ -196,6 +202,7 @@ jobs:
             return "$status"
           }
 
-          run_suite core
+          run_suite core_a
+          run_suite core_b
           run_suite gameplay
           run_suite matrix
