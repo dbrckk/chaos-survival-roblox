@@ -38,10 +38,11 @@ function DisasterImpact.applyRadialDamage(ctx, position, radius, maxDamage, haza
             local distance = (root.Position - position).Magnitude
             local damage = DisasterImpact.damageForDistance(distance, radius, maxDamage)
             if damage > 0 then
+                local appliedDamage = math.min(damage, humanoid.Health)
                 if hazardKind and ctx.OnHazardDamage then
-                    pcall(ctx.OnHazardDamage, player, hazardKind, damage)
+                    pcall(ctx.OnHazardDamage, player, hazardKind, appliedDamage)
                 end
-                humanoid:TakeDamage(damage)
+                humanoid:TakeDamage(appliedDamage)
                 hits += 1
             elseif hazardKind
                 and DisasterImpact.nearMissForDistance(distance, radius, 3.5)
