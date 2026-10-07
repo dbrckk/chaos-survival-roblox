@@ -99,8 +99,11 @@ Duration target: 30–60 minutes.
 - Lowest observed FPS:
 - Typical FPS:
 - Visible stutter:
-- Memory at start:
-- Memory at end:
+- Memory at start (MB / ClientMemoryPulse):
+- Memory at end (MB / ClientMemoryPulse):
+- Instance count at start:
+- Instance count at end:
+- Latest frame/render snapshot (FrameMs / CPU / GPU):
 - Visual metrics at start (parts/lights/effects):
 - Visual metrics at end (parts/lights/effects):
 - Visual instance growth without map/phase reason: yes / no
