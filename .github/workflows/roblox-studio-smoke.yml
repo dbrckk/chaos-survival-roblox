@@ -96,6 +96,11 @@ jobs:
           $stdout = Join-Path $env:GITHUB_WORKSPACE "build/studio-stdout.log"
           $stderr = Join-Path $env:GITHUB_WORKSPACE "build/studio-stderr.log"
 
+          foreach ($path in @($output, $stdout, $stderr)) {
+            Remove-Item $path -Force -ErrorAction SilentlyContinue
+          }
+          $runStartedAt = Get-Date
+
           $arguments = @(
             "--task", "RunScript",
             "--localPlaceFile", $place,
@@ -109,9 +114,13 @@ jobs:
 
           while ((Get-Date) -lt $deadline) {
             if (Test-Path $output) {
-              $contents = Get-Content $output -Raw -ErrorAction SilentlyContinue
-              if ($contents -match "CHAOS_STUDIO_E2E_OK" -or $contents -match "CHAOS_STUDIO_E2E_FAILED") {
-                break
+              $outputInfo = Get-Item $output -ErrorAction SilentlyContinue
+              $freshOutput = $outputInfo -and $outputInfo.LastWriteTime -ge $runStartedAt
+              if ($freshOutput) {
+                $contents = Get-Content $output -Raw -ErrorAction SilentlyContinue
+                if ($contents -match "CHAOS_STUDIO_E2E_OK" -or $contents -match "CHAOS_STUDIO_E2E_FAILED") {
+                  break
+                }
               }
             }
 
@@ -123,6 +132,10 @@ jobs:
             Start-Sleep -Milliseconds 500
           }
 
+          if (-not $process.HasExited -and (Get-Date) -ge $deadline) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
           if (Test-Path $stdout) {
             Write-Host "=== Studio stdout ==="
             Get-Content $stdout
@@ -132,7 +145,7 @@ jobs:
             Get-Content $stderr
           }
 
-          if (!(Test-Path $output)) {
+          if (!(Test-Path $output) -or (Get-Item $output).LastWriteTime -lt $runStartedAt) {
             Write-Host "=== Roblox logs ==="
             $logRoots = @(
               "$env:LOCALAPPDATA\Roblox\logs",
