@@ -110,14 +110,19 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             fail(player.Name .. ": invalid arena entry probe " .. arenaId)
             return
         end
+        local worldArenaId = tostring(report.worldArenaId or "")
         if report.ok ~= true
             or report.characterReady ~= true
             or report.insideFootprint ~= true
+            or report.arenaMatches ~= true
+            or worldArenaId ~= arenaId
         then
             fail(
                 player.Name
                     .. ": arena entry probe failed for "
                     .. arenaId
+                    .. " world="
+                    .. worldArenaId
                     .. ": "
                     .. tostring(report.error or "unknown")
             )
@@ -125,7 +130,12 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         end
 
         arenaEntryProbeReports[arenaId] = true
-        print("CHAOS_E2E_ARENA_ENTRY", player.Name, arenaId)
+        print(
+            "CHAOS_E2E_ARENA_ENTRY",
+            player.Name,
+            arenaId,
+            "world=" .. worldArenaId
+        )
         return
     end
 
