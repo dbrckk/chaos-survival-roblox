@@ -12,8 +12,10 @@ Request:
 - spectator + late-join / leave-rejoin probes
 - touch/UX/readability checks
 - AI survivor animation/readability checks
+- progression/meta notification attention-budget checks
 
 Candidate reason:
-- current main has green Build Validation + Open Cloud
-- progression toasts now deferred outside attention-critical phases
+- Build Validation green after deferred meta FIFO hardening
+- progression/achievement/quest notifications no longer overwrite one another
+- one calm intermission consumes at most one meta toast
 - request fresh exact-SHA authenticated Studio certification
