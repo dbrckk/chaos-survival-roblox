@@ -5,5 +5,15 @@ Purpose:
 - Ordinary pushes do not trigger the self-hosted Studio runner.
 - Release certification still requires the Studio run to succeed on this exact main-branch SHA.
 
-Request: four-arena physical entry + visual/UX/spectator/join-leave certification.
-trigger exact-SHA authenticated candidate after runner hardening
+Request:
+- four-arena physical entry
+- READY / VOTE / ROUND / RESULT multi-phase validation
+- visual budget + post-process + FOV checks
+- spectator + late-join / leave-rejoin probes
+- touch/UX/readability checks
+- AI survivor animation/readability checks
+
+Candidate reason:
+- current main has green Build Validation + Open Cloud
+- progression toasts now deferred outside attention-critical phases
+- request fresh exact-SHA authenticated Studio certification
