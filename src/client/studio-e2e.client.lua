@@ -36,6 +36,7 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
 local arenaProbed = {}
+local arenaEntryProbed = {}
 
 local function sendVisualPhaseProbe(phase)
     if phase ~= "ready" and phase ~= "round" and phase ~= "result" then
@@ -113,6 +114,58 @@ local function sendArenaProbe(state)
     })
 end
 
+local function sendArenaEntryProbe(state)
+    if type(state) ~= "table" or tostring(state.phase or "") ~= "ready" then
+        return
+    end
+
+    task.delay(0.25, function()
+        if not player.Parent then
+            return
+        end
+
+        local root = workspace:FindFirstChild("GeneratedMap")
+        local arena = root and root:FindFirstChild("Arena")
+        local arenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
+        if arenaId == "" or arenaEntryProbed[arenaId] then
+            return
+        end
+        arenaEntryProbed[arenaId] = true
+
+        local base = arena and arena:FindFirstChild("Base")
+        local character = player.Character
+        local humanoidRoot = character and character:FindFirstChild("HumanoidRootPart")
+        local isParticipant = player:GetAttribute("RoundParticipant") == true
+        local insideFootprint = false
+
+        if base and base:IsA("BasePart")
+            and humanoidRoot and humanoidRoot:IsA("BasePart")
+        then
+            local localPosition = base.CFrame:PointToObjectSpace(humanoidRoot.Position)
+            insideFootprint = math.abs(localPosition.X) <= (base.Size.X * 0.5 + 10)
+                and math.abs(localPosition.Z) <= (base.Size.Z * 0.5 + 10)
+        end
+
+        local ok = isParticipant
+            and base ~= nil
+            and humanoidRoot ~= nil
+            and insideFootprint
+
+        reportEvent:FireServer({
+            kind = "arena_entry_probe",
+            arenaId = arenaId,
+            ok = ok,
+            participant = isParticipant,
+            insideFootprint = insideFootprint,
+            error = ok and "" or string.format(
+                "participant=%s inside=%s",
+                tostring(isParticipant),
+                tostring(insideFootprint)
+            ),
+        })
+    end)
+end
+
 if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
     roundStateEvent.OnClientEvent:Connect(function(state)
         if type(state) == "table" then
@@ -120,6 +173,7 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
             lastRoundPhase = state.phase
             sendVisualPhaseProbe(tostring(state.phase or ""))
             sendArenaProbe(state)
+            sendArenaEntryProbe(state)
         end
     end)
 else
