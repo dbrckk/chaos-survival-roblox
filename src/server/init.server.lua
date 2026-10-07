@@ -223,7 +223,7 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
     local instanceCount = math.clamp(
         math.floor(tonumber(payload.instanceCount) or 0),
         0,
-        1000000
+        250000
     )
     local frameTimeMs = math.clamp(
         tonumber(payload.frameTimeMs) or 0,
