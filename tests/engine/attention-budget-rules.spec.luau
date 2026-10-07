@@ -11,6 +11,24 @@ describe("attention budget rules", function()
         expect(AttentionBudgetRules.voteActive("round", {"A"})).toBe(false)
     end)
 
+    it("keeps deferred meta notifications FIFO and bounded", function()
+        local queue = {}
+        AttentionBudgetRules.enqueueBounded(queue, "A", 3)
+        AttentionBudgetRules.enqueueBounded(queue, "B", 3)
+        AttentionBudgetRules.enqueueBounded(queue, "C", 3)
+        AttentionBudgetRules.enqueueBounded(queue, "D", 3)
+
+        expect(#queue).toBe(3)
+        expect(queue[1]).toBe("B")
+        expect(queue[2]).toBe("C")
+        expect(queue[3]).toBe("D")
+
+        expect(AttentionBudgetRules.popFirst(queue)).toBe("B")
+        expect(AttentionBudgetRules.popFirst(queue)).toBe("C")
+        expect(AttentionBudgetRules.popFirst(queue)).toBe("D")
+        expect(AttentionBudgetRules.popFirst(queue)).toBe(nil)
+    end)
+
     it("suppresses meta controls during vote ready round and result", function()
         expect(AttentionBudgetRules.suppressMetaControls(
             "intermission",
