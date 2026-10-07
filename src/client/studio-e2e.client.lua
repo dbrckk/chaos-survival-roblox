@@ -147,13 +147,21 @@ local function sendArenaEntryProbe(state)
                 and humanoid.Health > 0
                 and humanoidRoot ~= nil
             local insideFootprint = false
+            local offsetX = 0
+            local offsetZ = 0
+            local limitX = 0
+            local limitZ = 0
 
             if base and base:IsA("BasePart")
                 and humanoidRoot and humanoidRoot:IsA("BasePart")
             then
                 local localPosition = base.CFrame:PointToObjectSpace(humanoidRoot.Position)
-                insideFootprint = math.abs(localPosition.X) <= (base.Size.X * 0.5 + 10)
-                    and math.abs(localPosition.Z) <= (base.Size.Z * 0.5 + 10)
+                offsetX = localPosition.X
+                offsetZ = localPosition.Z
+                limitX = base.Size.X * 0.5 + 10
+                limitZ = base.Size.Z * 0.5 + 10
+                insideFootprint = math.abs(offsetX) <= limitX
+                    and math.abs(offsetZ) <= limitZ
             end
 
             local arenaMatches = worldArenaId == expectedArenaId
@@ -170,12 +178,20 @@ local function sendArenaEntryProbe(state)
                 characterReady = characterReady,
                 insideFootprint = insideFootprint,
                 arenaMatches = arenaMatches,
+                offsetX = offsetX,
+                offsetZ = offsetZ,
+                limitX = limitX,
+                limitZ = limitZ,
                 error = ok and "" or string.format(
-                    "characterReady=%s inside=%s expected=%s world=%s",
+                    "characterReady=%s inside=%s expected=%s world=%s offset=(%.1f,%.1f) limit=(%.1f,%.1f)",
                     tostring(characterReady),
                     tostring(insideFootprint),
                     expectedArenaId,
-                    worldArenaId
+                    worldArenaId,
+                    offsetX,
+                    offsetZ,
+                    limitX,
+                    limitZ
                 ),
             }
 
