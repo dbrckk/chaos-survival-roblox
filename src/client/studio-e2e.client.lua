@@ -502,6 +502,7 @@ if hud then
     local cosmeticPanel = hud:FindFirstChild("CosmeticsPanel", true)
     local achievementPanel = hud:FindFirstChild("AchievementPanel", true)
     local votePanel = hud:FindFirstChild("VotePanel", true)
+    local metaDock = hud:FindFirstChild("MetaDock", true)
     local rookieCoach = hud:FindFirstChild("RookieCoach", true)
 
     check(top ~= nil and insideViewport(top), "top HUD outside viewport")
@@ -560,6 +561,25 @@ if hud then
 
         check(votePanel.Visible, "vote panel never became visible")
         if votePanel.Visible then
+            if metaDock and metaDock:IsA("GuiObject") then
+                check(metaDock.Visible == false, "meta dock visible during active vote")
+            end
+
+            local inviteButton = inviteGui and inviteGui:FindFirstChild("InviteFriendsButton", true)
+            if inviteButton and inviteButton:IsA("GuiObject") then
+                check(inviteButton.Visible == false, "invite CTA visible during active vote")
+            end
+
+            local shareButton = shareGui and shareGui:FindFirstChild("ShareMomentButton", true)
+            if shareButton and shareButton:IsA("GuiObject") then
+                check(shareButton.Visible == false, "share CTA visible during active vote")
+            end
+
+            local reactionDock = reactionsGui and reactionsGui:FindFirstChild("ResultReactionDock", true)
+            if reactionDock and reactionDock:IsA("GuiObject") then
+                check(reactionDock.Visible == false, "reaction dock visible during active vote")
+            end
+
             local voteButtons = {}
             for _, child in ipairs(votePanel:GetChildren()) do
                 if child:IsA("TextButton") then
