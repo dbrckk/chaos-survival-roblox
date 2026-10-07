@@ -215,6 +215,31 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         0,
         2000
     )
+    local totalMemoryMb = math.clamp(
+        tonumber(payload.totalMemoryMb) or 0,
+        0,
+        65536
+    )
+    local instanceCount = math.clamp(
+        math.floor(tonumber(payload.instanceCount) or 0),
+        0,
+        1000000
+    )
+    local frameTimeMs = math.clamp(
+        tonumber(payload.frameTimeMs) or 0,
+        0,
+        1000
+    )
+    local renderCpuMs = math.clamp(
+        tonumber(payload.renderCpuMs) or 0,
+        0,
+        1000
+    )
+    local renderGpuMs = math.clamp(
+        tonumber(payload.renderGpuMs) or 0,
+        0,
+        1000
+    )
 
     local budgetStatus = VisualBudgetRules.status(tier, {
         Parts = visualParts,
@@ -252,6 +277,17 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
             .. "|Phase:" .. phase
             .. "|Chaos:" .. tostring(chaosCount)
             .. "|Rush:" .. tostring(finalRush)
+    )
+
+    GameAnalytics.custom(
+        player,
+        "ClientMemoryPulse",
+        math.floor(totalMemoryMb + 0.5),
+        "VFX:" .. tier .. "|Device:" .. deviceClass,
+        "Instances:" .. tostring(instanceCount),
+        "FrameMs:" .. string.format("%.1f", frameTimeMs)
+            .. "|CPU:" .. string.format("%.1f", renderCpuMs)
+            .. "|GPU:" .. string.format("%.1f", renderGpuMs)
     )
 end)
 
