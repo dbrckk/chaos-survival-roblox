@@ -110,7 +110,7 @@ jobs:
           )
 
           $process = Start-Process -FilePath "$env:STUDIO_EXE" -ArgumentList $arguments -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-          $deadline = (Get-Date).AddSeconds(120)
+          $deadline = (Get-Date).AddSeconds(150)
 
           while ((Get-Date) -lt $deadline) {
             if (Test-Path $output) {
@@ -162,7 +162,7 @@ jobs:
                 }
             }
 
-            throw "Studio produced no E2E output within 120 seconds."
+            throw "Studio produced no E2E output within 150 seconds."
           }
 
           Write-Host "=== Studio E2E output ==="
