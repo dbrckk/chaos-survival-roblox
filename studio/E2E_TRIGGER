@@ -6,3 +6,4 @@ Purpose:
 - Release certification still requires the Studio run to succeed on this exact main-branch SHA.
 
 Request: four-arena physical entry + visual/UX/spectator/join-leave certification.
+trigger exact-SHA authenticated candidate after runner hardening
