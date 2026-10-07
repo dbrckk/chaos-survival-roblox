@@ -2,6 +2,10 @@ name: Roblox Studio E2E Playtest (Authenticated Runner)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "studio/E2E_TRIGGER"
 
 concurrency:
   group: roblox-studio-e2e-${{ github.ref }}
