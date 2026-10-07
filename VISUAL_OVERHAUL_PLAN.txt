@@ -134,7 +134,7 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.9 Centraliser strictement le FOV de round dans juice ; arena-mechanic-feedback ne modifie plus directement la caméra.
 [QA]   6.10 Body feel additif via C0 : ne jamais écraser Motor6D.Transform piloté par l'Animator R15.
 [FAIT] 6.10 Transmettre eliminationCause dans RoundFeedback pour afficher le conseil de revanche spécifique au vrai danger.
-[QA]   6.11 Attribuer les knockbacks réels Tornado/JumpShock avant une chute pour éviter les mauvaises causes en Double Chaos.
+[QA]   6.11 Attribuer les knockbacks réels Tornado/JumpShock avant une chute — fallback ne crédite plus ces hazards sans contact récent ; règles moteur testées.
 
 PHASE 6B — GAMEPLAY / FUN
 --------------------------

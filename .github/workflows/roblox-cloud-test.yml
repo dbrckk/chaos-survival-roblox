@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        suite: [core_a, core_b, gameplay, matrix]
+        suite: [gameplay, matrix, core_a, core_b]
     env:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
@@ -115,6 +115,7 @@ jobs:
             "tests/engine/disaster-balance.spec.luau",
             "tests/engine/disaster-climax.spec.luau",
             "tests/engine/disaster-impact.spec.luau",
+            "tests/engine/elimination-cause-rules.spec.luau",
             "tests/engine/disaster-residue.spec.luau",
             "tests/engine/disaster-runtime.spec.luau",
             "tests/engine/disaster-setpiece.spec.luau",

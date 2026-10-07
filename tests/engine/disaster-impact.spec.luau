@@ -136,6 +136,49 @@ describe("Disaster impact", function()
         character:Destroy()
     end)
 
+    it("clamps lethal falloff damage to remaining health", function()
+        local character = Instance.new("Model")
+        character.Name = "FalloffFatalImpactCharacter"
+
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Position = Vector3.new(4, 3, 0)
+        root.Anchored = true
+        root.Parent = character
+
+        local humanoid = Instance.new("Humanoid")
+        humanoid.MaxHealth = 12
+        humanoid.Health = 12
+        humanoid.Parent = character
+        character.Parent = workspace
+
+        local subject = {
+            UserId = 456,
+            Name = "FalloffFatalImpactSubject",
+            Character = character,
+        }
+
+        local reportedDamage = nil
+        local healthWhenReported = nil
+        local hits = DisasterImpact.applyRadialDamage({
+            HazardContestants = {subject},
+            IsContestantActive = function()
+                return true
+            end,
+            OnHazardDamage = function(_, _, damage)
+                reportedDamage = damage
+                healthWhenReported = humanoid.Health
+            end,
+        }, Vector3.new(0, 3, 0), 8, 50, "Bombs")
+
+        expect(hits).toBe(1)
+        expect(reportedDamage).toBe(12)
+        expect(healthWhenReported).toBe(12)
+        expect(humanoid.Health).toBe(0)
+
+        character:Destroy()
+    end)
+
     it("sanitizes negative distance and damage inputs", function()
         expect(DisasterImpact.damageForDistance(-5, 8, 50)).toBe(50)
         expect(DisasterImpact.damageForDistance(0, 8, -10)).toBe(0)

@@ -110,6 +110,45 @@ describe("Headless disaster playtest", function()
         end
     end)
 
+    it("reports real jump shock knockback contacts without timer delay", function()
+        local character = Instance.new("Model")
+        character.Name = "JumpShockContactSubject"
+
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.Anchored = true
+        root.CanCollide = false
+        root.Parent = character
+
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Health = 100
+        humanoid.Parent = character
+        character.Parent = workspace
+
+        local subject = {
+            Character = character,
+        }
+        local contactKind = nil
+
+        local jumpShock = require("../../src/server/Disasters/JumpShock")
+        local applied = jumpShock.applyShock({
+            IsContestantActive = function()
+                return true
+            end,
+            OnHazardContact = function(target, kind)
+                if target == subject then
+                    contactKind = kind
+                end
+            end,
+        }, subject, 8)
+
+        expect(applied).toBe(true)
+        expect(contactKind).toBe("JumpShock")
+
+        character:Destroy()
+    end)
+
     it("starts and cleans every disaster inside a real Roblox DataModel", function()
         local originalGravity = workspace.Gravity
 

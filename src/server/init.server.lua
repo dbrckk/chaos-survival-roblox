@@ -37,6 +37,7 @@ local GameAnalytics = require(script.GameAnalytics)
 local ArenaVariants = require(script.ArenaVariants)
 local ArenaMechanics = require(script.ArenaMechanics)
 local DisasterBalance = require(script.DisasterBalance)
+local EliminationCauseRules = require(script.EliminationCauseRules)
 local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
 local RoundIntensity = require(script.RoundIntensity)
@@ -771,18 +772,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     end
 
     local function fallCause()
-        if activeHazards.Tornado then
-            return "Tornado"
-        elseif activeHazards.JumpShock then
-            return "JumpShock"
-        elseif activeHazards.LowGravity then
-            return "LowGravity"
-        elseif activeHazards.DisappearingPlatforms then
-            return "DisappearingPlatforms"
-        elseif activeHazards.ShrinkingArena then
-            return "ShrinkingArena"
-        end
-        return "Fall"
+        return EliminationCauseRules.fallbackFallCause(activeHazards)
     end
 
     for _, player in ipairs(contestants) do
@@ -803,11 +793,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
             deathConnections[player.UserId] = hum.Died:Connect(function()
                 eliminated[player.UserId] = true
 
-                local cause = nil
-                local recent = recentHazards[player.UserId]
-                if recent and (os.clock() - recent.at) <= 2.25 then
-                    cause = recent.kind
-                end
+                local cause = EliminationCauseRules.recentHazardKind(
+                    recentHazards[player.UserId],
+                    os.clock(),
+                    2.25
+                )
 
                 if not cause then
                     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")

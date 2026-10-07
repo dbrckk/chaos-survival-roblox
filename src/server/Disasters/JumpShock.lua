@@ -21,6 +21,37 @@ local function makeWarning(ctx)
     return ring
 end
 
+function D.applyShock(ctx, subject, horizontalForce)
+    if ctx.IsContestantActive and not ctx.IsContestantActive(subject) then
+        return false
+    end
+
+    local root = subject.Character and subject.Character:FindFirstChild("HumanoidRootPart")
+    local hum = subject.Character and subject.Character:FindFirstChildOfClass("Humanoid")
+    if not root or not hum or hum.Health <= 0 then
+        return false
+    end
+
+    local horizontal = math.max(0, tonumber(horizontalForce) or 0)
+    root.AssemblyLinearVelocity = MovementSafety.addImpulse(
+        root.AssemblyLinearVelocity,
+        Vector3.new(
+            math.random(-horizontal, horizontal),
+            math.random(34, 46),
+            math.random(-horizontal, horizontal)
+        ),
+        62,
+        -55,
+        58
+    )
+
+    if ctx.OnHazardContact then
+        pcall(ctx.OnHazardContact, subject, "JumpShock")
+    end
+
+    return true
+end
+
 function D.start(ctx)
     local profile = ctx.BalanceProfile or {}
     local horizontal = profile.JumpHorizontalForce or 8
@@ -54,27 +85,7 @@ function D.start(ctx)
             end
 
             for _, p in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
-                if ctx.IsContestantActive and not ctx.IsContestantActive(p) then
-                    continue
-                end
-                local root = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
-                if root and hum and hum.Health > 0 then
-                    root.AssemblyLinearVelocity = MovementSafety.addImpulse(
-                        root.AssemblyLinearVelocity,
-                        Vector3.new(
-                            math.random(-horizontal,horizontal),
-                            math.random(34,46),
-                            math.random(-horizontal,horizontal)
-                        ),
-                        62,
-                        -55,
-                        58
-                    )
-                    if ctx.OnHazardContact then
-                        pcall(ctx.OnHazardContact, p, "JumpShock")
-                    end
-                end
+                D.applyShock(ctx, p, horizontal)
             end
         end
     end)
