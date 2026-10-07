@@ -62,15 +62,33 @@ jobs:
 
           $studioPath = $null
           while ((Get-Date) -lt $deadline) {
-            $candidate = Get-ChildItem "$env:LOCALAPPDATA\Roblox" -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
-              Where-Object { $_.LastWriteTime -ge $installStartedAt.AddMinutes(-2) } |
-              Sort-Object LastWriteTime -Descending |
+            $studioProcess = Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
               Select-Object -First 1
-
-            if ($candidate) {
-              $studioPath = $candidate.FullName
+            if ($studioProcess -and $studioProcess.Path) {
+              $studioPath = $studioProcess.Path
+              Write-Host "Detected Studio from running process: $studioPath"
               break
             }
+
+            $roots = @(
+              "$env:LOCALAPPDATA\Roblox",
+              "$env:USERPROFILE\AppData\Local\Roblox",
+              "C:\Program Files\Roblox",
+              "C:\Program Files (x86)\Roblox"
+            ) | Where-Object { Test-Path $_ }
+
+            foreach ($root in $roots) {
+              $candidate = Get-ChildItem $root -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 1
+              if ($candidate) {
+                $studioPath = $candidate.FullName
+                Write-Host "Detected Studio on disk: $studioPath"
+                break
+              }
+            }
+
+            if ($studioPath) { break }
 
             if ($process.HasExited -and $process.ExitCode -ne 0) {
               throw "Roblox Studio installer exited with code $($process.ExitCode)."
