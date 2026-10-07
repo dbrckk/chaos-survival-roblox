@@ -213,6 +213,7 @@ PHASE 7 — OPTIMISATION VISUELLE
 [FAIT] 7.39 Garde-fou CI GlobalShadows : seul arena-lighting.client.lua peut modifier la propriété.
 [FAIT] 7.40 Garde-fou CI Motor6D.Transform : aucun polish client ne peut prendre la propriété de l'Animator.
 [FAIT] 7.41 Garde-fou CI LOD : chaque couche LOD doit être enregistrée dans le budget visuel et le cache doit rester weak-keyed.
+[QA]   7.42 Télémétrie mémoire/render soak : ClientMemoryPulse remonte mémoire MB, instances, FrameMs, CPU et GPU toutes les 45 s.
 
 PHASE 8 — PRESENTATION PUBLIQUE
 --------------------------------
