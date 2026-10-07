@@ -8,7 +8,7 @@ All items below must be green on the **exact release commit**. The checkboxes de
 
 - [ ] Build Validation succeeds on release SHA.
 - [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
-- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 63 specs).
+- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 64 specs).
 - [ ] Rojo produces a non-empty place file.
 - [ ] Luau syntax validation succeeds.
 - [ ] Fair-play monetization guard succeeds.
@@ -24,7 +24,7 @@ Latest historical full automated certification: commit `70681aabc40c493467ffbc13
 
 > Every candidate SHA must re-run both automated workflows. A later code/doc commit invalidates the automated certification until the new exact SHA is green.
 
-Use the manual **Release Candidate Gate** workflow only after both required workflows are green on the candidate SHA. It verifies the exact SHA, checks release metadata consistency, and uploads a `release-evidence.md` artifact. This gate never publishes the Roblox place and never replaces the manual Studio/device/persistence/alpha gates.
+Use the manual **Release Candidate Gate** workflow only after both required workflows are green on the candidate SHA **and all manual gates have actually passed**. The workflow requires `CERTIFY` plus explicit `PASS` attestations for Studio E2E, Android, desktop, persistence, gameplay/fairness, accessibility, public alpha and final store/page assets. It verifies the exact SHA, checks release metadata consistency, and uploads a `release-evidence.md` artifact. This gate never publishes the Roblox place.
 
 ### CI infrastructure failures
 
@@ -186,7 +186,7 @@ Only after retention/device UX are acceptable:
 - [ ] Write changelog.
 - [x] Keep a documented rollback path via `ROLLBACK_RUNBOOK.md`; select and record the last known-good certified SHA before release.
 - [ ] Verify Roblox experience icon, thumbnails, description and screenshots.
-- [x] Publish Roblox Place workflow refuses uncertified SHAs unless exact-SHA Build Validation + Open Cloud are green.
+- [x] Publish Roblox Place workflow refuses uncertified SHAs unless exact-SHA Build Validation + Open Cloud + Release Candidate Gate are green.
 - [ ] Archive the publish artifact containing place file + publish-metadata.txt.
 - [ ] Run a final smoke test immediately after publication.
 

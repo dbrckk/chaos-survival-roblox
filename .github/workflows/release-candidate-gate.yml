@@ -7,6 +7,38 @@ on:
         description: 'Type CERTIFY to verify the selected main commit'
         required: true
         default: ''
+      studio_e2e:
+        description: 'Type PASS after authenticated four-client Studio E2E succeeds'
+        required: true
+        default: ''
+      android:
+        description: 'Type PASS after physical Android UX/performance soak succeeds'
+        required: true
+        default: ''
+      desktop:
+        description: 'Type PASS after physical desktop UX/performance pass succeeds'
+        required: true
+        default: ''
+      persistence:
+        description: 'Type PASS after persistence/rejoin validation succeeds'
+        required: true
+        default: ''
+      gameplay_fairness:
+        description: 'Type PASS after gameplay/fairness review succeeds'
+        required: true
+        default: ''
+      accessibility:
+        description: 'Type PASS after audio/accessibility review succeeds'
+        required: true
+        default: ''
+      public_alpha:
+        description: 'Type PASS after small real-player public alpha succeeds'
+        required: true
+        default: ''
+      store_assets:
+        description: 'Type PASS after icon/thumbnails/screenshots/page review succeeds'
+        required: true
+        default: ''
 
 permissions:
   contents: read
@@ -23,6 +55,39 @@ jobs:
         run: |
           test "${{ inputs.confirm }}" = "CERTIFY" || {
             echo "Type CERTIFY to run the release candidate gate."
+            exit 1
+          }
+
+          test "${{ inputs.studio_e2e }}" = "PASS" || {
+            echo "Studio E2E attestation must be PASS."
+            exit 1
+          }
+          test "${{ inputs.android }}" = "PASS" || {
+            echo "Android attestation must be PASS."
+            exit 1
+          }
+          test "${{ inputs.desktop }}" = "PASS" || {
+            echo "Desktop attestation must be PASS."
+            exit 1
+          }
+          test "${{ inputs.persistence }}" = "PASS" || {
+            echo "Persistence attestation must be PASS."
+            exit 1
+          }
+          test "${{ inputs.gameplay_fairness }}" = "PASS" || {
+            echo "Gameplay/fairness attestation must be PASS."
+            exit 1
+          }
+          test "${{ inputs.accessibility }}" = "PASS" || {
+            echo "Audio/accessibility attestation must be PASS."
+            exit 1
+          }
+          test "${{ inputs.public_alpha }}" = "PASS" || {
+            echo "Public alpha attestation must be PASS."
+            exit 1
+          }
+          test "${{ inputs.store_assets }}" = "PASS" || {
+            echo "Store/page asset attestation must be PASS."
             exit 1
           }
 
@@ -138,16 +203,18 @@ jobs:
                   "- PASS — exact SHA has green real-engine Open Cloud tests.",
                   "- PASS — Open Cloud run implies shard coverage verification passed.",
                   "",
-                  "## Manual gates still required",
+                  "## Manual gate attestations",
                   "",
-                  "- Authenticated four-client Roblox Studio E2E.",
-                  "- Physical Android UX/performance soak.",
-                  "- Physical desktop UX/performance pass.",
-                  "- Persistence/rejoin validation with API Services.",
-                  "- Small real-player public alpha.",
-                  "- Final icon/thumbnails/screenshots/page review.",
+                  "- PASS — authenticated four-client Roblox Studio E2E.",
+                  "- PASS — physical Android UX/performance soak.",
+                  "- PASS — physical desktop UX/performance pass.",
+                  "- PASS — persistence/rejoin validation with API Services.",
+                  "- PASS — gameplay/fairness review.",
+                  "- PASS — audio/accessibility review.",
+                  "- PASS — small real-player public alpha.",
+                  "- PASS — final icon/thumbnails/screenshots/page review.",
                   "",
-                  "This artifact certifies automated gates only; it does not declare 1.0 release-ready by itself.",
+                  "This artifact certifies automated evidence plus the explicit manual attestations supplied to the gate.",
                   "",
               ]),
               encoding="utf-8",

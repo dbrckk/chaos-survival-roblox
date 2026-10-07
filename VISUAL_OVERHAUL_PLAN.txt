@@ -242,6 +242,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [TODO] 9.5 Android final.
 [TODO] 9.6 Desktop final.
 [TODO] 9.7 Créer release candidate 1.0 et geler le visuel.
+[FAIT] 9.7a Production publish exige désormais Build + Open Cloud + Release Candidate Gate réussi sur le même SHA.
 
 État actuel
 -----------
