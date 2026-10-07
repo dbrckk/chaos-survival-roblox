@@ -1,0 +1,8 @@
+Chaos Survival authenticated Studio E2E trigger.
+
+Purpose:
+- A commit touching only this file intentionally requests the authenticated four-client Studio E2E workflow.
+- Ordinary pushes do not trigger the self-hosted Studio runner.
+- Release certification still requires the Studio run to succeed on this exact main-branch SHA.
+
+Request: four-arena physical entry + visual/UX/spectator/join-leave certification.
