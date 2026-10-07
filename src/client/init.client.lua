@@ -208,6 +208,15 @@ levelToastText.ZIndex = 31
 levelToastText.Parent = levelToast
 
 local lastKnownLevel = player:GetAttribute("Level") or 1
+local currentHudPhase = "waiting"
+local currentHudVoteOptions = nil
+local pendingLevelUp = nil
+local shouldDeferMetaNotification = nil
+
+local levelToastToken = 0
+local questToastToken = 0
+local achievementToastToken = 0
+local dailyToastToken = 0
 
 local function xpProgressForLevel(level, xp)
     local currentLevel = math.max(1, tonumber(level) or 1)
@@ -219,6 +228,9 @@ local function xpProgressForLevel(level, xp)
 end
 
 local function showLevelUp(level)
+    levelToastToken += 1
+    local token = levelToastToken
+
     levelToastText.Text = "LEVEL " .. tostring(level) .. "!"
     levelToast.Visible = true
     levelToast.BackgroundTransparency = 1
@@ -243,10 +255,15 @@ local function showLevelUp(level)
     ):Play()
 
     task.delay(2.1, function()
+        if token ~= levelToastToken then
+            return
+        end
         TweenService:Create(levelToast, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
         TweenService:Create(levelToastScale, TweenInfo.new(0.2), {Scale = 0.88}):Play()
         task.wait(0.22)
-        levelToast.Visible = false
+        if token == levelToastToken then
+            levelToast.Visible = false
+        end
     end)
 end
 
@@ -2147,7 +2164,14 @@ local function refreshStats()
     ):Play()
 
     if level > lastKnownLevel then
-        showLevelUp(level)
+        if shouldDeferMetaNotification and shouldDeferMetaNotification() then
+            pendingLevelUp = math.max(
+                tonumber(pendingLevelUp) or 0,
+                tonumber(level) or 1
+            )
+        else
+            showLevelUp(level)
+        end
     end
     lastKnownLevel = level
 end
@@ -2348,17 +2372,18 @@ end
 
 
 
-local currentHudPhase = "waiting"
 local pendingQuestCompletion = nil
 local pendingAchievement = nil
 local pendingDailyReward = nil
+local pendingGenericMetaNotification = nil
 local metaNotificationShownThisIntermission = false
 
-local function shouldDeferMetaNotification()
-    return currentHudPhase == "ready"
-        or currentHudPhase == "round"
-        or currentHudPhase == "result"
-        or (tonumber(player:GetAttribute("Games")) or 0) <= 0
+shouldDeferMetaNotification = function()
+    return not AttentionBudgetRules.canShowMetaNotification(
+        currentHudPhase,
+        currentHudVoteOptions,
+        player:GetAttribute("Games")
+    )
 end
 
 local function showQuestCompletion(quest)
@@ -2386,10 +2411,14 @@ local function showQuestCompletion(quest)
         quest.coins or 0,
         quest.xp or 0
     )
+    questToastToken += 1
+    local token = questToastToken
     questToast.Visible = true
 
     task.delay(weekly and 4.6 or 4, function()
-        questToast.Visible = false
+        if token == questToastToken then
+            questToast.Visible = false
+        end
     end)
 end
 
@@ -2411,9 +2440,13 @@ local function showAchievement(item)
         item.coins or 0,
         item.xp or 0
     )
+    achievementToastToken += 1
+    local token = achievementToastToken
     achievementToast.Visible = true
     task.delay(4, function()
-        achievementToast.Visible = false
+        if token == achievementToastToken then
+            achievementToast.Visible = false
+        end
     end)
 end
 
@@ -2427,26 +2460,85 @@ local function showDailyReward(reward)
     local xp = tonumber(reward.xp) or 0
     dailyTitle.Text = CoreLocalization.text(localeId, "DAY_STREAK", streak)
     dailyBody.Text = CoreLocalization.text(localeId, "COINS_XP", coins, xp)
+    dailyToastToken += 1
+    local token = dailyToastToken
     dailyToast.Visible = true
 
     task.delay(4, function()
-        dailyToast.Visible = false
+        if token == dailyToastToken then
+            dailyToast.Visible = false
+        end
     end)
 end
 
+local function showGenericMetaNotification(item)
+    if not item then
+        return
+    end
+
+    questToastTitle.Text = tostring(item.title or "")
+    questToastBody.Text = tostring(item.body or "")
+    questToastToken += 1
+    local token = questToastToken
+    questToast.Visible = true
+
+    task.delay(tonumber(item.duration) or 3.4, function()
+        if token == questToastToken then
+            questToast.Visible = false
+        end
+    end)
+end
+
+local function queueOrShowGenericMetaNotification(titleText, bodyText, duration)
+    local item = {
+        title = titleText,
+        body = bodyText,
+        duration = duration,
+    }
+    if shouldDeferMetaNotification() then
+        pendingGenericMetaNotification = item
+    else
+        showGenericMetaNotification(item)
+    end
+end
+
+local function hideMetaNotifications()
+    levelToastToken += 1
+    questToastToken += 1
+    achievementToastToken += 1
+    dailyToastToken += 1
+    levelToast.Visible = false
+    questToast.Visible = false
+    achievementToast.Visible = false
+    dailyToast.Visible = false
+end
+
 local function showOnePendingMetaNotification()
-    if currentHudPhase ~= "intermission"
+    if not AttentionBudgetRules.canShowMetaNotification(
+        currentHudPhase,
+        currentHudVoteOptions,
+        player:GetAttribute("Games")
+    )
         or metaNotificationShownThisIntermission
-        or (tonumber(player:GetAttribute("Games")) or 0) <= 0
     then
         return
     end
 
-    if pendingAchievement then
+    if pendingGenericMetaNotification then
+        metaNotificationShownThisIntermission = true
+        local item = pendingGenericMetaNotification
+        pendingGenericMetaNotification = nil
+        showGenericMetaNotification(item)
+    elseif pendingAchievement then
         metaNotificationShownThisIntermission = true
         local item = pendingAchievement
         pendingAchievement = nil
         showAchievement(item)
+    elseif pendingLevelUp then
+        metaNotificationShownThisIntermission = true
+        local level = pendingLevelUp
+        pendingLevelUp = nil
+        showLevelUp(level)
     elseif pendingQuestCompletion then
         metaNotificationShownThisIntermission = true
         local quest = pendingQuestCompletion
@@ -2617,6 +2709,7 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     local previousHudPhase = currentHudPhase
     currentHudPhase = tostring(state.phase or "waiting")
+    currentHudVoteOptions = state.voteOptions
     compactRoundTop = touchDevice and currentHudPhase == "round"
     top.Visible = currentHudPhase ~= "result"
 
@@ -2655,6 +2748,14 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     if metaControlsSuppressed then
         closeAllPanels()
+    end
+
+    if not AttentionBudgetRules.canShowMetaNotification(
+        currentHudPhase,
+        currentHudVoteOptions,
+        gamesPlayed
+    ) then
+        hideMetaNotifications()
     end
 
     if activeGameplay or firstLobby then
