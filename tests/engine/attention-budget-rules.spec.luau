@@ -27,6 +27,22 @@ describe("attention budget rules", function()
         expect(AttentionBudgetRules.suppressMetaControls("intermission", nil, 0)).toBe(true)
     end)
 
+    it("only shows meta notifications in a calm non-voting intermission", function()
+        expect(AttentionBudgetRules.canShowMetaNotification(
+            "intermission",
+            nil,
+            2
+        )).toBe(true)
+        expect(AttentionBudgetRules.canShowMetaNotification(
+            "intermission",
+            {"A", "B", "C"},
+            2
+        )).toBe(false)
+        expect(AttentionBudgetRules.canShowMetaNotification("round", nil, 2)).toBe(false)
+        expect(AttentionBudgetRules.canShowMetaNotification("result", nil, 2)).toBe(false)
+        expect(AttentionBudgetRules.canShowMetaNotification("intermission", nil, 0)).toBe(false)
+    end)
+
     it("allows meta controls only in calm phases after the first game", function()
         expect(AttentionBudgetRules.suppressMetaControls("waiting", nil, 2)).toBe(false)
         expect(AttentionBudgetRules.suppressMetaControls("intermission", nil, 2)).toBe(false)
