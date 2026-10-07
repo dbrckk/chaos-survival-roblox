@@ -144,6 +144,8 @@ jobs:
             Remove-Item $path -Force -ErrorAction SilentlyContinue
           }
           $runStartedAt = Get-Date
+          $authRequired = $false
+          $authLog = $null
 
           $arguments = @(
             "--task", "RunScript",
@@ -167,12 +169,52 @@ jobs:
               }
             }
 
+            $logRoot = "$env:LOCALAPPDATA\Roblox\logs"
+            if (Test-Path $logRoot) {
+              $latestStudioLog = Get-ChildItem $logRoot -File -ErrorAction SilentlyContinue |
+                Where-Object {
+                  $_.Name -match "Studio" -and $_.LastWriteTime -ge $runStartedAt
+                } |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 1
+
+              if ($latestStudioLog) {
+                $loginState = Get-Content $latestStudioLog.FullName -Raw -ErrorAction SilentlyContinue
+                if ($loginState -match "Authenticated\s*:\s*NO" -and
+                    $loginState -match "LoginPageOpenTime|Cookie list not found") {
+                  $authRequired = $true
+                  $authLog = $latestStudioLog.FullName
+                  break
+                }
+              }
+            }
+
             if ($process.HasExited) {
               Start-Sleep -Seconds 2
               if (Test-Path $output) { break }
             }
 
             Start-Sleep -Milliseconds 500
+          }
+
+          if ($authRequired) {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            }
+
+            @(
+              "status=AUTH_REQUIRED"
+              "certifying=false"
+              "commit=$env:GITHUB_SHA"
+              "run_id=$env:GITHUB_RUN_ID"
+              "runner=$env:RUNNER_NAME"
+              "studio_log=$authLog"
+              "completed_utc=$([DateTime]::UtcNow.ToString('o'))"
+            ) | Set-Content -Path "build/studio-hosted-e2e-result.txt" -Encoding utf8
+
+            Write-Host "Hosted Studio is installed and runnable, but this ephemeral runner has no authenticated Roblox Studio session."
+            Write-Host "This probe is non-certifying; the authenticated self-hosted Studio E2E gate remains required."
+            throw "AUTH_REQUIRED: Roblox Studio is not authenticated on the GitHub-hosted runner."
           }
 
           if (-not $process.HasExited -and (Get-Date) -ge $deadline) {
