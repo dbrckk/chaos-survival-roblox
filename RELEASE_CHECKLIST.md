@@ -108,6 +108,8 @@ Run at least 30 minutes continuously.
 - [ ] Meteor Shower + another disaster remains playable.
 - [ ] Device temperature and battery use remain reasonable for Roblox gameplay.
 - [ ] Memory remains stable enough for a long session.
+- [ ] ClientMemoryPulse does not show sustained memory or instance-count growth without a map/phase reason.
+- [ ] FrameMs / render CPU / render GPU snapshots remain consistent with the settled VFX tier.
 
 ## Data persistence gate
 
