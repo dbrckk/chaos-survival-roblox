@@ -24,6 +24,8 @@ Copy this file for each release-candidate certification run.
 - Result: PASS / FAIL
 - Artifact name:
 - `CHAOS_STUDIO_E2E_OK` present: yes / no
+- `CHAOS_E2E_ARENA` observed for Classic / Towers / Crossroads / Orbital: yes / no
+- RoundState arenaId matched world VariantId for all four: yes / no
 - Server/client runtime errors:
 - Notes:
 
