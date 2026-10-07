@@ -1,0 +1,217 @@
+name: Roblox Studio Hosted E2E Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "studio/HOSTED_E2E_TRIGGER"
+
+concurrency:
+  group: roblox-studio-hosted-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rojo 7.7.0
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\rojo.zip"
+          $dir = "$env:RUNNER_TEMP\rojo"
+          Invoke-WebRequest -Uri "https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-windows-x86_64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+          $exe = Get-ChildItem $dir -Filter "rojo.exe" -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "Rojo executable not found." }
+          $exe.Directory.FullName | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $exe.FullName --version
+
+      - name: Build local Roblox place
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          if (!(Test-Path build/ChaosSurvival.rbxlx)) {
+            throw "Rojo build did not create the place file."
+          }
+
+      - name: Install official Roblox Studio
+        shell: pwsh
+        run: |
+          $installer = "$env:RUNNER_TEMP\RobloxStudioInstaller.exe"
+          Invoke-WebRequest -Uri "https://setup.rbxcdn.com/RobloxStudioInstaller.exe" -OutFile $installer
+
+          $signature = Get-AuthenticodeSignature $installer
+          Write-Host "Installer signature: $($signature.Status) / $($signature.SignerCertificate.Subject)"
+          if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "Roblox") {
+            throw "Roblox Studio installer signature validation failed."
+          }
+
+          $installStartedAt = Get-Date
+          $process = Start-Process -FilePath $installer -PassThru
+          $deadline = (Get-Date).AddMinutes(5)
+
+          $studioPath = $null
+          while ((Get-Date) -lt $deadline) {
+            $candidate = Get-ChildItem "$env:LOCALAPPDATA\Roblox" -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+              Where-Object { $_.LastWriteTime -ge $installStartedAt.AddMinutes(-2) } |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 1
+
+            if ($candidate) {
+              $studioPath = $candidate.FullName
+              break
+            }
+
+            if ($process.HasExited -and $process.ExitCode -ne 0) {
+              throw "Roblox Studio installer exited with code $($process.ExitCode)."
+            }
+
+            Start-Sleep -Seconds 3
+          }
+
+          if (-not $studioPath) {
+            throw "Roblox Studio was not installed within five minutes."
+          }
+
+          $studioSignature = Get-AuthenticodeSignature $studioPath
+          Write-Host "Studio signature: $($studioSignature.Status) / $($studioSignature.SignerCertificate.Subject)"
+          if ($studioSignature.Status -ne "Valid" -or $studioSignature.SignerCertificate.Subject -notmatch "Roblox") {
+            throw "Installed Roblox Studio signature validation failed."
+          }
+
+          Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 2
+
+          "STUDIO_EXE=$studioPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Studio: $studioPath"
+
+      - name: Record hosted probe metadata
+        shell: pwsh
+        run: |
+          $studioInfo = Get-Item "$env:STUDIO_EXE"
+          @(
+            "certifying=false"
+            "commit=$env:GITHUB_SHA"
+            "run_id=$env:GITHUB_RUN_ID"
+            "run_attempt=$env:GITHUB_RUN_ATTEMPT"
+            "runner=$env:RUNNER_NAME"
+            "os=$env:RUNNER_OS"
+            "utc=$([DateTime]::UtcNow.ToString('o'))"
+            "studio_path=$env:STUDIO_EXE"
+            "studio_file_version=$($studioInfo.VersionInfo.FileVersion)"
+            "studio_product_version=$($studioInfo.VersionInfo.ProductVersion)"
+          ) | Set-Content -Path "build/studio-hosted-probe-metadata.txt" -Encoding utf8
+
+      - name: Run four-client local Studio probe
+        shell: pwsh
+        run: |
+          $place = (Resolve-Path "build/ChaosSurvival.rbxlx").Path
+          $script = (Resolve-Path "studio/ci-runner.luau").Path
+          $output = Join-Path $env:GITHUB_WORKSPACE "build/studio-hosted-e2e.log"
+          $stdout = Join-Path $env:GITHUB_WORKSPACE "build/studio-hosted-stdout.log"
+          $stderr = Join-Path $env:GITHUB_WORKSPACE "build/studio-hosted-stderr.log"
+
+          foreach ($path in @($output, $stdout, $stderr)) {
+            Remove-Item $path -Force -ErrorAction SilentlyContinue
+          }
+          $runStartedAt = Get-Date
+
+          $arguments = @(
+            "--task", "RunScript",
+            "--localPlaceFile", $place,
+            "--runScriptFile", $script,
+            "--outputFile", $output,
+            "--quitAfterExecution"
+          )
+
+          $process = Start-Process -FilePath "$env:STUDIO_EXE" -ArgumentList $arguments -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $deadline = (Get-Date).AddSeconds(180)
+
+          while ((Get-Date) -lt $deadline) {
+            if (Test-Path $output) {
+              $info = Get-Item $output -ErrorAction SilentlyContinue
+              if ($info -and $info.LastWriteTime -ge $runStartedAt) {
+                $contents = Get-Content $output -Raw -ErrorAction SilentlyContinue
+                if ($contents -match "CHAOS_STUDIO_E2E_OK" -or $contents -match "CHAOS_STUDIO_E2E_FAILED") {
+                  break
+                }
+              }
+            }
+
+            if ($process.HasExited) {
+              Start-Sleep -Seconds 2
+              if (Test-Path $output) { break }
+            }
+
+            Start-Sleep -Milliseconds 500
+          }
+
+          if (-not $process.HasExited -and (Get-Date) -ge $deadline) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
+          if (Test-Path $stdout) {
+            Write-Host "=== Studio stdout ==="
+            Get-Content $stdout
+          }
+          if (Test-Path $stderr) {
+            Write-Host "=== Studio stderr ==="
+            Get-Content $stderr
+          }
+
+          if (!(Test-Path $output) -or (Get-Item $output).LastWriteTime -lt $runStartedAt) {
+            Write-Host "=== Roblox logs ==="
+            $logRoot = "$env:LOCALAPPDATA\Roblox\logs"
+            if (Test-Path $logRoot) {
+              Get-ChildItem $logRoot -File -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 5 |
+                ForEach-Object {
+                  Write-Host "--- $($_.FullName) ---"
+                  Get-Content $_.FullName -Tail 180 -ErrorAction SilentlyContinue
+                }
+            }
+            throw "Hosted Studio produced no fresh E2E output."
+          }
+
+          Write-Host "=== Hosted Studio E2E output ==="
+          Get-Content $output
+
+          $contents = Get-Content $output -Raw
+          if ($contents -notmatch "CHAOS_STUDIO_E2E_OK") {
+            throw "Hosted Studio E2E probe did not report success."
+          }
+
+          @(
+            "status=PASS"
+            "certifying=false"
+            "commit=$env:GITHUB_SHA"
+            "run_id=$env:GITHUB_RUN_ID"
+            "runner=$env:RUNNER_NAME"
+            "completed_utc=$([DateTime]::UtcNow.ToString('o'))"
+          ) | Set-Content -Path "build/studio-hosted-e2e-result.txt" -Encoding utf8
+
+      - name: Upload hosted probe artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roblox-studio-hosted-probe
+          path: |
+            build/ChaosSurvival.rbxlx
+            build/studio-hosted-e2e.log
+            build/studio-hosted-stdout.log
+            build/studio-hosted-stderr.log
+            build/studio-hosted-probe-metadata.txt
+            build/studio-hosted-e2e-result.txt
+          if-no-files-found: warn
