@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        suite: [gameplay, matrix, core_a, core_b]
+        suite: [gameplay, matrix, core_a, core_b1, core_b2]
     env:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
@@ -82,7 +82,7 @@ jobs:
           backend = "cloud"
           default = false
 
-          [suites.core_b]
+          [suites.core_b1]
           include = [
             "tests/engine/attention-budget-rules.spec.luau",
             "tests/engine/lobby-presentation-rules.spec.luau",
@@ -94,6 +94,12 @@ jobs:
             "tests/engine/result-presentation.spec.luau",
             "tests/engine/round-event-presentation.spec.luau",
             "tests/engine/session-streak.spec.luau",
+          ]
+          backend = "cloud"
+          default = false
+
+          [suites.core_b2]
+          include = [
             "tests/engine/share-moment-rules.spec.luau",
             "tests/engine/social-experience-rules.spec.luau",
             "tests/engine/solo-rush.spec.luau",
@@ -166,7 +172,7 @@ jobs:
               config = tomllib.load(handle)
 
           assigned = []
-          for suite in ("core_a", "core_b", "gameplay", "matrix"):
+          for suite in ("core_a", "core_b1", "core_b2", "gameplay", "matrix"):
               assigned.extend(config["suites"][suite]["include"])
 
           actual = sorted(glob.glob("tests/engine/**/*.spec.luau", recursive=True))
