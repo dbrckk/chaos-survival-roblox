@@ -27,6 +27,12 @@ reportEvent.Parent = ReplicatedStorage
 
 local reports = {}
 local spectatorProbeReports = {}
+local arenaProbeReports = {
+    Classic = false,
+    Towers = false,
+    Crossroads = false,
+    Orbital = false,
+}
 local visualPhaseProbeReports = {
     ready = 0,
     round = 0,
@@ -53,9 +59,41 @@ local function visualPhasesReady()
     return true
 end
 
+local function arenaCoverageReady()
+    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        if arenaProbeReports[arenaId] ~= true then
+            return false
+        end
+    end
+    return true
+end
+
 reportEvent.OnServerEvent:Connect(function(player, report)
     if type(report) ~= "table" then
         fail("invalid report from " .. player.Name)
+        return
+    end
+
+    if report.kind == "arena_probe" then
+        local arenaId = tostring(report.arenaId or "")
+        local worldArenaId = tostring(report.worldArenaId or "")
+        if arenaProbeReports[arenaId] == nil then
+            fail(player.Name .. ": invalid arena probe " .. arenaId)
+            return
+        end
+        if report.ok ~= true or worldArenaId ~= arenaId then
+            fail(
+                player.Name
+                    .. ": arena probe mismatch state="
+                    .. arenaId
+                    .. " world="
+                    .. worldArenaId
+            )
+            return
+        end
+
+        arenaProbeReports[arenaId] = true
+        print("CHAOS_E2E_ARENA", player.Name, arenaId, "world=" .. worldArenaId)
         return
     end
 
@@ -312,7 +350,12 @@ task.spawn(function()
 
         local uxReady = uxPhaseProbeReports.ready >= 1
             and uxPhaseProbeReports.result >= 1
-        if reported >= expectedTotal and played and visualPhasesReady() and uxReady then
+        if reported >= expectedTotal
+            and played
+            and visualPhasesReady()
+            and uxReady
+            and arenaCoverageReady()
+        then
             break
         end
 
@@ -328,6 +371,12 @@ task.spawn(function()
     for _, phase in ipairs({"ready", "round", "result"}) do
         if visualPhaseProbeReports[phase] < 1 then
             fail("missing visual phase probe: " .. phase)
+        end
+    end
+
+    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        if arenaProbeReports[arenaId] ~= true then
+            fail("missing arena coverage probe: " .. arenaId)
         end
     end
 
@@ -387,7 +436,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, UI/input/vote/movement/round-state/visual-phases/spectator/join-leave verified",
+            "PASS: %d clients, 4 arenas + UI/input/vote/movement/round-state/visual-phases/spectator/join-leave verified",
             expectedTotal
         ))
     end
