@@ -238,6 +238,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [QA]   9.2i Studio E2E post-process : ROUND exige DoF near/far ≈0 et SunRays désactivés ; valeurs loggées par phase.
 [FAIT] 9.2j Ajouter Release Candidate Gate exact-SHA : vérifie Build/Open Cloud/Studio E2E verts et génère une preuve automatisée sans publier.
 [FAIT] 9.2k Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
+[QA]   9.2l Studio E2E entrée arène : READY transporte arenaId autoritatif, probe physique retry-safe et correspondance state/world obligatoire pour les 4 arènes.
 [QA]   9.2l Studio E2E quatre arènes : ordre E2E déterministe, probes state/world et PASS impossible sans Classic/Towers/Crossroads/Orbital.
 [QA]   9.2m Budget ROUND par arène : Studio E2E exige un probe visuel valide séparément sur Classic/Towers/Crossroads/Orbital.
 [QA]   9.2n Entrée réelle quatre arènes : READY probe exige personnage vivant dans l'empreinte Arena.Base sur Classic/Towers/Crossroads/Orbital.
