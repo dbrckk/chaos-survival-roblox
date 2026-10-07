@@ -1,2 +1,3 @@
 trigger hosted probe
 trigger hosted probe after process detection fix
+trigger hosted auth classification probe
