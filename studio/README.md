@@ -37,6 +37,18 @@ The self-hosted runner therefore must:
 2. already have Roblox Studio installed;
 3. already have an authenticated Studio session for the runner user.
 
+### Hosted diagnostic probe
+
+`.github/workflows/roblox-studio-hosted-probe.yml` is deliberately **non-certifying**. It installs the official signed Studio build on a temporary `windows-latest` runner and attempts the same local four-client harness.
+
+Its result manifest uses:
+
+- `status=PASS` only if the local Studio harness actually completes;
+- `status=AUTH_REQUIRED` when Studio starts but the ephemeral runner has no authenticated Roblox session;
+- `certifying=false` in every case.
+
+A hosted probe can diagnose installer/CLI compatibility, but it never satisfies the Release Candidate Gate. Do not store Roblox passwords or session cookies in GitHub to turn this probe into a certifying run.
+
 ## Always-on autonomous coverage
 
 The normal Open Cloud workflow does not need Studio login. It runs real Roblox-engine tests on every push, including:
