@@ -111,7 +111,7 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             return
         end
         if report.ok ~= true
-            or report.participant ~= true
+            or report.characterReady ~= true
             or report.insideFootprint ~= true
         then
             fail(
