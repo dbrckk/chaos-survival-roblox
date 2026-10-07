@@ -134,8 +134,11 @@ local function sendArenaEntryProbe(state)
 
         local base = arena and arena:FindFirstChild("Base")
         local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         local humanoidRoot = character and character:FindFirstChild("HumanoidRootPart")
-        local isParticipant = player:GetAttribute("RoundParticipant") == true
+        local characterReady = humanoid ~= nil
+            and humanoid.Health > 0
+            and humanoidRoot ~= nil
         local insideFootprint = false
 
         if base and base:IsA("BasePart")
@@ -146,20 +149,19 @@ local function sendArenaEntryProbe(state)
                 and math.abs(localPosition.Z) <= (base.Size.Z * 0.5 + 10)
         end
 
-        local ok = isParticipant
+        local ok = characterReady
             and base ~= nil
-            and humanoidRoot ~= nil
             and insideFootprint
 
         reportEvent:FireServer({
             kind = "arena_entry_probe",
             arenaId = arenaId,
             ok = ok,
-            participant = isParticipant,
+            characterReady = characterReady,
             insideFootprint = insideFootprint,
             error = ok and "" or string.format(
-                "participant=%s inside=%s",
-                tostring(isParticipant),
+                "characterReady=%s inside=%s",
+                tostring(characterReady),
                 tostring(insideFootprint)
             ),
         })
