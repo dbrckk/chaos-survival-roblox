@@ -50,7 +50,7 @@ Classify failures before changing production code:
 Run the four-client Chaos E2E harness from an authenticated Studio session.
 
 - [ ] Generated lobby appears correctly.
-- [ ] All 4 arena variants can be entered.
+- [ ] All 4 arena variants can be entered — Studio E2E must observe Classic, Towers, Crossroads and Orbital, with RoundState arenaId matching GeneratedMap.Arena.VariantId.
 - [ ] Critical HUD elements remain within viewport bounds.
 - [ ] Touch targets meet the E2E minimum size.
 - [ ] READY visual phase probe passes tier budget + FOV bounds.
