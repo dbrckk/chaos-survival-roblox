@@ -4,12 +4,14 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local isStudioE2E = false
 
 if RunService:IsStudio() then
     local okService, StudioTestService = pcall(game.GetService, game, "StudioTestService")
     if okService and StudioTestService then
         local okArgs, args = pcall(StudioTestService.GetTestArgs, StudioTestService)
         if okArgs and type(args) == "table" and args.suite == "ChaosE2E" then
+            isStudioE2E = true
             Config.IntermissionSeconds = 2
             Config.VoteSeconds = 2
             Config.ReadySeconds = 1
@@ -152,6 +154,7 @@ assert(#disasters >= 3, "At least 3 valid disasters are required")
 local roundNumber = 0
 local currentArenaVariant = "Classic"
 local recentArenaVariantIds = {currentArenaVariant}
+local studioE2EArenaIndex = 0
 local recentPrimaryDisasterIds = {}
 local currentVotes = {}
 local currentOptions = {}
@@ -1279,7 +1282,13 @@ while true do
     botVoteStarted = false
     AISurvivorService.clearVotes()
 
-    currentArenaVariant = ArenaVariants.chooseRecent(recentArenaVariantIds)
+    if isStudioE2E then
+        studioE2EArenaIndex += 1
+        local order = ArenaVariants.Order
+        currentArenaVariant = order[((studioE2EArenaIndex - 1) % #order) + 1]
+    else
+        currentArenaVariant = ArenaVariants.chooseRecent(recentArenaVariantIds)
+    end
     local arenaDefinition = ArenaVariants.get(currentArenaVariant)
     local intermissionSettings = SoloRules.resolve(Config, readyPlayerCount())
 
