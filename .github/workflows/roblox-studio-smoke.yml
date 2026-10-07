@@ -67,6 +67,12 @@ jobs:
             throw "Roblox Studio must already be installed on the authenticated self-hosted runner."
           }
 
+          $signature = Get-AuthenticodeSignature $studioPath
+          Write-Host "Studio signature: $($signature.Status) / $($signature.SignerCertificate.Subject)"
+          if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "Roblox") {
+            throw "Authenticated Studio runner must use an official signed Roblox Studio build."
+          }
+
           Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
           Start-Sleep -Seconds 2
