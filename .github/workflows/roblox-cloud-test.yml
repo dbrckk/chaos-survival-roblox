@@ -15,8 +15,14 @@ permissions:
 
 jobs:
   engine:
+    name: engine (${{ matrix.suite }})
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        suite: [core_a, core_b, gameplay, matrix]
     env:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
@@ -202,7 +208,4 @@ jobs:
             return "$status"
           }
 
-          run_suite core_a
-          run_suite core_b
-          run_suite gameplay
-          run_suite matrix
+          run_suite "${{ matrix.suite }}"
