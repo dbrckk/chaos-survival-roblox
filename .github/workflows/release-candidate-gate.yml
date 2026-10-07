@@ -179,11 +179,93 @@ jobs:
                   print(" -", failure)
               raise SystemExit(1)
 
-          evidence = Path("release-evidence.md")
           build = required["Build Validation"]
           cloud = required["Roblox Open Cloud Engine Tests"]
           studio = required["Roblox Studio E2E Playtest (Authenticated Runner)"]
 
+          artifacts_request = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/actions/runs/{studio['id']}/artifacts?per_page=100",
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+          with urllib.request.urlopen(artifacts_request, timeout=30) as response:
+              artifacts_payload = json.load(response)
+
+          studio_artifact = None
+          for artifact in artifacts_payload.get("artifacts", []):
+              if (
+                  artifact.get("name") == "roblox-studio-e2e"
+                  and not artifact.get("expired", False)
+              ):
+                  studio_artifact = artifact
+                  break
+
+          if studio_artifact is None:
+              raise SystemExit(
+                  "Authenticated Studio E2E run is green but its roblox-studio-e2e artifact is missing or expired."
+              )
+
+          import io
+          import zipfile
+
+          archive_request = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/actions/artifacts/{studio_artifact['id']}/zip",
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+          with urllib.request.urlopen(archive_request, timeout=60) as response:
+              archive_bytes = response.read()
+
+          with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
+              candidates = [
+                  name for name in archive.namelist()
+                  if name.endswith("studio-e2e-result.txt")
+              ]
+              if len(candidates) != 1:
+                  raise SystemExit(
+                      "Expected exactly one studio-e2e-result.txt in Studio E2E artifact; found "
+                      + str(len(candidates))
+                  )
+              manifest_text = archive.read(candidates[0]).decode("utf-8-sig")
+
+          manifest = {}
+          for raw_line in manifest_text.splitlines():
+              if "=" not in raw_line:
+                  continue
+              key, value = raw_line.split("=", 1)
+              manifest[key.strip()] = value.strip()
+
+          manifest_failures = []
+          if manifest.get("status") != "PASS":
+              manifest_failures.append("status is not PASS")
+          if manifest.get("commit") != sha:
+              manifest_failures.append(
+                  f"commit mismatch: {manifest.get('commit')} != {sha}"
+              )
+          if manifest.get("run_id") != str(studio["id"]):
+              manifest_failures.append(
+                  f"run_id mismatch: {manifest.get('run_id')} != {studio['id']}"
+              )
+          if not manifest.get("run_attempt"):
+              manifest_failures.append("run_attempt missing")
+          if not manifest.get("completed_utc"):
+              manifest_failures.append("completed_utc missing")
+          if not manifest.get("studio_file_version"):
+              manifest_failures.append("studio_file_version missing")
+
+          if manifest_failures:
+              raise SystemExit(
+                  "Studio E2E PASS manifest verification failed: "
+                  + "; ".join(manifest_failures)
+              )
+
+          evidence = Path("release-evidence.md")
           evidence.write_text(
               "\n".join([
                   "# Chaos Survival — Automated Release Evidence",
@@ -193,6 +275,9 @@ jobs:
                   f"- Build Validation: PASS (run {build['id']})",
                   f"- Roblox Open Cloud Engine Tests: PASS (run {cloud['id']})",
                   f"- Roblox Studio E2E: PASS (run {studio['id']})",
+                  f"- Studio E2E manifest: PASS / commit {manifest['commit']} / run {manifest['run_id']} / attempt {manifest['run_attempt']}",
+                  f"- Studio version: {manifest['studio_file_version']}",
+                  f"- Studio completed UTC: {manifest['completed_utc']}",
                   f"- Engine spec files: {len(spec_paths)}",
                   "",
                   "## Automated status",
