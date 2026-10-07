@@ -37,6 +37,7 @@ local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
 local arenaProbed = {}
 local arenaEntryProbed = {}
+local arenaEntryPending = {}
 
 local function sendVisualPhaseProbe(phase)
     if phase ~= "ready" and phase ~= "round" and phase ~= "result" then
@@ -120,9 +121,14 @@ local function sendArenaEntryProbe(state)
     end
 
     local expectedArenaId = tostring(state.arenaId or "")
-    if expectedArenaId == "" or arenaEntryProbed[expectedArenaId] then
+    if expectedArenaId == ""
+        or arenaEntryProbed[expectedArenaId]
+        or arenaEntryPending[expectedArenaId]
+    then
         return
     end
+
+    arenaEntryPending[expectedArenaId] = true
 
     task.spawn(function()
         local deadline = os.clock() + 1.25
@@ -179,6 +185,8 @@ local function sendArenaEntryProbe(state)
 
             task.wait(0.10)
         end
+
+        arenaEntryPending[expectedArenaId] = nil
 
         if arenaEntryProbed[expectedArenaId] or not finalReport then
             return
