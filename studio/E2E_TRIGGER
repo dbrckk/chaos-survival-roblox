@@ -3,7 +3,7 @@ Chaos Survival authenticated Studio E2E trigger.
 Purpose:
 - A commit touching only this file intentionally requests the authenticated four-client Studio E2E workflow.
 - Ordinary pushes do not trigger the self-hosted Studio runner.
-- Release certification still requires the Studio run to succeed on this exact main-branch SHA.
+- Release certification still requires Build Validation, Open Cloud and Studio E2E to succeed on this exact main-branch SHA.
 
 Request:
 - four-arena physical entry
@@ -15,7 +15,10 @@ Request:
 - progression/meta notification attention-budget checks
 
 Candidate reason:
-- Build Validation green after deferred meta FIFO hardening
-- progression/achievement/quest notifications no longer overwrite one another
-- one calm intermission consumes at most one meta toast
+- 65 engine specs are sharded exactly once
+- Open Cloud core_b was split into core_b1/core_b2 to reduce PROCESSING timeouts
+- transient Open Cloud PROCESSING stalls have bounded retries only; assertion failures never retry
+- visual/memory/performance telemetry and long-session lifecycle guards are in place
+- progression/achievement/quest notifications use bounded deferred FIFO queues
+- lighting, Clouds, FOV, Motor6D and post-process ownership are CI-guarded
 - request fresh exact-SHA authenticated Studio certification
