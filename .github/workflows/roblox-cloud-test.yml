@@ -84,6 +84,7 @@ jobs:
 
           [suites.core_b]
           include = [
+            "tests/engine/attention-budget-rules.spec.luau",
             "tests/engine/lobby-presentation-rules.spec.luau",
             "tests/engine/mastery.spec.luau",
             "tests/engine/monetization-rules.spec.luau",
