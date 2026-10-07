@@ -54,7 +54,7 @@ Run the four-client Chaos E2E harness from an authenticated Studio session.
 - [ ] Critical HUD elements remain within viewport bounds.
 - [ ] Touch targets meet the E2E minimum size.
 - [ ] READY visual phase probe passes tier budget + FOV bounds.
-- [ ] ROUND visual phase probe passes tier budget + FOV bounds.
+- [ ] ROUND visual phase probe passes tier budget + FOV bounds on Classic, Towers, Crossroads and Orbital.
 - [ ] RESULT visual phase probe passes tier budget + FOV bounds.
 - [ ] `CHAOS_E2E_VISUAL_PHASE` logs include tier, parts, lights, effects, FOV and audited-folder count.
 - [ ] Quest, Cosmetics and Achievements panels remain mutually exclusive.
