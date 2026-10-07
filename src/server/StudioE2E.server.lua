@@ -33,6 +33,12 @@ local arenaProbeReports = {
     Crossroads = false,
     Orbital = false,
 }
+local arenaEntryProbeReports = {
+    Classic = false,
+    Towers = false,
+    Crossroads = false,
+    Orbital = false,
+}
 local visualPhaseProbeReports = {
     ready = 0,
     round = 0,
@@ -74,6 +80,15 @@ local function arenaCoverageReady()
     return true
 end
 
+local function arenaEntryCoverageReady()
+    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        if arenaEntryProbeReports[arenaId] ~= true then
+            return false
+        end
+    end
+    return true
+end
+
 local function roundArenaVisualCoverageReady()
     for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
         if roundArenaVisualReports[arenaId] ~= true then
@@ -86,6 +101,31 @@ end
 reportEvent.OnServerEvent:Connect(function(player, report)
     if type(report) ~= "table" then
         fail("invalid report from " .. player.Name)
+        return
+    end
+
+    if report.kind == "arena_entry_probe" then
+        local arenaId = tostring(report.arenaId or "")
+        if arenaEntryProbeReports[arenaId] == nil then
+            fail(player.Name .. ": invalid arena entry probe " .. arenaId)
+            return
+        end
+        if report.ok ~= true
+            or report.participant ~= true
+            or report.insideFootprint ~= true
+        then
+            fail(
+                player.Name
+                    .. ": arena entry probe failed for "
+                    .. arenaId
+                    .. ": "
+                    .. tostring(report.error or "unknown")
+            )
+            return
+        end
+
+        arenaEntryProbeReports[arenaId] = true
+        print("CHAOS_E2E_ARENA_ENTRY", player.Name, arenaId)
         return
     end
 
@@ -380,6 +420,7 @@ task.spawn(function()
             and visualPhasesReady()
             and uxReady
             and arenaCoverageReady()
+            and arenaEntryCoverageReady()
             and roundArenaVisualCoverageReady()
         then
             break
@@ -403,6 +444,12 @@ task.spawn(function()
     for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
         if arenaProbeReports[arenaId] ~= true then
             fail("missing arena coverage probe: " .. arenaId)
+        end
+    end
+
+    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        if arenaEntryProbeReports[arenaId] ~= true then
+            fail("missing arena entry probe: " .. arenaId)
         end
     end
 
@@ -468,7 +515,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, 4 arenas + per-arena ROUND visual budgets + UI/input/vote/movement/round-state/visual-phases/spectator/join-leave verified",
+            "PASS: %d clients, 4 arena entries + per-arena ROUND visual budgets + UI/input/vote/movement/round-state/visual-phases/spectator/join-leave verified",
             expectedTotal
         ))
     end
