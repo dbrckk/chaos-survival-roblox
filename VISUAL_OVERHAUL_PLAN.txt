@@ -240,6 +240,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [FAIT] 9.2k Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
 [QA]   9.2l Studio E2E quatre arènes : ordre E2E déterministe, probes state/world et PASS impossible sans Classic/Towers/Crossroads/Orbital.
 [QA]   9.2m Budget ROUND par arène : Studio E2E exige un probe visuel valide séparément sur Classic/Towers/Crossroads/Orbital.
+[QA]   9.2n Entrée réelle quatre arènes : READY probe exige personnage vivant dans l'empreinte Arena.Base sur Classic/Towers/Crossroads/Orbital.
 [FAIT] 9.2l Durcir le Studio E2E self-hosted : supprimer les artefacts obsolètes avant run, exiger une sortie fraîche et archiver un manifeste PASS exact-SHA.
 [EN COURS] 9.3 Corriger les incohérences restantes révélées par CI/E2E puis par captures/appareil.
 [TODO] 9.4 Studio E2E authentifié — le Release Candidate Gate exige désormais un run Studio E2E PASS sur le même SHA.
