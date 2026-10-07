@@ -238,7 +238,7 @@ PHASE 9 — CERTIFICATION VISUELLE FINALE
 [FAIT] 9.2e Ajouter Release Candidate Gate exact-SHA : vérifie Build/Open Cloud verts et génère une preuve automatisée sans publier.
 [FAIT] 9.2f Verrouiller la publication Roblox : refus automatique des SHAs non certifiés + metadata de publication archivée.
 [EN COURS] 9.3 Corriger les incohérences restantes révélées par CI/E2E puis par captures/appareil.
-[TODO] 9.4 Studio E2E authentifié.
+[TODO] 9.4 Studio E2E authentifié — le Release Candidate Gate exige désormais un run Studio E2E PASS sur le même SHA.
 [TODO] 9.5 Android final.
 [TODO] 9.6 Desktop final.
 [TODO] 9.7 Créer release candidate 1.0 et geler le visuel.

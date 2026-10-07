@@ -7,10 +7,6 @@ on:
         description: 'Type CERTIFY to verify the selected main commit'
         required: true
         default: ''
-      studio_e2e:
-        description: 'Type PASS after authenticated four-client Studio E2E succeeds'
-        required: true
-        default: ''
       android:
         description: 'Type PASS after physical Android UX/performance soak succeeds'
         required: true
@@ -58,10 +54,6 @@ jobs:
             exit 1
           }
 
-          test "${{ inputs.studio_e2e }}" = "PASS" || {
-            echo "Studio E2E attestation must be PASS."
-            exit 1
-          }
           test "${{ inputs.android }}" = "PASS" || {
             echo "Android attestation must be PASS."
             exit 1
@@ -132,10 +124,12 @@ jobs:
           required = {
               "Build Validation": None,
               "Roblox Open Cloud Engine Tests": None,
+              "Roblox Studio E2E Playtest (Authenticated Runner)": None,
           }
           latest_seen = {
               "Build Validation": None,
               "Roblox Open Cloud Engine Tests": None,
+              "Roblox Studio E2E Playtest (Authenticated Runner)": None,
           }
 
           for run in payload.get("workflow_runs", []):
@@ -147,8 +141,10 @@ jobs:
               trusted = run.get("head_branch") == "main"
               if name == "Build Validation":
                   trusted = trusted and run.get("event") == "push"
-              else:
+              elif name == "Roblox Open Cloud Engine Tests":
                   trusted = trusted and run.get("event") in {"push", "workflow_dispatch"}
+              else:
+                  trusted = trusted and run.get("event") == "workflow_dispatch"
 
               if (
                   required[name] is None
@@ -186,6 +182,7 @@ jobs:
           evidence = Path("release-evidence.md")
           build = required["Build Validation"]
           cloud = required["Roblox Open Cloud Engine Tests"]
+          studio = required["Roblox Studio E2E Playtest (Authenticated Runner)"]
 
           evidence.write_text(
               "\n".join([
@@ -195,6 +192,7 @@ jobs:
                   f"- Git ref: `{os.environ.get('GITHUB_REF_NAME', '')}`",
                   f"- Build Validation: PASS (run {build['id']})",
                   f"- Roblox Open Cloud Engine Tests: PASS (run {cloud['id']})",
+                  f"- Roblox Studio E2E: PASS (run {studio['id']})",
                   f"- Engine spec files: {len(spec_paths)}",
                   "",
                   "## Automated status",
@@ -202,10 +200,10 @@ jobs:
                   "- PASS — exact SHA has green Build Validation.",
                   "- PASS — exact SHA has green real-engine Open Cloud tests.",
                   "- PASS — Open Cloud run implies shard coverage verification passed.",
+                  "- PASS — authenticated four-client Roblox Studio E2E succeeded on the exact SHA.",
                   "",
                   "## Manual gate attestations",
                   "",
-                  "- PASS — authenticated four-client Roblox Studio E2E.",
                   "- PASS — physical Android UX/performance soak.",
                   "- PASS — physical desktop UX/performance pass.",
                   "- PASS — persistence/rejoin validation with API Services.",

@@ -24,7 +24,7 @@ Latest historical full automated certification: commit `70681aabc40c493467ffbc13
 
 > Every candidate SHA must re-run both automated workflows. A later code/doc commit invalidates the automated certification until the new exact SHA is green.
 
-Use the manual **Release Candidate Gate** workflow only after both required workflows are green on the candidate SHA **and all manual gates have actually passed**. The workflow requires `CERTIFY` plus explicit `PASS` attestations for Studio E2E, Android, desktop, persistence, gameplay/fairness, accessibility, public alpha and final store/page assets. It verifies the exact SHA, checks release metadata consistency, and uploads a `release-evidence.md` artifact. This gate never publishes the Roblox place.
+Use the manual **Release Candidate Gate** workflow only after Build Validation, Open Cloud **and the authenticated Studio E2E workflow** are green on the exact candidate SHA, and all remaining manual gates have actually passed. The workflow verifies the exact-SHA Studio run automatically and requires `CERTIFY` plus explicit `PASS` attestations for Android, desktop, persistence, gameplay/fairness, accessibility, public alpha and final store/page assets. It checks release metadata consistency and uploads a `release-evidence.md` artifact. This gate never publishes the Roblox place.
 
 ### CI infrastructure failures
 
@@ -181,7 +181,8 @@ Only after retention/device UX are acceptable:
 - [x] README source counts are CI-enforced for disasters, arenas, cosmetics and engine specs.
 - [ ] Roadmap reflects remaining launch blockers.
 - [x] No placeholder production IDs or temporary debug code remain.
-- [ ] Run Release Candidate Gate on the exact candidate SHA and archive its evidence artifact.
+- [ ] Run authenticated Studio E2E on the exact candidate SHA.
+- [ ] Run Release Candidate Gate on that same SHA and archive its evidence artifact.
 - [ ] Create release candidate tag.
 - [ ] Write changelog.
 - [x] Keep a documented rollback path via `ROLLBACK_RUNBOOK.md`; select and record the last known-good certified SHA before release.
