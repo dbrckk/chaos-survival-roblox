@@ -29,6 +29,8 @@ Copy this file for each release-candidate certification run.
 - RoundState arenaId matched world VariantId for all four: yes / no
 - Per-arena ROUND visual budget probes: Classic / Towers / Crossroads / Orbital PASS / FAIL
 - Server/client runtime errors:
+- Physical arena entry probes (Classic/Towers/Crossroads/Orbital): PASS / FAIL
+- READY arenaId matches observed world arena for all four: yes / no
 - Notes:
 
 ## Core flow
