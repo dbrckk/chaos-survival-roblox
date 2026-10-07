@@ -130,11 +130,22 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         end
 
         arenaEntryProbeReports[arenaId] = true
+        local offsetX = tonumber(report.offsetX) or 0
+        local offsetZ = tonumber(report.offsetZ) or 0
+        local limitX = tonumber(report.limitX) or 0
+        local limitZ = tonumber(report.limitZ) or 0
         print(
             "CHAOS_E2E_ARENA_ENTRY",
             player.Name,
             arenaId,
-            "world=" .. worldArenaId
+            "world=" .. worldArenaId,
+            string.format(
+                "offset=(%.1f,%.1f) limit=(%.1f,%.1f)",
+                offsetX,
+                offsetZ,
+                limitX,
+                limitZ
+            )
         )
         return
     end
