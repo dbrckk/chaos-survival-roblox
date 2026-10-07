@@ -9,6 +9,7 @@ local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local AttentionBudgetRules = require(ReplicatedStorage.Shared.AttentionBudgetRules)
 
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
@@ -2628,11 +2629,14 @@ stateEvent.OnClientEvent:Connect(function(state)
         metaNotificationShownThisIntermission = false
     end
 
-    local firstLobby = (tonumber(player:GetAttribute("Games")) or 0) <= 0
+    local gamesPlayed = tonumber(player:GetAttribute("Games")) or 0
+    local firstLobby = gamesPlayed <= 0
     local activeGameplay = state.phase == "round" or state.phase == "ready"
-    metaControlsSuppressed = activeGameplay
-        or state.phase == "result"
-        or firstLobby
+    metaControlsSuppressed = AttentionBudgetRules.suppressMetaControls(
+        state.phase,
+        state.voteOptions,
+        gamesPlayed
+    )
     if metaDock then
         metaDock.Visible = not metaControlsSuppressed
     end
