@@ -35,6 +35,7 @@ local auditedFolders = 0
 local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
+local arenaProbed = {}
 
 local function sendVisualPhaseProbe(phase)
     if phase ~= "ready" and phase ~= "round" and phase ~= "result" then
@@ -78,12 +79,40 @@ local function sendVisualPhaseProbe(phase)
     end)
 end
 
+local function sendArenaProbe(state)
+    if type(state) ~= "table" or tostring(state.phase or "") ~= "result" then
+        return
+    end
+
+    local arenaId = tostring(state.arenaId or "")
+    if arenaId == "" or arenaProbed[arenaId] then
+        return
+    end
+    arenaProbed[arenaId] = true
+
+    local root = workspace:FindFirstChild("GeneratedMap")
+    local arena = root and root:FindFirstChild("Arena")
+    local worldArenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
+    local matchesWorld = worldArenaId == arenaId
+
+    reportEvent:FireServer({
+        kind = "arena_probe",
+        arenaId = arenaId,
+        worldArenaId = worldArenaId,
+        ok = matchesWorld,
+        error = matchesWorld
+            and ""
+            or ("RoundState arena " .. arenaId .. " != world arena " .. worldArenaId),
+    })
+end
+
 if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
     roundStateEvent.OnClientEvent:Connect(function(state)
         if type(state) == "table" then
             roundStateReceived = true
             lastRoundPhase = state.phase
             sendVisualPhaseProbe(tostring(state.phase or ""))
+            sendArenaProbe(state)
         end
     end)
 else
