@@ -113,20 +113,23 @@ describe("Disaster impact", function()
 
         local healthWhenCauseRecorded = nil
         local reportedKind = nil
+        local reportedDamage = nil
 
         local hits = DisasterImpact.applyRadialDamage({
             HazardContestants = {subject},
             IsContestantActive = function()
                 return true
             end,
-            OnHazardDamage = function(_, kind)
+            OnHazardDamage = function(_, kind, damage)
                 reportedKind = kind
+                reportedDamage = damage
                 healthWhenCauseRecorded = humanoid.Health
             end,
         }, Vector3.new(0, 3, 0), 8, 50, "Meteor")
 
         expect(hits).toBe(1)
         expect(reportedKind).toBe("Meteor")
+        expect(reportedDamage).toBe(20)
         expect(healthWhenCauseRecorded).toBe(20)
         expect(humanoid.Health).toBe(0)
 
