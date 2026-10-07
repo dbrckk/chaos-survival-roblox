@@ -37,6 +37,12 @@ The self-hosted runner therefore must:
 2. already have Roblox Studio installed;
 3. already have an authenticated Studio session for the runner user.
 
+Before bringing that runner online for a release candidate, run:
+
+`powershell -ExecutionPolicy Bypass -File .\\studio\\self-hosted-runner-preflight.ps1`
+
+The preflight checks the Studio install, verifies the Roblox Authenticode signature, launches Studio briefly under the runner's Windows account, and reads the resulting Studio log for the final authentication state. Exit code `2` means the Windows user must open Studio normally, sign in interactively, close Studio, and rerun the preflight. It never asks for or stores a Roblox password/session cookie.
+
 ### Hosted diagnostic probe
 
 `.github/workflows/roblox-studio-hosted-probe.yml` is deliberately **non-certifying**. It installs the official signed Studio build on a temporary `windows-latest` runner and attempts the same local four-client harness.
