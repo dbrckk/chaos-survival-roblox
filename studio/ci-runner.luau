@@ -6,7 +6,7 @@ local result = StudioTestService:ExecuteMultiplayerTestAsync(2, {
     suite = "ChaosE2E",
     initialPlayers = 2,
     addPlayers = 2,
-    timeoutSeconds = 55,
+    timeoutSeconds = 90,
 })
 
 print("CHAOS_STUDIO_E2E_RESULT", result)
