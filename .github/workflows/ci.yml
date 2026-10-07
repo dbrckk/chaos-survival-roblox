@@ -528,6 +528,37 @@ jobs:
           )
           PY
 
+      - name: Validate visual plan milestone numbering
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("VISUAL_OVERHAUL_PLAN.txt")
+          labels = []
+          for line_number, line in enumerate(path.read_text().splitlines(), start=1):
+              match = re.match(r"^\[(?:TODO|EN COURS|FAIT|QA)\]\s+(\S+)", line)
+              if match:
+                  labels.append((match.group(1), line_number))
+
+          seen = {}
+          duplicates = []
+          for label, line_number in labels:
+              if label in seen:
+                  duplicates.append((label, seen[label], line_number))
+              else:
+                  seen[label] = line_number
+
+          if duplicates:
+              print("Duplicate visual plan milestone labels:")
+              for label, first, second in duplicates:
+                  print(f" - {label}: lines {first} and {second}")
+              raise SystemExit(1)
+
+          print(f"Visual plan milestone numbering verified: {len(labels)} unique labels.")
+          PY
+
       - name: Enforce single client cloud owner
         shell: bash
         run: |
