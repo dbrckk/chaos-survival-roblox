@@ -112,6 +112,7 @@ PHASE 5 — UI / UX PREMIUM
 [QA]   5.8 Adapter automatiquement l'UI aux formats Android étroits / larges.
 [EN COURS] 5.9 QA tactile complète — cibles meta/sociales ≥44 px sur tactile + contrôles Studio E2E ; validation appareil réel restante.
 [QA]   5.10 Vérifier Invite/Share/Réactions : CTA et réactions ≥44 px même sur tinyHeight.
+[QA]   5.11 Préserver toutes les notifications meta différées via FIFO bornée ; une seule notification consomme chaque intermission calme.
 
 PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
