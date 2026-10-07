@@ -1551,6 +1551,7 @@ while true do
             fusionName = fusionName,
             soloMode = readyCount == 1,
             arenaName = roundSettings.ArenaName,
+            arenaId = currentArenaVariant,
             disasterIds = readyDisasterIds,
             survivorsAlive = readyCount + AISurvivorService.visibleCount(),
             contestantCount = readyCount + AISurvivorService.visibleCount(),
