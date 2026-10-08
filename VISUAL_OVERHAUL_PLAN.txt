@@ -153,6 +153,7 @@ PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 [QA]   6.22 Transformer le rookie guide en beacon monde premium : anneau, verre, cap High et carte holographique lisible.
 [QA]   6.23 Harmoniser le premier contact : splash Chaos orbit premium + cristaux orbitaux verre/noyau lumineux dans le lobby.
 [QA]   6.24 Personnaliser le lobby profile hologram : portrait Roblox, cadre holographique et progression XP animée avec ReduceMotion.
+[QA]   6.25 Rendre le round recap lobby instantanément lisible : sigil hazard + rail survivants/participants, sans texte supplémentaire.
 
 PHASE 6B — GAMEPLAY / FUN
 --------------------------
