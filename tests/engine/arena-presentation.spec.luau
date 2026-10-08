@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaPresentation = require("../../src/shared/ArenaPresentation")
+local VisualTheme = require("../../src/shared/VisualTheme")
 local MapVisualReadiness = require("../../src/shared/MapVisualReadiness")
 local ArenaSignatureKit = require("../../src/client/ArenaSignatureKit")
 
@@ -77,7 +78,7 @@ describe("Kinetic arena signatures", function()
             local variant = entry[1]
             local signature = entry[2]
             for _, tier in ipairs({"Low", "Medium", "High"}) do
-                local built = ArenaSignatureKit.build(root, base, variant, tier)
+                local built = ArenaSignatureKit.build(root, base, variant, tier, VisualTheme)
                 expect(built.folder:FindFirstChild(signature) ~= nil).toBe(true)
                 expect(#built.parts <= built.profile.MaxParts).toBe(true)
                 expect(#built.animated >= 1).toBe(true)
@@ -99,7 +100,7 @@ describe("Kinetic arena signatures", function()
         local base = Instance.new("Part")
         base.Size = Vector3.new(100, 2, 100)
         for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
-            local built = ArenaSignatureKit.build(root, base, variant, "Medium")
+            local built = ArenaSignatureKit.build(root, base, variant, "Medium", VisualTheme)
             local animated = built.animated[1].part
             ArenaSignatureKit.update(built, 1, true)
             local frozenCF = animated.CFrame

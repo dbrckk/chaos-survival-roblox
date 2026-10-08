@@ -1,7 +1,9 @@
 -- Procedural 3D prop kit for Chaos Showtime.
 -- Works with standard Roblox primitives: no uploaded mesh IDs, no collisions and
 -- no independent animation loop. The owning Showtime script drives all motion.
-local UITheme = require(game:GetService("ReplicatedStorage").Shared.UITheme)
+-- Shared theme resolves on the first build in the actual client;
+-- cloud engine tests can inject the same palette explicitly.
+local UITheme = nil
 
 local ShowtimeProps = {}
 
@@ -202,7 +204,9 @@ end
 
 -- Returns references only to the truly animated pieces. Everything else is
 -- static and inexpensive in the client, built once per graphics-tier change.
-function ShowtimeProps.build(parent, baseCF, tier)
+function ShowtimeProps.build(parent, baseCF, tier, themeOverride)
+    UITheme = themeOverride or UITheme
+        or require(game:GetService("ReplicatedStorage").Shared.UITheme)
     local holder = Instance.new("Folder")
     holder.Name = "Showtime3DAssets"
     holder.Parent = parent

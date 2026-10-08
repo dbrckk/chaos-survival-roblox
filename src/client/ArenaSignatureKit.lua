@@ -1,7 +1,9 @@
 -- Four arena-specific kinetic hero props, built from Roblox primitives.
 -- Cosmetic only: every part is anchored, non-colliding and local to this client.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+-- Load the theme only during construction; isolated Open Cloud unit tests
+-- inject the identical shared palette to avoid missing replicated scripts.
+local VisualTheme = nil
 
 local ArenaSignatureKit = {}
 
@@ -188,7 +190,9 @@ local function orbital(bundle, cf, theme, profile)
     end
 end
 
-function ArenaSignatureKit.build(parent, arenaBase, variant, tierName)
+function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOverride)
+    VisualTheme = themeOverride or VisualTheme
+        or require(ReplicatedStorage.Shared.VisualTheme)
     assert(arenaBase and arenaBase:IsA("BasePart"), "Arena signature needs an arena base")
     local profile = ArenaSignatureKit.profile(tierName)
     local theme = VisualTheme.arena(variant)

@@ -2,6 +2,7 @@
 local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Showtime = require("../../src/shared/LobbyShowtimeRules")
+local UITheme = require("../../src/shared/UITheme")
 local ShowtimeProps = require("../../src/client/ShowtimeProps")
 
 describe("Lobby Showtime", function()
@@ -80,8 +81,8 @@ describe("Lobby Showtime", function()
 
     it("builds real non-colliding stage props and restores them after combat", function()
         local container = Instance.new("Folder")
-        local low = ShowtimeProps.build(container, CFrame.new(0, 5, 0), "Low")
-        local high = ShowtimeProps.build(container, CFrame.new(0, 5, 0), "High")
+        local low = ShowtimeProps.build(container, CFrame.new(0, 5, 0), "Low", UITheme)
+        local high = ShowtimeProps.build(container, CFrame.new(0, 5, 0), "High", UITheme)
         expect(low.folder:FindFirstChild("ShowtimeDJBooth") ~= nil).toBe(true)
         expect(low.folder:FindFirstChild("ShowtimeSpeakerHousing1") ~= nil).toBe(true)
         expect(high.folder:FindFirstChild("ShowtimeTrussAccent1") ~= nil).toBe(true)
