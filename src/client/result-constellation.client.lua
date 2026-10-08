@@ -231,6 +231,109 @@ local function addSurvivorPedestal(item, accentColor, secondaryColor, tier, redu
     end
 end
 
+local function addResultArchitecture(
+    center,
+    radius,
+    accentColor,
+    secondaryColor,
+    tier,
+    reducedMotion,
+    survivorCount
+)
+    local profile = ResultPresentation.architectureProfile(tier.Name, survivorCount)
+    if profile.Pylons <= 0 then
+        return
+    end
+
+    local structureRadius = radius * profile.RadiusScale
+    for index = 1, profile.Pylons do
+        local angle = ((index - 1) / profile.Pylons) * math.pi * 2
+        local outward = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        local basePosition = center + outward * structureRadius
+        local bodyCenter = basePosition + Vector3.new(0, profile.Height * 0.5, 0)
+        local target = center + Vector3.new(0, profile.Height * 0.44, 0)
+        local bodyCFrame = CFrame.lookAt(bodyCenter, target)
+        local pylonAccent = index % 2 == 0 and secondaryColor or accentColor
+
+        local body = makePart(
+            "ResultVictoryPylonBody" .. tostring(index),
+            Vector3.new(0.82, profile.Height, 1.18),
+            bodyCFrame,
+            VisualTheme.World.Metal,
+            Enum.Material.Metal,
+            reducedMotion and 0.16 or 1
+        )
+
+        local glass = makePart(
+            "ResultVictoryPylonGlass" .. tostring(index),
+            Vector3.new(0.54, profile.Height * 0.72, 0.16),
+            bodyCFrame * CFrame.new(0, 0.02, -0.64),
+            VisualTheme.World.MetalLight:Lerp(pylonAccent, 0.18),
+            Enum.Material.Glass,
+            reducedMotion and 0.48 or 1
+        )
+
+        local blade = makePart(
+            "ResultVictoryPylonAccent" .. tostring(index),
+            Vector3.new(0.13, profile.Height * 0.54, 0.11),
+            bodyCFrame * CFrame.new(0, 0.02, -0.75),
+            pylonAccent,
+            Enum.Material.Neon,
+            reducedMotion and 0.42 or 1
+        )
+
+        local cap = makePart(
+            "ResultVictoryPylonCap" .. tostring(index),
+            Vector3.new(1.12, 0.36, 1.36),
+            bodyCFrame * CFrame.new(0, profile.Height * 0.5 + 0.18, 0),
+            pylonAccent:Lerp(Color3.new(1, 1, 1), 0.10),
+            Enum.Material.Glass,
+            reducedMotion and 0.46 or 1
+        )
+
+        if not reducedMotion then
+            local entryOffset = CFrame.new(0, -0.85, 0)
+            local bodyTarget = body.CFrame
+            local glassTarget = glass.CFrame
+            local bladeTarget = blade.CFrame
+            local capTarget = cap.CFrame
+
+            body.CFrame = bodyTarget * entryOffset
+            glass.CFrame = glassTarget * entryOffset
+            blade.CFrame = bladeTarget * entryOffset
+            cap.CFrame = capTarget * entryOffset
+
+            local delayTime = math.min(0.22, (index - 1) * 0.035)
+            task.delay(delayTime, function()
+                if not body.Parent then
+                    return
+                end
+
+                TweenService:Create(
+                    body,
+                    TweenInfo.new(0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                    {CFrame = bodyTarget, Transparency = 0.10}
+                ):Play()
+                TweenService:Create(
+                    glass,
+                    TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                    {CFrame = glassTarget, Transparency = 0.34}
+                ):Play()
+                TweenService:Create(
+                    blade,
+                    TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                    {CFrame = bladeTarget, Transparency = 0.18}
+                ):Play()
+                TweenService:Create(
+                    cap,
+                    TweenInfo.new(0.40, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                    {CFrame = capTarget, Transparency = 0.38}
+                ):Play()
+            end)
+        end
+    end
+end
+
 local function rebuild(state)
     clear()
     lastState = state
@@ -307,6 +410,16 @@ local function rebuild(state)
         coreLight.Shadows = false
         coreLight.Parent = core
     end
+
+    addResultArchitecture(
+        center,
+        radius,
+        accentColor,
+        secondaryColor,
+        tier,
+        reducedMotion,
+        #survivors
+    )
 
     local centerAnchor = Instance.new("Part")
     centerAnchor.Name = "ResultConstellationAnchor"
