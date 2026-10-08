@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalizationService = game:GetService("LocalizationService")
+local TweenService = game:GetService("TweenService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -23,6 +24,8 @@ local statsLabel = nil
 local progressLabel = nil
 local collectionLabel = nil
 local xpFill = nil
+local avatarImage = nil
+local xpTween = nil
 local currentPhase = "waiting"
 local collectionOwned = nil
 local collectionTotal = nil
@@ -35,6 +38,11 @@ local function clear()
     progressLabel = nil
     collectionLabel = nil
     xpFill = nil
+    avatarImage = nil
+    if xpTween then
+        xpTween:Cancel()
+        xpTween = nil
+    end
 end
 
 local function nextLevelXP(level)
@@ -83,7 +91,21 @@ local function refresh()
     progressLabel.Text = remaining > 0
         and CoreLocalization.text(localeId, "NEXT_LEVEL_XP", remaining)
         or CoreLocalization.text(localeId, "NEXT_LEVEL_READY_SHORT")
-    xpFill.Size = UDim2.fromScale(progress, 1)
+    local targetSize = UDim2.fromScale(progress, 1)
+    if xpTween then
+        xpTween:Cancel()
+        xpTween = nil
+    end
+    if player:GetAttribute("ReduceMotion") == true then
+        xpFill.Size = targetSize
+    else
+        xpTween = TweenService:Create(
+            xpFill,
+            TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            {Size = targetSize}
+        )
+        xpTween:Play()
+    end
 
     if collectionLabel then
         if collectionOwned ~= nil and collectionTotal ~= nil then
@@ -147,6 +169,40 @@ local function build()
         90
     )
 
+    local avatarFrame = Instance.new("Frame")
+    avatarFrame.Name = "ProfileAvatarFrame"
+    avatarFrame.Position = UDim2.fromOffset(18, 38)
+    avatarFrame.Size = UDim2.fromOffset(76, 76)
+    avatarFrame.BackgroundColor3 = UITheme.Colors.PanelSoft
+    avatarFrame.BackgroundTransparency = 0.06
+    avatarFrame.BorderSizePixel = 0
+    avatarFrame.Parent = panel
+    UITheme.addCorner(avatarFrame, UDim.new(1, 0))
+    UITheme.addStroke(avatarFrame, UITheme.Colors.Cyan, 1.5, 0.22)
+
+    local avatarGlow = Instance.new("Frame")
+    avatarGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+    avatarGlow.Position = UDim2.fromScale(0.5, 0.5)
+    avatarGlow.Size = UDim2.fromScale(1.18, 1.18)
+    avatarGlow.BackgroundColor3 = UITheme.Colors.Cyan
+    avatarGlow.BackgroundTransparency = 0.86
+    avatarGlow.BorderSizePixel = 0
+    avatarGlow.ZIndex = 0
+    avatarGlow.Parent = avatarFrame
+    UITheme.addCorner(avatarGlow, UDim.new(1, 0))
+
+    avatarImage = Instance.new("ImageLabel")
+    avatarImage.Name = "ProfileAvatar"
+    avatarImage.AnchorPoint = Vector2.new(0.5, 0.5)
+    avatarImage.Position = UDim2.fromScale(0.5, 0.5)
+    avatarImage.Size = UDim2.fromScale(0.88, 0.88)
+    avatarImage.BackgroundTransparency = 1
+    avatarImage.BorderSizePixel = 0
+    avatarImage.ZIndex = 1
+    avatarImage.ScaleType = Enum.ScaleType.Crop
+    avatarImage.Parent = avatarFrame
+    UITheme.addCorner(avatarImage, UDim.new(1, 0))
+
     local accent = Instance.new("Frame")
     accent.Size = UDim2.new(1, 0, 0, 6)
     accent.BackgroundColor3 = UITheme.Colors.Cyan
@@ -155,8 +211,8 @@ local function build()
     UITheme.addCorner(accent, UITheme.Corners.Pill)
 
     local title = Instance.new("TextLabel")
-    title.Position = UDim2.fromScale(0.05, 0.08)
-    title.Size = UDim2.fromScale(0.90, 0.19)
+    title.Position = UDim2.fromScale(0.27, 0.08)
+    title.Size = UDim2.fromScale(0.68, 0.19)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
     title.Text = CoreLocalization.text(localeId, "CHAOS_PROFILE")
@@ -166,8 +222,8 @@ local function build()
     title.Parent = panel
 
     statsLabel = Instance.new("TextLabel")
-    statsLabel.Position = UDim2.fromScale(0.05, 0.30)
-    statsLabel.Size = UDim2.fromScale(0.90, 0.16)
+    statsLabel.Position = UDim2.fromScale(0.27, 0.30)
+    statsLabel.Size = UDim2.fromScale(0.68, 0.16)
     statsLabel.BackgroundTransparency = 1
     statsLabel.Font = Enum.Font.GothamBold
     statsLabel.TextColor3 = UITheme.Colors.Text
@@ -176,8 +232,8 @@ local function build()
     statsLabel.Parent = panel
 
     local xpTrack = Instance.new("Frame")
-    xpTrack.Position = UDim2.fromScale(0.05, 0.51)
-    xpTrack.Size = UDim2.fromScale(0.90, 0.075)
+    xpTrack.Position = UDim2.fromScale(0.27, 0.51)
+    xpTrack.Size = UDim2.fromScale(0.68, 0.075)
     xpTrack.BackgroundColor3 = UITheme.Colors.PanelSoft
     xpTrack.BackgroundTransparency = 0.10
     xpTrack.BorderSizePixel = 0
@@ -193,8 +249,8 @@ local function build()
     UITheme.addGradient(xpFill, UITheme.Colors.Cyan, UITheme.Colors.Violet, 0)
 
     progressLabel = Instance.new("TextLabel")
-    progressLabel.Position = UDim2.fromScale(0.05, 0.61)
-    progressLabel.Size = UDim2.fromScale(0.90, 0.13)
+    progressLabel.Position = UDim2.fromScale(0.27, 0.61)
+    progressLabel.Size = UDim2.fromScale(0.68, 0.13)
     progressLabel.BackgroundTransparency = 1
     progressLabel.Font = Enum.Font.GothamMedium
     progressLabel.TextColor3 = UITheme.Colors.Muted
@@ -203,8 +259,8 @@ local function build()
     progressLabel.Parent = panel
 
     collectionLabel = Instance.new("TextLabel")
-    collectionLabel.Position = UDim2.fromScale(0.05, 0.78)
-    collectionLabel.Size = UDim2.fromScale(0.90, 0.13)
+    collectionLabel.Position = UDim2.fromScale(0.05, 0.80)
+    collectionLabel.Size = UDim2.fromScale(0.90, 0.11)
     collectionLabel.BackgroundTransparency = 1
     collectionLabel.Font = Enum.Font.GothamBold
     collectionLabel.TextColor3 = UITheme.Colors.Gold
@@ -212,8 +268,28 @@ local function build()
     collectionLabel.TextXAlignment = Enum.TextXAlignment.Left
     collectionLabel.Parent = panel
 
+    local builtGui = gui
+    task.spawn(function()
+        local ok, image = pcall(
+            Players.GetUserThumbnailAsync,
+            Players,
+            player.UserId,
+            Enum.ThumbnailType.HeadShot,
+            Enum.ThumbnailSize.Size100x100
+        )
+        if ok
+            and gui == builtGui
+            and avatarImage
+            and avatarImage.Parent
+        then
+            avatarImage.Image = image
+        end
+    end)
+
     refresh()
 end
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refresh)
 
 for _, attribute in ipairs({"Level", "XP", "Wins", "Coins", "DataLoaded"}) do
     player:GetAttributeChangedSignal(attribute):Connect(refresh)
