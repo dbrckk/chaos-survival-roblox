@@ -145,3 +145,17 @@ Chaque lot est évalué par : directeur artistique (cohérence), environment art
 | 06 — certification | Perf thermique, Android réel, accessibilité, nettoyage | Vérification physique et revue artistique |
 
 **État initial du sprint 01 :** implémentation engagée, **non certifiée visuellement**. Les sprints suivants ne sont pas « terminés » par la présence de code existant.
+
+## Sprint 01/02 — changements déjà codés, à vérifier dans Studio
+
+- [x] `ArenaSignatureKit.lua` : quatre silhouettes originales (radar, cage de levage, transit, confinement) + limites par tier et test moteur.
+- [x] `ShowtimeProps.lua` : arche acoustique et ailes d'enceinte adaptées au tier avec test d'existence.
+- [x] `ArenaDetailKit.lua` : huit motifs originaux répartis sur les équipements de service et les masses de décor, de 1 à 3 pièces selon Low/Medium/High.
+- [x] `arena-service-props.client.lua` : détails industriels uniques sur les caméras, caisses, bornes et modules d'énergie.
+- [x] `arena-midground-mass.client.lua` : reliefs et sous-silhouettes du lointain différenciés pour les quatre variantes.
+- [x] `arena-focal-lighting.client.lua` : éclairages reconstruits sur apparition tardive de la Base et changement d'identité de l'arène.
+- [x] `studio-e2e.client.lua` : vérification runtime de l'identité de deux motifs secondaires par arène et de l'absence de collision.
+- [ ] Comparer par captures visuelles Low/Medium/High les quatre arènes et le Showtime en Studio.
+- [ ] Essais Android réels et revue direction artistique ; aucun statut « AAA atteint » avant ces preuves.
+
+Les cases « codé » signifient uniquement **présence dans la branche d'art**, pas rendu validé ou intégration publiée.

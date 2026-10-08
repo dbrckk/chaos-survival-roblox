@@ -192,6 +192,7 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         end
         if report.ok ~= true or worldArenaId ~= arenaId
             or report.signatureReady ~= true
+            or report.secondaryReady ~= true
             or (tonumber(report.signatureParts) or 0) < 6
             or (tonumber(report.signatureParts) or math.huge) > 50
         then

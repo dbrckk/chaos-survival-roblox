@@ -198,20 +198,40 @@ local function sendArenaProbe(state)
         and signatureParts >= 6 and signatureParts <= 50
         and safeParts
 
+    -- The unique secondary architectural kit must survive every map swap,
+    -- not only be constructible in isolated unit tests.
+    local names = ({
+        Classic = {"ClassicOpticShroud", "ClassicTrussDiagonal"},
+        Towers = {"TowerCrateSeal", "TowerCoolingVent"},
+        Crossroads = {"CrossroadsDirectionArrow", "CrossroadsTransitCornice"},
+        Orbital = {"OrbitalCanisterCollar", "OrbitalRadialSpine"},
+    })[arenaId]
+    local serviceFolder = workspace:FindFirstChild("ArenaServicePropsLocal")
+    local skylineFolder = workspace:FindFirstChild("ArenaMidgroundMassLocal")
+    local serviceMotif = names and serviceFolder and serviceFolder:FindFirstChild(names[1])
+    local skylineMotif = names and skylineFolder and skylineFolder:FindFirstChild(names[2])
+    local secondaryReady = serviceMotif ~= nil and skylineMotif ~= nil
+        and serviceMotif:GetAttribute("ChaosVisualMotif") == true
+        and skylineMotif:GetAttribute("ChaosVisualMotif") == true
+        and serviceMotif.Anchored and skylineMotif.Anchored
+        and not serviceMotif.CanCollide and not skylineMotif.CanCollide
+
     reportEvent:FireServer({
         kind = "arena_probe",
         arenaId = arenaId,
         worldArenaId = worldArenaId,
-        ok = matchesWorld and signatureReady,
+        ok = matchesWorld and signatureReady and secondaryReady,
         signatureReady = signatureReady,
+        secondaryReady = secondaryReady,
         signatureHero = expectedHero or "Unknown",
         signatureParts = signatureParts,
         error = matchesWorld and signatureReady
             and ""
             or string.format(
-                "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s",
+                "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s motifs=%s",
                 arenaId, worldArenaId, tostring(expectedHero),
-                tostring(signatureHero ~= nil), signatureParts, tostring(safeParts)
+                tostring(signatureHero ~= nil), signatureParts, tostring(safeParts),
+                tostring(secondaryReady)
             ),
     })
 end
