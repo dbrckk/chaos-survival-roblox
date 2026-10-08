@@ -95,6 +95,36 @@ describe("Kinetic arena signatures", function()
         root:Destroy()
     end)
 
+
+    it("adds an arena-specific silhouette beyond a generic pillar or neon bar", function()
+        local parent = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(110, 2, 110)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local signatures = {
+                Classic = "ClassicGoniometerArc1",
+                Towers = "TowerTensionTruss-1_1",
+                Crossroads = "CrossroadRouteChevron-1_1",
+                Orbital = "OrbitalContainmentPylon1",
+            }
+            for arenaId, motif in pairs(signatures) do
+                local bundle = ArenaSignatureKit.build(parent, base, arenaId, tier, VisualTheme)
+                expect(bundle.folder:FindFirstChild(motif) ~= nil).toBe(true)
+                expect(#bundle.parts > 12).toBe(true)
+                expect(#bundle.parts <= bundle.profile.MaxParts).toBe(true)
+                for _, item in ipairs(bundle.parts) do
+                    expect(item.Anchored).toBe(true)
+                    expect(item.CanCollide).toBe(false)
+                    expect(item.CanTouch).toBe(false)
+                    expect(item.CanQuery).toBe(false)
+                end
+                bundle.folder:Destroy()
+            end
+        end
+        base:Destroy()
+        parent:Destroy()
+    end)
+
     it("freezes motion predictably for mobile accessibility", function()
         local root = Instance.new("Folder")
         local base = Instance.new("Part")
