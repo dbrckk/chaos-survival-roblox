@@ -257,7 +257,7 @@ local function emoteAudio(id)
     Debris:AddItem(sound, 2)
 end
 
-local function playEmote(id)
+local function playEmote(id, automatic)
     if not available() then
         return
     end
@@ -312,7 +312,9 @@ local function playEmote(id)
     end
     currentEmote = {id = id, track = entry.track}
     personalConfetti()
-    emoteAudio(id)
+    if automatic ~= true then
+        emoteAudio(id)
+    end
     open = false
     panel.Visible = false
     if particles and particles.Parent then
@@ -717,10 +719,25 @@ local function updateStage(now)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    local previousPhase = phase
     phase = tostring(state.phase or "waiting")
     voteOptions = state.voteOptions
     refreshUI()
     updateStage(os.clock())
+
+    if Showtime.shouldCelebrate(
+        phase,
+        previousPhase,
+        state.survivorUserIds,
+        player.UserId,
+        player:GetAttribute("ReduceMotion") == true
+    ) then
+        task.defer(function()
+            if phase == "result" and not currentEmote then
+                playEmote("cheer", true)
+            end
+        end)
+    end
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
