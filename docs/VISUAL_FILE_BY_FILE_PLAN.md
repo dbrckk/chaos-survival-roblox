@@ -159,3 +159,11 @@ Chaque lot est évalué par : directeur artistique (cohérence), environment art
 - [ ] Essais Android réels et revue direction artistique ; aucun statut « AAA atteint » avant ces preuves.
 
 Les cases « codé » signifient uniquement **présence dans la branche d'art**, pas rendu validé ou intégration publiée.
+
+### Sprint 02 — habillage de plateformes mobiles
+
+- [x] `PlatformFinishKit.lua` : détails de surface **distinctifs** pour 4 arènes, 1/2/3 éléments selon le tier, tous non collidants, sans masse ni animation supplémentaire.
+- [x] `arena-platform-identity.client.lua` : finitions soudées aux plateformes mobiles (WeldConstraint) et reconstruction lorsque l'arène, le dossier `Platforms` ou une plateforme arrivent tardivement.
+- [x] `tests/engine/arena-presentation.spec.luau` : vérifie 4 styles × 3 tiers, noms, quantité, absence de collisions, massless et attaches sur le vrai support.
+- [ ] Studio authentifié : mesurer les effets sur plateformes en mouvement et vérifier le signal d'alerte des plateformes qui s'effondrent.
+- [ ] Android réel : vérifier que les détails ne masquent ni bord de plateforme, ni sauts, ni dangers ; mesurer le coût en FPS et mémoire.

@@ -7,6 +7,7 @@ local VisualTheme = require("../../src/shared/VisualTheme")
 local MapVisualReadiness = require("../../src/shared/MapVisualReadiness")
 local ArenaSignatureKit = require("../../src/client/ArenaSignatureKit")
 local ArenaDetailKit = require("../../src/client/ArenaDetailKit")
+local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 
 local CENTER = Vector3.new(0, 0, 0)
 
@@ -250,6 +251,54 @@ describe("Arena architectural secondary motifs", function()
         expect(#ArenaDetailKit.build(folder, "Service", "Classic", host, "High", nil)).toBe(0)
         host:Destroy()
         folder:Destroy()
+    end)
+end)
+
+
+describe("Moving platform premium trim kit", function()
+    it("creates four distinctive, bounded, non-colliding welded motifs", function()
+        local parent = Instance.new("Folder")
+        local platform = Instance.new("Part")
+        platform.Size = Vector3.new(12, 2, 12)
+        platform.Parent = workspace
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            local names = PlatformFinishKit.names(variant)
+            expect(#names).toBe(3)
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local built = PlatformFinishKit.build(parent, platform, variant,
+                    tier, VisualTheme.arena(variant))
+                expect(#built).toBe(PlatformFinishKit.count(tier))
+                for index, item in ipairs(built) do
+                    expect(item.Name).toBe(names[index])
+                    expect(item:GetAttribute("ChaosPlatformTrim")).toBe(true)
+                    expect(item.Massless).toBe(true)
+                    expect(item.Anchored).toBe(false)
+                    expect(item.CanCollide).toBe(false)
+                    expect(item.CanTouch).toBe(false)
+                    expect(item.CanQuery).toBe(false)
+                    local weld = item:FindFirstChild("ChaosPlatformTrimWeld")
+                    expect(weld ~= nil).toBe(true)
+                    expect(weld.Part0).toBe(item)
+                    expect(weld.Part1).toBe(platform)
+                    item:Destroy()
+                end
+            end
+        end
+        platform:Destroy()
+        parent:Destroy()
+    end)
+
+    it("refuses unexpected variants and invalid platform parents", function()
+        local container = Instance.new("Folder")
+        local base = Instance.new("Part")
+        expect(#PlatformFinishKit.build(container, base, "NotAnArena", "High",
+            VisualTheme.arena("Classic"))).toBe(0)
+        expect(#PlatformFinishKit.build(container, nil, "Classic", "High",
+            VisualTheme.arena("Classic"))).toBe(0)
+        expect(#PlatformFinishKit.build(nil, base, "Classic", "High",
+            VisualTheme.arena("Classic"))).toBe(0)
+        base:Destroy()
+        container:Destroy()
     end)
 end)
 
