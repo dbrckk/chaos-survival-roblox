@@ -356,6 +356,7 @@ local function makeHoloDancer(index, center)
     table.insert(dancers, {
         base = base, body = body, head = head, left = left, right = right,
         footL = footL, footR = footR, phase = index * math.pi,
+        parts = {body, head, left, right, footL, footR},
     })
 end
 
@@ -509,8 +510,7 @@ local function updateStage(now)
 
     if not enabled then
         for _, dancer in ipairs(dancers) do
-            for _, part in ipairs({dancer.body, dancer.head, dancer.left,
-                dancer.right, dancer.footL, dancer.footR}) do
+            for _, part in ipairs(dancer.parts) do
                 part.Transparency = 1
             end
         end
@@ -532,8 +532,7 @@ local function updateStage(now)
             * CFrame.Angles(0, 0, 0.36 + sway)
         dancer.footL.CFrame = bodyCF * CFrame.new(-0.3, -1.4, 0)
         dancer.footR.CFrame = bodyCF * CFrame.new(0.3, -1.4, 0)
-        for _, part in ipairs({dancer.body, dancer.head, dancer.left,
-            dancer.right, dancer.footL, dancer.footR}) do
+        for _, part in ipairs(dancer.parts) do
             part.Transparency = 0.28
         end
     end
@@ -578,8 +577,8 @@ end)
 
 task.spawn(function()
     while true do
-        task.wait(profile.Interval)
-        if stageBase then
+        task.wait(activePhase() and profile.Interval or 0.65)
+        if activePhase() and stageBase then
             updateStage(os.clock())
         end
     end
