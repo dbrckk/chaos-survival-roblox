@@ -14,6 +14,12 @@
 
 All notable changes to Chaos Survival are documented here.
 
+## 2026-10-08 — Kinetic arena monuments
+
+- Add four signature 3D hero sculptures outside the playable arena: animated broadcast radar, vertical service lift, traffic/transit signal array and rotating orbital gyroscope.
+- Each uses native non-colliding Roblox primitives; tier-scaled parts and dynamic accent lighting; Reduce Motion and inactive rounds freeze animation.
+- Register new scene folder for adaptive LOD and visual-budget tracking; expand engine tests for all maps, graphics tiers and motion accessibility.
+
 ## Unreleased — Release Candidate Hardening
 
 ### Gameplay
