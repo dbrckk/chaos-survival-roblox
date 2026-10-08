@@ -108,6 +108,34 @@ function ResultPresentation.eliminationCopy(feedback, localeId)
     return "ELIMINATED", "React early to the hazard warning and keep a safe route"
 end
 
+local ELIMINATION_TO_DISASTER = {
+    Meteor = "Meteors",
+    Bomb = "Bombs",
+    Lava = "RisingLava",
+    Tornado = "Tornado",
+    JumpShock = "JumpShock",
+    LowGravity = "LowGravity",
+    DisappearingPlatforms = "DisappearingPlatforms",
+    ShrinkingArena = "ShrinkingArena",
+}
+
+function ResultPresentation.visualHazardOrder(feedback)
+    feedback = type(feedback) == "table" and feedback or {}
+    local ids = type(feedback.disasterIds) == "table" and feedback.disasterIds or {}
+
+    local primary = ids[1]
+    local secondary = ids[2]
+
+    if feedback.survived ~= true and secondary then
+        local causedBy = ELIMINATION_TO_DISASTER[tostring(feedback.eliminationCause or "")]
+        if causedBy and causedBy == secondary then
+            primary, secondary = secondary, primary
+        end
+    end
+
+    return primary, secondary
+end
+
 function ResultPresentation.kind(feedback)
     feedback = type(feedback) == "table" and feedback or {}
 
