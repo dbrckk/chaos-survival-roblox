@@ -4,11 +4,12 @@ local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
-local Rules = require(ReplicatedStorage.Shared.ImpactSetpieceRules)
+-- Rules resolve at first spawn in the live Rojo place; cloud engine specs
+-- can inject the same shared rules module without requiring global scripts.
 
 local ImpactSetpiece = {}
 
-function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion)
+function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesOverride)
     if type(payload) ~= "table"
         or typeof(payload.position) ~= "Vector3"
         or typeof(payload.color) ~= "Color3"
@@ -16,7 +17,8 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion)
         return nil
     end
 
-    local recipe = Rules.get(payload.kind, qualityTier, reduceMotion, payload.radius)
+    local rules = rulesOverride or require(ReplicatedStorage.Shared.ImpactSetpieceRules)
+    local recipe = rules.get(payload.kind, qualityTier, reduceMotion, payload.radius)
     if not recipe then
         return nil
     end
@@ -26,7 +28,7 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion)
     container.Parent = parent
 
     for index = 1, recipe.Count do
-        local fragment = Rules.fragment(recipe.Kind, index, recipe.Count, recipe.Radius)
+        local fragment = rules.fragment(recipe.Kind, index, recipe.Count, recipe.Radius)
         local direction = fragment.Direction
         local yaw = math.atan2(direction.X, direction.Z)
         local start = payload.position

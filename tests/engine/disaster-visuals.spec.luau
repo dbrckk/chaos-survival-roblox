@@ -41,7 +41,7 @@ describe("Disaster visual identities", function()
                 position = Vector3.new(0, 5, 0),
                 color = Color3.fromRGB(255, 130, 75),
                 radius = 11,
-            }, "High", false)
+            }, "High", false, ImpactSetpieceRules)
             expect(parts ~= nil).toBe(true)
             expect(#parts:GetChildren()).toBe(case.count)
             for _, child in ipairs(parts:GetChildren()) do
@@ -58,7 +58,7 @@ describe("Disaster visual identities", function()
         expect(ImpactSetpiece.spawn(root, {kind = "Meteor"}, "High", false) == nil).toBe(true)
         expect(ImpactSetpiece.spawn(root, {
             kind = "Meteor", position = Vector3.zero, color = Color3.new(1, 1, 1),
-        }, "Low", false) == nil).toBe(true)
+        }, "Low", false, ImpactSetpieceRules) == nil).toBe(true)
         root:Destroy()
     end)
 
