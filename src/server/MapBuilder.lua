@@ -1067,24 +1067,106 @@ local function buildLobby(root, config)
     surface.AlwaysOnTop = false
     surface.Parent = sign
 
+    local brandMark = Instance.new("Frame")
+    brandMark.Name = "ChaosWorldBrandSigil"
+    brandMark.AnchorPoint = Vector2.new(0.5, 0.5)
+    brandMark.Position = UDim2.fromScale(0.16, 0.50)
+    brandMark.Size = UDim2.fromScale(0.20, 0.62)
+    brandMark.BackgroundTransparency = 1
+    brandMark.Parent = surface
+
+    local outerDiamond = Instance.new("Frame")
+    outerDiamond.Name = "OuterDiamond"
+    outerDiamond.AnchorPoint = Vector2.new(0.5, 0.5)
+    outerDiamond.Position = UDim2.fromScale(0.5, 0.5)
+    outerDiamond.Size = UDim2.fromScale(0.66, 0.66)
+    outerDiamond.Rotation = 45
+    outerDiamond.BackgroundColor3 = VisualTheme.Accents.Cyan
+    outerDiamond.BackgroundTransparency = 0.78
+    outerDiamond.BorderSizePixel = 0
+    outerDiamond.Parent = brandMark
+
+    local outerCorner = Instance.new("UICorner")
+    outerCorner.CornerRadius = UDim.new(0, 8)
+    outerCorner.Parent = outerDiamond
+
+    local outerStroke = Instance.new("UIStroke")
+    outerStroke.Color = VisualTheme.Accents.Cyan
+    outerStroke.Thickness = 2
+    outerStroke.Transparency = 0.18
+    outerStroke.Parent = outerDiamond
+
+    local middleDiamond = Instance.new("Frame")
+    middleDiamond.Name = "MiddleDiamond"
+    middleDiamond.AnchorPoint = Vector2.new(0.5, 0.5)
+    middleDiamond.Position = UDim2.fromScale(0.5, 0.5)
+    middleDiamond.Size = UDim2.fromScale(0.46, 0.46)
+    middleDiamond.Rotation = 45
+    middleDiamond.BackgroundColor3 = VisualTheme.Accents.Violet
+    middleDiamond.BackgroundTransparency = 0.20
+    middleDiamond.BorderSizePixel = 0
+    middleDiamond.Parent = brandMark
+
+    local middleCorner = Instance.new("UICorner")
+    middleCorner.CornerRadius = UDim.new(0, 7)
+    middleCorner.Parent = middleDiamond
+
+    local crystal = Instance.new("Frame")
+    crystal.Name = "CrystalCore"
+    crystal.AnchorPoint = Vector2.new(0.5, 0.5)
+    crystal.Position = UDim2.fromScale(0.5, 0.5)
+    crystal.Size = UDim2.fromScale(0.22, 0.44)
+    crystal.Rotation = 45
+    crystal.BackgroundColor3 = VisualTheme.Accents.Cyan:Lerp(Color3.new(1, 1, 1), 0.30)
+    crystal.BorderSizePixel = 0
+    crystal.Parent = brandMark
+
+    local crystalCorner = Instance.new("UICorner")
+    crystalCorner.CornerRadius = UDim.new(0, 6)
+    crystalCorner.Parent = crystal
+
+    for i, def in ipairs({
+        {x = 0.12, y = 0.50, rotation = -18, color = VisualTheme.Accents.Cyan},
+        {x = 0.88, y = 0.50, rotation = 18, color = VisualTheme.Accents.Violet},
+        {x = 0.50, y = 0.10, rotation = 90, color = VisualTheme.Accents.Orange},
+    }) do
+        local slash = Instance.new("Frame")
+        slash.Name = "OrbitSlash" .. i
+        slash.AnchorPoint = Vector2.new(0.5, 0.5)
+        slash.Position = UDim2.fromScale(def.x, def.y)
+        slash.Size = UDim2.fromScale(0.28, 0.055)
+        slash.Rotation = def.rotation
+        slash.BackgroundColor3 = def.color
+        slash.BackgroundTransparency = 0.10
+        slash.BorderSizePixel = 0
+        slash.Parent = brandMark
+
+        local slashCorner = Instance.new("UICorner")
+        slashCorner.CornerRadius = UDim.new(1, 0)
+        slashCorner.Parent = slash
+    end
+
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.fromScale(1, 0.62)
+    title.Position = UDim2.fromScale(0.29, 0)
+    title.Size = UDim2.fromScale(0.66, 0.62)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
     title.TextColor3 = Color3.fromRGB(245, 248, 255)
     title.TextStrokeTransparency = 0.65
     title.TextScaled = true
     title.Text = "CHAOS SURVIVAL"
+    title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = surface
 
     local subtitle = Instance.new("TextLabel")
-    subtitle.Position = UDim2.fromScale(0, 0.62)
-    subtitle.Size = UDim2.fromScale(1, 0.30)
+    subtitle.Position = UDim2.fromScale(0.29, 0.62)
+    subtitle.Size = UDim2.fromScale(0.66, 0.30)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.GothamBold
     subtitle.TextColor3 = Color3.fromRGB(120, 195, 255)
     subtitle.TextScaled = true
     subtitle.Text = "VOTE • SURVIVE • ADAPT"
+    subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = surface
 
     local frameOffsets = {
