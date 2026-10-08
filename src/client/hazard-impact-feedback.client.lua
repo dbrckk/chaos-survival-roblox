@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local ImpactSetpiece = require(script.Parent.ImpactSetpiece)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardImpactFeedback")
@@ -103,6 +104,15 @@ local function renderBurst(payload)
         return
     end
     activeBursts += 1
+
+    -- Layer one brief, profile-bounded signature over the existing impact
+    -- ring/plume. This never alters damage, hit detection or scorch ownership.
+    ImpactSetpiece.spawn(workspace, {
+        position = position,
+        color = color,
+        radius = radius,
+        kind = kind,
+    }, profile.Name, reduced)
 
     local burst = Instance.new("Part")
     burst.Name = "LocalHazardImpactBurst"

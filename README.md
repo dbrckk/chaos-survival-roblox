@@ -37,6 +37,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Final-five-second danger timer feedback
 - Server-side reward handling
 - Per-disaster visual identities with Double Chaos color blending
+- Cinematic meteor impact shards and bomb pressure spokes: two visually distinct short-lived procedural 3D blast accents, tier-budgeted and suppressed by Reduce Motion.
 - Progressive round-intensity director with solo/Double Chaos safety caps
 - Hazard cadence, arena VFX and audio mix react to escalating round intensity
 - Dynamic neon arena beacon reacting to active chaos

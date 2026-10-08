@@ -14,6 +14,13 @@
 
 All notable changes to Chaos Survival are documented here.
 
+## 2026-10-08 — Distinct 3D impact language
+
+- Meteors gain short-lived glass-metal kinetic impact shards; bombs project neon pressure spokes rather than using only the existing generic smoke/rings.
+- Hooks into the existing server-authoritative HazardImpactFeedback pipeline; no new remotes, damage, collision surfaces, screen shakes, or redundant impact event listeners.
+- Four or fewer fragments on Medium, 7–8 on High, none on Low/Reduce Motion. Auto-destruction and existing concurrency/distance guards preserve mobile performance.
+- Extend the real Roblox engine disaster visuals spec with geometry, tier, accessibility and deterministic trajectory assertions.
+
 ## Unreleased — Release Candidate Hardening
 
 ### Gameplay
