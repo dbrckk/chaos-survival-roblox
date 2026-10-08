@@ -1624,6 +1624,26 @@ local resultScale = Instance.new("UIScale")
 resultScale.Scale = 0.82
 resultScale.Parent = resultCard
 
+local resultGlyph = Instance.new("Frame")
+resultGlyph.Name = "ResultHazardGlyph"
+resultGlyph.AnchorPoint = Vector2.new(0.5, 0.5)
+resultGlyph.Position = UDim2.fromScale(0.88, 0.52)
+resultGlyph.Size = UDim2.fromScale(0.18, 0.58)
+resultGlyph.BackgroundTransparency = 1
+resultGlyph.Visible = false
+resultGlyph.ZIndex = 21
+resultGlyph.Parent = resultCard
+
+local resultGlyphSecondary = Instance.new("Frame")
+resultGlyphSecondary.Name = "ResultHazardGlyphSecondary"
+resultGlyphSecondary.AnchorPoint = Vector2.new(0.5, 0.5)
+resultGlyphSecondary.Position = UDim2.fromScale(0.12, 0.52)
+resultGlyphSecondary.Size = UDim2.fromScale(0.16, 0.50)
+resultGlyphSecondary.BackgroundTransparency = 1
+resultGlyphSecondary.Visible = false
+resultGlyphSecondary.ZIndex = 21
+resultGlyphSecondary.Parent = resultCard
+
 local resultTitle = Instance.new("TextLabel")
 resultTitle.Name = "ResultTitle"
 resultTitle.Size = UDim2.new(1, -28, 0.34, 0)
@@ -1956,6 +1976,36 @@ local function showRoundFeedback(feedback)
             or (survived
                 and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
                 or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel)))
+
+    local resultPrimaryId = type(feedback.disasterIds) == "table"
+        and feedback.disasterIds[1]
+        or nil
+    local resultSecondaryId = type(feedback.disasterIds) == "table"
+        and feedback.disasterIds[2]
+        or nil
+
+    resultGlyph.Position = UDim2.fromScale(feedback.doubleChaos and 0.86 or 0.88, 0.52)
+    resultGlyph.Size = UDim2.fromScale(
+        feedback.doubleChaos and 0.16 or 0.18,
+        feedback.doubleChaos and 0.50 or 0.58
+    )
+    renderHazardGlyph(
+        resultGlyph,
+        resultPrimaryId,
+        UITheme.disasterAccent(resultPrimaryId, UITheme.Colors.Cyan),
+        0.82
+    )
+
+    if feedback.doubleChaos and resultSecondaryId then
+        renderHazardGlyph(
+            resultGlyphSecondary,
+            resultSecondaryId,
+            UITheme.disasterAccent(resultSecondaryId, UITheme.Colors.Violet),
+            0.84
+        )
+    else
+        resultGlyphSecondary.Visible = false
+    end
 
     local streakBonus = tonumber(feedback.streakBonusCoins) or 0
     local shardCoins = tonumber(feedback.shardCoins) or 0
