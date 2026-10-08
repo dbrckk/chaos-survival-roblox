@@ -77,6 +77,14 @@ local function practicePads()
     return result
 end
 
+local function arenaRunway()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local lobby = generated and generated:FindFirstChild("Lobby")
+    local decor = lobby and lobby:FindFirstChild("Decor")
+    local runway = decor and decor:FindFirstChild("ArenaRunway")
+    return runway and runway:IsA("BasePart") and runway or nil
+end
+
 local function arenaPads()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
@@ -169,6 +177,19 @@ local function refresh()
             nearestPart(practicePads()),
             CoreLocalization.text(localeId, "PRACTICE_BOOST"),
             Color3.fromRGB(80, 220, 255)
+        )
+        return
+    end
+
+    if games == 0
+        and (tonumber(player:GetAttribute("LobbyPracticeUses")) or 0) > 0
+        and (currentState.phase == "waiting" or currentState.phase == "intermission")
+        and not currentState.voteOptions
+    then
+        mark(
+            arenaRunway(),
+            CoreLocalization.text(localeId, "ENTER_ARENA"),
+            Color3.fromRGB(95, 215, 255)
         )
         return
     end
