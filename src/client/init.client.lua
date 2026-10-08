@@ -1977,12 +1977,8 @@ local function showRoundFeedback(feedback)
                 and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
                 or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel)))
 
-    local resultPrimaryId = type(feedback.disasterIds) == "table"
-        and feedback.disasterIds[1]
-        or nil
-    local resultSecondaryId = type(feedback.disasterIds) == "table"
-        and feedback.disasterIds[2]
-        or nil
+    local resultPrimaryId, resultSecondaryId =
+        ResultPresentation.visualHazardOrder(feedback)
 
     resultGlyph.Position = UDim2.fromScale(feedback.doubleChaos and 0.86 or 0.88, 0.52)
     resultGlyph.Size = UDim2.fromScale(
