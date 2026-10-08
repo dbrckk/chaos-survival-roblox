@@ -104,17 +104,48 @@ local function spotlightModel(key, model, labelText, localFocus)
     TweenService:Create(label, TweenInfo.new(0.18), {TextTransparency = 0}):Play()
 
     if tier.Name ~= "Low" then
-        local sparkles = Instance.new("Sparkles")
-        sparkles.Name = "ResultSurvivorSparkles"
-        sparkles.SparkleColor = accent
-        sparkles.Parent = root
-        table.insert(bundle, sparkles)
+        local reducedMotion = player:GetAttribute("ReduceMotion") == true
+
+        if not reducedMotion then
+            local motes = Instance.new("Attachment")
+            motes.Name = "ResultSurvivorMotes"
+            motes.Position = Vector3.new(0, 0.4, 0)
+            motes.Parent = root
+            table.insert(bundle, motes)
+
+            local emitter = Instance.new("ParticleEmitter")
+            emitter.Name = "ResultSurvivorMotesEmitter"
+            emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+            emitter.Rate = (localFocus and 5 or 3) * tier.ParticleScale
+            emitter.Lifetime = NumberRange.new(0.55, 0.95)
+            emitter.Speed = NumberRange.new(0.25, localFocus and 1.0 or 0.75)
+            emitter.Acceleration = Vector3.new(0, 1.4, 0)
+            emitter.SpreadAngle = Vector2.new(55, 55)
+            emitter.LightEmission = 0.88
+            emitter.LightInfluence = 0
+            emitter.Color = ColorSequence.new(
+                accent:Lerp(Color3.new(1, 1, 1), 0.18),
+                accent
+            )
+            emitter.Size = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, localFocus and 0.18 or 0.14),
+                NumberSequenceKeypoint.new(0.62, localFocus and 0.11 or 0.09),
+                NumberSequenceKeypoint.new(1, 0),
+            })
+            emitter.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.18),
+                NumberSequenceKeypoint.new(1, 1),
+            })
+            emitter.Parent = motes
+        end
 
         local light = Instance.new("PointLight")
         light.Name = "ResultSurvivorGlow"
         light.Color = accent
-        light.Brightness = (localFocus and 1.5 or 1.2) * tier.Scale
-        light.Range = (localFocus and 13 or 10) + 4 * tier.Scale
+        light.Brightness = (localFocus and 1.35 or 1.0)
+            * tier.Scale
+            * (reducedMotion and 0.72 or 1)
+        light.Range = (localFocus and 12 or 9) + 3 * tier.Scale
         light.Shadows = false
         light.Parent = root
         table.insert(bundle, light)
