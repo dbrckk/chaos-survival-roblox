@@ -181,3 +181,12 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `studio-e2e.client.lua` : vérification complète après RESULT du monument, des deux familles de décors et d'un détail soudé à la plateforme. Une fenêtre de **2 secondes** absorbe les retards normaux de réplication, sans masquer un échec réel.
 - [x] `StudioE2E.server.lua` : le serveur rejette explicitement un habillage de plateforme absent/détaché et journalise l'état des trois familles de décor.
 - [ ] Exécuter ce scénario sur un Windows Roblox Studio authentifié et contrôler les résultats des quatre arènes.
+
+## Sprint 02 — façades et bordures des arènes
+
+- [x] `ArenaEdgeFinishKit.lua` : quatre façades latérales originales (radar, levage, transit, confinement) avec 1/2/3 détails par côté selon Low/Medium/High ; **aucun néon sur Low**, aucune pièce collidante.
+- [x] `arena-edge-profile.client.lua` : les lip/trims/corners suivent désormais le `CFrame` de l'arène, y compris pour une carte tournée ; les façades sont placées à l'extérieur de la zone jouable.
+- [x] `arena-edge-profile.client.lua` : reconstruction lors de l'arrivée tardive d'une Base ou d'un changement de `VariantId` via `MapVisualReadiness`.
+- [x] `tests/engine/arena-presentation.spec.luau` : quatre arènes × trois niveaux, pièces ancrées/non collidantes, absence de Néon en Low et contrôle de placement sur arène tournée.
+- [ ] Vérifier en Studio que la visibilité réelle des avertissements de danger reste prioritaire et que les bords ne sont pas occultés par la brume.
+

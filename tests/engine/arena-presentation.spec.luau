@@ -8,6 +8,7 @@ local MapVisualReadiness = require("../../src/shared/MapVisualReadiness")
 local ArenaSignatureKit = require("../../src/client/ArenaSignatureKit")
 local ArenaDetailKit = require("../../src/client/ArenaDetailKit")
 local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
+local ArenaEdgeFinishKit = require("../../src/client/ArenaEdgeFinishKit")
 
 local CENTER = Vector3.new(0, 0, 0)
 
@@ -299,6 +300,57 @@ describe("Moving platform premium trim kit", function()
             VisualTheme.arena("Classic"))).toBe(0)
         base:Destroy()
         container:Destroy()
+    end)
+end)
+ 
+
+describe("Premium arena perimeter geometry", function()
+    it("keeps the four outboard edge silhouettes distinct at every graphics tier", function()
+        local parent = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 80)
+        base.CFrame = CFrame.new(21, 13, -17)
+            * CFrame.Angles(0, math.rad(31), 0)
+        local seen = {}
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            local names = ArenaEdgeFinishKit.names(variant)
+            expect(#names).toBe(3)
+            expect(seen[names[1]] == nil).toBe(true)
+            seen[names[1]] = true
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local built = ArenaEdgeFinishKit.build(
+                    parent, base, variant, tier, VisualTheme.arena(variant))
+                expect(#built).toBe(ArenaEdgeFinishKit.count(tier) * 4)
+                local north = parent:FindFirstChild(names[1] .. "North")
+                expect(north ~= nil).toBe(true)
+                local offset = base.CFrame:PointToObjectSpace(north.Position)
+                expect(offset.Z < -base.Size.Z * 0.5).toBe(true)
+                for _, item in ipairs(built) do
+                    expect(item:GetAttribute("ChaosEdgeFinish")).toBe(true)
+                    expect(item.Anchored).toBe(true)
+                    expect(item.CanCollide).toBe(false)
+                    expect(item.CanTouch).toBe(false)
+                    expect(item.CanQuery).toBe(false)
+                    if tier == "Low" then
+                        expect(item.Material == Enum.Material.Neon).toBe(false)
+                    end
+                    item:Destroy()
+                end
+            end
+        end
+        parent:Destroy()
+        base:Destroy()
+    end)
+
+    it("does not generate unmanaged edge geometry for invalid inputs", function()
+        local holder = Instance.new("Folder")
+        local base = Instance.new("Part")
+        local theme = VisualTheme.arena("Classic")
+        expect(#ArenaEdgeFinishKit.build(holder, base, "Unknown", "High", theme)).toBe(0)
+        expect(#ArenaEdgeFinishKit.build(holder, nil, "Classic", "High", theme)).toBe(0)
+        expect(#ArenaEdgeFinishKit.build(nil, base, "Classic", "High", theme)).toBe(0)
+        holder:Destroy()
+        base:Destroy()
     end)
 end)
 
