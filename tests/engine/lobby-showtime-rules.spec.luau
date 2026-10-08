@@ -97,7 +97,9 @@ describe("Lobby Showtime", function()
         expect(casing.Transparency < 1).toBe(true)
         local equalizer = low.folder:FindFirstChild("ShowtimeEqualizer1")
         ShowtimeProps.update(low, 2.0, true, true, 0)
-        expect(equalizer.Size.Y).toBe(0.38)
+        -- Roblox Vector3 components are float32; avoid exact equality to
+        -- decimal literals represented as double-precision Luau numbers.
+        expect(math.abs(equalizer.Size.Y - 0.38) < 0.0001).toBe(true)
         expect(#low.equalizer).toBe(3)
         expect(#high.equalizer).toBe(8)
 
