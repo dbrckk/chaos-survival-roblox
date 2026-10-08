@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
+local SpectatorTargetRules = require(ReplicatedStorage.Shared.SpectatorTargetRules)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
 
 local player = Players.LocalPlayer
@@ -255,6 +256,20 @@ RunService:BindToRenderStep(
     Enum.RenderPriority.Camera.Value + 2,
     function(dt)
         local camera = workspace.CurrentCamera
+        if SpectatorTargetRules.isSpectating(
+            previousPhase == "round",
+            player:GetAttribute("RoundParticipant"),
+            player:GetAttribute("RoundEliminated")
+        ) then
+            -- CameraSubject belongs to spectator mode, not the player's
+            -- distant lobby avatar; never add local footstep shake to it.
+            lean = 0
+            bob = 0
+            accelerationKick = 0
+            speedFovOffset = 0
+            CameraFeelBus.reset()
+            return
+        end
         if not camera or not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
             CameraFeelBus.reset()
             return
