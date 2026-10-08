@@ -175,3 +175,9 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `arena-surface-detail.client.lua` : recoloration des détails conservée, reconstruction sur arrivée tardive du sol et changement de variante, sans multiplication de couches.
 - [ ] Studio : vérifier que les boîtiers ne masquent aucun élément de jeu et que les avertissements restent prioritaires pendant les catastrophes.
 - [ ] Android : contrôler la nouvelle densité de pièces, les FPS et les transitions de qualité.
+
+### Sprint 02 — validation de la présence effective des finitions
+
+- [x] `studio-e2e.client.lua` : vérification complète après RESULT du monument, des deux familles de décors et d'un détail soudé à la plateforme. Une fenêtre de **2 secondes** absorbe les retards normaux de réplication, sans masquer un échec réel.
+- [x] `StudioE2E.server.lua` : le serveur rejette explicitement un habillage de plateforme absent/détaché et journalise l'état des trois familles de décor.
+- [ ] Exécuter ce scénario sur un Windows Roblox Studio authentifié et contrôler les résultats des quatre arènes.

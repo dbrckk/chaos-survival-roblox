@@ -154,21 +154,12 @@ local function sendShowtimePhaseProbe(phase)
     end)
 end
 
-local function sendArenaProbe(state)
-    if type(state) ~= "table" or tostring(state.phase or "") ~= "result" then
-        return
-    end
-
-    local arenaId = tostring(state.arenaId or "")
-    if arenaId == "" or arenaProbed[arenaId] then
-        return
-    end
-    arenaProbed[arenaId] = true
-
+local function sampleArenaPresentation(arenaId)
     local root = workspace:FindFirstChild("GeneratedMap")
     local arena = root and root:FindFirstChild("Arena")
     local worldArenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
     local matchesWorld = worldArenaId == arenaId
+
     local expectedHero = ({
         Classic = "ClassicRadarSweep",
         Towers = "TowerAnimatedLift",
@@ -179,6 +170,7 @@ local function sendArenaProbe(state)
     local signatureSet = signatureRoot and signatureRoot:FindFirstChild("ArenaSignatureSet")
     local signatureHero = signatureSet and expectedHero
         and signatureSet:FindFirstChild(expectedHero)
+
     local signatureParts = 0
     local safeParts = true
     if signatureSet then
@@ -198,8 +190,6 @@ local function sendArenaProbe(state)
         and signatureParts >= 6 and signatureParts <= 50
         and safeParts
 
-    -- The unique secondary architectural kit must survive every map swap,
-    -- not only be constructible in isolated unit tests.
     local names = ({
         Classic = {"ClassicOpticShroud", "ClassicTrussDiagonal"},
         Towers = {"TowerCrateSeal", "TowerCoolingVent"},
@@ -216,24 +206,69 @@ local function sendArenaProbe(state)
         and serviceMotif.Anchored and skylineMotif.Anchored
         and not serviceMotif.CanCollide and not skylineMotif.CanCollide
 
-    reportEvent:FireServer({
+    local platformName = ({
+        Classic = "ClassicCalibrationPlate",
+        Towers = "TowerHoistMount",
+        Crossroads = "CrossroadsRouteChevron",
+        Orbital = "OrbitalFluxSpine",
+    })[arenaId]
+    local platformRoot = workspace:FindFirstChild("ArenaPlatformIdentityLocal")
+    local trim = platformRoot and platformName
+        and platformRoot:FindFirstChild(platformName)
+    local weld = trim and trim:FindFirstChild("ChaosPlatformTrimWeld")
+    local platformReady = trim ~= nil
+        and trim:IsA("BasePart")
+        and trim:GetAttribute("ChaosPlatformTrim") == true
+        and trim.Massless and not trim.Anchored and not trim.CanCollide
+        and not trim.CanTouch and not trim.CanQuery
+        and weld ~= nil and weld:IsA("WeldConstraint")
+        and weld.Part0 == trim and weld.Part1 ~= nil
+
+    local ok = matchesWorld and signatureReady and secondaryReady and platformReady
+    return {
         kind = "arena_probe",
         arenaId = arenaId,
         worldArenaId = worldArenaId,
-        ok = matchesWorld and signatureReady and secondaryReady,
+        ok = ok,
         signatureReady = signatureReady,
         secondaryReady = secondaryReady,
+        platformReady = platformReady,
         signatureHero = expectedHero or "Unknown",
         signatureParts = signatureParts,
-        error = matchesWorld and signatureReady
-            and ""
-            or string.format(
-                "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s motifs=%s",
-                arenaId, worldArenaId, tostring(expectedHero),
-                tostring(signatureHero ~= nil), signatureParts, tostring(safeParts),
-                tostring(secondaryReady)
-            ),
-    })
+        error = ok and "" or string.format(
+            "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s secondary=%s platform=%s",
+            arenaId, worldArenaId, tostring(expectedHero),
+            tostring(signatureHero ~= nil), signatureParts, tostring(safeParts),
+            tostring(secondaryReady), tostring(platformReady)
+        ),
+    }
+end
+
+local function sendArenaProbe(state)
+    if type(state) ~= "table" or tostring(state.phase or "") ~= "result" then
+        return
+    end
+
+    local arenaId = tostring(state.arenaId or "")
+    if arenaId == "" or arenaProbed[arenaId] then
+        return
+    end
+    arenaProbed[arenaId] = true
+
+    task.spawn(function()
+        -- The arena, decor and client-local welds can replicate in different
+        -- frames. Probe repeatedly, but never give an incorrect PASS.
+        local deadline = os.clock() + 2.0
+        local result = nil
+        while player.Parent and os.clock() < deadline do
+            result = sampleArenaPresentation(arenaId)
+            if result.ok then break end
+            task.wait(0.10)
+        end
+        if result then
+            reportEvent:FireServer(result)
+        end
+    end)
 end
 
 local function sendArenaEntryProbe(state)
