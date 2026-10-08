@@ -1,3 +1,11 @@
 trigger hosted probe
 trigger hosted probe after process detection fix
 trigger hosted auth classification probe
+
+
+2026-10-08 integrated visual candidate probe request
+- Branch: integration/chaos-visual-mobile-polish-20261008
+- Purpose: non-certifying attempt to run official signed Studio on GitHub-hosted Windows.
+- Capture signed installer status, Studio authentication failure or four-client E2E logs.
+- This request does not publish a Roblox place, change production settings or certify Android UX.
+- Authenticated self-hosted Studio E2E remains mandatory for release.
