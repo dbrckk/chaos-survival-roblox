@@ -95,6 +95,22 @@ describe("Character cinematic reactions", function()
         model:Destroy()
     end)
 
+    it("excludes lobby late-joiners and eliminated players from cinematic reactions", function()
+        expect(CharacterReactionRules.humanEligible(true, false)).toBe(true)
+        expect(CharacterReactionRules.humanEligible(true, nil)).toBe(true)
+        expect(CharacterReactionRules.humanEligible(false, false)).toBe(false)
+        expect(CharacterReactionRules.humanEligible(nil, nil)).toBe(false)
+        expect(CharacterReactionRules.humanEligible(true, true)).toBe(false)
+    end)
+
+    it("recognizes direct land-to-run transitions while clearing airborne time", function()
+        expect(CharacterReactionRules.isLandingTransition(Enum.HumanoidStateType.Landed)).toBe(true)
+        expect(CharacterReactionRules.isLandingTransition(Enum.HumanoidStateType.Running)).toBe(true)
+        expect(CharacterReactionRules.isLandingTransition(Enum.HumanoidStateType.RunningNoPhysics)).toBe(true)
+        expect(CharacterReactionRules.isLandingTransition(Enum.HumanoidStateType.Freefall)).toBe(false)
+        expect(CharacterReactionRules.isLandingTransition(Enum.HumanoidStateType.Jumping)).toBe(false)
+    end)
+
     it("throttles rapid duplicate events without permanent locks", function()
         local r = CharacterReactionRules
         expect(r.cooldownReady(10, nil, 1)).toBe(true)

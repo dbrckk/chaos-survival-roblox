@@ -19,6 +19,18 @@ function CharacterReactionRules.isActive(phase, alive)
     return phase == "round" and (tonumber(alive) or 0) > 0
 end
 
+-- Only living, active round entrants receive reaction VFX. Human
+-- spectator/lobby avatars must not be treated as contestants after respawn.
+function CharacterReactionRules.humanEligible(participant, eliminated)
+    return participant == true and eliminated ~= true
+end
+
+function CharacterReactionRules.isLandingTransition(state)
+    return state == Enum.HumanoidStateType.Landed
+        or state == Enum.HumanoidStateType.Running
+        or state == Enum.HumanoidStateType.RunningNoPhysics
+end
+
 function CharacterReactionRules.cooldownReady(now, last, cooldown)
     local time = tonumber(now)
     if not time then

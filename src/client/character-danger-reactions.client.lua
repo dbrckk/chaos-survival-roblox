@@ -20,6 +20,7 @@ local lastImpact = -math.huge
 local impactByModel = setmetatable({}, {__mode = "k"})
 local landingByModel = setmetatable({}, {__mode = "k"})
 local watched = setmetatable({}, {__mode = "k"})
+local pendingRigs = setmetatable({}, {__mode = "k"})
 local activePieces = setmetatable({}, {__mode = "k"})
 local botFolderConnection = nil
 local botFolder = nil
@@ -31,6 +32,17 @@ end
 
 local function liveRoot(model)
     if not model or not model.Parent then
+        return nil
+    end
+    local owner = Players:GetPlayerFromCharacter(model)
+    if owner then
+        if not Rules.humanEligible(
+            owner:GetAttribute("RoundParticipant"),
+            owner:GetAttribute("RoundEliminated")
+        ) then
+            return nil
+        end
+    elseif model:GetAttribute("AISurvivor") ~= true then
         return nil
     end
     local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -150,17 +162,23 @@ local function watchLanding(model)
     if watched[model] then
         return
     end
-    -- CharacterAdded and bot-folder insertion can fire before the rig has
-    -- finished receiving its HumanoidRootPart. Wait once instead of losing
-    -- landing effects for the entire spawn.
+    -- Replication may deliver the model before its root/Humanoid. Keep one
+    -- temporary ChildAdded listener, removed as soon as both exist.
     local humanoid = model:FindFirstChildOfClass("Humanoid")
-        or model:WaitForChild("Humanoid", 6)
     local root = model:FindFirstChild("HumanoidRootPart")
-        or model:WaitForChild("HumanoidRootPart", 6)
-    if not humanoid or not root or not root:IsA("BasePart")
-        or not model.Parent
-    then
+    if not humanoid or not root or not root:IsA("BasePart") then
+        if not pendingRigs[model] then
+            pendingRigs[model] = model.ChildAdded:Connect(function(child)
+                if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
+                    task.defer(watchLanding, model)
+                end
+            end)
+        end
         return
+    end
+    if pendingRigs[model] then
+        pendingRigs[model]:Disconnect()
+        pendingRigs[model] = nil
     end
     watched[model] = true
     local airborneAt = nil
@@ -169,7 +187,7 @@ local function watchLanding(model)
             airborneAt = airborneAt or os.clock()
         elseif state == Enum.HumanoidStateType.Dead then
             airborneAt = nil
-        elseif state == Enum.HumanoidStateType.Landed then
+        elseif Rules.isLandingTransition(state) then
             local started = airborneAt
             airborneAt = nil
             if not started then
