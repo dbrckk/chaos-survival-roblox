@@ -63,6 +63,7 @@ local function renderHazardGlyph(container, hazardId, color, transparency)
         segment.BackgroundColor3 = color or UITheme.Colors.Cyan
         segment.BackgroundTransparency = transparency or 0.08
         segment.BorderSizePixel = 0
+        segment.ZIndex = container.ZIndex
         segment:SetAttribute("HazardGlyphSegment", true)
         segment.Parent = container
         UITheme.addCorner(segment, UITheme.Corners.Pill)
