@@ -103,15 +103,50 @@ local function sendArenaProbe(state)
     local arena = root and root:FindFirstChild("Arena")
     local worldArenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
     local matchesWorld = worldArenaId == arenaId
+    local expectedHero = ({
+        Classic = "ClassicRadarSweep",
+        Towers = "TowerAnimatedLift",
+        Crossroads = "CrossroadAnimatedSignal1",
+        Orbital = "OrbitalGyroscopeHeart",
+    })[arenaId]
+    local signatureRoot = workspace:FindFirstChild("ArenaSignatureLocal")
+    local signatureSet = signatureRoot and signatureRoot:FindFirstChild("ArenaSignatureSet")
+    local signatureHero = signatureSet and expectedHero
+        and signatureSet:FindFirstChild(expectedHero)
+    local signatureParts = 0
+    local safeParts = true
+    if signatureSet then
+        for _, child in ipairs(signatureSet:GetDescendants()) do
+            if child:IsA("BasePart") then
+                signatureParts += 1
+                if not child.Anchored or child.CanCollide
+                    or child.CanTouch or child.CanQuery
+                then
+                    safeParts = false
+                end
+            end
+        end
+    end
+    local signatureReady = signatureHero ~= nil
+        and signatureHero:IsA("BasePart")
+        and signatureParts >= 6 and signatureParts <= 50
+        and safeParts
 
     reportEvent:FireServer({
         kind = "arena_probe",
         arenaId = arenaId,
         worldArenaId = worldArenaId,
-        ok = matchesWorld,
-        error = matchesWorld
+        ok = matchesWorld and signatureReady,
+        signatureReady = signatureReady,
+        signatureHero = expectedHero or "Unknown",
+        signatureParts = signatureParts,
+        error = matchesWorld and signatureReady
             and ""
-            or ("RoundState arena " .. arenaId .. " != world arena " .. worldArenaId),
+            or string.format(
+                "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s",
+                arenaId, worldArenaId, tostring(expectedHero),
+                tostring(signatureHero ~= nil), signatureParts, tostring(safeParts)
+            ),
     })
 end
 

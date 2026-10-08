@@ -157,19 +157,30 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             fail(player.Name .. ": invalid arena probe " .. arenaId)
             return
         end
-        if report.ok ~= true or worldArenaId ~= arenaId then
+        if report.ok ~= true or worldArenaId ~= arenaId
+            or report.signatureReady ~= true
+            or (tonumber(report.signatureParts) or 0) < 6
+            or (tonumber(report.signatureParts) or math.huge) > 50
+        then
             fail(
                 player.Name
-                    .. ": arena probe mismatch state="
+                    .. ": arena/signature probe mismatch state="
                     .. arenaId
                     .. " world="
                     .. worldArenaId
+                    .. ": "
+                    .. tostring(report.error or "signature missing")
             )
             return
         end
 
         arenaProbeReports[arenaId] = true
-        print("CHAOS_E2E_ARENA", player.Name, arenaId, "world=" .. worldArenaId)
+        print(
+            "CHAOS_E2E_ARENA", player.Name, arenaId,
+            "world=" .. worldArenaId,
+            "hero=" .. tostring(report.signatureHero or "missing"),
+            "parts=" .. tostring(report.signatureParts or 0)
+        )
         return
     end
 

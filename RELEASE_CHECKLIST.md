@@ -83,6 +83,7 @@ Record:
 - [ ] Build Validation and Roblox Open Cloud Engine Tests both pass on the exact candidate SHA (67 uniquely assigned engine specs).
 - [ ] Studio confirms six R6/R15 emotes and no conflict with Settings or locomotion.
 - [ ] Android 320/360/400/440px viewport checks: emote dock stays on screen and accessibility Settings remains operable.
+- [ ] The four arena probes confirm each distinct hero monument is present, has 6–50 anchored non-colliding parts and logs its identity/part count during Studio E2E.
 - [ ] All four map landmarks render and rotate safely, remain non-colliding and clean up across arena transitions.
 - [ ] Meteor/Bomb bursts render as different fragments, including all transient pieces in live budget metrics.
 - [ ] Near-miss and landing FX affect eligible living participants and AI only; late joiners, spectators and eliminated lobby avatars excluded.
