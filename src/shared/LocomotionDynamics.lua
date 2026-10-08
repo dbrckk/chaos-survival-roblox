@@ -25,7 +25,8 @@ function LocomotionDynamics.acceleration(speed, previousSpeed, dt, grounded)
     local previous = math.max(0, tonumber(previousSpeed) or current)
     local acceleration = (current - previous) / math.max(dt, 1 / 120)
     local launch = math.clamp((acceleration - 24) / 125, 0, 1)
-    local stop = current > 1.0 and math.clamp((-acceleration - 18) / 115, 0, 1) or 0
+    local stop = math.max(current, previous) > 1.0
+        and math.clamp((-acceleration - 18) / 115, 0, 1) or 0
     return launch, stop
 end
 
