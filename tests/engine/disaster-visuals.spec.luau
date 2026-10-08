@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local DisasterVisuals = require("../../src/shared/DisasterVisuals")
 local UITheme = require("../../src/shared/UITheme")
 local DisasterBalance = require("../../src/server/DisasterBalance")
+local HazardGlyphs = require("../../src/shared/HazardGlyphs")
 
 describe("Disaster visual identities", function()
     it("defines a profile for every disaster", function()
@@ -28,6 +29,23 @@ describe("Disaster visual identities", function()
             expect(profile.Bloom > 0).toBe(true)
             expect(profile.Fov >= 70).toBe(true)
             expect(profile.Fov <= 85).toBe(true)
+        end
+    end)
+
+    it("defines a bounded procedural glyph for every disaster", function()
+        for id in pairs(DisasterVisuals.Profiles) do
+            local recipe = HazardGlyphs.get(id)
+            expect(recipe ~= nil).toBe(true)
+            expect(#(recipe :: any) >= 3).toBe(true)
+            expect(#(recipe :: any) <= 8).toBe(true)
+
+            for _, segment in ipairs(recipe :: any) do
+                expect(segment.X >= 0 and segment.X <= 1).toBe(true)
+                expect(segment.Y >= 0 and segment.Y <= 1).toBe(true)
+                expect(segment.Width > 0 and segment.Width <= 1).toBe(true)
+                expect(segment.Height > 0 and segment.Height <= 1).toBe(true)
+                expect(math.abs(segment.Rotation or 0) <= 180).toBe(true)
+            end
         end
     end)
 
