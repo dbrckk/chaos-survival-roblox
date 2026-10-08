@@ -15,6 +15,7 @@ local lastRevealAt = 0
 local previousPhase = "waiting"
 local mapConnection = nil
 local hazardHologram = nil
+local hazardHologramSignature = ""
 local lastState = nil
 
 local function clearHazardHologram()
@@ -22,6 +23,7 @@ local function clearHazardHologram()
         hazardHologram:Destroy()
     end
     hazardHologram = nil
+    hazardHologramSignature = ""
 end
 
 local function addGlyphSegments(parent, hazardId, color)
@@ -50,8 +52,6 @@ local function addGlyphSegments(parent, hazardId, color)
 end
 
 local function showHazardHologram(arena, state)
-    clearHazardHologram()
-
     if not arena or not arena.Parent or not state then
         return
     end
@@ -73,6 +73,19 @@ local function showHazardHologram(arena, state)
 
     local doubleChaos = ids[2] ~= nil
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
+    local signature = table.concat(ids, "|")
+        .. "|" .. tier.Name
+        .. "|" .. tostring(reducedMotion)
+
+    if hazardHologram
+        and hazardHologram.Parent
+        and hazardHologramSignature == signature
+    then
+        return
+    end
+
+    clearHazardHologram()
+    hazardHologramSignature = signature
 
     local gui = Instance.new("BillboardGui")
     gui.Name = "ArenaHazardHologramLocal"
