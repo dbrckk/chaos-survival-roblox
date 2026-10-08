@@ -93,6 +93,53 @@ topAccent.BorderSizePixel = 0
 topAccent.Parent = top
 UITheme.addCorner(topAccent, UITheme.Corners.Pill)
 
+local topHazardGlyph = Instance.new("Frame")
+topHazardGlyph.Name = "TopHazardGlyph"
+topHazardGlyph.AnchorPoint = Vector2.new(0, 0.5)
+topHazardGlyph.Position = UDim2.new(0, 16, 0.5, 0)
+topHazardGlyph.Size = UDim2.fromOffset(42, 42)
+topHazardGlyph.BackgroundColor3 = UITheme.Colors.PanelSoft
+topHazardGlyph.BackgroundTransparency = 0.36
+topHazardGlyph.BorderSizePixel = 0
+topHazardGlyph.Visible = false
+topHazardGlyph.ZIndex = 2
+topHazardGlyph.Parent = top
+UITheme.addCorner(topHazardGlyph, UITheme.Corners.Medium)
+local topHazardStroke = UITheme.addStroke(
+    topHazardGlyph,
+    UITheme.Colors.Cyan,
+    1.1,
+    0.38
+)
+
+local topHazardGlyphCanvas = Instance.new("Frame")
+topHazardGlyphCanvas.AnchorPoint = Vector2.new(0.5, 0.5)
+topHazardGlyphCanvas.Position = UDim2.fromScale(0.5, 0.5)
+topHazardGlyphCanvas.Size = UDim2.fromScale(0.70, 0.70)
+topHazardGlyphCanvas.BackgroundTransparency = 1
+topHazardGlyphCanvas.ZIndex = 2
+topHazardGlyphCanvas.Parent = topHazardGlyph
+
+local topHazardSecondary = Instance.new("Frame")
+topHazardSecondary.Name = "TopHazardSecondary"
+topHazardSecondary.AnchorPoint = Vector2.new(1, 1)
+topHazardSecondary.Position = UDim2.fromScale(1.08, 1.08)
+topHazardSecondary.Size = UDim2.fromScale(0.48, 0.48)
+topHazardSecondary.BackgroundColor3 = UITheme.Colors.Panel
+topHazardSecondary.BackgroundTransparency = 0.08
+topHazardSecondary.BorderSizePixel = 0
+topHazardSecondary.Visible = false
+topHazardSecondary.ZIndex = 3
+topHazardSecondary.Parent = topHazardGlyph
+UITheme.addCorner(topHazardSecondary, UITheme.Corners.Small)
+local topHazardSecondaryCanvas = Instance.new("Frame")
+topHazardSecondaryCanvas.AnchorPoint = Vector2.new(0.5, 0.5)
+topHazardSecondaryCanvas.Position = UDim2.fromScale(0.5, 0.5)
+topHazardSecondaryCanvas.Size = UDim2.fromScale(0.70, 0.70)
+topHazardSecondaryCanvas.BackgroundTransparency = 1
+topHazardSecondaryCanvas.ZIndex = 3
+topHazardSecondaryCanvas.Parent = topHazardSecondary
+
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -90, 0.58, 0)
 title.Position = UDim2.fromOffset(18, 6)
@@ -1707,6 +1754,46 @@ resultNext.ZIndex = 22
 resultNext.Parent = resultCard
 UITheme.addTextConstraint(resultNext, 10, 15)
 
+local function refreshTopHazardIdentity(state)
+    local phase = tostring(state and state.phase or "")
+    local ids = state and type(state.disasterIds) == "table" and state.disasterIds or {}
+    local primaryId = ids[1]
+    local secondaryId = ids[2]
+
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local tooNarrow = touchDevice and UIResponsive.classify(viewport, true).veryNarrow
+    local visible = (phase == "ready" or phase == "round")
+        and primaryId ~= nil
+        and not tooNarrow
+
+    topHazardGlyph.Visible = visible
+    if not visible then
+        topHazardSecondary.Visible = false
+        return
+    end
+
+    local primaryColor = UITheme.disasterAccent(primaryId, UITheme.Colors.Cyan)
+    topHazardStroke.Color = primaryColor
+    renderHazardGlyph(topHazardGlyphCanvas, primaryId, primaryColor, 0.08)
+
+    if secondaryId then
+        local secondaryColor = UITheme.disasterAccent(
+            secondaryId,
+            UITheme.Colors.Violet
+        )
+        topHazardSecondary.Visible = true
+        renderHazardGlyph(
+            topHazardSecondaryCanvas,
+            secondaryId,
+            secondaryColor,
+            0.06
+        )
+    else
+        topHazardSecondary.Visible = false
+    end
+end
+
 local function applyResponsiveLayout()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
@@ -1714,6 +1801,13 @@ local function applyResponsiveLayout()
     if not touchDevice then
         top.Position = UDim2.fromScale(0.5, 0.025)
         top.Size = UDim2.fromScale(0.88, 0.13)
+        topHazardGlyph.Position = UDim2.new(0, 16, 0.5, 0)
+        topHazardGlyph.Size = UDim2.fromOffset(42, 42)
+        local topLeftInset = topHazardGlyph.Visible and 70 or 18
+        title.Position = UDim2.fromOffset(topLeftInset, 6)
+        title.Size = UDim2.new(1, -(topLeftInset + 72), 0.58, 0)
+        hint.Position = UDim2.new(0, topLeftInset, 0.62, 0)
+        hint.Size = UDim2.new(1, -(topLeftInset + 82), 0.32, 0)
         timer.Size = UDim2.fromOffset(70, 70)
         votes.Position = UDim2.fromScale(0.5, 0.58)
         votes.Size = UDim2.fromScale(0.88, 0.24)
@@ -1747,15 +1841,37 @@ local function applyResponsiveLayout()
     aliveCounter.Size = UDim2.fromOffset(math.max(88, profile.timerSize + 36), 24)
     aliveCounter.Position = UDim2.new(1, -8, 1, 5)
 
+    local mobileLeftInset = topHazardGlyph.Visible and 62 or 14
+    topHazardGlyph.Position = UDim2.new(0, 12, 0.5, 0)
+    topHazardGlyph.Size = UDim2.fromOffset(
+        profile.tinyHeight and 34 or 40,
+        profile.tinyHeight and 34 or 40
+    )
+
     if compactRoundTop then
-        title.Position = UDim2.new(0, 14, 0.14, 0)
-        title.Size = UDim2.new(1, -(profile.timerSize + 32), 0.70, 0)
+        title.Position = UDim2.new(0, mobileLeftInset, 0.14, 0)
+        title.Size = UDim2.new(
+            1,
+            -(profile.timerSize + mobileLeftInset + 18),
+            0.70,
+            0
+        )
         hint.Visible = false
     else
-        title.Position = UDim2.fromOffset(14, 4)
-        title.Size = UDim2.new(1, -(profile.timerSize + 32), 0.56, 0)
-        hint.Position = UDim2.new(0, 14, 0.60, 0)
-        hint.Size = UDim2.new(1, -(profile.timerSize + 40), 0.32, 0)
+        title.Position = UDim2.new(0, mobileLeftInset, 0, 4)
+        title.Size = UDim2.new(
+            1,
+            -(profile.timerSize + mobileLeftInset + 18),
+            0.56,
+            0
+        )
+        hint.Position = UDim2.new(0, mobileLeftInset, 0.60, 0)
+        hint.Size = UDim2.new(
+            1,
+            -(profile.timerSize + mobileLeftInset + 26),
+            0.32,
+            0
+        )
         hint.Visible = true
     end
 
@@ -2888,6 +3004,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     currentHudPhase = tostring(state.phase or "waiting")
     currentHudVoteOptions = state.voteOptions
     compactRoundTop = touchDevice and currentHudPhase == "round"
+    refreshTopHazardIdentity(state)
     top.Visible = currentHudPhase ~= "result"
 
     if previousHudPhase == "result" and currentHudPhase ~= "result" then
