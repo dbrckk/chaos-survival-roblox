@@ -5,6 +5,8 @@ local TweenService = game:GetService("TweenService")
 
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -12,6 +14,158 @@ local revealToken = 0
 local lastRevealAt = 0
 local previousPhase = "waiting"
 local mapConnection = nil
+local hazardHologram = nil
+local lastState = nil
+
+local function clearHazardHologram()
+    if hazardHologram and hazardHologram.Parent then
+        hazardHologram:Destroy()
+    end
+    hazardHologram = nil
+end
+
+local function addGlyphSegments(parent, hazardId, color)
+    local recipe = HazardGlyphs.get(hazardId)
+    if not recipe then
+        return false
+    end
+
+    for _, def in ipairs(recipe) do
+        local segment = Instance.new("Frame")
+        segment.AnchorPoint = Vector2.new(0.5, 0.5)
+        segment.Position = UDim2.fromScale(def.X, def.Y)
+        segment.Size = UDim2.fromScale(def.Width, def.Height)
+        segment.Rotation = def.Rotation or 0
+        segment.BackgroundColor3 = color
+        segment.BackgroundTransparency = 0.10
+        segment.BorderSizePixel = 0
+        segment.Parent = parent
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = segment
+    end
+
+    return true
+end
+
+local function showHazardHologram(arena, state)
+    clearHazardHologram()
+
+    if not arena or not arena.Parent or not state then
+        return
+    end
+
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    if tier.Name == "Low" then
+        return
+    end
+
+    local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
+    if not ids[1] then
+        return
+    end
+
+    local base = arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then
+        return
+    end
+
+    local doubleChaos = ids[2] ~= nil
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
+
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "ArenaHazardHologramLocal"
+    gui.Adornee = base
+    gui.AlwaysOnTop = false
+    gui.LightInfluence = 0
+    gui.MaxDistance = 240
+    gui.Size = UDim2.fromOffset(
+        tier.Name == "High" and 260 or 220,
+        tier.Name == "High" and 108 or 92
+    )
+    gui.StudsOffsetWorldSpace = Vector3.new(
+        0,
+        math.max(9, base.Size.Y * 0.5 + 8),
+        0
+    )
+    gui.Parent = base
+
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.fromScale(1, 1)
+    panel.BackgroundColor3 = VisualTheme.World.Deep
+    panel.BackgroundTransparency = 0.20
+    panel.BorderSizePixel = 0
+    panel.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 18)
+    corner.Parent = panel
+
+    local primaryProfile = DisasterVisuals.get(ids[1])
+    local primaryColor = primaryProfile and primaryProfile.Accent or VisualTheme.Accents.Cyan
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = primaryColor
+    stroke.Thickness = tier.Name == "High" and 2 or 1.5
+    stroke.Transparency = 0.18
+    stroke.Parent = panel
+
+    local accentRail = Instance.new("Frame")
+    accentRail.AnchorPoint = Vector2.new(0.5, 0)
+    accentRail.Position = UDim2.fromScale(0.5, 0.06)
+    accentRail.Size = UDim2.fromScale(doubleChaos and 0.82 or 0.62, 0.055)
+    accentRail.BackgroundColor3 = primaryColor
+    accentRail.BorderSizePixel = 0
+    accentRail.Parent = panel
+
+    local railCorner = Instance.new("UICorner")
+    railCorner.CornerRadius = UDim.new(1, 0)
+    railCorner.Parent = accentRail
+
+    local function glyphSlot(hazardId, x, color)
+        local slot = Instance.new("Frame")
+        slot.AnchorPoint = Vector2.new(0.5, 0.5)
+        slot.Position = UDim2.fromScale(x, 0.56)
+        slot.Size = UDim2.fromScale(doubleChaos and 0.32 or 0.42, 0.68)
+        slot.BackgroundTransparency = 1
+        slot.Parent = panel
+        addGlyphSegments(slot, hazardId, color)
+    end
+
+    glyphSlot(ids[1], doubleChaos and 0.30 or 0.50, primaryColor)
+
+    if doubleChaos then
+        local secondaryProfile = DisasterVisuals.get(ids[2])
+        local secondaryColor = secondaryProfile and secondaryProfile.Accent or VisualTheme.Accents.Violet
+        glyphSlot(ids[2], 0.70, secondaryColor)
+
+        local divider = Instance.new("Frame")
+        divider.AnchorPoint = Vector2.new(0.5, 0.5)
+        divider.Position = UDim2.fromScale(0.5, 0.57)
+        divider.Size = UDim2.fromScale(0.012, 0.48)
+        divider.BackgroundColor3 = primaryColor:Lerp(secondaryColor, 0.5)
+        divider.BackgroundTransparency = 0.42
+        divider.BorderSizePixel = 0
+        divider.Parent = panel
+        local dividerCorner = Instance.new("UICorner")
+        dividerCorner.CornerRadius = UDim.new(1, 0)
+        dividerCorner.Parent = divider
+    end
+
+    local scale = Instance.new("UIScale")
+    scale.Scale = reducedMotion and 1 or 0.84
+    scale.Parent = panel
+    if not reducedMotion then
+        TweenService:Create(
+            scale,
+            TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = 1}
+        ):Play()
+    end
+
+    hazardHologram = gui
+end
 
 local function makeNeonPart(name, size, cframe, color, transparency)
     local part = Instance.new("Part")
@@ -274,6 +428,7 @@ local function bindGeneratedMap(root)
 
     if not root then
         revealToken += 1
+        clearHazardHologram()
         return
     end
 
@@ -309,12 +464,40 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = tostring(state.phase or "waiting")
-    if phase == "ready" and previousPhase ~= "ready" then
+    lastState = state
+
+    if phase == "ready" then
         local generated = workspace:FindFirstChild("GeneratedMap")
         local arena = generated and generated:FindFirstChild("Arena")
         if arena then
-            task.delay(0.08, revealArena, arena, true)
+            if previousPhase ~= "ready" then
+                task.delay(0.08, revealArena, arena, true)
+            end
+            showHazardHologram(arena, state)
+        end
+    elseif previousPhase == "ready" then
+        clearHazardHologram()
+    end
+
+    previousPhase = phase
+end)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    if lastState and tostring(lastState.phase or "") == "ready" then
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        if arena then
+            showHazardHologram(arena, lastState)
         end
     end
-    previousPhase = phase
+end)
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if lastState and tostring(lastState.phase or "") == "ready" then
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        if arena then
+            showHazardHologram(arena, lastState)
+        end
+    end
 end)
