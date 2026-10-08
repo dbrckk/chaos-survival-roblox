@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -47,25 +48,55 @@ local function rebuild()
     local radius = tier.Name == "Low" and 7.4 or 8.2
 
     for i = 1, count do
-        local node = Instance.new("Part")
-        node.Name = "ChaosCoreOrbitNode" .. i
-        node.Shape = Enum.PartType.Ball
-        node.Size = Vector3.new(0.55, 0.55, 0.55)
-        node.Anchored = true
-        node.CanCollide = false
-        node.CanTouch = false
-        node.CanQuery = false
-        node.CastShadow = false
-        node.Material = Enum.Material.Neon
-        node.Color = i % 2 == 0 and UITheme.Colors.Violet or UITheme.Colors.Cyan
-        node.Transparency = tier.Name == "Low" and 0.36 or 0.16
-        node.Parent = folder
+        local accent = i % 3 == 0
+            and UITheme.Colors.Orange
+            or (i % 2 == 0 and UITheme.Colors.Violet or UITheme.Colors.Cyan)
+
+        local shard = Instance.new("Part")
+        shard.Name = "ChaosCoreOrbitShard" .. i
+        shard.Size = tier.Name == "Low"
+            and Vector3.new(0.28, 0.58, 0.28)
+            or Vector3.new(0.34, tier.Name == "High" and 0.92 or 0.78, 0.34)
+        shard.Anchored = true
+        shard.CanCollide = false
+        shard.CanTouch = false
+        shard.CanQuery = false
+        shard.CastShadow = false
+        shard.Material = Enum.Material.Glass
+        shard.Color = VisualTheme.World.MetalLight:Lerp(accent, tier.Name == "Low" and 0.32 or 0.48)
+        shard.Transparency = tier.Name == "Low" and 0.42 or 0.24
+        shard.Parent = folder
+
+        local core = nil
+        if tier.Name ~= "Low" then
+            core = Instance.new("Part")
+            core.Name = "ChaosCoreOrbitShardCore" .. i
+            core.Size = Vector3.new(
+                0.12,
+                tier.Name == "High" and 0.58 or 0.46,
+                0.12
+            )
+            core.Anchored = true
+            core.CanCollide = false
+            core.CanTouch = false
+            core.CanQuery = false
+            core.CastShadow = false
+            core.Material = Enum.Material.Neon
+            core.Color = accent:Lerp(Color3.new(1, 1, 1), 0.18)
+            core.Transparency = tier.Name == "High" and 0.06 or 0.14
+            core.Parent = folder
+        end
 
         nodes[#nodes + 1] = {
-            part = node,
+            part = shard,
+            core = core,
             angle = ((i - 1) / count) * math.pi * 2,
             radius = radius + ((i % 2) * 0.7),
             height = ((i % 3) - 1) * 0.75,
+            spin = 0.18 + (i % 3) * 0.035,
+            phase = i * 0.73,
+            transparency = tier.Name == "Low" and 0.42 or 0.24,
+            coreTransparency = tier.Name == "High" and 0.06 or 0.14,
         }
     end
 end
@@ -75,9 +106,11 @@ local function refreshVisibility()
     for _, entry in ipairs(nodes) do
         local part = entry.part
         if part and part.Parent then
-            part.Transparency = active
-                and (tierName == "Low" and 0.36 or 0.16)
-                or 1
+            part.Transparency = active and entry.transparency or 1
+        end
+        local core = entry.core
+        if core and core.Parent then
+            core.Transparency = active and entry.coreTransparency or 1
         end
     end
 end
@@ -120,12 +153,26 @@ task.spawn(function()
                 local part = entry.part
                 if part and part.Parent then
                     local angle = entry.angle + now * speed
-                    local y = entry.height + math.sin(now * 1.15 + i) * amplitude
-                    part.Position = center + Vector3.new(
+                    local y = entry.height + math.sin(now * 1.15 + entry.phase) * amplitude
+                    local position = center + Vector3.new(
                         math.cos(angle) * entry.radius,
                         y,
                         math.sin(angle) * entry.radius
                     )
+                    local rotation = reduced
+                        and CFrame.Angles(math.rad(45), angle, math.rad(45))
+                        or CFrame.Angles(
+                            math.rad(45) + math.sin(now * 0.62 + i) * 0.10,
+                            angle + now * entry.spin,
+                            math.rad(45)
+                        )
+                    local cframe = CFrame.new(position) * rotation
+                    part.CFrame = cframe
+
+                    local core = entry.core
+                    if core and core.Parent then
+                        core.CFrame = cframe
+                    end
                 end
             end
 
