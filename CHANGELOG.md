@@ -19,8 +19,8 @@ All notable changes to Chaos Survival are documented here.
 - Add a procedural neon dance floor with crowd-reactive tiles, holographic ribbons, three cycling dancer motifs, a DJ booth/turntables, twin 3D speaker stacks, truss, equalizer, pylons and personal celebration confetti.
 - Add six opt-in Roblox-native R6/R15 emotes: dance, shuffle, groove, cheer, wave and laugh, available in calm phases on mobile and desktop (G).
 - Avatar animation playback uses the replicated player Animator and is interrupted on movement, jumping, death or active round.
-- Reduce Motion freezes decorative choreography; Low/Medium/High VFX profiles bound local geometry, lights, particles and update rate. Add subtle, proximity-limited stage beat and personal emote cues respecting AudioMuted.
-- Add four real-engine specs, CI registration and the visual-budget folder audit.
+- Reduce Motion freezes decorative choreography; Low/Medium/High VFX profiles bound local geometry, lights, particles and update rate. Add subtle, proximity-limited stage beat and personal emote cues respecting AudioMuted. Winning players get one automatic, motion-accessible victory cheer on result transition.
+- Add a Roblox Open Cloud engine spec with regression tests for six emotes, accessibility, safe prop construction, tier budgets, mute/proximity rules and one-off winner celebrations; CI registration and visual-budget folder audit.
 - This addition is cosmetic only: no changes to survival, movement, upgrades, game currency or rewards.
 
 ## Unreleased — Release Candidate Hardening
