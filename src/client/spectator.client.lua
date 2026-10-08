@@ -340,7 +340,13 @@ local function bindTargetHealth(humanoid)
     targetHealthConnection = humanoid.HealthChanged:Connect(update)
     targetDiedConnection = humanoid.Died:Connect(function()
         task.delay(0.08, function()
-            if roundActive and card.Visible and spectateIndex then
+            -- An intervening RoundState may already have selected the successor.
+            -- Never advance twice because a stale death callback ran afterward.
+            if roundActive
+                and card.Visible
+                and observedHumanoid == humanoid
+                and spectateIndex
+            then
                 spectateIndex(true)
             end
         end)
