@@ -8,6 +8,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
+local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -136,6 +137,43 @@ local function collectSurvivors(state, budget)
     return result
 end
 
+local function addHazardGlyph(parent, id, color, position)
+    local recipe = HazardGlyphs.get(id)
+    if not recipe then
+        return nil
+    end
+
+    local holder = Instance.new("Frame")
+    holder.Name = "HazardGlyph_" .. tostring(id)
+    holder.AnchorPoint = Vector2.new(0.5, 0.5)
+    holder.Position = position
+    holder.Size = UDim2.fromOffset(42, 42)
+    holder.BackgroundColor3 = UITheme.Colors.PanelSoft
+    holder.BackgroundTransparency = 0.20
+    holder.BorderSizePixel = 0
+    holder.Parent = parent
+    UITheme.addCorner(holder, UITheme.Corners.Pill)
+    UITheme.addStroke(holder, color, 1.0, 0.42)
+
+    for index, segment in ipairs(recipe) do
+        local bar = Instance.new("Frame")
+        bar.Name = "Stroke" .. tostring(index)
+        bar.AnchorPoint = Vector2.new(0.5, 0.5)
+        bar.Position = UDim2.fromScale(segment.X, segment.Y)
+        bar.Size = UDim2.fromScale(segment.Width, segment.Height)
+        bar.Rotation = segment.Rotation
+        bar.BackgroundColor3 = color
+        bar.BorderSizePixel = 0
+        bar.Parent = holder
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = bar
+    end
+
+    return holder
+end
+
 local function addGroupLabel(centerAnchor, state, survivorCount, accentColor)
     local gui = Instance.new("BillboardGui")
     gui.Name = "ResultConstellationLabel"
@@ -157,8 +195,8 @@ local function addGroupLabel(centerAnchor, state, survivorCount, accentColor)
     UITheme.addStroke(panel, accentColor, 1.4, 0.24)
 
     local title = Instance.new("TextLabel")
-    title.Position = UDim2.fromScale(0.05, 0.10)
-    title.Size = UDim2.fromScale(0.90, 0.38)
+    title.Position = UDim2.fromScale(0.17, 0.10)
+    title.Size = UDim2.fromScale(0.66, 0.38)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBlack
     title.Text = survivorCount == 1
@@ -181,8 +219,8 @@ local function addGroupLabel(centerAnchor, state, survivorCount, accentColor)
     )
 
     local subtitle = Instance.new("TextLabel")
-    subtitle.Position = UDim2.fromScale(0.05, 0.58)
-    subtitle.Size = UDim2.fromScale(0.90, 0.22)
+    subtitle.Position = UDim2.fromScale(0.17, 0.58)
+    subtitle.Size = UDim2.fromScale(0.66, 0.22)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.GothamBold
     subtitle.Text = tostring(disasterName) .. "  •  " .. tostring(arenaName)
@@ -191,6 +229,26 @@ local function addGroupLabel(centerAnchor, state, survivorCount, accentColor)
     subtitle.TextWrapped = true
     subtitle.Parent = panel
     UITheme.addTextConstraint(subtitle, 10, 15)
+
+    local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
+    local primaryId = ids[1]
+    local secondaryId = ids[2]
+    if primaryId then
+        addHazardGlyph(
+            panel,
+            primaryId,
+            UITheme.disasterAccent(primaryId, accentColor),
+            UDim2.fromScale(0.085, 0.50)
+        )
+    end
+    if secondaryId then
+        addHazardGlyph(
+            panel,
+            secondaryId,
+            UITheme.disasterAccent(secondaryId, UITheme.Colors.Violet),
+            UDim2.fromScale(0.915, 0.50)
+        )
+    end
 end
 
 local function addSurvivorPedestal(item, accentColor, secondaryColor, tier, reducedMotion)
