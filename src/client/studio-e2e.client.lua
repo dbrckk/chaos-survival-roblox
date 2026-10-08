@@ -291,6 +291,7 @@ local shrinkGui = playerGui:WaitForChild("ShrinkPressure", 10)
 local inviteGui = playerGui:WaitForChild("ChaosSocialInvite", 10)
 local shareGui = playerGui:WaitForChild("ChaosMomentShare", 10)
 local reactionsGui = playerGui:WaitForChild("ChaosSocialReactions", 10)
+local showtimeGui = playerGui:WaitForChild("ChaosShowtime", 10)
 
 check(hud ~= nil, "ChaosHUD missing")
 check(juice ~= nil, "ChaosJuice missing")
@@ -333,6 +334,26 @@ check(shrinkGui ~= nil, "ShrinkPressure missing")
 check(inviteGui ~= nil, "ChaosSocialInvite missing")
 check(shareGui ~= nil, "ChaosMomentShare missing")
 check(reactionsGui ~= nil, "ChaosSocialReactions missing")
+
+check(showtimeGui ~= nil, "ChaosShowtime emote interface missing")
+if showtimeGui then
+    for _, controlName in ipairs({
+        "ShowtimeToggle",
+        "Emote_dance",
+        "Emote_shuffle",
+        "Emote_cheer",
+        "Emote_wave",
+    }) do
+        local control = showtimeGui:FindFirstChild(controlName, true)
+        check(control ~= nil, controlName .. " missing")
+        if control and control:IsA("GuiObject") then
+            check(
+                control.Size.Y.Offset >= 44,
+                controlName .. " touch target too small"
+            )
+        end
+    end
+end
 
 do
     local minHeight = UserInputService.TouchEnabled and 44 or 36
