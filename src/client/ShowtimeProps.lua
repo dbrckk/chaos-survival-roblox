@@ -21,6 +21,7 @@ local function primitive(parent, name, cf, size, color, material, transparency, 
     if shape then
         p.Shape = shape
     end
+    p:SetAttribute("ShowtimeDefaultTransparency", p.Transparency)
     p.Parent = parent
     return p
 end
