@@ -10,6 +10,7 @@ local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local AttentionBudgetRules = require(ReplicatedStorage.Shared.AttentionBudgetRules)
+local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
@@ -38,6 +39,35 @@ local root = Instance.new("Frame")
 root.Size = UDim2.fromScale(1, 1)
 root.BackgroundTransparency = 1
 root.Parent = gui
+
+local function renderHazardGlyph(container, hazardId, color, transparency)
+    for _, child in ipairs(container:GetChildren()) do
+        if child:GetAttribute("HazardGlyphSegment") == true then
+            child:Destroy()
+        end
+    end
+
+    local recipe = HazardGlyphs.get(hazardId)
+    container.Visible = recipe ~= nil
+    if not recipe then
+        return
+    end
+
+    for _, segmentDef in ipairs(recipe) do
+        local segment = Instance.new("Frame")
+        segment.Name = "GlyphSegment"
+        segment.AnchorPoint = Vector2.new(0.5, 0.5)
+        segment.Position = UDim2.fromScale(segmentDef.X, segmentDef.Y)
+        segment.Size = UDim2.fromScale(segmentDef.Width, segmentDef.Height)
+        segment.Rotation = segmentDef.Rotation or 0
+        segment.BackgroundColor3 = color or UITheme.Colors.Cyan
+        segment.BackgroundTransparency = transparency or 0.08
+        segment.BorderSizePixel = 0
+        segment:SetAttribute("HazardGlyphSegment", true)
+        segment.Parent = container
+        UITheme.addCorner(segment, UITheme.Corners.Pill)
+    end
+end
 
 local top = Instance.new("Frame")
 top.Name = "TopHUD"
@@ -329,6 +359,16 @@ local countdownScale = Instance.new("UIScale")
 countdownScale.Scale = 1
 countdownScale.Parent = countdownCard
 
+local countdownGlyph = Instance.new("Frame")
+countdownGlyph.Name = "CountdownHazardGlyph"
+countdownGlyph.AnchorPoint = Vector2.new(0.5, 0.5)
+countdownGlyph.Position = UDim2.fromScale(0.82, 0.52)
+countdownGlyph.Size = UDim2.fromScale(0.28, 0.68)
+countdownGlyph.BackgroundTransparency = 1
+countdownGlyph.Visible = false
+countdownGlyph.ZIndex = 40
+countdownGlyph.Parent = countdownCard
+
 local countdownKicker = Instance.new("TextLabel")
 countdownKicker.Name = "CountdownKicker"
 countdownKicker.Size = UDim2.new(1, -28, 0.22, 0)
@@ -435,6 +475,12 @@ local function presentCountdown(state)
         )
         countdownStroke.Color = state.doubleChaos and UITheme.Colors.Violet or accent
         countdownKicker.TextColor3 = accent
+        renderHazardGlyph(
+            countdownGlyph,
+            state.disasterIds and state.disasterIds[1],
+            accent,
+            0.66
+        )
 
         local survivorCount = math.max(
             1,
@@ -515,6 +561,7 @@ local function presentCountdown(state)
     end
 
     countdownToken += 1
+    countdownGlyph.Visible = false
     countdownCard.Visible = false
 end
 
@@ -2300,10 +2347,29 @@ local function showVotes(options)
         UITheme.addTextConstraint(statusBadge, compactVote and 10 or 11, 18)
         UITheme.addCorner(statusBadge, UITheme.Corners.Pill)
 
+        local glyph = Instance.new("Frame")
+        glyph.Name = "VoteHazardGlyph"
+        glyph.Position = UDim2.fromScale(0.07, compactVote and 0.29 or 0.33)
+        glyph.Size = UDim2.fromScale(0.16, compactVote and 0.23 or 0.22)
+        glyph.BackgroundColor3 = accentColor:Lerp(UITheme.Colors.Panel, 0.72)
+        glyph.BackgroundTransparency = 0.16
+        glyph.BorderSizePixel = 0
+        glyph.Parent = button
+        UITheme.addCorner(glyph, UITheme.Corners.Medium)
+        UITheme.addStroke(glyph, accentColor, 1, selected and 0.18 or 0.42)
+
+        local glyphCanvas = Instance.new("Frame")
+        glyphCanvas.AnchorPoint = Vector2.new(0.5, 0.5)
+        glyphCanvas.Position = UDim2.fromScale(0.5, 0.5)
+        glyphCanvas.Size = UDim2.fromScale(0.72, 0.72)
+        glyphCanvas.BackgroundTransparency = 1
+        glyphCanvas.Parent = glyph
+        renderHazardGlyph(glyphCanvas, option.id, accentColor, selected and 0.02 or 0.10)
+
         local name = Instance.new("TextLabel")
         name.Name = "VoteHazardName"
-        name.Position = UDim2.fromScale(0.07, compactVote and 0.27 or 0.34)
-        name.Size = UDim2.fromScale(0.86, compactVote and 0.25 or 0.23)
+        name.Position = UDim2.fromScale(0.26, compactVote and 0.27 or 0.34)
+        name.Size = UDim2.fromScale(0.67, compactVote and 0.25 or 0.23)
         name.BackgroundTransparency = 1
         name.Font = Enum.Font.GothamBlack
         name.Text = CoreLocalization.hazardName(localeId, option.id)
