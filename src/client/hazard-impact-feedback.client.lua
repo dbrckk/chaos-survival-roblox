@@ -24,9 +24,9 @@ local function maxConcurrentBursts(profile, reduced)
     elseif profile.Name == "Low" then
         return 6
     elseif profile.Name == "Medium" then
-        return 10
+        return 8
     end
-    return 14
+    return 10
 end
 
 local function tier()
@@ -42,22 +42,26 @@ local function makeAftermath(position, color, radius, kind, profile, reduced)
 
     local debrisCount = profile.Name == "High" and 6 or 3
     for i = 1, debrisCount do
-        local angle = ((i - 1) / debrisCount) * math.pi * 2 + math.random() * 0.45
-        local distance = radius * (0.28 + math.random() * 0.40)
-        local shard = Instance.new("Part")
-        shard.Name = "LocalImpactDebris"
+        -- Event position supplies stable natural variation without random
+        -- flicker between clients or frame-dependent math.random() calls.
+        local phase = (position.X * 0.11 + position.Z * 0.07) % (math.pi * 2)
+        local angle = ((i - 1) / debrisCount) * math.pi * 2 + phase
+        local distance = radius * (0.30 + (i % 3) * 0.16)
+        local meteor = kind == "Meteor"
+        local shard = meteor and Instance.new("WedgePart") or Instance.new("Part")
+        shard.Name = meteor and "LocalMeteorMineralFragment" or "LocalBombShrapnel"
         shard.Size = Vector3.new(
-            0.18 + math.random() * 0.28,
-            0.08 + math.random() * 0.12,
-            0.30 + math.random() * 0.42
+            0.20 + (i % 3) * 0.12,
+            0.10 + (i % 2) * 0.08,
+            0.32 + (i % 4) * 0.13
         )
         shard.CFrame = CFrame.new(
             position
                 + Vector3.new(math.cos(angle) * distance, 0.13, math.sin(angle) * distance)
         ) * CFrame.Angles(
-            math.random() * 1.4,
-            math.random() * math.pi,
-            math.random() * 1.4
+            i * 0.21,
+            angle,
+            i * 0.17
         )
         shard.Anchored = true
         shard.CanCollide = false
@@ -69,16 +73,16 @@ local function makeAftermath(position, color, radius, kind, profile, reduced)
             and color:Lerp(Color3.fromRGB(42, 34, 28), 0.70)
             or color:Lerp(Color3.fromRGB(35, 38, 48), 0.72)
         shard.Transparency = 0.12
-        shard.Parent = workspace
+        shard.Parent = setpieceFolder
 
         TweenService:Create(
             shard,
             TweenInfo.new(0.66 + math.random() * 0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
                 Position = shard.Position + Vector3.new(
-                    math.cos(angle) * (1.5 + math.random() * 2.2),
-                    0.15 + math.random() * 0.45,
-                    math.sin(angle) * (1.5 + math.random() * 2.2)
+                    math.cos(angle) * (1.5 + (i % 3) * 0.8),
+                    0.15 + (i % 4) * 0.14,
+                    math.sin(angle) * (1.5 + (i % 3) * 0.8)
                 ),
                 Transparency = 1,
             }
@@ -138,7 +142,7 @@ local function renderBurst(payload)
     burst.Material = Enum.Material.Neon
     burst.Color = color
     burst.Transparency = 0.2
-    burst.Parent = workspace
+    burst.Parent = setpieceFolder
 
     local ring = Instance.new("Part")
     ring.Name = "LocalHazardShockRing"
@@ -154,7 +158,7 @@ local function renderBurst(payload)
     ring.Material = Enum.Material.Neon
     ring.Color = color
     ring.Transparency = 0.18
-    ring.Parent = workspace
+    ring.Parent = setpieceFolder
 
     local secondaryRing = nil
     local plumeAnchor = nil
@@ -175,7 +179,7 @@ local function renderBurst(payload)
             and Color3.fromRGB(255, 205, 95)
             or color:Lerp(Color3.new(1, 1, 1), 0.22)
         secondaryRing.Transparency = 0.34
-        secondaryRing.Parent = workspace
+        secondaryRing.Parent = setpieceFolder
 
         plumeAnchor = Instance.new("Part")
         plumeAnchor.Name = "LocalHazardImpactPlumeAnchor"
@@ -187,7 +191,7 @@ local function renderBurst(payload)
         plumeAnchor.CanQuery = false
         plumeAnchor.CastShadow = false
         plumeAnchor.Transparency = 1
-        plumeAnchor.Parent = workspace
+        plumeAnchor.Parent = setpieceFolder
 
         local attachment = Instance.new("Attachment")
         attachment.Name = "ImpactPlumeAttachment"
@@ -264,7 +268,7 @@ local function renderBurst(payload)
             and Color3.fromRGB(255, 218, 115)
             or color:Lerp(Color3.new(1, 1, 1), 0.18)
         core.Transparency = 0.05
-        core.Parent = workspace
+        core.Parent = setpieceFolder
     end
 
     local light
@@ -284,7 +288,13 @@ local function renderBurst(payload)
         burst,
         TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
-            Size = Vector3.new(targetDiameter, targetDiameter, targetDiameter),
+            -- Squashed kind-dependent volume reveals the playfield behind it
+            -- instead of a huge generic glowing sphere.
+            Size = kind == "Meteor"
+                and Vector3.new(targetDiameter * 0.54,
+                    targetDiameter * 0.68, targetDiameter * 0.54)
+                or Vector3.new(targetDiameter * 0.82,
+                    targetDiameter * 0.24, targetDiameter * 0.82),
             Transparency = 1,
         }
     ):Play()
@@ -318,7 +328,11 @@ local function renderBurst(payload)
             core,
             TweenInfo.new(duration * 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
-                Size = Vector3.new(targetDiameter * 0.42, targetDiameter * 0.42, targetDiameter * 0.42),
+                Size = kind == "Meteor"
+                    and Vector3.new(targetDiameter * 0.25, targetDiameter * 0.36,
+                        targetDiameter * 0.25)
+                    or Vector3.new(targetDiameter * 0.38, targetDiameter * 0.15,
+                        targetDiameter * 0.38),
                 Transparency = 1,
             }
         ):Play()

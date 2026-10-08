@@ -199,3 +199,12 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `tests/engine/disaster-visuals.spec.luau` : 11 catastrophes × 3 tiers × 2 emplacements, silhouettes distinctes, rotation de carte, absence de collisions, aucun néon en Low.
 - [ ] Revue manuelle en Studio : les plaques ne doivent jamais masquer un danger, les introduc­tions Double Chaos ne doivent pas saturer le cadre.
 - [ ] FPS Android et comparaison de lisibilité High/Medium/Low, notamment avec Reduce Motion.
+
+## Sprint 04 — impacts de météores / bombes : signature de matière
+
+- [x] `ImpactSetpieceRules.lua` : 2 (Medium) ou 4 (High) finitions géométriques supplémentaires, aucune en Low ou avec Reduce Motion. Répartition radiale **déterministe** et bornée.
+- [x] `ImpactSetpiece.lua` : deux langages de matière immédiatement distincts : **éclats de bord de cratère minéral (WedgePart/Slate)** et **éléments tangentiels de front de pression (Metal)**. Décroissance courte et suppression Debris.
+- [x] `hazard-impact-feedback.client.lua` : grands flashs réduits en épaisseur pour ne pas bloquer la vue, formes météore et bombe différenciées ; débris de matière déterministes et inventoriés dans `ImpactSetpieceLocal`.
+- [x] Concurrence de VFX réduite à 8 Medium / 10 High (contre 10/14 auparavant) ; sons, collisions, dégâts, positions et temps de gameplay inchangés.
+- [x] `tests/engine/disaster-visuals.spec.luau` : quantité, types, matériaux, limites Medium/High, trajectoires et absence de collisions sur deux classes d'impacts.
+- [ ] Vérifier en Studio l'absence d'occlusion des trajectoires du joueur, la compatibilité Double Chaos et les FPS Android sur une succession dense d'impacts.

@@ -78,6 +78,50 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
             }
         ):Play()
     end
+    -- Faceted crater rubble and tangent pressure-arc hardware deliberately
+    -- replace a second generic neon ring. The shapes differ even in grayscale.
+    local finishCount = rules.finishCount(recipe.Kind, qualityTier, reduceMotion)
+    for index = 1, finishCount do
+        local finish = rules.finish(recipe.Kind, index, finishCount, recipe.Radius)
+        local meteor = recipe.Kind == "Meteor"
+        local piece = meteor and Instance.new("WedgePart") or Instance.new("Part")
+        piece.Name = meteor and ("MeteorCraterRim" .. index)
+            or ("BombPressureArc" .. index)
+        piece.Anchored = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+        piece.Material = meteor and Enum.Material.Slate or Enum.Material.Metal
+        piece.Color = meteor
+            and payload.color:Lerp(Color3.fromRGB(48, 40, 35), 0.70)
+            or payload.color:Lerp(Color3.fromRGB(145, 139, 145), 0.56)
+        piece.Transparency = meteor and 0.11 or 0.18
+        piece.Size = meteor
+            and Vector3.new(finish.Width, finish.Height, finish.Width * 0.75)
+            or Vector3.new(finish.Width, 0.15, 0.25)
+        local angle = finish.Angle
+        local rotation = CFrame.Angles(0, -angle, meteor and math.rad(20) or 0)
+        local start = payload.position + finish.Direction * finish.StartRadius
+            + Vector3.new(0, meteor and finish.Height * 0.5 or 0.16, 0)
+        local goal = payload.position + finish.Direction * finish.EndRadius
+            + Vector3.new(0, finish.Lift, 0)
+        piece.CFrame = CFrame.new(start) * rotation
+        piece.Parent = container
+        TweenService:Create(
+            piece,
+            TweenInfo.new(recipe.Lifetime * (meteor and 0.85 or 0.72),
+                Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                CFrame = CFrame.new(goal) * rotation,
+                Size = meteor
+                    and Vector3.new(finish.Width * 0.62,
+                        finish.Height * 0.43, finish.Width * 0.32)
+                    or Vector3.new(finish.Width * 1.4, 0.05, 0.18),
+                Transparency = 1,
+            }
+        ):Play()
+    end
     Debris:AddItem(container, recipe.Lifetime + 0.12)
     return container
 end

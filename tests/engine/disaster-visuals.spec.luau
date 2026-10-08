@@ -23,9 +23,14 @@ describe("Disaster visual identities", function()
                 expect(meteor.Material ~= bomb.Material).toBe(true)
                 expect(meteor.Count <= 7).toBe(true)
                 expect(bomb.Count <= 8).toBe(true)
+                expect(ImpactSetpieceRules.finishCount("Meteor", tier, false) <= 4).toBe(true)
+                expect(ImpactSetpieceRules.finishCount("Bomb", tier, false) <= 4).toBe(true)
             end
         end
         expect(ImpactSetpieceRules.get("Meteor", "High", true, 12) == nil).toBe(true)
+        expect(ImpactSetpieceRules.finishCount("Meteor", "High", true)).toBe(0)
+        expect(ImpactSetpieceRules.finishCount("Bomb", "Low", false)).toBe(0)
+        expect(ImpactSetpieceRules.finishCount("Unknown", "High", false)).toBe(0)
         expect(ImpactSetpieceRules.get("Unknown", "High", false, 12) == nil).toBe(true)
         expect(ImpactSetpieceRules.get("Bomb", "High", false, 500).Radius).toBe(40)
         expect(ImpactSetpieceRules.get("Meteor", "High", false, -5).Radius).toBe(1)
@@ -34,8 +39,10 @@ describe("Disaster visual identities", function()
     it("builds non-colliding meteor shards and bomb spokes with bounded geometry", function()
         local root = Instance.new("Folder")
         for _, case in ipairs({
-            {kind = "Meteor", class = "WedgePart", name = "MeteorShard", count = 7},
-            {kind = "Bomb", class = "Part", name = "BombPressureSpoke", count = 8},
+            {kind = "Meteor", class = "WedgePart", name = "MeteorShard",
+                finish = "MeteorCraterRim", count = 7, finishClass = "WedgePart"},
+            {kind = "Bomb", class = "Part", name = "BombPressureSpoke",
+                finish = "BombPressureArc", count = 8, finishClass = "Part"},
         }) do
             local parts = ImpactSetpiece.spawn(root, {
                 kind = case.kind,
@@ -44,16 +51,27 @@ describe("Disaster visual identities", function()
                 radius = 11,
             }, "High", false, ImpactSetpieceRules)
             expect(parts ~= nil).toBe(true)
-            expect(#parts:GetChildren()).toBe(case.count)
+            expect(#parts:GetChildren()).toBe(case.count + 4)
+            local shards = 0
+            local finishes = 0
             for _, child in ipairs(parts:GetChildren()) do
-                expect(child.ClassName).toBe(case.class)
+                if string.find(child.Name, case.name, 1, true) then
+                    shards += 1
+                    expect(child.ClassName).toBe(case.class)
+                else
+                    finishes += 1
+                    expect(string.find(child.Name, case.finish, 1, true) ~= nil).toBe(true)
+                    expect(child.ClassName).toBe(case.finishClass)
+                    expect(child.Material == Enum.Material.Neon).toBe(false)
+                end
                 expect(child.Anchored).toBe(true)
                 expect(child.CanCollide).toBe(false)
                 expect(child.CanTouch).toBe(false)
                 expect(child.CanQuery).toBe(false)
                 expect(child.Size.Magnitude > 0).toBe(true)
-                expect(string.find(child.Name, case.name, 1, true) ~= nil).toBe(true)
             end
+            expect(shards).toBe(case.count)
+            expect(finishes).toBe(4)
             parts:Destroy()
         end
         expect(ImpactSetpiece.spawn(root, {kind = "Meteor"}, "High", false) == nil).toBe(true)
@@ -61,6 +79,29 @@ describe("Disaster visual identities", function()
             kind = "Meteor", position = Vector3.zero, color = Color3.new(1, 1, 1),
         }, "Low", false, ImpactSetpieceRules) == nil).toBe(true)
         root:Destroy()
+    end)
+
+    it("keeps mechanical impact finish paths within deterministic material budgets", function()
+        for _, kind in ipairs({"Meteor", "Bomb"}) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local total = ImpactSetpieceRules.finishCount(kind, tier, false)
+                if tier == "Low" then
+                    expect(total).toBe(0)
+                elseif tier == "Medium" then
+                    expect(total).toBe(2)
+                else
+                    expect(total).toBe(4)
+                end
+                for i = 1, total do
+                    local fragment = ImpactSetpieceRules.finish(kind, i, total, 17)
+                    expect(fragment.Direction.Magnitude > 0.99).toBe(true)
+                    expect(fragment.EndRadius > fragment.StartRadius).toBe(true)
+                    expect(fragment.Lift >= 0).toBe(true)
+                    expect(fragment.Height > 0 and fragment.Width > 0).toBe(true)
+                end
+            end
+        end
+        expect(ImpactSetpieceRules.finish("Unknown", 1, 4, 20) == nil).toBe(true)
     end)
 
     it("keeps radial debris trajectories stable and physically bounded", function()
