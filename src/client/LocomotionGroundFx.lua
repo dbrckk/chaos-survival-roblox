@@ -5,6 +5,12 @@ local TweenService = game:GetService("TweenService")
 
 local GroundFx = {}
 
+-- Register every transient foot-contact piece with the live visual-budget
+-- collector rather than parenting the effects directly to workspace.
+local effectRoot = Instance.new("Folder")
+effectRoot.Name = "LocomotionContactLocal"
+effectRoot.Parent = workspace
+
 local COLORS = {
     Launch = Color3.fromRGB(83, 222, 255),
     Skid = Color3.fromRGB(255, 156, 83),
@@ -91,7 +97,7 @@ function GroundFx.emit(root, kind, strength, tier)
         return nil
     end
     local basis = CFrame.lookAt(hit.Position, hit.Position + flat.Unit)
-    return GroundFx.build(workspace, basis, kind, strength, tier)
+    return GroundFx.build(effectRoot, basis, kind, strength, tier)
 end
 
 return GroundFx

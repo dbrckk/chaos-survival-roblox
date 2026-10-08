@@ -115,6 +115,25 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("includes short-lived sprint and skid traces in the live part count", function()
+        local root = Instance.new("Folder")
+        local effects = Instance.new("Folder")
+        effects.Name = "LocomotionContactLocal"
+        effects.Parent = root
+        local sprint = Instance.new("Folder")
+        sprint.Name = "ChaosLaunchContact"
+        sprint.Parent = effects
+        for i = 1, 4 do
+            local trace = Instance.new("Part")
+            trace.Name = "LaunchFootTrace" .. i
+            trace.Parent = sprint
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(1)
+        expect(metrics.Parts).toBe(4)
+        root:Destroy()
+    end)
+
     it("classifies live visual budget status before any tier lookup", function()
         expect(type(VisualBudgetRules.status)).toBe("function")
         expect(VisualBudgetRules.status("High", {
