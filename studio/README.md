@@ -35,11 +35,17 @@ The self-hosted runner therefore must:
 
 1. run Windows;
 2. already have Roblox Studio installed;
-3. already have an authenticated Studio session for the runner user.
+3. already have an authenticated Studio session;
+4. run the GitHub Actions runner under the **same Windows user account** that owns that authenticated Studio session;
+5. expose the standard `self-hosted` and `windows` runner labels.
 
-Before bringing that runner online for a release candidate, run:
+Avoid running the certifying runner under `Network Service`, `Local System`, or another Windows account unless that exact account has its own valid Studio authentication state. A runner that is configured correctly but offline leaves the Studio E2E job in `queued`; this is expected and does not indicate a game-code failure.
+
+Before bringing that runner online for a release candidate, sign into the runner's Windows account interactively and run:
 
 `powershell -ExecutionPolicy Bypass -File .\\studio\\self-hosted-runner-preflight.ps1`
+
+Then start the GitHub Actions runner under that same Windows account. Once the runner reports online in GitHub, either dispatch the Studio workflow manually from `main` or update `studio/E2E_TRIGGER` to request a fresh exact-SHA certification.
 
 The preflight checks the Studio install, verifies the Roblox Authenticode signature, launches Studio briefly under the runner's Windows account, and reads the resulting Studio log for the final authentication state. Exit code `2` means the Windows user must open Studio normally, sign in interactively, close Studio, and rerun the preflight. It never asks for or stores a Roblox password/session cookie.
 
