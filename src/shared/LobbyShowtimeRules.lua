@@ -115,6 +115,22 @@ function LobbyShowtimeRules.spatialBeatActive(phase, voteOptions, distance, mute
         and (tonumber(distance) or math.huge) <= 24
 end
 
+-- Non-blocking radial light wave launched by a nearby avatar emote.
+-- Distance is world-space studs; age is seconds since the emote began.
+function LobbyShowtimeRules.floorPulse(distance, age, reduceMotion)
+    if reduceMotion == true then
+        return 0
+    end
+    local elapsed = tonumber(age)
+    if elapsed == nil or elapsed < 0 or elapsed > 1.45 then
+        return 0
+    end
+    local radius = elapsed * 12
+    local delta = math.abs((tonumber(distance) or math.huge) - radius)
+    local ring = math.clamp(1 - delta / 2.55, 0, 1)
+    return ring * math.clamp(1 - elapsed / 1.45, 0, 1)
+end
+
 function LobbyShowtimeRules.profile(tier)
     local name = tostring(tier or "Low")
     if name == "High" then
