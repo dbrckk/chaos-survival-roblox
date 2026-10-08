@@ -123,6 +123,8 @@ PHASE 5 — UI / UX PREMIUM
 [QA]   5.19 Harmoniser le spectateur avec l'identité hazard active : rail/contour + glyphes simple/double, santé et contrôles au-dessus, aucune nouvelle couche monde.
 [QA]   5.20 Prioriser la vraie cause létale dans le RESULT Double Chaos : si le hazard secondaire tue, son glyph passe principal ; ordre centralisé/testé dans ResultPresentation.
 [QA]   5.21 Ajouter un sigil hazard compact au HUD READY/ROUND : simple/double, accent réel, masqué sur veryNarrow, texte/timer restent prioritaires.
+[QA]   5.22 Ajouter les glyphes hazards aux warnings létaux Meteor/Bomb/Freeze/JumpShock : forme + couleur + texte, aucune boucle supplémentaire, meilleur décodage mobile/accessibilité.
+[QA]   5.23 Réutiliser le sigil Chaos sur le panneau principal du lobby : même cristal/anneau que le boot, composition logo + titre + tagline, SurfaceGui uniquement.
 
 PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
