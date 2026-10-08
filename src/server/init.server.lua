@@ -56,6 +56,7 @@ local Mastery = require(script.Mastery)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local SocialExperienceRules = require(ReplicatedStorage.Shared.SocialExperienceRules)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local HazardImpactAudience = require(ReplicatedStorage.Shared.HazardImpactAudience)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 
 local remotes = RemoteRegistry.ensureFolder(ReplicatedStorage, "Remotes")
@@ -978,7 +979,15 @@ local function runDisasterSet(selected, contestants, roundSettings)
         OnHazardImpact = function(position, color, radius, kind)
             for _, player in ipairs(Players:GetPlayers()) do
                 local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if root and (root.Position - position).Magnitude <= 180 then
+                -- A spectator's camera may follow a survivor across the
+                -- arena even when their own avatar is in the lobby.
+                if HazardImpactAudience.shouldSend(
+                    position,
+                    root and root.Position,
+                    player:GetAttribute("RoundParticipant"),
+                    player:GetAttribute("RoundEliminated"),
+                    180
+                ) then
                     hazardImpactFeedbackEvent:FireClient(player, {
                         position = position,
                         color = color,

@@ -193,6 +193,11 @@ local function watchLanding(model)
             if not started then
                 return
             end
+            -- Do not play battle recovery on a lobby avatar or eliminated
+            -- survivor even if the humanoid has just landed.
+            if not liveRoot(model) then
+                return
+            end
             local now = os.clock()
             local strength = Rules.landingStrength(now - started)
             local settings = profile()

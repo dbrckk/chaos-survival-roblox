@@ -97,9 +97,14 @@ local function renderBurst(payload)
         return
     end
 
+    local spectating = player:GetAttribute("RoundEliminated") == true
+        or player:GetAttribute("RoundParticipant") ~= true
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
-    if root and (root.Position - position).Magnitude > MAX_DISTANCE then
+    local camera = workspace.CurrentCamera
+    local observer = spectating and camera and camera.CFrame.Position
+        or (root and root.Position)
+    if not observer or (observer - position).Magnitude > MAX_DISTANCE then
         return
     end
 

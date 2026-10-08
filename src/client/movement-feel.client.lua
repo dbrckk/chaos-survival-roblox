@@ -184,7 +184,9 @@ end)
 bindTornado(workspace:FindFirstChild("RoundTornado"))
 
 hazardImpactEvent.OnClientEvent:Connect(function(payload)
-    if not root or not root.Parent or typeof(payload) ~= "table" then
+    if player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true
+        or not root or not root.Parent or typeof(payload) ~= "table" then
         return
     end
 

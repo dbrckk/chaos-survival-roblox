@@ -139,3 +139,5 @@ This **unreleased candidate** reconciles PRs #12–#16 with the already merged s
 All added content is cosmetic only. No speed, jump, damage, server authority, physics, or monetization changes. Full Studio and real Android performance/gameplay playtests remain required before release.
 
 - Late map-replication resilience: lobby floor and arena base visual builders now watch nested map parts and arena identity attributes instead of relying on container arrival order.
+
+- Cosmetic hazard-impact events also reach spectating clients; visible bursts are filtered by spectator camera range, while movement/body feedback remains disabled for nonparticipants.

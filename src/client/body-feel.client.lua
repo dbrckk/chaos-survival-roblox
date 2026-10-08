@@ -196,7 +196,9 @@ mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
 end)
 
 hazardImpactEvent.OnClientEvent:Connect(function(payload)
-    if player:GetAttribute("ReduceMotion") == true
+    if player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true
+        or player:GetAttribute("ReduceMotion") == true
         or typeof(payload) ~= "table"
         or not root
         or not root.Parent
