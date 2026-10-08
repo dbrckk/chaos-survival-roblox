@@ -91,6 +91,64 @@ local brandScale = Instance.new("UIScale")
 brandScale.Scale = 1
 brandScale.Parent = brandMark
 
+local orbitRing = Instance.new("Frame")
+orbitRing.Name = "ChaosBrandOrbit"
+orbitRing.AnchorPoint = Vector2.new(0.5, 0.5)
+orbitRing.Position = UDim2.fromScale(0.5, 0.5)
+orbitRing.Size = UDim2.fromScale(0.92, 0.92)
+orbitRing.BackgroundTransparency = 1
+orbitRing.BorderSizePixel = 0
+orbitRing.Parent = brandMark
+
+for index = 1, 8 do
+    local angle = (index - 1) * 45
+    local radians = math.rad(angle)
+    local radius = 0.43
+    local tick = Instance.new("Frame")
+    tick.Name = "OrbitTick" .. tostring(index)
+    tick.AnchorPoint = Vector2.new(0.5, 0.5)
+    tick.Position = UDim2.fromScale(
+        0.5 + math.cos(radians) * radius,
+        0.5 + math.sin(radians) * radius
+    )
+    tick.Size = UDim2.fromScale(
+        index % 2 == 0 and 0.17 or 0.11,
+        index % 2 == 0 and 0.032 or 0.024
+    )
+    tick.Rotation = angle
+    tick.BackgroundColor3 = index % 3 == 0
+        and UITheme.Colors.Orange
+        or (index % 2 == 0 and UITheme.Colors.Violet or UITheme.Colors.Cyan)
+    tick.BackgroundTransparency = index % 2 == 0 and 0.22 or 0.38
+    tick.BorderSizePixel = 0
+    tick.Parent = orbitRing
+    UITheme.addCorner(tick, UITheme.Corners.Pill)
+end
+
+local coreGlow = Instance.new("Frame")
+coreGlow.Name = "CrystalCoreGlow"
+coreGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+coreGlow.Position = UDim2.fromScale(0.5, 0.5)
+coreGlow.Size = UDim2.fromScale(0.34, 0.56)
+coreGlow.Rotation = 45
+coreGlow.BackgroundColor3 = UITheme.Colors.Cyan
+coreGlow.BackgroundTransparency = 0.82
+coreGlow.BorderSizePixel = 0
+coreGlow.Parent = brandMark
+UITheme.addCorner(coreGlow, UDim.new(0, 8))
+
+local coreGlowGradient = Instance.new("UIGradient")
+coreGlowGradient.Color = ColorSequence.new(
+    UITheme.Colors.Cyan,
+    UITheme.Colors.Violet
+)
+coreGlowGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.28),
+    NumberSequenceKeypoint.new(0.5, 0.06),
+    NumberSequenceKeypoint.new(1, 0.34),
+})
+coreGlowGradient.Parent = coreGlow
+
 local outer = Instance.new("Frame")
 outer.Name = "OuterDiamond"
 outer.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -225,6 +283,8 @@ local finished = false
 
 if not reduceMotion then
     brandScale.Scale = 0.84
+    orbitRing.Rotation = -14
+    coreGlow.BackgroundTransparency = 0.96
     TweenService:Create(
         brandScale,
         TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -235,6 +295,18 @@ if not reduceMotion then
         scale,
         TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {Scale = 1}
+    ):Play()
+
+    TweenService:Create(
+        orbitRing,
+        TweenInfo.new(0.82, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        {Rotation = 10}
+    ):Play()
+
+    TweenService:Create(
+        coreGlow,
+        TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 0.82}
     ):Play()
 end
 
