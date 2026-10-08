@@ -25,6 +25,7 @@ VisualBudgetRules.LocalFolders = {
     "DisappearingPlatformReadabilityLocal",
     "DisasterClimaxLocal",
     "DisasterResidueLocal",
+    "ImpactSetpieceLocal",
     "HazardRouteReadabilityLocal",
     "HazardWarningSignaturesLocal",
     "LobbyPersonalProgressLocal",
