@@ -113,6 +113,8 @@ PHASE 5 — UI / UX PREMIUM
 [EN COURS] 5.9 QA tactile complète — cibles meta/sociales ≥44 px sur tactile + contrôles Studio E2E ; validation appareil réel restante.
 [QA]   5.10 Vérifier Invite/Share/Réactions : CTA et réactions ≥44 px même sur tinyHeight.
 [QA]   5.11 Préserver toutes les notifications meta différées via FIFO bornée ; une seule notification consomme chaque intermission calme.
+[QA]   5.12 Transformer l'arche du lobby en asset hero de guidance : écran world-space phase-aware, bande intérieure et 4 indicateurs non-collidables ; +5 Parts statiques, 0 Light, Low sobre / Medium complet / High animé, ReduceMotion sans sweep.
+[QA]   5.13 Ajouter un langage de glyphes procéduraux pour les 11 hazards : signature sans texte dans vote + READY, dual-glyph Double Chaos ; UI-only, aucun asset externe, coût réseau nul.
 
 PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
