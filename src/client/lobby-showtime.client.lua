@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local LocalizationService = game:GetService("LocalizationService")
+local Debris = game:GetService("Debris")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
@@ -191,6 +192,42 @@ if player.Character then
     task.spawn(bindHumanoid, player.Character)
 end
 
+local function personalConfetti()
+    if player:GetAttribute("ReduceMotion") == true then
+        return
+    end
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then
+        return
+    end
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "ShowtimePersonalBurst"
+    attachment.Position = Vector3.new(0, -1.5, 0)
+    attachment.Parent = root
+    local emitter = Instance.new("ParticleEmitter")
+    emitter.Enabled = false
+    emitter.Rate = 0
+    emitter.Lifetime = NumberRange.new(0.35, 0.65)
+    emitter.Speed = NumberRange.new(3, 5)
+    emitter.SpreadAngle = Vector2.new(75, 75)
+    emitter.LightEmission = 0.9
+    emitter.Color = ColorSequence.new(UITheme.Colors.Cyan, UITheme.Colors.Magenta)
+    emitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.23),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    emitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.15),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    emitter.Parent = attachment
+    emitter:Emit(VfxQuality.particleCount(
+        VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name, 12, 3
+    ))
+    Debris:AddItem(attachment, 1.4)
+end
+
 local function playEmote(id)
     if not available() then
         return
@@ -245,6 +282,7 @@ local function playEmote(id)
         return
     end
     currentEmote = {id = id, track = entry.track}
+    personalConfetti()
     open = false
     panel.Visible = false
     if particles and particles.Parent then
@@ -517,12 +555,34 @@ local function buildStage()
     end
 end
 
+local function peopleOnStage()
+    if not stageCenter then
+        return 0
+    end
+    local count = 0
+    for _, person in ipairs(Players:GetPlayers()) do
+        local character = person.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root and root:IsA("BasePart") then
+            local delta = root.Position - stageCenter
+            if math.abs(delta.Y) < 8
+                and math.abs(delta.X) < 7
+                and math.abs(delta.Z) < 7
+            then
+                count += 1
+            end
+        end
+    end
+    return math.min(4, count)
+end
+
 local function updateStage(now)
     if not stageBase or not stageBase.Parent then
         return
     end
     local enabled = activePhase()
     local reduced = player:GetAttribute("ReduceMotion") == true
+    local crowd = enabled and peopleOnStage() or 0
     stageBase.Transparency = enabled and 0.09 or 1
     if titleBillboard then
         titleBillboard.Enabled = enabled
@@ -532,6 +592,7 @@ local function updateStage(now)
     end
     for _, light in ipairs(lights) do
         light.Enabled = enabled and not reduced
+        light.Brightness = 0.50 + crowd * 0.10
     end
     for _, ribbon in ipairs(beams) do
         ribbon.beam.Enabled = enabled and not reduced
@@ -550,8 +611,8 @@ local function updateStage(now)
         if enabled then
             local beat = reduced and 0.5
                 or (0.5 + 0.5 * math.sin(now * 3.4 + entry.offset))
-            local intensity = currentEmote and 0.18 or 0
-            entry.part.Transparency = math.clamp(0.76 - beat * 0.26 - intensity, 0.28, 0.76)
+            local intensity = (currentEmote and 0.12 or 0) + crowd * 0.045
+            entry.part.Transparency = math.clamp(0.76 - beat * 0.26 - intensity, 0.26, 0.76)
         else
             entry.part.Transparency = 1
         end
