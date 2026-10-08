@@ -38,6 +38,8 @@ local stageBase = nil
 local assetKit = nil
 local stageBeat = nil
 local lastStageBeat = -math.huge
+local lastEmoteStarted = -math.huge
+local lastEmotePosition = nil
 local refreshUI
 
 local folder = Instance.new("Folder")
@@ -311,6 +313,11 @@ local function playEmote(id, automatic)
         return
     end
     currentEmote = {id = id, track = entry.track}
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if root and root:IsA("BasePart") then
+        lastEmoteStarted = os.clock()
+        lastEmotePosition = root.Position
+    end
     personalConfetti()
     if automatic ~= true then
         emoteAudio(id)
@@ -410,6 +417,8 @@ local function clearStage()
     assetKit = nil
     stageBeat = nil
     lastStageBeat = -math.huge
+    lastEmoteStarted = -math.huge
+    lastEmotePosition = nil
     titleBillboard = nil
 end
 
@@ -670,7 +679,14 @@ local function updateStage(now)
             local beat = reduced and 0.5
                 or (0.5 + 0.5 * math.sin(now * 3.4 + entry.offset))
             local intensity = (currentEmote and 0.12 or 0) + crowd * 0.045
-            entry.part.Transparency = math.clamp(0.76 - beat * 0.26 - intensity, 0.26, 0.76)
+            if lastEmotePosition then
+                local delta = entry.part.Position - lastEmotePosition
+                local horizontal = math.sqrt(delta.X * delta.X + delta.Z * delta.Z)
+                intensity += Showtime.floorPulse(
+                    horizontal, now - lastEmoteStarted, reduced
+                ) * 0.30
+            end
+            entry.part.Transparency = math.clamp(0.76 - beat * 0.26 - intensity, 0.16, 0.76)
         else
             entry.part.Transparency = 1
         end
