@@ -29,6 +29,7 @@ VisualBudgetRules.LocalFolders = {
     "HazardWarningSignaturesLocal",
     "LobbyPersonalProgressLocal",
     "LobbyPresentationLocal",
+    "LobbyShowtimeLocal",
     "LobbyProfileHologramLocal",
     "LobbyRoundRecapLocal",
     "LobbySurfaceDetailLocal",
