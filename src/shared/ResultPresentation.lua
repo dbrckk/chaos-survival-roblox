@@ -213,6 +213,31 @@ function ResultPresentation.constellationRadius(tierName)
     return 13
 end
 
+function ResultPresentation.architectureProfile(tierName, survivorCount)
+    local tier = tostring(tierName or "Medium")
+    local survivors = math.max(0, math.floor(tonumber(survivorCount) or 0))
+
+    if tier == "Low" or survivors <= 0 then
+        return {
+            Pylons = 0,
+            Height = 0,
+            RadiusScale = 0,
+        }
+    elseif tier == "High" then
+        return {
+            Pylons = survivors == 1 and 6 or 5,
+            Height = survivors == 1 and 7.4 or 6.6,
+            RadiusScale = 0.74,
+        }
+    end
+
+    return {
+        Pylons = survivors == 1 and 4 or 3,
+        Height = survivors == 1 and 5.6 or 5.0,
+        RadiusScale = 0.68,
+    }
+end
+
 function ResultPresentation.intensity(feedback)
     local kind = ResultPresentation.kind(feedback)
     if kind == "master" then
