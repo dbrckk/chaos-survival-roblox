@@ -325,10 +325,11 @@ local function applyLayout()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     local touch = UserInputService.TouchEnabled
-    local top = touch and UIResponsive.mobileProfile(viewport).topHeight or 68
-    local rightGap = touch and 12 or 20
-    toggle.Position = UDim2.new(1, -rightGap, 0, top + 16)
-    panel.Position = UDim2.new(1, -rightGap, 0, top + 70)
+    local mobile = UIResponsive.mobileProfile(viewport)
+    local top = touch and mobile.topHeight or 68
+    local rightInset = Showtime.dockRightInset(viewport.X, touch, mobile.veryNarrow)
+    toggle.Position = UDim2.new(1, -rightInset, 0, top + 16)
+    panel.Position = UDim2.new(1, -rightInset, 0, top + 70)
     local width = math.max(1, viewport.X)
     panel.Size = UDim2.fromOffset(math.min(232, width - 24), 161)
 end
