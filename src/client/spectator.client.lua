@@ -341,7 +341,7 @@ local function bindTargetHealth(humanoid)
     targetDiedConnection = humanoid.Died:Connect(function()
         task.delay(0.08, function()
             if roundActive and card.Visible and spectateIndex then
-                spectateIndex(targetIndex + 1)
+                spectateIndex(true)
             end
         end)
     end)
@@ -445,10 +445,12 @@ local function roundSummary()
     return table.concat(pieces, "  •  ")
 end
 
-spectateIndex = function(index)
+spectateIndex = function(advance)
     rebuildTargets()
 
     if #targets == 0 then
+        targetIndex = 0
+        selectedCharacter = nil
         local summary = roundSummary()
         if player:GetAttribute("RoundParticipant") == true then
             label.Text = CoreLocalization.text(localeId, "ELIMINATED_WAITING")
@@ -464,29 +466,41 @@ spectateIndex = function(index)
         return
     end
 
-    targetIndex = ((index - 1) % #targets) + 1
+    -- Preserve the observed human/bot across list reordering and timer ticks.
+    targetIndex = SpectatorTargetRules.resolveIndex(
+        targets,
+        selectedCharacter,
+        targetIndex,
+        advance == true
+    )
     local target = targets[targetIndex]
-    local character = target and target.Character
+    local character = target.Character
     local hum = character and character:FindFirstChildOfClass("Humanoid")
-
-    if hum and workspace.CurrentCamera then
-        workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
-        workspace.CurrentCamera.CameraSubject = hum
-        local summary = roundSummary()
-        local displayName = tostring(
-            target.DisplayName or CoreLocalization.text(localeId, "SURVIVOR_LABEL")
-        )
-        if player:GetAttribute("RoundParticipant") == true then
-            label.Text = CoreLocalization.text(localeId, "SPECTATING", displayName)
-        else
-            label.Text = CoreLocalization.text(localeId, "JOINING_NEXT", displayName)
-        end
-        if summary ~= "" then
-            label.Text ..= "\n" .. summary
-        end
-        nextButton.Visible = #targets > 1
-        bindTargetHealth(hum)
+    if not hum then
+        return
     end
+    selectedCharacter = character
+
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CameraType ~= Enum.CameraType.Custom or camera.CameraSubject ~= hum) then
+        camera.CameraType = Enum.CameraType.Custom
+        camera.CameraSubject = hum
+    end
+
+    local summary = roundSummary()
+    local displayName = tostring(
+        target.DisplayName or CoreLocalization.text(localeId, "SURVIVOR_LABEL")
+    )
+    if player:GetAttribute("RoundParticipant") == true then
+        label.Text = CoreLocalization.text(localeId, "SPECTATING", displayName)
+    else
+        label.Text = CoreLocalization.text(localeId, "JOINING_NEXT", displayName)
+    end
+    if summary ~= "" then
+        label.Text ..= "\n" .. summary
+    end
+    nextButton.Visible = #targets > 1
+    bindTargetHealth(hum)
 end
 
 local function refresh()
@@ -504,17 +518,18 @@ local function refresh()
                 {Scale = 1}
             ):Play()
         end
-        spectateIndex(math.max(1, targetIndex))
+        spectateIndex(false)
     else
         card.Visible = false
         targetIndex = 0
+        selectedCharacter = nil
         clearTargetHealth()
         restoreCamera()
     end
 end
 
 nextButton.Activated:Connect(function()
-    spectateIndex(targetIndex + 1)
+    spectateIndex(true)
 end)
 
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
@@ -525,7 +540,7 @@ player.CharacterAdded:Connect(function()
     local participant = player:GetAttribute("RoundParticipant") == true
 
     if roundActive and (eliminated or not participant) then
-        spectateIndex(math.max(1, targetIndex))
+        spectateIndex(false)
     else
         restoreCamera()
     end
