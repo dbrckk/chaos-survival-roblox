@@ -7,6 +7,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -46,6 +47,30 @@ accentRail.BorderSizePixel = 0
 accentRail.Parent = card
 UITheme.addCorner(accentRail, UITheme.Corners.Pill)
 
+local accentGradient = Instance.new("UIGradient")
+accentGradient.Color = ColorSequence.new(UITheme.Colors.Blue, UITheme.Colors.Cyan)
+accentGradient.Parent = accentRail
+
+local hazardGlyph = Instance.new("Frame")
+hazardGlyph.Name = "SpectatorHazardGlyph"
+hazardGlyph.AnchorPoint = Vector2.new(0.5, 0.5)
+hazardGlyph.Position = UDim2.fromScale(0.12, 0.48)
+hazardGlyph.Size = UDim2.fromScale(0.15, 0.58)
+hazardGlyph.BackgroundTransparency = 1
+hazardGlyph.Visible = false
+hazardGlyph.ZIndex = 1
+hazardGlyph.Parent = card
+
+local hazardGlyphSecondary = Instance.new("Frame")
+hazardGlyphSecondary.Name = "SpectatorHazardGlyphSecondary"
+hazardGlyphSecondary.AnchorPoint = Vector2.new(0.5, 0.5)
+hazardGlyphSecondary.Position = UDim2.fromScale(0.24, 0.48)
+hazardGlyphSecondary.Size = UDim2.fromScale(0.13, 0.50)
+hazardGlyphSecondary.BackgroundTransparency = 1
+hazardGlyphSecondary.Visible = false
+hazardGlyphSecondary.ZIndex = 1
+hazardGlyphSecondary.Parent = card
+
 local scale = Instance.new("UIScale")
 scale.Scale = 1
 scale.Parent = card
@@ -60,6 +85,7 @@ label.TextScaled = true
 label.TextWrapped = true
 label.TextXAlignment = Enum.TextXAlignment.Left
 label.Text = "SPECTATING"
+label.ZIndex = 2
 label.Parent = card
 
 local nextButton = Instance.new("TextButton")
@@ -72,6 +98,7 @@ nextButton.Font = Enum.Font.GothamBlack
 nextButton.TextColor3 = UITheme.Colors.Text
 nextButton.TextScaled = true
 nextButton.Text = CoreLocalization.text(localeId, "NEXT")
+nextButton.ZIndex = 2
 nextButton.Parent = card
 UITheme.addCorner(nextButton, UITheme.Corners.Medium)
 UITheme.addStroke(nextButton, UITheme.Colors.Cyan, 1.1, 0.35)
@@ -85,6 +112,7 @@ healthTrack.Size = UDim2.fromScale(0.62, 0.10)
 healthTrack.BackgroundColor3 = UITheme.Colors.PanelSoft
 healthTrack.BackgroundTransparency = 0.05
 healthTrack.BorderSizePixel = 0
+healthTrack.ZIndex = 2
 healthTrack.Parent = card
 UITheme.addCorner(healthTrack, UITheme.Corners.Pill)
 
@@ -93,6 +121,7 @@ healthFill.Name = "TargetHealthFill"
 healthFill.Size = UDim2.fromScale(1, 1)
 healthFill.BackgroundColor3 = UITheme.Colors.Green
 healthFill.BorderSizePixel = 0
+healthFill.ZIndex = 2
 healthFill.Parent = healthTrack
 UITheme.addCorner(healthFill, UITheme.Corners.Pill)
 
@@ -104,6 +133,70 @@ local targetHealthConnection = nil
 local targetDiedConnection = nil
 local spectateIndex
 local viewportConnection = nil
+
+local function renderSpectatorGlyph(container, hazardId, color, transparency)
+    for _, child in ipairs(container:GetChildren()) do
+        if child:GetAttribute("HazardGlyphSegment") == true then
+            child:Destroy()
+        end
+    end
+
+    local recipe = HazardGlyphs.get(hazardId)
+    container.Visible = recipe ~= nil
+    if not recipe then
+        return
+    end
+
+    for _, def in ipairs(recipe) do
+        local segment = Instance.new("Frame")
+        segment.AnchorPoint = Vector2.new(0.5, 0.5)
+        segment.Position = UDim2.fromScale(def.X, def.Y)
+        segment.Size = UDim2.fromScale(def.Width, def.Height)
+        segment.Rotation = def.Rotation or 0
+        segment.BackgroundColor3 = color
+        segment.BackgroundTransparency = transparency or 0.82
+        segment.BorderSizePixel = 0
+        segment.ZIndex = container.ZIndex
+        segment:SetAttribute("HazardGlyphSegment", true)
+        segment.Parent = container
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = segment
+    end
+end
+
+local function refreshHazardIdentity(state)
+    local ids = state and type(state.disasterIds) == "table" and state.disasterIds or {}
+    local primaryId = ids[1]
+    local secondaryId = ids[2]
+
+    if not primaryId then
+        hazardGlyph.Visible = false
+        hazardGlyphSecondary.Visible = false
+        cardStroke.Color = UITheme.Colors.Blue
+        accentGradient.Color = ColorSequence.new(UITheme.Colors.Blue, UITheme.Colors.Cyan)
+        return
+    end
+
+    local primary = UITheme.disasterAccent(primaryId, UITheme.Colors.Cyan)
+    local secondary = secondaryId
+        and UITheme.disasterAccent(secondaryId, UITheme.Colors.Violet)
+        or primary:Lerp(UITheme.Colors.Blue, 0.35)
+
+    cardStroke.Color = primary
+    accentGradient.Color = ColorSequence.new(primary, secondary)
+
+    hazardGlyph.Position = UDim2.fromScale(secondaryId and 0.10 or 0.13, 0.48)
+    renderSpectatorGlyph(hazardGlyph, primaryId, primary, 0.84)
+
+    if secondaryId then
+        hazardGlyphSecondary.Position = UDim2.fromScale(0.23, 0.48)
+        renderSpectatorGlyph(hazardGlyphSecondary, secondaryId, secondary, 0.86)
+    else
+        hazardGlyphSecondary.Visible = false
+    end
+end
 
 local function applyResponsive()
     local camera = workspace.CurrentCamera
@@ -376,5 +469,6 @@ end)
 stateEvent.OnClientEvent:Connect(function(state)
     latestState = state
     roundActive = state.phase == "round"
+    refreshHazardIdentity(state)
     refresh()
 end)
