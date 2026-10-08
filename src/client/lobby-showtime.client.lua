@@ -23,6 +23,7 @@ local motionConnections = {}
 local loaded = {}
 local viewportConnection = nil
 local tiles = {}
+local fixedPieces = {}
 local dancers = {}
 local lights = {}
 local particles = nil
@@ -30,6 +31,7 @@ local titleBillboard = nil
 local profile = Showtime.profile("Low")
 local stageCenter = nil
 local stageBase = nil
+local refreshUI
 
 local folder = Instance.new("Folder")
 folder.Name = "LobbyShowtimeLocal"
@@ -158,6 +160,9 @@ local function bindHumanoid(character)
         return
     end
     boundHumanoid = hum
+    if refreshUI then
+        refreshUI()
+    end
 
     table.insert(motionConnections, hum.Running:Connect(function(speed)
         if speed > 2 then
@@ -252,7 +257,7 @@ for id, button in pairs(buttons) do
     end)
 end
 
-local function refreshUI()
+refreshUI = function()
     local enabled = available()
     toggle.Visible = enabled
     if not enabled then
@@ -323,6 +328,7 @@ end
 local function clearStage()
     folder:ClearAllChildren()
     table.clear(tiles)
+    table.clear(fixedPieces)
     table.clear(dancers)
     table.clear(lights)
     particles = nil
@@ -390,11 +396,12 @@ local function buildStage()
             northSouth and side * 6.55 or 0, 0.15,
             northSouth and 0 or side * 6.55
         )
-        makePart("ShowtimeEdge_" .. i,
+        local edge = makePart("ShowtimeEdge_" .. i,
             northSouth and Vector3.new(0.18, 0.22, 13.1)
                 or Vector3.new(13.1, 0.22, 0.18),
             cf, i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Violet,
             Enum.Material.Neon, 0.21)
+        table.insert(fixedPieces, {part = edge, transparency = 0.21})
     end
 
     for i = 1, 4 do
@@ -404,6 +411,7 @@ local function buildStage()
             baseCF * CFrame.new(sx * 6.3, 1.15, sz * 6.3),
             i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
             Enum.Material.Glass, 0.18)
+        table.insert(fixedPieces, {part = crystal, transparency = 0.18})
         if #lights < profile.Lights then
             local light = Instance.new("PointLight")
             light.Name = "ShowtimePulseLight"
@@ -480,6 +488,9 @@ local function updateStage(now)
     stageBase.Transparency = enabled and 0.09 or 1
     if titleBillboard then
         titleBillboard.Enabled = enabled
+    end
+    for _, entry in ipairs(fixedPieces) do
+        entry.part.Transparency = enabled and entry.transparency or 1
     end
     for _, light in ipairs(lights) do
         light.Enabled = enabled and not reduced
