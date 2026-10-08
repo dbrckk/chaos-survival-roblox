@@ -53,16 +53,19 @@ end
 
 local function showHazardHologram(arena, state)
     if not arena or not arena.Parent or not state then
+        clearHazardHologram()
         return
     end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     if tier.Name == "Low" then
+        clearHazardHologram()
         return
     end
 
     local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
     if not ids[1] then
+        clearHazardHologram()
         return
     end
 
