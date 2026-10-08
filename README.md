@@ -48,6 +48,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Mobile spectator mode after elimination with live survivor/time context
 - Chaos Shards: optional server-authoritative risk/reward pickups with daily-quest integration
 - Close-call / near-miss feedback with per-round tracking
+- Event-driven character cinematic reactions: curved dodge ribbons, blast-pressure arcs near live impacts and two-sided landing recovery fins for nearby players and AI bots; pure cosmetic, no physics changes.
 - Critical-health clutch-survival feedback and analytics
 - XP progress bar and level-up celebration
 - Session survival streaks with capped coin bonuses

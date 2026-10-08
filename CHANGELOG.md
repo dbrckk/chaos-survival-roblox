@@ -14,6 +14,13 @@
 
 All notable changes to Chaos Survival are documented here.
 
+## 2026-10-08 — Character danger & recovery VFX
+
+- Add event-driven curved near-miss ribbons for the local survivor, radial air-pressure arcs for nearby real players and AI survivors, and short two-sided stabilizer fins after sustained freefall.
+- Reuse server-authoritative HazardNearMiss, HazardImpactFeedback, RoundState and Humanoid state changes; no new networking, no animation overrides, no health/physics/camera edits.
+- All effects follow avatars via attachments, last at most 0.42 s, are distance/cooldown-bounded and fully disabled on Low quality or Reduce Motion.
+- Extend existing survival-feedback Roblox engine suite with gating, strength, cooldown and graphics-tier tests.
+
 ## Unreleased — Release Candidate Hardening
 
 ### Gameplay
