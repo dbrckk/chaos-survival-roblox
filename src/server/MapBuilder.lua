@@ -899,6 +899,92 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Glow
     )
 
+    local gateInnerGlow = decorPart(
+        decor,
+        "ArenaGateInnerGlow",
+        Vector3.new(17.8, 0.34, 0.48),
+        archCenter + Vector3.new(0, 11.45, -1.62),
+        VisualTheme.Accents.Cyan,
+        VisualTheme.Materials.Glow
+    )
+    gateInnerGlow.Transparency = 0.16
+    gateInnerGlow.CanCollide = false
+    gateInnerGlow.CanTouch = false
+    gateInnerGlow.CanQuery = false
+
+    for side = -1, 1, 2 do
+        for index = 1, 2 do
+            local indicator = decorPart(
+                decor,
+                (side < 0 and "ArenaGateIndicatorL" or "ArenaGateIndicatorR") .. index,
+                Vector3.new(0.34, 3.6, 0.34),
+                archCenter + Vector3.new(side * (8.45 + index * 0.52), 5.3 + index * 3.8, -1.60),
+                index == 1 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
+                VisualTheme.Materials.Glow
+            )
+            indicator.Transparency = 0.22
+            indicator.CanCollide = false
+            indicator.CanTouch = false
+            indicator.CanQuery = false
+        end
+    end
+
+    local gateGui = Instance.new("SurfaceGui")
+    gateGui.Name = "ArenaGateGui"
+    gateGui.Face = Enum.NormalId.Front
+    gateGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    gateGui.PixelsPerStud = 42
+    gateGui.LightInfluence = 0
+    gateGui.AlwaysOnTop = false
+    gateGui.Parent = archTop
+
+    local gatePanel = Instance.new("Frame")
+    gatePanel.Name = "GatePanel"
+    gatePanel.AnchorPoint = Vector2.new(0.5, 0.5)
+    gatePanel.Position = UDim2.fromScale(0.5, 0.5)
+    gatePanel.Size = UDim2.fromScale(0.88, 0.72)
+    gatePanel.BackgroundColor3 = VisualTheme.World.Deep
+    gatePanel.BackgroundTransparency = 0.10
+    gatePanel.BorderSizePixel = 0
+    gatePanel.Parent = gateGui
+
+    local gateCorner = Instance.new("UICorner")
+    gateCorner.CornerRadius = UDim.new(0.08, 0)
+    gateCorner.Parent = gatePanel
+
+    local gateStroke = Instance.new("UIStroke")
+    gateStroke.Name = "GateStroke"
+    gateStroke.Color = VisualTheme.Accents.Cyan
+    gateStroke.Thickness = 2
+    gateStroke.Transparency = 0.18
+    gateStroke.Parent = gatePanel
+
+    local gateStatus = Instance.new("TextLabel")
+    gateStatus.Name = "GateStatus"
+    gateStatus.Position = UDim2.fromScale(0.05, 0.08)
+    gateStatus.Size = UDim2.fromScale(0.90, 0.48)
+    gateStatus.BackgroundTransparency = 1
+    gateStatus.Font = Enum.Font.GothamBlack
+    gateStatus.Text = "ARENA LINK"
+    gateStatus.TextColor3 = Color3.fromRGB(245, 248, 255)
+    gateStatus.TextStrokeColor3 = Color3.fromRGB(3, 6, 12)
+    gateStatus.TextStrokeTransparency = 0.60
+    gateStatus.TextScaled = true
+    gateStatus.Parent = gatePanel
+
+    local gateSubstatus = Instance.new("TextLabel")
+    gateSubstatus.Name = "GateSubstatus"
+    gateSubstatus.Position = UDim2.fromScale(0.05, 0.57)
+    gateSubstatus.Size = UDim2.fromScale(0.90, 0.25)
+    gateSubstatus.BackgroundTransparency = 1
+    gateSubstatus.Font = Enum.Font.GothamBold
+    gateSubstatus.Text = "MOVE • VOTE • SURVIVE"
+    gateSubstatus.TextColor3 = VisualTheme.Accents.Cyan
+    gateSubstatus.TextStrokeColor3 = Color3.fromRGB(3, 6, 12)
+    gateSubstatus.TextStrokeTransparency = 0.72
+    gateSubstatus.TextScaled = true
+    gateSubstatus.Parent = gatePanel
+
     local runwayCenter = config.LobbyCenter + Vector3.new(0, 1.18, 17.5)
     local runway = decorPart(
         decor,
@@ -998,7 +1084,7 @@ local function buildLobby(root, config)
     subtitle.Font = Enum.Font.GothamBold
     subtitle.TextColor3 = Color3.fromRGB(120, 195, 255)
     subtitle.TextScaled = true
-    subtitle.Text = "VOTE • SURVIVE • REPEAT"
+    subtitle.Text = "VOTE • SURVIVE • ADAPT"
     subtitle.Parent = surface
 
     local frameOffsets = {
