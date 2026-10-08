@@ -2,6 +2,7 @@
 local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Showtime = require("../../src/shared/LobbyShowtimeRules")
+local ShowtimeProps = require("../../src/client/ShowtimeProps")
 
 describe("Lobby Showtime", function()
     it("makes emotes available only in calm phases", function()
@@ -56,6 +57,36 @@ describe("Lobby Showtime", function()
             expect(inset - entry.rightGap - entry.settingsWidth >= 12).toBe(true)
             expect(entry.width - inset - 232 >= 0).toBe(true)
         end
+    end)
+
+    it("builds real non-colliding stage props and restores them after combat", function()
+        local container = Instance.new("Folder")
+        local low = ShowtimeProps.build(container, CFrame.new(0, 5, 0), "Low")
+        local high = ShowtimeProps.build(container, CFrame.new(0, 5, 0), "High")
+        expect(low.folder:FindFirstChild("ShowtimeDJBooth") ~= nil).toBe(true)
+        expect(low.folder:FindFirstChild("ShowtimeSpeakerHousing1") ~= nil).toBe(true)
+        expect(high.folder:FindFirstChild("ShowtimeTrussAccent1") ~= nil).toBe(true)
+        expect(#high.props > #low.props).toBe(true)
+
+        for _, descendant in ipairs(high.props) do
+            if descendant:IsA("BasePart") then
+                expect(descendant.CanCollide).toBe(false)
+                expect(descendant.CanTouch).toBe(false)
+                expect(descendant.CanQuery).toBe(false)
+            end
+        end
+
+        local casing = low.folder:FindFirstChild("ShowtimeSpeakerHousing1")
+        ShowtimeProps.update(low, 1.0, false, false, 0)
+        expect(casing.Transparency).toBe(1)
+        ShowtimeProps.update(low, 1.2, true, false, 2)
+        expect(casing.Transparency < 1).toBe(true)
+        local equalizer = low.folder:FindFirstChild("ShowtimeEqualizer1")
+        ShowtimeProps.update(low, 2.0, true, true, 0)
+        expect(equalizer.Size.Y).toBe(0.38)
+        expect(#low.equalizer).toBe(3)
+        expect(#high.equalizer).toBe(8)
+        container:Destroy()
     end)
 
     it("caps procedural dance scenery for each graphics tier", function()
