@@ -56,6 +56,10 @@ local roundArenaVisualReports = {
     Crossroads = false,
     Orbital = false,
 }
+local showtimePhaseProbeReports = {
+    round = false,
+    result = false,
+}
 local uxPhaseProbeReports = {
     ready = 0,
     result = 0,
@@ -210,6 +214,27 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             "hero=" .. tostring(report.signatureHero or "missing"),
             "parts=" .. tostring(report.signatureParts or 0)
         )
+        return
+    end
+
+    if report.kind == "showtime_phase_probe" then
+        local phase = tostring(report.phase or "")
+        if showtimePhaseProbeReports[phase] == nil
+            or report.ok ~= true
+            or type(report.propParts) ~= "number"
+            or report.propParts < 12
+            or type(report.visibleProps) ~= "number"
+            or (phase == "round" and report.visibleProps ~= 0)
+            or (phase == "result" and report.visibleProps < 1)
+        then
+            fail(player.Name .. ": Showtime presentation probe failed: "
+                .. tostring(report.error or phase))
+            return
+        end
+        showtimePhaseProbeReports[phase] = true
+        print("CHAOS_E2E_SHOWTIME", player.Name, phase,
+            "parts=" .. tostring(report.propParts),
+            "visible=" .. tostring(report.visibleProps))
         return
     end
 
@@ -484,6 +509,8 @@ task.spawn(function()
             and arenaEntryCoverageReady()
             and roundArenaVisualCoverageReady()
             and roundJourneyObserved()
+            and showtimePhaseProbeReports.round
+            and showtimePhaseProbeReports.result
         then
             break
         end
@@ -498,6 +525,11 @@ task.spawn(function()
     end
     if not roundJourneyObserved() then
         fail("no client completed intermission > ready > round > result in order")
+    end
+    for _, phase in ipairs({"round", "result"}) do
+        if showtimePhaseProbeReports[phase] ~= true then
+            fail("missing Showtime stage display probe for " .. phase)
+        end
     end
 
     for _, phase in ipairs({"ready", "round", "result"}) do
@@ -580,7 +612,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, 4 arena entries + per-arena ROUND visuals + complete round journey + UI/input/vote/movement/spectator/join-leave verified",
+            "PASS: %d clients, 4 arena entries + per-arena ROUND visuals + complete round journey + Showtime phase visibility + UI/input/vote/movement/spectator/join-leave verified",
             expectedTotal
         ))
     end

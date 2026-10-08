@@ -39,6 +39,7 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
 local arenaProbed = {}
+local showtimeProbed = {}
 local arenaEntryProbed = {}
 local arenaEntryPending = {}
 
@@ -87,6 +88,68 @@ local function sendVisualPhaseProbe(phase)
                 sunRaysIntensity = sunRays and sunRays:IsA("SunRaysEffect")
                     and sunRays.Intensity or -1,
             },
+        })
+    end)
+end
+
+local function sendShowtimePhaseProbe(phase)
+    if phase ~= "round" and phase ~= "result" then
+        return
+    end
+    if showtimeProbed[phase] then
+        return
+    end
+    showtimeProbed[phase] = true
+
+    task.delay(0.55, function()
+        if not player.Parent then
+            return
+        end
+        local root = workspace:FindFirstChild("LobbyShowtimeLocal")
+        local deck = root and root:FindFirstChild("ShowtimeDeck")
+        local assets = root and root:FindFirstChild("Showtime3DAssets")
+        local expected = phase == "result"
+        local parts = 0
+        local visible = 0
+        local safe = true
+        if assets then
+            for _, item in ipairs(assets:GetDescendants()) do
+                if item:IsA("BasePart") then
+                    parts += 1
+                    if item.Transparency < 0.98 then
+                        visible += 1
+                    end
+                    if not item.Anchored or item.CanCollide
+                        or item.CanTouch or item.CanQuery
+                    then
+                        safe = false
+                    end
+                end
+            end
+        end
+
+        local deckVisible = deck and deck:IsA("BasePart")
+            and deck.Transparency < 0.98
+        local hero = assets and assets:FindFirstChild("ShowtimeCrownHeart")
+        local dj = assets and assets:FindFirstChild("ShowtimeDJBooth")
+        local okay = root ~= nil and deck ~= nil
+            and assets ~= nil and hero ~= nil and dj ~= nil
+            and parts >= 12 and safe
+            and deckVisible == expected
+            and ((expected and visible > 0)
+                or (not expected and visible == 0))
+
+        reportEvent:FireServer({
+            kind = "showtime_phase_probe",
+            phase = phase,
+            ok = okay,
+            propParts = parts,
+            visibleProps = visible,
+            error = okay and "" or string.format(
+                "phase=%s deck=%s props=%d visible=%d crown=%s dj=%s safe=%s",
+                phase, tostring(deckVisible), parts, visible,
+                tostring(hero ~= nil), tostring(dj ~= nil), tostring(safe)
+            ),
         })
     end)
 end
@@ -272,6 +335,7 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                 end
             end
             sendVisualPhaseProbe(tostring(state.phase or ""))
+            sendShowtimePhaseProbe(tostring(state.phase or ""))
             sendArenaProbe(state)
             sendArenaEntryProbe(state)
         end
