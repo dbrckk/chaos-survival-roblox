@@ -10,6 +10,7 @@ local StudioTestService = game:GetService("StudioTestService")
 local Lighting = game:GetService("Lighting")
 
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local RoundJourneyRules = require(ReplicatedStorage.Shared.RoundJourneyRules)
 
 local player = Players.LocalPlayer
 if not player then return end
@@ -25,6 +26,8 @@ end
 local reportEvent = ReplicatedStorage:WaitForChild("ChaosE2EReport")
 local failures = {}
 local roundStateReceived = false
+local roundJourneyStage = 0
+local observedJourneys = {}
 local lastRoundPhase = nil
 local visualMetrics = {
     Parts = 0,
@@ -252,6 +255,22 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
         if type(state) == "table" then
             roundStateReceived = true
             lastRoundPhase = state.phase
+            local stage, completed = RoundJourneyRules.advance(
+                roundJourneyStage, state.phase
+            )
+            roundJourneyStage = stage
+            if completed then
+                local arenaId = tostring(state.arenaId or "")
+                if arenaId ~= "" and not observedJourneys[arenaId] then
+                    observedJourneys[arenaId] = true
+                    reportEvent:FireServer({
+                        kind = "round_journey_probe",
+                        arenaId = arenaId,
+                        completedStages = stage,
+                        phases = {"intermission", "ready", "round", "result"},
+                    })
+                end
+            end
             sendVisualPhaseProbe(tostring(state.phase or ""))
             sendArenaProbe(state)
             sendArenaEntryProbe(state)
