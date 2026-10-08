@@ -224,3 +224,12 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `disaster-aftermath.client.lua` : affichage compact, atténué sur Android Low et Medium ; flou forcé à zéro avec Reduce Motion ; retour propre à la scène normale.
 - [x] `tests/engine/disaster-residue.spec.luau` : profils présents pour 11 catastrophes, mélange Double Chaos, limites et qualité Low, Reduce Motion.
 - [ ] Examiner les transitions Result → Lobby dans Studio, notamment un Double Chaos obscurité + météores, afin de confirmer la lisibilité.
+
+## Sprint 04 — finition de matière et stabilité réseau des retombées
+
+- [x] `DisasterResidue.lua` : neuf teintes de matériau **refroidi / dissipé** déterministes selon le danger ; transition de couleur seulement en Medium/High, jamais Low ni Reduce Motion.
+- [x] `disaster-residue.client.lua` : la géométrie `AftermathSurfaceKit` se ternit une seule fois avant le fondu final ; aucune boucle RenderStepped, aucun objet supplémentaire, aucune modification du gameplay.
+- [x] `disaster-residue.client.lua` : trois nouvelles tentatives bornées si `Arena.Base` arrive après `RoundState=result`, interrompues si la manche ou la carte change.
+- [x] Nettoyage immédiat lors de la suppression de `GeneratedMap` ; adaptation du nombre de marques existantes lors d'un abaissement de qualité graphique.
+- [x] `tests/engine/disaster-residue.spec.luau` : neuf teintes distinctes, transitions terminées avant l'effacement final, Low et Reduce Motion désactivent le vieillissement, aucune animation des cratères météore/bombe.
+- [ ] Vérification visuelle sur Studio + appareil Android : stabilité des couleurs, transitions, événements à forte fréquence et identité durant Double Chaos.

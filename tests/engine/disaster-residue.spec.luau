@@ -104,6 +104,49 @@ describe("Nine distinct non-impact aftermath silhouettes", function()
 end)
 
 
+describe("Physical aftermath settling on Android tiers", function()
+    it("uses a distinct, timed material-color finish on all nine static residue types", function()
+        local ids = {
+            "RisingLava", "LowGravity", "DisappearingPlatforms",
+            "Tornado", "Freeze", "SpeedSurge", "Darkness",
+            "ShrinkingArena", "JumpShock",
+        }
+        local seen = {}
+        for _, id in ipairs(ids) do
+            local p = DisasterResidue.get(id)
+            local high = DisasterResidue.settlement(id, "High", false,
+                p.Color, 3.8)
+            local medium = DisasterResidue.settlement(id, "Medium", false,
+                p.Color, 3.8)
+            expect(high ~= nil and medium ~= nil).toBe(true)
+            expect(high.Color ~= p.Color).toBe(true)
+            expect(high.StartAfter > 0).toBe(true)
+            expect(high.StartAfter + high.Duration < 3.8 - 0.8).toBe(true)
+            expect(medium.StartAfter + medium.Duration < 3.8 - 0.8).toBe(true)
+            expect(high.Transparency < 1).toBe(true)
+            expect(medium.Transparency < 1).toBe(true)
+            local signature = string.format("%.3f/%.3f/%.3f",
+                high.Color.R, high.Color.G, high.Color.B)
+            expect(seen[signature] == nil).toBe(true)
+            seen[signature] = true
+            expect(DisasterResidue.settlement(id, "Low", false,
+                p.Color, 3.8) == nil).toBe(true)
+            expect(DisasterResidue.settlement(id, "High", true,
+                p.Color, 3.8) == nil).toBe(true)
+        end
+    end)
+
+    it("does not animate impact-only scars or malformed requests", function()
+        local color = Color3.fromRGB(88, 99, 110)
+        expect(DisasterResidue.settlement("Bombs", "High", false,
+            color, 4) == nil).toBe(true)
+        expect(DisasterResidue.settlement("Meteors", "High", false,
+            color, 4) == nil).toBe(true)
+        expect(DisasterResidue.settlement("Freeze", "High", false,
+            nil, 4) == nil).toBe(true)
+    end)
+end)
+
 describe("Aftermath color harmony", function()
     it("defines a subdued result-only grade for all eleven hazards", function()
         for _, id in ipairs(IDS) do

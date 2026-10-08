@@ -111,7 +111,25 @@ local function makePart(name, size, cframe, color, material, transparency)
     return part
 end
 
-local function fadeLater(part, lifetime)
+local function fadeLater(part, lifetime, settlement)
+    if settlement then
+        -- One scheduled color transition; no per-frame animation or extra
+        -- geometry. Fade and settling finish before the part is removed.
+        task.delay(settlement.StartAfter, function()
+            if part.Parent then
+                TweenService:Create(
+                    part,
+                    TweenInfo.new(settlement.Duration,
+                        Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {
+                        Color = settlement.Color,
+                        Transparency = math.max(part.Transparency,
+                            settlement.Transparency),
+                    }
+                ):Play()
+            end
+        end)
+    end
     task.delay(math.max(0.2, lifetime - 0.8), function()
         if part.Parent then
             TweenService:Create(
@@ -361,7 +379,11 @@ local function resultResidueFor(id, index, count, base, quality)
                     VisualTheme.arena(variant))
                 for _, piece in ipairs(pieces) do
                     piece:SetAttribute("ResidueCreatedAt", os.clock())
-                    fadeLater(piece, lifetime)
+                    local settling = DisasterResidue.settlement(
+                        id, quality.Name,
+                        player:GetAttribute("ReduceMotion") == true,
+                        piece.Color, lifetime)
+                    fadeLater(piece, lifetime, settling)
                 end
             end
         elseif profile.Kind == "fracture"
@@ -430,15 +452,25 @@ end
 
 local function playResultResidue()
     local base = arenaBase()
-    if not base then
-        return
-    end
-
+    if not base then return false end
     local quality = tier()
     for index, id in ipairs(lastIds) do
         resultResidueFor(id, index, #lastIds, base, quality)
     end
     trimBudget()
+    return true
+end
+
+local function resultWithRetry(token, attemptsLeft)
+    if token ~= roundToken or phase ~= "result" then return end
+    if playResultResidue() then return end
+    if attemptsLeft > 0 then
+        -- RoundState may precede Arena.Base replication on slow Android
+        -- clients. Retries are short, bounded and cancelled on phase change.
+        task.delay(0.30, function()
+            resultWithRetry(token, attemptsLeft - 1)
+        end)
+    end
 end
 
 impactEvent.OnClientEvent:Connect(impactResidue)
@@ -460,8 +492,19 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
     elseif previousPhase == "round" and phase == "result" then
         roundToken += 1
-        playResultResidue()
+        resultWithRetry(roundToken, 3)
     elseif phase == "ready" or phase == "intermission" or phase == "waiting" then
         clearResidue(0.28)
     end
 end)
+
+-- Avoid carrying residue from a discarded map into the next streamed arena.
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        roundToken += 1
+        folder:ClearAllChildren()
+    end
+end)
+
+-- Downgrading graphics while scars are visible must honor the new tier cap.
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(trimBudget)
