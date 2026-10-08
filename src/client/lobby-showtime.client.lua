@@ -26,6 +26,7 @@ local tiles = {}
 local fixedPieces = {}
 local dancers = {}
 local lights = {}
+local beams = {}
 local particles = nil
 local titleBillboard = nil
 local profile = Showtime.profile("Low")
@@ -331,6 +332,7 @@ local function clearStage()
     table.clear(fixedPieces)
     table.clear(dancers)
     table.clear(lights)
+    table.clear(beams)
     particles = nil
     stageCenter = nil
     stageBase = nil
@@ -425,6 +427,41 @@ local function buildStage()
         end
     end
 
+    -- Thin, sweeping holographic light ribbons. These are not gameplay hazards.
+    local beamCount = tier.Name == "High" and 2 or (tier.Name == "Medium" and 1 or 0)
+    for i = 1, beamCount do
+        local sx = i == 1 and -1 or 1
+        local source = makePart("ShowtimeLaserSource" .. i,
+            Vector3.new(0.15, 0.15, 0.15),
+            baseCF * CFrame.new(sx * 6.1, 3.0, -5.6),
+            UITheme.Colors.Cyan, Enum.Material.Glass, 1)
+        local target = makePart("ShowtimeLaserTarget" .. i,
+            Vector3.new(0.15, 0.15, 0.15),
+            baseCF * CFrame.new(0, 1.9, 0),
+            UITheme.Colors.Violet, Enum.Material.Glass, 1)
+        local from = Instance.new("Attachment")
+        from.Parent = source
+        local to = Instance.new("Attachment")
+        to.Parent = target
+        local beam = Instance.new("Beam")
+        beam.Name = "ShowtimeLightRibbon" .. i
+        beam.Attachment0 = from
+        beam.Attachment1 = to
+        beam.FaceCamera = true
+        beam.Segments = 8
+        beam.Width0 = 0.14
+        beam.Width1 = 0.035
+        beam.Color = ColorSequence.new(
+            i == 1 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
+            UITheme.Colors.Violet
+        )
+        beam.Transparency = NumberSequence.new(0.30)
+        beam.LightEmission = 0.85
+        beam.Enabled = false
+        beam.Parent = source
+        table.insert(beams, {target = target, beam = beam, phase = i * math.pi})
+    end
+
     local sign = makePart("ShowtimeMarquee", Vector3.new(0.3, 0.3, 0.3),
         baseCF * CFrame.new(0, 6.6, 5.4), UITheme.Colors.Cyan, Enum.Material.Glass, 1)
     local billboard = Instance.new("BillboardGui")
@@ -495,6 +532,18 @@ local function updateStage(now)
     end
     for _, light in ipairs(lights) do
         light.Enabled = enabled and not reduced
+    end
+    for _, ribbon in ipairs(beams) do
+        ribbon.beam.Enabled = enabled and not reduced
+        if enabled and not reduced and stageCenter then
+            ribbon.target.CFrame = CFrame.new(
+                stageCenter + Vector3.new(
+                    math.cos(now * 0.82 + ribbon.phase) * 4.0,
+                    1.75 + math.sin(now * 1.3 + ribbon.phase) * 0.65,
+                    math.sin(now * 0.82 + ribbon.phase) * 4.0
+                )
+            )
+        end
     end
 
     for _, entry in ipairs(tiles) do
