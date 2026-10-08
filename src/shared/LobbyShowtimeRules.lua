@@ -68,6 +68,17 @@ function LobbyShowtimeRules.get(id, rigType)
     }
 end
 
+-- Coordinate with AccessibilityQuickSettings at the top-right of the screen.
+-- Reserve its expanded settings panel, not only its toggle button.
+function LobbyShowtimeRules.dockRightInset(viewportWidth, touch, veryNarrow)
+    local width = math.max(1, tonumber(viewportWidth) or 1280)
+    local rightGap = touch == true and 10 or width * 0.015
+    local settingsPanelWidth = touch == true
+        and (veryNarrow == true and 176 or 186)
+        or 178
+    return math.ceil(rightGap + settingsPanelWidth + 12)
+end
+
 function LobbyShowtimeRules.profile(tier)
     local name = tostring(tier or "Low")
     if name == "High" then
