@@ -5,11 +5,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local LocalizationService = game:GetService("LocalizationService")
 local Debris = game:GetService("Debris")
+local SoundService = game:GetService("SoundService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local Showtime = require(ReplicatedStorage.Shared.LobbyShowtimeRules)
+local ShowtimeProps = require(script.Parent.ShowtimeProps)
 
 local player = Players.LocalPlayer
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -33,6 +35,9 @@ local titleBillboard = nil
 local profile = Showtime.profile("Low")
 local stageCenter = nil
 local stageBase = nil
+local assetKit = nil
+local stageBeat = nil
+local lastStageBeat = -math.huge
 local refreshUI
 
 local folder = Instance.new("Folder")
@@ -67,7 +72,7 @@ UITheme.addTextConstraint(toggle, 12, 18)
 local panel = Instance.new("Frame")
 panel.Name = "ShowtimePanel"
 panel.AnchorPoint = Vector2.new(1, 0)
-panel.Size = UDim2.fromOffset(232, 161)
+panel.Size = UDim2.fromOffset(232, 217)
 panel.BackgroundColor3 = UITheme.Colors.Panel
 panel.BackgroundTransparency = 0.05
 panel.BorderSizePixel = 0
@@ -228,6 +233,30 @@ local function personalConfetti()
     Debris:AddItem(attachment, 1.4)
 end
 
+local function emoteAudio(id)
+    if player:GetAttribute("AudioMuted") == true then
+        return
+    end
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return
+    end
+    local sound = Instance.new("Sound")
+    sound.Name = "ShowtimeEmoteCue"
+    sound.SoundId = id == "cheer" and "rbxasset://sounds/switch.wav"
+        or "rbxasset://sounds/electronicpingshort.wav"
+    sound.Volume = 0.12
+    sound.PlaybackSpeed = id == "groove" and 0.90
+        or (id == "laugh" and 1.28 or 1.13)
+    sound.RollOffMaxDistance = 35
+    sound.RollOffMinDistance = 4
+    sound.SoundGroup = SoundService:FindFirstChild("ChaosSFX")
+    sound.Parent = root
+    sound:Play()
+    Debris:AddItem(sound, 2)
+end
+
 local function playEmote(id)
     if not available() then
         return
@@ -283,6 +312,7 @@ local function playEmote(id)
     end
     currentEmote = {id = id, track = entry.track}
     personalConfetti()
+    emoteAudio(id)
     open = false
     panel.Visible = false
     if particles and particles.Parent then
@@ -331,7 +361,7 @@ local function applyLayout()
     toggle.Position = UDim2.new(1, -rightInset, 0, top + 16)
     panel.Position = UDim2.new(1, -rightInset, 0, top + 70)
     local width = math.max(1, viewport.X)
-    panel.Size = UDim2.fromOffset(math.min(232, width - 24), 161)
+    panel.Size = UDim2.fromOffset(math.min(232, width - 24), 217)
 end
 
 local function bindCamera()
@@ -375,6 +405,9 @@ local function clearStage()
     particles = nil
     stageCenter = nil
     stageBase = nil
+    assetKit = nil
+    stageBeat = nil
+    lastStageBeat = -math.huge
     titleBillboard = nil
 end
 
@@ -417,6 +450,15 @@ local function buildStage()
 
     stageBase = makePart("ShowtimeDeck", Vector3.new(13.8, 0.16, 13.8),
         baseCF, UITheme.Colors.Panel, Enum.Material.Metal, 0.09)
+    assetKit = ShowtimeProps.build(folder, baseCF, tier.Name)
+    stageBeat = Instance.new("Sound")
+    stageBeat.Name = "ShowtimeSpatialBeat"
+    stageBeat.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+    stageBeat.Volume = 0.05
+    stageBeat.RollOffMinDistance = 6
+    stageBeat.RollOffMaxDistance = 24
+    stageBeat.SoundGroup = SoundService:FindFirstChild("ChaosSFX")
+    stageBeat.Parent = stageBase
     local size = 11.6 / profile.Grid
     for row = 1, profile.Grid do
         for column = 1, profile.Grid do
@@ -591,6 +633,7 @@ local function updateStage(now)
     for _, entry in ipairs(fixedPieces) do
         entry.part.Transparency = enabled and entry.transparency or 1
     end
+    ShowtimeProps.update(assetKit, now, enabled, reduced, crowd)
     for _, light in ipairs(lights) do
         light.Enabled = enabled and not reduced
         light.Brightness = 0.50 + crowd * 0.10
@@ -606,6 +649,18 @@ local function updateStage(now)
                 )
             )
         end
+    end
+
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local distance = root and (root.Position - stageCenter).Magnitude or math.huge
+    if stageBeat and crowd > 0
+        and Showtime.spatialBeatActive(phase, voteOptions, distance, player:GetAttribute("AudioMuted"))
+        and now - lastStageBeat >= 1.75
+    then
+        lastStageBeat = now
+        stageBeat.PlaybackSpeed = 0.98 + (crowd % 3) * 0.12
+        stageBeat.Volume = 0.035 + crowd * 0.008
+        stageBeat:Play()
     end
 
     for _, entry in ipairs(tiles) do
