@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local ArenaDetailKit = require(script.Parent.ArenaDetailKit)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 
@@ -10,7 +12,7 @@ local folder = Instance.new("Folder")
 folder.Name = "ArenaMidgroundMassLocal"
 folder.Parent = workspace
 
-local mapConnection = nil
+local disconnectMapWatch = nil
 
 local function clear()
     folder:ClearAllChildren()
@@ -65,6 +67,8 @@ local function buildClassic(base, theme, tier)
             tier.Name == "Low" and 0.34 or 0.18
         )
 
+        ArenaDetailKit.build(folder, "Midground", "Classic", body, tier.Name, theme)
+
         local glowEnabled = tier.Name == "High" and i <= 3
             or tier.Name == "Medium" and i == 1
         if glowEnabled then
@@ -103,6 +107,8 @@ local function buildTowers(base, theme, tier)
             tier.Name == "Low" and 0.32 or 0.15
         )
 
+        ArenaDetailKit.build(folder, "Midground", "Towers", body, tier.Name, theme)
+
         local stripEnabled = tier.Name == "High" and i % 2 == 1
             or tier.Name == "Medium" and i == 1
         if stripEnabled then
@@ -139,6 +145,8 @@ local function buildCrossroads(base, theme, tier)
             Enum.Material.Concrete,
             tier.Name == "Low" and 0.36 or 0.18
         )
+
+        ArenaDetailKit.build(folder, "Midground", "Crossroads", body, tier.Name, theme)
 
         local railEnabled = tier.Name == "High" and i % 2 == 1
             or tier.Name == "Medium" and i == 1
@@ -180,6 +188,8 @@ local function buildOrbital(base, theme, tier)
             Enum.PartType.Ball
         )
 
+        ArenaDetailKit.build(folder, "Midground", "Orbital", body, tier.Name, theme)
+
         if tier.Name ~= "Low" then
             local tangent = angle + math.pi * 0.5
             local glowing = tier.Name == "High" and i % 3 == 0
@@ -200,7 +210,7 @@ local function rebuild()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
@@ -221,17 +231,17 @@ local function rebuild()
 end
 
 local function bindMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
-
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base",
+            function()
                 task.defer(rebuild)
             end
-        end)
+        )
     end
 end
 

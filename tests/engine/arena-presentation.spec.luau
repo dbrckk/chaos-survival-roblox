@@ -6,6 +6,7 @@ local ArenaPresentation = require("../../src/shared/ArenaPresentation")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local MapVisualReadiness = require("../../src/shared/MapVisualReadiness")
 local ArenaSignatureKit = require("../../src/client/ArenaSignatureKit")
+local ArenaDetailKit = require("../../src/client/ArenaDetailKit")
 
 local CENTER = Vector3.new(0, 0, 0)
 
@@ -206,6 +207,49 @@ describe("Late-replicated visual map readiness", function()
         expect(current == nil).toBe(true)
         dispose()
         generated:Destroy()
+    end)
+end)
+
+
+describe("Arena architectural secondary motifs", function()
+    it("keeps each arena uniquely recognizable across both prop scales", function()
+        local root = Instance.new("Folder")
+        local host = Instance.new("Part")
+        host.Size = Vector3.new(6, 8, 5)
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            for _, role in ipairs({"Service", "Midground"}) do
+                local names = ArenaDetailKit.names(variant, role)
+                expect(names ~= nil).toBe(true)
+                expect(#names).toBe(3)
+                for _, tier in ipairs({"Low", "Medium", "High"}) do
+                    local built = ArenaDetailKit.build(root, role, variant, host, tier,
+                        VisualTheme.arena(variant))
+                    expect(#built).toBe(ArenaDetailKit.count(tier))
+                    for i, part in ipairs(built) do
+                        expect(part.Name).toBe(names[i])
+                        expect(part.Anchored).toBe(true)
+                        expect(part.CanCollide).toBe(false)
+                        expect(part.CanQuery).toBe(false)
+                        expect(part.CanTouch).toBe(false)
+                        expect(part:GetAttribute("ChaosVisualMotif")).toBe(true)
+                        part:Destroy()
+                    end
+                end
+            end
+        end
+        host:Destroy()
+        root:Destroy()
+    end)
+
+    it("does not create geometry without a valid parent, host and arena", function()
+        local folder = Instance.new("Folder")
+        local host = Instance.new("Part")
+        local theme = VisualTheme.arena("Classic")
+        expect(#ArenaDetailKit.build(folder, "Service", "Unknown", host, "High", theme)).toBe(0)
+        expect(#ArenaDetailKit.build(folder, "Service", "Classic", nil, "High", theme)).toBe(0)
+        expect(#ArenaDetailKit.build(folder, "Service", "Classic", host, "High", nil)).toBe(0)
+        host:Destroy()
+        folder:Destroy()
     end)
 end)
 

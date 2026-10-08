@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local ArenaDetailKit = require(script.Parent.ArenaDetailKit)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 
@@ -10,7 +12,7 @@ local folder = Instance.new("Folder")
 folder.Name = "ArenaServicePropsLocal"
 folder.Parent = workspace
 
-local mapConnection = nil
+local disconnectMapWatch = nil
 
 local function clear()
     folder:ClearAllChildren()
@@ -129,6 +131,7 @@ local function addClassic(base, theme, tier)
             Enum.PartType.Cylinder
         )
         addSurfaceLabel(camera, string.format("CAM %02d", i), theme.Accent, tier, Enum.NormalId.Top)
+        ArenaDetailKit.build(folder, "Service", "Classic", camera, tier.Name, theme)
     end
 end
 
@@ -156,6 +159,7 @@ local function addTowers(base, theme, tier)
         )
 
         addSurfaceLabel(crate, string.format("MAINT %02d", i), theme.Secondary, tier, Enum.NormalId.Front)
+        ArenaDetailKit.build(folder, "Service", "Towers", crate, tier.Name, theme)
 
         local litLatch = tier.Name == "High" and i % 2 == 1
             or tier.Name == "Medium" and i == 1
@@ -194,6 +198,7 @@ local function addCrossroads(base, theme, tier)
             0.08
         )
         addSurfaceLabel(post, string.format("L%02d", i), theme.Accent, tier, Enum.NormalId.Front)
+        ArenaDetailKit.build(folder, "Service", "Crossroads", post, tier.Name, theme)
         local litCap = tier.Name ~= "Low" and i % 2 == 1
         makePart(
             "CrossroadsBollardCap" .. i,
@@ -248,6 +253,7 @@ local function addOrbital(base, theme, tier)
             litBand and 0.52 or 0.16
         )
         addSurfaceLabel(body, string.format("AUX-%02d", i), theme.Accent, tier, Enum.NormalId.Top)
+        ArenaDetailKit.build(folder, "Service", "Orbital", body, tier.Name, theme)
     end
 end
 
@@ -256,7 +262,7 @@ local function rebuild()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
@@ -277,17 +283,17 @@ local function rebuild()
 end
 
 local function bindMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
-
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base",
+            function()
                 task.defer(rebuild)
             end
-        end)
+        )
     end
 end
 
