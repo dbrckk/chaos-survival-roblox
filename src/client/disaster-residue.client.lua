@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local DisasterResidue = require(ReplicatedStorage.Shared.DisasterResidue)
+local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local AftermathSurfaceKit = require(script.Parent.AftermathSurfaceKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -343,10 +345,26 @@ local function resultResidueFor(id, index, count, base, quality)
         local seed = i + index * 11
         local x = ((((seed * 37) % 101) / 100) * 2 - 1) * halfX * 0.68
         local z = ((((seed * 53) % 97) / 96) * 2 - 1) * halfZ * 0.68
-        local position = base.Position
-            + Vector3.new(x, base.Size.Y * 0.5 + 0.08, z)
+        -- Local floor coordinates preserve placement on rotated arenas.
+        local position = base.CFrame:PointToWorldSpace(
+            Vector3.new(x, base.Size.Y * 0.5 + 0.08, z))
 
-        if profile.Kind == "fracture"
+        if AftermathSurfaceKit.names(id) ~= nil then
+            local surface, normal = surfaceAt(position)
+            if surface then
+                local frame = flatCFrame(surface, normal, (seed * 47) % 180)
+                local variant = tostring(base.Parent:GetAttribute("VariantId") or "Classic")
+                local pieces = AftermathSurfaceKit.build(
+                    folder, id, quality.Name, frame, profile,
+                    0.88 + (i % 3) * 0.09,
+                    tostring(index) .. "_" .. tostring(i),
+                    VisualTheme.arena(variant))
+                for _, piece in ipairs(pieces) do
+                    piece:SetAttribute("ResidueCreatedAt", os.clock())
+                    fadeLater(piece, lifetime)
+                end
+            end
+        elseif profile.Kind == "fracture"
             or profile.Kind == "scrape"
             or profile.Kind == "streak"
             or profile.Kind == "edge"

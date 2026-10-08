@@ -208,3 +208,12 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] Concurrence de VFX réduite à 8 Medium / 10 High (contre 10/14 auparavant) ; sons, collisions, dégâts, positions et temps de gameplay inchangés.
 - [x] `tests/engine/disaster-visuals.spec.luau` : quantité, types, matériaux, limites Medium/High, trajectoires et absence de collisions sur deux classes d'impacts.
 - [ ] Vérifier en Studio l'absence d'occlusion des trajectoires du joueur, la compatibilité Double Chaos et les FPS Android sur une succession dense d'impacts.
+
+## Sprint 04 — retombées des neuf catastrophes non explosives
+
+- [x] `AftermathSurfaceKit.lua` : 9 recettes originales formellement distinctes. Lave = croûte fondue, faible gravité = doubles arcs orbitaux, plateformes = lèvres cassées, tornade = sillons de vent, gel = aiguilles de givre, vitesse = traînées parallèles, obscurité = replis d'ombre, arène rétrécissante = bras convergents, saut électrique = zigzags de décharge.
+- [x] `disaster-residue.client.lua` : après le Round, générer ces empreintes via le kit en suivant la normale du sol et le `CFrame` de l'arène (y compris tournée). Les empreintes de météores/bombes conservent leur système de cratères et de brûlures.
+- [x] **Budget par empreinte** : 2 objets en Low, 3 en Medium, 4 en High ; les anciens budgets globaux de résidus restent en vigueur et les objets sont nettoyés par `Debris`.
+- [x] `tests/engine/disaster-residue.spec.luau` : 9 catastrophes × 3 niveaux, géométries aux noms uniques, matériaux non-neon, absence de collisions, position correcte dans une scène tournée, entrées invalides.
+- [ ] Revue Studio : s'assurer que les empreintes ne masquent pas les cibles de navigation ou les signaux de danger et qu'elles sont visibles sans surcharge.
+- [ ] Comparaison Android Low/Medium/High et contrôle des résidus après un changement rapide de carte.
