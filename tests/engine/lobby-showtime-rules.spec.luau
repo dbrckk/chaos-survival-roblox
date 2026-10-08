@@ -101,6 +101,7 @@ describe("Lobby Showtime", function()
         expect(#high.equalizer).toBe(8)
 
         local firstRing = low.crown.orbit[1].part
+        ShowtimeProps.update(low, 2.0, true, true, 0)
         local atRest = firstRing.CFrame
         ShowtimeProps.update(low, 5.0, true, true, 4)
         expect(firstRing.CFrame).toBe(atRest)
