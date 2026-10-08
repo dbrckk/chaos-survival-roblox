@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 35
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 1
       matrix:
         suite: [gameplay, matrix, core_a, core_b1, core_b2]
     env:
@@ -216,7 +216,7 @@ jobs:
                 return 0
               fi
 
-              if ! grep -Eq 'did not finish within the deadline|last state: PROCESSING' "$log"; then
+              if ! grep -Eq 'did not finish within the deadline|last state: PROCESSING|Open Cloud returned HTTP 429' "$log"; then
                 echo "Non-transient Open Cloud failure for $suite; not retrying."
                 echo "::endgroup::"
                 return "$status"
@@ -228,12 +228,23 @@ jobs:
                 return "$status"
               fi
 
-              if [ "$attempt" -eq 1 ]; then
+              if grep -q 'Open Cloud returned HTTP 429' "$log"; then
+                # Quotas are shared across runs, so a fast retry only repeats
+                # the rejection. Back off substantially on rate limiting.
+                if [ "$attempt" -eq 1 ]; then
+                  delay=55
+                else
+                  delay=105
+                fi
+                reason="rate limit (HTTP 429)"
+              elif [ "$attempt" -eq 1 ]; then
                 delay=8
+                reason="execution timeout"
               else
                 delay=20
+                reason="execution timeout"
               fi
-              echo "Transient Roblox Open Cloud timeout detected for $suite; retrying after ${delay}s."
+              echo "Transient Roblox Open Cloud ${reason} for $suite; retrying after ${delay}s."
               sleep "$delay"
               attempt=$((attempt + 1))
             done
