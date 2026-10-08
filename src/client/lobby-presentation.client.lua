@@ -6,6 +6,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 
 local player = Players.LocalPlayer
 local frenchLocale = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -309,6 +310,53 @@ local function tweenPart(part, transparency, color, duration)
     ):Play()
 end
 
+local function renderGateGlyph(container, hazardId, color)
+    for _, child in ipairs(container:GetChildren()) do
+        if child:GetAttribute("HazardGlyphSegment") == true then
+            child:Destroy()
+        end
+    end
+
+    local recipe = HazardGlyphs.get(hazardId)
+    container.Visible = recipe ~= nil
+    if not recipe then
+        return
+    end
+
+    for _, def in ipairs(recipe) do
+        local segment = Instance.new("Frame")
+        segment.AnchorPoint = Vector2.new(0.5, 0.5)
+        segment.Position = UDim2.fromScale(def.X, def.Y)
+        segment.Size = UDim2.fromScale(def.Width, def.Height)
+        segment.Rotation = def.Rotation or 0
+        segment.BackgroundColor3 = color
+        segment.BackgroundTransparency = 0.08
+        segment.BorderSizePixel = 0
+        segment:SetAttribute("HazardGlyphSegment", true)
+        segment.Parent = container
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = segment
+    end
+end
+
+local function ensureGateGlyph(panel, name, position)
+    local existing = panel:FindFirstChild(name)
+    if existing and existing:IsA("Frame") then
+        return existing
+    end
+
+    local glyph = Instance.new("Frame")
+    glyph.Name = name
+    glyph.AnchorPoint = Vector2.new(0.5, 0.5)
+    glyph.Position = position
+    glyph.Size = UDim2.fromScale(0.16, 0.68)
+    glyph.BackgroundTransparency = 1
+    glyph.Visible = false
+    glyph.Parent = panel
+    return glyph
+end
+
 local function applyGatePresentation(mode, accent, q, duration)
     if not currentDecor then
         return
@@ -328,12 +376,67 @@ local function applyGatePresentation(mode, accent, q, duration)
             currentState.voteOptions
         )
 
+        local primaryGlyph = panel and ensureGateGlyph(
+            panel,
+            "GateGlyphPrimary",
+            UDim2.fromScale(0.15, 0.52)
+        )
+        local secondaryGlyph = panel and ensureGateGlyph(
+            panel,
+            "GateGlyphSecondary",
+            UDim2.fromScale(0.29, 0.52)
+        )
+        local ids = type(currentState.disasterIds) == "table"
+            and currentState.disasterIds
+            or {}
+        local showHazards = mode == "launch" and ids[1] ~= nil
+
+        if primaryGlyph then
+            if showHazards then
+                primaryGlyph.Position = UDim2.fromScale(ids[2] and 0.13 or 0.17, 0.52)
+                renderGateGlyph(primaryGlyph, ids[1], accent)
+            else
+                primaryGlyph.Visible = false
+            end
+        end
+
+        if secondaryGlyph then
+            if showHazards and ids[2] then
+                secondaryGlyph.Position = UDim2.fromScale(0.29, 0.52)
+                renderGateGlyph(
+                    secondaryGlyph,
+                    ids[2],
+                    VisualTheme.Accents.Violet:Lerp(accent, 0.18)
+                )
+            else
+                secondaryGlyph.Visible = false
+            end
+        end
+
         if title and title:IsA("TextLabel") then
             title.Text = mainText
+            title.Position = showHazards
+                and UDim2.fromScale(ids[2] and 0.40 or 0.30, 0.08)
+                or UDim2.fromScale(0.05, 0.08)
+            title.Size = showHazards
+                and UDim2.fromScale(ids[2] and 0.55 or 0.65, 0.48)
+                or UDim2.fromScale(0.90, 0.48)
+            title.TextXAlignment = showHazards
+                and Enum.TextXAlignment.Left
+                or Enum.TextXAlignment.Center
         end
         if subtitle and subtitle:IsA("TextLabel") then
             subtitle.Text = subText
             subtitle.TextColor3 = accent
+            subtitle.Position = showHazards
+                and UDim2.fromScale(ids[2] and 0.40 or 0.30, 0.57)
+                or UDim2.fromScale(0.05, 0.57)
+            subtitle.Size = showHazards
+                and UDim2.fromScale(ids[2] and 0.55 or 0.65, 0.25)
+                or UDim2.fromScale(0.90, 0.25)
+            subtitle.TextXAlignment = showHazards
+                and Enum.TextXAlignment.Left
+                or Enum.TextXAlignment.Center
         end
         if gateStroke and gateStroke:IsA("UIStroke") then
             gateStroke.Color = accent
