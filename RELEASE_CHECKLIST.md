@@ -89,6 +89,7 @@ Record:
 - [ ] All four map landmarks render and rotate safely, remain non-colliding and clean up across arena transitions.
 - [ ] Meteor/Bomb bursts render as different fragments, including all transient pieces in live budget metrics.
 - [ ] Near-miss and landing FX affect eligible living participants and AI only; late joiners, spectators and eliminated lobby avatars excluded.
+- [ ] Simultaneous character reaction beams stay at or below 12 per client and missing rigs release their temporary listeners within eight seconds.
 - [ ] R15 sprint/hard stop/180-degree pivot/jump/land + respawn produce no frozen body pose or broken movement.
 - [ ] Performance + hazards during Double Chaos remain readable on a real Android device at Low/Medium/High VFX tiers.
 - [ ] Reduce Motion suppresses cosmetic pulses and pose intensity while maintaining critical hazard readability.

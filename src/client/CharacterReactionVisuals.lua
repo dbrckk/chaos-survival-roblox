@@ -2,6 +2,25 @@
 -- health, camera or animation is changed. Beam instances follow their root.
 local Debris = game:GetService("Debris")
 local CharacterReactionVisuals = {}
+local MAX_LIVE_BEAMS = 12
+
+-- Count live Beam instances, not attachments. Prune destroyed objects from
+-- the bookkeeping table so long sessions never accumulate stale references.
+local function liveBeamCount(activePieces)
+    local count = 0
+    for instance in pairs(activePieces) do
+        if not instance.Parent then
+            activePieces[instance] = nil
+        elseif instance:IsA("Beam") then
+            count += 1
+        end
+    end
+    return count
+end
+
+function CharacterReactionVisuals.activeBeams(activePieces)
+    return type(activePieces) == "table" and liveBeamCount(activePieces) or 0
+end
 
 local function colorFor(kind, mode)
     if mode == "Landing" then
@@ -83,7 +102,9 @@ function CharacterReactionVisuals.burst(root, mode, kind, count, strength, activ
     then
         return 0
     end
-    local pieces = math.clamp(math.floor(tonumber(count) or 0), 0, 3)
+    local requested = math.clamp(math.floor(tonumber(count) or 0), 0, 3)
+    local available = math.max(0, MAX_LIVE_BEAMS - liveBeamCount(activePieces))
+    local pieces = math.min(requested, available)
     local intensity = math.clamp(tonumber(strength) or 0, 0, 1)
     for i = 1, pieces do
         stroke(root, mode, kind, i, intensity, activePieces)

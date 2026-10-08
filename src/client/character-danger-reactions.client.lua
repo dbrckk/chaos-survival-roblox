@@ -173,6 +173,15 @@ local function watchLanding(model)
                     task.defer(watchLanding, model)
                 end
             end)
+            -- Abandoned partial rigs are common under StreamingEnabled and
+            -- rapid respawn. Do not retain their connections indefinitely.
+            task.delay(8, function()
+                local connection = pendingRigs[model]
+                if connection then
+                    connection:Disconnect()
+                    pendingRigs[model] = nil
+                end
+            end)
         end
         return
     end
