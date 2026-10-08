@@ -145,6 +145,20 @@ describe("Result presentation", function()
         expect(ResultPresentation.constellationRadius("High")).toBe(16)
     end)
 
+    it("scales premium result architecture without burdening low quality", function()
+        local low = ResultPresentation.architectureProfile("Low", 1)
+        local medium = ResultPresentation.architectureProfile("Medium", 3)
+        local high = ResultPresentation.architectureProfile("High", 3)
+        local sole = ResultPresentation.architectureProfile("High", 1)
+
+        expect(low.Pylons).toBe(0)
+        expect(low.Height).toBe(0)
+        expect(high.Pylons > medium.Pylons).toBe(true)
+        expect(high.Height > medium.Height).toBe(true)
+        expect(sole.Pylons >= high.Pylons).toBe(true)
+        expect(sole.RadiusScale <= 0.8).toBe(true)
+    end)
+
     it("orders presentation intensity by result importance", function()
         local master = ResultPresentation.intensity({
             survived = true,
