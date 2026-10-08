@@ -3,7 +3,7 @@ name: Roblox Studio Hosted E2E Probe
 on:
   workflow_dispatch:
   push:
-    branches: [main, integration/chaos-visual-mobile-polish-20261008]
+    branches: [main]
     paths:
       - "studio/HOSTED_E2E_TRIGGER"
 

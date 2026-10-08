@@ -3,7 +3,7 @@ name: Roblox Studio E2E Playtest (Authenticated Runner)
 on:
   workflow_dispatch:
   push:
-    branches: [main, integration/chaos-visual-mobile-polish-20261008]
+    branches: [main]
     paths:
       - "studio/E2E_TRIGGER"
 

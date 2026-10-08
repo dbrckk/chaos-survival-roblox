@@ -25,9 +25,3 @@ Candidate reason:
 Runner availability:
 - Repository GITHUB_TOKEN cannot enumerate self-hosted runners (GitHub returns 403 without administration-level runner access).
 - The authenticated Studio job therefore remains queued until an eligible self-hosted Windows runner connects.
-
-Integration Studio request — 2026-10-08
-- Execute the four-client authenticated Studio playtest on integration/chaos-visual-mobile-polish-20261008.
-- Verify Classic/Towers/Crossroads/Orbital kinetic signature identity, non-colliding visuals, correct lobby Showtime phase visibility and a complete ordered intermission > ready > round > result journey.
-- Keep this as validation evidence only. Do not publish or certify until physical Android and desktop playtests pass.
-- A queued job is not a successful Studio test: it requires an authenticated self-hosted Windows runner.
