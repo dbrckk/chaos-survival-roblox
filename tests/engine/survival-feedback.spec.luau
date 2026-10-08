@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local SurvivalFeedback = require("../../src/server/SurvivalFeedback")
 local CharacterReactionRules = require("../../src/shared/CharacterReactionRules")
+local CharacterReactionVisuals = require("../../src/client/CharacterReactionVisuals")
 
 describe("Survival feedback", function()
     it("marks living players at or below twenty percent health as critical", function()
@@ -57,6 +58,41 @@ describe("Character cinematic reactions", function()
         expect(r.landingStrength(0.4)).toBe(0)
         expect(r.landingStrength(0.8) > 0).toBe(true)
         expect(r.landingStrength(10)).toBe(1)
+    end)
+
+    it("builds real curved beams without any extra physical character parts", function()
+        local model = Instance.new("Model")
+        model.Name = "ReactiveTestAvatar"
+        model.Parent = workspace
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        local active = {}
+        local visual = CharacterReactionVisuals
+        expect(visual.burst(root, "Dodge", "Meteor", 2, 0.9, active)).toBe(2)
+        expect(visual.burst(root, "Shock", "Bomb", 1, 0.6, active)).toBe(1)
+        expect(visual.burst(root, "Landing", "", 2, 0.8, active)).toBe(2)
+        local beamCount = 0
+        local attachmentCount = 0
+        local partCount = 0
+        for _, child in ipairs(root:GetChildren()) do
+            if child:IsA("Beam") then
+                beamCount += 1
+                expect(child.Attachment0 ~= nil and child.Attachment1 ~= nil).toBe(true)
+                expect(child.Segments >= 4).toBe(true)
+                expect(child.Width0 > 0 and child.Width0 < 0.20).toBe(true)
+            elseif child:IsA("Attachment") then
+                attachmentCount += 1
+            elseif child:IsA("BasePart") then
+                partCount += 1
+            end
+        end
+        expect(beamCount).toBe(5)
+        expect(attachmentCount).toBe(10)
+        expect(partCount).toBe(0)
+        expect(visual.burst(root, "Dodge", "Meteor", 50, 1, active)).toBe(3)
+        expect(visual.burst(nil, "Dodge", "Meteor", 1, 1, active)).toBe(0)
+        model:Destroy()
     end)
 
     it("throttles rapid duplicate events without permanent locks", function()
