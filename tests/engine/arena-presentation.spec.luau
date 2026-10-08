@@ -124,12 +124,6 @@ end)
 describe("Late-replicated visual map readiness", function()
     it("rebuilds only when the target floor or arena base actually arrives", function()
         local generated = Instance.new("Folder")
-        local observed = {}
-        local disconnect = MapVisualReadiness.watch(generated, "Arena", "Base", function(base)
-            table.insert(observed, base)
-        end)
-        -- nil insert does not preserve a list slot, so explicitly count callbacks.
-        disconnect()
         local calls = 0
         local sawBase = false
         local active = MapVisualReadiness.watch(generated, "Arena", "Base", function(base)
