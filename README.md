@@ -32,6 +32,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Contextual first-session coach covering vote, positioning, survival and optional shard collection
 - 4 rotating arena layouts with no immediate repeat: Classic Grid, Tower Run, Crossroads and Orbital Ring
 - Variant-specific hero landmarks, midground masses, understructures, focal lighting, material language and functional service props
+- Four new kinetic arena signatures: Classic rotating radar, Towers moving lift, Crossroads animated transit signals, Orbital concentric gyroscope. Quality-tier geometry budgets, no collision or paid assets; reduced-motion static mode.
 - Animated personal round-result feedback with survival, streak, shard and close-call breakdown
 - Compact live round-focus HUD with Chaos intensity and shard count
 - Final-five-second danger timer feedback
