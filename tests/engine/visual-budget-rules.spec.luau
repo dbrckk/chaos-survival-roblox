@@ -85,6 +85,36 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("audits temporary meteor and bomb setpieces under their shared local folder", function()
+        local root = Instance.new("Folder")
+        local folder = Instance.new("Folder")
+        folder.Name = "ImpactSetpieceLocal"
+        folder.Parent = root
+        local meteor = Instance.new("Folder")
+        meteor.Name = "ImpactSignature_Meteor"
+        meteor.Parent = folder
+        local bomb = Instance.new("Folder")
+        bomb.Name = "ImpactSignature_Bomb"
+        bomb.Parent = folder
+        for i = 1, 7 do
+            Instance.new("WedgePart").Parent = meteor
+        end
+        for i = 1, 8 do
+            Instance.new("Part").Parent = bomb
+        end
+        local found = 0
+        for _, name in ipairs(VisualBudgetRules.LocalFolders) do
+            if name == folder.Name then
+                found += 1
+            end
+        end
+        expect(found).toBe(1)
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(1)
+        expect(metrics.Parts).toBe(15)
+        root:Destroy()
+    end)
+
     it("classifies live visual budget status before any tier lookup", function()
         expect(type(VisualBudgetRules.status)).toBe("function")
         expect(VisualBudgetRules.status("High", {

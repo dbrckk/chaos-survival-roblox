@@ -4,12 +4,19 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local ImpactSetpiece = require(script.Parent.ImpactSetpiece)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardImpactFeedback")
 
 local MAX_DISTANCE = 150
 local activeBursts = 0
+
+-- Single telemetry-visible folder for every temporary impact setpiece.
+-- This is registered in VisualBudgetRules so live Studio audits count it.
+local setpieceFolder = Instance.new("Folder")
+setpieceFolder.Name = "ImpactSetpieceLocal"
+setpieceFolder.Parent = workspace
 
 local function maxConcurrentBursts(profile, reduced)
     if reduced then
@@ -103,6 +110,15 @@ local function renderBurst(payload)
         return
     end
     activeBursts += 1
+
+    -- Layer one brief, profile-bounded signature over the existing impact
+    -- ring/plume. This never alters damage, hit detection or scorch ownership.
+    ImpactSetpiece.spawn(setpieceFolder, {
+        position = position,
+        color = color,
+        radius = radius,
+        kind = kind,
+    }, profile.Name, reduced)
 
     local burst = Instance.new("Part")
     burst.Name = "LocalHazardImpactBurst"
