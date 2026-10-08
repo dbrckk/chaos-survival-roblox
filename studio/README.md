@@ -47,7 +47,12 @@ Before bringing that runner online for a release candidate, sign into the runner
 
 Then start the GitHub Actions runner under that same Windows account. Once the runner reports online in GitHub, either dispatch the Studio workflow manually from `main` or update `studio/E2E_TRIGGER` to request a fresh exact-SHA certification.
 
-The preflight checks the Studio install, verifies the Roblox Authenticode signature, launches Studio briefly under the runner's Windows account, and reads the resulting Studio log for the final authentication state. Exit code `2` means the Windows user must open Studio normally, sign in interactively, close Studio, and rerun the preflight. It never asks for or stores a Roblox password/session cookie.
+The preflight checks the Studio install, verifies the Roblox Authenticode signature, prints the active Windows identity/profile, inspects any installed GitHub Actions runner service account, launches Studio briefly under the runner's Windows account, and reads the resulting Studio log for the final authentication state.
+
+- Exit code `2`: Studio is not authenticated for the current Windows user. Open Studio normally, sign in interactively, close Studio, and rerun the preflight.
+- Exit code `3`: the GitHub runner service is configured under a Windows system account such as LocalSystem/NetworkService/LocalService. Run the certifying runner interactively under the authenticated user or reconfigure the service to use that same user.
+
+The preflight never asks for or stores a Roblox password/session cookie.
 
 ### Hosted diagnostic probe
 
