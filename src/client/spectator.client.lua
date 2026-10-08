@@ -227,6 +227,9 @@ applyResponsive = function()
         if profile.veryNarrow then
             hazardGlyphSecondary.Visible = false
         else
+            -- On viewport widening, bring back the Double Chaos symbol.
+            hazardGlyphSecondary.Visible = shownSecondaryId ~= nil
+                and HazardGlyphs.get(shownSecondaryId) ~= nil
             local secondarySize = profile.tinyHeight and 26 or 30
             hazardGlyphSecondary.Size = UDim2.fromOffset(secondarySize, secondarySize)
             hazardGlyphSecondary.Position = UDim2.new(
@@ -249,6 +252,8 @@ applyResponsive = function()
         label.Size = UDim2.new(1, -(leftInset + rightReserve), 0.64, -4)
         healthTrack.Size = UDim2.new(1, -(profile.tinyHeight and 124 or 136), 0.10, 0)
     else
+        hazardGlyphSecondary.Visible = shownSecondaryId ~= nil
+            and HazardGlyphs.get(shownSecondaryId) ~= nil
         card.Position = UDim2.fromScale(0.5, 0.88)
         card.Size = UDim2.fromScale(0.58, 0.105)
         nextButton.Size = UDim2.new(0.28, 0, 0.72, 0)
@@ -303,14 +308,19 @@ local function clearTargetHealth()
         targetDiedConnection:Disconnect()
         targetDiedConnection = nil
     end
+    observedHumanoid = nil
     healthFill.Size = UDim2.fromScale(0, 1)
 end
 
 local function bindTargetHealth(humanoid)
+    if observedHumanoid == humanoid then
+        return
+    end
     clearTargetHealth()
     if not humanoid then
         return
     end
+    observedHumanoid = humanoid
 
     local function update()
         local ratio = humanoid.MaxHealth > 0
