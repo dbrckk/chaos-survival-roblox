@@ -14,6 +14,13 @@
 
 All notable changes to Chaos Survival are documented here.
 
+## 2026-10-08 — R15 expressive locomotion
+
+- Add sprint-start acceleration, stop/slide anticipation even after input release, 90/180-degree planted pivots, cadence-synced weight shifts, upward reach and fall bracing to the single existing body-feel Motor6D owner.
+- No new animation controllers, camera owners, asset IDs or physics changes. Scoped to existing R15 visual offsets and automatically blended back toward base joint C0.
+- Low/Medium/High tiers and Reduce Motion bound pose intensity; gameplay health, speed, jump and input remain untouched.
+- Add pure, engine-tested `LocomotionDynamics` envelopes to the existing body motion test shard.
+
 ## Unreleased — Release Candidate Hardening
 
 ### Gameplay
