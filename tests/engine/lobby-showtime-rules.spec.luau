@@ -36,6 +36,18 @@ describe("Lobby Showtime", function()
         expect(Showtime.get("dance", "unknown") == nil).toBe(true)
     end)
 
+    it("keeps emote controls clear of the accessibility panel", function()
+        for _, entry in ipairs({
+            {width = 540, touch = true, narrow = true, settingsWidth = 176, rightGap = 10},
+            {width = 640, touch = true, narrow = false, settingsWidth = 186, rightGap = 10},
+            {width = 1280, touch = false, narrow = false, settingsWidth = 178, rightGap = 19.2},
+        }) do
+            local inset = Showtime.dockRightInset(entry.width, entry.touch, entry.narrow)
+            expect(inset - entry.rightGap - entry.settingsWidth >= 12).toBe(true)
+            expect(entry.width - inset - 232 >= 0).toBe(true)
+        end
+    end)
+
     it("caps procedural dance scenery for each graphics tier", function()
         local low = Showtime.profile("Low")
         local mid = Showtime.profile("Medium")
