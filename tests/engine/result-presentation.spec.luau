@@ -102,6 +102,32 @@ describe("Result presentation", function()
         end
     end)
 
+    it("prioritizes the actual lethal hazard in Double Chaos result visuals", function()
+        local primary, secondary = ResultPresentation.visualHazardOrder({
+            survived = false,
+            disasterIds = {"Tornado", "Bombs"},
+            eliminationCause = "Bomb",
+        })
+        expect(primary).toBe("Bombs")
+        expect(secondary).toBe("Tornado")
+
+        local survivedPrimary, survivedSecondary = ResultPresentation.visualHazardOrder({
+            survived = true,
+            disasterIds = {"Tornado", "Bombs"},
+            eliminationCause = "Bomb",
+        })
+        expect(survivedPrimary).toBe("Tornado")
+        expect(survivedSecondary).toBe("Bombs")
+
+        local fallPrimary, fallSecondary = ResultPresentation.visualHazardOrder({
+            survived = false,
+            disasterIds = {"Tornado", "Bombs"},
+            eliminationCause = "Fall",
+        })
+        expect(fallPrimary).toBe("Tornado")
+        expect(fallSecondary).toBe("Bombs")
+    end)
+
     it("falls back to useful generic elimination guidance", function()
         local title, tip = ResultPresentation.eliminationCopy({
             survived = false,
