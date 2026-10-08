@@ -8,6 +8,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local SpectatorTargetRules = require(ReplicatedStorage.Shared.SpectatorTargetRules)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -129,7 +130,11 @@ local roundActive = false
 local latestState = nil
 local targets = {}
 local targetIndex = 0
+local selectedCharacter = nil
 local targetHealthConnection = nil
+local observedHumanoid = nil
+local shownPrimaryId = nil
+local shownSecondaryId = nil
 local targetDiedConnection = nil
 local spectateIndex
 local viewportConnection = nil
@@ -172,6 +177,13 @@ local function refreshHazardIdentity(state)
     local primaryId = ids[1]
     local secondaryId = ids[2]
 
+    -- RoundState ticks every second; do not reconstruct unchanged glyph parts.
+    if primaryId == shownPrimaryId and secondaryId == shownSecondaryId then
+        return
+    end
+    shownPrimaryId = primaryId
+    shownSecondaryId = secondaryId
+
     if not primaryId then
         hazardGlyph.Visible = false
         hazardGlyphSecondary.Visible = false
@@ -187,16 +199,8 @@ local function refreshHazardIdentity(state)
 
     cardStroke.Color = primary
     accentGradient.Color = ColorSequence.new(primary, secondary)
-
-    hazardGlyph.Position = UDim2.fromScale(secondaryId and 0.10 or 0.13, 0.48)
     renderSpectatorGlyph(hazardGlyph, primaryId, primary, 0.84)
-
-    if secondaryId then
-        hazardGlyphSecondary.Position = UDim2.fromScale(0.23, 0.48)
-        renderSpectatorGlyph(hazardGlyphSecondary, secondaryId, secondary, 0.86)
-    else
-        hazardGlyphSecondary.Visible = false
-    end
+    renderSpectatorGlyph(hazardGlyphSecondary, secondaryId, secondary, 0.86)
 
     if applyResponsive then
         applyResponsive()
