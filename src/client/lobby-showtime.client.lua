@@ -683,21 +683,33 @@ local function updateStage(now)
         return
     end
 
-    for _, dancer in ipairs(dancers) do
+    for index, dancer in ipairs(dancers) do
+        -- Three complementary dance motifs, shifted per performer. Unlike
+        -- rig Animator clips, these are intentionally decorative mannequins.
         local t = reduced and 0 or now
         local shift = t * 2.6 + dancer.phase
-        local bob = reduced and 0 or math.sin(shift) * 0.20
-        local sway = reduced and 0 or math.sin(shift) * 0.62
-        local bodyCF = CFrame.new(dancer.base + Vector3.new(0, 2.05 + bob, 0))
-            * CFrame.Angles(0, sway * 0.35, sway * 0.16)
+        local step = reduced and 0 or math.sin(shift)
+        local sway = reduced and 0 or math.sin(shift * 0.5) * 0.46
+        local motif = reduced and 0 or ((math.floor(t / 3.4) + index) % 3)
+        local handsHigh = motif == 1 and 0.72 or (motif == 2 and 0.38 or -0.18)
+        local torsoTurn = motif == 2 and 0.38 or 0.20
+        local bob = reduced and 0 or math.abs(step) * 0.19
+        local footStep = reduced and 0 or step * (motif == 2 and 0.39 or 0.23)
+
+        local bodyCF = CFrame.new(
+            dancer.base + Vector3.new(sway * 0.45, 2.05 + bob, 0)
+        ) * CFrame.Angles(0, sway * torsoTurn, sway * 0.18)
         dancer.body.CFrame = bodyCF
         dancer.head.CFrame = bodyCF * CFrame.new(0, 1.35, 0)
+            * CFrame.Angles(0, -sway * 0.30, 0)
         dancer.left.CFrame = bodyCF * CFrame.new(-0.78, 0.28, 0)
-            * CFrame.Angles(0, 0, -0.36 - sway)
+            * CFrame.Angles(-handsHigh, 0, -0.35 - step * 0.55)
         dancer.right.CFrame = bodyCF * CFrame.new(0.78, 0.28, 0)
-            * CFrame.Angles(0, 0, 0.36 + sway)
-        dancer.footL.CFrame = bodyCF * CFrame.new(-0.3, -1.4, 0)
-        dancer.footR.CFrame = bodyCF * CFrame.new(0.3, -1.4, 0)
+            * CFrame.Angles(handsHigh, 0, 0.35 - step * 0.55)
+        dancer.footL.CFrame = bodyCF * CFrame.new(-0.3, -1.4, footStep)
+            * CFrame.Angles(footStep * 0.18, 0, 0)
+        dancer.footR.CFrame = bodyCF * CFrame.new(0.3, -1.4, -footStep)
+            * CFrame.Angles(-footStep * 0.18, 0, 0)
         for _, part in ipairs(dancer.parts) do
             part.Transparency = 0.28
         end
