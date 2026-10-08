@@ -7,6 +7,7 @@ local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentatio
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 
 local player = Players.LocalPlayer
 local frenchLocale = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -332,6 +333,7 @@ local function renderGateGlyph(container, hazardId, color)
         segment.BackgroundColor3 = color
         segment.BackgroundTransparency = 0.08
         segment.BorderSizePixel = 0
+        segment.ZIndex = container.ZIndex
         segment:SetAttribute("HazardGlyphSegment", true)
         segment.Parent = container
         local corner = Instance.new("UICorner")
@@ -353,6 +355,7 @@ local function ensureGateGlyph(panel, name, position)
     glyph.Size = UDim2.fromScale(0.16, 0.68)
     glyph.BackgroundTransparency = 1
     glyph.Visible = false
+    glyph.ZIndex = 1
     glyph.Parent = panel
     return glyph
 end
@@ -403,10 +406,11 @@ local function applyGatePresentation(mode, accent, q, duration)
         if secondaryGlyph then
             if showHazards and ids[2] then
                 secondaryGlyph.Position = UDim2.fromScale(0.29, 0.52)
+                local secondaryProfile = DisasterVisuals.get(ids[2])
                 renderGateGlyph(
                     secondaryGlyph,
                     ids[2],
-                    VisualTheme.Accents.Violet:Lerp(accent, 0.18)
+                    secondaryProfile and secondaryProfile.Accent or VisualTheme.Accents.Violet
                 )
             else
                 secondaryGlyph.Visible = false
@@ -414,6 +418,7 @@ local function applyGatePresentation(mode, accent, q, duration)
         end
 
         if title and title:IsA("TextLabel") then
+            title.ZIndex = 2
             title.Text = mainText
             title.Position = showHazards
                 and UDim2.fromScale(ids[2] and 0.40 or 0.30, 0.08)
@@ -426,6 +431,7 @@ local function applyGatePresentation(mode, accent, q, duration)
                 or Enum.TextXAlignment.Center
         end
         if subtitle and subtitle:IsA("TextLabel") then
+            subtitle.ZIndex = 2
             subtitle.Text = subText
             subtitle.TextColor3 = accent
             subtitle.Position = showHazards
