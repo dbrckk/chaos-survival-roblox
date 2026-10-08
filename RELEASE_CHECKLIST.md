@@ -94,6 +94,8 @@ Record:
 - [ ] Performance + hazards during Double Chaos remain readable on a real Android device at Low/Medium/High VFX tiers.
 - [ ] Reduce Motion suppresses cosmetic pulses and pose intensity while maintaining critical hazard readability.
 
+Full hands-on Android protocol: [Android playtest checklist](docs/ANDROID_QA_PLAYTEST.md). This is a manual acceptance plan, not a passed test.
+
 ## Physical device gate
 
 Test at minimum one Android phone and one desktop client.
