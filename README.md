@@ -45,6 +45,9 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Adaptive client-side world polish that rebuilds correctly across arena swaps and scales down on weaker devices
 - Responsive body/camera game feel with landing, impact, launch, turn/brake feedback, READY anticipation, coyote time and jump buffering
 - Live multiplayer vote counts and leading-choice highlight
+- Procedural Chaos Showtime dance plaza in the lobby: reactive neon tiles, animated hologram dancers, corner pylons, confetti bursts and adaptive device budgets
+- Four native Roblox avatar emotes (two dances, cheer and wave) for R6/R15, accessible by touch or G key outside voting/combat
+- Mobile-first emote controls, automatic animation interruption on movement, and Reduce Motion support
 - Mobile spectator mode after elimination with live survivor/time context
 - Chaos Shards: optional server-authoritative risk/reward pickups with daily-quest integration
 - Close-call / near-miss feedback with per-round tracking
