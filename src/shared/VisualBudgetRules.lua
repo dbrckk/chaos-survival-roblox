@@ -19,6 +19,7 @@ VisualBudgetRules.LocalFolders = {
     "ArenaCinematicDisasterAtmosphereLocal",
     "LobbyCoreOrbitLocal",
     "LobbyCrewBeaconLocal",
+    "LobbyShowtimeLocal",
     "ResultConstellationLocal",
     "ChaosHazardWarningDecorLocal",
     "ChaosPremiumDisasterVfxLocal",

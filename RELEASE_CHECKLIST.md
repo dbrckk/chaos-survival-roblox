@@ -8,7 +8,7 @@ All items below must be green on the **exact release commit**. The checkboxes de
 
 - [ ] Build Validation succeeds on release SHA.
 - [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
-- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 65 specs).
+- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 66 specs).
 - [ ] Rojo produces a non-empty place file.
 - [ ] Luau syntax validation succeeds.
 - [ ] Fair-play monetization guard succeeds.

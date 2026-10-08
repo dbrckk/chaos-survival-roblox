@@ -45,6 +45,9 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Adaptive client-side world polish that rebuilds correctly across arena swaps and scales down on weaker devices
 - Responsive body/camera game feel with landing, impact, launch, turn/brake feedback, READY anticipation, coyote time and jump buffering
 - Live multiplayer vote counts and leading-choice highlight
+- Procedural Chaos Showtime dance plaza in the lobby: crowd-reactive neon tiles, emote-triggered radial light waves, kinetic prismatic crown with spinning neon halos, sweeping holographic light ribbons, animated dancers, 3D DJ booth with turntables, bass-speaker towers, truss, animated equalizer, pylons, personal emote confetti and adaptive device budgets
+- Six native Roblox avatar emotes (three dances, cheer, wave and laugh) for R6/R15, accessible by touch or G key outside voting/combat
+- Mobile-first emote controls, automatic animation interruption on movement, and Reduce Motion support; surviving players automatically perform a brief one-time victory cheer (disabled by Reduce Motion)
 - Mobile spectator mode after elimination with live survivor/time context
 - Chaos Shards: optional server-authoritative risk/reward pickups with daily-quest integration
 - Close-call / near-miss feedback with per-round tracking
@@ -58,7 +61,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Real-engine gameplay matrix: every arena × every disaster + every allowed Double Chaos pair
 - Four-client Studio E2E harness with virtual UI clicks, movement, voting, joins and leaves
 - AI Survivor animation state blending (idle/walk/run/jump/fall) and map-aware/hazard-aware navigation
-- 65 engine specs assigned exactly once across Open Cloud CI shards
+- 66 engine specs assigned exactly once across Open Cloud CI shards
 - No paid assets required
 
 ## Current disasters
