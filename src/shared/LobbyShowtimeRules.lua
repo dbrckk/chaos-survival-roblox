@@ -17,6 +17,20 @@ LobbyShowtimeRules.Emotes = {
         LabelEN = "SHUFFLE",
         LabelFR = "SHUFFLE",
     },
+    groove = {
+        R15 = 507777268,
+        R6 = 182436935,
+        Loop = true,
+        LabelEN = "GROOVE",
+        LabelFR = "GROOVE",
+    },
+    laugh = {
+        R15 = 507770818,
+        R6 = 129423131,
+        Loop = false,
+        LabelEN = "LAUGH",
+        LabelFR = "RIRE",
+    },
     cheer = {
         R15 = 507770677,
         R6 = 129423030,
@@ -33,7 +47,7 @@ LobbyShowtimeRules.Emotes = {
     },
 }
 
-LobbyShowtimeRules.Order = {"dance", "shuffle", "cheer", "wave"}
+LobbyShowtimeRules.Order = {"dance", "shuffle", "groove", "cheer", "wave", "laugh"}
 
 function LobbyShowtimeRules.enabled(phase, voteOptions)
     local current = tostring(phase or "")
@@ -77,6 +91,12 @@ function LobbyShowtimeRules.dockRightInset(viewportWidth, touch, veryNarrow)
         and (veryNarrow == true and 176 or 186)
         or 178
     return math.ceil(rightGap + settingsPanelWidth + 12)
+end
+
+function LobbyShowtimeRules.spatialBeatActive(phase, voteOptions, distance, muted)
+    return LobbyShowtimeRules.enabled(phase, voteOptions)
+        and muted ~= true
+        and (tonumber(distance) or math.huge) <= 24
 end
 
 function LobbyShowtimeRules.profile(tier)
