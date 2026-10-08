@@ -137,3 +137,5 @@ This **unreleased candidate** reconciles PRs #12–#16 with the already merged s
 - R15 sprint starts, stop skids, sharp pivots, foot planting, takeoff and fall bracing with transient floor cues.
 
 All added content is cosmetic only. No speed, jump, damage, server authority, physics, or monetization changes. Full Studio and real Android performance/gameplay playtests remain required before release.
+
+- Late map-replication resilience: lobby floor and arena base visual builders now watch nested map parts and arena identity attributes instead of relying on container arrival order.

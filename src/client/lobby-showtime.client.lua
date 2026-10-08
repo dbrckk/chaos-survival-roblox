@@ -12,6 +12,7 @@ local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local Showtime = require(ReplicatedStorage.Shared.LobbyShowtimeRules)
 local ShowtimeProps = require(script.Parent.ShowtimeProps)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -25,6 +26,7 @@ local boundHumanoid = nil
 local motionConnections = {}
 local loaded = {}
 local viewportConnection = nil
+local disconnectStageSource = nil
 local tiles = {}
 local fixedPieces = {}
 local dancers = {}
@@ -479,8 +481,7 @@ end
 local function buildStage()
     clearStage()
     local generated = workspace:FindFirstChild("GeneratedMap")
-    local lobby = generated and generated:FindFirstChild("Lobby")
-    local floor = lobby and lobby:FindFirstChild("Floor")
+    local floor = MapVisualReadiness.part(generated, "Lobby", "Floor")
     if not floor or not floor:IsA("BasePart") then
         return
     end
@@ -797,25 +798,39 @@ end)
 player.CharacterAdded:Connect(function()
     task.defer(refreshUI)
 end)
+local function bindStageSource(generated)
+    if disconnectStageSource then
+        disconnectStageSource()
+        disconnectStageSource = nil
+    end
+    if not generated then
+        clearStage()
+        return
+    end
+    disconnectStageSource = MapVisualReadiness.watch(
+        generated, "Lobby", "Floor",
+        function()
+            task.defer(function()
+                buildStage()
+                updateStage(os.clock())
+            end)
+        end
+    )
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(function()
-            buildStage()
-            updateStage(os.clock())
-        end)
+        bindStageSource(child)
     end
 end)
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        clearStage()
+        bindStageSource(workspace:FindFirstChild("GeneratedMap"))
     end
 end)
 
-task.defer(function()
-    buildStage()
-    refreshUI()
-    updateStage(os.clock())
-end)
+bindStageSource(workspace:FindFirstChild("GeneratedMap"))
+task.defer(refreshUI)
 
 task.spawn(function()
     while true do

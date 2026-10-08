@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SignatureKit = require(script.Parent.ArenaSignatureKit)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -13,14 +14,14 @@ folder.Parent = workspace
 
 local phase = "waiting"
 local bundle = nil
-local mapConnection = nil
+local disconnectMapWatch = nil
 
 local function rebuild()
     folder:ClearAllChildren()
     bundle = nil
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not base or not base:IsA("BasePart") then
         return
     end
@@ -31,16 +32,17 @@ local function rebuild()
 end
 
 local function bind(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base",
+            function()
                 task.defer(rebuild)
             end
-        end)
+        )
     end
 end
 

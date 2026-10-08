@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaPresentation = require("../../src/shared/ArenaPresentation")
+local MapVisualReadiness = require("../../src/shared/MapVisualReadiness")
 local ArenaSignatureKit = require("../../src/client/ArenaSignatureKit")
 
 local CENTER = Vector3.new(0, 0, 0)
@@ -116,6 +117,70 @@ describe("Kinetic arena signatures", function()
         end
         base:Destroy()
         root:Destroy()
+    end)
+end)
+
+
+describe("Late-replicated visual map readiness", function()
+    it("rebuilds only when the target floor or arena base actually arrives", function()
+        local generated = Instance.new("Folder")
+        local observed = {}
+        local disconnect = MapVisualReadiness.watch(generated, "Arena", "Base", function(base)
+            table.insert(observed, base)
+        end)
+        -- nil insert does not preserve a list slot, so explicitly count callbacks.
+        disconnect()
+        local calls = 0
+        local sawBase = false
+        local active = MapVisualReadiness.watch(generated, "Arena", "Base", function(base)
+            calls += 1
+            sawBase = base ~= nil
+        end)
+        expect(calls).toBe(1)
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = generated
+        expect(calls).toBe(2)
+        expect(sawBase).toBe(false)
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Parent = arena
+        expect(calls).toBe(3)
+        expect(sawBase).toBe(true)
+        arena:SetAttribute("VariantId", "Orbital")
+        expect(calls).toBe(4)
+        expect(MapVisualReadiness.part(generated, "Arena", "Base")).toBe(base)
+        base:Destroy()
+        expect(calls).toBe(5)
+        expect(sawBase).toBe(false)
+        active()
+        local replacement = Instance.new("Part")
+        replacement.Name = "Base"
+        replacement.Parent = arena
+        expect(calls).toBe(5)
+        generated:Destroy()
+    end)
+
+    it("detects a lobby floor that appears after its parent model", function()
+        local generated = Instance.new("Folder")
+        local calls = 0
+        local current = nil
+        local dispose = MapVisualReadiness.watch(generated, "Lobby", "Floor", function(floor)
+            calls += 1
+            current = floor
+        end)
+        local lobby = Instance.new("Folder")
+        lobby.Name = "Lobby"
+        lobby.Parent = generated
+        local floor = Instance.new("Part")
+        floor.Name = "Floor"
+        floor.Parent = lobby
+        expect(calls).toBe(3)
+        expect(current).toBe(floor)
+        lobby:Destroy()
+        expect(current == nil).toBe(true)
+        dispose()
+        generated:Destroy()
     end)
 end)
 
