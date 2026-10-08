@@ -16,7 +16,7 @@ All notable changes to Chaos Survival are documented here.
 
 ## 2026-10-08 — Chaos Showtime (new social visuals and emotes)
 
-- Add a procedural neon dance floor with crowd-reactive tiles, holographic ribbons, three cycling dancer motifs, a DJ booth/turntables, twin 3D speaker stacks, truss, equalizer, pylons and personal celebration confetti.
+- Add a procedural neon dance floor with crowd-reactive tiles, emote-triggered radial floor waves, a rotating prismatic crown (device-tier-controlled), holographic ribbons, three cycling dancer motifs, a DJ booth/turntables, twin 3D speaker stacks, truss, equalizer, pylons and personal celebration confetti.
 - Add six opt-in Roblox-native R6/R15 emotes: dance, shuffle, groove, cheer, wave and laugh, available in calm phases on mobile and desktop (G).
 - Avatar animation playback uses the replicated player Animator and is interrupted on movement, jumping, death or active round.
 - Reduce Motion freezes decorative choreography; Low/Medium/High VFX profiles bound local geometry, lights, particles and update rate. Add subtle, proximity-limited stage beat and personal emote cues respecting AudioMuted. Winning players get one automatic, motion-accessible victory cheer on result transition.
