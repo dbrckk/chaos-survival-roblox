@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 
 local BodyMotionRules = require(ReplicatedStorage.Shared.BodyMotionRules)
 local LocomotionDynamics = require(ReplicatedStorage.Shared.LocomotionDynamics)
+local GroundFx = require(script.Parent.LocomotionGroundFx)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -47,6 +48,7 @@ local cutPose = 0
 local footPlantPose = 0
 local ascentReachPose = 0
 local descentBracePose = 0
+local lastGroundCueAt = -math.huge
 local baseC0 = setmetatable({}, {__mode = "k"})
 
 local function motor(parent, name)
@@ -105,6 +107,7 @@ local function bind(nextCharacter)
     footPlantPose = 0
     ascentReachPose = 0
     descentBracePose = 0
+    lastGroundCueAt = -math.huge
     readyPose = 0
 
     if not humanoid or not root or humanoid.RigType ~= Enum.HumanoidRigType.R15 then
@@ -314,6 +317,22 @@ RunService:BindToRenderStep(
             previousMoveDirection, moveDirection, speed, grounded
         )
         cutPose += (cutTarget - cutPose) * expAlpha(11, dt)
+
+        local cue, cueStrength = LocomotionDynamics.groundCue(
+            launchTarget, skidTarget, cutTarget,
+            player:GetAttribute("VfxQualityTier"), reduced, roundPhase
+        )
+        local now = os.clock()
+        if cue and now - lastGroundCueAt >= 0.55 then
+            -- No extra per-frame loop: only a brief geometry burst for a
+            -- grounded start, hard-stop skid or high-speed planted pivot.
+            local contact = GroundFx.emit(
+                root, cue, cueStrength, player:GetAttribute("VfxQualityTier")
+            )
+            if contact then
+                lastGroundCueAt = now
+            end
+        end
         local turnTarget = signedTurn * turnSeverity
         turnPose += (turnTarget - turnPose) * expAlpha(9, dt)
         turnSeverityPose += (turnSeverity - turnSeverityPose) * expAlpha(8, dt)

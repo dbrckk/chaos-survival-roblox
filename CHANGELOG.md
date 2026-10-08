@@ -16,6 +16,9 @@ All notable changes to Chaos Survival are documented here.
 
 ## 2026-10-08 — R15 expressive locomotion
 
+- Add brief device-tiered floor contact streaks for sprint launches, hard-stop skids and tight pivots; geometric burst lasts 0.56 seconds, uses world raycasts and never changes physics or touch collision.
+- Fix one-frame complete-stop braking and protect with a precise regression test.
+
 - Add sprint-start acceleration, stop/slide anticipation even after input release, 90/180-degree planted pivots, cadence-synced weight shifts, upward reach and fall bracing to the single existing body-feel Motor6D owner.
 - No new animation controllers, camera owners, asset IDs or physics changes. Scoped to existing R15 visual offsets and automatically blended back toward base joint C0.
 - Low/Medium/High tiers and Reduce Motion bound pose intensity; gameplay health, speed, jump and input remain untouched.

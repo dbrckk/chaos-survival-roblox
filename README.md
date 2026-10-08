@@ -44,7 +44,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Premium procedural arena treatment with metal spawn pads, neon platform underglow and edge beacons
 - Adaptive client-side world polish that rebuilds correctly across arena swaps and scales down on weaker devices
 - Responsive body/camera game feel with landing, impact, launch, turn/brake feedback, READY anticipation, coyote time and jump buffering
-- R15 micro-choreography with physical sprint takeoff, input-release skids, 180-degree pivots, planted strides, jump reach and fall bracing, all inside the existing single Motor6D controller.
+- R15 micro-choreography with physical sprint takeoff, input-release skids, 180-degree pivots, planted strides, jump reach and fall bracing, all inside the existing single Motor6D controller; quick neon ground scuffs on major starts, pivots and stops.
 - Live multiplayer vote counts and leading-choice highlight
 - Mobile spectator mode after elimination with live survivor/time context
 - Chaos Shards: optional server-authoritative risk/reward pickups with daily-quest integration

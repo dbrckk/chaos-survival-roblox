@@ -81,4 +81,23 @@ function LocomotionDynamics.flight(verticalVelocity, grounded, lowGravity)
         math.clamp((-velocity - 7) / 35, 0, 1) * scale
 end
 
+-- Only meaningful grounded impulses emit a ground cue. Keep short-lived
+-- scuffs separate from persistent footsteps and impact decals.
+function LocomotionDynamics.groundCue(launch, skid, cut, tier, reduced, phase)
+    if reduced == true or phase ~= "round" or tier == "Low" then
+        return nil, 0
+    end
+    local braking = math.clamp(tonumber(skid) or 0, 0, 1)
+    local turning = math.clamp(math.abs(tonumber(cut) or 0), 0, 1)
+    local accelerating = math.clamp(tonumber(launch) or 0, 0, 1)
+    if braking >= 0.68 then
+        return "Skid", braking
+    elseif turning >= 0.77 then
+        return "Pivot", turning
+    elseif accelerating >= 0.68 then
+        return "Launch", accelerating
+    end
+    return nil, 0
+end
+
 return LocomotionDynamics

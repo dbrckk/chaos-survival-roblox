@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local BodyMotionRules = require("../../src/shared/BodyMotionRules")
 local LocomotionDynamics = require("../../src/shared/LocomotionDynamics")
+local GroundFx = require("../../src/client/LocomotionGroundFx")
 
 describe("Body motion rules", function()
     it("differentiates starting sprint and braking with released input", function()
@@ -51,6 +52,52 @@ describe("Body motion rules", function()
             Vector3.new(0, 0, -1), Vector3.new(0, 0, 1), 18, false
         )
         expect(air).toBe(0)
+    end)
+
+    it("classifies only major grounded movements into a short floor accent", function()
+        local r = LocomotionDynamics
+        local skid, strength = r.groundCue(0.7, 0.95, 0.9, "High", false, "round")
+        expect(skid).toBe("Skid")
+        expect(strength > 0.9).toBe(true)
+        local pivot = r.groundCue(0.10, 0.1, -0.9, "Medium", false, "round")
+        expect(pivot).toBe("Pivot")
+        local sprint = r.groundCue(0.9, 0, 0, "Medium", false, "round")
+        expect(sprint).toBe("Launch")
+        for _, data in ipairs({
+            {"Low", false, "round"},
+            {"High", true, "round"},
+            {"High", false, "waiting"},
+        }) do
+            local nothing, quiet = r.groundCue(1, 1, 1, data[1], data[2], data[3])
+            expect(nothing == nil).toBe(true)
+            expect(quiet).toBe(0)
+        end
+        local noCue = r.groundCue(0.1, 0.1, 0.1, "High", false, "round")
+        expect(noCue == nil).toBe(true)
+    end)
+
+    it("creates only bounded non-colliding transient ground geometry", function()
+        local root = Instance.new("Folder")
+        local cf = CFrame.new(0, 2, 0)
+        for _, style in ipairs({"Launch", "Skid", "Pivot"}) do
+            local high = GroundFx.build(root, cf, style, 0.9, "High")
+            local medium = GroundFx.build(root, cf, style, 0.9, "Medium")
+            expect(high ~= nil).toBe(true)
+            expect(#high:GetChildren()).toBe(4)
+            expect(#medium:GetChildren()).toBe(2)
+            for _, child in ipairs(high:GetChildren()) do
+                expect(child:IsA("BasePart")).toBe(true)
+                expect(child.CanCollide).toBe(false)
+                expect(child.CanTouch).toBe(false)
+                expect(child.CanQuery).toBe(false)
+                expect(child.Anchored).toBe(true)
+            end
+            high:Destroy()
+            medium:Destroy()
+        end
+        expect(GroundFx.build(root, cf, "Skid", 1, "Low") == nil).toBe(true)
+        expect(GroundFx.build(root, cf, "Other", 1, "High") == nil).toBe(true)
+        root:Destroy()
     end)
 
     it("adds planted footsteps and safe airborne reach without forcing physics", function()
