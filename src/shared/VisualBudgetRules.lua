@@ -28,6 +28,7 @@ VisualBudgetRules.LocalFolders = {
     "DisasterIntroGlyphLocal",
     "DisasterResidueLocal",
     "ImpactSetpieceLocal",
+    "CharacterContactLocal",
     "LocomotionContactLocal",
     "HazardRouteReadabilityLocal",
     "HazardWarningSignaturesLocal",

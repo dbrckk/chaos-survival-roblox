@@ -233,3 +233,14 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] Nettoyage immédiat lors de la suppression de `GeneratedMap` ; adaptation du nombre de marques existantes lors d'un abaissement de qualité graphique.
 - [x] `tests/engine/disaster-residue.spec.luau` : neuf teintes distinctes, transitions terminées avant l'effacement final, Low et Reduce Motion désactivent le vieillissement, aucune animation des cratères météore/bombe.
 - [ ] Vérification visuelle sur Studio + appareil Android : stabilité des couleurs, transitions, événements à forte fréquence et identité durant Double Chaos.
+
+## Sprint 05 — réception au sol, matériaux et sensation de contrôle
+
+- [x] `GroundContactRules.lua` : règles de réaction au sol limitées aux survivants actifs ; avatar local prioritaire, zéro décoration à distance en Low, en final rush sur les autres avatars, ou avec Reduce Motion.
+- [x] `character-contact-vfx.client.lua` : les réceptions distinguent désormais métal (copeaux mécaniques), ardoise/béton (éclats minéraux) et glace (cristaux de verre), orientés selon la normale réelle du sol, sans collision ni modification de la physique.
+- [x] `character-contact-vfx.client.lua` : plafond global 6 / 18 / 30 pièces (Low / Medium / High), cooldown de 0,64 s par avatar et arrêt des effets au départ de la manche.
+- [x] `character-contact-vfx.client.lua` : suppression de l'attente récursive non bornée pour les rigs incomplets au profit d'un événement ChildAdded à durée bornée.
+- [x] `character-danger-reactions.client.lua` : ne pas afficher de réaction de near-miss quand la distance/rayon est invalide ; un impact hors écran ne consomme plus le cooldown d'une réaction visible.
+- [x] `VisualBudgetRules.lua` : les anneaux et éclats de contact sont maintenant mesurés dans `CharacterContactLocal`.
+- [x] `tests/engine/ground-contact-rules.spec.luau` : limites de pièces, conditions de manche, audio-matière existant, variétés de matériaux et cooldowns.
+- [ ] QA Studio/Android : entendre et voir les réceptions sur plusieurs sols, vérifier l'absence de bruit VFX dans le lobby et la stabilité en serveur plein.
