@@ -32,6 +32,8 @@ local loopPanels = {}
 local pylonGlows = {}
 local approachRibs = {}
 local practicePads = {}
+local gateIndicators = {}
+local gateInnerGlow = nil
 local presentationToken = 0
 local pulseCursor = 0
 
@@ -55,6 +57,8 @@ local function clearLocal()
     pylonGlows = {}
     approachRibs = {}
     practicePads = {}
+    gateIndicators = {}
+    gateInnerGlow = nil
     currentLobby = nil
     currentDecor = nil
     currentActivities = nil
@@ -249,6 +253,12 @@ local function bindLobby()
                 elseif string.find(descendant.Name, "ArenaApproachRibTop") then
                     rememberPart(descendant)
                     table.insert(approachRibs, descendant)
+                elseif string.find(descendant.Name, "ArenaGateIndicator") then
+                    rememberPart(descendant)
+                    table.insert(gateIndicators, descendant)
+                elseif descendant.Name == "ArenaGateInnerGlow" then
+                    rememberPart(descendant)
+                    gateInnerGlow = descendant
                 end
             end
         end
@@ -260,6 +270,7 @@ local function bindLobby()
         table.sort(loopPanels, byName)
         table.sort(pylonGlows, byName)
         table.sort(approachRibs, byName)
+        table.sort(gateIndicators, byName)
     end
 
     cacheActivities()
@@ -298,6 +309,71 @@ local function tweenPart(part, transparency, color, duration)
     ):Play()
 end
 
+local function applyGatePresentation(mode, accent, q, duration)
+    if not currentDecor then
+        return
+    end
+
+    local gate = currentDecor:FindFirstChild("ArenaGateTop")
+    if gate and gate:IsA("BasePart") then
+        local gui = gate:FindFirstChild("ArenaGateGui")
+        local panel = gui and gui:FindFirstChild("GatePanel")
+        local title = panel and panel:FindFirstChild("GateStatus")
+        local subtitle = panel and panel:FindFirstChild("GateSubstatus")
+        local gateStroke = panel and panel:FindFirstChild("GateStroke")
+        local mainText, subText = LobbyPresentationRules.gateText(
+            currentState.phase,
+            currentState.seconds,
+            currentState.title,
+            currentState.voteOptions
+        )
+
+        if title and title:IsA("TextLabel") then
+            title.Text = mainText
+        end
+        if subtitle and subtitle:IsA("TextLabel") then
+            subtitle.Text = subText
+            subtitle.TextColor3 = accent
+        end
+        if gateStroke and gateStroke:IsA("UIStroke") then
+            gateStroke.Color = accent
+            gateStroke.Transparency = mode == "launch" and 0.04 or 0.18
+        end
+    end
+
+    if gateInnerGlow and gateInnerGlow.Parent then
+        local baseTransparency = q.Name == "Low" and 0.64
+            or (q.Name == "Medium" and 0.36 or 0.20)
+        local emphasis = mode == "launch" and 0.18
+            or (mode == "vote" and 0.08 or 0)
+        tweenPart(
+            gateInnerGlow,
+            math.max(0.08, baseTransparency - emphasis),
+            accent,
+            duration
+        )
+    end
+
+    for index, indicator in ipairs(gateIndicators) do
+        if indicator.Parent then
+            local visibleOnTier = q.Name ~= "Low" or index == 1 or index == #gateIndicators
+            local baseTransparency = q.Name == "High" and 0.24
+                or (q.Name == "Medium" and 0.42 or 0.72)
+            if mode == "launch" then
+                baseTransparency -= q.Name == "Low" and 0.08 or 0.18
+            elseif mode == "inactive" then
+                baseTransparency = 0.90
+            end
+            tweenPart(
+                indicator,
+                visibleOnTier and math.clamp(baseTransparency, 0.10, 0.96) or 1,
+                accent,
+                duration
+            )
+        end
+    end
+end
+
 local function applyState()
     if not currentLobby or not currentLobby.Parent then
         bindLobby()
@@ -327,6 +403,8 @@ local function applyState()
     local accent = modeColor(mode)
     local q = quality()
     local duration = player:GetAttribute("ReduceMotion") == true and 0.10 or 0.24
+
+    applyGatePresentation(mode, accent, q, duration)
 
     local centerGlow = currentDecor and currentDecor:FindFirstChild("CenterGlow")
     if centerGlow and centerGlow:IsA("BasePart") then
@@ -505,6 +583,31 @@ local function ambientRipple(mode, token)
     end
 
     pulseCursor += 1
+
+    if (mode == "vote" or mode == "launch")
+        and #gateIndicators > 0
+        and player:GetAttribute("ReduceMotion") ~= true
+    then
+        local indicator = gateIndicators[((pulseCursor - 1) % #gateIndicators) + 1]
+        if indicator and indicator.Parent then
+            local baseTransparency = quality().Name == "High" and 0.24 or 0.42
+            local pulseTransparency = mode == "launch" and 0.06 or 0.14
+            TweenService:Create(
+                indicator,
+                TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Transparency = pulseTransparency}
+            ):Play()
+            task.delay(0.16, function()
+                if token == presentationToken and indicator.Parent then
+                    TweenService:Create(
+                        indicator,
+                        TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Transparency = baseTransparency}
+                    ):Play()
+                end
+            end)
+        end
+    end
 
     if mode == "social" and #socialPads > 0 then
         local pad = socialPads[((pulseCursor - 1) % #socialPads) + 1]
