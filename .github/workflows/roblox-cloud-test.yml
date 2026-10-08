@@ -17,10 +17,11 @@ jobs:
   engine:
     name: engine (${{ matrix.suite }})
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     strategy:
       fail-fast: false
-      max-parallel: 2
+      # Prevent simultaneous submissions from this run to the same Roblox place.
+      max-parallel: 1
       matrix:
         suite: [gameplay, matrix, core_a, core_b1, core_b2]
     env:
@@ -198,7 +199,7 @@ jobs:
         run: |
           run_suite() {
             suite="$1"
-            max_attempts=3
+            max_attempts=4
             attempt=1
 
             echo "::group::Open Cloud suite: $suite"
@@ -217,24 +218,27 @@ jobs:
                 return 0
               fi
 
-              if ! grep -Eq 'did not finish within the deadline|last state: PROCESSING' "$log"; then
+              # Roblox may return HTTP 429 during high Open Cloud demand.
+              # A rate limit is transient, unlike failed gameplay assertions.
+              if grep -Eiq 'HTTP 429|Too Many Requests|rate.limit(ed|ing)?' "$log"; then
+                cause="Open Cloud throttling"
+                delay=$((30 * 2 ** (attempt - 1)))
+              elif grep -Eq 'did not finish within the deadline|last state: PROCESSING' "$log"; then
+                cause="Open Cloud task timeout"
+                delay=$((12 * attempt))
+              else
                 echo "Non-transient Open Cloud failure for $suite; not retrying."
                 echo "::endgroup::"
                 return "$status"
               fi
 
               if [ "$attempt" -ge "$max_attempts" ]; then
-                echo "Transient Open Cloud timeout persisted after $max_attempts attempts for $suite."
+                echo "Transient $cause persisted after $max_attempts attempts for $suite."
                 echo "::endgroup::"
                 return "$status"
               fi
 
-              if [ "$attempt" -eq 1 ]; then
-                delay=8
-              else
-                delay=20
-              fi
-              echo "Transient Roblox Open Cloud timeout detected for $suite; retrying after ${delay}s."
+              echo "Transient $cause for $suite; retrying after ${delay}s."
               sleep "$delay"
               attempt=$((attempt + 1))
             done
