@@ -117,6 +117,7 @@ PHASE 5 — UI / UX PREMIUM
 [QA]   5.13 Ajouter un langage de glyphes procéduraux pour les 11 hazards : signature sans texte dans vote + READY, dual-glyph Double Chaos ; UI-only, aucun asset externe, coût réseau nul.
 [QA]   5.14 Réutiliser les glyphes hazards dans RESULT : watermark discret simple/double derrière le texte ; UI-only, 0 Part/Light/Emitter, aucune animation continue.
 [QA]   5.15 Projeter un hologramme hazard world-space pendant READY : BillboardGui simple/double au-dessus de l'arène, Medium/High uniquement, Low supprimé, ReduceMotion sans pop, rebuild seulement si hazard/tier/accessibilité change.
+[QA]   5.16 Fermer le trou UX rookie entre pratique et vote : après le premier pad, le guide world-space pointe le runway/gate jusqu'à l'ouverture du vote, puis laisse l'UI vote prioritaire.
 
 PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
