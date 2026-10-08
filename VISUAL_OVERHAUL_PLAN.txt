@@ -118,6 +118,8 @@ PHASE 5 — UI / UX PREMIUM
 [QA]   5.14 Réutiliser les glyphes hazards dans RESULT : watermark discret simple/double derrière le texte ; UI-only, 0 Part/Light/Emitter, aucune animation continue.
 [QA]   5.15 Projeter un hologramme hazard world-space pendant READY : BillboardGui simple/double au-dessus de l'arène, Medium/High uniquement, Low supprimé, ReduceMotion sans pop, rebuild seulement si hazard/tier/accessibilité change.
 [QA]   5.16 Fermer le trou UX rookie entre pratique et vote : après le premier pad, le guide world-space pointe le runway/gate jusqu'à l'ouverture du vote, puis laisse l'UI vote prioritaire.
+[QA]   5.17 Ajouter un sigil Chaos original au boot splash : cristal/anneau procédural cyan-violet-orange, composition logo+copy, aucune texture externe, animation unique désactivée avec ReduceMotion.
+[QA]   5.18 Afficher le/les glyphes hazards sur l'arche hero en READY : vraie couleur de chaque catastrophe, texte prioritaire au-dessus, UI locale uniquement et aucun coût réseau supplémentaire.
 
 PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
