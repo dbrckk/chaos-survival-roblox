@@ -22,7 +22,7 @@ describe("Lobby Showtime", function()
     end)
 
     it("has native R15 and R6 clips for every displayed emote", function()
-        expect(#Showtime.Order).toBe(4)
+        expect(#Showtime.Order).toBe(6)
         for _, id in ipairs(Showtime.Order) do
             local r15 = Showtime.get(id, "R15")
             local r6 = Showtime.get(id, "R6")
@@ -34,6 +34,16 @@ describe("Lobby Showtime", function()
         end
         expect(Showtime.get("unknown", "R15") == nil).toBe(true)
         expect(Showtime.get("dance", "unknown") == nil).toBe(true)
+    end)
+
+    it("limits spatial stage audio to nearby unmuted calm phases", function()
+        expect(Showtime.spatialBeatActive("waiting", nil, 4, false)).toBe(true)
+        expect(Showtime.spatialBeatActive("intermission", nil, 23, false)).toBe(true)
+        expect(Showtime.spatialBeatActive("waiting", nil, 25, false)).toBe(false)
+        expect(Showtime.spatialBeatActive("waiting", nil, 4, true)).toBe(false)
+        expect(Showtime.spatialBeatActive("round", nil, 4, false)).toBe(false)
+        expect(Showtime.spatialBeatActive("intermission", {{id = "Meteors"}}, 4, false)).toBe(false)
+        expect(Showtime.spatialBeatActive("result", nil, nil, false)).toBe(false)
     end)
 
     it("keeps emote controls clear of the accessibility panel", function()
