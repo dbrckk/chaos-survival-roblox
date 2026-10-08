@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -140,7 +141,7 @@ local function rebuild()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
@@ -307,33 +308,35 @@ local function refreshSurfaceAccent()
     end
 end
 
-local mapConnection = nil
+local disconnectMapWatch = nil
+local refreshPending = false
+
+local function scheduleRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+        refreshSurfaceAccent()
+    end)
+end
 
 local function bindGeneratedMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
-
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.defer(function()
-                    rebuild()
-                    refreshSurfaceAccent()
-                end)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bindGeneratedMap(child)
-        task.defer(function()
-            rebuild()
-            refreshSurfaceAccent()
-        end)
+        scheduleRefresh()
     end
 end)
 
@@ -346,12 +349,7 @@ end)
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(function()
-        rebuild()
-        refreshSurfaceAccent()
-    end)
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
 
 stateEvent.OnClientEvent:Connect(function(state)
     currentState = state

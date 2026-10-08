@@ -167,3 +167,11 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `tests/engine/arena-presentation.spec.luau` : vérifie 4 styles × 3 tiers, noms, quantité, absence de collisions, massless et attaches sur le vrai support.
 - [ ] Studio authentifié : mesurer les effets sur plateformes en mouvement et vérifier le signal d'alerte des plateformes qui s'effondrent.
 - [ ] Android réel : vérifier que les détails ne masquent ni bord de plateforme, ni sauts, ni dangers ; mesurer le coût en FPS et mémoire.
+
+### Sprint 02 — éclairage motivé et surfaces répliquées
+
+- [x] `arena-focal-lighting.client.lua` : habillage métallique des projecteurs, diffuseurs de verre High seulement, aucun projecteur ou effet lumineux supplémentaire.
+- [x] `ArenaFocalLightingRules.lua` : contrôle des boîtiers 0/1/2 éléments par spot selon Low/Medium/High ; toujours 0 en Low.
+- [x] `arena-surface-detail.client.lua` : recoloration des détails conservée, reconstruction sur arrivée tardive du sol et changement de variante, sans multiplication de couches.
+- [ ] Studio : vérifier que les boîtiers ne masquent aucun élément de jeu et que les avertissements restent prioritaires pendant les catastrophes.
+- [ ] Android : contrôler la nouvelle densité de pièces, les FPS et les transitions de qualité.

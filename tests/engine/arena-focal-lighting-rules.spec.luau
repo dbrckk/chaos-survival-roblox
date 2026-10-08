@@ -11,6 +11,18 @@ describe("Arena focal lighting rules", function()
         expect(ArenaFocalLightingRules.sourceCount("High")).toBe(3)
     end)
 
+    it("uses restrained physical housings with no extra light sources", function()
+        expect(ArenaFocalLightingRules.fixtureParts("Low")).toBe(0)
+        expect(ArenaFocalLightingRules.fixtureParts("Medium")).toBe(1)
+        expect(ArenaFocalLightingRules.fixtureParts("High")).toBe(2)
+        local low = ArenaFocalLightingRules.fixtureParts("Low")
+            * ArenaFocalLightingRules.sourceCount("Low")
+        local high = ArenaFocalLightingRules.fixtureParts("High")
+            * ArenaFocalLightingRules.sourceCount("High")
+        expect(low).toBe(0)
+        expect(high <= 6).toBe(true)
+    end)
+
     it("defines three focal candidates for every arena", function()
         for _, id in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
             local definitions = ArenaFocalLightingRules.definitions(id)

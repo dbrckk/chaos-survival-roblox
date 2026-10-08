@@ -38,6 +38,43 @@ local function colorFor(theme, role)
     return theme.Accent
 end
 
+local function makeHousing(anchor, variantTheme, tierName, index)
+    local detailCount = ArenaFocalLightingRules.fixtureParts(tierName)
+    if detailCount == 0 then return end
+
+    -- Shades and reflective facets point in the same direction as the real
+    -- SpotLight. No extra emitted lights, shadows, or animated objects.
+    local housing = Instance.new("Part")
+    housing.Name = "ArenaFocalLuminaire" .. index
+    housing.Size = Vector3.new(1.55, 0.56, 1.38)
+    housing.CFrame = anchor.CFrame * CFrame.new(0, 0, 0.12)
+    housing.Color = variantTheme.Structure:Lerp(variantTheme.Detail, 0.22)
+    housing.Material = Enum.Material.Metal
+    housing.Transparency = 0.07
+    housing.Anchored = true
+    housing.CanCollide = false
+    housing.CanTouch = false
+    housing.CanQuery = false
+    housing.CastShadow = false
+    housing.Parent = folder
+
+    if detailCount >= 2 then
+        local diffuser = Instance.new("Part")
+        diffuser.Name = "ArenaFocalDiffuser" .. index
+        diffuser.Size = Vector3.new(1.20, 0.10, 0.34)
+        diffuser.CFrame = anchor.CFrame * CFrame.new(0, -0.22, -0.50)
+        diffuser.Color = variantTheme.Detail
+        diffuser.Material = Enum.Material.Glass
+        diffuser.Transparency = 0.35
+        diffuser.Anchored = true
+        diffuser.CanCollide = false
+        diffuser.CanTouch = false
+        diffuser.CanQuery = false
+        diffuser.CastShadow = false
+        diffuser.Parent = folder
+    end
+end
+
 local function targetBrightness(light)
     local base = tonumber(light:GetAttribute("BaseBrightness")) or 0
     return base * ArenaFocalLightingRules.phaseScale(phase, finalRush)
@@ -106,6 +143,7 @@ local function rebuild()
         anchor.CastShadow = false
         anchor.Transparency = 1
         anchor.Parent = folder
+        makeHousing(anchor, theme, tier.Name, i)
 
         local light = Instance.new("SpotLight")
         light.Name = "ArenaFocalSpot" .. i
