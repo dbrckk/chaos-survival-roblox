@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local BodyMotionRules = require(ReplicatedStorage.Shared.BodyMotionRules)
+local LocomotionDynamics = require(ReplicatedStorage.Shared.LocomotionDynamics)
+local GroundFx = require(script.Parent.LocomotionGroundFx)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -40,6 +42,13 @@ local lastMoveDirection = Vector3.zero
 local brakePose = 0
 local turnPose = 0
 local turnSeverityPose = 0
+local startPose = 0
+local skidPose = 0
+local cutPose = 0
+local footPlantPose = 0
+local ascentReachPose = 0
+local descentBracePose = 0
+local lastGroundCueAt = -math.huge
 local baseC0 = setmetatable({}, {__mode = "k"})
 
 local function motor(parent, name)
@@ -92,6 +101,13 @@ local function bind(nextCharacter)
     brakePose = 0
     turnPose = 0
     turnSeverityPose = 0
+    startPose = 0
+    skidPose = 0
+    cutPose = 0
+    footPlantPose = 0
+    ascentReachPose = 0
+    descentBracePose = 0
+    lastGroundCueAt = -math.huge
     readyPose = 0
 
     if not humanoid or not root or humanoid.RigType ~= Enum.HumanoidRigType.R15 then
@@ -275,11 +291,20 @@ RunService:BindToRenderStep(
         local scale = BodyMotionRules.motionScale(reduced)
 
         local acceleration = (speed - lastSpeed) / math.max(dt, 1 / 240)
+        local launchTarget, skidTarget = LocomotionDynamics.acceleration(
+            speed, lastSpeed, dt, grounded
+        )
         lastSpeed = speed
+        local dynamicScale = LocomotionDynamics.profile(
+            player:GetAttribute("VfxQualityTier"), reduced
+        )
+        startPose += (launchTarget - startPose) * expAlpha(11, dt)
+        skidPose += (skidTarget - skidPose) * expAlpha(12, dt)
 
         local moveDirection = humanoid.MoveDirection
+        local previousMoveDirection = lastMoveDirection
         local signedTurn, turnSeverity = BodyMotionRules.turnResponse(
-            lastMoveDirection,
+            previousMoveDirection,
             moveDirection
         )
         if moveDirection.Magnitude > 0.05 then
@@ -288,6 +313,26 @@ RunService:BindToRenderStep(
 
         local brakeTarget = BodyMotionRules.brakeWeight(acceleration, moving)
         brakePose += (brakeTarget - brakePose) * expAlpha(10, dt)
+        local cutTarget = LocomotionDynamics.cut(
+            previousMoveDirection, moveDirection, speed, grounded
+        )
+        cutPose += (cutTarget - cutPose) * expAlpha(11, dt)
+
+        local cue, cueStrength = LocomotionDynamics.groundCue(
+            launchTarget, skidTarget, cutTarget,
+            player:GetAttribute("VfxQualityTier"), reduced, roundPhase
+        )
+        local now = os.clock()
+        if cue and now - lastGroundCueAt >= 0.55 then
+            -- No extra per-frame loop: only a brief geometry burst for a
+            -- grounded start, hard-stop skid or high-speed planted pivot.
+            local contact = GroundFx.emit(
+                root, cue, cueStrength, player:GetAttribute("VfxQualityTier")
+            )
+            if contact then
+                lastGroundCueAt = now
+            end
+        end
         local turnTarget = signedTurn * turnSeverity
         turnPose += (turnTarget - turnPose) * expAlpha(9, dt)
         turnSeverityPose += (turnSeverity - turnSeverityPose) * expAlpha(8, dt)
@@ -311,6 +356,15 @@ RunService:BindToRenderStep(
             strideClock += dt * strideFrequency
         end
         local strideWave = math.sin(strideClock) * strideWeight * scale
+        local plantTarget = LocomotionDynamics.footPlant(
+            strideClock, strideWeight, grounded
+        )
+        footPlantPose += (plantTarget - footPlantPose) * expAlpha(13, dt)
+        local ascentTarget, descentTarget = LocomotionDynamics.flight(
+            velocity.Y, grounded, lowGravityActive
+        )
+        ascentReachPose += (ascentTarget - ascentReachPose) * expAlpha(9, dt)
+        descentBracePose += (descentTarget - descentBracePose) * expAlpha(11, dt)
 
         landing *= math.exp(-dt * 11)
         launchWeight *= math.exp(-dt * 4.8)
@@ -376,17 +430,25 @@ RunService:BindToRenderStep(
                 + moonFloat
                 + brakePose * 4.0
             ) * scale
+                + math.rad(
+                    -startPose * 3.8 + skidPose * 5.0
+                    + descentBracePose * 2.2
+                ) * dynamicScale
                 + math.rad(actionPitch),
             math.rad(turnPose * 3.2) * scale,
             math.rad(
                 -3.8 * side * moveWeight
                 - turnPose * 1.6
             ) * scale + actionRoll
+                + math.rad(cutPose * 5.5) * dynamicScale
         ) * celebrationWaist
         local rootTarget = CFrame.new(
             0,
-            grounded and (-0.035 * moveWeight - landing * 0.075) * scale
-                or (-0.03 * jumpWeight + 0.025 * fallWeight) * scale,
+            grounded and (
+                -0.035 * moveWeight - landing * 0.075
+                - footPlantPose * 0.022
+                - skidPose * 0.025
+            ) * scale or (-0.03 * jumpWeight + 0.025 * fallWeight) * scale,
             0
         ) * CFrame.Angles(
             math.rad(
@@ -396,12 +458,14 @@ RunService:BindToRenderStep(
                 + readyPose * 2.8
                 + fallWeight * 2.0
                 - brakePose * 1.8
-            ) * scale,
+            ) * scale
+                + math.rad(-startPose * 2.2 + skidPose * 3.6) * dynamicScale,
             math.rad(turnPose * 1.4) * scale,
             math.rad(
                 1.6 * side * moveWeight
                 + turnPose * 1.1
             ) * scale
+                + math.rad(-cutPose * 3.8) * dynamicScale
         ) * celebrationRoot
 
         local hipCounter = math.rad(
@@ -416,15 +480,17 @@ RunService:BindToRenderStep(
         ) * scale
         local strideTurnScale = 1 - turnSeverityPose * 0.28
         local strideHip = math.rad(3.4) * strideWave * strideTurnScale
+        local pivotHip = math.rad(cutPose * 3.0) * dynamicScale
+        local brakeKnee = math.rad(skidPose * 4.2) * dynamicScale
         local leftTarget = CFrame.Angles(
-            moonLeg + tuck + strideHip,
+            moonLeg + tuck + strideHip + brakeKnee,
             0,
-            hipCounter
+            hipCounter + pivotHip
         ) * celebrationLeftHip
         local rightTarget = CFrame.Angles(
-            -moonLeg + tuck - strideHip,
+            -moonLeg + tuck - strideHip + brakeKnee,
             0,
-            hipCounter
+            hipCounter - pivotHip
         ) * celebrationRightHip
 
         local actionArmPitch = math.rad(
@@ -437,15 +503,20 @@ RunService:BindToRenderStep(
         local impactArmRoll = math.rad(impactWeight * 11) * scale
         local strideArm = math.rad(4.6) * strideWave * strideTurnScale
         local turnArm = math.rad(turnPose * 4.0) * scale
+        local reachArm = math.rad(
+            ascentReachPose * 8.0 - descentBracePose * 10.5
+            - startPose * 7.2 + skidPose * 6.4
+        ) * dynamicScale
+        local cutArm = math.rad(cutPose * 5.5) * dynamicScale
         local leftActionShoulder = CFrame.Angles(
-            actionArmPitch - strideArm,
+            actionArmPitch - strideArm + reachArm,
             turnArm,
-            -impactArmRoll
+            -impactArmRoll - cutArm
         )
         local rightActionShoulder = CFrame.Angles(
-            actionArmPitch + strideArm,
+            actionArmPitch + strideArm + reachArm,
             -turnArm,
-            impactArmRoll
+            impactArmRoll + cutArm
         )
 
         local alpha = expAlpha(grounded and 11 or 7, dt)
