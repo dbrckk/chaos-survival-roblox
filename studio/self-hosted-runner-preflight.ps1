@@ -2,6 +2,41 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "Chaos Survival — authenticated Studio runner preflight"
 
+$currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+Write-Host "Windows identity: $currentIdentity"
+Write-Host "USERPROFILE: $env:USERPROFILE"
+Write-Host "LOCALAPPDATA: $env:LOCALAPPDATA"
+
+$runnerServices = Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -like "actions.runner.*" }
+
+if ($runnerServices) {
+    foreach ($service in $runnerServices) {
+        Write-Host "GitHub runner service: $($service.Name)"
+        Write-Host "GitHub runner service account: $($service.StartName)"
+
+        $systemAccounts = @(
+            "LocalSystem",
+            "NT AUTHORITY\SYSTEM",
+            "NT AUTHORITY\NETWORK SERVICE",
+            "NT AUTHORITY\LOCAL SERVICE"
+        )
+
+        if ($systemAccounts -contains $service.StartName) {
+            Write-Host ""
+            Write-Host "ACTION REQUIRED:"
+            Write-Host "The GitHub Actions runner service is using a Windows system account."
+            Write-Host "Studio authentication belongs to a user profile and will not reliably carry over."
+            Write-Host "Run the certifying runner interactively under the authenticated Windows user,"
+            Write-Host "or reconfigure the runner service to use that same Windows account."
+            exit 3
+        }
+    }
+}
+else {
+    Write-Host "No GitHub runner Windows service detected; interactive runner mode is acceptable."
+}
+
 $roots = @(
     "$env:LOCALAPPDATA\Roblox",
     "$env:USERPROFILE\AppData\Local\Roblox",
