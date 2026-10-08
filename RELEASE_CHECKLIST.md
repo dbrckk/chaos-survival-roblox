@@ -49,6 +49,12 @@ Classify failures before changing production code:
 
 Run the four-client Chaos E2E harness from an authenticated Studio session.
 
+Before certification:
+- [ ] Run `powershell -ExecutionPolicy Bypass -File .\studio\self-hosted-runner-preflight.ps1` under the same Windows user that will run the GitHub Actions runner.
+- [ ] Preflight exits 0: official signed Studio found, current Windows user authenticated, and no incompatible system-account runner service detected.
+- [ ] GitHub self-hosted runner is online with `self-hosted` + `windows` labels under that same user context.
+
+Then validate the game:
 - [ ] Generated lobby appears correctly.
 - [ ] All 4 arena variants can be entered — Studio E2E must observe Classic, Towers, Crossroads and Orbital, with RoundState arenaId matching GeneratedMap.Arena.VariantId and a READY entry probe confirming a live character inside Arena.Base footprint.
 - [ ] Critical HUD elements remain within viewport bounds.
