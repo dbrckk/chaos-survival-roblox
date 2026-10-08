@@ -142,6 +142,64 @@ local function buildTruss(folder, baseCF, tier)
     end
 end
 
+-- A faceted prismatic crown suspended over the DJ desk. Segmented rings
+-- make a distinct 3D hero silhouette without any mesh upload or external IDs.
+-- Segments are created once and only their CFrames are updated in a calm phase.
+local function buildPrismaticCrown(folder, baseCF, tier)
+    local center = baseCF * CFrame.new(0, 6.8, -3.7)
+    local ringCount = tier == "High" and 14 or (tier == "Medium" and 10 or 6)
+    local ringLayers = tier == "High" and 2 or 1
+    local orbit = {}
+    local crystal = primitive(folder, "ShowtimeCrownCrystal", center,
+        Vector3.new(1.25, 1.25, 1.25),
+        UITheme.Colors.Cyan, Enum.Material.Glass, 0.23, Enum.PartType.Ball)
+    local heart = primitive(folder, "ShowtimeCrownHeart", center,
+        Vector3.new(0.58, 0.58, 0.58),
+        UITheme.Colors.Magenta, Enum.Material.Neon, 0.16, Enum.PartType.Ball)
+
+    for layer = 1, ringLayers do
+        local radius = layer == 1 and 2.06 or 2.55
+        local color = layer == 1 and UITheme.Colors.Violet or UITheme.Colors.Cyan
+        for i = 1, ringCount do
+            local angle = ((i - 1) / ringCount) * math.pi * 2
+            local localCF = CFrame.new(
+                math.cos(angle) * radius,
+                math.sin(angle) * radius,
+                0
+            ) * CFrame.Angles(0, 0, angle + math.pi * 0.5)
+            local segment = primitive(folder,
+                "ShowtimeCrownRing" .. layer .. "_" .. i,
+                center * localCF,
+                Vector3.new(2 * math.pi * radius / ringCount * 0.82, 0.11, 0.15),
+                color, Enum.Material.Neon, layer == 1 and 0.18 or 0.31)
+            table.insert(orbit, {
+                part = segment,
+                localCF = localCF,
+                layer = layer,
+            })
+        end
+    end
+
+    -- Two bottom anchors visually connect the suspended centerpiece to the
+    -- stage without placing any blocking geometry in the player's path.
+    local anchorCount = tier == "Low" and 0 or 2
+    for i = 1, anchorCount do
+        local side = i == 1 and -1 or 1
+        primitive(folder, "ShowtimeCrownAnchor" .. i,
+            baseCF * CFrame.new(side * 2.6, 5.9, -3.9)
+                * CFrame.Angles(0, 0, math.rad(side * 22)),
+            Vector3.new(0.24, 1.0, 0.24),
+            UITheme.Colors.Cyan, Enum.Material.Glass, 0.22)
+    end
+
+    return {
+        center = center,
+        crystal = crystal,
+        heart = heart,
+        orbit = orbit,
+    }
+end
+
 -- Returns references only to the truly animated pieces. Everything else is
 -- static and inexpensive in the client, built once per graphics-tier change.
 function ShowtimeProps.build(parent, baseCF, tier)
@@ -153,6 +211,7 @@ function ShowtimeProps.build(parent, baseCF, tier)
     buildSpeaker(holder, baseCF, 2, settings)
     buildConsole(holder, baseCF, tier)
     buildTruss(holder, baseCF, tier)
+    local crown = buildPrismaticCrown(holder, baseCF, tier)
 
     local equalizer = {}
     local count = tier == "Low" and 3 or (tier == "Medium" and 5 or 8)
@@ -171,6 +230,7 @@ function ShowtimeProps.build(parent, baseCF, tier)
         folder = holder,
         baseCF = baseCF,
         equalizer = equalizer,
+        crown = crown,
         props = holder:GetDescendants(),
     }
 end
@@ -204,6 +264,32 @@ function ShowtimeProps.update(asset, now, enabled, reduceMotion, audience)
         bar.part.CFrame = asset.baseCF * CFrame.new(
             bar.x, 2.8 + height * 0.5, -5.40
         )
+    end
+
+    local crown = asset.crown
+    if crown then
+        local crowd = math.clamp(tonumber(audience) or 0, 0, 4)
+        local time = reduceMotion and 0 or (tonumber(now) or 0)
+        local attitude = CFrame.Angles(
+            math.rad(22) + time * 0.14,
+            time * (0.24 + crowd * 0.035),
+            math.rad(36)
+        )
+        crown.crystal.CFrame = crown.center * attitude
+        crown.heart.CFrame = crown.center * attitude
+        for _, ring in ipairs(crown.orbit) do
+            local layerSpin = ring.layer == 1 and time * 0.33 or -time * 0.23
+            local ringAttitude = attitude * CFrame.Angles(
+                layerSpin * 0.65,
+                0,
+                layerSpin
+            )
+            ring.part.CFrame = crown.center * ringAttitude * ring.localCF
+        end
+        -- A restrained highlight makes group emotes feel responsive without
+        -- any extra particle emitters, dynamic lights or surface scans.
+        crown.heart.Transparency = reduceMotion and 0.16
+            or math.clamp(0.27 - crowd * 0.035 - math.sin(time * 2.2) * 0.055, 0.06, 0.32)
     end
 end
 
