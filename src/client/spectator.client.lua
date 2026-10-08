@@ -133,6 +133,7 @@ local targetHealthConnection = nil
 local targetDiedConnection = nil
 local spectateIndex
 local viewportConnection = nil
+local applyResponsive
 
 local function renderSpectatorGlyph(container, hazardId, color, transparency)
     for _, child in ipairs(container:GetChildren()) do
@@ -196,9 +197,13 @@ local function refreshHazardIdentity(state)
     else
         hazardGlyphSecondary.Visible = false
     end
+
+    if applyResponsive then
+        applyResponsive()
+    end
 end
 
-local function applyResponsive()
+applyResponsive = function()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
 
@@ -211,14 +216,60 @@ local function applyResponsive()
         nextButton.Size = UDim2.fromOffset(profile.tinyHeight and 88 or 98, 44)
         nextButton.Position = UDim2.new(1, -8, 0.5, 0)
 
-        label.Size = UDim2.new(1, -(profile.tinyHeight and 112 or 122), 0.64, -4)
+        local glyphSize = profile.tinyHeight and 30 or 36
+        hazardGlyph.Size = UDim2.fromOffset(glyphSize, glyphSize)
+        hazardGlyph.Position = UDim2.new(0, 10 + glyphSize * 0.5, 0.48, 0)
+
+        if profile.veryNarrow then
+            hazardGlyphSecondary.Visible = false
+        else
+            local secondarySize = profile.tinyHeight and 26 or 30
+            hazardGlyphSecondary.Size = UDim2.fromOffset(secondarySize, secondarySize)
+            hazardGlyphSecondary.Position = UDim2.new(
+                0,
+                16 + glyphSize + secondarySize * 0.5,
+                0.48,
+                0
+            )
+        end
+
+        local leftInset = 12
+        if hazardGlyphSecondary.Visible then
+            leftInset = 24 + glyphSize + (profile.tinyHeight and 26 or 30)
+        elseif hazardGlyph.Visible then
+            leftInset = 18 + glyphSize
+        end
+
+        local rightReserve = profile.tinyHeight and 112 or 122
+        label.Position = UDim2.new(0, leftInset, 0, 7)
+        label.Size = UDim2.new(1, -(leftInset + rightReserve), 0.64, -4)
         healthTrack.Size = UDim2.new(1, -(profile.tinyHeight and 124 or 136), 0.10, 0)
     else
         card.Position = UDim2.fromScale(0.5, 0.88)
         card.Size = UDim2.fromScale(0.58, 0.105)
         nextButton.Size = UDim2.new(0.28, 0, 0.72, 0)
         nextButton.Position = UDim2.new(1, -8, 0.5, 0)
-        label.Size = UDim2.new(0.68, -14, 0.64, -4)
+
+        hazardGlyph.Size = UDim2.fromScale(0.15, 0.58)
+        hazardGlyph.Position = UDim2.fromScale(
+            hazardGlyphSecondary.Visible and 0.10 or 0.13,
+            0.48
+        )
+        hazardGlyphSecondary.Size = UDim2.fromScale(0.13, 0.50)
+        hazardGlyphSecondary.Position = UDim2.fromScale(0.23, 0.48)
+
+        local leftScale = hazardGlyphSecondary.Visible
+            and 0.31
+            or (hazardGlyph.Visible and 0.20 or 0)
+        label.Position = leftScale > 0
+            and UDim2.new(leftScale, 0, 0, 7)
+            or UDim2.fromOffset(12, 7)
+        label.Size = UDim2.new(
+            0.68 - leftScale,
+            leftScale > 0 and -6 or -14,
+            0.64,
+            -4
+        )
         healthTrack.Size = UDim2.fromScale(0.62, 0.10)
     end
 end
