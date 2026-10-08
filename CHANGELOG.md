@@ -14,6 +14,14 @@
 
 All notable changes to Chaos Survival are documented here.
 
+## 2026-10-08 — Unified mobile/visual candidate
+
+- Combined Showtime social features, animated arena signatures, impact meshes, spectator-aware character reactions and expressive R15 movement onto one branch.
+- Reconciled the three new local visual-budget folders: LobbyShowtimeLocal, ArenaSignatureLocal and ImpactSetpieceLocal.
+- Preserved spectator coverage, added Showtime to CI engine sharding and retained rate-limit-aware Open Cloud retries.
+- New candidate is not shipped or certified; awaiting exact-commit validation and a physical Android/Studio run.
+
+
 ## 2026-10-08 — Spectator stability and mobile UX
 
 - Keep the spectator camera on the same survivor across joins, eliminations, and list reordering.

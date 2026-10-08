@@ -8,7 +8,7 @@ All items below must be green on the **exact release commit**. The checkboxes de
 
 - [ ] Build Validation succeeds on release SHA.
 - [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
-- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 66 specs).
+- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 67 specs).
 - [ ] Rojo produces a non-empty place file.
 - [ ] Luau syntax validation succeeds.
 - [ ] Fair-play monetization guard succeeds.
@@ -77,6 +77,18 @@ Record:
 - date
 - PASS/FAIL
 - screenshots/log excerpts for any failure
+
+## Unified visual candidate acceptance (#12–#16)
+
+- [ ] Build Validation and Roblox Open Cloud Engine Tests both pass on the exact candidate SHA (67 uniquely assigned engine specs).
+- [ ] Studio confirms six R6/R15 emotes and no conflict with Settings or locomotion.
+- [ ] Android 320/360/400/440px viewport checks: emote dock stays on screen and accessibility Settings remains operable.
+- [ ] All four map landmarks render and rotate safely, remain non-colliding and clean up across arena transitions.
+- [ ] Meteor/Bomb bursts render as different fragments, including all transient pieces in live budget metrics.
+- [ ] Near-miss and landing FX affect eligible living participants and AI only; late joiners, spectators and eliminated lobby avatars excluded.
+- [ ] R15 sprint/hard stop/180-degree pivot/jump/land + respawn produce no frozen body pose or broken movement.
+- [ ] Performance + hazards during Double Chaos remain readable on a real Android device at Low/Medium/High VFX tiers.
+- [ ] Reduce Motion suppresses cosmetic pulses and pose intensity while maintaining critical hazard readability.
 
 ## Physical device gate
 

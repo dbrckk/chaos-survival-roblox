@@ -125,3 +125,15 @@ src/
 The default CI uses Roblox Open Cloud Engine Tests and currently covers all arena/disaster combinations plus every allowed Double Chaos pair in a real Roblox DataModel.
 
 A separate four-client Studio E2E harness is included under `studio/`. It automates UI clicks, voting, movement, staggered joins and client leave behavior using StudioTestService and VirtualInput. Roblox Studio requires a logged-in user session, so the GitHub Studio workflow is manual and targets an authenticated self-hosted Windows runner.
+
+## Integrated visual and locomotion candidate (2026-10-08)
+
+This **unreleased candidate** reconciles PRs #12–#16 with the already merged spectator fix (#11) and Open Cloud retry hardening (#17):
+
+- Chaos Showtime: six R6/R15 emotes, a holographic dance floor, DJ architecture, a neon crown and accessible narrow-screen mobile controls.
+- Four original arena landmarks: Classic radar, Towers maintenance elevator, Crossroads transit signage and Orbital gyroscope.
+- Unique meteor and bomb impact fragments, included in visual performance telemetry.
+- Event-driven blast/near-miss/landing reactions on eligible living players and AI bots; spectator/lobby avatars excluded.
+- R15 sprint starts, stop skids, sharp pivots, foot planting, takeoff and fall bracing with transient floor cues.
+
+All added content is cosmetic only. No speed, jump, damage, server authority, physics, or monetization changes. Full Studio and real Android performance/gameplay playtests remain required before release.
