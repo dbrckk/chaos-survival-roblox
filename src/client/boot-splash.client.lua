@@ -79,10 +79,76 @@ local scale = Instance.new("UIScale")
 scale.Scale = 0.96
 scale.Parent = card
 
+local brandMark = Instance.new("Frame")
+brandMark.Name = "ChaosBrandSigil"
+brandMark.AnchorPoint = Vector2.new(0.5, 0.5)
+brandMark.Position = UDim2.fromScale(0.16, 0.40)
+brandMark.Size = UDim2.fromScale(0.18, 0.44)
+brandMark.BackgroundTransparency = 1
+brandMark.Parent = card
+
+local brandScale = Instance.new("UIScale")
+brandScale.Scale = 1
+brandScale.Parent = brandMark
+
+local outer = Instance.new("Frame")
+outer.Name = "OuterDiamond"
+outer.AnchorPoint = Vector2.new(0.5, 0.5)
+outer.Position = UDim2.fromScale(0.5, 0.5)
+outer.Size = UDim2.fromScale(0.68, 0.68)
+outer.Rotation = 45
+outer.BackgroundColor3 = UITheme.Colors.Cyan
+outer.BackgroundTransparency = 0.78
+outer.BorderSizePixel = 0
+outer.Parent = brandMark
+UITheme.addCorner(outer, UDim.new(0, 8))
+UITheme.addStroke(outer, UITheme.Colors.Cyan, 1.5, 0.20)
+
+local middle = Instance.new("Frame")
+middle.Name = "MiddleDiamond"
+middle.AnchorPoint = Vector2.new(0.5, 0.5)
+middle.Position = UDim2.fromScale(0.5, 0.5)
+middle.Size = UDim2.fromScale(0.48, 0.48)
+middle.Rotation = 45
+middle.BackgroundColor3 = UITheme.Colors.Violet
+middle.BackgroundTransparency = 0.24
+middle.BorderSizePixel = 0
+middle.Parent = brandMark
+UITheme.addCorner(middle, UDim.new(0, 7))
+
+local core = Instance.new("Frame")
+core.Name = "CrystalCore"
+core.AnchorPoint = Vector2.new(0.5, 0.5)
+core.Position = UDim2.fromScale(0.5, 0.5)
+core.Size = UDim2.fromScale(0.23, 0.46)
+core.Rotation = 45
+core.BackgroundColor3 = UITheme.Colors.Cyan:Lerp(Color3.new(1, 1, 1), 0.30)
+core.BorderSizePixel = 0
+core.Parent = brandMark
+UITheme.addCorner(core, UDim.new(0, 6))
+
+for i, def in ipairs({
+    {x = 0.12, y = 0.50, rotation = -18, color = UITheme.Colors.Cyan},
+    {x = 0.88, y = 0.50, rotation = 18, color = UITheme.Colors.Violet},
+    {x = 0.50, y = 0.10, rotation = 90, color = UITheme.Colors.Orange},
+}) do
+    local slash = Instance.new("Frame")
+    slash.Name = "OrbitSlash" .. i
+    slash.AnchorPoint = Vector2.new(0.5, 0.5)
+    slash.Position = UDim2.fromScale(def.x, def.y)
+    slash.Size = UDim2.fromScale(0.28, 0.055)
+    slash.Rotation = def.rotation
+    slash.BackgroundColor3 = def.color
+    slash.BackgroundTransparency = 0.12
+    slash.BorderSizePixel = 0
+    slash.Parent = brandMark
+    UITheme.addCorner(slash, UITheme.Corners.Pill)
+end
+
 local kicker = Instance.new("TextLabel")
 kicker.Name = "Kicker"
-kicker.Position = UDim2.fromScale(0.07, 0.10)
-kicker.Size = UDim2.fromScale(0.86, 0.14)
+kicker.Position = UDim2.fromScale(0.29, 0.10)
+kicker.Size = UDim2.fromScale(0.64, 0.14)
 kicker.BackgroundTransparency = 1
 kicker.Font = Enum.Font.GothamBold
 kicker.Text = CoreLocalization.text(localeId, "ENTER_ARENA")
@@ -93,8 +159,8 @@ UITheme.addTextConstraint(kicker, 11, 16)
 
 local title = Instance.new("TextLabel")
 title.Name = "Title"
-title.Position = UDim2.fromScale(0.06, 0.27)
-title.Size = UDim2.fromScale(0.88, 0.30)
+title.Position = UDim2.fromScale(0.28, 0.27)
+title.Size = UDim2.fromScale(0.66, 0.30)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBlack
 title.Text = "CHAOS SURVIVAL"
@@ -105,8 +171,8 @@ UITheme.addTextConstraint(title, 26, 48)
 
 local subtitle = Instance.new("TextLabel")
 subtitle.Name = "Subtitle"
-subtitle.Position = UDim2.fromScale(0.08, 0.59)
-subtitle.Size = UDim2.fromScale(0.84, 0.12)
+subtitle.Position = UDim2.fromScale(0.29, 0.59)
+subtitle.Size = UDim2.fromScale(0.63, 0.12)
 subtitle.BackgroundTransparency = 1
 subtitle.Font = Enum.Font.GothamMedium
 subtitle.Text = CoreLocalization.text(localeId, "SURVIVE_ADAPT_ESCAPE")
@@ -158,6 +224,13 @@ local startedAt = os.clock()
 local finished = false
 
 if not reduceMotion then
+    brandScale.Scale = 0.84
+    TweenService:Create(
+        brandScale,
+        TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Scale = 1}
+    ):Play()
+
     TweenService:Create(
         scale,
         TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
