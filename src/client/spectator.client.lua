@@ -8,6 +8,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local SpectatorTargetRules = require(ReplicatedStorage.Shared.SpectatorTargetRules)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -129,7 +130,11 @@ local roundActive = false
 local latestState = nil
 local targets = {}
 local targetIndex = 0
+local selectedCharacter = nil
 local targetHealthConnection = nil
+local observedHumanoid = nil
+local shownPrimaryId = nil
+local shownSecondaryId = nil
 local targetDiedConnection = nil
 local spectateIndex
 local viewportConnection = nil
@@ -172,6 +177,13 @@ local function refreshHazardIdentity(state)
     local primaryId = ids[1]
     local secondaryId = ids[2]
 
+    -- RoundState ticks every second; do not reconstruct unchanged glyph parts.
+    if primaryId == shownPrimaryId and secondaryId == shownSecondaryId then
+        return
+    end
+    shownPrimaryId = primaryId
+    shownSecondaryId = secondaryId
+
     if not primaryId then
         hazardGlyph.Visible = false
         hazardGlyphSecondary.Visible = false
@@ -187,16 +199,8 @@ local function refreshHazardIdentity(state)
 
     cardStroke.Color = primary
     accentGradient.Color = ColorSequence.new(primary, secondary)
-
-    hazardGlyph.Position = UDim2.fromScale(secondaryId and 0.10 or 0.13, 0.48)
     renderSpectatorGlyph(hazardGlyph, primaryId, primary, 0.84)
-
-    if secondaryId then
-        hazardGlyphSecondary.Position = UDim2.fromScale(0.23, 0.48)
-        renderSpectatorGlyph(hazardGlyphSecondary, secondaryId, secondary, 0.86)
-    else
-        hazardGlyphSecondary.Visible = false
-    end
+    renderSpectatorGlyph(hazardGlyphSecondary, secondaryId, secondary, 0.86)
 
     if applyResponsive then
         applyResponsive()
@@ -223,6 +227,9 @@ applyResponsive = function()
         if profile.veryNarrow then
             hazardGlyphSecondary.Visible = false
         else
+            -- On viewport widening, bring back the Double Chaos symbol.
+            hazardGlyphSecondary.Visible = shownSecondaryId ~= nil
+                and HazardGlyphs.get(shownSecondaryId) ~= nil
             local secondarySize = profile.tinyHeight and 26 or 30
             hazardGlyphSecondary.Size = UDim2.fromOffset(secondarySize, secondarySize)
             hazardGlyphSecondary.Position = UDim2.new(
@@ -245,6 +252,8 @@ applyResponsive = function()
         label.Size = UDim2.new(1, -(leftInset + rightReserve), 0.64, -4)
         healthTrack.Size = UDim2.new(1, -(profile.tinyHeight and 124 or 136), 0.10, 0)
     else
+        hazardGlyphSecondary.Visible = shownSecondaryId ~= nil
+            and HazardGlyphs.get(shownSecondaryId) ~= nil
         card.Position = UDim2.fromScale(0.5, 0.88)
         card.Size = UDim2.fromScale(0.58, 0.105)
         nextButton.Size = UDim2.new(0.28, 0, 0.72, 0)
@@ -299,14 +308,19 @@ local function clearTargetHealth()
         targetDiedConnection:Disconnect()
         targetDiedConnection = nil
     end
+    observedHumanoid = nil
     healthFill.Size = UDim2.fromScale(0, 1)
 end
 
 local function bindTargetHealth(humanoid)
+    if observedHumanoid == humanoid then
+        return
+    end
     clearTargetHealth()
     if not humanoid then
         return
     end
+    observedHumanoid = humanoid
 
     local function update()
         local ratio = humanoid.MaxHealth > 0
@@ -326,8 +340,14 @@ local function bindTargetHealth(humanoid)
     targetHealthConnection = humanoid.HealthChanged:Connect(update)
     targetDiedConnection = humanoid.Died:Connect(function()
         task.delay(0.08, function()
-            if roundActive and card.Visible and spectateIndex then
-                spectateIndex(targetIndex + 1)
+            -- An intervening RoundState may already have selected the successor.
+            -- Never advance twice because a stale death callback ran afterward.
+            if roundActive
+                and card.Visible
+                and observedHumanoid == humanoid
+                and spectateIndex
+            then
+                spectateIndex(true)
             end
         end)
     end)
@@ -431,10 +451,12 @@ local function roundSummary()
     return table.concat(pieces, "  •  ")
 end
 
-spectateIndex = function(index)
+spectateIndex = function(advance)
     rebuildTargets()
 
     if #targets == 0 then
+        targetIndex = 0
+        selectedCharacter = nil
         local summary = roundSummary()
         if player:GetAttribute("RoundParticipant") == true then
             label.Text = CoreLocalization.text(localeId, "ELIMINATED_WAITING")
@@ -450,29 +472,41 @@ spectateIndex = function(index)
         return
     end
 
-    targetIndex = ((index - 1) % #targets) + 1
+    -- Preserve the observed human/bot across list reordering and timer ticks.
+    targetIndex = SpectatorTargetRules.resolveIndex(
+        targets,
+        selectedCharacter,
+        targetIndex,
+        advance == true
+    )
     local target = targets[targetIndex]
-    local character = target and target.Character
+    local character = target.Character
     local hum = character and character:FindFirstChildOfClass("Humanoid")
-
-    if hum and workspace.CurrentCamera then
-        workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
-        workspace.CurrentCamera.CameraSubject = hum
-        local summary = roundSummary()
-        local displayName = tostring(
-            target.DisplayName or CoreLocalization.text(localeId, "SURVIVOR_LABEL")
-        )
-        if player:GetAttribute("RoundParticipant") == true then
-            label.Text = CoreLocalization.text(localeId, "SPECTATING", displayName)
-        else
-            label.Text = CoreLocalization.text(localeId, "JOINING_NEXT", displayName)
-        end
-        if summary ~= "" then
-            label.Text ..= "\n" .. summary
-        end
-        nextButton.Visible = #targets > 1
-        bindTargetHealth(hum)
+    if not hum then
+        return
     end
+    selectedCharacter = character
+
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CameraType ~= Enum.CameraType.Custom or camera.CameraSubject ~= hum) then
+        camera.CameraType = Enum.CameraType.Custom
+        camera.CameraSubject = hum
+    end
+
+    local summary = roundSummary()
+    local displayName = tostring(
+        target.DisplayName or CoreLocalization.text(localeId, "SURVIVOR_LABEL")
+    )
+    if player:GetAttribute("RoundParticipant") == true then
+        label.Text = CoreLocalization.text(localeId, "SPECTATING", displayName)
+    else
+        label.Text = CoreLocalization.text(localeId, "JOINING_NEXT", displayName)
+    end
+    if summary ~= "" then
+        label.Text ..= "\n" .. summary
+    end
+    nextButton.Visible = #targets > 1
+    bindTargetHealth(hum)
 end
 
 local function refresh()
@@ -490,17 +524,18 @@ local function refresh()
                 {Scale = 1}
             ):Play()
         end
-        spectateIndex(math.max(1, targetIndex))
+        spectateIndex(false)
     else
         card.Visible = false
         targetIndex = 0
+        selectedCharacter = nil
         clearTargetHealth()
         restoreCamera()
     end
 end
 
 nextButton.Activated:Connect(function()
-    spectateIndex(targetIndex + 1)
+    spectateIndex(true)
 end)
 
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
@@ -511,7 +546,7 @@ player.CharacterAdded:Connect(function()
     local participant = player:GetAttribute("RoundParticipant") == true
 
     if roundActive and (eliminated or not participant) then
-        spectateIndex(math.max(1, targetIndex))
+        spectateIndex(false)
     else
         restoreCamera()
     end

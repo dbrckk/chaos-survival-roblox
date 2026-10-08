@@ -14,6 +14,14 @@
 
 All notable changes to Chaos Survival are documented here.
 
+## 2026-10-08 — Spectator stability and mobile UX
+
+- Keep the spectator camera on the same survivor across joins, eliminations, and list reordering.
+- Select the immediate next survivor without skipping after elimination.
+- Reuse health listeners and hazard glyph instances across RoundState updates.
+- Restore secondary Double Chaos symbols after narrow-to-wide mobile rotation.
+- Add four engine regression cases for spectator selection.
+
 ## Unreleased — Release Candidate Hardening
 
 ### Gameplay
