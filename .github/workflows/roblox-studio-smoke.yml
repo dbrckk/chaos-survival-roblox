@@ -13,9 +13,76 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
+  runner_preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Verify authenticated Windows runner availability
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/actions/runners?per_page=100",
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+
+          try:
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = json.load(response)
+          except Exception as exc:
+              raise SystemExit(
+                  "Unable to query self-hosted runners before Studio E2E: " + str(exc)
+              )
+
+          eligible = []
+          for runner in payload.get("runners", []):
+              labels = {
+                  str(label.get("name", "")).lower()
+                  for label in runner.get("labels", [])
+              }
+              if (
+                  runner.get("status") == "online"
+                  and "self-hosted" in labels
+                  and "windows" in labels
+              ):
+                  eligible.append({
+                      "name": runner.get("name"),
+                      "busy": bool(runner.get("busy")),
+                      "labels": sorted(labels),
+                  })
+
+          if not eligible:
+              print("No online self-hosted Windows runner is available.")
+              print("Start/connect the authenticated Windows runner, then request Studio E2E again.")
+              raise SystemExit(1)
+
+          print("Eligible authenticated Studio runner(s):")
+          for runner in eligible:
+              print(
+                  f" - {runner['name']} "
+                  f"busy={runner['busy']} "
+                  f"labels={','.join(runner['labels'])}"
+              )
+          PY
+
   e2e:
+    needs: runner_preflight
     runs-on: [self-hosted, windows]
     timeout-minutes: 20
 
