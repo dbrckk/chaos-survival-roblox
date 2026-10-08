@@ -115,6 +115,8 @@ PHASE 5 — UI / UX PREMIUM
 [QA]   5.11 Préserver toutes les notifications meta différées via FIFO bornée ; une seule notification consomme chaque intermission calme.
 [QA]   5.12 Transformer l'arche du lobby en asset hero de guidance : écran world-space phase-aware, bande intérieure et 4 indicateurs non-collidables ; +5 Parts statiques, 0 Light, Low sobre / Medium complet / High animé, ReduceMotion sans sweep.
 [QA]   5.13 Ajouter un langage de glyphes procéduraux pour les 11 hazards : signature sans texte dans vote + READY, dual-glyph Double Chaos ; UI-only, aucun asset externe, coût réseau nul.
+[QA]   5.14 Réutiliser les glyphes hazards dans RESULT : watermark discret simple/double derrière le texte ; UI-only, 0 Part/Light/Emitter, aucune animation continue.
+[QA]   5.15 Projeter un hologramme hazard world-space pendant READY : BillboardGui simple/double au-dessus de l'arène, Medium/High uniquement, Low supprimé, ReduceMotion sans pop, rebuild seulement si hazard/tier/accessibilité change.
 
 PHASE 6 — FEEDBACK JOUEUR ET GAME FEEL VISUEL
 ----------------------------------------------
