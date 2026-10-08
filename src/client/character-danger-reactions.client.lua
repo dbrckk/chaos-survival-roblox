@@ -232,9 +232,16 @@ local function watchLanding(model)
     if watched[model] then
         return
     end
+    -- CharacterAdded and bot-folder insertion can fire before the rig has
+    -- finished receiving its HumanoidRootPart. Wait once instead of losing
+    -- landing effects for the entire spawn.
     local humanoid = model:FindFirstChildOfClass("Humanoid")
+        or model:WaitForChild("Humanoid", 6)
     local root = model:FindFirstChild("HumanoidRootPart")
-    if not humanoid or not root then
+        or model:WaitForChild("HumanoidRootPart", 6)
+    if not humanoid or not root or not root:IsA("BasePart")
+        or not model.Parent
+    then
         return
     end
     watched[model] = true
@@ -269,7 +276,9 @@ local function watchLanding(model)
 end
 
 local function watchPlayer(p)
-    p.CharacterAdded:Connect(watchLanding)
+    p.CharacterAdded:Connect(function(character)
+        task.spawn(watchLanding, character)
+    end)
     if p.Character then
         task.defer(watchLanding, p.Character)
     end
