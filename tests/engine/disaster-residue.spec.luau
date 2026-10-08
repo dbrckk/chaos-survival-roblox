@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local DisasterResidue = require("../../src/shared/DisasterResidue")
 local AftermathSurfaceKit = require("../../src/client/AftermathSurfaceKit")
 local VisualTheme = require("../../src/shared/VisualTheme")
+local DisasterAftermathTone = require("../../src/shared/DisasterAftermathTone")
 
 local IDS = {
     "RisingLava",
@@ -99,6 +100,45 @@ describe("Nine distinct non-impact aftermath silhouettes", function()
             ground, profile)).toBe(0)
         expect(#root:GetChildren()).toBe(0)
         root:Destroy()
+    end)
+end)
+
+
+describe("Aftermath color harmony", function()
+    it("defines a subdued result-only grade for all eleven hazards", function()
+        for _, id in ipairs(IDS) do
+            local tone = DisasterAftermathTone.combine({id})
+            expect(tone ~= nil).toBe(true)
+            expect(tone.Contrast >= 0 and tone.Contrast <= 0.055).toBe(true)
+            expect(tone.Saturation <= 0).toBe(true)
+            expect(tone.Blur >= 0 and tone.Blur <= 1.2).toBe(true)
+        end
+    end)
+
+    it("mixes both Double Chaos palettes without doubling blur", function()
+        local tornado = DisasterAftermathTone.combine({"Tornado"})
+        local freeze = DisasterAftermathTone.combine({"Freeze"})
+        local combined = DisasterAftermathTone.combine({"Tornado", "Freeze"})
+        expect(combined ~= nil).toBe(true)
+        expect(combined.Tint ~= tornado.Tint).toBe(true)
+        expect(combined.Tint ~= freeze.Tint).toBe(true)
+        expect(combined.Blur < tornado.Blur + freeze.Blur).toBe(true)
+        expect(combined.Contrast <= 0.055).toBe(true)
+        expect(DisasterAftermathTone.combine({"Invalid"}) == nil).toBe(true)
+    end)
+
+    it("respects Android Low and the Reduce Motion accessibility setting", function()
+        local ids = {"RisingLava", "JumpShock"}
+        local low = DisasterAftermathTone.presentation(ids, "Low", false)
+        local medium = DisasterAftermathTone.presentation(ids, "Medium", false)
+        local high = DisasterAftermathTone.presentation(ids, "High", false)
+        local reduced = DisasterAftermathTone.presentation(ids, "High", true)
+        expect(low ~= nil and medium ~= nil and high ~= nil and reduced ~= nil).toBe(true)
+        expect(low.Blur <= medium.Blur).toBe(true)
+        expect(medium.Blur <= high.Blur).toBe(true)
+        expect(reduced.Blur).toBe(0)
+        expect(reduced.Contrast < high.Contrast).toBe(true)
+        expect(low.Hold < high.Hold).toBe(true)
     end)
 end)
 

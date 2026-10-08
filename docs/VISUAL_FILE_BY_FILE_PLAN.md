@@ -217,3 +217,10 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `tests/engine/disaster-residue.spec.luau` : 9 catastrophes × 3 niveaux, géométries aux noms uniques, matériaux non-neon, absence de collisions, position correcte dans une scène tournée, entrées invalides.
 - [ ] Revue Studio : s'assurer que les empreintes ne masquent pas les cibles de navigation ou les signaux de danger et qu'elles sont visibles sans surcharge.
 - [ ] Comparaison Android Low/Medium/High et contrôle des résidus après un changement rapide de carte.
+
+## Sprint 04 — harmonisation de la colorimétrie après la manche
+
+- [x] `DisasterAftermathTone.lua` : extraire les 11 profils de couleur de résultat dans un module partagé et testable ; pour Double Chaos, mélanger les deux teintes (au lieu de choisir la seule la plus intense), mais limiter le contraste, la saturation et le flou.
+- [x] `disaster-aftermath.client.lua` : affichage compact, atténué sur Android Low et Medium ; flou forcé à zéro avec Reduce Motion ; retour propre à la scène normale.
+- [x] `tests/engine/disaster-residue.spec.luau` : profils présents pour 11 catastrophes, mélange Double Chaos, limites et qualité Low, Reduce Motion.
+- [ ] Examiner les transitions Result → Lobby dans Studio, notamment un Double Chaos obscurité + météores, afin de confirmer la lisibilité.
