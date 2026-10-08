@@ -62,7 +62,7 @@ local function buildSpeaker(folder, baseCF, index, options)
         stackCF * CFrame.new(0, 0, 0.85),
         Vector3.new(1.80, 4.1, 0.10),
         Color3.fromRGB(7, 13, 23), Enum.Material.SmoothPlastic)
-    faceLabel(baffle, "CHAOS  /  LIVE", Enum.NormalId.Front, accent)
+    faceLabel(baffle, "CHAOS  /  LIVE", Enum.NormalId.Back, accent)
 
     local lowCone = primitive(folder, "ShowtimeBassCone" .. index,
         stackCF * CFrame.new(0, -0.91, 0.94)
@@ -92,7 +92,7 @@ local function buildConsole(folder, baseCF, tier)
     local front = primitive(folder, "ShowtimeBoothFront", bodyCF * CFrame.new(0, 0, 0.89),
         Vector3.new(4.95, 1.42, 0.08),
         Color3.fromRGB(30, 43, 67), Enum.Material.Metal, 0.04)
-    faceLabel(front, "C  H  A  O  S", Enum.NormalId.Front, UITheme.Colors.Cyan)
+    faceLabel(front, "C  H  A  O  S", Enum.NormalId.Back, UITheme.Colors.Cyan)
 
     primitive(folder, "ShowtimeMixDeck", bodyCF * CFrame.new(0, 1.00, 0),
         Vector3.new(4.8, 0.13, 1.67), dark, Enum.Material.SmoothPlastic)
