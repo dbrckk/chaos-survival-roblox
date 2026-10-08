@@ -41,6 +41,16 @@ describe("Spectator target stability", function()
         expect(Rules.resolveIndex(remaining, beta, 2, false)).toBe(2)
     end)
 
+    it("wraps when the final observed target disappears", function()
+        local remaining = {
+            {Character = alpha},
+            {Character = beta},
+        }
+        expect(Rules.resolveIndex(remaining, gamma, 3, false)).toBe(1)
+        expect(Rules.resolveIndex(remaining, gamma, 3, true)).toBe(1)
+        expect(Rules.resolveIndex({{Character = alpha}}, beta, 2, false)).toBe(1)
+    end)
+
     it("handles empty and outdated selections", function()
         expect(Rules.resolveIndex({}, beta, 2, true)).toBe(0)
         expect(Rules.resolveIndex({{Character = alpha}}, nil, 0, false)).toBe(1)
