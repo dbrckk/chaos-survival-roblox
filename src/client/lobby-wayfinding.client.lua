@@ -5,6 +5,8 @@ local LocalizationService = game:GetService("LocalizationService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -16,6 +18,7 @@ folder.Parent = workspace
 
 local markers = {}
 local phase = "waiting"
+local voteOptions = nil
 
 local definitions = {
     {
@@ -113,16 +116,32 @@ for _, definition in ipairs(definitions) do
 end
 
 local function refresh()
-    local visible = phase ~= "ready" and phase ~= "round"
+    local mode = LobbyPresentationRules.mode(phase, voteOptions)
+    local visible = mode == "social"
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local reduced = player:GetAttribute("ReduceMotion") == true
+
     for _, marker in ipairs(markers) do
         marker.gui.Enabled = visible
-        marker.beam.Transparency = visible and 0.48 or 1
+        if not visible then
+            marker.beam.Transparency = 1
+        elseif tier.Name == "Low" then
+            marker.beam.Transparency = 1
+        elseif reduced then
+            marker.beam.Transparency = 0.72
+        else
+            marker.beam.Transparency = tier.Name == "High" and 0.42 or 0.56
+        end
     end
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
     phase = tostring(state.phase or "waiting")
+    voteOptions = state.voteOptions
     refresh()
 end)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refresh)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refresh)
 
 refresh()
