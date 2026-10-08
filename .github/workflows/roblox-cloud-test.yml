@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      # Avoid simultaneous submissions to the same Open Cloud place/API key.
+      # Prevent simultaneous submissions from this run to the same Roblox place.
       max-parallel: 1
       matrix:
         suite: [gameplay, matrix, core_a, core_b1, core_b2]
@@ -104,6 +104,7 @@ jobs:
             "tests/engine/share-moment-rules.spec.luau",
             "tests/engine/social-experience-rules.spec.luau",
             "tests/engine/solo-rush.spec.luau",
+            "tests/engine/spectator-target-rules.spec.luau",
             "tests/engine/survival-feedback.spec.luau",
             "tests/engine/surface-audio-rules.spec.luau",
             "tests/engine/ui-responsive.spec.luau",
