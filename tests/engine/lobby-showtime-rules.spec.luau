@@ -80,6 +80,7 @@ describe("Lobby Showtime", function()
         expect(#low.crown.orbit).toBe(6)
         expect(#high.crown.orbit).toBe(28)
         expect(#high.props > #low.props).toBe(true)
+        expect(#high.props <= 100).toBe(true)
 
         for _, descendant in ipairs(high.props) do
             if descendant:IsA("BasePart") then
