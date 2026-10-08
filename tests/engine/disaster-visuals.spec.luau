@@ -8,6 +8,7 @@ local DisasterBalance = require("../../src/server/DisasterBalance")
 local HazardGlyphs = require("../../src/shared/HazardGlyphs")
 local ImpactSetpieceRules = require("../../src/shared/ImpactSetpieceRules")
 local ImpactSetpiece = require("../../src/client/ImpactSetpiece")
+local DisasterIntroGlyphKit = require("../../src/client/DisasterIntroGlyphKit")
 
 describe("Disaster visual identities", function()
     it("assigns unique tiered impact accents only for meteor and bomb events", function()
@@ -219,6 +220,77 @@ describe("Disaster visual identities", function()
         expect((combined :: any).Density <= 0.28).toBe(true)
         expect((combined :: any).Haze <= 1.5).toBe(true)
         expect((combined :: any).Fov <= 84).toBe(true)
+    end)
+end)
+
+describe("Eleven physical disaster intro glyphs", function()
+    it("builds distinct bounded non-colliding marks at Low Medium and High", function()
+        local parent = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 80)
+        base.CFrame = CFrame.new(18, 5, -26)
+            * CFrame.Angles(0, math.rad(27), 0)
+        local variants = {
+            "RisingLava", "Meteors", "LowGravity",
+            "DisappearingPlatforms", "Tornado", "Freeze", "Bombs",
+            "SpeedSurge", "Darkness", "ShrinkingArena", "JumpShock",
+        }
+        local signatures = {}
+        for _, id in ipairs(variants) do
+            local recipe = HazardGlyphs.get(id)
+            local signature = ""
+            for _, seg in ipairs(recipe) do
+                signature ..= string.format("%.2f/%.2f/%.2f/%.2f;",
+                    seg.X, seg.Y, seg.Width, seg.Rotation)
+            end
+            expect(signatures[signature] == nil).toBe(true)
+            signatures[signature] = true
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local one = DisasterIntroGlyphKit.build(parent, base, id, tier, 1,
+                    HazardGlyphs, DisasterVisuals)
+                local two = DisasterIntroGlyphKit.build(parent, base, id, tier, 2,
+                    HazardGlyphs, DisasterVisuals)
+                expect(one ~= nil and two ~= nil).toBe(true)
+                expect(one.folder.Name).toBe("ChaosDisasterIntro_" .. id)
+                local expected = 1 + DisasterIntroGlyphKit.strokeCount(tier, #recipe)
+                    + (tier == "High" and 2 or 0)
+                expect(#one.parts).toBe(expected)
+                expect(#two.parts).toBe(expected)
+                expect((one.frame.Position - two.frame.Position).Magnitude > 20).toBe(true)
+                local origin = base.CFrame:PointToObjectSpace(one.frame.Position)
+                expect(origin.Z < -base.Size.Z * 0.5).toBe(true)
+                for _, instance in ipairs(one.parts) do
+                    expect(instance:GetAttribute("ChaosIntroSymbol")).toBe(true)
+                    expect(instance.Anchored).toBe(true)
+                    expect(instance.CanCollide).toBe(false)
+                    expect(instance.CanTouch).toBe(false)
+                    expect(instance.CanQuery).toBe(false)
+                    if tier == "Low" then
+                        expect(instance.Material == Enum.Material.Neon).toBe(false)
+                    end
+                end
+                one.folder:Destroy()
+                two.folder:Destroy()
+            end
+        end
+        expect(#variants).toBe(11)
+        parent:Destroy()
+        base:Destroy()
+    end)
+
+    it("rejects unknown glyphs or invalid parent and signal slot", function()
+        local parent = Instance.new("Folder")
+        local base = Instance.new("Part")
+        expect(DisasterIntroGlyphKit.build(parent, base, "Missing", "High", 1,
+            HazardGlyphs, DisasterVisuals) == nil).toBe(true)
+        expect(DisasterIntroGlyphKit.build(parent, base, "Bombs", "Low", 3,
+            HazardGlyphs, DisasterVisuals) == nil).toBe(true)
+        expect(DisasterIntroGlyphKit.build(parent, nil, "Bombs", "Low", 1,
+            HazardGlyphs, DisasterVisuals) == nil).toBe(true)
+        expect(DisasterIntroGlyphKit.build(nil, base, "Bombs", "Low", 1,
+            HazardGlyphs, DisasterVisuals) == nil).toBe(true)
+        parent:Destroy()
+        base:Destroy()
     end)
 end)
 

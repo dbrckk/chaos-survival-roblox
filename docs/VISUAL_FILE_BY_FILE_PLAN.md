@@ -190,3 +190,12 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `tests/engine/arena-presentation.spec.luau` : quatre arènes × trois niveaux, pièces ancrées/non collidantes, absence de Néon en Low et contrôle de placement sur arène tournée.
 - [ ] Vérifier en Studio que la visibilité réelle des avertissements de danger reste prioritaire et que les bords ne sont pas occultés par la brume.
 
+
+## Sprint 04 — catastrophes : identité physique de l'introduction
+
+- [x] `DisasterIntroGlyphKit.lua` : les **11 glyphes** existants deviennent des plaques géométriques 3D propres à chaque danger, orientées vers l'arène et placées **en dehors du sol jouable** ; Double Chaos a deux emplacements distincts.
+- [x] `disaster-setpiece.client.lua` : animation d'apparition et dissolution courte des plaques avec `Debris`, nettoyage en fin de manche, Reduce Motion, et un deuxième essai borné si `Arena.Base` réplique tard.
+- [x] `VisualBudgetRules.lua` : le dossier `DisasterIntroGlyphLocal` entre dans le comptage global des pièces décoratives.
+- [x] `tests/engine/disaster-visuals.spec.luau` : 11 catastrophes × 3 tiers × 2 emplacements, silhouettes distinctes, rotation de carte, absence de collisions, aucun néon en Low.
+- [ ] Revue manuelle en Studio : les plaques ne doivent jamais masquer un danger, les introduc­tions Double Chaos ne doivent pas saturer le cadre.
+- [ ] FPS Android et comparaison de lisibilité High/Medium/Low, notamment avec Reduce Motion.

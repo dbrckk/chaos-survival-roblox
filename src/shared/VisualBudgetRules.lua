@@ -25,6 +25,7 @@ VisualBudgetRules.LocalFolders = {
     "ChaosPremiumDisasterVfxLocal",
     "DisappearingPlatformReadabilityLocal",
     "DisasterClimaxLocal",
+    "DisasterIntroGlyphLocal",
     "DisasterResidueLocal",
     "ImpactSetpieceLocal",
     "LocomotionContactLocal",

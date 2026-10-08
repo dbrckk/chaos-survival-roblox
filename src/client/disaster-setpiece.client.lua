@@ -5,11 +5,15 @@ local TweenService=game:GetService("TweenService")
 
 local VfxQuality=require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterSetpiece=require(ReplicatedStorage.Shared.DisasterSetpiece)
+local DisasterIntroGlyphKit=require(script.Parent.DisasterIntroGlyphKit)
 
 local player=Players.LocalPlayer
 local stateEvent=ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local previousPhase="waiting"
 local token=0
+local glyphFolder=Instance.new("Folder")
+glyphFolder.Name="DisasterIntroGlyphLocal"
+glyphFolder.Parent=workspace
 
 local function arenaBase()
     local g=workspace:FindFirstChild("GeneratedMap")
@@ -38,6 +42,26 @@ end
 local function tween(p,duration,goal)
     TweenService:Create(p,TweenInfo.new(duration,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),goal):Play()
     Debris:AddItem(p,duration+0.2)
+end
+
+-- Existing per-hazard physical intro is enhanced by a distinct geometric
+-- emblem for each of the eleven disasters, never a shared generic ring.
+local function revealGlyphs(base, ids, current)
+    if token~=current or not base.Parent then return end
+    local tier=VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local reduced=player:GetAttribute("ReduceMotion")==true
+    local duration=reduced and 0.33 or 0.80
+    for slot,id in ipairs(ids or {}) do
+        if slot>2 then break end
+        local bundle=DisasterIntroGlyphKit.build(
+            glyphFolder,base,tostring(id),tier.Name,slot)
+        if bundle then
+            for _,piece in ipairs(bundle.parts) do
+                tween(piece,duration,{Transparency=1})
+            end
+            Debris:AddItem(bundle.folder,duration+0.14)
+        end
+    end
 end
 
 local function playProfile(profile,base,index,total,current)
@@ -112,20 +136,42 @@ local function playProfile(profile,base,index,total,current)
     end
 end
 
+local function startIntro(state, current, retry)
+    if token~=current then return end
+    local base=arenaBase()
+    if not base then
+        -- The arena base can replicate after RoundState on slow mobile clients.
+        if retry then
+            task.delay(0.24,function()
+                if token==current then startIntro(state,current,false) end
+            end)
+        end
+        return
+    end
+    revealGlyphs(base,state.disasterIds,current)
+    local profiles=DisasterSetpiece.forIds(state.disasterIds)
+    for i,p in ipairs(profiles) do
+        task.delay((i-1)*0.11,function()
+            playProfile(p,base,i,#profiles,current)
+        end)
+    end
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
     local phase=tostring(state.phase or "waiting")
     if phase=="round" and previousPhase~="round" then
-        local base=arenaBase()
-        if base then
-            token+=1
-            local current=token
-            local profiles=DisasterSetpiece.forIds(state.disasterIds)
-            for i,p in ipairs(profiles) do
-                task.delay((i-1)*0.11,function() playProfile(p,base,i,#profiles,current) end)
-            end
-        end
+        token+=1
+        glyphFolder:ClearAllChildren()
+        startIntro(state,token,true)
     elseif phase~="round" then
         token+=1
+        glyphFolder:ClearAllChildren()
     end
     previousPhase=phase
+end)
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion")==true then
+        glyphFolder:ClearAllChildren()
+    end
 end)
