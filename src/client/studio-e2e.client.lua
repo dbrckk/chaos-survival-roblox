@@ -341,8 +341,10 @@ if showtimeGui then
         "ShowtimeToggle",
         "Emote_dance",
         "Emote_shuffle",
+        "Emote_groove",
         "Emote_cheer",
         "Emote_wave",
+        "Emote_laugh",
     }) do
         local control = showtimeGui:FindFirstChild(controlName, true)
         check(control ~= nil, controlName .. " missing")
