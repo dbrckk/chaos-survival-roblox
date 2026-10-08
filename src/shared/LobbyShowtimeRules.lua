@@ -93,6 +93,22 @@ function LobbyShowtimeRules.dockRightInset(viewportWidth, touch, veryNarrow)
     return math.ceil(rightGap + settingsPanelWidth + 12)
 end
 
+-- One voluntary-feeling victory flourish on entry to RESULT: survivor only.
+-- Do not replay on the server's once-per-second result timer snapshots.
+function LobbyShowtimeRules.shouldCelebrate(phase, previousPhase, survivorUserIds, userId, reduceMotion)
+    if phase ~= "result" or previousPhase == "result" or reduceMotion == true
+        or type(survivorUserIds) ~= "table"
+    then
+        return false
+    end
+    for _, survivorId in ipairs(survivorUserIds) do
+        if survivorId == userId then
+            return true
+        end
+    end
+    return false
+end
+
 function LobbyShowtimeRules.spatialBeatActive(phase, voteOptions, distance, muted)
     return LobbyShowtimeRules.enabled(phase, voteOptions)
         and muted ~= true
