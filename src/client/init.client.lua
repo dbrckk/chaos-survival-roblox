@@ -369,6 +369,16 @@ countdownGlyph.Visible = false
 countdownGlyph.ZIndex = 40
 countdownGlyph.Parent = countdownCard
 
+local countdownGlyphSecondary = Instance.new("Frame")
+countdownGlyphSecondary.Name = "CountdownHazardGlyphSecondary"
+countdownGlyphSecondary.AnchorPoint = Vector2.new(0.5, 0.5)
+countdownGlyphSecondary.Position = UDim2.fromScale(0.22, 0.52)
+countdownGlyphSecondary.Size = UDim2.fromScale(0.22, 0.58)
+countdownGlyphSecondary.BackgroundTransparency = 1
+countdownGlyphSecondary.Visible = false
+countdownGlyphSecondary.ZIndex = 40
+countdownGlyphSecondary.Parent = countdownCard
+
 local countdownKicker = Instance.new("TextLabel")
 countdownKicker.Name = "CountdownKicker"
 countdownKicker.Size = UDim2.new(1, -28, 0.22, 0)
@@ -475,12 +485,34 @@ local function presentCountdown(state)
         )
         countdownStroke.Color = state.doubleChaos and UITheme.Colors.Violet or accent
         countdownKicker.TextColor3 = accent
+        local primaryId = state.disasterIds and state.disasterIds[1]
+        local secondaryId = state.disasterIds and state.disasterIds[2]
+
+        countdownGlyph.Position = UDim2.fromScale(
+            state.doubleChaos and 0.78 or 0.82,
+            0.52
+        )
+        countdownGlyph.Size = UDim2.fromScale(
+            state.doubleChaos and 0.22 or 0.28,
+            state.doubleChaos and 0.58 or 0.68
+        )
         renderHazardGlyph(
             countdownGlyph,
-            state.disasterIds and state.disasterIds[1],
+            primaryId,
             accent,
-            0.66
+            state.doubleChaos and 0.72 or 0.66
         )
+
+        if state.doubleChaos and secondaryId then
+            renderHazardGlyph(
+                countdownGlyphSecondary,
+                secondaryId,
+                UITheme.disasterAccent(secondaryId, UITheme.Colors.Violet),
+                0.72
+            )
+        else
+            countdownGlyphSecondary.Visible = false
+        end
 
         local survivorCount = math.max(
             1,
@@ -562,6 +594,7 @@ local function presentCountdown(state)
 
     countdownToken += 1
     countdownGlyph.Visible = false
+    countdownGlyphSecondary.Visible = false
     countdownCard.Visible = false
 end
 
