@@ -337,7 +337,16 @@ end
 
 refreshUI = function()
     local enabled = available()
-    toggle.Visible = enabled
+    local camera = workspace.CurrentCamera
+    local viewportWidth = camera and camera.ViewportSize.X or 1280
+    local dockLeft = Showtime.dockSide(viewportWidth, UserInputService.TouchEnabled) == "left"
+    local settings = player.PlayerGui:FindFirstChild("AccessibilityQuickSettings")
+    local settingsPanel = settings and settings:FindFirstChild("SettingsPanel")
+    local settingsExpanded = dockLeft and settingsPanel and settingsPanel.Visible == true
+    if settingsExpanded then
+        open = false
+    end
+    toggle.Visible = enabled and not settingsExpanded
     if not enabled then
         open = false
         stopEmote()
@@ -367,10 +376,21 @@ local function applyLayout()
     local mobile = UIResponsive.mobileProfile(viewport)
     local top = touch and mobile.topHeight or 68
     local rightInset = Showtime.dockRightInset(viewport.X, touch, mobile.veryNarrow)
-    toggle.Position = UDim2.new(1, -rightInset, 0, top + 16)
-    panel.Position = UDim2.new(1, -rightInset, 0, top + 70)
+    local leftDock = Showtime.dockSide(viewport.X, touch) == "left"
+    toggle.AnchorPoint = leftDock and Vector2.new(0, 0) or Vector2.new(1, 0)
+    panel.AnchorPoint = toggle.AnchorPoint
+    if leftDock then
+        toggle.Position = UDim2.fromOffset(12, top + 16)
+        panel.Position = UDim2.fromOffset(12, top + 70)
+    else
+        toggle.Position = UDim2.new(1, -rightInset, 0, top + 16)
+        panel.Position = UDim2.new(1, -rightInset, 0, top + 70)
+    end
     local width = math.max(1, viewport.X)
     panel.Size = UDim2.fromOffset(math.min(232, width - 24), 217)
+    if refreshUI then
+        refreshUI()
+    end
 end
 
 local function bindCamera()
@@ -386,6 +406,17 @@ local function bindCamera()
 end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 bindCamera()
+
+-- Settings is created by a separate LocalScript. When expanded on very
+-- narrow devices, give it exclusive access to the overlapping top region.
+task.spawn(function()
+    local settings = player.PlayerGui:WaitForChild("AccessibilityQuickSettings", 30)
+    local settingsPanel = settings and settings:WaitForChild("SettingsPanel", 10)
+    if settingsPanel then
+        settingsPanel:GetPropertyChangedSignal("Visible"):Connect(refreshUI)
+        refreshUI()
+    end
+end)
 
 local function makePart(name, size, cf, color, material, transparency)
     local obj = Instance.new("Part")

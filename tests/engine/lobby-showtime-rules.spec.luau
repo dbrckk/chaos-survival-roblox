@@ -56,6 +56,16 @@ describe("Lobby Showtime", function()
         expect(Showtime.spatialBeatActive("result", nil, nil, false)).toBe(false)
     end)
 
+    it("keeps both the mobile emote grid and Settings reachable on tiny screens", function()
+        for _, width in ipairs({320, 360, 400, 440}) do
+            expect(Showtime.dockSide(width, true)).toBe("left")
+            expect(12 + math.min(232, width - 24) <= width - 12).toBe(true)
+        end
+        expect(Showtime.dockSide(450, true)).toBe("right")
+        expect(Showtime.dockSide(540, true)).toBe("right")
+        expect(Showtime.dockSide(320, false)).toBe("right")
+    end)
+
     it("keeps emote controls clear of the accessibility panel", function()
         for _, entry in ipairs({
             {width = 540, touch = true, narrow = true, settingsWidth = 176, rightGap = 10},

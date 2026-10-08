@@ -84,6 +84,13 @@ end
 
 -- Coordinate with AccessibilityQuickSettings at the top-right of the screen.
 -- Reserve its expanded settings panel, not only its toggle button.
+-- On narrow portrait screens, the settings panel occupies the right edge.
+-- Dock Showtime on the left rather than clipping the emote grid offscreen.
+function LobbyShowtimeRules.dockSide(viewportWidth, touch)
+    return touch == true and (tonumber(viewportWidth) or 1280) < 450
+        and "left" or "right"
+end
+
 function LobbyShowtimeRules.dockRightInset(viewportWidth, touch, veryNarrow)
     local width = math.max(1, tonumber(viewportWidth) or 1280)
     local rightGap = touch == true and 10 or width * 0.015
