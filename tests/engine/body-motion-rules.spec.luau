@@ -13,6 +13,16 @@ describe("Body motion rules", function()
         expect(noBrake).toBe(0)
         expect(noLaunch).toBe(0)
         expect(braking > 0).toBe(true)
+        -- A hard stop may leap directly from sprint speed to zero in one
+        -- low-FPS sample or after collision: the skid must not disappear.
+        local hardStopLaunch, hardStopSkid =
+            LocomotionDynamics.acceleration(0, 20, 0.11, true)
+        expect(hardStopLaunch).toBe(0)
+        expect(hardStopSkid > 0.7).toBe(true)
+        local settledLaunch, settledStop =
+            LocomotionDynamics.acceleration(0, 0, 0.11, true)
+        expect(settledLaunch).toBe(0)
+        expect(settledStop).toBe(0)
         local airborneLaunch, airborneBrake = LocomotionDynamics.acceleration(4, 20, 0.10, false)
         expect(airborneLaunch).toBe(0)
         expect(airborneBrake).toBe(0)
