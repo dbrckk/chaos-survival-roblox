@@ -18,8 +18,10 @@ function SpectatorTargetRules.resolveIndex(targets, selectedCharacter, previousI
         end
     end
 
-    -- After elimination the next survivor already occupies the removed slot.
-    return math.clamp(math.floor(tonumber(previousIndex) or 1), 1, count)
+    -- After elimination, the successor occupies the removed slot. If the
+    -- eliminated target was last, wrap to the first surviving target.
+    local slot = math.max(1, math.floor(tonumber(previousIndex) or 1))
+    return ((slot - 1) % count) + 1
 end
 
 return SpectatorTargetRules
