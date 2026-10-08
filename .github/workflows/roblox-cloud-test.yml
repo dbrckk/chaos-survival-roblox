@@ -86,6 +86,7 @@ jobs:
           include = [
             "tests/engine/attention-budget-rules.spec.luau",
             "tests/engine/lobby-presentation-rules.spec.luau",
+            "tests/engine/lobby-showtime-rules.spec.luau",
             "tests/engine/mastery.spec.luau",
             "tests/engine/monetization-rules.spec.luau",
             "tests/engine/movement-assist-rules.spec.luau",
