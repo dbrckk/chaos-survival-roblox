@@ -35,6 +35,10 @@ local FOLDERS = {
         LowDistance = 130,
         MediumDistance = 205,
     },
+    ArenaSignatureLocal = {
+        LowDistance = 145,
+        MediumDistance = 220,
+    },
     ArenaMidgroundMassLocal = {
         LowDistance = 145,
         MediumDistance = 215,
