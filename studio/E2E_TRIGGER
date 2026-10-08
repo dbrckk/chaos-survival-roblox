@@ -22,3 +22,6 @@ Candidate reason:
 - progression/achievement/quest notifications use bounded deferred FIFO queues
 - lighting, Clouds, FOV, Motor6D and post-process ownership are CI-guarded
 - request fresh exact-SHA authenticated Studio certification
+Preflight hardening:
+- GitHub-hosted preflight verifies an online self-hosted Windows runner before the Studio job is queued.
+- If the runner is offline, the workflow now fails explicitly instead of waiting silently.
