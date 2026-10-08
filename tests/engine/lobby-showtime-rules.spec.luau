@@ -75,6 +75,10 @@ describe("Lobby Showtime", function()
         expect(low.folder:FindFirstChild("ShowtimeDJBooth") ~= nil).toBe(true)
         expect(low.folder:FindFirstChild("ShowtimeSpeakerHousing1") ~= nil).toBe(true)
         expect(high.folder:FindFirstChild("ShowtimeTrussAccent1") ~= nil).toBe(true)
+        expect(low.folder:FindFirstChild("ShowtimeCrownCrystal") ~= nil).toBe(true)
+        expect(high.folder:FindFirstChild("ShowtimeCrownHeart") ~= nil).toBe(true)
+        expect(#low.crown.orbit).toBe(6)
+        expect(#high.crown.orbit).toBe(28)
         expect(#high.props > #low.props).toBe(true)
 
         for _, descendant in ipairs(high.props) do
@@ -95,6 +99,17 @@ describe("Lobby Showtime", function()
         expect(equalizer.Size.Y).toBe(0.38)
         expect(#low.equalizer).toBe(3)
         expect(#high.equalizer).toBe(8)
+
+        local firstRing = low.crown.orbit[1].part
+        local atRest = firstRing.CFrame
+        ShowtimeProps.update(low, 5.0, true, true, 4)
+        expect(firstRing.CFrame).toBe(atRest)
+        ShowtimeProps.update(low, 6.0, true, false, 4)
+        expect(firstRing.CFrame ~= atRest).toBe(true)
+        ShowtimeProps.update(low, 7.0, false, false, 0)
+        expect(firstRing.Transparency).toBe(1)
+        ShowtimeProps.update(low, 7.2, true, true, 0)
+        expect(firstRing.Transparency < 1).toBe(true)
         container:Destroy()
     end)
 
