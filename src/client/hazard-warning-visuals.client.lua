@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 
 local player = Players.LocalPlayer
 local tracked = {}
@@ -141,6 +142,61 @@ local function ensureRenderLoop()
     end)
 end
 
+local WARNING_GLYPH_IDS = {
+    Meteor = "Meteors",
+    Bomb = "Bombs",
+    Freeze = "Freeze",
+    JumpShock = "JumpShock",
+}
+
+local function addWarningGlyph(parent, kind, color)
+    local hazardId = WARNING_GLYPH_IDS[kind]
+    local recipe = hazardId and HazardGlyphs.get(hazardId) or nil
+    if not recipe then
+        return
+    end
+
+    local glyph = Instance.new("Frame")
+    glyph.Name = "WarningGlyph"
+    glyph.AnchorPoint = Vector2.new(0, 0.5)
+    glyph.Position = UDim2.fromScale(0.035, 0.5)
+    glyph.Size = UDim2.fromScale(0.22, 0.72)
+    glyph.BackgroundColor3 = color:Lerp(Color3.fromRGB(12, 16, 24), 0.70)
+    glyph.BackgroundTransparency = 0.12
+    glyph.BorderSizePixel = 0
+    glyph.ZIndex = 2
+    glyph.Parent = parent
+
+    local glyphCorner = Instance.new("UICorner")
+    glyphCorner.CornerRadius = UDim.new(0, 7)
+    glyphCorner.Parent = glyph
+
+    local canvas = Instance.new("Frame")
+    canvas.AnchorPoint = Vector2.new(0.5, 0.5)
+    canvas.Position = UDim2.fromScale(0.5, 0.5)
+    canvas.Size = UDim2.fromScale(0.72, 0.72)
+    canvas.BackgroundTransparency = 1
+    canvas.ZIndex = 2
+    canvas.Parent = glyph
+
+    for _, def in ipairs(recipe) do
+        local segment = Instance.new("Frame")
+        segment.AnchorPoint = Vector2.new(0.5, 0.5)
+        segment.Position = UDim2.fromScale(def.X, def.Y)
+        segment.Size = UDim2.fromScale(def.Width, def.Height)
+        segment.Rotation = def.Rotation or 0
+        segment.BackgroundColor3 = color
+        segment.BackgroundTransparency = 0.04
+        segment.BorderSizePixel = 0
+        segment.ZIndex = 2
+        segment.Parent = canvas
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = segment
+    end
+end
+
 local function register(part)
     if not part:IsA("BasePart") then
         return
@@ -178,7 +234,7 @@ local function register(part)
     local label = Instance.new("BillboardGui")
     label.Name = kind .. "WarningLabelLocal"
     label.Adornee = part
-    label.Size = UDim2.fromOffset(132, 34)
+    label.Size = UDim2.fromOffset(154, 36)
     label.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
     label.AlwaysOnTop = true
     label.LightInfluence = 0
@@ -203,7 +259,15 @@ local function register(part)
     warningText.TextScaled = true
     warningText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     warningText.TextStrokeTransparency = 0.42
+    warningText.ZIndex = 1
     warningText.Parent = label
+
+    local textPadding = Instance.new("UIPadding")
+    textPadding.PaddingLeft = UDim.new(0, 38)
+    textPadding.PaddingRight = UDim.new(0, 7)
+    textPadding.Parent = warningText
+
+    addWarningGlyph(warningText, kind, warningText.TextColor3)
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1, 0)
