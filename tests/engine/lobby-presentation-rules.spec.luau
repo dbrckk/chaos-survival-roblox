@@ -55,6 +55,45 @@ describe("Lobby presentation rules", function()
         expect(subtitle).toBe("PRACTICE WHILE PLAYERS JOIN")
     end)
 
+    it("keeps the arena gate actionable through the full lobby flow", function()
+        local waitingTitle, waitingSub = LobbyPresentationRules.gateText(
+            "waiting",
+            0,
+            "WAITING FOR PLAYERS",
+            nil
+        )
+        expect(waitingTitle).toBe("TRAIN HERE")
+        expect(waitingSub).toBe("MOVE • JUMP • WATCH THE GATE")
+
+        local voteTitle, voteSub = LobbyPresentationRules.gateText(
+            "intermission",
+            7,
+            "VOTE FOR THE NEXT CHAOS",
+            {{id = "Meteors"}}
+        )
+        expect(voteTitle).toBe("VOTE NOW")
+        expect(string.find(voteSub, "7s", 1, true) ~= nil).toBe(true)
+
+        local readyTitle, readySub = LobbyPresentationRules.gateText(
+            "ready",
+            3,
+            "CHAOS FUSION: Storm Core",
+            nil
+        )
+        expect(readyTitle).toBe("ARENA READY")
+        expect(string.find(readySub, "Storm Core", 1, true) ~= nil).toBe(true)
+        expect(string.find(readySub, "3s", 1, true) ~= nil).toBe(true)
+
+        local roundTitle, roundSub = LobbyPresentationRules.gateText(
+            "round",
+            12,
+            "SURVIVE",
+            nil
+        )
+        expect(roundTitle).toBe("ROUND LIVE")
+        expect(roundSub).toBe("SURVIVE UNTIL 0")
+    end)
+
     it("slows ambient pulses for accessibility", function()
         local normal = LobbyPresentationRules.pulseCadence("High", false, "launch")
         local reduced = LobbyPresentationRules.pulseCadence("High", true, "launch")
