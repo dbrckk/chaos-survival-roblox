@@ -100,6 +100,51 @@ describe("Character cinematic reactions", function()
         model:Destroy()
     end)
 
+    it("uses different physical silhouettes for meteor ejections and bomb pressure", function()
+        local visual = CharacterReactionVisuals
+        local meteor = visual.signature("Shock", "Meteor", 1, 0.8)
+        local bomb = visual.signature("Shock", "Bomb", 1, 0.8)
+        local dodge = visual.signature("Dodge", "Meteor", 2, 0.8)
+        local landing = visual.signature("Landing", "", 1, 0.8)
+        expect(meteor ~= nil and bomb ~= nil and dodge ~= nil and landing ~= nil).toBe(true)
+        expect(meteor.Finish.Y - meteor.Start.Y > 1.0).toBe(true)
+        expect(bomb.Finish.Y - bomb.Start.Y < 0.25).toBe(true)
+        expect(math.abs(bomb.Finish.X) > math.abs(meteor.Finish.X)).toBe(true)
+        expect(meteor.Curve1 ~= bomb.Curve1).toBe(true)
+        expect(meteor.Color ~= bomb.Color).toBe(true)
+        expect(landing.Finish.Y < landing.Start.Y).toBe(true)
+        expect(landing.Emission < meteor.Emission).toBe(true)
+        expect(dodge.Lifetime > bomb.Lifetime).toBe(true)
+        for _, design in ipairs({meteor, bomb, dodge, landing}) do
+            expect(design.Lifetime > 0 and design.Lifetime < 0.5).toBe(true)
+            expect(design.Width > 0 and design.Width < 0.2).toBe(true)
+            expect(design.Segments >= 6 and design.Segments <= 8).toBe(true)
+        end
+        expect(visual.signature("Unknown", "Bomb", 1, 1) == nil).toBe(true)
+    end)
+
+    it("marks reaction beams for in-Studio visual and audio synchronization audits", function()
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        local active = {}
+        expect(CharacterReactionVisuals.burst(root, "Shock", "Meteor", 1,
+            0.7, active)).toBe(1)
+        for _, item in ipairs(root:GetChildren()) do
+            if item:IsA("Beam") then
+                expect(item:GetAttribute("ChaosReactionMode")).toBe("Shock")
+                expect(item:GetAttribute("ChaosReactionKind")).toBe("Meteor")
+                expect(item.FaceCamera).toBe(true)
+                expect(item.CanCollide == nil).toBe(true)
+            end
+        end
+        expect(CharacterReactionVisuals.burst(root, "Wrong", "Meteor", 1,
+            0.7, active)).toBe(0)
+        model:Destroy()
+    end)
+
     it("excludes lobby late-joiners and eliminated players from cinematic reactions", function()
         expect(CharacterReactionRules.humanEligible(true, false)).toBe(true)
         expect(CharacterReactionRules.humanEligible(true, nil)).toBe(true)

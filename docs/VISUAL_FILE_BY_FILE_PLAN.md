@@ -253,3 +253,12 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `audio.client.lua` : plus de son de réception supplémentaire hors manche, sur un avatar éliminé ou réapparu ; les sons de base Roblox et la correction EQ des pas restent en place.
 - [x] Tests moteur dans les **suites existantes** `audio-config.spec.luau` et `ground-contact-rules.spec.luau` (pas de nouveau fichier de test ni de modification du shard).
 - [ ] Vérification humaine de la spatialisation au casque et sur Android, ainsi que des signaux en Double Chaos lors de fortes densités d'impacts.
+
+## Sprint 05 — silhouettes de réactions en mouvement
+
+- [x] `CharacterReactionVisuals.signature` : recettes déterministes de faisceaux par action et cause : météore = éjection haute, bombe = front de pression horizontal, esquive = filaments de fuite, réception = amortissement dirigé vers le bas.
+- [x] `CharacterReactionVisuals.burst` : animation progressive de l'épaisseur des Beam (une seule Tween par faisceau, sans RenderStepped), objets toujours détruits automatiquement sous 0,5 s, aucune modification des Animators ou de la physique.
+- [x] Chaque Beam expose les attributs `ChaosReactionMode` et `ChaosReactionKind` pour une vérification en Studio ; les modes inconnus sont rejetés.
+- [x] Réduction du nombre de tâches différées de nettoyage (une par signature plutôt qu'une par attachment/faisceau).
+- [x] Tests ajoutés dans `survival-feedback.spec.luau` (pas de nouvelle suite) : directions et couleurs distinguables, durées/largeurs bornées, attributs et modes inconnus.
+- [ ] Valider visuellement avec 3 avatars, deux catastrophes simultanées et 30/60 FPS sur Android.
