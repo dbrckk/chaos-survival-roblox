@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local AISurvivorRules = require("../../src/server/AISurvivorRules")
 local AISurvivorService = require("../../src/server/AISurvivorService")
+local AISurvivorNetworkOwnership = require("../../src/server/AISurvivorNetworkOwnership")
 
 describe("AI survivor rules", function()
     it("loads the runtime AI survivor service contract in Roblox", function()
@@ -13,6 +14,37 @@ describe("AI survivor rules", function()
         expect(type(AISurvivorService.visibleCount)).toBe("function")
         expect(type(AISurvivorService.aliveRoundCount)).toBe("function")
         expect(type(AISurvivorService.names)).toBe("function")
+    end)
+
+    it("only claims server physics ownership for a live workspace rig", function()
+        local model = Instance.new("Model")
+        model.Name = "OwnershipProbe"
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.Anchored = false
+        root.Parent = model
+
+        -- Regression: calling SetNetworkOwner before parenting used to be
+        -- silently ignored by a blanket pcall in the bot rig factory.
+        expect(AISurvivorNetworkOwnership.claim(model)).toBe(false)
+        model.Parent = workspace
+        root.Anchored = true
+        expect(AISurvivorNetworkOwnership.claim(model)).toBe(false)
+
+        root.Anchored = false
+        local ok, canSet = pcall(root.CanSetNetworkOwnership, root)
+        if ok and canSet then
+            expect(AISurvivorNetworkOwnership.claim(model)).toBe(true)
+            local ownerOk, owner = pcall(root.GetNetworkOwner, root)
+            expect(ownerOk).toBe(true)
+            expect(owner == nil).toBe(true)
+        else
+            -- Editing and some cloud test contexts cannot assign simulation
+            -- ownership; the live-server path is covered by Studio QA.
+            expect(AISurvivorNetworkOwnership.claim(model)).toBe(false)
+        end
+        model:Destroy()
     end)
 
     it("fills a small server toward four visible participants", function()
