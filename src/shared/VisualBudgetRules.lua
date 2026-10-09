@@ -39,6 +39,7 @@ VisualBudgetRules.LocalFolders = {
     "LobbyShowtimeLocal",
     "PhaseDashVfxLocal",
     "FluxRelayLocal",
+    "OrbitalHelixLocal",
     "LobbyProfileHologramLocal",
     "LobbyRoundRecapLocal",
     "LobbySurfaceDetailLocal",
