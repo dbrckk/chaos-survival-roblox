@@ -71,7 +71,13 @@ function FluxRelayRules.velocity(current, gatePosition, center, overdrive)
         return previous
     end
     local direction = toward.Unit
-    local horizontal = Vector3.new(previous.X, 0, previous.Z) * 0.15
+    local carry = Vector3.new(previous.X, 0, previous.Z)
+    if carry.Magnitude > 40 then
+        carry = carry.Unit * 40
+    end
+    -- Never allow extreme pre-existing knockback to overpower the inward
+    -- relay direction; even stacked Speed Surge/Dash must return to the hub.
+    local horizontal = carry * 0.15
         + direction * (overdrive == true and 47 or 41)
     if horizontal.Magnitude > 54 then
         horizontal = horizontal.Unit * 54
