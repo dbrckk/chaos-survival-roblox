@@ -74,17 +74,21 @@ local function ensureRenderLoop()
                     or ((math.sin(alpha * math.pi * 6) + 1) * 0.5)
 
                 if state.kind == "Freeze" then
-                    local freezePeak = 0.18 * currentTier.Scale
-                    part.Transparency = math.clamp(
+                    local freezePeak = 0.12 * currentTier.Scale
+                    part.Transparency = reduced and 0.82 or math.clamp(
                         0.84 - (freezePeak * math.sin(alpha * math.pi)),
-                        0.60,
+                        0.69,
                         0.92
                     )
                 elseif state.kind == "JumpShock" then
-                    local diameter = state.startSize
-                        + ((state.endSize - state.startSize) * alpha)
+                    -- In ReduceMotion, show the final hazard coverage at once
+                    -- instead of sweeping a large luminous disc across sightlines.
+                    local diameter = reduced and state.endSize
+                        or (state.startSize
+                            + ((state.endSize - state.startSize) * alpha))
                     part.Size = Vector3.new(part.Size.X, diameter, diameter)
-                    part.Transparency = 0.30 + (0.58 * alpha)
+                    part.Transparency = reduced and 0.78
+                        or (0.62 + 0.27 * alpha)
 
                     if state.signature then
                         local localFrame = warningDeckFrame(part, state.deck)
