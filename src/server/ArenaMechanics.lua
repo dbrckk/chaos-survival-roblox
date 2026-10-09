@@ -5,12 +5,16 @@ local helixModule = script and script.Parent:FindFirstChild("OrbitalHelix")
 local OrbitalHelix = if helixModule
     then require(helixModule)
     else require("./OrbitalHelix")
+local gridModule = script and script.Parent:FindFirstChild("GridCircuitService")
+local GridCircuitService = if gridModule
+    then require(gridModule)
+    else require("./GridCircuitService")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
     Classic = {
         Name = "ESCAPE PADS",
-        Hint = "Blue pads launch you away from the center when a route collapses",
+        Hint = "Blue escape pads launch outward; touch four Grid Circuit nodes clockwise for a skill clear",
         Color = Color3.fromRGB(90, 180, 255),
         Pads = {
             {offset = Vector3.new(18, 1.7, 0), impulse = Vector3.new(38, 10, 0)},
@@ -211,7 +215,10 @@ function ArenaMechanics.start(ctx, variantId)
         end)
     end
 
-    if variantId == "Crossroads" then
+    if variantId == "Classic" then
+        -- Optional non-pay-to-win navigation skill inside the stable base.
+        GridCircuitService.start(ctx, folder, base.Position)
+    elseif variantId == "Crossroads" then
         -- Secondary timed traversal loop, sharing the mechanics lifecycle and
         -- round cleanup. Unlike pads, only the charged alternating lane pair
         -- relays the runner inward.
