@@ -169,8 +169,12 @@ spectator or eliminated avatar. Individual per-player progress and expiry
 are replicated as `RoundGridCircuitStep`, `RoundGridCircuitNext`,
 `RoundGridCircuitDeadline`, `RoundGridCircuitComplete`. The 0.65s
 touch debounce prevents physics contacts from jumping multiple stages.
-A completion triggers `GRID CIRCUIT CLEAR` once; no trust in client
-input or submitted claimed ranks.
+A human completion triggers `GRID CIRCUIT CLEAR` once; no trust
+in client input or submitted claimed ranks. Survivor bots use the same
+server-owned timing and order checks, but their state is held on their rig
+and they receive no human scores, progression, currency or DataStore writes.
+They sometimes select the next station as a deliberate walking waypoint
+when active disaster conditions make that route reasonable.
 
 **Original art identity:** four visually distinct compass-labeled stations
 (NW / NE / SE / SW) with steel plinth, inset radial segmented circuit,
