@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 
 local player = Players.LocalPlayer
 local tracked = {}
@@ -21,6 +22,17 @@ local warningNames = {
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end)
+
+local function warningDeckFrame(part, deck)
+    return HazardWarningSignatureRules.frame(part.Position, deck)
+end
+
+local function destroySignature(state)
+    if not state or not state.signature then return end
+    for _, piece in ipairs(state.signature) do
+        if piece.Parent then piece:Destroy() end
+    end
+end
 
 local function ensureRenderLoop()
     if loopStarted then
@@ -46,6 +58,7 @@ local function ensureRenderLoop()
                     if state.label and state.label.Parent then
                         state.label:Destroy()
                     end
+                    destroySignature(state)
                     tracked[part] = nil
                     continue
                 end
@@ -73,17 +86,23 @@ local function ensureRenderLoop()
                     part.Size = Vector3.new(part.Size.X, diameter, diameter)
                     part.Transparency = 0.30 + (0.58 * alpha)
 
-                    if state.ring and state.ring.Parent then
-                        local trailingDiameter = math.max(state.startSize, diameter * 0.82)
-                        state.ring.Size = Vector3.new(
-                            0.08,
-                            trailingDiameter,
-                            trailingDiameter
-                        )
-                        state.ring.CFrame = CFrame.new(
-                            part.Position + Vector3.new(0, 0.08, 0)
-                        ) * CFrame.Angles(0, 0, math.rad(90))
-                        state.ring.Transparency = 0.38 + (0.54 * alpha)
+                    if state.signature then
+                        local localFrame = warningDeckFrame(part, state.deck)
+                        local count = #state.signature
+                        for index, piece in ipairs(state.signature) do
+                            if piece.Parent then
+                                local design = HazardWarningSignatureRules.recipe(
+                                    "JumpShock", index, count, diameter,
+                                    reduced and 0 or alpha
+                                )
+                                piece.CFrame = localFrame * CFrame.new(design.Offset)
+                                    * design.Rotation
+                                piece.Size = design.Size
+                                piece.Transparency = reduced
+                                    and (index > 1 and 1 or 0.67)
+                                    or design.Transparency
+                            end
+                        end
                     end
                 else
                     local diameter = state.startSize
@@ -135,6 +154,7 @@ local function ensureRenderLoop()
                     if state.label and state.label.Parent then
                         state.label:Destroy()
                     end
+                    destroySignature(state)
                     tracked[part] = nil
                 end
             end
@@ -198,7 +218,7 @@ local function addWarningGlyph(parent, kind, color)
 end
 
 local function register(part)
-    if not part:IsA("BasePart") then
+    if not part:IsA("BasePart") or tracked[part] then
         return
     end
 
@@ -208,7 +228,7 @@ local function register(part)
     end
 
     local ring = nil
-    if kind == "Meteor" or kind == "Bomb" or kind == "JumpShock" then
+    if kind == "Meteor" or kind == "Bomb" then
         ring = Instance.new("Part")
         ring.Name = kind .. "WarningRingLocal"
         ring.Shape = Enum.PartType.Cylinder
@@ -228,6 +248,40 @@ local function register(part)
         ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.06, 0))
             * CFrame.Angles(0, 0, math.rad(90))
         ring.Parent = localDecor
+    end
+
+    local signature = nil
+    local signatureDeck = nil
+    if kind == "JumpShock" then
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        local base = arena and arena:FindFirstChild("Base")
+        signatureDeck = base and base:IsA("BasePart") and base.CFrame or nil
+        local count = HazardWarningSignatureRules.count(
+            kind, currentTier.Name, player:GetAttribute("ReduceMotion") == true
+        )
+        signature = {}
+        local centerFrame = warningDeckFrame(part, signatureDeck)
+        for index = 1, count do
+            local design = HazardWarningSignatureRules.recipe(
+                kind, index, count, math.max(8, part.Size.Y), 0
+            )
+            local piece = Instance.new("Part")
+            piece.Name = "JumpShockAngularWarning" .. index
+            piece.Size = design.Size
+            piece.CFrame = centerFrame * CFrame.new(design.Offset)
+                * design.Rotation
+            piece.Anchored = true
+            piece.CanCollide = false
+            piece.CanTouch = false
+            piece.CanQuery = false
+            piece.CastShadow = false
+            piece.Material = design.Material
+            piece.Color = design.Secondary and design.SecondaryColor or design.Color
+            piece.Transparency = design.Transparency
+            piece.Parent = localDecor
+            table.insert(signature, piece)
+        end
     end
 
 
@@ -286,6 +340,8 @@ local function register(part)
         startSize = math.max(0.1, tonumber(part:GetAttribute("WarningStartSize")) or part.Size.X),
         endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
         ring = ring,
+        signature = signature,
+        deck = signatureDeck,
         label = label,
     }
 
@@ -336,5 +392,6 @@ workspace.ChildRemoved:Connect(function(child)
     if state and state.label and state.label.Parent then
         state.label:Destroy()
     end
+    destroySignature(state)
     tracked[child] = nil
 end)
