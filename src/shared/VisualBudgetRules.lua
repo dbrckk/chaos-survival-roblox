@@ -42,6 +42,7 @@ VisualBudgetRules.LocalFolders = {
     "LobbyWayfindingLocal",
     "PracticePadPolishLocal",
     "ResultSurvivorSpotlightsLocal",
+    "RoundTransitionPulsesLocal",
     "RookieWorldGuideLocal",
     "TornadoDebrisLocal",
 }
