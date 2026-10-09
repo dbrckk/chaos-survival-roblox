@@ -269,7 +269,7 @@ local function signatureDance(id)
         part.CFrame = CFrame.new(root.Position + Vector3.new(
             math.cos(angle) * 2.2, 0.65, math.sin(angle) * 2.2
         )) * CFrame.Angles(0, angle, id == "robot" and 0 or 0.48)
-        part.Parent = workspace
+        part.Parent = folder
         local nextAngle = angle + (id == "orbit" and 0.90 or 0.22)
         TweenService:Create(part,
             TweenInfo.new(0.72, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
