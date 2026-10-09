@@ -169,6 +169,19 @@ describe("Lobby Showtime", function()
             ~= choreography.style(5.0, 2, nil, 0)).toBe(true)
     end)
 
+    it("updates the existing stage sign for solo players, group dances and named emotes", function()
+        local caption = ShowtimeChoreography.caption
+        expect(caption(nil, 0, true)).toBe("PISTE DE DANSE")
+        expect(caption(nil, 0, false)).toBe("CHAOS SHOWTIME")
+        expect(caption(nil, 1, false)).toBe("JOIN THE FLOOR")
+        expect(caption(nil, 3, true)).toBe("DANSONS ENSEMBLE")
+        expect(caption("wave", 1, true)).toBe("EN DUO / SALUT")
+        expect(caption("cheer", 2, false)).toBe("DUET / CHEER")
+        expect(caption("laugh", 4, true)).toBe("EN DUO / RIRE")
+        expect(caption("unknown", 4, false)).toBe("DANCE TOGETHER")
+        expect(caption("dance", 0, true)).toBe("PISTE DE DANSE")
+    end)
+
     it("freezes every moving joint for reduced motion while retaining an emote silhouette", function()
         for _, id in ipairs({"dance", "shuffle", "groove", "cheer", "wave", "laugh"}) do
             local first = ShowtimeChoreography.pose(6, 1, id, 3, true)
