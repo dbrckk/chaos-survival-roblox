@@ -244,3 +244,12 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `VisualBudgetRules.lua` : les anneaux et éclats de contact sont maintenant mesurés dans `CharacterContactLocal`.
 - [x] `tests/engine/ground-contact-rules.spec.luau` : limites de pièces, conditions de manche, audio-matière existant, variétés de matériaux et cooldowns.
 - [ ] QA Studio/Android : entendre et voir les réceptions sur plusieurs sols, vérifier l'absence de bruit VFX dans le lobby et la stabilité en serveur plein.
+
+## Sprint 05 — cohérence audio 3D et retours de réception
+
+- [x] `ImpactAudioRules.lua` : impacts spatialisés ciblés selon distance et niveau Android. Low = 1 couche max, Medium = 2, High = 3 seulement pour événements proches ; au-delà de 86 studs une couche, au-delà du rayon de diffusion aucune création.
+- [x] `audio.client.lua` : n'instancier aucun son quand `AudioMuted` est actif ; calcul d'observateur compatible spectateur/caméra ; filtrage de portée **avant** consommation du cooldown, volumes plafonnés, durée des objets sonores réduite de 4 à 2,8 s.
+- [x] `GroundContactRules.lua` : timbre de réception distinct selon le sol (métallique, minéral, cristal, neutre) avec volume doux ; le son supplémentaire n'apparaît qu'après une chute significative, avec atténuation Low/Reduce Motion.
+- [x] `audio.client.lua` : plus de son de réception supplémentaire hors manche, sur un avatar éliminé ou réapparu ; les sons de base Roblox et la correction EQ des pas restent en place.
+- [x] Tests moteur dans les **suites existantes** `audio-config.spec.luau` et `ground-contact-rules.spec.luau` (pas de nouveau fichier de test ni de modification du shard).
+- [ ] Vérification humaine de la spatialisation au casque et sur Android, ainsi que des signaux en Double Chaos lors de fortes densités d'impacts.

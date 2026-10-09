@@ -52,6 +52,29 @@ function GroundContactRules.materialStyle(material)
     return "Neutral"
 end
 
+function GroundContactRules.landingAudio(material, airtime, tierName, reducedMotion)
+    local t = tonumber(airtime)
+    if not t or t < 0.55 then return nil end
+    -- The default Roblox Landing sound is already present, so this is
+    -- deliberately a faint low-frequency impact rather than a second footstep.
+    local style = GroundContactRules.materialStyle(material)
+    local accents = {
+        Mechanical = -0.32,
+        Mineral = -0.45,
+        Crystal = 0.11,
+        Neutral = -0.18,
+    }
+    local volume = math.clamp(0.075 + (t - 0.55) * 0.075, 0.075, 0.18)
+    if tierName == "Low" or reducedMotion == true then
+        volume *= 0.75
+    end
+    return {
+        VolumeScale = volume,
+        PitchOffset = accents[style],
+        Style = style,
+    }
+end
+
 function GroundContactRules.concurrentLimit(tier)
     if tier == "High" then return 30 end
     if tier == "Medium" then return 18 end

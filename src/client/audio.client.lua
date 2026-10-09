@@ -5,6 +5,9 @@ local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local AudioConfig = require(ReplicatedStorage.Shared.AudioConfig)
+local GroundContactRules = require(ReplicatedStorage.Shared.GroundContactRules)
+local ImpactAudioRules = require(ReplicatedStorage.Shared.ImpactAudioRules)
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -438,23 +441,31 @@ setMix(lastPhase or "waiting", lastOverdrive, lastFinalRush)
 
 local lastSpatialImpactAt = 0
 local function playSpatialImpact(payload)
-    local position = payload and payload.position
-    if typeof(position) ~= "Vector3" then
-        return
-    end
+    if type(payload) ~= "table" then return end
+    local position = payload.position
+    if typeof(position) ~= "Vector3" then return end
 
-    local now = os.clock()
-    if now - lastSpatialImpactAt < 0.10 then
-        return
-    end
-    lastSpatialImpactAt = now
+    local camera = workspace.CurrentCamera
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local observer = camera and camera.CFrame.Position
+        or (root and root:IsA("BasePart") and root.Position)
+    if not observer then return end
 
     local kind = tostring(payload.kind or "")
     local definition = kind == "Meteor" and AudioConfig.Sfx.Meteor
         or (kind == "Bomb" and AudioConfig.Sfx.Bombs or nil)
-    if not definition then
-        return
-    end
+    if not definition then return end
+
+    local tierName = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    local plan = ImpactAudioRules.plan(
+        kind, (position - observer).Magnitude, tierName,
+        player:GetAttribute("AudioMuted") == true)
+    if not plan then return end
+
+    local now = os.clock()
+    if now - lastSpatialImpactAt < 0.10 then return end
+    lastSpatialImpactAt = now
 
     local holder = Instance.new("Part")
     holder.Name = "LocalSpatialImpactAudio"
@@ -475,9 +486,10 @@ local function playSpatialImpact(payload)
         local sound = Instance.new("Sound")
         sound.Name = name
         sound.SoundId = layerDefinition.SoundId
-        sound.Volume = math.max(
-            0.08,
-            (layerDefinition.Volume or 0.3) * math.max(0, volumeScale or 1)
+        sound.Volume = math.clamp(
+            (layerDefinition.Volume or 0.3)
+                * math.max(0, volumeScale or 1) * plan.VolumeScale,
+            0, 0.7
         )
         sound.PlaybackSpeed = math.clamp(
             (layerDefinition.PlaybackSpeed or 1)
@@ -487,8 +499,8 @@ local function playSpatialImpact(payload)
             2.3
         )
         sound.RollOffMode = Enum.RollOffMode.InverseTapered
-        sound.RollOffMinDistance = 8
-        sound.RollOffMaxDistance = 125
+        sound.RollOffMinDistance = plan.MinDistance
+        sound.RollOffMaxDistance = plan.MaxDistance
         sound.EmitterSize = 6
         sound.SoundGroup = hazardGroup
         sound.Parent = holder
@@ -513,7 +525,7 @@ local function playSpatialImpact(payload)
         0
     )
 
-    if kind == "Meteor" then
+    if plan.LayerCount >= 2 and kind == "Meteor" then
         addLayer(
             "MeteorAirTail",
             AudioConfig.Sfx.Wind,
@@ -521,14 +533,16 @@ local function playSpatialImpact(payload)
             0.24,
             0.015
         )
-        addLayer(
-            "MeteorBody",
-            AudioConfig.Sfx.Hit,
-            0.15,
-            -0.34,
-            0.045
-        )
-    elseif kind == "Bomb" then
+        if plan.LayerCount >= 3 then
+            addLayer(
+                "MeteorBody",
+                AudioConfig.Sfx.Hit,
+                0.15,
+                -0.34,
+                0.045
+            )
+        end
+    elseif plan.LayerCount >= 2 and kind == "Bomb" then
         addLayer(
             "BombBody",
             AudioConfig.Sfx.Hit,
@@ -536,16 +550,18 @@ local function playSpatialImpact(payload)
             -0.46,
             0.018
         )
-        addLayer(
-            "BombTail",
-            AudioConfig.Sfx.Darkness,
-            0.12,
-            -0.26,
-            0.070
-        )
+        if plan.LayerCount >= 3 then
+            addLayer(
+                "BombTail",
+                AudioConfig.Sfx.Darkness,
+                0.12,
+                -0.26,
+                0.070
+            )
+        end
     end
 
-    Debris:AddItem(holder, 4)
+    Debris:AddItem(holder, plan.Lifetime)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
@@ -821,18 +837,19 @@ local function bindHealthAudio(character)
             local airtime = os.clock() - airborneAt
             airborneAt = nil
 
-            if airtime >= 0.38 then
-                local volumeScale = math.clamp(
-                    0.10 + (airtime - 0.38) * 0.12,
-                    0.10,
-                    0.24
-                )
-                playRaw(
-                    "Hit",
-                    0.015,
-                    volumeScale,
-                    airtime > 0.85 and -0.42 or -0.26
-                )
+            if player.Character == character and humanoid.Health > 0
+                and GroundContactRules.eligible(
+                    lastPhase, true,
+                    player:GetAttribute("RoundParticipant"),
+                    player:GetAttribute("RoundEliminated"), false)
+            then
+                local plan = GroundContactRules.landingAudio(
+                    humanoid.FloorMaterial, airtime,
+                    VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
+                    player:GetAttribute("ReduceMotion") == true)
+                if plan then
+                    playRaw("Hit", 0.015, plan.VolumeScale, plan.PitchOffset)
+                end
             end
         end
     end)
