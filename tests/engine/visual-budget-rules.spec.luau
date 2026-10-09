@@ -4,6 +4,8 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VisualBudgetRules = require("../../src/shared/VisualBudgetRules")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
+local LandingImprintKit = require("../../src/client/LandingImprintKit")
+local LocomotionGroundFx = require("../../src/client/LocomotionGroundFx")
 
 describe("visual budget rules", function()
     it("uses progressively smaller budgets for lower tiers", function()
@@ -166,6 +168,37 @@ describe("visual budget rules", function()
             expect(arc.Shape).toBe(Enum.PartType.Block)
             expect(arc.CanCollide).toBe(false)
         end
+        root:Destroy()
+    end)
+
+    it("counts simultaneous bot landings and launch marks in the live graphics budget", function()
+        local root = Instance.new("Folder")
+        local landing = Instance.new("Folder")
+        landing.Name = "CharacterContactLocal"
+        landing.Parent = root
+        local locomotion = Instance.new("Folder")
+        locomotion.Name = "LocomotionContactLocal"
+        locomotion.Parent = root
+        local frame = CFrame.new(0, 5, 0)
+        for i = 1, 4 do
+            local shifted = frame * CFrame.new(i * 2, 0, 0)
+            local botLanding = LandingImprintKit.build(
+                landing, shifted, Color3.fromRGB(120, 210, 230),
+                "Mechanical", Enum.Material.Metal, 3, 0.85, false
+            )
+            expect(#botLanding).toBe(3)
+            local botPivot = LocomotionGroundFx.build(
+                locomotion, shifted, "Pivot", 0.9, "High"
+            )
+            expect(botPivot ~= nil).toBe(true)
+            expect(#botPivot:GetChildren()).toBe(4)
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(28)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
         root:Destroy()
     end)
 
