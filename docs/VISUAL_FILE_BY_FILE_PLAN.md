@@ -284,3 +284,15 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] Tests `arena-presentation.spec.luau` : 4 arènes × 3 tiers, pièces adaptées à chaque matériau, orientation de carte inclinée, contrôle de hauteur au-dessus de la fondation, propriétés physiques sûres, entrées invalides et nombre maximal.
 - [x] `studio-e2e.client.lua` et `StudioE2E.server.lua` : vérification du motif de sol propre à chaque arène, en plus de la sculpture, de la skyline et des finitions de plateforme.
 - [ ] Gates restant à remplir : GitHub Build Validation **et** 5 shards Open Cloud sur le SHA final ; scènes et captures Studio en quatre arènes ; contrôle Android réel High/Medium/Low en mouvement avec effets de catastrophes, lisibilité des signaux et FPS. **Aucune publication avant validation.**
+
+
+## Sprint 02 — matériel de lumière et profondeur cohérente (9 octobre 2026)
+
+- [x] `ArenaFocalFixtureKit.lua` : les boîtiers de SpotLight ont une architecture spécifique à chaque arène : optique de mesure (Classic), cage de refroidissement (Towers), capot de transit (Crossroads), collier d'iris (Orbital). Les **SpotLights existants** sont conservés sans ajout de sources lumineuses.
+- [x] Budgets stricts : **0/1/2 pièces par projecteur Low/Medium/High**, aucun Neon, collision, particule, touch, query ou ombre supplémentaire.
+- [x] `ArenaSceneryFrames.lua` et `arena-cinematic-depth.client.lua` : horizon, couronnes, pylônes, anneaux, balises et trajectoires aériennes transformés selon `Arena.Base.CFrame`, y compris si la carte est tournée ou inclinée.
+- [x] Le trafic aérien décoratif cesse pendant la manche afin de préserver la hiérarchie d'attention des catastrophes, sans gêner les animations du lobby.
+- [x] `arena-cinematic-depth.client.lua` et `arena-lighting.client.lua` : reconstruction / ambiance re-synchronisées avec `MapVisualReadiness.watch` lorsque la base et le type de carte arrivent après le modèle. Déconnexion après suppression de la carte.
+- [x] Tests dans `arena-focal-lighting-rules.spec.luau` et `arena-presentation.spec.luau` : 4 styles × 3 profils, noms, matériaux, propriétés non-collidantes, repère incliné et cas invalides.
+- [x] `studio-e2e.client.lua` / `StudioE2E.server.lua` : un luminaire physique propre à chaque arène est désormais requis en Medium/High ; le contrôle Low admet l'absence prévue de sources.
+- [ ] Avant fusion : **Build Validation et cinq shards Open Cloud sur le même SHA**, Studio E2E, captures, mesures de FPS et vérification physique Android. Aucun nouveau rendu n'est déclaré AAA ou publié.
