@@ -142,11 +142,22 @@ local function sendShowtimePhaseProbe(phase)
 
         local deckVisible = deck and deck:IsA("BasePart")
             and deck.Transparency < 0.98
+        local qualityName = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+        local dancerVisor = root and root:FindFirstChild("HoloDancerVisor1")
+        local dancerChest = root and root:FindFirstChild("HoloDancerChestCore1")
+        local holoDetailReady = qualityName == "Low"
+            or (dancerVisor ~= nil and dancerChest ~= nil
+                and dancerVisor:GetAttribute("ChaosHologramDetail") == true
+                and dancerChest:GetAttribute("ChaosHologramDetail") == true
+                and dancerVisor.Anchored and not dancerVisor.CanCollide
+                and not dancerVisor.CanTouch and not dancerVisor.CanQuery
+                and (dancerVisor.Transparency < 0.98) == expected
+                and (dancerChest.Transparency < 0.98) == expected)
         local hero = assets and assets:FindFirstChild("ShowtimeCrownHeart")
         local dj = assets and assets:FindFirstChild("ShowtimeDJBooth")
         local okay = root ~= nil and deck ~= nil
             and assets ~= nil and hero ~= nil and dj ~= nil
-            and parts >= 12 and safe
+            and parts >= 12 and safe and holoDetailReady
             and deckVisible == expected
             and ((expected and visible > 0)
                 or (not expected and visible == 0))
@@ -158,9 +169,9 @@ local function sendShowtimePhaseProbe(phase)
             propParts = parts,
             visibleProps = visible,
             error = okay and "" or string.format(
-                "phase=%s deck=%s props=%d visible=%d crown=%s dj=%s safe=%s",
+                "phase=%s deck=%s props=%d visible=%d crown=%s dj=%s safe=%s holo=%s",
                 phase, tostring(deckVisible), parts, visible,
-                tostring(hero ~= nil), tostring(dj ~= nil), tostring(safe)
+                tostring(hero ~= nil), tostring(dj ~= nil), tostring(safe), tostring(holoDetailReady)
             ),
         })
     end)
