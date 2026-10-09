@@ -48,6 +48,12 @@ survival route without teleporting or bypassing collision. Every player receives
   adjacent independent islands disappear.
 - All four links are generated/destroyed with the arena; no new persistent
   server heartbeat or external models.
+- **Shrinking Arena safety:** unlike a fixed 49-stud beam crossing moving
+  tower decks, each Skybridge now rescales its physical span continuously
+  (49→18.2 studs at 45% shrink), and carries its rails, steel ribs, inset
+  panels, structural support posts and glows in the same relative layout.
+  Every transform and size is restored after the round; no client-only
+  scaffold masquerades as a safe route.
 - **QA:** sprint across both junctions of every bridge, jump and land on
   both sides, visit via each updraft pad, and test in every hazard combination.
   Verify no rail, bolt, underframe or fake collider outlives a map swap.

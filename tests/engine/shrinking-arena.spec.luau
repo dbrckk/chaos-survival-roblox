@@ -91,6 +91,81 @@ describe("Shrinking Arena mobility integration", function()
             generated:Destroy()
         end
     end)
+    it("shrinks four Tower Run skybridge decks, rails and supports as one assembly", function()
+        local root = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena:FindFirstChild("Platforms")
+        local decor = arena:FindFirstChild("Decor")
+        local originals = {}
+        local details = {}
+
+        expect(ShrinkingArena.skybridgeSpan(49, 1)).toBe(49)
+        expect(math.abs(ShrinkingArena.skybridgeSpan(49, 0.45) - 18.2) < 0.01).toBe(true)
+        for index = 18, 21 do
+            local bridge = platforms:FindFirstChild("Skybridge" .. index)
+            expect(bridge ~= nil).toBe(true)
+            expect(bridge.CanCollide).toBe(true)
+            expect(bridge:GetAttribute("ChaosSkybridge")).toBe(true)
+            local prefix = {
+                "SkybridgeRail" .. index .. "_1",
+                "SkybridgeRib" .. index .. "_0",
+                "PlatformGlow" .. index,
+                "PlatformPanel" .. index,
+                "PlatformUnderFrame" .. index,
+                "PlatformCoreGlow" .. index,
+                "PlatformSupport" .. index .. "_1",
+            }
+            originals[bridge] = {cf = bridge.CFrame, size = bridge.Size}
+            details[bridge] = {}
+            for _, name in ipairs(prefix) do
+                local part = decor:FindFirstChild(name)
+                expect(part ~= nil).toBe(true)
+                originals[part] = {cf = part.CFrame, size = part.Size}
+                table.insert(details[bridge], part)
+            end
+        end
+
+        local running = true
+        local callbacks = {}
+        ShrinkingArena.start({
+            Config = Config, RoundSeconds = 0.36,
+            Cleanup = {}, OnCleanup = callbacks,
+            Active = function() return running end,
+        })
+        task.wait(0.22)
+
+        for bridge, old in pairs(originals) do
+            if bridge:GetAttribute("ChaosSkybridge") == true then
+                local alongX = old.size.X > old.size.Z
+                local originalSpan = math.max(old.size.X, old.size.Z)
+                local shrunkSpan = math.max(bridge.Size.X, bridge.Size.Z)
+                expect(shrunkSpan < originalSpan).toBe(true)
+                expect(shrunkSpan > 4).toBe(true)
+                expect(bridge.CanCollide).toBe(true)
+                expect((bridge.Position - old.cf.Position).Magnitude < 0.01).toBe(true)
+
+                for _, detail in ipairs(details[bridge]) do
+                    local prior = originals[detail]
+                    local d0 = alongX and prior.size.X or prior.size.Z
+                    local d1 = alongX and detail.Size.X or detail.Size.Z
+                    if d0 > 2.2 then
+                        expect(d1 < d0).toBe(true)
+                    end
+                    expect(detail.CanCollide).toBe(false)
+                    expect(detail.Parent).toBe(decor)
+                end
+            end
+        end
+
+        running = false
+        cleanup(callbacks, {})
+        for part, old in pairs(originals) do
+            expect((part.Position - old.cf.Position).Magnitude < 0.001).toBe(true)
+            expect((part.Size - old.size).Magnitude < 0.001).toBe(true)
+        end
+        root:Destroy()
+    end)
+
     it("shrinks every Orbital ramp with the decks, then restores its beams", function()
         local root = MapBuilder.build(Config, "Orbital", ArenaVariants)
         local arena = root:FindFirstChild("Arena")

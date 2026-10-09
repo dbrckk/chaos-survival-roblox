@@ -30,6 +30,16 @@ function D.scaledEdgeTransform(originalSize, localPosition, scale)
     return Vector3.new(scaledX, size.Y, scaledZ), D.scaledLocalPosition(offset, safeScale)
 end
 
+-- Towers' four permanent skybridges originally span the inner edges of
+-- towers 56 studs apart with 7 studs total endpoint overlap.
+-- During shrink their endpoints must remain attached to the moving
+-- middle decks, rather than retaining their pre-shrink 49-stud span.
+function D.skybridgeSpan(originalSpan, scale)
+    local span = math.max(1, tonumber(originalSpan) or 49)
+    local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
+    return math.max(4, (span + 7) * safeScale - 7)
+end
+
 function D.start(ctx)
     local generatedMap = workspace:FindFirstChild("GeneratedMap")
     local arena = generatedMap and generatedMap:FindFirstChild("Arena")
@@ -73,15 +83,48 @@ function D.start(ctx)
         end
     end
 
+    -- Engineered Skybridge detail is a local assembly relative to the
+    -- physical bridge, not a generic independent floor decoration.
+    local bridgeStates = {}
+    for _, state in ipairs(movableParts) do
+        local index = tonumber(state.part.Name:match("^Skybridge(%d+)$"))
+        if index and state.part:GetAttribute("ChaosSkybridge") == true then
+            state.bridgeSpan = math.max(state.part.Size.X, state.part.Size.Z)
+            state.alongX = state.part.Size.X > state.part.Size.Z
+            bridgeStates[index] = state
+        end
+    end
+
+    local bridgeDetails = {}
     if decor then
         for _, item in ipairs(decor:GetChildren()) do
-            if item:IsA("BasePart") and string.match(item.Name, "^PlatformGlow%d+$") then
-                movableParts[#movableParts+1] = {
-                    part = item,
-                    cframe = item.CFrame,
-                    localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
-                    localPosition = originalCFrame:PointToObjectSpace(item.Position),
-                }
+            if item:IsA("BasePart") then
+                local index = tonumber(
+                    item.Name:match("^SkybridgeRail(%d+)_")
+                    or item.Name:match("^SkybridgeRib(%d+)_")
+                    or item.Name:match("^PlatformGlow(%d+)$")
+                    or item.Name:match("^PlatformPanel(%d+)$")
+                    or item.Name:match("^PlatformUnderFrame(%d+)$")
+                    or item.Name:match("^PlatformCoreGlow(%d+)$")
+                    or item.Name:match("^PlatformSupport(%d+)_")
+                )
+                local bridge = index and bridgeStates[index]
+                if bridge then
+                    table.insert(bridgeDetails, {
+                        part = item,
+                        bridge = bridge,
+                        size = item.Size,
+                        cframe = item.CFrame,
+                        localCFrame = bridge.part.CFrame:ToObjectSpace(item.CFrame),
+                    })
+                elseif item.Name:match("^PlatformGlow%d+$") then
+                    movableParts[#movableParts+1] = {
+                        part = item,
+                        cframe = item.CFrame,
+                        localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
+                        localPosition = originalCFrame:PointToObjectSpace(item.Position),
+                    }
+                end
             end
         end
     end
@@ -142,12 +185,44 @@ function D.start(ctx)
                     local rotationOnly = state.localCFrame - state.localCFrame.Position
                     part.CFrame = (originalCFrame * CFrame.new(localPosition)) * rotationOnly
 
+                    if state.bridgeSpan then
+                        local span = D.skybridgeSpan(state.bridgeSpan, scale)
+                        part.Size = state.alongX
+                            and Vector3.new(span, part.Size.Y, part.Size.Z)
+                            or Vector3.new(part.Size.X, part.Size.Y, span)
+                    end
+
                     if state.impulse then
                         local scaledImpulse = D.scaledImpulse(state.impulse, scale)
                         part:SetAttribute("ImpulseX", scaledImpulse.X)
                         part:SetAttribute("ImpulseY", scaledImpulse.Y)
                         part:SetAttribute("ImpulseZ", scaledImpulse.Z)
                     end
+                end
+            end
+
+            -- Rails, glow panels, armor ribs and supports maintain their
+            -- engineering offsets from the rescaled physical deck.
+            for _, detail in ipairs(bridgeDetails) do
+                local piece = detail.part
+                local bridge = detail.bridge
+                if piece.Parent and bridge.part.Parent then
+                    local span = D.skybridgeSpan(bridge.bridgeSpan, scale)
+                    local ratio = span / bridge.bridgeSpan
+                    local p = detail.localCFrame.Position
+                    local rotationOnly = detail.localCFrame - p
+                    local relative = bridge.alongX
+                        and Vector3.new(p.X * ratio, p.Y, p.Z)
+                        or Vector3.new(p.X, p.Y, p.Z * ratio)
+                    piece.CFrame = bridge.part.CFrame
+                        * CFrame.new(relative) * rotationOnly
+                    local size = detail.size
+                    piece.Size = bridge.alongX
+                        and Vector3.new(
+                            size.X > 2.2 and size.X * ratio or size.X,
+                            size.Y, size.Z)
+                        or Vector3.new(size.X, size.Y,
+                            size.Z > 2.2 and size.Z * ratio or size.Z)
                 end
             end
 
@@ -178,11 +253,23 @@ function D.start(ctx)
             local part = state.part
             if part and part.Parent then
                 part.CFrame = state.cframe
+                if state.bridgeSpan then
+                    part.Size = state.alongX
+                        and Vector3.new(state.bridgeSpan, part.Size.Y, part.Size.Z)
+                        or Vector3.new(part.Size.X, part.Size.Y, state.bridgeSpan)
+                end
                 if state.impulse then
                     part:SetAttribute("ImpulseX", state.impulse.X)
                     part:SetAttribute("ImpulseY", state.impulse.Y)
                     part:SetAttribute("ImpulseZ", state.impulse.Z)
                 end
+            end
+        end
+
+        for _, detail in ipairs(bridgeDetails) do
+            if detail.part and detail.part.Parent then
+                detail.part.Size = detail.size
+                detail.part.CFrame = detail.cframe
             end
         end
     end
