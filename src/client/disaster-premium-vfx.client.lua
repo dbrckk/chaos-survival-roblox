@@ -261,7 +261,7 @@ ensureRenderLoop = function()
             -- The warning/lava renderer should not wake at 30 Hz in the
             -- lobby or between hazards on Android devices.
             if not lavaState and next(freezeStates) == nil then
-                task.wait(0.42)
+                task.wait(0.16)
                 continue
             end
             local tier = quality()
