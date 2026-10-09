@@ -570,6 +570,38 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             lane.Transparency = 0.84
         end
 
+        -- Flux Relay navigation is physically readable from the floor.
+        -- Inlaid cyan chevrons teach the return-to-hub loop rather than
+        -- forcing the player to decode a HUD paragraph during a disaster.
+        for laneIndex = 1, 4 do
+            local direction = laneIndex == 1 and Vector3.new(1, 0, 0)
+                or (laneIndex == 2 and Vector3.new(0, 0, 1)
+                    or (laneIndex == 3 and Vector3.new(-1, 0, 0)
+                        or Vector3.new(0, 0, -1)))
+            for stepIndex = 1, 3 do
+                local distance = 23 + stepIndex * 3.15
+                local position = center + direction * distance
+                    + Vector3.new(0, 1.29, 0)
+                local facing = CFrame.lookAt(position,
+                    center + Vector3.new(0, 1.29, 0))
+                for side = -1, 1, 2 do
+                    local mark = decorPart(
+                        decor,
+                        "FluxRouteChevron" .. laneIndex .. "_" ..
+                            stepIndex .. "_" .. tostring(side),
+                        Vector3.new(0.13, 0.05, 0.95),
+                        position,
+                        stepIndex == 3 and theme.Accent or theme.Secondary,
+                        VisualTheme.Materials.Glow
+                    )
+                    mark.CFrame = facing * CFrame.new(side * 0.38, 0, 0)
+                        * CFrame.Angles(0, math.rad(side * 34), 0)
+                    mark.Transparency = 0.36 + (3 - stepIndex) * 0.06
+                    mark.CastShadow = false
+                end
+            end
+        end
+
         local hub = decorPart(
             decor,
             "CrossroadHubMark",
