@@ -56,6 +56,7 @@ overdriveStroke.Transparency = 0.25
 overdriveStroke.Parent = overdriveLabel
 
 local lastTrigger = 0
+local titleToken = 0
 
 local function currentVfxTier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -110,9 +111,11 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     lastTrigger = now
 
     local overdrive = payload.overdrive == true
+    local fluxRelay = payload.mechanicName == "FLUX RELAY"
     local accent = overdrive
         and Color3.fromRGB(255, 210, 90)
-        or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))
+        or (fluxRelay and Color3.fromRGB(88, 250, 229)
+            or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255)))
     local tier = currentVfxTier()
     local reduced = player:GetAttribute("ReduceMotion") == true
     flash.BackgroundColor3 = accent
@@ -127,7 +130,16 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
 
     pulseCharacter(accent)
 
-    if overdrive then
+    if overdrive or fluxRelay then
+        titleToken += 1
+        local token = titleToken
+        overdriveLabel.Text = overdrive and "OVERDRIVE BOOST" or "FLUX RELAY"
+        overdriveLabel.TextColor3 = overdrive
+            and Color3.fromRGB(255, 225, 115)
+            or Color3.fromRGB(147, 255, 232)
+        overdriveStroke.Color = overdrive
+            and Color3.fromRGB(255, 210, 90)
+            or Color3.fromRGB(88, 250, 229)
         overdriveLabel.Visible = true
         overdriveLabel.TextTransparency = 1
         overdriveLabel.BackgroundTransparency = 1
@@ -136,12 +148,15 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
             BackgroundTransparency = 0.10,
         }):Play()
         task.delay(0.55, function()
+            if token ~= titleToken then return end
             TweenService:Create(overdriveLabel, TweenInfo.new(0.18), {
                 TextTransparency = 1,
                 BackgroundTransparency = 1,
             }):Play()
             task.delay(0.2, function()
-                overdriveLabel.Visible = false
+                if token == titleToken then
+                    overdriveLabel.Visible = false
+                end
             end)
         end)
     end
