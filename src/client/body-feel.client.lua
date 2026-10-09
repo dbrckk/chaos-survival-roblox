@@ -52,6 +52,8 @@ local ascentReachPose = 0
 local descentBracePose = 0
 local lastGroundCueAt = -math.huge
 local baseC0 = setmetatable({}, {__mode = "k"})
+local bindSerial = 0
+local humanoidStateConnection = nil
 
 local function motor(parent, name)
     local item = parent and parent:FindFirstChild(name)
@@ -77,10 +79,17 @@ local function rememberBaseC0(joint)
 end
 
 local function bind(nextCharacter)
+    bindSerial += 1
+    local serial = bindSerial
+    if humanoidStateConnection then
+        humanoidStateConnection:Disconnect()
+        humanoidStateConnection = nil
+    end
     resetMotors()
     character = nextCharacter
-    humanoid = character:WaitForChild("Humanoid", 5)
-    root = character:WaitForChild("HumanoidRootPart", 5)
+    -- Block rendering on this rig until both body anchors are present.
+    humanoid = nil
+    root = nil
     waist = nil
     rootJoint = nil
     leftHip = nil
@@ -114,6 +123,16 @@ local function bind(nextCharacter)
     lastGroundCueAt = -math.huge
     readyPose = 0
 
+    -- CharacterAdded can fire again while a streamed rig is still yielding.
+    -- An older promise must never overwrite this client's current motors.
+    local nextHumanoid = nextCharacter:WaitForChild("Humanoid", 5)
+    local nextRoot = nextCharacter:WaitForChild("HumanoidRootPart", 5)
+    if serial ~= bindSerial or character ~= nextCharacter
+        or player.Character ~= nextCharacter then
+        return
+    end
+    humanoid = nextHumanoid
+    root = nextRoot
     if not humanoid or not root or humanoid.RigType ~= Enum.HumanoidRigType.R15 then
         return
     end
@@ -138,7 +157,8 @@ local function bind(nextCharacter)
         rememberBaseC0(joint)
     end
 
-    humanoid.StateChanged:Connect(function(_, state)
+    humanoidStateConnection = humanoid.StateChanged:Connect(function(_, state)
+        if serial ~= bindSerial then return end
         if state == Enum.HumanoidStateType.Jumping then
             jumpWeight = math.max(jumpWeight, 1)
         elseif state == Enum.HumanoidStateType.Freefall then
@@ -162,10 +182,21 @@ if player.Character then
 end
 player.CharacterAdded:Connect(bind)
 player.CharacterRemoving:Connect(function()
+    bindSerial += 1
+    if humanoidStateConnection then
+        humanoidStateConnection:Disconnect()
+        humanoidStateConnection = nil
+    end
     resetMotors()
     character = nil
     humanoid = nil
     root = nil
+    waist = nil
+    rootJoint = nil
+    leftHip = nil
+    rightHip = nil
+    leftShoulder = nil
+    rightShoulder = nil
 end)
 
 local function expAlpha(speed, dt)
