@@ -676,6 +676,14 @@ local function updateStage(now)
     stageBase.Transparency = enabled and 0.09 or 1
     if titleBillboard then
         titleBillboard.Enabled = enabled
+        local title = titleBillboard:FindFirstChildOfClass("TextLabel")
+        if title and title:IsA("TextLabel") then
+            local emoteId = enabled and currentEmote and currentEmote.id or nil
+            local captionText = ShowtimeChoreography.caption(emoteId, crowd, french)
+            if title.Text ~= captionText then
+                title.Text = captionText
+            end
+        end
     end
     for _, entry in ipairs(fixedPieces) do
         entry.part.Transparency = enabled and entry.transparency or 1
