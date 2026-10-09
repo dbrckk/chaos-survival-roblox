@@ -137,7 +137,7 @@ describe("Character cinematic reactions", function()
                 expect(item:GetAttribute("ChaosReactionMode")).toBe("Shock")
                 expect(item:GetAttribute("ChaosReactionKind")).toBe("Meteor")
                 expect(item.FaceCamera).toBe(true)
-                expect(item.CanCollide == nil).toBe(true)
+                expect(item:IsA("BasePart")).toBe(false)
             end
         end
         expect(CharacterReactionVisuals.burst(root, "Wrong", "Meteor", 1,
