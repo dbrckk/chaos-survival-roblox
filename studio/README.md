@@ -33,6 +33,7 @@ The same Studio plugin also adds **Chaos Solo AI**. With the current source sync
 - valid unanchored HumanoidRootPart/Humanoid on each bot;
 - `GetNetworkOwner() == nil` for each bot assembly after the bounded network-ownership initialization;
 - at least two distinct bots moving horizontally, including an actual playing locomotion animation track (not just a MoveDirection signal).
+- all three living bots entering the arena in the same solo session, flagged `AISurvivorInRound=true` on their rig; idle lobby bots are not valid spectator camera targets.
 
 The AI roster also stays fixed from **ready** through **round** and **result** when other human clients join or leave. New players are considered for AI-count reconciliation at the next intermission, not halfway through an active survival contest.
 
