@@ -33,6 +33,9 @@ local function disposeBot(model)
         local trail = state.root and state.root:FindFirstChild("AISurvivorCosmeticTrail")
         if trail and trail:IsA("Trail") then
             trail.Enabled = false
+            if state.defaultTrailColor then
+                trail.Color = state.defaultTrailColor
+            end
         end
         bots[model] = nil
     end
@@ -73,6 +76,11 @@ local function watch(model)
         lastSpeed = 0,
         lastVelocity = root.AssemblyLinearVelocity,
         lastCueAt = -math.huge,
+        cueKind = nil,
+        cueUntil = 0,
+        trail = nil,
+        defaultTrailColor = nil,
+        appliedTrailKind = nil,
     }
 end
 
@@ -167,6 +175,20 @@ task.spawn(function()
 
             local trail = state.root:FindFirstChild("AISurvivorCosmeticTrail")
             if trail and trail:IsA("Trail") then
+                if state.trail ~= trail then
+                    state.trail = trail
+                    state.defaultTrailColor = trail.Color
+                    state.appliedTrailKind = nil
+                end
+                local accentKind = phase == "round" and not reduceMotion
+                    and q.Name ~= "Low" and now < state.cueUntil
+                    and state.cueKind or nil
+                if state.appliedTrailKind ~= accentKind then
+                    local accent = BotRules.trailAccent(accentKind)
+                    trail.Color = accent and ColorSequence.new(accent)
+                        or state.defaultTrailColor
+                    state.appliedTrailKind = accentKind
+                end
                 local ratio = math.clamp(
                     state.lastSpeed / math.max(1, state.humanoid.WalkSpeed),
                     0, 1.25
@@ -194,6 +216,8 @@ task.spawn(function()
                     if effect then
                         lastGlobalCueAt = now
                         state.lastCueAt = now
+                        state.cueKind = cue
+                        state.cueUntil = now + 0.32
                         emissions += 1
                     end
                 end
