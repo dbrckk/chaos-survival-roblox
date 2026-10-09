@@ -106,6 +106,7 @@ end
 feedbackEvent.OnClientEvent:Connect(function(payload)
     local now = os.clock()
     local gridClear = payload.mechanicName == "GRID CIRCUIT CLEAR"
+    local skyrail = payload.mechanicName == "SKYRAIL SLIPSTREAM"
     -- The final challenge success should never be swallowed by a mobility
     -- pad's short visual cooldown during a fast last-node crossing.
     if now - lastTrigger < 0.18 and not gridClear then
@@ -126,6 +127,8 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
                 or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))))
     if gridClear and not overdrive then
         accent = Color3.fromRGB(120, 245, 179)
+    elseif skyrail and not overdrive then
+        accent = Color3.fromRGB(100, 230, 250)
     end
     local tier = currentVfxTier()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -141,12 +144,13 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
 
     pulseCharacter(accent)
 
-    if overdrive or fluxRelay or helixFlow or gridClear then
+    if overdrive or fluxRelay or helixFlow or gridClear or skyrail then
         titleToken += 1
         local token = titleToken
         overdriveLabel.Text = overdrive and "OVERDRIVE BOOST"
             or (gridClear and "GRID CIRCUIT CLEAR"
-                or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY"))
+                or (skyrail and "SKYRAIL SLIPSTREAM"
+                    or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY")))
         overdriveLabel.TextColor3 = (overdrive or orbitMaster)
             and Color3.fromRGB(255, 225, 115)
             or (gridClear and Color3.fromRGB(197, 255, 218)

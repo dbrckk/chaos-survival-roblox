@@ -54,6 +54,18 @@ survival route without teleporting or bypassing collision. Every player receives
   panels, structural support posts and glows in the same relative layout.
   Every transform and size is restored after the round; no client-only
   scaffold masquerades as a safe route.
+- **Skyrail Slipstream (active gameplay):** four server-owned invisible
+  checkpoint zones at the midspan of each elevated Skybridge. An active
+  human/bot running along the bridge at >=9 studs/s receives a *directional*
+  12 studs/s additive impulse capped at 42 studs/s total horizontal speed,
+  with a 4.5-second cooldown keyed to the character. Vertical velocity stays
+  within the game's existing safety envelope. Stationary, perpendicular,
+  out-of-position, airborne-fast, spectator and dead rig contacts cannot
+  trigger. Each checkpoint is welded to the solid bridge so it follows
+  Shrinking Arena as the deck midpoint moves. The human sees a distinct
+  cyan SKYRAIL SLIPSTREAM cue and the route signal can react for observers;
+  no user remote input, coins, paid privilege, permanent movement modifier,
+  damage, or separate server polling loops.
 - **Original Skyrail Conductor skyline:** four bridge-middle mechanical
   gantries with armor plated pylons, inset signal fibers, overhead crown
   structures and asymmetric signal fins. Animated cyan/gold courier slivers

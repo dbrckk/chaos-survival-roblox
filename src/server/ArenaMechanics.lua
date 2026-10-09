@@ -9,6 +9,10 @@ local gridModule = script and script.Parent:FindFirstChild("GridCircuitService")
 local GridCircuitService = if gridModule
     then require(gridModule)
     else require("./GridCircuitService")
+local skyrailModule = script and script.Parent:FindFirstChild("SkyrailSlipstream")
+local SkyrailSlipstream = if skyrailModule
+    then require(skyrailModule)
+    else require("./SkyrailSlipstream")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
@@ -25,7 +29,7 @@ ArenaMechanics.Definitions = {
     },
     Towers = {
         Name = "UPDRAFT PADS",
-        Hint = "Cyan pads launch you upward to reopen vertical escape routes",
+        Hint = "Cyan updraft pads lift you; run across elevated Skyrails for a controlled slipstream boost",
         Color = Color3.fromRGB(65, 220, 255),
         Pads = {
             {offset = Vector3.new(-28, 1.7, -28), impulse = Vector3.new(8, 55, 8)},
@@ -218,6 +222,9 @@ function ArenaMechanics.start(ctx, variantId)
     if variantId == "Classic" then
         -- Optional non-pay-to-win navigation skill inside the stable base.
         GridCircuitService.start(ctx, folder, base.Position)
+    elseif variantId == "Towers" then
+        -- Active elevated movement route that does not alter bridge physics.
+        SkyrailSlipstream.start(ctx, folder, arena)
     elseif variantId == "Crossroads" then
         -- Secondary timed traversal loop, sharing the mechanics lifecycle and
         -- round cleanup. Unlike pads, only the charged alternating lane pair

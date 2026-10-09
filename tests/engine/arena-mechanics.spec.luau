@@ -6,6 +6,7 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
 local FluxRelayRules = require("../../src/shared/FluxRelayRules")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
+local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
 local GridCircuitService = require("../../src/server/GridCircuitService")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
@@ -41,6 +42,60 @@ describe("Arena mechanics", function()
         end
         expect(GridCircuitRules.previous(0) == nil).toBe(true)
         expect(GridCircuitRules.previous(5) == nil).toBe(true)
+    end)
+
+    it("builds four welded Skyrail Slipstream checkpoints on permanent Tower bridges", function()
+        local root = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            Contestants = {},
+        }
+        local mechanic = ArenaMechanics.start(ctx, "Towers")
+        expect(mechanic ~= nil).toBe(true)
+        local folder = arena:FindFirstChild("Mechanics")
+            :FindFirstChild("SkyrailSlipstream")
+        expect(folder ~= nil).toBe(true)
+        expect(#folder:GetChildren()).toBe(4)
+        for _, sensor in ipairs(folder:GetChildren()) do
+            local weld = sensor:FindFirstChild("SkyrailFollowBridge")
+            expect(weld ~= nil).toBe(true)
+            expect(weld.Part1).toBe(sensor)
+            expect(weld.Part0:GetAttribute("ChaosSkybridge")).toBe(true)
+            expect(sensor.Anchored).toBe(false)
+            expect(sensor.Transparency).toBe(1)
+            expect(sensor.CanCollide).toBe(false)
+            expect(sensor.CanQuery).toBe(false)
+            expect(sensor.CanTouch).toBe(true)
+            expect((sensor.Position - (weld.Part0.CFrame
+                * CFrame.new(0, weld.Part0.Size.Y * 0.5 + 2.1, 0)).Position
+            ).Magnitude < 0.01).toBe(true)
+        end
+        root:Destroy()
+    end)
+
+    it("limits Skyrail impulse speed and rejects off-axis or stationary movement", function()
+        local x = Instance.new("Part")
+        x.Size = Vector3.new(49, 1, 4.5)
+        local z = Instance.new("Part")
+        z.Size = Vector3.new(4.5, 1, 49)
+        expect(SkyrailSlipstream.direction(x, Vector3.new(15, 0, 0))).toBe(Vector3.xAxis)
+        expect(SkyrailSlipstream.direction(x, Vector3.new(-15, 0, 0))).toBe(-Vector3.xAxis)
+        expect(SkyrailSlipstream.direction(x, Vector3.new(0, 0, 18)) == nil).toBe(true)
+        expect(SkyrailSlipstream.direction(x, Vector3.new(6, 0, 0)) == nil).toBe(true)
+        local direction = SkyrailSlipstream.direction(z, Vector3.new(0, 0, -18))
+        expect(direction ~= nil).toBe(true)
+        expect(math.abs(direction.Z)).toBe(1)
+        local nextVelocity = SkyrailSlipstream.velocity(
+            Vector3.new(38, 15, 0), Vector3.xAxis
+        )
+        expect(nextVelocity.X).toBe(42)
+        expect(nextVelocity.Y).toBe(15)
+        expect(SkyrailSlipstream.Cooldown >= 4).toBe(true)
+        x:Destroy()
+        z:Destroy()
     end)
 
     it("offers an optional clockwise four-node Grid Circuit on Classic", function()
