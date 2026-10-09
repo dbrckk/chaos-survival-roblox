@@ -1,6 +1,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local FluxRelayRules = require(ReplicatedStorage.Shared.FluxRelayRules)
+-- The Open Cloud suite imports source modules against the last published
+-- place, so pre-merge Shared modules may not be replicated there yet.
+local fluxRulesInPlace = ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("FluxRelayRules")
+local FluxRelayRules = if fluxRulesInPlace
+    then require(fluxRulesInPlace)
+    else require("../shared/FluxRelayRules")
 
 local CrossroadsFluxRelay = {}
 
