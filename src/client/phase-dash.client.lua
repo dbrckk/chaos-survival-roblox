@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 local SoundService = game:GetService("SoundService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
@@ -17,6 +18,9 @@ local stateEvent = remotes:WaitForChild("RoundState")
 local dashEvent = remotes:WaitForChild("PhaseDash")
 local phase = "waiting"
 local nextSendAt = -math.huge
+local introduced = false
+local introUntil = 0
+local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
 local otherConnections = {}
 
 -- Track all temporary dash geometry in the audited local visual budget.
@@ -49,6 +53,23 @@ UITheme.addCorner(button, UITheme.Corners.Medium)
 UITheme.addStroke(button, Color3.fromRGB(97, 226, 239), 1.7, 0.15)
 UITheme.addPressFeedback(button, 0.94)
 UITheme.addTextConstraint(button, 12, 20)
+
+local intro = Instance.new("TextLabel")
+intro.Name = "PhaseDashFirstUseHint"
+intro.AnchorPoint = Vector2.new(0.5, 1)
+intro.Position = UDim2.new(0.5, 0, 0, -7)
+intro.Size = UDim2.fromOffset(158, 34)
+intro.BackgroundColor3 = Color3.fromRGB(12, 22, 37)
+intro.BackgroundTransparency = 0.14
+intro.Font = Enum.Font.GothamBold
+intro.TextColor3 = Color3.fromRGB(190, 248, 239)
+intro.TextScaled = true
+intro.TextWrapped = true
+intro.Text = french and "ESQUIVE LES DANGERS" or "DODGE THE DANGER"
+intro.Visible = false
+intro.Parent = button
+UITheme.addCorner(intro, UITheme.Corners.Medium)
+UITheme.addTextConstraint(intro, 11, 16)
 
 local timerRail = Instance.new("Frame")
 timerRail.Name = "ChargeRail"
@@ -244,13 +265,20 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if input.KeyCode == Enum.KeyCode.Q then requestDash() end
 end)
 stateEvent.OnClientEvent:Connect(function(state)
-    phase = type(state) == "table" and tostring(state.phase or "waiting") or "waiting"
+    local nextPhase = type(state) == "table"
+        and tostring(state.phase or "waiting") or "waiting"
+    if nextPhase == "round" and phase ~= "round" and not introduced then
+        introduced = true
+        introUntil = os.clock() + 7
+    end
+    phase = nextPhase
 end)
 
 task.spawn(function()
     while gui.Parent do
         local active = canUse()
         button.Visible = active
+        intro.Visible = active and os.clock() < introUntil and remaining() <= 0
         if active then
             local remainingSeconds = remaining()
             button.Size = UserInputService.TouchEnabled
@@ -270,6 +298,6 @@ task.spawn(function()
                 charge.Size = UDim2.fromScale(1, 1)
             end
         end
-        task.wait(0.12)
+        task.wait(active and 0.12 or 0.35)
     end
 end)
