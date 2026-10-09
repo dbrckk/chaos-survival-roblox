@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local Layout = require(ReplicatedStorage.Shared.DisasterAtmosphereLayout)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -191,16 +192,14 @@ local function addVolumetricBeam(index, base, angle, radius, color, tier)
 
     local height = tier.Name == "High" and 42 or 30
     local width = tier.Name == "High" and 1.1 or 0.75
-    local pos = base.Position + Vector3.new(
-        math.cos(angle) * radius,
-        height * 0.5 + 4,
-        math.sin(angle) * radius
+    local frame = Layout.beamFrame(
+        base.CFrame, base.Size, angle, radius, height
     )
 
     local shaft = makePart(
         "DisasterLightShaft" .. index,
         Vector3.new(width, height, width),
-        CFrame.new(pos),
+        frame,
         color,
         Enum.Material.Neon,
         tier.Name == "High" and 0.86 or 0.90
@@ -219,6 +218,12 @@ end
 local function rebuild()
     clear()
 
+    -- Empty lobby/vote/result atmosphere only adds visual clutter and GPU
+    -- load. Keep this layer reserved for live server-declared catastrophes.
+    if phase ~= "round" or #disasterIds == 0 then
+        return
+    end
+
     local _, base, variant, theme = arenaContext()
     if not base then
         return
@@ -231,20 +236,22 @@ local function rebuild()
     local secondary = secondaryProfile and secondaryProfile.Accent or theme.Secondary
 
     local radius = math.max(base.Size.X, base.Size.Z) * 0.52
-    local beaconCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+    local beaconCount = Layout.beaconCount(tier.Name, true)
 
     for i = 1, beaconCount do
         local angle = ((i - 1) / beaconCount) * math.pi * 2
-        local pos = base.Position + Vector3.new(
-            math.cos(angle) * radius,
-            base.Size.Y * 0.5 + 0.8,
-            math.sin(angle) * radius
+        local pos = Layout.point(
+            base.CFrame, base.Size, angle, radius, 0.8
+        )
+        local beaconFrame = CFrame.fromMatrix(
+            pos, base.CFrame.RightVector, base.CFrame.UpVector,
+            -base.CFrame.LookVector
         )
 
         local beacon = makePart(
             "DisasterPerimeterBeacon" .. i,
             Vector3.new(0.44, 1.8, 0.44),
-            CFrame.new(pos),
+            beaconFrame,
             i % 2 == 0 and secondary or accent,
             Enum.Material.Neon,
             tier.Name == "Low" and 0.50 or 0.30
@@ -338,13 +345,15 @@ local function ensureRenderLoop()
             if part and part.Parent and base and base.Parent then
                 local sweep = math.sin(clock * 0.38 * motion + state.index * 0.9) * 0.12
                 local angle = state.angle + sweep
-                local pos = base.Position + Vector3.new(
-                    math.cos(angle) * state.radius,
-                    state.height * 0.5 + 4,
-                    math.sin(angle) * state.radius
+                local deckFrame = Layout.beamFrame(
+                    base.CFrame, base.Size, angle,
+                    state.radius, state.height
                 )
-                part.CFrame = CFrame.new(pos)
-                    * CFrame.Angles(math.rad(4 * math.sin(clock * 0.5 + state.index)), 0, math.rad(5 * math.cos(clock * 0.43 + state.index)))
+                part.CFrame = deckFrame * CFrame.Angles(
+                    math.rad(4 * math.sin(clock * 0.5 + state.index)),
+                    0,
+                    math.rad(5 * math.cos(clock * 0.43 + state.index))
+                )
                 part.Transparency = phase == "round"
                     and (finalRush and 0.78 or 0.84)
                     or 0.93
