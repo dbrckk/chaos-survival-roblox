@@ -489,6 +489,31 @@ function AISurvivorRules.brainCadence(recordCount, phase)
     return 0.18
 end
 
+-- Always return a NUMBER: a Lua `or` chain with a bare equality can
+-- produce boolean true for FreezeWarning and crash distance comparisons.
+function AISurvivorRules.warningDetectionRadius(warningName, visualRadius)
+    if warningName == "FreezeWarning" or warningName == "JumpShockWarning" then
+        return 80
+    end
+    return math.max(0, tonumber(visualRadius) or 0) + 9
+end
+
+-- A single pulse should generate at most one deliberate jump per survivor.
+-- The caller marks a warning instance as handled even when a cautious bot
+-- declines the Freeze jump. A newly spawned warning is a new opportunity.
+function AISurvivorRules.shouldJumpForWarning(warningName, alreadyHandled, roll)
+    if alreadyHandled == true then
+        return false
+    end
+    if warningName == "JumpShockWarning" then
+        return true
+    end
+    if warningName == "FreezeWarning" then
+        return (tonumber(roll) or 1) < 0.55
+    end
+    return false
+end
+
 function AISurvivorRules.reactionReady(firstSeenAt, now, reactionSeconds)
     local seen = tonumber(firstSeenAt)
     local current = tonumber(now)
