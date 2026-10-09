@@ -272,3 +272,15 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] Reprise automatique lorsque `GeneratedMap`, `Arena.Base` ou `VariantId` arrivent hors ordre ; le changement de qualité reconstruit proprement la couche, et la suppression de la carte détruit les pièces.
 - [x] Tests de structures `arena-presentation.spec.luau` : 4 cartes × 3 tiers, noms spécifiques, matériaux Low, limites, orientation, non-collision et entrées invalides.
 - [ ] **Validation bloquante** : vérifier Build Validation et Open Cloud sur le **SHA final**, puis quatre angles de caméra dans Roblox Studio et Android Low/Medium/High à 30/60 FPS avant déclaration de qualité de production.
+
+
+## Sprint 02 — finitions matérielles des sols et remise en place des couches (9 octobre 2026)
+
+- [x] `ArenaDeckFinishKit.lua` : six motifs distincts par arène ; gravure d'arpentage (Classic), plaques de charge et d'ancrage (Towers), flèches de transit en relief (Crossroads), iris de confinement (Orbital).
+- [x] Detail borné par tier : **2 pièces Low / 4 Medium / 6 High**, sans particules, Neon, éclairage supplémentaire, hitbox, contact, query ni ombre coûteuse.
+- [x] `arena-surface-detail.client.lua` : plans et compositions 3D calculés dans le repère `Arena.Base.CFrame` pour les arènes orientées ; colorimétrie réactive aux catastrophes préservée.
+- [x] Correction de la superposition : le serveur instancie `ArenaDeckInset` au-dessus de `Arena.Base`. Les couches de détail client sont surélevées de **0,18 stud au-dessus du sommet de Base**, pour ne plus être masquées par le dessus du panneau (`Base + 0,15 stud`).
+- [x] `arena-surface-relief.client.lua` : souscription à `MapVisualReadiness.watch` plutôt que fenêtre courte `Arena.ChildAdded` ; reconstitution après réplication tardive de `Base` ou `VariantId`, suppression des connexions et des instances à la fin de la carte.
+- [x] Tests `arena-presentation.spec.luau` : 4 arènes × 3 tiers, pièces adaptées à chaque matériau, orientation de carte inclinée, contrôle de hauteur au-dessus de la fondation, propriétés physiques sûres, entrées invalides et nombre maximal.
+- [x] `studio-e2e.client.lua` et `StudioE2E.server.lua` : vérification du motif de sol propre à chaque arène, en plus de la sculpture, de la skyline et des finitions de plateforme.
+- [ ] Gates restant à remplir : GitHub Build Validation **et** 5 shards Open Cloud sur le SHA final ; scènes et captures Studio en quatre arènes ; contrôle Android réel High/Medium/Low en mouvement avec effets de catastrophes, lisibilité des signaux et FPS. **Aucune publication avant validation.**
