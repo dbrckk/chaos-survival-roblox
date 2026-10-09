@@ -296,3 +296,16 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] Tests dans `arena-focal-lighting-rules.spec.luau` et `arena-presentation.spec.luau` : 4 styles × 3 profils, noms, matériaux, propriétés non-collidantes, repère incliné et cas invalides.
 - [x] `studio-e2e.client.lua` / `StudioE2E.server.lua` : un luminaire physique propre à chaque arène est désormais requis en Medium/High ; le contrôle Low admet l'absence prévue de sources.
 - [ ] Avant fusion : **Build Validation et cinq shards Open Cloud sur le même SHA**, Studio E2E, captures, mesures de FPS et vérification physique Android. Aucun nouveau rendu n'est déclaré AAA ou publié.
+
+
+## Sprint 02 — portail de lobby cinématique et véritables anneaux de transition (9 octobre 2026)
+
+- [x] `LobbyGateCueKit.lua` + `lobby-presentation.client.lua` : ailettes articulées non bloquantes à l'entrée de l'arène, flèches directionnelles sur la piste et graduations de fin de parcours ; construction différée tant que les véritables ancrages `ArenaGateTop` et `ArenaRunway` ne sont pas répliqués.
+- [x] Cues de lobby par état : **social** = cyan discret, **vote** = magenta, **launch** = or et ailettes ouvertes, **inactive** = masqué. Changements animés uniquement à la transition de mode, sans nouvelle boucle RenderStepped. `ReduceMotion` saute les transitions.
+- [x] Géométrie bornée **2/4/6 BaseParts Low/Medium/High**, non-collidante, non-interrogeable, sans Neon, light, hitbox, sons ou nouvelles textures ; entièrement comptée dans `LobbyPresentationLocal`.
+- [x] `CinematicPulseRingKit.lua` : remplacement des cylindres pleins déguisés en anneaux par de **vrais contours creux de 4/6/8 segments** Low/Medium/High ; alignement à l'orientation du sol de `Arena.Base.CFrame`, disparition rapide, compatible `ReduceMotion`.
+- [x] `round-transition-world-pulse.client.lua` : début de manche, final rush, fusion et réactions locales réutilisent la recette segmentée ; la seconde couronne est désactivée en Low et ReduceMotion.
+- [x] `VisualBudgetRules.lua` : nouveau dossier `RoundTransitionPulsesLocal` audité pour éviter que les coûts de la transition restent invisibles dans les métriques.
+- [x] Tests complémentaires dans `lobby-presentation-rules.spec.luau` et `round-event-presentation.spec.luau` : profils, couleurs de phase, attributs de pièces, forme **Block** non-disque, repère incliné, surfaces non physiques et cas invalides.
+- [x] `studio-e2e.client.lua` / `StudioE2E.server.lua` : vérification d'une ailette de portail en mode **ready**, en plus de la suite de vérification des visuels par phase.
+- [ ] Garde-fous : attendre la réussite de Build Validation et de tous les shards Open Cloud au **commit final** ; capturer l'enchaînement lobby → vote → entrée → manche et vérifier la lisibilité et le FPS sur Android Low/Medium/High. Sans validation Studio/Android, ne pas publier.
