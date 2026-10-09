@@ -241,6 +241,31 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("counts attached local meteor trails even when meteor shells are server owned", function()
+        local root = Instance.new("Folder")
+        for i = 1, 6 do
+            local meteor = Instance.new("Part")
+            meteor.Name = "RoundMeteor"
+            meteor.Parent = root
+            local trail = Instance.new("Trail")
+            trail.Name = "SignatureMeteorTrail"
+            trail.Parent = meteor
+        end
+        local other = Instance.new("Part")
+        other.Name = "OtherHazard"
+        other.Parent = root
+        local extra = Instance.new("Trail")
+        extra.Name = "SignatureMeteorTrail"
+        extra.Parent = other
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(0)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(6)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
     it("classifies live visual budget status before any tier lookup", function()
         expect(type(VisualBudgetRules.status)).toBe("function")
         expect(VisualBudgetRules.status("High", {
