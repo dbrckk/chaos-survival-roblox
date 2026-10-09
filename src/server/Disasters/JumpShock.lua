@@ -15,7 +15,7 @@ local function makeWarning(ctx)
     ring.CanQuery = false
     ring.Material = Enum.Material.Neon
     ring.Color = Color3.fromRGB(80, 155, 255)
-    ring.Transparency = 0.30
+    ring.Transparency = 0.62
     ring.Parent = workspace
     ctx.Cleanup[#ctx.Cleanup+1] = ring
     return ring
