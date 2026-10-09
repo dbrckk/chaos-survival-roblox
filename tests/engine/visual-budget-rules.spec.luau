@@ -90,6 +90,35 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("counts transient Phase Dash facets and Showtime glyphs in mobile budgets", function()
+        local root = Instance.new("Folder")
+        local dash = Instance.new("Folder")
+        dash.Name = "PhaseDashVfxLocal"
+        dash.Parent = root
+        local showtime = Instance.new("Folder")
+        showtime.Name = "LobbyShowtimeLocal"
+        showtime.Parent = root
+
+        for index = 1, 7 do
+            local part = Instance.new("Part")
+            part.Name = "PhaseDashRingFacet" .. index
+            part.CanCollide = false
+            part.Parent = dash
+        end
+        for index = 1, 3 do
+            local part = Instance.new("Part")
+            part.Name = "OrbitDanceGlyph" .. index
+            part.CanCollide = false
+            part.Parent = showtime
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(10)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
     it("audits temporary meteor and bomb setpieces under their shared local folder", function()
         local root = Instance.new("Folder")
         local folder = Instance.new("Folder")
