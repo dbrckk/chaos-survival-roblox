@@ -1,7 +1,6 @@
 -- Deterministic disaster-reactive shading for existing arena floor details
 -- and focal lights. Never creates geometry, post effects or flashes.
 -- The authoritative platform colors, materials and collisions are untouched.
-local DisasterVisuals = require(script.Parent.DisasterVisuals)
 local ArenaCrisisSurfaceRules = {}
 
 local INTENSITY = {
@@ -24,7 +23,7 @@ local SOUND_SHIFT = {
     ShrinkingArena = -0.020, JumpShock = 0.025,
 }
 
-function ArenaCrisisSurfaceRules.profile(ids, phase, tier, reduced, finalRush)
+function ArenaCrisisSurfaceRules.profile(ids, phase, tier, reduced, finalRush, visualsOverride)
     local out = {
         Active = false,
         Primary = nil,
@@ -38,8 +37,9 @@ function ArenaCrisisSurfaceRules.profile(ids, phase, tier, reduced, finalRush)
         Static = reduced == true or tier == "Low",
     }
     if phase ~= "round" or type(ids) ~= "table" then return out end
+    local visuals = visualsOverride or require(game:GetService("ReplicatedStorage").Shared.DisasterVisuals)
     for _, id in ipairs(ids) do
-        local visual = DisasterVisuals.get(id)
+        local visual = visuals.get(id)
         local energy = INTENSITY[id]
         if visual and energy then
             if not out.Primary then
