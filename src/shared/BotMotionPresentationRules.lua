@@ -27,6 +27,22 @@ function BotMotionPresentationRules.trailAccent(cueKind)
     return ACCENTS[cueKind]
 end
 
+-- Keep an existing AI Trail only when it can materially improve the
+-- viewer's scene. Enter/exit hysteresis avoids flickering at the boundary.
+-- No newly-instantiated trails, and no need to know the total bot count.
+function BotMotionPresentationRules.trailVisible(
+        tier, reducedMotion, phase, grounded, runRatio, viewerDistance, wasVisible)
+    if phase ~= "round" or reducedMotion == true or grounded ~= true
+        or (tier ~= "High" and tier ~= "Medium")
+        or type(viewerDistance) ~= "number"
+        or viewerDistance < 0 or (tonumber(runRatio) or 0) <= 0.68 then
+        return false
+    end
+    local entering = tier == "High" and 95 or 66
+    local leaving = entering + 12
+    return viewerDistance <= (wasVisible == true and leaving or entering)
+end
+
 function BotMotionPresentationRules.cue(velocity, previousVelocity, dt,
         grounded, tier, reducedMotion, phase, viewerDistance)
     local profile = BotMotionPresentationRules.profile(tier, reducedMotion)
