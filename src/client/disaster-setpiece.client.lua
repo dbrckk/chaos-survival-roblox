@@ -75,6 +75,7 @@ local function playProfile(profile,base,index,total,current)
     local centerFrame=base.CFrame*CFrame.new(0,base.Size.Y*0.5+0.14,0)
     local center=centerFrame.Position
     local span=math.max(base.Size.X,base.Size.Z)
+    local duration=reduced and 0.28 or 0.58
     if profile.Kind=="freeze" or profile.Kind=="blast"
         or profile.Kind=="void" or profile.Kind=="collapse"
         or profile.Kind=="shock" then
@@ -84,7 +85,6 @@ local function playProfile(profile,base,index,total,current)
         )
         return
     end
-    local duration=reduced and 0.28 or 0.58
     if profile.Kind=="rise" then
         for i=1,(tier.Name=="High" and 4 or 2) do
             local x=((i%2==0) and 1 or -1)*span*0.34
