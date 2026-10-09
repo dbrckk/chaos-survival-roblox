@@ -9,6 +9,7 @@ local ArenaSignatureKit = require("../../src/client/ArenaSignatureKit")
 local ArenaDetailKit = require("../../src/client/ArenaDetailKit")
 local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 local ArenaEdgeFinishKit = require("../../src/client/ArenaEdgeFinishKit")
+local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
 
 local CENTER = Vector3.new(0, 0, 0)
 
@@ -351,6 +352,68 @@ describe("Premium arena perimeter geometry", function()
         expect(#ArenaEdgeFinishKit.build(nil, base, "Classic", "High", theme)).toBe(0)
         holder:Destroy()
         base:Destroy()
+    end)
+end)
+
+
+describe("Arena skyline visual identity", function()
+    it("keeps four distinct outboard silhouettes readable from Low to High", function()
+        local holder = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 3, 84)
+        base.CFrame = CFrame.new(27, 14, -34)
+            * CFrame.Angles(0, math.rad(34), 0)
+        local primaryNames = {}
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            local names = ArenaSilhouetteAccentKit.names(variant)
+            expect(#names).toBe(4)
+            expect(primaryNames[names[1]] == nil).toBe(true)
+            primaryNames[names[1]] = true
+            for _, tierName in ipairs({"Low", "Medium", "High"}) do
+                local built = ArenaSilhouetteAccentKit.build(
+                    holder, base, variant, tierName, VisualTheme.arena(variant))
+                expect(#built).toBe(ArenaSilhouetteAccentKit.count(tierName))
+                for i, part in ipairs(built) do
+                    expect(part.Name).toBe(names[i])
+                    expect(part:GetAttribute("ChaosSilhouetteAccent")).toBe(true)
+                    expect(part:GetAttribute("ArenaVariant")).toBe(variant)
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    expect(part.Size.X > 0 and part.Size.Y > 0 and part.Size.Z > 0).toBe(true)
+                    local relative = base.CFrame:PointToObjectSpace(part.Position)
+                    expect(
+                        math.abs(relative.X) > base.Size.X * 0.5
+                            or math.abs(relative.Z) > base.Size.Z * 0.5
+                    ).toBe(true)
+                    if tierName == "Low" then
+                        expect(part.Material == Enum.Material.Neon).toBe(false)
+                    end
+                    part:Destroy()
+                end
+            end
+        end
+        expect(ArenaSilhouetteAccentKit.count("Low")).toBe(2)
+        expect(ArenaSilhouetteAccentKit.count("Medium")).toBe(3)
+        expect(ArenaSilhouetteAccentKit.count("High")).toBe(4)
+        holder:Destroy()
+        base:Destroy()
+    end)
+
+    it("ignores unexpected inputs without creating scenery", function()
+        local folder = Instance.new("Folder")
+        local base = Instance.new("Part")
+        local theme = VisualTheme.arena("Classic")
+        expect(#ArenaSilhouetteAccentKit.build(nil, base, "Classic", "High", theme)).toBe(0)
+        expect(#ArenaSilhouetteAccentKit.build(folder, nil, "Classic", "High", theme)).toBe(0)
+        expect(#ArenaSilhouetteAccentKit.build(folder, base, "Unexpected", "High", theme)).toBe(0)
+        expect(#ArenaSilhouetteAccentKit.build(folder, base, "Classic", "Unknown", theme)).toBe(0)
+        expect(#ArenaSilhouetteAccentKit.build(folder, base, "Classic", "High", nil)).toBe(0)
+        expect(#folder:GetChildren()).toBe(0)
+        base:Destroy()
+        folder:Destroy()
     end)
 end)
 
