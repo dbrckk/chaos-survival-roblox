@@ -2,7 +2,6 @@
 -- Deterministic non-physical landmark reactions to live disasters.
 -- No additional objects, camera displacement or flashes. Designed to layer
 -- onto arena-hero-motion's existing anchored cosmetic scene ownership.
-local DisasterVisuals = require(script.Parent.DisasterVisuals)
 
 local LandmarkDisasterReactionRules = {}
 
@@ -22,7 +21,7 @@ local EVENTS = {
 
 local QUALITY = {Low = 0.18, Medium = 0.58, High = 1}
 
-function LandmarkDisasterReactionRules.compose(ids, phase, tier, reduceMotion, finalRush)
+function LandmarkDisasterReactionRules.compose(ids, phase, tier, reduceMotion, finalRush, visualsOverride)
     local profile = {
         Active = false,
         Accent = Color3.fromRGB(140, 200, 255),
@@ -34,11 +33,12 @@ function LandmarkDisasterReactionRules.compose(ids, phase, tier, reduceMotion, f
     if phase ~= "round" or type(ids) ~= "table" then
         return profile
     end
+    local visuals = visualsOverride or require(game:GetService("ReplicatedStorage").Shared.DisasterVisuals)
     local count = 0
     local accum = Vector3.zero
     for _, id in ipairs(ids) do
         local event = EVENTS[tostring(id)]
-        local visual = DisasterVisuals.get(tostring(id))
+        local visual = visuals.get(tostring(id))
         if event and visual and count < 2 then
             count += 1
             profile.Active = true
