@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
+local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
 
 describe("Chaos Survival engine", function()
@@ -175,6 +176,49 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(count).toBe(24)
+        root:Destroy()
+    end)
+
+    it("builds eight connected, solid Orbital helix ramps with cosmetic rails", function()
+        local variant = ArenaVariants.get("Orbital")
+        local center = Config.ArenaCenter
+        local root = MapBuilder.build(Config, "Orbital", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local circuit = arena and arena:FindFirstChild("HelixCircuit")
+        expect(circuit ~= nil).toBe(true)
+        expect(OrbitalHelix.Count).toBe(8)
+
+        local physical = 0
+        local noncolliding = 0
+        for _, obj in ipairs((circuit :: Folder):GetChildren()) do
+            expect(obj:IsA("BasePart")).toBe(true)
+            expect(obj.Anchored).toBe(true)
+            if obj:GetAttribute("OrbitalHelixRamp") == true then
+                physical += 1
+                local index = obj:GetAttribute("HelixLane")
+                local route = OrbitalHelix.route(variant, center, index)
+                expect(route ~= nil).toBe(true)
+                expect(obj.CanCollide).toBe(true)
+                expect(obj.CanTouch).toBe(true)
+                expect(obj.CanQuery).toBe(true)
+                expect(obj.Size.X >= 5).toBe(true)
+                expect(obj.Size.Z >= 12).toBe(true)
+                expect((obj.Position - route.CFrame.Position).Magnitude < 0.01).toBe(true)
+                expect(obj.CFrame.LookVector:Dot(
+                    (route.Finish - route.Start).Unit) > 0.999).toBe(true)
+            else
+                noncolliding += 1
+                expect(obj.CanCollide).toBe(false)
+                expect(obj.CanTouch).toBe(false)
+                expect(obj.CanQuery).toBe(false)
+                expect(obj.CastShadow).toBe(false)
+            end
+        end
+        expect(physical).toBe(8)
+        expect(noncolliding).toBe(64)
+
+        local swapped = MapBuilder.buildArena(Config, "Classic", ArenaVariants)
+        expect(swapped:FindFirstChild("HelixCircuit") == nil).toBe(true)
         root:Destroy()
     end)
 
