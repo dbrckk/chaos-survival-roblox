@@ -310,7 +310,10 @@ function OrbitalHelix.startFlow(ctx, mechanics, arena)
             trigger.Name = "HelixFlowTrigger" .. tostring(
                 ramp:GetAttribute("HelixLane") or "Unknown"
             )
-            trigger.Anchored = true
+            -- Weld to the solid ramp, so Shrinking Arena carries the
+            -- invisible checkpoint with the moving/tilting Helix deck.
+            trigger.Anchored = false
+            trigger.Massless = true
             trigger.Transparency = 1
             trigger.CanCollide = false
             trigger.CanQuery = false
@@ -320,6 +323,11 @@ function OrbitalHelix.startFlow(ctx, mechanics, arena)
             trigger.CFrame = ramp.CFrame * CFrame.new(0, 2.1, 0)
             trigger:SetAttribute("HelixLane", ramp:GetAttribute("HelixLane"))
             trigger.Parent = folder
+            local weld = Instance.new("WeldConstraint")
+            weld.Name = "HelixFlowFollowRamp"
+            weld.Part0 = ramp
+            weld.Part1 = trigger
+            weld.Parent = trigger
             trigger.Touched:Connect(function(hit)
                 OrbitalHelix.tryFlow(ctx, trigger, hit, ready, os.clock())
             end)
