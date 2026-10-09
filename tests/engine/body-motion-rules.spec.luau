@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local BodyMotionRules = require("../../src/shared/BodyMotionRules")
+local BotMotionPresentationRules = require("../../src/shared/BotMotionPresentationRules")
 local LocomotionDynamics = require("../../src/shared/LocomotionDynamics")
 local GroundFx = require("../../src/client/LocomotionGroundFx")
 
@@ -186,6 +187,95 @@ describe("Body motion rules", function()
     it("reduces motion consistently when accessibility is enabled", function()
         expect(BodyMotionRules.motionScale(false)).toBe(1)
         expect(BodyMotionRules.motionScale(true)).toBe(0.18)
+    end)
+end)
+
+
+describe("Directional character impact and cinematic AI footwork", function()
+    it("reacts to the physical explosion side without rotating the avatar or applying force", function()
+        local base = CFrame.new(20, 8, -14)
+            * CFrame.Angles(0, math.rad(72), 0)
+        local right = base.RightVector
+        local forward = base.LookVector
+        local strength, rightward, forwardward = BodyMotionRules.blastResponse(
+            base, base.Position - right * 6, 8
+        )
+        expect(strength > 0 and strength < 1).toBe(true)
+        expect(rightward > 0.99).toBe(true)
+        expect(math.abs(forwardward) < 0.01).toBe(true)
+
+        local _, leftward = BodyMotionRules.blastResponse(
+            base, base.Position + right * 6, 8
+        )
+        expect(leftward < -0.99).toBe(true)
+        local _, _, forwardReaction = BodyMotionRules.blastResponse(
+            base, base.Position - forward * 5, 8
+        )
+        expect(forwardReaction > 0.99).toBe(true)
+        local _, _, backwardReaction = BodyMotionRules.blastResponse(
+            base, base.Position + forward * 5, 8
+        )
+        expect(backwardReaction < -0.99).toBe(true)
+        local farIntensity = BodyMotionRules.blastResponse(
+            base, base.Position + Vector3.new(200, 0, 0), 8
+        )
+        expect(farIntensity).toBe(0)
+        local zeroIntensity, zeroSide, zeroForward = BodyMotionRules.blastResponse(
+            base, base.Position, 8
+        )
+        expect(zeroIntensity).toBe(1)
+        expect(zeroSide).toBe(0)
+        expect(zeroForward).toBe(0)
+        expect(BodyMotionRules.blastResponse(nil, base.Position, 8)).toBe(0)
+        expect(BodyMotionRules.blastResponse(base, nil, 8)).toBe(0)
+    end)
+
+    it("creates only nearby, meaningful AI launch, skid and pivot cues", function()
+        local rules = BotMotionPresentationRules
+        expect(rules.profile("Low", false).MaxPerScan).toBe(0)
+        expect(rules.profile("Medium", false).Range).toBe(54)
+        expect(rules.profile("High", false).Range).toBe(78)
+        expect(rules.profile("High", true).MaxPerScan).toBe(0)
+        expect(rules.profile("High", false).Cooldown > 1).toBe(true)
+
+        local launch, launchStrength = rules.cue(
+            Vector3.new(17, 0, 0), Vector3.new(3, 0, 0),
+            0.08, true, "High", false, "round", 10
+        )
+        expect(launch).toBe("Launch")
+        expect(launchStrength > 0.78).toBe(true)
+        local skid, skidStrength = rules.cue(
+            Vector3.new(3, 0, 0), Vector3.new(18, 0, 0),
+            0.08, true, "High", false, "round", 10
+        )
+        expect(skid).toBe("Skid")
+        expect(skidStrength > 0.78).toBe(true)
+        local pivot, pivotStrength = rules.cue(
+            Vector3.new(-17, 0, 0), Vector3.new(17, 0, 0),
+            0.08, true, "High", false, "round", 10
+        )
+        expect(pivot).toBe("Pivot")
+        expect(pivotStrength > 0.78).toBe(true)
+        for _, scenario in ipairs({
+            {true, "Low", false, "round", 10},
+            {true, "High", true, "round", 10},
+            {true, "High", false, "ready", 10},
+            {true, "High", false, "round", 110},
+            {false, "High", false, "round", 10},
+        }) do
+            local inactive = rules.cue(
+                Vector3.new(17, 0, 0), Vector3.new(3, 0, 0),
+                0.08, scenario[1], scenario[2], scenario[3],
+                scenario[4], scenario[5]
+            )
+            expect(inactive == nil).toBe(true)
+        end
+        expect(rules.cue(nil, Vector3.zero, 0.08, true,
+            "High", false, "round", 10) == nil).toBe(true)
+        expect(rules.cue(Vector3.zero, Vector3.zero, 0,
+            true, "High", false, "round", 10) == nil).toBe(true)
+        expect(rules.cue(Vector3.new(3, 0, 0), Vector3.new(3, 0, 0),
+            0.08, true, "High", false, "round", 10) == nil).toBe(true)
     end)
 end)
 
