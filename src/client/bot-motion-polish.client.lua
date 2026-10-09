@@ -173,6 +173,8 @@ task.spawn(function()
             state.lastVelocity = velocity
             state.lastSpeed += (speed - state.lastSpeed) * 0.22
 
+            local distance = viewerPosition
+                and (state.root.Position - viewerPosition).Magnitude or math.huge
             local trail = state.root:FindFirstChild("AISurvivorCosmeticTrail")
             if trail and trail:IsA("Trail") then
                 if state.trail ~= trail then
@@ -193,9 +195,11 @@ task.spawn(function()
                     state.lastSpeed / math.max(1, state.humanoid.WalkSpeed),
                     0, 1.25
                 )
-                trail.Enabled = phase == "round" and not reduceMotion
-                    and q.Name ~= "Low" and ratio > 0.68
-                    and state.humanoid.FloorMaterial ~= Enum.Material.Air
+                trail.Enabled = BotRules.trailVisible(
+                    q.Name, reduceMotion, phase,
+                    state.humanoid.FloorMaterial ~= Enum.Material.Air,
+                    ratio, distance, trail.Enabled
+                )
                 trail.Lifetime = (0.09 + (state.index % 3) * 0.024)
                     * (q.Name == "High" and 1 or 0.72)
             end
@@ -205,7 +209,6 @@ task.spawn(function()
                 and now - state.lastCueAt >= botProfile.Cooldown
                 and viewerPosition ~= nil
             then
-                local distance = (state.root.Position - viewerPosition).Magnitude
                 local cue, strength = BotRules.cue(
                     velocity, previousVelocity, dt,
                     state.humanoid.FloorMaterial ~= Enum.Material.Air,
