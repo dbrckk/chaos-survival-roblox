@@ -595,6 +595,7 @@ local function createRig(record)
 
     model.Name = record.identity.Username
     model:SetAttribute("AISurvivor", true)
+    model:SetAttribute("AISurvivorInRound", false)
     model:SetAttribute("AISurvivorSlot", record.slot)
     model:SetAttribute("AISurvivorProfile", record.profile.Id)
     model:SetAttribute("ChaosAccent", record.identity.Accent)
@@ -713,6 +714,7 @@ local function sendToLobby(record)
     end
 
     record.inRound = false
+    record.model:SetAttribute("AISurvivorInRound", false)
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
@@ -731,6 +733,7 @@ local function sendToArena(record)
     end
 
     record.inRound = true
+    record.model:SetAttribute("AISurvivorInRound", true)
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
