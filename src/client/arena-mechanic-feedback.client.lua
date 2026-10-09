@@ -105,7 +105,10 @@ end
 
 feedbackEvent.OnClientEvent:Connect(function(payload)
     local now = os.clock()
-    if now - lastTrigger < 0.18 then
+    local gridClear = payload.mechanicName == "GRID CIRCUIT CLEAR"
+    -- The final challenge success should never be swallowed by a mobility
+    -- pad's short visual cooldown during a fast last-node crossing.
+    if now - lastTrigger < 0.18 and not gridClear then
         return
     end
     lastTrigger = now
@@ -121,6 +124,9 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         or (fluxRelay and Color3.fromRGB(88, 250, 229)
             or (helixFlow and Color3.fromRGB(106, 245, 176)
                 or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))))
+    if gridClear and not overdrive then
+        accent = Color3.fromRGB(120, 245, 179)
+    end
     local tier = currentVfxTier()
     local reduced = player:GetAttribute("ReduceMotion") == true
     flash.BackgroundColor3 = accent
@@ -135,19 +141,22 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
 
     pulseCharacter(accent)
 
-    if overdrive or fluxRelay or helixFlow then
+    if overdrive or fluxRelay or helixFlow or gridClear then
         titleToken += 1
         local token = titleToken
         overdriveLabel.Text = overdrive and "OVERDRIVE BOOST"
-            or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY")
+            or (gridClear and "GRID CIRCUIT CLEAR"
+                or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY"))
         overdriveLabel.TextColor3 = (overdrive or orbitMaster)
             and Color3.fromRGB(255, 225, 115)
-            or (helixFlow and Color3.fromRGB(184, 255, 216)
-                or Color3.fromRGB(147, 255, 232))
+            or (gridClear and Color3.fromRGB(197, 255, 218)
+                or (helixFlow and Color3.fromRGB(184, 255, 216)
+                    or Color3.fromRGB(147, 255, 232)))
         overdriveStroke.Color = (overdrive or orbitMaster)
             and Color3.fromRGB(255, 210, 90)
-            or (helixFlow and Color3.fromRGB(106, 245, 176)
-                or Color3.fromRGB(88, 250, 229))
+            or (gridClear and Color3.fromRGB(120, 245, 179)
+                or (helixFlow and Color3.fromRGB(106, 245, 176)
+                    or Color3.fromRGB(88, 250, 229)))
         overdriveLabel.Visible = true
         overdriveLabel.TextTransparency = 1
         overdriveLabel.BackgroundTransparency = 1

@@ -174,7 +174,9 @@ in client input or submitted claimed ranks. Survivor bots use the same
 server-owned timing and order checks, but their state is held on their rig
 and they receive no human scores, progression, currency or DataStore writes.
 They sometimes select the next station as a deliberate walking waypoint
-when active disaster conditions make that route reasonable.
+when active disaster conditions make that route reasonable. All four bot
+circuit attributes are reset every time a surviving NPC rig returns to the
+ready phase, preventing previous-round completions from blocking its AI.
 
 **Original art identity:** four visually distinct compass-labeled stations
 (NW / NE / SE / SW) with steel plinth, inset radial segmented circuit,
@@ -188,7 +190,9 @@ glowing ground-chevron strokes on High, 16 on Medium and 0 on Low;
 only the next clockwise edge receives a bright highlight. A compact
 four-segment progress track sits below the existing mobile-friendly
 status prompt; an expired attempt clears highlighted guidance without
-altering the server-owned state. The `GridCircuitLocal` folder is
+altering the server-owned state. A successful human clear displays an
+accessible green `GRID CIRCUIT CLEAR` celebration and takes priority over
+a just-triggered pad's short animation cooldown. The `GridCircuitLocal` folder is
 budget-audited.
 
 **QA:** complete a circuit on desktop and Android; start from every compass

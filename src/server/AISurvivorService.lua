@@ -2229,6 +2229,19 @@ function AISurvivorService.start(gameConfig)
     startBrain()
 end
 
+-- A bot can reuse a surviving rig across multiple rounds. Reset all
+-- optional circuit progress so yesterday's clear cannot disable navigation.
+function AISurvivorService.resetGridCircuit(model)
+    if typeof(model) ~= "Instance" or not model:IsA("Model") then
+        return false
+    end
+    model:SetAttribute("GridCircuitStep", 0)
+    model:SetAttribute("GridCircuitNext", 0)
+    model:SetAttribute("GridCircuitDeadline", 0)
+    model:SetAttribute("GridCircuitComplete", false)
+    return true
+end
+
 function AISurvivorService.setRoundState(state)
     currentState = state or currentState
     local phase = tostring(currentState.phase or "waiting")
@@ -2252,6 +2265,7 @@ function AISurvivorService.setRoundState(state)
                     0.32
                 )
                 sendToArena(record)
+                AISurvivorService.resetGridCircuit(record.model)
             end
         elseif phase == "result" then
             for _, record in ipairs(records) do
