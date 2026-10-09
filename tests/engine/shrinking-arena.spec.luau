@@ -142,7 +142,9 @@ describe("Shrinking Arena mobility integration", function()
                 expect(shrunkSpan < originalSpan).toBe(true)
                 expect(shrunkSpan > 4).toBe(true)
                 expect(bridge.CanCollide).toBe(true)
-                expect((bridge.Position - old.cf.Position).Magnitude < 0.01).toBe(true)
+                -- North/south/east/west spans follow their tower rows inward.
+                expect((bridge.Position - Config.ArenaCenter).Magnitude
+                    < (old.cf.Position - Config.ArenaCenter).Magnitude).toBe(true)
 
                 for _, detail in ipairs(details[bridge]) do
                     local prior = originals[detail]
