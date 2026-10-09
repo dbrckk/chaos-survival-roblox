@@ -134,16 +134,25 @@ local function bindFlowCircuit()
     table.clear(flowConnections)
     flowFolder = current
     if current then
-        for _, sensor in ipairs(current:GetChildren()) do
-            if sensor:IsA("BasePart") then
-                table.insert(flowConnections, sensor:GetAttributeChangedSignal(
-                    "HelixFlowAt"
-                ):Connect(function()
-                    if sensor.Parent == flowFolder then
-                        flowBurst(sensor)
-                    end
-                end))
+        local observedSensors = {}
+        local function observeSensor(sensor)
+            if not sensor:IsA("BasePart") or observedSensors[sensor] then
+                return
             end
+            observedSensors[sensor] = true
+            table.insert(flowConnections, sensor:GetAttributeChangedSignal(
+                "HelixFlowAt"
+            ):Connect(function()
+                if sensor.Parent == flowFolder then
+                    flowBurst(sensor)
+                end
+            end))
+        end
+        -- An arena folder may replicate before its eight child sensors.
+        -- Subscribe to late additions as well as sensors already present.
+        table.insert(flowConnections, current.ChildAdded:Connect(observeSensor))
+        for _, sensor in ipairs(current:GetChildren()) do
+            observeSensor(sensor)
         end
     end
 end
@@ -182,9 +191,10 @@ local function rebuild(circuit, tier, reduced, ramps)
     currentCircuit = circuit
     currentTier = tier
     currentReduced = reduced
-    if reduced or tier == "Low" then return end
-
     orderedRamps = ramps
+    -- Still track the actual eight ramp identities on Low/reduced motion.
+    -- Otherwise the controller rebuilds empty visual arrays every poll.
+    if reduced or tier == "Low" then return end
     for index, ramp in ipairs(ramps) do
         local n = tier == "High" and 3 or 1
         for lane = 1, n do
@@ -219,6 +229,16 @@ task.spawn(function()
         local ramps = readRamps(circuit)
         local stale = circuit ~= currentCircuit or tier ~= currentTier
             or reduced ~= currentReduced or #ramps ~= #orderedRamps
+        if not stale then
+            for index, ramp in ipairs(ramps) do
+                if ramp ~= orderedRamps[index] then
+                    -- Handle StreamingEnabled replacing ramp instances while
+                    -- the parent HelixCircuit folder remains unchanged.
+                    stale = true
+                    break
+                end
+            end
+        end
         if stale then
             rebuild(circuit, tier, reduced, ramps)
         end
