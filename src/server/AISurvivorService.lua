@@ -1064,15 +1064,10 @@ local function immediateThreat(record, root, now)
             handled = setmetatable({}, {__mode = "k"})
             record.reactedWarnings = handled
         end
-        if handled[nearest] ~= true then
-            handled[nearest] = true
-            if AISurvivorRules.shouldJumpForWarning(
-                nearest.Name, false, math.random()
-            ) then
-                local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    humanoid.Jump = true
-                end
+        if AISurvivorRules.consumeWarningJump(handled, nearest, math.random()) then
+            local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Jump = true
             end
         end
         return nil
