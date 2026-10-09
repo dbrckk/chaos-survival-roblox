@@ -4,6 +4,8 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
+local FluxRelayRules = require("../../src/shared/FluxRelayRules")
+local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
 local MovementSafety = require("../../src/server/MovementSafety")
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
@@ -37,6 +39,118 @@ describe("Arena mechanics", function()
                 expect(pad.impulse.Magnitude <= 60).toBe(true)
             end
         end
+    end)
+
+    it("alternates charged return lanes with a clear standby window", function()
+        local r = FluxRelayRules
+        expect(#r.Offsets).toBe(4)
+        expect(r.Period).toBe(8)
+        expect(r.ChargeDuration < r.Period * 0.5).toBe(true)
+        for index = 1, 4 do
+            expect(typeof(r.Offsets[index])).toBe("Vector3")
+        end
+        expect(r.offsetFor(1)).toBe(r.offsetFor(3))
+        expect(r.offsetFor(2)).toBe(r.offsetFor(4))
+        expect(r.offsetFor(1) ~= r.offsetFor(2)).toBe(true)
+
+        local epoch = 100
+        expect(r.charged(100.5, epoch, r.offsetFor(1))).toBe(true)
+        expect(r.charged(100.5, epoch, r.offsetFor(3))).toBe(true)
+        expect(r.charged(100.5, epoch, r.offsetFor(2))).toBe(false)
+        expect(r.charged(104.5, epoch, r.offsetFor(1))).toBe(false)
+        expect(r.charged(104.5, epoch, r.offsetFor(2))).toBe(true)
+        expect(r.charged(108.5, epoch, r.offsetFor(1))).toBe(true)
+    end)
+
+    it("requires an alive eligible runner, charged gate and elapsed cooldown", function()
+        local r = FluxRelayRules
+        expect(r.canTrigger(true, true, 100, 101, 100, 0, 10, 9)).toBe(true)
+        expect(r.canTrigger(true, true, 100, 101, 100, 0, 10, 11)).toBe(false)
+        expect(r.canTrigger(false, true, 100, 101, 100, 0, 10, 0)).toBe(false)
+        expect(r.canTrigger(true, false, 100, 101, 100, 0, 10, 0)).toBe(false)
+        expect(r.canTrigger(true, true, 0, 101, 100, 0, 10, 0)).toBe(false)
+        expect(r.canTrigger(true, true, 100, 104, 100, 0, 10, 0)).toBe(false)
+        expect(r.nextAllowed(10)).toBe(13.5)
+    end)
+
+    it("redirects the runner toward the hub without exceeding safe speed", function()
+        local rules = FluxRelayRules
+        local center = Vector3.new(0, 0, 0)
+        local gate = Vector3.new(34, 4, 0)
+        local normal = rules.velocity(Vector3.new(26, -18, 12), gate, center, false)
+        local boosted = rules.velocity(Vector3.new(26, -18, 12), gate, center, true)
+        expect(normal.X < 0).toBe(true)
+        expect(boosted.X < normal.X).toBe(true)
+        for _, velocity in ipairs({
+            Vector3.new(200, 100, 200),
+            Vector3.new(-150, -100, 99),
+            Vector3.zero,
+        }) do
+            local result = rules.velocity(velocity, gate, center, true)
+            expect(Vector3.new(result.X, 0, result.Z).Magnitude <= 54.001).toBe(true)
+            expect(result.Y >= -52 and result.Y <= 58).toBe(true)
+        end
+    end)
+
+    it("spawns four invisible live flux triggers beside Crossroads launch pads", function()
+        local root = MapBuilder.build(Config, "Crossroads", ArenaVariants)
+        local events = {}
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            OnArenaMechanicUsed = function() table.insert(events, "human") end,
+        }
+        local result = ArenaMechanics.start(ctx, "Crossroads")
+        expect(result ~= nil).toBe(true)
+        local arena = root:FindFirstChild("Arena")
+        local mechanics = arena and arena:FindFirstChild("Mechanics")
+        local relays = mechanics and mechanics:FindFirstChild("FluxRelays")
+        expect(relays ~= nil).toBe(true)
+        expect(#(relays :: Folder):GetChildren()).toBe(4)
+
+        local first = relays:FindFirstChild("FluxRelay1")
+        local second = relays:FindFirstChild("FluxRelay2")
+        expect(first ~= nil).toBe(true)
+        expect(second ~= nil).toBe(true)
+        expect(first:GetAttribute("FluxRelayIndex")).toBe(1)
+        expect(second:GetAttribute("FluxRelayIndex")).toBe(2)
+        for _, obj in ipairs(relays:GetChildren()) do
+            expect(obj:IsA("BasePart")).toBe(true)
+            expect(obj.CanCollide).toBe(false)
+            expect(obj.CanTouch).toBe(true)
+            expect(obj.CanQuery).toBe(false)
+            expect(obj.Transparency).toBe(1)
+        end
+
+        local bot = Instance.new("Model")
+        bot.Name = "TestFluxSurvivor"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = bot
+        local hit = Instance.new("Part")
+        hit.Name = "HumanoidRootPart"
+        hit.Anchored = true
+        hit.Parent = bot
+        bot.Parent = workspace
+        local epoch = first:GetAttribute("FluxCycleEpoch")
+        local ready = {}
+        local ok = CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
+            ready, epoch, 10, epoch + 0.5, Config.ArenaCenter)
+        expect(ok).toBe(true)
+        expect(type(first:GetAttribute("FluxTriggeredAt"))).toBe("number")
+        expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
+            ready, epoch, 11, epoch + 0.6, Config.ArenaCenter)).toBe(false)
+        expect(CrossroadsFluxRelay.tryTrigger(ctx, second, hit,
+            ready, epoch, 14, epoch + 4.5, Config.ArenaCenter)).toBe(true)
+        bot:SetAttribute("AISurvivorInRound", false)
+        expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
+            ready, epoch, 22, epoch + 8.5, Config.ArenaCenter)).toBe(false)
+        expect(#events).toBe(0)
+
+        bot:Destroy()
+        root:Destroy()
     end)
 
     it("keeps ambient pad particles client-side", function()
