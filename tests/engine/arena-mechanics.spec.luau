@@ -94,6 +94,7 @@ describe("Arena mechanics", function()
             local result = rules.velocity(velocity, gate, center, true)
             expect(Vector3.new(result.X, 0, result.Z).Magnitude <= 54.001).toBe(true)
             expect(result.Y >= -52 and result.Y <= 58).toBe(true)
+            expect(result.X < 0).toBe(true)
         end
     end)
 
