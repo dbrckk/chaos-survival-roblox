@@ -237,6 +237,10 @@ describe("Directional character impact and cinematic AI footwork", function()
         expect(rules.profile("High", false).Range).toBe(78)
         expect(rules.profile("High", true).MaxPerScan).toBe(0)
         expect(rules.profile("High", false).Cooldown > 1).toBe(true)
+        expect(rules.trailAccent("Launch")).toBe(Color3.fromRGB(83, 222, 255))
+        expect(rules.trailAccent("Skid")).toBe(Color3.fromRGB(255, 156, 83))
+        expect(rules.trailAccent("Pivot")).toBe(Color3.fromRGB(187, 105, 255))
+        expect(rules.trailAccent("Unknown") == nil).toBe(true)
 
         local launch, launchStrength = rules.cue(
             Vector3.new(17, 0, 0), Vector3.new(3, 0, 0),
