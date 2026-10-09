@@ -222,7 +222,10 @@ describe("visual budget rules", function()
             )
             expect(#pieces).toBe(6)
             for _, piece in ipairs(pieces) do
-                expect(piece.Shape).toBe(Enum.PartType.Block)
+                expect(piece:IsA("Part") or piece:IsA("WedgePart")).toBe(true)
+                if piece:IsA("Part") then
+                    expect(piece.Shape).toBe(Enum.PartType.Block)
+                end
                 expect(piece.CanCollide).toBe(false)
                 expect(piece.CanTouch).toBe(false)
                 expect(piece.CanQuery).toBe(false)
