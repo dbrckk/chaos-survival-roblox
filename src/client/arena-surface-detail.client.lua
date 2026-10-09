@@ -149,7 +149,8 @@ local function rebuild()
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.035, 0)
+    -- The entire detail composition follows a rotated or tilted arena deck.
+    local surfaceFrame = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.035, 0)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local countScale = tier.Name == "Low" and 0.55 or (tier.Name == "Medium" and 0.78 or 1)
@@ -170,7 +171,7 @@ local function rebuild()
             makePart(
                 "ClassicInset" .. i,
                 size,
-                CFrame.new(center + offset),
+                surfaceFrame * CFrame.new(offset),
                 i % 3 == 0 and theme.Secondary or theme.Detail,
                 Enum.Material.Metal,
                 0.52
@@ -184,11 +185,11 @@ local function rebuild()
             for s = 1, segments do
                 local angle = ((s - 1) / segments) * math.pi * 2
                 local tangent = angle + math.pi * 0.5
-                local pos = center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+                local pos = surfaceFrame * CFrame.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
                 makePart(
                     "TowerRing" .. i .. "_" .. s,
                     Vector3.new(math.max(3.0, radius * 0.42), 0.05, 0.16),
-                    CFrame.new(pos) * CFrame.Angles(0, -tangent, 0),
+                    pos * CFrame.Angles(0, -tangent, 0),
                     i % 2 == 0 and theme.Secondary or theme.Detail,
                     Enum.Material.Metal,
                     0.56
@@ -209,7 +210,7 @@ local function rebuild()
                 "CrossroadLaneInset" .. i,
                 horizontal and Vector3.new(base.Size.X * 0.70, 0.05, 0.24)
                     or Vector3.new(0.24, 0.05, base.Size.Z * 0.70),
-                CFrame.new(center + offset),
+                surfaceFrame * CFrame.new(offset),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
                 tier.Name == "Low" and 0.72 or 0.58
@@ -219,11 +220,11 @@ local function rebuild()
         if tier.Name ~= "Low" then
             for i = 1, 8 do
                 local angle = ((i - 1) / 8) * math.pi * 2
-                local pos = center + Vector3.new(math.cos(angle) * halfX * 0.48, 0, math.sin(angle) * halfZ * 0.48)
+                local pos = surfaceFrame * CFrame.new(math.cos(angle) * halfX * 0.48, 0, math.sin(angle) * halfZ * 0.48)
                 makePart(
                     "CrossroadNode" .. i,
                     Vector3.new(2.2, 0.05, 2.2),
-                    CFrame.new(pos) * CFrame.Angles(0, -angle, 0),
+                    pos * CFrame.Angles(0, -angle, 0),
                     theme.Detail,
                     Enum.Material.DiamondPlate,
                     0.42
@@ -236,11 +237,11 @@ local function rebuild()
         for i = 1, segments do
             local angle = ((i - 1) / segments) * math.pi * 2
             local tangent = angle + math.pi * 0.5
-            local pos = center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+            local pos = surfaceFrame * CFrame.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
             makePart(
                 "OrbitalSurfaceArc" .. i,
                 Vector3.new(radius * 0.34, 0.05, 0.22),
-                CFrame.new(pos) * CFrame.Angles(0, -tangent, 0),
+                pos * CFrame.Angles(0, -tangent, 0),
                 i % 3 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
                 tier.Name == "Low" and 0.74 or 0.56
@@ -250,7 +251,7 @@ local function rebuild()
         local core = makePart(
             "OrbitalSurfaceCore",
             Vector3.new(math.min(base.Size.X, base.Size.Z) * 0.22, 0.05, math.min(base.Size.X, base.Size.Z) * 0.22),
-            CFrame.new(center),
+            surfaceFrame,
             theme.Structure,
             Enum.Material.Metal,
             0.48
@@ -262,7 +263,7 @@ local function rebuild()
         for i = 1, spokeCount do
             local angle = ((i - 1) / spokeCount) * math.pi * 2
             local length = radius * 0.62
-            local midpoint = center + Vector3.new(
+            local midpoint = surfaceFrame * CFrame.new(
                 math.cos(angle) * radius * 0.31,
                 0.01,
                 math.sin(angle) * radius * 0.31
@@ -270,7 +271,7 @@ local function rebuild()
             makePart(
                 "OrbitalRadialSeam" .. i,
                 Vector3.new(length, 0.028, 0.08),
-                CFrame.new(midpoint)
+                midpoint
                     * CFrame.Angles(0, -(angle + math.pi * 0.5), 0),
                 VisualTheme.World.Deep:Lerp(theme.Structure, 0.28),
                 Enum.Material.Metal,
