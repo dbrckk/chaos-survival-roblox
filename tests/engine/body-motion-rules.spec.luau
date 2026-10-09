@@ -249,7 +249,13 @@ describe("Directional character impact and cinematic AI footwork", function()
     end)
 
     it("creates only nearby, meaningful AI launch, skid and pivot cues", function()
-        local rules = BotMotionPresentationRules
+        local rules = {
+            profile = BotMotionPresentationRules.profile,
+            trailAccent = BotMotionPresentationRules.trailAccent,
+            cue = function(...)
+                return BotMotionPresentationRules.cue(..., LocomotionDynamics)
+            end,
+        }
         expect(rules.profile("Low", false).MaxPerScan).toBe(0)
         expect(rules.profile("Medium", false).Range).toBe(54)
         expect(rules.profile("High", false).Range).toBe(78)
