@@ -382,3 +382,16 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `VisualBudgetRules.collect` : comptabilise aussi les `SignatureMeteorTrail` attachées aux `RoundMeteor` serveur (hors dossiers locaux), sans compter les météores physiques comme pièces visuelles, et sans doubler les effets d'autres types de projectiles.
 - [x] Tests `disaster-visuals.spec.luau` : distances, quota, phases, états inconnus, ordre de priorité et objets valides, budgets d'ondes 4/6/8 segments, modes réduits et signatures Bomb/Meteor différenciées. `visual-budget-rules.spec.luau` : six trails sont bien comptées dans la télémétrie graphique.
 - [ ] Contrôler les tests moteur Roblox Open Cloud **sur le commit final** ainsi que les tempêtes de météores (10+ projectiles), impacts simultanés (5+), sessions avec bots IA, et FPS sur Android. La compilation ne mesure pas le GPU mobile ; aucune fusion ou publication automatique n'a été effectuée.
+
+
+## Sprint 02 — décor principal sensible aux catastrophes (9 octobre 2026)
+
+- [x] `LandmarkDisasterReactionRules.lua` : compositions de mouvements subtils et teintes pour les **11 catastrophes** (tempête, vibration, chaleur, froid, apesanteur, obscurité, tension électrique), Double Chaos limité à deux profils pour une scène compréhensible, intensité par qualité et Final Rush borné.
+- [x] `arena-hero-motion.client.lua` : les éléments visuels des **4 familles de landmarks** (Tower Run, Orbital, Classic, Crossroads) deviennent réactifs via leur **propriétaire d'animation existant** : pas de second Animator ni d'instances, collisions/physique du jeu inchangées ; réinitialisation des couleurs/positions en phase d'attente.
+- [x] Accessibilité : `ReduceMotion` **fige tous les décalages, inclinaisons et oscillations additionnelles**, conserve une faible couleur de reconnaissance ; qualité Low avec intensité plafonnée. Évite les grands flashs lumineux et les écrans recouvrants.
+- [x] `DisasterAtmosphereLayout.lua` : géométrie des balises périphériques et axes de faisceau alignés sur `Base.CFrame`, y compris terrains inclinés / tournés, avec correction de la hauteur locale au lieu d'une projection Y mondiale.
+- [x] `arena-cinematic-disaster-atmosphere.client.lua` : couche périphérique supprimée hors `round` ou sans catastrophe ; pas de particules d'ambiance GPU en lobby / vote / résultat.
+- [x] `tests/engine/landmark-disaster-reactions.spec.luau` : couverture des 11 catastrophes, Double Chaos, Final Rush, Low/Medium/High, réduction des mouvements et limites d'amplitude.
+- [x] `tests/engine/disaster-atmosphere-layout.spec.luau` : positions et orientations inclinées, entrées invalides et nombre de balises.
+- [x] `README.md` actualisé de 68 à **70 engine specs** et `.github/workflows/roblox-cloud-test.yml` mis à jour : nouvelles specs réparties une seule fois entre `core_a` et `gameplay`. Cela répare deux contrôles obligatoires de la CI.
+- [ ] Avant fusion : tests Open Cloud complets sur le SHA final, contrôle visuel dans quatre maps et les 11 désastres, comparatif captures Low/Medium/High, fps et ressenti Android réel, visibilité HUD / danger avec Double Chaos, comparaison sans et avec ReduceMotion.
