@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local HazardWarning = require("../../src/server/HazardWarning")
+local Localization = require("../../src/shared/CoreLocalization")
 local WarningSignatures = require("../../src/shared/HazardWarningSignatureRules")
 
 describe("Hazard warning metadata", function()
@@ -120,6 +121,44 @@ describe("Premium frost and electric warning silhouettes", function()
         end
         expect(WarningSignatures.frame(pos, nil).Position).toBe(pos)
         expect(WarningSignatures.frame(nil, deck) == nil).toBe(true)
+    end)
+
+    it("uses localized danger actions and never falsely instructs JumpShock players to jump", function()
+        local label = WarningSignatures.label
+        expect(label("Meteor", "en-us", Localization)).toBe("DODGE")
+        expect(label("Meteor", "fr-fr", Localization)).toBe("ESQUIVE")
+        expect(label("Bomb", "en-us", Localization)).toBe("MOVE OUT")
+        expect(label("Bomb", "fr-fr", Localization)).toBe("ÉCARTE-TOI")
+        expect(label("Freeze", "en-us", Localization)).toBe("FREEZE")
+        expect(label("Freeze", "fr-fr", Localization)).toBe("GEL")
+        expect(label("JumpShock", "en-us", Localization)).toBe("SHOCKWAVE")
+        expect(label("JumpShock", "fr-fr", Localization)).toBe("ONDE DE CHOC")
+        expect(label("JumpShock", "en-us", Localization) ~= "JUMP").toBe(true)
+        expect(label("Unknown", "fr-fr", Localization) == nil).toBe(true)
+        expect(label("Freeze", "en-us", nil)).toBe("FREEZE")
+    end)
+
+    it("adapts live shock warning geometry counts across quality and ReduceMotion", function()
+        local count = WarningSignatures.count
+        local transitions = {
+            {"High", false, 4},
+            {"Medium", false, 3},
+            {"Low", false, 1},
+            {"High", true, 1},
+            {"High", false, 4},
+        }
+        for _, entry in ipairs(transitions) do
+            expect(count("JumpShock", entry[1], entry[2])).toBe(entry[3])
+            for i = 1, entry[3] do
+                local design = WarningSignatures.recipe(
+                    "JumpShock", i, entry[3], 70, 0.55
+                )
+                expect(design ~= nil).toBe(true)
+                expect(design.Wedge).toBe(false)
+                expect(design.Material).toBe(Enum.Material.Neon)
+            end
+        end
+        expect(count("JumpShock", "Invalid", true)).toBe(1)
     end)
 
     it("rejects malformed stroke requests and clamps oversized arena markers", function()
