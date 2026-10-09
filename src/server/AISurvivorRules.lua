@@ -55,6 +55,13 @@ function AISurvivorRules.desiredBotCount(realPlayerCount)
     )
 end
 
+-- Players who join during an active round are spectators until the next one.
+-- Keep the existing AI contestants (and their health/identities) intact for
+-- the current round; reconcile the roster at intermission/ready instead.
+function AISurvivorRules.rosterLocked(phase)
+    return phase == "round"
+end
+
 function AISurvivorRules.profileForSlot(slot)
     local count = #AISurvivorRules.Profiles
     local index = ((math.max(1, math.floor(tonumber(slot) or 1)) - 1) % count) + 1
