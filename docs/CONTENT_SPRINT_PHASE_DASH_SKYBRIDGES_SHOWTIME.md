@@ -151,6 +151,43 @@ the round. Confirm path slope, foot contact, avatar collision, camera
 and mobile touch controls in Roblox Studio and on Android. CI unit
 assertions alone cannot establish these physical results.
 
+## 6. Classic Grid — clockwise Grid Circuit
+
+**Optional micro-challenge:** four noncolliding holographic navigation stations
+occupy accessible diagonal corners of the ground-level grid, inside the
+smallest shrinkable floor. Touch any station to start. Within **20 seconds**,
+visit the next three stations **clockwise** without skipping or repeating
+one. On a wrong station, progress is unchanged; on expiry, the touched
+station starts a new run. A completed circuit can only be claimed once
+per player per round, and gives style/momentum recognition through the
+existing arena-mechanic event, **not coins, XP, buffs, damage, immunity
+or a paid advantage**.
+
+**Server security:** sensor Touched validates a real living player round
+participant and a near-ground HumanoidRootPart, not an oversize accessory,
+spectator or eliminated avatar. Individual per-player progress and expiry
+are replicated as `RoundGridCircuitStep`, `RoundGridCircuitNext`,
+`RoundGridCircuitDeadline`, `RoundGridCircuitComplete`. The 0.65s
+touch debounce prevents physics contacts from jumping multiple stages.
+A completion triggers `GRID CIRCUIT CLEAR` once; no trust in client
+input or submitted claimed ranks.
+
+**Original art identity:** four visually distinct compass-labeled stations
+(NW / NE / SE / SW) with steel plinth, inset radial segmented circuit,
+four vertical indicator pylons and faceted caps on High. Orange emphasizes
+the **personal** next station; a modest screen reminder shows next
+direction and remaining time. Temporary outward energy facets broadcast
+through replicated station timestamps. English/French labels are authored,
+Low renders just five static parts per station, Medium 17, High 25,
+all noncolliding. The `GridCircuitLocal` folder is budget-audited.
+
+**QA:** complete a circuit on desktop and Android; start from every compass
+node; verify deadline, wrong node, repeated touch, one completion per
+round, simultaneous unrelated players with different next stations,
+spectator/eliminated denial, and correct geometry during Shrinking Arena.
+Verify simple read-time for first-time players and no camera/input
+obstruction, then collect real Android frame measurements.
+
 ## Acceptance and limits
 
 Build Validation and Open Cloud engine tests validate schemas/recipes but
