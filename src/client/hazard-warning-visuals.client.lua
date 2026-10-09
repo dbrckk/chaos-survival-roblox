@@ -74,19 +74,6 @@ local function syncShockSignature(part, state, diameter, progress, reduced)
     end
 end
 
-local WARNING_ID = {
-    Meteor = "Meteors", Bomb = "Bombs",
-    Freeze = "Freeze", JumpShock = "JumpShock",
-}
-local function warningLabel(kind)
-    local locale = player.LocaleId
-    local hazard = WARNING_ID[kind]
-    if kind == "Meteor" or kind == "Bomb" then
-        return CoreLocalization.hazardAction(locale, hazard)
-            or string.upper(kind)
-    end
-    return CoreLocalization.hazardName(locale, hazard) or string.upper(kind)
-end
 
 local function ensureRenderLoop()
     if loopStarted then
@@ -319,7 +306,9 @@ local function register(part)
     warningText.BackgroundTransparency = 0.18
     warningText.BorderSizePixel = 0
     warningText.Font = Enum.Font.GothamBlack
-    warningText.Text = warningLabel(kind)
+    warningText.Text = HazardWarningSignatureRules.label(
+        kind, player.LocaleId, CoreLocalization
+    ) or string.upper(kind)
     warningText.TextColor3 = kind == "Bomb"
         and Color3.fromRGB(255, 120, 120)
         or (kind == "Meteor"
