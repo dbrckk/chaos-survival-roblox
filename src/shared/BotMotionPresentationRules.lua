@@ -16,6 +16,17 @@ function BotMotionPresentationRules.profile(tier, reducedMotion)
     return PROFILES[tostring(tier or "")] or PROFILES.Low
 end
 
+-- A short color cue ties an existing AI trail to its nearby footwork.
+-- This is returned as a presentation color only; no extra Trail is created.
+local ACCENTS = {
+    Launch = Color3.fromRGB(83, 222, 255),
+    Skid = Color3.fromRGB(255, 156, 83),
+    Pivot = Color3.fromRGB(187, 105, 255),
+}
+function BotMotionPresentationRules.trailAccent(cueKind)
+    return ACCENTS[cueKind]
+end
+
 function BotMotionPresentationRules.cue(velocity, previousVelocity, dt,
         grounded, tier, reducedMotion, phase, viewerDistance)
     local profile = BotMotionPresentationRules.profile(tier, reducedMotion)
