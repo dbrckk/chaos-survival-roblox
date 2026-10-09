@@ -289,6 +289,10 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             return
         end
 
+        if phase == "ready" and report.gateCueReady ~= true then
+            fail(player.Name .. ": READY lobby gate cue missing or unsafe")
+        end
+
         if fieldOfView < 60 or fieldOfView > 90 then
             fail(player.Name .. ": " .. phase .. " FOV outside safe bounds")
         end
