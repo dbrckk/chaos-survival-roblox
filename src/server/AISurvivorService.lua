@@ -10,8 +10,12 @@ local ArenaPresentation = if script
 local ArenaMechanics = if script
     then require(script.Parent.ArenaMechanics)
     else require("./ArenaMechanics")
-local FluxRelayRules = if script
-    then require(ReplicatedStorage.Shared.FluxRelayRules)
+-- Lest Cloud evaluates repository source against an older published place.
+-- The Shared folder in that place does not contain new unmerged modules yet.
+local fluxRulesInPlace = ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("FluxRelayRules")
+local FluxRelayRules = if fluxRulesInPlace
+    then require(fluxRulesInPlace)
     else require("../shared/FluxRelayRules")
 local AISurvivorNetworkOwnership = if script
     then require(script.Parent.AISurvivorNetworkOwnership)
