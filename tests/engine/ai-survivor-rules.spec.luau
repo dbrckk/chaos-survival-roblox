@@ -47,6 +47,16 @@ describe("AI survivor rules", function()
         model:Destroy()
     end)
 
+    it("uses elevated Orbital ramps only when a bot can actually reach them", function()
+        local rules = AISurvivorRules
+        local waypoint = Vector3.new(15, 12, 8)
+        expect(rules.helixWaypointReachable(Vector3.new(5, 10, 4), waypoint)).toBe(true)
+        expect(rules.helixWaypointReachable(Vector3.new(5, 2, 4), waypoint)).toBe(false)
+        expect(rules.helixWaypointReachable(Vector3.new(-19, 10, 8), waypoint)).toBe(false)
+        expect(rules.helixWaypointReachable(nil, waypoint)).toBe(false)
+        expect(rules.helixWaypointReachable(waypoint, nil)).toBe(false)
+    end)
+
     it("fills a small server toward four visible participants", function()
         expect(AISurvivorRules.desiredBotCount(0)).toBe(0)
         expect(AISurvivorRules.desiredBotCount(1)).toBe(3)
