@@ -123,6 +123,65 @@ describe("Character cinematic reactions", function()
         expect(visual.signature("Unknown", "Bomb", 1, 1) == nil).toBe(true)
     end)
 
+    it("orients explosion ribbons away from impacts even for a rotated avatar", function()
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.CFrame = CFrame.new(20, 10, -12)
+            * CFrame.Angles(0, math.rad(63), 0)
+        root.Parent = model
+        local source = root.Position + Vector3.new(-12, 0, 6)
+        local turn, directed = CharacterReactionVisuals.shockOrientation(
+            root.CFrame, source
+        )
+        expect(directed).toBe(true)
+        local away = Vector3.new(12, 0, -6).Unit
+        local worldForward = root.CFrame:VectorToWorldSpace(turn.LookVector)
+        expect(worldForward:Dot(away) > 0.999).toBe(true)
+        expect(select(2, CharacterReactionVisuals.shockOrientation(
+            root.CFrame, root.Position
+        ))).toBe(false)
+        expect(select(2, CharacterReactionVisuals.shockOrientation(
+            root.CFrame, nil
+        ))).toBe(false)
+
+        local active = {}
+        expect(CharacterReactionVisuals.burst(root, "Shock", "Bomb", 2,
+            0.8, active, source)).toBe(2)
+        local displacement = Vector3.zero
+        local beams = 0
+        for _, item in ipairs(root:GetChildren()) do
+            if item:IsA("Beam") then
+                expect(item:GetAttribute("ChaosReactionDirectional")).toBe(true)
+                expect(item:GetAttribute("ChaosReactionKind")).toBe("Bomb")
+                local a = item.Attachment0.Position
+                local b = item.Attachment1.Position
+                displacement += root.CFrame:VectorToWorldSpace(b - a)
+                beams += 1
+            end
+        end
+        expect(beams).toBe(2)
+        expect(displacement.Unit:Dot(away) > 0.80).toBe(true)
+        model:Destroy()
+    end)
+
+    it("gives meteor dodges an upward streak and bomb dodges a low swept profile", function()
+        local meteor = CharacterReactionVisuals.signature("Dodge", "Meteor", 1, 0.9)
+        local bomb = CharacterReactionVisuals.signature("Dodge", "Bomb", 1, 0.9)
+        local general = CharacterReactionVisuals.signature("Dodge", "Unknown", 1, 0.9)
+        expect(meteor.Finish.Y > bomb.Finish.Y + 1).toBe(true)
+        expect(math.abs(bomb.Finish.X) > math.abs(meteor.Finish.X)).toBe(true)
+        expect(bomb.Curve0 ~= meteor.Curve0).toBe(true)
+        expect(general ~= nil).toBe(true)
+        expect(meteor.Lifetime).toBe(bomb.Lifetime)
+        for _, item in ipairs({meteor, bomb, general}) do
+            expect(item.Width < 0.20).toBe(true)
+            expect(item.Lifetime < 0.50).toBe(true)
+            expect(item.Segments <= 8).toBe(true)
+        end
+    end)
+
     it("marks reaction beams for in-Studio visual and audio synchronization audits", function()
         local model = Instance.new("Model")
         model.Parent = workspace
