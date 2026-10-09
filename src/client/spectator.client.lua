@@ -512,7 +512,9 @@ end
 local function refresh()
     local eliminated = player:GetAttribute("RoundEliminated") == true
     local participant = player:GetAttribute("RoundParticipant") == true
-    local shouldSpectate = roundActive and (eliminated or not participant)
+    local shouldSpectate = SpectatorTargetRules.isSpectating(
+        roundActive, participant, eliminated
+    )
 
     if shouldSpectate then
         if not card.Visible then
@@ -545,7 +547,9 @@ player.CharacterAdded:Connect(function()
     local eliminated = player:GetAttribute("RoundEliminated") == true
     local participant = player:GetAttribute("RoundParticipant") == true
 
-    if roundActive and (eliminated or not participant) then
+    if SpectatorTargetRules.isSpectating(
+        roundActive, participant, eliminated
+    ) then
         spectateIndex(false)
     else
         restoreCamera()

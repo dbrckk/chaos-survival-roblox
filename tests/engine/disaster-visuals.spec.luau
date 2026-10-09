@@ -6,8 +6,74 @@ local DisasterVisuals = require("../../src/shared/DisasterVisuals")
 local UITheme = require("../../src/shared/UITheme")
 local DisasterBalance = require("../../src/server/DisasterBalance")
 local HazardGlyphs = require("../../src/shared/HazardGlyphs")
+local ImpactSetpieceRules = require("../../src/shared/ImpactSetpieceRules")
+local ImpactSetpiece = require("../../src/client/ImpactSetpiece")
 
 describe("Disaster visual identities", function()
+    it("assigns unique tiered impact accents only for meteor and bomb events", function()
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local meteor = ImpactSetpieceRules.get("Meteor", tier, false, 15)
+            local bomb = ImpactSetpieceRules.get("Bomb", tier, false, 15)
+            if tier == "Low" then
+                expect(meteor == nil and bomb == nil).toBe(true)
+            else
+                expect(meteor ~= nil and bomb ~= nil).toBe(true)
+                expect(meteor.Prefix ~= bomb.Prefix).toBe(true)
+                expect(meteor.Material ~= bomb.Material).toBe(true)
+                expect(meteor.Count <= 7).toBe(true)
+                expect(bomb.Count <= 8).toBe(true)
+            end
+        end
+        expect(ImpactSetpieceRules.get("Meteor", "High", true, 12) == nil).toBe(true)
+        expect(ImpactSetpieceRules.get("Unknown", "High", false, 12) == nil).toBe(true)
+        expect(ImpactSetpieceRules.get("Bomb", "High", false, 500).Radius).toBe(40)
+        expect(ImpactSetpieceRules.get("Meteor", "High", false, -5).Radius).toBe(1)
+    end)
+
+    it("builds non-colliding meteor shards and bomb spokes with bounded geometry", function()
+        local root = Instance.new("Folder")
+        for _, case in ipairs({
+            {kind = "Meteor", class = "WedgePart", name = "MeteorShard", count = 7},
+            {kind = "Bomb", class = "Part", name = "BombPressureSpoke", count = 8},
+        }) do
+            local parts = ImpactSetpiece.spawn(root, {
+                kind = case.kind,
+                position = Vector3.new(0, 5, 0),
+                color = Color3.fromRGB(255, 130, 75),
+                radius = 11,
+            }, "High", false, ImpactSetpieceRules)
+            expect(parts ~= nil).toBe(true)
+            expect(#parts:GetChildren()).toBe(case.count)
+            for _, child in ipairs(parts:GetChildren()) do
+                expect(child.ClassName).toBe(case.class)
+                expect(child.Anchored).toBe(true)
+                expect(child.CanCollide).toBe(false)
+                expect(child.CanTouch).toBe(false)
+                expect(child.CanQuery).toBe(false)
+                expect(child.Size.Magnitude > 0).toBe(true)
+                expect(string.find(child.Name, case.name, 1, true) ~= nil).toBe(true)
+            end
+            parts:Destroy()
+        end
+        expect(ImpactSetpiece.spawn(root, {kind = "Meteor"}, "High", false) == nil).toBe(true)
+        expect(ImpactSetpiece.spawn(root, {
+            kind = "Meteor", position = Vector3.zero, color = Color3.new(1, 1, 1),
+        }, "Low", false, ImpactSetpieceRules) == nil).toBe(true)
+        root:Destroy()
+    end)
+
+    it("keeps radial debris trajectories stable and physically bounded", function()
+        for _, kind in ipairs({"Meteor", "Bomb"}) do
+            for i = 1, 8 do
+                local fragment = ImpactSetpieceRules.fragment(kind, i, 8, 25)
+                expect(math.abs(fragment.Direction.Magnitude - 1) < 0.001).toBe(true)
+                expect(fragment.EndRadius > fragment.StartRadius).toBe(true)
+                expect(fragment.Lift >= 0).toBe(true)
+                expect(fragment.Width > 0 and fragment.Length > 0).toBe(true)
+            end
+        end
+    end)
+
     it("defines a profile for every disaster", function()
         local ids = {
             "RisingLava",

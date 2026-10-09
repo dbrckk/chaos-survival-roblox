@@ -39,6 +39,12 @@ local arenaEntryProbeReports = {
     Crossroads = false,
     Orbital = false,
 }
+local roundJourneyReports = {
+    Classic = false,
+    Towers = false,
+    Crossroads = false,
+    Orbital = false,
+}
 local visualPhaseProbeReports = {
     ready = 0,
     round = 0,
@@ -49,6 +55,10 @@ local roundArenaVisualReports = {
     Towers = false,
     Crossroads = false,
     Orbital = false,
+}
+local showtimePhaseProbeReports = {
+    round = false,
+    result = false,
 }
 local uxPhaseProbeReports = {
     ready = 0,
@@ -89,6 +99,13 @@ local function arenaEntryCoverageReady()
     return true
 end
 
+local function roundJourneyObserved()
+    for _, seen in pairs(roundJourneyReports) do
+        if seen then return true end
+    end
+    return false
+end
+
 local function roundArenaVisualCoverageReady()
     for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
         if roundArenaVisualReports[arenaId] ~= true then
@@ -101,6 +118,22 @@ end
 reportEvent.OnServerEvent:Connect(function(player, report)
     if type(report) ~= "table" then
         fail("invalid report from " .. player.Name)
+        return
+    end
+
+    if report.kind == "round_journey_probe" then
+        local arenaId = tostring(report.arenaId or "")
+        if roundJourneyReports[arenaId] == nil
+            or report.completedStages ~= 4
+            or type(report.phases) ~= "table"
+            or table.concat(report.phases, ",") ~= "intermission,ready,round,result"
+        then
+            fail(player.Name .. ": invalid complete-round journey for " .. arenaId)
+            return
+        end
+        roundJourneyReports[arenaId] = true
+        print("CHAOS_E2E_ROUND_JOURNEY", player.Name, arenaId,
+            "intermission>ready>round>result")
         return
     end
 
@@ -157,19 +190,51 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             fail(player.Name .. ": invalid arena probe " .. arenaId)
             return
         end
-        if report.ok ~= true or worldArenaId ~= arenaId then
+        if report.ok ~= true or worldArenaId ~= arenaId
+            or report.signatureReady ~= true
+            or (tonumber(report.signatureParts) or 0) < 6
+            or (tonumber(report.signatureParts) or math.huge) > 50
+        then
             fail(
                 player.Name
-                    .. ": arena probe mismatch state="
+                    .. ": arena/signature probe mismatch state="
                     .. arenaId
                     .. " world="
                     .. worldArenaId
+                    .. ": "
+                    .. tostring(report.error or "signature missing")
             )
             return
         end
 
         arenaProbeReports[arenaId] = true
-        print("CHAOS_E2E_ARENA", player.Name, arenaId, "world=" .. worldArenaId)
+        print(
+            "CHAOS_E2E_ARENA", player.Name, arenaId,
+            "world=" .. worldArenaId,
+            "hero=" .. tostring(report.signatureHero or "missing"),
+            "parts=" .. tostring(report.signatureParts or 0)
+        )
+        return
+    end
+
+    if report.kind == "showtime_phase_probe" then
+        local phase = tostring(report.phase or "")
+        if showtimePhaseProbeReports[phase] == nil
+            or report.ok ~= true
+            or type(report.propParts) ~= "number"
+            or report.propParts < 12
+            or type(report.visibleProps) ~= "number"
+            or (phase == "round" and report.visibleProps ~= 0)
+            or (phase == "result" and report.visibleProps < 1)
+        then
+            fail(player.Name .. ": Showtime presentation probe failed: "
+                .. tostring(report.error or phase))
+            return
+        end
+        showtimePhaseProbeReports[phase] = true
+        print("CHAOS_E2E_SHOWTIME", player.Name, phase,
+            "parts=" .. tostring(report.propParts),
+            "visible=" .. tostring(report.visibleProps))
         return
     end
 
@@ -443,6 +508,9 @@ task.spawn(function()
             and arenaCoverageReady()
             and arenaEntryCoverageReady()
             and roundArenaVisualCoverageReady()
+            and roundJourneyObserved()
+            and showtimePhaseProbeReports.round
+            and showtimePhaseProbeReports.result
         then
             break
         end
@@ -454,6 +522,14 @@ task.spawn(function()
     for _ in pairs(reports) do reportCount += 1 end
     if reportCount < expectedTotal then
         fail(string.format("only %d/%d clients reported", reportCount, expectedTotal))
+    end
+    if not roundJourneyObserved() then
+        fail("no client completed intermission > ready > round > result in order")
+    end
+    for _, phase in ipairs({"round", "result"}) do
+        if showtimePhaseProbeReports[phase] ~= true then
+            fail("missing Showtime stage display probe for " .. phase)
+        end
     end
 
     for _, phase in ipairs({"ready", "round", "result"}) do
@@ -536,7 +612,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, 4 arena entries + per-arena ROUND visual budgets + UI/input/vote/movement/round-state/visual-phases/spectator/join-leave verified",
+            "PASS: %d clients, 4 arena entries + per-arena ROUND visuals + complete round journey + Showtime phase visibility + UI/input/vote/movement/spectator/join-leave verified",
             expectedTotal
         ))
     end

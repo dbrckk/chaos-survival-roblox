@@ -10,6 +10,7 @@ local StudioTestService = game:GetService("StudioTestService")
 local Lighting = game:GetService("Lighting")
 
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local RoundJourneyRules = require(ReplicatedStorage.Shared.RoundJourneyRules)
 
 local player = Players.LocalPlayer
 if not player then return end
@@ -25,6 +26,8 @@ end
 local reportEvent = ReplicatedStorage:WaitForChild("ChaosE2EReport")
 local failures = {}
 local roundStateReceived = false
+local roundJourneyStage = 0
+local observedJourneys = {}
 local lastRoundPhase = nil
 local visualMetrics = {
     Parts = 0,
@@ -36,6 +39,7 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
 local arenaProbed = {}
+local showtimeProbed = {}
 local arenaEntryProbed = {}
 local arenaEntryPending = {}
 
@@ -88,6 +92,68 @@ local function sendVisualPhaseProbe(phase)
     end)
 end
 
+local function sendShowtimePhaseProbe(phase)
+    if phase ~= "round" and phase ~= "result" then
+        return
+    end
+    if showtimeProbed[phase] then
+        return
+    end
+    showtimeProbed[phase] = true
+
+    task.delay(0.55, function()
+        if not player.Parent then
+            return
+        end
+        local root = workspace:FindFirstChild("LobbyShowtimeLocal")
+        local deck = root and root:FindFirstChild("ShowtimeDeck")
+        local assets = root and root:FindFirstChild("Showtime3DAssets")
+        local expected = phase == "result"
+        local parts = 0
+        local visible = 0
+        local safe = true
+        if assets then
+            for _, item in ipairs(assets:GetDescendants()) do
+                if item:IsA("BasePart") then
+                    parts += 1
+                    if item.Transparency < 0.98 then
+                        visible += 1
+                    end
+                    if not item.Anchored or item.CanCollide
+                        or item.CanTouch or item.CanQuery
+                    then
+                        safe = false
+                    end
+                end
+            end
+        end
+
+        local deckVisible = deck and deck:IsA("BasePart")
+            and deck.Transparency < 0.98
+        local hero = assets and assets:FindFirstChild("ShowtimeCrownHeart")
+        local dj = assets and assets:FindFirstChild("ShowtimeDJBooth")
+        local okay = root ~= nil and deck ~= nil
+            and assets ~= nil and hero ~= nil and dj ~= nil
+            and parts >= 12 and safe
+            and deckVisible == expected
+            and ((expected and visible > 0)
+                or (not expected and visible == 0))
+
+        reportEvent:FireServer({
+            kind = "showtime_phase_probe",
+            phase = phase,
+            ok = okay,
+            propParts = parts,
+            visibleProps = visible,
+            error = okay and "" or string.format(
+                "phase=%s deck=%s props=%d visible=%d crown=%s dj=%s safe=%s",
+                phase, tostring(deckVisible), parts, visible,
+                tostring(hero ~= nil), tostring(dj ~= nil), tostring(safe)
+            ),
+        })
+    end)
+end
+
 local function sendArenaProbe(state)
     if type(state) ~= "table" or tostring(state.phase or "") ~= "result" then
         return
@@ -103,15 +169,50 @@ local function sendArenaProbe(state)
     local arena = root and root:FindFirstChild("Arena")
     local worldArenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
     local matchesWorld = worldArenaId == arenaId
+    local expectedHero = ({
+        Classic = "ClassicRadarSweep",
+        Towers = "TowerAnimatedLift",
+        Crossroads = "CrossroadAnimatedSignal1",
+        Orbital = "OrbitalGyroscopeHeart",
+    })[arenaId]
+    local signatureRoot = workspace:FindFirstChild("ArenaSignatureLocal")
+    local signatureSet = signatureRoot and signatureRoot:FindFirstChild("ArenaSignatureSet")
+    local signatureHero = signatureSet and expectedHero
+        and signatureSet:FindFirstChild(expectedHero)
+    local signatureParts = 0
+    local safeParts = true
+    if signatureSet then
+        for _, child in ipairs(signatureSet:GetDescendants()) do
+            if child:IsA("BasePart") then
+                signatureParts += 1
+                if not child.Anchored or child.CanCollide
+                    or child.CanTouch or child.CanQuery
+                then
+                    safeParts = false
+                end
+            end
+        end
+    end
+    local signatureReady = signatureHero ~= nil
+        and signatureHero:IsA("BasePart")
+        and signatureParts >= 6 and signatureParts <= 50
+        and safeParts
 
     reportEvent:FireServer({
         kind = "arena_probe",
         arenaId = arenaId,
         worldArenaId = worldArenaId,
-        ok = matchesWorld,
-        error = matchesWorld
+        ok = matchesWorld and signatureReady,
+        signatureReady = signatureReady,
+        signatureHero = expectedHero or "Unknown",
+        signatureParts = signatureParts,
+        error = matchesWorld and signatureReady
             and ""
-            or ("RoundState arena " .. arenaId .. " != world arena " .. worldArenaId),
+            or string.format(
+                "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s",
+                arenaId, worldArenaId, tostring(expectedHero),
+                tostring(signatureHero ~= nil), signatureParts, tostring(safeParts)
+            ),
     })
 end
 
@@ -217,7 +318,24 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
         if type(state) == "table" then
             roundStateReceived = true
             lastRoundPhase = state.phase
+            local stage, completed = RoundJourneyRules.advance(
+                roundJourneyStage, state.phase
+            )
+            roundJourneyStage = stage
+            if completed then
+                local arenaId = tostring(state.arenaId or "")
+                if arenaId ~= "" and not observedJourneys[arenaId] then
+                    observedJourneys[arenaId] = true
+                    reportEvent:FireServer({
+                        kind = "round_journey_probe",
+                        arenaId = arenaId,
+                        completedStages = stage,
+                        phases = {"intermission", "ready", "round", "result"},
+                    })
+                end
+            end
             sendVisualPhaseProbe(tostring(state.phase or ""))
+            sendShowtimePhaseProbe(tostring(state.phase or ""))
             sendArenaProbe(state)
             sendArenaEntryProbe(state)
         end
@@ -291,6 +409,7 @@ local shrinkGui = playerGui:WaitForChild("ShrinkPressure", 10)
 local inviteGui = playerGui:WaitForChild("ChaosSocialInvite", 10)
 local shareGui = playerGui:WaitForChild("ChaosMomentShare", 10)
 local reactionsGui = playerGui:WaitForChild("ChaosSocialReactions", 10)
+local showtimeGui = playerGui:WaitForChild("ChaosShowtime", 10)
 
 check(hud ~= nil, "ChaosHUD missing")
 check(juice ~= nil, "ChaosJuice missing")
@@ -333,6 +452,28 @@ check(shrinkGui ~= nil, "ShrinkPressure missing")
 check(inviteGui ~= nil, "ChaosSocialInvite missing")
 check(shareGui ~= nil, "ChaosMomentShare missing")
 check(reactionsGui ~= nil, "ChaosSocialReactions missing")
+
+check(showtimeGui ~= nil, "ChaosShowtime emote interface missing")
+if showtimeGui then
+    for _, controlName in ipairs({
+        "ShowtimeToggle",
+        "Emote_dance",
+        "Emote_shuffle",
+        "Emote_groove",
+        "Emote_cheer",
+        "Emote_wave",
+        "Emote_laugh",
+    }) do
+        local control = showtimeGui:FindFirstChild(controlName, true)
+        check(control ~= nil, controlName .. " missing")
+        if control and control:IsA("GuiObject") then
+            check(
+                control.Size.Y.Offset >= 44,
+                controlName .. " touch target too small"
+            )
+        end
+    end
+end
 
 do
     local minHeight = UserInputService.TouchEnabled and 44 or 36

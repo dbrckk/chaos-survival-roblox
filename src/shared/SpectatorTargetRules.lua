@@ -1,6 +1,11 @@
 -- Stable spectator target selection; only changes presentation, not gameplay.
 local SpectatorTargetRules = {}
 
+function SpectatorTargetRules.isSpectating(roundActive, participant, eliminated)
+    return roundActive == true
+        and (eliminated == true or participant ~= true)
+end
+
 function SpectatorTargetRules.resolveIndex(targets, selectedCharacter, previousIndex, advance)
     local count = type(targets) == "table" and #targets or 0
     if count == 0 then

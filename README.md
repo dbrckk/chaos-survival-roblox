@@ -58,7 +58,7 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 - Real-engine gameplay matrix: every arena × every disaster + every allowed Double Chaos pair
 - Four-client Studio E2E harness with virtual UI clicks, movement, voting, joins and leaves
 - AI Survivor animation state blending (idle/walk/run/jump/fall) and map-aware/hazard-aware navigation
-- 66 engine specs assigned exactly once across Open Cloud CI shards
+- 67 engine specs assigned exactly once across Open Cloud CI shards
 - No paid assets required
 
 ## Current disasters
@@ -125,3 +125,19 @@ src/
 The default CI uses Roblox Open Cloud Engine Tests and currently covers all arena/disaster combinations plus every allowed Double Chaos pair in a real Roblox DataModel.
 
 A separate four-client Studio E2E harness is included under `studio/`. It automates UI clicks, voting, movement, staggered joins and client leave behavior using StudioTestService and VirtualInput. Roblox Studio requires a logged-in user session, so the GitHub Studio workflow is manual and targets an authenticated self-hosted Windows runner.
+
+## Integrated visual and locomotion candidate (2026-10-08)
+
+This **unreleased candidate** reconciles PRs #12–#16 with the already merged spectator fix (#11) and Open Cloud retry hardening (#17):
+
+- Chaos Showtime: six R6/R15 emotes, a holographic dance floor, DJ architecture, a neon crown and accessible narrow-screen mobile controls.
+- Four original arena landmarks: Classic radar, Towers maintenance elevator, Crossroads transit signage and Orbital gyroscope.
+- Unique meteor and bomb impact fragments, included in visual performance telemetry.
+- Event-driven blast/near-miss/landing reactions on eligible living players and AI bots; spectator/lobby avatars excluded.
+- R15 sprint starts, stop skids, sharp pivots, foot planting, takeoff and fall bracing with transient floor cues.
+
+All added content is cosmetic only. No speed, jump, damage, server authority, physics, or monetization changes. Full Studio and real Android performance/gameplay playtests remain required before release.
+
+- Late map-replication resilience: lobby floor and arena base visual builders now watch nested map parts and arena identity attributes instead of relying on container arrival order.
+
+- Cosmetic hazard-impact events also reach spectating clients; visible bursts are filtered by spectator camera range, while movement/body feedback remains disabled for nonparticipants.
