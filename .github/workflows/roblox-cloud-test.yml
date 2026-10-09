@@ -65,6 +65,7 @@ jobs:
             "tests/engine/animation-catalog.spec.luau",
             "tests/engine/arena-focal-lighting-rules.spec.luau",
             "tests/engine/arena-material-rules.spec.luau",
+            "tests/engine/arena-crisis-surface.spec.luau",
             "tests/engine/arena-presentation.spec.luau",
             "tests/engine/arena-spatial-audio-rules.spec.luau",
             "tests/engine/arena-variants.spec.luau",
