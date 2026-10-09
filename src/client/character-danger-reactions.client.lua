@@ -133,7 +133,7 @@ local function impact(payload)
         impactByModel[model] = now
         n += 1
         ReactionVisuals.burst(root, "Shock", tostring(payload.kind or ""),
-            p.Shock, intensity, activePieces)
+            p.Shock, intensity, activePieces, payload.position)
     end
 
     candidate(player.Character)
