@@ -1517,6 +1517,54 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         )
         platform.Color = theme.Detail:Lerp(theme.Surface, 0.28)
 
+        if definition.Skybridge == true then
+            platform.Name = "Skybridge" .. tostring(i)
+            platform:SetAttribute("ChaosSkybridge", true)
+            platform.Material = VisualTheme.Materials.Structure
+            -- Clean parallel luminous rails make the route legible without
+            -- opaque barriers that interfere with dodge/parkour.
+            local alongX = platform.Size.X > platform.Size.Z
+            local span = math.max(platform.Size.X, platform.Size.Z) - 0.8
+            local width = math.min(platform.Size.X, platform.Size.Z)
+            for side = -1, 1, 2 do
+                local railOffset = (width * 0.5 - 0.34) * side
+                local rail = decorPart(
+                    decor,
+                    "SkybridgeRail" .. i .. "_" .. tostring(side),
+                    alongX and Vector3.new(span, 0.14, 0.20)
+                        or Vector3.new(0.20, 0.14, span),
+                    platform.Position + Vector3.new(
+                        alongX and 0 or railOffset,
+                        (platform.Size.Y * 0.5) + 0.10,
+                        alongX and railOffset or 0
+                    ),
+                    side < 0 and theme.Accent or theme.Secondary,
+                    VisualTheme.Materials.Glow
+                )
+                rail.Transparency = 0.16
+                rail.CastShadow = false
+            end
+            -- Three under-deck ribs per bridge suggest structural engineering
+            -- at no collision cost. The bridge itself remains the only
+            -- physical route.
+            for ribIndex = -1, 1 do
+                local rib = decorPart(
+                    decor,
+                    "SkybridgeRib" .. i .. "_" .. tostring(ribIndex),
+                    alongX and Vector3.new(0.46, 0.38, width + 0.22)
+                        or Vector3.new(width + 0.22, 0.38, 0.46),
+                    platform.Position + Vector3.new(
+                        alongX and ribIndex * span * 0.27 or 0,
+                        -(platform.Size.Y * 0.5) - 0.24,
+                        alongX and 0 or ribIndex * span * 0.27
+                    ),
+                    theme.Structure,
+                    VisualTheme.Materials.Structure
+                )
+                rib.CastShadow = false
+            end
+        end
+
         local trim = decorPart(
             decor,
             "PlatformGlow" .. i,
