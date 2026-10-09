@@ -75,7 +75,8 @@ function LandingImprintKit.build(parent, surfaceFrame, color,
             TweenInfo.new(duration, Enum.EasingStyle.Quad,
                 Enum.EasingDirection.Out),
             {
-                CFrame = part.CFrame * CFrame.new(design.Travel),
+                CFrame = surfaceFrame * CFrame.new(design.Offset + design.Travel)
+                    * CFrame.Angles(0, design.Angle, 0),
                 Size = Vector3.new(design.Size.X * 0.54, 0.025,
                     design.Size.Z * 1.30),
                 Transparency = 1,
