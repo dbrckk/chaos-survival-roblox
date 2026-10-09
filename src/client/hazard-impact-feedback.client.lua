@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ImpactSetpiece = require(script.Parent.ImpactSetpiece)
 local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 local ImpactPulseRules = require(ReplicatedStorage.Shared.ImpactPulseRules)
+local ImpactMaterialRules = require(ReplicatedStorage.Shared.ImpactMaterialRules)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardImpactFeedback")
@@ -35,62 +36,68 @@ local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function makeAftermath(position, color, radius, kind, profile, reduced)
-    -- Persistent ground traces are owned by disaster-residue.client.lua.
-    -- This layer only keeps short-lived airborne debris tied to the impact burst.
-    if profile.Name == "Low" or reduced then
-        return
+-- One raycast per eligible impact, restricted to the generated arena.
+-- A missing/streamed-out deck resolves to neutral stone, never another player.
+local function sampleGround(position, color, kind, profile, reduced)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local hit = nil
+    if generated then
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Include
+        params.FilterDescendantsInstances = {generated}
+        params.IgnoreWater = true
+        hit = workspace:Raycast(
+            position + Vector3.new(0, 14, 0),
+            Vector3.new(0, -58, 0),
+            params
+        )
     end
+    local surfaceColor = hit and hit.Instance:IsA("BasePart")
+        and hit.Instance.Color or Color3.fromRGB(112, 105, 99)
+    local style = ImpactMaterialRules.palette(
+        hit and hit.Material or Enum.Material.Slate,
+        surfaceColor, color, kind, profile.Name, reduced
+    )
+    local frame = ImpactMaterialRules.surfaceFrame(
+        hit and (hit.Position + hit.Normal * 0.04) or position,
+        hit and hit.Normal or Vector3.yAxis
+    )
+    return style, frame
+end
 
-    local debrisCount = profile.Name == "High" and 6 or 3
-    for i = 1, debrisCount do
-        -- Event position supplies stable natural variation without random
-        -- flicker between clients or frame-dependent math.random() calls.
-        local phase = (position.X * 0.11 + position.Z * 0.07) % (math.pi * 2)
-        local angle = ((i - 1) / debrisCount) * math.pi * 2 + phase
-        local distance = radius * (0.30 + (i % 3) * 0.16)
-        local meteor = kind == "Meteor"
-        local shard = meteor and Instance.new("WedgePart") or Instance.new("Part")
-        shard.Name = meteor and "LocalMeteorMineralFragment" or "LocalBombShrapnel"
-        shard.Size = Vector3.new(
-            0.20 + (i % 3) * 0.12,
-            0.10 + (i % 2) * 0.08,
-            0.32 + (i % 4) * 0.13
+local function makeAftermath(kind, profile, style, frame, radius)
+    -- The persistent crater/scorch is owned by disaster-residue.client.lua.
+    -- This uses the *existing* six/three temporary airborne pieces only,
+    -- now shaded/oriented by the raycast material and surface normal.
+    if not style or style.Count == 0 or not frame then return end
+    for i = 1, style.Count do
+        local fragment = ImpactMaterialRules.fragment(
+            frame, i, style.Count, radius, style.Motion
         )
-        shard.CFrame = CFrame.new(
-            position
-                + Vector3.new(math.cos(angle) * distance, 0.13, math.sin(angle) * distance)
-        ) * CFrame.Angles(
-            i * 0.21,
-            angle,
-            i * 0.17
-        )
-        shard.Anchored = true
-        shard.CanCollide = false
-        shard.CanTouch = false
-        shard.CanQuery = false
-        shard.CastShadow = false
-        shard.Material = Enum.Material.Metal
-        shard.Color = kind == "Meteor"
-            and color:Lerp(Color3.fromRGB(42, 34, 28), 0.70)
-            or color:Lerp(Color3.fromRGB(35, 38, 48), 0.72)
-        shard.Transparency = 0.12
-        shard.Parent = setpieceFolder
-
-        TweenService:Create(
-            shard,
-            TweenInfo.new(0.66 + (((i * 37) % 11) / 10) * 0.26,
-                Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {
-                Position = shard.Position + Vector3.new(
-                    math.cos(angle) * (1.5 + (i % 3) * 0.8),
-                    0.15 + (i % 4) * 0.14,
-                    math.sin(angle) * (1.5 + (i % 3) * 0.8)
-                ),
-                Transparency = 1,
-            }
-        ):Play()
-        Debris:AddItem(shard, 1.0)
+        if fragment then
+            local meteor = kind == "Meteor"
+            local shard = meteor and Instance.new("WedgePart") or Instance.new("Part")
+            shard.Name = meteor and "LocalMeteorSurfaceFragment" or "LocalBombSurfaceFragment"
+            shard.Size = fragment.Size
+            shard.CFrame = fragment.Start
+            shard.Anchored = true
+            shard.CanCollide = false
+            shard.CanTouch = false
+            shard.CanQuery = false
+            shard.CastShadow = false
+            shard.Material = style.Material
+            shard.Color = style.Color
+            shard.Transparency = 0.16
+            shard:SetAttribute("ImpactSurfaceFamily", style.Family)
+            shard.Parent = setpieceFolder
+            local duration = 0.62 + (((i * 37) % 11) / 10) * 0.25
+            TweenService:Create(
+                shard,
+                TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = shard.Position + fragment.Travel, Transparency = 1}
+            ):Play()
+            Debris:AddItem(shard, duration + 0.14)
+        end
     end
 end
 
@@ -123,6 +130,9 @@ local function renderBurst(payload)
         return
     end
     activeBursts += 1
+    local materialStyle, groundFrame = sampleGround(
+        position, color, kind, profile, reduced
+    )
     local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
     local targetDiameter = radius * 2
         * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
@@ -195,8 +205,8 @@ local function renderBurst(payload)
                 Color3.fromRGB(255, 110, 48)
             )
             or ColorSequence.new(
-                color:Lerp(Color3.fromRGB(165, 120, 105), 0.50),
-                Color3.fromRGB(58, 54, 60)
+                materialStyle.DustColor:Lerp(color, 0.20),
+                materialStyle.DustColor:Lerp(Color3.fromRGB(58, 54, 60), 0.55)
             )
         plumeEmitter.Lifetime = kind == "Meteor"
             and NumberRange.new(0.30, 0.56)
@@ -334,8 +344,8 @@ local function renderBurst(payload)
         dust.LightEmission = 0.28
         dust.LightInfluence = 0.45
         dust.Color = ColorSequence.new(
-            color:Lerp(Color3.fromRGB(88, 82, 78), 0.65),
-            Color3.fromRGB(48, 45, 46)
+            materialStyle.DustColor:Lerp(color, 0.18),
+            materialStyle.DustColor:Lerp(Color3.fromRGB(48, 45, 46), 0.42)
         )
         dust.Size = NumberSequence.new({
             NumberSequenceKeypoint.new(0, math.max(0.35, radius * 0.05)),
@@ -365,7 +375,7 @@ local function renderBurst(payload)
         emitter:Emit(VfxQuality.particleCount("Medium", 14, 6))
     end
 
-    makeAftermath(position, color, radius, kind, profile, reduced)
+    makeAftermath(kind, profile, materialStyle, groundFrame, radius)
 
     local lifetime = duration * 1.35 + 0.08
     Debris:AddItem(burst, lifetime)
