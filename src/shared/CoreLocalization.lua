@@ -424,7 +424,7 @@ local ARENA_COPY = {
             name = "CLASSIC GRID",
             strategy = "Balanced routes • switch height when danger closes in",
             mechanicName = "ESCAPE PADS",
-            mechanicHint = "Blue pads launch you away from the center when a route collapses",
+            mechanicHint = "Blue pads aid escape; touch all four glowing Grid Circuit nodes clockwise for mastery",
         },
         Towers = {
             name = "TOWER RUN",
@@ -450,7 +450,7 @@ local ARENA_COPY = {
             name = "GRILLE CLASSIQUE",
             strategy = "Routes équilibrées • change de hauteur quand le danger se referme",
             mechanicName = "PADS D'ÉVASION",
-            mechanicHint = "Les pads bleus t'éloignent du centre quand une route devient dangereuse",
+            mechanicHint = "Les pads bleus aident à fuir ; touche les quatre bornes lumineuses dans le sens horaire",
         },
         Towers = {
             name = "TOURS",
