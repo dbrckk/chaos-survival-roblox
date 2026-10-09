@@ -206,6 +206,22 @@ local function sampleArenaPresentation(arenaId)
         and serviceMotif.Anchored and skylineMotif.Anchored
         and not serviceMotif.CanCollide and not skylineMotif.CanCollide
 
+    local silhouetteName = ({
+        Classic = "SurveyCounterweight",
+        Towers = "CoolingIntakeSpine",
+        Crossroads = "TransitDirectionBeam",
+        Orbital = "DockFieldSpine",
+    })[arenaId]
+    local silhouetteRoot = workspace:FindFirstChild("ArenaSilhouetteBreakupLocal")
+    local silhouette = silhouetteRoot and silhouetteName
+        and silhouetteRoot:FindFirstChild(silhouetteName)
+    local silhouetteReady = silhouette ~= nil
+        and silhouette:IsA("BasePart")
+        and silhouette:GetAttribute("ChaosSilhouetteAccent") == true
+        and silhouette:GetAttribute("ArenaVariant") == arenaId
+        and silhouette.Anchored and not silhouette.CanCollide
+        and not silhouette.CanTouch and not silhouette.CanQuery
+
     local platformName = ({
         Classic = "ClassicCalibrationPlate",
         Towers = "TowerHoistMount",
@@ -224,7 +240,8 @@ local function sampleArenaPresentation(arenaId)
         and weld ~= nil and weld:IsA("WeldConstraint")
         and weld.Part0 == trim and weld.Part1 ~= nil
 
-    local ok = matchesWorld and signatureReady and secondaryReady and platformReady
+    local ok = matchesWorld and signatureReady and secondaryReady
+        and platformReady and silhouetteReady
     return {
         kind = "arena_probe",
         arenaId = arenaId,
@@ -233,13 +250,14 @@ local function sampleArenaPresentation(arenaId)
         signatureReady = signatureReady,
         secondaryReady = secondaryReady,
         platformReady = platformReady,
+        silhouetteReady = silhouetteReady,
         signatureHero = expectedHero or "Unknown",
         signatureParts = signatureParts,
         error = ok and "" or string.format(
-            "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s secondary=%s platform=%s",
+            "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s secondary=%s platform=%s skyline=%s",
             arenaId, worldArenaId, tostring(expectedHero),
             tostring(signatureHero ~= nil), signatureParts, tostring(safeParts),
-            tostring(secondaryReady), tostring(platformReady)
+            tostring(secondaryReady), tostring(platformReady), tostring(silhouetteReady)
         ),
     }
 end
