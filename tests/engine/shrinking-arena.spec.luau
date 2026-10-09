@@ -6,6 +6,7 @@ local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
+local OrbitalHelix = require("../../src/server/OrbitalHelix")
 
 local function cleanup(callbacks, objects)
     for _, fn in ipairs(callbacks) do
@@ -89,6 +90,75 @@ describe("Shrinking Arena mobility integration", function()
         if generated then
             generated:Destroy()
         end
+    end)
+    it("shrinks every Orbital ramp with the decks, then restores its beams", function()
+        local root = MapBuilder.build(Config, "Orbital", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena and arena:FindFirstChild("Platforms")
+        local helix = arena and arena:FindFirstChild("HelixCircuit")
+        expect(platforms ~= nil).toBe(true)
+        expect(helix ~= nil).toBe(true)
+
+        local originals = {}
+        local source = OrbitalHelix.capture(helix)
+        expect(#source).toBe(8)
+        for _, state in ipairs(source) do
+            originals[state.ramp] = {
+                cf = state.ramp.CFrame,
+                size = state.ramp.Size,
+            }
+            expect(#state.decorations).toBe(8)
+            for _, d in ipairs(state.decorations) do
+                originals[d.part] = {cf = d.part.CFrame, size = d.part.Size}
+            end
+        end
+
+        local active = true
+        local objects = {}
+        local callbacks = {}
+        ShrinkingArena.start({
+            Config = Config,
+            RoundSeconds = 0.36,
+            Cleanup = objects,
+            OnCleanup = callbacks,
+            Active = function() return active end,
+        })
+        task.wait(0.22)
+
+        local advanced = 0
+        for index = 1, 8 do
+            local outer = platforms:FindFirstChild("Platform" .. index)
+            local inner = platforms:FindFirstChild("Platform" .. (index + 8))
+            local ramp = helix:FindFirstChild("HelixRamp" .. index)
+            expect(outer ~= nil).toBe(true)
+            expect(inner ~= nil).toBe(true)
+            expect(ramp ~= nil).toBe(true)
+
+            local from = outer.Position + Vector3.new(0, outer.Size.Y * 0.5 - 0.15, 0)
+            local to = inner.Position + Vector3.new(0, inner.Size.Y * 0.5 - 0.15, 0)
+            expect((ramp.Position - (from + to) * 0.5).Magnitude < 0.1).toBe(true)
+            expect((ramp.CFrame.LookVector - (to - from).Unit).Magnitude < 0.02).toBe(true)
+            expect(math.abs(ramp.Size.Z - ((to - from).Magnitude + 4.4)) < 0.1).toBe(true)
+
+            local old = originals[ramp]
+            if (ramp.Position - old.cf.Position).Magnitude > 1 then
+                advanced += 1
+            end
+            expect(ramp.CanCollide).toBe(true)
+            local rail = helix:FindFirstChild("HelixEdgeSignal" .. index .. "_1")
+            expect(rail ~= nil).toBe(true)
+            expect(rail.CanCollide).toBe(false)
+            expect((rail.CFrame.Position - originals[rail].cf.Position).Magnitude > 0.3).toBe(true)
+        end
+        expect(advanced).toBe(8)
+
+        active = false
+        cleanup(callbacks, objects)
+        for part, state in pairs(originals) do
+            expect((part.CFrame.Position - state.cf.Position).Magnitude < 0.001).toBe(true)
+            expect((part.Size - state.size).Magnitude < 0.001).toBe(true)
+        end
+        root:Destroy()
     end)
 end)
 
