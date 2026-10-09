@@ -476,6 +476,21 @@ function AISurvivorRules.locomotionTransition(previousKind, nextKind)
     return 0.10
 end
 
+-- An unexpected NPC runtime failure must not terminate the shared AI loop.
+-- Each record is isolated, and diagnostics are throttled per character.
+function AISurvivorRules.runBrainStep(record, now, stepFn)
+    local success, result = pcall(stepFn, record, now)
+    if success then
+        return true, nil, false
+    end
+
+    local shouldReport = now >= (record.nextBrainWarningAt or -math.huge)
+    if shouldReport then
+        record.nextBrainWarningAt = now + 8
+    end
+    return false, tostring(result), shouldReport
+end
+
 function AISurvivorRules.brainCadence(recordCount, phase)
     local count = math.max(0, math.floor(tonumber(recordCount) or 0))
     if count == 0 then
