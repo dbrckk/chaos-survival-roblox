@@ -6,6 +6,7 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
 local FluxRelayRules = require("../../src/shared/FluxRelayRules")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
+local GridCircuitService = require("../../src/server/GridCircuitService")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
 local MovementSafety = require("../../src/server/MovementSafety")
@@ -120,6 +121,65 @@ describe("Arena mechanics", function()
             expect(math.abs(node.Position.Z - base.Position.Z) <= 17).toBe(true)
         end
         root:Destroy()
+    end)
+
+    it("lets in-round AI complete Grid Circuit with no human rewards", function()
+        local generated = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local arena = generated:FindFirstChild("Arena")
+        local mechanics = Instance.new("Folder")
+        mechanics.Name = "Mechanics"
+        mechanics.Parent = arena
+
+        local credited = 0
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Contestants = {},
+            OnArenaMechanicUsed = function()
+                credited += 1
+            end,
+        }
+        local nodes = GridCircuitService.start(ctx, mechanics, Config.ArenaCenter)
+        expect(nodes ~= nil).toBe(true)
+
+        local bot = Instance.new("Model")
+        bot.Name = "ClassicGridCircuitBot"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = bot
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.Anchored = true
+        root.Parent = bot
+        bot.Parent = workspace
+
+        local state = {}
+        local ready = {}
+        for i = 1, 4 do
+            local sensor = nodes:FindFirstChild("GridCircuitNode" .. i)
+            expect(sensor ~= nil).toBe(true)
+            root.Position = sensor.Position
+            expect(GridCircuitService.tryTouch(ctx, sensor, root, state,
+                ready, i * 2, 100 + i * 2)).toBe(true)
+            expect(bot:GetAttribute("GridCircuitStep")).toBe(i)
+            if i < 4 then
+                expect(bot:GetAttribute("GridCircuitNext")).toBe(i + 1)
+            end
+        end
+        expect(bot:GetAttribute("GridCircuitComplete")).toBe(true)
+        expect(credited).toBe(0)
+
+        -- A dead or out-of-round NPC cannot claim a second completion.
+        bot:SetAttribute("AISurvivorInRound", false)
+        local first = nodes:FindFirstChild("GridCircuitNode1")
+        root.Position = first.Position
+        expect(GridCircuitService.tryTouch(ctx, first, root, state,
+            ready, 20, 120)).toBe(false)
+
+        bot:Destroy()
+        generated:Destroy()
     end)
 
     it("provides multiple telegraphed mobility choices per arena", function()
