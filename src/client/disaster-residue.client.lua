@@ -117,11 +117,12 @@ local function makePart(name, size, cframe, color, material, transparency)
 end
 
 local function fadeLater(part, lifetime, settlement)
+    local createdInRound = roundToken
     if settlement then
-        -- One scheduled color transition; no per-frame animation or extra
-        -- geometry. Fade and settling finish before the part is removed.
+        -- Do not restart a color tween after the enclosing round or map
+        -- has cleared. Old fading geometry is cleaned by Debris separately.
         task.delay(settlement.StartAfter, function()
-            if part.Parent then
+            if createdInRound == roundToken and part.Parent then
                 TweenService:Create(
                     part,
                     TweenInfo.new(settlement.Duration,
