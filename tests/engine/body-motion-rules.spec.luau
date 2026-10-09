@@ -252,8 +252,11 @@ describe("Directional character impact and cinematic AI footwork", function()
         local rules = {
             profile = BotMotionPresentationRules.profile,
             trailAccent = BotMotionPresentationRules.trailAccent,
-            cue = function(...)
-                return BotMotionPresentationRules.cue(..., LocomotionDynamics)
+            cue = function(v, before, dt, grounded, tier, reduced, phase, distance)
+                return BotMotionPresentationRules.cue(
+                    v, before, dt, grounded, tier, reduced, phase, distance,
+                    LocomotionDynamics
+                )
             end,
         }
         expect(rules.profile("Low", false).MaxPerScan).toBe(0)
