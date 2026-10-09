@@ -7,6 +7,7 @@ local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
+local ArenaMechanics = require("../../src/server/ArenaMechanics")
 
 local function cleanup(callbacks, objects)
     for _, fn in ipairs(callbacks) do
@@ -164,6 +165,51 @@ describe("Shrinking Arena mobility integration", function()
         for part, old in pairs(originals) do
             expect((part.Position - old.cf.Position).Magnitude < 0.001).toBe(true)
             expect((part.Size - old.size).Magnitude < 0.001).toBe(true)
+        end
+        root:Destroy()
+    end)
+
+    it("keeps Crossroads Flux Relays on the shrinking base and restores gate locations", function()
+        local root = MapBuilder.build(Config, "Crossroads", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local mechanicsCtx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            Contestants = {},
+        }
+        ArenaMechanics.start(mechanicsCtx, "Crossroads")
+        local mechanics = arena:FindFirstChild("Mechanics")
+        local relays = mechanics and mechanics:FindFirstChild("FluxRelays")
+        expect(relays ~= nil).toBe(true)
+        expect(#relays:GetChildren()).toBe(4)
+        local original = {}
+        for _, gate in ipairs(relays:GetChildren()) do
+            original[gate] = gate.CFrame
+        end
+        local active = true
+        local callbacks = {}
+        ShrinkingArena.start({
+            Config = Config,
+            RoundSeconds = 0.36,
+            Cleanup = {}, OnCleanup = callbacks,
+            Active = function() return active end,
+        })
+        task.wait(0.22)
+        for gate, old in pairs(original) do
+            local current = gate.Position - Config.ArenaCenter
+            local before = old.Position - Config.ArenaCenter
+            local planarCurrent = Vector3.new(current.X, 0, current.Z).Magnitude
+            local planarBefore = Vector3.new(before.X, 0, before.Z).Magnitude
+            expect(planarCurrent < planarBefore - 0.2).toBe(true)
+            expect(gate.CanCollide).toBe(false)
+            expect(gate.CanTouch).toBe(true)
+            expect(gate:GetAttribute("FluxCycleEpoch") ~= nil).toBe(true)
+        end
+        active = false
+        cleanup(callbacks, {})
+        for gate, old in pairs(original) do
+            expect((gate.CFrame.Position - old.Position).Magnitude < 0.001).toBe(true)
         end
         root:Destroy()
     end)

@@ -146,6 +146,25 @@ function D.start(ctx)
                 }
             end
         end
+
+        -- Unlike Tower Skyrail and Orbital Helix, Flux Relays are fixed
+        -- world checkpoints. During a shrinking-floor round their gates
+        -- must stay over the walkable base, not hang beyond its new edge.
+        local relays = mechanics:FindFirstChild("FluxRelays")
+        if relays then
+            for _, item in ipairs(relays:GetChildren()) do
+                if item:IsA("BasePart")
+                    and type(item:GetAttribute("FluxRelayIndex")) == "number"
+                then
+                    movableParts[#movableParts+1] = {
+                        part = item,
+                        cframe = item.CFrame,
+                        localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
+                        localPosition = originalCFrame:PointToObjectSpace(item.Position),
+                    }
+                end
+            end
+        end
     end
 
     local helix = arena:FindFirstChild("HelixCircuit")

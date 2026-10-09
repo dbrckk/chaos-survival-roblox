@@ -138,6 +138,15 @@ derive from synchronized server timestamps—no per-frame server signal
 spam. A successful crossing drives a short teal feedback cue, while
 Overdrive retains the game's existing golden identity.
 
+**Shrinking Arena compatibility:** the server now scales all four Flux
+checkpoint positions inward alongside the base while preserving charging
+epochs, timestamps and cooldowns. The full client-rendered arch—including
+armor, light rails and sculpted chevrons—follows each replicated sensor's
+transform without adding any extra polling loop. Cleanup restores the
+original positions, and a dedicated Open Cloud regression verifies the
+real gates move and restore rather than leaving misleading portals
+outside the shrinking arena.
+
 **Test cases:** use each lane from both sides; verify the active pair
 alternates, inactive arch does not boost, one character cannot spam across
 adjacent gates, and bots use the same active gating. Test with

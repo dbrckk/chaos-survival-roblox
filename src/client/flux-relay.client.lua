@@ -106,6 +106,11 @@ local function makeGate(trigger)
     local tier = quality()
     local detail = tier == "High" and 2 or (tier == "Medium" and 1 or 0)
     local statusPieces = {}
+    -- Capture only parts of this gate, not earlier gates or one-shot VFX.
+    local existingParts = {}
+    for _, item in ipairs(folder:GetChildren()) do
+        existingParts[item] = true
+    end
 
     -- Three-piece engineered arch, not a single neon box.
     local left = newPart("FluxFrameLeft", Vector3.new(0.76, 6.1, 0.80),
@@ -151,6 +156,15 @@ local function makeGate(trigger)
     end
 
     local label, stroke = banner(trigger)
+    local pieces = {}
+    for _, item in ipairs(folder:GetChildren()) do
+        if item:IsA("BasePart") and not existingParts[item] then
+            table.insert(pieces, {
+                part = item,
+                localCFrame = trigger.CFrame:ToObjectSpace(item.CFrame),
+            })
+        end
+    end
     local entry = {
         trigger = trigger,
         statusPieces = statusPieces,
@@ -158,7 +172,8 @@ local function makeGate(trigger)
         stroke = stroke,
         lastCharged = nil,
         blinkUntil = -math.huge,
-        parts = {left, right, header},
+        sourceCFrame = trigger.CFrame,
+        parts = pieces,
     }
     gates[trigger] = entry
 
@@ -203,6 +218,16 @@ local function render(now)
         if not trigger.Parent then
             -- Source rebinding owns the lifetime of all visual components.
             continue
+        end
+        if trigger.CFrame ~= entry.sourceCFrame then
+            -- Shrinking Arena moves the server checkpoint; move the whole
+            -- bespoke light sculpture to exactly the same physical gate.
+            for _, piece in ipairs(entry.parts) do
+                if piece.part.Parent then
+                    piece.part.CFrame = trigger.CFrame * piece.localCFrame
+                end
+            end
+            entry.sourceCFrame = trigger.CFrame
         end
         local epoch = trigger:GetAttribute("FluxCycleEpoch")
         local offset = trigger:GetAttribute("FluxPhaseOffset")
