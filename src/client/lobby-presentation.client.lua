@@ -8,6 +8,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local LobbyGateCueKit = require(script.Parent.LobbyGateCueKit)
 
 local player = Players.LocalPlayer
 local frenchLocale = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -36,6 +37,7 @@ local approachRibs = {}
 local practicePads = {}
 local gateIndicators = {}
 local gateInnerGlow = nil
+local gateCue = nil
 local presentationToken = 0
 local pulseCursor = 0
 
@@ -61,6 +63,7 @@ local function clearLocal()
     practicePads = {}
     gateIndicators = {}
     gateInnerGlow = nil
+    gateCue = nil
     currentLobby = nil
     currentDecor = nil
     currentActivities = nil
@@ -511,7 +514,20 @@ local function applyState()
     )
     local accent = modeColor(mode)
     local q = quality()
-    local duration = player:GetAttribute("ReduceMotion") == true and 0.10 or 0.24
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
+    local duration = reducedMotion and 0.10 or 0.24
+
+    -- Decor and its gate parts may replicate after Lobby.Floor.
+    if not gateCue and currentDecor then
+        local gateTop = currentDecor:FindFirstChild("ArenaGateTop")
+        local runway = currentDecor:FindFirstChild("ArenaRunway")
+        if gateTop and runway then
+            gateCue = LobbyGateCueKit.build(
+                folder, gateTop, runway, q.Name, VisualTheme.Accents
+            )
+        end
+    end
+    LobbyGateCueKit.apply(gateCue, mode, VisualTheme.Accents, reducedMotion)
 
     applyGatePresentation(mode, accent, q, duration)
 
