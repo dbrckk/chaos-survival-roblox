@@ -83,38 +83,63 @@ task.spawn(function()
         positions[bot] = root.Position
     end
 
-    local movementSeen = false
+    local movingBots = {}
     local animatedMotionSeen = false
-    local samplingUntil = math.min(deadline, os.clock() + 7)
+    local samplingUntil = math.min(deadline, os.clock() + 10)
     while os.clock() < samplingUntil do
         for bot, origin in pairs(positions) do
             local root = bot:FindFirstChild("HumanoidRootPart")
             local humanoid = bot:FindFirstChildOfClass("Humanoid")
             if root and humanoid and root:IsA("BasePart") and humanoid.Health > 0 then
-                if (root.Position - origin).Magnitude > 1.2 then
-                    movementSeen = true
+                local shift = root.Position - origin
+                local horizontalTravel = Vector3.new(shift.X, 0, shift.Z).Magnitude
+                if horizontalTravel > 1.2 then
+                    movingBots[bot] = true
                 end
-                if humanoid.MoveDirection.Magnitude > 0.05
-                    and root.AssemblyLinearVelocity.Magnitude > 0.5
+
+                local velocity = root.AssemblyLinearVelocity
+                local horizontalSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+                if humanoid.MoveDirection.Magnitude > 0.05 and horizontalSpeed > 0.5
+                    and humanoid.FloorMaterial ~= Enum.Material.Air
                 then
-                    animatedMotionSeen = true
+                    local animator = humanoid:FindFirstChildOfClass("Animator")
+                    if animator then
+                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                            if track.IsPlaying
+                                and track.Priority == Enum.AnimationPriority.Movement
+                                and track.WeightCurrent > 0.01
+                            then
+                                animatedMotionSeen = true
+                                break
+                            end
+                        end
+                    end
                 end
             end
         end
-        if movementSeen and animatedMotionSeen then
+        local active = 0
+        for _ in pairs(movingBots) do
+            active += 1
+        end
+        -- Distinct moving bots, not camera offsets or a single NPC falling.
+        if active >= 2 and animatedMotionSeen then
             break
         end
         task.wait(0.15)
     end
 
-    if not movementSeen or not animatedMotionSeen then
+    local movedCount = 0
+    for _ in pairs(movingBots) do
+        movedCount += 1
+    end
+    if movedCount < 2 or not animatedMotionSeen then
         StudioTestService:EndTest(string.format(
-            "FAIL: bots spawned but active solo movement was not observed (travel=%s, locomotion=%s)",
-            tostring(movementSeen), tostring(animatedMotionSeen)
+            "FAIL: solo locomotion insufficient (movingBots=%d/3, activeMovementAnimation=%s)",
+            movedCount, tostring(animatedMotionSeen)
         ))
         return
     end
 
     print("CHAOS_SOLO_AI_E2E", "human=1", "bots=3", "network=server", "movement=PASS")
-    StudioTestService:EndTest("PASS: solo AI: three distinct living server-owned bots with observed locomotion")
+    StudioTestService:EndTest("PASS: solo AI: three distinct living server-owned bots, two moving with active locomotion animation")
 end)
