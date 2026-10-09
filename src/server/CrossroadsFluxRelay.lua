@@ -51,6 +51,13 @@ function CrossroadsFluxRelay.tryTrigger(ctx, trigger, hit, ready, epoch, now, se
     if not trigger or not trigger.Parent or not ctx.Active() then return false end
     local character, root, humanoid, player, bot = subjectFromHit(hit)
     if not character then return false end
+    -- Touched may originate from a giant accessory or a long attached part.
+    -- Only accept a real survivor body close to this server-owned arch.
+    local delta = root.Position - trigger.Position
+    local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
+    if horizontal > 9 or math.abs(delta.Y) > 6 then
+        return false
+    end
 
     local eligible = bot == true or (player ~= nil
         and ctx.IsContestantActive and ctx.IsContestantActive(player) == true)
