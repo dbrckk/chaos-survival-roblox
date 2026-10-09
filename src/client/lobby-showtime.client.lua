@@ -240,6 +240,50 @@ local function personalConfetti()
     Debris:AddItem(attachment, 1.4)
 end
 
+-- Authored dance signatures: light geometry with no humanoid or camera edits.
+-- Brief one-shots; VFX quality and accessibility bound allocation.
+local function signatureDance(id)
+    if id ~= "robot" and id ~= "orbit" then return end
+    if player:GetAttribute("ReduceMotion") == true then return end
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    if tier == "Low" then return end
+
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then return end
+    local count = tier == "High" and 6 or 3
+    for index = 1, count do
+        local angle = (index - 1) * math.pi * 2 / count
+        local color = index % 2 == 0 and UITheme.Colors.Magenta or UITheme.Colors.Cyan
+        local part = Instance.new("Part")
+        part.Name = id == "robot" and "NeonRobotGlyph" or "OrbitDanceGlyph"
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.CastShadow = false
+        part.Material = Enum.Material.Glass
+        part.Color = color
+        part.Transparency = 0.25
+        part.Size = id == "robot" and Vector3.new(0.20, 1.3, 0.42)
+            or Vector3.new(0.50, 0.16, 1.10)
+        part.CFrame = CFrame.new(root.Position + Vector3.new(
+            math.cos(angle) * 2.2, 0.65, math.sin(angle) * 2.2
+        )) * CFrame.Angles(0, angle, id == "robot" and 0 or 0.48)
+        part.Parent = workspace
+        local nextAngle = angle + (id == "orbit" and 0.90 or 0.22)
+        TweenService:Create(part,
+            TweenInfo.new(0.72, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+            {
+                CFrame = CFrame.new(root.Position + Vector3.new(
+                    math.cos(nextAngle) * 3, 1.55, math.sin(nextAngle) * 3
+                )) * CFrame.Angles(0, nextAngle, 0),
+                Transparency = 1,
+            }
+        ):Play()
+        Debris:AddItem(part, 0.85)
+    end
+end
+
 local function emoteAudio(id)
     if player:GetAttribute("AudioMuted") == true then
         return
@@ -324,6 +368,7 @@ local function playEmote(id, automatic)
         lastEmotePosition = root.Position
     end
     personalConfetti()
+    signatureDance(id)
     if automatic ~= true then
         emoteAudio(id)
     end
