@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local LocalizationService = game:GetService("LocalizationService")
+local SoundService = game:GetService("SoundService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local FluxRelayRules = require(ReplicatedStorage.Shared.FluxRelayRules)
@@ -164,6 +165,23 @@ local function makeGate(trigger)
     table.insert(connections, trigger:GetAttributeChangedSignal("FluxTriggeredAt"):Connect(function()
         if not gates[trigger] then return end
         entry.blinkUntil = os.clock() + 0.3
+        local camera = workspace.CurrentCamera
+        local withinEarshot = camera
+            and (camera.CFrame.Position - trigger.Position).Magnitude <= 95
+        if withinEarshot and player:GetAttribute("AudioMuted") ~= true then
+            local tone = Instance.new("Sound")
+            tone.Name = "FluxRelayChargeWhoosh"
+            tone.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+            tone.Volume = 0.15
+            tone.PlaybackSpeed = 0.68
+                + (tonumber(trigger:GetAttribute("FluxRelayIndex")) or 1) * 0.055
+            tone.RollOffMaxDistance = 50
+            tone.RollOffMinDistance = 5
+            tone.SoundGroup = SoundService:FindFirstChild("ChaosSFX")
+            tone.Parent = trigger
+            tone:Play()
+            Debris:AddItem(tone, 2)
+        end
         if player:GetAttribute("ReduceMotion") == true then return end
         if tier == "Low" then return end
         local center = trigger.Position + Vector3.new(0, -2.75, 0)
