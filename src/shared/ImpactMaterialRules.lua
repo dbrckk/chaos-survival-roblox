@@ -86,6 +86,24 @@ function ImpactMaterialRules.palette(material, surfaceColor, eventColor, kind, t
     }
 end
 
+-- Per-camera and per-impact quotas prevent 5+ simultaneous blasts from
+-- producing a dense field of offscreen microchips on Android. The material
+-- palette and existing dust emitter remain available even when chips are 0.
+function ImpactMaterialRules.chipCount(tier, reduced, viewerDistance, concurrent)
+    if reduced == true or tier == "Low"
+        or type(viewerDistance) ~= "number" or viewerDistance < 0
+        or type(concurrent) ~= "number" or concurrent < 1 then
+        return 0
+    end
+    if tier == "High" then
+        if viewerDistance <= 80 and concurrent <= 2 then return 6 end
+        if viewerDistance <= 110 and concurrent <= 3 then return 3 end
+    elseif tier == "Medium" then
+        if viewerDistance <= 70 and concurrent <= 2 then return 3 end
+    end
+    return 0
+end
+
 function ImpactMaterialRules.surfaceFrame(position, normal)
     if typeof(position) ~= "Vector3" then return nil end
     local up = typeof(normal) == "Vector3" and normal.Magnitude > 0.01
