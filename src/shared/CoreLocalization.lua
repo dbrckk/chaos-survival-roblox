@@ -436,7 +436,7 @@ local ARENA_COPY = {
             name = "CROSSROADS",
             strategy = "Four escape lanes • avoid committing to a dead end too early",
             mechanicName = "LANE BOOSTERS",
-            mechanicHint = "Pink pads accelerate you along a lane so you can switch routes quickly",
+            mechanicHint = "Pink pads launch outward; timed cyan Flux Relays return you to the hub",
         },
         Orbital = {
             name = "ORBITAL RING",
@@ -462,7 +462,7 @@ local ARENA_COPY = {
             name = "CARREFOUR",
             strategy = "Quatre voies de fuite • ne t'engage pas trop tôt dans une impasse",
             mechanicName = "BOOSTERS DE VOIE",
-            mechanicHint = "Les pads roses t'accélèrent le long d'une voie pour changer vite de route",
+            mechanicHint = "Les pads roses propulsent dehors ; les relais cyan te ramènent au centre",
         },
         Orbital = {
             name = "ANNEAU ORBITAL",
