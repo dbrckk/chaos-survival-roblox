@@ -1,16 +1,19 @@
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
+local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundFeedback")
 
 local lastCelebrationAt = 0
+local folder = Instance.new("Folder")
+folder.Name = "RoundCelebrationPulsesLocal"
+folder.Parent = workspace
 
 local function profile()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -21,32 +24,17 @@ local function rootPart()
     return character and character:FindFirstChild("HumanoidRootPart")
 end
 
-local function makeRing(root, color, radius, duration, height)
-    local ring = Instance.new("Part")
-    ring.Name = "LocalRoundCelebrationRing"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.08, 1, 1)
-    ring.CFrame = CFrame.new(root.Position + Vector3.new(0, height or -2.35, 0))
-        * CFrame.Angles(0, 0, math.rad(90))
-    ring.Anchored = true
-    ring.CanCollide = false
-    ring.CanTouch = false
-    ring.CanQuery = false
-    ring.CastShadow = false
-    ring.Material = Enum.Material.Neon
-    ring.Color = color
-    ring.Transparency = 0.18
-    ring.Parent = workspace
-
-    TweenService:Create(
-        ring,
-        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            Size = Vector3.new(0.08, radius, radius),
-            Transparency = 1,
-        }
-    ):Play()
-    Debris:AddItem(ring, duration + 0.08)
+-- Share the same translucent, hollow outline language as the round-start
+-- pulse; unlike the old solid cylinder, it never covers the full floor.
+local function makeRing(root, color, diameter, duration, height)
+    local quality = profile()
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local center = CFrame.new(root.Position + Vector3.new(0, height or -2.35, 0))
+    return CinematicPulseRingKit.emit(
+        folder, "LocalRoundCelebrationRing", center, color,
+        reduced and diameter or 1, diameter, duration,
+        quality.Name, reduced, reduced and 0.70 or 0.42
+    )
 end
 
 local function makeBurst(root, color, count, speed)
