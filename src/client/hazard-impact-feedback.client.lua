@@ -5,6 +5,8 @@ local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ImpactSetpiece = require(script.Parent.ImpactSetpiece)
+local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
+local ImpactPulseRules = require(ReplicatedStorage.Shared.ImpactPulseRules)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardImpactFeedback")
@@ -111,6 +113,7 @@ local function renderBurst(payload)
     if not observer or (observer - position).Magnitude > MAX_DISTANCE then
         return
     end
+    local viewerDistance = (observer - position).Magnitude
 
     local profile = tier()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -119,6 +122,21 @@ local function renderBurst(payload)
         return
     end
     activeBursts += 1
+    local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
+    local targetDiameter = radius * 2
+        * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
+    local pulseRecipe = ImpactPulseRules.pulse(
+        profile.Name, reduced, viewerDistance, activeBursts, kind
+    )
+    if pulseRecipe then
+        CinematicPulseRingKit.emit(
+            setpieceFolder, pulseRecipe.Name,
+            CFrame.new(position + Vector3.new(0, 0.16, 0)),
+            color, math.max(1, targetDiameter * 0.15),
+            targetDiameter * pulseRecipe.Scale,
+            pulseRecipe.Duration, profile.Name, reduced, pulseRecipe.Alpha
+        )
+    end
 
     -- Layer one brief, profile-bounded signature over the existing impact
     -- ring/plume. This never alters damage, hit detection or scorch ownership.
@@ -144,43 +162,9 @@ local function renderBurst(payload)
     burst.Transparency = 0.2
     burst.Parent = setpieceFolder
 
-    local ring = Instance.new("Part")
-    ring.Name = "LocalHazardShockRing"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.12, 1, 1)
-    ring.CFrame = CFrame.new(position + Vector3.new(0, 0.16, 0))
-        * CFrame.Angles(0, 0, math.rad(90))
-    ring.Anchored = true
-    ring.CanCollide = false
-    ring.CanTouch = false
-    ring.CanQuery = false
-    ring.CastShadow = false
-    ring.Material = Enum.Material.Neon
-    ring.Color = color
-    ring.Transparency = 0.18
-    ring.Parent = setpieceFolder
-
-    local secondaryRing = nil
+    -- Hollow arcs above replace screen-covering circular pressure discs.
     local plumeAnchor = nil
     if profile.Name ~= "Low" and not reduced then
-        secondaryRing = Instance.new("Part")
-        secondaryRing.Name = "LocalHazardSecondaryShockRing"
-        secondaryRing.Shape = Enum.PartType.Cylinder
-        secondaryRing.Size = Vector3.new(0.08, 1, 1)
-        secondaryRing.CFrame = CFrame.new(position + Vector3.new(0, 0.22, 0))
-            * CFrame.Angles(0, 0, math.rad(90))
-        secondaryRing.Anchored = true
-        secondaryRing.CanCollide = false
-        secondaryRing.CanTouch = false
-        secondaryRing.CanQuery = false
-        secondaryRing.CastShadow = false
-        secondaryRing.Material = Enum.Material.Neon
-        secondaryRing.Color = kind == "Meteor"
-            and Color3.fromRGB(255, 205, 95)
-            or color:Lerp(Color3.new(1, 1, 1), 0.22)
-        secondaryRing.Transparency = 0.34
-        secondaryRing.Parent = setpieceFolder
-
         plumeAnchor = Instance.new("Part")
         plumeAnchor.Name = "LocalHazardImpactPlumeAnchor"
         plumeAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
@@ -281,9 +265,6 @@ local function renderBurst(payload)
         light.Parent = burst
     end
 
-    local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
-    local targetDiameter = radius * 2
-        * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
     TweenService:Create(
         burst,
         TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -298,30 +279,6 @@ local function renderBurst(payload)
             Transparency = 1,
         }
     ):Play()
-
-    TweenService:Create(
-        ring,
-        TweenInfo.new(duration * 1.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            Size = Vector3.new(0.12, targetDiameter * 1.18, targetDiameter * 1.18),
-            Transparency = 1,
-        }
-    ):Play()
-
-    if secondaryRing then
-        TweenService:Create(
-            secondaryRing,
-            TweenInfo.new(duration * 1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {
-                Size = Vector3.new(
-                    0.08,
-                    targetDiameter * 1.52,
-                    targetDiameter * 1.52
-                ),
-                Transparency = 1,
-            }
-        ):Play()
-    end
 
     if core then
         TweenService:Create(
@@ -411,10 +368,6 @@ local function renderBurst(payload)
 
     local lifetime = duration * 1.35 + 0.08
     Debris:AddItem(burst, lifetime)
-    Debris:AddItem(ring, lifetime)
-    if secondaryRing then
-        Debris:AddItem(secondaryRing, lifetime * 1.4)
-    end
     if plumeAnchor then
         Debris:AddItem(plumeAnchor, math.max(0.85, lifetime * 2.2))
     end
