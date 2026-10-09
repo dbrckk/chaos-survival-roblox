@@ -32,7 +32,9 @@ The same Studio plugin also adds **Chaos Solo AI**. With the current source sync
 - exactly one human plus three distinct living AI survivor rigs;
 - valid unanchored HumanoidRootPart/Humanoid on each bot;
 - `GetNetworkOwner() == nil` for each bot assembly after the bounded network-ownership initialization;
-- actual movement and a locomotion signal during a short sample window.
+- at least two distinct bots moving horizontally, including an actual playing locomotion animation track (not just a MoveDirection signal).
+
+The AI roster also stays fixed from **ready** through **round** and **result** when other human clients join or leave. New players are considered for AI-count reconciliation at the next intermission, not halfway through an active survival contest.
 
 The test returns `PASS:` or `FAIL:` through official `StudioTestService:EndTest`. It does **not** prove client rendering quality, real-device FPS, or all disaster decisions. This test is not silently counted as passed by ordinary Build Validation or Open Cloud engine tests; it requires an actual Studio session. Use it before Android solo acceptance and record its candidate commit and exact result.
 
