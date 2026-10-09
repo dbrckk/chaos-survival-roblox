@@ -25,20 +25,18 @@ describe("Lobby Showtime", function()
         expect(Showtime.canEmote("round", nil, 100)).toBe(false)
     end)
 
-    it("supports six native and two original R6/R15 procedural emotes", function()
+    it("supports eight Animator-safe emotes with two original visual dances", function()
         expect(#Showtime.Order).toBe(8)
         for _, id in ipairs(Showtime.Order) do
             local r15 = Showtime.get(id, "R15")
             local r6 = Showtime.get(id, "R6")
             expect(r15 ~= nil).toBe(true)
             expect(r6 ~= nil).toBe(true)
-            if r15.Procedural then
-                expect(id == "robot" or id == "orbit").toBe(true)
-                expect(r6.Procedural).toBe(true)
-                expect(r15.AnimationId == nil).toBe(true)
-            else
-                expect(r15.AnimationId > 0).toBe(true)
-                expect(r6.AnimationId > 0).toBe(true)
+            expect(r15.AnimationId > 0).toBe(true)
+            expect(r6.AnimationId > 0).toBe(true)
+            if id == "robot" or id == "orbit" then
+                expect(r15.VisualStyle).toBe(id)
+                expect(r6.VisualStyle).toBe(id)
             end
             expect(#r15.LabelEN > 0 and #r15.LabelFR > 0).toBe(true)
         end
