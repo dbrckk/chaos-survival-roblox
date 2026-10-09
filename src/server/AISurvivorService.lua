@@ -10,6 +10,9 @@ local ArenaPresentation = if script
 local ArenaMechanics = if script
     then require(script.Parent.ArenaMechanics)
     else require("./ArenaMechanics")
+local AISurvivorNetworkOwnership = if script
+    then require(script.Parent.AISurvivorNetworkOwnership)
+    else require("./AISurvivorNetworkOwnership")
 local LobbyActivities = if script
     then require(script.Parent.LobbyActivities)
     else require("./LobbyActivities")
@@ -613,12 +616,7 @@ local function createRig(record)
     humanoid.MaxHealth = 100
     humanoid.Health = 100
 
-    for _, descendant in ipairs(model:GetDescendants()) do
-        if descendant:IsA("BasePart") then
-            pcall(descendant.SetNetworkOwner, descendant, nil)
-        end
-    end
-
+    -- Parenting first is required by Roblox physics ownership APIs.
     model.Parent = botsFolder
     record.model = model
     record.proxy.Character = model
@@ -639,6 +637,12 @@ local function createRig(record)
     addCosmeticTrail(record, root)
     addNameplate(record, model)
     attachAnimations(record, humanoid)
+
+    -- Claim the complete welded rig after it exists under Workspace.
+    -- Bot navigation, health and survival decisions remain server-owned.
+    if not AISurvivorNetworkOwnership.claim(model) then
+        warn("AI Survivor server network ownership unavailable:", record.identity.Username)
+    end
 
     table.insert(record.connections, humanoid.Died:Connect(function()
         record.alive = false
