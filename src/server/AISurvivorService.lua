@@ -2020,17 +2020,27 @@ local function startBrain()
 
     task.spawn(function()
         local nextPresenceCheck = 0
+        local nextReconcileWarningAt = -math.huge
 
         while started do
             local now = os.clock()
 
             if currentState.phase ~= "round" and now >= nextPresenceCheck then
-                reconcile()
+                local ok, err = pcall(reconcile)
+                if not ok and now >= nextReconcileWarningAt then
+                    warn("AI Survivor roster reconcile failed:", err)
+                    nextReconcileWarningAt = now + 8
+                end
                 nextPresenceCheck = now + 2.5
             end
 
             for _, record in ipairs(records) do
-                stepRecord(record, now)
+                local ok, err, shouldReport = AISurvivorRules.runBrainStep(
+                    record, now, stepRecord
+                )
+                if not ok and shouldReport then
+                    warn("AI Survivor brain step failed:", record.identity.Username, err)
+                end
             end
 
             task.wait(AISurvivorRules.brainCadence(
