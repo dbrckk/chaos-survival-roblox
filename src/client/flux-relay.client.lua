@@ -284,8 +284,15 @@ bind(workspace:FindFirstChild("GeneratedMap"))
 
 task.spawn(function()
     while folder.Parent do
-        render(os.clock())
-        local tier = quality()
-        task.wait(tier == "Low" and 0.28 or (UserInputService.TouchEnabled and 0.20 or 0.12))
+        if next(gates) == nil then
+            -- Almost every player is outside Crossroads most of the time.
+            -- No update work or time polling while the mechanic is absent.
+            task.wait(0.60)
+        else
+            render(os.clock())
+            local tier = quality()
+            task.wait(tier == "Low" and 0.28
+                or (UserInputService.TouchEnabled and 0.20 or 0.12))
+        end
     end
 end)
