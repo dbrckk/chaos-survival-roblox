@@ -6,6 +6,7 @@ local VisualBudgetRules = require("../../src/shared/VisualBudgetRules")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 local LandingImprintKit = require("../../src/client/LandingImprintKit")
 local DisasterIntroMotionKit = require("../../src/client/DisasterIntroMotionKit")
+local DisasterBoundaryClimaxKit = require("../../src/client/DisasterBoundaryClimaxKit")
 local LocomotionGroundFx = require("../../src/client/LocomotionGroundFx")
 
 describe("visual budget rules", function()
@@ -238,6 +239,45 @@ describe("visual budget rules", function()
         expect(metrics.Lights).toBe(0)
         expect(metrics.Effects).toBe(0)
         expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("audits shrinking/blackout scenery and both simultaneous climax signatures", function()
+        local root = Instance.new("Folder")
+        local persistent = Instance.new("Folder")
+        persistent.Name = "ChaosMotionDisasterVfxLocal"
+        persistent.Parent = root
+        for i = 1, 8 do
+            local part = Instance.new("Part")
+            part.Name = i <= 4 and "ShrinkPerimeterLocal" .. i
+                or "BlackoutEmergencyBeacon" .. (i - 4)
+            part.Parent = persistent
+        end
+        local transient = Instance.new("Folder")
+        transient.Name = "DisasterClimaxLocal"
+        transient.Parent = root
+        local frame = CFrame.new(3, 5, 7)
+            * CFrame.Angles(0, math.rad(20), math.rad(9))
+        local arenaSize = Vector3.new(124, 3, 92)
+        local primary = Color3.fromRGB(250, 85, 110)
+        local secondary = Color3.fromRGB(245, 220, 160)
+        for _, kind in ipairs({"blast", "shrink"}) do
+            local pieces = DisasterBoundaryClimaxKit.emit(transient, kind,
+                frame, arenaSize, 3, primary, secondary, "High", false)
+            expect(#pieces).toBe(6)
+            for _, part in ipairs(pieces) do
+                expect(part.CanCollide).toBe(false)
+                expect(part.CanTouch).toBe(false)
+                expect(part.CanQuery).toBe(false)
+                expect(part.CastShadow).toBe(false)
+            end
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(20)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
         root:Destroy()
     end)
 
