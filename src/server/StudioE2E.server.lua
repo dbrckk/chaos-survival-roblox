@@ -483,6 +483,7 @@ task.spawn(function()
             "RoundFeedback",
             "ClientReady",
             "ArenaMechanicFeedback",
+            "PhaseDash",
             "HazardImpactFeedback",
             "HazardNearMiss",
             "ChaosShardCollected",
