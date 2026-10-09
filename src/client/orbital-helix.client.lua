@@ -3,6 +3,8 @@
 -- Streaming-safe and 0 parts on Low/ReduceMotion hardware.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local player = Players.LocalPlayer
@@ -16,6 +18,8 @@ local currentTier = nil
 local currentReduced = nil
 local runners = {}
 local orderedRamps = {}
+local flowFolder = nil
+local flowConnections = {}
 
 local function resolveCircuit()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -36,6 +40,78 @@ local function readRamps(circuit)
             < (b:GetAttribute("HelixLane") or 0)
     end)
     return ramps
+end
+
+local function flowBurst(sensor)
+    if not sensor or not sensor.Parent or player:GetAttribute("ReduceMotion") == true then
+        return
+    end
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    if tier == "Low" then return end
+    local camera = workspace.CurrentCamera
+    if camera and (sensor.Position - camera.CFrame.Position).Magnitude > 100 then
+        return
+    end
+
+    local count = tier == "High" and 8 or 5
+    local origin = sensor.Position - Vector3.new(0, 1.6, 0)
+    for index = 1, count do
+        local angle = (index - 1) * math.pi * 2 / count
+        local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        local tangent = Vector3.new(-radial.Z, 0, radial.X)
+        local inner = origin + radial * 1.5
+        local outer = origin + radial * 3.5
+        local piece = Instance.new("Part")
+        piece.Name = "HelixFlowCelebrationFacet"
+        piece.Size = Vector3.new(0.13, 0.075, 1.1)
+        piece.CFrame = CFrame.lookAt(inner, inner + tangent)
+        piece.Color = index % 2 == 0
+            and Color3.fromRGB(115, 255, 187)
+            or Color3.fromRGB(77, 201, 252)
+        piece.Material = Enum.Material.Neon
+        piece.Transparency = 0.24
+        piece.Anchored = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+        piece.Parent = folder
+        TweenService:Create(piece,
+            TweenInfo.new(0.42, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+            {
+                CFrame = CFrame.lookAt(outer, outer + tangent),
+                Size = Vector3.new(0.10, 0.06, 1.65),
+                Transparency = 1,
+            }
+        ):Play()
+        Debris:AddItem(piece, 0.52)
+    end
+end
+
+local function bindFlowCircuit()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    local current = mechanics and mechanics:FindFirstChild("HelixFlow")
+    if flowFolder == current then return end
+    for _, connection in ipairs(flowConnections) do
+        connection:Disconnect()
+    end
+    table.clear(flowConnections)
+    flowFolder = current
+    if current then
+        for _, sensor in ipairs(current:GetChildren()) do
+            if sensor:IsA("BasePart") then
+                table.insert(flowConnections, sensor:GetAttributeChangedSignal(
+                    "HelixFlowAt"
+                ):Connect(function()
+                    if sensor.Parent == flowFolder then
+                        flowBurst(sensor)
+                    end
+                end))
+            end
+        end
+    end
 end
 
 local function reset()
@@ -112,6 +188,7 @@ task.spawn(function()
         if stale then
             rebuild(circuit, tier, reduced, ramps)
         end
+        bindFlowCircuit()
 
         if #runners > 0 then
             draw(os.clock())
