@@ -38,6 +38,23 @@ function FluxRelayRules.canTrigger(active, contestant, health, serverTime, epoch
         and (tonumber(now) or 0) >= (tonumber(readyAt) or 0)
 end
 
+-- NPC planning: only chase a charged gate when the expected arrival
+-- still falls inside that gate's actual active window. Never steer all
+-- agents to an inactive landmark just because it is visually prominent.
+function FluxRelayRules.viableRoute(serverTime, epoch, offset, distance, walkSpeed)
+    local travel = math.max(0, tonumber(distance) or math.huge)
+    local speed = math.max(1, tonumber(walkSpeed) or 16)
+    if travel > 24 then return false end
+    local eta = travel / speed + 0.18
+    local at = tonumber(serverTime)
+    if not at or not FluxRelayRules.charged(at, epoch, offset) then
+        return false
+    end
+    local chargedPhaseSeconds = FluxRelayRules.progress(at, epoch, offset)
+        * FluxRelayRules.Period
+    return chargedPhaseSeconds + eta <= FluxRelayRules.ChargeDuration - 0.12
+end
+
 function FluxRelayRules.nextAllowed(now)
     return (tonumber(now) or 0) + FluxRelayRules.TouchCooldown
 end
