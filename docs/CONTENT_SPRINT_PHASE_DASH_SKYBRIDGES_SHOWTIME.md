@@ -69,6 +69,35 @@ survival route without teleporting or bypassing collision. Every player receives
 - The new styles cannot execute during combat/voting, follow the usual
   movement interruption and ReduceMotion/AudioMuted rules.
 
+## 4. Crossroads — timed Flux Relay return loops
+
+**Original active level mechanic:** Crossroads now has four new frame-style
+cyan/violet Flux Relay arches at its outer lanes. Each pair of opposite
+gates charges for 3.2 seconds in an eight-second cycle. The other pair
+charges 4 seconds later. During uncharged phases the gate remains a safe,
+walk-through navigational element (no collision or damage).
+
+Passing an active arch delivers a server-owned velocity redirection toward
+the central hub, naturally forming a route loop with the existing pink
+outward launch pads. The mechanic is accessible to every human contestant
+and every living in-round survivor bot. The activation cooldown is 3.5s
+per character, with no remote client velocity argument, purchase privilege,
+damage, or coins. Physics remains capped at 54 studs/s horizontal.
+
+**Visual language:** four metal-frame structures with recessed neon rails,
+hub-pointing directional chevrons, charged / charging world labels,
+faceted upper crowns on High, and tier-scaled detail counts. Visual states
+derive from synchronized server timestamps—no per-frame server signal
+spam. A successful crossing drives a short teal feedback cue, while
+Overdrive retains the game's existing golden identity.
+
+**Test cases:** use each lane from both sides; verify the active pair
+alternates, inactive arch does not boost, one character cannot spam across
+adjacent gates, and bots use the same active gating. Test with
+Speed Surge/Low Gravity and against Phase Dash, plus map swap and low-end
+Android frame rate. All gate geometry is audited in `FluxRelayLocal`;
+no decorative part is collidable.
+
 ## Acceptance and limits
 
 Build Validation and Open Cloud engine tests validate schemas/recipes but
