@@ -106,6 +106,7 @@ jobs:
             "tests/engine/social-experience-rules.spec.luau",
             "tests/engine/solo-rush.spec.luau",
             "tests/engine/spectator-target-rules.spec.luau",
+            "tests/engine/ground-contact-rules.spec.luau",
             "tests/engine/survival-feedback.spec.luau",
             "tests/engine/surface-audio-rules.spec.luau",
             "tests/engine/ui-responsive.spec.luau",
