@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 
 local ArenaSpatialAudioRules = require(ReplicatedStorage.Shared.ArenaSpatialAudioRules)
 local ArenaCrisisSurfaceRules = require(ReplicatedStorage.Shared.ArenaCrisisSurfaceRules)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local AudioConfig = require(ReplicatedStorage.Shared.AudioConfig)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -26,7 +27,7 @@ local overdrive = false
 local finalRush = false
 local activeDisasters = {}
 local currentVariant = "Classic"
-local mapConnection = nil
+local disconnectMapWatch = nil
 
 local function clear()
     for _, sound in ipairs(activeSounds) do
@@ -190,26 +191,33 @@ local function rebuild()
 end
 
 local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.08, rebuild)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base",
+            function()
+                task.defer(function()
+                    -- Discard queued rebuilds from a replaced or removed map.
+                    if generated == workspace:FindFirstChild("GeneratedMap") then
+                        rebuild()
+                    end
+                end)
             end
-        end)
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         task.defer(function()
-            bindMap()
-            rebuild()
+            if workspace:FindFirstChild("GeneratedMap") == child then
+                bindMap()
+            end
         end)
     end
 end)
@@ -232,4 +240,3 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 bindMap()
-rebuild()
