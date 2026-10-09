@@ -60,6 +60,14 @@ ArenaVariants.Definitions = {
             {offset=Vector3.new(0,14,24),size=Vector3.new(12,2,12)},
             {offset=Vector3.new(-24,14,0),size=Vector3.new(12,2,12)},
             {offset=Vector3.new(24,14,0),size=Vector3.new(12,2,12)},
+            -- Skybridge Circuit: four contiguous high-level routes. Tops are
+            -- Y=13, aligned with the middle decks of the corner towers.
+            -- Unlike decorative beams these are real collision platforms and
+            -- participate in DisappearingPlatforms / hazard gameplay.
+            {offset=Vector3.new(0,12.5,-28),size=Vector3.new(49,1,4.5),Skybridge=true},
+            {offset=Vector3.new(0,12.5,28),size=Vector3.new(49,1,4.5),Skybridge=true},
+            {offset=Vector3.new(-28,12.5,0),size=Vector3.new(4.5,1,49),Skybridge=true},
+            {offset=Vector3.new(28,12.5,0),size=Vector3.new(4.5,1,49),Skybridge=true},
         },
     },
 
