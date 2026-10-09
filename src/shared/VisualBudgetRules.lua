@@ -112,6 +112,18 @@ function VisualBudgetRules.collect(root)
         end
     end
 
+    -- Active meteor trails are local cosmetic children of server-owned
+    -- RoundMeteor parts. They cannot be moved to a visual folder without
+    -- breaking Attachment0/Attachment1 ownership, so count them explicitly.
+    for _, meteor in ipairs(root:GetChildren()) do
+        if meteor.Name == "RoundMeteor" and meteor:IsA("BasePart") then
+            local trail = meteor:FindFirstChild("SignatureMeteorTrail")
+            if trail and trail:IsA("Trail") then
+                metrics.Effects += 1
+            end
+        end
+    end
+
     return metrics, auditedFolders
 end
 
