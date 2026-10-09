@@ -90,6 +90,8 @@ function CrossroadsFluxRelay.tryTrigger(ctx, trigger, hit, ready, epoch, now, se
     local tier = weave and weave.tier or 1
     if player then
         player:SetAttribute("RoundFluxWeaveCombo", tier)
+        player:SetAttribute("RoundFluxWeaveNextParity",
+            FluxRelayRules.nextParity(weave))
         player:SetAttribute("RoundFluxWeaveBest", math.max(
             tonumber(player:GetAttribute("RoundFluxWeaveBest")) or 0,
             tier
@@ -98,7 +100,9 @@ function CrossroadsFluxRelay.tryTrigger(ctx, trigger, hit, ready, epoch, now, se
         character:SetAttribute("FluxWeaveCombo", tier)
     end
 
-    trigger:SetAttribute("FluxWeaveTier", tier)
+    -- A repeated/previously mastered gate can still return the runner
+    -- inward, but must not rebroadcast a rare MASTER visual award.
+    trigger:SetAttribute("FluxWeaveTier", advanced and tier or 1)
     trigger:SetAttribute("FluxTriggeredAt", serverTime)
     if player and advanced and ctx.OnArenaMechanicUsed then
         local label = tier == 3 and "FLUX MASTER"

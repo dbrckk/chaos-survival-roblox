@@ -140,7 +140,12 @@ taking two consecutive gates from the same charging pair, or crossing
 a gate after the window expires never fabricates a higher rank.
 Each round stores independent contestant progress in
 `RoundFluxWeaveCombo` / `RoundFluxWeaveBest`, and active bots
-obey the same server logic without human rewards.
+obey the same server logic without human rewards. The server also
+publishes `RoundFluxWeaveNextParity` (0 for even gates, 1 for
+odd gates, -1 for inactive/completed) so the charged gates of the
+next required pair acquire a **personal gold WEAVE // NEXT** sign.
+The highlight changes without rebuilding the VFX mesh or allocating
+extra world parts.
 There are no extra movement buffs, coins or purchase advantages.
 
 **Visual language:** four metal-frame structures with recessed neon rails,
@@ -152,7 +157,9 @@ Overdrive retains the game's existing golden identity. Unique
 Flux Weave mastery plays a cyan or gold rank-aware energy burst on
 High/Medium and a short-lived local 3D badge for nearby spectators,
 with no additional particles or animated world geometry on Low /
-ReduceMotion. All one-shot visuals are Debris-cleaned.
+ReduceMotion. All one-shot visuals are Debris-cleaned. Returning through a
+previously mastered gate may still grant its ordinary movement return
+but never replays the rare mastery-grade world burst.
 
 **Shrinking Arena compatibility:** the server now scales all four Flux
 checkpoint positions inward alongside the base while preserving charging

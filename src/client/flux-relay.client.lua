@@ -170,7 +170,7 @@ local function makeGate(trigger)
         statusPieces = statusPieces,
         label = label,
         stroke = stroke,
-        lastCharged = nil,
+        lastStatus = nil,
         blinkUntil = -math.huge,
         sourceCFrame = trigger.CFrame,
         parts = pieces,
@@ -285,17 +285,31 @@ local function render(now)
         local charged = epoch ~= nil and FluxRelayRules.charged(
             serverTime, epoch, offset
         )
-        if charged ~= entry.lastCharged then
-            entry.lastCharged = charged
-            entry.label.Text = charged and
-                (french and "FLUX // PRÊT" or "FLUX // READY")
-                or (french and "FLUX // RECHARGE" or "FLUX // CHARGING")
-            entry.label.TextColor3 = charged and style.Charged or style.Idle
-            entry.stroke.Color = charged and style.Charged or style.Edge
+        local nextParity = tonumber(
+            player:GetAttribute("RoundFluxWeaveNextParity")
+        ) or -1
+        local playerActive = player:GetAttribute("RoundParticipant") == true
+            and player:GetAttribute("RoundEliminated") ~= true
+        local index = tonumber(trigger:GetAttribute("FluxRelayIndex"))
+        local nextGate = charged and playerActive
+            and (nextParity == 0 or nextParity == 1)
+            and index ~= nil and index % 2 == nextParity
+        local textStatus = nextGate
+            and (french and "WEAVE // SUITE" or "WEAVE // NEXT")
+            or (charged and (french and "FLUX // PRÊT" or "FLUX // READY")
+                or (french and "FLUX // RECHARGE" or "FLUX // CHARGING"))
+        if textStatus ~= entry.lastStatus then
+            entry.lastStatus = textStatus
+            entry.label.Text = textStatus
+            entry.label.TextColor3 = nextGate and style.Signal
+                or (charged and style.Charged or style.Idle)
+            entry.stroke.Color = nextGate and style.Signal
+                or (charged and style.Charged or style.Edge)
         end
         local pulse = reduced and 0.48 or (0.5 + 0.5 * math.sin(now * 4.0))
         local fresh = now < entry.blinkUntil
-        local tint = fresh and style.Signal or (charged and style.Charged or style.Idle)
+        local tint = (fresh or nextGate) and style.Signal
+            or (charged and style.Charged or style.Idle)
         local alpha = charged and (0.10 + 0.18 * pulse) or 0.67
         if reduced then alpha = charged and 0.24 or 0.7 end
         for _, piece in ipairs(entry.statusPieces) do

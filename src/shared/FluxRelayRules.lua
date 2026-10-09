@@ -52,6 +52,20 @@ function FluxRelayRules.advanceWeave(previous, laneIndex, now)
     }, true
 end
 
+-- Client navigation uses a server-replicated target parity, not
+-- a client-submitted score. -1 means no outstanding pair is required.
+function FluxRelayRules.nextParity(progress)
+    if type(progress) ~= "table"
+        or (tonumber(progress.tier) or 0) < 1
+        or (tonumber(progress.tier) or 0) >= FluxRelayRules.WeaveCap
+    then
+        return -1
+    end
+    local group = tonumber(progress.group)
+    if group ~= 0 and group ~= 1 then return -1 end
+    return 1 - group
+end
+
 function FluxRelayRules.offsetFor(index)
     -- Opposite lanes charge together. Adjacent lanes alternate.
     return (index == 2 or index == 4) and FluxRelayRules.Period * 0.5 or 0
