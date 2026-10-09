@@ -141,6 +141,28 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("tracks up to twenty-four Orbital helix runner glyphs at High quality", function()
+        local root = Instance.new("Folder")
+        local helix = Instance.new("Folder")
+        helix.Name = "OrbitalHelixLocal"
+        helix.Parent = root
+        for index = 1, 24 do
+            local glyph = Instance.new("Part")
+            glyph.Name = "HelixMotionGlyph"
+            glyph.CanCollide = false
+            glyph.CanTouch = false
+            glyph.CanQuery = false
+            glyph.Parent = helix
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(1)
+        expect(metrics.Parts).toBe(24)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
     it("audits temporary meteor and bomb setpieces under their shared local folder", function()
         local root = Instance.new("Folder")
         local folder = Instance.new("Folder")
