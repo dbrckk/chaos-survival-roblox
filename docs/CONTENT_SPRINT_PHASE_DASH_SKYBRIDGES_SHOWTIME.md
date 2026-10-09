@@ -98,6 +98,52 @@ Speed Surge/Low Gravity and against Phase Dash, plus map swap and low-end
 Android frame rate. All gate geometry is audited in `FluxRelayLocal`;
 no decorative part is collidable.
 
+## 5. Orbital — Helix Circuit and Helix Flow
+
+**Traversable world architecture:** eight physical inclined ramps connect
+the outer ring's alternating-height decks to the offset inner decks,
+forming deliberate radial shortcuts through Orbital. Ramps have dense
+DiamondPlate surface, steel spine braces, engineered noncolliding frame
+and inset cyan/blue route illumination. Client motion glyphs travel inward
+along the authored ramps (24 High / 8 Medium / 0 Low or ReduceMotion);
+all transient geometry is counted in `OrbitalHelixLocal`.
+
+**Shrinking Arena contract:** this disaster moves the original islands,
+so every Helix ramp and its entire decorative assembly now changes its
+length, midpoint, orientation and framing to keep the two endpoints
+aligned to their dynamically shifted decks; cleanup restores all exact
+original transforms. The server-owned Helix Flow sensors are welded to
+the ramp rather than floating in their pre-shrink position.
+
+**Original skill mechanic — HELIX FLOW:** as a survivor crosses a sensor
+midway along a ramp while genuinely moving *inward* at >=8 studs/s
+horizontal, the server recognizes one mastered traversal. A 4.2-second
+per-character cooldown prevents farming. The action counts as an arena
+mechanic for human round-momentum tracking and shows a distinct soft-green
+success cue (also respects the existing overdrive banner priority).
+The physical Helix Flow sensors are invisible, noncolliding and welded
+to their ramp. Bots are judged by the same directional rule but never
+receive a player's progression. The mechanic applies **no** additional
+speed, immunity, damage, currency or paid advantage.
+
+**Original art response:** a replicated server timestamp drives a brief
+tier-aware cyan/green segmented light sweep visible near successful
+human and bot traversals. No shake, no permanent lights, zero Low-tier
+glyphs and no repeated client remote spam.
+
+**Navigation:** survivor bots can consider ramps as genuine intermediate
+targets only when near the ramp at a reachable elevation, and update
+their targets if the ramp moves under Shrinking Arena. They do not try
+to walk onto elevated ramps from ground level through the scenery.
+
+**Acceptance tests:** verify human sprint from outer→inner triggers once,
+inner→outer fails, stationary body fails, observers see the brief skill
+cue, cooldown holds, spectators/eliminated players receive no credit,
+eight sensors follow the ramps during shrink and are cleaned after
+the round. Confirm path slope, foot contact, avatar collision, camera
+and mobile touch controls in Roblox Studio and on Android. CI unit
+assertions alone cannot establish these physical results.
+
 ## Acceptance and limits
 
 Build Validation and Open Cloud engine tests validate schemas/recipes but
