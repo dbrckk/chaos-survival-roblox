@@ -10,6 +10,8 @@ local StudioTestService = game:GetService("StudioTestService")
 local Lighting = game:GetService("Lighting")
 
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local ArenaFocalFixtureKit = require(script.Parent.ArenaFocalFixtureKit)
 local RoundJourneyRules = require(ReplicatedStorage.Shared.RoundJourneyRules)
 
 local player = Players.LocalPlayer
@@ -237,6 +239,18 @@ local function sampleArenaPresentation(arenaId)
         and deck.Anchored and not deck.CanCollide and not deck.CanTouch
         and not deck.CanQuery and deck.Material ~= Enum.Material.Neon
 
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local fixtureNames = ArenaFocalFixtureKit.names(arenaId)
+    local fixtureRoot = workspace:FindFirstChild("ArenaFocalLightingLocal")
+    local fixture = fixtureRoot and fixtureNames[1]
+        and fixtureRoot:FindFirstChild(fixtureNames[1] .. "1")
+    local fixtureReady = tier.Name == "Low"
+        or (fixture ~= nil and fixture:IsA("BasePart")
+            and fixture:GetAttribute("ChaosFocalFixture") == true
+            and fixture:GetAttribute("ArenaVariant") == arenaId
+            and fixture.Anchored and not fixture.CanCollide
+            and not fixture.CanTouch and not fixture.CanQuery)
+
     local platformName = ({
         Classic = "ClassicCalibrationPlate",
         Towers = "TowerHoistMount",
@@ -256,7 +270,7 @@ local function sampleArenaPresentation(arenaId)
         and weld.Part0 == trim and weld.Part1 ~= nil
 
     local ok = matchesWorld and signatureReady and secondaryReady
-        and platformReady and silhouetteReady and deckReady
+        and platformReady and silhouetteReady and deckReady and fixtureReady
     return {
         kind = "arena_probe",
         arenaId = arenaId,
@@ -267,13 +281,14 @@ local function sampleArenaPresentation(arenaId)
         platformReady = platformReady,
         silhouetteReady = silhouetteReady,
         deckReady = deckReady,
+        fixtureReady = fixtureReady,
         signatureHero = expectedHero or "Unknown",
         signatureParts = signatureParts,
         error = ok and "" or string.format(
-            "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s secondary=%s platform=%s skyline=%s deck=%s",
+            "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s secondary=%s platform=%s skyline=%s deck=%s fixture=%s",
             arenaId, worldArenaId, tostring(expectedHero),
             tostring(signatureHero ~= nil), signatureParts, tostring(safeParts),
-            tostring(secondaryReady), tostring(platformReady), tostring(silhouetteReady), tostring(deckReady)
+            tostring(secondaryReady), tostring(platformReady), tostring(silhouetteReady), tostring(deckReady), tostring(fixtureReady)
         ),
     }
 end
