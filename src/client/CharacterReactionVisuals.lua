@@ -50,7 +50,21 @@ function CharacterReactionVisuals.signature(mode, kind, index, strength)
     local endPosition
     local curve0
     local curve1
-    if mode == "Dodge" then
+    if mode == "Dodge" and kind == "Bomb" then
+        -- Bomb evasions produce a low, swept pressure-ribbon with wide lateral spread.
+        startPosition = Vector3.new(side * 0.62, -0.50 + height, 0.68)
+        endPosition = Vector3.new(side * (1.45 + intensity * 0.55),
+            -0.18 + height, -0.69)
+        curve0 = side * (0.46 + intensity * 0.24)
+        curve1 = -side * 0.32
+    elseif mode == "Dodge" and kind == "Meteor" then
+        -- Meteor escapes leave a steeper upward afterimage.
+        startPosition = Vector3.new(side * 0.60, -0.32 + height, 0.52)
+        endPosition = Vector3.new(side * (0.94 + intensity * 0.36),
+            1.18 + height + intensity * 0.12, -0.58)
+        curve0 = side * (0.23 + intensity * 0.26)
+        curve1 = -side * 0.24
+    elseif mode == "Dodge" then
         startPosition = Vector3.new(side * 0.72, -0.36 + height, 0.62)
         endPosition = Vector3.new(side * (1.10 + intensity * 0.42),
             0.92 + height, -0.52)
@@ -93,19 +107,40 @@ function CharacterReactionVisuals.signature(mode, kind, index, strength)
     }
 end
 
+-- Shock outlines must travel away from the actual explosion, rather than
+-- follow the facing direction of whichever avatar received the event.
+-- Nil/degenerate positions keep the original avatar-relative composition.
+function CharacterReactionVisuals.shockOrientation(rootCFrame, sourcePosition)
+    if typeof(rootCFrame) ~= "CFrame"
+        or typeof(sourcePosition) ~= "Vector3" then
+        return CFrame.new(), false
+    end
+    local delta = rootCFrame.Position - sourcePosition
+    local flat = Vector3.new(delta.X, 0, delta.Z)
+    if flat.Magnitude < 0.05 then
+        return CFrame.new(), false
+    end
+    local localAway = rootCFrame:VectorToObjectSpace(flat.Unit)
+    local horizontal = Vector3.new(localAway.X, 0, localAway.Z)
+    if horizontal.Magnitude < 0.05 then
+        return CFrame.new(), false
+    end
+    return CFrame.lookAt(Vector3.zero, horizontal.Unit), true
+end
+
 -- Beams follow the root, then taper progressively; no extra BaseParts,
 -- per-frame loops, physics impulses or screen-space camera movement.
-local function stroke(root, mode, kind, index, strength, activePieces)
+local function stroke(root, mode, kind, index, strength, activePieces, orientation, directional)
     local design = CharacterReactionVisuals.signature(mode, kind, index, strength)
     if not design then return end
 
     local a = Instance.new("Attachment")
     a.Name = "ChaosReaction" .. mode .. "Start"
-    a.Position = design.Start
+    a.Position = orientation:VectorToWorldSpace(design.Start)
     a.Parent = root
     local b = Instance.new("Attachment")
     b.Name = "ChaosReaction" .. mode .. "End"
-    b.Position = design.Finish
+    b.Position = orientation:VectorToWorldSpace(design.Finish)
     b.Parent = root
 
     local beam = Instance.new("Beam")
@@ -128,6 +163,7 @@ local function stroke(root, mode, kind, index, strength, activePieces)
     })
     beam:SetAttribute("ChaosReactionMode", mode)
     beam:SetAttribute("ChaosReactionKind", kind)
+    beam:SetAttribute("ChaosReactionDirectional", directional == true)
     beam.Parent = root
 
     -- The last ~70% of the effect collapses to a fine filament instead of
@@ -156,7 +192,7 @@ local function stroke(root, mode, kind, index, strength, activePieces)
     end)
 end
 
-function CharacterReactionVisuals.burst(root, mode, kind, count, strength, activePieces)
+function CharacterReactionVisuals.burst(root, mode, kind, count, strength, activePieces, sourcePosition)
     if not root or not root:IsA("BasePart") or not root.Parent
         or type(activePieces) ~= "table"
         or CharacterReactionVisuals.signature(mode, kind, 1, strength) == nil
@@ -167,8 +203,14 @@ function CharacterReactionVisuals.burst(root, mode, kind, count, strength, activ
     local available = math.max(0, MAX_LIVE_BEAMS - liveBeamCount(activePieces))
     local pieces = math.min(requested, available)
     local intensity = math.clamp(tonumber(strength) or 0, 0, 1)
+    local orientation, directional = CFrame.new(), false
+    if mode == "Shock" then
+        orientation, directional = CharacterReactionVisuals.shockOrientation(
+            root.CFrame, sourcePosition
+        )
+    end
     for i = 1, pieces do
-        stroke(root, mode, kind, i, intensity, activePieces)
+        stroke(root, mode, kind, i, intensity, activePieces, orientation, directional)
     end
     return pieces
 end
