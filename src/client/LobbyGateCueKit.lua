@@ -68,7 +68,7 @@ end
 
 function LobbyGateCueKit.apply(kit, mode, accents, reduceMotion)
     if not kit or not accents then return end
-    local nextMode = mode == "launch" or mode == "vote" or mode == "social"
+    local nextMode = (mode == "launch" or mode == "vote" or mode == "social")
         and mode or "inactive"
     if kit.mode == nextMode then return end
     kit.mode = nextMode
