@@ -320,3 +320,16 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `round-celebration.client.lua` : conversion des célébrations Win / Clutch / Master / First Chaos / défaite en véritables anneaux segmentés via `CinematicPulseRingKit`, afin de ne plus dessiner de disques opaques sur le sol.
 - [x] `VisualBudgetRules.lua` : ajout du dossier transitoire `RoundCelebrationPulsesLocal`. `visual-budget-rules.spec.luau` vérifie la présence des deux familles de contours et le nombre exact de pièces, sans lumière ou effet particulaire dans ces contours.
 - [ ] Validation bloquante : les deux GitHub Actions sur le SHA final, captures Studio de deux impacts de côtés opposés, 1 joueur + 2 IA et séquences de victoire/défaite, FPS et contraste sur Android réel avant toute fusion ou publication.
+
+
+## Sprint 02 — chorégraphies de groupe et hologrammes habillés (9 octobre 2026)
+
+- [x] `ShowtimeChoreography.lua` : 6 motifs distincts **dance, shuffle, groove, cheer, wave, laugh**, avec poses indépendantes par danseur et alternance déterministe quand la scène ne suit pas d'emote humain.
+- [x] Les danseurs décoratifs rejoignent la **même emote que le joueur** seulement si quelqu'un se trouve sur la piste ; cela ne télécommande aucun joueur, bot, Humanoid, Animator ni Motor6D.
+- [x] `ReduceMotion` impose des poses immobiles et constantes dans le temps ; le profil Low ne crée toujours aucun mannequin.
+- [x] `ShowtimeHologramDetails.lua` : visière et noyau de poitrine Medium ; bracelets en plus High. Respectivement **0 / 2 / 4 parties par mannequin** Low/Medium/High, sans collision, ombre, Neon, source lumineuse ou particules supplémentaires. Les détails suivent le corps pendant les gestes, puis disparaissent pendant `round`.
+- [x] `lobby-showtime.client.lua` : les mouvements et les accessoires sont mis à jour **dans la boucle existante** de 0,10 s High / 0,16 s Medium, sans nouveau RenderStepped ni touche d'interface.
+- [x] Marquee physique `ShowtimeTitle` rendu plus social : **DANCE TOGETHER / DANSONS ENSEMBLE**, **DUET / EN DUO** + nom de l'emote en FR/EN ; aucun nouvel élément d'écran ou équipement sonore.
+- [x] `lobby-showtime-rules.spec.luau` : différences mesurables entre les six poses, invariants d'amplitude, proximité, six silhouettes statiques avec ReduceMotion, budgets de costumes, opacité active/inactive et traductions du panneau.
+- [x] `studio-e2e.client.lua` : contrôle de la visière et du noyau Medium/High en `result`, invisibilité pendant `round` et règles Low inchangées.
+- [ ] Validation obligatoire avant fusion : **Build Validation + Open Cloud** au SHA final, E2E du lobby en `waiting`/`result`/`round`, interactions emote à 1/2 joueurs, captures et FPS Android Low/Medium/High. Les gestes appartiennent aux hologrammes de scène : ce n'est pas encore un système d'animations AAA nouvelles pour avatars réels.
