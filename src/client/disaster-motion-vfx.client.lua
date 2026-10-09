@@ -182,15 +182,15 @@ local function updateShrink()
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local thickness = 0.24
-    local y = base.Position.Y + (base.Size.Y * 0.5) + 0.18
+    local y = base.Size.Y * 0.5 + 0.18
     local reduced = player:GetAttribute("ReduceMotion") == true
     local pulse = reduced and 0.5 or ((math.sin(clock * 5.4) + 1) * 0.5)
 
     local defs = {
-        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y - base.Position.Y, -halfZ)},
-        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y - base.Position.Y, halfZ)},
-        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(-halfX, y - base.Position.Y, 0)},
-        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(halfX, y - base.Position.Y, 0)},
+        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y, -halfZ)},
+        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y, halfZ)},
+        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(-halfX, y, 0)},
+        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(halfX, y, 0)},
     }
 
     for i, def in ipairs(defs) do
