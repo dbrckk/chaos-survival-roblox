@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local DisasterResidue = require("../../src/shared/DisasterResidue")
 local AftermathSurfaceKit = require("../../src/client/AftermathSurfaceKit")
+local ImpactSurfaceScarKit = require("../../src/client/ImpactSurfaceScarKit")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local DisasterAftermathTone = require("../../src/shared/DisasterAftermathTone")
 
@@ -182,6 +183,140 @@ describe("Aftermath color harmony", function()
         expect(reduced.Blur).toBe(0)
         expect(reduced.Contrast < high.Contrast).toBe(true)
         expect(low.Hold < high.Hold).toBe(true)
+    end)
+end)
+
+describe("Ground-correct meteor/bomb aftermath in active rounds", function()
+    it("uses all five material scar languages without additional effects", function()
+        local families = {
+            {Enum.Material.Metal, "Metal", Enum.Material.Metal},
+            {Enum.Material.Slate, "Stone", Enum.Material.Slate},
+            {Enum.Material.Ground, "Dust", Enum.Material.Ground},
+            {Enum.Material.Ice, "Ice", Enum.Material.Ice},
+            {Enum.Material.Glass, "Polished", Enum.Material.Glass},
+        }
+        local source = Color3.fromRGB(96, 114, 125)
+        for _, expected in ipairs(families) do
+            local material = expected[1]
+            for _, kind in ipairs({"Meteor", "Bomb"}) do
+                local recipe = ImpactSurfaceScarKit.recipe(
+                    kind, "High", material, source,
+                    Color3.fromRGB(255, 145, 85), false
+                )
+                expect(recipe ~= nil).toBe(true)
+                expect(recipe.Family).toBe(expected[2])
+                expect(recipe.Material).toBe(expected[3])
+                expect(typeof(recipe.Color)).toBe("Color3")
+                expect(recipe.CrackCount).toBe(5)
+                expect(recipe.Alpha >= 0.30 and recipe.Alpha <= 0.76).toBe(true)
+                expect(recipe.Signature == "FacetedCrater"
+                    or recipe.Signature == "PressureScorch").toBe(true)
+            end
+        end
+        expect(ImpactSurfaceScarKit.recipe("Unknown", "High",
+            Enum.Material.Metal, source, source, false) == nil).toBe(true)
+        expect(ImpactSurfaceScarKit.family(Enum.Material.Wood)).toBe("Stone")
+    end)
+
+    it("maintains the previous 1/4/6 total-part budget across tiers and slopes", function()
+        local parent = Instance.new("Folder")
+        local ground = CFrame.new(15, 6, 21)
+            * CFrame.Angles(math.rad(14), math.rad(42), math.rad(-8))
+        local source = Color3.fromRGB(92, 98, 111)
+        local center = Color3.fromRGB(200, 105, 60)
+        for _, kind in ipairs({"Meteor", "Bomb"}) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local parts = ImpactSurfaceScarKit.build(
+                    parent, ground, kind, tier, Enum.Material.Slate,
+                    source, center, 13, false
+                )
+                local expected = tier == "Low" and 1
+                    or (tier == "Medium" and 4 or 6)
+                expect(#parts).toBe(expected)
+                expect(parts[1].Name).toBe(kind == "Meteor"
+                    and "ImpactFacetedCrater" or "ImpactPressureScorch")
+                expect(parts[1]:IsA(kind == "Meteor" and "WedgePart" or "Part"))
+                    .toBe(true)
+                for _, part in ipairs(parts) do
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    expect(part:GetAttribute("ImpactScarFamily")).toBe("Stone")
+                    expect((part.Position - ground.Position).Magnitude <= 14)
+                        .toBe(true)
+                    expect(part.Size.Magnitude > 0).toBe(true)
+                    part:Destroy()
+                end
+            end
+        end
+        expect(#parent:GetChildren()).toBe(0)
+        local still = ImpactSurfaceScarKit.build(
+            parent, ground, "Meteor", "High", Enum.Material.Ice,
+            source, center, 12, true
+        )
+        expect(#still).toBe(1)
+        still[1]:Destroy()
+        expect(#ImpactSurfaceScarKit.build(parent, nil, "Meteor",
+            "High", Enum.Material.Ice, source, center, 12, false)).toBe(0)
+        expect(#ImpactSurfaceScarKit.build(nil, ground, "Meteor",
+            "High", Enum.Material.Ice, source, center, 12, false)).toBe(0)
+        expect(#ImpactSurfaceScarKit.build(parent, ground, "Unknown",
+            "High", Enum.Material.Ice, source, center, 12, false)).toBe(0)
+        parent:Destroy()
+    end)
+
+    it("bounds per-camera range before any raycast and handles accessibility", function()
+        local visible = ImpactSurfaceScarKit.visible
+        expect(visible("round", "Meteor", "Low", 64)).toBe(true)
+        expect(visible("round", "Meteor", "Low", 65)).toBe(false)
+        expect(visible("round", "Bomb", "Medium", 108)).toBe(true)
+        expect(visible("round", "Bomb", "Medium", 109)).toBe(false)
+        expect(visible("round", "Meteor", "High", 150)).toBe(true)
+        expect(visible("round", "Meteor", "High", 151)).toBe(false)
+        expect(visible("ready", "Meteor", "High", 1)).toBe(false)
+        expect(visible("round", "Unknown", "High", 1)).toBe(false)
+        expect(visible("round", "Bomb", "High", nil)).toBe(false)
+        local c = Color3.fromRGB(80, 95, 110)
+        expect(ImpactSurfaceScarKit.settlement("Low", false, c, 5) == nil).toBe(true)
+        expect(ImpactSurfaceScarKit.settlement("High", true, c, 5) == nil).toBe(true)
+        expect(ImpactSurfaceScarKit.settlement("High", false, nil, 5) == nil).toBe(true)
+        local cooling = ImpactSurfaceScarKit.settlement("High", false, c, 5.5)
+        expect(cooling ~= nil).toBe(true)
+        expect(cooling.StartAfter > 0).toBe(true)
+        expect(cooling.StartAfter + cooling.Duration < 5.5 - 0.8).toBe(true)
+        expect(cooling.Color ~= c).toBe(true)
+        expect(cooling.Transparency >= 0.6 and cooling.Transparency < 1)
+            .toBe(true)
+    end)
+
+    it("emits deterministic crack recipes for crater and bomb pressure language", function()
+        for _, kind in ipairs({"Meteor", "Bomb"}) do
+            local names = {}
+            for i = 1, 5 do
+                local first = ImpactSurfaceScarKit.crack(
+                    i, 5, 12, kind, "Stone"
+                )
+                local again = ImpactSurfaceScarKit.crack(
+                    i, 5, 12, kind, "Stone"
+                )
+                expect(first.Name).toBe(kind == "Meteor"
+                    and "RimFacet" or "PressureCut")
+                expect(first.Wedge).toBe(kind == "Meteor")
+                expect(first.Offset).toBe(again.Offset)
+                expect(first.Angle).toBe(again.Angle)
+                expect(first.Size).toBe(again.Size)
+                expect(first.Size.X > 0 and first.Size.Z > 0).toBe(true)
+                names[first.Name .. i] = true
+            end
+            expect(ImpactSurfaceScarKit.crack(0, 5, 12, kind, "Stone") == nil)
+                .toBe(true)
+            expect(ImpactSurfaceScarKit.crack(1, 0, 12, kind, "Stone") == nil)
+                .toBe(true)
+        end
+        expect(ImpactSurfaceScarKit.crack(1, 5, 12, "Invalid", "Ice") == nil)
+            .toBe(true)
     end)
 end)
 
