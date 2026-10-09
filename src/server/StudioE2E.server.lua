@@ -196,6 +196,7 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             or report.platformReady ~= true
             or report.silhouetteReady ~= true
             or report.deckReady ~= true
+            or report.fixtureReady ~= true
             or (tonumber(report.signatureParts) or 0) < 6
             or (tonumber(report.signatureParts) or math.huge) > 50
         then
@@ -220,7 +221,8 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             "secondary=" .. tostring(report.secondaryReady),
             "platform=" .. tostring(report.platformReady),
             "skyline=" .. tostring(report.silhouetteReady),
-            "deck=" .. tostring(report.deckReady)
+            "deck=" .. tostring(report.deckReady),
+            "fixture=" .. tostring(report.fixtureReady)
         )
         return
     end
