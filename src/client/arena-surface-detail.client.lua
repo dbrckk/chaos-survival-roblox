@@ -5,6 +5,7 @@ local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaDeckFinishKit = require(script.Parent.ArenaDeckFinishKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -156,6 +157,7 @@ local function rebuild()
     local countScale = tier.Name == "Low" and 0.55 or (tier.Name == "Medium" and 0.78 or 1)
 
     addPanelLanguage(base, theme, tier, variant)
+    ArenaDeckFinishKit.build(folder, base, variant, tier.Name, theme)
 
     if variant == "Classic" then
         local lanes = math.max(4, math.floor(8 * countScale))
