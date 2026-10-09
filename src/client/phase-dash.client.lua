@@ -66,26 +66,45 @@ local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
 end
 
+-- An actual hollow ring of short bevel-like facets, never a solid
+-- neon cylinder. Each facet is noncolliding, and Tween/Debris own its
+-- complete lifetime. Budget: High 10 facets/ring, Medium 7, Low 5.
 local function cosmeticRing(position, color, growth, age)
-    local ring = Instance.new("Part")
-    ring.Name = "PhaseDashShockRing"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.10, 3.0, 3.0)
-    ring.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
-    ring.Material = Enum.Material.Neon
-    ring.Color = color
-    ring.Transparency = 0.30
-    ring.Anchored = true
-    ring.CastShadow = false
-    ring.CanCollide = false
-    ring.CanTouch = false
-    ring.CanQuery = false
-    ring.Parent = workspace
-    TweenService:Create(ring,
-        TweenInfo.new(age, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
-        {Size = Vector3.new(0.10, growth, growth), Transparency = 1}
-    ):Play()
-    Debris:AddItem(ring, age + 0.12)
+    local tier = quality()
+    local count = tier == "High" and 10 or (tier == "Medium" and 7 or 5)
+    local fromRadius = 1.45
+    local toRadius = growth * 0.5
+    for index = 1, count do
+        local angle = (index - 1) * 2 * math.pi / count
+        local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
+        local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        local chord = 2 * fromRadius * math.sin(math.pi / count) * 0.92
+        local facet = Instance.new("Part")
+        facet.Name = "PhaseDashRingFacet"
+        facet.Size = Vector3.new(0.17, 0.09, chord)
+        facet.CFrame = CFrame.lookAt(position + radial * fromRadius,
+            position + radial * fromRadius + tangent)
+        facet.Material = Enum.Material.Neon
+        facet.Color = color
+        facet.Transparency = 0.30
+        facet.Anchored = true
+        facet.CastShadow = false
+        facet.CanCollide = false
+        facet.CanTouch = false
+        facet.CanQuery = false
+        facet.Parent = workspace
+        TweenService:Create(facet,
+            TweenInfo.new(age, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+            {
+                Size = Vector3.new(0.12, 0.06,
+                    2 * toRadius * math.sin(math.pi / count) * 0.96),
+                CFrame = CFrame.lookAt(position + radial * toRadius,
+                    position + radial * toRadius + tangent),
+                Transparency = 1,
+            }
+        ):Play()
+        Debris:AddItem(facet, age + 0.12)
+    end
 end
 
 local function dashTrail(root, secondary)
