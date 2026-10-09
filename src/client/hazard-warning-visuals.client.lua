@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 
 local player = Players.LocalPlayer
@@ -32,6 +33,59 @@ local function destroySignature(state)
     for _, piece in ipairs(state.signature) do
         if piece.Parent then piece:Destroy() end
     end
+end
+
+-- Reconcile against live quality/accessibility without duplicating objects.
+-- Existing pieces are retained where possible; old excess pieces are removed
+-- on the very next render update when the player lowers their quality tier.
+local function syncShockSignature(part, state, diameter, progress, reduced)
+    if state.kind ~= "JumpShock" then return end
+    local count = HazardWarningSignatureRules.count(
+        "JumpShock", currentTier.Name, reduced
+    )
+    local pieces = state.signature
+    if not pieces then return end
+    while #pieces > count do
+        local extra = table.remove(pieces)
+        if extra and extra.Parent then extra:Destroy() end
+    end
+    local centerFrame = warningDeckFrame(part, state.deck)
+    for index = 1, count do
+        local design = HazardWarningSignatureRules.recipe(
+            "JumpShock", index, count, diameter, reduced and 0 or progress
+        )
+        local piece = pieces[index]
+        if not piece then
+            piece = Instance.new("Part")
+            piece.Name = "JumpShockAngularWarning" .. index
+            piece.Anchored = true
+            piece.CanCollide = false
+            piece.CanTouch = false
+            piece.CanQuery = false
+            piece.CastShadow = false
+            piece.Parent = localDecor
+            pieces[index] = piece
+        end
+        piece.Size = design.Size
+        piece.CFrame = centerFrame * CFrame.new(design.Offset) * design.Rotation
+        piece.Material = design.Material
+        piece.Color = design.Secondary and design.SecondaryColor or design.Color
+        piece.Transparency = reduced and 0.67 or design.Transparency
+    end
+end
+
+local WARNING_ID = {
+    Meteor = "Meteors", Bomb = "Bombs",
+    Freeze = "Freeze", JumpShock = "JumpShock",
+}
+local function warningLabel(kind)
+    local locale = player.LocaleId
+    local hazard = WARNING_ID[kind]
+    if kind == "Meteor" or kind == "Bomb" then
+        return CoreLocalization.hazardAction(locale, hazard)
+            or string.upper(kind)
+    end
+    return CoreLocalization.hazardName(locale, hazard) or string.upper(kind)
 end
 
 local function ensureRenderLoop()
@@ -90,24 +144,7 @@ local function ensureRenderLoop()
                     part.Transparency = reduced and 0.78
                         or (0.62 + 0.27 * alpha)
 
-                    if state.signature then
-                        local localFrame = warningDeckFrame(part, state.deck)
-                        local count = #state.signature
-                        for index, piece in ipairs(state.signature) do
-                            if piece.Parent then
-                                local design = HazardWarningSignatureRules.recipe(
-                                    "JumpShock", index, count, diameter,
-                                    reduced and 0 or alpha
-                                )
-                                piece.CFrame = localFrame * CFrame.new(design.Offset)
-                                    * design.Rotation
-                                piece.Size = design.Size
-                                piece.Transparency = reduced
-                                    and (index > 1 and 1 or 0.67)
-                                    or design.Transparency
-                            end
-                        end
-                    end
+                    syncShockSignature(part, state, diameter, alpha, reduced)
                 else
                     local diameter = state.startSize
                         + ((state.endSize - state.startSize) * alpha)
@@ -261,31 +298,7 @@ local function register(part)
         local arena = generated and generated:FindFirstChild("Arena")
         local base = arena and arena:FindFirstChild("Base")
         signatureDeck = base and base:IsA("BasePart") and base.CFrame or nil
-        local count = HazardWarningSignatureRules.count(
-            kind, currentTier.Name, player:GetAttribute("ReduceMotion") == true
-        )
         signature = {}
-        local centerFrame = warningDeckFrame(part, signatureDeck)
-        for index = 1, count do
-            local design = HazardWarningSignatureRules.recipe(
-                kind, index, count, math.max(8, part.Size.Y), 0
-            )
-            local piece = Instance.new("Part")
-            piece.Name = "JumpShockAngularWarning" .. index
-            piece.Size = design.Size
-            piece.CFrame = centerFrame * CFrame.new(design.Offset)
-                * design.Rotation
-            piece.Anchored = true
-            piece.CanCollide = false
-            piece.CanTouch = false
-            piece.CanQuery = false
-            piece.CastShadow = false
-            piece.Material = design.Material
-            piece.Color = design.Secondary and design.SecondaryColor or design.Color
-            piece.Transparency = design.Transparency
-            piece.Parent = localDecor
-            table.insert(signature, piece)
-        end
     end
 
 
@@ -306,9 +319,7 @@ local function register(part)
     warningText.BackgroundTransparency = 0.18
     warningText.BorderSizePixel = 0
     warningText.Font = Enum.Font.GothamBlack
-    warningText.Text = kind == "JumpShock"
-        and "JUMP"
-        or string.upper(kind)
+    warningText.Text = warningLabel(kind)
     warningText.TextColor3 = kind == "Bomb"
         and Color3.fromRGB(255, 120, 120)
         or (kind == "Meteor"
@@ -349,6 +360,11 @@ local function register(part)
         label = label,
     }
 
+    if kind == "JumpShock" then
+        local state = tracked[part]
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        syncShockSignature(part, state, state.startSize, 0, reduced)
+    end
     ensureRenderLoop()
 end
 
