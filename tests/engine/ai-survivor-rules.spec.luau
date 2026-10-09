@@ -227,6 +227,51 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.locomotionTransition("fall", "run")).toBe(0.10)
     end)
 
+    it("isolates one failed AI step without stopping other bots", function()
+        local processed = {}
+        local bots = {
+            {identity = "Nova"},
+            {identity = "Milo"},
+            {identity = "Kai"},
+        }
+        local function step(record)
+            if record.identity == "Milo" then
+                error("simulated NPC-only failure")
+            end
+            table.insert(processed, record.identity)
+        end
+
+        local warnings = 0
+        for _, bot in ipairs(bots) do
+            local ok, err, shouldReport = AISurvivorRules.runBrainStep(
+                bot, 10, step
+            )
+            if bot.identity == "Milo" then
+                expect(ok).toBe(false)
+                expect(type(err)).toBe("string")
+                expect(shouldReport).toBe(true)
+                warnings += shouldReport and 1 or 0
+            else
+                expect(ok).toBe(true)
+            end
+        end
+        expect(processed[1]).toBe("Nova")
+        expect(processed[2]).toBe("Kai")
+        expect(#processed).toBe(2)
+        expect(warnings).toBe(1)
+
+        local okLater, _, reportLater = AISurvivorRules.runBrainStep(
+            bots[2], 11, step
+        )
+        expect(okLater).toBe(false)
+        expect(reportLater).toBe(false)
+
+        local _, _, reportAgain = AISurvivorRules.runBrainStep(
+            bots[2], 18, step
+        )
+        expect(reportAgain).toBe(true)
+    end)
+
     it("slows the ai brain when idle or showing results", function()
         expect(AISurvivorRules.brainCadence(0, "waiting")).toBe(0.75)
         expect(AISurvivorRules.brainCadence(3, "result")).toBe(0.42)
