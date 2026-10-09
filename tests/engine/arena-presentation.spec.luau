@@ -10,6 +10,7 @@ local ArenaDetailKit = require("../../src/client/ArenaDetailKit")
 local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 local ArenaEdgeFinishKit = require("../../src/client/ArenaEdgeFinishKit")
 local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
+local ArenaDeckFinishKit = require("../../src/client/ArenaDeckFinishKit")
 
 local CENTER = Vector3.new(0, 0, 0)
 
@@ -411,6 +412,74 @@ describe("Arena skyline visual identity", function()
         expect(#ArenaSilhouetteAccentKit.build(folder, base, "Unexpected", "High", theme)).toBe(0)
         expect(#ArenaSilhouetteAccentKit.build(folder, base, "Classic", "Unknown", theme)).toBe(0)
         expect(#ArenaSilhouetteAccentKit.build(folder, base, "Classic", "High", nil)).toBe(0)
+        expect(#folder:GetChildren()).toBe(0)
+        base:Destroy()
+        folder:Destroy()
+    end)
+end)
+
+
+describe("Arena premium deck material finishes", function()
+    it("preserves four physically distinct floor recipes in rotated arenas", function()
+        local folder = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(112, 3, 92)
+        base.CFrame = CFrame.new(31, 18, -16)
+            * CFrame.Angles(math.rad(9), math.rad(36), math.rad(-5))
+        local observedNames = {}
+        local firstMaterials = {}
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            local names = ArenaDeckFinishKit.names(variant)
+            expect(#names).toBe(6)
+            expect(observedNames[names[1]] == nil).toBe(true)
+            observedNames[names[1]] = true
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local generated = ArenaDeckFinishKit.build(
+                    folder, base, variant, tier, VisualTheme.arena(variant))
+                expect(#generated).toBe(ArenaDeckFinishKit.count(tier))
+                for index, part in ipairs(generated) do
+                    expect(part.Name).toBe(names[index])
+                    expect(part:GetAttribute("ChaosDeckFinish")).toBe(true)
+                    expect(part:GetAttribute("ArenaVariant")).toBe(variant)
+                    expect(part:GetAttribute("SurfaceBaseColor")).toBe(part.Color)
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    expect(part.Material == Enum.Material.Neon).toBe(false)
+                    local localPosition = base.CFrame:PointToObjectSpace(part.Position)
+                    expect(math.abs(localPosition.X) < base.Size.X * 0.5).toBe(true)
+                    expect(math.abs(localPosition.Z) < base.Size.Z * 0.5).toBe(true)
+                    expect(part.CFrame.UpVector:Dot(base.CFrame.UpVector) > 0.98).toBe(true)
+                    if index == 1 then
+                        firstMaterials[variant] = part.Material
+                    end
+                    part:Destroy()
+                end
+            end
+        end
+        expect(firstMaterials.Classic).toBe(Enum.Material.Metal)
+        expect(firstMaterials.Towers).toBe(Enum.Material.CorrodedMetal)
+        expect(firstMaterials.Crossroads).toBe(Enum.Material.Concrete)
+        expect(firstMaterials.Orbital).toBe(Enum.Material.Metal)
+        expect(ArenaDeckFinishKit.count("Low")).toBe(2)
+        expect(ArenaDeckFinishKit.count("Medium")).toBe(4)
+        expect(ArenaDeckFinishKit.count("High")).toBe(6)
+        expect(#folder:GetChildren()).toBe(0)
+        base:Destroy()
+        folder:Destroy()
+    end)
+
+    it("rejects invalid deck inputs before allocating geometry", function()
+        local folder = Instance.new("Folder")
+        local base = Instance.new("Part")
+        local theme = VisualTheme.arena("Classic")
+        expect(#ArenaDeckFinishKit.build(nil, base, "Classic", "High", theme)).toBe(0)
+        expect(#ArenaDeckFinishKit.build(folder, nil, "Classic", "High", theme)).toBe(0)
+        expect(#ArenaDeckFinishKit.build(folder, base, "Unknown", "High", theme)).toBe(0)
+        expect(#ArenaDeckFinishKit.build(folder, base, "Classic", "Unknown", theme)).toBe(0)
+        expect(#ArenaDeckFinishKit.build(folder, base, "Classic", "High", nil)).toBe(0)
         expect(#folder:GetChildren()).toBe(0)
         base:Destroy()
         folder:Destroy()
