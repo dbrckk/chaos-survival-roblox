@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
 local FluxRelayRules = require("../../src/shared/FluxRelayRules")
+local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
 local MovementSafety = require("../../src/server/MovementSafety")
@@ -26,6 +27,99 @@ describe("Arena mechanics", function()
             expect(seenNames[mechanic.Name] == nil).toBe(true)
             seenNames[mechanic.Name] = true
         end
+    end)
+
+    it("offers an optional clockwise four-node Grid Circuit on Classic", function()
+        local rules = GridCircuitRules
+        expect(rules.Count).toBe(4)
+        expect(#rules.Offsets).toBe(4)
+        expect(rules.Window).toBe(20)
+        expect(rules.next(1)).toBe(2)
+        expect(rules.next(4)).toBe(1)
+        expect(rules.next(0) == nil).toBe(true)
+        expect(rules.next(5) == nil).toBe(true)
+
+        local first, changed = rules.advance(nil, 3, 100)
+        expect(changed).toBe(true)
+        expect(first.step).toBe(1)
+        expect(first.nextNode).toBe(4)
+        expect(first.expiresAt).toBe(120)
+        local wrong, bad = rules.advance(first, 2, 102)
+        expect(bad).toBe(false)
+        expect(wrong).toBe(first)
+
+        local same, replayed = rules.advance(first, 3, 103)
+        expect(replayed).toBe(false)
+        expect(same).toBe(first)
+        local second, changed2 = rules.advance(first, 4, 105)
+        expect(changed2).toBe(true)
+        expect(second.step).toBe(2)
+        expect(second.nextNode).toBe(1)
+        local third = rules.advance(second, 1, 109)
+        expect(third.step).toBe(3)
+        expect(third.nextNode).toBe(2)
+        local fourth = rules.advance(third, 2, 114)
+        expect(fourth.completed).toBe(true)
+        expect(fourth.step).toBe(4)
+        expect(fourth.nextNode).toBe(0)
+
+        local repeated, advanced = rules.advance(fourth, 3, 115)
+        expect(advanced).toBe(false)
+        expect(repeated).toBe(fourth)
+        local expired = rules.advance(first, 4, 121)
+        expect(expired.step).toBe(1)
+        expect(expired.nextNode).toBe(1)
+        local invalid, ignored = rules.advance(nil, -1, 100)
+        expect(invalid == nil and ignored == false).toBe(true)
+        expect(rules.advance(nil, 1, nil) == nil).toBe(true)
+    end)
+
+    it("rejects inactive, distant or dead Grid Circuit touch events", function()
+        local r = GridCircuitRules
+        expect(r.eligible(true, true, 100, 1, 0, 9, 8)).toBe(true)
+        expect(r.eligible(false, true, 100, 1, 0, 9, 8)).toBe(false)
+        expect(r.eligible(true, false, 100, 1, 0, 9, 8)).toBe(false)
+        expect(r.eligible(true, true, 0, 1, 0, 9, 8)).toBe(false)
+        expect(r.eligible(true, true, 100, 8, 0, 9, 8)).toBe(false)
+        expect(r.eligible(true, true, 100, 1, 7, 9, 8)).toBe(false)
+        expect(r.eligible(true, true, 100, 1, 0, 7, 8)).toBe(false)
+        expect(r.eligible(true, true, 100, 0, 0, 9, 8)).toBe(true)
+    end)
+
+    it("spawns four passive Grid Circuit nodes above Classic ground without blockers", function()
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            Contestants = {},
+        }
+        local mechanic = ArenaMechanics.start(ctx, "Classic")
+        expect(mechanic ~= nil).toBe(true)
+        local arena = root:FindFirstChild("Arena")
+        local base = arena and arena:FindFirstChild("Base")
+        local mechanics = arena and arena:FindFirstChild("Mechanics")
+        local circuit = mechanics and mechanics:FindFirstChild("GridCircuit")
+        expect(circuit ~= nil).toBe(true)
+        expect(#(circuit :: Folder):GetChildren()).toBe(4)
+        for index = 1, 4 do
+            local node = circuit:FindFirstChild("GridCircuitNode" .. index)
+            expect(node ~= nil).toBe(true)
+            expect(node:IsA("BasePart")).toBe(true)
+            expect(node:GetAttribute("GridCircuitIndex")).toBe(index)
+            expect(node.Anchored).toBe(true)
+            expect(node.CanCollide).toBe(false)
+            expect(node.CanTouch).toBe(true)
+            expect(node.CanQuery).toBe(false)
+            expect(node.Transparency).toBe(1)
+            expect((node.Position - (base.Position
+                + GridCircuitRules.Offsets[index]
+                + Vector3.new(0, 3.3, 0))).Magnitude < 0.001).toBe(true)
+            -- All four stations remain above the smallest shrinking floor.
+            expect(math.abs(node.Position.X - base.Position.X) <= 17).toBe(true)
+            expect(math.abs(node.Position.Z - base.Position.Z) <= 17).toBe(true)
+        end
+        root:Destroy()
     end)
 
     it("provides multiple telegraphed mobility choices per arena", function()
