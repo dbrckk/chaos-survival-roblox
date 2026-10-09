@@ -119,6 +119,28 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("audits the entire four-gate Flux Relay scene rather than hiding it from budget metrics", function()
+        local root = Instance.new("Folder")
+        local flux = Instance.new("Folder")
+        flux.Name = "FluxRelayLocal"
+        flux.Parent = root
+        for index = 1, 4 do
+            for partIndex = 1, 12 do
+                local piece = Instance.new("Part")
+                piece.Name = "FluxGate" .. index .. "_" .. partIndex
+                piece.CanCollide = false
+                piece.Parent = flux
+            end
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(1)
+        expect(metrics.Parts).toBe(48)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
     it("audits temporary meteor and bomb setpieces under their shared local folder", function()
         local root = Instance.new("Folder")
         local folder = Instance.new("Folder")
