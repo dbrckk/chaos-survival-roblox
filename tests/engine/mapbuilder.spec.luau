@@ -119,6 +119,37 @@ describe("Chaos Survival engine", function()
         root:Destroy()
     end)
 
+    it("builds physical Tower Run bridges with purely cosmetic edge rails", function()
+        local root = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena and arena:FindFirstChild("Platforms")
+        local decor = arena and arena:FindFirstChild("Decor")
+        expect(platforms ~= nil).toBe(true)
+        expect(decor ~= nil).toBe(true)
+
+        local bridges = 0
+        for _, p in ipairs((platforms :: Folder):GetChildren()) do
+            if p:GetAttribute("ChaosSkybridge") == true then
+                bridges += 1
+                expect(p.CanCollide).toBe(true)
+                expect(p:IsA("BasePart")).toBe(true)
+                expect(math.abs(p.Position.Y + p.Size.Y * 0.5
+                    - (Config.ArenaCenter.Y + 13)) < 0.001).toBe(true)
+            end
+        end
+        expect(bridges).toBe(4)
+
+        for _, item in ipairs((decor :: Folder):GetChildren()) do
+            if string.find(item.Name, "SkybridgeRail", 1, true) then
+                expect(item.CanCollide).toBe(false)
+                expect(item.CanTouch).toBe(false)
+                expect(item.CanQuery).toBe(false)
+            end
+        end
+        expect((decor :: Folder):FindFirstChild("SkybridgeRail18_-1") ~= nil).toBe(true)
+        root:Destroy()
+    end)
+
     it("has valid round timing and rewards", function()
         expect(Config.RoundSeconds > 0).toBe(true)
         expect(Config.IntermissionSeconds >= 0).toBe(true)
