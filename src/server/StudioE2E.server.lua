@@ -194,6 +194,7 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             or report.signatureReady ~= true
             or report.secondaryReady ~= true
             or report.platformReady ~= true
+            or report.silhouetteReady ~= true
             or (tonumber(report.signatureParts) or 0) < 6
             or (tonumber(report.signatureParts) or math.huge) > 50
         then
@@ -216,7 +217,8 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             "hero=" .. tostring(report.signatureHero or "missing"),
             "parts=" .. tostring(report.signatureParts or 0),
             "secondary=" .. tostring(report.secondaryReady),
-            "platform=" .. tostring(report.platformReady)
+            "platform=" .. tostring(report.platformReady),
+            "skyline=" .. tostring(report.silhouetteReady)
         )
         return
     end
