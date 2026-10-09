@@ -6,6 +6,12 @@ function SpectatorTargetRules.isSpectating(roundActive, participant, eliminated)
         and (eliminated == true or participant ~= true)
 end
 
+-- A living AI rig may still be in the lobby, between respawn and ready.
+-- Spectators must only follow active survivors from the current arena.
+function SpectatorTargetRules.isEligibleBot(inRound, health)
+    return inRound == true and type(health) == "number" and health > 0
+end
+
 function SpectatorTargetRules.resolveIndex(targets, selectedCharacter, previousIndex, advance)
     local count = type(targets) == "table" and #targets or 0
     if count == 0 then
