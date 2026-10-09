@@ -633,6 +633,7 @@ local function createRig(record)
     record.turnPauseUntil = 0
     record.threat = nil
     record.threatSeenAt = nil
+    record.reactedWarnings = setmetatable({}, {__mode = "k"})
 
     addPrimitiveAccessory(record, model)
     addCosmeticTrail(record, root)
@@ -734,6 +735,7 @@ local function sendToArena(record)
 
     record.inRound = true
     record.model:SetAttribute("AISurvivorInRound", true)
+    record.reactedWarnings = setmetatable({}, {__mode = "k"})
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
@@ -1028,9 +1030,9 @@ local function immediateThreat(record, root, now)
         local predictedDistance = (predictedPosition - warning.Position).Magnitude
         local distance = math.min(currentDistance, predictedDistance)
         local warningRadius = math.max(warning.Size.X, warning.Size.Z, warning.Size.Y) * 0.5
-        local threshold = warning.Name == "FreezeWarning" or warning.Name == "JumpShockWarning"
-            and 80
-            or (warningRadius + 9)
+        local threshold = AISurvivorRules.warningDetectionRadius(
+            warning.Name, warningRadius
+        )
 
         if distance <= threshold and distance < nearestDistance then
             nearest = warning
@@ -1053,20 +1055,25 @@ local function immediateThreat(record, root, now)
         return nil
     end
 
-    if nearest.Name == "FreezeWarning" then
-        if math.random() < 0.55 then
-            local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.Jump = true
-            end
+    if nearest.Name == "FreezeWarning" or nearest.Name == "JumpShockWarning" then
+        -- Keep one reaction per actual pulse instance, even if it remains in
+        -- range for many 0.18-second AI brain steps. Weak keys prevent stale
+        -- destroyed warning parts from being retained across long sessions.
+        local handled = record.reactedWarnings
+        if not handled then
+            handled = setmetatable({}, {__mode = "k"})
+            record.reactedWarnings = handled
         end
-        return nil
-    end
-
-    if nearest.Name == "JumpShockWarning" then
-        local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Jump = true
+        if handled[nearest] ~= true then
+            handled[nearest] = true
+            if AISurvivorRules.shouldJumpForWarning(
+                nearest.Name, false, math.random()
+            ) then
+                local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.Jump = true
+                end
+            end
         end
         return nil
     end
