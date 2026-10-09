@@ -259,7 +259,9 @@ local function updateLook()
     local complete = player:GetAttribute("RoundGridCircuitComplete") == true
     local participant = player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
-    local phase = activeRound and participant
+    -- The independent client controller must never show a Classic-only
+    -- challenge while a different arena variant is being played.
+    local phase = activeRound and participant and currentFolder ~= nil
     local deadline = tonumber(player:GetAttribute("RoundGridCircuitDeadline")) or 0
     local remain = math.max(0, math.ceil(deadline - workspace:GetServerTimeNow()))
     local key = tostring(stage) .. "/" .. tostring(destination) .. "/"
