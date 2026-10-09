@@ -56,6 +56,18 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.desiredBotCount(9)).toBe(0)
     end)
 
+    it("freezes active AI competitors when a human joins mid-round", function()
+        expect(AISurvivorRules.desiredBotCount(1)).toBe(3)
+        expect(AISurvivorRules.desiredBotCount(2)).toBe(2)
+
+        -- The extra human must not evict a live AI during a round.
+        expect(AISurvivorRules.rosterLocked("round")).toBe(true)
+        for _, phase in ipairs({"waiting", "intermission", "vote", "ready", "result"}) do
+            expect(AISurvivorRules.rosterLocked(phase)).toBe(false)
+        end
+        expect(AISurvivorRules.rosterLocked(nil)).toBe(false)
+    end)
+
     it("rotates distinct behavior profiles", function()
         expect(AISurvivorRules.profileForSlot(1).Id).toBe("Cautious")
         expect(AISurvivorRules.profileForSlot(2).Id).toBe("Balanced")
