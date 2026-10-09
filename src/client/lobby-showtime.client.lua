@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local LocalizationService = game:GetService("LocalizationService")
 local Debris = game:GetService("Debris")
 local SoundService = game:GetService("SoundService")
@@ -78,7 +79,7 @@ UITheme.addTextConstraint(toggle, 12, 18)
 local panel = Instance.new("Frame")
 panel.Name = "ShowtimePanel"
 panel.AnchorPoint = Vector2.new(1, 0)
-panel.Size = UDim2.fromOffset(232, 217)
+panel.Size = UDim2.fromOffset(232, 271)
 panel.BackgroundColor3 = UITheme.Colors.Panel
 panel.BackgroundTransparency = 0.05
 panel.BorderSizePixel = 0
@@ -144,6 +145,14 @@ local function stopEmote()
     currentEmote = nil
     if active and active.track then
         active.track:Stop(0.17)
+    end
+    if active and active.proceduralConnection then
+        active.proceduralConnection:Disconnect()
+        for _, joint in pairs(active.joints or {}) do
+            if joint and joint.Parent then
+                joint.Transform = CFrame.identity
+            end
+        end
     end
 end
 
@@ -263,6 +272,64 @@ local function emoteAudio(id)
     Debris:AddItem(sound, 2)
 end
 
+-- Animator owns normal emotes; our two authored dances pose only local
+-- limb Transform values after Animator's evaluation. Neither root motion
+-- nor camera motion is altered and all joints reset on interruption.
+local function beginProceduralEmote(id, hum)
+    local character = hum.Parent
+    if not character then return false end
+    local joints = {}
+    local wanted = {
+        ["LeftShoulder"] = "leftArm", ["Left Shoulder"] = "leftArm",
+        ["RightShoulder"] = "rightArm", ["Right Shoulder"] = "rightArm",
+        ["LeftHip"] = "leftLeg", ["Left Hip"] = "leftLeg",
+        ["RightHip"] = "rightLeg", ["Right Hip"] = "rightLeg",
+        ["Waist"] = "torso", ["RootJoint"] = "torso",
+        ["Neck"] = "neck",
+    }
+    for _, node in ipairs(character:GetDescendants()) do
+        if node:IsA("Motor6D") then
+            local key = wanted[node.Name]
+            if key then joints[key] = node end
+        end
+    end
+    if not joints.leftArm or not joints.rightArm then
+        return false
+    end
+
+    local began = os.clock()
+    local active = {id = id, joints = joints}
+    currentEmote = active
+    active.proceduralConnection = RunService.PreSimulation:Connect(function()
+        if currentEmote ~= active or hum.Health <= 0 then
+            return
+        end
+        local pose = ShowtimeChoreography.pose(
+            os.clock() - began, 1, id, 1,
+            player:GetAttribute("ReduceMotion") == true
+        )
+        if joints.leftArm.Parent then
+            joints.leftArm.Transform = CFrame.Angles(pose.ArmL, 0, -0.18 - pose.ArmSwing)
+        end
+        if joints.rightArm.Parent then
+            joints.rightArm.Transform = CFrame.Angles(pose.ArmR, 0, 0.18 + pose.ArmSwing)
+        end
+        if joints.leftLeg and joints.leftLeg.Parent then
+            joints.leftLeg.Transform = CFrame.Angles(pose.LegSwing * 0.65, 0, 0)
+        end
+        if joints.rightLeg and joints.rightLeg.Parent then
+            joints.rightLeg.Transform = CFrame.Angles(-pose.LegSwing * 0.65, 0, 0)
+        end
+        if joints.torso and joints.torso.Parent then
+            joints.torso.Transform = CFrame.Angles(0, pose.Yaw, pose.Roll)
+        end
+        if joints.neck and joints.neck.Parent then
+            joints.neck.Transform = CFrame.Angles(0, pose.HeadYaw, 0)
+        end
+    end)
+    return true
+end
+
 local function playEmote(id, automatic)
     if not available() then
         return
@@ -278,11 +345,14 @@ local function playEmote(id, automatic)
     local rigType = hum.RigType == Enum.HumanoidRigType.R6 and "R6" or "R15"
     local definition = Showtime.get(id, rigType)
     local animator = hum:FindFirstChildOfClass("Animator")
-    if not definition or not animator then
+    if not definition or (definition.Procedural ~= true and not animator) then
         return
     end
 
     stopEmote()
+    if definition.Procedural == true then
+        if not beginProceduralEmote(id, hum) then return end
+    else
     local entry = loaded[id]
     if not entry then
         local animation = Instance.new("Animation")
@@ -317,6 +387,7 @@ local function playEmote(id, automatic)
         return
     end
     currentEmote = {id = id, track = entry.track}
+    end
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if root and root:IsA("BasePart") then
         lastEmoteStarted = os.clock()
@@ -391,7 +462,7 @@ local function applyLayout()
         panel.Position = UDim2.new(1, -rightInset, 0, top + 70)
     end
     local width = math.max(1, viewport.X)
-    panel.Size = UDim2.fromOffset(math.min(232, width - 24), 217)
+    panel.Size = UDim2.fromOffset(math.min(232, width - 24), 271)
     if refreshUI then
         refreshUI()
     end
