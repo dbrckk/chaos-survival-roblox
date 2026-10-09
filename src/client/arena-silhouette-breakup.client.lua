@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaSilhouetteAccentKit = require(script.Parent.ArenaSilhouetteAccentKit)
 
 local player = Players.LocalPlayer
 
@@ -10,7 +12,8 @@ local folder = Instance.new("Folder")
 folder.Name = "ArenaSilhouetteBreakupLocal"
 folder.Parent = workspace
 
-local mapConnection = nil
+local disconnectMapWatch = nil
+local refreshPending = false
 
 local function clear()
     folder:ClearAllChildren()
@@ -306,50 +309,60 @@ local function rebuild()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    if tier.Name == "Low" then
-        return
-    end
-
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
     local high = tier.Name == "High"
 
-    if variant == "Towers" then
-        towers(base, theme, high)
-    elseif variant == "Crossroads" then
-        crossroads(base, theme, high)
-    elseif variant == "Orbital" then
-        orbital(base, theme, high)
-    else
-        classic(base, theme, high)
+    -- A compact, genuinely distinct skyline silhouette stays visible on Low,
+    -- while the richer legacy architecture remains reserved for Medium/High.
+    ArenaSilhouetteAccentKit.build(folder, base, variant, tier.Name, theme)
+    if tier.Name ~= "Low" then
+        if variant == "Towers" then
+            towers(base, theme, high)
+        elseif variant == "Crossroads" then
+            crossroads(base, theme, high)
+        elseif variant == "Orbital" then
+            orbital(base, theme, high)
+        else
+            classic(base, theme, high)
+        end
     end
 end
 
-local function bindMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+local function scheduleRefresh()
+    if refreshPending then
+        return
     end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+    end)
+end
 
+local function bindMap(generated)
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
+    end
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.defer(rebuild)
-            end
-        end)
+        -- Arena, Base and VariantId replicate asynchronously on Roblox clients.
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bindMap(child)
-        task.defer(rebuild)
+        scheduleRefresh()
     end
 end)
 
@@ -361,7 +374,7 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
+    scheduleRefresh()
 end)
 
 bindMap(workspace:FindFirstChild("GeneratedMap"))
