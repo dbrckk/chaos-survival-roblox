@@ -4,6 +4,7 @@ local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local ArenaSpatialAudioRules = require(ReplicatedStorage.Shared.ArenaSpatialAudioRules)
+local ArenaCrisisSurfaceRules = require(ReplicatedStorage.Shared.ArenaCrisisSurfaceRules)
 local AudioConfig = require(ReplicatedStorage.Shared.AudioConfig)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
@@ -23,6 +24,7 @@ local activeSounds = {}
 local phase = "waiting"
 local overdrive = false
 local finalRush = false
+local activeDisasters = {}
 local currentVariant = "Classic"
 local mapConnection = nil
 
@@ -82,6 +84,7 @@ local function makeLoop(anchor, name, soundName, pitch, baseVolume, minDistance,
     sound.EmitterSize = 7
     sound.SoundGroup = group
     sound:SetAttribute("ArenaBaseVolume", baseVolume)
+    sound:SetAttribute("ArenaBasePitch", pitch)
     applyTreatment(sound, profile)
     sound.Parent = anchor
     sound:Play()
@@ -95,13 +98,22 @@ end
 
 local function refreshVolumes(duration)
     local scale = targetScale()
+    local reaction = ArenaCrisisSurfaceRules.profile(
+        activeDisasters, phase,
+        VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
+        player:GetAttribute("ReduceMotion") == true, finalRush
+    )
     for _, sound in ipairs(activeSounds) do
         if sound and sound.Parent then
             local base = tonumber(sound:GetAttribute("ArenaBaseVolume")) or 0
+            local basePitch = tonumber(sound:GetAttribute("ArenaBasePitch")) or 1
             TweenService:Create(
                 sound,
                 TweenInfo.new(duration or 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {Volume = base * scale}
+                {
+                    Volume = base * scale,
+                    PlaybackSpeed = ArenaCrisisSurfaceRules.audio(basePitch, reaction),
+                }
             ):Play()
         end
     end
@@ -124,7 +136,6 @@ local function rebuild()
         profile.Radius,
         math.max(base.Size.X, base.Size.Z) * 0.50
     )
-    local center = base.Position + Vector3.new(0, 5.5, 0)
 
     for i = 1, count do
         local angle = ((i - 1) / count) * math.pi * 2
@@ -136,11 +147,11 @@ local function rebuild()
         local anchor = Instance.new("Part")
         anchor.Name = "ArenaAmbienceAnchor" .. i
         anchor.Size = Vector3.new(0.2, 0.2, 0.2)
-        anchor.Position = center + Vector3.new(
+        anchor.Position = base.CFrame:PointToWorldSpace(Vector3.new(
             math.cos(angle) * radius,
-            y,
+            base.Size.Y * 0.5 + 5.5 + y,
             math.sin(angle) * radius
-        )
+        ))
         anchor.Anchored = true
         anchor.CanCollide = false
         anchor.CanTouch = false
@@ -216,6 +227,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     phase = tostring(state.phase or "waiting")
     overdrive = phase == "round" and state.overdrive == true
     finalRush = phase == "round" and state.finalRush == true
+    activeDisasters = state.disasterIds or {}
     refreshVolumes(finalRush and 0.08 or 0.24)
 end)
 
