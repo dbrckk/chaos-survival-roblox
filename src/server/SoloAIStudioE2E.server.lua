@@ -140,6 +140,34 @@ task.spawn(function()
         return
     end
 
-    print("CHAOS_SOLO_AI_E2E", "human=1", "bots=3", "network=server", "movement=PASS")
-    StudioTestService:EndTest("PASS: solo AI: three distinct living server-owned bots, two moving with active locomotion animation")
+    -- The solo game must actually advance from the lobby into an arena.
+    -- Three healthy lobby mannequins are not sufficient evidence of a game.
+    local allBotsEnteredArena = false
+    while os.clock() < deadline do
+        local currentBots = botsIn(workspace:FindFirstChild("AISurvivors"))
+        if #currentBots == EXPECTED_BOTS then
+            local roundBots = 0
+            for _, bot in ipairs(currentBots) do
+                local hum = bot:FindFirstChildOfClass("Humanoid")
+                if bot:GetAttribute("AISurvivorInRound") == true
+                    and hum and hum.Health > 0
+                then
+                    roundBots += 1
+                end
+            end
+            if roundBots == EXPECTED_BOTS then
+                allBotsEnteredArena = true
+                break
+            end
+        end
+        task.wait(0.2)
+    end
+
+    if not allBotsEnteredArena then
+        StudioTestService:EndTest("FAIL: solo AI did not send all three bots into an active arena")
+        return
+    end
+
+    print("CHAOS_SOLO_AI_E2E", "human=1", "bots=3", "network=server", "movement=PASS", "arena=PASS")
+    StudioTestService:EndTest("PASS: solo AI: three server-owned living bots, multiple moving with animations, all enter arena")
 end)
