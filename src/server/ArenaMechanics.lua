@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local MovementSafety = if script then require(script.Parent.MovementSafety) else require("./MovementSafety")
+local CrossroadsFluxRelay = if script then require(script.Parent.CrossroadsFluxRelay) else require("./CrossroadsFluxRelay")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
@@ -27,7 +28,7 @@ ArenaMechanics.Definitions = {
     },
     Crossroads = {
         Name = "LANE BOOSTERS",
-        Hint = "Pink pads accelerate you along a lane so you can switch routes quickly",
+        Hint = "Pink launch pads rush outward; timed cyan Flux Relays send you back toward the hub",
         Color = Color3.fromRGB(235, 105, 220),
         Pads = {
             {offset = Vector3.new(18, 1.7, 0), impulse = Vector3.new(46, 8, 0)},
@@ -204,6 +205,13 @@ function ArenaMechanics.start(ctx, variantId)
                 pcall(ctx.OnArenaMechanicUsed, player, variantId, definition.Name, overdrive)
             end
         end)
+    end
+
+    if variantId == "Crossroads" then
+        -- Secondary timed traversal loop, sharing the mechanics lifecycle and
+        -- round cleanup. Unlike pads, only the charged alternating lane pair
+        -- relays the runner inward.
+        CrossroadsFluxRelay.start(ctx, folder, base.Position)
     end
 
     return {
