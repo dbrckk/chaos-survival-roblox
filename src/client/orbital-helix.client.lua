@@ -53,7 +53,9 @@ local function flowBurst(sensor)
         return
     end
 
-    local count = tier == "High" and 8 or 5
+    local mastery = math.clamp(tonumber(sensor:GetAttribute("HelixFlowTier")) or 1, 1, 3)
+    local count = tier == "High" and (mastery == 3 and 12 or 8)
+        or (mastery == 3 and 7 or 5)
     local origin = sensor.Position - Vector3.new(0, 1.6, 0)
     for index = 1, count do
         local angle = (index - 1) * math.pi * 2 / count
@@ -65,9 +67,11 @@ local function flowBurst(sensor)
         piece.Name = "HelixFlowCelebrationFacet"
         piece.Size = Vector3.new(0.13, 0.075, 1.1)
         piece.CFrame = CFrame.lookAt(inner, inner + tangent)
-        piece.Color = index % 2 == 0
-            and Color3.fromRGB(115, 255, 187)
-            or Color3.fromRGB(77, 201, 252)
+        piece.Color = mastery == 3
+            and (index % 2 == 0 and Color3.fromRGB(255, 210, 112)
+                or Color3.fromRGB(166, 252, 230))
+            or (index % 2 == 0 and Color3.fromRGB(115, 255, 187)
+                or Color3.fromRGB(77, 201, 252))
         piece.Material = Enum.Material.Neon
         piece.Transparency = 0.24
         piece.Anchored = true
@@ -85,6 +89,36 @@ local function flowBurst(sensor)
             }
         ):Play()
         Debris:AddItem(piece, 0.52)
+    end
+
+    if mastery >= 2 then
+        -- Tiny 3D-world celebration, not a HUD obstruction; spectators can
+        -- recognize the skill chain even if they aren't the scoring player.
+        local banner = Instance.new("BillboardGui")
+        banner.Name = "HelixMasteryBanner"
+        banner.Adornee = sensor
+        banner.StudsOffsetWorldSpace = Vector3.new(0, 4.6, 0)
+        banner.Size = UDim2.fromOffset(175, 34)
+        banner.MaxDistance = 75
+        banner.AlwaysOnTop = false
+        banner.Parent = folder
+
+        local title = Instance.new("TextLabel")
+        title.Name = "MasteryTitle"
+        title.Size = UDim2.fromScale(1, 1)
+        title.BackgroundColor3 = Color3.fromRGB(11, 24, 36)
+        title.BackgroundTransparency = 0.18
+        title.BorderSizePixel = 0
+        title.Font = Enum.Font.GothamBlack
+        title.TextScaled = true
+        title.TextColor3 = mastery == 3 and Color3.fromRGB(255, 225, 133)
+            or Color3.fromRGB(154, 255, 213)
+        title.Text = mastery == 3 and "ORBIT MASTER ×3" or "HELIX CHAIN ×2"
+        title.Parent = banner
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = title
+        Debris:AddItem(banner, 1.15)
     end
 end
 
