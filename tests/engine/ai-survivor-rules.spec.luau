@@ -451,6 +451,54 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.platformAvailable(true, 0.95, nil)).toBe(false)
     end)
 
+    it("keeps Freeze and JumpShock warning detection distances numeric", function()
+        for _, kind in ipairs({"FreezeWarning", "JumpShockWarning"}) do
+            local radius = AISurvivorRules.warningDetectionRadius(kind, 75)
+            expect(type(radius)).toBe("number")
+            expect(radius).toBe(80)
+            expect(79.9 <= radius).toBe(true)
+        end
+
+        expect(AISurvivorRules.warningDetectionRadius("MeteorWarning", 12)).toBe(21)
+        expect(AISurvivorRules.warningDetectionRadius("BombWarning", 8)).toBe(17)
+        expect(AISurvivorRules.warningDetectionRadius("BombWarning", -10)).toBe(9)
+    end)
+
+    it("consumes each Freeze pulse only once even if the bot declines jumping", function()
+        local handled = setmetatable({}, {__mode = "k"})
+        local freeze = Instance.new("Part")
+        freeze.Name = "FreezeWarning"
+
+        expect(AISurvivorRules.consumeWarningJump(handled, freeze, 0.70)).toBe(false)
+        expect(handled[freeze]).toBe(true)
+        expect(AISurvivorRules.consumeWarningJump(handled, freeze, 0.10)).toBe(false)
+
+        local nextFreeze = Instance.new("Part")
+        nextFreeze.Name = "FreezeWarning"
+        expect(AISurvivorRules.consumeWarningJump(handled, nextFreeze, 0.10)).toBe(true)
+        expect(AISurvivorRules.consumeWarningJump(handled, nextFreeze, 0.10)).toBe(false)
+
+        freeze:Destroy()
+        nextFreeze:Destroy()
+    end)
+
+    it("allows one pre-jump per Shock warning and ignores unrelated markers", function()
+        local handled = {}
+        local shock = Instance.new("Part")
+        shock.Name = "JumpShockWarning"
+        expect(AISurvivorRules.consumeWarningJump(handled, shock, 0.99)).toBe(true)
+        expect(AISurvivorRules.consumeWarningJump(handled, shock, 0.01)).toBe(false)
+
+        local meteor = Instance.new("Part")
+        meteor.Name = "MeteorWarning"
+        expect(AISurvivorRules.consumeWarningJump(handled, meteor, 0.01)).toBe(false)
+        expect(handled[meteor] == nil).toBe(true)
+        expect(AISurvivorRules.consumeWarningJump(nil, shock, 0.01)).toBe(false)
+
+        shock:Destroy()
+        meteor:Destroy()
+    end)
+
     it("delays reactions instead of granting perfect reflexes", function()
         expect(AISurvivorRules.reactionReady(10, 10.19, 0.20)).toBe(false)
         expect(AISurvivorRules.reactionReady(10, 10.20, 0.20)).toBe(true)
