@@ -6,6 +6,7 @@ local TweenService=game:GetService("TweenService")
 local VfxQuality=require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterSetpiece=require(ReplicatedStorage.Shared.DisasterSetpiece)
 local DisasterIntroGlyphKit=require(script.Parent.DisasterIntroGlyphKit)
+local DisasterIntroMotionKit=require(script.Parent.DisasterIntroMotionKit)
 
 local player=Players.LocalPlayer
 local stateEvent=ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -14,6 +15,9 @@ local token=0
 local glyphFolder=Instance.new("Folder")
 glyphFolder.Name="DisasterIntroGlyphLocal"
 glyphFolder.Parent=workspace
+local motionFolder=Instance.new("Folder")
+motionFolder.Name="DisasterIntroMotionLocal"
+motionFolder.Parent=workspace
 
 local function arenaBase()
     local g=workspace:FindFirstChild("GeneratedMap")
@@ -35,7 +39,7 @@ local function part(name,size,cf,color,transparency)
     p.Material = Enum.Material.Neon
     p.Color = color
     p.Transparency = transparency or 0.3
-    p.Parent = workspace
+    p.Parent = motionFolder
     return p
 end
 
@@ -68,8 +72,18 @@ local function playProfile(profile,base,index,total,current)
     if token~=current or not base.Parent then return end
     local tier=VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced=player:GetAttribute("ReduceMotion")==true
-    local center=base.Position+Vector3.new(0,base.Size.Y*0.5+0.14,0)
+    local centerFrame=base.CFrame*CFrame.new(0,base.Size.Y*0.5+0.14,0)
+    local center=centerFrame.Position
     local span=math.max(base.Size.X,base.Size.Z)
+    if profile.Kind=="freeze" or profile.Kind=="blast"
+        or profile.Kind=="void" or profile.Kind=="collapse"
+        or profile.Kind=="shock" then
+        DisasterIntroMotionKit.emit(
+            motionFolder,profile.Kind,centerFrame,span,
+            profile.Color,profile.Secondary,tier.Name,reduced,duration
+        )
+        return
+    end
     local duration=reduced and 0.28 or 0.58
     if profile.Kind=="rise" then
         for i=1,(tier.Name=="High" and 4 or 2) do
@@ -103,35 +117,11 @@ local function playProfile(profile,base,index,total,current)
             local p=part("TornadoIntro",Vector3.new(0.22,5,0.22),CFrame.new(center+Vector3.new(math.cos(angle)*span*0.22,2,math.sin(angle)*span*0.22)),profile.Color,0.4)
             tween(p,duration,{CFrame=CFrame.new(center+Vector3.new(math.cos(angle+1.3)*span*0.10,9,math.sin(angle+1.3)*span*0.10)),Transparency=1})
         end
-    elseif profile.Kind=="freeze" then
-        local p=part("FreezeIntro",Vector3.new(0.06,span*0.18,span*0.18),CFrame.new(center)*CFrame.Angles(0,0,math.rad(90)),profile.Color,0.28)
-        p.Shape=Enum.PartType.Cylinder
-        tween(p,duration,{Size=Vector3.new(0.06,span*0.92,span*0.92),Transparency=1})
-    elseif profile.Kind=="blast" then
-        for i=1,2 do
-            local p=part("BombIntro",Vector3.new(0.06,span*0.18,span*0.18),CFrame.new(center+Vector3.new(0,i*0.04,0))*CFrame.Angles(0,0,math.rad(90)),i==1 and profile.Color or profile.Secondary,0.3)
-            p.Shape=Enum.PartType.Cylinder
-            tween(p,duration*0.8,{Size=Vector3.new(0.06,span*(0.55+i*0.18),span*(0.55+i*0.18)),Transparency=1})
-        end
     elseif profile.Kind=="speed" then
         for i=1,(tier.Name=="Low" and 3 or 6) do
             local yaw=math.rad((i-1)*(180/6))
             local p=part("SpeedIntro",Vector3.new(span*0.34,0.08,0.12),CFrame.new(center)*CFrame.Angles(0,yaw,0),profile.Color,0.38)
             tween(p,duration*0.8,{CFrame=p.CFrame*CFrame.new(0,0,-span*0.22),Transparency=1})
-        end
-    elseif profile.Kind=="void" then
-        local p=part("DarknessIntro",Vector3.new(0.06,span*0.95,span*0.95),CFrame.new(center)*CFrame.Angles(0,0,math.rad(90)),profile.Color,0.76)
-        p.Shape=Enum.PartType.Cylinder
-        tween(p,duration,{Size=Vector3.new(0.06,span*0.20,span*0.20),Transparency=1})
-    elseif profile.Kind=="collapse" then
-        local p=part("ShrinkIntro",Vector3.new(0.06,span*1.02,span*1.02),CFrame.new(center)*CFrame.Angles(0,0,math.rad(90)),profile.Color,0.34)
-        p.Shape=Enum.PartType.Cylinder
-        tween(p,duration,{Size=Vector3.new(0.06,span*0.62,span*0.62),Transparency=1})
-    elseif profile.Kind=="shock" then
-        for i=1,2 do
-            local p=part("ShockIntro",Vector3.new(0.06,span*0.18,span*0.18),CFrame.new(center+Vector3.new(0,i*0.06,0))*CFrame.Angles(0,0,math.rad(90)),profile.Color,0.28)
-            p.Shape=Enum.PartType.Cylinder
-            tween(p,duration*0.72,{Size=Vector3.new(0.06,span*(0.70+i*0.12),span*(0.70+i*0.12)),Transparency=1})
         end
     end
 end
@@ -162,10 +152,12 @@ stateEvent.OnClientEvent:Connect(function(state)
     if phase=="round" and previousPhase~="round" then
         token+=1
         glyphFolder:ClearAllChildren()
+        motionFolder:ClearAllChildren()
         startIntro(state,token,true)
     elseif phase~="round" then
         token+=1
         glyphFolder:ClearAllChildren()
+        motionFolder:ClearAllChildren()
     end
     previousPhase=phase
 end)
@@ -173,5 +165,6 @@ end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     if player:GetAttribute("ReduceMotion")==true then
         glyphFolder:ClearAllChildren()
+        motionFolder:ClearAllChildren()
     end
 end)
