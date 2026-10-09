@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
+local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
 
 describe("Chaos Survival engine", function()
     it("builds a complete playable map hierarchy", function()
@@ -138,6 +139,13 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(bridges).toBe(4)
+        -- Permanently safe bridges supply a consistent escape route; only
+        -- adjacent conventional platforms participate in random collapse.
+        local eligible = DisappearingPlatforms.eligiblePlatforms(platforms, {})
+        expect(#eligible > 0).toBe(true)
+        for _, candidate in ipairs(eligible) do
+            expect(candidate:GetAttribute("ChaosSkybridge") == true).toBe(false)
+        end
 
         for _, item in ipairs((decor :: Folder):GetChildren()) do
             if string.find(item.Name, "SkybridgeRail", 1, true) then
