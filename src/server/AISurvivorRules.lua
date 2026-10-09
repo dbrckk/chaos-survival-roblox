@@ -55,11 +55,11 @@ function AISurvivorRules.desiredBotCount(realPlayerCount)
     )
 end
 
--- Players who join during an active round are spectators until the next one.
--- Keep the existing AI contestants (and their health/identities) intact for
--- the current round; reconcile the roster at intermission/ready instead.
+-- A round roster is committed at the ready countdown. Late joiners do not
+-- become active contestants, so do not add/remove AI during ready, round,
+-- or the result celebration. Rebalance at the next intermission.
 function AISurvivorRules.rosterLocked(phase)
-    return phase == "round"
+    return phase == "ready" or phase == "round" or phase == "result"
 end
 
 function AISurvivorRules.profileForSlot(slot)
