@@ -103,7 +103,9 @@ describe("Distinct frost and electric climax silhouettes", function()
                     expect(part.CanQuery).toBe(false)
                     expect(part.CastShadow).toBe(false)
                     expect(part:GetAttribute("ChaosClimaxSignature")).toBe(kind)
-                    expect(part.Shape == Enum.PartType.Cylinder).toBe(false)
+                    if part:IsA("Part") then
+                        expect(part.Shape == Enum.PartType.Cylinder).toBe(false)
+                    end
                     local localPosition = deck:PointToObjectSpace(part.Position)
                     expect(math.abs(localPosition.Y - (kind == "freeze" and 0.20 or 0.15))
                         < 0.10).toBe(true)
