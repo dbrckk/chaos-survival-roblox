@@ -16,11 +16,13 @@ local function validCharacter(hit)
     while cursor and cursor ~= workspace do
         if cursor:IsA("Model") then
             local player = Players:GetPlayerFromCharacter(cursor)
-            if player then
+            local bot = cursor:GetAttribute("AISurvivor") == true
+                and cursor:GetAttribute("AISurvivorInRound") == true
+            if player or bot then
                 local hum = cursor:FindFirstChildOfClass("Humanoid")
                 local root = cursor:FindFirstChild("HumanoidRootPart")
                 if hum and root and root:IsA("BasePart") then
-                    return player, root, hum
+                    return cursor, player, root, hum, bot
                 end
                 return nil
             end
@@ -54,36 +56,46 @@ function GridCircuitService.tryTouch(ctx, sensor, hit, states, readyAt, now, ser
         return false
     end
 
-    local player, root, hum = validCharacter(hit)
-    if not player then return false end
+    local rig, player, root, hum, bot = validCharacter(hit)
+    if not rig then return false end
     local dist = root.Position - sensor.Position
     local horizontal = Vector3.new(dist.X, 0, dist.Z).Magnitude
-    local active = type(ctx.IsContestantActive) == "function"
-        and ctx.IsContestantActive(player) == true
+    local active = bot == true or (player ~= nil
+        and type(ctx.IsContestantActive) == "function"
+        and ctx.IsContestantActive(player) == true)
     if not GridCircuitRules.eligible(
-        true, active, hum.Health, horizontal, dist.Y, now, readyAt[player]
+        true, active, hum.Health, horizontal, dist.Y, now, readyAt[rig]
     ) then
         return false
     end
 
     local index = sensor:GetAttribute("GridCircuitIndex")
-    local previous = states[player]
+    local previous = states[rig]
     local nextState, advanced = GridCircuitRules.advance(
         previous, index, serverTime
     )
     if not advanced then return false end
 
-    states[player] = nextState
-    readyAt[player] = now + GridCircuitRules.TouchCooldown
+    states[rig] = nextState
+    readyAt[rig] = now + GridCircuitRules.TouchCooldown
 
-    player:SetAttribute("RoundGridCircuitStep", nextState.step)
-    player:SetAttribute("RoundGridCircuitNext", nextState.nextNode)
-    player:SetAttribute("RoundGridCircuitDeadline", nextState.expiresAt)
-    player:SetAttribute("RoundGridCircuitComplete", nextState.completed)
+    if player then
+        player:SetAttribute("RoundGridCircuitStep", nextState.step)
+        player:SetAttribute("RoundGridCircuitNext", nextState.nextNode)
+        player:SetAttribute("RoundGridCircuitDeadline", nextState.expiresAt)
+        player:SetAttribute("RoundGridCircuitComplete", nextState.completed)
+    else
+        -- NPCs advertise their state for server navigation; no player
+        -- rewards, statistics, or DataStore writes are ever awarded to bots.
+        rig:SetAttribute("GridCircuitStep", nextState.step)
+        rig:SetAttribute("GridCircuitNext", nextState.nextNode)
+        rig:SetAttribute("GridCircuitDeadline", nextState.expiresAt)
+        rig:SetAttribute("GridCircuitComplete", nextState.completed)
+    end
 
-    sensor:SetAttribute("GridCircuitPulseAt", serverTime)
     sensor:SetAttribute("GridCircuitPulseStep", nextState.step)
-    if nextState.completed and ctx.OnArenaMechanicUsed then
+    sensor:SetAttribute("GridCircuitPulseAt", serverTime)
+    if player and nextState.completed and ctx.OnArenaMechanicUsed then
         pcall(ctx.OnArenaMechanicUsed, player, "Classic", "GRID CIRCUIT CLEAR", false)
     end
     return true
