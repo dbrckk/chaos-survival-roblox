@@ -79,9 +79,32 @@ function CrossroadsFluxRelay.tryTrigger(ctx, trigger, hit, ready, epoch, now, se
     root.AssemblyLinearVelocity = FluxRelayRules.velocity(
         root.AssemblyLinearVelocity, trigger.Position, center, overdrive
     )
+    local states = ctx.FluxWeaveStates
+    local previous = type(states) == "table" and states[character] or nil
+    local weave, advanced = FluxRelayRules.advanceWeave(
+        previous, trigger:GetAttribute("FluxRelayIndex"), now
+    )
+    if type(states) == "table" and weave then
+        states[character] = weave
+    end
+    local tier = weave and weave.tier or 1
+    if player then
+        player:SetAttribute("RoundFluxWeaveCombo", tier)
+        player:SetAttribute("RoundFluxWeaveBest", math.max(
+            tonumber(player:GetAttribute("RoundFluxWeaveBest")) or 0,
+            tier
+        ))
+    else
+        character:SetAttribute("FluxWeaveCombo", tier)
+    end
+
+    trigger:SetAttribute("FluxWeaveTier", tier)
     trigger:SetAttribute("FluxTriggeredAt", serverTime)
-    if player and ctx.OnArenaMechanicUsed then
-        pcall(ctx.OnArenaMechanicUsed, player, "Crossroads", "FLUX RELAY", overdrive)
+    if player and advanced and ctx.OnArenaMechanicUsed then
+        local label = tier == 3 and "FLUX MASTER"
+            or (tier == 2 and "FLUX WEAVE x2" or "FLUX RELAY")
+        pcall(ctx.OnArenaMechanicUsed,
+            player, "Crossroads", label, overdrive)
     end
     return true
 end
@@ -92,6 +115,7 @@ function CrossroadsFluxRelay.start(ctx, mechanics, center)
     folder.Name = "FluxRelays"
     folder.Parent = mechanics
     local ready = setmetatable({}, {__mode = "k"})
+    ctx.FluxWeaveStates = setmetatable({}, {__mode = "k"})
     local epoch = workspace:GetServerTimeNow()
 
     for index = 1, #FluxRelayRules.Offsets do

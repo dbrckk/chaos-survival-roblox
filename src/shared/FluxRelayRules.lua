@@ -5,12 +5,52 @@ local FluxRelayRules = {}
 FluxRelayRules.Period = 8
 FluxRelayRules.ChargeDuration = 3.2
 FluxRelayRules.TouchCooldown = 3.5
+FluxRelayRules.WeaveWindow = 12
+FluxRelayRules.WeaveCap = 3
 FluxRelayRules.Offsets = {
     Vector3.new(34, 0, 0),
     Vector3.new(0, 0, 34),
     Vector3.new(-34, 0, 0),
     Vector3.new(0, 0, -34),
 }
+
+-- Alternate between perpendicular charged lane pairs to earn Flux Weave.
+-- A -> B -> A can score rank 3 only if all three physical gates differ.
+-- Same lane pair, repeated gate and fully mastered runs cannot farm rank.
+function FluxRelayRules.advanceWeave(previous, laneIndex, now)
+    local lane = tonumber(laneIndex)
+    local time = tonumber(now)
+    if not lane or lane % 1 ~= 0 or lane < 1
+        or lane > #FluxRelayRules.Offsets or not time or time ~= time
+    then
+        return nil, false
+    end
+
+    local group = lane % 2
+    local old = type(previous) == "table" and previous or nil
+    if old and type(old.at) == "number"
+        and time >= old.at and time - old.at <= FluxRelayRules.WeaveWindow
+    then
+        local visited = type(old.visited) == "table"
+            and old.visited or {[old.lane] = true}
+        if old.group == group or visited[lane]
+            or (tonumber(old.tier) or 1) >= FluxRelayRules.WeaveCap
+        then
+            return old, false
+        end
+        local nextVisited = table.clone(visited)
+        nextVisited[lane] = true
+        return {
+            tier = (tonumber(old.tier) or 1) + 1,
+            lane = lane, group = group, at = time,
+            visited = nextVisited,
+        }, true
+    end
+    return {
+        tier = 1, lane = lane, group = group, at = time,
+        visited = {[lane] = true},
+    }, true
+end
 
 function FluxRelayRules.offsetFor(index)
     -- Opposite lanes charge together. Adjacent lanes alternate.

@@ -197,17 +197,68 @@ local function makeGate(trigger)
             tone:Play()
             Debris:AddItem(tone, 2)
         end
-        if player:GetAttribute("ReduceMotion") == true then return end
-        if tier == "Low" then return end
+        if player:GetAttribute("ReduceMotion") == true
+            or quality() == "Low"
+        then
+            return
+        end
+        local rank = math.clamp(
+            tonumber(trigger:GetAttribute("FluxWeaveTier")) or 1, 1, 3
+        )
         local center = trigger.Position + Vector3.new(0, -2.75, 0)
+        local color = rank == 3 and style.Signal or style.Charged
         local flash = newPart("FluxCompletionGlyph",
             Vector3.new(2.5, 0.1, 0.18),
-            CFrame.new(center), style.Signal, Enum.Material.Neon, 0.08)
+            CFrame.new(center), color, Enum.Material.Neon, 0.08)
         TweenService:Create(flash, TweenInfo.new(0.4), {
-            Size = Vector3.new(6.8, 0.1, 0.12),
+            Size = Vector3.new(rank == 3 and 8.4 or 6.8, 0.1, 0.12),
             Transparency = 1,
         }):Play()
         Debris:AddItem(flash, 0.48)
+
+        if rank >= 2 then
+            local count = tier == "High" and (rank == 3 and 8 or 6)
+                or (rank == 3 and 5 or 3)
+            for n = 1, count do
+                local radians = n * math.pi * 2 / count
+                local radial = Vector3.new(math.cos(radians), 0, math.sin(radians))
+                local start = center + Vector3.new(0, 2.5, 0) + radial * 1.7
+                local finish = start + radial * 3.2 + Vector3.new(0, 1.4, 0)
+                local facet = newPart("FluxWeaveFacet",
+                    Vector3.new(0.18, 0.11, 0.75),
+                    CFrame.lookAt(start, finish), color, Enum.Material.Neon, 0.14)
+                TweenService:Create(facet, TweenInfo.new(0.42), {
+                    CFrame = CFrame.lookAt(finish, finish + radial),
+                    Transparency = 1,
+                }):Play()
+                Debris:AddItem(facet, 0.48)
+            end
+
+            -- This temporary badge is close to the actual scored gate,
+            -- useful to observers without occupying the player's mobile UI.
+            local badge = Instance.new("BillboardGui")
+            badge.Name = "FluxWeaveBadge"
+            badge.Adornee = trigger
+            badge.Size = UDim2.fromOffset(172, 35)
+            badge.StudsOffsetWorldSpace = Vector3.new(0, 4.2, 0)
+            badge.MaxDistance = 75
+            badge.AlwaysOnTop = false
+            badge.Parent = folder
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.fromScale(1, 1)
+            label.BackgroundColor3 = Color3.fromRGB(19, 26, 45)
+            label.BackgroundTransparency = 0.18
+            label.BorderSizePixel = 0
+            label.Font = Enum.Font.GothamBlack
+            label.TextScaled = true
+            label.TextColor3 = color
+            label.Text = rank == 3 and "FLUX MASTER ×3" or "FLUX WEAVE ×2"
+            label.Parent = badge
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = label
+            Debris:AddItem(badge, 1.1)
+        end
     end))
 end
 

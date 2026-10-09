@@ -131,12 +131,28 @@ and every living in-round survivor bot. The activation cooldown is 3.5s
 per character, with no remote client velocity argument, purchase privilege,
 damage, or coins. Physics remains capped at 54 studs/s horizontal.
 
+**Flux Weave (optional mastery):** a human or bot starts at any
+charged arch, then reaches a gate from the *other* charging pair,
+then a **third unique** gate from the first pair within a rolling
+12-second window. This unlocks style feedback `FLUX WEAVE x2`
+and `FLUX MASTER` (rank cap 3). Repeating an already visited gate,
+taking two consecutive gates from the same charging pair, or crossing
+a gate after the window expires never fabricates a higher rank.
+Each round stores independent contestant progress in
+`RoundFluxWeaveCombo` / `RoundFluxWeaveBest`, and active bots
+obey the same server logic without human rewards.
+There are no extra movement buffs, coins or purchase advantages.
+
 **Visual language:** four metal-frame structures with recessed neon rails,
 hub-pointing directional chevrons, charged / charging world labels,
 faceted upper crowns on High, and tier-scaled detail counts. Visual states
 derive from synchronized server timestamps—no per-frame server signal
 spam. A successful crossing drives a short teal feedback cue, while
-Overdrive retains the game's existing golden identity.
+Overdrive retains the game's existing golden identity. Unique
+Flux Weave mastery plays a cyan or gold rank-aware energy burst on
+High/Medium and a short-lived local 3D badge for nearby spectators,
+with no additional particles or animated world geometry on Low /
+ReduceMotion. All one-shot visuals are Debris-cleaned.
 
 **Shrinking Arena compatibility:** the server now scales all four Flux
 checkpoint positions inward alongside the base while preserving charging

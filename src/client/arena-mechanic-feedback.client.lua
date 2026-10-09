@@ -110,15 +110,18 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         or payload.mechanicName == "SKYRAIL CHAIN x2"
         or payload.mechanicName == "SKYRAIL ACE"
     local skyrailAce = payload.mechanicName == "SKYRAIL ACE"
+    local fluxWeave = payload.mechanicName == "FLUX WEAVE x2"
+        or payload.mechanicName == "FLUX MASTER"
+    local fluxMaster = payload.mechanicName == "FLUX MASTER"
     -- The final challenge success should never be swallowed by a mobility
     -- pad's short visual cooldown during a fast last-node crossing.
-    if now - lastTrigger < 0.18 and not gridClear then
+    if now - lastTrigger < 0.18 and not (gridClear or fluxWeave) then
         return
     end
     lastTrigger = now
 
     local overdrive = payload.overdrive == true
-    local fluxRelay = payload.mechanicName == "FLUX RELAY"
+    local fluxRelay = payload.mechanicName == "FLUX RELAY" or fluxWeave
     local helixFlow = payload.mechanicName == "HELIX FLOW"
         or payload.mechanicName == "HELIX CHAIN x2"
         or payload.mechanicName == "ORBIT MASTER"
@@ -133,6 +136,8 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     elseif skyrail and not overdrive then
         accent = skyrailAce and Color3.fromRGB(255, 214, 117)
             or Color3.fromRGB(100, 230, 250)
+    elseif fluxMaster and not overdrive then
+        accent = Color3.fromRGB(255, 206, 106)
     end
     local tier = currentVfxTier()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -153,14 +158,15 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         local token = titleToken
         overdriveLabel.Text = overdrive and "OVERDRIVE BOOST"
             or (gridClear and "GRID CIRCUIT CLEAR"
-                or (skyrail and tostring(payload.mechanicName)
-                    or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY")))
-        overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce)
+                or (fluxWeave and tostring(payload.mechanicName)
+                    or (skyrail and tostring(payload.mechanicName)
+                        or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY"))))
+        overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce or fluxMaster)
             and Color3.fromRGB(255, 225, 115)
             or (gridClear and Color3.fromRGB(197, 255, 218)
                 or (helixFlow and Color3.fromRGB(184, 255, 216)
                     or Color3.fromRGB(147, 255, 232)))
-        overdriveStroke.Color = (overdrive or orbitMaster or skyrailAce)
+        overdriveStroke.Color = (overdrive or orbitMaster or skyrailAce or fluxMaster)
             and Color3.fromRGB(255, 210, 90)
             or (gridClear and Color3.fromRGB(120, 245, 179)
                 or (helixFlow and Color3.fromRGB(106, 245, 176)
