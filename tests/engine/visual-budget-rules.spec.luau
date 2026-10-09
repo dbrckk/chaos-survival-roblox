@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VisualBudgetRules = require("../../src/shared/VisualBudgetRules")
+local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 
 describe("visual budget rules", function()
     it("uses progressively smaller budgets for lower tiers", function()
@@ -131,6 +132,40 @@ describe("visual budget rules", function()
         local metrics, audited = VisualBudgetRules.collect(root)
         expect(audited).toBe(1)
         expect(metrics.Parts).toBe(4)
+        root:Destroy()
+    end)
+
+    it("audits all transient winner and transition contours without solid screen-covering disks", function()
+        local root = Instance.new("Folder")
+        local transitions = Instance.new("Folder")
+        transitions.Name = "RoundTransitionPulsesLocal"
+        transitions.Parent = root
+        local celebrations = Instance.new("Folder")
+        celebrations.Name = "RoundCelebrationPulsesLocal"
+        celebrations.Parent = root
+        local cf = CFrame.new(0, 5, 0)
+        local tint = Color3.fromRGB(75, 214, 255)
+        local first = CinematicPulseRingKit.emit(
+            transitions, "RoundStart", cf, tint, 1, 82, 0.6, "Medium", true
+        )
+        local second = CinematicPulseRingKit.emit(
+            celebrations, "Win", cf, tint, 1, 22, 0.6, "High", true
+        )
+        local third = CinematicPulseRingKit.emit(
+            celebrations, "Clutch", cf, tint, 1, 19, 0.6, "High", true
+        )
+        expect(#first).toBe(6)
+        expect(#second).toBe(8)
+        expect(#third).toBe(8)
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(22)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        for _, arc in ipairs(first) do
+            expect(arc.Shape).toBe(Enum.PartType.Block)
+            expect(arc.CanCollide).toBe(false)
+        end
         root:Destroy()
     end)
 
