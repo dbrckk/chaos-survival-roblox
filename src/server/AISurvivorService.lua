@@ -1411,7 +1411,14 @@ local function chooseArenaTarget(record, root, now)
                 local relay = choices[1].part
                 record.targetIsPad = false
                 record.targetPart = relay
-                return separateTarget(record, relay.Position), 1.0
+                -- Aim beyond the trigger so the walking bot actually crosses
+                -- its volume. Stopping at the centre alone would be cancelled
+                -- by the regular four-stud target-arrival tolerance.
+                local outward = relay.Position - config.ArenaCenter
+                local flat = Vector3.new(outward.X, 0, outward.Z)
+                local crossing = relay.Position + (flat.Magnitude > 0.1
+                    and flat.Unit * 7 or Vector3.zero)
+                return clampToArena(separateTarget(record, crossing)), 1.0
             end
         end
     end
