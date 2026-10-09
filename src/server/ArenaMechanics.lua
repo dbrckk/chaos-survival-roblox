@@ -1,6 +1,10 @@
 local Players = game:GetService("Players")
 local MovementSafety = if script then require(script.Parent.MovementSafety) else require("./MovementSafety")
 local CrossroadsFluxRelay = if script then require(script.Parent.CrossroadsFluxRelay) else require("./CrossroadsFluxRelay")
+local helixModule = script and script.Parent:FindFirstChild("OrbitalHelix")
+local OrbitalHelix = if helixModule
+    then require(helixModule)
+    else require("./OrbitalHelix")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
@@ -212,6 +216,10 @@ function ArenaMechanics.start(ctx, variantId)
         -- round cleanup. Unlike pads, only the charged alternating lane pair
         -- relays the runner inward.
         CrossroadsFluxRelay.start(ctx, folder, base.Position)
+    elseif variantId == "Orbital" then
+        -- Reward intentional skill-route traversal as a style mechanic.
+        -- Invisible checkpoints travel with their ramp during shrink.
+        OrbitalHelix.startFlow(ctx, folder, arena)
     end
 
     return {
