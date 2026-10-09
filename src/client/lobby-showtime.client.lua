@@ -12,6 +12,8 @@ local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local Showtime = require(ReplicatedStorage.Shared.LobbyShowtimeRules)
 local ShowtimeProps = require(script.Parent.ShowtimeProps)
+local ShowtimeChoreography = require(script.Parent.ShowtimeChoreography)
+local ShowtimeHologramDetails = require(script.Parent.ShowtimeHologramDetails)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
@@ -455,7 +457,7 @@ local function clearStage()
     titleBillboard = nil
 end
 
-local function makeHoloDancer(index, center)
+local function makeHoloDancer(index, center, tierName)
     local offset = index == 1 and -4.8 or 4.8
     local base = center + Vector3.new(offset, 0, 3.1)
     local color = index == 1 and UITheme.Colors.Cyan or UITheme.Colors.Magenta
@@ -471,10 +473,12 @@ local function makeHoloDancer(index, center)
         body.CFrame * CFrame.new(-0.30, -1.4, 0), color, Enum.Material.Glass, 0.30)
     local footR = makePart("HoloDancerLegR" .. index, Vector3.new(0.36, 1.1, 0.40),
         body.CFrame * CFrame.new(0.30, -1.4, 0), color, Enum.Material.Glass, 0.30)
+    local details = ShowtimeHologramDetails.build(folder, tierName, index, color)
     table.insert(dancers, {
         base = base, body = body, head = head, left = left, right = right,
-        footL = footL, footR = footR, phase = index * math.pi,
+        footL = footL, footR = footR,
         parts = {body, head, left, right, footL, footR},
+        details = details,
     })
 end
 
@@ -612,7 +616,7 @@ local function buildStage()
     UITheme.addTextConstraint(banner, 12, 23)
 
     for index = 1, profile.Dancers do
-        makeHoloDancer(index, stageCenter)
+        makeHoloDancer(index, stageCenter, tier.Name)
     end
 
     if tier.Name ~= "Low" then
@@ -729,37 +733,44 @@ local function updateStage(now)
             for _, part in ipairs(dancer.parts) do
                 part.Transparency = 1
             end
+            ShowtimeHologramDetails.pose(
+                dancer.details, dancer.body.CFrame, dancer.head.CFrame,
+                dancer.left.CFrame, dancer.right.CFrame, false
+            )
         end
         return
     end
 
+    local leadEmote = currentEmote and currentEmote.id or nil
     for index, dancer in ipairs(dancers) do
-        -- Three complementary dance motifs, shifted per performer. Unlike
-        -- rig Animator clips, these are intentionally decorative mannequins.
-        local t = reduced and 0 or now
-        local shift = t * 2.6 + dancer.phase
-        local step = reduced and 0 or math.sin(shift)
-        local sway = reduced and 0 or math.sin(shift * 0.5) * 0.46
-        local motif = reduced and 0 or ((math.floor(t / 3.4) + index) % 3)
-        local handsHigh = motif == 1 and 0.72 or (motif == 2 and 0.38 or -0.18)
-        local torsoTurn = motif == 2 and 0.38 or 0.20
-        local bob = reduced and 0 or math.abs(step) * 0.19
-        local footStep = reduced and 0 or step * (motif == 2 and 0.39 or 0.23)
-
+        -- Choreography is authored exclusively for these decorative mannequins.
+        -- A performer can mirror a player's nearby emote, never control it.
+        local pose = ShowtimeChoreography.pose(
+            now, index, leadEmote, crowd, reduced
+        )
         local bodyCF = CFrame.new(
-            dancer.base + Vector3.new(sway * 0.45, 2.05 + bob, 0)
-        ) * CFrame.Angles(0, sway * torsoTurn, sway * 0.18)
+            dancer.base + Vector3.new(pose.Sway * 0.40, 2.05 + pose.Bob, 0)
+        ) * CFrame.Angles(0, pose.Yaw, pose.Roll)
+        local headCF = bodyCF * CFrame.new(0, 1.35, 0)
+            * CFrame.Angles(0, pose.HeadYaw, 0)
+        local leftCF = bodyCF * CFrame.new(-0.78, 0.28, 0)
+            * CFrame.Angles(pose.ArmL, 0, -0.32 - pose.ArmSwing)
+        local rightCF = bodyCF * CFrame.new(0.78, 0.28, 0)
+            * CFrame.Angles(pose.ArmR, 0, 0.32 - pose.ArmSwing)
+        local footStep = pose.LegSwing
+
         dancer.body.CFrame = bodyCF
-        dancer.head.CFrame = bodyCF * CFrame.new(0, 1.35, 0)
-            * CFrame.Angles(0, -sway * 0.30, 0)
-        dancer.left.CFrame = bodyCF * CFrame.new(-0.78, 0.28, 0)
-            * CFrame.Angles(-handsHigh, 0, -0.35 - step * 0.55)
-        dancer.right.CFrame = bodyCF * CFrame.new(0.78, 0.28, 0)
-            * CFrame.Angles(handsHigh, 0, 0.35 - step * 0.55)
+        dancer.head.CFrame = headCF
+        dancer.left.CFrame = leftCF
+        dancer.right.CFrame = rightCF
         dancer.footL.CFrame = bodyCF * CFrame.new(-0.3, -1.4, footStep)
             * CFrame.Angles(footStep * 0.18, 0, 0)
         dancer.footR.CFrame = bodyCF * CFrame.new(0.3, -1.4, -footStep)
             * CFrame.Angles(-footStep * 0.18, 0, 0)
+
+        ShowtimeHologramDetails.pose(
+            dancer.details, bodyCF, headCF, leftCF, rightCF, true
+        )
         for _, part in ipairs(dancer.parts) do
             part.Transparency = 0.28
         end
