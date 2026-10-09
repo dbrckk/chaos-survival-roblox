@@ -1,5 +1,6 @@
 -- Eight inclined, physically traversable routes between the outer and
 -- inner rings of Orbital. No moving collision or per-frame server physics.
+local Players = game:GetService("Players")
 local OrbitalHelix = {}
 
 OrbitalHelix.Count = 8
@@ -218,5 +219,114 @@ function OrbitalHelix.restore(snapshot)
         end
     end
 end
+
+
+-- HELIX FLOW: a traversal skill cue, not an automated movement power.
+-- The server acknowledges intentional inward crossings. No coins, damage,
+-- speed boost, asset requirement, or client-provided success event.
+OrbitalHelix.FlowCooldown = 4.2
+
+function OrbitalHelix.inwardFlow(velocity, look)
+    if typeof(velocity) ~= "Vector3" or typeof(look) ~= "Vector3" then
+        return false
+    end
+    local v = Vector3.new(velocity.X, 0, velocity.Z)
+    local inward = Vector3.new(look.X, 0, look.Z)
+    if inward.Magnitude < 0.01 then return false end
+    return v:Dot(inward.Unit) >= 8
+end
+
+local function rigFromHit(hit)
+    local node = hit
+    while node and node ~= workspace do
+        if node:IsA("Model") then
+            local player = Players:GetPlayerFromCharacter(node)
+            local bot = node:GetAttribute("AISurvivor") == true
+                and node:GetAttribute("AISurvivorInRound") == true
+            if player or bot then
+                local hum = node:FindFirstChildOfClass("Humanoid")
+                local root = node:FindFirstChild("HumanoidRootPart")
+                if hum and root and root:IsA("BasePart") then
+                    return node, hum, root, player, bot
+                end
+                return nil
+            end
+        end
+        node = node.Parent
+    end
+    return nil
+end
+
+function OrbitalHelix.tryFlow(ctx, sensor, hit, ready, now)
+    if not sensor or not sensor.Parent or not ctx
+        or type(ctx.Active) ~= "function" or not ctx.Active()
+    then
+        return false
+    end
+
+    local rig, hum, root, player, bot = rigFromHit(hit)
+    if not rig or hum.Health <= 0 then return false end
+    local eligible = bot == true or (player ~= nil
+        and type(ctx.IsContestantActive) == "function"
+        and ctx.IsContestantActive(player) == true)
+    if not eligible or (ready[rig] or -math.huge) > now then
+        return false
+    end
+
+    local delta = sensor.CFrame:PointToObjectSpace(root.Position)
+    if math.abs(delta.X) > sensor.Size.X * 0.5 + 0.8
+        or math.abs(delta.Y) > sensor.Size.Y * 0.5 + 0.8
+        or math.abs(delta.Z) > sensor.Size.Z * 0.5 + 1.1
+        or not OrbitalHelix.inwardFlow(
+            root.AssemblyLinearVelocity, sensor.CFrame.LookVector
+        )
+    then
+        return false
+    end
+
+    ready[rig] = now + OrbitalHelix.FlowCooldown
+    -- A replicated single-source hit timestamp supports client visuals for
+    -- humans and bots without broadcasting an arbitrary client event.
+    sensor:SetAttribute("HelixFlowAt", workspace:GetServerTimeNow())
+    if player and ctx.OnArenaMechanicUsed then
+        pcall(ctx.OnArenaMechanicUsed, player, "Orbital", "HELIX FLOW", false)
+    end
+    return true
+end
+
+function OrbitalHelix.startFlow(ctx, mechanics, arena)
+    local circuit = arena and arena:FindFirstChild("HelixCircuit")
+    if not mechanics or not circuit then return nil end
+    local folder = Instance.new("Folder")
+    folder.Name = "HelixFlow"
+    folder.Parent = mechanics
+    local ready = setmetatable({}, {__mode = "k"})
+
+    for _, ramp in ipairs(circuit:GetChildren()) do
+        if ramp:IsA("BasePart")
+            and ramp:GetAttribute("OrbitalHelixRamp") == true
+        then
+            local trigger = Instance.new("Part")
+            trigger.Name = "HelixFlowTrigger" .. tostring(
+                ramp:GetAttribute("HelixLane") or "Unknown"
+            )
+            trigger.Anchored = true
+            trigger.Transparency = 1
+            trigger.CanCollide = false
+            trigger.CanQuery = false
+            trigger.CanTouch = true
+            trigger.CastShadow = false
+            trigger.Size = Vector3.new(ramp.Size.X + 1, 4.2, 2.6)
+            trigger.CFrame = ramp.CFrame * CFrame.new(0, 2.1, 0)
+            trigger:SetAttribute("HelixLane", ramp:GetAttribute("HelixLane"))
+            trigger.Parent = folder
+            trigger.Touched:Connect(function(hit)
+                OrbitalHelix.tryFlow(ctx, trigger, hit, ready, os.clock())
+            end)
+        end
+    end
+    return folder
+end
+
 
 return OrbitalHelix
