@@ -92,6 +92,13 @@ function CrossroadsFluxRelay.tryTrigger(ctx, trigger, hit, ready, epoch, now, se
         player:SetAttribute("RoundFluxWeaveCombo", tier)
         player:SetAttribute("RoundFluxWeaveNextParity",
             FluxRelayRules.nextParity(weave))
+        -- Timestamp is in synchronized server time, updated only for
+        -- a new step; repeating a relay does not refresh the deadline.
+        if advanced then
+            player:SetAttribute("RoundFluxWeaveDeadline",
+                tier == FluxRelayRules.WeaveCap and 0
+                    or (serverTime + FluxRelayRules.WeaveWindow))
+        end
         player:SetAttribute("RoundFluxWeaveBest", math.max(
             tonumber(player:GetAttribute("RoundFluxWeaveBest")) or 0,
             tier

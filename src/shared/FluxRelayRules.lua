@@ -66,6 +66,18 @@ function FluxRelayRules.nextParity(progress)
     return 1 - group
 end
 
+-- Only display a personal route while its server-defined time is live.
+function FluxRelayRules.displayProgress(rawTier, rawDeadline, serverTime)
+    local tier = math.clamp(math.floor(tonumber(rawTier) or 0), 0, FluxRelayRules.WeaveCap)
+    if tier == FluxRelayRules.WeaveCap then return tier, 0 end
+    if tier == 0 then return 0, 0 end
+    local seconds = math.max(0, math.ceil(
+        (tonumber(rawDeadline) or 0) - (tonumber(serverTime) or 0)
+    ))
+    if seconds == 0 then return 0, 0 end
+    return tier, seconds
+end
+
 function FluxRelayRules.offsetFor(index)
     -- Opposite lanes charge together. Adjacent lanes alternate.
     return (index == 2 or index == 4) and FluxRelayRules.Period * 0.5 or 0

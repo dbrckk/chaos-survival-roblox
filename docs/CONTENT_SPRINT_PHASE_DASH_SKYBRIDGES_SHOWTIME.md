@@ -290,3 +290,8 @@ The original avatar clip fallback, custom animation publishing, soundtrack
 licensing, actual environment art review, and solo/multiplayer Studio E2E
 remain explicit release blockers. Performance target is >=30 stable FPS on
 modest Android hardware; it must be measured on a real device.
+
+
+### Crossroads Flux Weave — mobile route progress
+
+A bilingual compact three-step HUD shows the active Flux Weave rank, the next-pair instruction and the server-synchronized time remaining. It appears only for active Crossroads contestants. A personal server-time attribute RoundFluxWeaveDeadline is updated only when a distinct gate advances the rank, never by replaying an old gate; it is reset on each new round. The client derives displayProgress locally, hiding stale next-pair gold guidance immediately upon expiry. It reuses the existing Flux Relay rendering cadence, creates no additional world parts and no polling remotes. Lest covers active, expired, master and missing-deadline HUD rules.

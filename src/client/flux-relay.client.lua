@@ -31,6 +31,68 @@ local gates = {}
 local connections = {}
 local source = nil
 local sourceToken = 0
+local activeRound = false
+local lastHudKey = ""
+
+-- Reuse the existing local render cadence, without any extra polling.
+local hud = Instance.new("ScreenGui")
+hud.Name = "FluxWeaveProgress"
+hud.ResetOnSpawn = false
+hud.IgnoreGuiInset = true
+hud.DisplayOrder = 34
+hud.Parent = player:WaitForChild("PlayerGui")
+local hudPanel = Instance.new("Frame")
+hudPanel.Name = "FluxWeaveStatus"
+hudPanel.AnchorPoint = Vector2.new(0.5, 0)
+hudPanel.Position = UDim2.fromScale(0.5, 0.125)
+hudPanel.Size = UDim2.fromOffset(254, 34)
+hudPanel.BackgroundColor3 = Color3.fromRGB(13, 23, 40)
+hudPanel.BackgroundTransparency = 0.18
+hudPanel.BorderSizePixel = 0
+hudPanel.Visible = false
+hudPanel.Parent = hud
+local hudCorner = Instance.new("UICorner")
+hudCorner.CornerRadius = UDim.new(0, 8)
+hudCorner.Parent = hudPanel
+local hudOutline = Instance.new("UIStroke")
+hudOutline.Color = style.Edge
+hudOutline.Transparency = 0.20
+hudOutline.Parent = hudPanel
+local hudTitle = Instance.new("TextLabel")
+hudTitle.Name = "FluxWeaveText"
+hudTitle.Size = UDim2.fromScale(1, 1)
+hudTitle.BackgroundTransparency = 1
+hudTitle.Font = Enum.Font.GothamBold
+hudTitle.TextScaled = true
+hudTitle.TextColor3 = Color3.fromRGB(222, 236, 255)
+hudTitle.Text = ""
+hudTitle.Parent = hudPanel
+local hudTrack = Instance.new("Frame")
+hudTrack.Name = "FluxWeaveTrack"
+hudTrack.Size = UDim2.new(1, 0, 0, 5)
+hudTrack.Position = UDim2.new(0, 0, 1, 4)
+hudTrack.BackgroundTransparency = 1
+hudTrack.Parent = hudPanel
+local hudPips = {}
+for index = 1, FluxRelayRules.WeaveCap do
+    local pip = Instance.new("Frame")
+    pip.Name = "FluxWeaveStep" .. index
+    pip.Position = UDim2.new((index - 1) / FluxRelayRules.WeaveCap,
+        index == 1 and 0 or 2, 0, 0)
+    pip.Size = UDim2.new(1 / FluxRelayRules.WeaveCap,
+        index == 1 and -5 or -7, 1, 0)
+    pip.BackgroundColor3 = style.Edge
+    pip.BorderSizePixel = 0
+    pip.Parent = hudTrack
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = pip
+    hudPips[index] = pip
+end
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+stateEvent.OnClientEvent:Connect(function(data)
+    activeRound = type(data) == "table" and data.phase == "round"
+end)
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
@@ -60,6 +122,8 @@ local function clear()
     table.clear(connections)
     folder:ClearAllChildren()
     table.clear(gates)
+    hudPanel.Visible = false
+    lastHudKey = ""
 end
 
 local function banner(trigger)
@@ -262,8 +326,51 @@ local function makeGate(trigger)
     end))
 end
 
+local function renderHUD(serverTime)
+    local participant = player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+    local visible = activeRound and participant and next(gates) ~= nil
+    hudPanel.Visible = visible
+    if not visible then
+        lastHudKey = ""
+        return -1
+    end
+    local stage, remaining = FluxRelayRules.displayProgress(
+        player:GetAttribute("RoundFluxWeaveCombo"),
+        player:GetAttribute("RoundFluxWeaveDeadline"), serverTime
+    )
+    local nextParity = stage > 0 and stage < FluxRelayRules.WeaveCap
+        and (tonumber(player:GetAttribute("RoundFluxWeaveNextParity")) or -1)
+        or -1
+    local key = tostring(stage) .. "/" .. tostring(remaining)
+        .. "/" .. tostring(nextParity)
+    if key ~= lastHudKey then
+        lastHudKey = key
+        if stage == FluxRelayRules.WeaveCap then
+            hudTitle.Text = "FLUX MASTER  //  3/3"
+            hudTitle.TextColor3 = style.Signal
+        elseif stage == 0 then
+            hudTitle.Text = french and "FLUX • TRAVERSE UNE ARCHE"
+                or "FLUX • ENTER A CHARGED GATE"
+            hudTitle.TextColor3 = Color3.fromRGB(222, 236, 255)
+        else
+            hudTitle.Text = string.format("FLUX %d/3  •  %s  •  %ds",
+                stage, french and "AUTRE PAIRE" or "SWITCH PAIR", remaining)
+            hudTitle.TextColor3 = remaining <= 3 and style.Signal or style.Charged
+        end
+        hudOutline.Color = stage == FluxRelayRules.WeaveCap and style.Signal or style.Edge
+        for index, pip in ipairs(hudPips) do
+            pip.BackgroundColor3 = index <= stage
+                and (stage == FluxRelayRules.WeaveCap and style.Signal or style.Charged)
+                or style.Edge
+        end
+    end
+    return nextParity
+end
+
 local function render(now)
     local serverTime = workspace:GetServerTimeNow()
+    local nextParity = renderHUD(serverTime)
     local reduced = player:GetAttribute("ReduceMotion") == true
     for trigger, entry in pairs(gates) do
         if not trigger.Parent then
@@ -285,13 +392,8 @@ local function render(now)
         local charged = epoch ~= nil and FluxRelayRules.charged(
             serverTime, epoch, offset
         )
-        local nextParity = tonumber(
-            player:GetAttribute("RoundFluxWeaveNextParity")
-        ) or -1
-        local playerActive = player:GetAttribute("RoundParticipant") == true
-            and player:GetAttribute("RoundEliminated") ~= true
         local index = tonumber(trigger:GetAttribute("FluxRelayIndex"))
-        local nextGate = charged and playerActive
+        local nextGate = charged
             and (nextParity == 0 or nextParity == 1)
             and index ~= nil and index % 2 == nextParity
         local textStatus = nextGate
