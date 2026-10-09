@@ -168,6 +168,31 @@ describe("Arena mechanics", function()
         root:Destroy()
     end)
 
+    it("advances Helix mastery across different lanes without farming one ramp", function()
+        local r = OrbitalHelix
+        expect(r.ChainCap).toBe(3)
+        expect(r.ChainWindow > 2 * r.FlowCooldown).toBe(true)
+
+        local one = r.advanceChain(nil, 1, 10)
+        expect(one.tier).toBe(1)
+        expect(one.lane).toBe(1)
+        local repeated = r.advanceChain(one, 1, 15)
+        expect(repeated.tier).toBe(1)
+        expect(repeated.at).toBe(10)
+
+        local two = r.advanceChain(repeated, 3, 16)
+        expect(two.tier).toBe(2)
+        local three = r.advanceChain(two, 5, 22)
+        expect(three.tier).toBe(3)
+        expect(r.advanceChain(three, 7, 27).tier).toBe(3)
+        expect(r.advanceChain(three, 7, 43).tier).toBe(1)
+        expect(r.advanceChain(three, 0, 23).tier).toBe(0)
+        expect(r.advanceChain(three, 9, 23).tier).toBe(0)
+        expect(r.advanceChain(three, nil, 23).tier).toBe(0)
+        expect(r.advanceChain(three, 1, nil).tier).toBe(0)
+        expect(r.advanceChain(three, 1, 19).tier).toBe(1)
+    end)
+
     it("credits only controlled inward Helix Flow passes without automatic physics boosts", function()
         local root = MapBuilder.build(Config, "Orbital", ArenaVariants)
         local arena = root:FindFirstChild("Arena")
@@ -229,6 +254,8 @@ describe("Arena mechanics", function()
 
         local cooldown = {}
         expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 10)).toBe(true)
+        expect(first:GetAttribute("HelixFlowTier")).toBe(1)
+        expect(ctx.HelixChains[bot].tier).toBe(1)
         expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 11)).toBe(false)
         expect(mechanicUses).toBe(0)
 
