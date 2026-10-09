@@ -37,7 +37,7 @@ local function makePart(name, size, cframe, color, material, transparency)
 end
 
 local function addPanelLanguage(base, theme, tier, variant)
-    local top = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.042, 0)
+    local top = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.18, 0)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local seamAlpha = tier.Name == "Low" and 0.76 or (tier.Name == "Medium" and 0.64 or 0.56)
@@ -151,7 +151,7 @@ local function rebuild()
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     -- The entire detail composition follows a rotated or tilted arena deck.
-    local surfaceFrame = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.035, 0)
+    local surfaceFrame = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.18, 0)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local countScale = tier.Name == "Low" and 0.55 or (tier.Name == "Medium" and 0.78 or 1)
