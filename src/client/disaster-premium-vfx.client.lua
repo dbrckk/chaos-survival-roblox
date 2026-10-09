@@ -61,6 +61,9 @@ local function bindLava(lava)
         Color3.fromRGB(255, 145, 35),
         Enum.Material.Neon
     )
+    -- Place the overlay immediately: the dormant renderer may be sleeping
+    -- when a new lava part replicates, and must never show a piece at (0,0,0).
+    surface.CFrame = lava.CFrame * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
     surface.Transparency = tier.Name == "Low" and 0.38 or 0.24
     table.insert(instances, surface)
 
@@ -282,7 +285,8 @@ ensureRenderLoop = function()
                 0.12,
                 math.max(1, lava.Size.Z - 1.2)
             )
-            surface.CFrame = lava.CFrame + Vector3.new(0, (lava.Size.Y * 0.5) + 0.08, 0)
+            surface.CFrame = lava.CFrame
+                * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
             surface.Color = Color3.fromRGB(
                 255,
                 128 + math.floor(pulse * (reduceMotion and 12 or 40)),
