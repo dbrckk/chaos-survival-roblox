@@ -6,6 +6,7 @@ local ShowtimeChoreography = {}
 local valid = {
     dance = true, shuffle = true, groove = true,
     cheer = true, wave = true, laugh = true,
+    robot = true, orbit = true,
 }
 
 function ShowtimeChoreography.style(now, index, leadEmote, audience)
@@ -13,7 +14,7 @@ function ShowtimeChoreography.style(now, index, leadEmote, audience)
     if valid[emote] and (tonumber(audience) or 0) > 0 then
         return emote
     end
-    local cycle = {"groove", "shuffle", "dance", "wave", "cheer", "laugh"}
+    local cycle = {"groove", "shuffle", "robot", "dance", "orbit", "wave", "cheer", "laugh"}
     local beat = math.floor(math.max(0, tonumber(now) or 0) / 3.8)
     return cycle[((beat + math.max(1, math.floor(tonumber(index) or 1)) - 1)
         % #cycle) + 1]
@@ -33,6 +34,8 @@ function ShowtimeChoreography.caption(leadEmote, audience, french)
         cheer = {"BRAVO", "CHEER"},
         wave = {"SALUT", "WAVE"},
         laugh = {"RIRE", "LAUGH"},
+        robot = {"ROBOT NEON", "NEON ROBOT"},
+        orbit = {"ORBITALE", "ORBIT DANCE"},
     }
     local entry = labels[tostring(leadEmote or "")]
     if entry then
@@ -107,6 +110,32 @@ function ShowtimeChoreography.pose(now, index, leadEmote, audience, reduceMotion
         pose.ArmL = -0.46
         pose.ArmR = 0.46
         pose.LegSwing = 0
+    elseif style == "robot" then
+        -- An original stepped silhouette with clean mechanical accents.
+        -- The discretized beats contrast with ordinary smooth emote loops.
+        local step = stationary and 0 or math.floor((t * 3.8 + performer) % 8)
+        local side = step % 2 == 0 and 1 or -1
+        pose.Sway = side * 0.13 * energy
+        pose.Bob = step % 4 == 0 and 0.12 or 0
+        pose.Yaw = side * 0.22
+        pose.Roll = -side * 0.08
+        pose.ArmL = -0.68 + side * 0.48
+        pose.ArmR = 0.68 + side * 0.48
+        pose.HeadYaw = -side * 0.24
+        pose.LegSwing = side * 0.24
+        pose.ArmSwing = 0
+    elseif style == "orbit" then
+        -- Interlaced upper-body orbit and opposing feet; no spins of
+        -- HumanoidRootPart or camera, so the player stays in control.
+        pose.Sway = math.sin(rhythm * 0.5) * 0.28 * energy
+        pose.Yaw = math.sin(rhythm * 0.75) * 0.42
+        pose.Roll = math.cos(rhythm * 0.5) * 0.18
+        pose.Bob = (0.5 + 0.5 * math.sin(rhythm)) * 0.15 * energy
+        pose.ArmL = -0.72 - math.sin(rhythm) * 0.52
+        pose.ArmR = 0.72 + math.cos(rhythm) * 0.52
+        pose.HeadYaw = -pose.Yaw * 0.65
+        pose.LegSwing = math.sin(rhythm * 0.6) * 0.32
+        pose.ArmSwing = math.sin(rhythm * 0.65) * 0.16
     end
     if stationary then
         -- Reduced motion is a quiet, static pose: no shaking or dancing.
