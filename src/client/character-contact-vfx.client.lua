@@ -177,8 +177,7 @@ local function emitLanding(model, airtime)
     local basis = surfaceFrame(hit.Position, hit.Normal)
     for i = 1, count - 1 do
         local angle = ((i - 1) / count) * math.pi * 2 + ((i * 17) % 11) * 0.04
-        local shard = materialStyle == "Mineral"
-            or materialStyle == "Crystal"
+        local shard = (materialStyle == "Mineral" or materialStyle == "Crystal")
             and Instance.new("WedgePart") or Instance.new("Part")
         -- Material style determines shape; never change the actual platform.
         shard.Name = "CharacterLanding" .. materialStyle .. "Shard"
