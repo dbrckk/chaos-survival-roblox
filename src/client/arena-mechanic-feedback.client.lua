@@ -113,6 +113,9 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     local overdrive = payload.overdrive == true
     local fluxRelay = payload.mechanicName == "FLUX RELAY"
     local helixFlow = payload.mechanicName == "HELIX FLOW"
+        or payload.mechanicName == "HELIX CHAIN x2"
+        or payload.mechanicName == "ORBIT MASTER"
+    local orbitMaster = payload.mechanicName == "ORBIT MASTER"
     local accent = overdrive
         and Color3.fromRGB(255, 210, 90)
         or (fluxRelay and Color3.fromRGB(88, 250, 229)
@@ -136,12 +139,12 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         titleToken += 1
         local token = titleToken
         overdriveLabel.Text = overdrive and "OVERDRIVE BOOST"
-            or (helixFlow and "HELIX FLOW" or "FLUX RELAY")
-        overdriveLabel.TextColor3 = overdrive
+            or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY")
+        overdriveLabel.TextColor3 = (overdrive or orbitMaster)
             and Color3.fromRGB(255, 225, 115)
             or (helixFlow and Color3.fromRGB(184, 255, 216)
                 or Color3.fromRGB(147, 255, 232))
-        overdriveStroke.Color = overdrive
+        overdriveStroke.Color = (overdrive or orbitMaster)
             and Color3.fromRGB(255, 210, 90)
             or (helixFlow and Color3.fromRGB(106, 245, 176)
                 or Color3.fromRGB(88, 250, 229))
