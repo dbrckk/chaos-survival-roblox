@@ -3,6 +3,11 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Rules = require("../../src/shared/ArenaCrisisSurfaceRules")
 
+local function colorDistance(a, b)
+    return math.abs(a.R - b.R) + math.abs(a.G - b.G)
+        + math.abs(a.B - b.B)
+end
+
 local DISASTERS = {
     "RisingLava", "Meteors", "LowGravity", "DisappearingPlatforms",
     "Tornado", "Freeze", "Bombs", "SpeedSurge", "Darkness",
@@ -41,14 +46,16 @@ describe("Material-safe reactive arena surface, lighting and spatial audio", fun
         local crisis = Rules.profile({"Meteors"}, "round", "High", false, false)
         local seam = Rules.shade(original, Enum.Material.Neon, "PanelSeam4", 4, crisis, 0)
         local center = Rules.shade(original, Enum.Material.Neon, "OrbitalSurfaceArc4", 4, crisis, 0)
-        expect((seam - original).Magnitude < (center - original).Magnitude).toBe(true)
+        expect(colorDistance(seam, original) < colorDistance(center, original)).toBe(true)
         local repair = Rules.shade(original, Enum.Material.Neon, "RepairPlate4", 4, crisis, 0)
-        expect((repair - original).Magnitude < (center - original).Magnitude).toBe(true)
+        expect(colorDistance(repair, original) < colorDistance(center, original)).toBe(true)
         local rush = Rules.profile({"Meteors"}, "round", "High", false, true)
         expect(rush.MaxTint <= 0.11).toBe(true)
         expect(rush.LightTint <= 0.08).toBe(true)
-        expect((Rules.shade(original, Enum.Material.Neon, "OrbitalSurfaceArc4", 4, rush, 0)
-            - original).Magnitude < (center - original).Magnitude).toBe(true)
+        expect(colorDistance(
+            Rules.shade(original, Enum.Material.Neon, "OrbitalSurfaceArc4", 4, rush, 0),
+            original
+        ) < colorDistance(center, original)).toBe(true)
     end)
 
     it("blends Double Chaos accents in alternating decorative strips", function()
