@@ -75,4 +75,26 @@ function HazardWarningSignatureRules.recipe(kind, index, count, diameter, progre
     }
 end
 
+-- The world-space warning should describe the danger accurately, not
+-- suggest that jumping evades JumpShock (the server applies its impulse
+-- regardless of the player's jump state). Localized from the shared HUD copy.
+local WARNING_IDS = {
+    Meteor = "Meteors",
+    Bomb = "Bombs",
+    Freeze = "Freeze",
+    JumpShock = "JumpShock",
+}
+function HazardWarningSignatureRules.label(kind, localeId, localization)
+    local id = WARNING_IDS[kind]
+    if not id then return nil end
+    if not localization then return string.upper(kind) end
+    local label
+    if kind == "Meteor" or kind == "Bomb" then
+        label = localization.hazardAction(localeId, id)
+    else
+        label = localization.hazardName(localeId, id)
+    end
+    return label or string.upper(kind)
+end
+
 return HazardWarningSignatureRules
