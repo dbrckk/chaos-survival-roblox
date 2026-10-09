@@ -45,6 +45,12 @@ describe("Arena spatial audio rules", function()
         expect(mediumMax < highMax).toBe(true)
     end)
 
+    it("keeps spatial ambience silent when accessibility audio is muted", function()
+        expect(ArenaSpatialAudioRules.muteScale(false)).toBe(1)
+        expect(ArenaSpatialAudioRules.muteScale(nil)).toBe(1)
+        expect(ArenaSpatialAudioRules.muteScale(true)).toBe(0)
+    end)
+
     it("restores ambience readiness when Arena and Base replicate late", function()
         local generated = Instance.new("Folder")
         local observed = nil
