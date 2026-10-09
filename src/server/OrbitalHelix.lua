@@ -225,6 +225,44 @@ end
 -- The server acknowledges intentional inward crossings. No coins, damage,
 -- speed boost, asset requirement, or client-provided success event.
 OrbitalHelix.FlowCooldown = 4.2
+OrbitalHelix.ChainWindow = 18
+OrbitalHelix.ChainCap = 3
+
+-- A new lane inside the time window advances a skill chain, while
+-- revisiting the same ramp cannot farm consecutive mastery ranks.
+-- State is held only for a round by startFlow and keyed weakly by rig.
+function OrbitalHelix.advanceChain(last, lane, now)
+    local index = tonumber(lane)
+    local at = tonumber(now)
+    if not index or index < 1 or index > OrbitalHelix.Count
+        or index % 1 ~= 0 or not at
+    then
+        return {tier = 0, lane = 0, at = 0}
+    end
+
+    local previous = type(last) == "table" and last or nil
+    local earlier = previous and tonumber(previous.at) or nil
+    local previousLane = previous and tonumber(previous.lane) or nil
+    local previousTier = previous and tonumber(previous.tier) or 0
+
+    if earlier and at >= earlier
+        and at - earlier <= OrbitalHelix.ChainWindow
+        and previousLane == index
+    then
+        -- Same lane isn't a new skill achievement; refresh no timer.
+        return {tier = math.clamp(previousTier, 1, OrbitalHelix.ChainCap),
+            lane = index, at = earlier}
+    end
+
+    local tier = 1
+    if earlier and at >= earlier and at - earlier <= OrbitalHelix.ChainWindow
+        and previousLane ~= index
+    then
+        tier = math.min(OrbitalHelix.ChainCap, previousTier + 1)
+    end
+
+    return {tier = tier, lane = index, at = at}
+end
 
 function OrbitalHelix.inwardFlow(velocity, look)
     if typeof(velocity) ~= "Vector3" or typeof(look) ~= "Vector3" then
@@ -285,11 +323,33 @@ function OrbitalHelix.tryFlow(ctx, sensor, hit, ready, now)
     end
 
     ready[rig] = now + OrbitalHelix.FlowCooldown
-    -- A replicated single-source hit timestamp supports client visuals for
-    -- humans and bots without broadcasting an arbitrary client event.
+    local lane = sensor:GetAttribute("HelixLane")
+    local chainState = ctx.HelixChains
+    local oldChain = type(chainState) == "table" and chainState[rig] or nil
+    local newChain = OrbitalHelix.advanceChain(oldChain, lane, now)
+    if newChain.tier == 0 then return false end
+    local advanced = oldChain == nil or newChain.tier > oldChain.tier
+        or newChain.at > (oldChain.at or 0)
+    if type(chainState) == "table" then
+        chainState[rig] = newChain
+    end
+
+    -- The server owns the rank; replicated attributes drive the exact same
+    -- celebration for nearby spectators and bots.
+    sensor:SetAttribute("HelixFlowTier", newChain.tier)
     sensor:SetAttribute("HelixFlowAt", workspace:GetServerTimeNow())
-    if player and ctx.OnArenaMechanicUsed then
-        pcall(ctx.OnArenaMechanicUsed, player, "Orbital", "HELIX FLOW", false)
+    if player then
+        player:SetAttribute("RoundHelixFlowChain", newChain.tier)
+        player:SetAttribute("RoundHelixFlowBest", math.max(
+            tonumber(player:GetAttribute("RoundHelixFlowBest")) or 0,
+            newChain.tier
+        ))
+        if ctx.OnArenaMechanicUsed and advanced then
+            local title = newChain.tier == 3 and "ORBIT MASTER"
+                or (newChain.tier == 2 and "HELIX CHAIN x2"
+                    or "HELIX FLOW")
+            pcall(ctx.OnArenaMechanicUsed, player, "Orbital", title, false)
+        end
     end
     return true
 end
@@ -301,6 +361,7 @@ function OrbitalHelix.startFlow(ctx, mechanics, arena)
     folder.Name = "HelixFlow"
     folder.Parent = mechanics
     local ready = setmetatable({}, {__mode = "k"})
+    ctx.HelixChains = setmetatable({}, {__mode = "k"})
 
     for _, ramp in ipairs(circuit:GetChildren()) do
         if ramp:IsA("BasePart")
