@@ -10,6 +10,7 @@ local ImpactSetpieceRules = require("../../src/shared/ImpactSetpieceRules")
 local ImpactSetpiece = require("../../src/client/ImpactSetpiece")
 local DisasterIntroGlyphKit = require("../../src/client/DisasterIntroGlyphKit")
 local MeteorSignatureRules = require("../../src/shared/MeteorSignatureRules")
+local ImpactMaterialRules = require("../../src/shared/ImpactMaterialRules")
 local ImpactPulseRules = require("../../src/shared/ImpactPulseRules")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 
@@ -448,6 +449,102 @@ describe("Hollow kinetic shockwaves in dense meteor and bomb impacts", function(
         expect(count).toBe(3)
         expect(#folder:GetChildren()).toBe(0)
         folder:Destroy()
+    end)
+end)
+
+describe("Surface-specific meteor and bomb cosmetic microdebris", function()
+    it("uses five recognizable surface palettes and retains low/reduced budgets", function()
+        local rules = ImpactMaterialRules
+        local cases = {
+            {Enum.Material.Metal, "Metal", Enum.Material.Metal},
+            {Enum.Material.DiamondPlate, "Metal", Enum.Material.Metal},
+            {Enum.Material.Concrete, "Stone", Enum.Material.Slate},
+            {Enum.Material.Rock, "Stone", Enum.Material.Slate},
+            {Enum.Material.Ice, "Ice", Enum.Material.Ice},
+            {Enum.Material.Snow, "Ice", Enum.Material.Ice},
+            {Enum.Material.Sand, "Dust", Enum.Material.Ground},
+            {Enum.Material.Glass, "Polished", Enum.Material.Glass},
+            {Enum.Material.SmoothPlastic, "Polished", Enum.Material.Glass},
+        }
+        local surface = Color3.fromRGB(115, 132, 146)
+        local hot = Color3.fromRGB(255, 135, 52)
+        for _, c in ipairs(cases) do
+            local p = rules.palette(c[1], surface, hot, "Meteor", "High", false)
+            expect(p.Family).toBe(c[2])
+            expect(p.Material).toBe(c[3])
+            expect(typeof(p.Color)).toBe("Color3")
+            expect(typeof(p.DustColor)).toBe("Color3")
+            expect(p.Count).toBe(6)
+            expect(p.Motion > 0 and p.Motion <= 1).toBe(true)
+            expect(rules.palette(c[1], surface, hot, "Bomb", "Medium", false).Count).toBe(3)
+            expect(rules.palette(c[1], surface, hot, "Bomb", "Low", false).Count).toBe(0)
+            expect(rules.palette(c[1], surface, hot, "Bomb", "High", true).Count).toBe(0)
+        end
+        expect(rules.family(Enum.Material.Wood)).toBe("Stone")
+    end)
+
+    it("keeps all transient fragments above and oriented to tilted arena materials", function()
+        local rules = ImpactMaterialRules
+        local deck = CFrame.new(12, 8, -35)
+            * CFrame.Angles(math.rad(18), math.rad(51), math.rad(-8))
+        local surface = rules.surfaceFrame(deck.Position, deck.UpVector)
+        expect(surface.UpVector:Dot(deck.UpVector) > 0.999).toBe(true)
+        expect((surface.Position - deck.Position).Magnitude < 0.001).toBe(true)
+        for i = 1, 6 do
+            local fragment = rules.fragment(surface, i, 6, 18, 0.7)
+            expect(typeof(fragment.Start)).toBe("CFrame")
+            expect(typeof(fragment.Travel)).toBe("Vector3")
+            expect(fragment.Size.X > 0 and fragment.Size.Y > 0).toBe(true)
+            local localPoint = surface:PointToObjectSpace(fragment.Start.Position)
+            expect(math.abs(localPoint.Y - 0.12) < 0.001).toBe(true)
+            expect(fragment.Travel:Dot(deck.UpVector) >= 0.20).toBe(true)
+            expect(fragment.Travel.Magnitude < 3).toBe(true)
+        end
+        expect(rules.fragment(nil, 1, 3, 10, 1) == nil).toBe(true)
+        expect(rules.fragment(surface, 0, 3, 10, 1) == nil).toBe(true)
+        expect(rules.fragment(surface, 4, 3, 10, 1) == nil).toBe(true)
+        expect(rules.fragment(surface, 1, 3, 0, 1) == nil).toBe(true)
+        expect(rules.surfaceFrame(nil, Vector3.yAxis) == nil).toBe(true)
+        local fallback = rules.surfaceFrame(Vector3.new(0, 5, 0), Vector3.zero)
+        expect(fallback.UpVector:Dot(Vector3.yAxis) > 0.999).toBe(true)
+    end)
+
+    it("does not add lights, GPU emitters or collidable objects to material recipes", function()
+        local root = Instance.new("Folder")
+        local frame = ImpactMaterialRules.surfaceFrame(
+            Vector3.new(5, 3, 8), Vector3.yAxis
+        )
+        local color = Color3.fromRGB(95, 110, 122)
+        for _, material in ipairs({
+            Enum.Material.Metal, Enum.Material.Ice,
+            Enum.Material.Slate, Enum.Material.Glass,
+        }) do
+            local p = ImpactMaterialRules.palette(
+                material, color, color, "Bomb", "High", false
+            )
+            for i = 1, p.Count do
+                local fragment = ImpactMaterialRules.fragment(
+                    frame, i, p.Count, 9, p.Motion
+                )
+                local part = Instance.new("Part")
+                part.Anchored = true
+                part.CanCollide = false
+                part.CanTouch = false
+                part.CanQuery = false
+                part.CastShadow = false
+                part.CFrame = fragment.Start
+                part.Size = fragment.Size
+                part.Material = p.Material
+                part.Color = p.Color
+                part.Parent = root
+                expect(part.Anchored).toBe(true)
+                expect(part.CanCollide).toBe(false)
+                expect(part.CanQuery).toBe(false)
+            end
+        end
+        expect(#root:GetChildren()).toBe(24)
+        for _, part in ipairs(root:GetChildren()) do part:Destroy() end
+        root:Destroy()
     end)
 end)
 
