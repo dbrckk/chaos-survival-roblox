@@ -9,6 +9,12 @@ local arenaPresentationModule = shared and shared:FindFirstChild("ArenaPresentat
 local ArenaPresentation = if arenaPresentationModule
     then require(arenaPresentationModule)
     else require("../shared/ArenaPresentation")
+-- Cloud engine specs can import new source modules before the published
+-- place has received them; prefer sibling ModuleScript, otherwise source.
+local helixModule = script and script.Parent:FindFirstChild("OrbitalHelix")
+local OrbitalHelix = if helixModule
+    then require(helixModule)
+    else require("./OrbitalHelix")
 
 local MapBuilder = {}
 
@@ -1610,6 +1616,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         trim.CanQuery = false
         trim.Transparency = 0.18
         addPlatformFinish(decor, platform, i, theme)
+    end
+
+    if variant.Id == "Orbital" then
+        -- Fully physical sloped routes between the outer and inner decks.
+        -- No scripted platform movement or client-controlled collisions.
+        OrbitalHelix.build(arena, variant, config.ArenaCenter, theme)
     end
 
     local beaconOffsets = {
