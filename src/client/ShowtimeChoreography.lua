@@ -19,6 +19,32 @@ function ShowtimeChoreography.style(now, index, leadEmote, audience)
         % #cycle) + 1]
 end
 
+-- A restrained, localized marquee responds to real participation. It is
+-- information in existing UI, not a new surface or a flashing overlay.
+function ShowtimeChoreography.caption(leadEmote, audience, french)
+    local crowd = math.clamp(math.floor(tonumber(audience) or 0), 0, 4)
+    if crowd == 0 then
+        return french == true and "PISTE DE DANSE" or "CHAOS SHOWTIME"
+    end
+    local labels = {
+        dance = {"DANSE", "DANCE"},
+        shuffle = {"SHUFFLE", "SHUFFLE"},
+        groove = {"GROOVE", "GROOVE"},
+        cheer = {"BRAVO", "CHEER"},
+        wave = {"SALUT", "WAVE"},
+        laugh = {"RIRE", "LAUGH"},
+    }
+    local entry = labels[tostring(leadEmote or "")]
+    if entry then
+        return french == true and ("EN DUO / " .. entry[1])
+            or ("DUET / " .. entry[2])
+    end
+    if crowd >= 2 then
+        return french == true and "DANSONS ENSEMBLE" or "DANCE TOGETHER"
+    end
+    return french == true and "REJOINS LA DANSE" or "JOIN THE FLOOR"
+end
+
 function ShowtimeChoreography.pose(now, index, leadEmote, audience, reduceMotion)
     local style = ShowtimeChoreography.style(now, index, leadEmote, audience)
     local stationary = reduceMotion == true
