@@ -183,7 +183,13 @@ the **personal** next station; a modest screen reminder shows next
 direction and remaining time. Temporary outward energy facets broadcast
 through replicated station timestamps. English/French labels are authored,
 Low renders just five static parts per station, Medium 17, High 25,
-all noncolliding. The `GridCircuitLocal` folder is budget-audited.
+all noncolliding. A compass route overlay is drawn as 24 noncolliding
+glowing ground-chevron strokes on High, 16 on Medium and 0 on Low;
+only the next clockwise edge receives a bright highlight. A compact
+four-segment progress track sits below the existing mobile-friendly
+status prompt; an expired attempt clears highlighted guidance without
+altering the server-owned state. The `GridCircuitLocal` folder is
+budget-audited.
 
 **QA:** complete a circuit on desktop and Android; start from every compass
 node; verify deadline, wrong node, repeated touch, one completion per

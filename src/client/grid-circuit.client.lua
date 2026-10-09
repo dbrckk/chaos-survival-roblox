@@ -26,6 +26,8 @@ art.Name = "GridCircuitLocal"
 art.Parent = workspace
 
 local nodes = {}
+local guides = {}
+local guidesBuilt = false
 local connections = {}
 local currentFolder = nil
 local tierName = nil
@@ -62,6 +64,29 @@ stroke.Color = palette.Edge
 stroke.Transparency = 0.22
 stroke.Parent = banner
 
+-- A static four-segment mastery tracker that remains readable on touch.
+local progressTrack = Instance.new("Frame")
+progressTrack.Name = "CircuitProgressTrack"
+progressTrack.Size = UDim2.new(1, 0, 0, 5)
+progressTrack.Position = UDim2.new(0, 0, 1, 4)
+progressTrack.BackgroundTransparency = 1
+progressTrack.Visible = false
+progressTrack.Parent = banner
+local progressPips = {}
+for index = 1, 4 do
+    local pip = Instance.new("Frame")
+    pip.Name = "CircuitProgress" .. index
+    pip.Position = UDim2.new((index - 1) * 0.25, index == 1 and 0 or 2, 0, 0)
+    pip.Size = UDim2.new(0.25, index == 1 and -5 or -7, 1, 0)
+    pip.BorderSizePixel = 0
+    pip.BackgroundColor3 = palette.Edge
+    pip.Parent = progressTrack
+    local rounded = Instance.new("UICorner")
+    rounded.CornerRadius = UDim.new(1, 0)
+    rounded.Parent = pip
+    progressPips[index] = pip
+end
+
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local activeRound = false
 stateEvent.OnClientEvent:Connect(function(data)
@@ -93,6 +118,8 @@ local function clear()
     for _, c in ipairs(connections) do c:Disconnect() end
     table.clear(connections)
     table.clear(nodes)
+    table.clear(guides)
+    guidesBuilt = false
     art:ClearAllChildren()
     lastStyleKey = ""
 end
@@ -236,6 +263,43 @@ local function findCircuit()
     return mechanics and mechanics:FindFirstChild("GridCircuit")
 end
 
+-- Connect the four compass stations with shallow noncolliding
+-- floor chevrons. Highlight only the player's next clockwise edge.
+-- No moving parts/Heartbeat and no route glyphs on Low devices.
+local function ensureGuides()
+    if guidesBuilt then return end
+    local byIndex = {}
+    for _, node in pairs(nodes) do
+        byIndex[node.index] = node
+    end
+    if not (byIndex[1] and byIndex[2] and byIndex[3] and byIndex[4]) then
+        return
+    end
+    guidesBuilt = true
+    local steps = GridCircuitRules.routeChevrons(quality())
+    if steps == 0 then return end
+
+    for index = 1, 4 do
+        local nextIndex = GridCircuitRules.next(index)
+        local origin = byIndex[index].base.Position
+        local destination = byIndex[nextIndex].base.Position
+        local direction = destination - origin
+        local horizontal = Vector3.new(direction.X, 0, direction.Z).Unit
+        for number = 1, steps do
+            local center = origin:Lerp(destination, number / (steps + 1))
+                + Vector3.new(0, 0.16, 0)
+            for side = -1, 1, 2 do
+                local glyph = makePart("GridRouteChevron",
+                    Vector3.new(0.17, 0.055, 1.1),
+                    CFrame.lookAt(center, center + horizontal)
+                        * CFrame.Angles(0, math.rad(side * 32), 0),
+                    palette.Standby, Enum.Material.Neon, 0.84)
+                table.insert(guides, {from = index, part = glyph})
+            end
+        end
+    end
+end
+
 local function bindCircuit(circuit)
     clear()
     currentFolder = circuit
@@ -254,6 +318,7 @@ local function bindCircuit(circuit)
 end
 
 local function updateLook()
+    ensureGuides()
     local stage = tonumber(player:GetAttribute("RoundGridCircuitStep")) or 0
     local destination = tonumber(player:GetAttribute("RoundGridCircuitNext")) or 0
     local complete = player:GetAttribute("RoundGridCircuitComplete") == true
@@ -271,6 +336,14 @@ local function updateLook()
     lastStyleKey = key
 
     banner.Visible = phase and #GridCircuitRules.Offsets == 4
+    progressTrack.Visible = banner.Visible
+    local visibleProgress = (stage > 0 and not complete and remain <= 0)
+        and 0 or stage
+    for index, pip in ipairs(progressPips) do
+        pip.BackgroundColor3 = index <= visibleProgress
+            and (complete and palette.Complete or palette.Active)
+            or palette.Edge
+    end
     if phase then
         if complete then
             banner.Text = "GRID CIRCUIT  //  CLEAR"
@@ -291,7 +364,7 @@ local function updateLook()
 
     for sensor, node in pairs(nodes) do
         local chosen = phase and not complete
-            and stage > 0 and destination == node.index
+            and stage > 0 and remain > 0 and destination == node.index
         local success = phase and complete
         local color = success and palette.Complete
             or (chosen and palette.Active or palette.Standby)
@@ -309,6 +382,15 @@ local function updateLook()
             part.Color = color
             part.Transparency = dim and 0.75 or 0.20
         end
+    end
+    local previous = GridCircuitRules.previous(destination)
+    for _, guide in ipairs(guides) do
+        local selected = phase and stage > 0 and remain > 0
+            and not complete and previous == guide.from
+        guide.part.Color = complete and palette.Complete
+            or (selected and palette.Active or palette.Standby)
+        guide.part.Transparency = selected and 0.22
+            or (complete and 0.62 or 0.87)
     end
 end
 

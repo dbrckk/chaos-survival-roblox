@@ -168,9 +168,9 @@ describe("visual budget rules", function()
         local circuit = Instance.new("Folder")
         circuit.Name = "GridCircuitLocal"
         circuit.Parent = root
-        -- High tier: 1 base + 12 ring rails + 4 pylons +
-        -- 4 filaments + 4 service crowns = 25 parts per monument.
-        for index = 1, 100 do
+        -- High tier: 25 parts per monument (100 total), plus
+        -- 3 chevrons * 2 strokes * 4 route edges = 24 guide parts.
+        for index = 1, 124 do
             local piece = Instance.new("Part")
             piece.Name = "CircuitArt" .. index
             piece.CanCollide = false
@@ -178,7 +178,7 @@ describe("visual budget rules", function()
         end
         local metrics, count = VisualBudgetRules.collect(root)
         expect(count).toBe(1)
-        expect(metrics.Parts).toBe(100)
+        expect(metrics.Parts).toBe(124)
         expect(metrics.Lights).toBe(0)
         expect(metrics.Effects).toBe(0)
         expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)

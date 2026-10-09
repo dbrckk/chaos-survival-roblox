@@ -12,6 +12,23 @@ GridCircuitRules.Offsets = {
     Vector3.new(-16, 0, 16),
 }
 GridCircuitRules.Names = {"NW", "NE", "SE", "SW"}
+GridCircuitRules.RouteChevronsPerEdge = {
+    High = 3,
+    Medium = 2,
+    Low = 0,
+}
+
+function GridCircuitRules.previous(index)
+    local n = tonumber(index)
+    if not n or n % 1 ~= 0 or n < 1 or n > GridCircuitRules.Count then
+        return nil
+    end
+    return ((n + GridCircuitRules.Count - 2) % GridCircuitRules.Count) + 1
+end
+
+function GridCircuitRules.routeChevrons(tier)
+    return GridCircuitRules.RouteChevronsPerEdge[tier] or 0
+end
 
 function GridCircuitRules.next(index)
     local n = tonumber(index)

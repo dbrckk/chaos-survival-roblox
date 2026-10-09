@@ -30,6 +30,19 @@ describe("Arena mechanics", function()
         end
     end)
 
+    it("sets bounded compass-arrow detail tiers and consistent clockwise neighbors", function()
+        expect(GridCircuitRules.routeChevrons("High")).toBe(3)
+        expect(GridCircuitRules.routeChevrons("Medium")).toBe(2)
+        expect(GridCircuitRules.routeChevrons("Low")).toBe(0)
+        expect(GridCircuitRules.routeChevrons("Unknown")).toBe(0)
+        for index = 1, 4 do
+            local nextIndex = GridCircuitRules.next(index)
+            expect(GridCircuitRules.previous(nextIndex)).toBe(index)
+        end
+        expect(GridCircuitRules.previous(0) == nil).toBe(true)
+        expect(GridCircuitRules.previous(5) == nil).toBe(true)
+    end)
+
     it("offers an optional clockwise four-node Grid Circuit on Classic", function()
         local rules = GridCircuitRules
         expect(rules.Count).toBe(4)
