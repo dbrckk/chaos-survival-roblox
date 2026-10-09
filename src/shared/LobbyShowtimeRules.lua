@@ -45,9 +45,19 @@ LobbyShowtimeRules.Emotes = {
         LabelEN = "WAVE",
         LabelFR = "SALUT",
     },
+    -- Original joint choreography generated at runtime: no third-party
+    -- animation asset or paid catalog dependency.
+    robot = {
+        Procedural = true, Loop = true,
+        LabelEN = "NEON ROBOT", LabelFR = "ROBOT NEON",
+    },
+    orbit = {
+        Procedural = true, Loop = true,
+        LabelEN = "ORBIT DANCE", LabelFR = "DANSE ORBITE",
+    },
 }
 
-LobbyShowtimeRules.Order = {"dance", "shuffle", "groove", "cheer", "wave", "laugh"}
+LobbyShowtimeRules.Order = {"dance", "shuffle", "groove", "robot", "orbit", "cheer", "wave", "laugh"}
 
 function LobbyShowtimeRules.enabled(phase, voteOptions)
     local current = tostring(phase or "")
@@ -71,6 +81,17 @@ function LobbyShowtimeRules.get(id, rigType)
         return nil
     end
     local animationId = definition[rig]
+    if definition.Procedural == true then
+        if rig ~= "R15" and rig ~= "R6" then
+            return nil
+        end
+        return {
+            Procedural = true,
+            Loop = true,
+            LabelEN = definition.LabelEN,
+            LabelFR = definition.LabelFR,
+        }
+    end
     if type(animationId) ~= "number" or animationId <= 0 then
         return nil
     end
