@@ -41,6 +41,7 @@ VisualBudgetRules.LocalFolders = {
     "FluxRelayLocal",
     "GridCircuitLocal",
     "OrbitalHelixLocal",
+    "TowerSkyrailLocal",
     "LobbyProfileHologramLocal",
     "LobbyRoundRecapLocal",
     "LobbySurfaceDetailLocal",

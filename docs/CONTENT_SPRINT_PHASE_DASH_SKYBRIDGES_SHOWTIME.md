@@ -54,6 +54,16 @@ survival route without teleporting or bypassing collision. Every player receives
   panels, structural support posts and glows in the same relative layout.
   Every transform and size is restored after the round; no client-only
   scaffold masquerades as a safe route.
+- **Original Skyrail Conductor skyline:** four bridge-middle mechanical
+  gantries with armor plated pylons, inset signal fibers, overhead crown
+  structures and asymmetric signal fins. Animated cyan/gold courier slivers
+  suggest forward energy movement without influencing actual physics:
+  48 noncolliding local parts maximum on High (12 per bridge), 7 per
+  bridge on Medium, 2 static ground identifiers per bridge on Low.
+  Reduced motion removes moving energy couriers. Decoration positions
+  follow the real server bridge when it moves or changes length; there
+  are no replicated visual Heartbeat loops and no client collision.
+  The `TowerSkyrailLocal` layer participates in the GPU budget audit.
 - **QA:** sprint across both junctions of every bridge, jump and land on
   both sides, visit via each updraft pad, and test in every hazard combination.
   Verify no rail, bolt, underframe or fake collider outlives a map swap.
