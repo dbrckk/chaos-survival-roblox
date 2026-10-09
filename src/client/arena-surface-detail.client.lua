@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local ArenaCrisisSurfaceRules = require(ReplicatedStorage.Shared.ArenaCrisisSurfaceRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
@@ -281,32 +281,38 @@ local function rebuild()
             )
         end
     end
+
+    -- Some DeckFinishKit parts are created outside makePart; keep a stable
+    -- untinted reference for every decorative element, never the hazard color
+    -- applied in the previous frame or previous round.
+    for _, part in ipairs(folder:GetChildren()) do
+        if part:IsA("BasePart")
+            and typeof(part:GetAttribute("SurfaceBaseColor")) ~= "Color3" then
+            part:SetAttribute("SurfaceBaseColor", part.Color)
+        end
+    end
 end
 
 local function refreshSurfaceAccent()
     local state = currentState
-    local profile = state and DisasterVisuals.combine(state.disasterIds or {}) or nil
-    local secondary = state and state.disasterIds and state.disasterIds[2]
-        and DisasterVisuals.get(state.disasterIds[2]) or nil
-    local critical = state and state.phase == "round" and state.finalRush == true
-
-    for index, descendant in ipairs(folder:GetChildren()) do
-        if descendant:IsA("BasePart") then
-            local baseColor = descendant:GetAttribute("SurfaceBaseColor")
+    local reaction = ArenaCrisisSurfaceRules.profile(
+        state and state.disasterIds or {},
+        state and state.phase or "waiting",
+        VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
+        player:GetAttribute("ReduceMotion") == true,
+        state and state.finalRush == true
+    )
+    local now = os.clock()
+    for index, part in ipairs(folder:GetChildren()) do
+        if part:IsA("BasePart") then
+            local baseColor = part:GetAttribute("SurfaceBaseColor")
             if typeof(baseColor) ~= "Color3" then
-                baseColor = descendant.Color
+                baseColor = part.Color
+                part:SetAttribute("SurfaceBaseColor", baseColor)
             end
-
-            if state and state.phase == "round" and profile and not critical then
-                local accent = profile.Accent
-                if secondary and index % 2 == 0 then
-                    accent = secondary.Accent
-                end
-                local amount = descendant.Material == Enum.Material.Neon and 0.30 or 0.12
-                descendant.Color = baseColor:Lerp(accent, amount)
-            else
-                descendant.Color = baseColor
-            end
+            part.Color = ArenaCrisisSurfaceRules.shade(
+                baseColor, part.Material, part.Name, index, reaction, now
+            )
         end
     end
 end
@@ -353,6 +359,7 @@ end)
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshSurfaceAccent)
 
 stateEvent.OnClientEvent:Connect(function(state)
     currentState = state
@@ -361,3 +368,19 @@ end)
 
 rebuild()
 refreshSurfaceAccent()
+
+-- A bounded decorative 3-5 Hz tint sweep (not RenderStepped). Low-tier
+-- and reduced-motion clients get static event-specific colors only.
+task.spawn(function()
+    while true do
+        local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        local state = currentState
+        local animate = state and state.phase == "round"
+            and quality.Name ~= "Low"
+            and player:GetAttribute("ReduceMotion") ~= true
+        task.wait(animate and (quality.Name == "High" and 0.21 or 0.32) or 0.65)
+        if animate and currentState and currentState.phase == "round" then
+            refreshSurfaceAccent()
+        end
+    end
+end)
