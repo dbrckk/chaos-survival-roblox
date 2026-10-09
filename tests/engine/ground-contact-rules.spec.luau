@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local Rules = require("../../src/shared/GroundContactRules")
 local SurfaceAudioRules = require("../../src/shared/SurfaceAudioRules")
+local LandingImprintKit = require("../../src/client/LandingImprintKit")
 
 describe("Grounded character contact game feel", function()
     it("limits decoration to living round entrants rather than the lobby and spectators", function()
@@ -73,6 +74,96 @@ describe("Grounded character contact game feel", function()
         expect(Rules.cooldownReady(4.0, nil)).toBe(true)
         expect(Rules.cooldownReady(4.2, 4.0)).toBe(false)
         expect(Rules.cooldownReady(4.8, 4.0)).toBe(true)
+    end)
+end)
+
+
+describe("Premium material landing imprints", function()
+    it("replaces every old opaque landing cylinder with up to six surface-aligned marks", function()
+        local root = Instance.new("Folder")
+        local normal = Vector3.new(0.1, 1, 0.24).Unit
+        local guide = Vector3.zAxis
+        local right = guide:Cross(normal).Unit
+        local back = normal:Cross(right).Unit
+        local frame = CFrame.fromMatrix(Vector3.new(22, 6, -9), right, normal, back)
+        local variants = {
+            {"Mechanical", Enum.Material.Metal, 4},
+            {"Mineral", Enum.Material.Slate, 6},
+            {"Crystal", Enum.Material.Glass, 3},
+            {"Neutral", Enum.Material.SmoothPlastic, 1},
+        }
+        for _, variant in ipairs(variants) do
+            local style, material, count = variant[1], variant[2], variant[3]
+            local pieces = LandingImprintKit.build(
+                root, frame, Color3.fromRGB(130, 185, 226),
+                style, material, count, 0.82, false
+            )
+            expect(#pieces).toBe(count)
+            for i, p in ipairs(pieces) do
+                expect(p:IsA("BasePart")).toBe(true)
+                expect(p:IsA("WedgePart") or p:IsA("Part")).toBe(true)
+                expect(p:GetAttribute("ChaosLandingImprint")).toBe(true)
+                expect(p:GetAttribute("LandingSurfaceStyle")).toBe(style)
+                expect(p.Anchored).toBe(true)
+                expect(p.CanCollide).toBe(false)
+                expect(p.CanTouch).toBe(false)
+                expect(p.CanQuery).toBe(false)
+                expect(p.CastShadow).toBe(false)
+                expect(p.Size.Y <= 0.05).toBe(true)
+                expect(p.Size.Z <= 0.80).toBe(true)
+                expect(math.abs(p.CFrame.UpVector:Dot(normal)) > 0.99).toBe(true)
+                expect(p.Transparency >= 0.25).toBe(true)
+                if style == "Mineral" or style == "Crystal" then
+                    expect(p:IsA("WedgePart")).toBe(i > 1)
+                end
+                p:Destroy()
+            end
+        end
+        expect(#root:GetChildren()).toBe(0)
+        root:Destroy()
+    end)
+
+    it("caps its geometry at the same Low, Medium and High landing budgets", function()
+        local root = Instance.new("Folder")
+        local basis = CFrame.new()
+        local color = Color3.new(1, 1, 1)
+        local budgets = {
+            {"Low", true, 1},
+            {"Medium", true, 4},
+            {"Medium", false, 3},
+            {"High", true, 6},
+            {"High", false, 4},
+        }
+        for _, info in ipairs(budgets) do
+            local count = Rules.pieceBudget(info[1], false, false, info[2])
+            expect(count).toBe(info[3])
+            local pieces = LandingImprintKit.build(
+                root, basis, color, "Mechanical", Enum.Material.Metal,
+                count, 0.8, info[1] == "Low"
+            )
+            expect(#pieces).toBe(count)
+            for _, piece in ipairs(pieces) do
+                piece:Destroy()
+            end
+        end
+        expect(#LandingImprintKit.build(
+            root, basis, color, "Mechanical", Enum.Material.Metal,
+            7, 1, false
+        )).toBe(0)
+        expect(#LandingImprintKit.build(
+            root, basis, color, "Mechanical", Enum.Material.Metal,
+            0, 1, false
+        )).toBe(0)
+        expect(#LandingImprintKit.build(
+            root, basis, color, "Mechanical", nil,
+            3, 1, false
+        )).toBe(0)
+        expect(#LandingImprintKit.build(
+            root, nil, color, "Mechanical", Enum.Material.Metal,
+            3, 1, false
+        )).toBe(0)
+        expect(#root:GetChildren()).toBe(0)
+        root:Destroy()
     end)
 end)
 
