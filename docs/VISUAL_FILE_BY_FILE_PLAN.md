@@ -262,3 +262,13 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] Réduction du nombre de tâches différées de nettoyage (une par signature plutôt qu'une par attachment/faisceau).
 - [x] Tests ajoutés dans `survival-feedback.spec.luau` (pas de nouvelle suite) : directions et couleurs distinguables, durées/largeurs bornées, attributs et modes inconnus.
 - [ ] Valider visuellement avec 3 avatars, deux catastrophes simultanées et 30/60 FPS sur Android.
+
+
+## Sprint 02 — skyline accents lisibles sur Android (9 octobre 2026)
+
+- [x] `ArenaSilhouetteAccentKit.lua` : quatre identités physiques différentes au-delà des bords de jeu (instrument de mesure Classic, ailettes de refroidissement Towers, bifurcation de transit Crossroads, pétales de confinement Orbital), indépendantes de la couleur.
+- [x] `arena-silhouette-breakup.client.lua` : deux pièces architecturales en **Low**, trois en **Medium**, quatre en **High**, par-dessus les volumes secondaires existants seulement sur Medium/High. Aucun effet Neon ou source lumineuse additionnelle.
+- [x] Géométries **locales, ancrées, non-collidantes, non-touchables et non-interrogeables** ; placements relatifs à `Arena.Base.CFrame` pour les cartes tournées. Pièces comptabilisées dans le dossier `ArenaSilhouetteBreakupLocal` déjà audité.
+- [x] Reprise automatique lorsque `GeneratedMap`, `Arena.Base` ou `VariantId` arrivent hors ordre ; le changement de qualité reconstruit proprement la couche, et la suppression de la carte détruit les pièces.
+- [x] Tests de structures `arena-presentation.spec.luau` : 4 cartes × 3 tiers, noms spécifiques, matériaux Low, limites, orientation, non-collision et entrées invalides.
+- [ ] **Validation bloquante** : vérifier Build Validation et Open Cloud sur le **SHA final**, puis quatre angles de caméra dans Roblox Studio et Android Low/Medium/High à 30/60 FPS avant déclaration de qualité de production.
