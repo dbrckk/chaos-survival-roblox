@@ -92,7 +92,7 @@ function ArenaDeckFinishKit.build(parent, base, variant, tierName, theme)
     }
     local specs = recipes(variant, base.Size.X * 0.5, base.Size.Z * 0.5)
     -- Slightly above the top face, small enough not to hide route / hazard cues.
-    local surface = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.042, 0)
+    local surface = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.18, 0)
     for i = 1, count do
         local recipe = specs[i]
         local piece = Instance.new(recipe[7] or "Part")
