@@ -163,6 +163,28 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("includes all four detailed Classic Grid Circuit monuments in visual telemetry", function()
+        local root = Instance.new("Folder")
+        local circuit = Instance.new("Folder")
+        circuit.Name = "GridCircuitLocal"
+        circuit.Parent = root
+        -- High tier: 1 base + 12 ring rails + 4 pylons +
+        -- 4 filaments + 4 service crowns = 25 parts per monument.
+        for index = 1, 100 do
+            local piece = Instance.new("Part")
+            piece.Name = "CircuitArt" .. index
+            piece.CanCollide = false
+            piece.Parent = circuit
+        end
+        local metrics, count = VisualBudgetRules.collect(root)
+        expect(count).toBe(1)
+        expect(metrics.Parts).toBe(100)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
     it("audits temporary meteor and bomb setpieces under their shared local folder", function()
         local root = Instance.new("Folder")
         local folder = Instance.new("Folder")
