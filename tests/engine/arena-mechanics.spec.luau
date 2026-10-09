@@ -137,18 +137,26 @@ describe("Arena mechanics", function()
         local hit = Instance.new("Part")
         hit.Name = "HumanoidRootPart"
         hit.Anchored = true
+        hit.Position = first.Position
         hit.Parent = bot
         bot.Parent = workspace
         local epoch = first:GetAttribute("FluxCycleEpoch")
         local ready = {}
+        -- Oversized accessory contacts never activate a distant body.
+        hit.Position = first.Position + Vector3.new(20, 0, 0)
+        expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
+            ready, epoch, 9, epoch + 0.5, Config.ArenaCenter)).toBe(false)
+        hit.Position = first.Position
         local ok = CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
             ready, epoch, 10, epoch + 0.5, Config.ArenaCenter)
         expect(ok).toBe(true)
         expect(type(first:GetAttribute("FluxTriggeredAt"))).toBe("number")
         expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
             ready, epoch, 11, epoch + 0.6, Config.ArenaCenter)).toBe(false)
+        hit.Position = second.Position
         expect(CrossroadsFluxRelay.tryTrigger(ctx, second, hit,
             ready, epoch, 14, epoch + 4.5, Config.ArenaCenter)).toBe(true)
+        hit.Position = first.Position
         bot:SetAttribute("AISurvivorInRound", false)
         expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
             ready, epoch, 22, epoch + 8.5, Config.ArenaCenter)).toBe(false)
