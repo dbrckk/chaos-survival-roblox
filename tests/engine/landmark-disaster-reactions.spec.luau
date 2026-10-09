@@ -15,7 +15,7 @@ describe("Reactive arena landmarks during active disasters", function()
             local response = Rules.compose({id}, "round", "High", false, false)
             expect(response.Active).toBe(true)
             expect(typeof(response.Accent)).toBe("Color3")
-            expect(response.Motion).toBeGreaterThan(0)
+            expect(response.Motion > 0).toBe(true)
             for _, key in ipairs({
                 "Heat", "Shake", "Lift", "Wind", "Pulse",
                 "Drift", "Frost", "Darkness",
