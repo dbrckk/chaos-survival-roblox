@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local DisasterResidue = require(ReplicatedStorage.Shared.DisasterResidue)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local AftermathSurfaceKit = require(script.Parent.AftermathSurfaceKit)
+local ImpactSurfaceScarKit = require(script.Parent.ImpactSurfaceScarKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -76,10 +77,14 @@ local function surfaceAt(position)
     )
 
     if result then
-        return result.Position + result.Normal * 0.035, result.Normal
+        local groundColor = result.Instance:IsA("BasePart")
+            and result.Instance.Color or Color3.fromRGB(112, 105, 99)
+        return result.Position + result.Normal * 0.035, result.Normal,
+            result.Material, groundColor
     end
 
-    return position, Vector3.new(0, 1, 0)
+    return position, Vector3.new(0, 1, 0),
+        Enum.Material.Slate, Color3.fromRGB(112, 105, 99)
 end
 
 local function flatCFrame(position, normal, yaw)
@@ -248,46 +253,50 @@ local function makeFragments(position, radius, profile, count, lifetime)
 end
 
 local function impactResidue(payload)
-    if phase ~= "round" or type(payload) ~= "table" then
-        return
-    end
-
+    if phase ~= "round" or type(payload) ~= "table" then return end
     local kind = tostring(payload.kind or "")
-    local disasterId = kind == "Meteor" and "Meteors"
-        or (kind == "Bomb" and "Bombs" or nil)
-    local profile = disasterId and DisasterResidue.get(disasterId)
-    if not profile then
-        return
-    end
+    if kind ~= "Meteor" and kind ~= "Bomb" then return end
 
     local position = payload.position
-    if typeof(position) ~= "Vector3" then
+    if typeof(position) ~= "Vector3" then return end
+
+    local quality = tier()
+    local spectator = player:GetAttribute("RoundEliminated") == true
+        or player:GetAttribute("RoundParticipant") ~= true
+    local camera = workspace.CurrentCamera
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local viewer = spectator and camera and camera.CFrame.Position
+        or (root and root.Position)
+        or (camera and camera.CFrame.Position)
+    if not viewer or not ImpactSurfaceScarKit.visible(
+        phase, kind, quality.Name, (position - viewer).Magnitude
+    ) then
         return
     end
 
-    local quality = tier()
+    local disasterId = kind == "Meteor" and "Meteors" or "Bombs"
+    local profile = DisasterResidue.get(disasterId)
+    if not profile then return end
+
+    local surface, normal, groundMaterial, groundColor = surfaceAt(position)
+    if not surface then return end
+    -- Exactly one arena raycast per eligible event; all pieces share the same
+    -- surface normal. Ground scar silhouettes remain client-only.
+    local frame = flatCFrame(surface, normal, 0)
     local radius = math.clamp(tonumber(payload.radius) or 8, 2, 40)
-    local lifetime = DisasterResidue.impactLifetime(quality.Name)
-    local diameter = radius * (kind == "Meteor" and 0.82 or 0.68)
-
-    makeDisc(
-        kind .. "ScorchResidue",
-        position,
-        diameter,
-        profile,
-        quality.Name == "Low" and 0.72 or 0.58,
-        lifetime
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local pieces = ImpactSurfaceScarKit.build(
+        folder, frame, kind, quality.Name,
+        groundMaterial, groundColor, profile.Color, radius, reduced
     )
-
-    if quality.Name ~= "Low" then
-        makeCracks(
-            kind .. "ImpactCrack",
-            position,
-            radius * 0.78,
-            profile,
-            quality.Name == "High" and 5 or 3,
-            lifetime
+    local lifetime = DisasterResidue.impactLifetime(quality.Name)
+    for _, piece in ipairs(pieces) do
+        piece:SetAttribute("ResidueCreatedAt", os.clock())
+        local aging = ImpactSurfaceScarKit.settlement(
+            quality.Name, reduced, piece.Color, lifetime
         )
+        fadeLater(piece, lifetime, aging)
     end
     trimBudget()
 end
