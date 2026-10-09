@@ -42,6 +42,9 @@ end
 -- still falls inside that gate's actual active window. Never steer all
 -- agents to an inactive landmark just because it is visually prominent.
 function FluxRelayRules.viableRoute(serverTime, epoch, offset, distance, walkSpeed)
+    if tonumber(epoch) == nil or tonumber(offset) == nil then
+        return false
+    end
     local travel = math.max(0, tonumber(distance) or math.huge)
     local speed = math.max(1, tonumber(walkSpeed) or 16)
     if travel > 24 then return false end
