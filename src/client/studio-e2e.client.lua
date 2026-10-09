@@ -222,6 +222,21 @@ local function sampleArenaPresentation(arenaId)
         and silhouette.Anchored and not silhouette.CanCollide
         and not silhouette.CanTouch and not silhouette.CanQuery
 
+    local deckName = ({
+        Classic = "ClassicSurveyDatumWest",
+        Towers = "TowerLoadSpreaderNorth",
+        Crossroads = "CrossroadsLaneArrowWest",
+        Orbital = "OrbitalIrisPetalNorth",
+    })[arenaId]
+    local deckRoot = workspace:FindFirstChild("ArenaSurfaceDetailLocal")
+    local deck = deckRoot and deckName and deckRoot:FindFirstChild(deckName)
+    local deckReady = deck ~= nil
+        and deck:IsA("BasePart")
+        and deck:GetAttribute("ChaosDeckFinish") == true
+        and deck:GetAttribute("ArenaVariant") == arenaId
+        and deck.Anchored and not deck.CanCollide and not deck.CanTouch
+        and not deck.CanQuery and deck.Material ~= Enum.Material.Neon
+
     local platformName = ({
         Classic = "ClassicCalibrationPlate",
         Towers = "TowerHoistMount",
@@ -241,7 +256,7 @@ local function sampleArenaPresentation(arenaId)
         and weld.Part0 == trim and weld.Part1 ~= nil
 
     local ok = matchesWorld and signatureReady and secondaryReady
-        and platformReady and silhouetteReady
+        and platformReady and silhouetteReady and deckReady
     return {
         kind = "arena_probe",
         arenaId = arenaId,
@@ -251,13 +266,14 @@ local function sampleArenaPresentation(arenaId)
         secondaryReady = secondaryReady,
         platformReady = platformReady,
         silhouetteReady = silhouetteReady,
+        deckReady = deckReady,
         signatureHero = expectedHero or "Unknown",
         signatureParts = signatureParts,
         error = ok and "" or string.format(
-            "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s secondary=%s platform=%s skyline=%s",
+            "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s secondary=%s platform=%s skyline=%s deck=%s",
             arenaId, worldArenaId, tostring(expectedHero),
             tostring(signatureHero ~= nil), signatureParts, tostring(safeParts),
-            tostring(secondaryReady), tostring(platformReady), tostring(silhouetteReady)
+            tostring(secondaryReady), tostring(platformReady), tostring(silhouetteReady), tostring(deckReady)
         ),
     }
 end
