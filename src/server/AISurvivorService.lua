@@ -638,11 +638,24 @@ local function createRig(record)
     addNameplate(record, model)
     attachAnimations(record, humanoid)
 
-    -- Claim the complete welded rig after it exists under Workspace.
-    -- Bot navigation, health and survival decisions remain server-owned.
-    if not AISurvivorNetworkOwnership.claim(model) then
-        warn("AI Survivor server network ownership unavailable:", record.identity.Username)
-    end
+    -- Physics assembly formation can lag one simulation step behind parenting.
+    -- Retry a fixed number of times without retaining a replaced/dead rig.
+    task.defer(function()
+        for attempt = 1, 3 do
+            if record.model ~= model or not model:IsDescendantOf(workspace) then
+                return
+            end
+            if AISurvivorNetworkOwnership.claim(model) then
+                return
+            end
+            if attempt < 3 then
+                task.wait(0.20 * attempt)
+            end
+        end
+        if record.model == model and model.Parent then
+            warn("AI Survivor server network ownership unavailable:", record.identity.Username)
+        end
+    end)
 
     table.insert(record.connections, humanoid.Died:Connect(function()
         record.alive = false
