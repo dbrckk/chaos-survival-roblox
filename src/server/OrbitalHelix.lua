@@ -71,6 +71,8 @@ function OrbitalHelix.build(arena, variant, center, theme)
             )
             bridge:SetAttribute("OrbitalHelixRamp", true)
             bridge:SetAttribute("HelixLane", index)
+            bridge:SetAttribute("HelixStart", route.Start)
+            bridge:SetAttribute("HelixFinish", route.Finish)
 
             local lip = physicalPart(
                 folder, "HelixCenterGrain" .. index,
@@ -79,6 +81,7 @@ function OrbitalHelix.build(arena, variant, center, theme)
                 theme.Detail, Enum.Material.Metal, false
             )
             lip.Transparency = 0.38
+            lip:SetAttribute("HelixLane", index)
 
             for side = -1, 1, 2 do
                 local rail = physicalPart(
@@ -89,6 +92,7 @@ function OrbitalHelix.build(arena, variant, center, theme)
                     Enum.Material.Neon, false
                 )
                 rail.Transparency = 0.22
+                rail:SetAttribute("HelixLane", index)
 
                 local frame = physicalPart(
                     folder, "HelixUnderframe" .. index .. "_" .. side,
@@ -97,6 +101,7 @@ function OrbitalHelix.build(arena, variant, center, theme)
                     theme.Structure, Enum.Material.Metal, false
                 )
                 frame.Transparency = 0.08
+                frame:SetAttribute("HelixLane", index)
             end
 
             for braceIndex = -1, 1 do
@@ -107,11 +112,111 @@ function OrbitalHelix.build(arena, variant, center, theme)
                     theme.Detail, Enum.Material.Metal, false
                 )
                 brace.Transparency = 0.22
+                brace:SetAttribute("HelixLane", index)
             end
         end
     end
 
     return folder
+end
+
+
+-- Snapshot the complete engineered circuit once per shrinking round.
+-- Relative coordinates preserve every light rail, rib and inset while the
+-- solid inclined ramp changes length and tilt to follow its two decks.
+function OrbitalHelix.capture(circuit)
+    local snapshot = {}
+    if not circuit then return snapshot end
+    for _, ramp in ipairs(circuit:GetChildren()) do
+        if ramp:IsA("BasePart") and ramp:GetAttribute("OrbitalHelixRamp") == true then
+            local from = ramp:GetAttribute("HelixStart")
+            local to = ramp:GetAttribute("HelixFinish")
+            local lane = ramp:GetAttribute("HelixLane")
+            if typeof(from) == "Vector3" and typeof(to) == "Vector3"
+                and type(lane) == "number"
+            then
+                local entry = {
+                    ramp = ramp,
+                    from = from,
+                    to = to,
+                    originalCFrame = ramp.CFrame,
+                    originalSize = ramp.Size,
+                    decorations = {},
+                }
+                for _, piece in ipairs(circuit:GetChildren()) do
+                    if piece:IsA("BasePart") and piece ~= ramp
+                        and piece:GetAttribute("HelixLane") == lane
+                    then
+                        table.insert(entry.decorations, {
+                            part = piece,
+                            originalCFrame = piece.CFrame,
+                            originalSize = piece.Size,
+                            localCFrame = ramp.CFrame:ToObjectSpace(piece.CFrame),
+                        })
+                    end
+                end
+                table.insert(snapshot, entry)
+            end
+        end
+    end
+    return snapshot
+end
+
+function OrbitalHelix.scale(snapshot, center, amount)
+    if typeof(center) ~= "Vector3" then return end
+    local factor = math.clamp(tonumber(amount) or 1, 0.05, 1)
+    local function move(point)
+        local d = point - center
+        return center + Vector3.new(d.X * factor, d.Y, d.Z * factor)
+    end
+
+    for _, entry in ipairs(snapshot or {}) do
+        local ramp = entry.ramp
+        if ramp and ramp.Parent then
+            local from = move(entry.from)
+            local to = move(entry.to)
+            local cf = CFrame.lookAt((from + to) * 0.5, to, Vector3.yAxis)
+            local length = (to - from).Magnitude + 4.4
+            local prior = entry.originalSize.Z
+            ramp.CFrame = cf
+            ramp.Size = Vector3.new(entry.originalSize.X, entry.originalSize.Y, length)
+
+            for _, d in ipairs(entry.decorations) do
+                if d.part and d.part.Parent then
+                    local localCf = d.localCFrame
+                    local p = localCf.Position
+                    local rotationOnly = localCf - p
+                    d.part.CFrame = cf
+                        * CFrame.new(p.X, p.Y, p.Z * (length / prior))
+                        * rotationOnly
+                    local dz = d.originalSize.Z
+                    -- Rails and spines extend with the ramp; short transverse
+                    -- braces keep their engineered dimensions unchanged.
+                    if dz > 2 then
+                        dz = math.max(0.25, dz + length - prior)
+                    end
+                    d.part.Size = Vector3.new(
+                        d.originalSize.X, d.originalSize.Y, dz
+                    )
+                end
+            end
+        end
+    end
+end
+
+function OrbitalHelix.restore(snapshot)
+    for _, entry in ipairs(snapshot or {}) do
+        if entry.ramp and entry.ramp.Parent then
+            entry.ramp.Size = entry.originalSize
+            entry.ramp.CFrame = entry.originalCFrame
+        end
+        for _, d in ipairs(entry.decorations) do
+            if d.part and d.part.Parent then
+                d.part.Size = d.originalSize
+                d.part.CFrame = d.originalCFrame
+            end
+        end
+    end
 end
 
 return OrbitalHelix
