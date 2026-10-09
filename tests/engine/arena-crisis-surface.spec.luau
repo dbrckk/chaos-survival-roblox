@@ -85,10 +85,20 @@ describe("Material-safe reactive arena surface, lighting and spatial audio", fun
         expect(reduced.Wave).toBe(0)
         expect(low.MaxTint < normal.MaxTint).toBe(true)
         expect(reduced.MaxTint < normal.MaxTint).toBe(true)
-        expect(Rules.shade(original, Enum.Material.Metal, "RepairPlate1", 1, low, 1.2))
-            .toBe(Rules.shade(original, Enum.Material.Metal, "RepairPlate1", 1, low, 50))
-        expect(Rules.shade(original, Enum.Material.Neon, "TowerRing1", 1, reduced, 1.2))
-            .toBe(Rules.shade(original, Enum.Material.Neon, "TowerRing1", 1, reduced, 50))
+        local lowEarly = Rules.shade(
+            original, Enum.Material.Metal, "RepairPlate1", 1, low, 1.2
+        )
+        local lowLate = Rules.shade(
+            original, Enum.Material.Metal, "RepairPlate1", 1, low, 50
+        )
+        expect(lowEarly).toBe(lowLate)
+        local stillEarly = Rules.shade(
+            original, Enum.Material.Neon, "TowerRing1", 1, reduced, 1.2
+        )
+        local stillLate = Rules.shade(
+            original, Enum.Material.Neon, "TowerRing1", 1, reduced, 50
+        )
+        expect(stillEarly).toBe(stillLate)
         local moving = Rules.shade(original, Enum.Material.Neon, "TowerRing1", 1, normal, 1.2)
         local other = Rules.shade(original, Enum.Material.Neon, "TowerRing1", 1, normal, 50)
         expect(moving ~= other).toBe(true)
@@ -113,10 +123,8 @@ describe("Material-safe reactive arena surface, lighting and spatial audio", fun
         expect(Rules.audio(basePitch, freezing) < basePitch).toBe(true)
         expect(Rules.audio(basePitch, aggressive) > basePitch).toBe(true)
         expect(Rules.audio(1.6, aggressive) <= 1.4).toBe(true)
-        expect(Rules.profile({"Unknown"}, "round", "High", false, false).Active)
-            .toBe(false)
-        expect(Rules.profile({}, "round", "High", false, false).Active)
-            .toBe(false)
+        expect(Rules.profile({"Unknown"}, "round", "High", false, false).Active).toBe(false)
+        expect(Rules.profile({}, "round", "High", false, false).Active).toBe(false)
     end)
 end)
 
