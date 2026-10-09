@@ -324,6 +324,18 @@ function AISurvivorRules.padInterest(baseChance, variantId, lowOnMap, risingLava
     return math.clamp(chance, 0, 0.72)
 end
 
+-- AI can use Helix Circuit only when already on an accessible upper
+-- level. Otherwise it might try to walk through a ramp suspended above
+-- the arena floor instead of seeking an updraft.
+function AISurvivorRules.helixWaypointReachable(current, waypoint)
+    if typeof(current) ~= "Vector3" or typeof(waypoint) ~= "Vector3" then
+        return false
+    end
+    local diff = waypoint - current
+    local horizontal = Vector3.new(diff.X, 0, diff.Z).Magnitude
+    return horizontal <= 23 and math.abs(diff.Y) <= 5.5
+end
+
 function AISurvivorRules.reachableElevation(currentY, targetY, variantId)
     local rise = (tonumber(targetY) or 0) - (tonumber(currentY) or 0)
     if rise <= 0 then
