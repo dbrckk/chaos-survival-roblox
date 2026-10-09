@@ -77,8 +77,8 @@ function ImpactSurfaceScarKit.visible(phase, kind, tier, viewerDistance)
         or type(viewerDistance) ~= "number" or viewerDistance < 0 then
         return false
     end
-    local range = tier == "Low" and 64
-        or (tier == "Medium" and 108 or 150)
+    local range = tier == "High" and 150
+        or (tier == "Medium" and 108 or 64)
     return viewerDistance <= range
 end
 
