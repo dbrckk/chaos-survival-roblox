@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local VisualBudgetRules = require("../../src/shared/VisualBudgetRules")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 local LandingImprintKit = require("../../src/client/LandingImprintKit")
+local DisasterIntroMotionKit = require("../../src/client/DisasterIntroMotionKit")
 local LocomotionGroundFx = require("../../src/client/LocomotionGroundFx")
 
 describe("visual budget rules", function()
@@ -196,6 +197,41 @@ describe("visual budget rules", function()
         local metrics, audited = VisualBudgetRules.collect(root)
         expect(audited).toBe(2)
         expect(metrics.Parts).toBe(28)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("counts all double-chaos intro strokes without full arena-covering cylinders", function()
+        local root = Instance.new("Folder")
+        local glyph = Instance.new("Folder")
+        glyph.Name = "DisasterIntroGlyphLocal"
+        glyph.Parent = root
+        local motion = Instance.new("Folder")
+        motion.Name = "DisasterIntroMotionLocal"
+        motion.Parent = root
+        local frame = CFrame.new(8, 3, -11)
+            * CFrame.Angles(math.rad(7), math.rad(32), 0)
+        local blue = Color3.fromRGB(75, 175, 255)
+        local red = Color3.fromRGB(255, 80, 80)
+        for _, kind in ipairs({"freeze", "blast"}) do
+            local pieces = DisasterIntroMotionKit.emit(
+                motion, kind, frame, 98, blue, red,
+                "High", true, 0.58
+            )
+            expect(#pieces).toBe(6)
+            for _, piece in ipairs(pieces) do
+                expect(piece.Shape).toBe(Enum.PartType.Block)
+                expect(piece.CanCollide).toBe(false)
+                expect(piece.CanTouch).toBe(false)
+                expect(piece.CanQuery).toBe(false)
+                expect(piece.Size.Y <= 0.08).toBe(true)
+            end
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(12)
         expect(metrics.Lights).toBe(0)
         expect(metrics.Effects).toBe(0)
         expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
