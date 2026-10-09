@@ -1,3 +1,10 @@
+-- Keep newly authored connecting geometry attached to its moving decks.
+-- Cloud source tests run before unpublished place modules exist.
+local helixModule = script and script.Parent.Parent:FindFirstChild("OrbitalHelix")
+local OrbitalHelix = if helixModule
+    then require(helixModule)
+    else require("../OrbitalHelix")
+
 local D = {Name = "SHRINKING ARENA", Hint = "STAY NEAR THE CENTER!"}
 
 function D.scaledLocalPosition(localPosition, scale)
@@ -98,6 +105,9 @@ function D.start(ctx)
         end
     end
 
+    local helix = arena:FindFirstChild("HelixCircuit")
+    local helixSnapshot = OrbitalHelix.capture(helix)
+
     local duration = math.max(
         0.1,
         tonumber(ctx.RoundSeconds or ctx.Config.RoundSeconds) or 1
@@ -141,11 +151,16 @@ function D.start(ctx)
                 end
             end
 
+            if #helixSnapshot > 0 then
+                OrbitalHelix.scale(helixSnapshot, originalCFrame.Position, scale)
+            end
+
             task.wait(0.15)
         end
     end)
 
     ctx.OnCleanup[#ctx.OnCleanup+1] = function()
+        OrbitalHelix.restore(helixSnapshot)
         if base and base.Parent then
             base.Size = originalSize
             base.CFrame = originalCFrame
