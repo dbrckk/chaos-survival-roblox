@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local DisasterClimax = require(ReplicatedStorage.Shared.DisasterClimax)
+local DisasterClimaxSignatureKit = require(script.Parent.DisasterClimaxSignatureKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -256,51 +257,14 @@ local function playTornado(profile, base, stage, tier, reduced)
 end
 
 local function playFreeze(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-
-    local outer = ring(
-        "FreezeClimaxRing",
-        center,
-        span * 0.22,
-        profile.Color,
-        0.26
+    -- Angle-breaking ice needles replace the old large opaque cylinder.
+    -- The whole silhouette inherits the rotated/pitched arena frame.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
+    DisasterClimaxSignatureKit.emit(
+        folder, "freeze", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced
     )
-    tweenOut(
-        outer,
-        reduced and 0.24 or 0.56,
-        {
-            Size = Vector3.new(0.055, span * 0.88 * scale, span * 0.88 * scale),
-            Transparency = 1,
-        }
-    )
-
-    if tier.Name ~= "Low" then
-        for i = 1, 4 do
-            local angle = math.rad(45 + (i - 1) * 90)
-            local p = makePart(
-                "FreezeClimaxSpike" .. i,
-                Vector3.new(0.20, 1.8, 0.20),
-                CFrame.new(center + Vector3.new(
-                    math.cos(angle) * span * 0.22,
-                    0,
-                    math.sin(angle) * span * 0.22
-                )),
-                profile.Secondary,
-                0.34
-            )
-            tweenOut(
-                p,
-                reduced and 0.22 or 0.50,
-                {
-                    Size = Vector3.new(0.10, 5.5 * scale, 0.10),
-                    CFrame = p.CFrame * CFrame.new(0, 2.6 * scale, 0),
-                    Transparency = 1,
-                }
-            )
-        end
-    end
 end
 
 local function playBomb(profile, base, stage, tier, reduced)
@@ -445,32 +409,13 @@ local function playShrink(profile, base, stage, tier, reduced)
 end
 
 local function playShock(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.14, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-    local count = tier.Name == "Low" and 1 or 2
-
-    for i = 1, count do
-        local p = ring(
-            "ShockClimaxRing" .. i,
-            center + Vector3.new(0, i * 0.05, 0),
-            span * (0.14 + i * 0.06),
-            i == 1 and profile.Color or profile.Secondary,
-            0.24
-        )
-        tweenOut(
-            p,
-            reduced and 0.18 or 0.38,
-            {
-                Size = Vector3.new(
-                    0.055,
-                    span * (0.72 + i * 0.10) * scale,
-                    span * (0.72 + i * 0.10) * scale
-                ),
-                Transparency = 1,
-            }
-        )
-    end
+    -- Staggered zig-zag discharge strokes, not two full-floor discs.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.14, 0)
+    DisasterClimaxSignatureKit.emit(
+        folder, "shock", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced
+    )
 end
 
 local PLAYERS = {
