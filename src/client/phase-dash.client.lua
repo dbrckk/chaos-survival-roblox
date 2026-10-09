@@ -19,6 +19,11 @@ local phase = "waiting"
 local nextSendAt = -math.huge
 local otherConnections = {}
 
+-- Track all temporary dash geometry in the audited local visual budget.
+local fxFolder = Instance.new("Folder")
+fxFolder.Name = "PhaseDashVfxLocal"
+fxFolder.Parent = workspace
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosPhaseDash"
 gui.ResetOnSpawn = false
@@ -92,7 +97,7 @@ local function cosmeticRing(position, color, growth, age)
         facet.CanCollide = false
         facet.CanTouch = false
         facet.CanQuery = false
-        facet.Parent = workspace
+        facet.Parent = fxFolder
         TweenService:Create(facet,
             TweenInfo.new(age, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
             {
