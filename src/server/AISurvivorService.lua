@@ -826,6 +826,12 @@ local function reconcile()
         return
     end
 
+    -- Late joiners only spectate this round; never remove a live AI contestant.
+    -- Reconcile to the current human count once the round has finished.
+    if AISurvivorRules.rosterLocked(currentState.phase) then
+        return
+    end
+
     local desired = AISurvivorRules.desiredBotCount(humanCount())
 
     for slot = #records, desired + 1, -1 do
@@ -834,10 +840,6 @@ local function reconcile()
             destroyRecord(record)
         end
         records[slot] = nil
-    end
-
-    if currentState.phase == "round" then
-        return
     end
 
     for slot = 1, desired do
