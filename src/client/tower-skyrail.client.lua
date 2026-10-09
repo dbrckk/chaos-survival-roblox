@@ -178,7 +178,9 @@ local function surgeBurst(bridge, tier, reduced)
     end
     local alongX = bridge.Size.X > bridge.Size.Z
     local direction = alongX and bridge.CFrame.RightVector or bridge.CFrame.LookVector
-    local pieces = tier == "High" and 8 or 4
+    local rank = math.clamp(tonumber(bridge:GetAttribute("SkyrailFlowTier")) or 1, 1, 3)
+    local pieces = tier == "High" and (rank == 3 and 10 or 8)
+        or (rank == 3 and 6 or 4)
     local top = bridge.Size.Y * 0.5 + 0.13
     for index = 1, pieces do
         local side = (index % 2 == 0) and 1 or -1
@@ -193,7 +195,8 @@ local function surgeBurst(bridge, tier, reduced)
         p.Size = Vector3.new(0.19, 0.09, 0.65)
         p.CFrame = CFrame.lookAt(start.Position, start.Position + direction)
         p.Material = Enum.Material.Neon
-        p.Color = side == 1 and colors.Cyan or colors.Gold
+        p.Color = rank == 3 and (side == 1 and colors.Gold or colors.Cyan)
+            or (side == 1 and colors.Cyan or colors.Gold)
         p.Transparency = 0.18
         p.Anchored = true
         p.CanCollide = false

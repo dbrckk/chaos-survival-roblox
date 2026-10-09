@@ -57,14 +57,24 @@ survival route without teleporting or bypassing collision. Every player receives
 - **Skyrail Slipstream (active gameplay):** four server-owned invisible
   checkpoint zones at the midspan of each elevated Skybridge. An active
   human/bot running along the bridge at >=9 studs/s receives a *directional*
-  12 studs/s additive impulse capped at 42 studs/s total horizontal speed,
-  with a 4.5-second cooldown keyed to the character. Vertical velocity stays
+  up to 12 studs/s additive impulse capped at 42 studs/s total horizontal
+  speed, with a 4.5-second cooldown keyed to the character. As bridges
+  shrink, the impulse is reduced using the actual remaining distance to
+  its endpoint (and becomes inactive when there is insufficient safe
+  runway), rather than throwing a survivor across a short bridge. Vertical velocity stays
   within the game's existing safety envelope. Stationary, perpendicular,
   out-of-position, airborne-fast, spectator and dead rig contacts cannot
   trigger. Each checkpoint is welded to the solid bridge so it follows
   Shrinking Arena as the deck midpoint moves. The human sees a distinct
-  cyan SKYRAIL SLIPSTREAM cue and the route signal can react for observers;
-  no user remote input, coins, paid privilege, permanent movement modifier,
+  cyan SKYRAIL SLIPSTREAM cue and the route signal can react for observers.
+  Different bridge crossings within 16 seconds earn three levels of
+  traversal mastery: SKYRAIL SLIPSTREAM, SKYRAIL CHAIN x2, SKYRAIL ACE.
+  The same span does not raise or refresh the rank; the rank is capped
+  and round attributes track each player's current/best flow rank. This
+  only awards existing style/momentum acknowledgement on new successful
+  mastery, with no additional money or buffs. Gold accents distinguish
+  an ACE-level burst, and Low/ReduceMotion still disable transient
+  world-space facets; no user remote input, coins, paid privilege, permanent movement modifier,
   damage, or separate server polling loops. A verified crossing briefly
   brightens the existing gantry signal rails and emits eight local
   cyan/gold faceted slivers on High, four on Medium, zero on Low or

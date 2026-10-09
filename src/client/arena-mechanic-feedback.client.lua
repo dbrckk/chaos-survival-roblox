@@ -107,6 +107,9 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     local now = os.clock()
     local gridClear = payload.mechanicName == "GRID CIRCUIT CLEAR"
     local skyrail = payload.mechanicName == "SKYRAIL SLIPSTREAM"
+        or payload.mechanicName == "SKYRAIL CHAIN x2"
+        or payload.mechanicName == "SKYRAIL ACE"
+    local skyrailAce = payload.mechanicName == "SKYRAIL ACE"
     -- The final challenge success should never be swallowed by a mobility
     -- pad's short visual cooldown during a fast last-node crossing.
     if now - lastTrigger < 0.18 and not gridClear then
@@ -128,7 +131,8 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     if gridClear and not overdrive then
         accent = Color3.fromRGB(120, 245, 179)
     elseif skyrail and not overdrive then
-        accent = Color3.fromRGB(100, 230, 250)
+        accent = skyrailAce and Color3.fromRGB(255, 214, 117)
+            or Color3.fromRGB(100, 230, 250)
     end
     local tier = currentVfxTier()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -149,14 +153,14 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         local token = titleToken
         overdriveLabel.Text = overdrive and "OVERDRIVE BOOST"
             or (gridClear and "GRID CIRCUIT CLEAR"
-                or (skyrail and "SKYRAIL SLIPSTREAM"
+                or (skyrail and tostring(payload.mechanicName)
                     or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY")))
-        overdriveLabel.TextColor3 = (overdrive or orbitMaster)
+        overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce)
             and Color3.fromRGB(255, 225, 115)
             or (gridClear and Color3.fromRGB(197, 255, 218)
                 or (helixFlow and Color3.fromRGB(184, 255, 216)
                     or Color3.fromRGB(147, 255, 232)))
-        overdriveStroke.Color = (overdrive or orbitMaster)
+        overdriveStroke.Color = (overdrive or orbitMaster or skyrailAce)
             and Color3.fromRGB(255, 210, 90)
             or (gridClear and Color3.fromRGB(120, 245, 179)
                 or (helixFlow and Color3.fromRGB(106, 245, 176)
