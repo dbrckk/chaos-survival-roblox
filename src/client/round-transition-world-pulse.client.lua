@@ -9,6 +9,10 @@ local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
+local folder = Instance.new("Folder")
+folder.Name = "RoundTransitionPulsesLocal"
+folder.Parent = workspace
+
 local previousPhase = "waiting"
 local lastFinalRush = false
 local lastOverdrive = false
@@ -22,7 +26,7 @@ end
 
 local function emitRing(name, frame, color, startDiameter, endDiameter, duration, tier, reduced, alpha)
     return CinematicPulseRingKit.emit(
-        workspace, name, frame, color,
+        folder, name, frame, color,
         startDiameter, endDiameter, duration, tier.Name, reduced, alpha
     )
 end
