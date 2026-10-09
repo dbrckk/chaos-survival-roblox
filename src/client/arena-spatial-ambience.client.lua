@@ -14,7 +14,7 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 
 local group = SoundService:FindFirstChild("ChaosArenaAmbience") or Instance.new("SoundGroup")
 group.Name = "ChaosArenaAmbience"
-group.Volume = 1
+group.Volume = ArenaSpatialAudioRules.muteScale(player:GetAttribute("AudioMuted"))
 group.Parent = SoundService
 
 local folder = Instance.new("Folder")
@@ -227,6 +227,10 @@ workspace.ChildRemoved:Connect(function(child)
         clear()
         bindMap()
     end
+end)
+
+player:GetAttributeChangedSignal("AudioMuted"):Connect(function()
+    group.Volume = ArenaSpatialAudioRules.muteScale(player:GetAttribute("AudioMuted"))
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
