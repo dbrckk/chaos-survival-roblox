@@ -1,6 +1,5 @@
 -- Deterministic cosmetic reaction thresholds for nearby bot movement.
 -- No physics, AI pathing, Humanoid, Motor6D or Animator changes.
-local LocomotionDynamics = require(script.Parent.LocomotionDynamics)
 local BotMotionPresentationRules = {}
 
 local PROFILES = {
@@ -44,7 +43,7 @@ function BotMotionPresentationRules.trailVisible(
 end
 
 function BotMotionPresentationRules.cue(velocity, previousVelocity, dt,
-        grounded, tier, reducedMotion, phase, viewerDistance)
+        grounded, tier, reducedMotion, phase, viewerDistance, dynamicsOverride)
     local profile = BotMotionPresentationRules.profile(tier, reducedMotion)
     if profile.MaxPerScan == 0 or tostring(phase or "") ~= "round"
         or typeof(velocity) ~= "Vector3"
@@ -54,17 +53,18 @@ function BotMotionPresentationRules.cue(velocity, previousVelocity, dt,
         or viewerDistance > profile.Range then
         return nil, 0
     end
+    local dynamics = dynamicsOverride or require(game:GetService("ReplicatedStorage").Shared.LocomotionDynamics)
     local now = Vector3.new(velocity.X, 0, velocity.Z)
     local before = Vector3.new(previousVelocity.X, 0, previousVelocity.Z)
     local speed = now.Magnitude
     local previousSpeed = before.Magnitude
-    local launch, skid = LocomotionDynamics.acceleration(
+    local launch, skid = dynamics.acceleration(
         speed, previousSpeed, dt, true
     )
-    local cut = LocomotionDynamics.cut(
+    local cut = dynamics.cut(
         before, now, speed, true
     )
-    local kind, strength = LocomotionDynamics.groundCue(
+    local kind, strength = dynamics.groundCue(
         launch, skid, cut, tier, reducedMotion, phase
     )
     -- Bot pathfinding often makes tiny velocity corrections; only expose
