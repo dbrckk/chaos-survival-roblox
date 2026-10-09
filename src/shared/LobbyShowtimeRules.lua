@@ -45,14 +45,17 @@ LobbyShowtimeRules.Emotes = {
         LabelEN = "WAVE",
         LabelFR = "SALUT",
     },
-    -- Original joint choreography generated at runtime: no third-party
-    -- animation asset or paid catalog dependency.
+    -- Two new authored visual choreographies; avatar uses known compatible
+    -- native clips until a bespoke Roblox-uploaded avatar animation exists.
+    -- This avoids Motor6D writes that fight the default Animate controller.
     robot = {
-        Procedural = true, Loop = true,
+        R15 = 507776043, R6 = 182436842, Loop = true,
+        VisualStyle = "robot",
         LabelEN = "NEON ROBOT", LabelFR = "ROBOT NEON",
     },
     orbit = {
-        Procedural = true, Loop = true,
+        R15 = 507771019, R6 = 182435998, Loop = true,
+        VisualStyle = "orbit",
         LabelEN = "ORBIT DANCE", LabelFR = "DANSE ORBITE",
     },
 }
@@ -81,23 +84,13 @@ function LobbyShowtimeRules.get(id, rigType)
         return nil
     end
     local animationId = definition[rig]
-    if definition.Procedural == true then
-        if rig ~= "R15" and rig ~= "R6" then
-            return nil
-        end
-        return {
-            Procedural = true,
-            Loop = true,
-            LabelEN = definition.LabelEN,
-            LabelFR = definition.LabelFR,
-        }
-    end
     if type(animationId) ~= "number" or animationId <= 0 then
         return nil
     end
     return {
         AnimationId = animationId,
         Loop = definition.Loop,
+        VisualStyle = definition.VisualStyle,
         LabelEN = definition.LabelEN,
         LabelFR = definition.LabelFR,
     }
