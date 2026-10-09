@@ -348,3 +348,14 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 
 - [x] `body-feel.client.lua` : un **numéro de génération par CharacterAdded** empêche un vieux `WaitForChild` en retard de réassigner les Motor6D d'un personnage précédent ; `Humanoid.StateChanged` de l'ancien rig est déconnecté, et les C0 sont restaurés lors de `CharacterRemoving`. Pas d'animation forcée ni de second gestionnaire d'articulations.
 - [ ] Validation avant fusion : Build Validation et Open Cloud sur le SHA de pointe, Studio E2E avec **un joueur et plusieurs bots** et événements réels, contrôles de non-synchronisation des animations contre l'Animator Roblox, FPS Android Low/Medium/High. Aucun changement de serveur ni de publication.
+
+
+## Sprint 02 — landing decals lisibles et culling des bots (9 octobre 2026)
+
+- [x] `LandingImprintKit.lua` : les contacts de réception ne sont plus des **cylindres pleins**. À leur place : traces minces de chaussures / éclats matérialisés selon `Mechanical` (traits métalliques), `Mineral` (éclats angulaires), `Crystal` (prismes en verre) ou `Neutral` (traces discrètes). Expansion dans le **repère du sol incliné**, disparition courte, zéro collision, lumière ou particule.
+- [x] `character-contact-vfx.client.lua` : réutilise la sélection des participants humains / bots, la portée visuelle, la raycast du sol et la limite globale de pièces existantes. **Aucune augmentation du budget** : réception locale Low 1, Medium 4, High 6 ; autres survivants Medium 3, High 4 ; aucun effet des bots en `ReduceMotion` ni pendant `FinalRush`.
+- [x] `ground-contact-rules.spec.luau` : vérifie quatre matériaux, le sol incliné, les pièces sans hitbox ni ombre, les profils et les entrées invalides.
+- [x] `BotMotionPresentationRules.trailVisible` : les traînées IA existantes sont dorénavant **cachées hors champ proche** (seuil d'apparition 66 studs Medium, 95 High ; seuil de disparition +12), tout en tenant compte de la vitesse au sol, du mode Low, de `ReduceMotion` et de la phase.
+- [x] `bot-motion-polish.client.lua` : utilise la distance observateur calculée une fois par bot et la règle d'hystérésis pour éviter un clignotement des traces lorsque le joueur franchit un seuil de portée.
+- [x] `body-motion-rules.spec.luau` : culling des traînées avec hystérésis, qualité, immobilité, phase et accessibilité ; `visual-budget-rules.spec.luau` : simulation de **4 bots avec réception et pivot simultanés**, 28 pièces tracées dans les deux dossiers connus, sans lumières ni effets GPU supplémentaires.
+- [ ] Valider l'aspect réel des réceptions sur les quatre arènes (surfaces planes/inclinées, contrastes nuit/jour, disques supprimés), les impressions visuelles de bots isolés / en groupe et les fps Android. Les unit tests et la compilation ne remplacent pas ces playtests.
