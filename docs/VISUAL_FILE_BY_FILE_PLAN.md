@@ -309,3 +309,14 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] Tests complémentaires dans `lobby-presentation-rules.spec.luau` et `round-event-presentation.spec.luau` : profils, couleurs de phase, attributs de pièces, forme **Block** non-disque, repère incliné, surfaces non physiques et cas invalides.
 - [x] `studio-e2e.client.lua` / `StudioE2E.server.lua` : vérification d'une ailette de portail en mode **ready**, en plus de la suite de vérification des visuels par phase.
 - [ ] Garde-fous : attendre la réussite de Build Validation et de tous les shards Open Cloud au **commit final** ; capturer l'enchaînement lobby → vote → entrée → manche et vérifier la lisibilité et le FPS sur Android Low/Medium/High. Sans validation Studio/Android, ne pas publier.
+
+
+## Sprint 02 — réactions dirigées et célébrations réellement creuses (9 octobre 2026)
+
+- [x] `CharacterReactionVisuals.lua` : le ruban de **Shock** reçoit maintenant la position exacte de l'impact, oriente le profil opposé à l'explosion dans le repère local de chaque avatar et conserve un repli sûr si l'origine est absente ou confondue avec le personnage.
+- [x] Esquive **Meteor** : afterimage ascendant angulaire ; esquive **Bomb** : ruban bas, balayage latéral plus large. Pas de nouveau BasePart, moteur physique, Motor6D, Animator, asset importé ou RenderStepped.
+- [x] `character-danger-reactions.client.lua` : la position de l'impact provenant du serveur est transférée aux effets pour les joueurs et survivants IA proches ; la sélection des participants, limites de distance, qualité, cooldowns et `ReduceMotion` sont inchangés.
+- [x] Attribution `ChaosReactionDirectional` aux Beam pour l'audit Studio. Tests `survival-feedback.spec.luau` : avatar tourné, symétrie des deux rubans, direction de fuite, origine absente et silhouettes de deux catastrophes distinctes.
+- [x] `round-celebration.client.lua` : conversion des célébrations Win / Clutch / Master / First Chaos / défaite en véritables anneaux segmentés via `CinematicPulseRingKit`, afin de ne plus dessiner de disques opaques sur le sol.
+- [x] `VisualBudgetRules.lua` : ajout du dossier transitoire `RoundCelebrationPulsesLocal`. `visual-budget-rules.spec.luau` vérifie la présence des deux familles de contours et le nombre exact de pièces, sans lumière ou effet particulaire dans ces contours.
+- [ ] Validation bloquante : les deux GitHub Actions sur le SHA final, captures Studio de deux impacts de côtés opposés, 1 joueur + 2 IA et séquences de victoire/défaite, FPS et contraste sur Android réel avant toute fusion ou publication.
