@@ -79,6 +79,11 @@ function ArenaSpatialAudioRules.phaseScale(phase, overdrive, finalRush)
     return 0
 end
 
+-- Respect the same accessibility mute state as all other game audio buses.
+function ArenaSpatialAudioRules.muteScale(muted)
+    return muted == true and 0 or 1
+end
+
 function ArenaSpatialAudioRules.rolloff(tierName)
     local tier = tostring(tierName or "Medium")
     if tier == "Low" then
