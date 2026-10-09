@@ -1452,6 +1452,54 @@ local function chooseArenaTarget(record, root, now)
         end
     end
 
+    -- Classic Grid runners visibly attempt the optional four-station
+    -- clockwise mastery course instead of ignoring authored world content.
+    -- Live hazards and regular dodge decisions still take precedence.
+    if record.inRound and currentState.phase == "round"
+        and arenaVariantId() == "Classic"
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("Tornado")
+        and not hasDisaster("ShrinkingArena")
+        and record.model
+        and record.model:GetAttribute("GridCircuitComplete") ~= true
+    then
+        local step = tonumber(record.model:GetAttribute("GridCircuitStep")) or 0
+        local chosenChance = step > 0 and 0.60 or 0.12
+        if math.random() < chosenChance then
+            local _, arena = arenaParts()
+            local mechanics = arena and arena:FindFirstChild("Mechanics")
+            local grid = mechanics and mechanics:FindFirstChild("GridCircuit")
+            if grid then
+                local targetIndex = tonumber(
+                    record.model:GetAttribute("GridCircuitNext")
+                ) or 0
+                if targetIndex < 1 or targetIndex > 4 then
+                    targetIndex = math.random(1, 4)
+                end
+                local node = grid:FindFirstChild("GridCircuitNode" .. targetIndex)
+                if node and node:IsA("BasePart") then
+                    local gap = node.Position - root.Position
+                    local flat = Vector3.new(gap.X, 0, gap.Z)
+                    if math.abs(gap.Y) < 5.5 and flat.Magnitude < 60 then
+                        -- Walk through, not merely to, the edge of the
+                        -- trigger; bot AI considers itself 'arrived' ~4
+                        -- studs before the target and can stop short.
+                        local crossing = node.Position + (
+                            flat.Magnitude > 0.01
+                            and flat.Unit * 5.0 or Vector3.zero
+                        )
+                        record.targetIsPad = false
+                        record.targetPart = node
+                        return clampToArena(separateTarget(record, crossing)),
+                            math.clamp(flat.Magnitude /
+                                math.max(10, record.profile.WalkSpeed or 16) + 0.8,
+                                1.6, 4.6)
+                    end
+                end
+            end
+        end
+    end
+
     local pads = mechanicsPads()
     local variantId = arenaVariantId()
     local lowOnMap = root.Position.Y < config.ArenaCenter.Y + 10
