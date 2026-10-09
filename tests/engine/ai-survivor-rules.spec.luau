@@ -61,8 +61,10 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.desiredBotCount(2)).toBe(2)
 
         -- The extra human must not evict a live AI during a round.
-        expect(AISurvivorRules.rosterLocked("round")).toBe(true)
-        for _, phase in ipairs({"waiting", "intermission", "vote", "ready", "result"}) do
+        for _, phase in ipairs({"ready", "round", "result"}) do
+            expect(AISurvivorRules.rosterLocked(phase)).toBe(true)
+        end
+        for _, phase in ipairs({"waiting", "intermission", "vote"}) do
             expect(AISurvivorRules.rosterLocked(phase)).toBe(false)
         end
         expect(AISurvivorRules.rosterLocked(nil)).toBe(false)
