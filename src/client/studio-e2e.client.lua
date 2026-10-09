@@ -70,6 +70,15 @@ local function sendVisualPhaseProbe(phase)
         local camera = workspace.CurrentCamera
         local depth = Lighting:FindFirstChild("ArenaIdentityDepth")
         local sunRays = Lighting:FindFirstChild("ArenaIdentitySunRays")
+        local gateFolder = workspace:FindFirstChild("LobbyPresentationLocal")
+        local gateFin = gateFolder and gateFolder:FindFirstChild("GateVectorFinL")
+        local gateCueReady = phase ~= "ready"
+            or (gateFin ~= nil and gateFin:IsA("BasePart")
+                and gateFin:GetAttribute("ChaosLobbyGateCue") == true
+                and gateFin.Anchored and not gateFin.CanCollide
+                and not gateFin.CanTouch and not gateFin.CanQuery
+                and gateFin.Transparency < 0.7)
+
 
         reportEvent:FireServer({
             kind = "visual_phase_probe",
@@ -80,6 +89,7 @@ local function sendVisualPhaseProbe(phase)
             auditedFolders = folders,
             visualMetrics = metrics,
             withinBudget = VisualBudgetRules.withinBudget(tierName, metrics),
+            gateCueReady = gateCueReady,
             postProcess = {
                 depthNearIntensity = depth and depth:IsA("DepthOfFieldEffect")
                     and depth.NearIntensity or -1,
