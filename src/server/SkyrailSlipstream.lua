@@ -14,8 +14,8 @@ SkyrailSlipstream.SpeedCap = 42
 SkyrailSlipstream.ComboWindow = 16
 SkyrailSlipstream.ComboCap = 3
 
--- Only distinct bridge routes count toward movement mastery; touching the
--- same arch twice cannot grow the combo or extend its timing window.
+-- Require three unique bridge crossings for Skyrail Ace. Returning
+-- to a previously used bridge never advances rank or refreshes the clock.
 function SkyrailSlipstream.advanceChain(previous, bridgeName, now)
     if type(bridgeName) ~= "string"
         or not bridgeName:match("^Skybridge%d+$")
@@ -27,21 +27,35 @@ function SkyrailSlipstream.advanceChain(previous, bridgeName, now)
     if old and type(old.at) == "number" and now >= old.at
         and now - old.at <= SkyrailSlipstream.ComboWindow
     then
-        if old.bridgeName == bridgeName then return old, false end
+        local visited = type(old.visited) == "table"
+            and old.visited or {[old.bridgeName] = true}
+        if visited[bridgeName] then return old, false end
+        local nextVisited = table.clone(visited)
+        nextVisited[bridgeName] = true
+        local previousTier = tonumber(old.tier) or 1
+        local tier = math.min(SkyrailSlipstream.ComboCap, previousTier + 1)
         return {
-            tier = math.min(SkyrailSlipstream.ComboCap, old.tier + 1),
-            bridgeName = bridgeName, at = now,
-        }, true
+            tier = tier, bridgeName = bridgeName,
+            at = now, visited = nextVisited,
+        }, tier > previousTier
     end
-    return {tier = 1, bridgeName = bridgeName, at = now}, true
+    return {
+        tier = 1, bridgeName = bridgeName,
+        at = now, visited = {[bridgeName] = true},
+    }, true
 end
 
 -- On shrinking bridges, a full +12 impulse can launch someone over the
 -- destination deck. Scale by actual remaining half-span, retaining a
 -- safety margin at each end. Near an edge there is no activation.
-function SkyrailSlipstream.boostForSpan(span, localLongitudinal)
+function SkyrailSlipstream.boostForSpan(span, localLongitudinal, travelSign)
     local halfSpan = math.max(0, tonumber(span) or 0) * 0.5
-    local remaining = halfSpan - math.abs(tonumber(localLongitudinal) or 0)
+    local offset = tonumber(localLongitudinal) or 0
+    -- With no direction, use the safer nearest endpoint. Otherwise,
+    -- compute runway toward the endpoint the survivor is approaching.
+    local projected = travelSign == 1 and offset
+        or (travelSign == -1 and -offset or math.abs(offset))
+    local remaining = halfSpan - projected
     return math.clamp((remaining - 4.5) * 0.65, 0,
         SkyrailSlipstream.Boost)
 end
@@ -133,7 +147,10 @@ function SkyrailSlipstream.tryTrigger(ctx, sensor, bridge, hit, ready, now)
     local span = math.max(bridge.Size.X, bridge.Size.Z)
     local along = bridge.Size.X > bridge.Size.Z
         and relative.X or relative.Z
-    local boost = SkyrailSlipstream.boostForSpan(span, along)
+    local axis = bridge.Size.X > bridge.Size.Z
+        and bridge.CFrame.RightVector or bridge.CFrame.LookVector
+    local travelSign = direction:Dot(axis) >= 0 and 1 or -1
+    local boost = SkyrailSlipstream.boostForSpan(span, along, travelSign)
     if boost < 0.5 then return false end
 
     ready[rig] = now + SkyrailSlipstream.Cooldown
@@ -153,6 +170,8 @@ function SkyrailSlipstream.tryTrigger(ctx, sensor, bridge, hit, ready, now)
     -- Set tier first, timestamp last to let clients render the exact rank.
     sensor:SetAttribute("SkyrailFlowTier", tier)
     bridge:SetAttribute("SkyrailFlowTier", tier)
+    bridge:SetAttribute("SkyrailRunDirection", travelSign)
+    sensor:SetAttribute("SkyrailRunDirection", travelSign)
     sensor:SetAttribute("SkyrailUsedAt", usedAt)
     bridge:SetAttribute("SkyrailUsedAt", usedAt)
     if player then

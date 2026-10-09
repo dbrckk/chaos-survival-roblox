@@ -177,7 +177,9 @@ local function surgeBurst(bridge, tier, reduced)
         return
     end
     local alongX = bridge.Size.X > bridge.Size.Z
-    local direction = alongX and bridge.CFrame.RightVector or bridge.CFrame.LookVector
+    local axis = alongX and bridge.CFrame.RightVector or bridge.CFrame.LookVector
+    local travelSign = bridge:GetAttribute("SkyrailRunDirection") == -1 and -1 or 1
+    local direction = axis * travelSign
     local rank = math.clamp(tonumber(bridge:GetAttribute("SkyrailFlowTier")) or 1, 1, 3)
     local pieces = tier == "High" and (rank == 3 and 10 or 8)
         or (rank == 3 and 6 or 4)
@@ -204,7 +206,7 @@ local function surgeBurst(bridge, tier, reduced)
         p.CanQuery = false
         p.CastShadow = false
         p.Parent = art
-        local finish = start.Position + direction * (side * 5.4)
+        local finish = start.Position + direction * 5.4
         TweenService:Create(p,
             TweenInfo.new(0.40, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
             {CFrame = CFrame.lookAt(finish, finish + direction),
@@ -212,6 +214,33 @@ local function surgeBurst(bridge, tier, reduced)
                 Transparency = 1}
         ):Play()
         Debris:AddItem(p, 0.48)
+    end
+
+    if rank >= 2 then
+        -- Spectator-readable but short-lived world cue, without HUD clutter.
+        local display = Instance.new("BillboardGui")
+        display.Name = "SkyrailMasteryFlash"
+        display.Adornee = bridge
+        display.Size = UDim2.fromOffset(178, 36)
+        display.StudsOffsetWorldSpace = Vector3.new(0, 6.6, 0)
+        display.AlwaysOnTop = false
+        display.MaxDistance = 78
+        display.Parent = art
+        local label = Instance.new("TextLabel")
+        label.Name = "SkyrailMasteryTitle"
+        label.Size = UDim2.fromScale(1, 1)
+        label.BackgroundColor3 = Color3.fromRGB(13, 28, 43)
+        label.BackgroundTransparency = 0.18
+        label.BorderSizePixel = 0
+        label.Font = Enum.Font.GothamBlack
+        label.TextScaled = true
+        label.TextColor3 = rank == 3 and colors.Gold or colors.Cyan
+        label.Text = rank == 3 and "SKYRAIL ACE ×3" or "SKYRAIL CHAIN ×2"
+        label.Parent = display
+        local rounded = Instance.new("UICorner")
+        rounded.CornerRadius = UDim.new(0, 7)
+        rounded.Parent = label
+        Debris:AddItem(display, 1.1)
     end
 end
 

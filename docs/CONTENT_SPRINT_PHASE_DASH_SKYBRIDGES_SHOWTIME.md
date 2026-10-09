@@ -60,16 +60,19 @@ survival route without teleporting or bypassing collision. Every player receives
   up to 12 studs/s additive impulse capped at 42 studs/s total horizontal
   speed, with a 4.5-second cooldown keyed to the character. As bridges
   shrink, the impulse is reduced using the actual remaining distance to
-  its endpoint (and becomes inactive when there is insufficient safe
-  runway), rather than throwing a survivor across a short bridge. Vertical velocity stays
+  its endpoint in the runner's **current direction** (and becomes
+  inactive when there is insufficient safe runway), rather than
+  throwing a survivor across a short bridge. Vertical velocity stays
   within the game's existing safety envelope. Stationary, perpendicular,
   out-of-position, airborne-fast, spectator and dead rig contacts cannot
   trigger. Each checkpoint is welded to the solid bridge so it follows
   Shrinking Arena as the deck midpoint moves. The human sees a distinct
   cyan SKYRAIL SLIPSTREAM cue and the route signal can react for observers.
-  Different bridge crossings within 16 seconds earn three levels of
-  traversal mastery: SKYRAIL SLIPSTREAM, SKYRAIL CHAIN x2, SKYRAIL ACE.
-  The same span does not raise or refresh the rank; the rank is capped
+  Three genuinely **unique** bridge crossings within a rolling
+  16-second window earn traversal mastery: SKYRAIL SLIPSTREAM,
+  SKYRAIL CHAIN x2, SKYRAIL ACE. An A→B→A route cannot earn ACE;
+  a previously visited bridge cannot raise or refresh the rank,
+  and the rank is capped
   and round attributes track each player's current/best flow rank. This
   only awards existing style/momentum acknowledgement on new successful
   mastery, with no additional money or buffs. Gold accents distinguish
