@@ -451,6 +451,7 @@ describe("Arena premium deck material finishes", function()
                     local localPosition = base.CFrame:PointToObjectSpace(part.Position)
                     expect(math.abs(localPosition.X) < base.Size.X * 0.5).toBe(true)
                     expect(math.abs(localPosition.Z) < base.Size.Z * 0.5).toBe(true)
+                    expect(localPosition.Y > base.Size.Y * 0.5 + 0.13).toBe(true)
                     expect(part.CFrame.UpVector:Dot(base.CFrame.UpVector) > 0.98).toBe(true)
                     if index == 1 then
                         firstMaterials[variant] = part.Material
