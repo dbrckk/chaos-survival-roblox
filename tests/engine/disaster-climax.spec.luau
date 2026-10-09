@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local DisasterClimax = require("../../src/shared/DisasterClimax")
 local Signature = require("../../src/client/DisasterClimaxSignatureKit")
+local Boundary = require("../../src/client/DisasterBoundaryClimaxKit")
 
 local IDS = {
     "RisingLava",
@@ -126,6 +127,118 @@ describe("Distinct frost and electric climax silhouettes", function()
         expect(#Signature.emit(root, "freeze", nil, 100, 2,
             primary, secondary, "High", false)).toBe(0)
         root:Destroy()
+    end)
+end)
+
+describe("Rectangular shrink and directional bomb climax", function()
+    it("uses deterministic, different shapes with limited Android budgets", function()
+        local deckSize = Vector3.new(132, 3, 74)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local count = Boundary.count(tier, false)
+            expect(count).toBe(tier == "Low" and 2
+                or (tier == "Medium" and 4 or 6))
+            for _, kind in ipairs({"blast", "shrink"}) do
+                for _, stage in ipairs({1, 2, 3}) do
+                    for i = 1, count do
+                        local recipe = Boundary.recipe(kind, i, count, deckSize, stage)
+                        local again = Boundary.recipe(kind, i, count, deckSize, stage)
+                        expect(recipe ~= nil).toBe(true)
+                        expect(recipe.Start).toBe(again.Start)
+                        expect(recipe.Finish).toBe(again.Finish)
+                        expect(recipe.Rotation).toBe(again.Rotation)
+                        expect(recipe.Size.X > 0 and recipe.Size.Y <= 0.12).toBe(true)
+                        expect(recipe.GoalSize.X > 0).toBe(true)
+                        expect(recipe.Alpha >= 0.25 and recipe.Alpha <= 0.40).toBe(true)
+                        expect(recipe.Material).toBe(kind == "blast"
+                            and Enum.Material.Metal or Enum.Material.Glass)
+                        expect(recipe.Label).toBe(kind == "blast"
+                            and "BlastFin" or "ClosingEdge")
+                        if kind == "blast" then
+                            expect(recipe.Finish.Magnitude > recipe.Start.Magnitude)
+                                .toBe(true)
+                        else
+                            expect(Vector2.new(recipe.Finish.X, recipe.Finish.Z).Magnitude
+                                < Vector2.new(recipe.Start.X, recipe.Start.Z).Magnitude)
+                                .toBe(true)
+                            expect(recipe.Wedge).toBe(false)
+                        end
+                    end
+                end
+            end
+        end
+        expect(Boundary.count("High", true)).toBe(2)
+        expect(Boundary.count("Medium", true)).toBe(2)
+        expect(Boundary.count("invalid", false)).toBe(0)
+        expect(Boundary.recipe("invalid", 1, 4, deckSize, 2) == nil).toBe(true)
+        expect(Boundary.recipe("blast", 0, 4, deckSize, 2) == nil).toBe(true)
+        expect(Boundary.recipe("shrink", 7, 6, deckSize, 2) == nil).toBe(true)
+        expect(Boundary.recipe("shrink", 1, 4, deckSize, 0) == nil).toBe(true)
+        expect(Boundary.recipe("shrink", 1, 4, Vector3.zero, 2) == nil).toBe(true)
+    end)
+
+    it("preserves sloped ground orientation, nonphysical pieces and reduced motion", function()
+        local parent = Instance.new("Folder")
+        local deck = CFrame.new(18, 14, -42)
+            * CFrame.Angles(math.rad(14), math.rad(37), math.rad(-12))
+        local deckSize = Vector3.new(142, 2.5, 82)
+        local primary = Color3.fromRGB(225, 80, 170)
+        local secondary = Color3.fromRGB(250, 190, 125)
+        for _, kind in ipairs({"blast", "shrink"}) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local count = Boundary.count(tier, false)
+                local pieces = Boundary.emit(parent, kind, deck, deckSize, 3,
+                    primary, secondary, tier, false)
+                expect(#pieces).toBe(count)
+                for index, part in ipairs(pieces) do
+                    local recipe = Boundary.recipe(kind, index, count, deckSize, 3)
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    expect(part:GetAttribute("ChaosClimaxBoundary")).toBe(kind)
+                    expect(part:IsA(recipe.Wedge and "WedgePart" or "Part")).toBe(true)
+                    local actual = deck:PointToObjectSpace(part.Position)
+                    expect((actual - recipe.Start).Magnitude < 0.01).toBe(true)
+                    expect(part.Color).toBe(index % 2 == 0 and secondary or primary)
+                    part:Destroy()
+                end
+            end
+            local quiet = Boundary.emit(parent, kind, deck, deckSize, 2,
+                primary, secondary, "High", true)
+            expect(#quiet).toBe(2)
+            for index, part in ipairs(quiet) do
+                local recipe = Boundary.recipe(kind, index, 2, deckSize, 2)
+                expect((deck:PointToObjectSpace(part.Position) - recipe.Finish)
+                    .Magnitude < 0.01).toBe(true)
+                part:Destroy()
+            end
+        end
+        expect(#parent:GetChildren()).toBe(0)
+        expect(#Boundary.emit(parent, "invalid", deck, deckSize, 2,
+            primary, secondary, "High", false)).toBe(0)
+        expect(#Boundary.emit(parent, "blast", nil, deckSize, 2,
+            primary, secondary, "High", false)).toBe(0)
+        parent:Destroy()
+    end)
+
+    it("maps each rectangular side to inward positions including asymmetric decks", function()
+        local size = Vector3.new(160, 3, 60)
+        for stage = 1, 3 do
+            local seenX, seenZ = false, false
+            for index = 1, 4 do
+                local r = Boundary.recipe("shrink", index, 4, size, stage)
+                if math.abs(r.Start.X) > 10 then
+                    seenX = true
+                    expect(math.abs(r.Start.X) > math.abs(r.Finish.X)).toBe(true)
+                elseif math.abs(r.Start.Z) > 10 then
+                    seenZ = true
+                    expect(math.abs(r.Start.Z) > math.abs(r.Finish.Z)).toBe(true)
+                end
+            end
+            expect(seenX).toBe(true)
+            expect(seenZ).toBe(true)
+        end
     end)
 end)
 
