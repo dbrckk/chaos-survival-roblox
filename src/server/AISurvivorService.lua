@@ -1149,6 +1149,24 @@ local function arenaCandidates(root)
         end
     end
 
+    if variantId == "Orbital" then
+        local helix = arena:FindFirstChild("HelixCircuit")
+        for _, ramp in ipairs(sortedParts(helix)) do
+            if ramp:GetAttribute("OrbitalHelixRamp") == true and ramp.CanCollide then
+                local waypoint = ramp.Position
+                    + ramp.CFrame.UpVector * (ramp.Size.Y * 0.5 + 2.4)
+                if AISurvivorRules.helixWaypointReachable(
+                    root and root.Position, waypoint
+                ) then
+                    table.insert(result, {
+                        part = ramp,
+                        position = waypoint,
+                    })
+                end
+            end
+        end
+    end
+
     local base = arena:FindFirstChild("Base")
     if base and base:IsA("BasePart") then
         local halfX = math.max(5, base.Size.X * 0.5 - 7)
@@ -1185,6 +1203,13 @@ local function scoreCandidate(record, root, candidate, traits)
         center,
         (record.roundTraits and record.roundTraits.DirectionBias) or record.strafeBias
     )
+    if candidate.part
+        and candidate.part:GetAttribute("OrbitalHelixRamp") == true
+    then
+        -- Encourage genuine use of authored sloped routes instead of only
+        -- choosing isolated platform centers and jumping unrealistically.
+        score += 7
+    end
 
     if hasDisaster("RisingLava") then
         score += position.Y * (1.45 - risk * 0.45)
@@ -1949,6 +1974,16 @@ local function stepRecord(record, now)
         if record.targetPart and record.targetPart.Parent then
             if record.targetIsPad then
                 record.target = record.targetPart.Position + Vector3.new(0, 1.8, 0)
+            elseif record.targetPart.Parent.Name == "HelixCircuit" then
+                if record.targetPart:GetAttribute("OrbitalHelixRamp") == true then
+                    record.target = record.targetPart.Position
+                        + record.targetPart.CFrame.UpVector
+                            * (record.targetPart.Size.Y * 0.5 + 2.4)
+                else
+                    record.target = nil
+                    record.targetPart = nil
+                    record.nextThink = 0
+                end
             elseif record.targetPart.Parent.Name == "Platforms" then
                 if not AISurvivorRules.platformAvailable(
                     record.targetPart.CanCollide,
