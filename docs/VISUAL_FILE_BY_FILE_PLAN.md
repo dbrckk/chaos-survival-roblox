@@ -333,3 +333,16 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] `lobby-showtime-rules.spec.luau` : différences mesurables entre les six poses, invariants d'amplitude, proximité, six silhouettes statiques avec ReduceMotion, budgets de costumes, opacité active/inactive et traductions du panneau.
 - [x] `studio-e2e.client.lua` : contrôle de la visière et du noyau Medium/High en `result`, invisibilité pendant `round` et règles Low inchangées.
 - [ ] Validation obligatoire avant fusion : **Build Validation + Open Cloud** au SHA final, E2E du lobby en `waiting`/`result`/`round`, interactions emote à 1/2 joueurs, captures et FPS Android Low/Medium/High. Les gestes appartiennent aux hologrammes de scène : ce n'est pas encore un système d'animations AAA nouvelles pour avatars réels.
+
+
+## Sprint 02 — avatar R15 réactif et bots IA expressifs (9 octobre 2026)
+
+- [x] `BodyMotionRules.blastResponse` : direction locale et enveloppe d'intensité calculées depuis **l'impact effectif transmis par le serveur**, corrigées pour les avatars orientés arbitrairement et pour les rayons/distances invalides.
+- [x] `body-feel.client.lua` : **l'unique propriétaire existant des C0 Motor6D R15** combine désormais esquive latérale des épaules, inclinaison du torse et anticipation avant/arrière selon la direction du souffle. Décroissance exponentielle brève ; aucun second Animator, nouveau RenderStepped, force, rotation forcée du joueur ni dégât ne sont ajoutés.
+- [x] Réactions physiques visuelles uniquement pendant une manche pour les participants non éliminés, désactivées à la source avec `ReduceMotion`.
+- [x] `BotMotionPresentationRules.lua` : signatures cosmétiques **Launch / Skid / Pivot** tirées de l'accélération et du changement de cap réels du bot, pas de commandes de trajet inventées. Exige un mouvement marqué, un sol détecté, la phase `round`, et la proximité de l'observateur.
+- [x] `bot-motion-polish.client.lua` : un seul événement de trace par intervalle collectif, cooldown individuel d'au moins 1,35 s ; limites de distance **54 studs Medium / 78 High**, aucune trace en Low ou ReduceMotion.
+- [x] Les traces utilisent `LocomotionGroundFx.emit` déjà existant et comptabilisé dans `LocomotionContactLocal`, sans nouvelle source lumineuse ni boucle graphique. Les traînées IA existantes sont brièvement colorées cyan/orange/violet lors de ces actions, puis restaurées.
+- [x] Remplacement des tentatives infinies `task.delay(0.12)` pour les rigs IA partiels par une connexion `ChildAdded` **unique et nettoyée** après arrivée du root/Humanoid ou disparition du bot. Libération des anciens écouteurs et états lors du changement de dossier.
+- [x] `body-motion-rules.spec.luau` : impacts de quatre côtés pour R15 tourné, valeurs absentes et hors portée, forte accélération, freinage et demi-tour IA ; vérification des critères de qualité, mobilité, distance, couleur et accessibilité.
+- [ ] Validation avant fusion : Build Validation et Open Cloud sur le SHA de pointe, Studio E2E avec **un joueur et plusieurs bots** et événements réels, contrôles de non-synchronisation des animations contre l'Animator Roblox, FPS Android Low/Medium/High. Aucun changement de serveur ni de publication.
