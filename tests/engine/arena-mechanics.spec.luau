@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
 local FluxRelayRules = require("../../src/shared/FluxRelayRules")
+local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
 local MovementSafety = require("../../src/server/MovementSafety")
 local Config = require("../../src/shared/Config")
@@ -162,6 +163,77 @@ describe("Arena mechanics", function()
         expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
             ready, epoch, 22, epoch + 8.5, Config.ArenaCenter)).toBe(false)
         expect(#events).toBe(0)
+
+        bot:Destroy()
+        root:Destroy()
+    end)
+
+    it("credits only controlled inward Helix Flow passes without automatic physics boosts", function()
+        local root = MapBuilder.build(Config, "Orbital", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local ramps = arena and arena:FindFirstChild("HelixCircuit")
+        expect(ramps ~= nil).toBe(true)
+
+        local mechanicUses = 0
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            OnArenaMechanicUsed = function()
+                mechanicUses += 1
+            end,
+        }
+        local definition = ArenaMechanics.start(ctx, "Orbital")
+        expect(definition ~= nil).toBe(true)
+        local mechanics = arena:FindFirstChild("Mechanics")
+        local flow = mechanics and mechanics:FindFirstChild("HelixFlow")
+        expect(flow ~= nil).toBe(true)
+        expect(#(flow :: Folder):GetChildren()).toBe(8)
+
+        for _, sensor in ipairs(flow:GetChildren()) do
+            expect(sensor:IsA("BasePart")).toBe(true)
+            expect(sensor.Transparency).toBe(1)
+            expect(sensor.CanCollide).toBe(false)
+            expect(sensor.CanTouch).toBe(true)
+            expect(sensor.CanQuery).toBe(false)
+            local weld = sensor:FindFirstChild("HelixFlowFollowRamp")
+            expect(weld ~= nil).toBe(true)
+            expect(weld.Part0:GetAttribute("OrbitalHelixRamp")).toBe(true)
+            expect(weld.Part1).toBe(sensor)
+        end
+
+        expect(OrbitalHelix.inwardFlow(Vector3.new(15, 0, 0), Vector3.new(1, 0, 0))).toBe(true)
+        expect(OrbitalHelix.inwardFlow(Vector3.new(-15, 0, 0), Vector3.new(1, 0, 0))).toBe(false)
+        expect(OrbitalHelix.inwardFlow(Vector3.new(2, 0, 0), Vector3.new(1, 0, 0))).toBe(false)
+        expect(OrbitalHelix.inwardFlow(nil, Vector3.new(1, 0, 0))).toBe(false)
+
+        local bot = Instance.new("Model")
+        bot.Name = "HelixFlowRegressionBot"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local hum = Instance.new("Humanoid")
+        hum.Parent = bot
+        local body = Instance.new("Part")
+        body.Name = "HumanoidRootPart"
+        body.Size = Vector3.new(2, 2, 1)
+        body.Anchored = false
+        body.CanCollide = false
+        body.Parent = bot
+        bot.Parent = workspace
+
+        local first = flow:FindFirstChild("HelixFlowTrigger1")
+        local ramp = ramps:FindFirstChild("HelixRamp1")
+        body.CFrame = first.CFrame
+        local currentSpeed = ramp.CFrame.LookVector * 17
+        body.AssemblyLinearVelocity = currentSpeed
+
+        local cooldown = {}
+        expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 10)).toBe(true)
+        expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 11)).toBe(false)
+        expect(mechanicUses).toBe(0)
+
+        bot:SetAttribute("AISurvivorInRound", false)
+        expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 20)).toBe(false)
 
         bot:Destroy()
         root:Destroy()
