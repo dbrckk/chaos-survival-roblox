@@ -25,15 +25,21 @@ describe("Lobby Showtime", function()
         expect(Showtime.canEmote("round", nil, 100)).toBe(false)
     end)
 
-    it("has native R15 and R6 clips for every displayed emote", function()
-        expect(#Showtime.Order).toBe(6)
+    it("supports six native and two original R6/R15 procedural emotes", function()
+        expect(#Showtime.Order).toBe(8)
         for _, id in ipairs(Showtime.Order) do
             local r15 = Showtime.get(id, "R15")
             local r6 = Showtime.get(id, "R6")
             expect(r15 ~= nil).toBe(true)
             expect(r6 ~= nil).toBe(true)
-            expect(r15.AnimationId > 0).toBe(true)
-            expect(r6.AnimationId > 0).toBe(true)
+            if r15.Procedural then
+                expect(id == "robot" or id == "orbit").toBe(true)
+                expect(r6.Procedural).toBe(true)
+                expect(r15.AnimationId == nil).toBe(true)
+            else
+                expect(r15.AnimationId > 0).toBe(true)
+                expect(r6.AnimationId > 0).toBe(true)
+            end
             expect(#r15.LabelEN > 0 and #r15.LabelFR > 0).toBe(true)
         end
         expect(Showtime.get("unknown", "R15") == nil).toBe(true)
@@ -144,9 +150,9 @@ describe("Lobby Showtime", function()
         expect(Showtime.floorPulse(6, nil, false)).toBe(0)
     end)
 
-    it("has six authored, visually different synchronized dancer poses", function()
+    it("has eight authored, visually different synchronized dancer poses", function()
         local choreography = ShowtimeChoreography
-        local labels = {"dance", "shuffle", "groove", "cheer", "wave", "laugh"}
+        local labels = {"dance", "shuffle", "groove", "robot", "orbit", "cheer", "wave", "laugh"}
         for _, style in ipairs(labels) do
             expect(choreography.style(12.3, 1, style, 2)).toBe(style)
             local pose = choreography.pose(12.3, 1, style, 2, false)
@@ -163,6 +169,13 @@ describe("Lobby Showtime", function()
         expect(math.abs(cheer.ArmL) > math.abs(wave.ArmL)).toBe(true)
         expect(math.abs(wave.ArmR) > math.abs(shuffle.ArmR)).toBe(true)
         expect(math.abs(shuffle.LegSwing) > math.abs(wave.LegSwing)).toBe(true)
+        local robotA = choreography.pose(12.3, 1, "robot", 2, false)
+        local robotB = choreography.pose(13.2, 1, "robot", 2, false)
+        local orbit = choreography.pose(12.3, 1, "orbit", 2, false)
+        expect(robotA.Style).toBe("robot")
+        expect(robotA.ArmL ~= robotB.ArmL or robotA.Yaw ~= robotB.Yaw).toBe(true)
+        expect(math.abs(orbit.Roll) <= 0.20).toBe(true)
+        expect(orbit.ArmL ~= robotA.ArmL).toBe(true)
         expect(choreography.style(12.3, 1, "invalid", 2) ~= "invalid").toBe(true)
         expect(choreography.style(5.0, 1, "wave", 0) ~= "wave").toBe(true)
         expect(choreography.style(5.0, 1, nil, 0)
@@ -183,7 +196,7 @@ describe("Lobby Showtime", function()
     end)
 
     it("freezes every moving joint for reduced motion while retaining an emote silhouette", function()
-        for _, id in ipairs({"dance", "shuffle", "groove", "cheer", "wave", "laugh"}) do
+        for _, id in ipairs({"dance", "shuffle", "groove", "robot", "orbit", "cheer", "wave", "laugh"}) do
             local first = ShowtimeChoreography.pose(6, 1, id, 3, true)
             local second = ShowtimeChoreography.pose(32, 1, id, 3, true)
             expect(first.Style).toBe(id)
