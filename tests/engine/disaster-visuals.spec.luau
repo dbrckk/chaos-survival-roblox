@@ -9,6 +9,7 @@ local HazardGlyphs = require("../../src/shared/HazardGlyphs")
 local ImpactSetpieceRules = require("../../src/shared/ImpactSetpieceRules")
 local ImpactSetpiece = require("../../src/client/ImpactSetpiece")
 local DisasterIntroGlyphKit = require("../../src/client/DisasterIntroGlyphKit")
+local MeteorSignatureRules = require("../../src/shared/MeteorSignatureRules")
 
 describe("Disaster visual identities", function()
     it("assigns unique tiered impact accents only for meteor and bomb events", function()
@@ -332,6 +333,63 @@ describe("Eleven physical disaster intro glyphs", function()
             HazardGlyphs, DisasterVisuals) == nil).toBe(true)
         parent:Destroy()
         base:Destroy()
+    end)
+end)
+
+describe("Bounded active meteor signatures", function()
+    it("caps comet trails at zero/three/six for low/mobile and high visuals", function()
+        local r = MeteorSignatureRules
+        expect(r.profile("Low", false).MaxTrails).toBe(0)
+        expect(r.profile("Medium", false).MaxTrails).toBe(3)
+        expect(r.profile("High", false).MaxTrails).toBe(6)
+        expect(r.profile("High", true).MaxTrails).toBe(0)
+        expect(r.profile("Unknown", false).MaxTrails).toBe(0)
+        local viewer = Vector3.new(0, 8, 0)
+        local meteor = Vector3.new(0, 10, 35)
+        expect(r.shouldTrail("round", true, viewer, meteor,
+            "Medium", false, 0)).toBe(true)
+        expect(r.shouldTrail("round", true, viewer, meteor,
+            "Medium", false, 3)).toBe(false)
+        expect(r.shouldTrail("round", true, viewer, meteor,
+            "High", false, 5)).toBe(true)
+        expect(r.shouldTrail("round", true, viewer, meteor,
+            "High", false, 6)).toBe(false)
+        expect(r.shouldTrail("round", true, viewer,
+            Vector3.new(0, 0, 150), "Medium", false, 0)).toBe(false)
+        expect(r.shouldTrail("round", true, viewer,
+            Vector3.new(0, 0, 150), "High", false, 0)).toBe(true)
+        expect(r.shouldTrail("round", false, viewer, meteor,
+            "High", false, 0)).toBe(false)
+        expect(r.shouldTrail("waiting", true, viewer, meteor,
+            "High", false, 0)).toBe(false)
+        expect(r.shouldTrail("round", true, viewer, meteor,
+            "High", true, 0)).toBe(false)
+        expect(r.shouldTrail("round", true, nil, meteor,
+            "High", false, 0)).toBe(false)
+    end)
+
+    it("orders only valid, live meteor parts by camera proximity", function()
+        local folder = Instance.new("Folder")
+        local children = {}
+        for _, data in ipairs({
+            {"RoundMeteor", 55}, {"RoundMeteor", 5}, {"RoundMeteor", 25},
+            {"OtherHazard", 1}, {"RoundMeteor", 100},
+        }) do
+            local part = Instance.new("Part")
+            part.Name = data[1]
+            part.Position = Vector3.new(data[2], 0, 0)
+            part.Parent = folder
+            table.insert(children, part)
+        end
+        local ordered = MeteorSignatureRules.orderedCandidates(children, Vector3.zero)
+        expect(#ordered).toBe(4)
+        expect(ordered[1].Distance).toBe(5)
+        expect(ordered[2].Distance).toBe(25)
+        expect(ordered[3].Distance).toBe(55)
+        expect(ordered[4].Distance).toBe(100)
+        expect(#MeteorSignatureRules.orderedCandidates(children, nil)).toBe(0)
+        expect(#MeteorSignatureRules.orderedCandidates(nil, Vector3.zero)).toBe(0)
+        folder:Destroy()
     end)
 end)
 
