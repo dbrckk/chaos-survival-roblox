@@ -133,6 +133,9 @@ local function renderBurst(payload)
     local materialStyle, groundFrame = sampleGround(
         position, color, kind, profile, reduced
     )
+    materialStyle.Count = ImpactMaterialRules.chipCount(
+        profile.Name, reduced, viewerDistance, activeBursts
+    )
     local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
     local targetDiameter = radius * 2
         * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
