@@ -826,8 +826,9 @@ local function reconcile()
         return
     end
 
-    -- Late joiners only spectate this round; never remove a live AI contestant.
-    -- Reconcile to the current human count once the round has finished.
+    -- Lock the entire ready/round/result journey: late joiners cannot become
+    -- participants and must not despawn AI competitors or celebration actors.
+    -- Rebalance once the next intermission starts.
     if AISurvivorRules.rosterLocked(currentState.phase) then
         return
     end
