@@ -158,6 +158,26 @@ describe("Chaos Survival engine", function()
         root:Destroy()
     end)
 
+    it("draws twenty-four noncolliding return-route chevrons in Crossroads", function()
+        local root = MapBuilder.build(Config, "Crossroads", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local decor = arena and arena:FindFirstChild("Decor")
+        expect(decor ~= nil).toBe(true)
+        local count = 0
+        for _, part in ipairs((decor :: Folder):GetChildren()) do
+            if string.find(part.Name, "FluxRouteChevron", 1, true) then
+                count += 1
+                expect(part:IsA("BasePart")).toBe(true)
+                expect(part.CanCollide).toBe(false)
+                expect(part.CanTouch).toBe(false)
+                expect(part.CanQuery).toBe(false)
+                expect(part.Size.Y <= 0.06).toBe(true)
+            end
+        end
+        expect(count).toBe(24)
+        root:Destroy()
+    end)
+
     it("has valid round timing and rewards", function()
         expect(Config.RoundSeconds > 0).toBe(true)
         expect(Config.IntermissionSeconds >= 0).toBe(true)
