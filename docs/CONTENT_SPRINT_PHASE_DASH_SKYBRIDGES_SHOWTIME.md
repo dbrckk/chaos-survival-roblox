@@ -65,7 +65,13 @@ survival route without teleporting or bypassing collision. Every player receives
   Shrinking Arena as the deck midpoint moves. The human sees a distinct
   cyan SKYRAIL SLIPSTREAM cue and the route signal can react for observers;
   no user remote input, coins, paid privilege, permanent movement modifier,
-  damage, or separate server polling loops.
+  damage, or separate server polling loops. A verified crossing briefly
+  brightens the existing gantry signal rails and emits eight local
+  cyan/gold faceted slivers on High, four on Medium, zero on Low or
+  reduced-motion clients; the one-shot response is range-culled at
+  120 studs and automatically cleaned up. Open Cloud tests cover
+  checkpoint welding, bot-only eligibility, cooldown, bounded velocity
+  and tier-aware client-part budget.
 - **Original Skyrail Conductor skyline:** four bridge-middle mechanical
   gantries with armor plated pylons, inset signal fibers, overhead crown
   structures and asymmetric signal fins. Animated cyan/gold courier slivers

@@ -163,6 +163,29 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("counts at most one transient High-tier Skyrail impulse flare", function()
+        local root = Instance.new("Folder")
+        local skyrail = Instance.new("Folder")
+        skyrail.Name = "TowerSkyrailLocal"
+        skyrail.Parent = root
+        -- 48 authored structure/courier parts + 8 one-shot shards.
+        for index = 1, 56 do
+            local part = Instance.new("Part")
+            part.Name = "TowerSkyrailLocal" .. index
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.Parent = skyrail
+        end
+        local metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(56)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
     it("budgets noncolliding Tower Skyrail conductor structures and couriers", function()
         local folder = Instance.new("Folder")
         local skyrail = Instance.new("Folder")

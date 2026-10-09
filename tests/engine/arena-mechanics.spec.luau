@@ -76,6 +76,61 @@ describe("Arena mechanics", function()
         root:Destroy()
     end)
 
+    it("authorizes a running survivor bot once, not an outsider or repeated touch", function()
+        local rootMap = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = rootMap:FindFirstChild("Arena")
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            Contestants = {},
+        }
+        ArenaMechanics.start(ctx, "Towers")
+        local sensor = arena:FindFirstChild("Mechanics")
+            :FindFirstChild("SkyrailSlipstream")
+            :FindFirstChild("SkyrailSlipstreamTriggerSkybridge18")
+        expect(sensor ~= nil).toBe(true)
+        local bridge = arena:FindFirstChild("Platforms")
+            :FindFirstChild("Skybridge18")
+        expect(bridge ~= nil).toBe(true)
+
+        local bot = Instance.new("Model")
+        bot.Name = "SkyrailRegressionBot"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = bot
+        local body = Instance.new("Part")
+        body.Name = "HumanoidRootPart"
+        body.Size = Vector3.new(2, 2, 1)
+        body.Anchored = false
+        body.CanCollide = false
+        body.Parent = bot
+        bot.Parent = workspace
+        body.CFrame = sensor.CFrame
+        local along = bridge.Size.X > bridge.Size.Z
+            and bridge.CFrame.RightVector or bridge.CFrame.LookVector
+        body.AssemblyLinearVelocity = along * 17
+
+        local cooldown = {}
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 10
+        )).toBe(true)
+        expect(type(sensor:GetAttribute("SkyrailUsedAt"))).toBe("number")
+        expect(type(bridge:GetAttribute("SkyrailUsedAt"))).toBe("number")
+        expect((cooldown[bot] or 0) > 14).toBe(true)
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 11
+        )).toBe(false)
+
+        bot:SetAttribute("AISurvivorInRound", false)
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 20
+        )).toBe(false)
+        bot:Destroy()
+        rootMap:Destroy()
+    end)
+
     it("limits Skyrail impulse speed and rejects off-axis or stationary movement", function()
         local x = Instance.new("Part")
         x.Size = Vector3.new(49, 1, 4.5)
