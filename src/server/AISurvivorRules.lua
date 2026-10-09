@@ -514,6 +514,23 @@ function AISurvivorRules.shouldJumpForWarning(warningName, alreadyHandled, roll)
     return false
 end
 
+-- One-shot state lives in the server NPC record, never globally. Keys may be
+-- weak so expired warning instances are collectable during long sessions.
+function AISurvivorRules.consumeWarningJump(handled, warning, roll)
+    if type(handled) ~= "table" or typeof(warning) ~= "Instance" then
+        return false
+    end
+    local name = warning.Name
+    if name ~= "FreezeWarning" and name ~= "JumpShockWarning" then
+        return false
+    end
+    if handled[warning] == true then
+        return false
+    end
+    handled[warning] = true
+    return AISurvivorRules.shouldJumpForWarning(name, false, roll)
+end
+
 function AISurvivorRules.reactionReady(firstSeenAt, now, reactionSeconds)
     local seen = tonumber(firstSeenAt)
     local current = tonumber(now)
