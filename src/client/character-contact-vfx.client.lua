@@ -1,10 +1,9 @@
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local GroundContactRules = require(ReplicatedStorage.Shared.GroundContactRules)
+local LandingImprintKit = require(script.Parent.LandingImprintKit)
 
 local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -68,18 +67,6 @@ local function sampleSurface(root)
     )
 end
 
-local function cylinderOnSurface(position, normal)
-    local xAxis = normal.Magnitude > 0.01
-        and normal.Unit
-        or Vector3.new(0, 1, 0)
-    local seed = math.abs(xAxis:Dot(Vector3.new(0, 1, 0))) > 0.95
-        and Vector3.new(0, 0, 1)
-        or Vector3.new(0, 1, 0)
-    local zAxis = xAxis:Cross(seed).Unit
-    local yAxis = zAxis:Cross(xAxis).Unit
-    return CFrame.fromMatrix(position, xAxis, yAxis, zAxis)
-end
-
 local function emitLanding(model, airtime)
     local root = model:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then
@@ -136,79 +123,17 @@ local function emitLanding(model, airtime)
         and hit.Instance.Color:Lerp(Color3.new(1, 1, 1), 0.12)
         or Color3.fromRGB(150, 160, 175)
 
-    local ring = Instance.new("Part")
-    ring.Name = "CharacterLandingContact"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.035, 0.8, 0.8)
-    ring.CFrame = cylinderOnSurface(
-        hit.Position + hit.Normal * 0.045,
-        hit.Normal
+    -- A material-aware, paper-thin imprint replaces the old filled disc.
+    -- Build exactly the existing 1/3/4/6-part device budget; keep one
+    -- shared active-piece registry for all human and AI survivors.
+    local contactFrame = surfaceFrame(hit.Position + hit.Normal * 0.04,
+        hit.Normal)
+    local pieces = LandingImprintKit.build(
+        folder, contactFrame, color, materialStyle, hit.Material,
+        count, strength, reduced
     )
-    ring.Anchored = true
-    ring.CanCollide = false
-    ring.CanTouch = false
-    ring.CanQuery = false
-    ring.CastShadow = false
-    ring.Material = materialStyle == "Crystal" and Enum.Material.Glass
-        or (materialStyle == "Mechanical" and Enum.Material.Metal
-            or Enum.Material.SmoothPlastic)
-    ring.Color = color
-    ring.Transparency = 0.58
-    ring.Parent = folder
-    registerPart(ring)
-
-    local target = reduced and 0.95 or (2.2 + strength * 2.8)
-    TweenService:Create(
-        ring,
-        TweenInfo.new(
-            reduced and 0.12 or (quality.Name == "Low" and 0.18 or 0.28),
-            Enum.EasingStyle.Quad,
-            Enum.EasingDirection.Out
-        ),
-        {
-            Size = Vector3.new(0.035, target, target),
-            Transparency = 1,
-        }
-    ):Play()
-    Debris:AddItem(ring, 0.34)
-
-    if count <= 1 then return end
-
-    local basis = surfaceFrame(hit.Position, hit.Normal)
-    for i = 1, count - 1 do
-        local angle = ((i - 1) / count) * math.pi * 2 + ((i * 17) % 11) * 0.04
-        local shard = (materialStyle == "Mineral" or materialStyle == "Crystal")
-            and Instance.new("WedgePart") or Instance.new("Part")
-        -- Material style determines shape; never change the actual platform.
-        shard.Name = "CharacterLanding" .. materialStyle .. "Shard"
-        shard.Size = Vector3.new(0.10, 0.05, 0.22)
-        shard.CFrame = basis
-            * CFrame.new(math.cos(angle) * 0.55, 0.08, math.sin(angle) * 0.55)
-            * CFrame.Angles(0, angle, math.rad((i * 19) % 25))
-        shard.Anchored = true
-        shard.CanCollide = false
-        shard.CanTouch = false
-        shard.CanQuery = false
-        shard.CastShadow = false
-        shard.Material = materialStyle == "Crystal" and Enum.Material.Glass
-            or hit.Material
-        shard.Color = color:Lerp(Color3.new(0, 0, 0), 0.18)
-        shard.Transparency = 0.18
-        shard.Parent = folder
-        registerPart(shard)
-
-        TweenService:Create(
-            shard,
-            TweenInfo.new(0.26 + i * 0.018, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {
-                Position = shard.Position
-                    + basis:VectorToWorldSpace(Vector3.new(
-                        math.cos(angle) * 0.8, 0.16 + strength * 0.24,
-                        math.sin(angle) * 0.8)),
-                Transparency = 1,
-            }
-        ):Play()
-        Debris:AddItem(shard, 0.42)
+    for _, piece in ipairs(pieces) do
+        registerPart(piece)
     end
 end
 
