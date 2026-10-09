@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 
 local player = Players.LocalPlayer
 local localFolder = Instance.new("Folder")
@@ -18,8 +19,8 @@ local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function localPart(name, size, color, material)
-    local p = Instance.new("Part")
+local function localPart(name, size, color, material, className)
+    local p = Instance.new(className or "Part")
     p.Name = name
     p.Anchored = true
     p.CanCollide = false
@@ -135,35 +136,35 @@ local function bindFreeze(warning)
     end
 
     local tier = quality()
-    local count = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 8 or 10)
-    local radius = math.max(warning.Size.Y, warning.Size.Z) * 0.5
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local diameter = math.max(warning.Size.Y, warning.Size.Z)
+    local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local base = arena and arena:FindFirstChild("Base")
+    local deck = base and base:IsA("BasePart") and base.CFrame or nil
+    local frame = HazardWarningSignatureRules.frame(warning.Position, deck)
     local instances = {}
     local segments = {}
 
+    -- Short crystalline needles replace the former full neon perimeter bars
+    -- and central opaque cylinder. The authoritative freeze warning remains.
     for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local length = math.max(4.5, (2 * math.pi * radius / count) * 0.72)
-        local segment = localPart(
-            "FreezeRingSegment" .. i,
-            Vector3.new(length, 0.18, 0.65),
-            i % 2 == 0 and Color3.fromRGB(180, 245, 255) or Color3.fromRGB(90, 190, 255),
-            Enum.Material.Neon
+        local design = HazardWarningSignatureRules.recipe(
+            "Freeze", i, count, diameter, 0
         )
-        segment.Transparency = tier.Name == "Low" and 0.48 or 0.30
-        segment:SetAttribute("FreezeAngle", angle)
+        local segment = localPart(
+            "FreezeFacetWarning" .. i,
+            design.Size,
+            design.Secondary and design.SecondaryColor or design.Color,
+            design.Material,
+            design.Wedge and "WedgePart" or "Part"
+        )
+        segment.CFrame = frame * CFrame.new(design.Offset) * design.Rotation
+        segment.Transparency = reduced and 0.66 or design.Transparency
         table.insert(instances, segment)
         table.insert(segments, segment)
     end
-
-    local center = localPart(
-        "FreezeCenterMist",
-        Vector3.new(3.5, 0.12, 3.5),
-        Color3.fromRGB(175, 235, 255),
-        Enum.Material.Glass
-    )
-    center.Shape = Enum.PartType.Cylinder
-    center.Transparency = 0.54
-    table.insert(instances, center)
 
     local attachment = Instance.new("Attachment")
     attachment.Name = "FreezeMistLocal"
@@ -191,10 +192,11 @@ local function bindFreeze(warning)
     freezeStates[warning] = {
         warning = warning,
         segments = segments,
-        center = center,
         instances = instances,
-        radius = radius,
-        startedAt = workspace:GetServerTimeNow(),
+        diameter = diameter,
+        deck = deck,
+        startedAt = tonumber(warning:GetAttribute("WarningStartedAt"))
+            or workspace:GetServerTimeNow(),
         duration = math.max(0.1, tonumber(warning:GetAttribute("WarningDuration")) or 0.7),
         mist = mist,
     }
@@ -228,11 +230,22 @@ workspace.ChildRemoved:Connect(function(child)
     clearFreeze(child)
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+local function rebuildQuality()
     if lavaState and lavaState.lava and lavaState.lava.Parent then
         bindLava(lavaState.lava)
     end
-end)
+    local warnings = {}
+    for warning in pairs(freezeStates) do
+        table.insert(warnings, warning)
+    end
+    for _, warning in ipairs(warnings) do
+        clearFreeze(warning)
+        if warning.Parent then bindFreeze(warning) end
+    end
+end
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildQuality)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(rebuildQuality)
 
 ensureRenderLoop = function()
     if loopStarted then
@@ -292,31 +305,25 @@ ensureRenderLoop = function()
 
         local elapsed = workspace:GetServerTimeNow() - state.startedAt
         local alpha = math.clamp(elapsed / state.duration, 0, 1)
-        local expansion = 0.92 + alpha * 0.08
-        local y = warning.Position.Y + 0.18
-
+        local count = #state.segments
+        local frame = HazardWarningSignatureRules.frame(warning.Position, state.deck)
         for i, segment in ipairs(state.segments) do
             if segment.Parent then
-                local angle = segment:GetAttribute("FreezeAngle") or 0
-                local radius = state.radius * expansion
-                local position = Vector3.new(
-                    warning.Position.X + math.cos(angle) * radius,
-                    y + math.sin(clock * (reduceMotion and 1.1 or 5) + i) * 0.07 * motionScale,
-                    warning.Position.Z + math.sin(angle) * radius
+                local design = HazardWarningSignatureRules.recipe(
+                    "Freeze", i, count, state.diameter,
+                    reduceMotion and 0 or alpha
                 )
-                segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
-                segment.Transparency = 0.26 + alpha * 0.34
+                segment.CFrame = frame * CFrame.new(design.Offset)
+                    * design.Rotation
+                segment.Size = design.Size
+                segment.Transparency = reduceMotion and 0.66
+                    or design.Transparency
             end
         end
 
         if state.mist and state.mist.Parent then
-            state.mist.Rate = 8 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
-        end
-
-        if state.center and state.center.Parent then
-            state.center.CFrame = CFrame.new(warning.Position + Vector3.new(0, 0.18, 0))
-                * CFrame.Angles(0, 0, math.rad(90))
-            state.center.Transparency = 0.58 + alpha * 0.30
+            state.mist.Rate = reduceMotion and 0
+                or (8 * tier.ParticleScale)
         end
     end
         end
