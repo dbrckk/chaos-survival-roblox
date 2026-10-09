@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 
 local DisasterClimax = require(ReplicatedStorage.Shared.DisasterClimax)
 local DisasterClimaxSignatureKit = require(script.Parent.DisasterClimaxSignatureKit)
+local DisasterBoundaryClimaxKit = require(script.Parent.DisasterBoundaryClimaxKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -268,32 +269,13 @@ local function playFreeze(profile, base, stage, tier, reduced)
 end
 
 local function playBomb(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-    local count = tier.Name == "Low" and 1 or 2
-
-    for i = 1, count do
-        local p = ring(
-            "BombClimaxRing" .. i,
-            center + Vector3.new(0, i * 0.05, 0),
-            span * (0.16 + i * 0.05),
-            i == 1 and profile.Color or profile.Secondary,
-            0.24 + i * 0.06
-        )
-        tweenOut(
-            p,
-            reduced and 0.20 or 0.42,
-            {
-                Size = Vector3.new(
-                    0.055,
-                    span * (0.60 + i * 0.12) * scale,
-                    span * (0.60 + i * 0.12) * scale
-                ),
-                Transparency = 1,
-            }
-        )
-    end
+    -- Separated impulse fins show pressure direction without covering the
+    -- playing field with a second opaque circular cylinder.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
+    DisasterBoundaryClimaxKit.emit(
+        folder, "blast", deck, base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced
+    )
 end
 
 local function playSpeed(profile, base, stage, tier, reduced)
@@ -365,47 +347,13 @@ local function playDarkness(profile, base, stage, tier, reduced)
 end
 
 local function playShrink(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-
-    local p = ring(
-        "ShrinkClimaxRing",
-        center,
-        span * 1.02,
-        profile.Color,
-        0.28
+    -- Short rectangular perimeter segments visibly close in. The persistent
+    -- shrinking boundary is drawn elsewhere; these are transient accents.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
+    DisasterBoundaryClimaxKit.emit(
+        folder, "shrink", deck, base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced
     )
-    tweenOut(
-        p,
-        reduced and 0.24 or 0.56,
-        {
-            Size = Vector3.new(
-                0.055,
-                span * 0.48 / math.max(1, scale * 0.86),
-                span * 0.48 / math.max(1, scale * 0.86)
-            ),
-            Transparency = 1,
-        }
-    )
-
-    if tier.Name == "High" then
-        local inner = ring(
-            "ShrinkClimaxInner",
-            center + Vector3.new(0, 0.05, 0),
-            span * 0.82,
-            profile.Secondary,
-            0.42
-        )
-        tweenOut(
-            inner,
-            reduced and 0.20 or 0.48,
-            {
-                Size = Vector3.new(0.055, span * 0.38, span * 0.38),
-                Transparency = 1,
-            }
-        )
-    end
 end
 
 local function playShock(profile, base, stage, tier, reduced)
