@@ -10,6 +10,9 @@ local ArenaPresentation = if script
 local ArenaMechanics = if script
     then require(script.Parent.ArenaMechanics)
     else require("./ArenaMechanics")
+local FluxRelayRules = if script
+    then require(ReplicatedStorage.Shared.FluxRelayRules)
+    else require("../shared/FluxRelayRules")
 local AISurvivorNetworkOwnership = if script
     then require(script.Parent.AISurvivorNetworkOwnership)
     else require("./AISurvivorNetworkOwnership")
@@ -1368,6 +1371,49 @@ local function chooseArenaTarget(record, root, now)
         record.targetIsPad = false
         record.targetPart = nil
         return separateTarget(record, socialTarget), 0.65 + math.random() * 1.0
+    end
+
+    -- When a Flux Relay can be reached before its charge window ends,
+    -- humanlike bots sometimes pick it as a planned escape route. A bot
+    -- never targets a gate during shrinking-floor or rising-lava hazards.
+    if currentState.phase == "round"
+        and not hasDisaster("ShrinkingArena")
+        and not hasDisaster("RisingLava")
+        and math.random() < (0.13 + (traits.Risk or record.profile.Risk) * 0.14)
+    then
+        local _, arena = arenaParts()
+        local mechanics = arena and arena:FindFirstChild("Mechanics")
+        local relayFolder = mechanics and mechanics:FindFirstChild("FluxRelays")
+        if relayFolder then
+            local choices = {}
+            local serverTime = workspace:GetServerTimeNow()
+            for _, relay in ipairs(relayFolder:GetChildren()) do
+                if relay:IsA("BasePart") and relay:GetAttribute("FluxRelayIndex") ~= nil then
+                    local gap = relay.Position - root.Position
+                    local horizontal = Vector3.new(gap.X, 0, gap.Z).Magnitude
+                    if math.abs(gap.Y) <= 6
+                        and FluxRelayRules.viableRoute(
+                            serverTime,
+                            relay:GetAttribute("FluxCycleEpoch"),
+                            relay:GetAttribute("FluxPhaseOffset"),
+                            horizontal,
+                            record.profile.WalkSpeed
+                        )
+                    then
+                        table.insert(choices, {part = relay, distance = horizontal})
+                    end
+                end
+            end
+            table.sort(choices, function(a, b)
+                return a.distance < b.distance
+            end)
+            if #choices > 0 then
+                local relay = choices[1].part
+                record.targetIsPad = false
+                record.targetPart = relay
+                return separateTarget(record, relay.Position), 1.0
+            end
+        end
     end
 
     local pads = mechanicsPads()
