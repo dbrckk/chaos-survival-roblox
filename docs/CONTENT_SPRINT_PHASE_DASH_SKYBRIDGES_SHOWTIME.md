@@ -115,21 +115,28 @@ aligned to their dynamically shifted decks; cleanup restores all exact
 original transforms. The server-owned Helix Flow sensors are welded to
 the ramp rather than floating in their pre-shrink position.
 
-**Original skill mechanic — HELIX FLOW:** as a survivor crosses a sensor
-midway along a ramp while genuinely moving *inward* at >=8 studs/s
-horizontal, the server recognizes one mastered traversal. A 4.2-second
-per-character cooldown prevents farming. The action counts as an arena
-mechanic for human round-momentum tracking and shows a distinct soft-green
-success cue (also respects the existing overdrive banner priority).
+**Original skill mechanic — HELIX FLOW / ORBIT MASTER:** as a survivor
+crosses a sensor midway along a ramp while genuinely moving *inward*
+at >=8 studs/s horizontal, the server recognizes a traversal. A
+4.2-second per-character cooldown prevents spamming. Crossing a
+*different* ramp within 18 seconds advances from **HELIX FLOW** to
+**HELIX CHAIN x2** and finally **ORBIT MASTER x3**. Repeating the same
+ramp cannot raise the rank; the time window expiring resets mastery.
+Rank (current/best) is replicated to round participant attributes and
+reset each new round. The action counts as an arena mechanic for human
+round-momentum tracking only on new qualified chain progress and shows
+a distinct green-to-gold celebration (existing overdrive takes precedence).
 The physical Helix Flow sensors are invisible, noncolliding and welded
 to their ramp. Bots are judged by the same directional rule but never
 receive a player's progression. The mechanic applies **no** additional
 speed, immunity, damage, currency or paid advantage.
 
-**Original art response:** a replicated server timestamp drives a brief
-tier-aware cyan/green segmented light sweep visible near successful
-human and bot traversals. No shake, no permanent lights, zero Low-tier
-glyphs and no repeated client remote spam.
+**Original art response:** a replicated server timestamp and server
+mastery tier drive a brief tier-aware cyan/green segmented light sweep
+visible near successful human and bot traversals. Orbit Master shifts to
+gold-accented faceted energy and displays a compact temporary 3D world
+banner for nearby spectators. No camera shake, permanent lights or
+client remote spam; zero cosmetic glyphs on Low/ReduceMotion.
 
 **Navigation:** survivor bots can consider ramps as genuine intermediate
 targets only when near the ramp at a reachable elevation, and update
