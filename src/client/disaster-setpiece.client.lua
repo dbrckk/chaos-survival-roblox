@@ -73,7 +73,6 @@ local function playProfile(profile,base,index,total,current)
     local tier=VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced=player:GetAttribute("ReduceMotion")==true
     local centerFrame=base.CFrame*CFrame.new(0,base.Size.Y*0.5+0.14,0)
-    local center=centerFrame.Position
     local span=math.max(base.Size.X,base.Size.Z)
     local duration=reduced and 0.28 or 0.58
     if profile.Kind=="freeze" or profile.Kind=="blast"
@@ -89,38 +88,38 @@ local function playProfile(profile,base,index,total,current)
         for i=1,(tier.Name=="High" and 4 or 2) do
             local x=((i%2==0) and 1 or -1)*span*0.34
             local z=((i<=2) and 1 or -1)*span*0.34
-            local p=part("LavaIntro",Vector3.new(0.35,1,0.35),CFrame.new(center+Vector3.new(x,0,z)),profile.Color,0.3)
+            local p=part("LavaIntro",Vector3.new(0.35,1,0.35),centerFrame*CFrame.new(x,0,z),profile.Color,0.3)
             tween(p,duration,{Size=Vector3.new(0.18,13,0.18),CFrame=p.CFrame*CFrame.new(0,6,0),Transparency=1})
         end
     elseif profile.Kind=="skyfall" then
         for i=1,(tier.Name=="Low" and 2 or 4) do
             local x=((i*37)%9-4)*span*0.07
             local z=((i*53)%9-4)*span*0.07
-            local p=part("MeteorIntro",Vector3.new(0.28,10,0.28),CFrame.new(center+Vector3.new(x,18,z)),profile.Color,0.36)
-            tween(p,duration,{CFrame=CFrame.new(center+Vector3.new(x,2,z)),Transparency=1})
+            local p=part("MeteorIntro",Vector3.new(0.28,10,0.28),centerFrame*CFrame.new(x,18,z),profile.Color,0.36)
+            tween(p,duration,{CFrame=centerFrame*CFrame.new(x,2,z),Transparency=1})
         end
     elseif profile.Kind=="lift" then
         for i=1,(tier.Name=="Low" and 3 or 6) do
             local angle=(i/6)*math.pi*2
-            local p=part("GravityIntro",Vector3.new(0.2,3,0.2),CFrame.new(center+Vector3.new(math.cos(angle)*span*0.28,0,math.sin(angle)*span*0.28)),profile.Color,0.44)
+            local p=part("GravityIntro",Vector3.new(0.2,3,0.2),centerFrame*CFrame.new(math.cos(angle)*span*0.28,0,math.sin(angle)*span*0.28),profile.Color,0.44)
             tween(p,duration,{CFrame=p.CFrame*CFrame.new(0,10,0),Transparency=1})
         end
     elseif profile.Kind=="fracture" then
         for i=1,4 do
             local yaw=math.rad((i-1)*45)
-            local p=part("FractureIntro",Vector3.new(span*0.55,0.08,0.18),CFrame.new(center)*CFrame.Angles(0,yaw,0),profile.Color,0.38)
+            local p=part("FractureIntro",Vector3.new(span*0.55,0.08,0.18),centerFrame*CFrame.Angles(0,yaw,0),profile.Color,0.38)
             tween(p,duration,{Size=Vector3.new(span*0.78,0.05,0.08),Transparency=1})
         end
     elseif profile.Kind=="spiral" then
         for i=1,(tier.Name=="Low" and 3 or 6) do
             local angle=(i/6)*math.pi*2
-            local p=part("TornadoIntro",Vector3.new(0.22,5,0.22),CFrame.new(center+Vector3.new(math.cos(angle)*span*0.22,2,math.sin(angle)*span*0.22)),profile.Color,0.4)
-            tween(p,duration,{CFrame=CFrame.new(center+Vector3.new(math.cos(angle+1.3)*span*0.10,9,math.sin(angle+1.3)*span*0.10)),Transparency=1})
+            local p=part("TornadoIntro",Vector3.new(0.22,5,0.22),centerFrame*CFrame.new(math.cos(angle)*span*0.22,2,math.sin(angle)*span*0.22),profile.Color,0.4)
+            tween(p,duration,{CFrame=centerFrame*CFrame.new(math.cos(angle+1.3)*span*0.10,9,math.sin(angle+1.3)*span*0.10),Transparency=1})
         end
     elseif profile.Kind=="speed" then
         for i=1,(tier.Name=="Low" and 3 or 6) do
             local yaw=math.rad((i-1)*(180/6))
-            local p=part("SpeedIntro",Vector3.new(span*0.34,0.08,0.12),CFrame.new(center)*CFrame.Angles(0,yaw,0),profile.Color,0.38)
+            local p=part("SpeedIntro",Vector3.new(span*0.34,0.08,0.12),centerFrame*CFrame.Angles(0,yaw,0),profile.Color,0.38)
             tween(p,duration*0.8,{CFrame=p.CFrame*CFrame.new(0,0,-span*0.22),Transparency=1})
         end
     end
