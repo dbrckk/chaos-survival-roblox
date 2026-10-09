@@ -79,7 +79,8 @@ local function makeAftermath(position, color, radius, kind, profile, reduced)
 
         TweenService:Create(
             shard,
-            TweenInfo.new(0.66 + math.random() * 0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            TweenInfo.new(0.66 + (((i * 37) % 11) / 10) * 0.26,
+                Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
                 Position = shard.Position + Vector3.new(
                     math.cos(angle) * (1.5 + (i % 3) * 0.8),
@@ -347,7 +348,7 @@ local function renderBurst(payload)
         })
         dust.Parent = burst
         dust:Emit(VfxQuality.particleCount("High", 14, 6))
-    elseif profile.Name == "Medium" then
+    elseif profile.Name == "Medium" and not reduced then
         local emitter = Instance.new("ParticleEmitter")
         emitter.Name = "ImpactSparks"
         emitter.Rate = 0
