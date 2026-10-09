@@ -432,3 +432,13 @@ Les cases « codé » signifient uniquement **présence dans la branche d'art**,
 - [x] Compatibilité : `makeDisc` et `makeCracks` génériques **restent** utilisés pour Freeze/JumpShock et autres conséquences. Les 11 catastrophes demeurent couvertes ; le budget global `DisasterResidueLocal` préexistant reste 18/34/52 pièces selon le tier.
 - [x] `tests/engine/disaster-residue.spec.luau` enrichi (toujours 71 fichiers de specs) : géométries Low/Medium/High, 5 matériaux, deux types de marque, rayons transformés, nature non physique, réduction des mouvements, retour à zéro hors round, stabilité temporelle et règle de visibilité.
 - [ ] Critères restants : passage **Build Validation et les cinq suites Open Cloud sur le SHA final de cette passe**, puis captures Roblox Studio et mesures Android réelles en mêlée solo/bots/Double Chaos. Un green CI ne prouve pas le niveau AAA visuel ni les FPS sur téléphone.
+
+
+## Sprint 04 — climax gel et électricité, géométrie plus lisible (9 octobre 2026)
+
+- [x] Base vérifiée : `e07daf63`, **Build Validation et Roblox Open Cloud Engine Tests entièrement réussis**.
+- [x] `src/client/DisasterClimaxSignatureKit.lua` : deux signatures non génériques, sans disques pleins, flash plein écran ni nouvelle dépendance asset : **Freeze = éclats triangulaires de glace** (WedgePart, Material Ice) ; **JumpShock = courtes branches électriques brisées** (Part, Material Neon). Les formes et angles sont déterministes et restent distincts en Double Chaos.
+- [x] `disaster-climax.client.lua` : `playFreeze` et `playShock` délèguent désormais à ce kit. Tous les positions/déplacements sont calculés **dans `Base.CFrame`**, compatibles cartes tournées/inclinées ; les dix autres signatures de climax et l'autorité gameplay sont inchangées.
+- [x] Limites **Low 2 / Medium 4 / High 6** par signature, au maximum deux pièces quand ReduceMotion est actif. Chaque élément est ancré, sans collisions/physique, ombres, particules, sons, lumière ni texture ; vie transitoire **0,39–0,55 seconde**, ou **0,20 seconde** en ReduceMotion. Aucune animation par frame.
+- [x] `tests/engine/disaster-climax.spec.luau` enrichi sans augmenter les fichiers de tests (71) : contrôles Low/Medium/High et stages 1/2/3, formes glace/électricité, positions sur deck incliné, couleurs primaires/secondaires, non-collision, faible épaisseur et entrées invalides.
+- [ ] Validation à compléter : Build Validation et moteur Open Cloud **sur le dernier SHA**, captures Studio des cartes Classic/Towers/Crossroads/Orbital aux trois niveaux de danger, lisibilité du HUD mobile, contrôle visual/son et FPS Android. Pas de publication/fusion avant ces contrôles.
