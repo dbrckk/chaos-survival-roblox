@@ -4,6 +4,8 @@
 -- local visuals only: no touching, querying, shadow casting or server loops.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local player = Players.LocalPlayer
@@ -17,6 +19,8 @@ local currentTier = nil
 local currentReduced = nil
 local bridges = {}
 local canopy = {}
+local signalConnections = {}
+local activeSurges = {}
 
 local colors = {
     Armor = Color3.fromRGB(28, 42, 63),
@@ -162,7 +166,58 @@ local function buildCanopy(bridge, tier, reduced)
     return {Bridge = bridge, Parts = parts, Runners = animate, AlongX = alongX}
 end
 
+-- One-shot courier flare. It uses existing bridge transforms, with
+-- a bounded local part count and no per-frame server replication.
+local function surgeBurst(bridge, tier, reduced)
+    if reduced or tier == "Low" or not bridge or not bridge.Parent then
+        return
+    end
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - bridge.Position).Magnitude > 120 then
+        return
+    end
+    local alongX = bridge.Size.X > bridge.Size.Z
+    local direction = alongX and bridge.CFrame.RightVector or bridge.CFrame.LookVector
+    local pieces = tier == "High" and 8 or 4
+    local top = bridge.Size.Y * 0.5 + 0.13
+    for index = 1, pieces do
+        local side = (index % 2 == 0) and 1 or -1
+        local offset = (index - (pieces + 1) * 0.5) / pieces
+        local start = bridge.CFrame * CFrame.new(
+            alongX and offset * 3 or side * 1.4,
+            top,
+            alongX and side * 1.4 or offset * 3
+        )
+        local p = Instance.new("Part")
+        p.Name = "SkyrailImpulseFacet"
+        p.Size = Vector3.new(0.19, 0.09, 0.65)
+        p.CFrame = CFrame.lookAt(start.Position, start.Position + direction)
+        p.Material = Enum.Material.Neon
+        p.Color = side == 1 and colors.Cyan or colors.Gold
+        p.Transparency = 0.18
+        p.Anchored = true
+        p.CanCollide = false
+        p.CanTouch = false
+        p.CanQuery = false
+        p.CastShadow = false
+        p.Parent = art
+        local finish = start.Position + direction * (side * 5.4)
+        TweenService:Create(p,
+            TweenInfo.new(0.40, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+            {CFrame = CFrame.lookAt(finish, finish + direction),
+                Size = Vector3.new(0.10, 0.055, 1.35),
+                Transparency = 1}
+        ):Play()
+        Debris:AddItem(p, 0.48)
+    end
+end
+
 local function rebuild(platforms, tier, reduced, ordered)
+    for _, connection in ipairs(signalConnections) do
+        connection:Disconnect()
+    end
+    table.clear(signalConnections)
+    table.clear(activeSurges)
     art:ClearAllChildren()
     table.clear(canopy)
     currentPlatforms = platforms
@@ -171,6 +226,14 @@ local function rebuild(platforms, tier, reduced, ordered)
     bridges = ordered
     for _, bridge in ipairs(bridges) do
         table.insert(canopy, buildCanopy(bridge, tier, reduced))
+        table.insert(signalConnections, bridge:GetAttributeChangedSignal(
+            "SkyrailUsedAt"
+        ):Connect(function()
+            if bridge.Parent == currentPlatforms then
+                activeSurges[bridge] = os.clock() + 0.8
+                surgeBurst(bridge, tier, reduced)
+            end
+        end))
     end
 end
 
@@ -178,9 +241,15 @@ local function draw(timestamp)
     for _, structure in ipairs(canopy) do
         local bridge = structure.Bridge
         if bridge.Parent then
+            local surging = (activeSurges[bridge] or 0) > timestamp
             for _, item in ipairs(structure.Parts) do
                 if item.Part.Parent then
                     item.Part.CFrame = bridge.CFrame * item.LocalCf
+                    if item.Part.Name:find("SkyrailInsetFiber") or
+                        item.Part.Name:find("SkyrailCrownBeam")
+                    then
+                        item.Part.Transparency = surging and 0.03 or 0.23
+                    end
                 end
             end
 
