@@ -40,19 +40,21 @@ local function buildDrone(parent, base, variant, theme, tier, index, total)
         total = total, trail = nil, light = nil,
         accent = theme.Accent,
     }
+    local silhouette = AerialSurveyRules.silhouette(variant)
     local armor = theme.Structure:Lerp(Color3.fromRGB(22, 33, 50), 0.32)
     local silver = theme.Detail:Lerp(Color3.fromRGB(167, 188, 204), 0.22)
     local glow = theme.Accent
 
-    piece(craft, "SurveyArmoredHull", Vector3.new(2.6, 1.05, 4.4),
+    piece(craft, "SurveyArmoredHull", silhouette.Body,
         CFrame.new(0, 0, 0), armor, Enum.Material.Metal, 0.02, "Part", "hull").Shape = Enum.PartType.Ball
-    piece(craft, "SurveyCockpit", Vector3.new(1.85, 0.63, 2.2),
+    piece(craft, "SurveyCockpit", silhouette.Cockpit,
         CFrame.new(0, 0.43, -0.97), silver, Enum.Material.Glass, 0.28, "WedgePart", "cockpit")
     for side = -1, 1, 2 do
         piece(craft, "SurveyDeltaWing" .. side,
-            Vector3.new(3.9, 0.24, 2.35),
-            CFrame.new(side * 2.15, -0.03, 0.12)
-                * CFrame.Angles(0, math.rad(side * 10), math.rad(side * -5)),
+            silhouette.Wing,
+            CFrame.new(side * (silhouette.Body.X * 0.5 + 0.86), -0.03, 0.12)
+                * CFrame.Angles(0,
+                    math.rad(side * silhouette.WingYaw), math.rad(side * -5)),
             armor, Enum.Material.DiamondPlate, 0.03, "WedgePart", "wing")
     end
     piece(craft, "SurveyDorsalSpine", Vector3.new(0.38, 0.28, 2.6),
@@ -151,16 +153,17 @@ function AerialSurveyKit.build(parent, arenaBase, variant, tier, theme)
     return fleet
 end
 
-function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRush)
+function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRush, disasterIds)
     if not fleet or not fleet.folder.Parent or not fleet.base.Parent then return end
     local active = AerialSurveyRules.animated(phase, fleet.tier, reduced)
     local elapsed = active and (tonumber(now) or 0) or 0
-    local alert = AerialSurveyRules.alert(phase, threatColor and {"Hazard"} or nil, finalRush)
+    local behavior = active and AerialSurveyRules.behavior(disasterIds) or nil
+    local alert = AerialSurveyRules.alert(phase, disasterIds, finalRush)
     local tint = alert == "critical" and Color3.fromRGB(255, 195, 100)
         or (alert == "hazard" and threatColor or nil)
     for _, drone in ipairs(fleet.drones) do
         local frame = AerialSurveyRules.flightFrame(
-            fleet.base, fleet.variant, drone.index, drone.total, elapsed)
+            fleet.base, fleet.variant, drone.index, drone.total, elapsed, behavior)
         if frame then
             local wingBank = active and math.sin(elapsed * 1.7 + drone.index) * math.rad(2) or 0
             for _, item in ipairs(drone.sections) do

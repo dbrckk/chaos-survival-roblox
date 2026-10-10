@@ -27,6 +27,10 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         expect(Rules.animated("round", "Low", false)).toBe(false)
         expect(Rules.animated("round", "High", true)).toBe(false)
         expect(Rules.animated("waiting", "High", false)).toBe(false)
+        expect(Rules.silhouette("Classic").Wing.X).toBe(3.9)
+        expect(Rules.silhouette("Towers").Wing.X).toBe(2.75)
+        expect(Rules.silhouette("Crossroads").Wing.X).toBe(4.75)
+        expect(Rules.silhouette("Orbital").Wing.X).toBe(5.2)
     end)
 
     it("keeps flights outside playable arena and statically freezes accessible motion", function()
@@ -41,6 +45,30 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
                 or math.abs(localP.Z) > base.Size.Z * 0.5).toBe(true)
             expect((start.Position - moved.Position).Magnitude > 5).toBe(true)
         end
+        base:Destroy()
+    end)
+
+    it("uses distinct disaster animation reactions without changing collision bounds", function()
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        base.Parent = workspace
+        local normal = Rules.flightFrame(base, "Towers", 1, 2, 6)
+        local storm = Rules.flightFrame(base, "Towers", 1, 2, 6,
+            Rules.behavior({"Tornado"}))
+        local lava = Rules.flightFrame(base, "Towers", 1, 2, 6,
+            Rules.behavior({"RisingLava"}))
+        expect((storm.Position - normal.Position).Magnitude > 0.4).toBe(true)
+        expect(lava.Position.Y - normal.Position.Y).toBe(7)
+        local frozen = Rules.behavior({"Freeze"})
+        expect(frozen.Speed < 0.5).toBe(true)
+        local lowGravity = Rules.behavior({"LowGravity"})
+        expect(lowGravity.Climb).toBe(4)
+        expect(lowGravity.Speed < 1).toBe(true)
+        local meteor = Rules.behavior({"Meteors"})
+        expect(meteor.Sway > 1).toBe(true)
+        local danger = Rules.behavior({"Tornado", "RisingLava"})
+        expect(danger.Bank > 2).toBe(true)
+        expect(danger.Climb).toBe(7)
         base:Destroy()
     end)
 

@@ -73,7 +73,7 @@ task.spawn(function()
             -- Distant viewers pay no animation cost; all movement is cosmetic.
             AerialSurveyKit.update(fleet, close and os.clock() or 0,
                 phase, player:GetAttribute("ReduceMotion") == true or not close,
-                alertColor(), finalRush)
+                alertColor(), finalRush, activeDisasters)
         end
         local interval = fleet and fleet.profile.Interval or 0.65
         task.wait(close and interval or math.max(0.65, interval))
