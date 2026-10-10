@@ -255,3 +255,27 @@ Detached descendants are destroyed when clearing the client effect.
 Engine regressions cover detached lava/freeze attachments, missing wedges
 and survivor lifetime rules. Mobile QA remains required for rapid tier
 switching, streamed warning hosts and Double Chaos soak / FPS measurements.
+
+## Custom 3D catastrophe climax silhouettes: lava and meteors
+
+Two more catastrophe climax effects have their own authored, procedural
+3D geometry rather than identical neon bars. **Rising Lava** grows angled
+volcanic fins outward and upward from the floor, with asymmetric pitch.
+**Meteors** use inward-descending metallic spearhead wedges, creating a
+different readable silhouette without large opaque screen overlays.
+Both inherit the arena's full pitched/rotated `Base.CFrame`.
+
+Each climax retains the existing **Low 2 / Medium 4 / High 6** part budget.
+ReduceMotion uses a single short-lived, nearly static translucent wedge.
+All pieces are locally anchored, noncolliding, non-queryable, unshadowed,
+and cleaned by Debris; there are no new emitters, textures, lights,
+paid assets, hitboxes, sounds, or server-controlled movement changes.
+Existing named disaster warning geometry and timing remain unchanged.
+
+**Engine regression:** recipe validity/determinism across three stages,
+three tiers and both shapes, exact piece counts, stage-specific movement,
+pitched deck alignment, reduced-motion placement, collision/shadow checks,
+and rejection of malformed data. **Physical QA required:** compare
+Low/Medium/High lava and meteor shapes, floor readability under Double
+Chaos, camera angles, screenshots and GPU/FPS/thermal Android soak.
+Roblox Cloud engine tests do not substitute for device profiling.

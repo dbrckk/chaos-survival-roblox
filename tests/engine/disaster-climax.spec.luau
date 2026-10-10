@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local DisasterClimax = require("../../src/shared/DisasterClimax")
 local Signature = require("../../src/client/DisasterClimaxSignatureKit")
 local Boundary = require("../../src/client/DisasterBoundaryClimaxKit")
+local Elements = require("../../src/client/DisasterClimaxElementKit")
 
 local IDS = {
     "RisingLava",
@@ -239,6 +240,93 @@ describe("Rectangular shrink and directional bomb climax", function()
             expect(seenX).toBe(true)
             expect(seenZ).toBe(true)
         end
+    end)
+end)
+
+describe("Procedural volcanic and meteor climax sculpture", function()
+    it("keeps each original 3D recipe deterministic, bounded and distinct", function()
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local count = Elements.count(tier, false)
+            expect(count).toBe(tier == "Low" and 2 or
+                (tier == "Medium" and 4 or 6))
+            expect(Elements.count(tier, true)).toBe(1)
+            for _, kind in ipairs({"lava", "meteor"}) do
+                for stage = 1, 3 do
+                    for i = 1, count do
+                        local s = Elements.recipe(kind, i, count, 120, stage, tier)
+                        local again = Elements.recipe(kind, i, count, 120, stage, tier)
+                        expect(s ~= nil).toBe(true)
+                        expect(s.Start).toBe(again.Start)
+                        expect(s.Finish).toBe(again.Finish)
+                        expect(s.Rotation).toBe(again.Rotation)
+                        expect(s.Size.X > 0 and s.Size.Y > 0 and s.Size.Z > 0)
+                            .toBe(true)
+                        expect(s.GoalSize.X > 0 and s.GoalSize.Y > 0
+                            and s.GoalSize.Z > 0).toBe(true)
+                        expect(s.Transparency >= 0.35).toBe(true)
+                        if kind == "lava" then
+                            expect(s.Finish.Y > s.Start.Y).toBe(true)
+                            expect(s.Name).toBe("LavaClimaxVolcanicFin")
+                        else
+                            expect(s.Finish.Y < s.Start.Y).toBe(true)
+                            expect(s.Name).toBe("MeteorClimaxSpearhead")
+                        end
+                        if tier == "Low" then
+                            expect(s.Material).toBe(Enum.Material.SmoothPlastic)
+                        end
+                    end
+                end
+            end
+        end
+        expect(Elements.count("Invalid", false)).toBe(0)
+        expect(Elements.count("Invalid", true)).toBe(0)
+        expect(Elements.recipe("unknown", 1, 4, 120, 2, "High") == nil).toBe(true)
+        expect(Elements.recipe("lava", 0, 4, 120, 2, "High") == nil).toBe(true)
+        expect(Elements.recipe("meteor", 7, 6, 120, 2, "High") == nil).toBe(true)
+        expect(Elements.recipe("lava", 1, 4, 0, 2, "High") == nil).toBe(true)
+        expect(Elements.recipe("meteor", 1, 4, 120, 4, "High") == nil).toBe(true)
+        expect(Elements.recipe("lava", 1, 4, 120, 2, "Invalid") == nil).toBe(true)
+    end)
+
+    it("anchors one-shot wedges to pitched decks and respects ReduceMotion", function()
+        local folder = Instance.new("Folder")
+        local deck = CFrame.new(19, 7, -12)
+            * CFrame.Angles(math.rad(13), math.rad(37), math.rad(-8))
+        local primary = Color3.fromRGB(255, 87, 40)
+        local secondary = Color3.fromRGB(255, 209, 110)
+        for _, kind in ipairs({"lava", "meteor"}) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local count = Elements.count(tier, false)
+                local pieces = Elements.emit(folder, kind, deck,
+                    134, 3, primary, secondary, tier, false)
+                expect(#pieces).toBe(count)
+                for i, piece in ipairs(pieces) do
+                    local spec = Elements.recipe(kind, i, count, 134, 3, tier)
+                    expect(piece:IsA("WedgePart")).toBe(true)
+                    expect(piece.Anchored).toBe(true)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.CastShadow).toBe(false)
+                    expect(piece.Material).toBe(spec.Material)
+                    expect(piece:GetAttribute("ChaosClimaxElement")).toBe(kind)
+                    expect((deck:PointToObjectSpace(piece.Position) - spec.Start)
+                        .Magnitude < 0.02).toBe(true)
+                    piece:Destroy()
+                end
+            end
+            local quiet = Elements.emit(folder, kind, deck,
+                134, 2, primary, secondary, "High", true)
+            expect(#quiet).toBe(1)
+            local final = Elements.recipe(kind, 1, 1, 134, 2, "High")
+            expect((deck:PointToObjectSpace(quiet[1].Position) - final.Finish)
+                .Magnitude < 0.02).toBe(true)
+            quiet[1]:Destroy()
+        end
+        expect(#folder:GetChildren()).toBe(0)
+        expect(#Elements.emit(folder, "invalid", deck, 134, 3,
+            primary, secondary, "High", false)).toBe(0)
+        folder:Destroy()
     end)
 end)
 

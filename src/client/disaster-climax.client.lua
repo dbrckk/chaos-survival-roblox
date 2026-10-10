@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local DisasterClimax = require(ReplicatedStorage.Shared.DisasterClimax)
 local DisasterClimaxSignatureKit = require(script.Parent.DisasterClimaxSignatureKit)
 local DisasterBoundaryClimaxKit = require(script.Parent.DisasterBoundaryClimaxKit)
+local DisasterClimaxElementKit = require(script.Parent.DisasterClimaxElementKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -97,67 +98,20 @@ local function countForTier(tier, low, medium, high)
     return high
 end
 
+-- Original 3D silhouettes replace flat lava bars and meteor streaks.
+-- Count stays within 2/4/6 pieces, or one static reduced-motion wedge.
 local function playLava(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 2, 4, 6)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local radius = span * (0.34 + 0.03 * stage)
-        local position = center + Vector3.new(
-            math.cos(angle) * radius,
-            0,
-            math.sin(angle) * radius
-        )
-        local p = makePart(
-            "LavaClimaxJet" .. i,
-            Vector3.new(0.22, 1.5, 0.22),
-            CFrame.new(position),
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.28
-        )
-        tweenOut(
-            p,
-            reduced and 0.24 or 0.50,
-            {
-                Size = Vector3.new(0.14, 8 * scale, 0.14),
-                CFrame = p.CFrame * CFrame.new(0, 4 * scale, 0),
-                Transparency = 1,
-            }
-        )
-    end
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
+    DisasterClimaxElementKit.emit(folder, "lava", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playMeteor(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 2, 4, 6)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local x = (((i * 29) % 9) - 4) * span * 0.07
-        local z = (((i * 47) % 9) - 4) * span * 0.07
-        local from = center + Vector3.new(x - 7 * scale, 23 + i * 1.1, z + 5 * scale)
-        local to = center + Vector3.new(x, 3, z)
-        local streak = lineBetween(
-            "MeteorClimaxStreak" .. i,
-            from,
-            to,
-            stage >= 3 and 0.34 or 0.24,
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.30
-        )
-        tweenOut(
-            streak,
-            reduced and 0.22 or 0.46,
-            {
-                CFrame = streak.CFrame * CFrame.new(0, 0, streak.Size.Z * 0.45),
-                Transparency = 1,
-            }
-        )
-    end
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
+    DisasterClimaxElementKit.emit(folder, "meteor", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playGravity(profile, base, stage, tier, reduced)
