@@ -2065,7 +2065,10 @@ local function stepRecord(record, now)
             end
 
             if urgentTarget then
+                -- Survival reactions always override a cinematic Skyrail run.
                 record.targetIsPad = false
+                record.targetIsSkyrail = false
+                record.skyrailDirection = nil
                 record.targetPart = nil
                 record.target = separateTarget(record, urgentTarget)
                 record.nextThink = now + 0.55
@@ -2117,6 +2120,8 @@ local function stepRecord(record, now)
             record.target = nil
             record.targetPart = nil
             record.targetIsPad = false
+            record.targetIsSkyrail = false
+            record.skyrailDirection = nil
             record.nextThink = 0
         end
 
@@ -2131,6 +2136,8 @@ local function stepRecord(record, now)
             if math.random() < (traits.ReconsiderChance or 0) then
                 record.target = nil
                 record.targetPart = nil
+                record.targetIsSkyrail = false
+                record.skyrailDirection = nil
                 record.nextThink = 0
             end
         end
