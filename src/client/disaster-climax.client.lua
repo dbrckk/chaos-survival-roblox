@@ -175,40 +175,11 @@ local function playFracture(profile, base, stage, tier, reduced)
 end
 
 local function playTornado(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.2, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 3, 5, 7)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local from = center + Vector3.new(
-            math.cos(angle) * span * 0.32,
-            1,
-            math.sin(angle) * span * 0.32
-        )
-        local to = center + Vector3.new(
-            math.cos(angle + 1.15) * span * 0.08,
-            8 * scale,
-            math.sin(angle + 1.15) * span * 0.08
-        )
-        local streak = lineBetween(
-            "TornadoClimaxSpiral" .. i,
-            from,
-            to,
-            0.18,
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.38
-        )
-        tweenOut(
-            streak,
-            reduced and 0.24 or 0.52,
-            {
-                Transparency = 1,
-                Size = Vector3.new(0.08, 0.08, streak.Size.Z * 0.68),
-            }
-        )
-    end
+    -- Arena-local helix rather than long rectangular world-axis streaks.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.20, 0)
+    DisasterClimaxElementKit.emit(folder, "tornado", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playFreeze(profile, base, stage, tier, reduced)
@@ -342,10 +313,12 @@ local function playClimax(id, stage, base, delaySeconds, currentToken)
     end
 
     task.delay(delaySeconds or 0, function()
-        if token ~= currentToken
-            or not base.Parent
-            or player:GetAttribute("RoundEliminated") == true
-        then
+        if not DisasterClimax.shouldPresent(
+            currentToken, token, stage, stageById[id],
+            base.Parent ~= nil and arenaBase() == base,
+            previousPhase == "round",
+            player:GetAttribute("RoundEliminated")
+        ) then
             return
         end
 

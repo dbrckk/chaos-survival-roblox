@@ -47,6 +47,18 @@ describe("Disaster climax progression", function()
         expect(DisasterClimax.stageFor(1.02, false, true)).toBe(2)
     end)
 
+    it("rejects delayed climax bursts from stale stages, maps and rounds", function()
+        local can = DisasterClimax.shouldPresent
+        expect(can(7, 7, 2, 2, true, true, false)).toBe(true)
+        expect(can(7, 7, 2, 2, true, true, nil)).toBe(true)
+        expect(can(6, 7, 2, 2, true, true, false)).toBe(false)
+        expect(can(7, 7, 1, 2, true, true, false)).toBe(false)
+        expect(can(7, 7, 2, nil, true, true, false)).toBe(false)
+        expect(can(7, 7, 2, 2, false, true, false)).toBe(false)
+        expect(can(7, 7, 2, 2, true, false, false)).toBe(false)
+        expect(can(7, 7, 2, 2, true, true, true)).toBe(false)
+    end)
+
     it("always gives final rush the highest climax stage", function()
         expect(DisasterClimax.stageFor(0.88, true, false)).toBe(3)
         expect(DisasterClimax.stageFor(1.12, true, true)).toBe(3)
@@ -250,7 +262,7 @@ describe("Procedural volcanic and meteor climax sculpture", function()
             expect(count).toBe(tier == "Low" and 2 or
                 (tier == "Medium" and 4 or 6))
             expect(Elements.count(tier, true)).toBe(1)
-            for _, kind in ipairs({"lava", "meteor"}) do
+            for _, kind in ipairs({"lava", "meteor", "tornado"}) do
                 for stage = 1, 3 do
                     for i = 1, count do
                         local s = Elements.recipe(kind, i, count, 120, stage, tier)
@@ -267,9 +279,12 @@ describe("Procedural volcanic and meteor climax sculpture", function()
                         if kind == "lava" then
                             expect(s.Finish.Y > s.Start.Y).toBe(true)
                             expect(s.Name).toBe("LavaClimaxVolcanicFin")
-                        else
+                        elseif kind == "meteor" then
                             expect(s.Finish.Y < s.Start.Y).toBe(true)
                             expect(s.Name).toBe("MeteorClimaxSpearhead")
+                        else
+                            expect(s.Finish.Y > s.Start.Y).toBe(true)
+                            expect(s.Name).toBe("TornadoClimaxHelixFin")
                         end
                         if tier == "Low" then
                             expect(s.Material).toBe(Enum.Material.SmoothPlastic)
@@ -286,6 +301,8 @@ describe("Procedural volcanic and meteor climax sculpture", function()
         expect(Elements.recipe("lava", 1, 4, 0, 2, "High") == nil).toBe(true)
         expect(Elements.recipe("meteor", 1, 4, 120, 4, "High") == nil).toBe(true)
         expect(Elements.recipe("lava", 1, 4, 120, 2, "Invalid") == nil).toBe(true)
+        expect(Elements.recipe("tornado", 1, 4, 120, 2, "Invalid") == nil).toBe(true)
+        expect(Elements.recipe("tornado", 2.5, 4, 120, 2, "High") == nil).toBe(true)
     end)
 
     it("anchors one-shot wedges to pitched decks and respects ReduceMotion", function()
@@ -294,7 +311,7 @@ describe("Procedural volcanic and meteor climax sculpture", function()
             * CFrame.Angles(math.rad(13), math.rad(37), math.rad(-8))
         local primary = Color3.fromRGB(255, 87, 40)
         local secondary = Color3.fromRGB(255, 209, 110)
-        for _, kind in ipairs({"lava", "meteor"}) do
+        for _, kind in ipairs({"lava", "meteor", "tornado"}) do
             for _, tier in ipairs({"Low", "Medium", "High"}) do
                 local count = Elements.count(tier, false)
                 local pieces = Elements.emit(folder, kind, deck,

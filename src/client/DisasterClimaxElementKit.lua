@@ -4,7 +4,7 @@ local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 
 local Kit = {}
-local VALID = {lava = true, meteor = true}
+local VALID = {lava = true, meteor = true, tornado = true}
 local COUNTS = {Low = 2, Medium = 4, High = 6}
 
 function Kit.count(tier, reduced)
@@ -47,6 +47,31 @@ function Kit.recipe(kind, index, count, span, stage, tier)
                 or Enum.Material.SmoothPlastic,
             Transparency = tier == "Low" and 0.52 or 0.38,
             Duration = 0.48,
+        }
+    end
+
+    if kind == "tornado" then
+        -- A pitched, inward-winding helix of angular 3D fins, not bars.
+        local start = direction * (width * 0.30)
+            + Vector3.new(0, 0.85 + index * 0.20, 0)
+        local finish = Vector3.new(
+            math.cos(angle + 1.18) * width * 0.065,
+            6.5 + stage * 1.85 + index * 0.38,
+            math.sin(angle + 1.18) * width * 0.065
+        )
+        return {
+            Kind = kind,
+            Name = "TornadoClimaxHelixFin",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(math.rad(18), yaw + 0.48,
+                side * math.rad(19)),
+            Size = Vector3.new(0.30, 1.10, 3.0 + stage * 0.32),
+            GoalSize = Vector3.new(0.14, 0.43, 1.4 + stage * 0.22),
+            Material = tier == "High" and Enum.Material.Metal
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.58 or 0.44,
+            Duration = 0.52,
         }
     end
 

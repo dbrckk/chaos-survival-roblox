@@ -279,3 +279,22 @@ and rejection of malformed data. **Physical QA required:** compare
 Low/Medium/High lava and meteor shapes, floor readability under Double
 Chaos, camera angles, screenshots and GPU/FPS/thermal Android soak.
 Roblox Cloud engine tests do not substitute for device profiling.
+
+## Tornado spiral sculpture and stale-climax suppression
+
+Tornado climax presentation now uses bespoke helix-like, inward-spiraling
+WedgePart fins that lift through the arena-local frame, replacing generic
+world-axis strips. It matches the shared climax kit's **2 Low / 4 Medium /
+6 High** part cap (down from 3/5/7), with **one** static-leaning temporary
+fin for ReduceMotion. No physical collision, shadows, new particles, paid
+assets, or extra lighting. The server-owned tornado behavior is untouched.
+
+Scheduled local climax effects also check that the current intensity
+stage, round generation, and arena base still match before displaying.
+Superseded pending bursts are dropped rather than overlapping a later
+stage or a different arena. The current survivor/elimination filter remains.
+
+Engine coverage extends the existing visual spec to Tornado recipe
+determinism, geometry and deck orientation across all tiers and stages,
+plus stale callback cases. Actual Studio/mobile screenshot QA, Double
+Chaos fill-rate/FPS and 30-minute memory testing remain pending.

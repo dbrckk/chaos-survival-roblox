@@ -40,6 +40,14 @@ function DisasterClimax.stageFor(intensity, finalRush, overdrive)
     return 0
 end
 
+-- Reject delayed cosmetic bursts from obsolete intensity stages, maps
+-- or rounds, even if their scheduled callback was already queued.
+function DisasterClimax.shouldPresent(requestToken, activeToken,
+        requestedStage, latestStage, sameArena, inRound, eliminated)
+    return requestToken == activeToken and requestedStage == latestStage
+        and sameArena == true and inRound == true and eliminated ~= true
+end
+
 function DisasterClimax.get(id)
     return DisasterClimax.Profiles[id]
 end
