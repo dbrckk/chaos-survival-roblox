@@ -95,6 +95,16 @@ survival route without teleporting or bypassing collision. Every player receives
   follow the real server bridge when it moves or changes length; there
   are no replicated visual Heartbeat loops and no client collision.
   The `TowerSkyrailLocal` layer participates in the GPU budget audit.
+- **NPC gameplay:** survivor bots standing on compatible elevated
+  tower decks can now deliberately run to the *far end* of a real
+  Skyrail, passing its midpoint Slipstream trigger. The server never
+  selects an airborne bridge from the base floor, checks safe height,
+  lateral offset, span width and live collision, and excludes new
+  traversals during Tornado / Shrinking Arena. While crossing, it
+  preserves the chosen exit direction as the physical bridge moves
+  and prevents sideways social strafing that would push the bot off.
+  An individual retry delay discourages repeated oscillation.
+  Studio multiplayer testing must still confirm these trajectories.
 - **QA:** sprint across both junctions of every bridge, jump and land on
   both sides, visit via each updraft pad, and test in every hazard combination.
   Verify no rail, bolt, underframe or fake collider outlives a map swap.

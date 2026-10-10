@@ -552,6 +552,39 @@ describe("AI survivor rules", function()
         nextFreeze:Destroy()
     end)
 
+    it("plans a real full-length Skyrail traversal from elevated decks only", function()
+        local r = AISurvivorRules
+        local north = CFrame.new(0, 12.5, -28)
+        local span = Vector3.new(49, 1, 4.5)
+        local target, sign = r.skyrailCrossingTarget(
+            Vector3.new(28, 15.4, -28), north, span)
+        expect(target ~= nil).toBe(true)
+        expect(sign).toBe(-1)
+        expect(target.X < -17).toBe(true)
+        expect(math.abs(target.Z + 28) < 0.1).toBe(true)
+        local reverse, otherSign = r.skyrailCrossingTarget(
+            Vector3.new(-28, 15.4, -28), north, span)
+        expect(reverse.X > 17).toBe(true)
+        expect(otherSign).toBe(1)
+        expect(r.skyrailCrossingTarget(
+            Vector3.new(28, 3, -28), north, span) == nil).toBe(true)
+        expect(r.skyrailCrossingTarget(
+            Vector3.new(0, 15.4, -28), north, span) == nil).toBe(true)
+        expect(r.skyrailCrossingTarget(
+            Vector3.new(28, 15.4, -40), north, span) == nil).toBe(true)
+        expect(r.skyrailCrossingTarget(
+            Vector3.new(28, 15.4, -28), north, Vector3.new(49, 1, 2)) == nil).toBe(true)
+        local west = CFrame.new(-28, 12.5, 0)
+        local zTarget, zSign = r.skyrailCrossingTarget(
+            Vector3.new(-28, 15.4, 28), west, Vector3.new(4.5, 1, 49))
+        expect(zSign).toBe(-1)
+        expect(zTarget.Z < -17).toBe(true)
+        local moved = r.skyrailExitTarget(
+            CFrame.new(-20, 12.5, 0), Vector3.new(4.5, 1, 22), zSign)
+        expect(moved.Z < -5).toBe(true)
+        expect(r.skyrailExitTarget(west, span, 0) == nil).toBe(true)
+    end)
+
     it("allows one pre-jump per Shock warning and ignores unrelated markers", function()
         local handled = {}
         local shock = Instance.new("Part")

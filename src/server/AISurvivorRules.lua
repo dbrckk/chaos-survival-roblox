@@ -418,6 +418,46 @@ function AISurvivorRules.routeAffinity(variantId, position, center)
     return 4 - math.min(7, math.abs(radius - preferredRadius) * 0.20)
 end
 
+-- Traversing from the actual tower deck, rather than aiming at mid-air.
+-- The exit point sits past the midspan Slipstream trigger and safely
+-- inside the far end of the physical bridge.
+function AISurvivorRules.skyrailExitTarget(bridgeFrame, size, sign)
+    if typeof(bridgeFrame) ~= "CFrame" or typeof(size) ~= "Vector3"
+        or (sign ~= 1 and sign ~= -1)
+    then return nil end
+    local longX = size.X > size.Z
+    local span = math.max(size.X, size.Z)
+    local width = math.min(size.X, size.Z)
+    if span < 16 or width < 4 then return nil end
+    local finish = sign * (span * 0.5 - 4.8)
+    local altitude = size.Y * 0.5 + 2.4
+    return bridgeFrame:PointToWorldSpace(
+        longX and Vector3.new(finish, altitude, 0)
+            or Vector3.new(0, altitude, finish))
+end
+
+function AISurvivorRules.skyrailCrossingTarget(root, bridgeFrame, size)
+    if typeof(root) ~= "Vector3"
+        or typeof(bridgeFrame) ~= "CFrame"
+        or typeof(size) ~= "Vector3"
+    then return nil, nil end
+    local longX = size.X > size.Z
+    local span = math.max(size.X, size.Z)
+    local width = math.min(size.X, size.Z)
+    if span < 16 or width < 4 then return nil, nil end
+    local localRoot = bridgeFrame:PointToObjectSpace(root)
+    local distance = longX and localRoot.X or localRoot.Z
+    local side = longX and localRoot.Z or localRoot.X
+    local expectedY = size.Y * 0.5 + 2.4
+    if math.abs(localRoot.Y - expectedY) > 3.2
+        or math.abs(side) > width * 0.5 + 1.6
+        or math.abs(distance) < span * 0.5 - 10.5
+        or math.abs(distance) > span * 0.5 + 6.2
+    then return nil, nil end
+    local sign = distance >= 0 and -1 or 1
+    return AISurvivorRules.skyrailExitTarget(bridgeFrame, size, sign), sign
+end
+
 function AISurvivorRules.platformAvailable(canCollide, transparency, collapsePhase)
     if canCollide ~= true then
         return false

@@ -726,6 +726,8 @@ local function sendToLobby(record)
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -746,6 +748,9 @@ local function sendToArena(record)
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
+    record.nextSkyrailAt = 0
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -793,6 +798,9 @@ local function newRecord(slot)
         target = nil,
         targetPart = nil,
         targetIsPad = false,
+        targetIsSkyrail = false,
+        skyrailDirection = nil,
+        nextSkyrailAt = 0,
         strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
@@ -1395,6 +1403,8 @@ end
 
 local function chooseArenaTarget(record, root, now)
     local traits = decisionTraits(record)
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
     local socialTarget = socialArenaTarget(record, root, traits)
     if socialTarget then
         record.targetIsPad = false
@@ -1448,6 +1458,49 @@ local function chooseArenaTarget(record, root, now)
                 local crossing = relay.Position + (flat.Magnitude > 0.1
                     and flat.Unit * 7 or Vector3.zero)
                 return clampToArena(separateTarget(record, crossing)), 1.0
+            end
+        end
+    end
+
+    -- Elevated bots occasionally complete a full Skyrail crossing.
+    -- Only enter from a real mid-deck endpoint: never navigate from
+    -- ground-level into an unreachable airborne bridge.
+    if currentState.phase == "round"
+        and record.inRound
+        and arenaVariantId() == "Towers"
+        and now >= (record.nextSkyrailAt or 0)
+        and not hasDisaster("Tornado")
+        and not hasDisaster("ShrinkingArena")
+        and math.random() < (0.14 + (traits.Risk or record.profile.Risk) * 0.19)
+    then
+        local _, arena = arenaParts()
+        local platforms = arena and arena:FindFirstChild("Platforms")
+        if platforms then
+            local options = {}
+            for _, bridge in ipairs(platforms:GetChildren()) do
+                if bridge:IsA("BasePart")
+                    and bridge:GetAttribute("ChaosSkybridge") == true
+                    and AISurvivorRules.platformAvailable(
+                        bridge.CanCollide, bridge.Transparency,
+                        bridge:GetAttribute("CollapsePhase"))
+                then
+                    local finish, sign = AISurvivorRules.skyrailCrossingTarget(
+                        root.Position, bridge.CFrame, bridge.Size)
+                    if finish then
+                        table.insert(options, {part = bridge,
+                            target = finish, sign = sign})
+                    end
+                end
+            end
+            if #options > 0 then
+                local choice = options[math.random(1, #options)]
+                record.targetPart = choice.part
+                record.targetIsPad = false
+                record.targetIsSkyrail = true
+                record.skyrailDirection = choice.sign
+                record.nextSkyrailAt = now + 11
+                -- No social separation or sideways bias on narrow decks.
+                return choice.target, 4.6
             end
         end
     end
@@ -2040,7 +2093,21 @@ local function stepRecord(record, now)
                 ) then
                     record.target = nil
                     record.targetPart = nil
+                    record.targetIsSkyrail = false
                     record.nextThink = 0
+                elseif record.targetIsSkyrail
+                    and record.targetPart:GetAttribute("ChaosSkybridge") == true
+                then
+                    -- Keep the same far-side destination when a moving
+                    -- physical deck changes size/position during the round.
+                    record.target = AISurvivorRules.skyrailExitTarget(
+                        record.targetPart.CFrame, record.targetPart.Size,
+                        record.skyrailDirection)
+                    if not record.target then
+                        record.targetPart = nil
+                        record.targetIsSkyrail = false
+                        record.nextThink = 0
+                    end
                 elseif hasDisaster("ShrinkingArena") then
                     record.target = record.targetPart.Position
                         + Vector3.new(0, record.targetPart.Size.Y * 0.5 + 2.4, 0)
@@ -2072,6 +2139,8 @@ local function stepRecord(record, now)
             record.target = nil
             record.targetPart = nil
             record.targetIsPad = false
+            record.targetIsSkyrail = false
+            record.skyrailDirection = nil
             local _, pressure = decisionTraits(record)
             local pauseChance = 0.38 * (1 - pressure * 0.58)
             if math.random() < pauseChance then
@@ -2110,6 +2179,7 @@ local function stepRecord(record, now)
             local destination = record.target
             if not urgentTarget
                 and not record.targetIsPad
+                and not record.targetIsSkyrail
                 and horizontal.Magnitude > 8
                 and math.abs(record.strafeBias or 0) > 0.03
             then
