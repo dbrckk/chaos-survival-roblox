@@ -78,7 +78,6 @@ function GroundFx.build(parent, basis, kind, strength, tier)
         return nil
     end
 
-    local intensity = math.clamp(tonumber(strength) or 0, 0, 1)
     local count = tier == "High" and 4 or 2
     local folder = Instance.new("Folder")
     folder.Name = "Chaos" .. kind .. "Contact"
@@ -116,6 +115,21 @@ function GroundFx.build(parent, basis, kind, strength, tier)
     return folder
 end
 
+-- Slope-safe placement: follow the actual hit normal and project the
+-- avatar's heading onto the surface. Only cosmetic basis changes; no force.
+function GroundFx.surfaceBasis(position, normal, facing)
+    if typeof(position) ~= "Vector3" or typeof(normal) ~= "Vector3"
+        or typeof(facing) ~= "Vector3" or normal.Magnitude < 0.01
+    then
+        return nil
+    end
+    local up = normal.Unit
+    if up.Y < 0.72 then return nil end
+    local tangent = facing - up * facing:Dot(up)
+    if tangent.Magnitude < 0.1 then return nil end
+    return CFrame.lookAt(position, position + tangent.Unit, up)
+end
+
 function GroundFx.emit(root, kind, strength, tier)
     if not root or not root:IsA("BasePart") or not root.Parent then
         return nil
@@ -134,16 +148,10 @@ function GroundFx.emit(root, kind, strength, tier)
         Vector3.new(0, -7.0, 0),
         params
     )
-    if not hit or hit.Normal.Y < 0.72 then
-        return nil
-    end
-
-    local facing = root.CFrame.LookVector
-    local flat = Vector3.new(facing.X, 0, facing.Z)
-    if flat.Magnitude < 0.1 then
-        return nil
-    end
-    local basis = CFrame.lookAt(hit.Position, hit.Position + flat.Unit)
+    if not hit then return nil end
+    local basis = GroundFx.surfaceBasis(hit.Position, hit.Normal,
+        root.CFrame.LookVector)
+    if not basis then return nil end
     return GroundFx.build(effectRoot, basis, kind, strength, tier)
 end
 

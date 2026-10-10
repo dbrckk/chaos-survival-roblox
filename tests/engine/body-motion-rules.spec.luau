@@ -142,6 +142,47 @@ describe("Body motion rules", function()
         surface:Destroy()
     end)
 
+    it("requires a living server-confirmed contestant for local battle scuffs", function()
+        local r = LocomotionDynamics.footworkEligible
+        expect(r("round", true, false, 100)).toBe(true)
+        expect(r("round", true, nil, 1)).toBe(true)
+        expect(r("round", nil, nil, 100)).toBe(false)
+        expect(r("round", false, false, 100)).toBe(false)
+        expect(r("round", true, true, 100)).toBe(false)
+        expect(r("waiting", true, false, 100)).toBe(false)
+        expect(r("result", true, false, 100)).toBe(false)
+        expect(r("round", true, false, 0)).toBe(false)
+        expect(r("round", true, false, nil)).toBe(false)
+    end)
+
+    it("places authored movement wedges tangent to rotated and inclined floors", function()
+        local normal = Vector3.new(0.25, 1, 0.32).Unit
+        local face = Vector3.new(0, 0, -1)
+        local origin = Vector3.new(15, 6, -23)
+        local basis = GroundFx.surfaceBasis(origin, normal, face)
+        expect(basis ~= nil).toBe(true)
+        expect((basis.Position - origin).Magnitude < 0.0001).toBe(true)
+        expect(basis.UpVector:Dot(normal) > 0.999).toBe(true)
+        expect(math.abs(basis.LookVector:Dot(normal)) < 0.001).toBe(true)
+        expect(basis.LookVector:Dot(face) > 0.9).toBe(true)
+        local root = Instance.new("Folder")
+        for _, kind in ipairs({"Launch", "Skid", "Pivot"}) do
+            local fx = GroundFx.build(root, basis, kind, 0.92, "High")
+            expect(#fx:GetChildren()).toBe(4)
+            for _, piece in ipairs(fx:GetChildren()) do
+                expect(piece.CFrame.UpVector:Dot(normal) > 0.999).toBe(true)
+                expect(piece.Anchored).toBe(true)
+                expect(piece.CanCollide).toBe(false)
+            end
+            fx:Destroy()
+        end
+        root:Destroy()
+        expect(GroundFx.surfaceBasis(origin, Vector3.new(0, 0, 1), face) == nil).toBe(true)
+        expect(GroundFx.surfaceBasis(origin, Vector3.zero, face) == nil).toBe(true)
+        expect(GroundFx.surfaceBasis(origin, normal, normal) == nil).toBe(true)
+        expect(GroundFx.surfaceBasis(nil, normal, face) == nil).toBe(true)
+    end)
+
     it("adds planted footsteps and safe airborne reach without forcing physics", function()
         expect(LocomotionDynamics.footPlant(0, 1, true)).toBe(1)
         expect(LocomotionDynamics.footPlant(math.pi / 2, 1, true)).toBe(0)

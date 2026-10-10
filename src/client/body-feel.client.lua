@@ -366,7 +366,10 @@ RunService:BindToRenderStep(
             player:GetAttribute("VfxQualityTier"), reduced, roundPhase
         )
         local now = os.clock()
-        if cue and now - lastGroundCueAt >= 0.55 then
+        if cue and LocomotionDynamics.footworkEligible(
+            roundPhase, player:GetAttribute("RoundParticipant"),
+            player:GetAttribute("RoundEliminated"), humanoid.Health
+        ) and now - lastGroundCueAt >= 0.55 then
             -- No extra per-frame loop: only a brief geometry burst for a
             -- grounded start, hard-stop skid or high-speed planted pivot.
             local contact = GroundFx.emit(

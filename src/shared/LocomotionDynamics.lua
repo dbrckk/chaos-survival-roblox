@@ -81,6 +81,13 @@ function LocomotionDynamics.flight(verticalVelocity, grounded, lowGravity)
         math.clamp((-velocity - 7) / 35, 0, 1) * scale
 end
 
+-- Match server-owned participation: spectators, late joiners and eliminated
+-- players can still move, but must not leave active-survivor battle scuffs.
+function LocomotionDynamics.footworkEligible(phase, participant, eliminated, health)
+    return phase == "round" and participant == true and eliminated ~= true
+        and type(health) == "number" and health > 0
+end
+
 -- Only meaningful grounded impulses emit a ground cue. Keep short-lived
 -- scuffs separate from persistent footsteps and impact decals.
 function LocomotionDynamics.groundCue(launch, skid, cut, tier, reduced, phase)

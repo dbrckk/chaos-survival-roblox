@@ -142,3 +142,27 @@ transparency, noncolliding properties and rejected invalid signatures.
 on rotated maps, footwork under simultaneous hazards, camera tilt, R6/R15
 character movement and mobile GPU/FPS at Low/Medium/High/ReduceMotion.
 CI is not evidence of Android performance or visual polish in Studio.
+
+## Sculpted footwork — slope alignment and contestant identity
+
+Launch/Pivot wedges and metallic Skid grooves now follow the actual raycast
+**floor normal** rather than a horizontal plane; their yaw rotates around
+the inclined surface up-axis. A deterministic basis helper rejects steep
+walls, missing normals or degenerate headings. Geometry remains anchored,
+noncolliding, shadowless and auto-cleaned within 0.56 seconds. No extra
+parts, emitters, raycasts or high-frequency loops were added.
+
+Local ground cues also require the server-owned **RoundParticipant=true**,
+**RoundEliminated~=true**, a living Humanoid and the round phase. This
+prevents late joiners or eliminated spectators from showing movement marks
+reserved for active survivors. Ordinary locomotion, camera, UI, hazard
+warnings, collision, speed and rewards are unchanged. Bots still follow
+their existing phase/range/cooldown policies, and Low/ReduceMotion emit no
+optional ground cues.
+
+**Engine regression coverage:** sloped basis normal/tangent, 3 styles x
+four High-tier parts, steep/invalid surfaces and active/spectator/life
+participation gates. **Physical acceptance required:** capture slanted
+Towers and Orbital ramps at Low/Medium/High; test joins, elimination,
+respawn, camera turns and 30-minute Android GPU/FPS/cleanup. No physical
+Studio/device result or FPS gain is claimed from CI alone.
