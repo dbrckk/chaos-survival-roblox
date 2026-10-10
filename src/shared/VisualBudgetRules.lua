@@ -8,6 +8,7 @@ VisualBudgetRules.LocalFolders = {
     "ArenaUnderstructureLocal",
     "ArenaHeroSceneryLocal",
     "ArenaSignatureLocal",
+    "AerialSurveyLocal",
     "ArenaEdgeProfileLocal",
     "ArenaServicePropsLocal",
     "ArenaNavigationLanguageLocal",

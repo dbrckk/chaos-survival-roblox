@@ -39,6 +39,10 @@ local FOLDERS = {
         LowDistance = 145,
         MediumDistance = 220,
     },
+    AerialSurveyLocal = {
+        LowDistance = 145,
+        MediumDistance = 215,
+    },
     ArenaMidgroundMassLocal = {
         LowDistance = 145,
         MediumDistance = 215,
