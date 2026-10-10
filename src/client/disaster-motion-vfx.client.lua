@@ -303,7 +303,8 @@ ensureRenderLoop = function()
                 continue
             end
             local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-            local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
+            local dt = task.wait(VfxQuality.decorativeInterval(tier.Name,
+                player:GetAttribute("ReduceMotion") == true))
             if currentPhase ~= "round" then continue end
 
             clock += dt

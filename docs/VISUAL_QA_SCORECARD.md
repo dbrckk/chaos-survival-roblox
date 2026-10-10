@@ -188,3 +188,25 @@ bounds, hysteresis, startup fallback, Low, ReduceMotion and distance rules.
 Streamed AI replacement, 30-minute Android memory/FPS/overdraw, and
 Low/Medium/High transitions on a densely populated round. No real-device
 performance improvement is claimed from code review or CI alone.
+
+## Disaster VFX — mobile decorative cadence and attached-effect accounting
+
+Two **cosmetic** disaster animation owners now use the shared decorative
+cadence instead of updating all quality tiers at 30 Hz: High 30 Hz,
+Medium 24 Hz, Low 15 Hz, and ReduceMotion at most 12 Hz. This changes only
+optional lava/freeze and arena shrink/blackout ornamentation, not the
+server-owned disaster timing, damage, hitboxes or authoritative warnings.
+No new parts, materials, emitters, shaders, paid assets or lights.
+
+The live `VisualBudgetRules.collect` audit also now counts client-authored
+`LavaGlowLocal` surface lights and `LavaEmbers`/`FreezeMist` particle
+emitters attached to server-owned `RoundLava`/`FreezeWarning` parts. It
+does not count those server parts as decorative geometry, and ignores other
+server-authored effects. This **improves measurement** of peak GPU load;
+collection is not an automatic emitter-kill mechanism or a measured FPS gain.
+
+**Engine regression coverage:** tier/reduced-motion cadence, exact
+attachment names and classes, exclusion of authoritative hazards, plus
+cleanup of counted effects. **Physical acceptance pending:** Freeze + Lava
+Double Chaos stress at Low/Medium/High/ReduceMotion, warning legibility,
+Android FPS/GPU/temperature, and repeated map changes and 30-minute soaks.

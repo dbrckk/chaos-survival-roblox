@@ -422,6 +422,54 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("counts client lava light and hazard-attached particles without server shell parts", function()
+        local root = Instance.new("Folder")
+        local lava = Instance.new("Part")
+        lava.Name = "RoundLava"
+        lava.Parent = root
+        local glow = Instance.new("SurfaceLight")
+        glow.Name = "LavaGlowLocal"
+        glow.Parent = lava
+        local heat = Instance.new("Attachment")
+        heat.Name = "LavaHeatLocal"
+        heat.Parent = lava
+        local embers = Instance.new("ParticleEmitter")
+        embers.Name = "LavaEmbers"
+        embers.Parent = heat
+        local freeze = Instance.new("Part")
+        freeze.Name = "FreezeWarning"
+        freeze.Parent = root
+        local mist = Instance.new("Attachment")
+        mist.Name = "FreezeMistLocal"
+        mist.Parent = freeze
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Name = "FreezeMist"
+        emitter.Parent = mist
+        -- Unrelated server-authored and wrongly parented objects do not count.
+        local serverLamp = Instance.new("SurfaceLight")
+        serverLamp.Name = "AuthoritativeHazardLight"
+        serverLamp.Parent = lava
+        local wrongType = Instance.new("Part")
+        wrongType.Name = "LavaGlowLocal"
+        wrongType.Parent = lava
+        local fake = Instance.new("Part")
+        fake.Name = "RoundLava"
+        fake.Parent = root
+        Instance.new("SurfaceLight").Parent = fake
+        local metrics, folders = VisualBudgetRules.collect(root)
+        expect(folders).toBe(0)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Lights).toBe(1)
+        expect(metrics.Effects).toBe(2)
+        glow:Destroy()
+        embers:Destroy()
+        emitter:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        root:Destroy()
+    end)
+
     it("counts attached local meteor trails even when meteor shells are server owned", function()
         local root = Instance.new("Folder")
         for i = 1, 6 do

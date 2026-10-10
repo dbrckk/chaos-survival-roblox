@@ -58,6 +58,23 @@ describe("Adaptive VFX quality", function()
         expect(medium.DecorUpdateInterval < low.DecorUpdateInterval).toBe(true)
     end)
 
+    it("throttles optional disaster decoration on mobile and ReduceMotion", function()
+        local q = VfxQuality
+        expect(q.decorativeInterval("High", false)).toBe(1 / 30)
+        expect(q.decorativeInterval("Medium", false)).toBe(1 / 24)
+        expect(q.decorativeInterval("Low", false)).toBe(1 / 15)
+        expect(q.decorativeInterval("High", true)).toBe(1 / 12)
+        expect(q.decorativeInterval("Medium", true)).toBe(1 / 12)
+        expect(q.decorativeInterval("Low", true)).toBe(1 / 12)
+        expect(q.decorativeInterval("Unknown", false)).toBe(1 / 30)
+        for _, name in ipairs({"Low", "Medium", "High"}) do
+            expect(q.decorativeInterval(name, false)
+                >= q.get(name).UpdateInterval).toBe(true)
+            expect(q.decorativeInterval(name, true)
+                >= q.decorativeInterval(name, false)).toBe(true)
+        end
+    end)
+
     it("exposes bounded quality scales", function()
         for _, tierName in ipairs({"High", "Medium", "Low"}) do
             local tier = VfxQuality.get(tierName)

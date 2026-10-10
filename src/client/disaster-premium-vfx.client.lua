@@ -265,7 +265,8 @@ ensureRenderLoop = function()
                 continue
             end
             local tier = quality()
-            local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
+            local dt = task.wait(VfxQuality.decorativeInterval(tier.Name,
+                player:GetAttribute("ReduceMotion") == true))
             if not lavaState and next(freezeStates) == nil then
                 continue
             end

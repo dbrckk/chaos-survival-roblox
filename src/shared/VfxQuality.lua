@@ -88,6 +88,14 @@ function VfxQuality.get(tier)
     return VfxQuality.Tiers[tier] or VfxQuality.Tiers.High
 end
 
+-- Hazard-only scenery pulses and decoration need less frequent refreshes
+-- than gameplay warnings or hit detection. Reduced motion conserves even
+-- more mobile update work without suppressing static hazard cues.
+function VfxQuality.decorativeInterval(tier, reducedMotion)
+    local interval = VfxQuality.get(tier).DecorUpdateInterval
+    return math.max(interval, reducedMotion == true and (1 / 12) or 0)
+end
+
 function VfxQuality.particleCount(tier, baseCount, minimum)
     local profile = VfxQuality.get(tier)
     local base = math.max(0, tonumber(baseCount) or 0)
