@@ -4,7 +4,8 @@ local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 
 local Kit = {}
-local VALID = {lava = true, meteor = true, tornado = true}
+local VALID = {lava = true, meteor = true, tornado = true,
+    gravity = true, fracture = true}
 local COUNTS = {Low = 2, Medium = 4, High = 6}
 
 function Kit.count(tier, reduced)
@@ -72,6 +73,52 @@ function Kit.recipe(kind, index, count, span, stage, tier)
                 or Enum.Material.SmoothPlastic,
             Transparency = tier == "Low" and 0.58 or 0.44,
             Duration = 0.52,
+        }
+    end
+
+    if kind == "gravity" then
+        -- Rising anti-gravity petals: flat wide fins that drift up and inward
+        -- as if the arena itself were releasing its gravitational pull.
+        local start = direction * (width * 0.29)
+            + Vector3.new(0, 0.46 + index * 0.08, 0)
+        local finish = direction * (width * 0.18)
+            + Vector3.new(0, 5.2 + stage * 2.0 + index * 0.18, 0)
+        return {
+            Kind = kind,
+            Name = "GravityClimaxLiftPetal",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(math.rad(-16),
+                yaw + side * math.rad(17), side * math.rad(9)),
+            Size = Vector3.new(0.70, 0.11, 2.6 + stage * 0.28),
+            GoalSize = Vector3.new(0.48, 0.07, 1.5 + stage * 0.14),
+            Material = tier == "High" and Enum.Material.Glass
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.60 or 0.46,
+            Duration = 0.57,
+        }
+    end
+
+    if kind == "fracture" then
+        -- Disappearing-platform fault teeth: angular raised fissures that
+        -- split OUTWARD rather than following the lift/spiral motion language.
+        local start = direction * (width * 0.075)
+            + Vector3.new(0, 0.19, 0)
+        local finish = direction * (width * (0.25 + stage * 0.013))
+            + Vector3.new(0, 0.37, 0)
+        return {
+            Kind = kind,
+            Name = "FractureClimaxFaultTooth",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(side * math.rad(7), yaw, 
+                side * math.rad(11)),
+            Size = Vector3.new(0.46, 0.16, 2.8 + stage * 0.24),
+            GoalSize = Vector3.new(0.27, 0.11, 4.2 + stage * 0.20),
+            Material = tier == "High" and Enum.Material.Metal
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.58 or 0.43,
+            Duration = 0.43,
         }
     end
 

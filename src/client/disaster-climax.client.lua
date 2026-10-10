@@ -114,64 +114,20 @@ local function playMeteor(profile, base, stage, tier, reduced)
         profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
+-- Each effect uses an arena-local authored 3D silhouette, not a plain bar.
+-- No new emitters, lights or server-side movement; same bounded part caps.
 local function playGravity(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 3, 5, 8)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local radius = span * 0.28
-        local p = makePart(
-            "GravityClimaxLift" .. i,
-            Vector3.new(0.16, 2.8, 0.16),
-            CFrame.new(center + Vector3.new(
-                math.cos(angle) * radius,
-                0,
-                math.sin(angle) * radius
-            )),
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.42
-        )
-        tweenOut(
-            p,
-            reduced and 0.26 or 0.62,
-            {
-                CFrame = p.CFrame * CFrame.new(0, 9 * scale, 0),
-                Size = Vector3.new(0.08, 5.5 * scale, 0.08),
-                Transparency = 1,
-            }
-        )
-    end
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
+    DisasterClimaxElementKit.emit(folder, "gravity", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playFracture(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.10, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 3, 5, 7)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local yaw = math.rad((i - 1) * (180 / count))
-        local p = makePart(
-            "FractureClimax" .. i,
-            Vector3.new(span * 0.36, 0.06, 0.14),
-            CFrame.new(center)
-                * CFrame.Angles(0, yaw, 0)
-                * CFrame.new((i % 2 == 0 and 1 or -1) * span * 0.08, 0, 0),
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.34
-        )
-        tweenOut(
-            p,
-            reduced and 0.22 or 0.46,
-            {
-                Size = Vector3.new(span * 0.56 * scale, 0.04, 0.06),
-                Transparency = 1,
-            }
-        )
-    end
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.10, 0)
+    DisasterClimaxElementKit.emit(folder, "fracture", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playTornado(profile, base, stage, tier, reduced)

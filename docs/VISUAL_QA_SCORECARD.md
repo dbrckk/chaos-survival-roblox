@@ -298,3 +298,28 @@ Engine coverage extends the existing visual spec to Tornado recipe
 determinism, geometry and deck orientation across all tiers and stages,
 plus stale callback cases. Actual Studio/mobile screenshot QA, Double
 Chaos fill-rate/FPS and 30-minute memory testing remain pending.
+
+## Gravity petals and collapsing-platform fault teeth — original climax 3D
+
+LowGravity and DisappearingPlatforms climaxes now have different, bespoke
+procedural silhouettes instead of uniform unrotated neon bars:
+**Gravity** creates thin anti-gravity lift petals rising and drifting
+inward from the arena; **Fracture** creates angular fault wedges spreading
+outward from the deck center. Both inherit the full pitched/rotated
+arena `Base.CFrame` and are visually distinct from Lava, Meteors and
+Tornado. High materials are restrained (Glass for gravity, Metal for
+fracture); lower tiers use SmoothPlastic to avoid excessive overdraw.
+All facets remain anchored, non-colliding, unshadowed and time-limited.
+
+Each event now costs **2 Low / 4 Medium / 6 High WedgeParts**, rather than
+the previous 3/5/8 gravity or 3/5/7 fracture bars. ReduceMotion creates
+only one nearly static, short-lived facet. There are no additional
+particles, lights, third-party assets, or changes to server-owned disaster
+damage, collision, movement, reward mechanics or audio.
+
+Engine regression tests cover the expanded five-type recipe family
+across stage 1–3 and graphics tiers, deterministic orientation, pitched
+deck positions, accessibility caps, material choices and malformed input.
+Physical acceptance remains: Studio visual QA on rotated arenas,
+Double Chaos mixed VFX screenshots, Android FPS/thermal profiling and
+longer session stability; no unmeasured FPS gain is claimed.
