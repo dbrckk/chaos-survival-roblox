@@ -1,7 +1,5 @@
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local DisasterClimax = require(ReplicatedStorage.Shared.DisasterClimax)
 local DisasterClimaxSignatureKit = require(script.Parent.DisasterClimaxSignatureKit)
@@ -25,77 +23,6 @@ local function arenaBase()
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
     return base and base:IsA("BasePart") and base or nil
-end
-
-local function makePart(name, size, cframe, color, transparency, shape)
-    local p = Instance.new("Part")
-    p.Name = name
-    p.Size = size
-    p.CFrame = cframe
-    p.Anchored = true
-    p.CanCollide = false
-    p.CanTouch = false
-    p.CanQuery = false
-    p.CastShadow = false
-    p.Material = Enum.Material.Neon
-    p.Color = color
-    p.Transparency = transparency or 0.35
-    if shape then
-        p.Shape = shape
-    end
-    p.Parent = folder
-    return p
-end
-
-local function tweenOut(part, duration, goal)
-    TweenService:Create(
-        part,
-        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        goal
-    ):Play()
-    Debris:AddItem(part, duration + 0.2)
-end
-
-local function lineBetween(name, from, to, width, color, transparency)
-    local delta = to - from
-    local length = math.max(0.1, delta.Magnitude)
-    local mid = from + delta * 0.5
-    return makePart(
-        name,
-        Vector3.new(width, width, length),
-        CFrame.lookAt(mid, to),
-        color,
-        transparency
-    )
-end
-
-local function ring(name, center, diameter, color, transparency)
-    return makePart(
-        name,
-        Vector3.new(0.055, diameter, diameter),
-        CFrame.new(center) * CFrame.Angles(0, 0, math.rad(90)),
-        color,
-        transparency,
-        Enum.PartType.Cylinder
-    )
-end
-
-local function stageScale(stage)
-    if stage >= 3 then
-        return 1.65
-    elseif stage == 2 then
-        return 1.30
-    end
-    return 1
-end
-
-local function countForTier(tier, low, medium, high)
-    if tier.Name == "Low" then
-        return low
-    elseif tier.Name == "Medium" then
-        return medium
-    end
-    return high
 end
 
 -- Original 3D silhouettes replace flat lava bars and meteor streaks.
@@ -160,71 +87,19 @@ local function playBomb(profile, base, stage, tier, reduced)
 end
 
 local function playSpeed(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.10, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 3, 5, 7)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local angle = math.rad((i - 1) * (180 / count))
-        local p = makePart(
-            "SpeedClimaxLane" .. i,
-            Vector3.new(span * 0.26, 0.055, 0.11),
-            CFrame.new(center) * CFrame.Angles(0, angle, 0),
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.32
-        )
-        tweenOut(
-            p,
-            reduced and 0.20 or 0.42,
-            {
-                CFrame = p.CFrame * CFrame.new(0, 0, -span * 0.20 * scale),
-                Size = Vector3.new(span * 0.42 * scale, 0.04, 0.06),
-                Transparency = 1,
-            }
-        )
-    end
+    -- Swept chevrons in the deck's local basis, bounded on every tier.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.10, 0)
+    DisasterClimaxElementKit.emit(folder, "speed", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playDarkness(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-
-    local p = ring(
-        "DarknessClimaxVoid",
-        center,
-        span * 0.96,
-        profile.Color,
-        0.72
-    )
-    tweenOut(
-        p,
-        reduced and 0.24 or 0.58,
-        {
-            Size = Vector3.new(
-                0.055,
-                span * 0.18 / scale,
-                span * 0.18 / scale
-            ),
-            Transparency = 1,
-        }
-    )
-
-    if stage >= 2 and tier.Name ~= "Low" then
-        local core = makePart(
-            "DarknessClimaxCore",
-            Vector3.new(0.35, 8 * scale, 0.35),
-            CFrame.new(center + Vector3.new(0, 4 * scale, 0)),
-            profile.Secondary,
-            0.60
-        )
-        tweenOut(
-            core,
-            reduced and 0.20 or 0.40,
-            {Transparency = 1, Size = Vector3.new(0.12, 13 * scale, 0.12)}
-        )
-    end
+    -- Folded eclipse shutters replace the arena-wide neon cylinder.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
+    DisasterClimaxElementKit.emit(folder, "darkness", deck,
+        math.max(base.Size.X, base.Size.Z), stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playShrink(profile, base, stage, tier, reduced)

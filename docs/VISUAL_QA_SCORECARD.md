@@ -323,3 +323,29 @@ deck positions, accessibility caps, material choices and malformed input.
 Physical acceptance remains: Studio visual QA on rotated arenas,
 Double Chaos mixed VFX screenshots, Android FPS/thermal profiling and
 longer session stability; no unmeasured FPS gain is claimed.
+
+## Speed Surge slipstream and Darkness eclipse sculptures
+
+Replaced the remaining **world-axis Speed Surge bars** and
+**arena-wide Darkness cylinder / light column** with two unique, bounded
+procedural 3D languages. Speed creates tangential slipstream chevrons
+travelling across the deck; Darkness lowers angular eclipse shutters
+inward toward the center. Both use the arena's full pitched and rotated
+`Base.CFrame` and leave gameplay warnings visible.
+No new textures, emitters, lights, collision geometry or server effects.
+
+Each climax uses **2 Low / 4 Medium / 6 High** short-lived WedgeParts,
+compared with the former 3/5/7 Speed parts and up to 2 large Darkness
+parts. ReduceMotion uses exactly **one** nearly static, translucent
+wedge for either effect. Low has no Neon/Glass overdraw; all parts
+remain anchored, non-colliding, non-queryable, unshadowed, and Debris-
+cleaned. Obsolete cylinder/beam helper code was removed from the
+climax controller.
+
+The existing engine spec now exercises seven original geometric
+silhouettes over all tiers/stages, deterministic positions, sloped
+arena transforms, reduced-motion placement and invalid input,
+including NaN/infinite spans. Physical QA is still required for
+Double Chaos warning legibility, rotated arena camera views,
+Android fill rate, thermals and 30-minute stability. No measured
+performance improvement is claimed.

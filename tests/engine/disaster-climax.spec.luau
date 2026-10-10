@@ -262,7 +262,7 @@ describe("Procedural volcanic and meteor climax sculpture", function()
             expect(count).toBe(tier == "Low" and 2 or
                 (tier == "Medium" and 4 or 6))
             expect(Elements.count(tier, true)).toBe(1)
-            for _, kind in ipairs({"lava", "meteor", "tornado", "gravity", "fracture"}) do
+            for _, kind in ipairs({"lava", "meteor", "tornado", "gravity", "fracture", "speed", "darkness"}) do
                 for stage = 1, 3 do
                     for i = 1, count do
                         local s = Elements.recipe(kind, i, count, 120, stage, tier)
@@ -289,12 +289,23 @@ describe("Procedural volcanic and meteor climax sculpture", function()
                             expect(s.Finish.Y > s.Start.Y).toBe(true)
                             expect(s.Name).toBe("GravityClimaxLiftPetal")
                             expect(s.Size.Y < s.Size.Z).toBe(true)
-                        else
+                        elseif kind == "fracture" then
                             expect(s.Finish.Y > s.Start.Y).toBe(true)
                             expect(Vector2.new(s.Finish.X, s.Finish.Z).Magnitude
                                 > Vector2.new(s.Start.X, s.Start.Z).Magnitude)
                                 .toBe(true)
                             expect(s.Name).toBe("FractureClimaxFaultTooth")
+                        elseif kind == "speed" then
+                            expect(math.abs(s.Finish.Y - s.Start.Y) < 0.01)
+                                .toBe(true)
+                            expect((s.Finish - s.Start).Magnitude > 2).toBe(true)
+                            expect(s.Name).toBe("SpeedClimaxSlipstreamChevron")
+                        else
+                            expect(s.Finish.Y < s.Start.Y).toBe(true)
+                            expect(Vector2.new(s.Finish.X, s.Finish.Z).Magnitude
+                                < Vector2.new(s.Start.X, s.Start.Z).Magnitude)
+                                .toBe(true)
+                            expect(s.Name).toBe("DarknessClimaxEclipseShutter")
                         end
                         if tier == "Low" then
                             expect(s.Material).toBe(Enum.Material.SmoothPlastic)
@@ -317,6 +328,10 @@ describe("Procedural volcanic and meteor climax sculpture", function()
         expect(Elements.recipe("fracture", 7, 6, 120, 2, "High") == nil).toBe(true)
         expect(Elements.recipe("gravity", 1, 4, -4, 2, "High") == nil).toBe(true)
         expect(Elements.recipe("fracture", 1, 4, 120, 4, "High") == nil).toBe(true)
+        expect(Elements.recipe("speed", 1, 4, 0/0, 2, "High") == nil).toBe(true)
+        expect(Elements.recipe("darkness", 1, 4, math.huge, 2, "High") == nil).toBe(true)
+        expect(Elements.recipe("speed", 1, 4, 120, 0, "High") == nil).toBe(true)
+        expect(Elements.recipe("darkness", 1, 4, 120, 2, "Unknown") == nil).toBe(true)
     end)
 
     it("anchors one-shot wedges to pitched decks and respects ReduceMotion", function()
@@ -325,7 +340,7 @@ describe("Procedural volcanic and meteor climax sculpture", function()
             * CFrame.Angles(math.rad(13), math.rad(37), math.rad(-8))
         local primary = Color3.fromRGB(255, 87, 40)
         local secondary = Color3.fromRGB(255, 209, 110)
-        for _, kind in ipairs({"lava", "meteor", "tornado", "gravity", "fracture"}) do
+        for _, kind in ipairs({"lava", "meteor", "tornado", "gravity", "fracture", "speed", "darkness"}) do
             for _, tier in ipairs({"Low", "Medium", "High"}) do
                 local count = Elements.count(tier, false)
                 local pieces = Elements.emit(folder, kind, deck,

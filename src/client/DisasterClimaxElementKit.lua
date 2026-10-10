@@ -1,11 +1,11 @@
--- Authored procedural 3D climax signatures: volcanic rising fins and
--- meteor impact shards. Visual only; no hitboxes, lights, emitters or assets.
+-- Authored procedural 3D climax silhouettes for seven distinct hazards.
+-- Client-only visuals; no hitboxes, lights, emitters or external assets.
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 
 local Kit = {}
 local VALID = {lava = true, meteor = true, tornado = true,
-    gravity = true, fracture = true}
+    gravity = true, fracture = true, speed = true, darkness = true}
 local COUNTS = {Low = 2, Medium = 4, High = 6}
 
 function Kit.count(tier, reduced)
@@ -18,6 +18,7 @@ function Kit.recipe(kind, index, count, span, stage, tier)
         or type(count) ~= "number" or count % 1 ~= 0 or count < 1
         or count > 6 or index < 1 or index > count
         or type(span) ~= "number" or span <= 0
+        or span ~= span or span == math.huge
         or type(stage) ~= "number" or stage % 1 ~= 0
         or stage < 1 or stage > 3 or not COUNTS[tier] then
         return nil
@@ -119,6 +120,52 @@ function Kit.recipe(kind, index, count, span, stage, tier)
                 or Enum.Material.SmoothPlastic,
             Transparency = tier == "Low" and 0.58 or 0.43,
             Duration = 0.43,
+        }
+    end
+
+    if kind == "speed" then
+        -- Tangential acceleration chevrons sweep across the local deck.
+        local tangent = Vector3.new(-direction.Z, 0, direction.X)
+        local start = direction * (width * 0.18)
+            - tangent * (width * 0.13) + Vector3.new(0, 0.24, 0)
+        local finish = direction * (width * 0.18)
+            + tangent * (width * (0.14 + stage * 0.02))
+            + Vector3.new(0, 0.24, 0)
+        return {
+            Kind = kind,
+            Name = "SpeedClimaxSlipstreamChevron",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(math.rad(-8), yaw + math.pi * 0.5,
+                side * math.rad(12)),
+            Size = Vector3.new(0.38, 0.13, 2.9 + stage * 0.32),
+            GoalSize = Vector3.new(0.14, 0.08, 1.4 + stage * 0.18),
+            Material = tier == "High" and Enum.Material.Neon
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.64 or 0.48,
+            Duration = 0.43,
+        }
+    end
+
+    if kind == "darkness" then
+        -- Inward folding eclipse shutters, no arena-wide opaque disc.
+        local start = direction * (width * 0.32)
+            + Vector3.new(0, 3.0 + stage * 0.50 + index * 0.12, 0)
+        local finish = direction * (width * 0.13)
+            + Vector3.new(0, 1.0 + stage * 0.18, 0)
+        return {
+            Kind = kind,
+            Name = "DarknessClimaxEclipseShutter",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(math.rad(26),
+                yaw + side * 0.28, side * math.rad(21)),
+            Size = Vector3.new(0.46, 2.2 + stage * 0.24, 0.30),
+            GoalSize = Vector3.new(0.24, 1.0 + stage * 0.12, 0.15),
+            Material = tier == "High" and Enum.Material.Glass
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.66 or 0.53,
+            Duration = 0.52,
         }
     end
 
