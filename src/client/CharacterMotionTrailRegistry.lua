@@ -3,6 +3,7 @@ local Registry = {}
 function Registry.start(players)
     local tracked = setmetatable({}, {__mode = "k"})
     local pending = setmetatable({}, {__mode = "k"})
+    local nextOrder = 0
 
     local function stop(model)
         if pending[model] then
@@ -40,7 +41,8 @@ function Registry.start(players)
             pending[model]:Disconnect()
             pending[model] = nil
         end
-        local entry = {humanoid = humanoid, root = root, airborne = false}
+        nextOrder += 1
+        local entry = {humanoid = humanoid, root = root, airborne = false, order = nextOrder}
         tracked[model] = entry
         entry.stateChanged = humanoid.StateChanged:Connect(function(_, nextState)
             if nextState == Enum.HumanoidStateType.Jumping

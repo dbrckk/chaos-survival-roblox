@@ -135,6 +135,50 @@ describe("Human momentum ribbon GPU and accessibility policy", function()
         expect(lowLife).toBe(0)
         expect(lowWidth).toBe(0)
     end)
+    it("caps remote human ribbons with nearest-first and stable selection", function()
+        local r = TrailRules
+        expect(r.remoteBudget("Low")).toBe(0)
+        expect(r.remoteBudget("Medium")).toBe(4)
+        expect(r.remoteBudget("High")).toBe(8)
+        expect(r.remoteBudget("Unknown")).toBe(0)
+
+        local candidates = {}
+        for i = 1, 10 do
+            candidates[i] = {order = i, distance = i * 5, trail = {Enabled = false}}
+        end
+        local selected = {}
+        r.selectRemote(candidates, "Medium", selected)
+        local count = 0
+        for _, state in ipairs(candidates) do
+            if selected[state] then count += 1 end
+        end
+        expect(count).toBe(4)
+        expect(selected[candidates[1]]).toBe(true)
+        expect(selected[candidates[5]]).toBe(nil)
+
+        r.selectRemote(candidates, "High", selected)
+        count = 0
+        for _, state in ipairs(candidates) do
+            if selected[state] then count += 1 end
+        end
+        expect(count).toBe(8)
+        r.selectRemote(candidates, "Low", selected)
+        expect(next(selected)).toBe(nil)
+    end)
+
+    it("keeps active remote trails stable within a three-stud tie window", function()
+        local active = {order = 2, distance = 21, trail = {Enabled = true}}
+        local newcomer = {order = 1, distance = 19, trail = {Enabled = false}}
+        local tie = {order = 3, distance = 19, trail = {Enabled = false}}
+        local candidates = {newcomer, tie, active}
+        local selected = {}
+        TrailRules.selectRemote(candidates, "Medium", selected)
+        expect(candidates[1]).toBe(active)
+        expect(candidates[2]).toBe(newcomer)
+        expect(candidates[3]).toBe(tie)
+        expect(selected[active]).toBe(true)
+    end)
+
 end)
 
 return nil

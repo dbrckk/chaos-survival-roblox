@@ -33,3 +33,20 @@ switch Low/Medium/High and ReduceMotion while sprinting; inspect humanoid
 root trail counts, Final Rush and elimination cleanup, and remote culling.
 Profile a crowded round on a low-end Android device for FPS, memory, GPU
 overdraw and 30-minute stability. Engine specs check policy, not real FPS.
+
+## Crowded-round remote ribbon budget
+
+Only the nearest **four** remote humans on Medium or **eight** on High
+can render human momentum ribbons simultaneously; Low and ReduceMotion
+remain fully disabled. The local player's ribbon is never removed by
+the remote budget. Existing visible ribbons get a 3-stud priority bias
+to reduce popping as nearby players trade distance. Reusable candidate
+and selection tables avoid allocations in the decorative update loop.
+This is cosmetic only: movement, damage, collisions, rewards and
+server-authoritative bot visuals are unchanged.
+
+**Verification:** engine rules specs cover budget, nearest ordering,
+selection reset and tie stability. On an authenticated Android/Studio
+session, compare crowded rounds at each tier, test rapid camera turns,
+respawns, ReduceMotion toggles and GPU overdraw. No measured FPS gain
+is claimed until physical profiling.

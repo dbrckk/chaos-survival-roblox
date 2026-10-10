@@ -22,4 +22,31 @@ function Rules.style(tier)
     return 0, 0
 end
 
+-- A hard limit on simultaneously rendered remote human trails prevents
+-- crowded rounds from multiplying translucent GPU overdraw.
+function Rules.remoteBudget(tier)
+    if tier == "High" then return 8 end
+    if tier == "Medium" then return 4 end
+    return 0
+end
+
+-- Reuse the caller's arrays/maps to avoid per-frame allocations.
+-- Existing trails receive a small distance bias to prevent flicker
+-- when two players trade places at the visibility cutoff.
+function Rules.selectRemote(candidates, tier, selected)
+    table.clear(selected)
+    local budget = Rules.remoteBudget(tier)
+    if budget == 0 then return selected end
+    table.sort(candidates, function(a, b)
+        local da = a.distance - ((a.trail and a.trail.Enabled) and 3 or 0)
+        local db = b.distance - ((b.trail and b.trail.Enabled) and 3 or 0)
+        if da == db then return a.order < b.order end
+        return da < db
+    end)
+    for i = 1, math.min(budget, #candidates) do
+        selected[candidates[i]] = true
+    end
+    return selected
+end
+
 return Rules
