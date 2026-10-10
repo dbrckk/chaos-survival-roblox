@@ -210,3 +210,14 @@ attachment names and classes, exclusion of authoritative hazards, plus
 cleanup of counted effects. **Physical acceptance pending:** Freeze + Lava
 Double Chaos stress at Low/Medium/High/ReduceMotion, warning legibility,
 Android FPS/GPU/temperature, and repeated map changes and 30-minute soaks.
+
+## CI regression: viewport source-path compatibility
+
+The core_a engine failure at `83f1b5e` was traced to an unguarded
+`script.Parent` import in pure `CharacterMotionTrailRules` under Lest.
+Human and bot client controllers now both import `VisualViewportRules`
+directly; `CharacterMotionTrailRules` stays dependency-free for source-path
+engine tests. Existing 10%/18% viewport margins and Low/Medium/High,
+ReduceMotion, camera depth and GPU budgets are unchanged. Engine specs
+continue testing camera edges and load the human policy without a Roblox
+ModuleScript instance. Exact-head Open Cloud validation remains required.

@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Quality = require(ReplicatedStorage.Shared.VfxQuality)
 local Rules = require(ReplicatedStorage.Shared.CharacterMotionTrailRules)
+local Viewport = require(ReplicatedStorage.Shared.VisualViewportRules)
 local Builder = require(script.Parent.CharacterMotionTrailBuilder)
 local Registry = require(script.Parent.CharacterMotionTrailRegistry)
 local localPlayer = Players.LocalPlayer
@@ -61,7 +62,7 @@ task.spawn(function()
                 if visible and camera and model ~= localPlayer.Character then
                     local projected = camera:WorldToViewportPoint(root.Position)
                     local viewport = camera.ViewportSize
-                    visible = Rules.inViewport(projected.X, projected.Y,
+                    visible = Viewport.contains(projected.X, projected.Y,
                         projected.Z, viewport.X, viewport.Y, retained)
                 end
             end

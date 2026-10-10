@@ -1,7 +1,6 @@
 -- Cosmetic human momentum trail budget; never affects movement or damage.
 -- Distances are in studs; tier caps prevent unnecessary GPU trail rendering.
 local Rules = {}
-local Viewport = require(script.Parent.VisualViewportRules)
 
 function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, distance, wasVisible)
     if phase ~= "round" or finalRush == true or airborne == true
@@ -20,9 +19,7 @@ function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, di
         and (tonumber(distance) or math.huge) <= limit
 end
 
--- Keep the old API for existing rules/tests; camera math is now shared
--- with AI survivor ribbons so the two visual owners never diverge.
-Rules.inViewport = Viewport.contains
+-- Pure human trail rules are loadable by Lest via source path without script.Parent.
 
 -- Spectators and eliminated players must not show active-contestant momentum.
 function Rules.humanEligible(participant, eliminated)
