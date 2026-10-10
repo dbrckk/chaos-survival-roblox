@@ -181,4 +181,53 @@ describe("Human momentum ribbon GPU and accessibility policy", function()
 
 end)
 
+describe("Human ribbon attachment lifecycle", function()
+    local Builder = require("../../src/client/CharacterMotionTrailBuilder")
+
+    it("reuses a single trail and its attachments across repeated ensure calls", function()
+        local root = Instance.new("Part")
+        local accent = Color3.fromRGB(90, 190, 255)
+        local trail = Builder.ensure(root, accent)
+        expect(Builder.ensure(root, accent)).toBe(trail)
+        local attachments, trails = 0, 0
+        for _, child in ipairs(root:GetChildren()) do
+            if child:IsA("Attachment") then attachments += 1 end
+            if child:IsA("Trail") then trails += 1 end
+        end
+        expect(attachments).toBe(2)
+        expect(trails).toBe(1)
+        expect(trail.Enabled).toBe(false)
+        root:Destroy()
+    end)
+
+    it("rebuilds a deleted trail without multiplying attachments", function()
+        local root = Instance.new("Part")
+        local accent = Color3.fromRGB(90, 190, 255)
+        local first = Builder.ensure(root, accent)
+        local left, right = first.Attachment0, first.Attachment1
+        first:Destroy()
+        local rebuilt = Builder.ensure(root, accent)
+        expect(rebuilt ~= first).toBe(true)
+        expect(rebuilt.Attachment0).toBe(left)
+        expect(rebuilt.Attachment1).toBe(right)
+        expect(#root:GetChildren()).toBe(3)
+        root:Destroy()
+    end)
+
+    it("repairs an orphaned attachment on the existing trail", function()
+        local root = Instance.new("Part")
+        local accent = Color3.fromRGB(90, 190, 255)
+        local trail = Builder.ensure(root, accent)
+        local missing = trail.Attachment0
+        local right = trail.Attachment1
+        missing:Destroy()
+        expect(Builder.ensure(root, accent)).toBe(trail)
+        expect(trail.Attachment0 ~= missing).toBe(true)
+        expect(trail.Attachment0.Parent).toBe(root)
+        expect(trail.Attachment1).toBe(right)
+        expect(#root:GetChildren()).toBe(3)
+        root:Destroy()
+    end)
+end)
+
 return nil

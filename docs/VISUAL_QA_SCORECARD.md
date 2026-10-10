@@ -50,3 +50,17 @@ selection reset and tie stability. On an authenticated Android/Studio
 session, compare crowded rounds at each tier, test rapid camera turns,
 respawns, ReduceMotion toggles and GPU overdraw. No measured FPS gain
 is claimed until physical profiling.
+
+## Human ribbon rebuild safety — lifecycle regression
+
+`CharacterMotionTrailBuilder.ensure` now reuses the two authored root
+attachments if the Trail is externally deleted, and reconnects an existing
+Trail if either attachment disappears during a streamed-rig transition.
+This prevents duplicate attachment accumulation during cosmetic recreation;
+there are no new parts, sounds, lights, or motion settings. Low/Medium/High,
+ReduceMotion, remote ribbon caps and gameplay authority are unchanged.
+
+**Engine coverage:** create twice, destroy/rebuild the Trail, and destroy/
+repair one attachment. **Physical follow-up:** verify 2 attachments and at
+most 1 human ribbon per root after repeated respawns and long Android rounds.
+The engine test is not evidence of real-device FPS or GPU behavior.
