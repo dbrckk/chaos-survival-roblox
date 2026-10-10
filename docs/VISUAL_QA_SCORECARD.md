@@ -64,3 +64,21 @@ ReduceMotion, remote ribbon caps and gameplay authority are unchanged.
 repair one attachment. **Physical follow-up:** verify 2 attachments and at
 most 1 human ribbon per root after repeated respawns and long Android rounds.
 The engine test is not evidence of real-device FPS or GPU behavior.
+
+## Human ribbon motion hysteresis and live identity
+
+The sprint ribbon now uses a 0.82 speed-ratio entry threshold and a
+0.76 exit threshold for an already-visible ribbon. Camera culling retains
+the previous ribbon for at most 3 additional studs (Medium 63 / High 93).
+This reduces boundary flicker and repeated segment startup while preserving
+the four/eight remote-ribbon GPU caps. Phase changes, Final Rush, airborne
+states, Low and ReduceMotion always disable the effect immediately on the
+next decorative update. A changed `ChaosAccent` recolors the **existing**
+ribbon once, without adding attachments, trails, particles or lights.
+
+**Automated evidence:** the existing character-polish engine spec checks
+both hysteresis boundaries, all mandatory disable conditions, accent
+recoloring and unchanged object count. **Physical QA still required:**
+camera oscillation near 60/90 studs, sprint-stop jitter, changing accents
+mid-round, repeated respawn, crowded Android GPU/FPS and long-session
+cleanup. No real-device performance improvement is claimed.

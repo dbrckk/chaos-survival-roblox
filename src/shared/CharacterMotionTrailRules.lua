@@ -2,14 +2,20 @@
 -- Distances are in studs; tier caps prevent unnecessary GPU trail rendering.
 local Rules = {}
 
-function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, distance)
+function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, distance, wasVisible)
     if phase ~= "round" or finalRush == true or airborne == true
         or reduceMotion == true or (tier ~= "Medium" and tier ~= "High")
     then
         return false
     end
-    local limit = tier == "High" and 90 or 60
-    return (tonumber(ratio) or 0) > 0.82
+    -- Hysteresis avoids rapidly recreating translucent segments when
+    -- velocity jitters near sprint speed or the camera crosses a cull edge.
+    -- A previously visible ribbon may persist for 3 more studs, but never
+    -- bypasses phase, airborne, Low, or ReduceMotion restrictions.
+    local retained = wasVisible == true
+    local limit = (tier == "High" and 90 or 60) + (retained and 3 or 0)
+    local threshold = retained and 0.76 or 0.82
+    return (tonumber(ratio) or 0) > threshold
         and (tonumber(distance) or math.huge) <= limit
 end
 

@@ -50,7 +50,9 @@ task.spawn(function()
                 distance = model == localPlayer.Character and 0
                     or (viewer and (root.Position - viewer).Magnitude or math.huge)
                 visible = Rules.visible(phase, finalRush, state.airborne,
-                    ratio, tier.Name, reduceMotion, distance)
+                    ratio, tier.Name, reduceMotion, distance,
+                    state.trail ~= nil and state.trail.Parent ~= nil
+                        and state.trail.Enabled == true)
             end
             state.eligible = visible
             if visible and model ~= localPlayer.Character then
@@ -63,13 +65,21 @@ task.spawn(function()
         for model, state in pairs(tracked) do
             local visible = state.eligible
                 and (model == localPlayer.Character or selectedRemote[state] == true)
-            if visible and (not state.trail or not state.trail.Parent) then
+            if visible then
                 local color = model:GetAttribute("ChaosAccent")
                 if typeof(color) ~= "Color3" then
                     color = Color3.fromRGB(90, 190, 255)
                 end
-                state.trail = Builder.ensure(state.root, color)
-                state.appliedTier = nil
+                if not state.trail or not state.trail.Parent then
+                    state.trail = Builder.ensure(state.root, color)
+                    state.appliedTier = nil
+                    state.appliedAccent = color
+                elseif state.appliedAccent ~= color then
+                    -- Cosmetics can change during a round; recolor the same
+                    -- ribbon only on accent changes, never on every frame.
+                    Builder.setAccent(state.trail, color)
+                    state.appliedAccent = color
+                end
             end
             local trail = state.trail
             if trail and trail.Parent then
