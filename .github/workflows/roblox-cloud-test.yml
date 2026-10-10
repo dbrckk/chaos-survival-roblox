@@ -113,6 +113,7 @@ jobs:
             "tests/engine/surface-audio-rules.spec.luau",
             "tests/engine/ui-responsive.spec.luau",
             "tests/engine/vfx-quality.spec.luau",
+            "tests/engine/aerial-survey.spec.luau",
             "tests/engine/visual-budget-rules.spec.luau",
             "tests/engine/weekly-challenges.spec.luau",
             "tests/engine/world-depth-rules.spec.luau",
