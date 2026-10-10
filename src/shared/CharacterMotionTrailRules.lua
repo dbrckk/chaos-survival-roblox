@@ -1,4 +1,5 @@
 -- Cosmetic human momentum trail budget; never affects movement or damage.
+-- Distances are in studs; tier caps prevent unnecessary GPU trail rendering.
 local Rules = {}
 
 function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, distance)
