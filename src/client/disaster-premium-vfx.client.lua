@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
+local DisasterCosmeticRules = require(ReplicatedStorage.Shared.DisasterCosmeticRules)
 
 local player = Players.LocalPlayer
 local localFolder = Instance.new("Folder")
@@ -47,12 +48,21 @@ local function clearLava()
 end
 
 local function bindLava(lava)
-    clearLava()
-    if not lava:IsA("BasePart") then
+    if not lava:IsA("BasePart") then return end
+    local tier = quality()
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    if DisasterCosmeticRules.reusableLava(lavaState, lava) then
+        -- Reconfigure existing GPU instances instead of recreating them
+        -- when accessibility or tier changes during an active hazard.
+        local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced)
+        if lavaState.embers.Rate ~= rate then lavaState.embers.Rate = rate end
+        lavaState.light.Range = 20 + 8 * tier.Scale
+        lavaState.light.Brightness = 1.25 * tier.Scale
+        lavaState.surface.Transparency = tier.Name == "Low" and 0.38 or 0.24
         return
     end
 
-    local tier = quality()
+    clearLava()
     local instances = {}
 
     local surface = localPart(
@@ -74,7 +84,7 @@ local function bindLava(lava)
 
     local embers = Instance.new("ParticleEmitter")
     embers.Name = "LavaEmbers"
-    embers.Rate = 10 * tier.ParticleScale
+    embers.Rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced)
     embers.Lifetime = NumberRange.new(0.7, 1.5)
     embers.Speed = NumberRange.new(2.5, 6.5)
     embers.Acceleration = Vector3.new(0, 4.5, 0)
@@ -176,7 +186,7 @@ local function bindFreeze(warning)
 
     local mist = Instance.new("ParticleEmitter")
     mist.Name = "FreezeMist"
-    mist.Rate = 10 * tier.ParticleScale
+    mist.Rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
     mist.Lifetime = NumberRange.new(0.45, 0.9)
     mist.Speed = NumberRange.new(0.8, 2)
     mist.SpreadAngle = Vector2.new(180, 180)
@@ -296,7 +306,10 @@ ensureRenderLoop = function()
             surface.Transparency = 0.22 + pulse * (reduceMotion and 0.05 or 0.16)
         end
         if lavaState.embers and lavaState.embers.Parent then
-            lavaState.embers.Rate = 10 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
+            local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduceMotion)
+            if lavaState.embers.Rate ~= rate then
+                lavaState.embers.Rate = rate
+            end
         end
         if lavaState.light and lavaState.light.Parent then
             lavaState.light.Brightness = (
@@ -332,8 +345,10 @@ ensureRenderLoop = function()
         end
 
         if state.mist and state.mist.Parent then
-            state.mist.Rate = reduceMotion and 0
-                or (8 * tier.ParticleScale)
+            local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduceMotion)
+            if state.mist.Rate ~= rate then
+                state.mist.Rate = rate
+            end
         end
     end
         end

@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VfxQuality = require("../../src/shared/VfxQuality")
+local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
 
 describe("Adaptive VFX quality", function()
     it("starts touch devices conservatively without capping capable hardware", function()
@@ -73,6 +74,49 @@ describe("Adaptive VFX quality", function()
             expect(q.decorativeInterval(name, true)
                 >= q.decorativeInterval(name, false)).toBe(true)
         end
+    end)
+
+    it("reuses intact lava decoration but repairs missing cosmetic children", function()
+        local rules = DisasterCosmeticRules
+        local root = Instance.new("Folder")
+        local lava = Instance.new("Part")
+        lava.Parent = root
+        local surface = Instance.new("Part")
+        surface.Parent = root
+        local attachment = Instance.new("Attachment")
+        attachment.Parent = lava
+        local embers = Instance.new("ParticleEmitter")
+        embers.Parent = attachment
+        local light = Instance.new("SurfaceLight")
+        light.Parent = lava
+        local state = {lava = lava, surface = surface, embers = embers, light = light}
+        expect(rules.reusableLava(state, lava)).toBe(true)
+        local otherLava = Instance.new("Part")
+        expect(rules.reusableLava(state, otherLava)).toBe(false)
+        expect(rules.reusableLava(nil, lava)).toBe(false)
+        expect(rules.reusableLava(state, nil)).toBe(false)
+        embers:Destroy()
+        expect(rules.reusableLava(state, lava)).toBe(false)
+        local replacement = Instance.new("ParticleEmitter")
+        replacement.Parent = attachment
+        state.embers = replacement
+        expect(rules.reusableLava(state, lava)).toBe(true)
+        surface:Destroy()
+        expect(rules.reusableLava(state, lava)).toBe(false)
+        otherLava:Destroy()
+        root:Destroy()
+    end)
+
+    it("scales cosmetic lava and freeze particles from first render", function()
+        local rules = DisasterCosmeticRules
+        expect(rules.lavaEmberRate(1, false)).toBe(10)
+        expect(math.abs(rules.lavaEmberRate(0.72, false) - 7.2) < 0.001).toBe(true)
+        expect(math.abs(rules.lavaEmberRate(0.45, true) - 1.575) < 0.001).toBe(true)
+        expect(rules.lavaEmberRate(nil, false)).toBe(0)
+        expect(rules.freezeMistRate(1, false)).toBe(8)
+        expect(math.abs(rules.freezeMistRate(0.72, false) - 5.76) < 0.001).toBe(true)
+        expect(rules.freezeMistRate(1, true)).toBe(0)
+        expect(rules.freezeMistRate(nil, false)).toBe(0)
     end)
 
     it("exposes bounded quality scales", function()

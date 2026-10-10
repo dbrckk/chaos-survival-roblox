@@ -221,3 +221,20 @@ engine tests. Existing 10%/18% viewport margins and Low/Medium/High,
 ReduceMotion, camera depth and GPU budgets are unchanged. Engine specs
 continue testing camera edges and load the human policy without a Roblox
 ModuleScript instance. Exact-head Open Cloud validation remains required.
+
+## Lava cosmetic VFX reuse and immediate ReduceMotion policy
+
+Graphics-tier and ReduceMotion switches now reuse an intact lava overlay,
+ember emitter and SurfaceLight, changing visual properties in place
+instead of destroying/recreating GPU instances. Missing children or
+a replacement lava host still trigger full reconstruction. Optional
+freeze mist begins immediately with the correct tier rate, including
+zero on ReduceMotion, instead of emitting before the first decorative
+update. Unchanged particle rates are no longer rewritten every tick.
+
+**Engine regression coverage:** intact/replaced/destroyed lava hosts and
+children, scaled emission rates, reduced-motion freeze silence. This is
+purely cosmetic: server damage, warnings, phase timing, collisions and
+Low/Medium/High visual caps are preserved. Device QA is still needed
+for rapid setting switches, respawn/map rotations, Double Chaos and
+30-minute Android GPU/FPS/memory stability.
