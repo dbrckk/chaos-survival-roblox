@@ -48,9 +48,12 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         local base = Instance.new("Part")
         base.Size = Vector3.new(100, 2, 100)
         base.Parent = workspace
+        local world = Instance.new("Folder")
+        world.Name = "AerialSurveyTestWorld"
+        world.Parent = workspace
         local parent = Instance.new("Folder")
-        parent.Parent = workspace
         parent.Name = "AerialSurveyLocal"
+        parent.Parent = world
         for _, tier in ipairs({"Low", "Medium", "High"}) do
             parent:ClearAllChildren()
             local fleet = Kit.build(parent, base, "Towers", tier, theme)
@@ -79,13 +82,13 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
             Kit.update(fleet, 18, "round", true,
                 Color3.fromRGB(255, 80, 40), true)
             expect((first.sections[1].part.Position - before).Magnitude < 0.01).toBe(true)
-            local metrics, audited = VisualBudget.collect(parent)
+            local metrics, audited = VisualBudget.collect(world)
             expect(audited).toBe(1)
             expect(metrics.Parts).toBe(count)
             expect(metrics.Lights <= 3).toBe(true)
             expect(metrics.Effects <= 3).toBe(true)
         end
-        parent:Destroy()
+        world:Destroy()
         base:Destroy()
     end)
 

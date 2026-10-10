@@ -1,7 +1,12 @@
 -- Authored, stylized rescue/survey drones: faceted wings, twin turbines,
 -- cockpit glass, warning beacons, and animated rotor vanes.
 -- All elements are client-local and have NO collision, touch or query.
-local AerialSurveyRules = require(game:GetService("ReplicatedStorage").Shared.AerialSurveyRules)
+-- Open Cloud source tests run before new Shared modules are published.
+local replicated = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local inPlace = replicated and replicated:FindFirstChild("AerialSurveyRules")
+local AerialSurveyRules = if inPlace
+    then require(inPlace)
+    else require("../shared/AerialSurveyRules")
 local AerialSurveyKit = {}
 
 local function piece(drone, name, size, localFrame, color, material, alpha, className, role)
