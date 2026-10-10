@@ -120,3 +120,25 @@ survivors, check edges on narrow Android portrait/landscape screens, observe
 spectator camera changes, repeat respawns and tier toggles, and profile GPU
 fill/FPS and 30-minute stability. Projection reduces *eligible off-screen*
 ribbons but is not a wall-occlusion test or measured Android improvement.
+
+## Character footwork — directional sculpted 3D signatures
+
+The existing short-lived locomotion cues now use authored shapes rather
+than three recolored flat neon strips: **Launch** creates paired forward
+thrust wedges, **Pivot** creates radial counter-steer wedge fins, and
+**Skid** leaves low industrial metal braking grooves. Their opposing
+rotations and offsets make motion legible even without relying on color.
+High adds a restrained Neon material on only the first pair of wedge
+fins; Medium is non-Neon, and Low/ReduceMotion keep their existing zero
+ground-cue policy. Every cue stays within the pre-existing **2 Medium /
+4 High parts**, **0.56-second cleanup**, and exactly one tween per part.
+There are no meshes, external assets, new lights, collision, shadow,
+humanoid/physics, camera, damage or movement changes.
+
+**Automated evidence:** the existing body-motion engine spec validates
+each cue's actual instance class, material, piece count, dimensions,
+transparency, noncolliding properties and rejected invalid signatures.
+**Physical acceptance pending:** verify both feet and surface readability
+on rotated maps, footwork under simultaneous hazards, camera tilt, R6/R15
+character movement and mobile GPU/FPS at Low/Medium/High/ReduceMotion.
+CI is not evidence of Android performance or visual polish in Studio.

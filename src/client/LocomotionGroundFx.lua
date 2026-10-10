@@ -17,6 +17,60 @@ local COLORS = {
     Pivot = Color3.fromRGB(187, 105, 255),
 }
 
+-- Each cue has its own 3D silhouette rather than recolored flat strips.
+-- This rule is deterministic and retains the existing 2/4-piece budget.
+function GroundFx.signature(kind, index, strength, tier)
+    if COLORS[kind] == nil or (tier ~= "High" and tier ~= "Medium")
+        or type(index) ~= "number" or index % 1 ~= 0 or index < 1
+        or index > (tier == "High" and 4 or 2)
+    then
+        return nil
+    end
+
+    local side = index % 2 == 0 and 1 or -1
+    local pair = math.floor((index - 1) / 2)
+    local intensity = math.clamp(tonumber(strength) or 0, 0, 1)
+    local scale = 0.64 + 0.28 * intensity
+    if kind == "Skid" then
+        -- Industrial brake abrasion: low, paired metallic grooves.
+        return {
+            Class = "Part",
+            Material = Enum.Material.Metal,
+            Size = Vector3.new(0.13, 0.045, (2.30 + pair * 0.30) * scale),
+            Offset = Vector3.new(side * (0.40 + pair * 0.26), 0.065,
+                1.04 + pair * 0.14),
+            Yaw = side * math.rad(3),
+            Travel = Vector3.new(side * 0.08, 0, side * 0.24),
+            Transparency = 0.29 + pair * 0.14,
+        }
+    elseif kind == "Pivot" then
+        -- Radial counter-steer fins: two opposite swept wedges.
+        return {
+            Class = "WedgePart",
+            Material = tier == "High" and pair == 0
+                and Enum.Material.Neon or Enum.Material.SmoothPlastic,
+            Size = Vector3.new(0.17, 0.085, (1.40 + pair * 0.14) * scale),
+            Offset = Vector3.new(side * (0.49 + pair * 0.22), 0.085,
+                0.12 + pair * 0.10),
+            Yaw = side * math.rad(58),
+            Travel = Vector3.new(side * 0.16, 0.01, -side * 0.08),
+            Transparency = 0.30 + pair * 0.12,
+        }
+    end
+    -- Acceleration: paired, forward-swept thrust chevrons.
+    return {
+        Class = "WedgePart",
+        Material = tier == "High" and pair == 0
+            and Enum.Material.Neon or Enum.Material.SmoothPlastic,
+        Size = Vector3.new(0.16, 0.085, (1.24 + pair * 0.20) * scale),
+        Offset = Vector3.new(side * (0.38 + pair * 0.23), 0.085,
+            0.86 - pair * 0.08),
+        Yaw = side * math.rad(24),
+        Travel = Vector3.new(side * 0.12, 0.02, side * 0.18),
+        Transparency = 0.26 + pair * 0.14,
+    }
+end
+
 function GroundFx.build(parent, basis, kind, strength, tier)
     if not parent or typeof(basis) ~= "CFrame"
         or COLORS[kind] == nil or (tier ~= "High" and tier ~= "Medium")
@@ -31,37 +85,30 @@ function GroundFx.build(parent, basis, kind, strength, tier)
     folder.Parent = parent
 
     for i = 1, count do
-        local side = i % 2 == 0 and 1 or -1
-        local pair = math.floor((i - 1) / 2)
-        local width = kind == "Skid" and 0.13 or 0.10
-        local length = kind == "Skid" and 2.4
-            or (kind == "Pivot" and 1.55 or 1.25)
-        local z = kind == "Skid" and (1.05 + pair * 0.29)
-            or (kind == "Pivot" and 0.18 or 0.86)
-        local x = side * (0.40 + pair * 0.28)
-        local twist = kind == "Pivot" and side * math.rad(33)
-            or (kind == "Launch" and side * math.rad(16) or 0)
-        local mark = Instance.new("Part")
-        mark.Name = kind .. "FootTrace" .. i
-        mark.Size = Vector3.new(width, 0.035, length * (0.64 + 0.28 * intensity))
-        mark.CFrame = basis * CFrame.new(x, 0.065, z)
-            * CFrame.Angles(0, twist, 0)
+        local design = GroundFx.signature(kind, i, strength, tier)
+        local mark = Instance.new(design.Class)
+        mark.Name = kind .. (kind == "Skid" and "BrakeScuff"
+            or (kind == "Pivot" and "TurnFin" or "ThrustFin")) .. i
+        mark.Size = design.Size
+        mark.CFrame = basis * CFrame.new(design.Offset)
+            * CFrame.Angles(0, design.Yaw, 0)
         mark.Anchored = true
         mark.CanCollide = false
         mark.CanTouch = false
         mark.CanQuery = false
         mark.CastShadow = false
         mark.Color = COLORS[kind]
-        mark.Material = Enum.Material.Neon
-        mark.Transparency = 0.25 + pair * 0.15
+        mark.Material = design.Material
+        mark.Transparency = design.Transparency
         mark.Parent = folder
         TweenService:Create(
             mark,
             TweenInfo.new(0.46, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
                 Transparency = 1,
-                Size = Vector3.new(width * 0.35, 0.02, length * 1.25),
-                CFrame = mark.CFrame * CFrame.new(0, 0, side * 0.24),
+                Size = Vector3.new(design.Size.X * 0.38, 0.025,
+                    design.Size.Z * 1.25),
+                CFrame = mark.CFrame * CFrame.new(design.Travel),
             }
         ):Play()
     end

@@ -101,6 +101,47 @@ describe("Body motion rules", function()
         root:Destroy()
     end)
 
+    it("authors three distinct 3D ground signatures without increasing the GPU budget", function()
+        local surface = Instance.new("Folder")
+        for _, tier in ipairs({"Medium", "High"}) do
+            local count = tier == "High" and 4 or 2
+            for _, kind in ipairs({"Launch", "Skid", "Pivot"}) do
+                local fx = GroundFx.build(surface, CFrame.new(5, 1, -3),
+                    kind, 0.9, tier)
+                expect(#fx:GetChildren()).toBe(count)
+                for index, piece in ipairs(fx:GetChildren()) do
+                    local sig = GroundFx.signature(kind, index, 0.9, tier)
+                    expect(sig ~= nil).toBe(true)
+                    expect(piece.ClassName).toBe(sig.Class)
+                    expect(piece.Material).toBe(sig.Material)
+                    expect(piece.Size).toBe(sig.Size)
+                    expect(piece.CastShadow).toBe(false)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.Transparency >= 0.25).toBe(true)
+                    if tier == "Medium" then
+                        expect(piece.Material == Enum.Material.Neon).toBe(false)
+                    end
+                end
+                if kind == "Skid" then
+                    expect(fx:GetChildren()[1]:IsA("Part")).toBe(true)
+                    expect(fx:GetChildren()[1].Material).toBe(Enum.Material.Metal)
+                else
+                    expect(fx:GetChildren()[1]:IsA("WedgePart")).toBe(true)
+                end
+                fx:Destroy()
+            end
+            expect(GroundFx.signature("Launch", count + 1, 1, tier) == nil).toBe(true)
+        end
+        expect(GroundFx.signature("Launch", 1, 1, "Low") == nil).toBe(true)
+        expect(GroundFx.signature("Invalid", 1, 1, "High") == nil).toBe(true)
+        expect(GroundFx.signature("Skid", 1.5, 1, "High") == nil).toBe(true)
+        expect(GroundFx.signature("Skid", 0, 1, "High") == nil).toBe(true)
+        expect(#surface:GetChildren()).toBe(0)
+        surface:Destroy()
+    end)
+
     it("adds planted footsteps and safe airborne reach without forcing physics", function()
         expect(LocomotionDynamics.footPlant(0, 1, true)).toBe(1)
         expect(LocomotionDynamics.footPlant(math.pi / 2, 1, true)).toBe(0)
