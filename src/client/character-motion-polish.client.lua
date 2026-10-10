@@ -52,10 +52,18 @@ task.spawn(function()
                 local ratio = math.clamp(speed / math.max(1, humanoid.WalkSpeed), 0, 1.35)
                 distance = model == localPlayer.Character and 0
                     or (viewer and (root.Position - viewer).Magnitude or math.huge)
+                local retained = state.trail ~= nil and state.trail.Parent ~= nil
+                    and state.trail.Enabled == true
                 visible = Rules.visible(phase, finalRush, state.airborne,
-                    ratio, tier.Name, reduceMotion, distance,
-                    state.trail ~= nil and state.trail.Parent ~= nil
-                        and state.trail.Enabled == true)
+                    ratio, tier.Name, reduceMotion, distance, retained)
+                -- Project only distance/sprint-eligible remote humans; local
+                -- movement feedback is unaffected by camera direction.
+                if visible and camera and model ~= localPlayer.Character then
+                    local projected = camera:WorldToViewportPoint(root.Position)
+                    local viewport = camera.ViewportSize
+                    visible = Rules.inViewport(projected.X, projected.Y,
+                        projected.Z, viewport.X, viewport.Y, retained)
+                end
             end
             state.eligible = visible
             if visible and model ~= localPlayer.Character then

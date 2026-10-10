@@ -100,3 +100,23 @@ lobby during an active round, join late, eliminate and respawn, and delete
 an attachment while sprinting in a staging Studio session. Confirm one
 Trail and two attachments per eligible root; compare Low/Medium/High and
 ReduceMotion on Android. No FPS gain is claimed without device measurements.
+
+## Remote human ribbons — camera-frustum culling
+
+Remote human trails now require **both** the existing speed/phase/distance
+policy and a padded camera-viewport projection before entering the nearest
+4/8-player GPU selection. New ribbons use a 10% viewport margin; an already
+visible ribbon gets an 18% margin to avoid abrupt changes during camera pans.
+Roots behind the camera are culled. Projection only runs for otherwise
+eligible remote rigs and does not use per-frame RenderStepped hooks, raycasts,
+extra particles, lights, or allocations of Instance objects. Camera viewport
+initialization (zero-sized or missing view) fails open; the old distance and
+tier caps still apply. Local player trails stay exempt. Low/ReduceMotion
+still disable the effect, and the engine test covers the screen bounds,
+retention margin, behind-camera depth, and camera-startup fallback.
+
+**Physical acceptance pending:** rotate the camera quickly beside sprinting
+survivors, check edges on narrow Android portrait/landscape screens, observe
+spectator camera changes, repeat respawns and tier toggles, and profile GPU
+fill/FPS and 30-minute stability. Projection reduces *eligible off-screen*
+ribbons but is not a wall-occlusion test or measured Android improvement.

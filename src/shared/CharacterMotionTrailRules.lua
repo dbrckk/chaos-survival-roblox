@@ -19,6 +19,21 @@ function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, di
         and (tonumber(distance) or math.huge) <= limit
 end
 
+-- Only remote players use camera projection. A padded viewport prevents
+-- translucent ribbons from consuming GPU fill when their owner is off-screen.
+-- Fail open while the camera is initializing; distance/tier caps still apply.
+-- Retained ribbons get a slightly wider border to avoid camera-turn popping.
+-- This is a frustum test, not an expensive wall-occlusion raycast.
+function Rules.inViewport(x, y, depth, width, height, wasVisible)
+    local w, h = tonumber(width), tonumber(height)
+    if not w or not h or w <= 0 or h <= 0 then return true end
+    local px, py, z = tonumber(x), tonumber(y), tonumber(depth)
+    if not px or not py or not z or z <= 0 then return false end
+    local margin = wasVisible == true and 0.18 or 0.10
+    return px >= -w * margin and px <= w * (1 + margin)
+        and py >= -h * margin and py <= h * (1 + margin)
+end
+
 -- Spectators and eliminated players must not show active-contestant momentum.
 function Rules.humanEligible(participant, eliminated)
     return participant == true and eliminated ~= true

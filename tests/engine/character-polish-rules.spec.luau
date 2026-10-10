@@ -139,6 +139,22 @@ describe("Human momentum ribbon GPU and accessibility policy", function()
         expect(r.visible("round", false, true, 1, "High", false, 0, true)).toBe(false)
         expect(r.visible("round", false, false, 1, "Low", false, 0, true)).toBe(false)
     end)
+    it("rejects off-screen remote ribbons with hysteresis margins", function()
+        local r = TrailRules
+        expect(r.inViewport(960, 540, 10, 1920, 1080, false)).toBe(true)
+        expect(r.inViewport(-190, 540, 10, 1920, 1080, false)).toBe(true)
+        expect(r.inViewport(-200, 540, 10, 1920, 1080, false)).toBe(false)
+        expect(r.inViewport(-300, 540, 10, 1920, 1080, true)).toBe(true)
+        expect(r.inViewport(-350, 540, 10, 1920, 1080, true)).toBe(false)
+        expect(r.inViewport(2150, 540, 10, 1920, 1080, false)).toBe(false)
+        expect(r.inViewport(960, -120, 10, 1920, 1080, false)).toBe(false)
+        expect(r.inViewport(960, 540, -1, 1920, 1080, true)).toBe(false)
+        expect(r.inViewport(960, 540, 0, 1920, 1080, true)).toBe(false)
+        -- Camera viewport may briefly be zero-sized during device init.
+        expect(r.inViewport(960, 540, 10, 0, 0, false)).toBe(true)
+        expect(r.inViewport(960, 540, 10, nil, nil, false)).toBe(true)
+    end)
+
     it("suppresses airborne, idle, pre-round and final rush ribbons", function()
         local r = TrailRules
         expect(r.visible("ready", false, false, 1, "High", false, 0)).toBe(false)
