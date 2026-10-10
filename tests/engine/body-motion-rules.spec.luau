@@ -330,6 +330,31 @@ describe("Directional character impact and cinematic AI footwork", function()
         expect(visible("High", false, "round", true, 1, nil, true)).toBe(false)
     end)
 
+    it("shares stable camera-frustum limits for AI and human optional trails", function()
+        local Viewport = require("../../src/shared/VisualViewportRules")
+        local Humans = require("../../src/shared/CharacterMotionTrailRules")
+        expect(Humans.inViewport).toBe(Viewport.contains)
+        expect(Viewport.contains(960, 540, 10, 1920, 1080, false)).toBe(true)
+        expect(Viewport.contains(-190, 540, 10, 1920, 1080, false)).toBe(true)
+        expect(Viewport.contains(-200, 540, 10, 1920, 1080, false)).toBe(false)
+        expect(Viewport.contains(-300, 540, 10, 1920, 1080, true)).toBe(true)
+        expect(Viewport.contains(-350, 540, 10, 1920, 1080, true)).toBe(false)
+        expect(Viewport.contains(2100, 540, 10, 1920, 1080, false)).toBe(true)
+        expect(Viewport.contains(2150, 540, 10, 1920, 1080, false)).toBe(false)
+        expect(Viewport.contains(960, -120, 10, 1920, 1080, false)).toBe(false)
+        expect(Viewport.contains(960, 540, -1, 1920, 1080, true)).toBe(false)
+        expect(Viewport.contains(960, 540, 0, 1920, 1080, true)).toBe(false)
+        expect(Viewport.contains(960, 540, 10, 0, 0, false)).toBe(true)
+        expect(Viewport.contains(960, 540, 10, nil, nil, false)).toBe(true)
+        -- Projection is an additional cull; tier and distance gates still win.
+        expect(BotMotionPresentationRules.trailVisible(
+            "Low", false, "round", true, 1, 2, true)).toBe(false)
+        expect(BotMotionPresentationRules.trailVisible(
+            "High", true, "round", true, 1, 2, true)).toBe(false)
+        expect(BotMotionPresentationRules.trailVisible(
+            "High", false, "round", true, 1, 120, true)).toBe(false)
+    end)
+
     it("creates only nearby, meaningful AI launch, skid and pivot cues", function()
         local rules = {
             profile = BotMotionPresentationRules.profile,

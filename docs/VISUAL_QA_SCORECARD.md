@@ -166,3 +166,25 @@ participation gates. **Physical acceptance required:** capture slanted
 Towers and Orbital ramps at Low/Medium/High; test joins, elimination,
 respawn, camera turns and 30-minute Android GPU/FPS/cleanup. No physical
 Studio/device result or FPS gain is claimed from CI alone.
+
+## AI survivor ribbons — camera visibility and mobile update cost
+
+Human and AI cosmetic trails now share `VisualViewportRules.contains`.
+Eligible AI ribbons and the brief bot ground accents are culled outside a
+padded camera viewport (10% entry margin, 18% retained margin). The existing
+High/Medium distance/speed/phase gates remain intact, while Low and
+ReduceMotion always suppress these optional effects. A zero-size or
+unavailable camera keeps the previous distance-based behavior.
+
+Bot trail lifetime is applied only when its target value changes or a trail
+is replaced; `Enabled` is written only on state changes. Spectating
+clients calculate distance from the **camera**, not an eliminated lobby
+avatar. No new Trails, lights, particles, raycasts or RenderStepped loops
+are introduced, and existing AI server movement/physics are unchanged.
+
+**Regression coverage:** shared viewport alias and in/out/behind/edge
+bounds, hysteresis, startup fallback, Low, ReduceMotion and distance rules.
+**Physical QA pending:** camera-follow spectating, rotating beside AI rigs,
+Streamed AI replacement, 30-minute Android memory/FPS/overdraw, and
+Low/Medium/High transitions on a densely populated round. No real-device
+performance improvement is claimed from code review or CI alone.

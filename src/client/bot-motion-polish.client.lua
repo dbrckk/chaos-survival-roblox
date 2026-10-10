@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local BotRules = require(ReplicatedStorage.Shared.BotMotionPresentationRules)
+local ViewportRules = require(ReplicatedStorage.Shared.VisualViewportRules)
 local GroundFx = require(script.Parent.LocomotionGroundFx)
 
 local player = Players.LocalPlayer
@@ -81,6 +82,7 @@ local function watch(model)
         trail = nil,
         defaultTrailColor = nil,
         appliedTrailKind = nil,
+        appliedTrailLifetime = nil,
     }
 end
 
@@ -147,8 +149,10 @@ task.spawn(function()
         local viewerRoot = player.Character
             and player.Character:FindFirstChild("HumanoidRootPart")
         local camera = workspace.CurrentCamera
-        local viewerPosition = viewerRoot and viewerRoot.Position
-            or (camera and camera.CFrame.Position)
+        -- Camera position remains authoritative for spectators following
+        -- bots; the avatar can be far away from the active view.
+        local viewerPosition = camera and camera.CFrame.Position
+            or (viewerRoot and viewerRoot.Position)
         local emissions = 0
 
         for model, state in pairs(bots) do
@@ -176,11 +180,23 @@ task.spawn(function()
             local distance = viewerPosition
                 and (state.root.Position - viewerPosition).Magnitude or math.huge
             local trail = state.root:FindFirstChild("AISurvivorCosmeticTrail")
+            local onScreen = true
+            -- Only project nearby rigs that could show optional VFX; never
+            -- spend camera work on Low/ReduceMotion or distant bots.
+            if camera and phase == "round" and not reduceMotion
+                and q.Name ~= "Low" and distance <= 110 then
+                local p = camera:WorldToViewportPoint(state.root.Position)
+                local view = camera.ViewportSize
+                onScreen = ViewportRules.contains(p.X, p.Y, p.Z,
+                    view.X, view.Y, trail ~= nil and trail:IsA("Trail")
+                        and trail.Enabled == true)
+            end
             if trail and trail:IsA("Trail") then
                 if state.trail ~= trail then
                     state.trail = trail
                     state.defaultTrailColor = trail.Color
                     state.appliedTrailKind = nil
+                    state.appliedTrailLifetime = nil
                 end
                 local accentKind = phase == "round" and not reduceMotion
                     and q.Name ~= "Low" and now < state.cueUntil
@@ -195,19 +211,24 @@ task.spawn(function()
                     state.lastSpeed / math.max(1, state.humanoid.WalkSpeed),
                     0, 1.25
                 )
-                trail.Enabled = BotRules.trailVisible(
+                local visible = onScreen and BotRules.trailVisible(
                     q.Name, reduceMotion, phase,
                     state.humanoid.FloorMaterial ~= Enum.Material.Air,
                     ratio, distance, trail.Enabled
                 )
-                trail.Lifetime = (0.09 + (state.index % 3) * 0.024)
+                if trail.Enabled ~= visible then trail.Enabled = visible end
+                local lifetime = (0.09 + (state.index % 3) * 0.024)
                     * (q.Name == "High" and 1 or 0.72)
+                if state.appliedTrailLifetime ~= lifetime then
+                    if trail.Lifetime ~= lifetime then trail.Lifetime = lifetime end
+                    state.appliedTrailLifetime = lifetime
+                end
             end
 
             if emissions < botProfile.MaxPerScan
                 and now - lastGlobalCueAt >= 0.55
                 and now - state.lastCueAt >= botProfile.Cooldown
-                and viewerPosition ~= nil
+                and viewerPosition ~= nil and onScreen
             then
                 local cue, strength = BotRules.cue(
                     velocity, previousVelocity, dt,
