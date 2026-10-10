@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local CharacterPolishRules = require("../../src/shared/CharacterPolishRules")
+local TrailRules = require("../../src/shared/CharacterMotionTrailRules")
 
 describe("Character polish rules", function()
     it("keeps the local player more readable than remote characters", function()
@@ -102,6 +103,37 @@ describe("Character polish rules", function()
             true,
             true
         )).toBe(0)
+    end)
+end)
+
+
+describe("Human momentum ribbon GPU and accessibility policy", function()
+    it("culls by tier and camera distance, including ReduceMotion", function()
+        local r = TrailRules
+        expect(r.visible("round", false, false, 1, "High", false, 90)).toBe(true)
+        expect(r.visible("round", false, false, 1, "High", false, 90.1)).toBe(false)
+        expect(r.visible("round", false, false, 1, "Medium", false, 60)).toBe(true)
+        expect(r.visible("round", false, false, 1, "Medium", false, 61)).toBe(false)
+        expect(r.visible("round", false, false, 1, "Low", false, 0)).toBe(false)
+        expect(r.visible("round", false, false, 1, "High", true, 0)).toBe(false)
+        expect(r.visible("round", false, false, 1, "Unknown", false, 0)).toBe(false)
+        expect(r.visible("round", false, false, 1, "High", false, nil)).toBe(false)
+    end)
+    it("suppresses airborne, idle, pre-round and final rush ribbons", function()
+        local r = TrailRules
+        expect(r.visible("ready", false, false, 1, "High", false, 0)).toBe(false)
+        expect(r.visible("round", true, false, 1, "High", false, 0)).toBe(false)
+        expect(r.visible("round", false, true, 1, "High", false, 0)).toBe(false)
+        expect(r.visible("round", false, false, 0.82, "High", false, 0)).toBe(false)
+        expect(r.visible("round", false, false, 0.83, "High", false, 0)).toBe(true)
+        local highLife, highWidth = r.style("High")
+        local medLife, medWidth = r.style("Medium")
+        local lowLife, lowWidth = r.style("Low")
+        expect(highLife > medLife and medLife > lowLife).toBe(true)
+        expect(highWidth > medWidth and medWidth > lowWidth).toBe(true)
+        expect(highLife <= 0.14 and highWidth <= 0.34).toBe(true)
+        expect(lowLife).toBe(0)
+        expect(lowWidth).toBe(0)
     end)
 end)
 

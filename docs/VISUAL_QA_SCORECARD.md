@@ -17,3 +17,19 @@ Use this file to review a **rendered build**, not its source code. Do not assign
 **Rating scale:** 0 = absent, 1 = broken, 2 = generic but functional, 3 = intentional, 4 = polished, 5 = production showcase. Require a source screenshot, reviewer, date, candidate commit for each rating. Treat performance, accessibility and gameplay readability as hard gates regardless of the art rating.
 
 Release blocks: unlicensed assets, unreadable warnings, visual blockers/colliders, persistent camera seizure, severe mobile frame drops, missing model after replication, duplicated UI/lighting, dangling VFX after multiple rounds.
+
+## Human momentum ribbon: mobile and accessibility gate
+
+The human sprint ribbon uses one sculpted, three-point tapered Trail, lazily
+created only for eligible round movement. AI trails remain owned by
+`bot-motion-polish`; the human controller no longer watches bot rigs.
+Low and ReduceMotion emit no human ribbons; Medium culls beyond 60 studs,
+High beyond 90 studs from the camera (local player exempt). Styling changes
+only when the tier changes, at the tier's decorative update interval.
+Incomplete rigs receive one ChildAdded listener and an 8-second timeout.
+
+**Physical acceptance still required:** respawn and reconnect repeatedly;
+switch Low/Medium/High and ReduceMotion while sprinting; inspect humanoid
+root trail counts, Final Rush and elimination cleanup, and remote culling.
+Profile a crowded round on a low-end Android device for FPS, memory, GPU
+overdraw and 30-minute stability. Engine specs check policy, not real FPS.
