@@ -71,6 +71,26 @@ function AerialSurveyRules.animated(phase, tier, reduceMotion)
         and reduceMotion ~= true and tier ~= "Low"
 end
 
+-- Integrate the real wall-clock delta once, instead of multiplying absolute
+-- uptime by a changing disaster speed (which teleported the fleet).
+-- Reset the sample when motion is paused or a clock moves backwards; cap
+-- long frame stalls to avoid a catch-up leap on slow Android devices.
+function AerialSurveyRules.advanceClock(elapsed, lastNow, now, active, speed)
+    local progress = tonumber(elapsed) or 0
+    local tick = tonumber(now)
+    if not active or not tick or tick ~= tick or tick == math.huge
+        or tick == -math.huge
+    then
+        return progress, nil
+    end
+    local previous = tonumber(lastNow)
+    if not previous or previous ~= previous or tick < previous then
+        return progress, tick
+    end
+    local multiplier = math.clamp(tonumber(speed) or 1, 0.25, 1.5)
+    return progress + math.min(tick - previous, 0.30) * multiplier, tick
+end
+
 function AerialSurveyRules.flightFrame(base, variant, index, count, t, behavior)
     if not base or not base:IsA("BasePart") then return nil end
     local drones = math.max(1, math.floor(tonumber(count) or 1))

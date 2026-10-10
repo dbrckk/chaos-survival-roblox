@@ -141,6 +141,11 @@ function AerialSurveyKit.build(parent, arenaBase, variant, tier, theme)
         drones = {},
         profile = profile,
         lastAlert = nil,
+        lastTint = nil,
+        flightTime = 0,
+        lastNow = nil,
+        lastBaseFrame = arenaBase.CFrame,
+        lastBaseSize = arenaBase.Size,
     }
     local totalParts = 0
     for i = 1, profile.Drones do
@@ -156,28 +161,46 @@ end
 function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRush, disasterIds)
     if not fleet or not fleet.folder.Parent or not fleet.base.Parent then return end
     local active = AerialSurveyRules.animated(phase, fleet.tier, reduced)
-    local elapsed = active and (tonumber(now) or 0) or 0
     local behavior = active and AerialSurveyRules.behavior(disasterIds) or nil
+    -- The speed factor belongs to the integrated delta, not absolute uptime.
+    -- Pausing for ReduceMotion, Low, distance or a phase change preserves
+    -- the current pose and never causes a large resume-time jump.
+    fleet.flightTime, fleet.lastNow = AerialSurveyRules.advanceClock(
+        fleet.flightTime, fleet.lastNow, now, active,
+        behavior and behavior.Speed or 1)
+    if behavior then behavior.Speed = 1 end
+    local elapsed = fleet.flightTime
+    local baseFrame = fleet.base.CFrame
+    local baseSize = fleet.base.Size
+    local poseDirty = active or baseFrame ~= fleet.lastBaseFrame
+        or baseSize ~= fleet.lastBaseSize
     local alert = AerialSurveyRules.alert(phase, disasterIds, finalRush)
     local tint = alert == "critical" and Color3.fromRGB(255, 195, 100)
         or (alert == "hazard" and threatColor or nil)
+    local colorDirty = alert ~= fleet.lastAlert or tint ~= fleet.lastTint
+
     for _, drone in ipairs(fleet.drones) do
-        local frame = AerialSurveyRules.flightFrame(
-            fleet.base, fleet.variant, drone.index, drone.total, elapsed, behavior)
-        if frame then
-            local wingBank = active and math.sin(elapsed * 1.7 + drone.index) * math.rad(2) or 0
+        if poseDirty or colorDirty then
+            local frame = poseDirty and AerialSurveyRules.flightFrame(
+                fleet.base, fleet.variant, drone.index, drone.total,
+                elapsed, behavior) or nil
+            local wingBank = active and math.sin(elapsed * 1.7 + drone.index)
+                * math.rad(2) or 0
             for _, item in ipairs(drone.sections) do
                 if item.part.Parent then
-                    local animation = CFrame.identity
-                    if item.role == "rotor" and active then
-                        animation = CFrame.Angles(0, elapsed * 8, 0)
-                    elseif item.role == "wing" then
-                        animation = CFrame.Angles(0, 0,
-                            item.part.Name:find("-1", 1, true) and wingBank or -wingBank)
+                    if frame then
+                        local animation = CFrame.identity
+                        if item.role == "rotor" and active then
+                            animation = CFrame.Angles(0, elapsed * 8, 0)
+                        elseif item.role == "wing" and active then
+                            animation = CFrame.Angles(0, 0,
+                                item.part.Name:find("-1", 1, true)
+                                    and wingBank or -wingBank)
+                        end
+                        item.part.CFrame = frame * item.frame * animation
                     end
-                    item.part.CFrame = frame * item.frame * animation
-                    if item.role == "beacon" or item.role == "navigation"
-                        or item.role == "exhaust"
+                    if colorDirty and (item.role == "beacon"
+                        or item.role == "navigation" or item.role == "exhaust")
                     then
                         item.part.Color = tint or item.baseColor
                         item.part.Transparency = alert == "critical" and 0.08 or 0.22
@@ -186,13 +209,23 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
             end
         end
         if drone.light then
-            drone.light.Color = tint or drone.accent
-            drone.light.Enabled = active and alert ~= "standby"
+            if colorDirty then drone.light.Color = tint or drone.accent end
+            local enabled = active and alert ~= "standby"
+            if drone.light.Enabled ~= enabled then drone.light.Enabled = enabled end
         end
         if drone.trail then
-            drone.trail.Enabled = active and alert ~= "standby"
-            drone.trail.Color = ColorSequence.new(tint or drone.accent)
+            local enabled = active and alert ~= "standby"
+            if drone.trail.Enabled ~= enabled then drone.trail.Enabled = enabled end
+            if colorDirty then
+                drone.trail.Color = ColorSequence.new(tint or drone.accent)
+            end
         end
+    end
+    fleet.lastAlert = alert
+    fleet.lastTint = tint
+    if poseDirty then
+        fleet.lastBaseFrame = baseFrame
+        fleet.lastBaseSize = baseSize
     end
 end
 

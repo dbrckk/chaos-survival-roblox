@@ -33,6 +33,24 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         expect(math.abs(Rules.silhouette("Orbital").Wing.X - 5.2) < 0.0001).toBe(true)
     end)
 
+    it("integrates speed changes continuously and pauses without catch-up jumps", function()
+        local elapsed, last = Rules.advanceClock(0, nil, 12, true, 1)
+        expect(elapsed).toBe(0)
+        expect(last).toBe(12)
+        elapsed, last = Rules.advanceClock(elapsed, last, 12.2, true, 1.4)
+        expect(math.abs(elapsed - 0.28) < 0.0001).toBe(true)
+        local paused, sample = Rules.advanceClock(elapsed, last, 50, false, 1)
+        expect(paused).toBe(elapsed)
+        expect(sample).toBe(nil)
+        local resumed, resumeSample = Rules.advanceClock(paused, sample, 100, true, 1)
+        expect(resumed).toBe(paused)
+        expect(resumeSample).toBe(100)
+        local capped = Rules.advanceClock(0, 1, 100, true, 1.4)
+        expect(capped <= 0.421).toBe(true)
+        local reversed = Rules.advanceClock(elapsed, 100, 99, true, 1)
+        expect(reversed).toBe(elapsed)
+    end)
+
     it("keeps flights outside playable arena and statically freezes accessible motion", function()
         local base = Instance.new("Part")
         base.Size = Vector3.new(100, 2, 100)
@@ -121,14 +139,26 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
             local before = first.sections[1].part.Position
             Kit.update(fleet, 18, "round", false,
                 Color3.fromRGB(255, 80, 40), false)
+            Kit.update(fleet, 18.2, "round", false,
+                Color3.fromRGB(255, 80, 40), false)
+            local movingPose = first.sections[1].part.CFrame
             if tier ~= "Low" then
-                expect((first.sections[1].part.Position - before).Magnitude > 1).toBe(true)
+                expect((movingPose.Position - before).Magnitude > 1).toBe(true)
             else
-                expect((first.sections[1].part.Position - before).Magnitude < 0.01).toBe(true)
+                expect((movingPose.Position - before).Magnitude < 0.01).toBe(true)
             end
-            Kit.update(fleet, 18, "round", true,
+            Kit.update(fleet, 90, "round", true,
                 Color3.fromRGB(255, 80, 40), true)
-            expect((first.sections[1].part.Position - before).Magnitude < 0.01).toBe(true)
+            expect(first.sections[1].part.CFrame).toBe(movingPose)
+            expect(fleet.lastNow).toBe(nil)
+            Kit.update(fleet, 150, "round", false,
+                Color3.fromRGB(255, 80, 40), false)
+            expect(first.sections[1].part.CFrame).toBe(movingPose)
+            Kit.update(fleet, 150.1, "round", false,
+                Color3.fromRGB(255, 80, 40), false)
+            if tier ~= "Low" then
+                expect((first.sections[1].part.Position - movingPose.Position).Magnitude < 3).toBe(true)
+            end
             local metrics, audited = VisualBudget.collect(world)
             expect(audited).toBe(1)
             expect(metrics.Parts).toBe(count)
