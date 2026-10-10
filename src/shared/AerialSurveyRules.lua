@@ -81,8 +81,18 @@ function AerialSurveyRules.flightFrame(base, variant, index, count, t, behavior)
     local speed = variant == "Orbital" and 0.23
         or (variant == "Towers" and 0.13 or 0.17)
     local angle = phase + time * speed
-    local rx = base.Size.X * 0.5 + 44
-    local rz = base.Size.Z * 0.5 + 44
+    local halfX = base.Size.X * 0.5
+    local halfZ = base.Size.Z * 0.5
+    local rx = halfX + 44
+    local rz = halfZ + 44
+    -- An unscaled ellipse can cut through the corners of wide arenas.
+    -- Keep the entire patrol outside the deck plus a small sway allowance.
+    local clearance = 12
+    local coverage = math.sqrt(((halfX + clearance) / rx) ^ 2
+        + ((halfZ + clearance) / rz) ^ 2)
+    local orbitScale = math.max(1, coverage)
+    rx *= orbitScale
+    rz *= orbitScale
     local elevation = variant == "Towers" and 41
         or (variant == "Orbital" and 36
             or (variant == "Crossroads" and 30 or 32))

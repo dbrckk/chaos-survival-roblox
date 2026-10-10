@@ -5,7 +5,7 @@ broad survey wings, Towers' stockier service fuselage, Crossroads'
 elongated transit wing, and Orbital's long slender gyrocourier
 wing profile, with an armored ellipsoid body, shaped delta wings, cockpit glass, polished spine and a dorsal threat beacon. Medium adds paired metal turbines, actual emissive exhausts and a split tail; High adds structural vertical fins, starboard/port beacons, rotating turbine blades, one compact fill light and one short engine filament Trail per vehicle.
 
-**Per-map animation:** Classic orbit watch, Towers high-altitude maintenance flyover, Crossroads transit escort, Orbital faster orbital patrol. Vehicles fly **outside the playable deck bounds**, with no collision, touch or query, and do not change player speed, rewards, hazard damage or AI routing. During live rounds drone beacons change to the active disaster color. The
+**Per-map animation:** Classic orbit watch, Towers high-altitude maintenance flyover, Crossroads transit escort, Orbital faster orbital patrol. Vehicles fly **outside the playable deck bounds**, including wide/rotated maps (the ellipse scales only when needed to preserve at least 8 studs of horizontal clearance during disaster sway), with no collision, touch or query, and do not change player speed, rewards, hazard damage or AI routing. During live rounds drone beacons change to the active disaster color. The
 hover/choreography now reacts differently to disaster categories without
 adding parts: climb +7 studs above Rising Lava, bank in Tornado, evasive
 sway around Meteors/Bombs, buoyant Low Gravity rise, slower circulation

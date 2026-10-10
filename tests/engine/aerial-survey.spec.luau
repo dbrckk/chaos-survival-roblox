@@ -48,6 +48,25 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         base:Destroy()
     end)
 
+    it("keeps wide rotated arenas clear throughout every patrol orbit", function()
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(500, 2, 300)
+        base.CFrame = CFrame.new(24, 10, -60) * CFrame.Angles(0, math.rad(33), 0)
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            for slot = 1, 3 do
+                for step = 0, 31 do
+                    local frame = Rules.flightFrame(base, variant, slot, 3, step * 2,
+                        Rules.behavior({"Meteors"}))
+                    local point = base.CFrame:PointToObjectSpace(frame.Position)
+                    local outside = math.abs(point.X) > base.Size.X * 0.5 + 8
+                        or math.abs(point.Z) > base.Size.Z * 0.5 + 8
+                    expect(outside).toBe(true)
+                end
+            end
+        end
+        base:Destroy()
+    end)
+
     it("uses distinct disaster animation reactions without changing collision bounds", function()
         local base = Instance.new("Part")
         base.Size = Vector3.new(100, 2, 100)
