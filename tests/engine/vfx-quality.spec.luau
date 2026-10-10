@@ -89,7 +89,8 @@ describe("Adaptive VFX quality", function()
         embers.Parent = attachment
         local light = Instance.new("SurfaceLight")
         light.Parent = lava
-        local state = {lava = lava, surface = surface, embers = embers, light = light}
+        local state = {lava = lava, surface = surface, attachment = attachment,
+            embers = embers, light = light}
         expect(rules.reusableLava(state, lava)).toBe(true)
         local otherLava = Instance.new("Part")
         expect(rules.reusableLava(state, otherLava)).toBe(false)
@@ -103,10 +104,46 @@ describe("Adaptive VFX quality", function()
         expect(rules.reusableLava(state, lava)).toBe(true)
         surface:Destroy()
         expect(rules.reusableLava(state, lava)).toBe(false)
+        local replacement = Instance.new("Part")
+        replacement.Parent = root
+        state.surface = replacement
+        expect(rules.reusableLava(state, lava)).toBe(true)
+        attachment.Parent = nil
+        expect(rules.reusableLava(state, lava)).toBe(false)
+        attachment.Parent = lava
+        expect(rules.reusableLava(state, lava)).toBe(true)
+        light.Parent = root
+        expect(rules.reusableLava(state, lava)).toBe(false)
         otherLava:Destroy()
         root:Destroy()
     end)
 
+    it("detects disconnected freeze mist or missing crystal geometry", function()
+        local root = Instance.new("Folder")
+        local warning = Instance.new("Part")
+        warning.Parent = root
+        local attachment = Instance.new("Attachment")
+        attachment.Parent = warning
+        local mist = Instance.new("ParticleEmitter")
+        mist.Parent = attachment
+        local crystal = Instance.new("WedgePart")
+        crystal.Parent = root
+        local state = {warning = warning, attachment = attachment,
+            mist = mist, segments = {crystal}}
+        local healthy = DisasterCosmeticRules.reusableFreeze
+        expect(healthy(state, warning)).toBe(true)
+        expect(healthy(state, nil)).toBe(false)
+        attachment.Parent = nil
+        expect(healthy(state, warning)).toBe(false)
+        attachment.Parent = warning
+        expect(healthy(state, warning)).toBe(true)
+        mist.Parent = nil
+        expect(healthy(state, warning)).toBe(false)
+        mist.Parent = attachment
+        crystal:Destroy()
+        expect(healthy(state, warning)).toBe(false)
+        root:Destroy()
+    end)
     it("scales cosmetic lava and freeze particles from first render", function()
         local rules = DisasterCosmeticRules
         expect(rules.lavaEmberRate(1, false)).toBe(10)

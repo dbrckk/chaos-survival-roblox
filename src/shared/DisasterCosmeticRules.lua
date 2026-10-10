@@ -17,8 +17,22 @@ end
 function DisasterCosmeticRules.reusableLava(state, lava)
     return state ~= nil and lava ~= nil and state.lava == lava
         and state.surface ~= nil and state.surface.Parent ~= nil
-        and state.embers ~= nil and state.embers.Parent ~= nil
-        and state.light ~= nil and state.light.Parent ~= nil
+        and state.attachment ~= nil and state.attachment.Parent == lava
+        and state.embers ~= nil and state.embers.Parent == state.attachment
+        and state.light ~= nil and state.light.Parent == lava
 end
 
+-- Only reuse a warning while every cosmetic child is still correctly parented.
+function DisasterCosmeticRules.reusableFreeze(state, warning)
+    if state == nil or warning == nil or state.warning ~= warning
+        or state.attachment == nil or state.attachment.Parent ~= warning
+        or state.mist == nil or state.mist.Parent ~= state.attachment
+        or type(state.segments) ~= "table" or #state.segments == 0 then
+        return false
+    end
+    for _, part in ipairs(state.segments) do
+        if not part:IsA("WedgePart") or part.Parent == nil then return false end
+    end
+    return true
+end
 return DisasterCosmeticRules

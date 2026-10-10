@@ -40,9 +40,7 @@ local function clearLava()
         return
     end
     for _, instance in ipairs(lavaState.instances) do
-        if instance and instance.Parent then
-            instance:Destroy()
-        end
+        if instance then instance:Destroy() end
     end
     lavaState = nil
 end
@@ -120,6 +118,7 @@ local function bindLava(lava)
     lavaState = {
         lava = lava,
         surface = surface,
+        attachment = attachment,
         embers = embers,
         light = light,
         instances = instances,
@@ -137,16 +136,36 @@ local function clearFreeze(warning)
     end
     freezeStates[warning] = nil
     for _, instance in ipairs(state.instances) do
-        if instance and instance.Parent then
-            instance:Destroy()
-        end
+        if instance then instance:Destroy() end
     end
 end
 
 local function bindFreeze(warning)
-    if freezeStates[warning] or not warning:IsA("BasePart") then
-        return
+    if not warning:IsA("BasePart") then return end
+    local current = freezeStates[warning]
+    if current and DisasterCosmeticRules.reusableFreeze(current, warning) then
+        -- Same-piece-count refreshes reuse the glass ring and mist emitter.
+        local tier = quality()
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
+        if #current.segments == count then
+            local frame = HazardWarningSignatureRules.frame(warning.Position, current.deck)
+            local elapsed = workspace:GetServerTimeNow() - current.startedAt
+            local alpha = math.clamp(elapsed / current.duration, 0, 1)
+            for index, segment in ipairs(current.segments) do
+                local style = HazardWarningSignatureRules.recipe(
+                    "Freeze", index, count, current.diameter, reduced and 0 or alpha
+                )
+                segment.Size = style.Size
+                segment.CFrame = frame * CFrame.new(style.Offset) * style.Rotation
+                segment.Transparency = reduced and 0.66 or style.Transparency
+            end
+            local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
+            if current.mist.Rate ~= rate then current.mist.Rate = rate end
+            return
+        end
     end
+    if current then clearFreeze(warning) end
 
     local tier = quality()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -204,6 +223,7 @@ local function bindFreeze(warning)
 
     freezeStates[warning] = {
         warning = warning,
+        attachment = attachment,
         segments = segments,
         instances = instances,
         diameter = diameter,
@@ -252,8 +272,7 @@ local function rebuildQuality()
         table.insert(warnings, warning)
     end
     for _, warning in ipairs(warnings) do
-        clearFreeze(warning)
-        if warning.Parent then bindFreeze(warning) end
+        if warning.Parent then bindFreeze(warning) else clearFreeze(warning) end
     end
 end
 
@@ -326,6 +345,11 @@ ensureRenderLoop = function()
             continue
         end
 
+        if not DisasterCosmeticRules.reusableFreeze(state, warning) then
+            clearFreeze(warning)
+            bindFreeze(warning)
+            continue
+        end
         local elapsed = workspace:GetServerTimeNow() - state.startedAt
         local alpha = math.clamp(elapsed / state.duration, 0, 1)
         local count = #state.segments

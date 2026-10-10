@@ -238,3 +238,20 @@ purely cosmetic: server damage, warnings, phase timing, collisions and
 Low/Medium/High visual caps are preserved. Device QA is still needed
 for rapid setting switches, respawn/map rotations, Double Chaos and
 30-minute Android GPU/FPS/memory stability.
+
+## Lava/frost VFX attachment lifecycle hardening
+
+The reusable lava state now verifies its heat attachment belongs to the
+active `RoundLava`, the ember emitter belongs to that attachment, and the
+SurfaceLight belongs to the same lava host. Detached cosmetic instances
+trigger self-repair rather than being silently treated as valid.
+Freeze warning effects similarly check the mist/attachment and every
+glass wedge on each decorative update. Missing children are repaired;
+intact same-count rings can update without reallocating crystals or mist.
+Changing profile to a different crystal count still rebuilds the bounded
+2/4/6/8-piece ring; no server-owned warning, hitbox or damage changes.
+Detached descendants are destroyed when clearing the client effect.
+
+Engine regressions cover detached lava/freeze attachments, missing wedges
+and survivor lifetime rules. Mobile QA remains required for rapid tier
+switching, streamed warning hosts and Double Chaos soak / FPS measurements.
