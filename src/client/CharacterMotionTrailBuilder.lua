@@ -31,6 +31,13 @@ function Builder.setAccent(trail, accent)
     return true
 end
 
+-- Repair a streamed-away attachment even when its Trail still exists.
+function Builder.isIntact(trail, root)
+    return trail ~= nil and trail:IsA("Trail") and trail.Parent == root
+        and trail.Attachment0 ~= nil and trail.Attachment0.Parent == root
+        and trail.Attachment1 ~= nil and trail.Attachment1.Parent == root
+end
+
 function Builder.ensure(root, accent)
     local a = attachment(root, "ChaosMotionTrailLeft", Vector3.new(-0.72, -0.85, 0.48))
     local b = attachment(root, "ChaosMotionTrailRight", Vector3.new(0.72, -0.85, 0.48))

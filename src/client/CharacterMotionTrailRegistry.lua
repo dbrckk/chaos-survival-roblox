@@ -18,7 +18,7 @@ function Registry.start(players)
         if entry.destroying then entry.destroying:Disconnect() end
     end
 
-    local function watch(model)
+    local function watch(model, owner)
         if not model or not model.Parent or tracked[model] then return end
         local humanoid = model:FindFirstChildOfClass("Humanoid")
         local root = model:FindFirstChild("HumanoidRootPart")
@@ -27,7 +27,7 @@ function Registry.start(players)
                 local connection
                 connection = model.ChildAdded:Connect(function(child)
                     if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
-                        task.defer(watch, model)
+                        task.defer(watch, model, owner)
                     end
                 end)
                 pending[model] = connection
@@ -42,7 +42,9 @@ function Registry.start(players)
             pending[model] = nil
         end
         nextOrder += 1
-        local entry = {humanoid = humanoid, root = root, airborne = false, order = nextOrder}
+        local entry = {humanoid = humanoid, root = root,
+            player = owner or players:GetPlayerFromCharacter(model),
+            airborne = false, order = nextOrder}
         tracked[model] = entry
         entry.stateChanged = humanoid.StateChanged:Connect(function(_, nextState)
             if nextState == Enum.HumanoidStateType.Jumping
@@ -58,9 +60,11 @@ function Registry.start(players)
     end
 
     local function watchPlayer(player)
-        player.CharacterAdded:Connect(watch)
+        player.CharacterAdded:Connect(function(model)
+            watch(model, player)
+        end)
         player.CharacterRemoving:Connect(stop)
-        if player.Character then watch(player.Character) end
+        if player.Character then watch(player.Character, player) end
     end
     for _, player in ipairs(players:GetPlayers()) do watchPlayer(player) end
     players.PlayerAdded:Connect(watchPlayer)

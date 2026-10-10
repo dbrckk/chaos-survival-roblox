@@ -82,3 +82,21 @@ recoloring and unchanged object count. **Physical QA still required:**
 camera oscillation near 60/90 studs, sprint-stop jitter, changing accents
 mid-round, repeated respawn, crowded Android GPU/FPS and long-session
 cleanup. No real-device performance improvement is claimed.
+
+## Human ribbon — contestant identity and attachment recovery
+
+The human ribbon now requires server-owned `RoundParticipant=true` and
+`RoundEliminated~=true` player attributes, as well as the existing round,
+sprint, quality and distance gates. Late joiners, eliminated players and
+spectators cannot display the same sprint signal as active survivors.
+The registry caches the owning Player when binding a rig, avoiding repeated
+player lookups in the decorative update loop. A missing streamed attachment
+is detected even when its Trail still exists; the builder repairs the same
+ribbon on the next eligible visual update.
+
+**Engine coverage:** eligible/ineligible participant states and intact,
+orphaned and repaired attachment transitions. **Physical QA:** sprint in the
+lobby during an active round, join late, eliminate and respawn, and delete
+an attachment while sprinting in a staging Studio session. Confirm one
+Trail and two attachments per eligible root; compare Low/Medium/High and
+ReduceMotion on Android. No FPS gain is claimed without device measurements.

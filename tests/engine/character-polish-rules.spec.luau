@@ -108,6 +108,14 @@ end)
 
 
 describe("Human momentum ribbon GPU and accessibility policy", function()
+    it("never renders contestant momentum on spectators or eliminated avatars", function()
+        local r = TrailRules
+        expect(r.humanEligible(true, false)).toBe(true)
+        expect(r.humanEligible(true, nil)).toBe(true)
+        expect(r.humanEligible(false, false)).toBe(false)
+        expect(r.humanEligible(nil, false)).toBe(false)
+        expect(r.humanEligible(true, true)).toBe(false)
+    end)
     it("culls by tier and camera distance, including ReduceMotion", function()
         local r = TrailRules
         expect(r.visible("round", false, false, 1, "High", false, 90)).toBe(true)
@@ -244,10 +252,13 @@ describe("Human ribbon attachment lifecycle", function()
         local root = Instance.new("Part")
         local accent = Color3.fromRGB(90, 190, 255)
         local trail = Builder.ensure(root, accent)
+        expect(Builder.isIntact(trail, root)).toBe(true)
         local missing = trail.Attachment0
         local right = trail.Attachment1
         missing:Destroy()
+        expect(Builder.isIntact(trail, root)).toBe(false)
         expect(Builder.ensure(root, accent)).toBe(trail)
+        expect(Builder.isIntact(trail, root)).toBe(true)
         expect(trail.Attachment0 ~= missing).toBe(true)
         expect(trail.Attachment0.Parent).toBe(root)
         expect(trail.Attachment1).toBe(right)

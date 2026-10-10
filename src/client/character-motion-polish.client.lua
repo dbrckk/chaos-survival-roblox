@@ -43,7 +43,10 @@ task.spawn(function()
             end
             local visible = false
             local distance = math.huge
-            if humanoid.Health > 0 then
+            local owner = state.player
+            if humanoid.Health > 0 and owner and owner.Parent == Players
+                and Rules.humanEligible(owner:GetAttribute("RoundParticipant"),
+                    owner:GetAttribute("RoundEliminated")) then
                 local velocity = root.AssemblyLinearVelocity
                 local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
                 local ratio = math.clamp(speed / math.max(1, humanoid.WalkSpeed), 0, 1.35)
@@ -70,7 +73,7 @@ task.spawn(function()
                 if typeof(color) ~= "Color3" then
                     color = Color3.fromRGB(90, 190, 255)
                 end
-                if not state.trail or not state.trail.Parent then
+                if not Builder.isIntact(state.trail, state.root) then
                     state.trail = Builder.ensure(state.root, color)
                     state.appliedTier = nil
                     state.appliedAccent = color

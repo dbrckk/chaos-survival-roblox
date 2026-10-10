@@ -19,6 +19,11 @@ function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, di
         and (tonumber(distance) or math.huge) <= limit
 end
 
+-- Spectators and eliminated players must not show active-contestant momentum.
+function Rules.humanEligible(participant, eliminated)
+    return participant == true and eliminated ~= true
+end
+
 function Rules.style(tier)
     if tier == "High" then
         return 0.14, 0.34
