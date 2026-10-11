@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VfxQuality = require("../../src/shared/VfxQuality")
 local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
+local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 
 describe("Adaptive VFX quality", function()
     it("starts touch devices conservatively without capping capable hardware", function()
@@ -168,6 +169,83 @@ describe("Adaptive VFX quality", function()
 
         expect(VfxQuality.get("Low").UpdateInterval > VfxQuality.get("High").UpdateInterval).toBe(true)
     end)
+    it("preserves mobile hazard-edge neon and avoids compounding light dimming", function()
+        local kit = MobileReadabilityKit
+        local baseline = setmetatable({}, {__mode = "k"})
+        local edge = Instance.new("Part")
+        edge.Name = "EdgeSafetyGlow"
+        edge.Material = Enum.Material.Neon
+        local decor = Instance.new("Part")
+        decor.Name = "DecorationStrip"
+        decor.Material = Enum.Material.Neon
+        local light = Instance.new("PointLight")
+        light.Brightness = 2
+
+        kit.applyInstance(edge, "Low", baseline)
+        kit.applyInstance(decor, "Low", baseline)
+        kit.applyInstance(light, "Low", baseline)
+        expect(math.abs(edge.LocalTransparencyModifier - 0.07) < 0.001).toBe(true)
+        expect(math.abs(decor.LocalTransparencyModifier - 0.18) < 0.001).toBe(true)
+        expect(math.abs(light.Brightness - 1.24) < 0.001).toBe(true)
+        kit.applyInstance(light, "Medium", baseline)
+        expect(math.abs(light.Brightness - 1.44) < 0.001).toBe(true)
+        kit.applyInstance(light, "High", baseline)
+        expect(math.abs(light.Brightness - 1.60) < 0.001).toBe(true)
+        kit.applyInstance(light, "Low", baseline)
+        expect(math.abs(light.Brightness - 1.24) < 0.001).toBe(true)
+        expect(baseline[light]).toBe(2)
+        expect(kit.isGameplayEdge(edge)).toBe(true)
+        expect(kit.isGameplayEdge(decor)).toBe(false)
+        expect(kit.profile("Low") > kit.profile("High")).toBe(true)
+        edge:Destroy()
+        decor:Destroy()
+        light:Destroy()
+    end)
+
+    it("reattaches mobile readability to late Decor and replaced arenas", function()
+        local generated = Instance.new("Folder")
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        local calls = 0
+        local current = nil
+        local disconnect = MobileReadabilityKit.watch(generated, function(decor)
+            calls += 1
+            current = decor
+        end)
+        expect(calls).toBe(1)
+        arena.Parent = generated
+        task.wait()
+        expect(current == nil).toBe(true)
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        task.wait()
+        expect(current).toBe(decor)
+
+        decor.Parent = nil
+        task.wait()
+        expect(current == nil).toBe(true)
+        local replacement = Instance.new("Folder")
+        replacement.Name = "Arena"
+        arena.Parent = nil
+        replacement.Parent = generated
+        local lateDecor = Instance.new("Folder")
+        lateDecor.Name = "Decor"
+        lateDecor.Parent = replacement
+        task.wait()
+        expect(current).toBe(lateDecor)
+
+        disconnect()
+        local oldCalls = calls
+        lateDecor.Parent = nil
+        task.wait()
+        expect(calls).toBe(oldCalls)
+        generated:Destroy()
+        arena:Destroy()
+        decor:Destroy()
+        lateDecor:Destroy()
+    end)
+
 end)
 
 return nil

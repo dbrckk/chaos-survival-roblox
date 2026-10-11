@@ -1,6 +1,6 @@
-# Chaos Survival — Android physical acceptance (PR #18)
+# Chaos Survival — Android physical acceptance (PR #19 stacked on PR #18)
 
-This is a **hands-on test plan, not proof of completion**. Do not mark a check as passed unless it was observed on the actual PR #18 candidate. The existing public Roblox place may run an older published build: it cannot certify an unpublished pull request.
+This is a **hands-on test plan, not proof of completion**. Do not mark a check as passed unless it was observed on the actual tested PR #19 candidate based on PR #18. The existing public Roblox place may run an older published build: it cannot certify an unpublished pull request.
 
 ## Before testing
 
@@ -13,7 +13,7 @@ Record the exact deployed **candidate commit**, experience/place ID, phone model
 3. **Arena rotation** — observe Classic, Towers, Crossroads and Orbital. Photograph each unique landmark. Check terrain, colliders, readability, platform edges, and no leftover scenery following a map swap.
 4. **Visual pressure** — attempt Double Chaos with Meteors, Bombs, Freeze and Darkness; compare Low, Medium and High VFX on the same phone. Warnings and hazards must remain clear in Low mode. Record any severe FPS drop and frame hitch.
 5. **Motion and accessibility** — R15 start/stop, 180° pivot, jumping, landing, death and respawn. Turn Reduce Motion and Audio Muted on/off. Check no sustained joint deformation, doubled footsteps, reaction FX after elimination, or hidden danger warnings.
-6. **Showtime/UI** — in lobby and result phases open the six-emote panel, activate each available emote and interrupt it by walking or jumping. In a round confirm the DJ stage is not visible. Verify Settings remains tappable with the emote grid open on narrow portrait viewports. Check screen rotation if available.
+6. **Showtime/UI** — in lobby and result phases open the eight-emote panel, activate each available emote and interrupt it by walking or jumping. In a round confirm the DJ stage is not visible. Verify Settings remains tappable with the emote grid open on narrow portrait viewports. Check screen rotation if available.
 7. **Long session (30 minutes)** — stay in the same server over several rounds, toggling VFX quality and Reduce Motion. Check for accumulating glow, leftover parts, repeated audio, stale countdowns, broken spectator controls, and worsening performance.
 
 ## Record by phase
@@ -55,3 +55,7 @@ Severity: BLOCKER | MAJOR | MINOR
 ## Certification
 
 Mark Android PASS in the Release Candidate Gate **only after** this physical checklist passes on the exact release candidate that also has Build Validation, Open Cloud Engine Tests and authenticated Studio E2E success. GitHub CI alone cannot claim physical Android FPS, usability or graphics quality.
+
+## PR #19 Android decor replication regression
+
+After joining a fresh server and after changing maps, wait for the streamed Arena and its Decor folder. On each of Classic, Towers, Crossroads and Orbital, inspect the original decorative neon and motivated lights at Low, Medium and High. Check that late-replicated Decor also gets the mobile brightness/tint policy, that the safety edge remains clearer than decorative Neon, and that changing quality repeatedly does not progressively dim existing lights. Test a map swap while decoration is still streaming. This is a **manual Android/Studio acceptance scenario**, not an automated FPS measurement or an observed pass.
