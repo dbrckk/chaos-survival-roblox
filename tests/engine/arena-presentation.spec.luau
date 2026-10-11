@@ -529,7 +529,8 @@ describe("Touch decor streamed-subtree readability", function()
         -- A populated Model arrives as one streamed subtree.
         MobileReadabilityKit.applyTree(nested, "Low", baselines)
         expect(math.abs(glow.LocalTransparencyModifier - 0.18) < 0.0001).toBe(true)
-        expect(edge.LocalTransparencyModifier <= 0.07).toBe(true)
+        -- Roblox stores this property as a float; 0.07 may round slightly upward.
+        expect(math.abs(edge.LocalTransparencyModifier - 0.07) < 0.0001).toBe(true)
         expect(math.abs(lamp.Brightness - 3.1) < 0.0001).toBe(true)
         MobileReadabilityKit.applyTree(nested, "High", baselines)
         expect(math.abs(glow.LocalTransparencyModifier - 0.08) < 0.0001).toBe(true)
