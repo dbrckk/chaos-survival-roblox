@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local CharacterPolishRules = require("../../src/shared/CharacterPolishRules")
 local TrailRules = require("../../src/shared/CharacterMotionTrailRules")
+local PolishRegistry = require("../../src/client/CharacterPolishRegistry")
 local ViewportRules = require("../../src/shared/VisualViewportRules")
 
 describe("Character polish rules", function()
@@ -95,6 +96,16 @@ describe("Character polish rules", function()
             false,
             false
         )).toBe(0)
+    end)
+
+    it("does not allocate light during Low or ReduceMotion even on High", function()
+        local bright = CharacterPolishRules.lightBrightness
+        expect(bright("High", "round", true, false, true, false) > 0).toBe(true)
+        expect(bright("High", "round", true, false, true, true)).toBe(0)
+        expect(bright("Medium", "round", true, false, true, true)).toBe(0)
+        expect(bright("Low", "round", true, false, true, false)).toBe(0)
+        expect(bright("High", "waiting", true, false, true, false)).toBe(0)
+        expect(bright("High", "result", true, false, true, false)).toBe(0)
     end)
 
     it("suppresses extra character lighting during final rush", function()
@@ -280,6 +291,66 @@ describe("Human ribbon attachment lifecycle", function()
         expect(trail.Attachment0.Parent).toBe(root)
         expect(trail.Attachment1).toBe(right)
         expect(#root:GetChildren()).toBe(3)
+        root:Destroy()
+    end)
+end)
+
+describe("Character polish lifecycle and late streaming", function()
+    it("deduplicates model listeners and releases them when bots leave", function()
+        local calls, stopped = 0, 0
+        local registry = PolishRegistry.new(function()
+            calls += 1
+        end, function()
+            stopped += 1
+        end)
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        expect(registry.watch(model)).toBe(true)
+        expect(registry.watch(model)).toBe(false)
+        expect(registry.count()).toBe(1)
+        local before = calls
+        model:SetAttribute("ChaosAccent", Color3.fromRGB(70, 190, 255))
+        expect(calls).toBe(before + 1)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = model
+        expect(calls > before + 1).toBe(true)
+        registry.stop(model)
+        expect(registry.count()).toBe(0)
+        expect(stopped).toBe(1)
+        local afterStop = calls
+        model:SetAttribute("AISurvivor", true)
+        expect(calls).toBe(afterStop)
+        expect(registry.watch(model)).toBe(true)
+        model.Parent = nil
+        expect(registry.count()).toBe(0)
+        expect(stopped).toBe(2)
+        model:Destroy()
+    end)
+
+    it("refreshes bound models without extra listeners through rig streaming", function()
+        local updates = 0
+        local registry = PolishRegistry.new(function()
+            updates += 1
+        end)
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        registry.watch(model)
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        expect(registry.count()).toBe(1)
+        local withRoot = updates
+        root.Parent = nil
+        expect(updates > withRoot).toBe(true)
+        local replacement = Instance.new("Part")
+        replacement.Name = "HumanoidRootPart"
+        replacement.Parent = model
+        expect(updates > withRoot + 1).toBe(true)
+        local beforeRefresh = updates
+        registry.refreshAll()
+        expect(updates).toBe(beforeRefresh + 1)
+        registry.stop(model)
+        model:Destroy()
         root:Destroy()
     end)
 end)

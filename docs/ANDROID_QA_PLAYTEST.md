@@ -261,3 +261,26 @@ deduplication and explicit cleanup. This adds no new render loop,
 Trail budget, physics, network requests or new GPU geometry.
 Still requires full exact-head Open Cloud plus physical Android
 streaming and Studio visual testing before release acceptance.
+
+## PR #19 — client avatar polish lifecycle and zero-light allocation (11 October 2026)
+
+Android Low / Reduce Motion acceptance: join a crowded game with human
+contestants and AI, respawn and spectate, then switch Low → High → Low.
+Character outlines must remain readable but **no new decorative PointLights**
+are constructed for avatars when their desired brightness is zero. Existing
+ones are switched off on the same tier or accessibility change. During an
+active High round, living contestants can regain restrained optional light.
+The base Roblox character lighting, Animator, collisions and gameplay stay
+unchanged.
+
+Character polish now has model-owned listeners for accent, AI identity and
+rig changes, disconnects them after CharacterRemoving, AI removal, streaming
+out or destruction, and cleans up only its own named local Highlight and
+PointLight instances. An incomplete Humanoid can arrive later without a
+fixed timeout. Replacement bot folders release old model and folder
+listeners. Malformed RoundState snapshots safely return to waiting. Existing
+engine tests exercise listener counts, late root creation/removal, rewatch,
+stop, refresh and no-light rules.
+
+Real Android screenshots, warnings, memory, GPU activity and FPS have **not**
+been measured by the automated suites; check those on hardware before release.

@@ -3,15 +3,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CharacterPolishRules = require(ReplicatedStorage.Shared.CharacterPolishRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CharacterPolishRegistry = require(script.Parent.CharacterPolishRegistry)
 
 local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local phase = "waiting"
 local finalRush = false
-local watched = setmetatable({}, {__mode = "k"})
 local botFolder = nil
 local botFolderConnection = nil
+local botFolderRemovedConnection = nil
+local playerConnections = setmetatable({}, {__mode = "k"})
 
 local function accentFor(model, isLocal, isAI)
     local accent = model:GetAttribute("ChaosAccent")
@@ -65,6 +67,17 @@ local function ensureLight(model)
     return light
 end
 
+local function disableExistingLights(model)
+    for _, part in ipairs(model:GetChildren()) do
+        if part:IsA("BasePart") then
+            local light = part:FindFirstChild("ChaosCharacterPolishLight")
+            if light and light:IsA("PointLight") then
+                light.Enabled = false
+            end
+        end
+    end
+end
+
 local function applyModel(model)
     if not model or not model.Parent then
         return
@@ -72,6 +85,11 @@ local function applyModel(model)
 
     local humanoid = model:FindFirstChildOfClass("Humanoid")
     if not humanoid then
+        local highlight = model:FindFirstChild("ChaosCharacterPolishHighlight")
+        if highlight and highlight:IsA("Highlight") then
+            highlight.Enabled = false
+        end
+        disableExistingLights(model)
         return
     end
 
@@ -91,6 +109,7 @@ local function applyModel(model)
     end
 
     local highlight = ensureHighlight(model)
+    highlight.Enabled = true
     local auraHighlight = model:FindFirstChild("ChaosAuraHighlight")
     local hasAuraHighlight = auraHighlight and auraHighlight:IsA("Highlight")
 
@@ -120,124 +139,121 @@ local function applyModel(model)
     highlight.FillTransparency = fillTransparency
     highlight.OutlineTransparency = outlineTransparency
 
-    local light = ensureLight(model)
-    if light then
-        local brightness = CharacterPolishRules.lightBrightness(
-            quality.Name,
-            phase,
-            isLocal,
-            finalRush,
-            activeParticipant
-        )
-        light.Color = accent
-        light.Brightness = brightness
-        light.Range = isLocal and 8 or 6
-        light.Enabled = brightness > 0
+    local brightness = CharacterPolishRules.lightBrightness(
+        quality.Name, phase, isLocal, finalRush, activeParticipant,
+        localPlayer:GetAttribute("ReduceMotion") == true
+    )
+    -- Remove the GPU light from consideration on Low, reduced motion,
+    -- eliminated avatars and quiet phases. Never allocate a zero-light.
+    disableExistingLights(model)
+    if brightness > 0 then
+        local light = ensureLight(model)
+        if light then
+            light.Color = accent
+            light.Brightness = brightness
+            light.Range = isLocal and 8 or 6
+            light.Enabled = true
+        end
     end
 end
 
-local function watchModel(model)
-    if watched[model] then
-        applyModel(model)
-        return
+local function removePolish(model)
+    local highlight = model:FindFirstChild("ChaosCharacterPolishHighlight")
+    if highlight and highlight:IsA("Highlight") then
+        highlight:Destroy()
     end
-    watched[model] = true
-
-    applyModel(model)
-
-    model:GetAttributeChangedSignal("ChaosAccent"):Connect(function()
-        applyModel(model)
-    end)
-
-    model:GetAttributeChangedSignal("AISurvivor"):Connect(function()
-        applyModel(model)
-    end)
-
-    model.ChildAdded:Connect(function(child)
-        if child:IsA("Humanoid")
-            or child.Name == "UpperTorso"
-            or child.Name == "Torso"
-            or child.Name == "HumanoidRootPart"
-            or child.Name == "ChaosAuraHighlight"
-        then
-            task.defer(applyModel, model)
+    for _, child in ipairs(model:GetChildren()) do
+        if child:IsA("BasePart") then
+            local light = child:FindFirstChild("ChaosCharacterPolishLight")
+            if light and light:IsA("PointLight") then
+                light:Destroy()
+            end
         end
-    end)
+    end
+end
+
+local registry = CharacterPolishRegistry.new(applyModel, removePolish)
+local function watchModel(model)
+    registry.watch(model)
 end
 
 local function watchPlayer(player)
-    player.CharacterAdded:Connect(watchModel)
-    player:GetAttributeChangedSignal("RoundParticipant"):Connect(function()
-        if player.Character then
-            applyModel(player.Character)
-        end
-    end)
-    player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
-        if player.Character then
-            applyModel(player.Character)
-        end
-    end)
-    if player.Character then
-        watchModel(player.Character)
-    end
+    if playerConnections[player] then return end
+    local connections = {}
+    playerConnections[player] = connections
+    table.insert(connections, player.CharacterAdded:Connect(watchModel))
+    table.insert(connections, player.CharacterRemoving:Connect(registry.stop))
+    table.insert(connections,
+        player:GetAttributeChangedSignal("RoundParticipant"):Connect(function()
+            if player.Character then registry.refresh(player.Character) end
+        end))
+    table.insert(connections,
+        player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
+            if player.Character then registry.refresh(player.Character) end
+        end))
+    if player.Character then watchModel(player.Character) end
 end
 
 for _, player in ipairs(Players:GetPlayers()) do
     watchPlayer(player)
 end
 Players.PlayerAdded:Connect(watchPlayer)
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character then registry.stop(player.Character) end
+    local connections = playerConnections[player]
+    if connections then
+        for _, connection in ipairs(connections) do connection:Disconnect() end
+        playerConnections[player] = nil
+    end
+end)
 
-local function watchBotFolder(folder)
+local function watchBotFolder(nextFolder)
     if botFolderConnection then
         botFolderConnection:Disconnect()
         botFolderConnection = nil
     end
-    botFolder = folder
-
-    if not folder then
-        return
+    if botFolderRemovedConnection then
+        botFolderRemovedConnection:Disconnect()
+        botFolderRemovedConnection = nil
     end
-
-    for _, model in ipairs(folder:GetChildren()) do
-        if model:IsA("Model") then
-            watchModel(model)
+    if botFolder and botFolder ~= nextFolder then
+        for _, model in ipairs(botFolder:GetChildren()) do
+            if model:IsA("Model") then registry.stop(model) end
         end
     end
-
-    botFolderConnection = folder.ChildAdded:Connect(function(model)
-        if model:IsA("Model") then
-            task.defer(watchModel, model)
-        end
+    botFolder = nextFolder
+    if not nextFolder then return end
+    for _, model in ipairs(nextFolder:GetChildren()) do
+        if model:IsA("Model") then watchModel(model) end
+    end
+    botFolderConnection = nextFolder.ChildAdded:Connect(function(model)
+        if model:IsA("Model") then watchModel(model) end
+    end)
+    botFolderRemovedConnection = nextFolder.ChildRemoved:Connect(function(model)
+        if model:IsA("Model") then registry.stop(model) end
     end)
 end
 
 watchBotFolder(workspace:FindFirstChild("AISurvivors"))
-
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "AISurvivors" and child ~= botFolder then
         watchBotFolder(child)
     end
 end)
-
 workspace.ChildRemoved:Connect(function(child)
-    if child == botFolder then
-        watchBotFolder(nil)
-    end
+    if child == botFolder then watchBotFolder(nil) end
 end)
 
 local function refreshAll()
-    for model in pairs(watched) do
-        if model and model.Parent then
-            applyModel(model)
-        end
-    end
+    registry.refreshAll()
 end
 
 localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshAll)
 localPlayer:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshAll)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    phase = tostring(state.phase or "waiting")
-    finalRush = phase == "round" and state.finalRush == true
+    local snapshot = type(state) == "table" and state or {}
+    phase = tostring(snapshot.phase or "waiting")
+    finalRush = phase == "round" and snapshot.finalRush == true
     refreshAll()
 end)
