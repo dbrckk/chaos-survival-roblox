@@ -84,6 +84,12 @@ local function scan()
     end
 
     track(nextTracked, source:FindFirstChild("ClassicBroadcastTally"), "scan", 1)
+    track(nextTracked, source:FindFirstChild("ClassicOpsAntenna"), "opsAntenna", 1)
+    track(nextTracked, source:FindFirstChild("OrbitalDockingArmGlow"), "dockGlow", 1)
+    for i = 1, 3 do
+        track(nextTracked, source:FindFirstChild("CrossroadsClosedLaneBarrier" .. i),
+            "closureBar", i)
+    end
     for i = 1, 2 do
         track(
             nextTracked,
@@ -209,7 +215,7 @@ task.spawn(function()
         local ownsAnimatedCFrame = state.role == "lift"
             or state.role == "cable" or state.role == "reactorArm"
             or state.role == "antenna" or state.role == "signal"
-            or state.role == "craneWeight"
+            or state.role == "craneWeight" or state.role == "opsAntenna"
             or (state.role == "reactorCore" and tierScale > 0.18)
             or state.hadCoreMotion == true
         if state.role == "lift" then
@@ -248,6 +254,17 @@ task.spawn(function()
             local angle = clock * 0.22 * scale + (i - 1) * math.pi / 3
             frame = state.baseCFrame
                 * CFrame.Angles(0, 0, math.sin(angle) * math.rad(3.5) * scale)
+        elseif state.role == "opsAntenna" then
+            -- Locally articulated surveillance antenna; its booth stays fixed.
+            frame = state.baseCFrame
+                * HeroMotionBudget.serviceAntennaOffset(clock, scale)
+        elseif state.role == "dockGlow" or state.role == "closureBar" then
+            -- Staggered, low-contrast existing Neon, not gameplay warnings.
+            local glow = HeroMotionBudget.servicePulse(state.role, i, clock)
+            part.Transparency = math.clamp(
+                state.baseTransparency + (0.08 - glow * 0.16) * scale,
+                0.08, 0.85
+            )
         elseif state.role == "scan" then
             local wave = (math.sin(clock * 3.1) + 1) * 0.5
             part.Transparency = math.clamp(

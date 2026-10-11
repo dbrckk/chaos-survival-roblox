@@ -86,6 +86,36 @@ function HeroMotionBudgetRules.reactorCoreOffset(now, scale)
     return CFrame.new(0, rise, 0) * CFrame.Angles(pitch, 0, 0)
 end
 
+-- Existing asymmetric service silhouettes (Medium/High scenery only).
+-- Keep the base of the surveillance antenna fixed; only its slender rod
+-- gets a subtle local yaw, composed from its captured CFrame.
+function HeroMotionBudgetRules.serviceAntennaOffset(now, scale)
+    if type(now) ~= "number" or now ~= now or now < 0
+        or math.abs(now) > 1e7 or type(scale) ~= "number"
+        or scale ~= scale or math.abs(scale) == math.huge then
+        return CFrame.identity
+    end
+    local amplitude = math.clamp(scale, 0, 1)
+    return CFrame.Angles(0,
+        math.sin(now * 0.64 + 0.35) * math.rad(1.15) * amplitude, 0)
+end
+
+-- Restrained independent light rhythms: Orbital docking rail and three
+-- Crossroads closure bars. The "closed" signal remains constantly visible.
+-- These are decorative Neon transparencies, not danger telegraphs.
+function HeroMotionBudgetRules.servicePulse(role, index, now)
+    if role ~= "dockGlow" and role ~= "closureBar" then return 0 end
+    if type(index) ~= "number" or index ~= index or index % 1 ~= 0
+        or index < 1 or index > (role == "dockGlow" and 1 or 3)
+        or type(now) ~= "number" or now ~= now or now < 0
+        or math.abs(now) > 1e7 then
+        return 0
+    end
+    local frequency = role == "dockGlow" and 1.15 or 1.35
+    return (1 + math.cos(now * frequency
+        + (index - 1) * (2 * math.pi / 3))) * 0.5
+end
+
 -- Continuous three-phase signal chase, avoiding the former hard on/off
 -- jump every 0.42s. Decorative light only; no gameplay telegraph is altered.
 function HeroMotionBudgetRules.signalPulse(now, index)

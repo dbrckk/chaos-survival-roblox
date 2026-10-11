@@ -259,6 +259,61 @@ describe("Hero landmark animation scheduling and accessibility", function()
             > 0.99999).toBe(true)
     end)
 
+    it("articulates existing service antenna and stages subtle service Neon", function()
+        local base = CFrame.new(12, 7, -5)
+            * CFrame.Angles(math.rad(9), math.rad(48), 0)
+        local now = 1.37
+        local high = Budget.serviceAntennaOffset(now, 1)
+        local medium = Budget.serviceAntennaOffset(now, 0.62)
+        local rest = Budget.serviceAntennaOffset(now, 0)
+        expect(high.Position.Magnitude < 0.00001).toBe(true)
+        expect(high.RightVector:Dot(Vector3.xAxis) >= math.cos(math.rad(1.16)))
+            .toBe(true)
+        local function sweep(frame)
+            return (frame.LookVector - Vector3.new(0, 0, -1)).Magnitude
+        end
+        expect(sweep(high) > sweep(medium)).toBe(true)
+        expect(sweep(medium) > sweep(rest)).toBe(true)
+        expect(sweep(rest) < 0.00001).toBe(true)
+        local first = base * high
+        local again = base * Budget.serviceAntennaOffset(now, 1)
+        expect((first.Position - again.Position).Magnitude < 0.0001)
+            .toBe(true)
+        expect(first.LookVector:Dot(again.LookVector) > 0.99999)
+            .toBe(true)
+        for _, bad in ipairs({-1, math.huge, -math.huge, 1e8}) do
+            expect(Budget.serviceAntennaOffset(bad, 1).Position.Magnitude)
+                .toBe(0)
+        end
+        expect(sweep(Budget.serviceAntennaOffset(0/0, 1)) < 0.00001)
+            .toBe(true)
+        expect(sweep(Budget.serviceAntennaOffset(now, 0/0)) < 0.00001)
+            .toBe(true)
+        expect(Budget.motionScale("High", true)).toBe(0)
+
+        local distinct = {}
+        for i = 1, 3 do
+            distinct[i] = Budget.servicePulse("closureBar", i, 0)
+            expect(distinct[i] >= 0 and distinct[i] <= 1).toBe(true)
+            for _, t in ipairs({0, now, 13.7, 4097.3}) do
+                local a = Budget.servicePulse("closureBar", i, t)
+                expect(a >= 0 and a <= 1).toBe(true)
+                expect(math.abs(a - Budget.servicePulse("closureBar", i, t + 0.001))
+                    < 0.01).toBe(true)
+            end
+        end
+        expect(math.abs(distinct[1] + distinct[2] + distinct[3] - 1.5)
+            < 0.0001).toBe(true)
+        expect(Budget.servicePulse("dockGlow", 1, now) > 0).toBe(true)
+        expect(Budget.servicePulse("dockGlow", 1, now) <= 1).toBe(true)
+        expect(Budget.servicePulse("dockGlow", 2, now)).toBe(0)
+        expect(Budget.servicePulse("closureBar", 4, now)).toBe(0)
+        expect(Budget.servicePulse("unknown", 1, now)).toBe(0)
+        expect(Budget.servicePulse("closureBar", 1, -1)).toBe(0)
+        expect(Budget.servicePulse("closureBar", 1, math.huge)).toBe(0)
+        expect(Budget.servicePulse("closureBar", 1, 0/0)).toBe(0)
+    end)
+
     it("crossfades three transit lights without hard on-off frame jumps", function()
         local phase = {}
         for i = 1, 3 do

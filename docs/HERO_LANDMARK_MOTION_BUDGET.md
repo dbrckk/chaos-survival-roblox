@@ -175,3 +175,34 @@ Low rest pose, Medium/High scale, invalid inputs and ReduceMotion zero
 offset. CI is necessary but insufficient: visual clearance, actual Android
 FPS/frame-time, GPU/memory and thermal performance are **not verified**
 without Roblox Studio and physical-device profiling.
+
+## Non-colliding service-scene articulation and light choreography (11 October 2026)
+
+The existing **Medium/High** asymmetric client-local hero scenery now gets
+an intentional secondary service-language pass, without instancing new art:
+
+- Classic: the anchored `ClassicOpsAntenna` surveys with a maximum
+  1.15-degree local yaw, while the fixed operations booth is undisturbed.
+- Orbital: `OrbitalDockingArmGlow` runs a slow restrained Neon intensity
+  cycle without moving the structural docking arm or adding a light.
+- Crossroads: the three `CrossroadsClosedLaneBarrier*` strips use distinct
+  phase offsets for a smooth, low-contrast closure chase rather than
+  identical flashing. They remain visible throughout the pulse.
+
+All poses use the stored original CFrame and the existing 480ms resume,
+quality-tier and distance-LOD policy. Low does not instantiate the service
+cluster; ReduceMotion restores all baseline colors/poses/transparencies in
+one shot. Active disaster tint remains immediate and the service elements
+are not gameplay telegraphs. No new BasePart, GPU emitter, light, network
+event, collision or rendering loop is added. The single existing hero
+loop tracks these pieces only when they exist.
+
+Existing `landmark-disaster-reactions.spec.luau` (core_a) now verifies
+deterministic local 3D composition, rotation limits, tier scaling, static
+accessibility, slow staggered 3-bar pulses and malformed timestamps.
+
+Required before visual signoff: Roblox Studio and physical Android
+reviews of antenna clearance, all three closure strip light rhythms,
+Orbital docking silhouette, LOD reappearance, Low/Medium/High and
+ReduceMotion. No Studio screenshots or physical FPS/GPU/thermal metrics
+have been obtained by this code-only pass.
