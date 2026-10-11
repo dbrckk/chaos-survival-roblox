@@ -46,3 +46,7 @@ follow late VariantId, and restore original static poses when ReduceMotion
 is enabled or combat ends. Capture Studio screenshots and Android video,
 plus in-client performance statistics if available; leave these acceptance
 items unmarked until actually observed.
+
+## Exact-head core_a regression repair
+
+The original watcher used `require(script.Parent.ArenaIdentityMotionRules)` at module load, which failed in file-based Lest (`script` was nil) before any arena spec could execute. The watcher now takes the already-loaded `ArenaIdentityMotionRules.isIdentityPart` predicate as its third argument. The live LocalScript supplies the same predicate, and the Open Cloud test supplies it explicitly. This eliminates the test-environment-only dependency without duplicating the filtering logic or changing the render budget. Recheck Build Validation plus all five engine shards on the resulting commit; no visual/mobile sign-off is inferred.

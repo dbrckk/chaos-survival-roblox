@@ -115,7 +115,7 @@ local function bindMap()
                 rebuild()
             end
         end)
-    end)
+    end, MotionRules.isIdentityPart)
 end
 
 workspace.ChildAdded:Connect(function(child)

@@ -624,7 +624,7 @@ describe("Android arena identity ornament motion", function()
         local disconnect = IdentityMotionReadiness.watch(generated, function(arena, decor, variant)
             count += 1
             observedArena, observedDecor, observedVariant = arena, decor, variant
-        end)
+        end, IdentityMotionRules.isIdentityPart)
         expect(count).toBe(1)
         local arena = Instance.new("Folder")
         arena.Name = "Arena"

@@ -1,11 +1,14 @@
 -- Watches streamed Arena/Decor identity parts and late VariantId.
 -- One owner per GeneratedMap; disconnect explicitly on replacement.
-local Rules = require(script.Parent.ArenaIdentityMotionRules)
+-- The caller injects the identity-name predicate. The shared observer stays
+-- loadable both in the running Roblox DataModel and in file-based Lest.
 local Readiness = {}
 
-function Readiness.watch(generated, onChange)
-    assert(typeof(generated) == "Instance" and type(onChange) == "function",
-        "ArenaIdentityMotionReadiness.watch requires a map and callback")
+function Readiness.watch(generated, onChange, isIdentityPart)
+    assert(typeof(generated) == "Instance"
+        and type(onChange) == "function"
+        and type(isIdentityPart) == "function",
+        "ArenaIdentityMotionReadiness.watch requires map, callback and identity filter")
     local mapConnections = {}
     local arenaConnections = {}
     local decorConnections = {}
@@ -36,7 +39,7 @@ function Readiness.watch(generated, onChange)
         currentDecor = decor
         if decor then
             local function identityChanged(child)
-                if child:IsA("BasePart") and Rules.isIdentityPart(variant(), child.Name) then
+                if child:IsA("BasePart") and isIdentityPart(variant(), child.Name) then
                     emit()
                 end
             end
