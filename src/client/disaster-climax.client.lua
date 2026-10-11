@@ -139,7 +139,7 @@ local PLAYERS = {
     shock = playShock,
 }
 
-local function playClimax(id, stage, base, delaySeconds, currentToken, currentGeneration)
+local function playClimax(id, stage, base, delaySeconds, currentToken, currentGeneration, burstCount)
     local profile = DisasterClimax.get(id)
     local play = profile and PLAYERS[profile.Kind]
     if not profile or not play then
@@ -156,7 +156,12 @@ local function playClimax(id, stage, base, delaySeconds, currentToken, currentGe
             return
         end
 
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        -- Cosmetic Double Chaos tier scales independently of the device's
+        -- selected graphics setting; hazard telegraphs are never changed.
+        local tierName = DisasterClimax.burstTier(
+            player:GetAttribute("VfxQualityTier"), burstCount
+        )
+        local tier = VfxQuality.get(tierName)
         local reduced = player:GetAttribute("ReduceMotion") == true
         play(profile, base, stage, tier, reduced)
     end)
@@ -195,13 +200,16 @@ local function presentAvailable(state, serial, attempt)
         state.intensity, state.finalRush == true, state.overdrive == true
     )
     if stage <= 0 then return end
+    -- Select a maximum of two distinct, valid cosmetic bursts. Unknown
+    -- IDs and duplicates never steal GPU budget from active disasters.
+    local presentationIds = DisasterClimax.burstIds(ids)
     local currentToken = token
-    for index, id in ipairs(ids) do
+    for index, id in ipairs(presentationIds) do
         local previousStage = stageById[id] or 0
         if stage > previousStage then
             stageById[id] = stage
             playClimax(id, stage, base, (index - 1) * 0.10,
-                currentToken, generationById[id] or 0)
+                currentToken, generationById[id] or 0, #presentationIds)
         end
     end
 end

@@ -79,6 +79,36 @@ function DisasterClimax.replicationRetryDelay(attempt)
     return REPLICATION_RETRY_SECONDS[attempt]
 end
 
+-- A Double Chaos cinematic combines multiple purely decorative bursts.
+-- Keep two different signatures legible without doubling the High-tier
+-- transient meshes. Server warnings/impacts are not part of this budget.
+function DisasterClimax.burstTier(requestedTier, simultaneousCount)
+    local tier = requestedTier == "Low" and "Low"
+        or requestedTier == "Medium" and "Medium" or "High"
+    local count = math.max(0, tonumber(simultaneousCount) or 0)
+    if count < 2 then return tier end
+    if count >= 3 then return "Low" end
+    return tier == "High" and "Medium" or tier
+end
+
+-- Bound one snapshot's simultaneous cinematic owners. Only recognized,
+-- distinct disaster IDs can consume a cosmetic slot. Every authoritative
+-- warning continues to render independently of this selection.
+function DisasterClimax.burstIds(ids)
+    local selected = {}
+    local seen = {}
+    if type(ids) ~= "table" then return selected end
+    for _, id in ipairs(ids) do
+        if type(id) == "string" and DisasterClimax.Profiles[id]
+            and not seen[id] then
+            table.insert(selected, id)
+            seen[id] = true
+            if #selected >= 2 then break end
+        end
+    end
+    return selected
+end
+
 function DisasterClimax.get(id)
     return DisasterClimax.Profiles[id]
 end

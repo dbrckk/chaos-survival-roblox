@@ -378,3 +378,27 @@ duplicate/invalid IDs, absent snapshots and generation invalidation.
 Physical verification remains required: rapid round-to-result transitions,
 arena swap while a climax is visible, streaming delays, and Android
 30-minute memory/FPS measurements. No physical test is claimed.
+
+## Double Chaos climax-budget coordination
+
+The local climax owner now selects **at most two distinct, recognized
+disaster signatures per RoundState snapshot**. During a simultaneous pair,
+the purely cosmetic High-tier climax uses the Medium mesh count (4 per
+hazard instead of 6); Medium stays at 4 and Low stays at 2. The
+result is a bounded **8 climax pieces for Double Chaos at High/Medium,
+4 at Low, or 2 with ReduceMotion**. Ordinary solo-disaster presentation
+keeps its original 2/4/6 quality levels and authored shapes. This scope
+only covers one-shot climax meshes, not permanent map decoration,
+particles, client lights or other VFX owners.
+
+Duplicate and unknown disaster IDs never take a cosmetic burst slot.
+The authoritative server hazards, damage, impact locations, safety
+warnings, UI, round state, accessibility settings and device quality
+selection remain untouched. This is a conservative peak burst-work
+reduction, **not a measured Android FPS improvement**.
+
+Engine coverage verifies snapshot filtering, stable ordering, all tier
+transitions and single-versus-double budgets. Actual visual acceptance
+requires High and Medium side-by-side Double Chaos captures, correct
+hazard warnings, simultaneous peak GPU/thermal tests and 30-minute
+Android and Studio runs.
