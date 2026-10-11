@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local LobbyActivities = require("../../src/server/LobbyActivities")
 local PracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit")
+local PracticePadRegistry = require("../../src/client/LobbyPracticePadRegistry")
 
 describe("Lobby activities", function()
     it("provides four symmetric practice boost pads", function()
@@ -62,6 +63,81 @@ describe("Lobby activities", function()
         local invalid = Instance.new("Part")
         expect(PracticeVisualKit.create(invalid) == nil).toBe(true)
         invalid:Destroy()
+    end)
+
+    it("observes late practice attributes and detaches on streaming", function()
+        local root = Instance.new("Folder")
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = root
+        local lobby = Instance.new("Folder")
+        lobby.Name = "Lobby"
+        lobby.Parent = generated
+        local activities = Instance.new("Folder")
+        activities.Name = "Activities"
+        activities.Parent = lobby
+        local pad = Instance.new("Part")
+        pad.Name = "PracticeBoostPad1"
+        pad.Parent = activities
+
+        local attaches = 0
+        local detaches = 0
+        local observers = PracticePadRegistry.new(
+            function()
+                attaches += 1
+                local bundle = PracticeVisualKit.create(pad)
+                expect(bundle ~= nil).toBe(true)
+            end,
+            function()
+                detaches += 1
+                local attachment = pad:FindFirstChild("PracticeMotesAttachment")
+                local folder = pad:FindFirstChild("PracticePadPolishLocal")
+                if attachment then attachment:Destroy() end
+                if folder then folder:Destroy() end
+            end
+        )
+
+        expect(PracticePadRegistry.isCandidate(pad)).toBe(true)
+        expect(PracticePadRegistry.isCandidate(nil)).toBe(false)
+        expect(observers.watch(pad)).toBe(true)
+        expect(observers.watch(pad)).toBe(false)
+        expect(observers.count()).toBe(1)
+        expect(attaches).toBe(0)
+
+        pad:SetAttribute("LobbyPracticePad", true)
+        task.wait()
+        expect(attaches).toBe(1)
+        expect(pad:FindFirstChild("PracticeMotesAttachment") ~= nil).toBe(true)
+        pad:SetAttribute("LobbyPracticePad", false)
+        task.wait()
+        expect(detaches).toBe(1)
+        expect(pad:FindFirstChild("PracticeMotesAttachment") == nil).toBe(true)
+        pad:SetAttribute("LobbyPracticePad", true)
+        task.wait()
+        expect(attaches).toBe(2)
+        expect(observers.stop(pad)).toBe(true)
+        expect(observers.stop(pad)).toBe(false)
+        expect(detaches).toBe(2)
+        expect(observers.count()).toBe(0)
+        pad:SetAttribute("LobbyPracticePad", false)
+        pad:SetAttribute("LobbyPracticePad", true)
+        task.wait()
+        expect(attaches).toBe(2)
+        root:Destroy()
+    end)
+
+    it("refuses unrelated server parts without tracking them", function()
+        local unrelated = Instance.new("Part")
+        unrelated:SetAttribute("LobbyPracticePad", true)
+        local observers = PracticePadRegistry.new(function()
+            expect(false).toBe(true)
+        end, function()
+            expect(false).toBe(true)
+        end)
+        expect(PracticePadRegistry.isCandidate(unrelated)).toBe(false)
+        expect(observers.watch(unrelated)).toBe(false)
+        expect(observers.count()).toBe(0)
+        unrelated:Destroy()
     end)
 
     it("keeps practice boosts inside movement safety limits", function()

@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local PracticeVisualKit = require(script.Parent.LobbyPracticeVisualKit)
+local PracticePadRegistry = require(script.Parent.LobbyPracticePadRegistry)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -190,25 +191,19 @@ local function triggerNearestPractice()
     end
 end
 
+-- A pad can arrive via StreamingEnabled before its attributes. Observe
+-- the marker independently of arrival order and release the subscription
+-- when the pad streams out or the lobby is regenerated.
+local padObservers = PracticePadRegistry.new(attach, remove)
+
 local function scan(root)
     for _, descendant in ipairs(root:GetDescendants()) do
-        if descendant:IsA("BasePart") and descendant:GetAttribute("LobbyPracticePad") == true then
-            attach(descendant)
-        end
+        padObservers.watch(descendant)
     end
 end
 
-workspace.DescendantAdded:Connect(function(descendant)
-    if descendant:IsA("BasePart") and descendant:GetAttribute("LobbyPracticePad") == true then
-        attach(descendant)
-    end
-end)
-
-workspace.DescendantRemoving:Connect(function(descendant)
-    if tracked[descendant] then
-        remove(descendant)
-    end
-end)
+workspace.DescendantAdded:Connect(padObservers.watch)
+workspace.DescendantRemoving:Connect(padObservers.stop)
 
 local function refreshAll()
     for pad, bundle in pairs(tracked) do

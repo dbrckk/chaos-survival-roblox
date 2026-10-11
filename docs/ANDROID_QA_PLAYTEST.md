@@ -513,3 +513,24 @@ render loop, replicated remote, emitter, 3D instance, or server change.
 Check in Roblox Studio and on a physical Android device for localized
 layout, repeated pad uses, reduced-motion changes during animations,
 and touch target/readability at small viewport sizes.
+
+## PR #19 — late attribute replication on streamed practice pads
+
+Some mobile sessions stream in a lobby BasePart before the
+LobbyPracticePad marker attribute. Previously, the one-time scan and
+DescendantAdded callback ignored it permanently when the marker arrived
+later, so the pad was usable on the server but had no local particles,
+highlight or practice visual confirmation.
+
+A dedicated LobbyPracticePadRegistry now monitors marker changes only for
+BaseParts inside GeneratedMap/Lobby/Activities. It attaches once when
+the marker becomes true, removes visual descendants when it becomes false,
+and disconnects the subscription as the pad or map streams out. A newly
+streamed instance can then attach normally, without leaks, a poll loop,
+extra gameplay remotes or altered server authority.
+
+Roblox engine lobby-activities tests cover late marker arrival, duplicate
+watch protection, marker false→true changes, cleanup, disconnection,
+and rejecting unrelated map Parts. Device verification should stream the
+lobby in/out at Low quality and check that all four pads regain their
+individual particle/Highlight styling.

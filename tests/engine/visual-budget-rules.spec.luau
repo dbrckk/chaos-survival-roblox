@@ -4,7 +4,6 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VisualBudgetRules = require("../../src/shared/VisualBudgetRules")
 local SceneryLodRules = require("../../src/shared/SceneryLodRules")
-local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 local LandingImprintKit = require("../../src/client/LandingImprintKit")
 local DisasterIntroMotionKit = require("../../src/client/DisasterIntroMotionKit")
