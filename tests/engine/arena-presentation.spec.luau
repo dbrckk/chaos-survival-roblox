@@ -14,6 +14,7 @@ local ArenaDeckFinishKit = require("../../src/client/ArenaDeckFinishKit")
 local ArenaSceneryFrames = require("../../src/shared/ArenaSceneryFrames")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local IdentityMotionRules = require("../../src/shared/ArenaIdentityMotionRules")
+local IdentityMotionReadiness = require("../../src/shared/ArenaIdentityMotionReadiness")
 
 local CENTER = Vector3.new(0, 0, 0)
 
@@ -616,6 +617,89 @@ describe("Android arena identity ornament motion", function()
         end
         expect(IdentityMotionRules.isIdentityPart("Orbital", nil)).toBe(false)
     end)
+    it("recovers late Arena/Decor, variant swaps and streamed identity parts", function()
+        local generated = Instance.new("Folder")
+        local count = 0
+        local observedArena, observedDecor, observedVariant = nil, nil, nil
+        local disconnect = IdentityMotionReadiness.watch(generated, function(arena, decor, variant)
+            count += 1
+            observedArena, observedDecor, observedVariant = arena, decor, variant
+        end)
+        expect(count).toBe(1)
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = generated
+        expect(observedArena).toBe(arena)
+        expect(observedDecor == nil).toBe(true)
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        expect(observedDecor).toBe(decor)
+        expect(observedVariant).toBe("Classic")
+
+        local beforeUnrelated = count
+        local unrelated = Instance.new("Part")
+        unrelated.Name = "RoundMeteor"
+        unrelated.Parent = decor
+        expect(count).toBe(beforeUnrelated)
+        local identity = Instance.new("Part")
+        identity.Name = "GridMarkerGlow1"
+        identity.Parent = decor
+        expect(count).toBe(beforeUnrelated + 1)
+        identity.Parent = nil
+        expect(count).toBe(beforeUnrelated + 2)
+
+        arena:SetAttribute("VariantId", "Orbital")
+        expect(observedVariant).toBe("Orbital")
+        local crown = Instance.new("Part")
+        crown.Name = "OrbitalCrown12"
+        crown.Parent = decor
+        local afterCrown = count
+        expect(afterCrown > beforeUnrelated + 2).toBe(true)
+
+        decor.Parent = nil
+        expect(observedDecor == nil).toBe(true)
+        local afterDetach = count
+        local stale = Instance.new("Part")
+        stale.Name = "OrbitalReactorNode1"
+        stale.Parent = decor
+        expect(count).toBe(afterDetach)
+
+        local freshDecor = Instance.new("Folder")
+        freshDecor.Name = "Decor"
+        freshDecor.Parent = arena
+        expect(observedDecor).toBe(freshDecor)
+        local freshNode = Instance.new("Part")
+        freshNode.Name = "OrbitalReactorNode8"
+        freshNode.Parent = freshDecor
+        expect(count > afterDetach + 1).toBe(true)
+
+        arena.Parent = nil
+        expect(observedArena == nil).toBe(true)
+        local afterArenaGone = count
+        local orphan = Instance.new("Part")
+        orphan.Name = "OrbitalCrown1"
+        orphan.Parent = freshDecor
+        expect(count).toBe(afterArenaGone)
+
+        local replacement = Instance.new("Folder")
+        replacement.Name = "Arena"
+        replacement:SetAttribute("VariantId", "Towers")
+        replacement.Parent = generated
+        expect(observedArena).toBe(replacement)
+        expect(observedVariant).toBe("Towers")
+        disconnect()
+        local afterDisconnect = count
+        local replacementDecor = Instance.new("Folder")
+        replacementDecor.Name = "Decor"
+        replacementDecor.Parent = replacement
+        expect(count).toBe(afterDisconnect)
+        generated:Destroy()
+        arena:Destroy()
+        decor:Destroy()
+        identity:Destroy()
+    end)
+
 end)
 
 return nil

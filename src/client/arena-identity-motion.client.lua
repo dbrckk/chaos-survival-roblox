@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local MotionRules = require(ReplicatedStorage.Shared.ArenaIdentityMotionRules)
+local MotionReadiness = require(ReplicatedStorage.Shared.ArenaIdentityMotionReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -11,8 +12,10 @@ local currentArena = nil
 local currentVariant = nil
 local tracked = {}
 local phase = "waiting"
-local decorChildConnection = nil
+local disconnectStructure = nil
+local watchedMap = nil
 local rebuildQueued = false
+local rebuildSerial = 0
 
 local function restoreTracked()
     for _, item in ipairs(tracked) do
@@ -26,10 +29,6 @@ local function restoreTracked()
 end
 
 local function clear()
-    if decorChildConnection then
-        decorChildConnection:Disconnect()
-        decorChildConnection = nil
-    end
     restoreTracked()
     table.clear(tracked)
     currentArena = nil
@@ -90,18 +89,29 @@ local function rebuild()
         end
     end
 
-    -- Arena.Decor may replicate before its animated children on Android.
-    -- Debounce additions to one rescan; disconnect on replacement/cleanup.
-    decorChildConnection = decor.ChildAdded:Connect(function(child)
-        if not child:IsA("BasePart")
-            or not MotionRules.isIdentityPart(currentVariant, child.Name)
-            or rebuildQueued then
-            return
-        end
+end
+
+-- Reconnect to each map generation; late Arena, Decor, VariantId and
+-- named ornaments are observed by a single disposeable structure watcher.
+local function bindMap()
+    rebuildSerial += 1
+    rebuildQueued = false
+    if disconnectStructure then
+        disconnectStructure()
+        disconnectStructure = nil
+    end
+    clear()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    watchedMap = generated
+    if not generated then return end
+    disconnectStructure = MotionReadiness.watch(generated, function()
+        if rebuildQueued then return end
         rebuildQueued = true
+        local serial = rebuildSerial
         task.defer(function()
+            if serial ~= rebuildSerial then return end
             rebuildQueued = false
-            if currentArena == arena and arena.Parent then
+            if workspace:FindFirstChild("GeneratedMap") == generated then
                 rebuild()
             end
         end)
@@ -110,17 +120,16 @@ end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(rebuild)
+        bindMap()
     end
 end)
-
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        clear()
+    if child == watchedMap then
+        bindMap()
     end
 end)
 
-task.defer(rebuild)
+bindMap()
 
 stateEvent.OnClientEvent:Connect(function(state)
     local previousPhase = phase
@@ -148,10 +157,6 @@ end)
 
 task.spawn(function()
     while true do
-        if not currentArena or not currentArena.Parent then
-            rebuild()
-        end
-
         local active = phase == "ready"
             or phase == "round"
             or phase == "result"
