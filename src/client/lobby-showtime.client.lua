@@ -37,6 +37,7 @@ local dancers = {}
 local lights = {}
 local beams = {}
 local particles = nil
+local personalBurstAttachment = nil
 local titleBillboard = nil
 local profile = Showtime.profile("Low")
 local stageCenter = nil
@@ -155,10 +156,16 @@ local function stopEmote()
     local active = currentEmote
     currentEmote = nil
     markEmoteActive(false)
+    if active then
+        ShowtimeSignatureKit.clear(folder)
+    end
+    if personalBurstAttachment then
+        personalBurstAttachment:Destroy()
+        personalBurstAttachment = nil
+    end
     if active and active.track then
         active.track:Stop(0.17)
     end
-
 end
 
 local function clearMotionConnections()
@@ -232,6 +239,10 @@ local function personalConfetti()
     if player:GetAttribute("ReduceMotion") == true then
         return
     end
+    if personalBurstAttachment then
+        personalBurstAttachment:Destroy()
+        personalBurstAttachment = nil
+    end
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then
@@ -241,6 +252,7 @@ local function personalConfetti()
     attachment.Name = "ShowtimePersonalBurst"
     attachment.Position = Vector3.new(0, -1.5, 0)
     attachment.Parent = root
+    personalBurstAttachment = attachment
     local emitter = Instance.new("ParticleEmitter")
     emitter.Enabled = false
     emitter.Rate = 0
@@ -370,7 +382,8 @@ local function playEmote(id, automatic)
     end
     open = false
     panel.Visible = false
-    if particles and particles.Parent then
+    if particles and particles.Parent
+        and player:GetAttribute("ReduceMotion") ~= true then
         particles:Emit(profile.Bursts)
     end
 end
@@ -854,6 +867,17 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     updateStage(os.clock())
 end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion") == true then
+        ShowtimeSignatureKit.reconcile(folder,
+            VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name, true)
+        if personalBurstAttachment then
+            personalBurstAttachment:Destroy()
+            personalBurstAttachment = nil
+        end
+        if particles and particles.Parent then
+            particles:Clear()
+        end
+    end
     updateStage(os.clock())
 end)
 player.CharacterAdded:Connect(function()

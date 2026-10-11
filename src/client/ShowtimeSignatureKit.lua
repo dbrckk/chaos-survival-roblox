@@ -110,22 +110,48 @@ function Kit.recipe(kind, index, count)
     }
 end
 
+-- Only temporary emote signatures carry this attribute; permanent stage
+-- architecture and other effects remain untouched.
+function Kit.clear(parent)
+    if not parent then return 0 end
+    local removed = 0
+    for _, child in ipairs(parent:GetChildren()) do
+        if child:GetAttribute("ChaosShowtimeSignature") == true then
+            child:Destroy()
+            removed += 1
+        end
+    end
+    return removed
+end
+
+function Kit.reconcile(parent, tier, reduced)
+    if not parent then return 0 end
+    local limit = Kit.count(tier, reduced)
+    local kept = 0
+    for _, child in ipairs(parent:GetChildren()) do
+        if child:GetAttribute("ChaosShowtimeSignature") == true then
+            if kept < limit then
+                kept += 1
+            else
+                child:Destroy()
+            end
+        end
+    end
+    return kept
+end
+
 function Kit.emit(parent, rootFrame, kind, tier, reduced, primary, secondary)
     local pieces = {}
     local count = Kit.count(tier, reduced)
-    if not parent or not NAMES[kind] or count == 0
+    if not parent then return pieces end
+    -- Clean the previous burst even when a quality or accessibility gate
+    -- prevents the next one from spawning.
+    Kit.clear(parent)
+    if not NAMES[kind] or count == 0
         or typeof(rootFrame) ~= "CFrame"
         or typeof(primary) ~= "Color3"
         or typeof(secondary) ~= "Color3" then
         return pieces
-    end
-
-    -- Switching dances never stacks several full 3D glyph sets. Do not
-    -- touch permanent stage assets or unrelated lobby visual owners.
-    for _, item in ipairs(parent:GetChildren()) do
-        if item:GetAttribute("ChaosShowtimeSignature") == true then
-            item:Destroy()
-        end
     end
     for i = 1, count do
         local spec = Kit.recipe(kind, i, count)

@@ -584,3 +584,27 @@ shadow gating, quality ceilings, rapid replacement and
 preservation of unrelated stage parts. Physical Roblox Studio
 and Android QA must confirm visual taste, camera visibility,
 performance, clipping, genuine avatar animations and ReduceMotion.
+
+## Showtime transient VFX: immediate accessibility cleanup
+
+A concrete accessibility defect existed in the new eight-signature
+emote pass: a burst already playing in High quality could remain on
+screen after a switch to Low or ReduceMotion until its 0.84-second
+Debris timeout. Additionally, the stage confetti emitter ignored
+ReduceMotion even though the personal emitter did not.
+
+`ShowtimeSignatureKit.clear/reconcile` now remove only marked
+temporary signature shapes; permanent stage geometry is preserved.
+Starting an emote under Low or ReduceMotion also clears the previous
+burst rather than returning early with stale geometry. Stopping or
+switching emotes clears the transient pieces and owned personal
+confetti attachment. Enabling ReduceMotion immediately removes both
+and clears existing stage particles; stage confetti emission is
+explicitly gated by ReduceMotion. No new per-frame callbacks, physics
+effects, server messages or asset IDs are introduced.
+
+The engine spec checks High (6) to Medium (3) to Low (0), a
+ReduceMotion transition, no stale shapes on blocked emissions, and
+preservation of unrelated stage parts. Exact-head CI and physical
+Android/Studio visual acceptance are separate gates; no FPS
+measurement or real-device verification is claimed here.
