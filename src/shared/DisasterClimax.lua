@@ -109,6 +109,33 @@ function DisasterClimax.burstIds(ids)
     return selected
 end
 
+-- The transient climax folder is a separate budget from all critical
+-- warning/VFX owners. All eleven climax kits share this 2/4/6/1 geometry cap.
+function DisasterClimax.burstPieceCount(tier, reduced)
+    if tier ~= "High" and tier ~= "Medium" and tier ~= "Low" then
+        return 0
+    end
+    if reduced == true then return 1 end
+    if tier == "High" then return 6 end
+    if tier == "Medium" then return 4 end
+    return 2
+end
+
+function DisasterClimax.burstPartLimit(requestedTier, simultaneousCount, reduced)
+    local tier = DisasterClimax.burstTier(requestedTier, simultaneousCount)
+    local count = math.max(1, math.floor(tonumber(simultaneousCount) or 1))
+    return DisasterClimax.burstPieceCount(tier, reduced) * math.min(2, count)
+end
+
+-- Number of oldest cosmetic parts to evict before adding the incoming
+-- signature. Keeps the total across *successive* snapshots under budget.
+function DisasterClimax.burstEvictions(existing, incoming, limit)
+    local before = math.max(0, math.floor(tonumber(existing) or 0))
+    local newParts = math.max(0, math.floor(tonumber(incoming) or 0))
+    local cap = math.max(0, math.floor(tonumber(limit) or 0))
+    return math.max(0, before + newParts - cap)
+end
+
 function DisasterClimax.get(id)
     return DisasterClimax.Profiles[id]
 end

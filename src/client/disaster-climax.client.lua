@@ -139,6 +139,18 @@ local PLAYERS = {
     shock = playShock,
 }
 
+-- Oldest-first eviction keeps the transient-only folder bounded across
+-- several rapidly escalating stages. It does not touch warning geometry.
+local function reserveClimaxPieces(expectedPieces, limit)
+    local children = folder:GetChildren()
+    local remove = DisasterClimax.burstEvictions(
+        #children, expectedPieces, limit
+    )
+    for i = 1, math.min(remove, #children) do
+        children[i]:Destroy()
+    end
+end
+
 local function playClimax(id, stage, base, delaySeconds, currentToken, currentGeneration, burstCount)
     local profile = DisasterClimax.get(id)
     local play = profile and PLAYERS[profile.Kind]
@@ -163,6 +175,11 @@ local function playClimax(id, stage, base, delaySeconds, currentToken, currentGe
         )
         local tier = VfxQuality.get(tierName)
         local reduced = player:GetAttribute("ReduceMotion") == true
+        local incoming = DisasterClimax.burstPieceCount(tierName, reduced)
+        local limit = DisasterClimax.burstPartLimit(
+            player:GetAttribute("VfxQualityTier"), burstCount, reduced
+        )
+        reserveClimaxPieces(incoming, limit)
         play(profile, base, stage, tier, reduced)
     end)
 end
@@ -195,14 +212,17 @@ local function presentAvailable(state, serial, attempt)
     end
 
     local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
-    DisasterClimax.pruneInactive(stageById, generationById, ids)
     local stage = DisasterClimax.stageFor(
         state.intensity, state.finalRush == true, state.overdrive == true
     )
+    -- Track *selected cosmetic* owners rather than all server disasters.
+    -- When the selection changes, invalidate already scheduled callbacks
+    -- even if the deselected disaster is still active server-side.
+    local presentationIds = stage > 0 and DisasterClimax.burstIds(ids) or {}
+    DisasterClimax.pruneInactive(
+        stageById, generationById, presentationIds
+    )
     if stage <= 0 then return end
-    -- Select a maximum of two distinct, valid cosmetic bursts. Unknown
-    -- IDs and duplicates never steal GPU budget from active disasters.
-    local presentationIds = DisasterClimax.burstIds(ids)
     local currentToken = token
     for index, id in ipairs(presentationIds) do
         local previousStage = stageById[id] or 0

@@ -123,6 +123,49 @@ describe("Disaster climax progression", function()
         expect(tier("Unknown", 2)).toBe("Medium")
     end)
 
+    it("keeps accumulated climax parts capped across consecutive stages", function()
+        local policy = DisasterClimax
+        expect(policy.burstPieceCount("High", false)).toBe(6)
+        expect(policy.burstPieceCount("Medium", false)).toBe(4)
+        expect(policy.burstPieceCount("Low", false)).toBe(2)
+        expect(policy.burstPieceCount("High", true)).toBe(1)
+        expect(policy.burstPieceCount("Unknown", false)).toBe(0)
+        expect(policy.burstPartLimit("High", 1, false)).toBe(6)
+        expect(policy.burstPartLimit("High", 2, false)).toBe(8)
+        expect(policy.burstPartLimit("Medium", 2, false)).toBe(8)
+        expect(policy.burstPartLimit("Low", 2, false)).toBe(4)
+        expect(policy.burstPartLimit("High", 2, true)).toBe(2)
+        expect(policy.burstPartLimit("High", 1, true)).toBe(1)
+        expect(policy.burstEvictions(0, 4, 8)).toBe(0)
+        expect(policy.burstEvictions(6, 4, 8)).toBe(2)
+        expect(policy.burstEvictions(8, 4, 8)).toBe(4)
+        expect(policy.burstEvictions(11, 4, 8)).toBe(7)
+        expect(policy.burstEvictions(2, 1, 2)).toBe(1)
+        expect(policy.burstEvictions(-3, 2, 4)).toBe(0)
+        expect(policy.burstEvictions(8, 0, 8)).toBe(0)
+    end)
+
+    it("invalidates scheduled presentation when selected pair changes", function()
+        local choose = DisasterClimax.burstIds
+        local stages = {Meteors = 2, Freeze = 2}
+        local generations = {}
+        -- A third server-authoritative hazard stays active but is not
+        -- selected; only client-side climax stage bookkeeping is pruned.
+        local updated = choose({"Tornado", "Freeze", "Meteors"})
+        expect(#updated).toBe(2)
+        DisasterClimax.pruneInactive(stages, generations, updated)
+        expect(stages.Meteors == nil).toBe(true)
+        expect(generations.Meteors).toBe(1)
+        expect(stages.Freeze).toBe(2)
+        stages.Meteors = 2
+        -- No climax when there is no cosmetic surge.
+        DisasterClimax.pruneInactive(stages, generations, {})
+        expect(stages.Meteors == nil).toBe(true)
+        expect(stages.Freeze == nil).toBe(true)
+        expect(generations.Meteors).toBe(2)
+        expect(generations.Freeze).toBe(1)
+    end)
+
     it("bounds arena replication recovery to three retries", function()
         local retry = DisasterClimax.replicationRetryDelay
         expect(retry(1)).toBe(0.15)

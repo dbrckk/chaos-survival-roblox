@@ -402,3 +402,29 @@ transitions and single-versus-double budgets. Actual visual acceptance
 requires High and Medium side-by-side Double Chaos captures, correct
 hazard warnings, simultaneous peak GPU/thermal tests and 30-minute
 Android and Studio runs.
+
+## Global transient climax budget and selection invalidation
+
+The Double Chaos cap is now enforced on the **live client-only
+`DisasterClimaxLocal` folder across successive RoundState snapshots**,
+not just the geometry emitted during one callback. Every authorized
+burst reserves its 1/2/4/6 pieces, evicting oldest climax cosmetics if
+necessary. The cap is **6 High / 4 Medium / 2 Low / 1 ReduceMotion**
+for one hazard; **8 High or Medium / 4 Low / 2 ReduceMotion** for
+Double Chaos. This budget does not include or delete persistent
+arena decoration, client damage cues, authoritative warnings, or
+non-climax VFX. Oldest-first eviction can shorten an earlier decorative
+fade during quick changes rather than creating an overdraw spike.
+
+Client presentation ownership is now reconciled against the **two
+selected signature IDs**, not every authoritative disaster ID. A
+previously selected climax whose server hazard remains active but no
+longer occupies a presentation slot has its queued callback invalidated.
+When the intensity drops below cosmetic climax thresholds, pending
+visual bursts are also invalidated while gameplay remains unaffected.
+
+Regression tests cover part-limit arithmetic, cumulative burst evictions,
+live selection changes and invalidation of old scheduled callbacks.
+Manual Studio/Android tests are still required for rapid stage changes,
+replacement arena streaming, Double Chaos peak fill-rate and stable
+30-minute GPU/CPU/memory measurements. No real FPS claim.
