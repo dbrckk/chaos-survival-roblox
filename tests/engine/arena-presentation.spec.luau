@@ -12,6 +12,7 @@ local ArenaEdgeFinishKit = require("../../src/client/ArenaEdgeFinishKit")
 local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
 local ArenaDeckFinishKit = require("../../src/client/ArenaDeckFinishKit")
 local ArenaSceneryFrames = require("../../src/shared/ArenaSceneryFrames")
+local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 
 local CENTER = Vector3.new(0, 0, 0)
 
@@ -503,6 +504,49 @@ describe("Rotated cinematic arena scenery frames", function()
         expect(frame.UpVector:Dot(base.CFrame.UpVector) > 0.999).toBe(true)
         expect(frame.LookVector:Dot(base.CFrame.LookVector) < 0.99).toBe(true)
         base:Destroy()
+    end)
+end)
+
+
+describe("Touch decor streamed-subtree readability", function()
+    it("dims nested Neon and lights without compounding quality changes", function()
+        local holder = Instance.new("Folder")
+        local nested = Instance.new("Model")
+        local glow = Instance.new("Part")
+        glow.Name = "DecorativeNeon"
+        glow.Material = Enum.Material.Neon
+        glow.Parent = nested
+        local edge = Instance.new("Part")
+        edge.Name = "EdgeSafetyGlow"
+        edge.Material = Enum.Material.Neon
+        edge.Parent = nested
+        local lamp = Instance.new("PointLight")
+        lamp.Brightness = 5
+        lamp.Parent = glow
+        nested.Parent = holder
+        local baselines = setmetatable({}, {__mode = "k"})
+
+        -- A populated Model arrives as one streamed subtree.
+        MobileReadabilityKit.applyTree(nested, "Low", baselines)
+        expect(math.abs(glow.LocalTransparencyModifier - 0.18) < 0.0001).toBe(true)
+        expect(edge.LocalTransparencyModifier <= 0.07).toBe(true)
+        expect(math.abs(lamp.Brightness - 3.1) < 0.0001).toBe(true)
+        MobileReadabilityKit.applyTree(nested, "High", baselines)
+        expect(math.abs(glow.LocalTransparencyModifier - 0.08) < 0.0001).toBe(true)
+        expect(math.abs(lamp.Brightness - 4) < 0.0001).toBe(true)
+        MobileReadabilityKit.applyTree(nested, "Low", baselines)
+        expect(math.abs(lamp.Brightness - 3.1) < 0.0001).toBe(true)
+
+        local streamed = Instance.new("Folder")
+        local newLight = Instance.new("SpotLight")
+        newLight.Brightness = 10
+        newLight.Parent = streamed
+        streamed.Parent = nested
+        MobileReadabilityKit.applyTree(streamed, "Medium", baselines)
+        expect(math.abs(newLight.Brightness - 7.2) < 0.0001).toBe(true)
+        expect(baselines[lamp]).toBe(5)
+        expect(baselines[newLight]).toBe(10)
+        holder:Destroy()
     end)
 end)
 

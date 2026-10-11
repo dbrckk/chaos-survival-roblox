@@ -63,3 +63,7 @@ After joining a fresh server and after changing maps, wait for the streamed Aren
 ## PR #19 Showtime geometry on rotated lobbies
 
 In a staging build with a rotated (or slightly tilted) Lobby.Floor, verify each original holographic dancer remains on its assigned side of the physical deck and the moving ribbons stay aligned with its local axes. Walk along all four deck corners: crowd cues, marquee and spatial sound must react to participants inside the rotated deck, not to a world-axis rectangle outside it. Repeat after map swap and quality changes. Automated rule tests verify coordinate transforms; visual composition, motion comfort and Android framerate still require observation on a device.
+
+## PR #19 — nested streaming decor regression (code-level coverage)
+
+On Android, stream a pre-populated Model or Folder into `GeneratedMap.Arena.Decor` after the map initially loads. Verify that **nested** Neon parts and Point/Spot/SurfaceLights are dimmed immediately at Low, Medium and High; a parent-only treatment is insufficient. Change quality Low → High → Low and confirm the original light brightness is restored proportionally rather than multiplied repeatedly. Verify edge guidance remains clearer than decorative Neon, and repeat while replacing the map. The existing arena engine spec now exercises the subtree treatment and baseline cache, but actual streaming timing, visual legibility and FPS require physical Studio/Android acceptance.

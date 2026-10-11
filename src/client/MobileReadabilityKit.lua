@@ -41,6 +41,17 @@ function Kit.applyInstance(instance, tier, originalBrightness)
     end
 end
 
+-- DescendantAdded may first deliver a pre-populated Model/Folder. Apply the
+-- complete streamed subtree, not only its container, so nested Neon and
+-- motivated lights receive the same touch policy immediately.
+function Kit.applyTree(root, tier, originalBrightness)
+    if not root then return end
+    Kit.applyInstance(root, tier, originalBrightness)
+    for _, descendant in ipairs(root:GetDescendants()) do
+        Kit.applyInstance(descendant, tier, originalBrightness)
+    end
+end
+
 -- Emissions are always the currently available Decor or nil. Listener
 -- teardown is explicit when a map/arena disappears or another one arrives.
 function Kit.watch(generated, onDecor)

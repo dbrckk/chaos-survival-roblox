@@ -26,10 +26,7 @@ local function applyDecor()
     if not decor or not decor.Parent then
         return
     end
-    local tier = tierName()
-    for _, descendant in ipairs(decor:GetDescendants()) do
-        MobileReadabilityKit.applyInstance(descendant, tier, lightBrightness)
-    end
+    MobileReadabilityKit.applyTree(decor, tierName(), lightBrightness)
 end
 
 local function bindDecor(decor)
@@ -48,7 +45,7 @@ local function bindDecor(decor)
         task.defer(function()
             -- Discard stale deferred callbacks from a previous arena.
             if currentDecor == decor and descendant:IsDescendantOf(decor) then
-                MobileReadabilityKit.applyInstance(
+                MobileReadabilityKit.applyTree(
                     descendant, tierName(), lightBrightness)
             end
         end)
