@@ -60,6 +60,10 @@ function HeroMotionBudgetRules.applyStillPose(part, state, reaction)
     return true
 end
 
+function HeroMotionBudgetRules.reactiveFrame(baseFrame, shift, yaw, bank)
+    return baseFrame * CFrame.new(shift) * CFrame.Angles(0, yaw, bank)
+end
+
 function HeroMotionBudgetRules.shouldUpdate(part)
     return part ~= nil and part.Parent ~= nil
         and part:GetAttribute("SceneryLodHidden") ~= true

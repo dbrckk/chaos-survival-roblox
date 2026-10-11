@@ -174,9 +174,12 @@ task.spawn(function()
         end
 
         local i = state.index
+        local frame = state.baseCFrame
+        local ownsAnimatedCFrame = state.role == "lift"
+            or state.role == "cable" or state.role == "reactorArm"
         if state.role == "lift" then
             local travel = math.sin(clock * 0.48) * 5.2 * scale
-            part.CFrame = state.baseCFrame * CFrame.new(0, travel, 0)
+            frame = state.baseCFrame * CFrame.new(0, travel, 0)
         elseif state.role == "pulse" then
             local wave = (math.sin(clock * 2.2) + 1) * 0.5
             part.Transparency = math.clamp(
@@ -186,7 +189,7 @@ task.spawn(function()
             )
         elseif state.role == "cable" then
             local sway = math.sin(clock * 0.72) * math.rad(3.2) * scale
-            part.CFrame = state.baseCFrame * CFrame.Angles(0, 0, sway)
+            frame = state.baseCFrame * CFrame.Angles(0, 0, sway)
         elseif state.role == "reactorCore" then
             local wave = (math.sin(clock * 2.8) + 1) * 0.5
             local sizeScale = 1 + wave * 0.08 * scale
@@ -199,7 +202,7 @@ task.spawn(function()
             part.Color = state.baseColor:Lerp(Color3.new(1, 1, 1), wave * 0.12 * scale)
         elseif state.role == "reactorArm" then
             local angle = clock * 0.22 * scale + (i - 1) * math.pi / 3
-            part.CFrame = state.baseCFrame
+            frame = state.baseCFrame
                 * CFrame.Angles(0, 0, math.sin(angle) * math.rad(3.5) * scale)
         elseif state.role == "scan" then
             local wave = (math.sin(clock * 3.1) + 1) * 0.5
@@ -226,30 +229,30 @@ task.spawn(function()
                 or state.baseColor
         end
 
-        -- One owner, one CFrame assignment per part and frame. Landmarks react
-        -- to hazard pressure without allocating new particles or instances.
-        local ownsAnimatedCFrame = state.role == "lift"
-            or state.role == "cable" or state.role == "reactorArm"
-        local baseFrame = ownsAnimatedCFrame and part.CFrame or state.baseCFrame
-        if reaction and reaction.Active then
+        -- Compose authored hero motion and disaster reaction before one
+        -- CFrame write, including on pitched/rotated arenas.
+        local reacts = reaction and reaction.Active == true
+        if reacts then
             local shift, bank, yaw, tint = LandmarkReactions.offset(
                 state.role, state.index, clock, reaction
             )
-            part.CFrame = baseFrame * CFrame.new(shift)
-                * CFrame.Angles(0, yaw, bank)
+            frame = HeroMotionBudget.reactiveFrame(frame, shift, yaw, bank)
             -- Core and crossing-signal animation authored its own color
             -- earlier this tick; all other roles restore captured base color.
             local animatedColor = (state.role == "reactorCore"
                 or state.role == "signal") and part.Color or state.baseColor
             part.Color = animatedColor:Lerp(reaction.Accent, tint)
         else
-            if not ownsAnimatedCFrame then
-                part.CFrame = state.baseCFrame
-            end
             if state.role ~= "reactorCore" and state.role ~= "signal" then
                 part.Color = state.baseColor
             end
         end
+        -- Static pieces only need a CFrame write while reacting, then
+        -- one reset after the hazard ends. Moving pieces update every tick.
+        if ownsAnimatedCFrame or reacts or state.hadReaction == true then
+            part.CFrame = frame
+        end
+        state.hadReaction = reacts
     end
     end
 end)

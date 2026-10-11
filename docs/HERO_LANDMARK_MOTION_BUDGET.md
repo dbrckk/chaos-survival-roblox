@@ -43,3 +43,14 @@ Manual acceptance: confirm that ReduceMotion toggles restore hero silhouettes
 (including reactor core size), that Bombs/Meteors remain recognizable by tint,
 and that map swaps and late scenery replication do not retain old transforms.
 Android FPS, power consumption and thermals still require hardware testing.
+
+## Single-write monument animation (11 October)
+
+In normal motion mode, the authored service-car, cable and reactor-arm
+gesture is composed with the disaster reaction before a single CFrame
+write, avoiding the prior intermediate write. Non-moving ornaments
+restore their base CFrame once when a disaster ends, rather than
+repeating that same write on every quiet loop iteration. Existing
+Low/Medium/High amplitudes, ReduceMotion static poses, hazards,
+collisions and LOD rules are unchanged. Engine core_a regression checks
+rotated 3D composition. Physical Android profiling remains necessary.
