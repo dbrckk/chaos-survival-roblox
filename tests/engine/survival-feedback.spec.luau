@@ -343,6 +343,28 @@ describe("Character cinematic reactions", function()
         humanoid:Destroy()
     end)
 
+    it("releases partial rigs and safely re-registers late Humanoids", function()
+        local registry = CharacterReactionRigRegistry.new(function() end)
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        expect(registry.watch(model)).toBe(true)
+        expect(registry.rig(model) == nil).toBe(true)
+        registry.stop(model)
+        expect(registry.count()).toBe(0)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = model
+        expect(registry.rig(model) == nil).toBe(true)
+        expect(registry.watch(model)).toBe(true)
+        local bound, boundHumanoid = registry.rig(model)
+        expect(bound).toBe(root)
+        expect(boundHumanoid).toBe(humanoid)
+        model:Destroy()
+        expect(registry.count()).toBe(0)
+    end)
+
     it("recognizes direct land-to-run transitions while clearing airborne time", function()
         expect(CharacterReactionRules.isLandingTransition(Enum.HumanoidStateType.Landed)).toBe(true)
         expect(CharacterReactionRules.isLandingTransition(Enum.HumanoidStateType.Running)).toBe(true)

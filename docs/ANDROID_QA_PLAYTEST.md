@@ -195,3 +195,22 @@ This is client-owned visual lifecycle only: no extra render loop,
 new Beam, Animator action, physics, damage, server event or
 monetization change. The full five-shard Open Cloud run and physical
 Android streaming/respawn/AI movement QA must pass before signoff.
+
+## PR #19 — material-contact FX streaming recovery (11 October 2026)
+
+The client material-contact controller now shares
+`CharacterReactionRigRegistry` with directional character reactions.
+The old permanent `watched` flag and 8-second partial-rig timeout
+could lose landing imprints after Humanoid/Root streaming and respawn.
+Current Humanoid/Root pairs are now rebound on replacement; their old
+StateChanged signals and airborne timestamps are cleared. Removing a
+character, AI bot or AISurvivors folder releases listeners. A contact
+imprint checks that its root is still the live model child before
+raycasting, and Freefall timestamps start only in an active round.
+Malformed RoundState snapshots safely fall back to waiting.
+
+Existing tier budgets, cooldowns, collision settings, materials, audio
+and server gameplay are unchanged. The shared registry engine suite
+now checks partial-rig teardown and late Humanoid re-registration.
+No new effects or render loops. Exact-head CI and real Roblox Studio /
+Android streaming and performance checks are still required.

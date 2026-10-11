@@ -4,15 +4,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local GroundContactRules = require(ReplicatedStorage.Shared.GroundContactRules)
 local LandingImprintKit = require(script.Parent.LandingImprintKit)
+local RigRegistry = require(script.Parent.CharacterReactionRigRegistry)
 
 local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
-local watched = setmetatable({}, {__mode = "k"})
 local finalRush = false
 local botFolderConnection = nil
+local botFolderRemovedConnection = nil
+local botFolder = nil
 local currentPhase = "waiting"
 local lastContact = setmetatable({}, {__mode = "k"})
-local pendingRigs = setmetatable({}, {__mode = "k"})
 local activePieces = setmetatable({}, {__mode = "k"})
 local folder = Instance.new("Folder")
 folder.Name = "CharacterContactLocal"
@@ -67,9 +68,9 @@ local function sampleSurface(root)
     )
 end
 
-local function emitLanding(model, airtime)
-    local root = model:FindFirstChild("HumanoidRootPart")
-    if not root or not root:IsA("BasePart") then
+local function emitLanding(model, root, airtime)
+    if not root or not root:IsA("BasePart") or root.Parent ~= model
+        or model:FindFirstChild("HumanoidRootPart") ~= root then
         return
     end
 
@@ -137,112 +138,74 @@ local function emitLanding(model, airtime)
     end
 end
 
-local function watchModel(model)
-    if watched[model] then
-        return
-    end
-
-    local humanoid = model:FindFirstChildOfClass("Humanoid")
-    local root = model:FindFirstChild("HumanoidRootPart")
-    if not humanoid or not root or not root:IsA("BasePart") then
-        if not pendingRigs[model] and model.Parent then
-            local connection = model.ChildAdded:Connect(function(child)
-                if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
-                    task.defer(watchModel, model)
-                end
-            end)
-            pendingRigs[model] = connection
-            -- A half-streamed rig cannot create endless polling tasks.
-            task.delay(8, function()
-                if pendingRigs[model] == connection then
-                    connection:Disconnect()
-                    pendingRigs[model] = nil
-                end
-            end)
+local registry = RigRegistry.new(function(model, root, state, entry)
+    if state == Enum.HumanoidStateType.Freefall then
+        entry.airborneAt = currentPhase == "round"
+            and (entry.airborneAt or os.clock()) or nil
+    elseif state == Enum.HumanoidStateType.Dead then
+        entry.airborneAt = nil
+    elseif state == Enum.HumanoidStateType.Landed
+        or state == Enum.HumanoidStateType.Running
+        or state == Enum.HumanoidStateType.RunningNoPhysics then
+        local started = entry.airborneAt
+        entry.airborneAt = nil
+        if started and currentPhase == "round" then
+            local airtime = os.clock() - started
+            if airtime >= 0.34 then emitLanding(model, root, airtime) end
         end
-        return
-    end
-    if pendingRigs[model] then
-        pendingRigs[model]:Disconnect()
-        pendingRigs[model] = nil
-    end
-
-    watched[model] = true
-    local airborneAt = nil
-
-    humanoid.StateChanged:Connect(function(_, state)
-        if state == Enum.HumanoidStateType.Freefall then
-            airborneAt = airborneAt or os.clock()
-        elseif airborneAt and (
-            state == Enum.HumanoidStateType.Landed
-            or state == Enum.HumanoidStateType.Running
-            or state == Enum.HumanoidStateType.RunningNoPhysics
-        ) then
-            local airtime = os.clock() - airborneAt
-            airborneAt = nil
-            if airtime >= 0.34 then
-                emitLanding(model, airtime)
-            end
-        elseif state == Enum.HumanoidStateType.Dead then
-            airborneAt = nil
-        end
-    end)
-end
-
-local function watchPlayer(player)
-    player.CharacterAdded:Connect(watchModel)
-    if player.Character then
-        watchModel(player.Character)
-    end
-end
-
-for _, player in ipairs(Players:GetPlayers()) do
-    watchPlayer(player)
-end
-Players.PlayerAdded:Connect(watchPlayer)
-
-local function watchBots(folder)
-    if botFolderConnection then
-        botFolderConnection:Disconnect()
-        botFolderConnection = nil
-    end
-
-    if not folder then
-        return
-    end
-
-    for _, model in ipairs(folder:GetChildren()) do
-        if model:IsA("Model") then
-            watchModel(model)
-        end
-    end
-    botFolderConnection = folder.ChildAdded:Connect(function(model)
-        if model:IsA("Model") then
-            task.defer(watchModel, model)
-        end
-    end)
-end
-
-local bots = workspace:FindFirstChild("AISurvivors")
-if bots then
-    watchBots(bots)
-end
-
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "AISurvivors" then
-        watchBots(child)
     end
 end)
-
-workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "AISurvivors" then
-        watchBots(nil)
+local function watchModel(model)
+    registry.watch(model)
+end
+local function watchPlayer(player)
+    player.CharacterAdded:Connect(function(model) task.defer(watchModel, model) end)
+    player.CharacterRemoving:Connect(function(model)
+        registry.stop(model)
+        lastContact[model] = nil
+    end)
+    if player.Character then task.defer(watchModel, player.Character) end
+end
+for _, player in ipairs(Players:GetPlayers()) do watchPlayer(player) end
+Players.PlayerAdded:Connect(watchPlayer)
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character then registry.stop(player.Character) end
+end)
+local function watchBots(nextFolder)
+    if botFolderConnection then botFolderConnection:Disconnect() end
+    if botFolderRemovedConnection then botFolderRemovedConnection:Disconnect() end
+    if botFolder and botFolder ~= nextFolder then
+        for _, model in ipairs(botFolder:GetChildren()) do
+            if model:IsA("Model") then registry.stop(model) end
+        end
     end
+    botFolder = nextFolder
+    if not nextFolder then return end
+    for _, model in ipairs(nextFolder:GetChildren()) do
+        if model:IsA("Model") then task.defer(watchModel, model) end
+    end
+    botFolderConnection = nextFolder.ChildAdded:Connect(function(model)
+        if model:IsA("Model") then task.defer(watchModel, model) end
+    end)
+    botFolderRemovedConnection = nextFolder.ChildRemoved:Connect(function(model)
+        if model:IsA("Model") then
+            registry.stop(model)
+            lastContact[model] = nil
+        end
+    end)
+end
+watchBots(workspace:FindFirstChild("AISurvivors"))
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "AISurvivors" and child ~= botFolder then watchBots(child) end
+end)
+workspace.ChildRemoved:Connect(function(child)
+    if child == botFolder then watchBots(nil) end
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    currentPhase = tostring(state.phase or "waiting")
-    finalRush = currentPhase == "round" and state.finalRush == true
+    local snapshot = type(state) == "table" and state or {}
+    currentPhase = tostring(snapshot.phase or "waiting")
+    finalRush = currentPhase == "round" and snapshot.finalRush == true
     if currentPhase ~= "round" then
         folder:ClearAllChildren()
     end
