@@ -8,6 +8,39 @@ local ShowtimeChoreography = require("../../src/client/ShowtimeChoreography")
 local ShowtimeHologramDetails = require("../../src/client/ShowtimeHologramDetails")
 
 describe("Lobby Showtime", function()
+    it("rejects stale, replaced and detached humanoids during emote rebinding", function()
+        local oldCharacter = Instance.new("Model")
+        local currentCharacter = Instance.new("Model")
+        local oldHumanoid = Instance.new("Humanoid")
+        local newHumanoid = Instance.new("Humanoid")
+        oldHumanoid.Parent = oldCharacter
+        newHumanoid.Parent = currentCharacter
+        local adopt = Showtime.canAdoptHumanoid
+        expect(adopt(2, 2, currentCharacter, currentCharacter, newHumanoid))
+            .toBe(true)
+        expect(adopt(1, 2, oldCharacter, currentCharacter, oldHumanoid))
+            .toBe(false)
+        expect(adopt(2, 2, oldCharacter, currentCharacter, oldHumanoid))
+            .toBe(false)
+        expect(adopt(2, 3, currentCharacter, currentCharacter, newHumanoid))
+            .toBe(false)
+        expect(adopt(nil, nil, currentCharacter, currentCharacter, newHumanoid))
+            .toBe(false)
+        expect(adopt(2, 2, currentCharacter, currentCharacter, nil)).toBe(false)
+        expect(adopt(2, 2, nil, currentCharacter, newHumanoid)).toBe(false)
+        newHumanoid.Parent = oldCharacter
+        expect(adopt(2, 2, currentCharacter, currentCharacter, newHumanoid))
+            .toBe(false)
+        newHumanoid.Parent = currentCharacter
+        local fake = Instance.new("Folder")
+        fake.Parent = currentCharacter
+        expect(adopt(2, 2, currentCharacter, currentCharacter, fake)).toBe(false)
+        fake:Destroy()
+        oldCharacter:Destroy()
+        currentCharacter:Destroy()
+    end)
+
+
     it("makes emotes available only in calm phases", function()
         expect(Showtime.enabled("waiting", nil)).toBe(true)
         expect(Showtime.enabled("intermission", nil)).toBe(true)

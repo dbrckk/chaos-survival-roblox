@@ -25,6 +25,7 @@ local voteOptions = nil
 local open = false
 local currentEmote = nil
 local boundHumanoid = nil
+local humanoidBindSerial = 0
 local motionConnections = {}
 local loaded = {}
 local viewportConnection = nil
@@ -177,11 +178,14 @@ local function clearLoaded()
     boundHumanoid = nil
 end
 
-local function bindHumanoid(character)
-    clearLoaded()
+local function bindHumanoid(character, serial)
+    -- A previous avatar's delayed WaitForChild must never destroy the
+    -- current avatar's emote tracks or clear the body-feel ownership flag.
     local hum = character:FindFirstChildOfClass("Humanoid")
         or character:WaitForChild("Humanoid", 8)
-    if not hum or character ~= player.Character then
+    if not Showtime.canAdoptHumanoid(
+        serial, humanoidBindSerial, character, player.Character, hum
+    ) then
         return
     end
     boundHumanoid = hum
@@ -207,12 +211,20 @@ local function bindHumanoid(character)
     table.insert(motionConnections, hum.Died:Connect(stopEmote))
 end
 
-player.CharacterAdded:Connect(function(character)
-    task.spawn(bindHumanoid, character)
+local function beginHumanoidBinding(character)
+    humanoidBindSerial += 1
+    -- Clear obsolete tracks immediately, before awaiting streaming.
+    clearLoaded()
+    task.spawn(bindHumanoid, character, humanoidBindSerial)
+end
+
+player.CharacterAdded:Connect(beginHumanoidBinding)
+player.CharacterRemoving:Connect(function()
+    humanoidBindSerial += 1
+    clearLoaded()
 end)
-player.CharacterRemoving:Connect(clearLoaded)
 if player.Character then
-    task.spawn(bindHumanoid, player.Character)
+    beginHumanoidBinding(player.Character)
 end
 
 local function personalConfetti()

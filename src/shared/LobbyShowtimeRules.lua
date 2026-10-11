@@ -72,6 +72,17 @@ function LobbyShowtimeRules.enabled(phase, voteOptions)
         )
 end
 
+-- Only the latest asynchronous CharacterAdded binding can own the native
+-- Action tracks. Verify attachment after replication delay, before mutation.
+function LobbyShowtimeRules.canAdoptHumanoid(serial, activeSerial, character,
+        currentCharacter, humanoid)
+    return type(serial) == "number" and serial == activeSerial
+        and typeof(character) == "Instance" and character:IsA("Model")
+        and character == currentCharacter
+        and typeof(humanoid) == "Instance" and humanoid:IsA("Humanoid")
+        and humanoid.Parent == character
+end
+
 function LobbyShowtimeRules.canEmote(phase, voteOptions, health)
     return LobbyShowtimeRules.enabled(phase, voteOptions)
         and (tonumber(health) or 0) > 0

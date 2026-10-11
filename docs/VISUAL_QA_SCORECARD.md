@@ -533,3 +533,25 @@ interruptions, missing dt and clamped blending. Studio QA still
 needs to verify authentic R6 and R15 Dance/Shuffle/Groove/Robot/Orbit
 clips, rapid switching, emote cancellation on movement, respawns,
 ReduceMotion and Android screenshot/FPS/thermal profiling.
+
+## Showtime streaming/respawn race hotfix
+
+The lobby emote controller previously called `clearLoaded()` at the
+start of asynchronous `bindHumanoid`, even before an up-to-eight-second
+Humanoid replication wait. An obsolete bind coroutine could therefore
+clear a newly spawned avatar's Action tracks, client-local emote
+ownership attribute and motion signals.
+
+`CharacterAdded` now increments a binding generation and clears old
+tracks **before yielding**. `CharacterRemoving` also increments the
+generation. The delayed bind is read-only until it confirms its
+generation, live Character identity and a directly attached Humanoid;
+stale callbacks exit without mutating active emotes. No additional
+polling, connections, remotes, game-physics changes, animation asset
+IDs or input changes.
+
+Engine regression tests cover stale generations, obsolete avatar at
+the current generation, nil values, humanoid reparenting and wrong
+instance class. Physical QA remains necessary for R6/R15 respawns
+during dances, delayed streaming, quick emote switches, movement
+interruptions, and Android performance.
