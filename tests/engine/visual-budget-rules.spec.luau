@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VisualBudgetRules = require("../../src/shared/VisualBudgetRules")
+local SceneryLodRules = require("../../src/shared/SceneryLodRules")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 local LandingImprintKit = require("../../src/client/LandingImprintKit")
 local DisasterIntroMotionKit = require("../../src/client/DisasterIntroMotionKit")
@@ -539,6 +540,41 @@ describe("visual budget rules", function()
         expect(over.Parts).toBe(10)
         expect(over.Lights).toBe(8)
         expect(over.Effects).toBe(4)
+    end)
+end)
+
+
+describe("Android decorative scenery LOD stability", function()
+    it("retains initial thresholds and never hides High quality scenery", function()
+        local visible = SceneryLodRules.visible
+        expect(visible("Low", 125, 125, 185, nil)).toBe(true)
+        expect(visible("Low", 125.01, 125, 185, nil)).toBe(false)
+        expect(visible("Medium", 185, 125, 185, nil)).toBe(true)
+        expect(visible("Medium", 185.01, 125, 185, nil)).toBe(false)
+        expect(visible("High", 10000, 125, 185, nil)).toBe(true)
+        expect(visible("High", math.huge, 125, 185, false)).toBe(true)
+    end)
+
+    it("prevents toggling when a camera grazes an LOD distance cutoff", function()
+        local show = SceneryLodRules.visible
+        expect(SceneryLodRules.Hysteresis).toBe(8)
+        for _, tier in ipairs({"Low", "Medium"}) do
+            local cutoff = tier == "Low" and 125 or 185
+            expect(show(tier, cutoff + 5, 125, 185, true)).toBe(true)
+            expect(show(tier, cutoff + 9, 125, 185, true)).toBe(false)
+            expect(show(tier, cutoff - 5, 125, 185, false)).toBe(false)
+            expect(show(tier, cutoff - 9, 125, 185, false)).toBe(true)
+        end
+    end)
+
+    it("fails closed for invalid mobile distance measurements", function()
+        local show = SceneryLodRules.visible
+        expect(show("Low", -1, 125, 185, true)).toBe(false)
+        expect(show("Low", 0/0, 125, 185, true)).toBe(false)
+        expect(show("Low", math.huge, 125, 185, false)).toBe(false)
+        expect(show("Medium", "near", 125, 185, nil)).toBe(false)
+        expect(show("Medium", 20, 0, 185, nil)).toBe(true)
+        expect(show("Low", 20, 0, 185, nil)).toBe(false)
     end)
 end)
 

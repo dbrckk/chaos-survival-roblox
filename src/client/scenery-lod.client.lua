@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 
 local player = Players.LocalPlayer
 
@@ -197,13 +198,14 @@ local function refreshCache(folder, cache)
     cache.dirty = false
 end
 
-local function applyFolder(folder, limits, profile, origin)
-    local maxDistance = profile.Name == "Low" and limits.LowDistance
-        or (profile.Name == "Medium" and limits.MediumDistance or math.huge)
-
-    local distance = (cameraPosition() - origin).Magnitude
-    local visible = distance <= maxDistance
+local function applyFolder(folder, limits, profile, origin, cameraPoint)
     local cache = ensureCache(folder)
+    local distance = (cameraPoint - origin).Magnitude
+    local visible = SceneryLodRules.visible(
+        profile.Name, distance, limits.LowDistance, limits.MediumDistance,
+        cache.visible
+    )
+    cache.visible = visible
     if cache.dirty then
         refreshCache(folder, cache)
     end
@@ -230,7 +232,9 @@ local function applyFolder(folder, limits, profile, origin)
                 )
                 descendant:SetAttribute("SceneryLodHidden", true)
                 descendant.LocalTransparencyModifier = 1
-            else
+            elseif descendant.LocalTransparencyModifier ~= 1 then
+                -- Other cosmetic owners can still change this property;
+                -- re-hide only if the value actually drifted.
                 descendant.LocalTransparencyModifier = 1
             end
         elseif VisualBudgetRules.isEffect(descendant)
@@ -246,7 +250,7 @@ local function applyFolder(folder, limits, profile, origin)
                 descendant:SetAttribute("SceneryLodBaseEnabled", descendant.Enabled)
                 descendant:SetAttribute("SceneryLodHidden", true)
                 descendant.Enabled = false
-            else
+            elseif descendant.Enabled then
                 descendant.Enabled = false
             end
         end
@@ -276,11 +280,12 @@ task.spawn(function()
         local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 
         local arenaOrigin, lobbyOrigin = currentOrigins()
+        local cameraPoint = cameraPosition()
         for folderName, limits in pairs(FOLDERS) do
             local folder = workspace:FindFirstChild(folderName)
             if folder then
                 local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
-                applyFolder(folder, limits, profile, origin)
+                applyFolder(folder, limits, profile, origin, cameraPoint)
             end
         end
 
