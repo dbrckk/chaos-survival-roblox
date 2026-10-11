@@ -13,6 +13,7 @@ local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccent
 local ArenaDeckFinishKit = require("../../src/client/ArenaDeckFinishKit")
 local ArenaSceneryFrames = require("../../src/shared/ArenaSceneryFrames")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
+local IdentityMotionRules = require("../../src/shared/ArenaIdentityMotionRules")
 
 local CENTER = Vector3.new(0, 0, 0)
 
@@ -548,6 +549,72 @@ describe("Touch decor streamed-subtree readability", function()
         expect(baselines[lamp]).toBe(5)
         expect(baselines[newLight]).toBe(10)
         holder:Destroy()
+    end)
+end)
+
+
+describe("Android arena identity ornament motion", function()
+    it("keeps authored tier scales and fully disables continuous ReduceMotion", function()
+        expect(IdentityMotionRules.motionScale("Low", false)).toBe(0.38)
+        expect(IdentityMotionRules.motionScale("Medium", false)).toBe(0.68)
+        expect(IdentityMotionRules.motionScale("High", false)).toBe(1)
+        expect(IdentityMotionRules.motionScale("Unknown", false)).toBe(0.38)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            expect(IdentityMotionRules.motionScale(tier, true)).toBe(0)
+            expect(IdentityMotionRules.interval(tier, true, true, true)).toBe(0.60)
+        end
+    end)
+
+    it("sleeps when inactive or no identity pieces have replicated", function()
+        expect(IdentityMotionRules.interval("Low", false, true, true)).toBe(0.16)
+        expect(IdentityMotionRules.interval("Medium", false, true, true)).toBe(0.09)
+        expect(IdentityMotionRules.interval("High", false, true, true)).toBe(0.09)
+        expect(IdentityMotionRules.interval("High", false, false, true)).toBe(0.60)
+        expect(IdentityMotionRules.interval("High", false, true, false)).toBe(0.60)
+    end)
+
+    it("does not write to far-away or removed decor", function()
+        local root = Instance.new("Folder")
+        local part = Instance.new("Part")
+        part.Parent = root
+        expect(IdentityMotionRules.shouldUpdate(part)).toBe(true)
+        part:SetAttribute("SceneryLodHidden", true)
+        expect(IdentityMotionRules.shouldUpdate(part)).toBe(false)
+        part:SetAttribute("SceneryLodHidden", false)
+        expect(IdentityMotionRules.shouldUpdate(part)).toBe(true)
+        part.Parent = nil
+        expect(IdentityMotionRules.shouldUpdate(part)).toBe(false)
+        expect(IdentityMotionRules.shouldUpdate(nil)).toBe(false)
+        part:Destroy()
+        root:Destroy()
+    end)
+
+    it("watches only the named direct-decor ornaments in each arena", function()
+        local valid = {
+            Classic = {"GridMarkerGlow1", "ClassicBroadcastGlow4"},
+            Towers = {"TowerBand4_3", "TowerMachineryCap2", "TowerAntenna1"},
+            Crossroads = {"CrossroadGate3", "CrossroadSignal4"},
+            Orbital = {"OrbitalCrown1", "OrbitalCrown12", "OrbitalReactorNode8"},
+        }
+        for variant, names in pairs(valid) do
+            for _, name in ipairs(names) do
+                expect(IdentityMotionRules.isIdentityPart(variant, name)).toBe(true)
+            end
+        end
+        for _, invalid in ipairs({
+            {"Classic", "GridMarkerGlow5"},
+            {"Towers", "TowerBand5_1"},
+            {"Towers", "TowerBand3_4"},
+            {"Crossroads", "CrossroadSignal8"},
+            {"Orbital", "OrbitalCrown13"},
+            {"Orbital", "OrbitalReactorNode0"},
+            {"Orbital", "RoundMeteor"},
+            {"Unknown", "OrbitalCrown1"},
+        }) do
+            expect(IdentityMotionRules.isIdentityPart(invalid[1], invalid[2]))
+                .toBe(false)
+        end
+        expect(IdentityMotionRules.isIdentityPart("Orbital", nil)).toBe(false)
     end)
 end)
 

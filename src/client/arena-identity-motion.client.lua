@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local MotionRules = require(ReplicatedStorage.Shared.ArenaIdentityMotionRules)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -10,7 +11,8 @@ local currentArena = nil
 local currentVariant = nil
 local tracked = {}
 local phase = "waiting"
-local rebuildToken = 0
+local decorChildConnection = nil
+local rebuildQueued = false
 
 local function restoreTracked()
     for _, item in ipairs(tracked) do
@@ -24,6 +26,10 @@ local function restoreTracked()
 end
 
 local function clear()
+    if decorChildConnection then
+        decorChildConnection:Disconnect()
+        decorChildConnection = nil
+    end
     restoreTracked()
     table.clear(tracked)
     currentArena = nil
@@ -45,7 +51,6 @@ local function trackPart(part, index)
 end
 
 local function rebuild()
-    rebuildToken += 1
     clear()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -84,23 +89,23 @@ local function rebuild()
             trackPart(decor:FindFirstChild("OrbitalReactorNode" .. i), 12 + i)
         end
     end
-end
 
-local function qualityScale()
-    local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    local scale
-    if profile.Name == "Low" then
-        scale = 0.38
-    elseif profile.Name == "Medium" then
-        scale = 0.68
-    else
-        scale = 1
-    end
-
-    if player:GetAttribute("ReduceMotion") == true then
-        scale *= 0.30
-    end
-    return scale
+    -- Arena.Decor may replicate before its animated children on Android.
+    -- Debounce additions to one rescan; disconnect on replacement/cleanup.
+    decorChildConnection = decor.ChildAdded:Connect(function(child)
+        if not child:IsA("BasePart")
+            or not MotionRules.isIdentityPart(currentVariant, child.Name)
+            or rebuildQueued then
+            return
+        end
+        rebuildQueued = true
+        task.defer(function()
+            rebuildQueued = false
+            if currentArena == arena and arena.Parent then
+                rebuild()
+            end
+        end)
+    end)
 end
 
 workspace.ChildAdded:Connect(function(child)
@@ -119,7 +124,7 @@ task.defer(rebuild)
 
 stateEvent.OnClientEvent:Connect(function(state)
     local previousPhase = phase
-    phase = tostring(state.phase or "waiting")
+    phase = tostring(state and state.phase or "waiting")
 
     local wasActive = previousPhase == "ready"
         or previousPhase == "round"
@@ -129,6 +134,14 @@ stateEvent.OnClientEvent:Connect(function(state)
         or phase == "result"
 
     if wasActive and not isActive then
+        restoreTracked()
+    end
+end)
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion") == true then
+        -- A frozen Orbital crown should return to the original authored pose,
+        -- not stay suspended at the last animation frame.
         restoreTracked()
     end
 end)
@@ -143,13 +156,15 @@ task.spawn(function()
             or phase == "round"
             or phase == "result"
 
-        local scale = qualityScale()
+        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        local scale = MotionRules.motionScale(tier, reduced)
         local now = os.clock()
 
-        if active then
+        if active and scale > 0 then
             for _, item in ipairs(tracked) do
             local part = item.part
-            if not part or not part.Parent then
+            if not MotionRules.shouldUpdate(part) then
                 continue
             end
 
@@ -193,10 +208,6 @@ task.spawn(function()
         end
         end
 
-        task.wait(
-            active
-                and (scale < 0.5 and 0.16 or 0.09)
-                or 0.60
-        )
+        task.wait(MotionRules.interval(tier, reduced, active, #tracked > 0))
     end
 end)
