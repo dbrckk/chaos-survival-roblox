@@ -9,6 +9,7 @@ local LandingImprintKit = require("../../src/client/LandingImprintKit")
 local DisasterIntroMotionKit = require("../../src/client/DisasterIntroMotionKit")
 local DisasterBoundaryClimaxKit = require("../../src/client/DisasterBoundaryClimaxKit")
 local LocomotionGroundFx = require("../../src/client/LocomotionGroundFx")
+local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit")
 
 describe("visual budget rules", function()
     it("uses progressively smaller budgets for lower tiers", function()
@@ -56,6 +57,57 @@ describe("visual budget rules", function()
         expect(VisualBudgetRules.isLight(light)).toBe(true)
         expect(VisualBudgetRules.isEffect(light)).toBe(false)
         light:Destroy()
+    end)
+
+    it("counts four client practice-pad emitters and highlights nested under the lobby", function()
+        local root = Instance.new("Folder")
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = root
+        local lobby = Instance.new("Folder")
+        lobby.Name = "Lobby"
+        lobby.Parent = generated
+        local activities = Instance.new("Folder")
+        activities.Name = "Activities"
+        activities.Parent = lobby
+        local pads, bundles = {}, {}
+
+        for i = 1, 4 do
+            local pad = Instance.new("Part")
+            pad.Name = "PracticeBoostPad" .. i
+            pad:SetAttribute("LobbyPracticePad", true)
+            pad.Parent = activities
+            local serverLight = Instance.new("PointLight")
+            serverLight.Parent = pad
+            local bundle = LobbyPracticeVisualKit.create(pad)
+            expect(bundle ~= nil).toBe(true)
+            pads[#pads + 1] = pad
+            bundles[#bundles + 1] = bundle
+        end
+        -- A server-owned unrelated effect must not consume the local
+        -- budget merely because it happens to be under a lobby pad.
+        local unrelated = Instance.new("ParticleEmitter")
+        unrelated.Name = "ServerDecorEffect"
+        unrelated.Parent = pads[1]
+
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(4)
+        expect(metrics.Effects).toBe(8) -- emitter + highlight per pad
+        expect(metrics.Lights).toBe(0) -- server-owned PointLight excluded
+        expect(metrics.Parts).toBe(0) -- server-owned pads excluded
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+
+        LobbyPracticeVisualKit.destroy(bundles[4])
+        metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(3)
+        expect(metrics.Effects).toBe(6)
+        LobbyPracticeVisualKit.destroy(bundles[3])
+        LobbyPracticeVisualKit.destroy(bundles[2])
+        LobbyPracticeVisualKit.destroy(bundles[1])
+        metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        root:Destroy()
     end)
 
     it("collects parts lights and effects from registered visual folders", function()

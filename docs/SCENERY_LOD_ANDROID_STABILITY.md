@@ -36,3 +36,25 @@ gameplay behavior or add new loops. Build and Open Cloud checks are required
 on the exact commit. Actual FPS, CPU, GPU and heat improvements must be
 measured on Roblox Studio and an Android device before making performance
 claims.
+
+## Client practice-pad budget accounting (11 October 2026)
+
+The four lobby practice pads are server-owned BaseParts in
+GeneratedMap/Lobby/Activities. Their **local** Highlight lives in a Folder
+under each pad, and their **local** ParticleEmitter in a separate Attachment
+directly under that pad. Neither is a top-level workspace folder, so the
+previous VisualBudgetRules.collect(root) silently omitted them from live
+device-tier budget telemetry.
+
+The collector now traverses *only* marked lobby practice pads and counts
+these named local child effects; it excludes server-owned pad geometry,
+PointLights and unrelated effects. A missing or partially removed local
+bundle is handled without exceptions. On four active pads, the visible
+counter gains exactly eight local GPU effects (one emitter and one
+Highlight per pad). It drops to six on removal of one pad and zero on
+cleanup. No budget thresholds are raised; the actual live visual load is
+unchanged, and the corrected count can expose previously hidden overages.
+The existing core_b2 visual-budget engine shard verifies these scenarios.
+
+This fixes telemetry accounting, **not** actual render-frame cost. Android
+FPS/GPU/memory and physical-device screenshots remain to be measured.

@@ -157,6 +157,48 @@ function VisualBudgetRules.collect(root)
         end
     end
 
+    -- Practice pad cosmetics live under server-owned lobby Parts, not as
+    -- direct workspace folders. The old direct-root lookup never saw them.
+    -- Count only the client-owned named bundle on a real, marked pad, not
+    -- the server-owned pad itself, its light, or unrelated server effects.
+    local generated = root:FindFirstChild("GeneratedMap")
+    local lobby = generated and generated:FindFirstChild("Lobby")
+    local activities = lobby and lobby:FindFirstChild("Activities")
+    if activities then
+        for _, pad in ipairs(activities:GetChildren()) do
+            if pad:IsA("BasePart")
+                and pad:GetAttribute("LobbyPracticePad") == true then
+                local localFolder = pad:FindFirstChild("PracticePadPolishLocal")
+                local localAttachment = pad:FindFirstChild("PracticeMotesAttachment")
+                local hasFolder = localFolder and localFolder:IsA("Folder")
+                local hasAttachment = localAttachment
+                    and localAttachment:IsA("Attachment")
+                if hasFolder or hasAttachment then
+                    auditedFolders += 1
+                    if hasFolder then
+                        for _, descendant in ipairs(localFolder:GetDescendants()) do
+                            if descendant:IsA("BasePart") then
+                                metrics.Parts += 1
+                            elseif VisualBudgetRules.isLight(descendant) then
+                                metrics.Lights += 1
+                            elseif VisualBudgetRules.isEffect(descendant) then
+                                metrics.Effects += 1
+                            end
+                        end
+                    end
+                    if hasAttachment then
+                        for _, descendant in ipairs(localAttachment:GetDescendants()) do
+                            if descendant.Name == "PracticeMotes"
+                                and descendant:IsA("ParticleEmitter") then
+                                metrics.Effects += 1
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
     return metrics, auditedFolders
 end
 
