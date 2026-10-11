@@ -367,7 +367,15 @@ describe("Body motion rules", function()
                 Enum.Material.Ice, Color3.fromRGB(175, 212, 236))
             expect(ice ~= nil and #ice:GetChildren() == 4).toBe(true)
             local marks = ice:GetChildren()
-            expect(marks[1].Color).toBe(iceAccent)
+            -- BasePart.Color is stored with Roblox's 8-bit channel precision,
+            -- while Color3:Lerp retains higher precision in the recipe.
+            -- Check the visible color within one channel step, not exact bits.
+            local storedAccent = marks[1].Color
+            local channelStep = 1 / 255 + 0.00001
+            expect(math.abs(storedAccent.R - iceAccent.R) <= channelStep
+                and math.abs(storedAccent.G - iceAccent.G) <= channelStep
+                and math.abs(storedAccent.B - iceAccent.B) <= channelStep)
+                .toBe(true)
             expect(marks[2].Color ~= marks[1].Color).toBe(true)
             for _, piece in ipairs(marks) do
                 expect(piece.Anchored).toBe(true)

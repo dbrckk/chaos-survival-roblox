@@ -471,3 +471,15 @@ Malformed RoundState events no longer crash lobby-wayfinding display.
 The engine lobby-activities suite checks real parentage, cleanup,
 no duplicate pad bundles, and accessibility particle rates. A live
 Roblox Studio and Android visual review remains necessary.
+
+## PR #19 — Roblox engine Color3 precision regression (11 October 2026)
+
+Open Cloud run 38171735611 passed gameplay, matrix, core_b1 and core_b2,
+but core_a failed one out of 241 assertions in the existing body-motion
+suite. It compared an unquantized Color3:Lerp recipe against a BasePart.Color
+value rounded to Roblox's stored channel precision (a difference under
+one 8-bit channel step). The existing test now tolerates at most one
+1/255 channel step plus numerical epsilon, while still checking the
+actual color, accent variation, part cap and collision-free geometry.
+No production color, shader, VFX budget, movement or gameplay code changed.
+Re-run all engine shards on the updated exact commit before release.
