@@ -107,7 +107,16 @@ function RigRegistry.new(onState)
         return total
     end
 
-    return {watch = watch, stop = stop, rig = rig, count = count}
+    -- Phase changes discard jump history without tearing down rig listeners.
+    -- Required for long-lived streamed rigs on back-to-back rounds.
+    local function clearAirborne()
+        for _, entry in pairs(entries) do
+            entry.airborneAt = nil
+        end
+    end
+
+    return {watch = watch, stop = stop, rig = rig, count = count,
+        clearAirborne = clearAirborne}
 end
 
 return RigRegistry

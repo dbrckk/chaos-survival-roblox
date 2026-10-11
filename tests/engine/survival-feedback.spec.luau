@@ -327,6 +327,8 @@ describe("Character cinematic reactions", function()
         expect(currentHumanoid).toBe(replacement)
         -- Late replication isn't discarded after an arbitrary 8s TTL;
         -- the model itself owns the listener until it is detached.
+        registry.clearAirborne()
+        expect(registry.rig(model)).toBe(secondRoot)
         registry.stop(model)
         expect(registry.count()).toBe(0)
         expect(registry.rig(model) == nil).toBe(true)

@@ -44,10 +44,21 @@ local function surfaceFrame(position, normal)
     return CFrame.fromMatrix(position, right, up, back)
 end
 
-local function localRoot()
+local function observerPosition()
     local character = localPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
-    return root and root:IsA("BasePart") and root or nil
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local camera = workspace.CurrentCamera
+    local active = currentPhase == "round"
+        and localPlayer:GetAttribute("RoundParticipant") == true
+        and localPlayer:GetAttribute("RoundEliminated") ~= true
+        and humanoid ~= nil and humanoid.Health > 0
+    local followsAvatar = camera ~= nil and humanoid ~= nil
+        and (camera.CameraSubject == humanoid or camera.CameraSubject == root)
+    return GroundContactRules.observerPosition(
+        root and root:IsA("BasePart") and root.Position or nil,
+        camera and camera.CFrame.Position or nil,
+        active, followsAvatar)
 end
 
 local function sampleSurface(root)
@@ -94,9 +105,7 @@ local function emitLanding(model, root, airtime)
     if count == 0 or airtime < GroundContactRules.minAirtime(quality.Name) then
         return
     end
-    local observerRoot = localRoot()
-    local observer = observerRoot and observerRoot.Position
-        or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame.Position)
+    local observer = observerPosition()
     if not observer or (observer - root.Position).Magnitude
         > GroundContactRules.maxDistance(quality.Name)
     then
@@ -207,6 +216,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     currentPhase = tostring(snapshot.phase or "waiting")
     finalRush = currentPhase == "round" and snapshot.finalRush == true
     if currentPhase ~= "round" then
+        registry.clearAirborne()
         folder:ClearAllChildren()
     end
 end)

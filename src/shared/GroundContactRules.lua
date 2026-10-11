@@ -75,6 +75,21 @@ function GroundContactRules.landingAudio(material, airtime, tierName, reducedMot
     }
 end
 
+-- A spectator must use the actual camera rather than the eliminated
+-- avatar left elsewhere in the map. Active third-person players keep the
+-- avatar-centered visual range only while the camera follows that avatar.
+function GroundContactRules.observerPosition(rootPosition, cameraPosition,
+        participantActive, cameraFollowsAvatar)
+    if participantActive == true and cameraFollowsAvatar == true
+        and typeof(rootPosition) == "Vector3" then
+        return rootPosition
+    end
+    if typeof(cameraPosition) == "Vector3" then
+        return cameraPosition
+    end
+    return nil
+end
+
 function GroundContactRules.concurrentLimit(tier)
     if tier == "High" then return 30 end
     if tier == "Medium" then return 18 end

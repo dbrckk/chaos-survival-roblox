@@ -214,3 +214,29 @@ and server gameplay are unchanged. The shared registry engine suite
 now checks partial-rig teardown and late Humanoid re-registration.
 No new effects or render loops. Exact-head CI and real Roblox Studio /
 Android streaming and performance checks are still required.
+
+## PR #19 — phase-safe landings, spectator camera and frost material identity (11 October 2026)
+
+Verify Freefall begins during a round and is followed by a landing after a normal
+phase transition, result screen, spectator handoff or respawn. The old jump must
+**not** replay as a new material contact or stabilization ribbon when the next
+round starts. The shared rig registry now clears airborne timestamps at every
+non-round RoundState while preserving the existing low-cost rig listeners.
+
+With an eliminated player whose root remains far from the arena, spectate a live
+player in third person. Material landing contact distance is now based on the
+spectator camera, not the dead avatar; active players continue avatar-centered
+sampling only while the camera actually follows their own Humanoid/root.
+Compare crystal/ice and slate/concrete landings: frost splinters use a curled
+transparent-glass travel path, while slate uses short angular stone fragments.
+The original one/six-piece Low/High cap, cooldown, collision flags and fast
+Debris cleanup are unchanged. Malformed NaN/Infinity/fractional signatures and
+non-Material enums are rejected before allocating Instances.
+
+The engine suites `ground-contact-rules.spec.luau` and
+`survival-feedback.spec.luau` cover deterministic camera choice, crystal
+silhouette differentiation, malformed input rejection and registry persistence
+across phase cleanup. **Physical** Studio/Android checks remain essential:
+observe spectator transitions, ice visibility on small screens, Reduce Motion,
+Low tier, map streaming and thermal/FPS behavior. No device FPS is inferred
+from CI success.

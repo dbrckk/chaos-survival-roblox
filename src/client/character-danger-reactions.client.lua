@@ -169,7 +169,8 @@ end
 -- Streamed replacements must not replay a stale airborne start timestamp.
 local rigRegistry = RigRegistry.new(function(model, root, state, entry)
     if state == Enum.HumanoidStateType.Freefall then
-        entry.airborneAt = entry.airborneAt or os.clock()
+        entry.airborneAt = phase == "round" and liveRoot(model) == root
+            and (entry.airborneAt or os.clock()) or nil
     elseif state == Enum.HumanoidStateType.Dead then
         entry.airborneAt = nil
     elseif Rules.isLandingTransition(state) then
@@ -282,6 +283,7 @@ roundEvent.OnClientEvent:Connect(function(snapshot)
     phase = tostring(type(snapshot) == "table"
         and snapshot.phase or "waiting")
     if phase ~= "round" then
+        rigRegistry.clearAirborne()
         killPieces()
     end
 end)

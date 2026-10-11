@@ -64,6 +64,17 @@ describe("Grounded character contact game feel", function()
             < metal.VolumeScale).toBe(true)
     end)
 
+    it("tracks the spectator camera rather than an eliminated avatar", function()
+        local avatar = Vector3.new(400, 10, 50)
+        local camera = Vector3.new(12, 20, 5)
+        expect(Rules.observerPosition(avatar, camera, true, true)).toBe(avatar)
+        expect(Rules.observerPosition(avatar, camera, true, false)).toBe(camera)
+        expect(Rules.observerPosition(avatar, camera, false, true)).toBe(camera)
+        expect(Rules.observerPosition(avatar, camera, nil, nil)).toBe(camera)
+        expect(Rules.observerPosition(avatar, nil, false, false) == nil).toBe(true)
+        expect(Rules.observerPosition(nil, camera, true, true)).toBe(camera)
+    end)
+
     it("caps active parts, limits visibility and debounces air landings", function()
         expect(Rules.concurrentLimit("Low")).toBe(6)
         expect(Rules.concurrentLimit("Medium")).toBe(18)
@@ -119,6 +130,40 @@ describe("Premium material landing imprints", function()
                 p:Destroy()
             end
         end
+        expect(#root:GetChildren()).toBe(0)
+        root:Destroy()
+    end)
+
+    it("gives frost a distinct curling glass silhouette rather than rock recoloring", function()
+        for i = 1, 6 do
+            local frost = LandingImprintKit.signature("Crystal", i, 6, 0.8)
+            local stone = LandingImprintKit.signature("Mineral", i, 6, 0.8)
+            expect(frost ~= nil and stone ~= nil).toBe(true)
+            expect(frost.Travel ~= stone.Travel).toBe(true)
+            expect(frost.Transparency > stone.Transparency).toBe(true)
+            expect(frost.Duration > stone.Duration).toBe(true)
+            expect(frost.Size.Y <= 0.05).toBe(true)
+            expect(frost.Duration < 0.5).toBe(true)
+            expect(frost.Wedge).toBe(i > 1)
+        end
+    end)
+
+    it("rejects non-finite and fractional imprint recipes without creating parts", function()
+        local root = Instance.new("Folder")
+        for _, invalid in ipairs({math.huge, -math.huge, 0/0}) do
+            expect(LandingImprintKit.signature("Crystal", 1, 6, invalid) == nil)
+                .toBe(true)
+            expect(LandingImprintKit.signature("Crystal", invalid, 6, 1) == nil)
+                .toBe(true)
+            expect(LandingImprintKit.signature("Crystal", 1, invalid, 1) == nil)
+                .toBe(true)
+            expect(#LandingImprintKit.build(root, CFrame.new(), Color3.new(1, 1, 1),
+                "Crystal", Enum.Material.Ice, 6, invalid, false)).toBe(0)
+        end
+        expect(LandingImprintKit.signature("Crystal", 1.5, 6, 0.8) == nil)
+            .toBe(true)
+        expect(#LandingImprintKit.build(root, CFrame.new(), Color3.new(1, 1, 1),
+            "Crystal", Enum.HumanoidStateType.Freefall, 3, 1, false)).toBe(0)
         expect(#root:GetChildren()).toBe(0)
         root:Destroy()
     end)
