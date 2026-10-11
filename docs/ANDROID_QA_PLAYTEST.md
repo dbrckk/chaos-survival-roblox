@@ -401,3 +401,20 @@ may grow as players join/leave. Roblox engine movement-safety tests verify
 single subscriptions, detached stale characters, cleanup after leave,
 invalid facet indices, deterministic geometry and unchanged tier part caps.
 Studio screenshots and physical Android FPS/thermal tests remain required.
+
+## PR #19 — material-reactive launch, skid and pivot contact art (11 October 2026)
+
+Human and AI grounded impulse effects now reuse the *existing* arena raycast
+material and sampled floor color to tint their original three distinct
+footwork silhouettes (glacial cool scratches, metallic shears, dust-ground
+gouges). Each movement still allocates 2/4 parts on Medium/High only, within
+the unchanged 8/16 scene-wide piece cap; Low/ReduceMotion remains gated by
+the existing motion owners. No textures, emitters, lights or new update loops
+are introduced. A slightly staggered secondary skid angle further breaks
+repeating straight bars, without altering physics, hit detection or timing.
+
+The existing body-motion engine suite now checks deterministic per-material
+color differences, unchanged part caps, no collisions and rejection of
+NaN/Infinity position, strength and scene-budget values before geometry.
+Roblox Studio appearance and physical Android thermal/FPS costs remain
+unmeasured.

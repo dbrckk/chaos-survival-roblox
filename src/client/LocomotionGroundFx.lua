@@ -5,6 +5,21 @@ local TweenService = game:GetService("TweenService")
 
 local GroundFx = {}
 
+local function finite(n)
+    return type(n) == "number" and n == n and math.abs(n) < math.huge
+end
+
+local function finiteVector(v)
+    return typeof(v) == "Vector3" and finite(v.X) and finite(v.Y)
+        and finite(v.Z)
+end
+
+local function finiteFrame(cf)
+    return typeof(cf) == "CFrame"
+        and finiteVector(cf.Position) and finiteVector(cf.RightVector)
+        and finiteVector(cf.UpVector) and finiteVector(cf.LookVector)
+end
+
 -- Register every transient foot-contact piece with the live visual-budget
 -- collector rather than parenting the effects directly to workspace.
 local effectRoot = Instance.new("Folder")
@@ -17,19 +32,52 @@ local COLORS = {
     Pivot = Color3.fromRGB(187, 105, 255),
 }
 
+-- Ground tint is computed once per event after the existing raycast. Keep
+-- action colors readable; different floor materials leave different tones.
+local GROUND_TINTS = {
+    [Enum.Material.Ice] = Color3.fromRGB(173, 230, 249),
+    [Enum.Material.Snow] = Color3.fromRGB(173, 230, 249),
+    [Enum.Material.Glacier] = Color3.fromRGB(173, 230, 249),
+    [Enum.Material.Metal] = Color3.fromRGB(198, 217, 228),
+    [Enum.Material.DiamondPlate] = Color3.fromRGB(198, 217, 228),
+    [Enum.Material.CorrodedMetal] = Color3.fromRGB(175, 171, 161),
+    [Enum.Material.Slate] = Color3.fromRGB(124, 128, 147),
+    [Enum.Material.Concrete] = Color3.fromRGB(124, 128, 147),
+    [Enum.Material.Ground] = Color3.fromRGB(180, 147, 105),
+    [Enum.Material.Sand] = Color3.fromRGB(180, 147, 105),
+    [Enum.Material.Mud] = Color3.fromRGB(180, 147, 105),
+    [Enum.Material.Grass] = Color3.fromRGB(150, 174, 120),
+}
+
+function GroundFx.materialAccent(kind, material, floorColor, tier)
+    local base = COLORS[kind]
+    if not base then return nil end
+    local tint = GROUND_TINTS[material]
+    if not tint then return base end
+    local blend = tier == "High" and 0.32 or 0.22
+    local color = base:Lerp(tint, blend)
+    if typeof(floorColor) == "Color3"
+        and finite(floorColor.R) and finite(floorColor.G)
+        and finite(floorColor.B) then
+        color = color:Lerp(floorColor, 0.06)
+    end
+    return color
+end
+
 -- Each cue has its own 3D silhouette rather than recolored flat strips.
 -- This rule is deterministic and retains the existing 2/4-piece budget.
 function GroundFx.signature(kind, index, strength, tier)
     if COLORS[kind] == nil or (tier ~= "High" and tier ~= "Medium")
-        or type(index) ~= "number" or index % 1 ~= 0 or index < 1
+        or not finite(index) or index % 1 ~= 0 or index < 1
         or index > (tier == "High" and 4 or 2)
+        or not finite(strength)
     then
         return nil
     end
 
     local side = index % 2 == 0 and 1 or -1
     local pair = math.floor((index - 1) / 2)
-    local intensity = math.clamp(tonumber(strength) or 0, 0, 1)
+    local intensity = math.clamp(strength, 0, 1)
     local scale = 0.64 + 0.28 * intensity
     if kind == "Skid" then
         -- Industrial brake abrasion: low, paired metallic grooves.
@@ -39,7 +87,7 @@ function GroundFx.signature(kind, index, strength, tier)
             Size = Vector3.new(0.13, 0.045, (2.30 + pair * 0.30) * scale),
             Offset = Vector3.new(side * (0.40 + pair * 0.26), 0.065,
                 1.04 + pair * 0.14),
-            Yaw = side * math.rad(3),
+            Yaw = side * math.rad(3 + pair * 5),
             Travel = Vector3.new(side * 0.08, 0, side * 0.24),
             Transparency = 0.29 + pair * 0.14,
         }
@@ -82,8 +130,14 @@ end
 function GroundFx.evictionCount(existing, arriving, tier)
     local cap = GroundFx.livePieceBudget(tier)
     if cap == 0 then return 0 end
-    return math.max(0, math.floor(math.max(0, tonumber(existing) or 0))
-        + math.floor(math.max(0, tonumber(arriving) or 0)) - cap)
+    -- Counters are local but can be malformed during device teardown.
+    -- Bound inputs before integer conversion or budget arithmetic.
+    local active = tonumber(existing)
+    local incoming = tonumber(arriving)
+    if not finite(active) then active = 0 end
+    if not finite(incoming) then incoming = 0 end
+    return math.max(0, math.floor(math.clamp(active, 0, cap * 2))
+        + math.floor(math.clamp(incoming, 0, cap * 2)) - cap)
 end
 
 local function isOwnedContact(instance)
@@ -121,14 +175,16 @@ function GroundFx.clear()
     effectRoot:ClearAllChildren()
 end
 
-function GroundFx.build(parent, basis, kind, strength, tier)
-    if not parent or typeof(basis) ~= "CFrame"
+function GroundFx.build(parent, basis, kind, strength, tier, material, floorColor)
+    if typeof(parent) ~= "Instance" or not finiteFrame(basis)
         or COLORS[kind] == nil or (tier ~= "High" and tier ~= "Medium")
+        or not finite(strength)
     then
         return nil
     end
 
     local count = tier == "High" and 4 or 2
+    local accent = GroundFx.materialAccent(kind, material, floorColor, tier)
     trimContactBudget(parent, count, tier)
     local folder = Instance.new("Folder")
     folder.Name = "Chaos" .. kind .. "Contact"
@@ -147,7 +203,7 @@ function GroundFx.build(parent, basis, kind, strength, tier)
         mark.CanTouch = false
         mark.CanQuery = false
         mark.CastShadow = false
-        mark.Color = COLORS[kind]
+        mark.Color = accent:Lerp(Color3.new(1, 1, 1), i % 2 == 0 and 0.08 or 0)
         mark.Material = design.Material
         mark.Transparency = design.Transparency
         mark.Parent = folder
@@ -169,8 +225,8 @@ end
 -- Slope-safe placement: follow the actual hit normal and project the
 -- avatar's heading onto the surface. Only cosmetic basis changes; no force.
 function GroundFx.surfaceBasis(position, normal, facing)
-    if typeof(position) ~= "Vector3" or typeof(normal) ~= "Vector3"
-        or typeof(facing) ~= "Vector3" or normal.Magnitude < 0.01
+    if not finiteVector(position) or not finiteVector(normal)
+        or not finiteVector(facing) or normal.Magnitude < 0.01
     then
         return nil
     end
@@ -203,7 +259,10 @@ function GroundFx.emit(root, kind, strength, tier)
     local basis = GroundFx.surfaceBasis(hit.Position, hit.Normal,
         root.CFrame.LookVector)
     if not basis then return nil end
-    return GroundFx.build(effectRoot, basis, kind, strength, tier)
+    local floorColor = hit.Instance:IsA("BasePart")
+        and hit.Instance.Color or nil
+    return GroundFx.build(effectRoot, basis, kind, strength, tier,
+        hit.Material, floorColor)
 end
 
 return GroundFx

@@ -349,6 +349,63 @@ describe("Body motion rules", function()
         surface:Destroy()
     end)
 
+    it("sculpts material-specific footwork marks without raising mobile part caps", function()
+        local root = Instance.new("Folder")
+        local frame = CFrame.new(10, 2, -6)
+        for _, kind in ipairs({"Launch", "Skid", "Pivot"}) do
+            local iceAccent = GroundFx.materialAccent(kind, Enum.Material.Ice,
+                Color3.fromRGB(175, 212, 236), "High")
+            local stoneAccent = GroundFx.materialAccent(kind, Enum.Material.Slate,
+                Color3.fromRGB(95, 105, 113), "High")
+            local mudAccent = GroundFx.materialAccent(kind, Enum.Material.Mud,
+                Color3.fromRGB(122, 99, 80), "Medium")
+            expect(iceAccent ~= stoneAccent).toBe(true)
+            expect(stoneAccent ~= mudAccent).toBe(true)
+            expect(GroundFx.materialAccent(kind, Enum.Material.Ice,
+                nil, "Medium") ~= iceAccent).toBe(true)
+            local ice = GroundFx.build(root, frame, kind, 0.9, "High",
+                Enum.Material.Ice, Color3.fromRGB(175, 212, 236))
+            expect(ice ~= nil and #ice:GetChildren() == 4).toBe(true)
+            local marks = ice:GetChildren()
+            expect(marks[1].Color).toBe(iceAccent)
+            expect(marks[2].Color ~= marks[1].Color).toBe(true)
+            for _, piece in ipairs(marks) do
+                expect(piece.Anchored).toBe(true)
+                expect(piece.CanCollide).toBe(false)
+                expect(piece.CanQuery).toBe(false)
+                expect(piece.Size.Magnitude > 0).toBe(true)
+            end
+            ice:Destroy()
+        end
+        expect(GroundFx.materialAccent("Unknown", Enum.Material.Ice,
+            nil, "High") == nil).toBe(true)
+        expect(#root:GetChildren()).toBe(0)
+        root:Destroy()
+    end)
+
+    it("rejects nonfinite contact impulses and geometry before allocation", function()
+        local root = Instance.new("Folder")
+        local frame = CFrame.new(3, 2, 1)
+        for _, bad in ipairs({0/0, math.huge, -math.huge}) do
+            expect(GroundFx.signature("Launch", 1, bad, "High") == nil).toBe(true)
+            expect(GroundFx.signature("Skid", bad, 1, "High") == nil).toBe(true)
+            expect(GroundFx.build(root, frame, "Pivot", bad, "High") == nil).toBe(true)
+            expect(GroundFx.evictionCount(bad, 2, "Medium")).toBe(0)
+            expect(GroundFx.evictionCount(6, bad, "Medium")).toBe(0)
+            expect(GroundFx.surfaceBasis(Vector3.new(bad, 0, 0),
+                Vector3.yAxis, Vector3.zAxis) == nil).toBe(true)
+            expect(GroundFx.surfaceBasis(Vector3.zero,
+                Vector3.new(0, bad, 0), Vector3.zAxis) == nil).toBe(true)
+        end
+        expect(GroundFx.build(root, frame, "Pivot", nil, "High") == nil).toBe(true)
+        expect(GroundFx.build("not-an-instance", frame, "Pivot",
+            0.9, "High") == nil).toBe(true)
+        expect(GroundFx.signature("Launch", 1, 1, "Low") == nil).toBe(true)
+        expect(GroundFx.evictionCount(16, 4, "High")).toBe(4)
+        expect(#root:GetChildren()).toBe(0)
+        root:Destroy()
+    end)
+
     it("caps combined human and AI ground-contact bursts without cutting pairs", function()
         local root = Instance.new("Folder")
         local cf = CFrame.new(2, 0.1, 5)
