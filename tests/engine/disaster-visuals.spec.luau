@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local DisasterVisuals = require("../../src/shared/DisasterVisuals")
+local DisasterMotionSceneRules = require("../../src/shared/DisasterMotionSceneRules")
 local UITheme = require("../../src/shared/UITheme")
 local DisasterBalance = require("../../src/server/DisasterBalance")
 local HazardGlyphs = require("../../src/shared/HazardGlyphs")
@@ -564,6 +565,95 @@ describe("Surface-specific meteor and bomb cosmetic microdebris", function()
         expect(#root:GetChildren()).toBe(24)
         for _, part in ipairs(root:GetChildren()) do part:Destroy() end
         root:Destroy()
+    end)
+end)
+
+describe("Android crisis perimeter identity and streaming", function()
+    it("anchors four crisis markers to all four sides of rotated decks", function()
+        local folder = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(90, 2, 66)
+        base.CFrame = CFrame.new(15, 8, -20)
+            * CFrame.Angles(math.rad(11), math.rad(38), math.rad(-6))
+        base.Parent = folder
+        local expected = {
+            Vector3.new(0, 1.18, -33),
+            Vector3.new(0, 1.18, 33),
+            Vector3.new(-45, 1.18, 0),
+            Vector3.new(45, 1.18, 0),
+        }
+        for i = 1, 4 do
+            local frame, size = DisasterMotionSceneRules.pose(base, "shrink", i)
+            expect(typeof(frame)).toBe("CFrame")
+            expect(size.Magnitude > 0).toBe(true)
+            local localPoint = base.CFrame:PointToObjectSpace(frame.Position)
+            expect((localPoint - expected[i]).Magnitude < 0.0001).toBe(true)
+            expect(frame.UpVector:Dot(base.CFrame.UpVector) > 0.99999)
+                .toBe(true)
+            local darkFrame, darkSize = DisasterMotionSceneRules.pose(
+                base, "blackout", i)
+            expect(darkSize).toBe(Vector3.new(0.55, 3.2, 0.55))
+            expect(darkFrame.UpVector:Dot(base.CFrame.UpVector) > 0.99999)
+                .toBe(true)
+            local point = base.CFrame:PointToObjectSpace(darkFrame.Position)
+            expect(math.abs(math.abs(point.X) - 41) < 0.0001).toBe(true)
+            expect(math.abs(math.abs(point.Z) - 29) < 0.0001).toBe(true)
+        end
+        expect(DisasterMotionSceneRules.pose(base, "shrink", 0) == nil).toBe(true)
+        expect(DisasterMotionSceneRules.pose(base, "blackout", 5) == nil).toBe(true)
+        expect(DisasterMotionSceneRules.pose(base, "unknown", 1) == nil).toBe(true)
+        folder:Destroy()
+    end)
+
+    it("detects stale blackout maps and updates geometry only when necessary", function()
+        local folder = Instance.new("Folder")
+        local first = Instance.new("Part")
+        first.Parent = folder
+        local second = Instance.new("Part")
+        second.Parent = folder
+        local marks = {}
+        for i = 1, 4 do
+            local p = Instance.new("Part")
+            p.Parent = folder
+            marks[i] = p
+        end
+        local r = DisasterMotionSceneRules
+        expect(r.needsRebuild(nil, first, marks)).toBe(true)
+        expect(r.needsRebuild(first, first, marks)).toBe(false)
+        expect(r.needsRebuild(first, second, marks)).toBe(true)
+        expect(r.needsRebuild(first, nil, marks)).toBe(true)
+        expect(r.needsRebuild(first, first, {})).toBe(true)
+        expect(r.geometryChanged(nil, nil, first)).toBe(true)
+        expect(r.geometryChanged(first.CFrame, first.Size, first)).toBe(false)
+        first.CFrame *= CFrame.Angles(0, math.rad(19), 0)
+        expect(r.geometryChanged(CFrame.identity, first.Size, first))
+            .toBe(true)
+        local oldSize = first.Size
+        first.Size = oldSize + Vector3.new(2, 0, 0)
+        expect(r.geometryChanged(first.CFrame, oldSize, first)).toBe(true)
+        marks[4]:Destroy()
+        expect(r.needsRebuild(first, first, marks)).toBe(true)
+        folder:Destroy()
+    end)
+
+    it("uses distinct bounded blackout pulses and still mobile accessibility", function()
+        local r = DisasterMotionSceneRules
+        local sum = 0
+        for i = 1, 4 do
+            local pulse = r.beaconPulse(0.5, i, "High", false)
+            expect(pulse >= 0 and pulse <= 1).toBe(true)
+            sum += pulse
+            expect(r.beaconPulse(0.5, i, "Low", false)).toBe(0.5)
+            expect(r.beaconPulse(0.5, i, "High", true)).toBe(0.5)
+            expect(math.abs(pulse - r.beaconPulse(0.501, i, "High", false))
+                < 0.01).toBe(true)
+        end
+        expect(math.abs(sum - 2) < 0.0001).toBe(true)
+        for _, invalid in ipairs({0/0, math.huge, -math.huge, -1, 1e8}) do
+            expect(r.beaconPulse(invalid, 1, "High", false)).toBe(0.5)
+            expect(r.beaconPulse(0.5, invalid, "High", false)).toBe(0.5)
+        end
+        expect(r.beaconPulse(0.5, 5, "High", false)).toBe(0.5)
     end)
 end)
 

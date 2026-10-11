@@ -135,3 +135,37 @@ loops or increased visual budgets. The existing engine shard
 behavior and follow-on cooldown readiness. The exact-head cloud
 shards, Studio appearance and Android performance still require
 separate validation; no FPS or physical-device claim is made.
+
+## PR #19 — rotated arena crisis VFX and Android budget (11 October 2026)
+
+`disaster-motion-vfx.client.lua` no longer rewrites four ShrinkingArena
+perimeter CFrames and Sizes every decorative tick when the Arena.Base
+has not moved. The original four noncolliding warning strips retain
+their shape, position and pulse; only translucency changes per tick.
+Geometry is recomputed when the base's Size or CFrame actually changes.
+
+The Darkness corner guidance previously kept the first four spawned
+beacons even if `GeneratedMap.Arena.Base` was replaced. Both four-part
+effects now explicitly observe the current base, discard stale owned
+parts and rebuild the correct local geometry for late replicated,
+replaced or rotated arenas. The four Darkness beacons are no longer
+perfectly synchronized: Medium/High use evenly offset, slow,
+bounded phases so players can distinguish the arena corners without
+new flashing objects. Low and ReduceMotion retain a constant visible
+baseline and skip redundant color/transparency writes after mode
+changes. Unlike damage warnings, these are decorative guidance cues,
+and the gameplay hitboxes stay server-owned.
+
+The new shared `DisasterMotionSceneRules.lua` centralizes the four
+geometry recipes, map-replacement check, transform-change gate and
+four-phase brightness envelope. The existing engine suite
+`disaster-visuals.spec.luau` covers four-way rotated transforms,
+nonrebuild steady state, streamed-base replacement, destroyed parts,
+bounds, tier/accessibility and invalid timing inputs.
+
+No added particle emitter, beam, light source, render loop or network
+message; no collision, damage, physics, balance or monetization changes.
+Acceptance still requires a physical Android pass near shrinking map
+corners, frequent map changes and Darkness+ShrinkingArena, together
+with Studio visual review and thermal/FPS measurement. Do not
+interpret an engine green status as a visual production approval.

@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local SceneRules = require(ReplicatedStorage.Shared.DisasterMotionSceneRules)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -14,7 +15,15 @@ local activeIds = {}
 local characterEffects = {}
 local shrinkParts = {}
 local shrinkBase = nil
+local shrinkPoseFrame = nil
+local shrinkPoseSize = nil
+local shrinkLastAlpha = nil
 local blackoutParts = {}
+local blackoutBase = nil
+local blackoutPoseFrame = nil
+local blackoutPoseSize = nil
+local blackoutLastTier = nil
+local blackoutLastReduced = nil
 local clock = 0
 local currentPhase = "waiting"
 local activeSignature = ""
@@ -36,6 +45,9 @@ end
 
 local function clearShrink()
     shrinkBase = nil
+    shrinkPoseFrame = nil
+    shrinkPoseSize = nil
+    shrinkLastAlpha = nil
     for _, instance in ipairs(shrinkParts) do
         if instance and instance.Parent then
             instance:Destroy()
@@ -45,6 +57,11 @@ local function clearShrink()
 end
 
 local function clearBlackout()
+    blackoutBase = nil
+    blackoutPoseFrame = nil
+    blackoutPoseSize = nil
+    blackoutLastTier = nil
+    blackoutLastReduced = nil
     for _, instance in ipairs(blackoutParts) do
         if instance and instance.Parent then
             instance:Destroy()
@@ -132,24 +149,26 @@ local function rebuildCharacterEffects()
 
 end
 
-local function ensureShrinkVisuals()
-    if currentPhase ~= "round" or not has("ShrinkingArena") then
-        clearShrink()
-        return
-    end
-
+local function arenaBase()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
-    if not base or not base:IsA("BasePart") then
-        clearShrink()
+    return base and base:IsA("BasePart") and base or nil
+end
+
+local function ensureShrinkVisuals()
+    if currentPhase ~= "round" or not has("ShrinkingArena") then
+        if #shrinkParts > 0 then clearShrink() end
         return
     end
-
-    if #shrinkParts == 4 and shrinkBase == base then
+    local base = arenaBase()
+    if not base then
+        if #shrinkParts > 0 then clearShrink() end
         return
     end
-
+    if not SceneRules.needsRebuild(shrinkBase, base, shrinkParts) then
+        return
+    end
     clearShrink()
     shrinkBase = base
     for i = 1, 4 do
@@ -161,7 +180,8 @@ local function ensureShrinkVisuals()
         p.CanQuery = false
         p.CastShadow = false
         p.Material = Enum.Material.Neon
-        p.Color = i % 2 == 0 and Color3.fromRGB(220, 85, 255) or Color3.fromRGB(255, 110, 195)
+        p.Color = i % 2 == 0 and Color3.fromRGB(220, 85, 255)
+            or Color3.fromRGB(255, 110, 195)
         p.Transparency = 0.28
         p.Parent = worldEffects
         table.insert(shrinkParts, p)
@@ -169,69 +189,53 @@ local function ensureShrinkVisuals()
 end
 
 local function updateShrink()
-    if #shrinkParts ~= 4 then
-        return
-    end
-
     local base = shrinkBase
-    if not base or not base.Parent then
-        clearShrink()
+    if not base or not base.Parent or #shrinkParts ~= 4 then
+        if #shrinkParts > 0 then clearShrink() end
         return
     end
+    -- Size/CFrame are only written when the source deck actually changes.
+    -- Ordinary frames touch transparency only, avoiding eight property
+    -- writes and four geometry allocations per frame on Android.
+    if SceneRules.geometryChanged(shrinkPoseFrame, shrinkPoseSize, base) then
+        for i, part in ipairs(shrinkParts) do
+            local frame, size = SceneRules.pose(base, "shrink", i)
+            if frame then
+                part.CFrame = frame
+                part.Size = size
+            end
+        end
+        shrinkPoseFrame, shrinkPoseSize = base.CFrame, base.Size
+    end
 
-    local halfX = base.Size.X * 0.5
-    local halfZ = base.Size.Z * 0.5
-    local thickness = 0.24
-    local y = base.Size.Y * 0.5 + 0.18
     local reduced = player:GetAttribute("ReduceMotion") == true
     local pulse = reduced and 0.5 or ((math.sin(clock * 5.4) + 1) * 0.5)
-
-    local defs = {
-        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y, -halfZ)},
-        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y, halfZ)},
-        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(-halfX, y, 0)},
-        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(halfX, y, 0)},
-    }
-
-    for i, def in ipairs(defs) do
-        local p = shrinkParts[i]
-        if p and p.Parent then
-            p.Size = def.size
-            p.CFrame = base.CFrame * CFrame.new(def.pos)
-            p.Transparency = 0.18 + pulse * 0.26
+    local alpha = 0.18 + pulse * 0.26
+    if alpha ~= shrinkLastAlpha then
+        for _, p in ipairs(shrinkParts) do
+            p.Transparency = alpha
         end
+        shrinkLastAlpha = alpha
     end
-
 end
-
 
 local function ensureBlackoutVisuals()
     if currentPhase ~= "round" or not has("Darkness") then
-        clearBlackout()
+        if #blackoutParts > 0 then clearBlackout() end
         return
     end
-
-    if #blackoutParts > 0 then
+    local base = arenaBase()
+    if not base then
+        if #blackoutParts > 0 then clearBlackout() end
         return
     end
-
-    local generated = workspace:FindFirstChild("GeneratedMap")
-    local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
-    if not base or not base:IsA("BasePart") then
+    -- An old set of emergency beacons must never stay on a replaced map.
+    if not SceneRules.needsRebuild(blackoutBase, base, blackoutParts) then
         return
     end
-
-    local halfX = base.Size.X * 0.5
-    local halfZ = base.Size.Z * 0.5
-    local offsets = {
-        Vector3.new(-halfX + 4, 2.2, -halfZ + 4),
-        Vector3.new(halfX - 4, 2.2, -halfZ + 4),
-        Vector3.new(-halfX + 4, 2.2, halfZ - 4),
-        Vector3.new(halfX - 4, 2.2, halfZ - 4),
-    }
-
-    for i, offset in ipairs(offsets) do
+    clearBlackout()
+    blackoutBase = base
+    for i = 1, 4 do
         local beacon = Instance.new("Part")
         beacon.Name = "BlackoutEmergencyBeacon" .. i
         beacon.Anchored = true
@@ -240,19 +244,55 @@ local function ensureBlackoutVisuals()
         beacon.CanQuery = false
         beacon.CastShadow = false
         beacon.Material = Enum.Material.Neon
-        beacon.Color = i % 2 == 0 and Color3.fromRGB(115, 90, 220) or Color3.fromRGB(75, 120, 220)
-        beacon.Size = Vector3.new(0.55, 3.2, 0.55)
-        beacon.CFrame = base.CFrame * CFrame.new(offset)
+        beacon.Color = i % 2 == 0 and Color3.fromRGB(115, 90, 220)
+            or Color3.fromRGB(75, 120, 220)
         beacon.Transparency = 0.38
         beacon.Parent = worldEffects
         table.insert(blackoutParts, beacon)
     end
 end
 
+local function updateBlackout(tier)
+    local base = blackoutBase
+    if not base or not base.Parent or #blackoutParts ~= 4 then
+        if #blackoutParts > 0 then clearBlackout() end
+        return
+    end
+    local geometryChanged = SceneRules.geometryChanged(
+        blackoutPoseFrame, blackoutPoseSize, base)
+    if geometryChanged then
+        for i, part in ipairs(blackoutParts) do
+            local frame, size = SceneRules.pose(base, "blackout", i)
+            if frame then
+                part.CFrame = frame
+                part.Size = size
+            end
+        end
+        blackoutPoseFrame, blackoutPoseSize = base.CFrame, base.Size
+    end
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local still = tier.Name == "Low" or reduced
+    local tierChanged = blackoutLastTier ~= tier.Name
+        or blackoutLastReduced ~= reduced
+    -- On Low/ReduceMotion, no cyclic property writes after the first pose.
+    if still and not geometryChanged and not tierChanged then return end
+    blackoutLastTier, blackoutLastReduced = tier.Name, reduced
+    for i, beacon in ipairs(blackoutParts) do
+        local pulse = SceneRules.beaconPulse(clock, i, tier.Name, reduced)
+        beacon.Transparency = 0.34 + pulse * 0.30
+        beacon.Color = i % 2 == 0
+            and Color3.fromRGB(115, 90 + math.floor(pulse * 25), 220)
+            or Color3.fromRGB(75, 115 + math.floor(pulse * 20), 220)
+    end
+end
+
 local function applyState(state)
-    local nextPhase = tostring(state.phase or "waiting")
+    local snapshot = type(state) == "table" and state or {}
+    local nextPhase = tostring(snapshot.phase or "waiting")
     local nextIds = {}
-    for _, id in ipairs(state.disasterIds or {}) do
+    local ids = type(snapshot.disasterIds) == "table"
+        and snapshot.disasterIds or {}
+    for _, id in ipairs(ids) do
         table.insert(nextIds, tostring(id))
     end
     table.sort(nextIds)
@@ -306,7 +346,9 @@ ensureRenderLoop = function()
             local dt = task.wait(VfxQuality.decorativeInterval(tier.Name,
                 player:GetAttribute("ReduceMotion") == true))
             if currentPhase ~= "round" then continue end
-
+            -- Events may arrive while waiting: use the current hazard set.
+            shrinkActive = has("ShrinkingArena")
+            blackoutActive = has("Darkness")
             clock += dt
 
     if shrinkActive then
@@ -318,16 +360,7 @@ ensureRenderLoop = function()
 
     if blackoutActive then
         ensureBlackoutVisuals()
-        local reduced = player:GetAttribute("ReduceMotion") == true
-        local pulse = reduced and 0.5 or ((math.sin(clock * 2.6) + 1) * 0.5)
-        for i, beacon in ipairs(blackoutParts) do
-            if beacon.Parent then
-                beacon.Transparency = 0.34 + pulse * 0.30
-                beacon.Color = i % 2 == 0
-                    and Color3.fromRGB(115, 90 + math.floor(pulse * 25), 220)
-                    or Color3.fromRGB(75, 115 + math.floor(pulse * 20), 220)
-            end
-        end
+        updateBlackout(tier)
     elseif #blackoutParts > 0 then
         clearBlackout()
     end
