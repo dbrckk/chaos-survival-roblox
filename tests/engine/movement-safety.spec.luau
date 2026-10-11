@@ -107,6 +107,43 @@ describe("Movement safety", function()
         removing:Destroy()
     end)
 
+    it("rejects nonfinite dash headings, physics and cooldown attributes", function()
+        local r = PhaseDashRules
+        local badNumbers = {0/0, math.huge, -math.huge}
+        local expected = Vector3.new(0, 0, -1)
+        for _, bad in ipairs(badNumbers) do
+            local heading = r.direction(Vector3.new(bad, 0, 1),
+                Vector3.new(bad, 0, bad))
+            expect(heading).toBe(expected)
+            local faceOnly = r.direction(Vector3.zero,
+                Vector3.new(0, 0, bad))
+            expect(faceOnly).toBe(expected)
+            local result = r.velocity(Vector3.new(bad, 1, 5),
+                Vector3.new(bad, 0, 0), Vector3.new(0, 0, -1))
+            expect(Vector3.new(result.X, 0, result.Z).Magnitude
+                <= r.MaxHorizontalSpeed).toBe(true)
+            expect(result.X == result.X and result.Y == result.Y
+                and result.Z == result.Z).toBe(true)
+            expect(result.Y >= -52 and result.Y <= 48).toBe(true)
+            expect(r.canActivate("round", true, false, 100, true,
+                bad, 0)).toBe(false)
+            expect(r.canActivate("round", true, false, bad, true,
+                10, 0)).toBe(false)
+            expect(r.canActivate("round", true, false, 100, true,
+                10, bad)).toBe(false)
+            expect(r.remaining(bad, 100)).toBe(0)
+            expect(r.remaining(100, bad)).toBe(0)
+            expect(r.nextReadyAt(bad)).toBe(r.Cooldown)
+        end
+        expect(r.direction(Vector3.new(1e8, 0, 0),
+            Vector3.new(1, 0, 0))).toBe(Vector3.new(1, 0, 0))
+        expect(r.direction(Vector3.new(1e8, 0, 0),
+            Vector3.new(1e8, 0, 0))).toBe(expected)
+        expect(r.remaining(120, 111)).toBe(9)
+        expect(r.remaining(100, 111)).toBe(0)
+        expect(r.remaining(nil, 111)).toBe(0)
+    end)
+
     it("limits Phase Dash movement and never trusts arbitrary client vectors", function()
         local rules = PhaseDashRules
         local direction = rules.direction(

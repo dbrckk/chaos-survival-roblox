@@ -418,3 +418,20 @@ color differences, unchanged part caps, no collisions and rejection of
 NaN/Infinity position, strength and scene-budget values before geometry.
 Roblox Studio appearance and physical Android thermal/FPS costs remain
 unmeasured.
+
+## PR #19 — finite Phase Dash server/client numerical contract (11 October 2026)
+
+The shared PhaseDashRules now rejects nonfinite health/timestamps and
+unbounded or nonfinite motion vectors. An invalid movement direction safely
+falls back to a valid avatar facing vector or neutral forward; corrupted
+current velocity is replaced before the unchanged 44-stud horizontal and
+-52..48 vertical speed clamps. The client also normalizes replicated
+PhaseDashHeading through these shared rules, and uses a finite-only
+cooldown-remaining helper to avoid NaN/Infinity HUD countdowns.
+
+The existing movement-safety engine tests cover NaN, both infinities,
+excessive coordinates, normal strafing direction and valid cooldown
+arithmetic. No dash power, duration, cooldown, VFX object count,
+monetization or server-authoritative movement conditions were changed.
+Roblox Studio multiplayer replication and physical Android playtesting
+remain required.

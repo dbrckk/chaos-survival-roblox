@@ -199,10 +199,9 @@ local function playDashEffect(character)
     local position = root.Position - Vector3.new(0, 2.45, 0)
     -- Server-computed movement heading also handles strafing correctly.
     -- Fall back to avatar facing for older servers or missing replication.
-    local heading = character:GetAttribute("PhaseDashHeading")
-    if typeof(heading) ~= "Vector3" then
-        heading = root.CFrame.LookVector
-    end
+    local heading = PhaseDashRules.direction(
+        character:GetAttribute("PhaseDashHeading"), root.CFrame.LookVector
+    )
     cosmeticRing(position, Color3.fromRGB(85, 233, 235),
         reduced and 4.4 or 9.5, reduced and 0.16 or 0.42,
         heading, false)
@@ -247,8 +246,9 @@ local function canUse()
 end
 
 local function remaining()
-    return math.max(0, (tonumber(player:GetAttribute("PhaseDashReadyAt")) or 0)
-        - workspace:GetServerTimeNow())
+    return PhaseDashRules.remaining(
+        player:GetAttribute("PhaseDashReadyAt"), workspace:GetServerTimeNow()
+    )
 end
 
 local function requestDash()
