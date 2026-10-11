@@ -25,6 +25,45 @@ function HeroMotionBudgetRules.resumeEnvelope(elapsed)
     return t * t * (3 - 2 * t)
 end
 
+-- Authored local-space micro-kinetics for the noncolliding Classic antenna
+-- vanes and Crossroads transit signal shutters. Never animate hazard geometry.
+function HeroMotionBudgetRules.signatureOffset(role, index, now, scale)
+    if role ~= "antenna" and role ~= "signal" then return nil end
+    if type(index) ~= "number" or index ~= index
+        or index % 1 ~= 0 or index < 1
+        or index > (role == "antenna" and 2 or 3)
+        or type(now) ~= "number" or now ~= now or math.abs(now) > 1e7
+        or type(scale) ~= "number" or scale ~= scale
+        or math.abs(scale) == math.huge or scale < 0 then
+        return nil
+    end
+    local strength = math.clamp(scale, 0, 1)
+    local cycle = now + index * 0.79
+    if role == "antenna" then
+        -- Paired left/right broadcast masts counter-sway around their bases.
+        local side = index == 1 and -1 or 1
+        return CFrame.Angles(0, 0,
+            math.sin(cycle * 0.74) * math.rad(1.8) * strength * side)
+    end
+    -- Small offset/roll evokes an indexed mechanical shutter without
+    -- moving the fixed gantry or introducing physical collision.
+    local sweep = math.sin(cycle * 1.28)
+    return CFrame.new(0, sweep * 0.085 * strength, 0)
+        * CFrame.Angles(0, 0, sweep * math.rad(1.1) * strength)
+end
+
+-- Continuous three-phase signal chase, avoiding the former hard on/off
+-- jump every 0.42s. Decorative light only; no gameplay telegraph is altered.
+function HeroMotionBudgetRules.signalPulse(now, index)
+    if type(now) ~= "number" or now ~= now or math.abs(now) > 1e7
+        or type(index) ~= "number" or index ~= index
+        or index % 1 ~= 0 or index < 1 or index > 3 then
+        return 0
+    end
+    return (1 + math.cos(now * (1.6 * math.pi)
+        + (index - 1) * (2 * math.pi / 3))) * 0.5
+end
+
 function HeroMotionBudgetRules.interval(tier, reduceMotion, hasTracked)
     if hasTracked ~= true then
         -- New scenery is still picked up by ChildAdded and the scan timer.

@@ -129,6 +129,74 @@ describe("Hero landmark animation scheduling and accessibility", function()
             * Budget.resumeEnvelope(1)).toBe(0.18)
     end)
 
+    it("animates authored antenna vanes and transit shutters without 3D drift", function()
+        local base = CFrame.new(15, 7, -12)
+            * CFrame.Angles(math.rad(14), math.rad(31), math.rad(-8))
+        for _, entry in ipairs({
+            {"antenna", 1}, {"antenna", 2},
+            {"signal", 1}, {"signal", 2}, {"signal", 3},
+        }) do
+            local role, index = entry[1], entry[2]
+            local high = Budget.signatureOffset(role, index, 1.37, 1)
+            local low = Budget.signatureOffset(role, index, 1.37, 0.18)
+            local still = Budget.signatureOffset(role, index, 1.37, 0)
+            expect(high ~= nil).toBe(true)
+            expect(low ~= nil).toBe(true)
+            expect(still ~= nil).toBe(true)
+            local function motion(cf)
+                return cf.Position.Magnitude
+                    + (cf.UpVector - Vector3.new(0, 1, 0)).Magnitude
+            end
+            expect(motion(high) > motion(low)).toBe(true)
+            expect(motion(low) > motion(still)).toBe(true)
+            expect(motion(still) < 0.00001).toBe(true)
+            expect(high.Position.Magnitude <= 0.086).toBe(true)
+            local localPose = base:ToObjectSpace(base * high)
+            expect((localPose.Position - high.Position).Magnitude < 0.0001)
+                .toBe(true)
+            expect(localPose.UpVector:Dot(high.UpVector) > 0.99999).toBe(true)
+            local repeatPose = Budget.signatureOffset(role, index, 1.37, 1)
+            expect((repeatPose.Position - high.Position).Magnitude < 0.0001)
+                .toBe(true)
+            expect(repeatPose.RightVector:Dot(high.RightVector) > 0.99999)
+                .toBe(true)
+        end
+        expect(Budget.signatureOffset("lift", 1, 1, 1) == nil).toBe(true)
+        expect(Budget.signatureOffset("antenna", 3, 1, 1) == nil).toBe(true)
+        expect(Budget.signatureOffset("signal", 4, 1, 1) == nil).toBe(true)
+        expect(Budget.signatureOffset("signal", 0, 1, 1) == nil).toBe(true)
+        expect(Budget.signatureOffset("signal", 1.5, 1, 1) == nil).toBe(true)
+        expect(Budget.signatureOffset("signal", 1, math.huge, 1) == nil).toBe(true)
+        expect(Budget.signatureOffset("signal", 1, 0/0, 1) == nil).toBe(true)
+        expect(Budget.signatureOffset("signal", 1, 1, -1) == nil).toBe(true)
+        expect(Budget.signatureOffset("signal", 1, 1, math.huge) == nil).toBe(true)
+        expect(Budget.signatureOffset("signal", 1, 1, 0/0) == nil).toBe(true)
+    end)
+
+    it("crossfades three transit lights without hard on-off frame jumps", function()
+        local phase = {}
+        for i = 1, 3 do
+            phase[i] = Budget.signalPulse(0, i)
+            expect(phase[i] >= 0 and phase[i] <= 1).toBe(true)
+            for _, t in ipairs({0, 0.42, 1.37, 9.1, 4097.37}) do
+                local glow = Budget.signalPulse(t, i)
+                expect(glow >= 0 and glow <= 1).toBe(true)
+                expect(math.abs(glow - Budget.signalPulse(t, i)) < 0.000001)
+                    .toBe(true)
+                expect(math.abs(glow - Budget.signalPulse(t + 0.001, i)) < 0.01)
+                    .toBe(true)
+            end
+        end
+        expect(math.abs(phase[1] + phase[2] + phase[3] - 1.5) < 0.0001)
+            .toBe(true)
+        expect(math.abs(phase[1] - phase[2]) > 0.1).toBe(true)
+        expect(Budget.signalPulse(math.huge, 1)).toBe(0)
+        expect(Budget.signalPulse(0/0, 1)).toBe(0)
+        expect(Budget.signalPulse(1, 0)).toBe(0)
+        expect(Budget.signalPulse(1, 4)).toBe(0)
+        expect(Budget.signalPulse(1, 1.5)).toBe(0)
+    end)
+
     it("stops all continuous displacement with ReduceMotion and idles without scenery", function()
         for _, tier in ipairs({"Low", "Medium", "High", "Unknown"}) do
             expect(Budget.motionScale(tier, true)).toBe(0)

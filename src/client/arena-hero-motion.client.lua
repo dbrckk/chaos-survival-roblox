@@ -199,8 +199,15 @@ task.spawn(function()
         local scale = tierScale * resume
         local i = state.index
         local frame = state.baseCFrame
+        local signature = HeroMotionBudget.signatureOffset(
+            state.role, state.index, clock, scale
+        )
+        if signature then
+            frame = frame * signature
+        end
         local ownsAnimatedCFrame = state.role == "lift"
             or state.role == "cable" or state.role == "reactorArm"
+            or state.role == "antenna" or state.role == "signal"
         if state.role == "lift" then
             local travel = math.sin(clock * 0.48) * 5.2 * scale
             frame = state.baseCFrame * CFrame.new(0, travel, 0)
@@ -243,14 +250,14 @@ task.spawn(function()
                 0.72
             )
         elseif state.role == "signal" then
-            local phase = (math.floor(clock * 2.4) + i) % 3
-            local active = phase == 0
-            part.Transparency = active
-                and math.max(0.10, state.baseTransparency - 0.10 * scale)
-                or math.min(0.72, state.baseTransparency + 0.26 * scale)
-            part.Color = active
-                and state.baseColor:Lerp(Color3.new(1, 1, 1), 0.16 * scale)
-                or state.baseColor
+            local glow = HeroMotionBudget.signalPulse(clock, i)
+            part.Transparency = math.clamp(
+                state.baseTransparency + (0.18 - glow * 0.30) * scale,
+                0.08, 0.78
+            )
+            part.Color = state.baseColor:Lerp(
+                Color3.new(1, 1, 1), glow * 0.16 * scale
+            )
         end
 
         -- Compose authored hero motion and disaster reaction before one

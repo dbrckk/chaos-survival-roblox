@@ -92,3 +92,39 @@ Classic tally during late streaming, LOD hide/show and rapid
 ReduceMotion toggles. Confirm no residual size/pose changes, flicker,
 obscured hazard telegraphs or frame-time regression at Low/Medium/High.
 No physical FPS, GPU, battery or thermal measurement is claimed.
+
+## Authored kinetic antennae and transit shutter signals (11 October 2026)
+
+The existing noncolliding **Classic** broadcast antennae (two High-tier
+neon masts) now counter-sway in local space by at most 1.8 degrees.
+The existing **Crossroads** transit signal bars (two on Low, three on
+Medium/High) now perform a phase-staggered vertical shutter travel
+within 0.085 studs, with at most 1.1 degrees of roll. Their fixed
+supporting geometry does not move. Both motions are composed against
+the captured original CFrame and combined with the existing disaster
+reaction in the controller's single CFrame write.
+
+The old three-state instant on/off Crossroads blink has been replaced
+by a continuous three-phase cosine chase: transparency and color now
+fade between authored baseline values, avoiding a hard jump every
+roughly 0.42 seconds. These signals are *scenery*, not hazard warnings;
+the disaster telegraph and UI pipelines are unchanged.
+
+The existing motion tier, 480 ms streaming/LOD resume envelope and
+ReduceMotion one-shot authored rest pose gate remain in control.
+This lot adds no geometry, lights, particle emitters, remotes, loops,
+colliders or server-side work. One bounded CFrame calculation is added
+for each visible antenna/signal on the **existing** hero-motion tick.
+No new work occurs in the reduced-motion idle path.
+
+`tests/engine/landmark-disaster-reactions.spec.luau` (core_a) adds
+checks for all five possible pieces, local-space composition on a
+rotated base, deterministic no-drift poses, maximum travel, quality
+scaling, zero-scale rest, invalid numeric input and the smooth,
+three-phase light cycle.
+
+**Still requiring manual verification:** visually inspect antenna
+alignment and transit-bar clearances in Roblox Studio, then assess
+Android readability, accessibility, LOD streaming and frame-time
+under Low/Medium/High. Automated tests and a successful build cannot
+certify premium visual quality or device FPS/thermals.
