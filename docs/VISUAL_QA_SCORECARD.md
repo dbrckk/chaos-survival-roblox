@@ -477,3 +477,31 @@ unsupported rig fallbacks. Full acceptance requires Roblox Studio
 preview on genuine R6/R15 rigs (with native running/emote animations),
 quick respawn or rig swaps, shoulder and hip clipping checks and real
 Android game-feeling/performance profiling.
+
+## R6 animation hotfix: missing Waist and late skeletal replication
+
+A critical issue was found in the R6 rollout: the client used
+`ipairs({waist, rootJoint, ...})` to save and restore original Motor6D
+poses. Because **R6 has no Waist**, `ipairs` stopped immediately at
+index one. No base C0 snapshot was saved and subsequent additive
+animation updates had no valid starting pose. R15 could likewise be
+affected when a particular upper joint was missing.
+
+The body-feel owner now obtains a compact ordered list of existing
+Motor6Ds using `BodyMotionRules.activeJoints`, so every present hip,
+shoulder and RootJoint receives a correct original-pose snapshot and
+restore. One bounded, character-scoped `DescendantAdded` connection
+also repairs bindings if a Motor6D, Torso, LowerTorso, UpperTorso or
+HumanoidRootPart arrives after initial rig setup. The same existing
+StateChanged observer is reused, old connections are disconnected on
+respawn, and delayed events check the character serial and identity.
+No new frame loop, animator override, control rewrite, physics changes,
+external assets or server actions.
+
+Engine regression tests construct a native-named R6 joint model with
+no Waist; assert **five** active motors, a reversible C0 pose write,
+partial-streaming motor removal, and late replacement recovery.
+Existing engine tests also exercise R15, ReduceMotion and bad instances.
+Runtime acceptance remains pending for real Roblox R6/R15 avatars
+and emotes, rapid respawns, partial character replication, restoration
+on shutdown, and on-device Android motion/thermal profiling.

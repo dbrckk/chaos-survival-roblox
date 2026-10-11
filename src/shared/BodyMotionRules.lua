@@ -37,6 +37,26 @@ function BodyMotionRules.joints(character, rigType)
     return nil
 end
 
+-- Never use ipairs on a fixed positional joint array: R6 has no Waist,
+-- so a nil in position one would skip every remaining Motor6D. This
+-- returns a compact, deterministic ordered list for C0 snapshots/restores.
+local JOINT_ORDER = {
+    "waist", "rootJoint", "leftHip", "rightHip",
+    "leftShoulder", "rightShoulder",
+}
+
+function BodyMotionRules.activeJoints(joints)
+    local result = {}
+    if type(joints) ~= "table" then return result end
+    for _, key in ipairs(JOINT_ORDER) do
+        local joint = joints[key]
+        if typeof(joint) == "Instance" and joint:IsA("Motor6D") then
+            table.insert(result, joint)
+        end
+    end
+    return result
+end
+
 -- R6's single rigid Torso and wide-offset shoulders need less additive
 -- lean than R15. Avoid dramatic inversions when switching avatar rigs.
 function BodyMotionRules.rigPoseScale(rigType)

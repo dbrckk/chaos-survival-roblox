@@ -54,17 +54,28 @@ local lastGroundCueAt = -math.huge
 local baseC0 = setmetatable({}, {__mode = "k"})
 local bindSerial = 0
 local humanoidStateConnection = nil
+local rigDescendantConnection = nil
 local rigPoseScale = 0
 
+local function jointReferences()
+    return {
+        waist = waist, rootJoint = rootJoint,
+        leftHip = leftHip, rightHip = rightHip,
+        leftShoulder = leftShoulder, rightShoulder = rightShoulder,
+    }
+end
+
+local function restoreMotor(joint)
+    if not joint then return end
+    local original = baseC0[joint]
+    if original and joint.Parent then joint.C0 = original end
+    baseC0[joint] = nil
+end
+
 local function resetMotors()
-    for _, joint in ipairs({waist, rootJoint, leftHip, rightHip, leftShoulder, rightShoulder}) do
-        if joint then
-            local original = baseC0[joint]
-            if original and joint.Parent then
-                joint.C0 = original
-            end
-            baseC0[joint] = nil
-        end
+    -- A compact list is essential for R6: waist is intentionally nil.
+    for _, joint in ipairs(BodyMotionRules.activeJoints(jointReferences())) do
+        restoreMotor(joint)
     end
 end
 
@@ -74,12 +85,76 @@ local function rememberBaseC0(joint)
     end
 end
 
+-- Idempotent joint repair: when an R6 or R15 joint arrives later,
+-- capture its original C0 once, while never losing the previous binding.
+-- A stale character's deferred callback cannot mutate the current rig.
+local function attachRig(nextCharacter, serial)
+    if serial ~= bindSerial or character ~= nextCharacter
+        or player.Character ~= nextCharacter then
+        return
+    end
+    local nextHumanoid = nextCharacter:FindFirstChildOfClass("Humanoid")
+    local nextRoot = nextCharacter:FindFirstChild("HumanoidRootPart")
+    if not nextHumanoid or not nextRoot or not nextRoot:IsA("BasePart") then
+        return
+    end
+    local joints = BodyMotionRules.joints(nextCharacter, nextHumanoid.RigType)
+    if not joints then return end
+
+    if humanoid ~= nextHumanoid then
+        if humanoidStateConnection then
+            humanoidStateConnection:Disconnect()
+            humanoidStateConnection = nil
+        end
+        humanoid = nextHumanoid
+        humanoidStateConnection = humanoid.StateChanged:Connect(function(_, state)
+            if serial ~= bindSerial then return end
+            if state == Enum.HumanoidStateType.Jumping then
+                jumpWeight = math.max(jumpWeight, 1)
+            elseif state == Enum.HumanoidStateType.Freefall then
+                airborne = true
+            elseif airborne and (
+                state == Enum.HumanoidStateType.Landed
+                or state == Enum.HumanoidStateType.Running
+                or state == Enum.HumanoidStateType.RunningNoPhysics
+            ) then
+                airborne = false
+                local fallSpeed = math.max(0, -lastY)
+                if fallSpeed > 20 then
+                    landing = math.max(landing,
+                        math.clamp((fallSpeed - 20) / 60, 0.08, 0.65))
+                end
+            end
+        end)
+    end
+
+    root = nextRoot
+    rigPoseScale = BodyMotionRules.rigPoseScale(nextHumanoid.RigType)
+    local function refresh(oldJoint, newJoint)
+        if oldJoint ~= newJoint then
+            restoreMotor(oldJoint)
+            rememberBaseC0(newJoint)
+        end
+        return newJoint
+    end
+    waist = refresh(waist, joints.waist)
+    rootJoint = refresh(rootJoint, joints.rootJoint)
+    leftHip = refresh(leftHip, joints.leftHip)
+    rightHip = refresh(rightHip, joints.rightHip)
+    leftShoulder = refresh(leftShoulder, joints.leftShoulder)
+    rightShoulder = refresh(rightShoulder, joints.rightShoulder)
+end
+
 local function bind(nextCharacter)
     bindSerial += 1
     local serial = bindSerial
     if humanoidStateConnection then
         humanoidStateConnection:Disconnect()
         humanoidStateConnection = nil
+    end
+    if rigDescendantConnection then
+        rigDescendantConnection:Disconnect()
+        rigDescendantConnection = nil
     end
     resetMotors()
     character = nextCharacter
@@ -120,56 +195,22 @@ local function bind(nextCharacter)
     readyPose = 0
     rigPoseScale = 0
 
-    -- CharacterAdded can fire again while a streamed rig is still yielding.
-    -- An older promise must never overwrite this client's current motors.
-    local nextHumanoid = nextCharacter:WaitForChild("Humanoid", 5)
-    local nextRoot = nextCharacter:WaitForChild("HumanoidRootPart", 5)
-    if serial ~= bindSerial or character ~= nextCharacter
-        or player.Character ~= nextCharacter then
-        return
-    end
-    humanoid = nextHumanoid
-    root = nextRoot
-    if not humanoid or not root then return end
-    local joints = BodyMotionRules.joints(character, humanoid.RigType)
-    if not joints then return end
-    rigPoseScale = BodyMotionRules.rigPoseScale(humanoid.RigType)
-    waist = joints.waist
-    rootJoint = joints.rootJoint
-    leftHip = joints.leftHip
-    rightHip = joints.rightHip
-    leftShoulder = joints.leftShoulder
-    rightShoulder = joints.rightShoulder
-
-    for _, joint in ipairs({
-        waist,
-        rootJoint,
-        leftHip,
-        rightHip,
-        leftShoulder,
-        rightShoulder,
-    }) do
-        rememberBaseC0(joint)
-    end
-
-    humanoidStateConnection = humanoid.StateChanged:Connect(function(_, state)
-        if serial ~= bindSerial then return end
-        if state == Enum.HumanoidStateType.Jumping then
-            jumpWeight = math.max(jumpWeight, 1)
-        elseif state == Enum.HumanoidStateType.Freefall then
-            airborne = true
-        elseif airborne and (
-            state == Enum.HumanoidStateType.Landed
-            or state == Enum.HumanoidStateType.Running
-            or state == Enum.HumanoidStateType.RunningNoPhysics
-        ) then
-            airborne = false
-            local fallSpeed = math.max(0, -lastY)
-            if fallSpeed > 20 then
-                landing = math.max(landing, math.clamp((fallSpeed - 20) / 60, 0.08, 0.65))
-            end
+    -- One observer heals late-streamed Motor6Ds without a polling loop,
+    -- including R6 rigs with a delayed Torso or RootJoint.
+    rigDescendantConnection = nextCharacter.DescendantAdded:Connect(function(item)
+        if item:IsA("Motor6D") or item:IsA("Humanoid")
+            or (item:IsA("BasePart") and (
+                item.Name == "Torso" or item.Name == "UpperTorso"
+                or item.Name == "LowerTorso" or item.Name == "HumanoidRootPart"
+            )) then
+            task.defer(attachRig, nextCharacter, serial)
         end
     end)
+
+    attachRig(nextCharacter, serial)
+    if not humanoid then nextCharacter:WaitForChild("Humanoid", 5) end
+    if not root then nextCharacter:WaitForChild("HumanoidRootPart", 5) end
+    attachRig(nextCharacter, serial)
 end
 
 if player.Character then
@@ -181,6 +222,10 @@ player.CharacterRemoving:Connect(function()
     if humanoidStateConnection then
         humanoidStateConnection:Disconnect()
         humanoidStateConnection = nil
+    end
+    if rigDescendantConnection then
+        rigDescendantConnection:Disconnect()
+        rigDescendantConnection = nil
     end
     resetMotors()
     character = nil

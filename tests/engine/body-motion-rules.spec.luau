@@ -8,6 +8,65 @@ local LocomotionDynamics = require("../../src/shared/LocomotionDynamics")
 local GroundFx = require("../../src/client/LocomotionGroundFx")
 
 describe("Body motion rules", function()
+    it("compacts R6 motor references past the intentionally missing Waist", function()
+        local model = Instance.new("Model")
+        local torso = Instance.new("Part")
+        torso.Name = "Torso"
+        torso.Parent = model
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        local function add(parent, name)
+            local j = Instance.new("Motor6D")
+            j.Name = name
+            j.C0 = CFrame.new(0.2, 0.3, -0.4)
+            j.Parent = parent
+            return j
+        end
+        local rootJoint = add(root, "RootJoint")
+        local lh = add(torso, "Left Hip")
+        local rh = add(torso, "Right Hip")
+        local ls = add(torso, "Left Shoulder")
+        local rs = add(torso, "Right Shoulder")
+        local joints = BodyMotionRules.joints(model, Enum.HumanoidRigType.R6)
+        local active = BodyMotionRules.activeJoints(joints)
+        expect(#active).toBe(5)
+        expect(active[1]).toBe(rootJoint)
+        expect(active[2]).toBe(lh)
+        expect(active[3]).toBe(rh)
+        expect(active[4]).toBe(ls)
+        expect(active[5]).toBe(rs)
+        local snapshots = {}
+        for _, motor in ipairs(active) do snapshots[motor] = motor.C0 end
+        for _, motor in ipairs(active) do
+            motor.C0 = motor.C0 * CFrame.Angles(0, 0.4, 0)
+        end
+        for _, motor in ipairs(active) do
+            motor.C0 = snapshots[motor]
+            expect(motor.C0).toBe(snapshots[motor])
+        end
+        local late = Instance.new("Part")
+        late.Name = "Left Shoulder"
+        late.Parent = torso
+        ls:Destroy()
+        expect(#BodyMotionRules.activeJoints(
+            BodyMotionRules.joints(model, Enum.HumanoidRigType.R6)
+        )).toBe(4)
+        late:Destroy()
+        local replacement = add(torso, "Left Shoulder")
+        local healed = BodyMotionRules.activeJoints(
+            BodyMotionRules.joints(model, Enum.HumanoidRigType.R6))
+        expect(#healed).toBe(5)
+        expect(healed[4]).toBe(replacement)
+        local broken = BodyMotionRules.activeJoints({waist = "not a motor",
+            rootJoint = rootJoint})
+        expect(#broken).toBe(1)
+        expect(broken[1]).toBe(rootJoint)
+        expect(#BodyMotionRules.activeJoints(nil)).toBe(0)
+        model:Destroy()
+    end)
+
+
     it("binds native R15 and R6 body joints without duplicating motors", function()
         local rules = BodyMotionRules
         local function part(model, name)
