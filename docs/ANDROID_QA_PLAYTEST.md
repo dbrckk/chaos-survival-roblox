@@ -495,3 +495,21 @@ enabled. The feedback still expires after 0.65 seconds and does not add
 new rendering loops. Engine lobby tests additionally verify that the
 particle anchor follows the actual pad after it moves. Android screenshots
 and accessibility testing remain outstanding.
+
+## PR #19 — localized boost confirmation and interruptible practice feedback
+
+The lobby success overlay now uses the central CoreLocalization catalog:
+"BOOST ACTIVATED" for English and "BOOST ACTIVÉ" for French, tested for
+en-US, fr-FR and fr-CA. It no longer leaves this first-time play cue in
+English for French clients.
+
+Repeated practice boosts cancel previously active Tween instances before
+starting a fresh, bounded confirmation, so rapid success notifications
+cannot leave an old fade overriding the new text. Enabling ReduceMotion
+while a confirmation is already animating cancels that motion immediately
+and replaces it with the existing static 0.65s cue. There is no new
+render loop, replicated remote, emitter, 3D instance, or server change.
+
+Check in Roblox Studio and on a physical Android device for localized
+layout, repeated pad uses, reduced-motion changes during animations,
+and touch target/readability at small viewport sizes.

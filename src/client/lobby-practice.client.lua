@@ -1,12 +1,15 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local PracticeVisualKit = require(script.Parent.LobbyPracticeVisualKit)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local tracked = {}
 
 local gui = Instance.new("ScreenGui")
@@ -24,7 +27,7 @@ label.BackgroundColor3 = UITheme.Colors.Panel
 label.BackgroundTransparency = 1
 label.BorderSizePixel = 0
 label.Font = Enum.Font.GothamBlack
-label.Text = "PRACTICE BOOST"
+label.Text = CoreLocalization.text(localeId, "PRACTICE_BOOST_APPLIED")
 label.TextColor3 = UITheme.Colors.Cyan
 label.TextScaled = true
 label.TextTransparency = 1
@@ -38,6 +41,20 @@ scale.Scale = 0.82
 scale.Parent = label
 
 local token = 0
+local activeTweens = {}
+
+local function cancelTweens()
+    for _, tween in ipairs(activeTweens) do
+        tween:Cancel()
+    end
+    table.clear(activeTweens)
+end
+
+local function playTween(target, info, values)
+    local tween = TweenService:Create(target, info, values)
+    activeTweens[#activeTweens + 1] = tween
+    tween:Play()
+end
 
 local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -47,6 +64,9 @@ local function showFeedback(color)
     token += 1
     local current = token
 
+    -- A second boost can arrive while the previous entry/exit animations
+    -- are still running. Cancel old owners before writing fresh UI state.
+    cancelTweens()
     label.TextColor3 = color
     labelStroke.Color = color
     label.Visible = true
@@ -68,28 +88,28 @@ local function showFeedback(color)
         return
     end
 
-    TweenService:Create(label, TweenInfo.new(0.12), {
+    playTween(label, TweenInfo.new(0.12), {
         TextTransparency = 0,
         BackgroundTransparency = 0.12,
-    }):Play()
-    TweenService:Create(labelStroke, TweenInfo.new(0.12), {Transparency = 0.24}):Play()
-    TweenService:Create(
+    })
+    playTween(labelStroke, TweenInfo.new(0.12), {Transparency = 0.24})
+    playTween(
         scale,
         TweenInfo.new(0.20, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {Scale = 1}
-    ):Play()
+    )
 
     task.delay(0.65, function()
         if current ~= token then
             return
         end
 
-        TweenService:Create(label, TweenInfo.new(0.16), {
+        playTween(label, TweenInfo.new(0.16), {
             TextTransparency = 1,
             BackgroundTransparency = 1,
-        }):Play()
-        TweenService:Create(labelStroke, TweenInfo.new(0.16), {Transparency = 1}):Play()
-        TweenService:Create(scale, TweenInfo.new(0.16), {Scale = 0.92}):Play()
+        })
+        playTween(labelStroke, TweenInfo.new(0.16), {Transparency = 1})
+        playTween(scale, TweenInfo.new(0.16), {Scale = 0.92})
 
         task.wait(0.18)
         if current == token then
@@ -201,7 +221,14 @@ local function refreshAll()
 end
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshAll)
-player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshAll)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    refreshAll()
+    -- If accessibility is enabled mid-animation, stop every current
+    -- tween immediately and replace it with a stationary confirmation.
+    if player:GetAttribute("ReduceMotion") == true and label.Visible then
+        showFeedback(label.TextColor3)
+    end
+end)
 
 -- Refreshing no longer recreates particle attachments or effects.
 -- Existing tracked pads stay stable across graphics/accessibility changes.
