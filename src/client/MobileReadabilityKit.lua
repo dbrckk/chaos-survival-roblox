@@ -58,6 +58,20 @@ function Kit.applyTree(root, tier, originalBrightness)
     end
 end
 
+-- Distance LOD writes its saved visibility modifier before clearing the
+-- hidden attribute. Observe only that explicit reveal transition: a
+-- static touch tint can then be restored without a polling/render loop.
+function Kit.watchLodReturn(part, onReveal)
+    assert(typeof(part) == "Instance" and part:IsA("BasePart")
+        and type(onReveal) == "function",
+        "MobileReadabilityKit.watchLodReturn requires a part and callback")
+    return part:GetAttributeChangedSignal("SceneryLodHidden"):Connect(function()
+        if part.Parent and part:GetAttribute("SceneryLodHidden") == false then
+            onReveal(part)
+        end
+    end)
+end
+
 -- Emissions are always the currently available Decor or nil. Listener
 -- teardown is explicit when a map/arena disappears or another one arrives.
 function Kit.watch(generated, onDecor)

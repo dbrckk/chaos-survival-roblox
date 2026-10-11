@@ -270,3 +270,29 @@ toggle graphic tiers near a streaming/LOD boundary and confirm that
 decorations stay hidden until LOD reveals them, while warning and
 navigation cues remain readable. No Android performance metrics or
 Studio screenshots are claimed by this regression.
+
+## Touch Neon return after LOD (11 October 2026)
+
+The previous hidden-state guard prevented touch-tier changes from revealing
+Neon while `SceneryLodHidden` was true. A second, distinct failure mode
+remained: distance LOD could restore the saved visibility modifier after the
+last touch readability pass, leaving a returned Neon strip at its unadjusted
+brightness until another quality or streaming event.
+
+The touch client now registers one `SceneryLodHidden` attribute listener
+per Neon part, including children of newly streamed subtrees. When LOD has
+restored `LocalTransparencyModifier` and clears its hidden attribute,
+the client reapplies the active touch tier immediately. Hidden transitions
+never write visibility. Observers disconnect when a subtree disappears
+and when the Decor generation changes, avoiding stale map callbacks.
+The source of truth for hidden state remains `scenery-lod.client.lua`.
+
+Existing `arena-presentation.spec.luau` in the core_a Open Cloud shard
+exercises both ordinary and gameplay-edge Neon, hide/reveal event ordering,
+modifier precision and listener disconnection. No new client loop, 3D
+geometry, particle, light, network message, physics rule or player input
+change is introduced.
+
+This is automated engine coverage, not physical Android acceptance:
+real-device streaming and repeated distance-boundary traversal still
+need a visual and performance pass at all quality tiers.

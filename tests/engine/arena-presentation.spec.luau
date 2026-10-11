@@ -642,6 +642,60 @@ describe("Touch decor streamed-subtree readability", function()
         expect(math.abs(lamp.Brightness - 3.6) < 0.0001).toBe(true)
         holder:Destroy()
     end)
+    it("reapplies touch tint at LOD reveal and disconnects stale observers", function()
+        local folder = Instance.new("Folder")
+        local glow = Instance.new("Part")
+        glow.Name = "DecorativeNeon"
+        glow.Material = Enum.Material.Neon
+        glow.Parent = folder
+        local edge = Instance.new("Part")
+        edge.Name = "EdgeSafetyGlow"
+        edge.Material = Enum.Material.Neon
+        edge.Parent = folder
+        local baselines = setmetatable({}, {__mode = "k"})
+        local callbacks = 0
+        local function attach(part)
+            return MobileReadabilityKit.watchLodReturn(part, function(revealed)
+                callbacks += 1
+                MobileReadabilityKit.applyInstance(revealed, "Medium", baselines)
+            end)
+        end
+        local disconnectGlow = attach(glow)
+        local disconnectEdge = attach(edge)
+
+        -- LOD hides a part after recording its own baseline. Touch
+        -- readability must never override that full invisibility.
+        glow:SetAttribute("SceneryLodHidden", true)
+        edge:SetAttribute("SceneryLodHidden", true)
+        glow.LocalTransparencyModifier = 1
+        edge.LocalTransparencyModifier = 1
+        MobileReadabilityKit.applyTree(folder, "High", baselines)
+        expect(glow.LocalTransparencyModifier).toBe(1)
+        expect(edge.LocalTransparencyModifier).toBe(1)
+        expect(callbacks).toBe(0)
+
+        -- The LOD controller restores its modifier *before* revealing.
+        glow.LocalTransparencyModifier = 0
+        edge.LocalTransparencyModifier = 0
+        glow:SetAttribute("SceneryLodHidden", false)
+        edge:SetAttribute("SceneryLodHidden", false)
+        expect(callbacks).toBe(2)
+        expect(math.abs(glow.LocalTransparencyModifier - 0.12) < 0.0001)
+            .toBe(true)
+        expect(math.abs(edge.LocalTransparencyModifier - 0.054) < 0.0001)
+            .toBe(true)
+        glow:SetAttribute("SceneryLodHidden", true)
+        glow.LocalTransparencyModifier = 1
+        expect(callbacks).toBe(2)
+
+        disconnectGlow:Disconnect()
+        disconnectEdge:Disconnect()
+        glow.LocalTransparencyModifier = 0
+        glow:SetAttribute("SceneryLodHidden", false)
+        expect(callbacks).toBe(2)
+        expect(glow.LocalTransparencyModifier).toBe(0)
+        folder:Destroy()
+    end)
 end)
 
 
