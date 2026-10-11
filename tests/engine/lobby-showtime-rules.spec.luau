@@ -8,6 +8,69 @@ local ShowtimeChoreography = require("../../src/client/ShowtimeChoreography")
 local ShowtimeHologramDetails = require("../../src/client/ShowtimeHologramDetails")
 
 describe("Lobby Showtime", function()
+    it("creates distinct bounded 3D entry signatures for all eight emotes", function()
+        local kit = require("../../src/client/ShowtimeSignatureKit")
+        local all = {"dance", "shuffle", "groove", "robot", "orbit",
+            "cheer", "wave", "laugh"}
+        local unique = {}
+        local root = Instance.new("Folder")
+        local stage = Instance.new("Folder")
+        stage.Name = "PermanentStage"
+        stage.Parent = root
+        local frame = CFrame.new(4, 6, -8)
+            * CFrame.Angles(0, math.rad(32), 0)
+        local colorA = Color3.fromRGB(60, 210, 245)
+        local colorB = Color3.fromRGB(235, 85, 205)
+        for _, id in ipairs(all) do
+            for _, tier in ipairs({"Medium", "High"}) do
+                local count = tier == "High" and 6 or 3
+                expect(kit.count(tier, false)).toBe(count)
+                local parts = kit.emit(root, frame, id, tier, false,
+                    colorA, colorB)
+                expect(#parts).toBe(count)
+                local design = kit.recipe(id, 1, count)
+                expect(design ~= nil).toBe(true)
+                unique[design.Name] = true
+                for i, p in ipairs(parts) do
+                    local spec = kit.recipe(id, i, count)
+                    expect(p.Name).toBe(spec.Name .. i)
+                    expect(p.ClassName).toBe(spec.Class)
+                    expect(p.Material).toBe(spec.Material)
+                    expect(p.CanCollide).toBe(false)
+                    expect(p.CanTouch).toBe(false)
+                    expect(p.CanQuery).toBe(false)
+                    expect(p.CastShadow).toBe(false)
+                    expect(p.Anchored).toBe(true)
+                    expect(p:GetAttribute("ChaosShowtimeStyle")).toBe(id)
+                    expect((frame:PointToObjectSpace(p.Position) - spec.Start)
+                        .Magnitude < 0.02).toBe(true)
+                    expect(spec.Size.X > 0 and spec.Size.Y > 0
+                        and spec.Size.Z > 0).toBe(true)
+                    expect(spec.GoalSize.Y > 0).toBe(true)
+                end
+                -- Previous temporary entry is evicted as a whole.
+                expect(#root:GetChildren()).toBe(count + 1)
+                expect(stage.Parent).toBe(root)
+            end
+        end
+        local labels = 0
+        for _ in pairs(unique) do labels += 1 end
+        expect(labels).toBe(8)
+        expect(kit.count("Low", false)).toBe(0)
+        expect(kit.count("High", true)).toBe(0)
+        expect(#kit.emit(root, frame, "robot", "Low", false,
+            colorA, colorB)).toBe(0)
+        expect(#kit.emit(root, frame, "robot", "High", true,
+            colorA, colorB)).toBe(0)
+        expect(kit.recipe("invalid", 1, 3) == nil).toBe(true)
+        expect(kit.recipe("wave", 0, 3) == nil).toBe(true)
+        expect(kit.recipe("wave", 4, 3) == nil).toBe(true)
+        expect(kit.recipe("wave", 1.5, 3) == nil).toBe(true)
+        expect(kit.recipe("wave", 1, 0) == nil).toBe(true)
+        root:Destroy()
+    end)
+
+
     it("rejects stale, replaced and detached humanoids during emote rebinding", function()
         local oldCharacter = Instance.new("Model")
         local currentCharacter = Instance.new("Model")

@@ -85,3 +85,15 @@ Une fonctionnalité visuelle est acceptée uniquement avec :
 - revue artistique indépendante du développeur du module.
 
 La note visuelle doit être une **évaluation d'un rendu observé**, jamais une promesse issue du nombre de lignes de code.
+
+
+### Originalité des entrées d'emotes Showtime
+
+Les 8 emotes possèdent une silhouette 3D de courte durée, spécifique
+à leur geste (croissants, chevrons, ondes basses, glyphes mécaniques,
+pétales orbitaux, pointes de victoire, arcs de salut, ondes de rire).
+Les figures ne sont pas des asset IDs inventés : géométries Roblox
+procédurales et non collidentes, au maximum 6 en High et 3 en Medium.
+Les effets Low et ReduceMotion restent désactivés. Aucune emote n'ajoute
+de contrôle de mouvement, récompense ou nouveau son. Le rendu doit
+encore être examiné en Studio et sur téléphone avant validation visuelle.

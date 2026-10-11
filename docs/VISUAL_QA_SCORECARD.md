@@ -555,3 +555,32 @@ the current generation, nil values, humanoid reparenting and wrong
 instance class. Physical QA remains necessary for R6/R15 respawns
 during dances, delayed streaming, quick emote switches, movement
 interruptions, and Android performance.
+
+## Eight original Showtime arrival silhouettes (R6 and R15)
+
+Previously only **Robot** and **Orbit** native emotes triggered a
+personal geometric arrival motif, both using similar glass strips.
+`ShowtimeSignatureKit` now gives all eight existing emotes distinct,
+bounded client-only 3D choreography fragments: outward rhythm
+crescents (Dance), paired skating chevrons (Shuffle), vertical bass
+wave fins (Groove), stepped circuit glyphs (Robot), twisted orbit
+petals (Orbit), rising victory spikes (Cheer), one-sided greeting
+arcs (Wave), and low expanding laugh ripples (Laugh).
+
+These visual flourishes follow the avatar's root frame without
+moving the character, changing Animator tracks, server authority or
+input. They use only anchored, non-colliding, non-queryable,
+shadowless parts; no uploaded meshes, lights, additional emitters,
+sound or network traffic. At most **6 transient shapes on High,
+3 on Medium and 0 on Low or ReduceMotion**. Switching emotes removes
+the preceding flourishes without affecting the persistent stage or
+its other visual owners; Debris also cleans up each burst within
+0.84 seconds. Each shape uses its own named procedural geometry
+instead of colored copies of a single primitive.
+
+Engine validation covers all eight motifs, distinct names,
+angled avatar-frame placement, class/material, collision and
+shadow gating, quality ceilings, rapid replacement and
+preservation of unrelated stage parts. Physical Roblox Studio
+and Android QA must confirm visual taste, camera visibility,
+performance, clipping, genuine avatar animations and ReduceMotion.
