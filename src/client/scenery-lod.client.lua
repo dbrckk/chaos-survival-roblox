@@ -125,6 +125,8 @@ local FOLDERS = {
         MediumDistance = 175,
         Origin = "Lobby",
     },
+    -- Practice cosmetics are owned by server-created pads, not workspace.
+    -- Nested Folder + sibling Attachment use the same safe visibility budget.
     PracticePadPolishLocal = {
         LowDistance = 100,
         MediumDistance = 150,
@@ -292,11 +294,21 @@ task.spawn(function()
         local arenaOrigin, lobbyOrigin = currentOrigins()
         local cameraPoint = cameraPosition()
         for folderName, limits in pairs(FOLDERS) do
-            local folder = workspace:FindFirstChild(folderName)
-            if folder then
-                local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
-                applyFolder(folder, limits, profile, origin, cameraPoint)
+            if folderName ~= "PracticePadPolishLocal" then
+                local folder = workspace:FindFirstChild(folderName)
+                if folder then
+                    local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
+                    applyFolder(folder, limits, profile, origin, cameraPoint)
+                end
             end
+        end
+
+        -- A pad's Highlight and particle emitter have separate parents.
+        -- Apply LOD to just these two client-owned containers; applying it
+        -- to the pad would wrongly hide the server-owned pad and light.
+        for _, owner in ipairs(SceneryLodRules.practicePadVisualOwners(workspace)) do
+            applyFolder(owner, FOLDERS.PracticePadPolishLocal,
+                profile, lobbyOrigin, cameraPoint)
         end
 
         task.wait(profile.Name == "Low" and 0.65 or 0.90)

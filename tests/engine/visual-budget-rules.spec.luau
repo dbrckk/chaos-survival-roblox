@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VisualBudgetRules = require("../../src/shared/VisualBudgetRules")
 local SceneryLodRules = require("../../src/shared/SceneryLodRules")
+local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 local LandingImprintKit = require("../../src/client/LandingImprintKit")
 local DisasterIntroMotionKit = require("../../src/client/DisasterIntroMotionKit")
@@ -597,6 +598,76 @@ end)
 
 
 describe("Android decorative scenery LOD stability", function()
+    it("locates nested pad cosmetics but never server-owned lobby scenery", function()
+        local root = Instance.new("Folder")
+        expect(#SceneryLodRules.practicePadVisualOwners(root)).toBe(0)
+        expect(#SceneryLodRules.practicePadVisualOwners(nil)).toBe(0)
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = root
+        local lobby = Instance.new("Folder")
+        lobby.Name = "Lobby"
+        lobby.Parent = generated
+        local activities = Instance.new("Folder")
+        activities.Name = "Activities"
+        activities.Parent = lobby
+
+        local pads = {}
+        for i = 1, 4 do
+            local pad = Instance.new("Part")
+            pad.Name = "PracticeBoostPad" .. i
+            pad:SetAttribute("LobbyPracticePad", true)
+            pad.Parent = activities
+            local light = Instance.new("PointLight")
+            light.Name = "PracticePadLight"
+            light.Parent = pad
+            pads[i] = pad
+            expect(LobbyPracticeVisualKit.create(pad) ~= nil).toBe(true)
+        end
+        local serverDecoration = Instance.new("ParticleEmitter")
+        serverDecoration.Name = "ServerDecorMotes"
+        serverDecoration.Parent = pads[1]
+
+        local owners = SceneryLodRules.practicePadVisualOwners(root)
+        expect(#owners).toBe(8)
+        local unique = {}
+        local highlightContainers, emitterContainers = 0, 0
+        for _, owner in ipairs(owners) do
+            expect(unique[owner] == nil).toBe(true)
+            unique[owner] = true
+            expect(owner:IsDescendantOf(activities)).toBe(true)
+            expect(owner:IsA("BasePart")).toBe(false)
+            expect(owner:IsA("Light")).toBe(false)
+            if owner.Name == "PracticePadPolishLocal" then
+                expect(owner:IsA("Folder")).toBe(true)
+                highlightContainers += 1
+            elseif owner.Name == "PracticeMotesAttachment" then
+                expect(owner:IsA("Attachment")).toBe(true)
+                emitterContainers += 1
+            else
+                expect(false).toBe(true)
+            end
+        end
+        expect(highlightContainers).toBe(4)
+        expect(emitterContainers).toBe(4)
+        expect(unique[serverDecoration] == nil).toBe(true)
+        expect(SceneryLodRules.visible("Low", 150, 100, 150, nil))
+            .toBe(false)
+        expect(SceneryLodRules.visible("High", 1000, 100, 150, nil))
+            .toBe(true)
+
+        pads[4]:Destroy()
+        expect(#SceneryLodRules.practicePadVisualOwners(root)).toBe(6)
+        local stray = Instance.new("Part")
+        stray.Name = "UnrelatedPad"
+        stray.Parent = activities
+        local decoy = Instance.new("Folder")
+        decoy.Name = "PracticePadPolishLocal"
+        decoy.Parent = stray
+        expect(#SceneryLodRules.practicePadVisualOwners(root)).toBe(6)
+        root:Destroy()
+    end)
+
     it("retains initial thresholds and never hides High quality scenery", function()
         local visible = SceneryLodRules.visible
         expect(visible("Low", 125, 125, 185, nil)).toBe(true)

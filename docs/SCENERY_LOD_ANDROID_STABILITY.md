@@ -58,3 +58,25 @@ The existing core_b2 visual-budget engine shard verifies these scenarios.
 
 This fixes telemetry accounting, **not** actual render-frame cost. Android
 FPS/GPU/memory and physical-device screenshots remain to be measured.
+
+## Nested practice-pad LOD (11 October 2026)
+
+The distance-based cosmetic LOD previously looked for
+`workspace.PracticePadPolishLocal`, but the local practice effects are
+actually nested under server-owned BaseParts at
+`GeneratedMap/Lobby/Activities/PracticeBoostPad*`. Their Highlight
+Folder and particle Attachment also have separate parents.
+
+On every existing LOD cadence (0.65s Low, 0.90s Medium/High), the
+client now discovers only these two specific local containers per marked
+pad. Both use the existing lobby distance cutoffs of 100/150 studs and
+8-stud hysteresis. The shared hide/restore code disables out-of-range
+emitters and highlights, and restores their previous Enabled state on
+return, without adding any new task or render loop.
+
+Server-owned pads, PointLights and unrelated game effects are not passed
+to the local LOD writer. The engine core_b2 suite checks correct nested
+target discovery, four-pad and streaming-removal counts, no duplicate
+targets, server-art exclusion and existing Low/High distance behavior.
+A real Android frame-time/temperature check is still needed to measure
+the performance impact.
