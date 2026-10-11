@@ -54,6 +54,29 @@ function BodyMotionRules.readyStance(phase, grounded, speed)
     return math.clamp(1 - (safeSpeed / 12), 0, 1)
 end
 
+-- A directional, short-lived *cosmetic* flinch from the explosion source.
+-- X is the local rightward escape vector; Forward is -local Z.
+-- The contact/damage authority is elsewhere: this never adds force or damage.
+function BodyMotionRules.blastResponse(rootFrame, sourcePosition, radius)
+    if typeof(rootFrame) ~= "CFrame" or typeof(sourcePosition) ~= "Vector3" then
+        return 0, 0, 0
+    end
+    local fromBlast = rootFrame.Position - sourcePosition
+    local distance = fromBlast.Magnitude
+    local reach = math.max(20, math.clamp(tonumber(radius) or 8, 1, 40) * 4.2)
+    if distance >= reach then
+        return 0, 0, 0
+    end
+    local strength = math.clamp(1 - distance / reach, 0, 1)
+    local flat = Vector3.new(fromBlast.X, 0, fromBlast.Z)
+    if flat.Magnitude < 0.05 then
+        return strength, 0, 0
+    end
+    local localAway = rootFrame:VectorToObjectSpace(flat.Unit)
+    return strength, math.clamp(localAway.X, -1, 1),
+        math.clamp(-localAway.Z, -1, 1)
+end
+
 function BodyMotionRules.motionScale(reduceMotion)
     return reduceMotion == true and 0.18 or 1
 end

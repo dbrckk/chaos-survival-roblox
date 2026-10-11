@@ -56,6 +56,7 @@ overdriveStroke.Transparency = 0.25
 overdriveStroke.Parent = overdriveLabel
 
 local lastTrigger = 0
+local titleToken = 0
 
 local function currentVfxTier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -104,15 +105,40 @@ end
 
 feedbackEvent.OnClientEvent:Connect(function(payload)
     local now = os.clock()
-    if now - lastTrigger < 0.18 then
+    local gridClear = payload.mechanicName == "GRID CIRCUIT CLEAR"
+    local skyrail = payload.mechanicName == "SKYRAIL SLIPSTREAM"
+        or payload.mechanicName == "SKYRAIL CHAIN x2"
+        or payload.mechanicName == "SKYRAIL ACE"
+    local skyrailAce = payload.mechanicName == "SKYRAIL ACE"
+    local fluxWeave = payload.mechanicName == "FLUX WEAVE x2"
+        or payload.mechanicName == "FLUX MASTER"
+    local fluxMaster = payload.mechanicName == "FLUX MASTER"
+    -- The final challenge success should never be swallowed by a mobility
+    -- pad's short visual cooldown during a fast last-node crossing.
+    if now - lastTrigger < 0.18 and not (gridClear or fluxWeave) then
         return
     end
     lastTrigger = now
 
     local overdrive = payload.overdrive == true
+    local fluxRelay = payload.mechanicName == "FLUX RELAY" or fluxWeave
+    local helixFlow = payload.mechanicName == "HELIX FLOW"
+        or payload.mechanicName == "HELIX CHAIN x2"
+        or payload.mechanicName == "ORBIT MASTER"
+    local orbitMaster = payload.mechanicName == "ORBIT MASTER"
     local accent = overdrive
         and Color3.fromRGB(255, 210, 90)
-        or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))
+        or (fluxRelay and Color3.fromRGB(88, 250, 229)
+            or (helixFlow and Color3.fromRGB(106, 245, 176)
+                or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))))
+    if gridClear and not overdrive then
+        accent = Color3.fromRGB(120, 245, 179)
+    elseif skyrail and not overdrive then
+        accent = skyrailAce and Color3.fromRGB(255, 214, 117)
+            or Color3.fromRGB(100, 230, 250)
+    elseif fluxMaster and not overdrive then
+        accent = Color3.fromRGB(255, 206, 106)
+    end
     local tier = currentVfxTier()
     local reduced = player:GetAttribute("ReduceMotion") == true
     flash.BackgroundColor3 = accent
@@ -127,7 +153,24 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
 
     pulseCharacter(accent)
 
-    if overdrive then
+    if overdrive or fluxRelay or helixFlow or gridClear or skyrail then
+        titleToken += 1
+        local token = titleToken
+        overdriveLabel.Text = overdrive and "OVERDRIVE BOOST"
+            or (gridClear and "GRID CIRCUIT CLEAR"
+                or (fluxWeave and tostring(payload.mechanicName)
+                    or (skyrail and tostring(payload.mechanicName)
+                        or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY"))))
+        overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce or fluxMaster)
+            and Color3.fromRGB(255, 225, 115)
+            or (gridClear and Color3.fromRGB(197, 255, 218)
+                or (helixFlow and Color3.fromRGB(184, 255, 216)
+                    or Color3.fromRGB(147, 255, 232)))
+        overdriveStroke.Color = (overdrive or orbitMaster or skyrailAce or fluxMaster)
+            and Color3.fromRGB(255, 210, 90)
+            or (gridClear and Color3.fromRGB(120, 245, 179)
+                or (helixFlow and Color3.fromRGB(106, 245, 176)
+                    or Color3.fromRGB(88, 250, 229)))
         overdriveLabel.Visible = true
         overdriveLabel.TextTransparency = 1
         overdriveLabel.BackgroundTransparency = 1
@@ -136,12 +179,15 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
             BackgroundTransparency = 0.10,
         }):Play()
         task.delay(0.55, function()
+            if token ~= titleToken then return end
             TweenService:Create(overdriveLabel, TweenInfo.new(0.18), {
                 TextTransparency = 1,
                 BackgroundTransparency = 1,
             }):Play()
             task.delay(0.2, function()
-                overdriveLabel.Visible = false
+                if token == titleToken then
+                    overdriveLabel.Visible = false
+                end
             end)
         end)
     end

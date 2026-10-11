@@ -55,6 +55,13 @@ function AISurvivorRules.desiredBotCount(realPlayerCount)
     )
 end
 
+-- A round roster is committed at the ready countdown. Late joiners do not
+-- become active contestants, so do not add/remove AI during ready, round,
+-- or the result celebration. Rebalance at the next intermission.
+function AISurvivorRules.rosterLocked(phase)
+    return phase == "ready" or phase == "round" or phase == "result"
+end
+
 function AISurvivorRules.profileForSlot(slot)
     local count = #AISurvivorRules.Profiles
     local index = ((math.max(1, math.floor(tonumber(slot) or 1)) - 1) % count) + 1
@@ -317,6 +324,18 @@ function AISurvivorRules.padInterest(baseChance, variantId, lowOnMap, risingLava
     return math.clamp(chance, 0, 0.72)
 end
 
+-- AI can use Helix Circuit only when already on an accessible upper
+-- level. Otherwise it might try to walk through a ramp suspended above
+-- the arena floor instead of seeking an updraft.
+function AISurvivorRules.helixWaypointReachable(current, waypoint)
+    if typeof(current) ~= "Vector3" or typeof(waypoint) ~= "Vector3" then
+        return false
+    end
+    local diff = waypoint - current
+    local horizontal = Vector3.new(diff.X, 0, diff.Z).Magnitude
+    return horizontal <= 23 and math.abs(diff.Y) <= 5.5
+end
+
 function AISurvivorRules.reachableElevation(currentY, targetY, variantId)
     local rise = (tonumber(targetY) or 0) - (tonumber(currentY) or 0)
     if rise <= 0 then
@@ -399,6 +418,46 @@ function AISurvivorRules.routeAffinity(variantId, position, center)
     return 4 - math.min(7, math.abs(radius - preferredRadius) * 0.20)
 end
 
+-- Traversing from the actual tower deck, rather than aiming at mid-air.
+-- The exit point sits past the midspan Slipstream trigger and safely
+-- inside the far end of the physical bridge.
+function AISurvivorRules.skyrailExitTarget(bridgeFrame, size, sign)
+    if typeof(bridgeFrame) ~= "CFrame" or typeof(size) ~= "Vector3"
+        or (sign ~= 1 and sign ~= -1)
+    then return nil end
+    local longX = size.X > size.Z
+    local span = math.max(size.X, size.Z)
+    local width = math.min(size.X, size.Z)
+    if span < 16 or width < 4 then return nil end
+    local finish = sign * (span * 0.5 - 4.8)
+    local altitude = size.Y * 0.5 + 2.4
+    return bridgeFrame:PointToWorldSpace(
+        longX and Vector3.new(finish, altitude, 0)
+            or Vector3.new(0, altitude, finish))
+end
+
+function AISurvivorRules.skyrailCrossingTarget(root, bridgeFrame, size)
+    if typeof(root) ~= "Vector3"
+        or typeof(bridgeFrame) ~= "CFrame"
+        or typeof(size) ~= "Vector3"
+    then return nil, nil end
+    local longX = size.X > size.Z
+    local span = math.max(size.X, size.Z)
+    local width = math.min(size.X, size.Z)
+    if span < 16 or width < 4 then return nil, nil end
+    local localRoot = bridgeFrame:PointToObjectSpace(root)
+    local distance = longX and localRoot.X or localRoot.Z
+    local side = longX and localRoot.Z or localRoot.X
+    local expectedY = size.Y * 0.5 + 2.4
+    if math.abs(localRoot.Y - expectedY) > 3.2
+        or math.abs(side) > width * 0.5 + 1.6
+        or math.abs(distance) < span * 0.5 - 10.5
+        or math.abs(distance) > span * 0.5 + 6.2
+    then return nil, nil end
+    local sign = distance >= 0 and -1 or 1
+    return AISurvivorRules.skyrailExitTarget(bridgeFrame, size, sign), sign
+end
+
 function AISurvivorRules.platformAvailable(canCollide, transparency, collapsePhase)
     if canCollide ~= true then
         return false
@@ -469,6 +528,21 @@ function AISurvivorRules.locomotionTransition(previousKind, nextKind)
     return 0.10
 end
 
+-- An unexpected NPC runtime failure must not terminate the shared AI loop.
+-- Each record is isolated, and diagnostics are throttled per character.
+function AISurvivorRules.runBrainStep(record, now, stepFn)
+    local success, result = pcall(stepFn, record, now)
+    if success then
+        return true, nil, false
+    end
+
+    local shouldReport = now >= (record.nextBrainWarningAt or -math.huge)
+    if shouldReport then
+        record.nextBrainWarningAt = now + 8
+    end
+    return false, tostring(result), shouldReport
+end
+
 function AISurvivorRules.brainCadence(recordCount, phase)
     local count = math.max(0, math.floor(tonumber(recordCount) or 0))
     if count == 0 then
@@ -480,6 +554,48 @@ function AISurvivorRules.brainCadence(recordCount, phase)
     end
 
     return 0.18
+end
+
+-- Always return a NUMBER: a Lua `or` chain with a bare equality can
+-- produce boolean true for FreezeWarning and crash distance comparisons.
+function AISurvivorRules.warningDetectionRadius(warningName, visualRadius)
+    if warningName == "FreezeWarning" or warningName == "JumpShockWarning" then
+        return 80
+    end
+    return math.max(0, tonumber(visualRadius) or 0) + 9
+end
+
+-- A single pulse should generate at most one deliberate jump per survivor.
+-- The caller marks a warning instance as handled even when a cautious bot
+-- declines the Freeze jump. A newly spawned warning is a new opportunity.
+function AISurvivorRules.shouldJumpForWarning(warningName, alreadyHandled, roll)
+    if alreadyHandled == true then
+        return false
+    end
+    if warningName == "JumpShockWarning" then
+        return true
+    end
+    if warningName == "FreezeWarning" then
+        return (tonumber(roll) or 1) < 0.55
+    end
+    return false
+end
+
+-- One-shot state lives in the server NPC record, never globally. Keys may be
+-- weak so expired warning instances are collectable during long sessions.
+function AISurvivorRules.consumeWarningJump(handled, warning, roll)
+    if type(handled) ~= "table" or typeof(warning) ~= "Instance" then
+        return false
+    end
+    local name = warning.Name
+    if name ~= "FreezeWarning" and name ~= "JumpShockWarning" then
+        return false
+    end
+    if handled[warning] == true then
+        return false
+    end
+    handled[warning] = true
+    return AISurvivorRules.shouldJumpForWarning(name, false, roll)
 end
 
 function AISurvivorRules.reactionReady(firstSeenAt, now, reactionSeconds)

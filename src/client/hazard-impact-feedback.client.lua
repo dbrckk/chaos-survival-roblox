@@ -5,6 +5,9 @@ local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ImpactSetpiece = require(script.Parent.ImpactSetpiece)
+local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
+local ImpactPulseRules = require(ReplicatedStorage.Shared.ImpactPulseRules)
+local ImpactMaterialRules = require(ReplicatedStorage.Shared.ImpactMaterialRules)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardImpactFeedback")
@@ -24,66 +27,77 @@ local function maxConcurrentBursts(profile, reduced)
     elseif profile.Name == "Low" then
         return 6
     elseif profile.Name == "Medium" then
-        return 10
+        return 8
     end
-    return 14
+    return 10
 end
 
 local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function makeAftermath(position, color, radius, kind, profile, reduced)
-    -- Persistent ground traces are owned by disaster-residue.client.lua.
-    -- This layer only keeps short-lived airborne debris tied to the impact burst.
-    if profile.Name == "Low" or reduced then
-        return
+-- One raycast per eligible impact, restricted to the generated arena.
+-- A missing/streamed-out deck resolves to neutral stone, never another player.
+local function sampleGround(position, color, kind, profile, reduced)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local hit = nil
+    if generated then
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Include
+        params.FilterDescendantsInstances = {generated}
+        params.IgnoreWater = true
+        hit = workspace:Raycast(
+            position + Vector3.new(0, 14, 0),
+            Vector3.new(0, -58, 0),
+            params
+        )
     end
+    local surfaceColor = hit and hit.Instance:IsA("BasePart")
+        and hit.Instance.Color or Color3.fromRGB(112, 105, 99)
+    local style = ImpactMaterialRules.palette(
+        hit and hit.Material or Enum.Material.Slate,
+        surfaceColor, color, kind, profile.Name, reduced
+    )
+    local frame = ImpactMaterialRules.surfaceFrame(
+        hit and (hit.Position + hit.Normal * 0.04) or position,
+        hit and hit.Normal or Vector3.yAxis
+    )
+    return style, frame
+end
 
-    local debrisCount = profile.Name == "High" and 6 or 3
-    for i = 1, debrisCount do
-        local angle = ((i - 1) / debrisCount) * math.pi * 2 + math.random() * 0.45
-        local distance = radius * (0.28 + math.random() * 0.40)
-        local shard = Instance.new("Part")
-        shard.Name = "LocalImpactDebris"
-        shard.Size = Vector3.new(
-            0.18 + math.random() * 0.28,
-            0.08 + math.random() * 0.12,
-            0.30 + math.random() * 0.42
+local function makeAftermath(kind, profile, style, frame, radius)
+    -- The persistent crater/scorch is owned by disaster-residue.client.lua.
+    -- This uses the *existing* six/three temporary airborne pieces only,
+    -- now shaded/oriented by the raycast material and surface normal.
+    if not style or style.Count == 0 or not frame then return end
+    for i = 1, style.Count do
+        local fragment = ImpactMaterialRules.fragment(
+            frame, i, style.Count, radius, style.Motion
         )
-        shard.CFrame = CFrame.new(
-            position
-                + Vector3.new(math.cos(angle) * distance, 0.13, math.sin(angle) * distance)
-        ) * CFrame.Angles(
-            math.random() * 1.4,
-            math.random() * math.pi,
-            math.random() * 1.4
-        )
-        shard.Anchored = true
-        shard.CanCollide = false
-        shard.CanTouch = false
-        shard.CanQuery = false
-        shard.CastShadow = false
-        shard.Material = Enum.Material.Metal
-        shard.Color = kind == "Meteor"
-            and color:Lerp(Color3.fromRGB(42, 34, 28), 0.70)
-            or color:Lerp(Color3.fromRGB(35, 38, 48), 0.72)
-        shard.Transparency = 0.12
-        shard.Parent = workspace
-
-        TweenService:Create(
-            shard,
-            TweenInfo.new(0.66 + math.random() * 0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {
-                Position = shard.Position + Vector3.new(
-                    math.cos(angle) * (1.5 + math.random() * 2.2),
-                    0.15 + math.random() * 0.45,
-                    math.sin(angle) * (1.5 + math.random() * 2.2)
-                ),
-                Transparency = 1,
-            }
-        ):Play()
-        Debris:AddItem(shard, 1.0)
+        if fragment then
+            local meteor = kind == "Meteor"
+            local shard = meteor and Instance.new("WedgePart") or Instance.new("Part")
+            shard.Name = meteor and "LocalMeteorSurfaceFragment" or "LocalBombSurfaceFragment"
+            shard.Size = fragment.Size
+            shard.CFrame = fragment.Start
+            shard.Anchored = true
+            shard.CanCollide = false
+            shard.CanTouch = false
+            shard.CanQuery = false
+            shard.CastShadow = false
+            shard.Material = style.Material
+            shard.Color = style.Color
+            shard.Transparency = 0.16
+            shard:SetAttribute("ImpactSurfaceFamily", style.Family)
+            shard.Parent = setpieceFolder
+            local duration = 0.62 + (((i * 37) % 11) / 10) * 0.25
+            TweenService:Create(
+                shard,
+                TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = shard.Position + fragment.Travel, Transparency = 1}
+            ):Play()
+            Debris:AddItem(shard, duration + 0.14)
+        end
     end
 end
 
@@ -107,6 +121,7 @@ local function renderBurst(payload)
     if not observer or (observer - position).Magnitude > MAX_DISTANCE then
         return
     end
+    local viewerDistance = (observer - position).Magnitude
 
     local profile = tier()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -115,6 +130,27 @@ local function renderBurst(payload)
         return
     end
     activeBursts += 1
+    local materialStyle, groundFrame = sampleGround(
+        position, color, kind, profile, reduced
+    )
+    materialStyle.Count = ImpactMaterialRules.chipCount(
+        profile.Name, reduced, viewerDistance, activeBursts
+    )
+    local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
+    local targetDiameter = radius * 2
+        * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
+    local pulseRecipe = ImpactPulseRules.pulse(
+        profile.Name, reduced, viewerDistance, activeBursts, kind
+    )
+    if pulseRecipe then
+        CinematicPulseRingKit.emit(
+            setpieceFolder, pulseRecipe.Name,
+            CFrame.new(position + Vector3.new(0, 0.16, 0)),
+            color, math.max(1, targetDiameter * 0.15),
+            targetDiameter * pulseRecipe.Scale,
+            pulseRecipe.Duration, profile.Name, reduced, pulseRecipe.Alpha
+        )
+    end
 
     -- Layer one brief, profile-bounded signature over the existing impact
     -- ring/plume. This never alters damage, hit detection or scorch ownership.
@@ -138,45 +174,11 @@ local function renderBurst(payload)
     burst.Material = Enum.Material.Neon
     burst.Color = color
     burst.Transparency = 0.2
-    burst.Parent = workspace
+    burst.Parent = setpieceFolder
 
-    local ring = Instance.new("Part")
-    ring.Name = "LocalHazardShockRing"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.12, 1, 1)
-    ring.CFrame = CFrame.new(position + Vector3.new(0, 0.16, 0))
-        * CFrame.Angles(0, 0, math.rad(90))
-    ring.Anchored = true
-    ring.CanCollide = false
-    ring.CanTouch = false
-    ring.CanQuery = false
-    ring.CastShadow = false
-    ring.Material = Enum.Material.Neon
-    ring.Color = color
-    ring.Transparency = 0.18
-    ring.Parent = workspace
-
-    local secondaryRing = nil
+    -- Hollow arcs above replace screen-covering circular pressure discs.
     local plumeAnchor = nil
     if profile.Name ~= "Low" and not reduced then
-        secondaryRing = Instance.new("Part")
-        secondaryRing.Name = "LocalHazardSecondaryShockRing"
-        secondaryRing.Shape = Enum.PartType.Cylinder
-        secondaryRing.Size = Vector3.new(0.08, 1, 1)
-        secondaryRing.CFrame = CFrame.new(position + Vector3.new(0, 0.22, 0))
-            * CFrame.Angles(0, 0, math.rad(90))
-        secondaryRing.Anchored = true
-        secondaryRing.CanCollide = false
-        secondaryRing.CanTouch = false
-        secondaryRing.CanQuery = false
-        secondaryRing.CastShadow = false
-        secondaryRing.Material = Enum.Material.Neon
-        secondaryRing.Color = kind == "Meteor"
-            and Color3.fromRGB(255, 205, 95)
-            or color:Lerp(Color3.new(1, 1, 1), 0.22)
-        secondaryRing.Transparency = 0.34
-        secondaryRing.Parent = workspace
-
         plumeAnchor = Instance.new("Part")
         plumeAnchor.Name = "LocalHazardImpactPlumeAnchor"
         plumeAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
@@ -187,7 +189,7 @@ local function renderBurst(payload)
         plumeAnchor.CanQuery = false
         plumeAnchor.CastShadow = false
         plumeAnchor.Transparency = 1
-        plumeAnchor.Parent = workspace
+        plumeAnchor.Parent = setpieceFolder
 
         local attachment = Instance.new("Attachment")
         attachment.Name = "ImpactPlumeAttachment"
@@ -206,8 +208,8 @@ local function renderBurst(payload)
                 Color3.fromRGB(255, 110, 48)
             )
             or ColorSequence.new(
-                color:Lerp(Color3.fromRGB(165, 120, 105), 0.50),
-                Color3.fromRGB(58, 54, 60)
+                materialStyle.DustColor:Lerp(color, 0.20),
+                materialStyle.DustColor:Lerp(Color3.fromRGB(58, 54, 60), 0.55)
             )
         plumeEmitter.Lifetime = kind == "Meteor"
             and NumberRange.new(0.30, 0.56)
@@ -264,7 +266,7 @@ local function renderBurst(payload)
             and Color3.fromRGB(255, 218, 115)
             or color:Lerp(Color3.new(1, 1, 1), 0.18)
         core.Transparency = 0.05
-        core.Parent = workspace
+        core.Parent = setpieceFolder
     end
 
     local light
@@ -277,48 +279,31 @@ local function renderBurst(payload)
         light.Parent = burst
     end
 
-    local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
-    local targetDiameter = radius * 2
-        * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
     TweenService:Create(
         burst,
         TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
-            Size = Vector3.new(targetDiameter, targetDiameter, targetDiameter),
+            -- Squashed kind-dependent volume reveals the playfield behind it
+            -- instead of a huge generic glowing sphere.
+            Size = kind == "Meteor"
+                and Vector3.new(targetDiameter * 0.54,
+                    targetDiameter * 0.68, targetDiameter * 0.54)
+                or Vector3.new(targetDiameter * 0.82,
+                    targetDiameter * 0.24, targetDiameter * 0.82),
             Transparency = 1,
         }
     ):Play()
-
-    TweenService:Create(
-        ring,
-        TweenInfo.new(duration * 1.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            Size = Vector3.new(0.12, targetDiameter * 1.18, targetDiameter * 1.18),
-            Transparency = 1,
-        }
-    ):Play()
-
-    if secondaryRing then
-        TweenService:Create(
-            secondaryRing,
-            TweenInfo.new(duration * 1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {
-                Size = Vector3.new(
-                    0.08,
-                    targetDiameter * 1.52,
-                    targetDiameter * 1.52
-                ),
-                Transparency = 1,
-            }
-        ):Play()
-    end
 
     if core then
         TweenService:Create(
             core,
             TweenInfo.new(duration * 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
-                Size = Vector3.new(targetDiameter * 0.42, targetDiameter * 0.42, targetDiameter * 0.42),
+                Size = kind == "Meteor"
+                    and Vector3.new(targetDiameter * 0.25, targetDiameter * 0.36,
+                        targetDiameter * 0.25)
+                    or Vector3.new(targetDiameter * 0.38, targetDiameter * 0.15,
+                        targetDiameter * 0.38),
                 Transparency = 1,
             }
         ):Play()
@@ -362,8 +347,8 @@ local function renderBurst(payload)
         dust.LightEmission = 0.28
         dust.LightInfluence = 0.45
         dust.Color = ColorSequence.new(
-            color:Lerp(Color3.fromRGB(88, 82, 78), 0.65),
-            Color3.fromRGB(48, 45, 46)
+            materialStyle.DustColor:Lerp(color, 0.18),
+            materialStyle.DustColor:Lerp(Color3.fromRGB(48, 45, 46), 0.42)
         )
         dust.Size = NumberSequence.new({
             NumberSequenceKeypoint.new(0, math.max(0.35, radius * 0.05)),
@@ -376,7 +361,7 @@ local function renderBurst(payload)
         })
         dust.Parent = burst
         dust:Emit(VfxQuality.particleCount("High", 14, 6))
-    elseif profile.Name == "Medium" then
+    elseif profile.Name == "Medium" and not reduced then
         local emitter = Instance.new("ParticleEmitter")
         emitter.Name = "ImpactSparks"
         emitter.Rate = 0
@@ -393,14 +378,10 @@ local function renderBurst(payload)
         emitter:Emit(VfxQuality.particleCount("Medium", 14, 6))
     end
 
-    makeAftermath(position, color, radius, kind, profile, reduced)
+    makeAftermath(kind, profile, materialStyle, groundFrame, radius)
 
     local lifetime = duration * 1.35 + 0.08
     Debris:AddItem(burst, lifetime)
-    Debris:AddItem(ring, lifetime)
-    if secondaryRing then
-        Debris:AddItem(secondaryRing, lifetime * 1.4)
-    end
     if plumeAnchor then
         Debris:AddItem(plumeAnchor, math.max(0.85, lifetime * 2.2))
     end

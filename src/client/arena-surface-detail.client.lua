@@ -1,9 +1,11 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local ArenaCrisisSurfaceRules = require(ReplicatedStorage.Shared.ArenaCrisisSurfaceRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaDeckFinishKit = require(script.Parent.ArenaDeckFinishKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -35,7 +37,7 @@ local function makePart(name, size, cframe, color, material, transparency)
 end
 
 local function addPanelLanguage(base, theme, tier, variant)
-    local top = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.042, 0)
+    local top = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.18, 0)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local seamAlpha = tier.Name == "Low" and 0.76 or (tier.Name == "Medium" and 0.64 or 0.56)
@@ -140,7 +142,7 @@ local function rebuild()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
@@ -148,12 +150,14 @@ local function rebuild()
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.035, 0)
+    -- The entire detail composition follows a rotated or tilted arena deck.
+    local surfaceFrame = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.18, 0)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local countScale = tier.Name == "Low" and 0.55 or (tier.Name == "Medium" and 0.78 or 1)
 
     addPanelLanguage(base, theme, tier, variant)
+    ArenaDeckFinishKit.build(folder, base, variant, tier.Name, theme)
 
     if variant == "Classic" then
         local lanes = math.max(4, math.floor(8 * countScale))
@@ -169,7 +173,7 @@ local function rebuild()
             makePart(
                 "ClassicInset" .. i,
                 size,
-                CFrame.new(center + offset),
+                surfaceFrame * CFrame.new(offset),
                 i % 3 == 0 and theme.Secondary or theme.Detail,
                 Enum.Material.Metal,
                 0.52
@@ -183,11 +187,11 @@ local function rebuild()
             for s = 1, segments do
                 local angle = ((s - 1) / segments) * math.pi * 2
                 local tangent = angle + math.pi * 0.5
-                local pos = center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+                local pos = surfaceFrame * CFrame.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
                 makePart(
                     "TowerRing" .. i .. "_" .. s,
                     Vector3.new(math.max(3.0, radius * 0.42), 0.05, 0.16),
-                    CFrame.new(pos) * CFrame.Angles(0, -tangent, 0),
+                    pos * CFrame.Angles(0, -tangent, 0),
                     i % 2 == 0 and theme.Secondary or theme.Detail,
                     Enum.Material.Metal,
                     0.56
@@ -208,7 +212,7 @@ local function rebuild()
                 "CrossroadLaneInset" .. i,
                 horizontal and Vector3.new(base.Size.X * 0.70, 0.05, 0.24)
                     or Vector3.new(0.24, 0.05, base.Size.Z * 0.70),
-                CFrame.new(center + offset),
+                surfaceFrame * CFrame.new(offset),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
                 tier.Name == "Low" and 0.72 or 0.58
@@ -218,11 +222,11 @@ local function rebuild()
         if tier.Name ~= "Low" then
             for i = 1, 8 do
                 local angle = ((i - 1) / 8) * math.pi * 2
-                local pos = center + Vector3.new(math.cos(angle) * halfX * 0.48, 0, math.sin(angle) * halfZ * 0.48)
+                local pos = surfaceFrame * CFrame.new(math.cos(angle) * halfX * 0.48, 0, math.sin(angle) * halfZ * 0.48)
                 makePart(
                     "CrossroadNode" .. i,
                     Vector3.new(2.2, 0.05, 2.2),
-                    CFrame.new(pos) * CFrame.Angles(0, -angle, 0),
+                    pos * CFrame.Angles(0, -angle, 0),
                     theme.Detail,
                     Enum.Material.DiamondPlate,
                     0.42
@@ -235,11 +239,11 @@ local function rebuild()
         for i = 1, segments do
             local angle = ((i - 1) / segments) * math.pi * 2
             local tangent = angle + math.pi * 0.5
-            local pos = center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+            local pos = surfaceFrame * CFrame.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
             makePart(
                 "OrbitalSurfaceArc" .. i,
                 Vector3.new(radius * 0.34, 0.05, 0.22),
-                CFrame.new(pos) * CFrame.Angles(0, -tangent, 0),
+                pos * CFrame.Angles(0, -tangent, 0),
                 i % 3 == 0 and theme.Secondary or theme.Accent,
                 Enum.Material.Neon,
                 tier.Name == "Low" and 0.74 or 0.56
@@ -249,7 +253,7 @@ local function rebuild()
         local core = makePart(
             "OrbitalSurfaceCore",
             Vector3.new(math.min(base.Size.X, base.Size.Z) * 0.22, 0.05, math.min(base.Size.X, base.Size.Z) * 0.22),
-            CFrame.new(center),
+            surfaceFrame,
             theme.Structure,
             Enum.Material.Metal,
             0.48
@@ -261,7 +265,7 @@ local function rebuild()
         for i = 1, spokeCount do
             local angle = ((i - 1) / spokeCount) * math.pi * 2
             local length = radius * 0.62
-            local midpoint = center + Vector3.new(
+            local midpoint = surfaceFrame * CFrame.new(
                 math.cos(angle) * radius * 0.31,
                 0.01,
                 math.sin(angle) * radius * 0.31
@@ -269,7 +273,7 @@ local function rebuild()
             makePart(
                 "OrbitalRadialSeam" .. i,
                 Vector3.new(length, 0.028, 0.08),
-                CFrame.new(midpoint)
+                midpoint
                     * CFrame.Angles(0, -(angle + math.pi * 0.5), 0),
                 VisualTheme.World.Deep:Lerp(theme.Structure, 0.28),
                 Enum.Material.Metal,
@@ -277,63 +281,71 @@ local function rebuild()
             )
         end
     end
-end
 
-local function refreshSurfaceAccent()
-    local state = currentState
-    local profile = state and DisasterVisuals.combine(state.disasterIds or {}) or nil
-    local secondary = state and state.disasterIds and state.disasterIds[2]
-        and DisasterVisuals.get(state.disasterIds[2]) or nil
-    local critical = state and state.phase == "round" and state.finalRush == true
-
-    for index, descendant in ipairs(folder:GetChildren()) do
-        if descendant:IsA("BasePart") then
-            local baseColor = descendant:GetAttribute("SurfaceBaseColor")
-            if typeof(baseColor) ~= "Color3" then
-                baseColor = descendant.Color
-            end
-
-            if state and state.phase == "round" and profile and not critical then
-                local accent = profile.Accent
-                if secondary and index % 2 == 0 then
-                    accent = secondary.Accent
-                end
-                local amount = descendant.Material == Enum.Material.Neon and 0.30 or 0.12
-                descendant.Color = baseColor:Lerp(accent, amount)
-            else
-                descendant.Color = baseColor
-            end
+    -- Some DeckFinishKit parts are created outside makePart; keep a stable
+    -- untinted reference for every decorative element, never the hazard color
+    -- applied in the previous frame or previous round.
+    for _, part in ipairs(folder:GetChildren()) do
+        if part:IsA("BasePart")
+            and typeof(part:GetAttribute("SurfaceBaseColor")) ~= "Color3" then
+            part:SetAttribute("SurfaceBaseColor", part.Color)
         end
     end
 end
 
-local mapConnection = nil
+local function refreshSurfaceAccent()
+    local state = currentState
+    local reaction = ArenaCrisisSurfaceRules.profile(
+        state and state.disasterIds or {},
+        state and state.phase or "waiting",
+        VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
+        player:GetAttribute("ReduceMotion") == true,
+        state and state.finalRush == true
+    )
+    local now = os.clock()
+    for index, part in ipairs(folder:GetChildren()) do
+        if part:IsA("BasePart") then
+            local baseColor = part:GetAttribute("SurfaceBaseColor")
+            if typeof(baseColor) ~= "Color3" then
+                baseColor = part.Color
+                part:SetAttribute("SurfaceBaseColor", baseColor)
+            end
+            part.Color = ArenaCrisisSurfaceRules.shade(
+                baseColor, part.Material, part.Name, index, reaction, now
+            )
+        end
+    end
+end
+
+local disconnectMapWatch = nil
+local refreshPending = false
+
+local function scheduleRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+        refreshSurfaceAccent()
+    end)
+end
 
 local function bindGeneratedMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
-
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.defer(function()
-                    rebuild()
-                    refreshSurfaceAccent()
-                end)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bindGeneratedMap(child)
-        task.defer(function()
-            rebuild()
-            refreshSurfaceAccent()
-        end)
+        scheduleRefresh()
     end
 end)
 
@@ -346,12 +358,8 @@ end)
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(function()
-        rebuild()
-        refreshSurfaceAccent()
-    end)
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshSurfaceAccent)
 
 stateEvent.OnClientEvent:Connect(function(state)
     currentState = state
@@ -360,3 +368,19 @@ end)
 
 rebuild()
 refreshSurfaceAccent()
+
+-- A bounded decorative 3-5 Hz tint sweep (not RenderStepped). Low-tier
+-- and reduced-motion clients get static event-specific colors only.
+task.spawn(function()
+    while true do
+        local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        local state = currentState
+        local animate = state and state.phase == "round"
+            and quality.Name ~= "Low"
+            and player:GetAttribute("ReduceMotion") ~= true
+        task.wait(animate and (quality.Name == "High" and 0.21 or 0.32) or 0.65)
+        if animate and currentState and currentState.phase == "round" then
+            refreshSurfaceAccent()
+        end
+    end
+end)

@@ -5,6 +5,8 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
+local OrbitalHelix = require("../../src/server/OrbitalHelix")
+local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
 
 describe("Chaos Survival engine", function()
     it("builds a complete playable map hierarchy", function()
@@ -116,6 +118,107 @@ describe("Chaos Survival engine", function()
             expect(root:FindFirstChild("Lobby") == lobby).toBe(true)
         end
 
+        root:Destroy()
+    end)
+
+    it("builds physical Tower Run bridges with purely cosmetic edge rails", function()
+        local root = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena and arena:FindFirstChild("Platforms")
+        local decor = arena and arena:FindFirstChild("Decor")
+        expect(platforms ~= nil).toBe(true)
+        expect(decor ~= nil).toBe(true)
+
+        local bridges = 0
+        for _, p in ipairs((platforms :: Folder):GetChildren()) do
+            if p:GetAttribute("ChaosSkybridge") == true then
+                bridges += 1
+                expect(p.CanCollide).toBe(true)
+                expect(p:IsA("BasePart")).toBe(true)
+                expect(math.abs(p.Position.Y + p.Size.Y * 0.5
+                    - (Config.ArenaCenter.Y + 13)) < 0.001).toBe(true)
+            end
+        end
+        expect(bridges).toBe(4)
+        -- Permanently safe bridges supply a consistent escape route; only
+        -- adjacent conventional platforms participate in random collapse.
+        local eligible = DisappearingPlatforms.eligiblePlatforms(platforms, {})
+        expect(#eligible > 0).toBe(true)
+        for _, candidate in ipairs(eligible) do
+            expect(candidate:GetAttribute("ChaosSkybridge") == true).toBe(false)
+        end
+
+        for _, item in ipairs((decor :: Folder):GetChildren()) do
+            if string.find(item.Name, "SkybridgeRail", 1, true) then
+                expect(item.CanCollide).toBe(false)
+                expect(item.CanTouch).toBe(false)
+                expect(item.CanQuery).toBe(false)
+            end
+        end
+        expect((decor :: Folder):FindFirstChild("SkybridgeRail18_-1") ~= nil).toBe(true)
+        root:Destroy()
+    end)
+
+    it("draws twenty-four noncolliding return-route chevrons in Crossroads", function()
+        local root = MapBuilder.build(Config, "Crossroads", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local decor = arena and arena:FindFirstChild("Decor")
+        expect(decor ~= nil).toBe(true)
+        local count = 0
+        for _, part in ipairs((decor :: Folder):GetChildren()) do
+            if string.find(part.Name, "FluxRouteChevron", 1, true) then
+                count += 1
+                expect(part:IsA("BasePart")).toBe(true)
+                expect(part.CanCollide).toBe(false)
+                expect(part.CanTouch).toBe(false)
+                expect(part.CanQuery).toBe(false)
+                expect(part.Size.Y <= 0.06).toBe(true)
+            end
+        end
+        expect(count).toBe(24)
+        root:Destroy()
+    end)
+
+    it("builds eight connected, solid Orbital helix ramps with cosmetic rails", function()
+        local variant = ArenaVariants.get("Orbital")
+        local center = Config.ArenaCenter
+        local root = MapBuilder.build(Config, "Orbital", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local circuit = arena and arena:FindFirstChild("HelixCircuit")
+        expect(circuit ~= nil).toBe(true)
+        expect(OrbitalHelix.Count).toBe(8)
+
+        local physical = 0
+        local noncolliding = 0
+        for _, obj in ipairs((circuit :: Folder):GetChildren()) do
+            expect(obj:IsA("BasePart")).toBe(true)
+            expect(obj.Anchored).toBe(true)
+            if obj:GetAttribute("OrbitalHelixRamp") == true then
+                physical += 1
+                local index = obj:GetAttribute("HelixLane")
+                local route = OrbitalHelix.route(variant, center, index)
+                expect(route ~= nil).toBe(true)
+                expect(obj.CanCollide).toBe(true)
+                expect(obj.CanTouch).toBe(true)
+                expect(obj.CanQuery).toBe(true)
+                expect(obj.Size.X >= 5).toBe(true)
+                expect(obj.Size.Z >= 12).toBe(true)
+                expect((obj.Position - route.CFrame.Position).Magnitude < 0.01).toBe(true)
+                expect(obj.CFrame.LookVector:Dot(
+                    (route.Finish - route.Start).Unit) > 0.999).toBe(true)
+            else
+                noncolliding += 1
+                expect(obj.CanCollide).toBe(false)
+                expect(obj.CanTouch).toBe(false)
+                expect(obj.CanQuery).toBe(false)
+                expect(obj.CastShadow).toBe(false)
+            end
+        end
+        expect(physical).toBe(8)
+        expect(noncolliding).toBe(64)
+
+        local swapped = MapBuilder.buildArena(Config, "Classic", ArenaVariants)
+        expect(swapped:FindFirstChild("HelixCircuit") == nil).toBe(true)
         root:Destroy()
     end)
 

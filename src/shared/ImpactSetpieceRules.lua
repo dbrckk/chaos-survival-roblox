@@ -19,6 +19,12 @@ local VARIANTS = {
         Lifetime = 0.62,
     },
 }
+-- Accent geometry is independently budgeted below the debris/shard budget.
+-- No extra pieces are introduced on Low or with reduced motion.
+local FINISH_BUDGETS = {
+    Medium = {Meteor = 2, Bomb = 2},
+    High = {Meteor = 4, Bomb = 4},
+}
 local BUDGETS = {
     Low = {Meteor = 0, Bomb = 0},
     Medium = {Meteor = 4, Bomb = 4},
@@ -43,6 +49,33 @@ function ImpactSetpieceRules.get(kind, tier, reduceMotion, radius)
         ColorMix = variant.ColorMix,
         Material = variant.Material,
         Prefix = variant.Prefix,
+    }
+end
+
+function ImpactSetpieceRules.finishCount(kind, tier, reduceMotion)
+    if reduceMotion == true or not VARIANTS[tostring(kind or "")] then
+        return 0
+    end
+    local budgets = FINISH_BUDGETS[tostring(tier or "Low")]
+    return budgets and (budgets[kind] or 0) or 0
+end
+
+function ImpactSetpieceRules.finish(kind, index, total, radius)
+    if kind ~= "Meteor" and kind ~= "Bomb" then
+        return nil
+    end
+    local size = math.clamp(tonumber(radius) or 8, 1, 40)
+    local segments = math.max(1, math.floor(tonumber(total) or 1))
+    local slot = math.clamp(math.floor(tonumber(index) or 1), 1, segments)
+    local angle = ((slot - 0.5) / segments) * math.pi * 2
+    return {
+        Angle = angle,
+        Direction = Vector3.new(math.cos(angle), 0, math.sin(angle)),
+        StartRadius = size * (kind == "Meteor" and 0.15 or 0.25),
+        EndRadius = size * (kind == "Meteor" and 0.47 or 0.78),
+        Lift = kind == "Meteor" and (0.45 + (slot % 2) * 0.35) or 0.08,
+        Width = math.max(0.35, size * (kind == "Meteor" and 0.095 or 0.21)),
+        Height = math.max(0.15, size * (kind == "Meteor" and 0.15 or 0.018)),
     }
 end
 

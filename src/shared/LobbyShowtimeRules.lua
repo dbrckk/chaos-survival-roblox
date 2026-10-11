@@ -45,9 +45,22 @@ LobbyShowtimeRules.Emotes = {
         LabelEN = "WAVE",
         LabelFR = "SALUT",
     },
+    -- Two new authored visual choreographies; avatar uses known compatible
+    -- native clips until a bespoke Roblox-uploaded avatar animation exists.
+    -- This avoids Motor6D writes that fight the default Animate controller.
+    robot = {
+        R15 = 507776043, R6 = 182436842, Loop = true,
+        VisualStyle = "robot",
+        LabelEN = "NEON ROBOT", LabelFR = "ROBOT NEON",
+    },
+    orbit = {
+        R15 = 507771019, R6 = 182435998, Loop = true,
+        VisualStyle = "orbit",
+        LabelEN = "ORBIT DANCE", LabelFR = "DANSE ORBITE",
+    },
 }
 
-LobbyShowtimeRules.Order = {"dance", "shuffle", "groove", "cheer", "wave", "laugh"}
+LobbyShowtimeRules.Order = {"dance", "shuffle", "groove", "robot", "orbit", "cheer", "wave", "laugh"}
 
 function LobbyShowtimeRules.enabled(phase, voteOptions)
     local current = tostring(phase or "")
@@ -77,6 +90,7 @@ function LobbyShowtimeRules.get(id, rigType)
     return {
         AnimationId = animationId,
         Loop = definition.Loop,
+        VisualStyle = definition.VisualStyle,
         LabelEN = definition.LabelEN,
         LabelFR = definition.LabelFR,
     }

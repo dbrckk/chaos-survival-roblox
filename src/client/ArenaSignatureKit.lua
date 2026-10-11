@@ -190,6 +190,101 @@ local function orbital(bundle, cf, theme, profile)
     end
 end
 
+-- Large-scale signature silhouettes instead of undifferentiated neon bars.
+-- All pieces stay anchored, non-colliding, and under the per-tier part cap.
+-- Geometry is built once; the existing animation loop only moves key actors.
+local function craftSignature(bundle, cf, theme, profile, variant)
+    local metal = theme.Structure
+    local trim = theme.Detail
+
+    if variant == "Classic" then
+        -- A continuous faceted goniometer halo reads as a radar at a distance.
+        local hub = cf * CFrame.new(0, 7.9, -0.18)
+        local radius = 3.65
+        for i = 1, profile.Segments do
+            local angle = (i - 1) * math.pi * 2 / profile.Segments
+            add(bundle, "ClassicGoniometerArc" .. i,
+                Vector3.new(2 * math.pi * radius / profile.Segments * 0.84, 0.19, 0.29),
+                hub * CFrame.new(math.cos(angle) * radius, math.sin(angle) * radius, 0)
+                    * CFrame.Angles(0, 0, angle + math.pi * 0.5),
+                i % 3 == 0 and theme.Accent or trim,
+                i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
+                i % 3 == 0 and 0.28 or 0.05)
+        end
+        for side = -1, 1, 2 do
+            add(bundle, "ClassicCounterbrace" .. side,
+                Vector3.new(0.24, 5.3, 0.34),
+                cf * CFrame.new(side * 1.65, 3.3, 0.14)
+                    * CFrame.Angles(0, 0, math.rad(side * 20)),
+                metal, Enum.Material.DiamondPlate, 0.03)
+        end
+
+    elseif variant == "Towers" then
+        -- Two continuous segmented load paths make the lift read as industrial
+        -- infrastructure rather than a floating cuboid.
+        for side = -1, 1, 2 do
+            for level = 1, 2 do
+                add(bundle, "TowerTensionTruss" .. side .. "_" .. level,
+                    Vector3.new(0.24, 4.8, 0.30),
+                    cf * CFrame.new(side * 2.76, 3.5 + level * 2.8, -0.1)
+                        * CFrame.Angles(0, 0, math.rad(side * (level == 1 and -18 or 18))),
+                    metal, Enum.Material.Metal, 0.08)
+            end
+            add(bundle, "TowerCounterweight" .. side,
+                Vector3.new(0.88, 2.35, 1.02),
+                cf * CFrame.new(side * 3.08, 8.6, -0.45),
+                trim, Enum.Material.DiamondPlate, 0.10)
+            add(bundle, "TowerRailMarker" .. side,
+                Vector3.new(0.22, 2.2, 0.12),
+                cf * CFrame.new(side * 2.05, 8.9, 0.28),
+                theme.Accent, Enum.Material.Neon, 0.25)
+        end
+
+    elseif variant == "Crossroads" then
+        -- Interlocking multi-level wayfinder fins echo transit lanes.
+        for side = -1, 1, 2 do
+            for i = 1, 3 do
+                add(bundle, "CrossroadRouteChevron" .. side .. "_" .. i,
+                    Vector3.new(2.3, 0.20, 0.30),
+                    cf * CFrame.new(side * (1.18 + i * 0.62), 3.4 + i * 0.83, 1.15)
+                        * CFrame.Angles(0, 0, math.rad(side * 30)),
+                    i == 3 and theme.Accent or (i == 2 and theme.Secondary or trim),
+                    i == 3 and Enum.Material.Neon or Enum.Material.Metal,
+                    i == 3 and 0.23 or 0.05)
+            end
+            add(bundle, "CrossroadGantryCorner" .. side,
+                Vector3.new(0.27, 2.4, 0.38),
+                cf * CFrame.new(side * 3.7, 6.3, 0.12)
+                    * CFrame.Angles(0, 0, math.rad(side * 31)),
+                metal, Enum.Material.DiamondPlate, 0.06)
+        end
+
+    elseif variant == "Orbital" then
+        -- Four grounded field pylons frame a floating gyroscope; dense geometry
+        -- stays only in the core, preserving a powerful Low-quality silhouette.
+        for i = 1, 4 do
+            local angle = (i - 1) * math.pi * 0.5
+            local x = math.cos(angle) * 3.25
+            local z = math.sin(angle) * 3.25
+            add(bundle, "OrbitalContainmentPylon" .. i,
+                Vector3.new(0.60, 3.2, 0.60),
+                cf * CFrame.new(x, 2.13, z)
+                    * CFrame.Angles(0, angle, math.rad(17)),
+                metal, Enum.Material.Metal, 0.11)
+            add(bundle, "OrbitalContainmentPrism" .. i,
+                Vector3.new(0.78, 1.05, 0.78),
+                cf * CFrame.new(x, 4.07, z)
+                    * CFrame.Angles(0, angle, math.rad(22)),
+                i % 2 == 0 and theme.Secondary or theme.Accent,
+                Enum.Material.Glass, 0.24)
+        end
+        add(bundle, "OrbitalContainmentShell",
+            Vector3.new(3.0, 3.0, 3.0),
+            cf * CFrame.new(0, 6.3, 0), trim,
+            Enum.Material.Glass, 0.76, Enum.PartType.Ball)
+    end
+end
+
 function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOverride)
     VisualTheme = themeOverride or VisualTheme
         or require(ReplicatedStorage.Shared.VisualTheme)
@@ -233,6 +328,10 @@ function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOver
     else
         classic(bundle, cf, theme, profile)
     end
+
+    craftSignature(bundle, cf, theme, profile, variant)
+    assert(#bundle.parts <= profile.MaxParts,
+        "Arena signature exceeded the visual part budget for " .. tostring(variant))
 
     if tierName == "High" then
         local light = Instance.new("PointLight")

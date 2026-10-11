@@ -3,8 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local ArenaFocalLightingRules = require(ReplicatedStorage.Shared.ArenaFocalLightingRules)
+local ArenaCrisisSurfaceRules = require(ReplicatedStorage.Shared.ArenaCrisisSurfaceRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaFocalFixtureKit = require(script.Parent.ArenaFocalFixtureKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -16,7 +19,8 @@ folder.Parent = workspace
 local lights = {}
 local phase = "waiting"
 local finalRush = false
-local mapConnection = nil
+local activeDisasters = {}
+local disconnectMapWatch = nil
 
 local function clear()
     for _, light in ipairs(lights) do
@@ -43,8 +47,21 @@ local function targetBrightness(light)
 end
 
 local function refresh(duration)
-    for _, light in ipairs(lights) do
+    local response = ArenaCrisisSurfaceRules.profile(
+        activeDisasters, phase,
+        VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
+        player:GetAttribute("ReduceMotion") == true, finalRush
+    )
+    for index, light in ipairs(lights) do
         if light and light.Parent then
+            local baseColor = light:GetAttribute("BaseColor")
+            if typeof(baseColor) ~= "Color3" then
+                baseColor = light.Color
+                light:SetAttribute("BaseColor", baseColor)
+            end
+            local color, brightness = ArenaCrisisSurfaceRules.light(
+                baseColor, targetBrightness(light), index, response
+            )
             TweenService:Create(
                 light,
                 TweenInfo.new(
@@ -52,7 +69,7 @@ local function refresh(duration)
                     Enum.EasingStyle.Quad,
                     Enum.EasingDirection.Out
                 ),
-                {Brightness = targetBrightness(light)}
+                {Brightness = brightness, Color = color}
             ):Play()
         end
     end
@@ -63,7 +80,7 @@ local function rebuild()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
@@ -105,11 +122,13 @@ local function rebuild()
         anchor.CastShadow = false
         anchor.Transparency = 1
         anchor.Parent = folder
+        ArenaFocalFixtureKit.build(folder, anchor, variant, tier.Name, theme, i)
 
         local light = Instance.new("SpotLight")
         light.Name = "ArenaFocalSpot" .. i
         light.Face = Enum.NormalId.Front
         light.Color = colorFor(theme, definition.Role)
+        light:SetAttribute("BaseColor", light.Color)
         light.Angle = math.clamp(tonumber(definition.Angle) or 50, 1, 180)
         light.Range = math.clamp(tonumber(definition.Range) or 48, 8, 80)
         light.Shadows = tier.Name == "High"
@@ -127,18 +146,18 @@ local function rebuild()
 end
 
 local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
-
     local generated = workspace:FindFirstChild("GeneratedMap")
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.08, rebuild)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base",
+            function()
+                task.defer(rebuild)
             end
-        end)
+        )
     end
 end
 
@@ -159,10 +178,14 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    refresh(0.18)
+end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     phase = tostring(state.phase or "waiting")
     finalRush = phase == "round" and state.finalRush == true
+    activeDisasters = state.disasterIds or {}
     refresh(finalRush and 0.08 or 0.26)
 end)
 

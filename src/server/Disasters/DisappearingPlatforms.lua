@@ -9,6 +9,9 @@ function D.eligiblePlatforms(folder, activeStates)
     for _, item in ipairs(folder:GetChildren()) do
         if item:IsA("BasePart")
             and item.CanCollide
+            -- Tower Run's engineered skybridges are permanent route backbones.
+            -- Their attached visual rails must never advertise a phantom path.
+            and item:GetAttribute("ChaosSkybridge") ~= true
             and not activeStates[item]
         then
             result[#result+1] = item

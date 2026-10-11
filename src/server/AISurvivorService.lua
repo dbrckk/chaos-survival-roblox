@@ -10,6 +10,16 @@ local ArenaPresentation = if script
 local ArenaMechanics = if script
     then require(script.Parent.ArenaMechanics)
     else require("./ArenaMechanics")
+-- Lest Cloud evaluates repository source against an older published place.
+-- The Shared folder in that place does not contain new unmerged modules yet.
+local fluxRulesInPlace = ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("FluxRelayRules")
+local FluxRelayRules = if fluxRulesInPlace
+    then require(fluxRulesInPlace)
+    else require("../shared/FluxRelayRules")
+local AISurvivorNetworkOwnership = if script
+    then require(script.Parent.AISurvivorNetworkOwnership)
+    else require("./AISurvivorNetworkOwnership")
 local LobbyActivities = if script
     then require(script.Parent.LobbyActivities)
     else require("./LobbyActivities")
@@ -592,6 +602,7 @@ local function createRig(record)
 
     model.Name = record.identity.Username
     model:SetAttribute("AISurvivor", true)
+    model:SetAttribute("AISurvivorInRound", false)
     model:SetAttribute("AISurvivorSlot", record.slot)
     model:SetAttribute("AISurvivorProfile", record.profile.Id)
     model:SetAttribute("ChaosAccent", record.identity.Accent)
@@ -613,12 +624,7 @@ local function createRig(record)
     humanoid.MaxHealth = 100
     humanoid.Health = 100
 
-    for _, descendant in ipairs(model:GetDescendants()) do
-        if descendant:IsA("BasePart") then
-            pcall(descendant.SetNetworkOwner, descendant, nil)
-        end
-    end
-
+    -- Parenting first is required by Roblox physics ownership APIs.
     model.Parent = botsFolder
     record.model = model
     record.proxy.Character = model
@@ -634,11 +640,31 @@ local function createRig(record)
     record.turnPauseUntil = 0
     record.threat = nil
     record.threatSeenAt = nil
+    record.reactedWarnings = setmetatable({}, {__mode = "k"})
 
     addPrimitiveAccessory(record, model)
     addCosmeticTrail(record, root)
     addNameplate(record, model)
     attachAnimations(record, humanoid)
+
+    -- Physics assembly formation can lag one simulation step behind parenting.
+    -- Retry a fixed number of times without retaining a replaced/dead rig.
+    task.defer(function()
+        for attempt = 1, 3 do
+            if record.model ~= model or not model:IsDescendantOf(workspace) then
+                return
+            end
+            if AISurvivorNetworkOwnership.claim(model) then
+                return
+            end
+            if attempt < 3 then
+                task.wait(0.20 * attempt)
+            end
+        end
+        if record.model == model and model.Parent then
+            warn("AI Survivor server network ownership unavailable:", record.identity.Username)
+        end
+    end)
 
     table.insert(record.connections, humanoid.Died:Connect(function()
         record.alive = false
@@ -696,9 +722,12 @@ local function sendToLobby(record)
     end
 
     record.inRound = false
+    record.model:SetAttribute("AISurvivorInRound", false)
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -714,9 +743,14 @@ local function sendToArena(record)
     end
 
     record.inRound = true
+    record.model:SetAttribute("AISurvivorInRound", true)
+    record.reactedWarnings = setmetatable({}, {__mode = "k"})
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
+    record.nextSkyrailAt = 0
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -764,6 +798,9 @@ local function newRecord(slot)
         target = nil,
         targetPart = nil,
         targetIsPad = false,
+        targetIsSkyrail = false,
+        skyrailDirection = nil,
+        nextSkyrailAt = 0,
         strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
@@ -809,6 +846,13 @@ local function reconcile()
         return
     end
 
+    -- Lock the entire ready/round/result journey: late joiners cannot become
+    -- participants and must not despawn AI competitors or celebration actors.
+    -- Rebalance once the next intermission starts.
+    if AISurvivorRules.rosterLocked(currentState.phase) then
+        return
+    end
+
     local desired = AISurvivorRules.desiredBotCount(humanCount())
 
     for slot = #records, desired + 1, -1 do
@@ -817,10 +861,6 @@ local function reconcile()
             destroyRecord(record)
         end
         records[slot] = nil
-    end
-
-    if currentState.phase == "round" then
-        return
     end
 
     for slot = 1, desired do
@@ -1005,9 +1045,9 @@ local function immediateThreat(record, root, now)
         local predictedDistance = (predictedPosition - warning.Position).Magnitude
         local distance = math.min(currentDistance, predictedDistance)
         local warningRadius = math.max(warning.Size.X, warning.Size.Z, warning.Size.Y) * 0.5
-        local threshold = warning.Name == "FreezeWarning" or warning.Name == "JumpShockWarning"
-            and 80
-            or (warningRadius + 9)
+        local threshold = AISurvivorRules.warningDetectionRadius(
+            warning.Name, warningRadius
+        )
 
         if distance <= threshold and distance < nearestDistance then
             nearest = warning
@@ -1030,20 +1070,20 @@ local function immediateThreat(record, root, now)
         return nil
     end
 
-    if nearest.Name == "FreezeWarning" then
-        if math.random() < 0.55 then
+    if nearest.Name == "FreezeWarning" or nearest.Name == "JumpShockWarning" then
+        -- Keep one reaction per actual pulse instance, even if it remains in
+        -- range for many 0.18-second AI brain steps. Weak keys prevent stale
+        -- destroyed warning parts from being retained across long sessions.
+        local handled = record.reactedWarnings
+        if not handled then
+            handled = setmetatable({}, {__mode = "k"})
+            record.reactedWarnings = handled
+        end
+        if AISurvivorRules.consumeWarningJump(handled, nearest, math.random()) then
             local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 humanoid.Jump = true
             end
-        end
-        return nil
-    end
-
-    if nearest.Name == "JumpShockWarning" then
-        local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Jump = true
         end
         return nil
     end
@@ -1117,6 +1157,24 @@ local function arenaCandidates(root)
         end
     end
 
+    if variantId == "Orbital" then
+        local helix = arena:FindFirstChild("HelixCircuit")
+        for _, ramp in ipairs(sortedParts(helix)) do
+            if ramp:GetAttribute("OrbitalHelixRamp") == true and ramp.CanCollide then
+                local waypoint = ramp.Position
+                    + ramp.CFrame.UpVector * (ramp.Size.Y * 0.5 + 2.4)
+                if AISurvivorRules.helixWaypointReachable(
+                    root and root.Position, waypoint
+                ) then
+                    table.insert(result, {
+                        part = ramp,
+                        position = waypoint,
+                    })
+                end
+            end
+        end
+    end
+
     local base = arena:FindFirstChild("Base")
     if base and base:IsA("BasePart") then
         local halfX = math.max(5, base.Size.X * 0.5 - 7)
@@ -1153,6 +1211,13 @@ local function scoreCandidate(record, root, candidate, traits)
         center,
         (record.roundTraits and record.roundTraits.DirectionBias) or record.strafeBias
     )
+    if candidate.part
+        and candidate.part:GetAttribute("OrbitalHelixRamp") == true
+    then
+        -- Encourage genuine use of authored sloped routes instead of only
+        -- choosing isolated platform centers and jumping unrealistically.
+        score += 7
+    end
 
     if hasDisaster("RisingLava") then
         score += position.Y * (1.45 - risk * 0.45)
@@ -1338,11 +1403,154 @@ end
 
 local function chooseArenaTarget(record, root, now)
     local traits = decisionTraits(record)
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
     local socialTarget = socialArenaTarget(record, root, traits)
     if socialTarget then
         record.targetIsPad = false
         record.targetPart = nil
         return separateTarget(record, socialTarget), 0.65 + math.random() * 1.0
+    end
+
+    -- When a Flux Relay can be reached before its charge window ends,
+    -- humanlike bots sometimes pick it as a planned escape route. A bot
+    -- never targets a gate during shrinking-floor or rising-lava hazards.
+    if currentState.phase == "round"
+        and not hasDisaster("ShrinkingArena")
+        and not hasDisaster("RisingLava")
+        and math.random() < (0.13 + (traits.Risk or record.profile.Risk) * 0.14)
+    then
+        local _, arena = arenaParts()
+        local mechanics = arena and arena:FindFirstChild("Mechanics")
+        local relayFolder = mechanics and mechanics:FindFirstChild("FluxRelays")
+        if relayFolder then
+            local choices = {}
+            local serverTime = workspace:GetServerTimeNow()
+            for _, relay in ipairs(relayFolder:GetChildren()) do
+                if relay:IsA("BasePart") and relay:GetAttribute("FluxRelayIndex") ~= nil then
+                    local gap = relay.Position - root.Position
+                    local horizontal = Vector3.new(gap.X, 0, gap.Z).Magnitude
+                    if math.abs(gap.Y) <= 6
+                        and FluxRelayRules.viableRoute(
+                            serverTime,
+                            relay:GetAttribute("FluxCycleEpoch"),
+                            relay:GetAttribute("FluxPhaseOffset"),
+                            horizontal,
+                            record.profile.WalkSpeed
+                        )
+                    then
+                        table.insert(choices, {part = relay, distance = horizontal})
+                    end
+                end
+            end
+            table.sort(choices, function(a, b)
+                return a.distance < b.distance
+            end)
+            if #choices > 0 then
+                local relay = choices[1].part
+                record.targetIsPad = false
+                record.targetPart = relay
+                -- Aim beyond the trigger so the walking bot actually crosses
+                -- its volume. Stopping at the centre alone would be cancelled
+                -- by the regular four-stud target-arrival tolerance.
+                local outward = relay.Position - config.ArenaCenter
+                local flat = Vector3.new(outward.X, 0, outward.Z)
+                local crossing = relay.Position + (flat.Magnitude > 0.1
+                    and flat.Unit * 7 or Vector3.zero)
+                return clampToArena(separateTarget(record, crossing)), 1.0
+            end
+        end
+    end
+
+    -- Elevated bots occasionally complete a full Skyrail crossing.
+    -- Only enter from a real mid-deck endpoint: never navigate from
+    -- ground-level into an unreachable airborne bridge.
+    if currentState.phase == "round"
+        and record.inRound
+        and arenaVariantId() == "Towers"
+        and now >= (record.nextSkyrailAt or 0)
+        and not hasDisaster("Tornado")
+        and not hasDisaster("ShrinkingArena")
+        and math.random() < (0.14 + (traits.Risk or record.profile.Risk) * 0.19)
+    then
+        local _, arena = arenaParts()
+        local platforms = arena and arena:FindFirstChild("Platforms")
+        if platforms then
+            local options = {}
+            for _, bridge in ipairs(platforms:GetChildren()) do
+                if bridge:IsA("BasePart")
+                    and bridge:GetAttribute("ChaosSkybridge") == true
+                    and AISurvivorRules.platformAvailable(
+                        bridge.CanCollide, bridge.Transparency,
+                        bridge:GetAttribute("CollapsePhase"))
+                then
+                    local finish, sign = AISurvivorRules.skyrailCrossingTarget(
+                        root.Position, bridge.CFrame, bridge.Size)
+                    if finish then
+                        table.insert(options, {part = bridge,
+                            target = finish, sign = sign})
+                    end
+                end
+            end
+            if #options > 0 then
+                local choice = options[math.random(1, #options)]
+                record.targetPart = choice.part
+                record.targetIsPad = false
+                record.targetIsSkyrail = true
+                record.skyrailDirection = choice.sign
+                record.nextSkyrailAt = now + 11
+                -- No social separation or sideways bias on narrow decks.
+                return choice.target, 4.6
+            end
+        end
+    end
+
+    -- Classic Grid runners visibly attempt the optional four-station
+    -- clockwise mastery course instead of ignoring authored world content.
+    -- Live hazards and regular dodge decisions still take precedence.
+    if record.inRound and currentState.phase == "round"
+        and arenaVariantId() == "Classic"
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("Tornado")
+        and not hasDisaster("ShrinkingArena")
+        and record.model
+        and record.model:GetAttribute("GridCircuitComplete") ~= true
+    then
+        local step = tonumber(record.model:GetAttribute("GridCircuitStep")) or 0
+        local chosenChance = step > 0 and 0.60 or 0.12
+        if math.random() < chosenChance then
+            local _, arena = arenaParts()
+            local mechanics = arena and arena:FindFirstChild("Mechanics")
+            local grid = mechanics and mechanics:FindFirstChild("GridCircuit")
+            if grid then
+                local targetIndex = tonumber(
+                    record.model:GetAttribute("GridCircuitNext")
+                ) or 0
+                if targetIndex < 1 or targetIndex > 4 then
+                    targetIndex = math.random(1, 4)
+                end
+                local node = grid:FindFirstChild("GridCircuitNode" .. targetIndex)
+                if node and node:IsA("BasePart") then
+                    local gap = node.Position - root.Position
+                    local flat = Vector3.new(gap.X, 0, gap.Z)
+                    if math.abs(gap.Y) < 5.5 and flat.Magnitude < 60 then
+                        -- Walk through, not merely to, the edge of the
+                        -- trigger; bot AI considers itself 'arrived' ~4
+                        -- studs before the target and can stop short.
+                        local crossing = node.Position + (
+                            flat.Magnitude > 0.01
+                            and flat.Unit * 5.0 or Vector3.zero
+                        )
+                        record.targetIsPad = false
+                        record.targetPart = node
+                        return clampToArena(separateTarget(record, crossing)),
+                            math.clamp(flat.Magnitude /
+                                math.max(10, record.profile.WalkSpeed or 16) + 0.8,
+                                1.6, 4.6)
+                    end
+                end
+            end
+        end
     end
 
     local pads = mechanicsPads()
@@ -1857,7 +2065,10 @@ local function stepRecord(record, now)
             end
 
             if urgentTarget then
+                -- Survival reactions always override a cinematic Skyrail run.
                 record.targetIsPad = false
+                record.targetIsSkyrail = false
+                record.skyrailDirection = nil
                 record.targetPart = nil
                 record.target = separateTarget(record, urgentTarget)
                 record.nextThink = now + 0.55
@@ -1867,6 +2078,16 @@ local function stepRecord(record, now)
         if record.targetPart and record.targetPart.Parent then
             if record.targetIsPad then
                 record.target = record.targetPart.Position + Vector3.new(0, 1.8, 0)
+            elseif record.targetPart.Parent.Name == "HelixCircuit" then
+                if record.targetPart:GetAttribute("OrbitalHelixRamp") == true then
+                    record.target = record.targetPart.Position
+                        + record.targetPart.CFrame.UpVector
+                            * (record.targetPart.Size.Y * 0.5 + 2.4)
+                else
+                    record.target = nil
+                    record.targetPart = nil
+                    record.nextThink = 0
+                end
             elseif record.targetPart.Parent.Name == "Platforms" then
                 if not AISurvivorRules.platformAvailable(
                     record.targetPart.CanCollide,
@@ -1875,7 +2096,21 @@ local function stepRecord(record, now)
                 ) then
                     record.target = nil
                     record.targetPart = nil
+                    record.targetIsSkyrail = false
                     record.nextThink = 0
+                elseif record.targetIsSkyrail
+                    and record.targetPart:GetAttribute("ChaosSkybridge") == true
+                then
+                    -- Keep the same far-side destination when a moving
+                    -- physical deck changes size/position during the round.
+                    record.target = AISurvivorRules.skyrailExitTarget(
+                        record.targetPart.CFrame, record.targetPart.Size,
+                        record.skyrailDirection)
+                    if not record.target then
+                        record.targetPart = nil
+                        record.targetIsSkyrail = false
+                        record.nextThink = 0
+                    end
                 elseif hasDisaster("ShrinkingArena") then
                     record.target = record.targetPart.Position
                         + Vector3.new(0, record.targetPart.Size.Y * 0.5 + 2.4, 0)
@@ -1885,6 +2120,8 @@ local function stepRecord(record, now)
             record.target = nil
             record.targetPart = nil
             record.targetIsPad = false
+            record.targetIsSkyrail = false
+            record.skyrailDirection = nil
             record.nextThink = 0
         end
 
@@ -1899,6 +2136,8 @@ local function stepRecord(record, now)
             if math.random() < (traits.ReconsiderChance or 0) then
                 record.target = nil
                 record.targetPart = nil
+                record.targetIsSkyrail = false
+                record.skyrailDirection = nil
                 record.nextThink = 0
             end
         end
@@ -1907,6 +2146,8 @@ local function stepRecord(record, now)
             record.target = nil
             record.targetPart = nil
             record.targetIsPad = false
+            record.targetIsSkyrail = false
+            record.skyrailDirection = nil
             local _, pressure = decisionTraits(record)
             local pauseChance = 0.38 * (1 - pressure * 0.58)
             if math.random() < pauseChance then
@@ -1945,6 +2186,7 @@ local function stepRecord(record, now)
             local destination = record.target
             if not urgentTarget
                 and not record.targetIsPad
+                and not record.targetIsSkyrail
                 and horizontal.Magnitude > 8
                 and math.abs(record.strafeBias or 0) > 0.03
             then
@@ -1995,17 +2237,27 @@ local function startBrain()
 
     task.spawn(function()
         local nextPresenceCheck = 0
+        local nextReconcileWarningAt = -math.huge
 
         while started do
             local now = os.clock()
 
             if currentState.phase ~= "round" and now >= nextPresenceCheck then
-                reconcile()
+                local ok, err = pcall(reconcile)
+                if not ok and now >= nextReconcileWarningAt then
+                    warn("AI Survivor roster reconcile failed:", err)
+                    nextReconcileWarningAt = now + 8
+                end
                 nextPresenceCheck = now + 2.5
             end
 
             for _, record in ipairs(records) do
-                stepRecord(record, now)
+                local ok, err, shouldReport = AISurvivorRules.runBrainStep(
+                    record, now, stepRecord
+                )
+                if not ok and shouldReport then
+                    warn("AI Survivor brain step failed:", record.identity.Username, err)
+                end
             end
 
             task.wait(AISurvivorRules.brainCadence(
@@ -2054,6 +2306,19 @@ function AISurvivorService.start(gameConfig)
     startBrain()
 end
 
+-- A bot can reuse a surviving rig across multiple rounds. Reset all
+-- optional circuit progress so yesterday's clear cannot disable navigation.
+function AISurvivorService.resetGridCircuit(model)
+    if typeof(model) ~= "Instance" or not model:IsA("Model") then
+        return false
+    end
+    model:SetAttribute("GridCircuitStep", 0)
+    model:SetAttribute("GridCircuitNext", 0)
+    model:SetAttribute("GridCircuitDeadline", 0)
+    model:SetAttribute("GridCircuitComplete", false)
+    return true
+end
+
 function AISurvivorService.setRoundState(state)
     currentState = state or currentState
     local phase = tostring(currentState.phase or "waiting")
@@ -2077,6 +2342,7 @@ function AISurvivorService.setRoundState(state)
                     0.32
                 )
                 sendToArena(record)
+                AISurvivorService.resetGridCircuit(record.model)
             end
         elseif phase == "result" then
             for _, record in ipairs(records) do

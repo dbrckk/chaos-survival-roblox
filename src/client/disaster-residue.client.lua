@@ -4,6 +4,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local DisasterResidue = require(ReplicatedStorage.Shared.DisasterResidue)
+local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local AftermathSurfaceKit = require(script.Parent.AftermathSurfaceKit)
+local ImpactSurfaceScarKit = require(script.Parent.ImpactSurfaceScarKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -74,10 +77,14 @@ local function surfaceAt(position)
     )
 
     if result then
-        return result.Position + result.Normal * 0.035, result.Normal
+        local groundColor = result.Instance:IsA("BasePart")
+            and result.Instance.Color or Color3.fromRGB(112, 105, 99)
+        return result.Position + result.Normal * 0.035, result.Normal,
+            result.Material, groundColor
     end
 
-    return position, Vector3.new(0, 1, 0)
+    return position, Vector3.new(0, 1, 0),
+        Enum.Material.Slate, Color3.fromRGB(112, 105, 99)
 end
 
 local function flatCFrame(position, normal, yaw)
@@ -109,7 +116,26 @@ local function makePart(name, size, cframe, color, material, transparency)
     return part
 end
 
-local function fadeLater(part, lifetime)
+local function fadeLater(part, lifetime, settlement)
+    local createdInRound = roundToken
+    if settlement then
+        -- Do not restart a color tween after the enclosing round or map
+        -- has cleared. Old fading geometry is cleaned by Debris separately.
+        task.delay(settlement.StartAfter, function()
+            if createdInRound == roundToken and part.Parent then
+                TweenService:Create(
+                    part,
+                    TweenInfo.new(settlement.Duration,
+                        Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {
+                        Color = settlement.Color,
+                        Transparency = math.max(part.Transparency,
+                            settlement.Transparency),
+                    }
+                ):Play()
+            end
+        end)
+    end
     task.delay(math.max(0.2, lifetime - 0.8), function()
         if part.Parent then
             TweenService:Create(
@@ -228,46 +254,50 @@ local function makeFragments(position, radius, profile, count, lifetime)
 end
 
 local function impactResidue(payload)
-    if phase ~= "round" or type(payload) ~= "table" then
-        return
-    end
-
+    if phase ~= "round" or type(payload) ~= "table" then return end
     local kind = tostring(payload.kind or "")
-    local disasterId = kind == "Meteor" and "Meteors"
-        or (kind == "Bomb" and "Bombs" or nil)
-    local profile = disasterId and DisasterResidue.get(disasterId)
-    if not profile then
-        return
-    end
+    if kind ~= "Meteor" and kind ~= "Bomb" then return end
 
     local position = payload.position
-    if typeof(position) ~= "Vector3" then
+    if typeof(position) ~= "Vector3" then return end
+
+    local quality = tier()
+    local spectator = player:GetAttribute("RoundEliminated") == true
+        or player:GetAttribute("RoundParticipant") ~= true
+    local camera = workspace.CurrentCamera
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local viewer = spectator and camera and camera.CFrame.Position
+        or (root and root.Position)
+        or (camera and camera.CFrame.Position)
+    if not viewer or not ImpactSurfaceScarKit.visible(
+        phase, kind, quality.Name, (position - viewer).Magnitude
+    ) then
         return
     end
 
-    local quality = tier()
+    local disasterId = kind == "Meteor" and "Meteors" or "Bombs"
+    local profile = DisasterResidue.get(disasterId)
+    if not profile then return end
+
+    local surface, normal, groundMaterial, groundColor = surfaceAt(position)
+    if not surface then return end
+    -- Exactly one arena raycast per eligible event; all pieces share the same
+    -- surface normal. Ground scar silhouettes remain client-only.
+    local frame = flatCFrame(surface, normal, 0)
     local radius = math.clamp(tonumber(payload.radius) or 8, 2, 40)
-    local lifetime = DisasterResidue.impactLifetime(quality.Name)
-    local diameter = radius * (kind == "Meteor" and 0.82 or 0.68)
-
-    makeDisc(
-        kind .. "ScorchResidue",
-        position,
-        diameter,
-        profile,
-        quality.Name == "Low" and 0.72 or 0.58,
-        lifetime
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local pieces = ImpactSurfaceScarKit.build(
+        folder, frame, kind, quality.Name,
+        groundMaterial, groundColor, profile.Color, radius, reduced
     )
-
-    if quality.Name ~= "Low" then
-        makeCracks(
-            kind .. "ImpactCrack",
-            position,
-            radius * 0.78,
-            profile,
-            quality.Name == "High" and 5 or 3,
-            lifetime
+    local lifetime = DisasterResidue.impactLifetime(quality.Name)
+    for _, piece in ipairs(pieces) do
+        piece:SetAttribute("ResidueCreatedAt", os.clock())
+        local aging = ImpactSurfaceScarKit.settlement(
+            quality.Name, reduced, piece.Color, lifetime
         )
+        fadeLater(piece, lifetime, aging)
     end
     trimBudget()
 end
@@ -343,10 +373,30 @@ local function resultResidueFor(id, index, count, base, quality)
         local seed = i + index * 11
         local x = ((((seed * 37) % 101) / 100) * 2 - 1) * halfX * 0.68
         local z = ((((seed * 53) % 97) / 96) * 2 - 1) * halfZ * 0.68
-        local position = base.Position
-            + Vector3.new(x, base.Size.Y * 0.5 + 0.08, z)
+        -- Local floor coordinates preserve placement on rotated arenas.
+        local position = base.CFrame:PointToWorldSpace(
+            Vector3.new(x, base.Size.Y * 0.5 + 0.08, z))
 
-        if profile.Kind == "fracture"
+        if AftermathSurfaceKit.names(id) ~= nil then
+            local surface, normal = surfaceAt(position)
+            if surface then
+                local frame = flatCFrame(surface, normal, (seed * 47) % 180)
+                local variant = tostring(base.Parent:GetAttribute("VariantId") or "Classic")
+                local pieces = AftermathSurfaceKit.build(
+                    folder, id, quality.Name, frame, profile,
+                    0.88 + (i % 3) * 0.09,
+                    tostring(index) .. "_" .. tostring(i),
+                    VisualTheme.arena(variant))
+                for _, piece in ipairs(pieces) do
+                    piece:SetAttribute("ResidueCreatedAt", os.clock())
+                    local settling = DisasterResidue.settlement(
+                        id, quality.Name,
+                        player:GetAttribute("ReduceMotion") == true,
+                        piece.Color, lifetime)
+                    fadeLater(piece, lifetime, settling)
+                end
+            end
+        elseif profile.Kind == "fracture"
             or profile.Kind == "scrape"
             or profile.Kind == "streak"
             or profile.Kind == "edge"
@@ -412,15 +462,25 @@ end
 
 local function playResultResidue()
     local base = arenaBase()
-    if not base then
-        return
-    end
-
+    if not base then return false end
     local quality = tier()
     for index, id in ipairs(lastIds) do
         resultResidueFor(id, index, #lastIds, base, quality)
     end
     trimBudget()
+    return true
+end
+
+local function resultWithRetry(token, attemptsLeft)
+    if token ~= roundToken or phase ~= "result" then return end
+    if playResultResidue() then return end
+    if attemptsLeft > 0 then
+        -- RoundState may precede Arena.Base replication on slow Android
+        -- clients. Retries are short, bounded and cancelled on phase change.
+        task.delay(0.30, function()
+            resultWithRetry(token, attemptsLeft - 1)
+        end)
+    end
 end
 
 impactEvent.OnClientEvent:Connect(impactResidue)
@@ -442,8 +502,19 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
     elseif previousPhase == "round" and phase == "result" then
         roundToken += 1
-        playResultResidue()
+        resultWithRetry(roundToken, 3)
     elseif phase == "ready" or phase == "intermission" or phase == "waiting" then
         clearResidue(0.28)
     end
 end)
+
+-- Avoid carrying residue from a discarded map into the next streamed arena.
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        roundToken += 1
+        folder:ClearAllChildren()
+    end
+end)
+
+-- Downgrading graphics while scars are visible must honor the new tier cap.
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(trimBudget)

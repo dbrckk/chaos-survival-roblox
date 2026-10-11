@@ -1,15 +1,47 @@
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local GroundContactRules = require(ReplicatedStorage.Shared.GroundContactRules)
+local LandingImprintKit = require(script.Parent.LandingImprintKit)
 
 local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local watched = setmetatable({}, {__mode = "k"})
 local finalRush = false
 local botFolderConnection = nil
+local currentPhase = "waiting"
+local lastContact = setmetatable({}, {__mode = "k"})
+local pendingRigs = setmetatable({}, {__mode = "k"})
+local activePieces = setmetatable({}, {__mode = "k"})
+local folder = Instance.new("Folder")
+folder.Name = "CharacterContactLocal"
+folder.Parent = workspace
+
+local function countActive()
+    local count = 0
+    for instance in pairs(activePieces) do
+        if not instance.Parent then
+            activePieces[instance] = nil
+        else
+            count += 1
+        end
+    end
+    return count
+end
+
+local function registerPart(part)
+    activePieces[part] = true
+end
+
+local function surfaceFrame(position, normal)
+    local up = normal.Magnitude > 0.01 and normal.Unit or Vector3.yAxis
+    local guide = math.abs(up:Dot(Vector3.zAxis)) > 0.95
+        and Vector3.xAxis or Vector3.zAxis
+    local right = guide:Cross(up).Unit
+    local back = up:Cross(right).Unit
+    return CFrame.fromMatrix(position, right, up, back)
+end
 
 local function localRoot()
     local character = localPlayer.Character
@@ -35,49 +67,52 @@ local function sampleSurface(root)
     )
 end
 
-local function cylinderOnSurface(position, normal)
-    local xAxis = normal.Magnitude > 0.01
-        and normal.Unit
-        or Vector3.new(0, 1, 0)
-    local seed = math.abs(xAxis:Dot(Vector3.new(0, 1, 0))) > 0.95
-        and Vector3.new(0, 0, 1)
-        or Vector3.new(0, 1, 0)
-    local zAxis = xAxis:Cross(seed).Unit
-    local yAxis = zAxis:Cross(xAxis).Unit
-    return CFrame.fromMatrix(position, xAxis, yAxis, zAxis)
-end
-
 local function emitLanding(model, airtime)
     local root = model:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then
         return
     end
 
-    if finalRush and model ~= localPlayer.Character then
+    local human = Players:GetPlayerFromCharacter(model)
+    if not GroundContactRules.eligible(
+        currentPhase, human ~= nil,
+        human and human:GetAttribute("RoundParticipant"),
+        human and human:GetAttribute("RoundEliminated"),
+        model:GetAttribute("AISurvivor")
+    ) then
         return
     end
+    local humanoid = model:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
 
     local quality = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
     local reduced = localPlayer:GetAttribute("ReduceMotion") == true
-
-    if quality.Name == "Low" and model ~= localPlayer.Character then
+    local localCharacter = model == localPlayer.Character
+    local count = GroundContactRules.pieceBudget(
+        quality.Name, reduced, finalRush, localCharacter)
+    if count == 0 or airtime < GroundContactRules.minAirtime(quality.Name) then
         return
     end
-
     local observerRoot = localRoot()
-    local maxDistance = quality.Name == "High" and 90 or 58
-    if observerRoot and (observerRoot.Position - root.Position).Magnitude > maxDistance then
+    local observer = observerRoot and observerRoot.Position
+        or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame.Position)
+    if not observer or (observer - root.Position).Magnitude
+        > GroundContactRules.maxDistance(quality.Name)
+    then
         return
     end
-
-    if quality.Name == "Low" and airtime < 0.65 then
+    local now = os.clock()
+    if not GroundContactRules.cooldownReady(now, lastContact[model]) then
+        return
+    end
+    if countActive() + count > GroundContactRules.concurrentLimit(quality.Name) then
         return
     end
 
     local hit = sampleSurface(root)
-    if not hit then
-        return
-    end
+    if not hit then return end
+    lastContact[model] = now
+    local materialStyle = GroundContactRules.materialStyle(hit.Material)
 
     local strength = math.clamp((airtime - 0.28) / 1.15, 0.18, 1)
     if reduced then
@@ -88,74 +123,17 @@ local function emitLanding(model, airtime)
         and hit.Instance.Color:Lerp(Color3.new(1, 1, 1), 0.12)
         or Color3.fromRGB(150, 160, 175)
 
-    local ring = Instance.new("Part")
-    ring.Name = "CharacterLandingContact"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.035, 0.8, 0.8)
-    ring.CFrame = cylinderOnSurface(
-        hit.Position + hit.Normal * 0.045,
-        hit.Normal
+    -- A material-aware, paper-thin imprint replaces the old filled disc.
+    -- Build exactly the existing 1/3/4/6-part device budget; keep one
+    -- shared active-piece registry for all human and AI survivors.
+    local contactFrame = surfaceFrame(hit.Position + hit.Normal * 0.04,
+        hit.Normal)
+    local pieces = LandingImprintKit.build(
+        folder, contactFrame, color, materialStyle, hit.Material,
+        count, strength, reduced
     )
-    ring.Anchored = true
-    ring.CanCollide = false
-    ring.CanTouch = false
-    ring.CanQuery = false
-    ring.CastShadow = false
-    ring.Material = Enum.Material.Neon
-    ring.Color = color
-    ring.Transparency = 0.58
-    ring.Parent = workspace
-
-    local target = reduced and 0.95 or (2.2 + strength * 2.8)
-    TweenService:Create(
-        ring,
-        TweenInfo.new(
-            reduced and 0.12 or (quality.Name == "Low" and 0.18 or 0.28),
-            Enum.EasingStyle.Quad,
-            Enum.EasingDirection.Out
-        ),
-        {
-            Size = Vector3.new(0.035, target, target),
-            Transparency = 1,
-        }
-    ):Play()
-    Debris:AddItem(ring, 0.34)
-
-    if quality.Name == "Low" or reduced then
-        return
-    end
-
-    local count = quality.Name == "High" and 5 or 3
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2 + ((i * 17) % 11) * 0.04
-        local shard = Instance.new("Part")
-        shard.Name = "CharacterLandingShard"
-        shard.Size = Vector3.new(0.10, 0.05, 0.22)
-        shard.CFrame = CFrame.new(
-            hit.Position
-                + hit.Normal * 0.08
-                + Vector3.new(math.cos(angle), 0, math.sin(angle)) * 0.55
-        ) * CFrame.Angles(0, angle, math.rad((i * 19) % 25))
-        shard.Anchored = true
-        shard.CanCollide = false
-        shard.CanTouch = false
-        shard.CanQuery = false
-        shard.CastShadow = false
-        shard.Material = hit.Material
-        shard.Color = color:Lerp(Color3.new(0, 0, 0), 0.18)
-        shard.Transparency = 0.18
-        shard.Parent = workspace
-
-        TweenService:Create(
-            shard,
-            TweenInfo.new(0.26 + i * 0.018, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {
-                Position = shard.Position
-                    + Vector3.new(math.cos(angle) * 0.8, 0.16 + strength * 0.24, math.sin(angle) * 0.8),
-                Transparency = 1,
-            }
-        ):Play()
-        Debris:AddItem(shard, 0.42)
+    for _, piece in ipairs(pieces) do
+        registerPart(piece)
     end
 end
 
@@ -167,12 +145,26 @@ local function watchModel(model)
     local humanoid = model:FindFirstChildOfClass("Humanoid")
     local root = model:FindFirstChild("HumanoidRootPart")
     if not humanoid or not root or not root:IsA("BasePart") then
-        task.delay(0.12, function()
-            if model.Parent then
-                watchModel(model)
-            end
-        end)
+        if not pendingRigs[model] and model.Parent then
+            local connection = model.ChildAdded:Connect(function(child)
+                if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
+                    task.defer(watchModel, model)
+                end
+            end)
+            pendingRigs[model] = connection
+            -- A half-streamed rig cannot create endless polling tasks.
+            task.delay(8, function()
+                if pendingRigs[model] == connection then
+                    connection:Disconnect()
+                    pendingRigs[model] = nil
+                end
+            end)
+        end
         return
+    end
+    if pendingRigs[model] then
+        pendingRigs[model]:Disconnect()
+        pendingRigs[model] = nil
     end
 
     watched[model] = true
@@ -249,6 +241,20 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    finalRush = tostring(state.phase or "") == "round"
-        and state.finalRush == true
+    currentPhase = tostring(state.phase or "waiting")
+    finalRush = currentPhase == "round" and state.finalRush == true
+    if currentPhase ~= "round" then
+        folder:ClearAllChildren()
+    end
+end)
+
+localPlayer:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if localPlayer:GetAttribute("ReduceMotion") == true then
+        folder:ClearAllChildren()
+    end
+end)
+localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    if VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier")).Name == "Low" then
+        folder:ClearAllChildren()
+    end
 end)

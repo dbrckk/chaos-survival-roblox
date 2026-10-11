@@ -8,6 +8,7 @@ VisualBudgetRules.LocalFolders = {
     "ArenaUnderstructureLocal",
     "ArenaHeroSceneryLocal",
     "ArenaSignatureLocal",
+    "AerialSurveyLocal",
     "ArenaEdgeProfileLocal",
     "ArenaServicePropsLocal",
     "ArenaNavigationLanguageLocal",
@@ -23,16 +24,25 @@ VisualBudgetRules.LocalFolders = {
     "ResultConstellationLocal",
     "ChaosHazardWarningDecorLocal",
     "ChaosPremiumDisasterVfxLocal",
+    "ChaosMotionDisasterVfxLocal",
     "DisappearingPlatformReadabilityLocal",
     "DisasterClimaxLocal",
+    "DisasterIntroGlyphLocal",
+    "DisasterIntroMotionLocal",
     "DisasterResidueLocal",
     "ImpactSetpieceLocal",
+    "CharacterContactLocal",
     "LocomotionContactLocal",
     "HazardRouteReadabilityLocal",
     "HazardWarningSignaturesLocal",
     "LobbyPersonalProgressLocal",
     "LobbyPresentationLocal",
     "LobbyShowtimeLocal",
+    "PhaseDashVfxLocal",
+    "FluxRelayLocal",
+    "GridCircuitLocal",
+    "OrbitalHelixLocal",
+    "TowerSkyrailLocal",
     "LobbyProfileHologramLocal",
     "LobbyRoundRecapLocal",
     "LobbySurfaceDetailLocal",
@@ -40,6 +50,8 @@ VisualBudgetRules.LocalFolders = {
     "LobbyWayfindingLocal",
     "PracticePadPolishLocal",
     "ResultSurvivorSpotlightsLocal",
+    "RoundTransitionPulsesLocal",
+    "RoundCelebrationPulsesLocal",
     "RookieWorldGuideLocal",
     "TornadoDebrisLocal",
 }
@@ -102,6 +114,44 @@ function VisualBudgetRules.collect(root)
                     metrics.Lights += 1
                 elseif VisualBudgetRules.isEffect(descendant) then
                     metrics.Effects += 1
+                end
+            end
+        end
+    end
+
+    -- Some cosmetic effects must be parented to server-owned hazard parts
+    -- for their Attachment or SurfaceLight behavior. Audit those *named*
+    -- client children rather than the authoritative shell/collision parts.
+    -- Restrict names, parent types and ancestry so unrelated server FX do
+    -- not become falsely attributed to the local graphics budget.
+    for _, hazard in ipairs(root:GetChildren()) do
+        if hazard:IsA("BasePart") then
+            if hazard.Name == "RoundMeteor" then
+                local trail = hazard:FindFirstChild("SignatureMeteorTrail")
+                if trail and trail:IsA("Trail") then
+                    metrics.Effects += 1
+                end
+            elseif hazard.Name == "RoundLava" or hazard.Name == "FreezeWarning" then
+                local isLava = hazard.Name == "RoundLava"
+                local lightName = "LavaGlowLocal"
+                local attachmentName = isLava and "LavaHeatLocal" or "FreezeMistLocal"
+                local emitterName = isLava and "LavaEmbers" or "FreezeMist"
+                if isLava then
+                    for _, child in ipairs(hazard:GetChildren()) do
+                        if child.Name == lightName and child:IsA("SurfaceLight") then
+                            metrics.Lights += 1
+                        end
+                    end
+                end
+                for _, child in ipairs(hazard:GetChildren()) do
+                    if child.Name == attachmentName and child:IsA("Attachment") then
+                        for _, effect in ipairs(child:GetChildren()) do
+                            if effect.Name == emitterName
+                                and effect:IsA("ParticleEmitter") then
+                                metrics.Effects += 1
+                            end
+                        end
+                    end
                 end
             end
         end

@@ -34,6 +34,8 @@ local roundPhase = "waiting"
 local readyPose = 0
 local launchWeight = 0
 local impactWeight = 0
+local impactSide = 0
+local impactForward = 0
 local jumpWeight = 0
 local fallWeight = 0
 local strideClock = 0
@@ -50,6 +52,8 @@ local ascentReachPose = 0
 local descentBracePose = 0
 local lastGroundCueAt = -math.huge
 local baseC0 = setmetatable({}, {__mode = "k"})
+local bindSerial = 0
+local humanoidStateConnection = nil
 
 local function motor(parent, name)
     local item = parent and parent:FindFirstChild(name)
@@ -75,10 +79,17 @@ local function rememberBaseC0(joint)
 end
 
 local function bind(nextCharacter)
+    bindSerial += 1
+    local serial = bindSerial
+    if humanoidStateConnection then
+        humanoidStateConnection:Disconnect()
+        humanoidStateConnection = nil
+    end
     resetMotors()
     character = nextCharacter
-    humanoid = character:WaitForChild("Humanoid", 5)
-    root = character:WaitForChild("HumanoidRootPart", 5)
+    -- Block rendering on this rig until both body anchors are present.
+    humanoid = nil
+    root = nil
     waist = nil
     rootJoint = nil
     leftHip = nil
@@ -93,6 +104,8 @@ local function bind(nextCharacter)
     lastY = 0
     launchWeight = 0
     impactWeight = 0
+    impactSide = 0
+    impactForward = 0
     jumpWeight = 0
     fallWeight = 0
     strideClock = 0
@@ -110,6 +123,16 @@ local function bind(nextCharacter)
     lastGroundCueAt = -math.huge
     readyPose = 0
 
+    -- CharacterAdded can fire again while a streamed rig is still yielding.
+    -- An older promise must never overwrite this client's current motors.
+    local nextHumanoid = nextCharacter:WaitForChild("Humanoid", 5)
+    local nextRoot = nextCharacter:WaitForChild("HumanoidRootPart", 5)
+    if serial ~= bindSerial or character ~= nextCharacter
+        or player.Character ~= nextCharacter then
+        return
+    end
+    humanoid = nextHumanoid
+    root = nextRoot
     if not humanoid or not root or humanoid.RigType ~= Enum.HumanoidRigType.R15 then
         return
     end
@@ -134,7 +157,8 @@ local function bind(nextCharacter)
         rememberBaseC0(joint)
     end
 
-    humanoid.StateChanged:Connect(function(_, state)
+    humanoidStateConnection = humanoid.StateChanged:Connect(function(_, state)
+        if serial ~= bindSerial then return end
         if state == Enum.HumanoidStateType.Jumping then
             jumpWeight = math.max(jumpWeight, 1)
         elseif state == Enum.HumanoidStateType.Freefall then
@@ -158,10 +182,21 @@ if player.Character then
 end
 player.CharacterAdded:Connect(bind)
 player.CharacterRemoving:Connect(function()
+    bindSerial += 1
+    if humanoidStateConnection then
+        humanoidStateConnection:Disconnect()
+        humanoidStateConnection = nil
+    end
     resetMotors()
     character = nil
     humanoid = nil
     root = nil
+    waist = nil
+    rootJoint = nil
+    leftHip = nil
+    rightHip = nil
+    leftShoulder = nil
+    rightShoulder = nil
 end)
 
 local function expAlpha(speed, dt)
@@ -196,7 +231,8 @@ mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
 end)
 
 hazardImpactEvent.OnClientEvent:Connect(function(payload)
-    if player:GetAttribute("RoundParticipant") ~= true
+    if roundPhase ~= "round"
+        or player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true
         or player:GetAttribute("ReduceMotion") == true
         or typeof(payload) ~= "table"
@@ -211,11 +247,16 @@ hazardImpactEvent.OnClientEvent:Connect(function(payload)
         return
     end
 
-    local distance = (root.Position - position).Magnitude
-    local radius = math.clamp(tonumber(payload.radius) or 8, 1, 40)
-    local reach = math.max(20, radius * 4.2)
-    if distance <= reach then
-        local proximity = 1 - math.clamp(distance / reach, 0, 1)
+    local proximity, side, forward = BodyMotionRules.blastResponse(
+        root.CFrame, position, payload.radius
+    )
+    if proximity > 0 then
+        -- Keep the existing soft impulse envelope; new directional accents
+        -- follow the hazard instead of rotating the player's character.
+        if proximity * 0.82 >= impactWeight then
+            impactSide = side
+            impactForward = forward
+        end
         impactWeight = math.max(impactWeight, proximity * 0.82)
     end
 end)
@@ -325,7 +366,10 @@ RunService:BindToRenderStep(
             player:GetAttribute("VfxQualityTier"), reduced, roundPhase
         )
         local now = os.clock()
-        if cue and now - lastGroundCueAt >= 0.55 then
+        if cue and LocomotionDynamics.footworkEligible(
+            roundPhase, player:GetAttribute("RoundParticipant"),
+            player:GetAttribute("RoundEliminated"), humanoid.Health
+        ) and now - lastGroundCueAt >= 0.55 then
             -- No extra per-frame loop: only a brief geometry burst for a
             -- grounded start, hard-stop skid or high-speed planted pivot.
             local contact = GroundFx.emit(
@@ -371,6 +415,8 @@ RunService:BindToRenderStep(
         landing *= math.exp(-dt * 11)
         launchWeight *= math.exp(-dt * 4.8)
         impactWeight *= math.exp(-dt * 8.5)
+        impactSide *= math.exp(-dt * 7.2)
+        impactForward *= math.exp(-dt * 7.2)
         jumpWeight *= math.exp(-dt * 6.5)
 
         if not grounded then
@@ -418,10 +464,10 @@ RunService:BindToRenderStep(
             + fallWeight * 5.5
             + impactWeight * 4.2
         ) * scale
-        local actionRoll = impactWeight
-            * math.sin(os.clock() * 24)
-            * math.rad(5.5)
-            * scale
+        local actionRoll = (
+            impactWeight * math.sin(os.clock() * 24) * math.rad(1.8)
+            + impactSide * impactWeight * math.rad(6.0)
+        ) * scale
 
         local waistTarget = CFrame.Angles(
             math.rad(
@@ -431,13 +477,14 @@ RunService:BindToRenderStep(
                 - surgeLean
                 + moonFloat
                 + brakePose * 4.0
+                + impactForward * impactWeight * 4.8
             ) * scale
                 + math.rad(
                     -startPose * 3.8 + skidPose * 5.0
                     + descentBracePose * 2.2
                 ) * dynamicScale
                 + math.rad(actionPitch),
-            math.rad(turnPose * 3.2) * scale,
+            math.rad(turnPose * 3.2 + impactSide * impactWeight * 3.8) * scale,
             math.rad(
                 -3.8 * side * moveWeight
                 - turnPose * 1.6
@@ -503,6 +550,7 @@ RunService:BindToRenderStep(
             - landing * 11
         ) * scale
         local impactArmRoll = math.rad(impactWeight * 11) * scale
+        local impactAsymmetry = math.rad(impactSide * impactWeight * 9) * scale
         local strideArm = math.rad(4.6) * strideWave * strideTurnScale
         local turnArm = math.rad(turnPose * 4.0) * scale
         local reachArm = math.rad(
@@ -513,12 +561,12 @@ RunService:BindToRenderStep(
         local leftActionShoulder = CFrame.Angles(
             actionArmPitch - strideArm + reachArm,
             turnArm,
-            -impactArmRoll - cutArm
+            -impactArmRoll - cutArm - impactAsymmetry
         )
         local rightActionShoulder = CFrame.Angles(
             actionArmPitch + strideArm + reachArm,
             -turnArm,
-            impactArmRoll + cutArm
+            impactArmRoll + cutArm - impactAsymmetry
         )
 
         local alpha = expAlpha(grounded and 11 or 7, dt)

@@ -3,13 +3,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
 folder.Name = "ArenaSurfaceReliefLocal"
 folder.Parent = workspace
 
-local mapConnection = nil
+local disconnectMapWatch = nil
+local refreshPending = false
 
 local function clear()
     folder:ClearAllChildren()
@@ -262,7 +264,7 @@ local function rebuild()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
@@ -289,39 +291,46 @@ local function rebuild()
     end
 end
 
-local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+-- Maps may replicate Arena, Base and VariantId in different frames.
+-- One map-scoped watcher prevents stale decor after a late Base or variant.
+local function scheduleRefresh()
+    if refreshPending then
+        return
     end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+    end)
+end
 
-    local generated = workspace:FindFirstChild("GeneratedMap")
+local function bindGeneratedMap(generated)
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
+    end
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.06, rebuild)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(function()
-            bindMap()
-            rebuild()
-        end)
+        bindGeneratedMap(child)
+        scheduleRefresh()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(nil)
         clear()
-        bindMap()
     end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
 
-bindMap()
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 rebuild()

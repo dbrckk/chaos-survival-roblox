@@ -14,6 +14,39 @@ DisasterResidue.Profiles = {
     JumpShock = {Kind="shock", Color=Color3.fromRGB(88,112,145), Material=Enum.Material.SmoothPlastic},
 }
 
+-- Quiet aging palettes: nine different physical residues settle instead of
+-- all remaining at a constant color before abruptly fading.
+local SETTLED = {
+    RisingLava = Color3.fromRGB(53, 46, 45),
+    LowGravity = Color3.fromRGB(66, 73, 104),
+    DisappearingPlatforms = Color3.fromRGB(65, 57, 48),
+    Tornado = Color3.fromRGB(63, 74, 79),
+    Freeze = Color3.fromRGB(115, 141, 157),
+    SpeedSurge = Color3.fromRGB(76, 52, 80),
+    Darkness = Color3.fromRGB(37, 40, 55),
+    ShrinkingArena = Color3.fromRGB(72, 49, 84),
+    JumpShock = Color3.fromRGB(63, 80, 103),
+}
+
+function DisasterResidue.settlement(id, tierName, reduceMotion, startingColor, lifetime)
+    local settled = SETTLED[id]
+    if not settled or (tierName ~= "Medium" and tierName ~= "High")
+        or reduceMotion == true or typeof(startingColor) ~= "Color3"
+    then
+        return nil
+    end
+    local duration = math.max(0.2, tonumber(lifetime) or 0)
+    -- Begin early enough to finish long before the existing final fade.
+    local delay = duration * 0.34
+    local tweenTime = math.min(0.8, duration * 0.19)
+    return {
+        Color = startingColor:Lerp(settled, tierName == "High" and 0.68 or 0.49),
+        StartAfter = delay,
+        Duration = tweenTime,
+        Transparency = tierName == "High" and 0.30 or 0.40,
+    }
+end
+
 function DisasterResidue.get(id)
     return DisasterResidue.Profiles[id]
 end

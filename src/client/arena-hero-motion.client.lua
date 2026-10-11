@@ -1,10 +1,32 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LandmarkReactions = require(ReplicatedStorage.Shared.LandmarkDisasterReactionRules)
 local player = Players.LocalPlayer
+local roundEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local source = workspace:WaitForChild("ArenaHeroSceneryLocal", 10)
 
 local tracked = {}
 local clock = 0
 local lastScan = 0
+local currentPhase = "waiting"
+local activeDisasters = {}
+local finalRush = false
+local reaction = nil
+
+local function refreshReaction()
+    reaction = LandmarkReactions.compose(
+        activeDisasters, currentPhase,
+        player:GetAttribute("VfxQualityTier"),
+        player:GetAttribute("ReduceMotion") == true, finalRush
+    )
+end
+
+roundEvent.OnClientEvent:Connect(function(state)
+    currentPhase = tostring(state and state.phase or "waiting")
+    activeDisasters = state and state.disasterIds or {}
+    finalRush = currentPhase == "round" and state.finalRush == true
+    refreshReaction()
+end)
 
 local function tierName()
     return tostring(player:GetAttribute("VfxQualityTier") or "Medium")
@@ -106,9 +128,16 @@ workspace.ChildRemoved:Connect(function(child)
     end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scan)
-player:GetAttributeChangedSignal("ReduceMotion"):Connect(scan)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    scan()
+    refreshReaction()
+end)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    scan()
+    refreshReaction()
+end)
 
+refreshReaction()
 scan()
 
 task.spawn(function()
@@ -182,6 +211,31 @@ task.spawn(function()
             part.Color = active
                 and state.baseColor:Lerp(Color3.new(1, 1, 1), 0.16 * scale)
                 or state.baseColor
+        end
+
+        -- One owner, one CFrame assignment per part and frame. Landmarks react
+        -- to hazard pressure without allocating new particles or instances.
+        local ownsAnimatedCFrame = state.role == "lift"
+            or state.role == "cable" or state.role == "reactorArm"
+        local baseFrame = ownsAnimatedCFrame and part.CFrame or state.baseCFrame
+        if reaction and reaction.Active then
+            local shift, bank, yaw, tint = LandmarkReactions.offset(
+                state.role, state.index, clock, reaction
+            )
+            part.CFrame = baseFrame * CFrame.new(shift)
+                * CFrame.Angles(0, yaw, bank)
+            -- Core and crossing-signal animation authored its own color
+            -- earlier this tick; all other roles restore captured base color.
+            local animatedColor = (state.role == "reactorCore"
+                or state.role == "signal") and part.Color or state.baseColor
+            part.Color = animatedColor:Lerp(reaction.Accent, tint)
+        else
+            if not ownsAnimatedCFrame then
+                part.CFrame = state.baseCFrame
+            end
+            if state.role ~= "reactorCore" and state.role ~= "signal" then
+                part.Color = state.baseColor
+            end
         end
     end
     end

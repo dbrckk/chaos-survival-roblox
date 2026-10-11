@@ -6,6 +6,10 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
+local worldEffects = Instance.new("Folder")
+worldEffects.Name = "ChaosMotionDisasterVfxLocal"
+worldEffects.Parent = workspace
+
 local activeIds = {}
 local characterEffects = {}
 local shrinkParts = {}
@@ -159,7 +163,7 @@ local function ensureShrinkVisuals()
         p.Material = Enum.Material.Neon
         p.Color = i % 2 == 0 and Color3.fromRGB(220, 85, 255) or Color3.fromRGB(255, 110, 195)
         p.Transparency = 0.28
-        p.Parent = workspace
+        p.Parent = worldEffects
         table.insert(shrinkParts, p)
     end
 end
@@ -178,15 +182,15 @@ local function updateShrink()
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local thickness = 0.24
-    local y = base.Position.Y + (base.Size.Y * 0.5) + 0.18
+    local y = base.Size.Y * 0.5 + 0.18
     local reduced = player:GetAttribute("ReduceMotion") == true
     local pulse = reduced and 0.5 or ((math.sin(clock * 5.4) + 1) * 0.5)
 
     local defs = {
-        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y - base.Position.Y, -halfZ)},
-        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y - base.Position.Y, halfZ)},
-        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(-halfX, y - base.Position.Y, 0)},
-        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(halfX, y - base.Position.Y, 0)},
+        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y, -halfZ)},
+        {size = Vector3.new(base.Size.X, thickness, 0.5), pos = Vector3.new(0, y, halfZ)},
+        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(-halfX, y, 0)},
+        {size = Vector3.new(0.5, thickness, base.Size.Z), pos = Vector3.new(halfX, y, 0)},
     }
 
     for i, def in ipairs(defs) do
@@ -240,7 +244,7 @@ local function ensureBlackoutVisuals()
         beacon.Size = Vector3.new(0.55, 3.2, 0.55)
         beacon.CFrame = base.CFrame * CFrame.new(offset)
         beacon.Transparency = 0.38
-        beacon.Parent = workspace
+        beacon.Parent = worldEffects
         table.insert(blackoutParts, beacon)
     end
 end
@@ -291,14 +295,17 @@ ensureRenderLoop = function()
 
     task.spawn(function()
         while true do
-            local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-            local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
             local shrinkActive = currentPhase == "round" and has("ShrinkingArena")
             local blackoutActive = currentPhase == "round" and has("Darkness")
-
             if not shrinkActive and not blackoutActive then
+                -- No reason to poll the client every frame in the lobby.
+                task.wait(0.16)
                 continue
             end
+            local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+            local dt = task.wait(VfxQuality.decorativeInterval(tier.Name,
+                player:GetAttribute("ReduceMotion") == true))
+            if currentPhase ~= "round" then continue end
 
             clock += dt
 

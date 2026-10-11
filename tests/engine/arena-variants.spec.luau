@@ -23,6 +23,37 @@ describe("Arena variants", function()
         end
     end)
 
+    it("adds a connected high-route skybridge circuit to the Tower Run arena", function()
+        local towers = ArenaVariants.get("Towers")
+        local links = {}
+        local mid = {}
+        for _, entry in ipairs(towers.Platforms) do
+            if entry.Skybridge == true then
+                table.insert(links, entry)
+            elseif entry.offset.Y == 12 then
+                table.insert(mid, entry)
+            end
+        end
+        expect(#links).toBe(4)
+        expect(#mid).toBe(4)
+        for _, bridge in ipairs(links) do
+            local top = bridge.offset.Y + bridge.size.Y * 0.5
+            expect(math.abs(top - 13) < 0.001).toBe(true)
+            expect(math.max(bridge.size.X, bridge.size.Z) >= 49).toBe(true)
+            expect(math.min(bridge.size.X, bridge.size.Z) >= 4).toBe(true)
+            local aligned = 0
+            for _, deck in ipairs(mid) do
+                local delta = deck.offset - bridge.offset
+                local reachX = deck.size.X * 0.5 + bridge.size.X * 0.5
+                local reachZ = deck.size.Z * 0.5 + bridge.size.Z * 0.5
+                if math.abs(delta.X) <= reachX and math.abs(delta.Z) <= reachZ then
+                    aligned += 1
+                end
+            end
+            expect(aligned).toBe(2)
+        end
+    end)
+
     it("derives hazard targeting bounds from arena footprints", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)

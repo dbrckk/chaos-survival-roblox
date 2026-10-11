@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 
 local player = Players.LocalPlayer
 local tracked = {}
@@ -21,6 +23,57 @@ local warningNames = {
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end)
+
+local function warningDeckFrame(part, deck)
+    return HazardWarningSignatureRules.frame(part.Position, deck)
+end
+
+local function destroySignature(state)
+    if not state or not state.signature then return end
+    for _, piece in ipairs(state.signature) do
+        if piece.Parent then piece:Destroy() end
+    end
+end
+
+-- Reconcile against live quality/accessibility without duplicating objects.
+-- Existing pieces are retained where possible; old excess pieces are removed
+-- on the very next render update when the player lowers their quality tier.
+local function syncShockSignature(part, state, diameter, progress, reduced)
+    if state.kind ~= "JumpShock" then return end
+    local count = HazardWarningSignatureRules.count(
+        "JumpShock", currentTier.Name, reduced
+    )
+    local pieces = state.signature
+    if not pieces then return end
+    while #pieces > count do
+        local extra = table.remove(pieces)
+        if extra and extra.Parent then extra:Destroy() end
+    end
+    local centerFrame = warningDeckFrame(part, state.deck)
+    for index = 1, count do
+        local design = HazardWarningSignatureRules.recipe(
+            "JumpShock", index, count, diameter, reduced and 0 or progress
+        )
+        local piece = pieces[index]
+        if not piece then
+            piece = Instance.new("Part")
+            piece.Name = "JumpShockAngularWarning" .. index
+            piece.Anchored = true
+            piece.CanCollide = false
+            piece.CanTouch = false
+            piece.CanQuery = false
+            piece.CastShadow = false
+            piece.Parent = localDecor
+            pieces[index] = piece
+        end
+        piece.Size = design.Size
+        piece.CFrame = centerFrame * CFrame.new(design.Offset) * design.Rotation
+        piece.Material = design.Material
+        piece.Color = design.Secondary and design.SecondaryColor or design.Color
+        piece.Transparency = reduced and 0.67 or design.Transparency
+    end
+end
+
 
 local function ensureRenderLoop()
     if loopStarted then
@@ -46,6 +99,7 @@ local function ensureRenderLoop()
                     if state.label and state.label.Parent then
                         state.label:Destroy()
                     end
+                    destroySignature(state)
                     tracked[part] = nil
                     continue
                 end
@@ -61,30 +115,23 @@ local function ensureRenderLoop()
                     or ((math.sin(alpha * math.pi * 6) + 1) * 0.5)
 
                 if state.kind == "Freeze" then
-                    local freezePeak = 0.18 * currentTier.Scale
-                    part.Transparency = math.clamp(
+                    local freezePeak = 0.12 * currentTier.Scale
+                    part.Transparency = reduced and 0.82 or math.clamp(
                         0.84 - (freezePeak * math.sin(alpha * math.pi)),
-                        0.60,
+                        0.69,
                         0.92
                     )
                 elseif state.kind == "JumpShock" then
-                    local diameter = state.startSize
-                        + ((state.endSize - state.startSize) * alpha)
+                    -- In ReduceMotion, show the final hazard coverage at once
+                    -- instead of sweeping a large luminous disc across sightlines.
+                    local diameter = reduced and state.endSize
+                        or (state.startSize
+                            + ((state.endSize - state.startSize) * alpha))
                     part.Size = Vector3.new(part.Size.X, diameter, diameter)
-                    part.Transparency = 0.30 + (0.58 * alpha)
+                    part.Transparency = reduced and 0.78
+                        or (0.62 + 0.27 * alpha)
 
-                    if state.ring and state.ring.Parent then
-                        local trailingDiameter = math.max(state.startSize, diameter * 0.82)
-                        state.ring.Size = Vector3.new(
-                            0.08,
-                            trailingDiameter,
-                            trailingDiameter
-                        )
-                        state.ring.CFrame = CFrame.new(
-                            part.Position + Vector3.new(0, 0.08, 0)
-                        ) * CFrame.Angles(0, 0, math.rad(90))
-                        state.ring.Transparency = 0.38 + (0.54 * alpha)
-                    end
+                    syncShockSignature(part, state, diameter, alpha, reduced)
                 else
                     local diameter = state.startSize
                         + ((state.endSize - state.startSize) * alpha)
@@ -135,6 +182,7 @@ local function ensureRenderLoop()
                     if state.label and state.label.Parent then
                         state.label:Destroy()
                     end
+                    destroySignature(state)
                     tracked[part] = nil
                 end
             end
@@ -198,7 +246,7 @@ local function addWarningGlyph(parent, kind, color)
 end
 
 local function register(part)
-    if not part:IsA("BasePart") then
+    if not part:IsA("BasePart") or tracked[part] then
         return
     end
 
@@ -208,7 +256,7 @@ local function register(part)
     end
 
     local ring = nil
-    if kind == "Meteor" or kind == "Bomb" or kind == "JumpShock" then
+    if kind == "Meteor" or kind == "Bomb" then
         ring = Instance.new("Part")
         ring.Name = kind .. "WarningRingLocal"
         ring.Shape = Enum.PartType.Cylinder
@@ -230,6 +278,16 @@ local function register(part)
         ring.Parent = localDecor
     end
 
+    local signature = nil
+    local signatureDeck = nil
+    if kind == "JumpShock" then
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        local base = arena and arena:FindFirstChild("Base")
+        signatureDeck = base and base:IsA("BasePart") and base.CFrame or nil
+        signature = {}
+    end
+
 
     local label = Instance.new("BillboardGui")
     label.Name = kind .. "WarningLabelLocal"
@@ -248,9 +306,9 @@ local function register(part)
     warningText.BackgroundTransparency = 0.18
     warningText.BorderSizePixel = 0
     warningText.Font = Enum.Font.GothamBlack
-    warningText.Text = kind == "JumpShock"
-        and "JUMP"
-        or string.upper(kind)
+    warningText.Text = HazardWarningSignatureRules.label(
+        kind, player.LocaleId, CoreLocalization
+    ) or string.upper(kind)
     warningText.TextColor3 = kind == "Bomb"
         and Color3.fromRGB(255, 120, 120)
         or (kind == "Meteor"
@@ -286,9 +344,16 @@ local function register(part)
         startSize = math.max(0.1, tonumber(part:GetAttribute("WarningStartSize")) or part.Size.X),
         endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
         ring = ring,
+        signature = signature,
+        deck = signatureDeck,
         label = label,
     }
 
+    if kind == "JumpShock" then
+        local state = tracked[part]
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        syncShockSignature(part, state, state.startSize, 0, reduced)
+    end
     ensureRenderLoop()
 end
 
@@ -336,5 +401,6 @@ workspace.ChildRemoved:Connect(function(child)
     if state and state.label and state.label.Parent then
         state.label:Destroy()
     end
+    destroySignature(state)
     tracked[child] = nil
 end)

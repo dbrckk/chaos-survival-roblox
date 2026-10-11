@@ -17,6 +17,16 @@ describe("Spectator target stability", function()
         expect(Rules.isSpectating(false, false, false)).toBe(false)
     end)
 
+    it("only spectates living AI survivors committed to this round", function()
+        expect(Rules.isEligibleBot(true, 100)).toBe(true)
+        expect(Rules.isEligibleBot(true, 1)).toBe(true)
+        expect(Rules.isEligibleBot(true, 0)).toBe(false)
+        expect(Rules.isEligibleBot(true, -1)).toBe(false)
+        expect(Rules.isEligibleBot(false, 100)).toBe(false)
+        expect(Rules.isEligibleBot(nil, 100)).toBe(false)
+        expect(Rules.isEligibleBot(true, nil)).toBe(false)
+    end)
+
     it("keeps the same character when targets are reordered", function()
         expect(Rules.resolveIndex({
             {Character = alpha},

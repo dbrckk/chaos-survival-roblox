@@ -3,6 +3,11 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VisualBudgetRules = require("../../src/shared/VisualBudgetRules")
+local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
+local LandingImprintKit = require("../../src/client/LandingImprintKit")
+local DisasterIntroMotionKit = require("../../src/client/DisasterIntroMotionKit")
+local DisasterBoundaryClimaxKit = require("../../src/client/DisasterBoundaryClimaxKit")
+local LocomotionGroundFx = require("../../src/client/LocomotionGroundFx")
 
 describe("visual budget rules", function()
     it("uses progressively smaller budgets for lower tiers", function()
@@ -85,6 +90,147 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("counts transient Phase Dash facets and Showtime glyphs in mobile budgets", function()
+        local root = Instance.new("Folder")
+        local dash = Instance.new("Folder")
+        dash.Name = "PhaseDashVfxLocal"
+        dash.Parent = root
+        local showtime = Instance.new("Folder")
+        showtime.Name = "LobbyShowtimeLocal"
+        showtime.Parent = root
+
+        for index = 1, 7 do
+            local part = Instance.new("Part")
+            part.Name = "PhaseDashRingFacet" .. index
+            part.CanCollide = false
+            part.Parent = dash
+        end
+        for index = 1, 3 do
+            local part = Instance.new("Part")
+            part.Name = "OrbitDanceGlyph" .. index
+            part.CanCollide = false
+            part.Parent = showtime
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(10)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("audits the entire four-gate Flux Relay scene rather than hiding it from budget metrics", function()
+        local root = Instance.new("Folder")
+        local flux = Instance.new("Folder")
+        flux.Name = "FluxRelayLocal"
+        flux.Parent = root
+        for index = 1, 4 do
+            for partIndex = 1, 12 do
+                local piece = Instance.new("Part")
+                piece.Name = "FluxGate" .. index .. "_" .. partIndex
+                piece.CanCollide = false
+                piece.Parent = flux
+            end
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(1)
+        expect(metrics.Parts).toBe(48)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("tracks up to twenty-four Orbital helix runner glyphs at High quality", function()
+        local root = Instance.new("Folder")
+        local helix = Instance.new("Folder")
+        helix.Name = "OrbitalHelixLocal"
+        helix.Parent = root
+        for index = 1, 24 do
+            local glyph = Instance.new("Part")
+            glyph.Name = "HelixMotionGlyph"
+            glyph.CanCollide = false
+            glyph.CanTouch = false
+            glyph.CanQuery = false
+            glyph.Parent = helix
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(1)
+        expect(metrics.Parts).toBe(24)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("counts at most one transient High-tier Skyrail impulse flare", function()
+        local root = Instance.new("Folder")
+        local skyrail = Instance.new("Folder")
+        skyrail.Name = "TowerSkyrailLocal"
+        skyrail.Parent = root
+        -- 48 authored structure/courier parts + 8 one-shot shards.
+        for index = 1, 56 do
+            local part = Instance.new("Part")
+            part.Name = "TowerSkyrailLocal" .. index
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.Parent = skyrail
+        end
+        local metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(56)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("budgets noncolliding Tower Skyrail conductor structures and couriers", function()
+        local folder = Instance.new("Folder")
+        local skyrail = Instance.new("Folder")
+        skyrail.Name = "TowerSkyrailLocal"
+        skyrail.Parent = folder
+        -- Maximum authored High tier: 2 pillars + 2 inset fibers +
+        -- 2 counterweights + 1 header + 1 crown + 2 wings + 2 runners
+        -- = 12 parts per bridge / 48 for all four bridges.
+        for index = 1, 48 do
+            local piece = Instance.new("Part")
+            piece.Name = "Skyrail" .. index
+            piece.CanCollide = false
+            piece.Parent = skyrail
+        end
+        local metrics, counted = VisualBudgetRules.collect(folder)
+        expect(counted).toBe(1)
+        expect(metrics.Parts).toBe(48)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        folder:Destroy()
+    end)
+
+    it("includes all four detailed Classic Grid Circuit monuments in visual telemetry", function()
+        local root = Instance.new("Folder")
+        local circuit = Instance.new("Folder")
+        circuit.Name = "GridCircuitLocal"
+        circuit.Parent = root
+        -- High tier: 25 parts per monument (100 total), plus
+        -- 3 chevrons * 2 strokes * 4 route edges = 24 guide parts.
+        for index = 1, 124 do
+            local piece = Instance.new("Part")
+            piece.Name = "CircuitArt" .. index
+            piece.CanCollide = false
+            piece.Parent = circuit
+        end
+        local metrics, count = VisualBudgetRules.collect(root)
+        expect(count).toBe(1)
+        expect(metrics.Parts).toBe(124)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
     it("audits temporary meteor and bomb setpieces under their shared local folder", function()
         local root = Instance.new("Folder")
         local folder = Instance.new("Folder")
@@ -131,6 +277,221 @@ describe("visual budget rules", function()
         local metrics, audited = VisualBudgetRules.collect(root)
         expect(audited).toBe(1)
         expect(metrics.Parts).toBe(4)
+        root:Destroy()
+    end)
+
+    it("audits all transient winner and transition contours without solid screen-covering disks", function()
+        local root = Instance.new("Folder")
+        local transitions = Instance.new("Folder")
+        transitions.Name = "RoundTransitionPulsesLocal"
+        transitions.Parent = root
+        local celebrations = Instance.new("Folder")
+        celebrations.Name = "RoundCelebrationPulsesLocal"
+        celebrations.Parent = root
+        local cf = CFrame.new(0, 5, 0)
+        local tint = Color3.fromRGB(75, 214, 255)
+        local first = CinematicPulseRingKit.emit(
+            transitions, "RoundStart", cf, tint, 1, 82, 0.6, "Medium", true
+        )
+        local second = CinematicPulseRingKit.emit(
+            celebrations, "Win", cf, tint, 1, 22, 0.6, "High", true
+        )
+        local third = CinematicPulseRingKit.emit(
+            celebrations, "Clutch", cf, tint, 1, 19, 0.6, "High", true
+        )
+        expect(#first).toBe(6)
+        expect(#second).toBe(8)
+        expect(#third).toBe(8)
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(22)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        for _, arc in ipairs(first) do
+            expect(arc.Shape).toBe(Enum.PartType.Block)
+            expect(arc.CanCollide).toBe(false)
+        end
+        root:Destroy()
+    end)
+
+    it("counts simultaneous bot landings and launch marks in the live graphics budget", function()
+        local root = Instance.new("Folder")
+        local landing = Instance.new("Folder")
+        landing.Name = "CharacterContactLocal"
+        landing.Parent = root
+        local locomotion = Instance.new("Folder")
+        locomotion.Name = "LocomotionContactLocal"
+        locomotion.Parent = root
+        local frame = CFrame.new(0, 5, 0)
+        for i = 1, 4 do
+            local shifted = frame * CFrame.new(i * 2, 0, 0)
+            local botLanding = LandingImprintKit.build(
+                landing, shifted, Color3.fromRGB(120, 210, 230),
+                "Mechanical", Enum.Material.Metal, 3, 0.85, false
+            )
+            expect(#botLanding).toBe(3)
+            local botPivot = LocomotionGroundFx.build(
+                locomotion, shifted, "Pivot", 0.9, "High"
+            )
+            expect(botPivot ~= nil).toBe(true)
+            expect(#botPivot:GetChildren()).toBe(4)
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(28)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("counts all double-chaos intro strokes without full arena-covering cylinders", function()
+        local root = Instance.new("Folder")
+        local glyph = Instance.new("Folder")
+        glyph.Name = "DisasterIntroGlyphLocal"
+        glyph.Parent = root
+        local motion = Instance.new("Folder")
+        motion.Name = "DisasterIntroMotionLocal"
+        motion.Parent = root
+        local frame = CFrame.new(8, 3, -11)
+            * CFrame.Angles(math.rad(7), math.rad(32), 0)
+        local blue = Color3.fromRGB(75, 175, 255)
+        local red = Color3.fromRGB(255, 80, 80)
+        for _, kind in ipairs({"freeze", "blast"}) do
+            local pieces = DisasterIntroMotionKit.emit(
+                motion, kind, frame, 98, blue, red,
+                "High", true, 0.58
+            )
+            expect(#pieces).toBe(6)
+            for _, piece in ipairs(pieces) do
+                expect(piece:IsA("Part") or piece:IsA("WedgePart")).toBe(true)
+                if piece:IsA("Part") then
+                    expect(piece.Shape).toBe(Enum.PartType.Block)
+                end
+                expect(piece.CanCollide).toBe(false)
+                expect(piece.CanTouch).toBe(false)
+                expect(piece.CanQuery).toBe(false)
+                expect(piece.Size.Y <= 0.08).toBe(true)
+            end
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(12)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("audits shrinking/blackout scenery and both simultaneous climax signatures", function()
+        local root = Instance.new("Folder")
+        local persistent = Instance.new("Folder")
+        persistent.Name = "ChaosMotionDisasterVfxLocal"
+        persistent.Parent = root
+        for i = 1, 8 do
+            local part = Instance.new("Part")
+            part.Name = i <= 4 and "ShrinkPerimeterLocal" .. i
+                or "BlackoutEmergencyBeacon" .. (i - 4)
+            part.Parent = persistent
+        end
+        local transient = Instance.new("Folder")
+        transient.Name = "DisasterClimaxLocal"
+        transient.Parent = root
+        local frame = CFrame.new(3, 5, 7)
+            * CFrame.Angles(0, math.rad(20), math.rad(9))
+        local arenaSize = Vector3.new(124, 3, 92)
+        local primary = Color3.fromRGB(250, 85, 110)
+        local secondary = Color3.fromRGB(245, 220, 160)
+        for _, kind in ipairs({"blast", "shrink"}) do
+            local pieces = DisasterBoundaryClimaxKit.emit(transient, kind,
+                frame, arenaSize, 3, primary, secondary, "High", false)
+            expect(#pieces).toBe(6)
+            for _, part in ipairs(pieces) do
+                expect(part.CanCollide).toBe(false)
+                expect(part.CanTouch).toBe(false)
+                expect(part.CanQuery).toBe(false)
+                expect(part.CastShadow).toBe(false)
+            end
+        end
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(2)
+        expect(metrics.Parts).toBe(20)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+        root:Destroy()
+    end)
+
+    it("counts client lava light and hazard-attached particles without server shell parts", function()
+        local root = Instance.new("Folder")
+        local lava = Instance.new("Part")
+        lava.Name = "RoundLava"
+        lava.Parent = root
+        local glow = Instance.new("SurfaceLight")
+        glow.Name = "LavaGlowLocal"
+        glow.Parent = lava
+        local heat = Instance.new("Attachment")
+        heat.Name = "LavaHeatLocal"
+        heat.Parent = lava
+        local embers = Instance.new("ParticleEmitter")
+        embers.Name = "LavaEmbers"
+        embers.Parent = heat
+        local freeze = Instance.new("Part")
+        freeze.Name = "FreezeWarning"
+        freeze.Parent = root
+        local mist = Instance.new("Attachment")
+        mist.Name = "FreezeMistLocal"
+        mist.Parent = freeze
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Name = "FreezeMist"
+        emitter.Parent = mist
+        -- Unrelated server-authored and wrongly parented objects do not count.
+        local serverLamp = Instance.new("SurfaceLight")
+        serverLamp.Name = "AuthoritativeHazardLight"
+        serverLamp.Parent = lava
+        local wrongType = Instance.new("Part")
+        wrongType.Name = "LavaGlowLocal"
+        wrongType.Parent = lava
+        local fake = Instance.new("Part")
+        fake.Name = "RoundLava"
+        fake.Parent = root
+        Instance.new("SurfaceLight").Parent = fake
+        local metrics, folders = VisualBudgetRules.collect(root)
+        expect(folders).toBe(0)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Lights).toBe(1)
+        expect(metrics.Effects).toBe(2)
+        glow:Destroy()
+        embers:Destroy()
+        emitter:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        root:Destroy()
+    end)
+
+    it("counts attached local meteor trails even when meteor shells are server owned", function()
+        local root = Instance.new("Folder")
+        for i = 1, 6 do
+            local meteor = Instance.new("Part")
+            meteor.Name = "RoundMeteor"
+            meteor.Parent = root
+            local trail = Instance.new("Trail")
+            trail.Name = "SignatureMeteorTrail"
+            trail.Parent = meteor
+        end
+        local other = Instance.new("Part")
+        other.Name = "OtherHazard"
+        other.Parent = root
+        local extra = Instance.new("Trail")
+        extra.Name = "SignatureMeteorTrail"
+        extra.Parent = other
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(0)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(6)
+        expect(VisualBudgetRules.withinBudget("High", metrics)).toBe(true)
         root:Destroy()
     end)
 

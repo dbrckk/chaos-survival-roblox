@@ -1,11 +1,24 @@
 local Players = game:GetService("Players")
 local MovementSafety = if script then require(script.Parent.MovementSafety) else require("./MovementSafety")
+local CrossroadsFluxRelay = if script then require(script.Parent.CrossroadsFluxRelay) else require("./CrossroadsFluxRelay")
+local helixModule = script and script.Parent:FindFirstChild("OrbitalHelix")
+local OrbitalHelix = if helixModule
+    then require(helixModule)
+    else require("./OrbitalHelix")
+local gridModule = script and script.Parent:FindFirstChild("GridCircuitService")
+local GridCircuitService = if gridModule
+    then require(gridModule)
+    else require("./GridCircuitService")
+local skyrailModule = script and script.Parent:FindFirstChild("SkyrailSlipstream")
+local SkyrailSlipstream = if skyrailModule
+    then require(skyrailModule)
+    else require("./SkyrailSlipstream")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
     Classic = {
         Name = "ESCAPE PADS",
-        Hint = "Blue pads launch you away from the center when a route collapses",
+        Hint = "Blue escape pads launch outward; touch four Grid Circuit nodes clockwise for a skill clear",
         Color = Color3.fromRGB(90, 180, 255),
         Pads = {
             {offset = Vector3.new(18, 1.7, 0), impulse = Vector3.new(38, 10, 0)},
@@ -16,7 +29,7 @@ ArenaMechanics.Definitions = {
     },
     Towers = {
         Name = "UPDRAFT PADS",
-        Hint = "Cyan pads launch you upward to reopen vertical escape routes",
+        Hint = "Cyan updraft pads lift you; run across elevated Skyrails for a controlled slipstream boost",
         Color = Color3.fromRGB(65, 220, 255),
         Pads = {
             {offset = Vector3.new(-28, 1.7, -28), impulse = Vector3.new(8, 55, 8)},
@@ -27,7 +40,7 @@ ArenaMechanics.Definitions = {
     },
     Crossroads = {
         Name = "LANE BOOSTERS",
-        Hint = "Pink pads accelerate you along a lane so you can switch routes quickly",
+        Hint = "Pink launch pads rush outward; timed cyan Flux Relays send you back toward the hub",
         Color = Color3.fromRGB(235, 105, 220),
         Pads = {
             {offset = Vector3.new(18, 1.7, 0), impulse = Vector3.new(46, 8, 0)},
@@ -204,6 +217,23 @@ function ArenaMechanics.start(ctx, variantId)
                 pcall(ctx.OnArenaMechanicUsed, player, variantId, definition.Name, overdrive)
             end
         end)
+    end
+
+    if variantId == "Classic" then
+        -- Optional non-pay-to-win navigation skill inside the stable base.
+        GridCircuitService.start(ctx, folder, base.Position)
+    elseif variantId == "Towers" then
+        -- Active elevated movement route that does not alter bridge physics.
+        SkyrailSlipstream.start(ctx, folder, arena)
+    elseif variantId == "Crossroads" then
+        -- Secondary timed traversal loop, sharing the mechanics lifecycle and
+        -- round cleanup. Unlike pads, only the charged alternating lane pair
+        -- relays the runner inward.
+        CrossroadsFluxRelay.start(ctx, folder, base.Position)
+    elseif variantId == "Orbital" then
+        -- Reward intentional skill-route traversal as a style mechanic.
+        -- Invisible checkpoints travel with their ramp during shrink.
+        OrbitalHelix.startFlow(ctx, folder, arena)
     end
 
     return {

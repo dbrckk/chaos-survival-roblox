@@ -1,76 +1,51 @@
+-- Distance-limited, device-budgeted meteor silhouettes.
+-- Rendered locally on server-owned RoundMeteor parts, never changing physics.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local MeteorRules = require(ReplicatedStorage.Shared.MeteorSignatureRules)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
-
 local phase = "waiting"
-local ids = {}
-local activeSignature = ""
-local meteorTrails = setmetatable({}, {__mode = "k"})
+local meteorsActive = false
+local trails = setmetatable({}, {__mode = "k"})
+local dirty = true
+local signalConnection = nil
 
-local function tier()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-end
-
-local function has(id)
-    for _, value in ipairs(ids) do
-        if value == id then
-            return true
-        end
-    end
-    return false
-end
-
-local function clearMeteorTrail(meteor)
+local function clear(meteor)
     local trail = meteor:FindFirstChild("SignatureMeteorTrail")
-    if trail then
-        trail:Destroy()
+    if trail then trail:Destroy() end
+    for _, name in ipairs({"SignatureMeteorTrailLeft", "SignatureMeteorTrailRight"}) do
+        local attachment = meteor:FindFirstChild(name)
+        if attachment then attachment:Destroy() end
     end
-
-    local left = meteor:FindFirstChild("SignatureMeteorTrailLeft")
-    if left then
-        left:Destroy()
-    end
-
-    local right = meteor:FindFirstChild("SignatureMeteorTrailRight")
-    if right then
-        right:Destroy()
-    end
-
-    meteorTrails[meteor] = nil
+    trails[meteor] = nil
 end
 
-local function addMeteorTrail(meteor)
-    if meteorTrails[meteor]
-        or not meteor:IsA("BasePart")
-        or meteor.Name ~= "RoundMeteor"
-    then
-        return
+local function clearAll()
+    for meteor in pairs(trails) do
+        clear(meteor)
     end
+end
 
-    local quality = tier()
-    if quality.Name == "Low" or player:GetAttribute("ReduceMotion") == true then
-        return
-    end
-
+local function add(meteor, lifetime)
+    if trails[meteor] or not meteor.Parent then return end
     local profile = DisasterVisuals.get("Meteors")
     local accent = profile and profile.Accent or Color3.fromRGB(255, 135, 50)
     local tint = profile and profile.Tint or Color3.fromRGB(255, 215, 120)
-
+    -- Existing attachment names from older streaming instances are never
+    -- reused blindly; locally owned effects always have matching endpoints.
     local left = Instance.new("Attachment")
     left.Name = "SignatureMeteorTrailLeft"
     left.Position = Vector3.new(-meteor.Size.X * 0.24, 0, meteor.Size.Z * 0.20)
     left.Parent = meteor
-
     local right = Instance.new("Attachment")
     right.Name = "SignatureMeteorTrailRight"
     right.Position = Vector3.new(meteor.Size.X * 0.24, 0, meteor.Size.Z * 0.20)
     right.Parent = meteor
-
     local trail = Instance.new("Trail")
     trail.Name = "SignatureMeteorTrail"
     trail.Attachment0 = left
@@ -78,7 +53,7 @@ local function addMeteorTrail(meteor)
     trail.FaceCamera = true
     trail.LightEmission = 0.82
     trail.LightInfluence = 0
-    trail.Lifetime = quality.Name == "High" and 0.24 or 0.16
+    trail.Lifetime = lifetime
     trail.MinLength = 0.08
     trail.Color = ColorSequence.new(accent, tint)
     trail.Transparency = NumberSequence.new({
@@ -90,52 +65,89 @@ local function addMeteorTrail(meteor)
         NumberSequenceKeypoint.new(1, 0),
     })
     trail.Parent = meteor
-
-    meteorTrails[meteor] = true
+    trails[meteor] = true
 end
 
-local function refreshMeteorTrails()
-    local enabled = phase == "round"
-        and has("Meteors")
-        and tier().Name ~= "Low"
-        and player:GetAttribute("ReduceMotion") ~= true
+local function sync()
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local profile = MeteorRules.profile(tier.Name,
+        player:GetAttribute("ReduceMotion") == true)
+    if phase ~= "round" or not meteorsActive or profile.MaxTrails == 0 then
+        clearAll()
+        return
+    end
 
-    for _, child in ipairs(workspace:GetChildren()) do
-        if child.Name == "RoundMeteor" and child:IsA("BasePart") then
-            if enabled then
-                addMeteorTrail(child)
-            else
-                clearMeteorTrail(child)
-            end
+    local camera = workspace.CurrentCamera
+    local character = player.Character
+    local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+    local viewerPosition = camera and camera.CFrame.Position
+        or (playerRoot and playerRoot.Position)
+    if not viewerPosition then
+        clearAll()
+        return
+    end
+
+    local ordered = MeteorRules.orderedCandidates(
+        workspace:GetChildren(), viewerPosition
+    )
+    local eligible = {}
+    local allocated = 0
+    for _, item in ipairs(ordered) do
+        if MeteorRules.shouldTrail(
+            phase, meteorsActive, viewerPosition, item.Part.Position,
+            tier.Name, false, allocated
+        ) then
+            allocated += 1
+            eligible[item.Part] = true
+            add(item.Part, profile.Lifetime)
+        else
+            -- Ordered candidates are sorted by distance. Once a candidate is
+            -- outside range or the cap is reached, none further qualifies.
+            break
+        end
+    end
+    for meteor in pairs(trails) do
+        if not eligible[meteor] or not meteor.Parent then
+            clear(meteor)
         end
     end
 end
 
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "RoundMeteor" and phase == "round" and has("Meteors") then
-        task.defer(addMeteorTrail, child)
-    end
-end)
-
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshMeteorTrails)
-player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshMeteorTrails)
-
 stateEvent.OnClientEvent:Connect(function(state)
-    local nextPhase = tostring(state.phase or "waiting")
-    local nextIds = {}
-    for _, id in ipairs(state.disasterIds or {}) do
-        nextIds[#nextIds + 1] = tostring(id)
+    local nextPhase = tostring(state and state.phase or "waiting")
+    local nextActive = false
+    if nextPhase == "round" then
+        for _, id in ipairs(state.disasterIds or {}) do
+            if id == "Meteors" then nextActive = true; break end
+        end
     end
-    table.sort(nextIds)
-
-    local nextSignature = nextPhase .. "|" .. table.concat(nextIds, ",")
     phase = nextPhase
-    ids = nextIds
-
-    if nextSignature ~= activeSignature then
-        activeSignature = nextSignature
-        refreshMeteorTrails()
-    end
+    meteorsActive = nextActive
+    dirty = true
+    if not nextActive then clearAll() end
 end)
 
-refreshMeteorTrails()
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    dirty = true
+end)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    dirty = true
+    if player:GetAttribute("ReduceMotion") == true then clearAll() end
+end)
+
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "RoundMeteor" then dirty = true end
+end)
+workspace.ChildRemoved:Connect(function(child)
+    if trails[child] then clear(child) end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(phase == "round" and meteorsActive and 0.25 or 0.8)
+        if dirty or (phase == "round" and meteorsActive) then
+            dirty = false
+            sync()
+        end
+    end
+end)

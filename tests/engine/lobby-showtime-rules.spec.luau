@@ -4,6 +4,8 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Showtime = require("../../src/shared/LobbyShowtimeRules")
 local UITheme = require("../../src/shared/UITheme")
 local ShowtimeProps = require("../../src/client/ShowtimeProps")
+local ShowtimeChoreography = require("../../src/client/ShowtimeChoreography")
+local ShowtimeHologramDetails = require("../../src/client/ShowtimeHologramDetails")
 
 describe("Lobby Showtime", function()
     it("makes emotes available only in calm phases", function()
@@ -23,8 +25,8 @@ describe("Lobby Showtime", function()
         expect(Showtime.canEmote("round", nil, 100)).toBe(false)
     end)
 
-    it("has native R15 and R6 clips for every displayed emote", function()
-        expect(#Showtime.Order).toBe(6)
+    it("supports eight Animator-safe emotes with two original visual dances", function()
+        expect(#Showtime.Order).toBe(8)
         for _, id in ipairs(Showtime.Order) do
             local r15 = Showtime.get(id, "R15")
             local r6 = Showtime.get(id, "R6")
@@ -32,6 +34,10 @@ describe("Lobby Showtime", function()
             expect(r6 ~= nil).toBe(true)
             expect(r15.AnimationId > 0).toBe(true)
             expect(r6.AnimationId > 0).toBe(true)
+            if id == "robot" or id == "orbit" then
+                expect(r15.VisualStyle).toBe(id)
+                expect(r6.VisualStyle).toBe(id)
+            end
             expect(#r15.LabelEN > 0 and #r15.LabelFR > 0).toBe(true)
         end
         expect(Showtime.get("unknown", "R15") == nil).toBe(true)
@@ -86,6 +92,10 @@ describe("Lobby Showtime", function()
         expect(low.folder:FindFirstChild("ShowtimeDJBooth") ~= nil).toBe(true)
         expect(low.folder:FindFirstChild("ShowtimeSpeakerHousing1") ~= nil).toBe(true)
         expect(high.folder:FindFirstChild("ShowtimeTrussAccent1") ~= nil).toBe(true)
+        expect(low.folder:FindFirstChild("ShowtimeWaveguideRib1") ~= nil).toBe(true)
+        expect(high.folder:FindFirstChild("ShowtimeWaveguideRib8") ~= nil).toBe(true)
+        expect(high.folder:FindFirstChild("ShowtimeAcousticWingEdge-1") ~= nil).toBe(true)
+        expect(low.folder:FindFirstChild("ShowtimeAcousticWingEdge-1") == nil).toBe(true)
         expect(low.folder:FindFirstChild("ShowtimeCrownCrystal") ~= nil).toBe(true)
         expect(high.folder:FindFirstChild("ShowtimeCrownHeart") ~= nil).toBe(true)
         expect(#low.crown.orbit).toBe(6)
@@ -136,6 +146,106 @@ describe("Lobby Showtime", function()
         expect(Showtime.floorPulse(0, -1, false)).toBe(0)
         expect(Showtime.floorPulse(0, 1.5, false)).toBe(0)
         expect(Showtime.floorPulse(6, nil, false)).toBe(0)
+    end)
+
+    it("has eight authored, visually different synchronized dancer poses", function()
+        local choreography = ShowtimeChoreography
+        local labels = {"dance", "shuffle", "groove", "robot", "orbit", "cheer", "wave", "laugh"}
+        for _, style in ipairs(labels) do
+            expect(choreography.style(12.3, 1, style, 2)).toBe(style)
+            local pose = choreography.pose(12.3, 1, style, 2, false)
+            expect(pose.Style).toBe(style)
+            expect(math.abs(pose.Sway) <= 0.8).toBe(true)
+            expect(math.abs(pose.Bob) <= 0.3).toBe(true)
+            expect(math.abs(pose.LegSwing) <= 0.6).toBe(true)
+            expect(math.abs(pose.ArmL) <= 1.8).toBe(true)
+            expect(math.abs(pose.ArmR) <= 1.8).toBe(true)
+        end
+        local cheer = choreography.pose(12.3, 1, "cheer", 2, false)
+        local wave = choreography.pose(12.3, 1, "wave", 2, false)
+        local shuffle = choreography.pose(12.3, 1, "shuffle", 2, false)
+        expect(math.abs(cheer.ArmL) > math.abs(wave.ArmL)).toBe(true)
+        expect(math.abs(wave.ArmR) > math.abs(shuffle.ArmR)).toBe(true)
+        expect(math.abs(shuffle.LegSwing) > math.abs(wave.LegSwing)).toBe(true)
+        local robotA = choreography.pose(12.3, 1, "robot", 2, false)
+        local robotB = choreography.pose(12.6, 1, "robot", 2, false)
+        local orbit = choreography.pose(12.3, 1, "orbit", 2, false)
+        expect(robotA.Style).toBe("robot")
+        expect(robotA.ArmL ~= robotB.ArmL or robotA.Yaw ~= robotB.Yaw).toBe(true)
+        expect(math.abs(orbit.Roll) <= 0.20).toBe(true)
+        expect(orbit.ArmL ~= robotA.ArmL).toBe(true)
+        expect(choreography.style(12.3, 1, "invalid", 2) ~= "invalid").toBe(true)
+        expect(choreography.style(5.0, 1, "wave", 0) ~= "wave").toBe(true)
+        expect(choreography.style(5.0, 1, nil, 0)
+            ~= choreography.style(5.0, 2, nil, 0)).toBe(true)
+    end)
+
+    it("updates the existing stage sign for solo players, group dances and named emotes", function()
+        local caption = ShowtimeChoreography.caption
+        expect(caption(nil, 0, true)).toBe("PISTE DE DANSE")
+        expect(caption(nil, 0, false)).toBe("CHAOS SHOWTIME")
+        expect(caption(nil, 1, false)).toBe("JOIN THE FLOOR")
+        expect(caption(nil, 3, true)).toBe("DANSONS ENSEMBLE")
+        expect(caption("wave", 1, true)).toBe("EN DUO / SALUT")
+        expect(caption("cheer", 2, false)).toBe("DUET / CHEER")
+        expect(caption("laugh", 4, true)).toBe("EN DUO / RIRE")
+        expect(caption("unknown", 4, false)).toBe("DANCE TOGETHER")
+        expect(caption("dance", 0, true)).toBe("PISTE DE DANSE")
+    end)
+
+    it("freezes every moving joint for reduced motion while retaining an emote silhouette", function()
+        for _, id in ipairs({"dance", "shuffle", "groove", "robot", "orbit", "cheer", "wave", "laugh"}) do
+            local first = ShowtimeChoreography.pose(6, 1, id, 3, true)
+            local second = ShowtimeChoreography.pose(32, 1, id, 3, true)
+            expect(first.Style).toBe(id)
+            for _, key in ipairs({
+                "Sway", "Bob", "Yaw", "Roll", "HeadYaw", "LegSwing", "ArmSwing",
+            }) do
+                expect(first[key]).toBe(0)
+                expect(second[key]).toBe(0)
+            end
+            expect(first.ArmL).toBe(second.ArmL)
+            expect(first.ArmR).toBe(second.ArmR)
+        end
+    end)
+
+    it("builds layered hologram costume pieces without new render lights or collisions", function()
+        local container = Instance.new("Folder")
+        local count = {Low = 0, Medium = 2, High = 4}
+        local color = UITheme.Colors.Cyan
+        local face = CFrame.new(17, 5, -4) * CFrame.Angles(0, math.rad(38), 0)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local details = ShowtimeHologramDetails.build(container, tier, 2, color)
+            expect(#details).toBe(count[tier])
+            expect(#details).toBe(ShowtimeHologramDetails.count(tier))
+            ShowtimeHologramDetails.pose(
+                details, face, face * CFrame.new(0, 1.35, 0),
+                face * CFrame.new(-0.78, 0.28, 0),
+                face * CFrame.new(0.78, 0.28, 0), true
+            )
+            for _, p in ipairs(details) do
+                expect(p:GetAttribute("ChaosHologramDetail")).toBe(true)
+                expect(p:IsA("BasePart")).toBe(true)
+                expect(p.CanCollide).toBe(false)
+                expect(p.CanTouch).toBe(false)
+                expect(p.CanQuery).toBe(false)
+                expect(p.Anchored).toBe(true)
+                expect(p.CastShadow).toBe(false)
+                expect(p.Material == Enum.Material.Neon).toBe(false)
+                expect(p.Transparency < 0.40).toBe(true)
+                expect((p.Position - face.Position).Magnitude < 2).toBe(true)
+            end
+            ShowtimeHologramDetails.pose(details, face, face, face, face, false)
+            for _, p in ipairs(details) do
+                expect(p.Transparency).toBe(1)
+                p:Destroy()
+            end
+        end
+        expect(#container:GetChildren()).toBe(0)
+        expect(#ShowtimeHologramDetails.build(nil, "High", 2, color)).toBe(0)
+        expect(#ShowtimeHologramDetails.build(container, "Bad", 2, color)).toBe(0)
+        expect(#ShowtimeHologramDetails.build(container, "High", 0, color)).toBe(0)
+        container:Destroy()
     end)
 
     it("caps procedural dance scenery for each graphics tier", function()

@@ -85,10 +85,12 @@ local function nearMiss(payload)
     if not Rules.cooldownReady(now, lastDodge, 0.80) then
         return
     end
+    local intensity = Rules.dodgeStrength(payload.distance, payload.radius)
+    if intensity <= 0 then return end
     lastDodge = now
     ReactionVisuals.burst(liveRoot(player.Character),
         "Dodge", tostring(payload.kind or ""), current.Dodge,
-        Rules.dodgeStrength(payload.distance, payload.radius), activePieces)
+        intensity, activePieces)
 end
 
 local function impact(payload)
@@ -105,11 +107,11 @@ local function impact(payload)
     if not Rules.cooldownReady(now, lastImpact, 0.18) then
         return
     end
-    lastImpact = now
     local viewer = viewerPosition()
     if not viewer or (payload.position - viewer).Magnitude > p.Range + 40 then
         return
     end
+    lastImpact = now
     local n = 0
 
     local function candidate(model)
@@ -131,7 +133,7 @@ local function impact(payload)
         impactByModel[model] = now
         n += 1
         ReactionVisuals.burst(root, "Shock", tostring(payload.kind or ""),
-            p.Shock, intensity, activePieces)
+            p.Shock, intensity, activePieces, payload.position)
     end
 
     candidate(player.Character)

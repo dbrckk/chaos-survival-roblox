@@ -1,0 +1,235 @@
+-- Authored procedural 3D climax silhouettes for seven distinct hazards.
+-- Client-only visuals; no hitboxes, lights, emitters or external assets.
+local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
+
+local Kit = {}
+local VALID = {lava = true, meteor = true, tornado = true,
+    gravity = true, fracture = true, speed = true, darkness = true}
+local COUNTS = {Low = 2, Medium = 4, High = 6}
+
+function Kit.count(tier, reduced)
+    if reduced == true then return COUNTS[tier] and 1 or 0 end
+    return COUNTS[tier] or 0
+end
+
+function Kit.recipe(kind, index, count, span, stage, tier)
+    if not VALID[kind] or type(index) ~= "number" or index % 1 ~= 0
+        or type(count) ~= "number" or count % 1 ~= 0 or count < 1
+        or count > 6 or index < 1 or index > count
+        or type(span) ~= "number" or span <= 0
+        or span ~= span or span == math.huge
+        or type(stage) ~= "number" or stage % 1 ~= 0
+        or stage < 1 or stage > 3 or not COUNTS[tier] then
+        return nil
+    end
+
+    local width = math.clamp(span, 24, 220)
+    local angle = (index - 1) / count * math.pi * 2
+        + (kind == "lava" and 0.21 or 0.38)
+    local side = index % 2 == 0 and 1 or -1
+    local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    local yaw = -angle - math.pi * 0.5 + side * 0.18
+
+    if kind == "lava" then
+        -- Three-dimensional asymmetric volcanic fins grow outward/upward.
+        local start = direction * (width * 0.30)
+            + Vector3.new(0, 0.65, 0)
+        local finish = direction * (width * (0.32 + stage * 0.012))
+            + Vector3.new(0, 5.2 + stage * 1.3, 0)
+        return {
+            Kind = kind,
+            Name = "LavaClimaxVolcanicFin",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(0, yaw, side * math.rad(13)),
+            Size = Vector3.new(0.50, 1.45, 0.28),
+            GoalSize = Vector3.new(0.22, 3.4 + stage * 0.82, 0.12),
+            Material = tier == "High" and Enum.Material.Neon
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.52 or 0.38,
+            Duration = 0.48,
+        }
+    end
+
+    if kind == "tornado" then
+        -- A pitched, inward-winding helix of angular 3D fins, not bars.
+        local start = direction * (width * 0.30)
+            + Vector3.new(0, 0.85 + index * 0.20, 0)
+        local finish = Vector3.new(
+            math.cos(angle + 1.18) * width * 0.065,
+            6.5 + stage * 1.85 + index * 0.38,
+            math.sin(angle + 1.18) * width * 0.065
+        )
+        return {
+            Kind = kind,
+            Name = "TornadoClimaxHelixFin",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(math.rad(18), yaw + 0.48,
+                side * math.rad(19)),
+            Size = Vector3.new(0.30, 1.10, 3.0 + stage * 0.32),
+            GoalSize = Vector3.new(0.14, 0.43, 1.4 + stage * 0.22),
+            Material = tier == "High" and Enum.Material.Metal
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.58 or 0.44,
+            Duration = 0.52,
+        }
+    end
+
+    if kind == "gravity" then
+        -- Rising anti-gravity petals: flat wide fins that drift up and inward
+        -- as if the arena itself were releasing its gravitational pull.
+        local start = direction * (width * 0.29)
+            + Vector3.new(0, 0.46 + index * 0.08, 0)
+        local finish = direction * (width * 0.18)
+            + Vector3.new(0, 5.2 + stage * 2.0 + index * 0.18, 0)
+        return {
+            Kind = kind,
+            Name = "GravityClimaxLiftPetal",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(math.rad(-16),
+                yaw + side * math.rad(17), side * math.rad(9)),
+            Size = Vector3.new(0.70, 0.11, 2.6 + stage * 0.28),
+            GoalSize = Vector3.new(0.48, 0.07, 1.5 + stage * 0.14),
+            Material = tier == "High" and Enum.Material.Glass
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.60 or 0.46,
+            Duration = 0.57,
+        }
+    end
+
+    if kind == "fracture" then
+        -- Disappearing-platform fault teeth: angular raised fissures that
+        -- split OUTWARD rather than following the lift/spiral motion language.
+        local start = direction * (width * 0.075)
+            + Vector3.new(0, 0.19, 0)
+        local finish = direction * (width * (0.25 + stage * 0.013))
+            + Vector3.new(0, 0.37, 0)
+        return {
+            Kind = kind,
+            Name = "FractureClimaxFaultTooth",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(side * math.rad(7), yaw, 
+                side * math.rad(11)),
+            Size = Vector3.new(0.46, 0.16, 2.8 + stage * 0.24),
+            GoalSize = Vector3.new(0.27, 0.11, 4.2 + stage * 0.20),
+            Material = tier == "High" and Enum.Material.Metal
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.58 or 0.43,
+            Duration = 0.43,
+        }
+    end
+
+    if kind == "speed" then
+        -- Tangential acceleration chevrons sweep across the local deck.
+        local tangent = Vector3.new(-direction.Z, 0, direction.X)
+        local start = direction * (width * 0.18)
+            - tangent * (width * 0.13) + Vector3.new(0, 0.24, 0)
+        local finish = direction * (width * 0.18)
+            + tangent * (width * (0.14 + stage * 0.02))
+            + Vector3.new(0, 0.24, 0)
+        return {
+            Kind = kind,
+            Name = "SpeedClimaxSlipstreamChevron",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(math.rad(-8), yaw + math.pi * 0.5,
+                side * math.rad(12)),
+            Size = Vector3.new(0.38, 0.13, 2.9 + stage * 0.32),
+            GoalSize = Vector3.new(0.14, 0.08, 1.4 + stage * 0.18),
+            Material = tier == "High" and Enum.Material.Neon
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.64 or 0.48,
+            Duration = 0.43,
+        }
+    end
+
+    if kind == "darkness" then
+        -- Inward folding eclipse shutters, no arena-wide opaque disc.
+        local start = direction * (width * 0.32)
+            + Vector3.new(0, 3.0 + stage * 0.50 + index * 0.12, 0)
+        local finish = direction * (width * 0.13)
+            + Vector3.new(0, 1.0 + stage * 0.18, 0)
+        return {
+            Kind = kind,
+            Name = "DarknessClimaxEclipseShutter",
+            Start = start,
+            Finish = finish,
+            Rotation = CFrame.Angles(math.rad(26),
+                yaw + side * 0.28, side * math.rad(21)),
+            Size = Vector3.new(0.46, 2.2 + stage * 0.24, 0.30),
+            GoalSize = Vector3.new(0.24, 1.0 + stage * 0.12, 0.15),
+            Material = tier == "High" and Enum.Material.Glass
+                or Enum.Material.SmoothPlastic,
+            Transparency = tier == "Low" and 0.66 or 0.53,
+            Duration = 0.52,
+        }
+    end
+
+    -- Falling spearheads: short chamfer-like wedges, not thick square beams.
+    local start = direction * (width * 0.28)
+        + Vector3.new(0, 20 + index * 0.75, 0)
+    local finish = direction * (width * 0.16)
+        + Vector3.new(0, 0.85, 0)
+    return {
+        Kind = kind,
+        Name = "MeteorClimaxSpearhead",
+        Start = start,
+        Finish = finish,
+        Rotation = CFrame.Angles(math.rad(-33), yaw, side * math.rad(8)),
+        Size = Vector3.new(0.44, 0.80, 3.0 + stage * 0.30),
+        GoalSize = Vector3.new(0.16, 0.25, 1.2 + stage * 0.20),
+        Material = tier == "Low" and Enum.Material.SmoothPlastic
+            or Enum.Material.Metal,
+        Transparency = tier == "Low" and 0.56 or 0.40,
+        Duration = 0.44,
+    }
+end
+
+function Kit.emit(parent, kind, deckFrame, span, stage, primary,
+        secondary, tier, reduced)
+    local pieces = {}
+    local count = Kit.count(tier, reduced)
+    if not parent or not VALID[kind] or typeof(deckFrame) ~= "CFrame"
+        or typeof(primary) ~= "Color3" or typeof(secondary) ~= "Color3"
+        or count == 0 then
+        return pieces
+    end
+    for i = 1, count do
+        local spec = Kit.recipe(kind, i, count, span, stage, tier)
+        if not spec then return pieces end
+        local part = Instance.new("WedgePart")
+        part.Name = spec.Name .. i
+        part.Size = spec.Size
+        part.CFrame = deckFrame
+            * CFrame.new(reduced and spec.Finish or spec.Start)
+            * spec.Rotation
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.CastShadow = false
+        part.Material = spec.Material
+        part.Color = i % 2 == 0 and secondary or primary
+        part.Transparency = reduced and 0.64 or spec.Transparency
+        part:SetAttribute("ChaosClimaxElement", kind)
+        part.Parent = parent
+        local duration = reduced and 0.18 or spec.Duration
+        TweenService:Create(part,
+            TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                CFrame = deckFrame * CFrame.new(spec.Finish) * spec.Rotation,
+                Size = spec.GoalSize,
+                Transparency = 1,
+            }
+        ):Play()
+        Debris:AddItem(part, duration + 0.12)
+        table.insert(pieces, part)
+    end
+    return pieces
+end
+
+return Kit

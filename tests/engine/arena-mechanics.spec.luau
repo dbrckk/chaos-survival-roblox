@@ -4,6 +4,12 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
+local FluxRelayRules = require("../../src/shared/FluxRelayRules")
+local GridCircuitRules = require("../../src/shared/GridCircuitRules")
+local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
+local GridCircuitService = require("../../src/server/GridCircuitService")
+local OrbitalHelix = require("../../src/server/OrbitalHelix")
+local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
 local MovementSafety = require("../../src/server/MovementSafety")
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
@@ -25,6 +31,329 @@ describe("Arena mechanics", function()
         end
     end)
 
+    it("sets bounded compass-arrow detail tiers and consistent clockwise neighbors", function()
+        expect(GridCircuitRules.routeChevrons("High")).toBe(3)
+        expect(GridCircuitRules.routeChevrons("Medium")).toBe(2)
+        expect(GridCircuitRules.routeChevrons("Low")).toBe(0)
+        expect(GridCircuitRules.routeChevrons("Unknown")).toBe(0)
+        for index = 1, 4 do
+            local nextIndex = GridCircuitRules.next(index)
+            expect(GridCircuitRules.previous(nextIndex)).toBe(index)
+        end
+        expect(GridCircuitRules.previous(0) == nil).toBe(true)
+        expect(GridCircuitRules.previous(5) == nil).toBe(true)
+    end)
+
+    it("builds four welded Skyrail Slipstream checkpoints on permanent Tower bridges", function()
+        local root = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            Contestants = {},
+        }
+        local mechanic = ArenaMechanics.start(ctx, "Towers")
+        expect(mechanic ~= nil).toBe(true)
+        local folder = arena:FindFirstChild("Mechanics")
+            :FindFirstChild("SkyrailSlipstream")
+        expect(folder ~= nil).toBe(true)
+        expect(#folder:GetChildren()).toBe(4)
+        for _, sensor in ipairs(folder:GetChildren()) do
+            local weld = sensor:FindFirstChild("SkyrailFollowBridge")
+            expect(weld ~= nil).toBe(true)
+            expect(weld.Part1).toBe(sensor)
+            expect(weld.Part0:GetAttribute("ChaosSkybridge")).toBe(true)
+            expect(sensor.Anchored).toBe(false)
+            expect(sensor.Transparency).toBe(1)
+            expect(sensor.CanCollide).toBe(false)
+            expect(sensor.CanQuery).toBe(false)
+            expect(sensor.CanTouch).toBe(true)
+            expect((sensor.Position - (weld.Part0.CFrame
+                * CFrame.new(0, weld.Part0.Size.Y * 0.5 + 2.1, 0)).Position
+            ).Magnitude < 0.01).toBe(true)
+        end
+        root:Destroy()
+    end)
+
+    it("authorizes a running survivor bot once, not an outsider or repeated touch", function()
+        local rootMap = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = rootMap:FindFirstChild("Arena")
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            Contestants = {},
+        }
+        ArenaMechanics.start(ctx, "Towers")
+        local sensor = arena:FindFirstChild("Mechanics")
+            :FindFirstChild("SkyrailSlipstream")
+            :FindFirstChild("SkyrailSlipstreamTriggerSkybridge18")
+        expect(sensor ~= nil).toBe(true)
+        local bridge = arena:FindFirstChild("Platforms")
+            :FindFirstChild("Skybridge18")
+        expect(bridge ~= nil).toBe(true)
+
+        local bot = Instance.new("Model")
+        bot.Name = "SkyrailRegressionBot"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = bot
+        local body = Instance.new("Part")
+        body.Name = "HumanoidRootPart"
+        body.Size = Vector3.new(2, 2, 1)
+        body.Anchored = false
+        body.CanCollide = false
+        body.Parent = bot
+        bot.Parent = workspace
+        body.CFrame = sensor.CFrame
+        local along = bridge.Size.X > bridge.Size.Z
+            and bridge.CFrame.RightVector or bridge.CFrame.LookVector
+        body.AssemblyLinearVelocity = along * 17
+
+        local cooldown = {}
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 10
+        )).toBe(true)
+        expect(type(sensor:GetAttribute("SkyrailUsedAt"))).toBe("number")
+        expect(type(bridge:GetAttribute("SkyrailUsedAt"))).toBe("number")
+        expect(sensor:GetAttribute("SkyrailFlowTier")).toBe(1)
+        expect(ctx.SkyrailChainStates[bot].tier).toBe(1)
+        expect(bridge:GetAttribute("SkyrailRunDirection")).toBe(1)
+        expect(sensor:GetAttribute("SkyrailRunDirection")).toBe(1)
+        expect((cooldown[bot] or 0) > 14).toBe(true)
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 11
+        )).toBe(false)
+
+        bot:SetAttribute("AISurvivorInRound", false)
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 20
+        )).toBe(false)
+        bot:Destroy()
+        rootMap:Destroy()
+    end)
+
+    it("scales Skyrail impulse by physical bridge span and ranks only different crossings", function()
+        local r = SkyrailSlipstream
+        expect(r.boostForSpan(49, 0)).toBe(12)
+        expect(r.boostForSpan(18, 0) < 4).toBe(true)
+        expect(r.boostForSpan(18, 0) > 2).toBe(true)
+        expect(r.boostForSpan(18, 7)).toBe(0)
+        expect(r.boostForSpan(18, 7, 1)).toBe(0)
+        expect(r.boostForSpan(18, 7, -1) > 7).toBe(true)
+        expect(r.boostForSpan(18, 7, -1) < 8).toBe(true)
+        expect(r.boostForSpan(4, 0)).toBe(0)
+        expect(r.boostForSpan(nil, 0)).toBe(0)
+        expect(r.ComboCap).toBe(3)
+        local first, good = r.advanceChain(nil, "Skybridge18", 10)
+        expect(good).toBe(true)
+        expect(first.tier).toBe(1)
+        local again, repeated = r.advanceChain(first, "Skybridge18", 15)
+        expect(repeated).toBe(false)
+        expect(again).toBe(first)
+        local second = r.advanceChain(first, "Skybridge19", 19)
+        expect(second.tier).toBe(2)
+        local replay, replayAdvanced = r.advanceChain(second, "Skybridge18", 21)
+        expect(replayAdvanced).toBe(false)
+        expect(replay).toBe(second)
+        expect(replay.at).toBe(19)
+        local third = r.advanceChain(second, "Skybridge20", 24)
+        expect(third.tier).toBe(3)
+        local capped, capAdvanced = r.advanceChain(third, "Skybridge21", 25)
+        expect(capped.tier).toBe(3)
+        expect(capAdvanced).toBe(false)
+        expect(capped.visited.Skybridge18).toBe(true)
+        expect(capped.visited.Skybridge21).toBe(true)
+        local sameState = r.advanceChain(capped, "Skybridge21", 26)
+        expect(sameState).toBe(capped)
+        local expiredReplay = r.advanceChain(second, "Skybridge18", 40)
+        expect(expiredReplay.tier).toBe(1)
+        local expired = r.advanceChain(second, "Skybridge20", 40)
+        expect(expired.tier).toBe(1)
+        expect(r.advanceChain(nil, "Unknown", 10) == nil).toBe(true)
+        expect(r.advanceChain(nil, "Skybridge18", nil) == nil).toBe(true)
+        local short = r.velocity(Vector3.new(17, 3, 0),
+            Vector3.xAxis, r.boostForSpan(18, 0))
+        expect(short.X > 19).toBe(true)
+        expect(short.X < 22).toBe(true)
+    end)
+
+    it("limits Skyrail impulse speed and rejects off-axis or stationary movement", function()
+        local x = Instance.new("Part")
+        x.Size = Vector3.new(49, 1, 4.5)
+        local z = Instance.new("Part")
+        z.Size = Vector3.new(4.5, 1, 49)
+        expect(SkyrailSlipstream.direction(x, Vector3.new(15, 0, 0))).toBe(Vector3.xAxis)
+        expect(SkyrailSlipstream.direction(x, Vector3.new(-15, 0, 0))).toBe(-Vector3.xAxis)
+        expect(SkyrailSlipstream.direction(x, Vector3.new(0, 0, 18)) == nil).toBe(true)
+        expect(SkyrailSlipstream.direction(x, Vector3.new(6, 0, 0)) == nil).toBe(true)
+        local direction = SkyrailSlipstream.direction(z, Vector3.new(0, 0, -18))
+        expect(direction ~= nil).toBe(true)
+        expect(math.abs(direction.Z)).toBe(1)
+        local nextVelocity = SkyrailSlipstream.velocity(
+            Vector3.new(38, 15, 0), Vector3.xAxis
+        )
+        expect(nextVelocity.X).toBe(42)
+        expect(nextVelocity.Y).toBe(15)
+        expect(SkyrailSlipstream.Cooldown >= 4).toBe(true)
+        x:Destroy()
+        z:Destroy()
+    end)
+
+    it("offers an optional clockwise four-node Grid Circuit on Classic", function()
+        local rules = GridCircuitRules
+        expect(rules.Count).toBe(4)
+        expect(#rules.Offsets).toBe(4)
+        expect(rules.Window).toBe(20)
+        expect(rules.next(1)).toBe(2)
+        expect(rules.next(4)).toBe(1)
+        expect(rules.next(0) == nil).toBe(true)
+        expect(rules.next(5) == nil).toBe(true)
+
+        local first, changed = rules.advance(nil, 3, 100)
+        expect(changed).toBe(true)
+        expect(first.step).toBe(1)
+        expect(first.nextNode).toBe(4)
+        expect(first.expiresAt).toBe(120)
+        local wrong, bad = rules.advance(first, 2, 102)
+        expect(bad).toBe(false)
+        expect(wrong).toBe(first)
+
+        local same, replayed = rules.advance(first, 3, 103)
+        expect(replayed).toBe(false)
+        expect(same).toBe(first)
+        local second, changed2 = rules.advance(first, 4, 105)
+        expect(changed2).toBe(true)
+        expect(second.step).toBe(2)
+        expect(second.nextNode).toBe(1)
+        local third = rules.advance(second, 1, 109)
+        expect(third.step).toBe(3)
+        expect(third.nextNode).toBe(2)
+        local fourth = rules.advance(third, 2, 114)
+        expect(fourth.completed).toBe(true)
+        expect(fourth.step).toBe(4)
+        expect(fourth.nextNode).toBe(0)
+
+        local repeated, advanced = rules.advance(fourth, 3, 115)
+        expect(advanced).toBe(false)
+        expect(repeated).toBe(fourth)
+        local expired = rules.advance(first, 4, 121)
+        expect(expired.step).toBe(1)
+        expect(expired.nextNode).toBe(1)
+        local invalid, ignored = rules.advance(nil, -1, 100)
+        expect(invalid == nil and ignored == false).toBe(true)
+        expect(rules.advance(nil, 1, nil) == nil).toBe(true)
+    end)
+
+    it("rejects inactive, distant or dead Grid Circuit touch events", function()
+        local r = GridCircuitRules
+        expect(r.eligible(true, true, 100, 1, 0, 9, 8)).toBe(true)
+        expect(r.eligible(false, true, 100, 1, 0, 9, 8)).toBe(false)
+        expect(r.eligible(true, false, 100, 1, 0, 9, 8)).toBe(false)
+        expect(r.eligible(true, true, 0, 1, 0, 9, 8)).toBe(false)
+        expect(r.eligible(true, true, 100, 8, 0, 9, 8)).toBe(false)
+        expect(r.eligible(true, true, 100, 1, 7, 9, 8)).toBe(false)
+        expect(r.eligible(true, true, 100, 1, 0, 7, 8)).toBe(false)
+        expect(r.eligible(true, true, 100, 0, 0, 9, 8)).toBe(true)
+    end)
+
+    it("spawns four passive Grid Circuit nodes above Classic ground without blockers", function()
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            Contestants = {},
+        }
+        local mechanic = ArenaMechanics.start(ctx, "Classic")
+        expect(mechanic ~= nil).toBe(true)
+        local arena = root:FindFirstChild("Arena")
+        local base = arena and arena:FindFirstChild("Base")
+        local mechanics = arena and arena:FindFirstChild("Mechanics")
+        local circuit = mechanics and mechanics:FindFirstChild("GridCircuit")
+        expect(circuit ~= nil).toBe(true)
+        expect(#(circuit :: Folder):GetChildren()).toBe(4)
+        for index = 1, 4 do
+            local node = circuit:FindFirstChild("GridCircuitNode" .. index)
+            expect(node ~= nil).toBe(true)
+            expect(node:IsA("BasePart")).toBe(true)
+            expect(node:GetAttribute("GridCircuitIndex")).toBe(index)
+            expect(node.Anchored).toBe(true)
+            expect(node.CanCollide).toBe(false)
+            expect(node.CanTouch).toBe(true)
+            expect(node.CanQuery).toBe(false)
+            expect(node.Transparency).toBe(1)
+            expect((node.Position - (base.Position
+                + GridCircuitRules.Offsets[index]
+                + Vector3.new(0, 3.3, 0))).Magnitude < 0.001).toBe(true)
+            -- All four stations remain above the smallest shrinking floor.
+            expect(math.abs(node.Position.X - base.Position.X) <= 17).toBe(true)
+            expect(math.abs(node.Position.Z - base.Position.Z) <= 17).toBe(true)
+        end
+        root:Destroy()
+    end)
+
+    it("lets in-round AI complete Grid Circuit with no human rewards", function()
+        local generated = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local arena = generated:FindFirstChild("Arena")
+        local mechanics = Instance.new("Folder")
+        mechanics.Name = "Mechanics"
+        mechanics.Parent = arena
+
+        local credited = 0
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Contestants = {},
+            OnArenaMechanicUsed = function()
+                credited += 1
+            end,
+        }
+        local nodes = GridCircuitService.start(ctx, mechanics, Config.ArenaCenter)
+        expect(nodes ~= nil).toBe(true)
+
+        local bot = Instance.new("Model")
+        bot.Name = "ClassicGridCircuitBot"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = bot
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.Anchored = true
+        root.Parent = bot
+        bot.Parent = workspace
+
+        local state = {}
+        local ready = {}
+        for i = 1, 4 do
+            local sensor = nodes:FindFirstChild("GridCircuitNode" .. i)
+            expect(sensor ~= nil).toBe(true)
+            root.Position = sensor.Position
+            expect(GridCircuitService.tryTouch(ctx, sensor, root, state,
+                ready, i * 2, 100 + i * 2)).toBe(true)
+            expect(bot:GetAttribute("GridCircuitStep")).toBe(i)
+            if i < 4 then
+                expect(bot:GetAttribute("GridCircuitNext")).toBe(i + 1)
+            end
+        end
+        expect(bot:GetAttribute("GridCircuitComplete")).toBe(true)
+        expect(credited).toBe(0)
+
+        -- A dead or out-of-round NPC cannot claim a second completion.
+        bot:SetAttribute("AISurvivorInRound", false)
+        local first = nodes:FindFirstChild("GridCircuitNode1")
+        root.Position = first.Position
+        expect(GridCircuitService.tryTouch(ctx, first, root, state,
+            ready, 20, 120)).toBe(false)
+
+        bot:Destroy()
+        generated:Destroy()
+    end)
+
     it("provides multiple telegraphed mobility choices per arena", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local mechanic = ArenaMechanics.get(id)
@@ -37,6 +366,284 @@ describe("Arena mechanics", function()
                 expect(pad.impulse.Magnitude <= 60).toBe(true)
             end
         end
+    end)
+
+    it("alternates charged return lanes with a clear standby window", function()
+        local r = FluxRelayRules
+        expect(#r.Offsets).toBe(4)
+        expect(r.Period).toBe(8)
+        expect(r.ChargeDuration < r.Period * 0.5).toBe(true)
+        for index = 1, 4 do
+            expect(typeof(r.Offsets[index])).toBe("Vector3")
+        end
+        expect(r.offsetFor(1)).toBe(r.offsetFor(3))
+        expect(r.offsetFor(2)).toBe(r.offsetFor(4))
+        expect(r.offsetFor(1) ~= r.offsetFor(2)).toBe(true)
+
+        local epoch = 100
+        expect(r.charged(100.5, epoch, r.offsetFor(1))).toBe(true)
+        expect(r.charged(100.5, epoch, r.offsetFor(3))).toBe(true)
+        expect(r.charged(100.5, epoch, r.offsetFor(2))).toBe(false)
+        expect(r.charged(104.5, epoch, r.offsetFor(1))).toBe(false)
+        expect(r.charged(104.5, epoch, r.offsetFor(2))).toBe(true)
+        expect(r.charged(108.5, epoch, r.offsetFor(1))).toBe(true)
+        expect(r.viableRoute(100.5, epoch, 0, 10, 16)).toBe(true)
+        expect(r.viableRoute(103.0, epoch, 0, 10, 16)).toBe(false)
+        expect(r.viableRoute(100.5, epoch, 0, 30, 16)).toBe(false)
+        expect(r.viableRoute(100.5, nil, 0, 10, 16)).toBe(false)
+        expect(r.viableRoute(100.5, epoch, nil, 10, 16)).toBe(false)
+    end)
+
+    it("requires an alive eligible runner, charged gate and elapsed cooldown", function()
+        local r = FluxRelayRules
+        expect(r.canTrigger(true, true, 100, 101, 100, 0, 10, 9)).toBe(true)
+        expect(r.canTrigger(true, true, 100, 101, 100, 0, 10, 11)).toBe(false)
+        expect(r.canTrigger(false, true, 100, 101, 100, 0, 10, 0)).toBe(false)
+        expect(r.canTrigger(true, false, 100, 101, 100, 0, 10, 0)).toBe(false)
+        expect(r.canTrigger(true, true, 0, 101, 100, 0, 10, 0)).toBe(false)
+        expect(r.canTrigger(true, true, 100, 104, 100, 0, 10, 0)).toBe(false)
+        expect(r.nextAllowed(10)).toBe(13.5)
+    end)
+
+    it("redirects the runner toward the hub without exceeding safe speed", function()
+        local rules = FluxRelayRules
+        local center = Vector3.new(0, 0, 0)
+        local gate = Vector3.new(34, 4, 0)
+        local normal = rules.velocity(Vector3.new(26, -18, 12), gate, center, false)
+        local boosted = rules.velocity(Vector3.new(26, -18, 12), gate, center, true)
+        expect(normal.X < 0).toBe(true)
+        expect(boosted.X < normal.X).toBe(true)
+        for _, velocity in ipairs({
+            Vector3.new(200, 100, 200),
+            Vector3.new(-150, -100, 99),
+            Vector3.zero,
+        }) do
+            local result = rules.velocity(velocity, gate, center, true)
+            expect(Vector3.new(result.X, 0, result.Z).Magnitude <= 54.001).toBe(true)
+            expect(result.Y >= -52 and result.Y <= 58).toBe(true)
+            expect(result.X < 0).toBe(true)
+        end
+    end)
+
+    it("spawns four invisible live flux triggers beside Crossroads launch pads", function()
+        local root = MapBuilder.build(Config, "Crossroads", ArenaVariants)
+        local events = {}
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            OnArenaMechanicUsed = function() table.insert(events, "human") end,
+        }
+        local result = ArenaMechanics.start(ctx, "Crossroads")
+        expect(result ~= nil).toBe(true)
+        local arena = root:FindFirstChild("Arena")
+        local mechanics = arena and arena:FindFirstChild("Mechanics")
+        local relays = mechanics and mechanics:FindFirstChild("FluxRelays")
+        expect(relays ~= nil).toBe(true)
+        expect(#(relays :: Folder):GetChildren()).toBe(4)
+
+        local first = relays:FindFirstChild("FluxRelay1")
+        local second = relays:FindFirstChild("FluxRelay2")
+        expect(first ~= nil).toBe(true)
+        expect(second ~= nil).toBe(true)
+        expect(first:GetAttribute("FluxRelayIndex")).toBe(1)
+        expect(second:GetAttribute("FluxRelayIndex")).toBe(2)
+        for _, obj in ipairs(relays:GetChildren()) do
+            expect(obj:IsA("BasePart")).toBe(true)
+            expect(obj.CanCollide).toBe(false)
+            expect(obj.CanTouch).toBe(true)
+            expect(obj.CanQuery).toBe(false)
+            expect(obj.Transparency).toBe(1)
+        end
+
+        local bot = Instance.new("Model")
+        bot.Name = "TestFluxSurvivor"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = bot
+        local hit = Instance.new("Part")
+        hit.Name = "HumanoidRootPart"
+        hit.Anchored = true
+        hit.Position = first.Position
+        hit.Parent = bot
+        bot.Parent = workspace
+        local epoch = first:GetAttribute("FluxCycleEpoch")
+        local ready = {}
+        -- Oversized accessory contacts never activate a distant body.
+        hit.Position = first.Position + Vector3.new(20, 0, 0)
+        expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
+            ready, epoch, 9, epoch + 0.5, Config.ArenaCenter)).toBe(false)
+        hit.Position = first.Position
+        local ok = CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
+            ready, epoch, 10, epoch + 0.5, Config.ArenaCenter)
+        expect(ok).toBe(true)
+        expect(type(first:GetAttribute("FluxTriggeredAt"))).toBe("number")
+        expect(first:GetAttribute("FluxWeaveTier")).toBe(1)
+        expect(ctx.FluxWeaveStates[bot].tier).toBe(1)
+        expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
+            ready, epoch, 11, epoch + 0.6, Config.ArenaCenter)).toBe(false)
+        hit.Position = second.Position
+        expect(CrossroadsFluxRelay.tryTrigger(ctx, second, hit,
+            ready, epoch, 14, epoch + 4.5, Config.ArenaCenter)).toBe(true)
+        expect(second:GetAttribute("FluxWeaveTier")).toBe(2)
+        expect(ctx.FluxWeaveStates[bot].tier).toBe(2)
+        hit.Position = first.Position
+        bot:SetAttribute("AISurvivorInRound", false)
+        expect(CrossroadsFluxRelay.tryTrigger(ctx, first, hit,
+            ready, epoch, 22, epoch + 8.5, Config.ArenaCenter)).toBe(false)
+        expect(#events).toBe(0)
+
+        bot:Destroy()
+        root:Destroy()
+    end)
+
+    it("requires alternating Flux Relay pairs and three unique gates for Flux Master", function()
+        local r = FluxRelayRules
+        expect(r.WeaveCap).toBe(3)
+        expect(r.WeaveWindow >= 8).toBe(true)
+        local first, yes = r.advanceWeave(nil, 1, 10)
+        expect(yes).toBe(true)
+        expect(first.tier).toBe(1)
+        expect(first.visited[1]).toBe(true)
+        expect(r.nextParity(first)).toBe(0)
+        expect(r.nextParity(nil)).toBe(-1)
+        expect(r.displayProgress(0, 0, 110)).toBe(0)
+        local activeRank, seconds = r.displayProgress(2, 122, 116.1)
+        expect(activeRank).toBe(2)
+        expect(seconds).toBe(6)
+        local expiredRank, expiredSeconds = r.displayProgress(2, 122, 123)
+        expect(expiredRank).toBe(0)
+        expect(expiredSeconds).toBe(0)
+        local masterRank, masterSeconds = r.displayProgress(3, 0, 140)
+        expect(masterRank).toBe(3)
+        expect(masterSeconds).toBe(0)
+        expect(r.displayProgress(1, nil, 144)).toBe(0)
+        local same, no = r.advanceWeave(first, 3, 11)
+        expect(no).toBe(false)
+        expect(same).toBe(first)
+        local second, yes2 = r.advanceWeave(first, 2, 15)
+        expect(yes2).toBe(true)
+        expect(second.tier).toBe(2)
+        expect(r.nextParity(second)).toBe(1)
+        local repeatOld, oldAdvanced = r.advanceWeave(second, 1, 18)
+        expect(oldAdvanced).toBe(false)
+        expect(repeatOld).toBe(second)
+        local repeatPair, pairAdvanced = r.advanceWeave(second, 4, 18)
+        expect(pairAdvanced).toBe(false)
+        expect(repeatPair).toBe(second)
+        local third, yes3 = r.advanceWeave(second, 3, 19)
+        expect(yes3).toBe(true)
+        expect(third.tier).toBe(3)
+        expect(r.nextParity(third)).toBe(-1)
+        expect(third.visited[1] and third.visited[2] and third.visited[3]).toBe(true)
+        local capped, beyond = r.advanceWeave(third, 4, 20)
+        expect(beyond).toBe(false)
+        expect(capped).toBe(third)
+        local expired = r.advanceWeave(second, 1, 28)
+        expect(expired.tier).toBe(1)
+        expect(expired.lane).toBe(1)
+        expect(r.advanceWeave(nil, 0, 3) == nil).toBe(true)
+        expect(r.advanceWeave(nil, 5, 3) == nil).toBe(true)
+        expect(r.advanceWeave(nil, 1, nil) == nil).toBe(true)
+    end)
+
+    it("advances Helix mastery across different lanes without farming one ramp", function()
+        local r = OrbitalHelix
+        expect(r.ChainCap).toBe(3)
+        expect(r.ChainWindow > 2 * r.FlowCooldown).toBe(true)
+
+        local one = r.advanceChain(nil, 1, 10)
+        expect(one.tier).toBe(1)
+        expect(one.lane).toBe(1)
+        local repeated = r.advanceChain(one, 1, 15)
+        expect(repeated.tier).toBe(1)
+        expect(repeated.at).toBe(10)
+
+        local two = r.advanceChain(repeated, 3, 16)
+        expect(two.tier).toBe(2)
+        local three = r.advanceChain(two, 5, 22)
+        expect(three.tier).toBe(3)
+        expect(r.advanceChain(three, 7, 27).tier).toBe(3)
+        expect(r.advanceChain(three, 7, 43).tier).toBe(1)
+        expect(r.advanceChain(three, 0, 23).tier).toBe(0)
+        expect(r.advanceChain(three, 9, 23).tier).toBe(0)
+        expect(r.advanceChain(three, nil, 23).tier).toBe(0)
+        expect(r.advanceChain(three, 1, nil).tier).toBe(0)
+        expect(r.advanceChain(three, 1, 19).tier).toBe(1)
+    end)
+
+    it("credits only controlled inward Helix Flow passes without automatic physics boosts", function()
+        local root = MapBuilder.build(Config, "Orbital", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local ramps = arena and arena:FindFirstChild("HelixCircuit")
+        expect(ramps ~= nil).toBe(true)
+
+        local mechanicUses = 0
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            OnArenaMechanicUsed = function()
+                mechanicUses += 1
+            end,
+        }
+        local definition = ArenaMechanics.start(ctx, "Orbital")
+        expect(definition ~= nil).toBe(true)
+        local mechanics = arena:FindFirstChild("Mechanics")
+        local flow = mechanics and mechanics:FindFirstChild("HelixFlow")
+        expect(flow ~= nil).toBe(true)
+        expect(#(flow :: Folder):GetChildren()).toBe(8)
+
+        for _, sensor in ipairs(flow:GetChildren()) do
+            expect(sensor:IsA("BasePart")).toBe(true)
+            expect(sensor.Transparency).toBe(1)
+            expect(sensor.CanCollide).toBe(false)
+            expect(sensor.CanTouch).toBe(true)
+            expect(sensor.CanQuery).toBe(false)
+            local weld = sensor:FindFirstChild("HelixFlowFollowRamp")
+            expect(weld ~= nil).toBe(true)
+            expect(weld.Part0:GetAttribute("OrbitalHelixRamp")).toBe(true)
+            expect(weld.Part1).toBe(sensor)
+        end
+
+        expect(OrbitalHelix.inwardFlow(Vector3.new(15, 0, 0), Vector3.new(1, 0, 0))).toBe(true)
+        expect(OrbitalHelix.inwardFlow(Vector3.new(-15, 0, 0), Vector3.new(1, 0, 0))).toBe(false)
+        expect(OrbitalHelix.inwardFlow(Vector3.new(2, 0, 0), Vector3.new(1, 0, 0))).toBe(false)
+        expect(OrbitalHelix.inwardFlow(nil, Vector3.new(1, 0, 0))).toBe(false)
+
+        local bot = Instance.new("Model")
+        bot.Name = "HelixFlowRegressionBot"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local hum = Instance.new("Humanoid")
+        hum.Parent = bot
+        local body = Instance.new("Part")
+        body.Name = "HumanoidRootPart"
+        body.Size = Vector3.new(2, 2, 1)
+        body.Anchored = false
+        body.CanCollide = false
+        body.Parent = bot
+        bot.Parent = workspace
+
+        local first = flow:FindFirstChild("HelixFlowTrigger1")
+        local ramp = ramps:FindFirstChild("HelixRamp1")
+        body.CFrame = first.CFrame
+        local currentSpeed = ramp.CFrame.LookVector * 17
+        body.AssemblyLinearVelocity = currentSpeed
+
+        local cooldown = {}
+        expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 10)).toBe(true)
+        expect(first:GetAttribute("HelixFlowTier")).toBe(1)
+        expect(ctx.HelixChains[bot].tier).toBe(1)
+        expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 11)).toBe(false)
+        expect(mechanicUses).toBe(0)
+
+        bot:SetAttribute("AISurvivorInRound", false)
+        expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 20)).toBe(false)
+
+        bot:Destroy()
+        root:Destroy()
     end)
 
     it("keeps ambient pad particles client-side", function()

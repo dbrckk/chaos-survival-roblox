@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local AISurvivorRules = require("../../src/server/AISurvivorRules")
 local AISurvivorService = require("../../src/server/AISurvivorService")
+local AISurvivorNetworkOwnership = require("../../src/server/AISurvivorNetworkOwnership")
 
 describe("AI survivor rules", function()
     it("loads the runtime AI survivor service contract in Roblox", function()
@@ -15,6 +16,62 @@ describe("AI survivor rules", function()
         expect(type(AISurvivorService.names)).toBe("function")
     end)
 
+    it("clears a recycled bot's Classic Grid Circuit completion at each round", function()
+        local model = Instance.new("Model")
+        model:SetAttribute("GridCircuitStep", 4)
+        model:SetAttribute("GridCircuitNext", 0)
+        model:SetAttribute("GridCircuitDeadline", 1234)
+        model:SetAttribute("GridCircuitComplete", true)
+        expect(AISurvivorService.resetGridCircuit(model)).toBe(true)
+        expect(model:GetAttribute("GridCircuitStep")).toBe(0)
+        expect(model:GetAttribute("GridCircuitNext")).toBe(0)
+        expect(model:GetAttribute("GridCircuitDeadline")).toBe(0)
+        expect(model:GetAttribute("GridCircuitComplete")).toBe(false)
+        expect(AISurvivorService.resetGridCircuit(nil)).toBe(false)
+        model:Destroy()
+    end)
+
+    it("only claims server physics ownership for a live workspace rig", function()
+        local model = Instance.new("Model")
+        model.Name = "OwnershipProbe"
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.Anchored = false
+        root.Parent = model
+
+        -- Regression: calling SetNetworkOwner before parenting used to be
+        -- silently ignored by a blanket pcall in the bot rig factory.
+        expect(AISurvivorNetworkOwnership.claim(model)).toBe(false)
+        model.Parent = workspace
+        root.Anchored = true
+        expect(AISurvivorNetworkOwnership.claim(model)).toBe(false)
+
+        root.Anchored = false
+        local ok, canSet = pcall(root.CanSetNetworkOwnership, root)
+        if ok and canSet then
+            expect(AISurvivorNetworkOwnership.claim(model)).toBe(true)
+            local ownerOk, owner = pcall(root.GetNetworkOwner, root)
+            expect(ownerOk).toBe(true)
+            expect(owner == nil).toBe(true)
+        else
+            -- Editing and some cloud test contexts cannot assign simulation
+            -- ownership; the live-server path is covered by Studio QA.
+            expect(AISurvivorNetworkOwnership.claim(model)).toBe(false)
+        end
+        model:Destroy()
+    end)
+
+    it("uses elevated Orbital ramps only when a bot can actually reach them", function()
+        local rules = AISurvivorRules
+        local waypoint = Vector3.new(15, 12, 8)
+        expect(rules.helixWaypointReachable(Vector3.new(5, 10, 4), waypoint)).toBe(true)
+        expect(rules.helixWaypointReachable(Vector3.new(5, 2, 4), waypoint)).toBe(false)
+        expect(rules.helixWaypointReachable(Vector3.new(-19, 10, 8), waypoint)).toBe(false)
+        expect(rules.helixWaypointReachable(nil, waypoint)).toBe(false)
+        expect(rules.helixWaypointReachable(waypoint, nil)).toBe(false)
+    end)
+
     it("fills a small server toward four visible participants", function()
         expect(AISurvivorRules.desiredBotCount(0)).toBe(0)
         expect(AISurvivorRules.desiredBotCount(1)).toBe(3)
@@ -22,6 +79,20 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.desiredBotCount(3)).toBe(1)
         expect(AISurvivorRules.desiredBotCount(4)).toBe(0)
         expect(AISurvivorRules.desiredBotCount(9)).toBe(0)
+    end)
+
+    it("freezes active AI competitors when a human joins mid-round", function()
+        expect(AISurvivorRules.desiredBotCount(1)).toBe(3)
+        expect(AISurvivorRules.desiredBotCount(2)).toBe(2)
+
+        -- The extra human must not evict a live AI during a round.
+        for _, phase in ipairs({"ready", "round", "result"}) do
+            expect(AISurvivorRules.rosterLocked(phase)).toBe(true)
+        end
+        for _, phase in ipairs({"waiting", "intermission", "vote"}) do
+            expect(AISurvivorRules.rosterLocked(phase)).toBe(false)
+        end
+        expect(AISurvivorRules.rosterLocked(nil)).toBe(false)
     end)
 
     it("rotates distinct behavior profiles", function()
@@ -179,6 +250,51 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.locomotionTransition("run", "idle")).toBe(0.12)
         expect(AISurvivorRules.locomotionTransition("run", "fall")).toBe(0.06)
         expect(AISurvivorRules.locomotionTransition("fall", "run")).toBe(0.10)
+    end)
+
+    it("isolates one failed AI step without stopping other bots", function()
+        local processed = {}
+        local bots = {
+            {identity = "Nova"},
+            {identity = "Milo"},
+            {identity = "Kai"},
+        }
+        local function step(record)
+            if record.identity == "Milo" then
+                error("simulated NPC-only failure")
+            end
+            table.insert(processed, record.identity)
+        end
+
+        local warnings = 0
+        for _, bot in ipairs(bots) do
+            local ok, err, shouldReport = AISurvivorRules.runBrainStep(
+                bot, 10, step
+            )
+            if bot.identity == "Milo" then
+                expect(ok).toBe(false)
+                expect(type(err)).toBe("string")
+                expect(shouldReport).toBe(true)
+                warnings += shouldReport and 1 or 0
+            else
+                expect(ok).toBe(true)
+            end
+        end
+        expect(processed[1]).toBe("Nova")
+        expect(processed[2]).toBe("Kai")
+        expect(#processed).toBe(2)
+        expect(warnings).toBe(1)
+
+        local okLater, _, reportLater = AISurvivorRules.runBrainStep(
+            bots[2], 11, step
+        )
+        expect(okLater).toBe(false)
+        expect(reportLater).toBe(false)
+
+        local _, _, reportAgain = AISurvivorRules.runBrainStep(
+            bots[2], 18, step
+        )
+        expect(reportAgain).toBe(true)
     end)
 
     it("slows the ai brain when idle or showing results", function()
@@ -403,6 +519,87 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.platformAvailable(true, 1, "Gone")).toBe(false)
         expect(AISurvivorRules.platformAvailable(false, 0, nil)).toBe(false)
         expect(AISurvivorRules.platformAvailable(true, 0.95, nil)).toBe(false)
+    end)
+
+    it("keeps Freeze and JumpShock warning detection distances numeric", function()
+        for _, kind in ipairs({"FreezeWarning", "JumpShockWarning"}) do
+            local radius = AISurvivorRules.warningDetectionRadius(kind, 75)
+            expect(type(radius)).toBe("number")
+            expect(radius).toBe(80)
+            expect(79.9 <= radius).toBe(true)
+        end
+
+        expect(AISurvivorRules.warningDetectionRadius("MeteorWarning", 12)).toBe(21)
+        expect(AISurvivorRules.warningDetectionRadius("BombWarning", 8)).toBe(17)
+        expect(AISurvivorRules.warningDetectionRadius("BombWarning", -10)).toBe(9)
+    end)
+
+    it("consumes each Freeze pulse only once even if the bot declines jumping", function()
+        local handled = setmetatable({}, {__mode = "k"})
+        local freeze = Instance.new("Part")
+        freeze.Name = "FreezeWarning"
+
+        expect(AISurvivorRules.consumeWarningJump(handled, freeze, 0.70)).toBe(false)
+        expect(handled[freeze]).toBe(true)
+        expect(AISurvivorRules.consumeWarningJump(handled, freeze, 0.10)).toBe(false)
+
+        local nextFreeze = Instance.new("Part")
+        nextFreeze.Name = "FreezeWarning"
+        expect(AISurvivorRules.consumeWarningJump(handled, nextFreeze, 0.10)).toBe(true)
+        expect(AISurvivorRules.consumeWarningJump(handled, nextFreeze, 0.10)).toBe(false)
+
+        freeze:Destroy()
+        nextFreeze:Destroy()
+    end)
+
+    it("plans a real full-length Skyrail traversal from elevated decks only", function()
+        local r = AISurvivorRules
+        local north = CFrame.new(0, 12.5, -28)
+        local span = Vector3.new(49, 1, 4.5)
+        local target, sign = r.skyrailCrossingTarget(
+            Vector3.new(28, 15.4, -28), north, span)
+        expect(target ~= nil).toBe(true)
+        expect(sign).toBe(-1)
+        expect(target.X < -17).toBe(true)
+        expect(math.abs(target.Z + 28) < 0.1).toBe(true)
+        local reverse, otherSign = r.skyrailCrossingTarget(
+            Vector3.new(-28, 15.4, -28), north, span)
+        expect(reverse.X > 17).toBe(true)
+        expect(otherSign).toBe(1)
+        expect(r.skyrailCrossingTarget(
+            Vector3.new(28, 3, -28), north, span) == nil).toBe(true)
+        expect(r.skyrailCrossingTarget(
+            Vector3.new(0, 15.4, -28), north, span) == nil).toBe(true)
+        expect(r.skyrailCrossingTarget(
+            Vector3.new(28, 15.4, -40), north, span) == nil).toBe(true)
+        expect(r.skyrailCrossingTarget(
+            Vector3.new(28, 15.4, -28), north, Vector3.new(49, 1, 2)) == nil).toBe(true)
+        local west = CFrame.new(-28, 12.5, 0)
+        local zTarget, zSign = r.skyrailCrossingTarget(
+            Vector3.new(-28, 15.4, 28), west, Vector3.new(4.5, 1, 49))
+        expect(zSign).toBe(-1)
+        expect(zTarget.Z < -17).toBe(true)
+        local moved = r.skyrailExitTarget(
+            CFrame.new(-20, 12.5, 0), Vector3.new(4.5, 1, 22), zSign)
+        expect(moved.Z < -5).toBe(true)
+        expect(r.skyrailExitTarget(west, span, 0) == nil).toBe(true)
+    end)
+
+    it("allows one pre-jump per Shock warning and ignores unrelated markers", function()
+        local handled = {}
+        local shock = Instance.new("Part")
+        shock.Name = "JumpShockWarning"
+        expect(AISurvivorRules.consumeWarningJump(handled, shock, 0.99)).toBe(true)
+        expect(AISurvivorRules.consumeWarningJump(handled, shock, 0.01)).toBe(false)
+
+        local meteor = Instance.new("Part")
+        meteor.Name = "MeteorWarning"
+        expect(AISurvivorRules.consumeWarningJump(handled, meteor, 0.01)).toBe(false)
+        expect(handled[meteor] == nil).toBe(true)
+        expect(AISurvivorRules.consumeWarningJump(nil, shock, 0.01)).toBe(false)
+
+        shock:Destroy()
+        meteor:Destroy()
     end)
 
     it("delays reactions instead of granting perfect reflexes", function()

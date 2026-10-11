@@ -3,6 +3,38 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local AudioConfig = require("../../src/shared/AudioConfig")
+local ImpactAudioRules = require("../../src/shared/ImpactAudioRules")
+
+describe("Client-only spatial impact sound policy", function()
+    it("scales three-dimensional impact detail down with distance and tier", function()
+        for _, kind in ipairs({"Meteor", "Bomb"}) do
+            local low = ImpactAudioRules.plan(kind, 20, "Low", false)
+            local medium = ImpactAudioRules.plan(kind, 20, "Medium", false)
+            local high = ImpactAudioRules.plan(kind, 20, "High", false)
+            local middle = ImpactAudioRules.plan(kind, 60, "High", false)
+            local far = ImpactAudioRules.plan(kind, 110, "High", false)
+            expect(low.LayerCount).toBe(1)
+            expect(medium.LayerCount).toBe(2)
+            expect(high.LayerCount).toBe(3)
+            expect(middle.LayerCount).toBe(2)
+            expect(far.LayerCount).toBe(1)
+            expect(high.MaxDistance <= 125).toBe(true)
+            expect(middle.VolumeScale <= high.VolumeScale).toBe(true)
+            expect(far.VolumeScale <= middle.VolumeScale).toBe(true)
+            expect(high.Lifetime <= 3).toBe(true)
+            expect(ImpactAudioRules.plan(kind, 130, "High", false) == nil).toBe(true)
+            expect(ImpactAudioRules.plan(kind, 90, "Low", false) == nil).toBe(true)
+            expect(ImpactAudioRules.plan(kind, 20, "High", true) == nil).toBe(true)
+        end
+    end)
+
+    it("rejects unknown impact types and invalid listener distances", function()
+        expect(ImpactAudioRules.plan("Unknown", 5, "High", false) == nil).toBe(true)
+        expect(ImpactAudioRules.plan("Meteor", -1, "High", false) == nil).toBe(true)
+        expect(ImpactAudioRules.plan("Meteor", nil, "High", false) == nil).toBe(true)
+        expect(ImpactAudioRules.plan("Meteor", 0, "NoTier", false).LayerCount).toBe(1)
+    end)
+end)
 
 describe("Audio configuration", function()
     it("uses a low-volume looping background track", function()

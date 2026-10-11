@@ -192,6 +192,11 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         end
         if report.ok ~= true or worldArenaId ~= arenaId
             or report.signatureReady ~= true
+            or report.secondaryReady ~= true
+            or report.platformReady ~= true
+            or report.silhouetteReady ~= true
+            or report.deckReady ~= true
+            or report.fixtureReady ~= true
             or (tonumber(report.signatureParts) or 0) < 6
             or (tonumber(report.signatureParts) or math.huge) > 50
         then
@@ -212,7 +217,12 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             "CHAOS_E2E_ARENA", player.Name, arenaId,
             "world=" .. worldArenaId,
             "hero=" .. tostring(report.signatureHero or "missing"),
-            "parts=" .. tostring(report.signatureParts or 0)
+            "parts=" .. tostring(report.signatureParts or 0),
+            "secondary=" .. tostring(report.secondaryReady),
+            "platform=" .. tostring(report.platformReady),
+            "skyline=" .. tostring(report.silhouetteReady),
+            "deck=" .. tostring(report.deckReady),
+            "fixture=" .. tostring(report.fixtureReady)
         )
         return
     end
@@ -277,6 +287,10 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         then
             fail(player.Name .. ": invalid " .. phase .. " visual metrics")
             return
+        end
+
+        if phase == "ready" and report.gateCueReady ~= true then
+            fail(player.Name .. ": READY lobby gate cue missing or unsafe")
         end
 
         if fieldOfView < 60 or fieldOfView > 90 then
@@ -469,6 +483,7 @@ task.spawn(function()
             "RoundFeedback",
             "ClientReady",
             "ArenaMechanicFeedback",
+            "PhaseDash",
             "HazardImpactFeedback",
             "HazardNearMiss",
             "ChaosShardCollected",

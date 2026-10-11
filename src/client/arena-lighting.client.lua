@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CloudLayer = require(script.Parent.CloudLayer)
 local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -138,7 +139,8 @@ local MOODS = {
 
 local phase = "waiting"
 local currentVariant = "Classic"
-local mapConnection = nil
+local disconnectMapWatch = nil
+local refreshPending = false
 
 local function readVariant()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -303,36 +305,40 @@ local function applyMood(duration)
     end)
 end
 
-local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
-    end
+-- A map can arrive before Arena.Base and its VariantId attribute.
+-- Keep the art direction synchronized without stacking duplicate tweens.
+local function scheduleMoodRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        applyMood(0.65)
+    end)
+end
 
-    local generated = workspace:FindFirstChild("GeneratedMap")
+local function bindMap(generated)
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
+    end
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.05, function()
-                    applyMood(0.85)
-                end)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleMoodRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(function()
-            bindMap()
-            applyMood(0.85)
-        end)
+        bindMap(child)
+        scheduleMoodRefresh()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        bindMap()
+        bindMap(nil)
+        scheduleMoodRefresh()
     end
 end)
 
@@ -349,5 +355,5 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     applyMood(0.35)
 end)
 
-bindMap()
+bindMap(workspace:FindFirstChild("GeneratedMap"))
 applyMood(0)
