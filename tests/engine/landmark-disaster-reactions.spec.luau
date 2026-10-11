@@ -442,6 +442,47 @@ describe("Hero landmark animation scheduling and accessibility", function()
         parent:Destroy()
     end)
 
+    it("restores LOD-hidden artwork at rest without changing the LOD mask", function()
+        local parent = Instance.new("Folder")
+        local part = Instance.new("Part")
+        part.Parent = parent
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.LocalTransparencyModifier = 1
+        part:SetAttribute("SceneryLodHidden", true)
+        local rest = {
+            baseCFrame = CFrame.new(13, 5, -8) * CFrame.Angles(0, 0.2, 0),
+            baseSize = Vector3.new(2, 3, 4),
+            baseTransparency = 0.26,
+            baseColor = Color3.fromRGB(90, 150, 230),
+        }
+        part.CFrame = CFrame.new(-2, 12, 7)
+        part.Size = Vector3.new(5, 6, 7)
+        part.Transparency = 0.8
+        part.Color = Color3.fromRGB(255, 20, 20)
+        expect(Budget.shouldUpdate(part)).toBe(false)
+        expect(Budget.applyStillPose(part, rest, nil)).toBe(true)
+        expect(part:GetAttribute("SceneryLodHidden")).toBe(true)
+        expect(part.LocalTransparencyModifier).toBe(1)
+        expect((part.CFrame.Position - rest.baseCFrame.Position).Magnitude < 0.001)
+            .toBe(true)
+        expect((part.Size - rest.baseSize).Magnitude < 0.001).toBe(true)
+        expect(math.abs(part.Transparency - rest.baseTransparency) < 0.001)
+            .toBe(true)
+        expect((Vector3.new(part.Color.R, part.Color.G, part.Color.B)
+            - Vector3.new(rest.baseColor.R, rest.baseColor.G,
+                rest.baseColor.B)).Magnitude < 0.01).toBe(true)
+        -- Re-enabling the LOD layer exposes the already-restored still art.
+        part:SetAttribute("SceneryLodHidden", false)
+        part.LocalTransparencyModifier = 0
+        expect(Budget.shouldUpdate(part)).toBe(true)
+        expect((part.CFrame.Position - rest.baseCFrame.Position).Magnitude < 0.001)
+            .toBe(true)
+        part:Destroy()
+        parent:Destroy()
+    end)
+
     it("composes local 3D hero movement with hazard offset without drift", function()
         local frame = CFrame.new(14, 8, -11)
             * CFrame.Angles(math.rad(14), math.rad(35), math.rad(-9))

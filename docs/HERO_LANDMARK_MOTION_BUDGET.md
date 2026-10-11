@@ -265,3 +265,27 @@ Unverified: actual Roblox Studio clearance against the pod's docking
 neck, visual desirability of the movement, physical Android graphics
 and thermal/FPS performance. No screenshots or device measurements
 have been produced.
+
+
+## ReduceMotion / LOD-hidden rest-pose handoff (11 October 2026)
+
+When ReduceMotion is enabled while an authored landmark is outside the
+distance-LOD range, the landmark must return to its captured rest pose
+*while still hidden*. The LOD controller owns `LocalTransparencyModifier`
+and its `SceneryLodHidden` attribute; the hero-motion controller owns
+the decorative part's authored `CFrame`, `Size`, `Transparency` and
+`Color`. Restoring those authored properties cannot unmask the LOD
+visibility modifier (which remains 1 until the LOD controller shows it).
+
+The reduced-motion handler now applies the still pose to both visible
+and LOD-hidden tracked parts on the existing event/scan path. This
+prevents a hidden moving monument from briefly reappearing in an
+animated pose when the distance-LOD state changes ahead of the next
+2.5-second scan. No continuous reduced-motion animation, additional
+instances, render loops, remotes or server writes are introduced.
+
+The `core_a` engine regression exercises a real LOD-hidden Part,
+checks pose, size, authored alpha/color, preserved visibility mask and
+the subsequent show transition. Existing Low/Medium/High cadence and
+ReduceMotion stillness remain unchanged. Visual clearance and frame
+time on Roblox Studio/Android hardware remain unverified.

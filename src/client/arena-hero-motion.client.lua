@@ -58,12 +58,11 @@ end
 local function applyReducedPose()
     if player:GetAttribute("ReduceMotion") ~= true then return end
     for part, state in pairs(tracked) do
-        -- Scenery LOD owns hidden-part transparency. A ReduceMotion event
-        -- must never reveal a culled monument by restoring its base alpha.
-        -- scan() reapplies the authored still pose once it becomes visible.
-        if HeroMotionBudget.shouldUpdate(part) then
-            HeroMotionBudget.applyStillPose(part, state, reaction)
-        end
+        -- LOD masks scenery with LocalTransparencyModifier, not Transparency.
+        -- Restore the hidden sculpt's 3D rest pose too: otherwise an LOD
+        -- re-entry before the next scan can expose its last animated frame.
+        -- applyStillPose never touches the LOD-owned visibility modifier.
+        HeroMotionBudget.applyStillPose(part, state, reaction)
     end
 end
 
