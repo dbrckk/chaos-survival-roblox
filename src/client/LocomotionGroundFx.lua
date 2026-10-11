@@ -71,6 +71,56 @@ function GroundFx.signature(kind, index, strength, tier)
     }
 end
 
+-- A single local owner is shared by the human R15 and every AI bot.
+-- A scene-wide cap prevents crowded turns from stacking contact geometry.
+local MAX_LIVE = {Medium = 8, High = 16}
+
+function GroundFx.livePieceBudget(tier)
+    return MAX_LIVE[tier] or 0
+end
+
+function GroundFx.evictionCount(existing, arriving, tier)
+    local cap = GroundFx.livePieceBudget(tier)
+    if cap == 0 then return 0 end
+    return math.max(0, math.floor(math.max(0, tonumber(existing) or 0))
+        + math.floor(math.max(0, tonumber(arriving) or 0)) - cap)
+end
+
+local function isOwnedContact(instance)
+    if not instance:IsA("Folder") then return false end
+    return instance.Name == "ChaosLaunchContact"
+        or instance.Name == "ChaosSkidContact"
+        or instance.Name == "ChaosPivotContact"
+end
+
+local function trimContactBudget(parent, arriving, tier)
+    local owned = {}
+    local total = 0
+    for _, child in ipairs(parent:GetChildren()) do
+        if isOwnedContact(child) then
+            local count = 0
+            for _, part in ipairs(child:GetChildren()) do
+                if part:IsA("BasePart") then count += 1 end
+            end
+            table.insert(owned, {folder = child, count = count})
+            total += count
+        end
+    end
+
+    local excess = GroundFx.evictionCount(total, arriving, tier)
+    -- Whole bursts are evicted oldest first. Do not truncate a half-pair,
+    -- leaving one-sided pivot/acceleration symbols on the floor.
+    for _, entry in ipairs(owned) do
+        if excess <= 0 then break end
+        entry.folder:Destroy()
+        excess -= entry.count
+    end
+end
+
+function GroundFx.clear()
+    effectRoot:ClearAllChildren()
+end
+
 function GroundFx.build(parent, basis, kind, strength, tier)
     if not parent or typeof(basis) ~= "CFrame"
         or COLORS[kind] == nil or (tier ~= "High" and tier ~= "Medium")
@@ -79,6 +129,7 @@ function GroundFx.build(parent, basis, kind, strength, tier)
     end
 
     local count = tier == "High" and 4 or 2
+    trimContactBudget(parent, count, tier)
     local folder = Instance.new("Folder")
     folder.Name = "Chaos" .. kind .. "Contact"
     folder.Parent = parent

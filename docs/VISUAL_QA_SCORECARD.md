@@ -428,3 +428,25 @@ live selection changes and invalidation of old scheduled callbacks.
 Manual Studio/Android tests are still required for rapid stage changes,
 replacement arena streaming, Double Chaos peak fill-rate and stable
 30-minute GPU/CPU/memory measurements. No real FPS claim.
+
+## Shared human+AI footwork VFX global cap
+
+Both the R15 movement-feel owner and AI motion accents already use
+`LocomotionGroundFx` and the common `LocomotionContactLocal` folder.
+Crowded maneuvers could briefly leave multiple overlapping 2/4-part
+foot-contact groups, even though each individual emission was capped.
+The renderer now counts only its own authored contact groups and
+evicts the **oldest entire burst**, never one side of the distinctive
+acceleration, brake-groove or pivot-wedge pair. This keeps up to
+**16 live pieces on High, 8 on Medium and 0 on Low** after every
+new emission. Unrelated sibling folders are preserved. When the local
+round ends or ReduceMotion/Low turns on, surviving footwork cosmetics
+are cleared immediately. No changes to humanoid control, animation
+motors, AI pathing, gameplay or authoritative danger signaling.
+
+Regression coverage: cumulative seven-burst pressure, preservation of
+unrelated nodes, whole-pair geometry retention, Medium tier downshift
+and invalid tier rejection. Physical Studio and Android 30-minute
+tests must still verify visual smoothness, actual FPS/overdraw and
+lobby/round transitions. The live cap is a preventive limit rather
+than proof of measured performance gain.

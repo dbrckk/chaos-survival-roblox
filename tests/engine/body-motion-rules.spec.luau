@@ -142,6 +142,49 @@ describe("Body motion rules", function()
         surface:Destroy()
     end)
 
+    it("caps combined human and AI ground-contact bursts without cutting pairs", function()
+        local root = Instance.new("Folder")
+        local cf = CFrame.new(2, 0.1, 5)
+        local rules = GroundFx
+        expect(rules.livePieceBudget("High")).toBe(16)
+        expect(rules.livePieceBudget("Medium")).toBe(8)
+        expect(rules.livePieceBudget("Low")).toBe(0)
+        expect(rules.evictionCount(16, 4, "High")).toBe(4)
+        expect(rules.evictionCount(12, 4, "High")).toBe(0)
+        expect(rules.evictionCount(7, 2, "Medium")).toBe(1)
+        expect(rules.evictionCount(0, 2, "Medium")).toBe(0)
+        local unrelated = Instance.new("Folder")
+        unrelated.Name = "UnrelatedUI"
+        unrelated.Parent = root
+        for i = 1, 7 do
+            local fx = GroundFx.build(root, cf,
+                i % 2 == 0 and "Skid" or "Pivot", 0.90, "High")
+            expect(fx ~= nil).toBe(true)
+            local pieces = 0
+            for _, group in ipairs(root:GetChildren()) do
+                if group ~= unrelated then
+                    pieces += #group:GetChildren()
+                end
+            end
+            expect(pieces <= 16).toBe(true)
+        end
+        expect(unrelated.Parent).toBe(root)
+        -- Switching to Medium enforces its smaller scene-wide cap.
+        local medium = GroundFx.build(root, cf, "Launch", 0.88, "Medium")
+        expect(medium ~= nil).toBe(true)
+        local pieces = 0
+        for _, group in ipairs(root:GetChildren()) do
+            if group ~= unrelated then
+                pieces += #group:GetChildren()
+                expect(#group:GetChildren() == 2
+                    or #group:GetChildren() == 4).toBe(true)
+            end
+        end
+        expect(pieces <= 8).toBe(true)
+        expect(GroundFx.build(root, cf, "Pivot", 0.88, "Low") == nil).toBe(true)
+        root:Destroy()
+    end)
+
     it("requires a living server-confirmed contestant for local battle scuffs", function()
         local r = LocomotionDynamics.footworkEligible
         expect(r("round", true, false, 100)).toBe(true)

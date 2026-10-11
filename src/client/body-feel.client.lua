@@ -218,6 +218,23 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
     speedSurgeActive = surge
     lowGravityActive = lowGravity
+    if roundPhase ~= "round" then
+        -- Cosmetic floor cues must not outlive the active survival round.
+        GroundFx.clear()
+        lastGroundCueAt = -math.huge
+    end
+end)
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion") == true then
+        GroundFx.clear()
+    end
+end)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    if player:GetAttribute("VfxQualityTier") == "Low" then
+        GroundFx.clear()
+    end
 end)
 
 mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
