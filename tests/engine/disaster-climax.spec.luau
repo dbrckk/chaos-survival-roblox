@@ -59,6 +59,45 @@ describe("Disaster climax progression", function()
         expect(can(7, 7, 2, 2, true, true, true)).toBe(false)
     end)
 
+    it("reconciles hazard membership and rejects removed/reintroduced bursts", function()
+        local stages = {RisingLava = 2, Meteors = 1}
+        local generations = {}
+        DisasterClimax.pruneInactive(stages, generations,
+            {"RisingLava", "Meteors"})
+        expect(stages.RisingLava).toBe(2)
+        expect(stages.Meteors).toBe(1)
+        expect(generations.Meteors == nil).toBe(true)
+
+        -- Removal cancels an already queued meteor burst.
+        local scheduledGeneration = generations.Meteors or 0
+        DisasterClimax.pruneInactive(stages, generations, {"RisingLava"})
+        expect(stages.Meteors == nil).toBe(true)
+        expect(generations.Meteors).toBe(scheduledGeneration + 1)
+        expect((generations.Meteors or 0) == scheduledGeneration).toBe(false)
+
+        -- Reintroduction at the same stage must be eligible again, but the
+        -- old delayed callback remains invalidated by its generation.
+        DisasterClimax.pruneInactive(stages, generations,
+            {"RisingLava", "Meteors", "Meteors"})
+        expect(stages.Meteors == nil).toBe(true)
+        stages.Meteors = 1
+        expect(generations.Meteors).toBe(scheduledGeneration + 1)
+        DisasterClimax.pruneInactive(stages, generations, {"Meteors"})
+        expect(stages.RisingLava == nil).toBe(true)
+        expect(generations.RisingLava).toBe(1)
+        expect(generations.Meteors).toBe(scheduledGeneration + 1)
+
+        -- Invalid or absent payloads cannot retain a stale stage.
+        DisasterClimax.pruneInactive(stages, generations,
+            {"Unknown", 42})
+        expect(stages.Meteors == nil).toBe(true)
+        expect(generations.Meteors).toBe(scheduledGeneration + 2)
+        stages.RisingLava = 3
+        DisasterClimax.pruneInactive(stages, generations, nil)
+        expect(stages.RisingLava == nil).toBe(true)
+        expect(generations.RisingLava).toBe(2)
+    end)
+
     it("bounds arena replication recovery to three retries", function()
         local retry = DisasterClimax.replicationRetryDelay
         expect(retry(1)).toBe(0.15)

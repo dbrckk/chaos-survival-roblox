@@ -48,6 +48,27 @@ function DisasterClimax.shouldPresent(requestToken, activeToken,
         and sameArena == true and inRound == true and eliminated ~= true
 end
 
+-- Reconcile a full authoritative RoundState disaster list. Removed hazards
+-- lose their displayed stage, and their generation advances so a queued
+-- callback cannot fire if the same hazard is removed and then re-added.
+-- Generations remain bounded to the eleven known disaster identifiers.
+function DisasterClimax.pruneInactive(stageById, generationById, ids)
+    local active = {}
+    if type(ids) == "table" then
+        for _, id in ipairs(ids) do
+            if type(id) == "string" and DisasterClimax.Profiles[id] then
+                active[id] = true
+            end
+        end
+    end
+    for id in pairs(stageById) do
+        if not active[id] then
+            stageById[id] = nil
+            generationById[id] = (generationById[id] or 0) + 1
+        end
+    end
+end
+
 -- Three bounded retries for arena Base arriving after RoundState.
 local REPLICATION_RETRY_SECONDS = {0.15, 0.35, 0.70}
 

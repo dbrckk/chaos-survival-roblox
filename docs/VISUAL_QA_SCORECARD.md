@@ -360,3 +360,21 @@ and invalid quality tiers are rejected without creating parts. The arena
 transforms, server-owned hazards and gameplay rules remain unchanged.
 Engine tests cover reduced-motion geometry and invalid inputs. Physical
 Studio and Android FPS, GPU, thermal and Double Chaos QA are still pending.
+
+## Disaster climax lifecycle: no stale hazards after a map/phase change
+
+The local climax presenter now clears live temporary geometry immediately
+on arena replacement and when leaving the round, rather than leaving
+up to ~0.7 seconds of visible debris on a different screen. It also
+reconciles the authoritative disaster-ID snapshot: a removed hazard loses
+its displayed stage, while a per-ID generation invalidates queued effects
+even if the same hazard returns at the same intensity before the callback
+executes. The full snapshot is supplied by the existing server; there are
+no extra remotes, polling loops, physics, hitboxes, or server changes.
+
+The existing 2/4/6 Low/Medium/High part counts and one-piece ReduceMotion
+limit remain unchanged. Engine specs cover hazard removal, reintroduction,
+duplicate/invalid IDs, absent snapshots and generation invalidation.
+Physical verification remains required: rapid round-to-result transitions,
+arena swap while a climax is visible, streaming delays, and Android
+30-minute memory/FPS measurements. No physical test is claimed.

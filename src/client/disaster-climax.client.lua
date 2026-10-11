@@ -16,6 +16,7 @@ folder.Parent = workspace
 
 local previousPhase = "waiting"
 local stageById = {}
+local generationById = {}
 local token = 0
 local snapshotSerial = 0
 local displayedBase = nil
@@ -138,7 +139,7 @@ local PLAYERS = {
     shock = playShock,
 }
 
-local function playClimax(id, stage, base, delaySeconds, currentToken)
+local function playClimax(id, stage, base, delaySeconds, currentToken, currentGeneration)
     local profile = DisasterClimax.get(id)
     local play = profile and PLAYERS[profile.Kind]
     if not profile or not play then
@@ -151,7 +152,7 @@ local function playClimax(id, stage, base, delaySeconds, currentToken)
             base.Parent ~= nil and arenaBase() == base,
             previousPhase == "round",
             player:GetAttribute("RoundEliminated")
-        ) then
+        ) or (generationById[id] or 0) ~= currentGeneration then
             return
         end
 
@@ -182,20 +183,25 @@ local function presentAvailable(state, serial, attempt)
     if displayedBase ~= base then
         displayedBase = base
         table.clear(stageById)
+        table.clear(generationById)
         token += 1
+        -- Remove old arena's live cosmetics immediately, not after Debris.
+        folder:ClearAllChildren()
     end
 
+    local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
+    DisasterClimax.pruneInactive(stageById, generationById, ids)
     local stage = DisasterClimax.stageFor(
         state.intensity, state.finalRush == true, state.overdrive == true
     )
     if stage <= 0 then return end
-    local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
     local currentToken = token
     for index, id in ipairs(ids) do
         local previousStage = stageById[id] or 0
         if stage > previousStage then
             stageById[id] = stage
-            playClimax(id, stage, base, (index - 1) * 0.10, currentToken)
+            playClimax(id, stage, base, (index - 1) * 0.10,
+                currentToken, generationById[id] or 0)
         end
     end
 end
@@ -206,12 +212,15 @@ stateEvent.OnClientEvent:Connect(function(state)
     if phase ~= "round" then
         token += 1
         table.clear(stageById)
+        table.clear(generationById)
+        folder:ClearAllChildren()
         displayedBase = nil
         previousPhase = phase
         return
     end
     if previousPhase ~= "round" then
         table.clear(stageById)
+        table.clear(generationById)
         displayedBase = nil
         token += 1
     end
