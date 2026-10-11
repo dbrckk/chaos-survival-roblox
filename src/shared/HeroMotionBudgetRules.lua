@@ -74,7 +74,8 @@ end
 function HeroMotionBudgetRules.reactorCoreOffset(now, scale)
     if type(now) ~= "number" or now ~= now or now < 0
         or math.abs(now) > 1e7 or type(scale) ~= "number"
-        or scale ~= scale or math.abs(scale) == math.huge then
+        or scale ~= scale or math.abs(scale) > 1e7 then
+        -- Malformed amplitudes must return to rest, never clamp into motion.
         return CFrame.identity
     end
     -- Low=0.18 stays static, and Medium=0.62 and High=1 grow gradually

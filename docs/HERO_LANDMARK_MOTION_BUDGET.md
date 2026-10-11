@@ -206,3 +206,18 @@ reviews of antenna clearance, all three closure strip light rhythms,
 Orbital docking silhouette, LOD reappearance, Low/Medium/High and
 ReduceMotion. No Studio screenshots or physical FPS/GPU/thermal metrics
 have been obtained by this code-only pass.
+
+## Exact-head Open Cloud core_a reactor guard repair (11 October 2026)
+
+The `core_a` job in run `38154978005` on `3b418550` reported
+225/226 assertions passing. The sole failure was the oversized
+`reactorCoreOffset(1.37, 1e8)` input returning approximately
+0.09239 stud of movement when the contract required the original rest
+frame. Large-but-finite scales were clamped to full amplitude. The
+reactor-core rule now rejects scale magnitudes above `1e7`, consistent
+with its existing timestamp bound and invalid NaN/infinity checks.
+A negative oversized scale is also tested. All legitimate
+Low/Medium/High, ReduceMotion and streaming/LOD behavior is unchanged.
+No server gameplay, geometry, collision or GPU budget is affected.
+Verify Build Validation and all five Open Cloud shards on the new SHA.
+Roblox Studio and physical Android QA remain outstanding.

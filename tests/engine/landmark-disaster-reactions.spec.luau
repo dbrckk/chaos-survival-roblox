@@ -243,7 +243,7 @@ describe("Hero landmark animation scheduling and accessibility", function()
                     .toBe(true)
             end
         end
-        for _, bad in ipairs({-1, math.huge, -math.huge, 1e8, 0/0}) do
+        for _, bad in ipairs({-1, math.huge, -math.huge, 1e8, -1e8, 0/0}) do
             expect(Budget.reactorCoreOffset(bad, 1).Position.Magnitude)
                 .toBe(0)
             expect(Budget.reactorCoreOffset(t, bad).Position.Magnitude)
