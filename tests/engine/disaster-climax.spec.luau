@@ -608,4 +608,65 @@ describe("Rectangular arena-local climax geometry", function()
     end)
 end)
 
+
+describe("Rectangular blast and shrinking-climax art direction", function()
+    it("travels along both ellipse axes instead of using only the short side", function()
+        local wide = Vector3.new(168, 3, 62)
+        local square = Vector3.new(62, 3, 62)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local count = Boundary.count(tier, false)
+            for stage = 1, 3 do
+                local factor = 0.19 + stage * 0.042
+                for index = 1, count do
+                    local recipe = Boundary.recipe("blast", index, count, wide, stage)
+                    local oldRadius = Boundary.recipe("blast", index, count, square, stage)
+                    local angle = (index - 1) / count * math.pi * 2 + 0.23
+                    expect(math.abs(recipe.Finish.X / wide.X
+                        - math.cos(angle) * factor) < 0.0001).toBe(true)
+                    expect(math.abs(recipe.Finish.Z / wide.Z
+                        - math.sin(angle) * factor) < 0.0001).toBe(true)
+                    expect(math.abs(recipe.Finish.X) < wide.X * 0.40).toBe(true)
+                    expect(math.abs(recipe.Finish.Z) < wide.Z * 0.40).toBe(true)
+                    expect(math.abs(recipe.Start.X) < math.abs(recipe.Finish.X))
+                        .toBe(true)
+                    expect(math.abs(recipe.Start.Z) < math.abs(recipe.Finish.Z))
+                        .toBe(true)
+                    expect(math.abs(recipe.Finish.Z - oldRadius.Finish.Z)
+                        < 0.0001).toBe(true)
+                    expect(recipe.Wedge).toBe(index % 2 == 1)
+                end
+            end
+        end
+    end)
+
+    it("places High shrinking accents on both long edges, never short edges", function()
+        for _, size in ipairs({
+            Vector3.new(168, 3, 62), Vector3.new(62, 3, 168),
+        }) do
+            local wide = size.X >= size.Z
+            local r1 = Boundary.recipe("shrink", 1, 6, size, 3)
+            local r2 = Boundary.recipe("shrink", 2, 6, size, 3)
+            local fifth = Boundary.recipe("shrink", 5, 6, size, 3)
+            local sixth = Boundary.recipe("shrink", 6, 6, size, 3)
+            expect(fifth ~= nil and sixth ~= nil).toBe(true)
+            if wide then
+                expect(math.abs(fifth.Start.Z) > size.Z * 0.40).toBe(true)
+                expect(math.abs(sixth.Start.Z) > size.Z * 0.40).toBe(true)
+                expect(fifth.Start.Z * sixth.Start.Z < 0).toBe(true)
+                expect(fifth.Size.X < r1.Size.X).toBe(true)
+            else
+                expect(math.abs(fifth.Start.X) > size.X * 0.40).toBe(true)
+                expect(math.abs(sixth.Start.X) > size.X * 0.40).toBe(true)
+                expect(fifth.Start.X * sixth.Start.X < 0).toBe(true)
+                expect(fifth.Size.X < r2.Size.X).toBe(true)
+            end
+            expect(fifth.Wedge).toBe(false)
+            expect(sixth.Wedge).toBe(false)
+        end
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            expect(Boundary.count(tier, true)).toBe(1)
+        end
+    end)
+end)
+
 return nil

@@ -35,14 +35,20 @@ function DisasterBoundaryClimaxKit.recipe(kind, index, count, deckSize, stage)
     if kind == "blast" then
         -- Broken shockfront fins expand radially without occluding the arena.
         local a = (index - 1) / count * math.pi * 2 + 0.23
-        local direction = Vector3.new(math.cos(a), 0, math.sin(a))
-        local yaw = -a - math.pi / 2 + (secondary and 0.13 or -0.15)
+        -- Elliptical pressure wave follows the actual X/Z deck extents;
+        -- the original min-axis-only radius looked too small on long decks.
+        local cosA, sinA = math.cos(a), math.sin(a)
+        local function radial(factor)
+            return Vector3.new(cosA * x * factor, 0, sinA * z * factor)
+        end
+        local yaw = -math.atan2(sinA * z, cosA * x)
+            - math.pi / 2 + (secondary and 0.13 or -0.15)
         local length = avg * (0.115 + 0.013 * stage)
         return {
             Wedge = index % 2 == 1,
             Material = Enum.Material.Metal,
-            Start = direction * (avg * 0.055) + Vector3.new(0, 0.16, 0),
-            Finish = direction * (avg * (0.19 + stage * 0.042))
+            Start = radial(0.055) + Vector3.new(0, 0.16, 0),
+            Finish = radial(0.19 + stage * 0.042)
                 + Vector3.new(0, 0.20, 0),
             Rotation = CFrame.Angles(0, yaw, 0),
             Size = Vector3.new(length * 0.68, 0.11, 0.27),
@@ -54,8 +60,18 @@ function DisasterBoundaryClimaxKit.recipe(kind, index, count, deckSize, stage)
     end
 
     -- Low: opposite north/south dashes. Medium: one per cardinal side.
-    -- High: four cardinal dashes plus two offset accents on the long sides.
-    local slot = count == 2 and (index - 1) * 2 or ((index - 1) % 4)
+    -- High: four cardinal dashes plus two shorter displaced strokes on the
+    -- two long edges (N/S on a wide deck, E/W on a tall deck).
+    local slot
+    if index > 4 then
+        if x >= z then
+            slot = index == 5 and 0 or 2
+        else
+            slot = index == 5 and 1 or 3
+        end
+    else
+        slot = count == 2 and (index - 1) * 2 or ((index - 1) % 4)
+    end
     local offset = index > 4 and (index == 5 and -0.20 or 0.20) or 0
     local y = 0.15
     local start, finish, rotation, length
@@ -71,7 +87,7 @@ function DisasterBoundaryClimaxKit.recipe(kind, index, count, deckSize, stage)
         start = Vector3.new(side * x * 0.45, y, z * offset)
         finish = Vector3.new(side * x * endFactor, y + 0.02, z * offset)
         rotation = CFrame.Angles(0, math.pi / 2, 0)
-        length = z * 0.39
+        length = z * (index > 4 and 0.19 or 0.39)
     end
     return {
         Wedge = false,
