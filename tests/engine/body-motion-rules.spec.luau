@@ -606,6 +606,83 @@ describe("Directional character impact and cinematic AI footwork", function()
             "High", false, "round", true, 1, 120, true)).toBe(false)
     end)
 
+    it("sculpts three short-lived AI trail gestures without extra instances", function()
+        local rules = BotMotionPresentationRules
+        local launch = rules.trailGesture("High", "Launch")
+        local skid = rules.trailGesture("High", "Skid")
+        local pivot = rules.trailGesture("High", "Pivot")
+        expect(launch ~= nil and skid ~= nil and pivot ~= nil).toBe(true)
+        expect(launch.Peak < pivot.Peak and pivot.Peak < skid.Peak).toBe(true)
+        expect(launch.Width < pivot.Width and pivot.Width < skid.Width)
+            .toBe(true)
+        expect(launch.DurationScale > pivot.DurationScale
+            and pivot.DurationScale > skid.DurationScale).toBe(true)
+        for _, tier in ipairs({"High", "Medium"}) do
+            for _, kind in ipairs({"Launch", "Skid", "Pivot"}) do
+                local design = rules.trailGesture(tier, kind)
+                expect(design.Width > 0 and design.Width <= 0.32).toBe(true)
+                expect(design.Emission >= 0 and design.Emission <= 0.75).toBe(true)
+                expect(design.Peak > 0 and design.Peak < 1).toBe(true)
+                expect(design.DurationScale > 0 and design.DurationScale <= 1.08)
+                    .toBe(true)
+            end
+        end
+        expect(rules.trailGesture("Low", "Skid") == nil).toBe(true)
+        expect(rules.trailGesture("High", "Unknown") == nil).toBe(true)
+        expect(rules.trailGesture("Medium", nil) == nil).toBe(true)
+        local root = Instance.new("Part")
+        local trail = Instance.new("Trail")
+        trail.Parent = root
+        local originalWidth = trail.WidthScale
+        local originalEmission = trail.LightEmission
+        local originalLifetime = trail.Lifetime
+        for _, kind in ipairs({"Launch", "Skid", "Pivot"}) do
+            local gesture = rules.trailGesture("High", kind)
+            trail.WidthScale = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, gesture.Width * 0.30),
+                NumberSequenceKeypoint.new(gesture.Peak, gesture.Width),
+                NumberSequenceKeypoint.new(1, 0),
+            })
+            trail.LightEmission = gesture.Emission
+            trail.Lifetime = 0.114 * gesture.DurationScale
+            expect(math.abs(trail.WidthScale.Keypoints[2].Value
+                - gesture.Width) < 0.0001).toBe(true)
+            expect(math.abs(trail.Lifetime - 0.114 * gesture.DurationScale)
+                < 0.0001).toBe(true)
+            expect(#root:GetChildren()).toBe(1)
+        end
+        trail.WidthScale = originalWidth
+        trail.LightEmission = originalEmission
+        trail.Lifetime = originalLifetime
+        expect(trail.WidthScale).toBe(originalWidth)
+        expect(trail.LightEmission).toBe(originalEmission)
+        expect(trail.Lifetime).toBe(originalLifetime)
+        root:Destroy()
+    end)
+
+    it("rejects nonfinite AI movement inputs before making any visual cue", function()
+        local r = BotMotionPresentationRules
+        local normal = Vector3.new(17, 0, 0)
+        local before = Vector3.new(3, 0, 0)
+        for _, bad in ipairs({0/0, math.huge, -math.huge}) do
+            expect(r.trailVisible("High", false, "round", true,
+                bad, 5, true)).toBe(false)
+            expect(r.trailVisible("High", false, "round", true,
+                1, bad, true)).toBe(false)
+            expect(r.cue(Vector3.new(bad, 0, 0), before, 0.08,
+                true, "High", false, "round", 5, LocomotionDynamics)
+                == nil).toBe(true)
+            expect(r.cue(normal, before, bad,
+                true, "High", false, "round", 5, LocomotionDynamics)
+                == nil).toBe(true)
+            expect(r.cue(normal, before, 0.08,
+                true, "High", false, "round", bad, LocomotionDynamics)
+                == nil).toBe(true)
+        end
+        expect(r.cue(normal, before, 0.08, true, "High", false,
+            "round", -1, LocomotionDynamics) == nil).toBe(true)
+    end)
+
     it("creates only nearby, meaningful AI launch, skid and pivot cues", function()
         local rules = {
             profile = BotMotionPresentationRules.profile,

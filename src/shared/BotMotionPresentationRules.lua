@@ -2,6 +2,16 @@
 -- No physics, AI pathing, Humanoid, Motor6D or Animator changes.
 local BotMotionPresentationRules = {}
 
+local function finite(value)
+    return type(value) == "number" and value == value
+        and math.abs(value) ~= math.huge
+end
+
+local function finiteVector(value)
+    return typeof(value) == "Vector3"
+        and finite(value.X) and finite(value.Y) and finite(value.Z)
+end
+
 local PROFILES = {
     Low = {Range = 0, Cooldown = math.huge, MaxPerScan = 0},
     Medium = {Range = 54, Cooldown = 1.65, MaxPerScan = 1},
@@ -26,6 +36,33 @@ function BotMotionPresentationRules.trailAccent(cueKind)
     return ACCENTS[cueKind]
 end
 
+-- Three distinct brief, sculpted Trail silhouettes on the existing bot
+-- Trail. These are static cached recipes: zero tables allocated per scan.
+-- A Launch draws out a slim jet, Skid spreads as a short friction fan,
+-- and Pivot banks into a tighter side-curved ribbon.
+local GESTURES = {
+    High = {
+        Launch = {Width = 0.21, Peak = 0.22, Emission = 0.75,
+            DurationScale = 1.08},
+        Skid = {Width = 0.32, Peak = 0.48, Emission = 0.62,
+            DurationScale = 0.74},
+        Pivot = {Width = 0.26, Peak = 0.36, Emission = 0.70,
+            DurationScale = 0.88},
+    },
+    Medium = {
+        Launch = {Width = 0.145, Peak = 0.22, Emission = 0.52,
+            DurationScale = 1.02},
+        Skid = {Width = 0.22, Peak = 0.48, Emission = 0.42,
+            DurationScale = 0.74},
+        Pivot = {Width = 0.18, Peak = 0.36, Emission = 0.48,
+            DurationScale = 0.88},
+    },
+}
+function BotMotionPresentationRules.trailGesture(tier, kind)
+    local byTier = GESTURES[tier]
+    return byTier and byTier[kind] or nil
+end
+
 -- Keep an existing AI Trail only when it can materially improve the
 -- viewer's scene. Enter/exit hysteresis avoids flickering at the boundary.
 -- No newly-instantiated trails, and no need to know the total bot count.
@@ -33,8 +70,8 @@ function BotMotionPresentationRules.trailVisible(
         tier, reducedMotion, phase, grounded, runRatio, viewerDistance, wasVisible)
     if phase ~= "round" or reducedMotion == true or grounded ~= true
         or (tier ~= "High" and tier ~= "Medium")
-        or type(viewerDistance) ~= "number"
-        or viewerDistance < 0 or (tonumber(runRatio) or 0) <= 0.68 then
+        or not finite(viewerDistance) or viewerDistance < 0
+        or not finite(runRatio) or runRatio <= 0.68 then
         return false
     end
     local entering = tier == "High" and 95 or 66
@@ -46,10 +83,9 @@ function BotMotionPresentationRules.cue(velocity, previousVelocity, dt,
         grounded, tier, reducedMotion, phase, viewerDistance, dynamicsOverride)
     local profile = BotMotionPresentationRules.profile(tier, reducedMotion)
     if profile.MaxPerScan == 0 or tostring(phase or "") ~= "round"
-        or typeof(velocity) ~= "Vector3"
-        or typeof(previousVelocity) ~= "Vector3"
-        or grounded ~= true or type(dt) ~= "number" or dt <= 0
-        or type(viewerDistance) ~= "number"
+        or not finiteVector(velocity) or not finiteVector(previousVelocity)
+        or grounded ~= true or not finite(dt) or dt <= 0
+        or not finite(viewerDistance) or viewerDistance < 0
         or viewerDistance > profile.Range then
         return nil, 0
     end

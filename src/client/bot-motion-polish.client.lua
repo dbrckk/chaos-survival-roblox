@@ -37,6 +37,15 @@ local function disposeBot(model)
             if state.defaultTrailColor then
                 trail.Color = state.defaultTrailColor
             end
+            if state.defaultTrailWidth then
+                trail.WidthScale = state.defaultTrailWidth
+            end
+            if state.defaultTrailEmission then
+                trail.LightEmission = state.defaultTrailEmission
+            end
+            if state.defaultTrailLifetime then
+                trail.Lifetime = state.defaultTrailLifetime
+            end
         end
         bots[model] = nil
     end
@@ -81,7 +90,12 @@ local function watch(model)
         cueUntil = 0,
         trail = nil,
         defaultTrailColor = nil,
+        defaultTrailWidth = nil,
+        defaultTrailEmission = nil,
+        defaultTrailLifetime = nil,
         appliedTrailKind = nil,
+        appliedTrailGesture = nil,
+        appliedTrailTier = nil,
         appliedTrailLifetime = nil,
     }
 end
@@ -126,7 +140,8 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 phaseEvent.OnClientEvent:Connect(function(state)
-    phase = tostring(state and state.phase or "waiting")
+    local snapshot = type(state) == "table" and state or {}
+    phase = tostring(snapshot.phase or "waiting")
     if phase ~= "round" then
         for _, entry in pairs(bots) do
             local trail = entry.root and entry.root:FindFirstChild("AISurvivorCosmeticTrail")
@@ -195,7 +210,12 @@ task.spawn(function()
                 if state.trail ~= trail then
                     state.trail = trail
                     state.defaultTrailColor = trail.Color
+                    state.defaultTrailWidth = trail.WidthScale
+                    state.defaultTrailEmission = trail.LightEmission
+                    state.defaultTrailLifetime = trail.Lifetime
                     state.appliedTrailKind = nil
+                    state.appliedTrailGesture = nil
+                    state.appliedTrailTier = nil
                     state.appliedTrailLifetime = nil
                 end
                 local accentKind = phase == "round" and not reduceMotion
@@ -206,6 +226,24 @@ task.spawn(function()
                     trail.Color = accent and ColorSequence.new(accent)
                         or state.defaultTrailColor
                     state.appliedTrailKind = accentKind
+                end
+                local gesture = BotRules.trailGesture(q.Name, accentKind)
+                if state.appliedTrailGesture ~= gesture
+                    or state.appliedTrailTier ~= q.Name then
+                    if gesture then
+                        trail.WidthScale = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0, gesture.Width * 0.30),
+                            NumberSequenceKeypoint.new(gesture.Peak, gesture.Width),
+                            NumberSequenceKeypoint.new(1, 0),
+                        })
+                        trail.LightEmission = gesture.Emission
+                    else
+                        -- Restore the exact original server-owned appearance.
+                        trail.WidthScale = state.defaultTrailWidth
+                        trail.LightEmission = state.defaultTrailEmission
+                    end
+                    state.appliedTrailGesture = gesture
+                    state.appliedTrailTier = q.Name
                 end
                 local ratio = math.clamp(
                     state.lastSpeed / math.max(1, state.humanoid.WalkSpeed),
@@ -219,6 +257,9 @@ task.spawn(function()
                 if trail.Enabled ~= visible then trail.Enabled = visible end
                 local lifetime = (0.09 + (state.index % 3) * 0.024)
                     * (q.Name == "High" and 1 or 0.72)
+                if gesture then
+                    lifetime = lifetime * gesture.DurationScale
+                end
                 if state.appliedTrailLifetime ~= lifetime then
                     if trail.Lifetime ~= lifetime then trail.Lifetime = lifetime end
                     state.appliedTrailLifetime = lifetime

@@ -306,3 +306,23 @@ The existing character-polish engine suite checks band hysteresis,
 bounded tier recipes, non-finite speed inputs and real Trail styling
 without additional instances. Visual/gamefeel quality and physical
 Android GPU costs remain unmeasured until device and Studio QA.
+
+## PR #19 — authored AI movement ribbon gestures (11 October 2026)
+
+The pre-existing server-owned AISurvivorCosmeticTrail now receives
+three brief original *shapes*, not only color changes, during
+AI floor-contact moments. Launch extends a thin thrust filament,
+Skid briefly spreads a low friction fan, and Pivot shows a tightly
+banked ribbon. Static tier-scoped presets (High/Medium) adjust the
+same Trail's WidthScale, emission and sub-0.15s lifetime only when
+a successful existing cue starts/ends or quality changes. The native
+Trail's original WidthScale, emission, color and lifetime are cached
+and restored on normal return and bot removal; its model, physics,
+Animator, movement and authoritative AI are untouched. No new
+Trail, MeshPart, ParticleEmitter or update loop is introduced.
+
+The engine body-motion shard checks uniqueness, expected dimensions,
+runtime Trail properties, low-tier gating, zero extra instances and
+nonfinite velocity/distance/time rejection. Client RoundState also
+handles malformed snapshots. Android visual quality, timing and
+GPU overdraw still need real-device and Studio assessment.
