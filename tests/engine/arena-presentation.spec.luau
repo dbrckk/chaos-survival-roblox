@@ -599,6 +599,49 @@ describe("Touch decor streamed-subtree readability", function()
         expect(baselines[newLight]).toBe(10)
         holder:Destroy()
     end)
+    it("does not reveal LOD-hidden Neon on mobile tier changes", function()
+        local holder = Instance.new("Folder")
+        local glow = Instance.new("Part")
+        glow.Name = "AmbientNeon"
+        glow.Material = Enum.Material.Neon
+        glow.LocalTransparencyModifier = 1
+        glow:SetAttribute("SceneryLodHidden", true)
+        glow.Parent = holder
+        local edge = Instance.new("Part")
+        edge.Name = "EdgeSafetyGlow"
+        edge.Material = Enum.Material.Neon
+        edge.LocalTransparencyModifier = 1
+        edge:SetAttribute("SceneryLodHidden", true)
+        edge.Parent = holder
+        local lamp = Instance.new("PointLight")
+        lamp.Brightness = 5
+        lamp.Enabled = false
+        lamp.Parent = glow
+        local baselines = setmetatable({}, {__mode = "k"})
+
+        MobileReadabilityKit.applyTree(holder, "Low", baselines)
+        expect(glow.LocalTransparencyModifier).toBe(1)
+        expect(edge.LocalTransparencyModifier).toBe(1)
+        expect(lamp.Enabled).toBe(false)
+        expect(math.abs(lamp.Brightness - 3.1) < 0.0001).toBe(true)
+
+        MobileReadabilityKit.applyTree(holder, "High", baselines)
+        expect(glow.LocalTransparencyModifier).toBe(1)
+        expect(edge.LocalTransparencyModifier).toBe(1)
+        expect(lamp.Enabled).toBe(false)
+
+        -- The LOD owner has now restored visibility and its own baseline.
+        glow:SetAttribute("SceneryLodHidden", false)
+        edge:SetAttribute("SceneryLodHidden", false)
+        glow.LocalTransparencyModifier = 0
+        edge.LocalTransparencyModifier = 0
+        MobileReadabilityKit.applyTree(holder, "Medium", baselines)
+        expect(math.abs(glow.LocalTransparencyModifier - 0.12) < 0.0001).toBe(true)
+        expect(math.abs(edge.LocalTransparencyModifier - 0.054) < 0.0001).toBe(true)
+        expect(lamp.Enabled).toBe(false)
+        expect(math.abs(lamp.Brightness - 3.6) < 0.0001).toBe(true)
+        holder:Destroy()
+    end)
 end)
 
 

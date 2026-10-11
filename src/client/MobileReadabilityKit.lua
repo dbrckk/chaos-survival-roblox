@@ -23,6 +23,12 @@ end
 function Kit.applyInstance(instance, tier, originalBrightness)
     local decorTransparency, lightScale = Kit.profile(tier)
     if instance:IsA("BasePart") and instance.Material == Enum.Material.Neon then
+        -- Distance LOD owns the fully hidden state. A touch-tier refresh
+        -- must not re-expose an ornament while its LOD owner hides it.
+        -- Apply the touch tint again once the LOD owner restores visibility.
+        if instance:GetAttribute("SceneryLodHidden") == true then
+            return
+        end
         if Kit.isGameplayEdge(instance) then
             instance.LocalTransparencyModifier = math.min(0.07, decorTransparency * 0.45)
         else

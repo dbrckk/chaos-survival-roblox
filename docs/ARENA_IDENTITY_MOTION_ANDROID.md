@@ -245,3 +245,28 @@ invalid-clock handling. **Manual acceptance remains necessary:** inspect
 counterweight clearance, movement readability and device performance in
 Roblox Studio and on a physical Android device; no FPS or GPU results are
 claimed here.
+
+## Touch readability versus distance LOD (11 October 2026)
+
+On touch devices, `MobileReadabilityKit` attenuates decorative Neon
+using `LocalTransparencyModifier` while preserving the smaller gameplay-edge
+tint and noncompounding Point/Spot/SurfaceLight brightness profiles.
+A streamed decoration marked `SceneryLodHidden = true` is now excluded
+from the Neon modifier pass, so touch-tier refreshes cannot reveal a
+distance-culled part by replacing its LOD-owned modifier of 1. Lights
+still receive the normal brightness profile without changing their
+`Enabled` state. After the scenery LOD owner restores the visibility
+attribute and baseline modifier, the next touch readability pass can
+apply the correct Low/Medium/High appearance again.
+
+The existing `arena-presentation.spec.luau` core_a engine shard checks
+both a decorative Neon part and a safety-edge Neon part through
+Low/High hidden updates, Medium visibility return and disabled light
+state. No additional geometry, particle emitters, lights, render loop,
+server traffic, collision or gameplay change is introduced.
+
+Manual acceptance remains open: on physical Android and in Studio,
+toggle graphic tiers near a streaming/LOD boundary and confirm that
+decorations stay hidden until LOD reveals them, while warning and
+navigation cues remain readable. No Android performance metrics or
+Studio screenshots are claimed by this regression.
