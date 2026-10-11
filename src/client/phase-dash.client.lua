@@ -197,13 +197,19 @@ local function playDashEffect(character)
     local reduced = player:GetAttribute("ReduceMotion") == true
     local tier = quality()
     local position = root.Position - Vector3.new(0, 2.45, 0)
+    -- Server-computed movement heading also handles strafing correctly.
+    -- Fall back to avatar facing for older servers or missing replication.
+    local heading = character:GetAttribute("PhaseDashHeading")
+    if typeof(heading) ~= "Vector3" then
+        heading = root.CFrame.LookVector
+    end
     cosmeticRing(position, Color3.fromRGB(85, 233, 235),
         reduced and 4.4 or 9.5, reduced and 0.16 or 0.42,
-        root.CFrame.LookVector, false)
+        heading, false)
     if not reduced and tier == "High" then
         cosmeticRing(position + Vector3.new(0, 0.08, 0),
             Color3.fromRGB(178, 101, 253), 6.7, 0.34,
-            root.CFrame.LookVector, true)
+            heading, true)
     end
     if not reduced and tier ~= "Low" then
         dashTrail(root, tier == "High")

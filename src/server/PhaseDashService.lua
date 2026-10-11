@@ -39,14 +39,21 @@ function PhaseDashService.start(remote, phaseProvider)
         end
 
         nextAllowed[player] = PhaseDashRules.nextReadyAt(now)
+        -- The same server-validated heading drives movement and the
+        -- replicated cosmetic shockwave (including sideways dashes).
+        local heading = PhaseDashRules.direction(
+            humanoid.MoveDirection, root.CFrame.LookVector
+        )
         root.AssemblyLinearVelocity = PhaseDashRules.velocity(
-            root.AssemblyLinearVelocity,
-            humanoid.MoveDirection,
-            root.CFrame.LookVector
+            root.AssemblyLinearVelocity, heading, heading
         )
         local readyAt = workspace:GetServerTimeNow() + PhaseDashRules.Cooldown
         player:SetAttribute("PhaseDashReadyAt", readyAt)
 
+        -- Replicate the heading before the pulse so remote observers do
+        -- not incorrectly orient strafe dashes along the avatar's facing.
+        -- Older clients that lack this attribute still use avatar facing.
+        character:SetAttribute("PhaseDashHeading", heading)
         -- Replicated one-shot on the character makes the effect visible to
         -- other players without trusting a VFX event from the requestor.
         character:SetAttribute(
