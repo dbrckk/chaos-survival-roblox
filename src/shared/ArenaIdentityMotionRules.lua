@@ -76,7 +76,7 @@ end
 function ArenaIdentityMotionRules.ornamentOffset(variant, name, now, index, scale)
     if type(now) ~= "number" or type(index) ~= "number"
         or type(scale) ~= "number" or now ~= now or index ~= index
-        or scale ~= scale or math.abs(now) > 10000000
+        or scale ~= scale or math.abs(now) > 1e7
         or math.abs(index) == math.huge or math.abs(scale) == math.huge
         or index < 1 or index > 64 or index % 1 ~= 0 or scale <= 0
         or not ArenaIdentityMotionRules.isIdentityPart(variant, name)
