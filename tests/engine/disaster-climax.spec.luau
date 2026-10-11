@@ -461,4 +461,83 @@ describe("Accessible climax parity and malformed geometry", function()
     end)
 end)
 
+
+describe("Rectangular arena-local climax geometry", function()
+    it("fits nine original silhouettes within the arena's short edges", function()
+        local size = Vector3.new(168, 3, 62)
+        local elementKinds = {"lava", "meteor", "tornado", "gravity",
+            "fracture", "speed", "darkness"}
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local count = Elements.count(tier, false)
+            for _, kind in ipairs(elementKinds) do
+                for stage = 1, 3 do
+                    for index = 1, count do
+                        local recipe = Elements.recipe(kind, index, count, size, stage, tier)
+                        expect(recipe ~= nil).toBe(true)
+                        for _, point in ipairs({recipe.Start, recipe.Finish}) do
+                            expect(math.abs(point.X) < size.X * 0.44).toBe(true)
+                            expect(math.abs(point.Z) < size.Z * 0.44).toBe(true)
+                        end
+                    end
+                end
+            end
+            for _, kind in ipairs({"freeze", "shock"}) do
+                for index = 1, Signature.count(tier, false) do
+                    local recipe = Signature.recipe(kind, index,
+                        Signature.count(tier, false), size, 3)
+                    expect(recipe ~= nil).toBe(true)
+                    for _, point in ipairs({recipe.Start, recipe.Finish}) do
+                        expect(math.abs(point.X) < size.X * 0.44).toBe(true)
+                        expect(math.abs(point.Z) < size.Z * 0.44).toBe(true)
+                    end
+                end
+            end
+        end
+        expect(Elements.recipe("meteor", 1, 2,
+            Vector3.new(0, 3, 62), 2, "Low") == nil).toBe(true)
+        expect(Elements.recipe("lava", 1, 2,
+            Vector3.new(168, 3, math.huge), 2, "Low") == nil).toBe(true)
+        expect(Signature.recipe("freeze", 1, 2,
+            Vector3.new(168, 3, 0), 2) == nil).toBe(true)
+        expect(Signature.recipe("shock", 1, 2,
+            Vector3.new(math.huge, 3, 62), 2) == nil).toBe(true)
+    end)
+
+    it("emits noncolliding scaled visuals on a tilted deck with motion budgets", function()
+        local root = Instance.new("Folder")
+        local deck = CFrame.new(8, 14, 33)
+            * CFrame.Angles(math.rad(16), math.rad(34), math.rad(-12))
+        local size = Vector3.new(168, 3, 62)
+        local color = Color3.fromRGB(255, 160, 80)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            for _, reduced in ipairs({false, true}) do
+                local count = Elements.count(tier, reduced)
+                local parts = Elements.emit(root, "speed", deck, size, 3,
+                    color, color, tier, reduced)
+                expect(#parts).toBe(count)
+                for index, part in ipairs(parts) do
+                    local recipe = Elements.recipe("speed", index, count, size, 3, tier)
+                    local target = reduced and recipe.Finish or recipe.Start
+                    expect((deck:PointToObjectSpace(part.Position) - target)
+                        .Magnitude < 0.02).toBe(true)
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    part:Destroy()
+                end
+                local ice = Signature.emit(root, "freeze", deck, size, 3,
+                    color, color, tier, reduced)
+                expect(#ice).toBe(Signature.count(tier, reduced))
+                for _, part in ipairs(ice) do
+                    expect(part.CanCollide).toBe(false)
+                    part:Destroy()
+                end
+            end
+        end
+        expect(#root:GetChildren()).toBe(0)
+        root:Destroy()
+    end)
+end)
+
 return nil

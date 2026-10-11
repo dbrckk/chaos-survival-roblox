@@ -8,6 +8,23 @@ local VALID = {lava = true, meteor = true, tornado = true,
     gravity = true, fracture = true, speed = true, darkness = true}
 local COUNTS = {Low = 2, Medium = 4, High = 6}
 
+-- Arena-local elliptical placement; scalar spans remain backward compatible.
+local function validAxis(n)
+    return type(n) == "number" and n > 0 and n == n and n < math.huge
+end
+
+local function extents(span)
+    if typeof(span) == "Vector3" then
+        if not validAxis(span.X) or not validAxis(span.Z) then
+            return nil, nil
+        end
+        return math.clamp(span.X, 24, 220), math.clamp(span.Z, 24, 220)
+    end
+    if not validAxis(span) then return nil, nil end
+    local side = math.clamp(span, 24, 220)
+    return side, side
+end
+
 function Kit.count(tier, reduced)
     if reduced == true then return COUNTS[tier] and 1 or 0 end
     return COUNTS[tier] or 0
@@ -17,25 +34,32 @@ function Kit.recipe(kind, index, count, span, stage, tier)
     if not VALID[kind] or type(index) ~= "number" or index % 1 ~= 0
         or type(count) ~= "number" or count % 1 ~= 0 or count < 1
         or count > 6 or index < 1 or index > count
-        or type(span) ~= "number" or span <= 0
-        or span ~= span or span == math.huge
         or type(stage) ~= "number" or stage % 1 ~= 0
         or stage < 1 or stage > 3 or not COUNTS[tier] then
         return nil
     end
 
-    local width = math.clamp(span, 24, 220)
+    local widthX, widthZ = extents(span)
+    if not widthX then return nil end
+    local width = math.min(widthX, widthZ)
     local angle = (index - 1) / count * math.pi * 2
         + (kind == "lava" and 0.21 or 0.38)
     local side = index % 2 == 0 and 1 or -1
-    local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
-    local yaw = -angle - math.pi * 0.5 + side * 0.18
+    local cosA, sinA = math.cos(angle), math.sin(angle)
+    local function radial(amount)
+        return Vector3.new(cosA * widthX * amount, 0, sinA * widthZ * amount)
+    end
+    local function tangential(amount)
+        return Vector3.new(-sinA * widthX * amount, 0, cosA * widthZ * amount)
+    end
+    local yaw = -math.atan2(sinA * widthZ, cosA * widthX)
+        - math.pi * 0.5 + side * 0.18
 
     if kind == "lava" then
         -- Three-dimensional asymmetric volcanic fins grow outward/upward.
-        local start = direction * (width * 0.30)
+        local start = radial(0.30)
             + Vector3.new(0, 0.65, 0)
-        local finish = direction * (width * (0.32 + stage * 0.012))
+        local finish = radial(0.32 + stage * 0.012)
             + Vector3.new(0, 5.2 + stage * 1.3, 0)
         return {
             Kind = kind,
@@ -54,12 +78,12 @@ function Kit.recipe(kind, index, count, span, stage, tier)
 
     if kind == "tornado" then
         -- A pitched, inward-winding helix of angular 3D fins, not bars.
-        local start = direction * (width * 0.30)
+        local start = radial(0.30)
             + Vector3.new(0, 0.85 + index * 0.20, 0)
         local finish = Vector3.new(
-            math.cos(angle + 1.18) * width * 0.065,
+            math.cos(angle + 1.18) * widthX * 0.065,
             6.5 + stage * 1.85 + index * 0.38,
-            math.sin(angle + 1.18) * width * 0.065
+            math.sin(angle + 1.18) * widthZ * 0.065
         )
         return {
             Kind = kind,
@@ -80,9 +104,9 @@ function Kit.recipe(kind, index, count, span, stage, tier)
     if kind == "gravity" then
         -- Rising anti-gravity petals: flat wide fins that drift up and inward
         -- as if the arena itself were releasing its gravitational pull.
-        local start = direction * (width * 0.29)
+        local start = radial(0.29)
             + Vector3.new(0, 0.46 + index * 0.08, 0)
-        local finish = direction * (width * 0.18)
+        local finish = radial(0.18)
             + Vector3.new(0, 5.2 + stage * 2.0 + index * 0.18, 0)
         return {
             Kind = kind,
@@ -103,9 +127,9 @@ function Kit.recipe(kind, index, count, span, stage, tier)
     if kind == "fracture" then
         -- Disappearing-platform fault teeth: angular raised fissures that
         -- split OUTWARD rather than following the lift/spiral motion language.
-        local start = direction * (width * 0.075)
+        local start = radial(0.075)
             + Vector3.new(0, 0.19, 0)
-        local finish = direction * (width * (0.25 + stage * 0.013))
+        local finish = radial(0.25 + stage * 0.013)
             + Vector3.new(0, 0.37, 0)
         return {
             Kind = kind,
@@ -125,11 +149,10 @@ function Kit.recipe(kind, index, count, span, stage, tier)
 
     if kind == "speed" then
         -- Tangential acceleration chevrons sweep across the local deck.
-        local tangent = Vector3.new(-direction.Z, 0, direction.X)
-        local start = direction * (width * 0.18)
-            - tangent * (width * 0.13) + Vector3.new(0, 0.24, 0)
-        local finish = direction * (width * 0.18)
-            + tangent * (width * (0.14 + stage * 0.02))
+            local start = radial(0.18)
+            - tangential(0.13) + Vector3.new(0, 0.24, 0)
+        local finish = radial(0.18)
+            + tangential(0.14 + stage * 0.02)
             + Vector3.new(0, 0.24, 0)
         return {
             Kind = kind,
@@ -149,9 +172,9 @@ function Kit.recipe(kind, index, count, span, stage, tier)
 
     if kind == "darkness" then
         -- Inward folding eclipse shutters, no arena-wide opaque disc.
-        local start = direction * (width * 0.32)
+        local start = radial(0.32)
             + Vector3.new(0, 3.0 + stage * 0.50 + index * 0.12, 0)
-        local finish = direction * (width * 0.13)
+        local finish = radial(0.13)
             + Vector3.new(0, 1.0 + stage * 0.18, 0)
         return {
             Kind = kind,
@@ -170,9 +193,9 @@ function Kit.recipe(kind, index, count, span, stage, tier)
     end
 
     -- Falling spearheads: short chamfer-like wedges, not thick square beams.
-    local start = direction * (width * 0.28)
+    local start = radial(0.28)
         + Vector3.new(0, 20 + index * 0.75, 0)
-    local finish = direction * (width * 0.16)
+    local finish = radial(0.16)
         + Vector3.new(0, 0.85, 0)
     return {
         Kind = kind,

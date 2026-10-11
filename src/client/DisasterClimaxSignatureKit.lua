@@ -9,6 +9,23 @@ local DisasterClimaxSignatureKit = {}
 local COUNTS = {Low = 2, Medium = 4, High = 6}
 local ALLOWED = {freeze = true, shock = true}
 
+-- Arena-local elliptical placement; scalar spans remain backward compatible.
+local function validAxis(n)
+    return type(n) == "number" and n > 0 and n == n and n < math.huge
+end
+
+local function extents(span)
+    if typeof(span) == "Vector3" then
+        if not validAxis(span.X) or not validAxis(span.Z) then
+            return nil, nil
+        end
+        return math.clamp(span.X, 20, 240), math.clamp(span.Z, 20, 240)
+    end
+    if not validAxis(span) then return nil, nil end
+    local side = math.clamp(span, 20, 240)
+    return side, side
+end
+
 function DisasterClimaxSignatureKit.count(tier, reduced)
     if reduced == true then return COUNTS[tier] and 1 or 0 end
     return COUNTS[tier] or 0
@@ -18,14 +35,16 @@ function DisasterClimaxSignatureKit.recipe(kind, index, count, span, stage)
     if not ALLOWED[kind] or type(index) ~= "number"
         or type(count) ~= "number" or count % 1 ~= 0 or count < 1 or count > 6
         or index < 1 or index > count or index % 1 ~= 0
-        or type(span) ~= "number" or span <= 0 or span ~= span or span == math.huge
         or type(stage) ~= "number" or stage % 1 ~= 0 or stage < 1 or stage > 3 then
         return nil
     end
-    local full = math.clamp(span, 20, 240)
+    local widthX, widthZ = extents(span)
+    if not widthX then return nil end
+    local full = math.min(widthX, widthZ)
     local angle = (index - 1) * math.pi * 2 / count
         + (kind == "freeze" and 0.16 or 0.37)
-    local outward = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    local cosA, sinA = math.cos(angle), math.sin(angle)
+    local outward = Vector3.new(cosA * widthX / full, 0, sinA * widthZ / full)
     local y = kind == "freeze" and 0.20 or 0.15
     local startRadius = full * (kind == "freeze" and 0.07 or 0.11)
     local endRadius = full * (
@@ -34,7 +53,8 @@ function DisasterClimaxSignatureKit.recipe(kind, index, count, span, stage)
     )
     local secondary = index % 2 == 0
     local rotation = CFrame.Angles(
-        0, -angle - math.pi * 0.5 + (secondary and 0.18 or -0.16),
+        0, -math.atan2(sinA * widthZ, cosA * widthX)
+            - math.pi * 0.5 + (secondary and 0.18 or -0.16),
         kind == "freeze" and (secondary and 0.10 or -0.10) or 0
     )
     local length = full * (
@@ -63,7 +83,7 @@ function DisasterClimaxSignatureKit.emit(parent, kind, deckCFrame, span,
     local pieces = {}
     if not parent or not ALLOWED[kind] or typeof(deckCFrame) ~= "CFrame"
         or typeof(primary) ~= "Color3" or typeof(secondary) ~= "Color3"
-        or type(span) ~= "number" or span <= 0 or span ~= span or span == math.huge or count <= 0
+        or count <= 0
         or type(stage) ~= "number" or stage % 1 ~= 0 or stage < 1 or stage > 3 then
         return pieces
     end

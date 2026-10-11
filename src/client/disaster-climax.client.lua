@@ -33,14 +33,14 @@ end
 local function playLava(profile, base, stage, tier, reduced)
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
     DisasterClimaxElementKit.emit(folder, "lava", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playMeteor(profile, base, stage, tier, reduced)
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
     DisasterClimaxElementKit.emit(folder, "meteor", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
@@ -49,14 +49,14 @@ end
 local function playGravity(profile, base, stage, tier, reduced)
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
     DisasterClimaxElementKit.emit(folder, "gravity", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playFracture(profile, base, stage, tier, reduced)
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.10, 0)
     DisasterClimaxElementKit.emit(folder, "fracture", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
@@ -64,7 +64,7 @@ local function playTornado(profile, base, stage, tier, reduced)
     -- Arena-local helix rather than long rectangular world-axis streaks.
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.20, 0)
     DisasterClimaxElementKit.emit(folder, "tornado", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
@@ -74,7 +74,7 @@ local function playFreeze(profile, base, stage, tier, reduced)
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
     DisasterClimaxSignatureKit.emit(
         folder, "freeze", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced
     )
 end
@@ -93,7 +93,7 @@ local function playSpeed(profile, base, stage, tier, reduced)
     -- Swept chevrons in the deck's local basis, bounded on every tier.
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.10, 0)
     DisasterClimaxElementKit.emit(folder, "speed", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
@@ -101,7 +101,7 @@ local function playDarkness(profile, base, stage, tier, reduced)
     -- Folded eclipse shutters replace the arena-wide neon cylinder.
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
     DisasterClimaxElementKit.emit(folder, "darkness", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
@@ -120,7 +120,7 @@ local function playShock(profile, base, stage, tier, reduced)
     local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.14, 0)
     DisasterClimaxSignatureKit.emit(
         folder, "shock", deck,
-        math.max(base.Size.X, base.Size.Z), stage,
+        base.Size, stage,
         profile.Color, profile.Secondary, tier.Name, reduced
     )
 end
