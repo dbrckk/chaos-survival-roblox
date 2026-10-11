@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local PracticeVisualKit = require(script.Parent.LobbyPracticeVisualKit)
 
 local player = Players.LocalPlayer
 local tracked = {}
@@ -91,14 +92,13 @@ local function remove(pad)
     end
     tracked[pad] = nil
 
-    if bundle.folder and bundle.folder.Parent then
-        bundle.folder:Destroy()
-    end
+    PracticeVisualKit.destroy(bundle)
 end
 
 local function refreshBundle(pad, bundle)
     local quality = tier()
-    bundle.emitter.Rate = quality.Name == "Low" and 0.8 or (4 * quality.ParticleScale)
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    bundle.emitter.Rate = PracticeVisualKit.rate(quality, reduced)
     bundle.highlight.FillTransparency = quality.Name == "Low" and 1 or 0.90
     bundle.highlight.OutlineTransparency = quality.Name == "Low" and 0.45 or 0.18
 
@@ -117,48 +117,8 @@ local function attach(pad)
         return
     end
 
-    local folder = Instance.new("Folder")
-    folder.Name = "PracticePadPolishLocal"
-    folder.Parent = pad
-
-    local attachment = Instance.new("Attachment")
-    attachment.Name = "PracticeMotesAttachment"
-    attachment.Position = Vector3.new(0, 0.25, 0)
-    attachment.Parent = folder
-
-    local emitter = Instance.new("ParticleEmitter")
-    emitter.Name = "PracticeMotes"
-    emitter.Rate = 4
-    emitter.Lifetime = NumberRange.new(0.25, 0.45)
-    emitter.Speed = NumberRange.new(1.2, 2.8)
-    emitter.SpreadAngle = Vector2.new(35, 35)
-    emitter.LightEmission = 0.9
-    emitter.Color = ColorSequence.new(pad.Color, Color3.new(1, 1, 1))
-    emitter.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.18),
-        NumberSequenceKeypoint.new(1, 0),
-    })
-    emitter.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.25),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    emitter.Parent = attachment
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "PracticeHighlight"
-    highlight.Adornee = pad
-    highlight.FillColor = pad.Color
-    highlight.FillTransparency = 0.90
-    highlight.OutlineColor = pad.Color:Lerp(Color3.new(1, 1, 1), 0.42)
-    highlight.OutlineTransparency = 0.18
-    highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-    highlight.Parent = folder
-
-    local bundle = {
-        folder = folder,
-        emitter = emitter,
-        highlight = highlight,
-    }
+    local bundle = PracticeVisualKit.create(pad)
+    if not bundle then return end
     tracked[pad] = bundle
     refreshBundle(pad, bundle)
 end
@@ -190,9 +150,11 @@ local function triggerNearestPractice()
     end
 
     showFeedback(nearestPad.Color:Lerp(Color3.new(1, 1, 1), 0.22))
-    nearestBundle.emitter:Emit(
-        VfxQuality.particleCount(tier().Name, 16, 4)
-    )
+    if player:GetAttribute("ReduceMotion") ~= true then
+        nearestBundle.emitter:Emit(
+            VfxQuality.particleCount(tier().Name, 16, 4)
+        )
+    end
 end
 
 local function scan(root)
@@ -215,7 +177,7 @@ workspace.DescendantRemoving:Connect(function(descendant)
     end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+local function refreshAll()
     for pad, bundle in pairs(tracked) do
         if pad.Parent then
             refreshBundle(pad, bundle)
@@ -223,7 +185,13 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
             remove(pad)
         end
     end
-end)
+end
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshAll)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshAll)
+
+-- Refreshing no longer recreates particle attachments or effects.
+-- Existing tracked pads stay stable across graphics/accessibility changes.
 
 scan(workspace)
 

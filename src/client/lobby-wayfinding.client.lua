@@ -136,8 +136,10 @@ local function refresh()
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    phase = tostring(state.phase or "waiting")
-    voteOptions = state.voteOptions
+    local snapshot = type(state) == "table" and state or {}
+    phase = tostring(snapshot.phase or "waiting")
+    voteOptions = type(snapshot.voteOptions) == "table"
+        and snapshot.voteOptions or nil
     refresh()
 end)
 

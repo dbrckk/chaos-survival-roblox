@@ -454,3 +454,20 @@ cue; dash: expect exactly one server-authored impulse and a 9-second
 cooldown. Repeat after elimination, respawn, spectator mode and with
 ReduceMotion. Real-device input timing and visual legibility are not yet
 certified.
+
+## PR #19 — visible practice-pad effects and safe lobby wayfinding (11 October 2026)
+
+The practice pad ParticleEmitter now uses an Attachment parented directly to
+the actual BasePart, rather than a Folder that could lose its world-space
+emission transform. A dedicated testable client kit owns the temporary
+Folder, direct Attachment, emitter and Highlight as one cleanup bundle.
+Respawn/removal/streaming cleanup destroys both attachment and folder.
+Existing visual parameters and particle limits are unchanged.
+
+ReduceMotion now sets the practice emitter rate to zero and suppresses
+burst Emit() calls, while retaining static highlight/readability. Toggling
+the setting refreshes existing pads without allocating new emitters.
+Malformed RoundState events no longer crash lobby-wayfinding display.
+The engine lobby-activities suite checks real parentage, cleanup,
+no duplicate pad bundles, and accessibility particle rates. A live
+Roblox Studio and Android visual review remains necessary.
