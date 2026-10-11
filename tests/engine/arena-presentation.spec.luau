@@ -631,6 +631,58 @@ describe("Android arena identity ornament motion", function()
             * rules.focusEnvelope(1, 0.38, 1)).toBe(0)
     end)
 
+    it("restores LOD-hidden identity decor and eases streamed motion from rest", function()
+        local rules = IdentityMotionRules
+        expect(rules.resumeEnvelope(0)).toBe(0)
+        expect(rules.resumeEnvelope(-1)).toBe(0)
+        expect(rules.resumeEnvelope("0.24")).toBe(0)
+        expect(rules.resumeEnvelope(0/0)).toBe(0)
+        expect(rules.resumeEnvelope(math.huge)).toBe(0)
+        expect(rules.resumeEnvelope(-math.huge)).toBe(0)
+        expect(math.abs(rules.resumeEnvelope(0.24) - 0.5) < 0.0001)
+            .toBe(true)
+        expect(rules.resumeEnvelope(0.48)).toBe(1)
+        expect(rules.resumeEnvelope(2)).toBe(1)
+        expect(math.abs(rules.motionScale("Low", false)
+            * rules.resumeEnvelope(0.24) - 0.19) < 0.0001).toBe(true)
+        expect(rules.motionScale("High", true)
+            * rules.resumeEnvelope(2)).toBe(0)
+
+        local holder = Instance.new("Folder")
+        local part = Instance.new("Part")
+        part.Parent = holder
+        local baseline = {
+            baseCFrame = CFrame.new(7, 9, -2)
+                * CFrame.Angles(0, math.rad(30), 0),
+            baseColor = Color3.fromRGB(42, 170, 235),
+            baseTransparency = 0.31,
+        }
+        part.CFrame = baseline.baseCFrame * CFrame.new(0, 1.2, 0)
+        part.Color = Color3.new(1, 1, 1)
+        part.Transparency = 0.65
+        part.LocalTransparencyModifier = 0.42
+        part:SetAttribute("SceneryLodHidden", true)
+        expect(rules.shouldUpdate(part)).toBe(false)
+        expect(rules.restorePose(part, baseline)).toBe(true)
+        expect((part.CFrame.Position - baseline.baseCFrame.Position).Magnitude
+            < 0.0001).toBe(true)
+        expect(part.CFrame.RightVector:Dot(baseline.baseCFrame.RightVector)
+            > 0.99999).toBe(true)
+        expect(part.Color).toBe(baseline.baseColor)
+        expect(part.Transparency).toBe(baseline.baseTransparency)
+        -- Scenery LOD alone owns the local visibility modifier.
+        expect(part.LocalTransparencyModifier).toBe(0.42)
+        expect(part:GetAttribute("SceneryLodHidden")).toBe(true)
+
+        part:SetAttribute("SceneryLodHidden", false)
+        expect(rules.shouldUpdate(part)).toBe(true)
+        expect(rules.restorePose(part, {})).toBe(false)
+        part.Parent = nil
+        expect(rules.restorePose(part, baseline)).toBe(false)
+        part:Destroy()
+        holder:Destroy()
+    end)
+
     it("keeps authored tier scales and fully disables continuous ReduceMotion", function()
         expect(IdentityMotionRules.motionScale("Low", false)).toBe(0.38)
         expect(IdentityMotionRules.motionScale("Medium", false)).toBe(0.68)

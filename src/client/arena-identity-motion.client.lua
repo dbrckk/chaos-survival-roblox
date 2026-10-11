@@ -21,15 +21,12 @@ local disconnectStructure = nil
 local watchedMap = nil
 local rebuildQueued = false
 local rebuildSerial = 0
+local preserveStates = nil
 
 local function restoreTracked()
     for _, item in ipairs(tracked) do
         local part = item.part
-        if part and part.Parent then
-            part.CFrame = item.baseCFrame
-            part.Transparency = item.baseTransparency
-            part.Color = item.baseColor
-        end
+        MotionRules.restorePose(part, item)
     end
 end
 
@@ -45,27 +42,49 @@ local function trackPart(part, index)
         return
     end
 
+    local existing = preserveStates and preserveStates[part]
+    if existing then
+        existing.index = index or existing.index
+        tracked[#tracked + 1] = existing
+        return
+    end
+
     tracked[#tracked + 1] = {
         part = part,
         index = index or #tracked + 1,
         baseCFrame = part.CFrame,
         baseTransparency = part.Transparency,
         baseColor = part.Color,
+        resumeAt = os.clock(),
+        wasLodHidden = false,
     }
 end
 
 local function rebuild()
-    clear()
-
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local decor = arena and arena:FindFirstChild("Decor")
     if not arena or not decor then
+        clear()
         return
     end
 
+    local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local previous = tracked
+    local sameScene = arena == currentArena and variant == currentVariant
+    if not sameScene then
+        restoreTracked()
+    end
+    preserveStates = nil
+    if sameScene then
+        preserveStates = {}
+        for _, item in ipairs(previous) do
+            preserveStates[item.part] = item
+        end
+    end
+    tracked = {}
     currentArena = arena
-    currentVariant = tostring(arena:GetAttribute("VariantId") or "Classic")
+    currentVariant = variant
 
     if currentVariant == "Classic" then
         for i = 1, 4 do
@@ -94,6 +113,20 @@ local function rebuild()
         end
     end
 
+    -- A newly streamed ornament must not restart every existing landmark.
+    -- Preserve the captured frame and resume clock of unchanged parts.
+    if sameScene then
+        local retained = {}
+        for _, item in ipairs(tracked) do
+            retained[item.part] = true
+        end
+        for _, item in ipairs(previous) do
+            if not retained[item.part] then
+                MotionRules.restorePose(item.part, item)
+            end
+        end
+    end
+    preserveStates = nil
 end
 
 -- Reconnect to each map generation; late Arena, Decor, VariantId and
@@ -181,8 +214,12 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
         restoreTracked()
     else
         -- Resume authored ornament motion from rest, not a full-scale jump.
+        local now = os.clock()
         phaseFromIntensity = 0
-        phaseStartedAt = os.clock()
+        phaseStartedAt = now
+        for _, item in ipairs(tracked) do
+            item.resumeAt = now
+        end
     end
 end)
 
@@ -206,9 +243,26 @@ task.spawn(function()
         if active and scale > 0 then
             for _, item in ipairs(tracked) do
             local part = item.part
-            if not MotionRules.shouldUpdate(part) then
+            if not part or not part.Parent then
                 continue
             end
+            if not MotionRules.shouldUpdate(part) then
+                if not item.wasLodHidden then
+                    -- LOD owns visibility. Restore the authored pose once,
+                    -- without changing its LocalTransparencyModifier.
+                    MotionRules.restorePose(part, item)
+                    item.wasLodHidden = true
+                end
+                continue
+            end
+            if item.wasLodHidden then
+                item.wasLodHidden = false
+                item.resumeAt = now
+            end
+            -- Only newly streamed or LOD-returning parts ease from rest.
+            local scale = scale * MotionRules.resumeEnvelope(
+                now - (item.resumeAt or now)
+            )
 
             local phase = now * 1.8 + item.index * 0.62
             local wave = (math.sin(phase) + 1) * 0.5

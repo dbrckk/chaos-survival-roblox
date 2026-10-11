@@ -173,3 +173,41 @@ as it also uses that pattern to catch placeholder identifiers. Writing
 the identical numeric threshold as `1e7` keeps runtime behavior unchanged
 and avoids a false positive. Build and Roblox Open Cloud checks on the
 new HEAD are required; neither outcome is assumed here.
+
+## Streamed identity ornaments: LOD and accessibility return
+
+Arena.Decor identity pieces now track their own **appearance resume** time.
+When a new named piece streams in, or an existing piece returns after
+`SceneryLodHidden`, its original authored pose is the starting frame.
+A 480 ms smoothstep envelope progressively restores its existing per-map
+motion, color pulse and glow; this envelope multiplies (never overrides)
+phase intensity, Final Rush focus and Low/Medium/High budgets.
+
+The map watcher previously restored and rescanned **every** ornament when
+one new named child streamed in, causing existing machinery to jump to
+rest. Within the same Arena and VariantId, rebuilds now reuse existing
+parts' authored baselines, current resume clocks and LOD state. Only
+newly arrived parts begin their resume envelope; removed parts are
+restored once. Changing arena or variant still restores old poses before
+capturing a new baseline.
+
+On the first observed hidden frame, the client restores the authored
+`CFrame`, `Color` and `Transparency` once. It deliberately **does not
+change `LocalTransparencyModifier` or `SceneryLodHidden`**, which are
+owned by the scenery LOD system. Returning from ReduceMotion also resets
+the resume clock. No new client loops, scene parts, lights, emitters,
+server messages, hitboxes or gameplay timing are introduced.
+
+The `core_a` engine regression covers invalid/halfway/complete resume
+times, tier and ReduceMotion multiplication, actual Roblox BasePart pose
+restoration, preserved LOD visibility modifier, and detached instances.
+The client-side rebuild ordering and live streaming event timing remain
+manual acceptance items, not covered by those pure-rule assertions.
+
+**Physical acceptance required:** cycle all four arenas with rapid
+stream-in/out and ReduceMotion on/off; inspect that crowns, antennas,
+collars and reactor nodes reappear without visible pose jumps, while
+unchanged ornaments continue their original animation when one new part
+streams in. Verify mobile Low/Medium/High and hazard cue readability.
+Record Studio and physical Android frame-time, FPS and thermal
+observations separately; none have been measured in this change.

@@ -58,6 +58,33 @@ function ArenaIdentityMotionRules.focusEnvelope(fromScale, toScale, elapsed)
     return from + (target - from) * smooth
 end
 
+-- Reintroduce a streamed or previously LOD-hidden ornament from its
+-- authored pose. This affects decoration only, never hazard telegraphs.
+function ArenaIdentityMotionRules.resumeEnvelope(elapsed)
+    if type(elapsed) ~= "number" or elapsed ~= elapsed
+        or math.abs(elapsed) == math.huge or elapsed <= 0 then
+        return 0
+    end
+    local t = math.clamp(elapsed / 0.48, 0, 1)
+    return t * t * (3 - 2 * t)
+end
+
+-- LOD owns LocalTransparencyModifier, not these authored properties.
+-- Reset the original frame only on state transitions, never every idle tick.
+function ArenaIdentityMotionRules.restorePose(part, state)
+    if not part or not part:IsA("BasePart") or not part.Parent
+        or type(state) ~= "table"
+        or typeof(state.baseCFrame) ~= "CFrame"
+        or typeof(state.baseColor) ~= "Color3"
+        or type(state.baseTransparency) ~= "number" then
+        return false
+    end
+    part.CFrame = state.baseCFrame
+    part.Color = state.baseColor
+    part.Transparency = state.baseTransparency
+    return true
+end
+
 function ArenaIdentityMotionRules.interval(tier, reduceMotion, active, hasTracked)
     if active ~= true or hasTracked ~= true or reduceMotion == true then
         return 0.60
