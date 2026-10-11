@@ -8,6 +8,70 @@ local LocomotionDynamics = require("../../src/shared/LocomotionDynamics")
 local GroundFx = require("../../src/client/LocomotionGroundFx")
 
 describe("Body motion rules", function()
+    it("binds native R15 and R6 body joints without duplicating motors", function()
+        local rules = BodyMotionRules
+        local function part(model, name)
+            local p = Instance.new("Part")
+            p.Name = name
+            p.Parent = model
+            return p
+        end
+        local function joint(parent, name)
+            local j = Instance.new("Motor6D")
+            j.Name = name
+            j.Parent = parent
+            return j
+        end
+        local r15 = Instance.new("Model")
+        local lower = part(r15, "LowerTorso")
+        local upper = part(r15, "UpperTorso")
+        local waist = joint(upper, "Waist")
+        local root15 = joint(lower, "Root")
+        local lhip15 = joint(lower, "LeftHip")
+        joint(lower, "RightHip")
+        joint(upper, "LeftShoulder")
+        joint(upper, "RightShoulder")
+        local b15 = rules.joints(r15, Enum.HumanoidRigType.R15)
+        expect(b15.waist).toBe(waist)
+        expect(b15.rootJoint).toBe(root15)
+        expect(b15.leftHip).toBe(lhip15)
+        expect(b15.rightShoulder ~= nil).toBe(true)
+        local r6 = Instance.new("Model")
+        local torso = part(r6, "Torso")
+        local hrp = part(r6, "HumanoidRootPart")
+        local root6 = joint(hrp, "RootJoint")
+        local lhip6 = joint(torso, "Left Hip")
+        local rhip6 = joint(torso, "Right Hip")
+        local leftArm = joint(torso, "Left Shoulder")
+        local rightArm = joint(torso, "Right Shoulder")
+        local b6 = rules.joints(r6, Enum.HumanoidRigType.R6)
+        expect(b6.waist == nil).toBe(true)
+        expect(b6.rootJoint).toBe(root6)
+        expect(b6.leftHip).toBe(lhip6)
+        expect(b6.rightHip).toBe(rhip6)
+        expect(b6.leftShoulder).toBe(leftArm)
+        expect(b6.rightShoulder).toBe(rightArm)
+        expect(rules.rigPoseScale(Enum.HumanoidRigType.R15)).toBe(1)
+        expect(rules.rigPoseScale(Enum.HumanoidRigType.R6)).toBe(0.46)
+        expect(rules.rigPoseScale(nil)).toBe(0)
+        expect(rules.joints(r6, nil) == nil).toBe(true)
+        expect(rules.joints(nil, Enum.HumanoidRigType.R6) == nil).toBe(true)
+        -- Partially streamed R6 rigs are fail-soft; no duplicate joints.
+        root6:Destroy()
+        local partial = rules.joints(r6, Enum.HumanoidRigType.R6)
+        expect(partial.rootJoint == nil).toBe(true)
+        expect(partial.leftHip).toBe(lhip6)
+        -- Non-Motor6D lookalikes must not become animation targets.
+        leftArm:Destroy()
+        local decoy = Instance.new("Folder")
+        decoy.Name = "Left Shoulder"
+        decoy.Parent = torso
+        expect(rules.joints(r6, Enum.HumanoidRigType.R6).leftShoulder == nil).toBe(true)
+        r6:Destroy()
+        r15:Destroy()
+    end)
+
+
     it("differentiates starting sprint and braking with released input", function()
         local launch, noBrake = LocomotionDynamics.acceleration(12, 2, 0.10, true)
         local noLaunch, braking = LocomotionDynamics.acceleration(8, 20, 0.10, true)

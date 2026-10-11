@@ -1,5 +1,50 @@
 local BodyMotionRules = {}
 
+-- Both Roblox skeletons can receive mild *local* joint-offset polish.
+-- All bindings target the rig's original Motor6Ds, never the Animator,
+-- physics assembly, server-owned movement or replicated character assets.
+local function existingMotor(part, name)
+    local joint = part and part:FindFirstChild(name)
+    return joint and joint:IsA("Motor6D") and joint or nil
+end
+
+function BodyMotionRules.joints(character, rigType)
+    if not character or not character:IsA("Model") then return nil end
+    if rigType == Enum.HumanoidRigType.R15 then
+        local lower = character:FindFirstChild("LowerTorso")
+        local upper = character:FindFirstChild("UpperTorso")
+        return {
+            waist = existingMotor(upper, "Waist"),
+            rootJoint = existingMotor(lower, "Root"),
+            leftHip = existingMotor(lower, "LeftHip"),
+            rightHip = existingMotor(lower, "RightHip"),
+            leftShoulder = existingMotor(upper, "LeftShoulder"),
+            rightShoulder = existingMotor(upper, "RightShoulder"),
+        }
+    elseif rigType == Enum.HumanoidRigType.R6 then
+        local torso = character:FindFirstChild("Torso")
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        return {
+            waist = nil, -- R6 has no waist; all lean stays on RootJoint.
+            rootJoint = existingMotor(hrp, "RootJoint")
+                or existingMotor(torso, "RootJoint"),
+            leftHip = existingMotor(torso, "Left Hip"),
+            rightHip = existingMotor(torso, "Right Hip"),
+            leftShoulder = existingMotor(torso, "Left Shoulder"),
+            rightShoulder = existingMotor(torso, "Right Shoulder"),
+        }
+    end
+    return nil
+end
+
+-- R6's single rigid Torso and wide-offset shoulders need less additive
+-- lean than R15. Avoid dramatic inversions when switching avatar rigs.
+function BodyMotionRules.rigPoseScale(rigType)
+    if rigType == Enum.HumanoidRigType.R15 then return 1 end
+    if rigType == Enum.HumanoidRigType.R6 then return 0.46 end
+    return 0
+end
+
 function BodyMotionRules.stride(speed, grounded, speedSurge)
     local safeSpeed = math.max(0, tonumber(speed) or 0)
     if grounded ~= true or safeSpeed < 2.5 then

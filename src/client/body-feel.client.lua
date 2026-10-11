@@ -54,11 +54,7 @@ local lastGroundCueAt = -math.huge
 local baseC0 = setmetatable({}, {__mode = "k"})
 local bindSerial = 0
 local humanoidStateConnection = nil
-
-local function motor(parent, name)
-    local item = parent and parent:FindFirstChild(name)
-    return item and item:IsA("Motor6D") and item or nil
-end
+local rigPoseScale = 0
 
 local function resetMotors()
     for _, joint in ipairs({waist, rootJoint, leftHip, rightHip, leftShoulder, rightShoulder}) do
@@ -122,6 +118,7 @@ local function bind(nextCharacter)
     descentBracePose = 0
     lastGroundCueAt = -math.huge
     readyPose = 0
+    rigPoseScale = 0
 
     -- CharacterAdded can fire again while a streamed rig is still yielding.
     -- An older promise must never overwrite this client's current motors.
@@ -133,18 +130,16 @@ local function bind(nextCharacter)
     end
     humanoid = nextHumanoid
     root = nextRoot
-    if not humanoid or not root or humanoid.RigType ~= Enum.HumanoidRigType.R15 then
-        return
-    end
-
-    local lower = character:FindFirstChild("LowerTorso")
-    local upper = character:FindFirstChild("UpperTorso")
-    waist = motor(upper, "Waist")
-    rootJoint = motor(lower, "Root")
-    leftHip = motor(lower, "LeftHip")
-    rightHip = motor(lower, "RightHip")
-    leftShoulder = motor(upper, "LeftShoulder")
-    rightShoulder = motor(upper, "RightShoulder")
+    if not humanoid or not root then return end
+    local joints = BodyMotionRules.joints(character, humanoid.RigType)
+    if not joints then return end
+    rigPoseScale = BodyMotionRules.rigPoseScale(humanoid.RigType)
+    waist = joints.waist
+    rootJoint = joints.rootJoint
+    leftHip = joints.leftHip
+    rightHip = joints.rightHip
+    leftShoulder = joints.leftShoulder
+    rightShoulder = joints.rightShoulder
 
     for _, joint in ipairs({
         waist,
@@ -197,6 +192,7 @@ player.CharacterRemoving:Connect(function()
     rightHip = nil
     leftShoulder = nil
     rightShoulder = nil
+    rigPoseScale = 0
 end)
 
 local function expAlpha(speed, dt)
@@ -337,7 +333,7 @@ RunService:BindToRenderStep(
         if not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
             return
         end
-        if not waist and not rootJoint then
+        if rigPoseScale == 0 or (not waist and not rootJoint) then
             return
         end
 
@@ -591,7 +587,11 @@ RunService:BindToRenderStep(
         local function applyOffset(joint, offset)
             local original = joint and baseC0[joint]
             if joint and original then
-                joint.C0 = joint.C0:Lerp(original * offset, alpha)
+                -- R15 keeps the original motion layer. R6 preserves the
+                -- same cues at a more restrained joint amplitude.
+                local addition = rigPoseScale == 1 and offset
+                    or CFrame.identity:Lerp(offset, rigPoseScale)
+                joint.C0 = joint.C0:Lerp(original * addition, alpha)
             end
         end
 

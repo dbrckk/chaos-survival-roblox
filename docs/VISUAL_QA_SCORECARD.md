@@ -450,3 +450,30 @@ and invalid tier rejection. Physical Studio and Android 30-minute
 tests must still verify visual smoothness, actual FPS/overdraw and
 lobby/round transitions. The live cap is a preventive limit rather
 than proof of measured performance gain.
+
+## R6/R15 local body-feel animation parity
+
+The `body-feel.client.lua` presenter previously required an R15
+Humanoid and skipped all rigid R6 avatars. It now binds to Roblox's
+native R6 `HumanoidRootPart.RootJoint`, `Torso["Left Hip"]`,
+`Torso["Right Hip"]`, `Torso["Left Shoulder"]`, and
+`Torso["Right Shoulder"]` motors. R15 continues to use its original
+Waist, lower Root, hips and shoulders. R6 pose layers inherit the
+existing start, skid, pivot, jump, landing, danger reaction, ready
+stance and short post-round celebration envelopes, but with **46%**
+of the joint offset to account for its rigid single torso and avoid
+exaggerated avatar motion. The original Motor6D.C0 values are restored
+when switching characters and obsolete streamed rigs cannot override
+the new one.
+
+Only the client's decorative joint offsets change. No new animation
+asset IDs, physics impulses, Animator replacements, body forces,
+collision changes, or new render loops are introduced. Existing
+Low/Medium/High and ReduceMotion attenuation still apply.
+
+Engine specs cover the two rig layouts, exact joint object matching,
+missing/partially streamed joints, lookalike instance rejection and
+unsupported rig fallbacks. Full acceptance requires Roblox Studio
+preview on genuine R6/R15 rigs (with native running/emote animations),
+quick respawn or rig swaps, shoulder and hip clipping checks and real
+Android game-feeling/performance profiling.
