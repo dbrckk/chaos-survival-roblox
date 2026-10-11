@@ -221,3 +221,24 @@ Low/Medium/High, ReduceMotion and streaming/LOD behavior is unchanged.
 No server gameplay, geometry, collision or GPU budget is affected.
 Verify Build Validation and all five Open Cloud shards on the new SHA.
 Roblox Studio and physical Android QA remain outstanding.
+
+## Android quiet-frame BasePart.Color write reduction (11 October 2026)
+
+The client-owned landmark controller previously assigned the same baseline
+`BasePart.Color` on **every** animation tick for all roles other than the
+animated reactor core and transit signals, even when no hazard was active.
+This unnecessary property-write traffic affected service decorations and
+other static landmarks on mobile.
+
+The new `shouldRestoreBaseColor(role, hadReaction)` policy writes the
+captured baseline exactly once on the first frame after a disaster reaction
+ends. During a disaster, per-frame accent composition is unchanged.
+`reactorCore` and `signal` still author their own dynamic color every
+frame, including the first quiet frame. The policy also preserves
+ReduceMotion's immediate one-shot rest pose and the LOD-hidden skip.
+
+A `core_a` regression covers all tracked landmark roles, quiet frames,
+the reaction-to-idle transition, and the real Part's restored Color.
+No geometry, physics, network calls, render loops, or emitters are added.
+The optimization removes redundant assignments, but physical Android
+FPS/GPU/thermal improvements remain **unmeasured**.

@@ -426,6 +426,32 @@ describe("Hero landmark animation scheduling and accessibility", function()
             .toBe(true)
     end)
 
+    it("restores static landmark tint once after hazards without idle color writes", function()
+        for _, role in ipairs({
+            "lift", "pulse", "cable", "craneWeight", "reactorArm",
+            "antenna", "opsAntenna", "dockGlow", "closureBar",
+            "scan", "signal", "reactorCore",
+        }) do
+            expect(Budget.shouldRestoreBaseColor(role, false)).toBe(false)
+            expect(Budget.shouldRestoreBaseColor(role, nil)).toBe(false)
+            expect(Budget.shouldRestoreBaseColor(role, true))
+                .toBe(role ~= "signal" and role ~= "reactorCore")
+        end
+        local part = Instance.new("Part")
+        local baseColor = Color3.fromRGB(30, 80, 140)
+        local disasterColor = Color3.fromRGB(255, 90, 40)
+        part.Color = disasterColor
+        local hadReaction = true
+        if Budget.shouldRestoreBaseColor("closureBar", hadReaction) then
+            part.Color = baseColor
+        end
+        hadReaction = false
+        expect(part.Color).toBe(baseColor)
+        expect(Budget.shouldRestoreBaseColor("closureBar", hadReaction))
+            .toBe(false)
+        part:Destroy()
+    end)
+
     it("does not animate LOD-hidden or detached client-only landmark parts", function()
         local folder = Instance.new("Folder")
         local part = Instance.new("Part")

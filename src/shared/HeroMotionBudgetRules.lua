@@ -180,6 +180,14 @@ function HeroMotionBudgetRules.reactiveFrame(baseFrame, shift, yaw, bank)
     return baseFrame * CFrame.new(shift) * CFrame.Angles(0, yaw, bank)
 end
 
+-- Restore hazard tint only on the first quiet frame. Reactor core and
+-- transit signal already author a fresh animated Color each update.
+-- This avoids continuous no-op property writes on static landmarks.
+function HeroMotionBudgetRules.shouldRestoreBaseColor(role, hadReaction)
+    return hadReaction == true
+        and role ~= "reactorCore" and role ~= "signal"
+end
+
 function HeroMotionBudgetRules.shouldUpdate(part)
     return part ~= nil and part.Parent ~= nil
         and part:GetAttribute("SceneryLodHidden") ~= true

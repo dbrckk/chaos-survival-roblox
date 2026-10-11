@@ -305,10 +305,12 @@ task.spawn(function()
             local animatedColor = (state.role == "reactorCore"
                 or state.role == "signal") and part.Color or state.baseColor
             part.Color = animatedColor:Lerp(reaction.Accent, tint)
-        else
-            if state.role ~= "reactorCore" and state.role ~= "signal" then
-                part.Color = state.baseColor
-            end
+        elseif HeroMotionBudget.shouldRestoreBaseColor(state.role,
+            state.hadReaction) then
+            -- Only the first non-reactive tick needs to undo hazard tint.
+            -- Static service parts otherwise retain their authored color
+            -- without redundant BasePart.Color writes on Android.
+            part.Color = state.baseColor
         end
         -- Static pieces only need a CFrame write while reacting, then
         -- one reset after the hazard ends. Moving pieces update every tick.
