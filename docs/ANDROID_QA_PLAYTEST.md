@@ -549,3 +549,18 @@ Studio/Android follow-up: reconnect during a round, join late and respawn
 while final rush toggles; check cosmetic Trails, aura emitters and highlights
 stay stable and do not leak. Build and real Roblox Open Cloud checks are
 required on the exact new commit; a physical Android test remains pending.
+
+## PR #19 — hero-landmark RoundState resilience (11 October 2026)
+
+The existing arena-hero-motion RoundState listener now treats missing and
+non-table snapshots as an idle round state rather than indexing a string or
+number and raising a Lua error. A safe fallback clears active disaster
+reactions and final-rush intensity and reapplies the existing reduced-motion
+still pose when relevant. Valid phase snapshots, four landmark identities,
+animation signatures, quality tier budgets and server authority are not
+changed. This is a client-only input guard with zero new Instances/tasks.
+
+Roblox Studio follow-up: join late during a round, reconnect, rotate arenas,
+switch ReduceMotion on/off and verify that returning to READY/ROUND restores
+normal animated landmarks. Full exact-head automated checks and physical
+Android observation remain required before release.

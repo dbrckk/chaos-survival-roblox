@@ -122,6 +122,11 @@ local function scan()
 end
 
 roundEvent.OnClientEvent:Connect(function(state)
+    -- A malformed or late RoundState must never abort the hero-motion
+    -- listener. Fall back to the safe idle/rest pose.
+    if type(state) ~= "table" then
+        state = nil
+    end
     currentPhase = tostring(state and state.phase or "waiting")
     activeDisasters = state and state.disasterIds or {}
     finalRush = currentPhase == "round" and state.finalRush == true
