@@ -35,6 +35,40 @@ function Rules.style(tier)
     return 0, 0
 end
 
+-- Three original motion signatures on one existing Trail, without geometry.
+-- Separate entry/exit thresholds suppress sprint-speed jitter on Android.
+function Rules.momentumBand(ratio, previous)
+    if type(ratio) ~= "number" or ratio ~= ratio
+        or math.abs(ratio) == math.huge or ratio < 0 then
+        return "Flow"
+    end
+    if (previous == "Surge" and ratio >= 1.04) or ratio >= 1.12 then
+        return "Surge"
+    end
+    if (previous == "Drive" and ratio >= 0.91) or ratio >= 0.97 then
+        return "Drive"
+    end
+    return "Flow"
+end
+
+function Rules.momentumStyle(tier, band)
+    local lifetime, width = Rules.style(tier)
+    if lifetime <= 0 then
+        return {Lifetime = 0, Width = 0, Peak = 0.28,
+            Emission = 0, Opacity = 1}
+    end
+    local life, breadth, peak, emission, opacity
+    if band == "Surge" then
+        life, breadth, peak, emission, opacity = 1.07, 1.08, 0.38, 0.82, 0.48
+    elseif band == "Drive" then
+        life, breadth, peak, emission, opacity = 1, 1, 0.28, 0.74, 0.56
+    else
+        life, breadth, peak, emission, opacity = 0.90, 0.85, 0.19, 0.65, 0.64
+    end
+    return {Lifetime = lifetime * life, Width = width * breadth,
+        Peak = peak, Emission = emission, Opacity = opacity}
+end
+
 -- A hard limit on simultaneously rendered remote human trails prevents
 -- crowded rounds from multiplying translucent GPU overdraw.
 function Rules.remoteBudget(tier)

@@ -183,6 +183,37 @@ describe("Human momentum ribbon GPU and accessibility policy", function()
         expect(lowLife).toBe(0)
         expect(lowWidth).toBe(0)
     end)
+    it("adds hysteretic Flow Drive Surge ribbon silhouettes within mobile budgets", function()
+        local r = TrailRules
+        expect(r.momentumBand(0.86, nil)).toBe("Flow")
+        expect(r.momentumBand(0.97, nil)).toBe("Drive")
+        expect(r.momentumBand(1.12, nil)).toBe("Surge")
+        expect(r.momentumBand(0.93, "Drive")).toBe("Drive")
+        expect(r.momentumBand(0.89, "Drive")).toBe("Flow")
+        expect(r.momentumBand(1.06, "Surge")).toBe("Surge")
+        expect(r.momentumBand(1.03, "Surge")).toBe("Drive")
+        for _, bad in ipairs({-1, 0/0, math.huge, -math.huge}) do
+            expect(r.momentumBand(bad, "Surge")).toBe("Flow")
+        end
+        for _, tier in ipairs({"Medium", "High"}) do
+            local flow = r.momentumStyle(tier, "Flow")
+            local drive = r.momentumStyle(tier, "Drive")
+            local surge = r.momentumStyle(tier, "Surge")
+            expect(flow.Width < drive.Width and drive.Width < surge.Width).toBe(true)
+            expect(flow.Lifetime < drive.Lifetime
+                and drive.Lifetime < surge.Lifetime).toBe(true)
+            expect(flow.Opacity > drive.Opacity and drive.Opacity > surge.Opacity).toBe(true)
+            expect(flow.Peak < drive.Peak and drive.Peak < surge.Peak).toBe(true)
+            expect(surge.Lifetime <= 0.15).toBe(true)
+            expect(surge.Width <= 0.37).toBe(true)
+            expect(surge.Emission <= 0.82).toBe(true)
+            expect(r.momentumStyle(tier, "unknown").Width).toBe(flow.Width)
+        end
+        expect(r.momentumStyle("Low", "Surge").Width).toBe(0)
+        expect(r.momentumStyle("Unknown", "Drive").Lifetime).toBe(0)
+        expect(r.visible("round", false, false, 1.2, "High", true, 5)).toBe(false)
+    end)
+
     it("caps remote human ribbons with nearest-first and stable selection", function()
         local r = TrailRules
         expect(r.remoteBudget("Low")).toBe(0)
@@ -231,6 +262,32 @@ end)
 
 describe("Human ribbon attachment lifecycle", function()
     local Builder = require("../../src/client/CharacterMotionTrailBuilder")
+
+    it("restyles the existing human Trail without altering color or attachment count", function()
+        local root = Instance.new("Part")
+        local trail = Builder.ensure(root, Color3.fromRGB(80, 170, 255))
+        local accent = trail.Color.Keypoints[1].Value
+        local previousWidth = 0
+        for _, band in ipairs({"Flow", "Drive", "Surge"}) do
+            local style = TrailRules.momentumStyle("High", band)
+            expect(Builder.applyMomentumStyle(trail, style)).toBe(true)
+            expect(math.abs(trail.Lifetime - style.Lifetime) < 0.0001).toBe(true)
+            expect(math.abs(trail.WidthScale.Keypoints[2].Value - style.Width)
+                < 0.0001).toBe(true)
+            expect(math.abs(trail.WidthScale.Keypoints[2].Time - style.Peak)
+                < 0.0001).toBe(true)
+            expect(math.abs(trail.LightEmission - style.Emission) < 0.0001)
+                .toBe(true)
+            expect(style.Width > previousWidth).toBe(true)
+            previousWidth = style.Width
+            expect(trail.Color.Keypoints[1].Value).toBe(accent)
+            expect(#root:GetChildren()).toBe(3)
+        end
+        expect(Builder.applyMomentumStyle(nil,
+            TrailRules.momentumStyle("High", "Flow"))).toBe(false)
+        expect(Builder.applyMomentumStyle(trail, nil)).toBe(false)
+        root:Destroy()
+    end)
 
     it("reuses a single trail and its attachments across repeated ensure calls", function()
         local root = Instance.new("Part")

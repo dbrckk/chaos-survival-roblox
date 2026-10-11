@@ -284,3 +284,25 @@ stop, refresh and no-light rules.
 
 Real Android screenshots, warnings, memory, GPU activity and FPS have **not**
 been measured by the automated suites; check those on hardware before release.
+
+## PR #19 — authored sprint-ribbon gamefeel (11 October 2026)
+
+The single existing human Trail has three velocity-responsive, bounded
+silhouettes: Flow (thin/quick), Drive (steady), Surge (slightly wider
+and brighter). Entry/exit velocity thresholds are deliberately
+different to avoid flicker. Existing decorative speed sampling is
+reused; the client only writes WidthScale, Lifetime, LightEmission
+and Transparency when the band or graphics tier actually changes,
+not at every visual tick. Rig replacement resets cached band/style.
+
+High-tier maximum lifetime is under 0.15 seconds and width scale under
+0.37; Medium is subtler. Low, ReduceMotion, final-rush, spectator,
+camera-culling and 4/8 remote-human Trail caps remain unchanged.
+No new Trail, Beam, Attachment, particle, light or render loop is
+introduced, and original cosmetic colors are preserved. The event
+handler also tolerates malformed RoundState payloads.
+
+The existing character-polish engine suite checks band hysteresis,
+bounded tier recipes, non-finite speed inputs and real Trail styling
+without additional instances. Visual/gamefeel quality and physical
+Android GPU costs remain unmeasured until device and Studio QA.

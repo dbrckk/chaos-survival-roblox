@@ -18,6 +18,8 @@ function Registry.create(players)
         entry.trail = nil
         entry.appliedTier = nil
         entry.appliedAccent = nil
+        entry.appliedBand = nil
+        entry.momentumBand = nil
         entry.airborne = false
     end
 

@@ -13,8 +13,9 @@ local phase, finalRush = "waiting", false
 local remoteCandidates, selectedRemote = {}, {}
 
 event.OnClientEvent:Connect(function(state)
-    phase = tostring(state and state.phase or "waiting")
-    finalRush = phase == "round" and state.finalRush == true
+    local snapshot = type(state) == "table" and state or {}
+    phase = tostring(snapshot.phase or "waiting")
+    finalRush = phase == "round" and snapshot.finalRush == true
 end)
 
 task.spawn(function()
@@ -52,6 +53,7 @@ task.spawn(function()
                 local velocity = root.AssemblyLinearVelocity
                 local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
                 local ratio = math.clamp(speed / math.max(1, humanoid.WalkSpeed), 0, 1.35)
+                state.momentumBand = Rules.momentumBand(ratio, state.momentumBand)
                 distance = model == localPlayer.Character and 0
                     or (viewer and (root.Position - viewer).Magnitude or math.huge)
                 local retained = state.trail ~= nil and state.trail.Parent ~= nil
@@ -86,6 +88,7 @@ task.spawn(function()
                 if not Builder.isIntact(state.trail, state.root) then
                     state.trail = Builder.ensure(state.root, color)
                     state.appliedTier = nil
+                    state.appliedBand = nil
                     state.appliedAccent = color
                 elseif state.appliedAccent ~= color then
                     -- Cosmetics can change during a round; recolor the same
@@ -96,15 +99,14 @@ task.spawn(function()
             end
             local trail = state.trail
             if trail and trail.Parent then
-                if state.appliedTier ~= tier.Name then
-                    local lifetime, width = Rules.style(tier.Name)
-                    trail.Lifetime = lifetime
-                    trail.WidthScale = NumberSequence.new({
-                        NumberSequenceKeypoint.new(0, width * 0.35),
-                        NumberSequenceKeypoint.new(0.28, width),
-                        NumberSequenceKeypoint.new(1, 0),
-                    })
-                    state.appliedTier = tier.Name
+                local band = state.momentumBand or "Flow"
+                if state.appliedTier ~= tier.Name or state.appliedBand ~= band then
+                    -- Exactly one Trail; avoid per-tick NumberSequence churn.
+                    if Builder.applyMomentumStyle(trail,
+                        Rules.momentumStyle(tier.Name, band)) then
+                        state.appliedTier = tier.Name
+                        state.appliedBand = band
+                    end
                 end
                 if trail.Enabled ~= visible then trail.Enabled = visible end
             end

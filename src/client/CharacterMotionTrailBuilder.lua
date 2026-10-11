@@ -31,6 +31,32 @@ function Builder.setAccent(trail, accent)
     return true
 end
 
+-- Restyle only on velocity-band or device-tier transitions.
+-- No new attachments, Trail objects or per-frame tweens.
+function Builder.applyMomentumStyle(trail, style)
+    if not trail or not trail:IsA("Trail") or type(style) ~= "table"
+        or type(style.Lifetime) ~= "number"
+        or type(style.Width) ~= "number"
+        or type(style.Peak) ~= "number"
+        or type(style.Emission) ~= "number"
+        or type(style.Opacity) ~= "number" then
+        return false
+    end
+    trail.Lifetime = style.Lifetime
+    trail.WidthScale = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, style.Width * 0.35),
+        NumberSequenceKeypoint.new(style.Peak, style.Width),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    trail.LightEmission = style.Emission
+    trail.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, style.Opacity),
+        NumberSequenceKeypoint.new(0.62, 0.76),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    return true
+end
+
 -- Repair a streamed-away attachment even when its Trail still exists.
 function Builder.isIntact(trail, root)
     return trail ~= nil and trail:IsA("Trail") and trail.Parent == root
