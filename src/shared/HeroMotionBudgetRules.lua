@@ -101,6 +101,19 @@ function HeroMotionBudgetRules.serviceAntennaOffset(now, scale)
         math.sin(now * 0.64 + 0.35) * math.rad(1.15) * amplitude, 0)
 end
 
+-- Orbital's existing anchored docking pod softly stabilizes against
+-- the static service arm. No new part or render loop; Low has no pod.
+function HeroMotionBudgetRules.dockingPodOffset(now, scale)
+    if type(now) ~= "number" or now ~= now or now < 0
+        or now > 1e7 or type(scale) ~= "number" or scale ~= scale
+        or scale < 0 or scale > 1 then
+        return CFrame.identity
+    end
+    local lift = math.sin(now * 0.77 + 0.4) * 0.12 * scale
+    local bank = math.sin(now * 0.52) * math.rad(1.25) * scale
+    return CFrame.new(0, lift, 0) * CFrame.Angles(0, 0, bank)
+end
+
 -- Restrained independent light rhythms: Orbital docking rail and three
 -- Crossroads closure bars. The "closed" signal remains constantly visible.
 -- These are decorative Neon transparencies, not danger telegraphs.

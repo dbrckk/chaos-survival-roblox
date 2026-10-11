@@ -242,3 +242,26 @@ the reaction-to-idle transition, and the real Part's restored Color.
 No geometry, physics, network calls, render loops, or emitters are added.
 The optimization removes redundant assignments, but physical Android
 FPS/GPU/thermal improvements remain **unmeasured**.
+
+## Orbital docking capsule: bounded local stabilizer (11 October 2026)
+
+The existing noncolliding anchored `OrbitalDockingPod` now gets a unique
+mechanical stabilization pose: at most 0.12 stud of vertical travel and
+1.25 degrees of roll, with differing time phases. The `OrbitalDockingArm`
+and `OrbitalDockingNeck` stay fixed; no extra geometry, lights, emitters,
+server events, hitboxes, or render loops are introduced. The pod only
+exists in the pre-existing Medium/High asymmetric service cluster,
+not Low.
+
+Each pose composes from its captured original CFrame and uses the
+existing per-tier amplitude, 480 ms stream/LOD re-entry envelope,
+active-disaster reaction and one-shot ReduceMotion return to rest.
+A bounds and non-finite-input guard rejects malformed timing/scales.
+The core_a landmark spec covers deterministic transformations on a
+rotated base, amplitude/angle limits, tier scaling, invalid numeric
+inputs and static accessibility gates.
+
+Unverified: actual Roblox Studio clearance against the pod's docking
+neck, visual desirability of the movement, physical Android graphics
+and thermal/FPS performance. No screenshots or device measurements
+have been produced.

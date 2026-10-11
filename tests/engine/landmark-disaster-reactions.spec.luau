@@ -314,6 +314,42 @@ describe("Hero landmark animation scheduling and accessibility", function()
         expect(Budget.servicePulse("closureBar", 1, 0/0)).toBe(0)
     end)
 
+    it("stabilizes Orbital docking capsule with bounded local 3D movement", function()
+        local frame = CFrame.new(19, 11, -24)
+            * CFrame.Angles(math.rad(7), math.rad(-31), math.rad(4))
+        local now = 1.37
+        local high = Budget.dockingPodOffset(now, 1)
+        local medium = Budget.dockingPodOffset(now, 0.62)
+        local still = Budget.dockingPodOffset(now, 0)
+        expect(math.abs(high.Position.Y) > math.abs(medium.Position.Y)).toBe(true)
+        expect(math.abs(medium.Position.Y) > math.abs(still.Position.Y)).toBe(true)
+        expect(high.Position.Magnitude <= 0.121).toBe(true)
+        expect(high.UpVector:Dot(Vector3.yAxis) >= math.cos(math.rad(1.26)))
+            .toBe(true)
+        expect(still.Position.Magnitude < 0.00001).toBe(true)
+        expect(still.UpVector:Dot(Vector3.yAxis) > 0.99999).toBe(true)
+        for _, clock in ipairs({0, 0.8, 1.37, 5.3, 4097.37}) do
+            local localPose = Budget.dockingPodOffset(clock, 1)
+            expect(localPose.Position.Magnitude <= 0.121).toBe(true)
+            local composed = frame * localPose
+            local repeated = frame * Budget.dockingPodOffset(clock, 1)
+            expect((composed.Position - repeated.Position).Magnitude < 0.0001)
+                .toBe(true)
+            expect(composed.UpVector:Dot(repeated.UpVector) > 0.99999)
+                .toBe(true)
+        end
+        for _, bad in ipairs({-1, math.huge, -math.huge, 1e8, 0/0}) do
+            local a = Budget.dockingPodOffset(bad, 1)
+            local b = Budget.dockingPodOffset(now, bad)
+            expect(a.Position.Magnitude < 0.00001).toBe(true)
+            expect(b.Position.Magnitude < 0.00001).toBe(true)
+            expect(a.UpVector:Dot(Vector3.yAxis) > 0.99999).toBe(true)
+            expect(b.UpVector:Dot(Vector3.yAxis) > 0.99999).toBe(true)
+        end
+        expect(Budget.dockingPodOffset(now, 1.01).Position.Magnitude).toBe(0)
+        expect(Budget.motionScale("High", true)).toBe(0)
+    end)
+
     it("crossfades three transit lights without hard on-off frame jumps", function()
         local phase = {}
         for i = 1, 3 do
