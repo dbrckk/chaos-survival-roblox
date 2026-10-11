@@ -97,9 +97,9 @@ end
 -- An actual hollow ring of short bevel-like facets, never a solid
 -- neon cylinder. Each facet is noncolliding, and Tween/Debris own its
 -- complete lifetime. Budget: High 10 facets/ring, Medium 7, Low 5.
-local function cosmeticRing(position, color, growth, age, forward, secondary)
+local function cosmeticRing(position, color, growth, age, forward, secondary, reducedMotion)
     local tier = quality()
-    local count = DashVisualRules.count(tier)
+    local count = DashVisualRules.count(tier, reducedMotion)
     local fromRadius = 1.45
     local toRadius = growth * 0.5
     -- Orient the shockwave to the actual avatar heading, never world X/Z.
@@ -108,7 +108,7 @@ local function cosmeticRing(position, color, growth, age, forward, secondary)
         or Vector3.new(0, 0, -1)
     local side = Vector3.new(-heading.Z, 0, heading.X)
     for index = 1, count do
-        local design = DashVisualRules.facet(tier, index, secondary)
+        local design = DashVisualRules.facet(tier, index, secondary, reducedMotion)
         local angle = design.Angle
         local radial = side * math.sin(angle) + heading * math.cos(angle)
         local tangent = side * math.cos(angle) - heading * math.sin(angle)
@@ -204,11 +204,11 @@ local function playDashEffect(character)
     )
     cosmeticRing(position, Color3.fromRGB(85, 233, 235),
         reduced and 4.4 or 9.5, reduced and 0.16 or 0.42,
-        heading, false)
+        heading, false, reduced)
     if not reduced and tier == "High" then
         cosmeticRing(position + Vector3.new(0, 0.08, 0),
             Color3.fromRGB(178, 101, 253), 6.7, 0.34,
-            heading, true)
+            heading, true, reduced)
     end
     if not reduced and tier ~= "Low" then
         dashTrail(root, tier == "High")

@@ -3,15 +3,23 @@
 -- increasing 5/7/10-part per-ring device budgets.
 local Rules = {}
 
-function Rules.count(tier)
+function Rules.count(tier, reducedMotion)
+    -- Preserve the authored full-detail silhouettes for normal play.
+    -- Accessibility mode retains a readable ring with fewer moving facets.
+    if reducedMotion == true then
+        if tier == "High" then return 5 end
+        if tier == "Medium" then return 4 end
+        if tier == "Low" then return 3 end
+        return 0
+    end
     if tier == "High" then return 10 end
     if tier == "Medium" then return 7 end
     if tier == "Low" then return 5 end
     return 0
 end
 
-function Rules.facet(tier, index, secondary)
-    local count = Rules.count(tier)
+function Rules.facet(tier, index, secondary, reducedMotion)
+    local count = Rules.count(tier, reducedMotion)
     if count == 0 or type(index) ~= "number" or index ~= index
         or math.abs(index) == math.huge or index % 1 ~= 0
         or index < 1 or index > count then

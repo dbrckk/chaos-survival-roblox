@@ -629,3 +629,19 @@ reuse, torso handoff, disabled/reenabled states, zero-light policy,
 color/range changes and malformed brightness. No GPU light budget was
 increased. This is a code-level optimization, **not** a measured Android
 FPS, GPU, power or thermal improvement; physical profiling is still needed.
+
+## PR #19 — reduced-motion Phase Dash silhouette budget (12 October 2026)
+
+The original directional Phase Dash pressure blades retain their normal
+5/7/10-facet Low/Medium/High first-ring identities. ReduceMotion now
+keeps a brief, readable first-ring cue with 3/4/5 facets instead of
+5/7/10, respectively. The High-tier secondary ring and every dash
+ribbon were already disabled under ReduceMotion and remain disabled.
+No server movement, cooldown, hitbox, audio or client input behavior is
+changed. Existing normal-mode art geometry and effect lifetimes remain
+unchanged. The movement-safety engine spec verifies the reduced counts,
+valid directional facet descriptors and unchanged normal counts.
+
+This reduces per-dash client Part/Tween creation under ReduceMotion; it
+is not a measured FPS, GPU, battery or thermal result. Confirm on an
+Android device that the cue is readable without visual discomfort.

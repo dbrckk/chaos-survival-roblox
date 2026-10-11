@@ -63,6 +63,29 @@ describe("Movement safety", function()
         expect(primary.Bank ~= accent.Bank).toBe(true)
     end)
 
+    it("halves moving Phase Dash facet load under ReduceMotion without removing the cue", function()
+        local art = DashVisualRules
+        local expected = {Low = 3, Medium = 4, High = 5}
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local normal = art.count(tier)
+            local reduced = art.count(tier, true)
+            expect(reduced).toBe(expected[tier])
+            expect(reduced < normal).toBe(true)
+            expect(art.count(tier, false)).toBe(normal)
+            for index = 1, reduced do
+                local facet = art.facet(tier, index, false, true)
+                expect(facet ~= nil and facet.Count == reduced).toBe(true)
+                expect(facet.Angle >= 0 and facet.Angle < math.pi * 2).toBe(true)
+                expect(facet.EndScale > 0 and facet.ChordScale > 0).toBe(true)
+            end
+            expect(art.facet(tier, reduced + 1, false, true)).toBe(nil)
+            expect(art.facet(tier, 1, false, false).Count).toBe(normal)
+        end
+        expect(art.count("Unknown", true)).toBe(0)
+        expect(art.facet("Unknown", 1, false, true)).toBe(nil)
+        expect(art.facet("High", 0/0, false, true)).toBe(nil)
+    end)
+
     it("disconnects remote avatar pulse listeners on respawn and departure", function()
         local added = Instance.new("BindableEvent")
         local removing = Instance.new("BindableEvent")
