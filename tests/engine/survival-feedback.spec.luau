@@ -100,6 +100,53 @@ describe("Character cinematic reactions", function()
         model:Destroy()
     end)
 
+    it("rejects invalid reaction numbers without allocating Beam or Attachment", function()
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local root = Instance.new("Part")
+        root.Parent = model
+        local active = {}
+        local visual = CharacterReactionVisuals
+        for _, invalid in ipairs({math.huge, -math.huge, 0/0}) do
+            expect(visual.signature("Dodge", "Meteor", invalid, 0.8) == nil)
+                .toBe(true)
+            expect(visual.signature("Shock", "Bomb", 1, invalid) == nil)
+                .toBe(true)
+            expect(visual.burst(root, "Dodge", "Meteor", invalid, 0.8, active))
+                .toBe(0)
+            expect(visual.burst(root, "Shock", "Bomb", 2, invalid, active))
+                .toBe(0)
+        end
+        for _, index in ipairs({0, -1, 4, 1.5, 1e8}) do
+            expect(visual.signature("Landing", "", index, 1) == nil)
+                .toBe(true)
+        end
+        expect(visual.burst(root, "Landing", "", nil, 0.8, active)).toBe(0)
+        expect(visual.burst(root, "Landing", "", 2, nil, active)).toBe(0)
+        expect(visual.activeBeams(active)).toBe(0)
+        expect(#root:GetChildren()).toBe(0)
+        -- Existing finite 0..1 intensity and capped count still work.
+        expect(visual.burst(root, "Dodge", "Meteor", 50, 0.9, active))
+            .toBe(3)
+        expect(visual.activeBeams(active)).toBe(3)
+        model:Destroy()
+    end)
+
+    it("falls back from invalid explosion vectors without malformed CFrames", function()
+        local root = CFrame.new(8, 2, -5)
+        for _, source in ipairs({
+            Vector3.new(0/0, 1, 0),
+            Vector3.new(math.huge, 0, 0),
+            Vector3.new(0, -math.huge, 0),
+        }) do
+            local offset, directed = CharacterReactionVisuals.shockOrientation(
+                root, source)
+            expect(directed).toBe(false)
+            expect((offset.Position - Vector3.zero).Magnitude < 0.0001)
+                .toBe(true)
+        end
+    end)
+
     it("uses different physical silhouettes for meteor ejections and bomb pressure", function()
         local visual = CharacterReactionVisuals
         local meteor = visual.signature("Shock", "Meteor", 1, 0.8)

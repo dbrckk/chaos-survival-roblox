@@ -67,3 +67,23 @@ In a staging build with a rotated (or slightly tilted) Lobby.Floor, verify each 
 ## PR #19 — nested streaming decor regression (code-level coverage)
 
 On Android, stream a pre-populated Model or Folder into `GeneratedMap.Arena.Decor` after the map initially loads. Verify that **nested** Neon parts and Point/Spot/SurfaceLights are dimmed immediately at Low, Medium and High; a parent-only treatment is insufficient. Change quality Low → High → Low and confirm the original light brightness is restored proportionally rather than multiplied repeatedly. Verify edge guidance remains clearer than decorative Neon, and repeat while replacing the map. The existing arena engine spec now exercises the subtree treatment and baseline cache, but actual streaming timing, visual legibility and FPS require physical Studio/Android acceptance.
+
+## PR #19 — malformed character reaction VFX inputs (11 October 2026)
+
+The pre-existing non-physical Dodge, Shock and Landing Beam recipes
+retain their directional/curved 3D signatures, per-tier policies,
+12-Beam live cap, short lifetime, no extra BaseParts and zero
+camera/physics changes. The renderer now rejects NaN/infinite event
+counts and intensity before creating Attachments or Beams. Direct
+signature calls also reject non-finite or out-of-range ribbon indices
+(only 1–3 are authored), rather than producing unbounded offsets.
+Shock orientation falls back to the existing neutral local frame when
+the impact/source vector contains non-finite coordinates.
+
+The engine spec `survival-feedback.spec.luau` adds regression cases
+for malformed count, strength, ribbon index and explosion vectors,
+verifying zero leaked attachments on invalid bursts and unchanged
+normal capped emission. These tests must still pass on the exact-head
+Open Cloud workflow before the lot is considered validated. Physical
+Android and Roblox Studio reviews of avatar effects, thermal behavior
+and frame rate remain outstanding and are not claimed here.

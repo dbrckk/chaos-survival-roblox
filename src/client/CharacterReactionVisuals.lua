@@ -6,6 +6,18 @@ local TweenService = game:GetService("TweenService")
 local CharacterReactionVisuals = {}
 local MAX_LIVE_BEAMS = 12
 
+-- Non-finite inputs must never reach Attachment.Position, Beam.Width0,
+-- or CFrame.lookAt. All valid effect recipes and tier budgets are unchanged.
+local function finiteNumber(value)
+    return type(value) == "number" and value == value
+        and math.abs(value) ~= math.huge
+end
+
+local function finiteVector(value)
+    return finiteNumber(value.X) and finiteNumber(value.Y)
+        and finiteNumber(value.Z)
+end
+
 -- Only Beam instances count toward the renderer budget (attachments are free
 -- bookkeeping). Prune dead references between bursts.
 local function liveBeamCount(activePieces)
@@ -42,10 +54,17 @@ function CharacterReactionVisuals.signature(mode, kind, index, strength)
     if mode ~= "Dodge" and mode ~= "Shock" and mode ~= "Landing" then
         return nil
     end
-    local side = (tonumber(index) or 1) % 2 == 0 and 1 or -1
-    local stripe = math.ceil(math.max(1, tonumber(index) or 1) / 2)
+    -- At most three ribbons are authored per burst. Larger indices can
+    -- displace silhouettes far above the avatar; invalid numbers can
+    -- produce invalid Roblox-native Beam and Attachment properties.
+    if not finiteNumber(index) or index % 1 ~= 0
+        or index < 1 or index > 3 or not finiteNumber(strength) then
+        return nil
+    end
+    local side = index % 2 == 0 and 1 or -1
+    local stripe = math.ceil(index / 2)
     local height = 0.24 + stripe * 0.22
-    local intensity = math.clamp(tonumber(strength) or 0, 0, 1)
+    local intensity = math.clamp(strength, 0, 1)
     local startPosition
     local endPosition
     local curve0
@@ -115,14 +134,18 @@ function CharacterReactionVisuals.shockOrientation(rootCFrame, sourcePosition)
         or typeof(sourcePosition) ~= "Vector3" then
         return CFrame.new(), false
     end
+    if not finiteVector(rootCFrame.Position)
+        or not finiteVector(sourcePosition) then
+        return CFrame.new(), false
+    end
     local delta = rootCFrame.Position - sourcePosition
     local flat = Vector3.new(delta.X, 0, delta.Z)
-    if flat.Magnitude < 0.05 then
+    if not finiteNumber(flat.Magnitude) or flat.Magnitude < 0.05 then
         return CFrame.new(), false
     end
     local localAway = rootCFrame:VectorToObjectSpace(flat.Unit)
     local horizontal = Vector3.new(localAway.X, 0, localAway.Z)
-    if horizontal.Magnitude < 0.05 then
+    if not finiteNumber(horizontal.Magnitude) or horizontal.Magnitude < 0.05 then
         return CFrame.new(), false
     end
     return CFrame.lookAt(Vector3.zero, horizontal.Unit), true
@@ -193,16 +216,21 @@ local function stroke(root, mode, kind, index, strength, activePieces, orientati
 end
 
 function CharacterReactionVisuals.burst(root, mode, kind, count, strength, activePieces, sourcePosition)
+    local requestedCount = tonumber(count)
+    local requestedStrength = tonumber(strength)
     if not root or not root:IsA("BasePart") or not root.Parent
         or type(activePieces) ~= "table"
-        or CharacterReactionVisuals.signature(mode, kind, 1, strength) == nil
+        or not finiteNumber(requestedCount)
+        or not finiteNumber(requestedStrength)
+        or CharacterReactionVisuals.signature(
+            mode, kind, 1, requestedStrength) == nil
     then
         return 0
     end
-    local requested = math.clamp(math.floor(tonumber(count) or 0), 0, 3)
+    local requested = math.clamp(math.floor(requestedCount), 0, 3)
     local available = math.max(0, MAX_LIVE_BEAMS - liveBeamCount(activePieces))
     local pieces = math.min(requested, available)
-    local intensity = math.clamp(tonumber(strength) or 0, 0, 1)
+    local intensity = math.clamp(requestedStrength, 0, 1)
     local orientation, directional = CFrame.new(), false
     if mode == "Shock" then
         orientation, directional = CharacterReactionVisuals.shockOrientation(
