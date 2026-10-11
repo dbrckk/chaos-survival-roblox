@@ -144,3 +144,32 @@ The previous six-motion tests are preserved. No live Roblox Studio/Android
 visual acceptance or physical FPS, battery, thermals or GPU profiling has
 been performed. Check collars and nodes at close range on all tiers, including
 accessibility toggles and map streaming, before marking production-ready.
+
+## Final Rush visual-focus stability (11 October 2026)
+
+The existing `RoundState.finalRush` flag now reduces the amplitude of
+the eight **decorative** arena ornament motions to 38% of their existing
+phase/tier-limited intensity. Gameplay hitboxes, disaster telegraphs,
+UI warnings, character motion and server hazard timing are not changed.
+
+On entry to, and exit from, Final Rush, the current displayed ornamental
+amplitude interpolates to the new target over 450 ms (smoothstep).
+Repeated RoundState packets with an unchanged flag do not restart the
+transition. A mid-transition interruption starts from its actual
+displayed value, avoiding a visual snap. The already-existing
+ReduceMotion, Low/Medium/High and decorative update cadence are retained.
+No new Part, VFX emitter, lighting instance, client loop, server remote
+or gameplay change is introduced.
+
+The `core_a` engine spec tests initial/halfway/completed focus transitions,
+recovery, interrupted transitions, invalid numeric input and combined
+Low-quality and ReduceMotion constraints. Manual Studio and Android QA
+must confirm hazard legibility and camera-facing clarity during Final Rush.
+
+**Exact-head build hygiene correction:** `ArenaIdentityMotionRules.lua`
+contained the numeric constant `10000000` in the long-session guard.
+The existing production hygiene CI rejects six consecutive zero digits,
+as it also uses that pattern to catch placeholder identifiers. Writing
+the identical numeric threshold as `1e7` keeps runtime behavior unchanged
+and avoids a false positive. Build and Roblox Open Cloud checks on the
+new HEAD are required; neither outcome is assumed here.

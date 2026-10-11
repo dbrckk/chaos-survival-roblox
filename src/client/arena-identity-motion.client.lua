@@ -14,6 +14,9 @@ local tracked = {}
 local phase = "waiting"
 local phaseStartedAt = os.clock()
 local phaseFromIntensity = 0
+local focusFromScale = 1
+local focusTarget = 1
+local focusStartedAt = os.clock()
 local disconnectStructure = nil
 local watchedMap = nil
 local rebuildQueued = false
@@ -145,6 +148,20 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
     phase = incomingPhase
 
+    -- Final Rush is updated by the existing RoundState payload even when
+    -- the phase remains "round". Decorative motion gives danger cues room.
+    local nextFocus = MotionRules.focusTarget(
+        phase, state and state.finalRush == true
+    )
+    if nextFocus ~= focusTarget then
+        local now = os.clock()
+        focusFromScale = MotionRules.focusEnvelope(
+            focusFromScale, focusTarget, now - focusStartedAt
+        )
+        focusStartedAt = now
+        focusTarget = nextFocus
+    end
+
     local wasActive = previousPhase == "ready"
         or previousPhase == "round"
         or previousPhase == "result"
@@ -181,6 +198,9 @@ task.spawn(function()
         local scale = MotionRules.motionScale(tier, reduced)
             * MotionRules.phaseEnvelope(
                 phase, now - phaseStartedAt, phaseFromIntensity
+            )
+            * MotionRules.focusEnvelope(
+                focusFromScale, focusTarget, now - focusStartedAt
             )
 
         if active and scale > 0 then

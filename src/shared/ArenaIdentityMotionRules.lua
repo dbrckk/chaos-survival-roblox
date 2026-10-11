@@ -32,6 +32,32 @@ function ArenaIdentityMotionRules.phaseEnvelope(phase, elapsed, previousIntensit
     return previous + (target - previous) * ease
 end
 
+-- During Final Rush, hazardous telegraphs outrank client-only decor.
+function ArenaIdentityMotionRules.focusTarget(phase, finalRush)
+    return phase == "round" and finalRush == true and 0.38 or 1
+end
+
+-- Displayed-level interpolation avoids ornamental snapping during pressure
+-- toggles. This changes no server gameplay, damage or hazard visibility.
+function ArenaIdentityMotionRules.focusEnvelope(fromScale, toScale, elapsed)
+    if type(fromScale) ~= "number" or fromScale ~= fromScale
+        or math.abs(fromScale) == math.huge then
+        fromScale = 1
+    end
+    if type(toScale) ~= "number" or toScale ~= toScale
+        or math.abs(toScale) == math.huge then
+        toScale = 1
+    end
+    local from = math.clamp(fromScale, 0, 1)
+    local target = math.clamp(toScale, 0, 1)
+    if type(elapsed) ~= "number" or elapsed ~= elapsed or elapsed < 0 then
+        return from
+    end
+    local fraction = math.clamp(elapsed / 0.45, 0, 1)
+    local smooth = fraction * fraction * (3 - 2 * fraction)
+    return from + (target - from) * smooth
+end
+
 function ArenaIdentityMotionRules.interval(tier, reduceMotion, active, hasTracked)
     if active ~= true or hasTracked ~= true or reduceMotion == true then
         return 0.60
