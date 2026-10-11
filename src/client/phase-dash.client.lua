@@ -11,6 +11,8 @@ local SoundService = game:GetService("SoundService")
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PhaseDashRules = require(ReplicatedStorage.Shared.PhaseDashRules)
+local ObserverRegistry = require(script.Parent.PhaseDashObserverRegistry)
+local DashVisualRules = require(script.Parent.PhaseDashVisualRules)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -21,7 +23,7 @@ local nextSendAt = -math.huge
 local introduced = false
 local introUntil = 0
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
-local otherConnections = {}
+
 
 -- Track all temporary dash geometry in the audited local visual budget.
 local fxFolder = Instance.new("Folder")
@@ -95,24 +97,34 @@ end
 -- An actual hollow ring of short bevel-like facets, never a solid
 -- neon cylinder. Each facet is noncolliding, and Tween/Debris own its
 -- complete lifetime. Budget: High 10 facets/ring, Medium 7, Low 5.
-local function cosmeticRing(position, color, growth, age)
+local function cosmeticRing(position, color, growth, age, forward, secondary)
     local tier = quality()
-    local count = tier == "High" and 10 or (tier == "Medium" and 7 or 5)
+    local count = DashVisualRules.count(tier)
     local fromRadius = 1.45
     local toRadius = growth * 0.5
+    -- Orient the shockwave to the actual avatar heading, never world X/Z.
+    local horizontal = Vector3.new(forward.X, 0, forward.Z)
+    local heading = horizontal.Magnitude > 0.1 and horizontal.Unit
+        or Vector3.new(0, 0, -1)
+    local side = Vector3.new(-heading.Z, 0, heading.X)
     for index = 1, count do
-        local angle = (index - 1) * 2 * math.pi / count
-        local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
-        local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
-        local chord = 2 * fromRadius * math.sin(math.pi / count) * 0.92
+        local design = DashVisualRules.facet(tier, index, secondary)
+        local angle = design.Angle
+        local radial = side * math.sin(angle) + heading * math.cos(angle)
+        local tangent = side * math.cos(angle) - heading * math.sin(angle)
+        local startRadius = fromRadius * design.StartScale
+        local endRadius = toRadius * design.EndScale
+        local rotation = CFrame.Angles(0, 0, design.Bank)
+        local chord = 2 * fromRadius * math.sin(math.pi / count)
+            * design.ChordScale
         local facet = Instance.new("Part")
         facet.Name = "PhaseDashRingFacet"
-        facet.Size = Vector3.new(0.17, 0.09, chord)
-        facet.CFrame = CFrame.lookAt(position + radial * fromRadius,
-            position + radial * fromRadius + tangent)
+        facet.Size = Vector3.new(design.Thickness, design.Height, chord)
+        facet.CFrame = CFrame.lookAt(position + radial * startRadius,
+            position + radial * startRadius + tangent) * rotation
         facet.Material = Enum.Material.Neon
         facet.Color = color
-        facet.Transparency = 0.30
+        facet.Transparency = design.Alpha
         facet.Anchored = true
         facet.CastShadow = false
         facet.CanCollide = false
@@ -122,10 +134,11 @@ local function cosmeticRing(position, color, growth, age)
         TweenService:Create(facet,
             TweenInfo.new(age, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
             {
-                Size = Vector3.new(0.12, 0.06,
-                    2 * toRadius * math.sin(math.pi / count) * 0.96),
-                CFrame = CFrame.lookAt(position + radial * toRadius,
-                    position + radial * toRadius + tangent),
+                Size = Vector3.new(design.Thickness * 0.70, 0.05,
+                    2 * endRadius * math.sin(math.pi / count)
+                        * design.ChordScale),
+                CFrame = CFrame.lookAt(position + radial * endRadius,
+                    position + radial * endRadius + tangent) * rotation,
                 Transparency = 1,
             }
         ):Play()
@@ -184,10 +197,13 @@ local function playDashEffect(character)
     local reduced = player:GetAttribute("ReduceMotion") == true
     local tier = quality()
     local position = root.Position - Vector3.new(0, 2.45, 0)
-    cosmeticRing(position, Color3.fromRGB(85, 233, 235), reduced and 4.4 or 9.5, reduced and 0.16 or 0.42)
+    cosmeticRing(position, Color3.fromRGB(85, 233, 235),
+        reduced and 4.4 or 9.5, reduced and 0.16 or 0.42,
+        root.CFrame.LookVector, false)
     if not reduced and tier == "High" then
         cosmeticRing(position + Vector3.new(0, 0.08, 0),
-            Color3.fromRGB(178, 101, 253), 6.7, 0.34)
+            Color3.fromRGB(178, 101, 253), 6.7, 0.34,
+            root.CFrame.LookVector, true)
     end
     if not reduced and tier ~= "Low" then
         dashTrail(root, tier == "High")
@@ -206,36 +222,14 @@ local function playDashEffect(character)
     end
 end
 
-local function unbindPerson(other)
-    local connections = otherConnections[other]
-    if connections then
-        for _, connection in ipairs(connections) do
-            connection:Disconnect()
-        end
-    end
-    otherConnections[other] = nil
-end
-
-local function observeCharacter(other, character)
-    unbindPerson(other)
-    local connection = character:GetAttributeChangedSignal("PhaseDashPulse"):Connect(function()
-        if other.Character == character then
-            playDashEffect(character)
-        end
-    end)
-    otherConnections[other] = {connection}
-end
-
-local playerConnections = {}
-local function observePlayer(other)
-    table.insert(playerConnections, other.CharacterAdded:Connect(function(character)
-        observeCharacter(other, character)
-    end))
-    if other.Character then observeCharacter(other, other.Character) end
-end
-for _, other in ipairs(Players:GetPlayers()) do observePlayer(other) end
-Players.PlayerAdded:Connect(observePlayer)
-Players.PlayerRemoving:Connect(unbindPerson)
+-- Explicitly release per-player and per-character pulse listeners on leave.
+-- The previous shared connection array retained CharacterAdded listeners.
+local observers = ObserverRegistry.new(function(character)
+    playDashEffect(character)
+end)
+for _, other in ipairs(Players:GetPlayers()) do observers.watch(other) end
+Players.PlayerAdded:Connect(observers.watch)
+Players.PlayerRemoving:Connect(observers.stop)
 
 local function canUse()
     local character = player.Character

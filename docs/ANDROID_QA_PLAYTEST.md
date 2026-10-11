@@ -384,3 +384,20 @@ parts, lights, particles, render loops or server changes. Existing engine
 residue tests now cover all material distinctions and reject NaN/Infinity
 radii, invalid indices and malformed warning durations. Actual Studio and
 Android screenshots, GPU overdraw, temperatures and FPS remain unmeasured.
+
+## PR #19 — directional Phase Dash shockwave and listener cleanup (11 October 2026)
+
+The client Phase Dash now uses authored forward-biased swept shockwave
+facets oriented to the avatar's horizontal LookVector instead of generic
+world-aligned round bars. Alternating bevel-like banks and shorter
+secondary violet strokes retain the exact existing 5/7/10 parts per ring
+(Low/Medium/High), existing High-only second ring, ReduceMotion gating,
+collision-free local tween lifecycle and no new particles, lights or loops.
+
+Remote player CharacterAdded, CharacterRemoving and character attribute
+listeners are owned by PhaseDashObserverRegistry and are explicitly
+disconnected on respawn or player departure. No persistent connection array
+may grow as players join/leave. Roblox engine movement-safety tests verify
+single subscriptions, detached stale characters, cleanup after leave,
+invalid facet indices, deterministic geometry and unchanged tier part caps.
+Studio screenshots and physical Android FPS/thermal tests remain required.
