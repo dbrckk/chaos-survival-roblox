@@ -512,12 +512,12 @@ local function clearStage()
     titleBillboard = nil
 end
 
-local function makeHoloDancer(index, center, tierName)
-    local offset = index == 1 and -4.8 or 4.8
-    local base = center + Vector3.new(offset, 0, 3.1)
+local function makeHoloDancer(index, centerFrame, tierName)
+    local baseFrame = Showtime.dancerFrame(centerFrame, index)
+    if not baseFrame then return end
     local color = index == 1 and UITheme.Colors.Cyan or UITheme.Colors.Magenta
     local body = makePart("HoloDancerBody" .. index, Vector3.new(1.05, 1.70, 0.65),
-        CFrame.new(base + Vector3.new(0, 2.05, 0)), color, Enum.Material.Glass, 0.20)
+        baseFrame * CFrame.new(0, 2.05, 0), color, Enum.Material.Glass, 0.20)
     local head = makePart("HoloDancerHead" .. index, Vector3.new(0.86, 0.83, 0.82),
         body.CFrame * CFrame.new(0, 1.35, 0), color, Enum.Material.Neon, 0.17)
     local left = makePart("HoloDancerArmL" .. index, Vector3.new(0.33, 1.25, 0.38),
@@ -530,7 +530,7 @@ local function makeHoloDancer(index, center, tierName)
         body.CFrame * CFrame.new(0.30, -1.4, 0), color, Enum.Material.Glass, 0.30)
     local details = ShowtimeHologramDetails.build(folder, tierName, index, color)
     table.insert(dancers, {
-        base = base, body = body, head = head, left = left, right = right,
+        baseFrame = baseFrame, body = body, head = head, left = left, right = right,
         footL = footL, footR = footR,
         parts = {body, head, left, right, footL, footR},
         details = details,
@@ -671,7 +671,7 @@ local function buildStage()
     UITheme.addTextConstraint(banner, 12, 23)
 
     for index = 1, profile.Dancers do
-        makeHoloDancer(index, stageCenter, tier.Name)
+        makeHoloDancer(index, baseCF, tier.Name)
     end
 
     if tier.Name ~= "Low" then
@@ -701,7 +701,7 @@ local function buildStage()
 end
 
 local function peopleOnStage()
-    if not stageCenter then
+    if not stageBase then
         return 0
     end
     local count = 0
@@ -709,11 +709,7 @@ local function peopleOnStage()
         local character = person.Character
         local root = character and character:FindFirstChild("HumanoidRootPart")
         if root and root:IsA("BasePart") then
-            local delta = root.Position - stageCenter
-            if math.abs(delta.Y) < 8
-                and math.abs(delta.X) < 7
-                and math.abs(delta.Z) < 7
-            then
+            if Showtime.onDanceFloor(stageBase.CFrame, root.Position) then
                 count += 1
             end
         end
@@ -751,12 +747,8 @@ local function updateStage(now)
     for _, ribbon in ipairs(beams) do
         ribbon.beam.Enabled = enabled and not reduced
         if enabled and not reduced and stageCenter then
-            ribbon.target.CFrame = CFrame.new(
-                stageCenter + Vector3.new(
-                    math.cos(now * 0.82 + ribbon.phase) * 4.0,
-                    1.75 + math.sin(now * 1.3 + ribbon.phase) * 0.65,
-                    math.sin(now * 0.82 + ribbon.phase) * 4.0
-                )
+            ribbon.target.CFrame = Showtime.ribbonFrame(
+                stageBase.CFrame, now, ribbon.phase
             )
         end
     end
@@ -811,9 +803,9 @@ local function updateStage(now)
         local pose = ShowtimeChoreography.pose(
             now, index, leadEmote, crowd, reduced
         )
-        local bodyCF = CFrame.new(
-            dancer.base + Vector3.new(pose.Sway * 0.40, 2.05 + pose.Bob, 0)
-        ) * CFrame.Angles(0, pose.Yaw, pose.Roll)
+        local bodyCF = dancer.baseFrame
+            * CFrame.new(pose.Sway * 0.40, 2.05 + pose.Bob, 0)
+            * CFrame.Angles(0, pose.Yaw, pose.Roll)
         local headCF = bodyCF * CFrame.new(0, 1.35, 0)
             * CFrame.Angles(0, pose.HeadYaw, 0)
         local leftCF = bodyCF * CFrame.new(-0.78, 0.28, 0)

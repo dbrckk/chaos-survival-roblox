@@ -163,6 +163,36 @@ function LobbyShowtimeRules.floorPulse(distance, age, reduceMotion)
     return ring * math.clamp(1 - elapsed / 1.45, 0, 1)
 end
 
+-- Stage geometry and proximity are evaluated in Lobby.Floor space.
+function LobbyShowtimeRules.dancerFrame(stageFrame, index)
+    if typeof(stageFrame) ~= "CFrame" or (index ~= 1 and index ~= 2) then
+        return nil
+    end
+    return stageFrame * CFrame.new(index == 1 and -4.8 or 4.8, 0, 3.1)
+end
+
+function LobbyShowtimeRules.onDanceFloor(stageFrame, worldPosition)
+    if typeof(stageFrame) ~= "CFrame" or typeof(worldPosition) ~= "Vector3" then
+        return false
+    end
+    local localPosition = stageFrame:PointToObjectSpace(worldPosition)
+    return math.abs(localPosition.Y) < 8
+        and math.abs(localPosition.X) < 7
+        and math.abs(localPosition.Z) < 7
+end
+
+function LobbyShowtimeRules.ribbonFrame(stageFrame, now, phase)
+    if typeof(stageFrame) ~= "CFrame" or type(now) ~= "number"
+        or type(phase) ~= "number" then
+        return nil
+    end
+    return stageFrame * CFrame.new(
+        math.cos(now * 0.82 + phase) * 4,
+        1.75 + math.sin(now * 1.3 + phase) * 0.65,
+        math.sin(now * 0.82 + phase) * 4
+    )
+end
+
 function LobbyShowtimeRules.profile(tier)
     local name = tostring(tier or "Low")
     if name == "High" then

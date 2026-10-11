@@ -59,3 +59,7 @@ Mark Android PASS in the Release Candidate Gate **only after** this physical che
 ## PR #19 Android decor replication regression
 
 After joining a fresh server and after changing maps, wait for the streamed Arena and its Decor folder. On each of Classic, Towers, Crossroads and Orbital, inspect the original decorative neon and motivated lights at Low, Medium and High. Check that late-replicated Decor also gets the mobile brightness/tint policy, that the safety edge remains clearer than decorative Neon, and that changing quality repeatedly does not progressively dim existing lights. Test a map swap while decoration is still streaming. This is a **manual Android/Studio acceptance scenario**, not an automated FPS measurement or an observed pass.
+
+## PR #19 Showtime geometry on rotated lobbies
+
+In a staging build with a rotated (or slightly tilted) Lobby.Floor, verify each original holographic dancer remains on its assigned side of the physical deck and the moving ribbons stay aligned with its local axes. Walk along all four deck corners: crowd cues, marquee and spatial sound must react to participants inside the rotated deck, not to a world-axis rectangle outside it. Repeat after map swap and quality changes. Automated rule tests verify coordinate transforms; visual composition, motion comfort and Android framerate still require observation on a device.
