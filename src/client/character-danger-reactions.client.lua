@@ -95,7 +95,7 @@ end
 
 local function impact(payload)
     if type(payload) ~= "table"
-        or typeof(payload.position) ~= "Vector3"
+        or not Rules.validPosition(payload.position)
     then
         return
     end

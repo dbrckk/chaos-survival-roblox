@@ -87,3 +87,24 @@ normal capped emission. These tests must still pass on the exact-head
 Open Cloud workflow before the lot is considered validated. Physical
 Android and Roblox Studio reviews of avatar effects, thermal behavior
 and frame rate remain outstanding and are not claimed here.
+
+## PR #19 — finite disaster feedback and Android VFX cooldown safety (11 October 2026)
+
+The event-driven character reaction controller now rejects malformed
+impact coordinates before performing world-space subtraction or consuming
+the impact cooldown. A shared finite-position guard checks all three
+Vector3 components and excludes coordinates outside 10 million studs.
+
+Pure `CharacterReactionRules` also reject NaN/infinite distance, radius,
+airtime and current clock values before calculating Dodge/Shock/Landing
+intensity or cooldown state. A nil Shock radius retains the existing
+8-stud fallback; valid per-tier budgets, near-miss behavior, explosion
+direction, low graphics and ReduceMotion gating do not change. This
+prevents malformed server payloads from silently occupying VFX cooldowns
+or reaching cosmetic Beam properties. No new objects, loops, effects,
+remotes, physics or gameplay authority are introduced.
+
+The existing `survival-feedback.spec.luau` engine shard now checks the
+invalid-input behavior alongside finite-event compatibility. Build and all
+five engine shards must be verified at the exact commit before signoff.
+Real Roblox Studio and Android gameplay/FPS checks are still outstanding.

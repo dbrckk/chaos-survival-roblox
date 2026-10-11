@@ -60,6 +60,32 @@ describe("Character cinematic reactions", function()
         expect(r.landingStrength(10)).toBe(1)
     end)
 
+    it("keeps malformed hazard inputs from producing reaction intensities", function()
+        local r = CharacterReactionRules
+        local valid = Vector3.new(12, 8, -4)
+        expect(r.validPosition(valid)).toBe(true)
+        expect(r.validPosition(nil)).toBe(false)
+        expect(r.validPosition("8, 4, 2")).toBe(false)
+        for _, bad in ipairs({0/0, math.huge, -math.huge}) do
+            expect(r.dodgeStrength(bad, 10)).toBe(0)
+            expect(r.dodgeStrength(3, bad)).toBe(0)
+            expect(r.airShockStrength(bad, 10)).toBe(0)
+            expect(r.airShockStrength(12, bad)).toBe(0)
+            expect(r.landingStrength(bad)).toBe(0)
+            expect(r.cooldownReady(bad, nil, 0.5)).toBe(false)
+            expect(r.validPosition(Vector3.new(bad, 4, -7))).toBe(false)
+        end
+        expect(r.validPosition(Vector3.new(1e8, 0, 0))).toBe(false)
+        -- Existing finite strength, cooldown and default radius rules remain.
+        expect(r.dodgeStrength(0, 10)).toBe(1)
+        expect(r.airShockStrength(12, nil) >= 0).toBe(true)
+        expect(r.airShockStrength(12, 12) > 0).toBe(true)
+        expect(r.landingStrength(1) > 0).toBe(true)
+        expect(r.cooldownReady(10, -math.huge, 0.8)).toBe(true)
+        expect(r.cooldownReady(10.1, 10, 0.8)).toBe(false)
+        expect(r.cooldownReady(10.9, 10, 0.8)).toBe(true)
+    end)
+
     it("builds real curved beams without any extra physical character parts", function()
         local model = Instance.new("Model")
         model.Name = "ReactiveTestAvatar"
