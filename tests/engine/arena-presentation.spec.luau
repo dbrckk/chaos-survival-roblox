@@ -134,6 +134,54 @@ describe("Kinetic arena signatures", function()
         parent:Destroy()
     end)
 
+    it("animates original tower counterweights opposite the lift and restores accessibility pose", function()
+        local root = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local built = ArenaSignatureKit.build(root, base, "Towers", tier, VisualTheme)
+            local lift = built.folder:FindFirstChild("TowerAnimatedLift")
+            local left = built.folder:FindFirstChild("TowerCounterweight-1")
+            local right = built.folder:FindFirstChild("TowerCounterweight1")
+            expect(lift ~= nil and left ~= nil and right ~= nil).toBe(true)
+            local liftFrame, leftFrame, rightFrame = lift.CFrame, left.CFrame, right.CFrame
+            ArenaSignatureKit.update(built, 2.5, false)
+            local liftDelta = lift.Position.Y - liftFrame.Position.Y
+            local leftDelta = left.Position.Y - leftFrame.Position.Y
+            local rightDelta = right.Position.Y - rightFrame.Position.Y
+            expect(liftDelta > 0).toBe(true)
+            expect(leftDelta < 0 and rightDelta < 0).toBe(true)
+            expect(math.abs(leftDelta) <= 1.401).toBe(true)
+            expect(math.abs(rightDelta - leftDelta) < 0.0001).toBe(true)
+            ArenaSignatureKit.update(built, 9, true)
+            expect(lift.CFrame).toBe(liftFrame)
+            expect(left.CFrame).toBe(leftFrame)
+            expect(right.CFrame).toBe(rightFrame)
+            built.folder:Destroy()
+        end
+        base:Destroy()
+        root:Destroy()
+    end)
+
+    it("keeps tower geometry finite when an invalid animation clock arrives", function()
+        local root = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        local built = ArenaSignatureKit.build(root, base, "Towers", "Low", VisualTheme)
+        ArenaSignatureKit.update(built, 0, true)
+        local cabin = built.folder:FindFirstChild("TowerAnimatedLift")
+        local weight = built.folder:FindFirstChild("TowerCounterweight1")
+        local cabinFrame, weightFrame = cabin.CFrame, weight.CFrame
+        for _, invalid in ipairs({math.huge, -math.huge, 0 / 0, -5, 1e8, "not-a-time"}) do
+            ArenaSignatureKit.update(built, invalid, false)
+            expect(cabin.CFrame).toBe(cabinFrame)
+            expect(weight.CFrame).toBe(weightFrame)
+        end
+        built.folder:Destroy()
+        base:Destroy()
+        root:Destroy()
+    end)
+
     it("freezes motion predictably for mobile accessibility", function()
         local root = Instance.new("Folder")
         local base = Instance.new("Part")

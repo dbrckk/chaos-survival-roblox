@@ -223,3 +223,25 @@ CFrame and Color assertions, LOD ownership, accessibility and tier budgets
 remain in place. This handles engine property precision without masking a
 visible or material deviation. Verify Build Validation and all five Open
 Cloud shards on the resulting exact HEAD before considering CI green.
+
+## Tower lift counterweight synchronization (11 October 2026)
+
+The two **existing** anchored, non-colliding `TowerCounterweight-1` and
+`TowerCounterweight1` parts now travel opposite to the Towers signature
+lift cabin (maximum 1.4 studs, compared with the cabin's 2.0 studs).
+Their initial authored CFrames are captured once, so updates cannot drift.
+This adds two entries to the **existing** signature animation list, with no
+new Parts, lights, particle emitters, remote events or render loops.
+
+The signature clock now treats NaN, infinities, negative timestamps and
+unreasonably large values as rest pose, preventing invalid CFrames after
+malformed or interrupted client timing. ReduceMotion immediately restores
+both the cabin and counterweights to their authored poses. The existing
+Low/Medium/High part budgets and update cadence are unchanged.
+
+The `arena-presentation.spec.luau` engine suite checks opposite-direction
+travel, amplitude bounds, all three tiers, accessibility restoration and
+invalid-clock handling. **Manual acceptance remains necessary:** inspect
+counterweight clearance, movement readability and device performance in
+Roblox Studio and on a physical Android device; no FPS or GPU results are
+claimed here.

@@ -230,10 +230,11 @@ local function craftSignature(bundle, cf, theme, profile, variant)
                         * CFrame.Angles(0, 0, math.rad(side * (level == 1 and -18 or 18))),
                     metal, Enum.Material.Metal, 0.08)
             end
-            add(bundle, "TowerCounterweight" .. side,
+            local weightFrame = cf * CFrame.new(side * 3.08, 8.6, -0.45)
+            local weight = add(bundle, "TowerCounterweight" .. side,
                 Vector3.new(0.88, 2.35, 1.02),
-                cf * CFrame.new(side * 3.08, 8.6, -0.45),
-                trim, Enum.Material.DiamondPlate, 0.10)
+                weightFrame, trim, Enum.Material.DiamondPlate, 0.10)
+            moving(bundle, weight, "counterweight", weightFrame, side)
             add(bundle, "TowerRailMarker" .. side,
                 Vector3.new(0.22, 2.2, 0.12),
                 cf * CFrame.new(side * 2.05, 8.9, 0.28),
@@ -349,7 +350,11 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion)
     if not bundle or not bundle.folder.Parent then
         return
     end
-    local now = reduceMotion == true and 0 or (tonumber(elapsed) or 0)
+    -- Reject invalid elapsed time before it can propagate NaN/inf into CFrame.
+    local parsed = tonumber(elapsed)
+    local now = if reduceMotion == true or parsed == nil
+        or parsed ~= parsed or math.abs(parsed) == math.huge
+        or parsed < 0 or parsed > 1e7 then 0 else parsed
     for _, entry in ipairs(bundle.animated) do
         local p = entry.part
         if p.Parent then
@@ -357,6 +362,10 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion)
                 p.CFrame = entry.frame * CFrame.Angles(0, now * 0.47, 0)
             elseif entry.role == "elevator" then
                 p.CFrame = entry.frame * CFrame.new(0, math.sin(now * 0.64) * 2.0, 0)
+            elseif entry.role == "counterweight" then
+                -- Existing counterweights travel opposite to the lift cabin.
+                p.CFrame = entry.frame
+                    * CFrame.new(0, -math.sin(now * 0.64) * 1.4, 0)
             elseif entry.role == "signal" then
                 local pulse = reduceMotion and 0.5
                     or (math.sin(now * 2.5 + entry.index * 1.45) + 1) * 0.5
