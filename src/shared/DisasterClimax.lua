@@ -48,6 +48,16 @@ function DisasterClimax.shouldPresent(requestToken, activeToken,
         and sameArena == true and inRound == true and eliminated ~= true
 end
 
+-- Three bounded retries for arena Base arriving after RoundState.
+local REPLICATION_RETRY_SECONDS = {0.15, 0.35, 0.70}
+
+function DisasterClimax.replicationRetryDelay(attempt)
+    if type(attempt) ~= "number" or attempt % 1 ~= 0 then
+        return nil
+    end
+    return REPLICATION_RETRY_SECONDS[attempt]
+end
+
 function DisasterClimax.get(id)
     return DisasterClimax.Profiles[id]
 end

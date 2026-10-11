@@ -17,6 +17,8 @@ folder.Parent = workspace
 local previousPhase = "waiting"
 local stageById = {}
 local token = 0
+local snapshotSerial = 0
+local displayedBase = nil
 
 local function arenaBase()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -159,46 +161,60 @@ local function playClimax(id, stage, base, delaySeconds, currentToken)
     end)
 end
 
-stateEvent.OnClientEvent:Connect(function(state)
-    local phase = tostring(state.phase or "waiting")
-
-    if phase ~= "round" then
-        token += 1
-        table.clear(stageById)
-        previousPhase = phase
+-- A round state can precede the arena Base's replication.
+-- Only the latest snapshot may retry, for at most three delayed attempts.
+local function presentAvailable(state, serial, attempt)
+    if serial ~= snapshotSerial or previousPhase ~= "round" then
+        return
+    end
+    local base = arenaBase()
+    if not base then
+        local delaySeconds = DisasterClimax.replicationRetryDelay(attempt)
+        if delaySeconds then
+            task.delay(delaySeconds, function()
+                presentAvailable(state, serial, attempt + 1)
+            end)
+        end
         return
     end
 
-    if previousPhase ~= "round" then
+    -- A replacement arena needs its own climax stage; invalidate old bursts.
+    if displayedBase ~= base then
+        displayedBase = base
         table.clear(stageById)
         token += 1
     end
 
     local stage = DisasterClimax.stageFor(
-        state.intensity,
-        state.finalRush == true,
-        state.overdrive == true
+        state.intensity, state.finalRush == true, state.overdrive == true
     )
-    local base = arenaBase()
-
-    if base and stage > 0 then
-        local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
-        local currentToken = token
-
-        for index, id in ipairs(ids) do
-            local previousStage = stageById[id] or 0
-            if stage > previousStage then
-                stageById[id] = stage
-                playClimax(
-                    id,
-                    stage,
-                    base,
-                    (index - 1) * 0.10,
-                    currentToken
-                )
-            end
+    if stage <= 0 then return end
+    local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
+    local currentToken = token
+    for index, id in ipairs(ids) do
+        local previousStage = stageById[id] or 0
+        if stage > previousStage then
+            stageById[id] = stage
+            playClimax(id, stage, base, (index - 1) * 0.10, currentToken)
         end
     end
+end
 
+stateEvent.OnClientEvent:Connect(function(state)
+    snapshotSerial += 1
+    local phase = tostring(state.phase or "waiting")
+    if phase ~= "round" then
+        token += 1
+        table.clear(stageById)
+        displayedBase = nil
+        previousPhase = phase
+        return
+    end
+    if previousPhase ~= "round" then
+        table.clear(stageById)
+        displayedBase = nil
+        token += 1
+    end
     previousPhase = phase
+    presentAvailable(state, snapshotSerial, 1)
 end)
