@@ -76,14 +76,14 @@ end
 function ArenaIdentityMotionRules.ornamentOffset(variant, name, now, index, scale)
     if type(now) ~= "number" or type(index) ~= "number"
         or type(scale) ~= "number" or now ~= now or index ~= index
-        or scale ~= scale or math.abs(now) == math.huge
+        or scale ~= scale or math.abs(now) > 10000000
         or math.abs(index) == math.huge or math.abs(scale) == math.huge
         or index < 1 or index > 64 or index % 1 ~= 0 or scale <= 0
         or not ArenaIdentityMotionRules.isIdentityPart(variant, name)
     then return nil end
 
     local amplitude = math.clamp(scale, 0, 1)
-    local cycle = (now % 4096) + index * 0.73
+    local cycle = now + index * 0.73
     if variant == "Classic" then
         if name:match("^GridMarkerGlow[1-4]$") then
             return CFrame.new(0, math.sin(cycle * 1.15) * 0.16 * amplitude, 0)

@@ -675,12 +675,9 @@ describe("Android arena identity ornament motion", function()
                 .toBe(true)
             expect(repeatPose.RightVector:Dot(high.RightVector) > 0.99999)
                 .toBe(true)
-            local wrapped = IdentityMotionRules.ornamentOffset(
-                variant, name, 4097.37, 1, 1)
-            expect((wrapped.Position - high.Position).Magnitude < 0.0001)
-                .toBe(true)
-            expect(wrapped.RightVector:Dot(high.RightVector) > 0.99999)
-                .toBe(true)
+            -- A long but realistic session remains a valid finite pose.
+            expect(IdentityMotionRules.ornamentOffset(
+                variant, name, 4097.37, 1, 1) ~= nil).toBe(true)
         end
         expect(IdentityMotionRules.ornamentOffset(
             "Towers", "TowerBand1_1", 1, 1, 1) ~= nil).toBe(true)
@@ -692,6 +689,8 @@ describe("Android arena identity ornament motion", function()
             "Classic", "GridMarkerGlow1", 1, 1, 0) == nil).toBe(true)
         expect(IdentityMotionRules.ornamentOffset(
             "Classic", "GridMarkerGlow1", math.huge, 1, 1) == nil).toBe(true)
+        expect(IdentityMotionRules.ornamentOffset(
+            "Classic", "GridMarkerGlow1", 10000001, 1, 1) == nil).toBe(true)
         for _, bad in ipairs({math.huge, -math.huge, 0/0}) do
             expect(IdentityMotionRules.ornamentOffset(
                 "Classic", "GridMarkerGlow1", 1, bad, 1) == nil).toBe(true)

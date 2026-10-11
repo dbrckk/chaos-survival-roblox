@@ -133,13 +133,13 @@ Two additional existing MapBuilder ornaments now receive subtle original
   per ornament/tick. The twelve Orbital crowns retain their existing motion.
 
 The shared `ornamentOffset` guard rejects non-finite timestamps, indices and
-amplitudes; index must be an integer from 1 to 64. A 4096-second phase wrap
-keeps sine arguments bounded in long-running sessions. All eight named
+amplitudes; index must be an integer from 1 to 64. Timestamps beyond 10 million seconds are rejected instead of wrapping
+the animation phase; this avoids an abrupt pose jump at a periodic boundary. All eight named
 motions retain tier amplitudes Low=0.38, Medium=0.68, High=1 and zero motion
 with ReduceMotion. Hidden ornaments remain skipped by the existing LOD gate.
 
 Engine `core_a` regression now covers eight 3D signatures, deterministic
-local-space composition, wrapped timestamps, and malformed numeric inputs.
+local-space composition, long-session timestamps, and malformed numeric inputs.
 The previous six-motion tests are preserved. No live Roblox Studio/Android
 visual acceptance or physical FPS, battery, thermals or GPU profiling has
 been performed. Check collars and nodes at close range on all tiers, including
