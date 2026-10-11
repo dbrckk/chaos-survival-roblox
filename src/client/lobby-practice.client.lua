@@ -8,6 +8,8 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local PracticeVisualKit = require(script.Parent.LobbyPracticeVisualKit)
 local PracticePadRegistry = require(script.Parent.LobbyPracticePadRegistry)
+local PracticeGlyphKit = require(script.Parent.LobbyPracticeGlyphKit)
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -136,6 +138,16 @@ local function refreshBundle(pad, bundle)
     bundle.emitter.Rate = PracticeVisualKit.rate(quality, reduced)
     bundle.highlight.FillTransparency = quality.Name == "Low" and 1 or 0.90
     bundle.highlight.OutlineTransparency = quality.Name == "Low" and 0.45 or 0.18
+
+    -- Rebuild only when the graphics tier changes. Static, cosmetic
+    -- chevrons live under the audited and LOD-managed local pad folder.
+    if bundle.glyphTier ~= quality.Name then
+        if bundle.glyph then bundle.glyph:Destroy() end
+        bundle.glyph = PracticeGlyphKit.build(
+            bundle.folder, pad, quality.Name, Config.LobbyCenter
+        )
+        bundle.glyphTier = quality.Name
+    end
 
     local light = pad:FindFirstChild("PracticePadLight")
     if light and light:IsA("PointLight") then

@@ -110,6 +110,43 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("counts new directional practice glyphs within existing local LOD budgets", function()
+        local root = Instance.new("Folder")
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = root
+        local lobby = Instance.new("Folder")
+        lobby.Name = "Lobby"
+        lobby.Parent = generated
+        local activities = Instance.new("Folder")
+        activities.Name = "Activities"
+        activities.Parent = lobby
+        local pad = Instance.new("Part")
+        pad.Size = Vector3.new(7.2, 0.3, 7.2)
+        pad:SetAttribute("LobbyPracticePad", true)
+        pad.Parent = activities
+        local bundle = LobbyPracticeVisualKit.create(pad)
+        local glyphs = require("../../src/client/LobbyPracticeGlyphKit")
+        local high = glyphs.build(bundle.folder, pad,
+            "High", Vector3.new(0, 0, -150))
+        expect(high ~= nil and #high:GetChildren() == 6).toBe(true)
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(1)
+        expect(metrics.Parts).toBe(6)
+        expect(metrics.Effects).toBe(2)
+        high:Destroy()
+        local low = glyphs.build(bundle.folder, pad,
+            "Low", Vector3.new(0, 0, -150))
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(2)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+        LobbyPracticeVisualKit.destroy(bundle)
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        root:Destroy()
+    end)
+
     it("collects parts lights and effects from registered visual folders", function()
         local root = Instance.new("Folder")
         local layer = Instance.new("Folder")

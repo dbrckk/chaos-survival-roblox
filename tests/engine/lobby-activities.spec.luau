@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local LobbyActivities = require("../../src/server/LobbyActivities")
 local PracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit")
 local PracticePadRegistry = require("../../src/client/LobbyPracticePadRegistry")
+local PracticeGlyphKit = require("../../src/client/LobbyPracticeGlyphKit")
 
 describe("Lobby activities", function()
     it("provides four symmetric practice boost pads", function()
@@ -70,6 +71,73 @@ describe("Lobby activities", function()
         expect(PracticeVisualKit.localizePadLabel(pad, ""))
             .toBe(false)
         pad:Destroy()
+    end)
+
+    it("sculpts tier-bound directional chevrons on each practice boost pad", function()
+        local root = Instance.new("Folder")
+        local center = Vector3.new(0, 0, -150)
+        local offsets = {
+            Vector3.new(-22, 0, 0), Vector3.new(22, 0, 0),
+            Vector3.new(0, 0, -22), Vector3.new(0, 0, 22),
+        }
+        local counts = {Low = 2, Medium = 4, High = 6}
+        local total = {Low = 0, Medium = 0, High = 0}
+        for _, offset in ipairs(offsets) do
+            local pad = Instance.new("Part")
+            pad.Name = "PracticeBoostPad"
+            pad.Size = Vector3.new(7.2, 0.3, 7.2)
+            pad.Position = center + offset
+            pad.Color = Color3.fromRGB(70, 215, 255)
+            pad:SetAttribute("LobbyPracticePad", true)
+            pad.Parent = root
+            local heading = PracticeGlyphKit.direction(pad, center)
+            expect(heading ~= nil).toBe(true)
+            expect(heading:Dot(-offset.Unit) > 0.999).toBe(true)
+            local holder = Instance.new("Folder")
+            holder.Parent = pad
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local glyph = PracticeGlyphKit.build(holder, pad, tier, center)
+                expect(glyph ~= nil).toBe(true)
+                expect(#glyph:GetChildren()).toBe(counts[tier])
+                total[tier] += #glyph:GetChildren()
+                for _, part in ipairs(glyph:GetChildren()) do
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    expect(part.Material).toBe(Enum.Material.Neon)
+                    expect(part.Size.Magnitude > 0).toBe(true)
+                    expect((part.Position - pad.Position).Magnitude < 4.0)
+                        .toBe(true)
+                end
+                glyph:Destroy()
+            end
+            pad:Destroy()
+        end
+        expect(total.Low).toBe(8)
+        expect(total.Medium).toBe(16)
+        expect(total.High).toBe(24)
+        expect(PracticeGlyphKit.count("Other")).toBe(0)
+        root:Destroy()
+    end)
+
+    it("rejects invalid pad glyph input without allocating Parts", function()
+        local root = Instance.new("Folder")
+        local pad = Instance.new("Part")
+        pad:SetAttribute("LobbyPracticePad", true)
+        pad.Parent = root
+        local folder = Instance.new("Folder")
+        folder.Parent = pad
+        expect(PracticeGlyphKit.build(folder, pad, "Unknown", Vector3.zero)
+            == nil).toBe(true)
+        expect(PracticeGlyphKit.build(folder, pad, "High",
+            Vector3.new(math.huge, 0, 0)) == nil).toBe(true)
+        expect(PracticeGlyphKit.direction(pad, Vector3.new(0/0, 0, 0))
+            == nil).toBe(true)
+        expect(#folder:GetChildren()).toBe(0)
+        pad:Destroy()
+        root:Destroy()
     end)
 
     it("gates practice motes on Reduce Motion without hiding pad guidance", function()

@@ -580,3 +580,24 @@ is added. Roblox engine tests cover absent, late-arriving and existing
 BillboardGui/TextLabel cases, along with both text variants. Gameplay,
 the server-owned sign and the three-dimensional visual budget do not
 change. Verify French text width/legibility at small mobile viewports.
+
+## PR #19 — original 3D practice-vector glyphs (11 October 2026)
+
+Four otherwise plain boost pads now carry small sculpted directional
+chevrons built entirely by a reusable client-only LobbyPracticeGlyphKit.
+The strokes point toward the lobby center, exactly matching the current
+four server-authoritative inward boost impulses. Two mirrored shallow
+Neon bevels compose one arrow. High shows three offset arrows (6 Parts
+per pad / 24 total), Medium shows two (4 / 16), and Low shows one
+(2 / 8). All are anchored, noncolliding, nontouching, nonquerying, and
+cast no shadows. The glyphs remain static with ReduceMotion, introduce
+no animations, lights, emitters or extra update loop, and are rebuilt
+only when the quality tier changes.
+
+The geometry is owned by each pad's already-audited PracticePadPolishLocal
+folder, so existing distance LOD automatically hides/restores it and
+streaming cleanup destroys it. Added engine tests check inward heading
+for all four pads, distinct tier budgets, spatial bounds, disabled
+physics, rejection of invalid input, and inclusion in the device VFX
+budget telemetry. Client Android/Studio visual, frame-time and heat
+checks are still needed; geometry was not physically playtested.
