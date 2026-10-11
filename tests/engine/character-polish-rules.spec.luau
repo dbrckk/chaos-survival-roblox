@@ -119,6 +119,69 @@ describe("Character polish rules", function()
 end)
 
 
+describe("Client avatar light allocation and rig handoff", function()
+    local LightKit = require("../../src/client/CharacterPolishLightKit")
+
+    it("reuses one optional PointLight, then disables it with Low or ReduceMotion", function()
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        local accent = Color3.fromRGB(90, 180, 245)
+        local bright = CharacterPolishRules.lightBrightness(
+            "High", "round", true, false, true, false
+        )
+        expect(LightKit.apply(model, 0, accent, true)).toBe(nil)
+        expect(#root:GetChildren()).toBe(0)
+        local first = LightKit.apply(model, bright, accent, true)
+        expect(first ~= nil and first:IsA("PointLight")).toBe(true)
+        expect(first.Enabled).toBe(true)
+        expect(first.Range).toBe(8)
+        expect(#root:GetChildren()).toBe(1)
+        expect(LightKit.apply(model, bright, accent, true)).toBe(first)
+        expect(first.Enabled).toBe(true)
+        expect(#root:GetChildren()).toBe(1)
+
+        local torso = Instance.new("Part")
+        torso.Name = "UpperTorso"
+        torso.Parent = model
+        local selected = LightKit.apply(model, bright, accent, true)
+        expect(selected ~= first).toBe(true)
+        expect(selected.Parent).toBe(torso)
+        expect(selected.Enabled).toBe(true)
+        expect(first.Enabled).toBe(false)
+        expect(LightKit.apply(model, bright, accent, true)).toBe(selected)
+        expect(#torso:GetChildren()).toBe(1)
+
+        local reduced = CharacterPolishRules.lightBrightness(
+            "High", "round", true, false, true, true
+        )
+        expect(reduced).toBe(0)
+        expect(LightKit.apply(model, reduced, accent, true)).toBe(nil)
+        expect(selected.Enabled).toBe(false)
+        expect(first.Enabled).toBe(false)
+        expect(#torso:GetChildren()).toBe(1)
+        local otherAccent = Color3.fromRGB(255, 120, 80)
+        expect(LightKit.apply(model, bright, otherAccent, false)).toBe(selected)
+        expect(selected.Enabled).toBe(true)
+        expect(selected.Range).toBe(6)
+        expect((Vector3.new(selected.Color.R, selected.Color.G, selected.Color.B)
+            - Vector3.new(otherAccent.R, otherAccent.G, otherAccent.B)).Magnitude
+            < 0.01).toBe(true)
+        expect(#torso:GetChildren()).toBe(1)
+
+        torso.Parent = nil
+        expect(LightKit.apply(model, bright, accent, true)).toBe(first)
+        expect(first.Enabled).toBe(true)
+        expect(#root:GetChildren()).toBe(1)
+        expect(LightKit.apply(model, math.huge, accent, true)).toBe(nil)
+        expect(first.Enabled).toBe(false)
+        model:Destroy()
+        torso:Destroy()
+    end)
+end)
+
 describe("Human momentum ribbon GPU and accessibility policy", function()
     it("never renders contestant momentum on spectators or eliminated avatars", function()
         local r = TrailRules

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CharacterPolishRules = require(ReplicatedStorage.Shared.CharacterPolishRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CharacterPolishRegistry = require(script.Parent.CharacterPolishRegistry)
+local CharacterPolishLightKit = require(script.Parent.CharacterPolishLightKit)
 
 local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -44,40 +45,6 @@ local function ensureHighlight(model)
     return highlight
 end
 
-local function ensureLight(model)
-    local torso = model:FindFirstChild("UpperTorso")
-        or model:FindFirstChild("Torso")
-        or model:FindFirstChild("HumanoidRootPart")
-    if not torso or not torso:IsA("BasePart") then
-        return nil
-    end
-
-    local light = torso:FindFirstChild("ChaosCharacterPolishLight")
-    if light and light:IsA("PointLight") then
-        return light
-    end
-
-    light = Instance.new("PointLight")
-    light.Name = "ChaosCharacterPolishLight"
-    light.Brightness = 0
-    light.Range = 7
-    light.Shadows = false
-    light.Enabled = false
-    light.Parent = torso
-    return light
-end
-
-local function disableExistingLights(model)
-    for _, part in ipairs(model:GetChildren()) do
-        if part:IsA("BasePart") then
-            local light = part:FindFirstChild("ChaosCharacterPolishLight")
-            if light and light:IsA("PointLight") then
-                light.Enabled = false
-            end
-        end
-    end
-end
-
 local function applyModel(model)
     if not model or not model.Parent then
         return
@@ -89,7 +56,7 @@ local function applyModel(model)
         if highlight and highlight:IsA("Highlight") then
             highlight.Enabled = false
         end
-        disableExistingLights(model)
+        CharacterPolishLightKit.apply(model, 0, nil, false)
         return
     end
 
@@ -143,18 +110,9 @@ local function applyModel(model)
         quality.Name, phase, isLocal, finalRush, activeParticipant,
         localPlayer:GetAttribute("ReduceMotion") == true
     )
-    -- Remove the GPU light from consideration on Low, reduced motion,
-    -- eliminated avatars and quiet phases. Never allocate a zero-light.
-    disableExistingLights(model)
-    if brightness > 0 then
-        local light = ensureLight(model)
-        if light then
-            light.Color = accent
-            light.Brightness = brightness
-            light.Range = isLocal and 8 or 6
-            light.Enabled = true
-        end
-    end
+    -- Keep the active light enabled during routine phase/rig refreshes.
+    -- Zero brightness allocates nothing and disables old lights immediately.
+    CharacterPolishLightKit.apply(model, brightness, accent, isLocal)
 end
 
 local function removePolish(model)
