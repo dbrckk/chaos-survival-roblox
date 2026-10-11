@@ -240,3 +240,24 @@ across phase cleanup. **Physical** Studio/Android checks remain essential:
 observe spectator transitions, ice visibility on small screens, Reduce Motion,
 Low tier, map streaming and thermal/FPS behavior. No device FPS is inferred
 from CI success.
+
+## PR #19 — resilient human momentum trails after streamed character swap (11 October 2026)
+
+Human sprint ribbons previously stopped listening after eight seconds
+when a character had not yet streamed both Humanoid and HumanoidRootPart.
+They also lost their native StateChanged subscription when a root
+streamed out, which could leave a resumed player with no motion trail.
+The new model-scoped CharacterMotionTrailRegistry uses ChildAdded,
+ChildRemoved, AncestryChanged and Destroying events to keep an
+incomplete but live avatar registered until its rig returns.
+On a root or Humanoid replacement it disables the obsolete trail,
+disconnects old StateChanged signals, resets airborne/style caches,
+and restores its original tier/distance-limited selection behavior.
+It also unsubscribes on CharacterRemoving and PlayerRemoving.
+
+The existing body-motion-rules.spec.luau now exercises delayed
+streaming, root/humanoid replacement, disabled obsolete effects,
+deduplication and explicit cleanup. This adds no new render loop,
+Trail budget, physics, network requests or new GPU geometry.
+Still requires full exact-head Open Cloud plus physical Android
+streaming and Studio visual testing before release acceptance.

@@ -1,64 +1,117 @@
--- Tracks human rigs without polling or retaining stale humanoid events.
+-- Event-driven human momentum trail registration. A model remains
+-- watchable through delayed Humanoid/Root streaming without any expiry timer.
 local Registry = {}
-function Registry.start(players)
+
+function Registry.create(players)
     local tracked = setmetatable({}, {__mode = "k"})
-    local pending = setmetatable({}, {__mode = "k"})
+    local watches = setmetatable({}, {__mode = "k"})
     local nextOrder = 0
 
-    local function stop(model)
-        if pending[model] then
-            pending[model]:Disconnect()
-            pending[model] = nil
+    local function retire(entry)
+        if entry.stateChanged then
+            entry.stateChanged:Disconnect()
+            entry.stateChanged = nil
         end
-        local entry = tracked[model]
-        if not entry then return end
-        tracked[model] = nil
-        if entry.trail and entry.trail.Parent then entry.trail.Enabled = false end
-        if entry.stateChanged then entry.stateChanged:Disconnect() end
-        if entry.destroying then entry.destroying:Disconnect() end
+        if entry.trail and entry.trail.Parent then
+            entry.trail.Enabled = false
+        end
+        entry.trail = nil
+        entry.appliedTier = nil
+        entry.appliedAccent = nil
+        entry.airborne = false
     end
 
-    local function watch(model, owner)
-        if not model or not model.Parent or tracked[model] then return end
-        local humanoid = model:FindFirstChildOfClass("Humanoid")
-        local root = model:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not root or not root:IsA("BasePart") then
-            if not pending[model] then
-                local connection
-                connection = model.ChildAdded:Connect(function(child)
-                    if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
-                        task.defer(watch, model, owner)
-                    end
-                end)
-                pending[model] = connection
-                task.delay(8, function()
-                    if pending[model] == connection then stop(model) end
-                end)
-            end
+    local function stop(model)
+        local entry = watches[model]
+        if not entry then return end
+        watches[model] = nil
+        tracked[model] = nil
+        retire(entry)
+        for _, connection in ipairs(entry.connections) do
+            connection:Disconnect()
+        end
+        table.clear(entry.connections)
+        entry.root = nil
+        entry.humanoid = nil
+    end
+
+    local function refresh(model, entry)
+        if watches[model] ~= entry or not model:IsDescendantOf(workspace) then
+            stop(model)
             return
         end
-        if pending[model] then
-            pending[model]:Disconnect()
-            pending[model] = nil
-        end
+        local humanoid = model:FindFirstChildOfClass("Humanoid")
+        local root = model:FindFirstChild("HumanoidRootPart")
+        if not root or not root:IsA("BasePart") then root = nil end
+        if entry.humanoid == humanoid and entry.root == root then return end
+        retire(entry)
+        tracked[model] = nil
+        entry.humanoid, entry.root = humanoid, root
+        if not humanoid or not root then return end
         nextOrder += 1
-        local entry = {humanoid = humanoid, root = root,
-            player = owner or players:GetPlayerFromCharacter(model),
-            airborne = false, order = nextOrder}
+        entry.order = nextOrder
         tracked[model] = entry
-        entry.stateChanged = humanoid.StateChanged:Connect(function(_, nextState)
-            if nextState == Enum.HumanoidStateType.Jumping
-                or nextState == Enum.HumanoidStateType.Freefall then
+        entry.stateChanged = humanoid.StateChanged:Connect(function(_, state)
+            if tracked[model] ~= entry
+                or entry.root ~= root or entry.humanoid ~= humanoid
+                or root.Parent ~= model or humanoid.Parent ~= model then
+                return
+            end
+            if state == Enum.HumanoidStateType.Jumping
+                or state == Enum.HumanoidStateType.Freefall then
                 entry.airborne = true
-            elseif nextState == Enum.HumanoidStateType.Landed
-                or nextState == Enum.HumanoidStateType.Running
-                or nextState == Enum.HumanoidStateType.RunningNoPhysics then
+            elseif state == Enum.HumanoidStateType.Landed
+                or state == Enum.HumanoidStateType.Running
+                or state == Enum.HumanoidStateType.RunningNoPhysics then
                 entry.airborne = false
             end
         end)
-        entry.destroying = model.Destroying:Connect(function() stop(model) end)
     end
 
+    local function watch(model, owner)
+        if not model or not model:IsA("Model")
+            or not model:IsDescendantOf(workspace) then return end
+        local entry = watches[model]
+        if entry then
+            if owner then entry.player = owner end
+            refresh(model, entry)
+            return
+        end
+        entry = {
+            root = nil, humanoid = nil, airborne = false, order = 0,
+            player = owner or players:GetPlayerFromCharacter(model),
+            stateChanged = nil, connections = {},
+        }
+        watches[model] = entry
+        table.insert(entry.connections, model.ChildAdded:Connect(function(child)
+            if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
+                refresh(model, entry)
+            end
+        end))
+        table.insert(entry.connections, model.ChildRemoved:Connect(function(child)
+            if child == entry.root or child == entry.humanoid then
+                refresh(model, entry)
+            end
+        end))
+        table.insert(entry.connections, model.AncestryChanged:Connect(function()
+            if not model:IsDescendantOf(workspace) then stop(model) end
+        end))
+        table.insert(entry.connections, model.Destroying:Connect(function()
+            stop(model)
+        end))
+        refresh(model, entry)
+    end
+
+    local function watchedCount()
+        local total = 0
+        for _ in pairs(watches) do total += 1 end
+        return total
+    end
+    return tracked, stop, watch, watchedCount
+end
+
+function Registry.start(players)
+    local tracked, stop, watch = Registry.create(players)
     local function watchPlayer(player)
         player.CharacterAdded:Connect(function(model)
             watch(model, player)
@@ -68,6 +121,10 @@ function Registry.start(players)
     end
     for _, player in ipairs(players:GetPlayers()) do watchPlayer(player) end
     players.PlayerAdded:Connect(watchPlayer)
+    players.PlayerRemoving:Connect(function(player)
+        if player.Character then stop(player.Character) end
+    end)
     return tracked, stop, watch
 end
+
 return Registry

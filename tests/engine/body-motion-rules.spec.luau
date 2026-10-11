@@ -6,6 +6,7 @@ local BodyMotionRules = require("../../src/shared/BodyMotionRules")
 local BotMotionPresentationRules = require("../../src/shared/BotMotionPresentationRules")
 local LocomotionDynamics = require("../../src/shared/LocomotionDynamics")
 local GroundFx = require("../../src/client/LocomotionGroundFx")
+local MotionTrailRegistry = require("../../src/client/CharacterMotionTrailRegistry")
 
 describe("Body motion rules", function()
     it("crossfades additional R6/R15 body poses around Showtime emotes", function()
@@ -177,6 +178,66 @@ describe("Body motion rules", function()
         local invalidLaunch, invalidBrake = LocomotionDynamics.acceleration(10, 0, 0, true)
         expect(invalidLaunch).toBe(0)
         expect(invalidBrake).toBe(0)
+    end)
+
+    it("restores human momentum trails after late or replaced avatar rigs", function()
+        local mock = {GetPlayerFromCharacter = function() return nil end}
+        local tracked, stop, watch, count = MotionTrailRegistry.create(mock)
+        local model = Instance.new("Model")
+        model.Name = "StreamingHumanTrail"
+        model.Parent = workspace
+        watch(model)
+        expect(count()).toBe(1)
+        expect(tracked[model] == nil).toBe(true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = model
+        watch(model)
+        expect(tracked[model] == nil).toBe(true)
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        watch(model)
+        expect(tracked[model].root).toBe(root)
+        local oldOrder = tracked[model].order
+        local oldTrail = Instance.new("Trail")
+        oldTrail.Enabled = true
+        oldTrail.Parent = root
+        tracked[model].trail = oldTrail
+        root.Parent = nil
+        watch(model)
+        expect(tracked[model] == nil).toBe(true)
+        expect(count()).toBe(1)
+        expect(oldTrail.Enabled).toBe(false)
+        local replacement = Instance.new("Part")
+        replacement.Name = "HumanoidRootPart"
+        replacement.Parent = model
+        watch(model)
+        expect(tracked[model].root).toBe(replacement)
+        expect(tracked[model].order > oldOrder).toBe(true)
+        expect(tracked[model].trail == nil).toBe(true)
+        humanoid.Parent = nil
+        watch(model)
+        expect(tracked[model] == nil).toBe(true)
+        local nextHumanoid = Instance.new("Humanoid")
+        nextHumanoid.Parent = model
+        watch(model)
+        expect(tracked[model].humanoid).toBe(nextHumanoid)
+        watch(model)
+        expect(count()).toBe(1)
+        stop(model)
+        expect(tracked[model] == nil).toBe(true)
+        expect(count()).toBe(0)
+        watch(model)
+        expect(count()).toBe(1)
+        model.Parent = nil
+        expect(count()).toBe(0)
+        model.Parent = workspace
+        watch(model)
+        expect(tracked[model] ~= nil).toBe(true)
+        stop(model)
+        model:Destroy()
+        root:Destroy()
+        humanoid:Destroy()
     end)
 
     it("stays responsive to sharp corner cuts and 180-degree turnarounds", function()

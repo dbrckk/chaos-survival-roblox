@@ -37,8 +37,9 @@ task.spawn(function()
                 continue
             end
             local root, humanoid = state.root, state.humanoid
-            if not root.Parent or not humanoid.Parent then
-                stop(model)
+            if root.Parent ~= model or humanoid.Parent ~= model then
+                -- Keep a model watcher while its native rig is streamed out.
+                -- Rebind the next Root/Humanoid instead of forgetting it.
                 watch(model)
                 continue
             end
