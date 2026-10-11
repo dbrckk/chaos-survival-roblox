@@ -215,6 +215,50 @@ describe("Hero landmark animation scheduling and accessibility", function()
         expect(Budget.motionScale("High", true)).toBe(0)
     end)
 
+    it("precesses Orbital reactor core only above Low, with bounded local 3D motion", function()
+        local Budget = require("../../src/shared/HeroMotionBudgetRules")
+        local base = CFrame.new(12, 19, -8)
+            * CFrame.Angles(math.rad(9), math.rad(31), math.rad(-7))
+        local t = 1.37
+        local low = Budget.reactorCoreOffset(t, Budget.motionScale("Low", false))
+        local medium = Budget.reactorCoreOffset(t, Budget.motionScale("Medium", false))
+        local high = Budget.reactorCoreOffset(t, Budget.motionScale("High", false))
+        expect(low.Position.Magnitude < 0.00001).toBe(true)
+        expect(low.UpVector:Dot(Vector3.yAxis) > 0.99999).toBe(true)
+        expect(medium.Position.Magnitude > 0).toBe(true)
+        expect(high.Position.Magnitude > medium.Position.Magnitude).toBe(true)
+        for _, clock in ipairs({0, 0.6, 1.37, 8, 4097.37}) do
+            for _, strength in ipairs({0, 0.18, 0.62, 1}) do
+                local offset = Budget.reactorCoreOffset(clock, strength)
+                expect(offset.Position.Magnitude <= 0.101).toBe(true)
+                expect(offset.UpVector:Dot(Vector3.yAxis)
+                    >= math.cos(math.rad(1.61))).toBe(true)
+                local relative = base:ToObjectSpace(base * offset)
+                expect((relative.Position - offset.Position).Magnitude < 0.0001)
+                    .toBe(true)
+                local repeated = Budget.reactorCoreOffset(clock, strength)
+                expect((repeated.Position - offset.Position).Magnitude < 0.0001)
+                    .toBe(true)
+                expect(repeated.UpVector:Dot(offset.UpVector) > 0.99999)
+                    .toBe(true)
+            end
+        end
+        for _, bad in ipairs({-1, math.huge, -math.huge, 1e8, 0/0}) do
+            expect(Budget.reactorCoreOffset(bad, 1).Position.Magnitude)
+                .toBe(0)
+            expect(Budget.reactorCoreOffset(t, bad).Position.Magnitude)
+                .toBe(0)
+        end
+        expect(Budget.reactorCoreOffset(t, Budget.motionScale("High", true))
+            .Position.Magnitude).toBe(0)
+        expect(Budget.reactorCoreOffset(t, 0.18 * Budget.resumeEnvelope(0.24))
+            .Position.Magnitude).toBe(0)
+        -- A Medium/High -> Low switch must return to rest, not leave
+        -- the previous moving core frame suspended.
+        expect(Budget.reactorCoreOffset(t, 0.18).UpVector:Dot(Vector3.yAxis)
+            > 0.99999).toBe(true)
+    end)
+
     it("crossfades three transit lights without hard on-off frame jumps", function()
         local phase = {}
         for i = 1, 3 do

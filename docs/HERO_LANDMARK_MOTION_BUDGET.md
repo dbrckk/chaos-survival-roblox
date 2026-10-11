@@ -151,3 +151,27 @@ clock inputs and zero-amplitude accessibility behavior. This is not a
 claim of physical Android FPS or Studio visual clearance: inspect the
 counterweight against the mast, cable and nearby player sightlines in
 Studio and on a real Android device before accepting the visual result.
+
+## Orbital reactor: low-cost precession (11 October 2026)
+
+The already-authored, anchored `OrbitalReactorCore` now combines its existing
+size/color/transparency pulse with a slow original **axial precession**:
+maximum 0.10 stud of local vertical travel and 1.6 degrees of local pitch.
+Its offset is composed with the existing disaster-reaction frame in the
+single CFrame write, against its captured authored base pose.
+
+The precession is **disabled on Low** (the original pulse remains intact)
+and uses a continuous Medium/High amplitude under the existing 480 ms
+stream/LOD resume envelope. Moving from Medium/High to Low restores the
+core's base CFrame on the next normal controller update; switching on
+ReduceMotion restores it immediately via the existing one-shot static-pose
+handler. Scenery LOD continues to own visibility and hidden pieces are
+not animated. No parts, lights, GPU emitters, remotes, loops, physics,
+server code or hazard telegraphs were added.
+
+`tests/engine/landmark-disaster-reactions.spec.luau` (core_a) verifies the
+bounds, rotated local-frame composition, deterministic no-drift transforms,
+Low rest pose, Medium/High scale, invalid inputs and ReduceMotion zero
+offset. CI is necessary but insufficient: visual clearance, actual Android
+FPS/frame-time, GPU/memory and thermal performance are **not verified**
+without Roblox Studio and physical-device profiling.

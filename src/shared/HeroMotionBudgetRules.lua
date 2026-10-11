@@ -67,6 +67,25 @@ function HeroMotionBudgetRules.craneCounterweightOffset(now, scale)
         * CFrame.Angles(0, 0, -wave * math.rad(0.8))
 end
 
+-- Slow 3D precession of the existing anchored Orbital reactor sculpture.
+-- Low uses the authored static core (no extra CFrame writes); Medium/High
+-- move within 0.10 studs and 1.6 degrees. The effective tier amplitude
+-- already includes the 480ms stream/LOD/ReduceMotion resume envelope.
+function HeroMotionBudgetRules.reactorCoreOffset(now, scale)
+    if type(now) ~= "number" or now ~= now or now < 0
+        or math.abs(now) > 1e7 or type(scale) ~= "number"
+        or scale ~= scale or math.abs(scale) == math.huge then
+        return CFrame.identity
+    end
+    -- Low=0.18 stays static, and Medium=0.62 and High=1 grow gradually
+    -- without exceeding the existing overall tier and accessibility gates.
+    local strength = math.clamp((scale - MOTION.Low) / (MOTION.High - MOTION.Low), 0, 1)
+    if strength == 0 then return CFrame.identity end
+    local rise = math.sin(now * 0.86) * 0.10 * strength
+    local pitch = math.sin(now * 0.57 + 0.6) * math.rad(1.6) * strength
+    return CFrame.new(0, rise, 0) * CFrame.Angles(pitch, 0, 0)
+end
+
 -- Continuous three-phase signal chase, avoiding the former hard on/off
 -- jump every 0.42s. Decorative light only; no gameplay telegraph is altered.
 function HeroMotionBudgetRules.signalPulse(now, index)

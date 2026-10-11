@@ -210,6 +210,8 @@ task.spawn(function()
             or state.role == "cable" or state.role == "reactorArm"
             or state.role == "antenna" or state.role == "signal"
             or state.role == "craneWeight"
+            or (state.role == "reactorCore" and tierScale > 0.18)
+            or state.hadCoreMotion == true
         if state.role == "lift" then
             local travel = math.sin(clock * 0.48) * 5.2 * scale
             frame = state.baseCFrame * CFrame.new(0, travel, 0)
@@ -229,6 +231,10 @@ task.spawn(function()
             frame = state.baseCFrame
                 * HeroMotionBudget.craneCounterweightOffset(clock, scale)
         elseif state.role == "reactorCore" then
+            -- A slow, bounded precession complements the existing core
+            -- light pulse. Low stays static and pays no new CFrame writes.
+            frame = state.baseCFrame
+                * HeroMotionBudget.reactorCoreOffset(clock, scale)
             local wave = (math.sin(clock * 2.8) + 1) * 0.5
             local sizeScale = 1 + wave * 0.08 * scale
             part.Size = state.baseSize * sizeScale
@@ -293,6 +299,8 @@ task.spawn(function()
             part.CFrame = frame
         end
         state.hadReaction = reacts
+        -- Reset once if graphics drop to Low after a Medium/High frame.
+        state.hadCoreMotion = state.role == "reactorCore" and tierScale > 0.18
     end
     end
 end)
