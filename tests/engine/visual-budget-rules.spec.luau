@@ -35,6 +35,10 @@ describe("visual budget rules", function()
             expect(seen[folderName] ~= true).toBe(true)
             seen[folderName] = true
         end
+        -- Unlike root-level decorative folders, this lives under each
+        -- marked lobby pad; live visual telemetry counts its Parts there.
+        expect(seen.PracticeVectorGlyphLocal).toBe(true)
+        expect(seen.PracticePadPolishLocal).toBe(true)
     end)
 
     it("classifies every managed GPU effect type consistently", function()

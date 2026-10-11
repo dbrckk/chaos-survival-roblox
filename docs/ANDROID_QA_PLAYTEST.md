@@ -601,3 +601,14 @@ for all four pads, distinct tier budgets, spatial bounds, disabled
 physics, rejection of invalid input, and inclusion in the device VFX
 budget telemetry. Client Android/Studio visual, frame-time and heat
 checks are still needed; geometry was not physically playtested.
+
+## PR #19 — register nested vector glyphs in visual audits
+
+The first Build Validation run for the practice-chevron feature failed
+on the persistent Local-folder coverage audit: the newly-created nested
+PracticeVectorGlyphLocal folder was absent from VisualBudgetRules.LocalFolders.
+It is now registered explicitly. The existing marked-pad telemetry collector
+already counts its child Parts through PracticePadPolishLocal; this registry
+addition merely satisfies whole-repo coverage and does not introduce a
+second live counting path or increase graphics budgets. A registry
+regression assertion was added to the visual-budget engine tests.

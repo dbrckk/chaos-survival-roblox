@@ -49,6 +49,9 @@ VisualBudgetRules.LocalFolders = {
     "LobbyTimeTrialLocal",
     "LobbyWayfindingLocal",
     "PracticePadPolishLocal",
+    -- Nested within that folder on marked lobby pads; the dedicated
+    -- lobby-pad collector accounts for its Parts without double-counting.
+    "PracticeVectorGlyphLocal",
     "ResultSurvivorSpotlightsLocal",
     "RoundTransitionPulsesLocal",
     "RoundCelebrationPulsesLocal",
