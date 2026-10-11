@@ -84,4 +84,45 @@ describe("Reactive arena landmarks during active disasters", function()
     end)
 end)
 
+
+describe("Hero landmark animation scheduling and accessibility", function()
+    local Budget = require("../../src/shared/HeroMotionBudgetRules")
+
+    it("preserves tier motion and cadence while falling back conservatively", function()
+        expect(Budget.motionScale("Low", false)).toBe(0.18)
+        expect(Budget.motionScale("Medium", false)).toBe(0.62)
+        expect(Budget.motionScale("High", false)).toBe(1)
+        expect(Budget.interval("Low", false, true)).toBe(0.16)
+        expect(Budget.interval("Medium", false, true)).toBe(0.09)
+        expect(Budget.interval("High", false, true)).toBe(0.055)
+        expect(Budget.motionScale("Unknown", false)).toBe(0.18)
+        expect(Budget.interval("Unknown", false, true)).toBe(0.16)
+    end)
+
+    it("stops all continuous displacement with ReduceMotion and idles without scenery", function()
+        for _, tier in ipairs({"Low", "Medium", "High", "Unknown"}) do
+            expect(Budget.motionScale(tier, true)).toBe(0)
+            expect(Budget.interval(tier, true, true)).toBe(0.24)
+        end
+        expect(Budget.interval("High", false, false)).toBe(0.50)
+        expect(Budget.interval("Low", true, false)).toBe(0.50)
+    end)
+
+    it("does not animate LOD-hidden or detached client-only landmark parts", function()
+        local folder = Instance.new("Folder")
+        local part = Instance.new("Part")
+        part.Parent = folder
+        expect(Budget.shouldUpdate(part)).toBe(true)
+        part:SetAttribute("SceneryLodHidden", true)
+        expect(Budget.shouldUpdate(part)).toBe(false)
+        part:SetAttribute("SceneryLodHidden", false)
+        expect(Budget.shouldUpdate(part)).toBe(true)
+        part.Parent = nil
+        expect(Budget.shouldUpdate(part)).toBe(false)
+        expect(Budget.shouldUpdate(nil)).toBe(false)
+        part:Destroy()
+        folder:Destroy()
+    end)
+end)
+
 return nil

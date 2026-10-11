@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LandmarkReactions = require(ReplicatedStorage.Shared.LandmarkDisasterReactionRules)
+local HeroMotionBudget = require(ReplicatedStorage.Shared.HeroMotionBudgetRules)
 local player = Players.LocalPlayer
 local roundEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local source = workspace:WaitForChild("ArenaHeroSceneryLocal", 10)
@@ -32,18 +33,6 @@ local function tierName()
     return tostring(player:GetAttribute("VfxQualityTier") or "Medium")
 end
 
-local function motionScale()
-    if player:GetAttribute("ReduceMotion") == true then
-        return 0.18
-    end
-    local tier = tierName()
-    if tier == "Low" then
-        return 0.18
-    elseif tier == "Medium" then
-        return 0.62
-    end
-    return 1
-end
 
 local function track(nextTracked, part, role, index)
     if not part or not part:IsA("BasePart") then
@@ -143,7 +132,8 @@ scan()
 task.spawn(function()
     while true do
         local tier = tierName()
-        local interval = tier == "Low" and 0.16 or (tier == "Medium" and 0.09 or 0.055)
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        local interval = HeroMotionBudget.interval(tier, reduced, next(tracked) ~= nil)
         local dt = task.wait(interval)
         clock += dt
 
@@ -152,11 +142,16 @@ task.spawn(function()
         scan()
     end
 
-    local scale = motionScale()
+    local scale = HeroMotionBudget.motionScale(tier, reduced)
 
     for part, state in pairs(tracked) do
         if not part.Parent then
             tracked[part] = nil
+            continue
+        end
+        -- Scenery LOD has already hidden this client-only landmark. Avoid
+        -- animating off-screen parts until their original visibility returns.
+        if not HeroMotionBudget.shouldUpdate(part) then
             continue
         end
 
