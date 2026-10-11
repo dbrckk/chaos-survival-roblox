@@ -40,6 +40,17 @@ describe("Disaster residue profiles", function()
             < DisasterResidue.resultBudget("High")).toBe(true)
     end)
 
+    it("bounds warning-trace schedules for streamed invalid attributes", function()
+        expect(DisasterResidue.warningDuration(nil)).toBe(0.7)
+        expect(DisasterResidue.warningDuration(0/0)).toBe(0.7)
+        expect(DisasterResidue.warningDuration(math.huge)).toBe(0.7)
+        expect(DisasterResidue.warningDuration(-math.huge)).toBe(0.7)
+        expect(DisasterResidue.warningDuration("not-a-number")).toBe(0.7)
+        expect(DisasterResidue.warningDuration(-1)).toBe(0.1)
+        expect(DisasterResidue.warningDuration(9)).toBe(8)
+        expect(DisasterResidue.warningDuration(1.5)).toBe(1.5)
+    end)
+
     it("keeps impact scars longer at higher quality", function()
         expect(DisasterResidue.impactLifetime("Low")
             < DisasterResidue.impactLifetime("Medium")).toBe(true)
@@ -264,6 +275,15 @@ describe("Ground-correct meteor/bomb aftermath in active rounds", function()
             "High", Enum.Material.Ice, source, center, 12, false)).toBe(0)
         expect(#ImpactSurfaceScarKit.build(parent, ground, "Unknown",
             "High", Enum.Material.Ice, source, center, 12, false)).toBe(0)
+        for _, invalid in ipairs({0/0, math.huge, -math.huge, -2}) do
+            expect(#ImpactSurfaceScarKit.build(parent, ground,
+                "Meteor", "High", Enum.Material.Ice,
+                source, center, invalid, false)).toBe(0)
+        end
+        expect(#ImpactSurfaceScarKit.build("bad-parent", ground,
+            "Meteor", "High", Enum.Material.Ice, source,
+            center, 12, false)).toBe(0)
+        expect(#parent:GetChildren()).toBe(0)
         parent:Destroy()
     end)
 
@@ -318,6 +338,28 @@ describe("Ground-correct meteor/bomb aftermath in active rounds", function()
         end
         expect(ImpactSurfaceScarKit.crack(1, 5, 12, "Invalid", "Ice") == nil)
             .toBe(true)
+        for _, invalid in ipairs({0/0, math.huge, -math.huge}) do
+            expect(ImpactSurfaceScarKit.crack(1, 5, invalid,
+                "Meteor", "Stone") == nil).toBe(true)
+            expect(ImpactSurfaceScarKit.crack(1, invalid, 12,
+                "Meteor", "Stone") == nil).toBe(true)
+        end
+        expect(ImpactSurfaceScarKit.crack(1.5, 5, 12, "Meteor", "Stone")
+            == nil).toBe(true)
+        expect(ImpactSurfaceScarKit.crack(1, 6, 12, "Meteor", "Stone")
+            == nil).toBe(true)
+        local stone = ImpactSurfaceScarKit.crack(2, 5, 12, "Bomb", "Stone")
+        local ice = ImpactSurfaceScarKit.crack(2, 5, 12, "Bomb", "Ice")
+        local metal = ImpactSurfaceScarKit.crack(2, 5, 12, "Bomb", "Metal")
+        local dust = ImpactSurfaceScarKit.crack(2, 5, 12, "Bomb", "Dust")
+        expect(ice.Wedge).toBe(true)
+        expect(stone.Wedge).toBe(false)
+        expect(ice.Angle ~= stone.Angle).toBe(true)
+        expect(metal.Angle ~= dust.Angle).toBe(true)
+        expect(ice.Size.Z > stone.Size.Z).toBe(true)
+        expect(dust.Size.Z < stone.Size.Z).toBe(true)
+        expect(ImpactSurfaceScarKit.crack(2, 5, 12,
+            "Bomb", "Ice").Angle).toBe(ice.Angle)
     end)
 end)
 

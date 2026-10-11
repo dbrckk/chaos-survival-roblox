@@ -60,6 +60,17 @@ function DisasterResidue.resultBudget(tierName)
     return 7
 end
 
+-- Warning Instances can briefly stream with malformed attributes.
+-- Never schedule infinity/NaN delays or a very long cosmetic trace.
+function DisasterResidue.warningDuration(raw)
+    local duration = tonumber(raw)
+    if type(duration) ~= "number" or duration ~= duration
+        or math.abs(duration) == math.huge then
+        return 0.7
+    end
+    return math.clamp(duration, 0.1, 8)
+end
+
 function DisasterResidue.impactLifetime(tierName)
     if tierName == "Low" then
         return 2.4

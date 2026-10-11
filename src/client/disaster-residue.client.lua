@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local DisasterResidue = require(ReplicatedStorage.Shared.DisasterResidue)
+local ImpactSetpieceRules = require(ReplicatedStorage.Shared.ImpactSetpieceRules)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local AftermathSurfaceKit = require(script.Parent.AftermathSurfaceKit)
 local ImpactSurfaceScarKit = require(script.Parent.ImpactSurfaceScarKit)
@@ -254,12 +255,15 @@ local function makeFragments(position, radius, profile, count, lifetime)
 end
 
 local function impactResidue(payload)
-    if phase ~= "round" or type(payload) ~= "table" then return end
+    -- Same finite-coordinate/color guard as the transient client impact VFX.
+    -- Reject before camera distance, arena raycast or constructing scars.
+    if phase ~= "round" or not ImpactSetpieceRules.validPayload(payload) then
+        return
+    end
     local kind = tostring(payload.kind or "")
     if kind ~= "Meteor" and kind ~= "Bomb" then return end
 
     local position = payload.position
-    if typeof(position) ~= "Vector3" then return end
 
     local quality = tier()
     local spectator = player:GetAttribute("RoundEliminated") == true
@@ -285,7 +289,7 @@ local function impactResidue(payload)
     -- Exactly one arena raycast per eligible event; all pieces share the same
     -- surface normal. Ground scar silhouettes remain client-only.
     local frame = flatCFrame(surface, normal, 0)
-    local radius = math.clamp(tonumber(payload.radius) or 8, 2, 40)
+    local radius = math.max(2, ImpactSetpieceRules.safeRadius(payload.radius))
     local reduced = player:GetAttribute("ReduceMotion") == true
     local pieces = ImpactSurfaceScarKit.build(
         folder, frame, kind, quality.Name,
@@ -317,9 +321,8 @@ local function warningResidue(instance)
     end
 
     local token = roundToken
-    local duration = math.max(
-        0.1,
-        tonumber(instance:GetAttribute("WarningDuration")) or 0.7
+    local duration = DisasterResidue.warningDuration(
+        instance:GetAttribute("WarningDuration")
     )
     local position = instance.Position
 
@@ -487,12 +490,16 @@ impactEvent.OnClientEvent:Connect(impactResidue)
 workspace.ChildAdded:Connect(warningResidue)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    -- A malformed snapshot must not tear down the client visual controller.
+    local snapshot = type(state) == "table" and state or {}
     previousPhase = phase
-    phase = tostring(state.phase or "waiting")
+    phase = tostring(snapshot.phase or "waiting")
 
     if phase == "round" then
         local ids = {}
-        for _, id in ipairs(state.disasterIds or {}) do
+        local incomingIds = type(snapshot.disasterIds) == "table"
+            and snapshot.disasterIds or {}
+        for _, id in ipairs(incomingIds) do
             table.insert(ids, tostring(id))
         end
         lastIds = ids

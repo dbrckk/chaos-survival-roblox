@@ -85,14 +85,28 @@ end
 function ImpactSurfaceScarKit.crack(index, total, radius, kind, family)
     if (kind ~= "Meteor" and kind ~= "Bomb")
         or type(index) ~= "number" or type(total) ~= "number"
-        or total < 1 or index < 1 or index > total
-        or type(radius) ~= "number" or radius <= 0 then
+        or index ~= index or total ~= total
+        or math.abs(index) == math.huge or math.abs(total) == math.huge
+        or index % 1 ~= 0 or total % 1 ~= 0
+        or total < 1 or total > 5 or index < 1 or index > total
+        or type(radius) ~= "number" or radius ~= radius
+        or math.abs(radius) == math.huge or radius <= 0 then
         return nil
     end
+    -- Original material-dependent fracture morphology: ice has branching
+    -- crystal cuts, metal keeps tight scored seams, and dust spreads softly.
+    -- The same five-or-fewer static pieces remain on all graphics tiers.
+    local familySkew = family == "Ice" and 0.16
+        or (family == "Metal" and -0.09
+            or (family == "Dust" and 0.09
+                or (family == "Polished" and -0.04 or 0)))
+    local side = index % 2 == 0 and -1 or 1
     local angle = ((index - 1) / total) * math.pi * 2
         + (kind == "Meteor" and 0.21 or 0.11)
+        + familySkew * side
     local distance = radius * (kind == "Meteor" and 0.36 or 0.30)
     local reach = radius * (0.28 + (index % 3) * 0.055)
+        * (family == "Ice" and 1.08 or (family == "Dust" and 0.84 or 1))
     local isFracture = kind == "Meteor" or family == "Ice"
     return {
         Name = isFracture and "RimFacet" or "PressureCut",
@@ -110,8 +124,9 @@ end
 
 function ImpactSurfaceScarKit.build(parent, frame, kind, tier,
         material, groundColor, hazardColor, radius, reduced)
-    if not parent or typeof(frame) ~= "CFrame"
-        or type(radius) ~= "number" or radius <= 0 then
+    if typeof(parent) ~= "Instance" or typeof(frame) ~= "CFrame"
+        or type(radius) ~= "number" or radius ~= radius
+        or math.abs(radius) == math.huge or radius <= 0 then
         return {}
     end
     local style = ImpactSurfaceScarKit.recipe(

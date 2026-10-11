@@ -367,3 +367,20 @@ fragment/finish indices, nonfinite counts and unknown types no longer produce
 synthetic geometry. The engine `disaster-visuals.spec.luau` checks distinct
 and finite transforms, deterministic repeats, per-tier counts and invalid
 inputs. Studio/Android must inspect actual appearance and GPU overdraw.
+
+## PR #19 — material-true impact scars and guarded residue lifecycle (11 October 2026)
+
+The persistent local disaster residue path now shares the finite payload
+validation used by the transient Meteor/Bomb VFX: NaN/Infinity positions,
+invalid colors and excessive coordinates cannot reach the arena raycast or
+crater geometry. Radius falls back to 8 and retains its 2..40 scar clamp.
+Malformed RoundState payloads no longer crash the residue controller.
+WarningDuration attributes are bounded to 0.1..8 seconds, with a 0.7s
+fallback for nonfinite values, avoiding invalid scheduled tasks.
+
+The same 1/4/6 material-aware scar pieces per tier acquire deterministic
+Ice branches, shallow metal scores and shorter dusty cuts without any new
+parts, lights, particles, render loops or server changes. Existing engine
+residue tests now cover all material distinctions and reject NaN/Infinity
+radii, invalid indices and malformed warning durations. Actual Studio and
+Android screenshots, GPU overdraw, temperatures and FPS remain unmeasured.
