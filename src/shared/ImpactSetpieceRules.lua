@@ -93,28 +93,52 @@ function ImpactSetpieceRules.finish(kind, index, total, radius)
     if kind ~= "Meteor" and kind ~= "Bomb" then
         return nil
     end
+    if not finite(index) or not finite(total) or index % 1 ~= 0
+        or total % 1 ~= 0 or index < 1 or total < 1
+        or index > total or total > 4 then
+        return nil
+    end
     local size = ImpactSetpieceRules.safeRadius(radius)
-    local segments = math.max(1, math.floor(tonumber(total) or 1))
-    local slot = math.clamp(math.floor(tonumber(index) or 1), 1, segments)
-    local angle = ((slot - 0.5) / segments) * math.pi * 2
+    local slot, segments = index, total
+    -- Meteor: chipped offset edges. Bomb: alternating tangential pressure
+    -- arcs. No additional pieces, randomness or per-frame animation.
+    local phaseSkew = kind == "Meteor"
+        and (slot % 2 == 0 and -0.10 or 0.08)
+        or (slot % 2 == 0 and 0.06 or -0.06)
+    local angle = ((slot - 0.5) / segments) * math.pi * 2 + phaseSkew
+    local facet = 0.90 + (slot % 3) * 0.07
     return {
         Angle = angle,
+        YawSkew = kind == "Meteor" and phaseSkew * 0.4 or phaseSkew,
+        Bank = kind == "Meteor"
+            and math.rad(slot % 2 == 0 and -15 or 22)
+            or math.rad(slot % 2 == 0 and 8 or -8),
         Direction = Vector3.new(math.cos(angle), 0, math.sin(angle)),
         StartRadius = size * (kind == "Meteor" and 0.15 or 0.25),
         EndRadius = size * (kind == "Meteor" and 0.47 or 0.78),
         Lift = kind == "Meteor" and (0.45 + (slot % 2) * 0.35) or 0.08,
-        Width = math.max(0.35, size * (kind == "Meteor" and 0.095 or 0.21)),
-        Height = math.max(0.15, size * (kind == "Meteor" and 0.15 or 0.018)),
+        Width = math.max(0.35, size * (kind == "Meteor" and 0.095 or 0.21))
+            * facet,
+        Height = math.max(0.15, size * (kind == "Meteor" and 0.15 or 0.018))
+            * (kind == "Meteor" and facet or 1),
     }
 end
 
 -- Static deterministic positioning avoids random visual flicker and makes
 -- every client see a recognizable radial signature at each impact.
 function ImpactSetpieceRules.fragment(kind, index, count, radius)
+    if (kind ~= "Meteor" and kind ~= "Bomb")
+        or not finite(index) or not finite(count)
+        or index % 1 ~= 0 or count % 1 ~= 0
+        or index < 1 or count < 1 or count > 8 or index > count then
+        return nil
+    end
     local size = ImpactSetpieceRules.safeRadius(radius)
-    local total = math.max(1, math.floor(tonumber(count) or 1))
-    local i = math.clamp(math.floor(tonumber(index) or 1), 1, total)
-    local angle = (i - 1) / total * math.pi * 2
+    local total, i = count, index
+    local variation = kind == "Meteor"
+        and (((i * 5) % 7) - 3) * 0.035
+        or ((i % 3) - 1) * 0.035
+    local angle = (i - 1) / total * math.pi * 2 + variation
     local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
 
     if kind == "Meteor" then
@@ -123,8 +147,10 @@ function ImpactSetpieceRules.fragment(kind, index, count, radius)
             StartRadius = size * 0.12,
             EndRadius = size * 0.62,
             Lift = 1.2 + (i % 3) * 0.55,
-            Length = math.max(0.6, size * 0.19),
-            Width = math.max(0.12, size * 0.045),
+            Length = math.max(0.6, size * 0.19) * (0.85 + (i % 3) * 0.08),
+            Width = math.max(0.12, size * 0.045) * (0.86 + (i % 3) * 0.10),
+            YawSkew = variation * 0.55,
+            Bank = math.rad(i % 2 == 0 and -28 or 30),
         }
     end
 
@@ -133,8 +159,10 @@ function ImpactSetpieceRules.fragment(kind, index, count, radius)
         StartRadius = size * 0.20,
         EndRadius = size * 0.72,
         Lift = 0.14,
-        Length = math.max(0.8, size * 0.58),
-        Width = math.max(0.12, size * 0.030),
+        Length = math.max(0.8, size * 0.58) * (0.88 + (i % 4) * 0.06),
+        Width = math.max(0.12, size * 0.030) * (0.95 + (i % 2) * 0.10),
+        YawSkew = (i % 2 == 0 and -0.13 or 0.13),
+        Bank = math.rad(i % 2 == 0 and -7 or 7),
     }
 end
 

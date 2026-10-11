@@ -161,6 +161,52 @@ describe("Disaster visual identities", function()
         expect(ImpactSetpieceRules.finish("Unknown", 1, 4, 20) == nil).toBe(true)
     end)
 
+    it("sculpts irregular meteor fracture wings and pressure-wave fans", function()
+        local rules = ImpactSetpieceRules
+        for _, tier in ipairs({"Medium", "High"}) do
+            for _, kind in ipairs({"Meteor", "Bomb"}) do
+                local profile = rules.get(kind, tier, false, 16)
+                local angles = {}
+                local banks = {}
+                local lengths = {}
+                for i = 1, profile.Count do
+                    local part = rules.fragment(kind, i, profile.Count, 16)
+                    expect(part ~= nil).toBe(true)
+                    expect(part.YawSkew ~= nil and part.Bank ~= nil).toBe(true)
+                    expect(math.abs(part.YawSkew) <= 0.14).toBe(true)
+                    expect(math.abs(part.Bank) <= math.rad(30)).toBe(true)
+                    expect(part.EndRadius > part.StartRadius).toBe(true)
+                    expect(part.Length > 0 and part.Width > 0).toBe(true)
+                    expect(part.Length < 16).toBe(true)
+                    expect(rules.fragment(kind, i, profile.Count, 16).Bank)
+                        .toBe(part.Bank)
+                    angles[i] = part.Direction
+                    banks[part.Bank] = true
+                    lengths[part.Length] = true
+                end
+                expect(next(banks) ~= nil).toBe(true)
+                expect(next(lengths) ~= nil).toBe(true)
+                expect(angles[1] ~= angles[2]).toBe(true)
+                local rimCount = rules.finishCount(kind, tier, false)
+                for i = 1, rimCount do
+                    local rim = rules.finish(kind, i, rimCount, 16)
+                    expect(rim ~= nil).toBe(true)
+                    expect(math.abs(rim.Bank) <= math.rad(22)).toBe(true)
+                    expect(math.abs(rim.YawSkew) <= 0.10).toBe(true)
+                    expect(rim.EndRadius > rim.StartRadius).toBe(true)
+                end
+            end
+        end
+        expect(rules.fragment("Unknown", 1, 7, 12) == nil).toBe(true)
+        expect(rules.fragment("Meteor", 0, 7, 12) == nil).toBe(true)
+        expect(rules.fragment("Meteor", 1, math.huge, 12) == nil).toBe(true)
+        expect(rules.fragment("Bomb", 1.5, 8, 12) == nil).toBe(true)
+        expect(rules.finish("Bomb", 1, math.huge, 12) == nil).toBe(true)
+        expect(rules.finish("Meteor", 5, 4, 12) == nil).toBe(true)
+        expect(rules.get("Meteor", "Low", false, 16) == nil).toBe(true)
+        expect(rules.get("Meteor", "High", true, 16) == nil).toBe(true)
+    end)
+
     it("keeps radial debris trajectories stable and physically bounded", function()
         for _, kind in ipairs({"Meteor", "Bomb"}) do
             for i = 1, 8 do

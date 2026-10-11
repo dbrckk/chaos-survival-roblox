@@ -59,7 +59,9 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         part.Size = recipe.Kind == "Meteor"
             and Vector3.new(fragment.Width, fragment.Length, fragment.Width * 1.8)
             or Vector3.new(fragment.Width, 0.08, fragment.Length * 0.50)
-        local rotation = CFrame.Angles(0, yaw, recipe.Kind == "Meteor" and math.rad(24) or 0)
+        -- Compose authored trajectory, oblique yaw and silhouette bank.
+        -- Geometry is still one wedge/part per existing budget slot.
+        local rotation = CFrame.Angles(0, yaw + fragment.YawSkew, fragment.Bank)
         part.CFrame = CFrame.new(start) * rotation
         part.Parent = container
 
@@ -103,7 +105,7 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
             and Vector3.new(finish.Width, finish.Height, finish.Width * 0.75)
             or Vector3.new(finish.Width, 0.15, 0.25)
         local angle = finish.Angle
-        local rotation = CFrame.Angles(0, -angle, meteor and math.rad(20) or 0)
+        local rotation = CFrame.Angles(0, -angle + finish.YawSkew, finish.Bank)
         local start = payload.position + finish.Direction * finish.StartRadius
             + Vector3.new(0, meteor and finish.Height * 0.5 or 0.16, 0)
         local goal = payload.position + finish.Direction * finish.EndRadius

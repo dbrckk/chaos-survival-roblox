@@ -354,3 +354,16 @@ rules injection, verifying no exception and no allocated 3D parts.
 The earlier failed exact-head run was #38163970237 (193/194 gameplay tests,
 four other shards green). A new complete exact-head CI is required before
 signoff; studio and Android FPS/visual checks are still unperformed.
+
+## PR #19 — non-generic impact fracture silhouettes (11 October 2026)
+
+Meteor impacts use deterministically staggered glass wedge wings with
+alternating 3D banks and different shard lengths; bombs use shorter
+oblique/fanned pressure strokes and alternating small banks. Each impact
+retains the existing High/Medium/Low and ReduceMotion budgets, identical
+WedgePart/Part counts, collision-free local animation and Debris lifetimes.
+No geometry, light, sound or particle budget increase was made. Invalid
+fragment/finish indices, nonfinite counts and unknown types no longer produce
+synthetic geometry. The engine `disaster-visuals.spec.luau` checks distinct
+and finite transforms, deterministic repeats, per-tier counts and invalid
+inputs. Studio/Android must inspect actual appearance and GPU overdraw.
