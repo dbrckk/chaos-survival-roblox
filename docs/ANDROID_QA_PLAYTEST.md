@@ -108,3 +108,30 @@ The existing `survival-feedback.spec.luau` engine shard now checks the
 invalid-input behavior alongside finite-event compatibility. Build and all
 five engine shards must be verified at the exact commit before signoff.
 Real Roblox Studio and Android gameplay/FPS checks are still outstanding.
+
+## PR #19 — emission-aware character VFX cooldowns (11 October 2026)
+
+A full shared 12-Beam visual budget, a streamed-away avatar root or
+other rejected cosmetic burst can legitimately return zero newly
+created Beams. Previously the Dodge, Shock and Landing controllers
+reserved their cooldown **before** checking that result; a valid later
+near-miss or impact could then be suppressed despite no visible
+feedback having appeared.
+
+The reaction controller now advances the respective cooldown only
+after `CharacterReactionVisuals.burst` returns a positive actual
+emission count. The global impact throttle is claimed only if at
+least one nearby eligible participant/AI gets a Shock effect;
+per-character Shock and Landing throttles similarly track real
+emission. `CharacterReactionRules.cooldownAfterEmission` is a small
+deterministic policy rejecting zero, negative, fractional and
+non-finite counts/times. Existing global 0.18s / 0.80s / 0.95s /
+1.20s cooldown durations remain unchanged for genuine effects.
+
+This alters client-local VFX scheduling only: no damage, physics,
+network traffic, game progression, new Beams, attachments, render
+loops or increased visual budgets. The existing engine shard
+`survival-feedback.spec.luau` tests dropped/accepted emission
+behavior and follow-on cooldown readiness. The exact-head cloud
+shards, Studio appearance and Android performance still require
+separate validation; no FPS or physical-device claim is made.

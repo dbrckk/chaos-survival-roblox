@@ -62,6 +62,17 @@ function CharacterReactionRules.cooldownReady(now, last, cooldown)
     return time - previous >= math.max(0, delay)
 end
 
+-- A cosmetic burst may create zero Beams when the shared 12-Beam cap is
+-- full or its root has disappeared. Do not use up a reaction cooldown
+-- unless a positive, finite number of Beams was actually created.
+function CharacterReactionRules.cooldownAfterEmission(previous, now, emitted)
+    if finite(now) and finite(emitted) and emitted > 0
+        and emitted % 1 == 0 then
+        return now
+    end
+    return previous
+end
+
 function CharacterReactionRules.dodgeStrength(distance, radius)
     local r = tonumber(radius)
     local d = tonumber(distance)

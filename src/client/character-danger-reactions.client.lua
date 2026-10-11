@@ -78,7 +78,8 @@ local function nearMiss(payload)
         return
     end
     local current = profile()
-    if current.Dodge == 0 or not liveRoot(player.Character) then
+    local root = liveRoot(player.Character)
+    if current.Dodge == 0 or not root then
         return
     end
     local now = os.clock()
@@ -87,10 +88,10 @@ local function nearMiss(payload)
     end
     local intensity = Rules.dodgeStrength(payload.distance, payload.radius)
     if intensity <= 0 then return end
-    lastDodge = now
-    ReactionVisuals.burst(liveRoot(player.Character),
+    local emitted = ReactionVisuals.burst(root,
         "Dodge", tostring(payload.kind or ""), current.Dodge,
         intensity, activePieces)
+    lastDodge = Rules.cooldownAfterEmission(lastDodge, now, emitted)
 end
 
 local function impact(payload)
@@ -111,7 +112,6 @@ local function impact(payload)
     if not viewer or (payload.position - viewer).Magnitude > p.Range + 40 then
         return
     end
-    lastImpact = now
     local n = 0
 
     local function candidate(model)
@@ -130,10 +130,13 @@ local function impact(payload)
         if not Rules.cooldownReady(now, impactByModel[model], 0.95) then
             return
         end
-        impactByModel[model] = now
-        n += 1
-        ReactionVisuals.burst(root, "Shock", tostring(payload.kind or ""),
-            p.Shock, intensity, activePieces, payload.position)
+        local emitted = ReactionVisuals.burst(root, "Shock",
+            tostring(payload.kind or ""), p.Shock, intensity,
+            activePieces, payload.position)
+        if emitted > 0 then
+            impactByModel[model] = now
+            n += 1
+        end
     end
 
     candidate(player.Character)
@@ -158,6 +161,8 @@ local function impact(payload)
             end
         end
     end
+    -- No visible reaction means the next valid impact must remain eligible.
+    lastImpact = Rules.cooldownAfterEmission(lastImpact, now, n)
 end
 
 local function watchLanding(model)
@@ -221,9 +226,10 @@ local function watchLanding(model)
             if not viewer or (root.Position - viewer).Magnitude > settings.Range then
                 return
             end
-            landingByModel[model] = now
-            ReactionVisuals.burst(root, "Landing", "",
+            local emitted = ReactionVisuals.burst(root, "Landing", "",
                 settings.Landing, strength, activePieces)
+            landingByModel[model] = Rules.cooldownAfterEmission(
+                landingByModel[model], now, emitted)
         end
     end)
 end
