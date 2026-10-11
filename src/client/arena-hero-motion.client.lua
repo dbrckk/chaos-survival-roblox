@@ -76,6 +76,7 @@ local function scan()
     track(nextTracked, source:FindFirstChild("TowerServiceCar"), "lift", 1)
     track(nextTracked, source:FindFirstChild("TowerServiceCrown"), "pulse", 2)
     track(nextTracked, source:FindFirstChild("TowerMaintenanceCraneCable"), "cable", 3)
+    track(nextTracked, source:FindFirstChild("TowerMaintenanceCounterweight"), "craneWeight", 4)
 
     track(nextTracked, source:FindFirstChild("OrbitalReactorCore"), "reactorCore", 1)
     for i = 1, 6 do
@@ -208,6 +209,7 @@ task.spawn(function()
         local ownsAnimatedCFrame = state.role == "lift"
             or state.role == "cable" or state.role == "reactorArm"
             or state.role == "antenna" or state.role == "signal"
+            or state.role == "craneWeight"
         if state.role == "lift" then
             local travel = math.sin(clock * 0.48) * 5.2 * scale
             frame = state.baseCFrame * CFrame.new(0, travel, 0)
@@ -221,6 +223,11 @@ task.spawn(function()
         elseif state.role == "cable" then
             local sway = math.sin(clock * 0.72) * math.rad(3.2) * scale
             frame = state.baseCFrame * CFrame.Angles(0, 0, sway)
+        elseif state.role == "craneWeight" then
+            -- The crane counterweight answers its cable's sway with a
+            -- small opposing mechanical travel on the same client tick.
+            frame = state.baseCFrame
+                * HeroMotionBudget.craneCounterweightOffset(clock, scale)
         elseif state.role == "reactorCore" then
             local wave = (math.sin(clock * 2.8) + 1) * 0.5
             local sizeScale = 1 + wave * 0.08 * scale

@@ -173,6 +173,48 @@ describe("Hero landmark animation scheduling and accessibility", function()
         expect(Budget.signatureOffset("signal", 1, 1, 0/0) == nil).toBe(true)
     end)
 
+    it("counterbalances the Towers crane cable without adding moving physics", function()
+        local base = CFrame.new(10, 12, -6)
+            * CFrame.Angles(math.rad(11), math.rad(37), 0)
+        local t = 1.37
+        local high = Budget.craneCounterweightOffset(t, 1)
+        local medium = Budget.craneCounterweightOffset(t, 0.62)
+        local low = Budget.craneCounterweightOffset(t, 0.18)
+        local still = Budget.craneCounterweightOffset(t, 0)
+        local cable = CFrame.Angles(0, 0,
+            math.sin(t * 0.72) * math.rad(3.2))
+        expect(high.Position.X * math.sin(t * 0.72) < 0).toBe(true)
+        expect(high.UpVector.X * cable.UpVector.X < 0).toBe(true)
+        expect(math.abs(high.Position.X) <= 0.28).toBe(true)
+        expect(math.abs(high.Position.X) > math.abs(medium.Position.X)).toBe(true)
+        expect(math.abs(medium.Position.X) > math.abs(low.Position.X)).toBe(true)
+        expect((still.Position - Vector3.zero).Magnitude < 0.00001).toBe(true)
+        expect(still.UpVector:Dot(Vector3.yAxis) > 0.99999).toBe(true)
+        for _, clock in ipairs({0, 0.4, 2.1, 50, 10000}) do
+            local offset = Budget.craneCounterweightOffset(clock, 1)
+            expect(offset.Position.Magnitude <= 0.281).toBe(true)
+            local composed = base * offset
+            local repeated = base * Budget.craneCounterweightOffset(clock, 1)
+            expect((composed.Position - repeated.Position).Magnitude < 0.0001)
+                .toBe(true)
+            expect(composed.UpVector:Dot(repeated.UpVector) > 0.99999)
+                .toBe(true)
+        end
+        for _, invalid in ipairs({-1, math.huge, -math.huge, 1e8}) do
+            local rest = Budget.craneCounterweightOffset(invalid, 1)
+            expect(rest.Position.Magnitude < 0.00001).toBe(true)
+        end
+        expect(Budget.craneCounterweightOffset(0/0, 1).Position.Magnitude)
+            .toBe(0)
+        expect(Budget.craneCounterweightOffset(t, 0/0).Position.Magnitude)
+            .toBe(0)
+        expect(Budget.craneCounterweightOffset(t, math.huge).Position.Magnitude)
+            .toBe(0)
+        expect(Budget.craneCounterweightOffset(t, -1).Position.Magnitude)
+            .toBe(0)
+        expect(Budget.motionScale("High", true)).toBe(0)
+    end)
+
     it("crossfades three transit lights without hard on-off frame jumps", function()
         local phase = {}
         for i = 1, 3 do

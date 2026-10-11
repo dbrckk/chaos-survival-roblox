@@ -52,6 +52,21 @@ function HeroMotionBudgetRules.signatureOffset(role, index, now, scale)
         * CFrame.Angles(0, 0, sweep * math.rad(1.1) * strength)
 end
 
+-- Opposing micro-travel for the existing Towers crane counterweight.
+-- Same 0.72 Hz-phase as its cable; authored base pose prevents drift.
+-- The scene piece is anchored, client-only and never a gameplay collider.
+function HeroMotionBudgetRules.craneCounterweightOffset(now, scale)
+    if type(now) ~= "number" or now ~= now or now < 0
+        or math.abs(now) > 1e7 or type(scale) ~= "number"
+        or scale ~= scale or math.abs(scale) == math.huge then
+        return CFrame.identity
+    end
+    local amplitude = math.clamp(scale, 0, 1)
+    local wave = math.sin(now * 0.72) * amplitude
+    return CFrame.new(-wave * 0.28, 0, 0)
+        * CFrame.Angles(0, 0, -wave * math.rad(0.8))
+end
+
 -- Continuous three-phase signal chase, avoiding the former hard on/off
 -- jump every 0.42s. Decorative light only; no gameplay telegraph is altered.
 function HeroMotionBudgetRules.signalPulse(now, index)

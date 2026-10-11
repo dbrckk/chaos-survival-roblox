@@ -128,3 +128,26 @@ alignment and transit-bar clearances in Roblox Studio, then assess
 Android readability, accessibility, LOD streaming and frame-time
 under Low/Medium/High. Automated tests and a successful build cannot
 certify premium visual quality or device FPS/thermals.
+
+## Towers crane counterweight: opposing local articulation (11 October 2026)
+
+The already-authored `TowerMaintenanceCounterweight` now performs a
+small mechanical counter-travel opposite the nearby
+`TowerMaintenanceCraneCable` sway. The same 0.72 phase drives a maximum
+0.28-stud local X translation and 0.8-degree counter-roll, composed from
+the captured original CFrame. No additional geometry, lights, emitters,
+physics, server remotes or update loops are introduced.
+
+The counterweight exists only in Medium/High Towers scenery; Low creates
+no counterweight and therefore incurs no new tracked part. The existing
+motion tier multiplier (Low 0.18, Medium 0.62, High 1), 480 ms resume
+envelope, distance-LOD gate, disaster reaction, and one-shot ReduceMotion
+rest pose remain authoritative. The counterweight is anchored and has
+CanCollide/CanTouch/CanQuery disabled by the scene factory.
+
+The core_a engine spec checks opposite motion to the cable, bounded
+translation, tier scaling, deterministic poses on rotated bases, invalid
+clock inputs and zero-amplitude accessibility behavior. This is not a
+claim of physical Android FPS or Studio visual clearance: inspect the
+counterweight against the mast, cable and nearby player sightlines in
+Studio and on a real Android device before accepting the visual result.
