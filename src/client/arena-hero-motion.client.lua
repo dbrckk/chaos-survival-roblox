@@ -22,13 +22,6 @@ local function refreshReaction()
     )
 end
 
-roundEvent.OnClientEvent:Connect(function(state)
-    currentPhase = tostring(state and state.phase or "waiting")
-    activeDisasters = state and state.disasterIds or {}
-    finalRush = currentPhase == "round" and state.finalRush == true
-    refreshReaction()
-end)
-
 local function tierName()
     return tostring(player:GetAttribute("VfxQualityTier") or "Medium")
 end
@@ -55,6 +48,16 @@ local function track(nextTracked, part, role, index)
         baseColor = part.Color,
         baseSize = part.Size,
     }
+end
+
+-- A stable, authored pose replaces every continuous landmark gesture when
+-- ReduceMotion is enabled. Reapply only on scene/state/tier changes; hazard
+-- identity remains visible via a very subtle static accent.
+local function applyReducedPose()
+    if player:GetAttribute("ReduceMotion") ~= true then return end
+    for part, state in pairs(tracked) do
+        HeroMotionBudget.applyStillPose(part, state, reaction)
+    end
 end
 
 local function scan()
@@ -101,7 +104,16 @@ local function scan()
     end
 
     tracked = nextTracked
+    applyReducedPose()
 end
+
+roundEvent.OnClientEvent:Connect(function(state)
+    currentPhase = tostring(state and state.phase or "waiting")
+    activeDisasters = state and state.disasterIds or {}
+    finalRush = currentPhase == "round" and state.finalRush == true
+    refreshReaction()
+    applyReducedPose()
+end)
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "ArenaHeroSceneryLocal" then
@@ -120,10 +132,11 @@ end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     scan()
     refreshReaction()
+    applyReducedPose()
 end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
-    scan()
     refreshReaction()
+    applyReducedPose()
 end)
 
 refreshReaction()
@@ -142,6 +155,11 @@ task.spawn(function()
         scan()
     end
 
+    -- One-shot reduced-motion pose is updated from events above. Do not
+    -- perform trigonometry, CFrame writes or pulse updates each idle tick.
+    if reduced then
+        continue
+    end
     local scale = HeroMotionBudget.motionScale(tier, reduced)
 
     for part, state in pairs(tracked) do

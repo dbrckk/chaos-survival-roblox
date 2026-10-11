@@ -25,6 +25,41 @@ function HeroMotionBudgetRules.interval(tier, reduceMotion, hasTracked)
     return INTERVAL[tier] or INTERVAL.Low
 end
 
+-- Static, non-animated hazard accent for ReduceMotion. Keeping it bounded
+-- avoids both pulse flicker and loss of disaster identity.
+function HeroMotionBudgetRules.staticTint(reaction, reduceMotion)
+    if reduceMotion ~= true or type(reaction) ~= "table"
+        or reaction.Active ~= true then
+        return 0
+    end
+    local alpha = tonumber(reaction.Tint) or 0
+    if alpha ~= alpha or alpha == math.huge or alpha == -math.huge then
+        return 0
+    end
+    return math.clamp(alpha, 0, 0.13)
+end
+
+-- Restore a captured client-only monument baseline in one deterministic
+-- operation. Invalid or detached instances are never mutated.
+function HeroMotionBudgetRules.applyStillPose(part, state, reaction)
+    if not part or not part:IsA("BasePart") or not part.Parent
+        or type(state) ~= "table"
+        or typeof(state.baseCFrame) ~= "CFrame"
+        or typeof(state.baseSize) ~= "Vector3"
+        or typeof(state.baseColor) ~= "Color3"
+        or type(state.baseTransparency) ~= "number" then
+        return false
+    end
+    part.CFrame = state.baseCFrame
+    part.Size = state.baseSize
+    part.Transparency = state.baseTransparency
+    local tint = HeroMotionBudgetRules.staticTint(reaction, true)
+    local accent = reaction and typeof(reaction.Accent) == "Color3"
+        and reaction.Accent or state.baseColor
+    part.Color = state.baseColor:Lerp(accent, tint)
+    return true
+end
+
 function HeroMotionBudgetRules.shouldUpdate(part)
     return part ~= nil and part.Parent ~= nil
         and part:GetAttribute("SceneryLodHidden") ~= true

@@ -24,3 +24,22 @@ Manual acceptance: compare landmark animations and hazard readability
 in Roblox Studio, then profile real Android devices at Low/Medium/High
 with ReduceMotion on/off. FPS, battery and thermal benefits have
 **not** been measured on hardware.
+
+## One-shot ReducedMotion pose (11 October 2026)
+
+The local hero-scenery controller now restores each tracked monument's
+authored CFrame, size and transparency when ReduceMotion is selected.
+A static, at-most-0.13-strength tint conveys active hazard identity without
+oscillation, blinking or camera motion. RoundState/tier/accessibility updates
+and new-scene scans refresh this pose; the existing 0.24s reduced loop no
+longer iterates over tracked pieces or performs tween/trigonometry writes.
+
+Low/Medium/High non-reduced motion and existing LOD skips are unchanged.
+No new parts, GPU effects, server logic, hitboxes, network events or
+per-frame listeners have been added. Engine regression covers static tint
+bounds and fallback behavior in the pre-existing core_a test file.
+
+Manual acceptance: confirm that ReduceMotion toggles restore hero silhouettes
+(including reactor core size), that Bombs/Meteors remain recognizable by tint,
+and that map swaps and late scenery replication do not retain old transforms.
+Android FPS, power consumption and thermals still require hardware testing.

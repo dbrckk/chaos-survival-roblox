@@ -108,6 +108,64 @@ describe("Hero landmark animation scheduling and accessibility", function()
         expect(Budget.interval("Low", true, false)).toBe(0.50)
     end)
 
+
+    it("retains a bounded static hazard accent without any motion pulses", function()
+        local active = compose({"Meteors", "Bombs"}, "round", "High", true, false)
+        expect(Budget.staticTint(active, true)).toBe(0.13)
+        expect(Budget.staticTint(active, false)).toBe(0)
+        expect(Budget.staticTint(compose({}, "waiting", "High", true, false), true))
+            .toBe(0)
+        expect(Budget.staticTint({Active=true, Tint=1}, true)).toBe(0.13)
+        expect(Budget.staticTint({Active=true, Tint=-1}, true)).toBe(0)
+        expect(Budget.staticTint({Active=true, Tint=0/0}, true)).toBe(0)
+        expect(Budget.staticTint({Active=true, Tint=math.huge}, true)).toBe(0)
+        expect(Budget.staticTint(nil, true)).toBe(0)
+    end)
+
+    it("restores nonphysical 3D hero art to its baseline with static hazard color", function()
+        local parent = Instance.new("Folder")
+        local piece = Instance.new("WedgePart")
+        piece.Parent = parent
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        local original = {
+            baseCFrame = CFrame.new(12, 8, -11)
+                * CFrame.Angles(math.rad(12), math.rad(46), math.rad(-5)),
+            baseSize = Vector3.new(1.5, 3.1, 2.2),
+            baseTransparency = 0.32,
+            baseColor = Color3.fromRGB(60, 150, 240),
+        }
+        piece.CFrame = CFrame.new(-9, 13, 5)
+        piece.Size = Vector3.new(6, 6, 6)
+        piece.Transparency = 0.7
+        piece.Color = Color3.fromRGB(255, 255, 255)
+        local hazard = compose({"Meteors"}, "round", "High", true, false)
+        expect(Budget.applyStillPose(piece, original, hazard)).toBe(true)
+        expect((piece.CFrame.Position - original.baseCFrame.Position)
+            .Magnitude < 0.001).toBe(true)
+        expect(piece.CFrame.LookVector:Dot(original.baseCFrame.LookVector)
+            > 0.99999).toBe(true)
+        expect((piece.Size - original.baseSize).Magnitude < 0.001).toBe(true)
+        expect(math.abs(piece.Transparency - 0.32) < 0.0001).toBe(true)
+        local tinted = original.baseColor:Lerp(hazard.Accent, 0.13)
+        expect((Vector3.new(piece.Color.R, piece.Color.G, piece.Color.B)
+            - Vector3.new(tinted.R, tinted.G, tinted.B)).Magnitude < 0.0001)
+            .toBe(true)
+        expect(piece.CanCollide).toBe(false)
+        expect(piece.CanTouch).toBe(false)
+        expect(piece.CanQuery).toBe(false)
+        expect(Budget.applyStillPose(piece, original, nil)).toBe(true)
+        expect((Vector3.new(piece.Color.R, piece.Color.G, piece.Color.B)
+            - Vector3.new(original.baseColor.R, original.baseColor.G,
+                original.baseColor.B)).Magnitude < 0.0001).toBe(true)
+        expect(Budget.applyStillPose(piece, {}, hazard)).toBe(false)
+        piece.Parent = nil
+        expect(Budget.applyStillPose(piece, original, hazard)).toBe(false)
+        piece:Destroy()
+        parent:Destroy()
+    end)
+
     it("does not animate LOD-hidden or detached client-only landmark parts", function()
         local folder = Instance.new("Folder")
         local part = Instance.new("Part")
