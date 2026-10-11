@@ -10,17 +10,19 @@ local COUNTS = {Low = 2, Medium = 4, High = 6}
 local ALLOWED = {blast = true, shrink = true}
 
 function DisasterBoundaryClimaxKit.count(tier, reduced)
-    if reduced == true then return 2 end
+    if reduced == true then return COUNTS[tier] and 1 or 0 end
     return COUNTS[tier] or 0
 end
 
 function DisasterBoundaryClimaxKit.recipe(kind, index, count, deckSize, stage)
     if not ALLOWED[kind] or type(index) ~= "number"
         or index % 1 ~= 0 or type(count) ~= "number"
-        or count % 1 ~= 0 or count < 2 or count > 6
+        or count % 1 ~= 0 or count < 1 or count > 6
         or index < 1 or index > count
         or typeof(deckSize) ~= "Vector3"
         or deckSize.X <= 0 or deckSize.Z <= 0
+        or deckSize.X ~= deckSize.X or deckSize.Z ~= deckSize.Z
+        or deckSize.X == math.huge or deckSize.Z == math.huge
         or type(stage) ~= "number" or stage % 1 ~= 0
         or stage < 1 or stage > 3 then
         return nil

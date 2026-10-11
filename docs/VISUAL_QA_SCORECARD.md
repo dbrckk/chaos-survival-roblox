@@ -349,3 +349,14 @@ including NaN/infinite spans. Physical QA is still required for
 Double Chaos warning legibility, rotated arena camera views,
 Android fill rate, thermals and 30-minute stability. No measured
 performance improvement is claimed.
+
+## Reduced-motion parity for eleven disaster climaxes
+
+Freeze, JumpShock, Bombs and ShrinkingArena now allocate one short-lived,
+translucent part under ReduceMotion, instead of two, matching the seven
+other authored 3D climax types. Normal Low/Medium/High remain 2/4/6.
+Fractional counts/stages, non-finite spans or horizontal arena dimensions,
+and invalid quality tiers are rejected without creating parts. The arena
+transforms, server-owned hazards and gameplay rules remain unchanged.
+Engine tests cover reduced-motion geometry and invalid inputs. Physical
+Studio and Android FPS, GPU, thermal and Double Chaos QA are still pending.

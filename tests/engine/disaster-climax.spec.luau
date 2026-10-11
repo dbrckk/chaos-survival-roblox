@@ -87,8 +87,8 @@ describe("Distinct frost and electric climax silhouettes", function()
                 end
             end
         end
-        expect(Signature.count("Low", true)).toBe(2)
-        expect(Signature.count("High", true)).toBe(2)
+        expect(Signature.count("Low", true)).toBe(1)
+        expect(Signature.count("High", true)).toBe(1)
         expect(Signature.count("Invalid", false)).toBe(0)
         expect(Signature.recipe("unknown", 1, 4, 100, 1) == nil).toBe(true)
         expect(Signature.recipe("freeze", 0, 4, 100, 1) == nil).toBe(true)
@@ -129,10 +129,11 @@ describe("Distinct frost and electric climax silhouettes", function()
             end
             local quiet = Signature.emit(root, kind, deck, 100, 3,
                 primary, secondary, "High", true)
-            expect(#quiet).toBe(2)
-            for _, part in ipairs(quiet) do
-                part:Destroy()
-            end
+            expect(#quiet).toBe(1)
+            local recipe = Signature.recipe(kind, 1, 1, 100, 3)
+            expect((deck:PointToObjectSpace(quiet[1].Position) - recipe.Finish)
+                .Magnitude < 0.01).toBe(true)
+            quiet[1]:Destroy()
         end
         expect(#root:GetChildren()).toBe(0)
         expect(#Signature.emit(root, "invalid", deck, 100, 2,
@@ -179,8 +180,8 @@ describe("Rectangular shrink and directional bomb climax", function()
                 end
             end
         end
-        expect(Boundary.count("High", true)).toBe(2)
-        expect(Boundary.count("Medium", true)).toBe(2)
+        expect(Boundary.count("High", true)).toBe(1)
+        expect(Boundary.count("Medium", true)).toBe(1)
         expect(Boundary.count("invalid", false)).toBe(0)
         expect(Boundary.recipe("invalid", 1, 4, deckSize, 2) == nil).toBe(true)
         expect(Boundary.recipe("blast", 0, 4, deckSize, 2) == nil).toBe(true)
@@ -219,9 +220,9 @@ describe("Rectangular shrink and directional bomb climax", function()
             end
             local quiet = Boundary.emit(parent, kind, deck, deckSize, 2,
                 primary, secondary, "High", true)
-            expect(#quiet).toBe(2)
+            expect(#quiet).toBe(1)
             for index, part in ipairs(quiet) do
-                local recipe = Boundary.recipe(kind, index, 2, deckSize, 2)
+                local recipe = Boundary.recipe(kind, index, 1, deckSize, 2)
                 expect((deck:PointToObjectSpace(part.Position) - recipe.Finish)
                     .Magnitude < 0.01).toBe(true)
                 part:Destroy()
@@ -373,6 +374,38 @@ describe("Procedural volcanic and meteor climax sculpture", function()
         expect(#Elements.emit(folder, "invalid", deck, 134, 3,
             primary, secondary, "High", false)).toBe(0)
         folder:Destroy()
+    end)
+end)
+
+describe("Accessible climax parity and malformed geometry", function()
+    it("caps all four legacy climaxes at one part with ReduceMotion", function()
+        for _, kit in ipairs({Signature, Boundary}) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                expect(kit.count(tier, true)).toBe(1)
+            end
+            expect(kit.count("Invalid", true)).toBe(0)
+        end
+        for _, kind in ipairs({"freeze", "shock"}) do
+            expect(Signature.recipe(kind, 1, 1, 100, 2) ~= nil).toBe(true)
+        end
+        for _, kind in ipairs({"blast", "shrink"}) do
+            expect(Boundary.recipe(kind, 1, 1, Vector3.new(80, 2, 90), 2) ~= nil).toBe(true)
+        end
+    end)
+    it("rejects invalid geometry without instantiating any parts", function()
+        local parent = Instance.new("Folder")
+        local deck = CFrame.new(1, 2, 3)
+        local color = Color3.fromRGB(90, 140, 200)
+        expect(Signature.recipe("freeze", 1, 1.5, 100, 2) == nil).toBe(true)
+        expect(Signature.recipe("shock", 1, 4, 100, 1.5) == nil).toBe(true)
+        expect(Signature.recipe("freeze", 1, 4, math.huge, 2) == nil).toBe(true)
+        expect(Boundary.recipe("blast", 1, 1.5, Vector3.new(80, 2, 90), 2) == nil).toBe(true)
+        expect(Boundary.recipe("shrink", 1, 4, Vector3.new(80, 2, 90), 1.5) == nil).toBe(true)
+        expect(Boundary.recipe("blast", 1, 4, Vector3.new(math.huge, 2, 90), 2) == nil).toBe(true)
+        expect(#Signature.emit(parent, "shock", deck, math.huge, 2, color, color, "High", false)).toBe(0)
+        expect(#Boundary.emit(parent, "blast", deck, Vector3.new(math.huge, 2, 90), 2, color, color, "High", false)).toBe(0)
+        expect(#parent:GetChildren()).toBe(0)
+        parent:Destroy()
     end)
 end)
 

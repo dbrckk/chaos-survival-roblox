@@ -10,16 +10,16 @@ local COUNTS = {Low = 2, Medium = 4, High = 6}
 local ALLOWED = {freeze = true, shock = true}
 
 function DisasterClimaxSignatureKit.count(tier, reduced)
-    if reduced == true then return 2 end
+    if reduced == true then return COUNTS[tier] and 1 or 0 end
     return COUNTS[tier] or 0
 end
 
 function DisasterClimaxSignatureKit.recipe(kind, index, count, span, stage)
     if not ALLOWED[kind] or type(index) ~= "number"
-        or type(count) ~= "number" or count < 2 or count > 6
+        or type(count) ~= "number" or count % 1 ~= 0 or count < 1 or count > 6
         or index < 1 or index > count or index % 1 ~= 0
-        or type(span) ~= "number" or span <= 0
-        or type(stage) ~= "number" or stage < 1 or stage > 3 then
+        or type(span) ~= "number" or span <= 0 or span ~= span or span == math.huge
+        or type(stage) ~= "number" or stage % 1 ~= 0 or stage < 1 or stage > 3 then
         return nil
     end
     local full = math.clamp(span, 20, 240)
@@ -63,8 +63,8 @@ function DisasterClimaxSignatureKit.emit(parent, kind, deckCFrame, span,
     local pieces = {}
     if not parent or not ALLOWED[kind] or typeof(deckCFrame) ~= "CFrame"
         or typeof(primary) ~= "Color3" or typeof(secondary) ~= "Color3"
-        or type(span) ~= "number" or span <= 0 or count <= 0
-        or type(stage) ~= "number" or stage < 1 or stage > 3 then
+        or type(span) ~= "number" or span <= 0 or span ~= span or span == math.huge or count <= 0
+        or type(stage) ~= "number" or stage % 1 ~= 0 or stage < 1 or stage > 3 then
         return pieces
     end
     local duration = reduced and 0.20 or (
@@ -72,6 +72,7 @@ function DisasterClimaxSignatureKit.emit(parent, kind, deckCFrame, span,
     )
     for index = 1, count do
         local spec = DisasterClimaxSignatureKit.recipe(kind, index, count, span, stage)
+        if not spec then break end
         local piece = Instance.new(spec.Wedge and "WedgePart" or "Part")
         piece.Name = (kind == "freeze" and "FreezeCrystalClimax"
             or "ShockDischargeClimax") .. index
