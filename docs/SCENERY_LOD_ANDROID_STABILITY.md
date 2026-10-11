@@ -20,3 +20,19 @@ Manual Roblox Studio and physical Android acceptance remains required:
 walk slowly across the distance threshold in Classic/Towers/Crossroads/Orbital,
 check animated landmarks and hazard warnings remain legible at Low/Medium/High,
 then profile FPS, GPU, memory and temperature during map and tier switches.
+
+## Visible-folder fast path (11 October 2026)
+
+When a folder remains visible and its descendant membership has not changed,
+the client now skips its redundant per-descendant LOD property scan. The
+DescendantAdded/DescendantRemoving callbacks continue to invalidate caches,
+and a hidden→visible transition still restores every original transparency
+and Enabled state. Hidden folders retain their existing per-pass re-hide
+checks, so concurrent cosmetic animations cannot expose distant decoration.
+
+This changes only client CPU work; it does not change distance hysteresis,
+quality thresholds, visual appearance, static/mobile part budgets, any
+gameplay behavior or add new loops. Build and Open Cloud checks are required
+on the exact commit. Actual FPS, CPU, GPU and heat improvements must be
+measured on Roblox Studio and an Android device before making performance
+claims.

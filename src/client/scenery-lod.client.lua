@@ -205,9 +205,19 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
         profile.Name, distance, limits.LowDistance, limits.MediumDistance,
         cache.visible
     )
+    local wasVisible = cache.visible
+    local wasDirty = cache.dirty
     cache.visible = visible
-    if cache.dirty then
+    if wasDirty then
         refreshCache(folder, cache)
+    end
+
+    -- An already-visible, unchanged folder has nothing to restore. Skip
+    -- walking hundreds of parts/effects on every Android LOD update.
+    -- Hidden folders still run each pass to enforce concealment if another
+    -- cosmetic owner changes a transparency or Enabled property.
+    if visible and wasVisible == true and not wasDirty then
+        return
     end
 
     for _, descendant in ipairs(cache.entries) do
