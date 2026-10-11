@@ -239,10 +239,21 @@ Players.PlayerRemoving:Connect(observers.stop)
 local function canUse()
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
     return phase == "round"
         and player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
         and humanoid ~= nil and humanoid.Health > 0
+        and root ~= nil and root:IsA("BasePart")
+        and root:IsDescendantOf(workspace)
+end
+
+-- Match the server's grounded-only rule. Keep the HUD visible in the air,
+-- but never consume a dash input that the server must reject.
+local function isGrounded()
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    return humanoid ~= nil and humanoid.FloorMaterial ~= Enum.Material.Air
 end
 
 local function remaining()
@@ -252,7 +263,8 @@ local function remaining()
 end
 
 local function requestDash()
-    if not canUse() or remaining() > 0 or os.clock() < nextSendAt then
+    if not canUse() or not isGrounded()
+        or remaining() > 0 or os.clock() < nextSendAt then
         return
     end
     -- Local throttle only helps UI; authoritative server cooldown is mandatory.
@@ -267,20 +279,25 @@ end)
 stateEvent.OnClientEvent:Connect(function(state)
     local nextPhase = type(state) == "table"
         and tostring(state.phase or "waiting") or "waiting"
-    if nextPhase == "round" and phase ~= "round" and not introduced then
-        introduced = true
-        introUntil = os.clock() + 7
-    end
+    -- The first-use hint begins only when Dash is actually usable, not
+    -- when the phase changes before the avatar has finished spawning.
     phase = nextPhase
 end)
 
 task.spawn(function()
     while gui.Parent do
         local active = canUse()
+        local remainingSeconds = active and remaining() or 0
+        local grounded = active and isGrounded()
+        local ready = active and grounded and remainingSeconds <= 0
+        if ready and not introduced then
+            introduced = true
+            introUntil = os.clock() + 7
+        end
         button.Visible = active
-        intro.Visible = active and os.clock() < introUntil and remaining() <= 0
+        button.Active = ready
+        intro.Visible = ready and os.clock() < introUntil
         if active then
-            local remainingSeconds = remaining()
             button.Size = UserInputService.TouchEnabled
                 and UDim2.fromOffset(91, 61) or UDim2.fromOffset(106, 57)
             button.Position = UserInputService.TouchEnabled
@@ -292,6 +309,10 @@ task.spawn(function()
                 charge.Size = UDim2.fromScale(
                     1 - math.clamp(remainingSeconds / PhaseDashRules.Cooldown, 0, 1), 1
                 )
+            elseif not grounded then
+                button.Text = french and "ATTERRIS" or "LAND"
+                button.TextColor3 = Color3.fromRGB(155, 177, 194)
+                charge.Size = UDim2.fromScale(1, 1)
             else
                 button.Text = UserInputService.TouchEnabled and "DASH" or "Q • DASH"
                 button.TextColor3 = Color3.fromRGB(117, 251, 233)

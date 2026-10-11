@@ -435,3 +435,22 @@ arithmetic. No dash power, duration, cooldown, VFX object count,
 monetization or server-authoritative movement conditions were changed.
 Roblox Studio multiplayer replication and physical Android playtesting
 remain required.
+
+## PR #19 — grounded Dash feedback and first-use onboarding (11 October 2026)
+
+Phase Dash keeps its existing mobile/desktop button visible while the living
+round participant is airborne, but now shows **ATTERRIS / LAND** and ignores
+an impossible input before contacting the server. Its local RootPart validity
+check matches the authoritative server preconditions; the server still owns
+all movement, cooldown and security decisions. The single first-use hint is
+triggered only when the player is grounded, spawned and off cooldown, rather
+than disappearing during a round-state transition. No new UI, VFX or recurring
+tasks are created.
+
+Android/Studio acceptance: enter round with a delayed spawn; ensure the hint
+appears upon the first genuinely available dash. Jump and tap the button or
+press Q: expect no dash and a grey landing cue. Land: expect the green DASH
+cue; dash: expect exactly one server-authored impulse and a 9-second
+cooldown. Repeat after elimination, respawn, spectator mode and with
+ReduceMotion. Real-device input timing and visual legibility are not yet
+certified.
