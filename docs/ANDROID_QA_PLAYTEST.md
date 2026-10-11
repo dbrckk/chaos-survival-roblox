@@ -612,3 +612,20 @@ already counts its child Parts through PracticePadPolishLocal; this registry
 addition merely satisfies whole-repo coverage and does not introduce a
 second live counting path or increase graphics budgets. A registry
 regression assertion was added to the visual-budget engine tests.
+
+## PR #19 — stable decorative avatar light ownership (11 October 2026)
+
+The avatar polish client now delegates optional PointLight ownership to a
+single small client module. On repeated round/quality/rig refreshes, an
+already-enabled selected light stays enabled (no redundant off/on cycle).
+Changing the preferred torso disables the previously selected light and
+reuses the new torso's existing light if available. Low, ReduceMotion,
+inactive rounds and missing Humanoids allocate **zero** additional lights;
+previously allocated lights are disabled, not multiplied. All light values
+remain determined by the existing CharacterPolishRules tier policy.
+
+The core_a character polish engine spec tests actual PointLight instance
+reuse, torso handoff, disabled/reenabled states, zero-light policy,
+color/range changes and malformed brightness. No GPU light budget was
+increased. This is a code-level optimization, **not** a measured Android
+FPS, GPU, power or thermal improvement; physical profiling is still needed.
