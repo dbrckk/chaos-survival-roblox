@@ -49,4 +49,43 @@ function ArenaIdentityMotionRules.isIdentityPart(variant, name)
     return false
 end
 
+
+-- Small, named, local-space articulation of existing noncolliding decor.
+-- Nil means this ornament has no moving joint. All valid offsets are based
+-- on the ORIGINAL CFrame, never on the previous animation frame.
+function ArenaIdentityMotionRules.ornamentOffset(variant, name, now, index, scale)
+    if type(now) ~= "number" or type(index) ~= "number"
+        or type(scale) ~= "number" or now ~= now or index ~= index
+        or math.abs(now) == math.huge or scale <= 0
+        or not ArenaIdentityMotionRules.isIdentityPart(variant, name)
+    then return nil end
+
+    local amplitude = math.clamp(scale, 0, 1)
+    local cycle = now + index * 0.73
+    if variant == "Classic" then
+        if name:match("^GridMarkerGlow[1-4]$") then
+            return CFrame.new(0, math.sin(cycle * 1.15) * 0.16 * amplitude, 0)
+        elseif name:match("^ClassicBroadcastGlow[1-4]$") then
+            return CFrame.Angles(0,
+                math.sin(cycle * 0.68) * math.rad(4) * amplitude, 0)
+        end
+    elseif variant == "Towers" then
+        if name:match("^TowerMachineryCap[1-4]$") then
+            return CFrame.new(0, math.sin(cycle * 0.92) * 0.18 * amplitude, 0)
+        elseif name:match("^TowerAntenna[1-4]$") then
+            return CFrame.Angles(0, 0,
+                math.sin(cycle * 0.73) * math.rad(1.5) * amplitude)
+        end
+    elseif variant == "Crossroads" then
+        if name:match("^CrossroadGate[1-4]$") then
+            return CFrame.new(math.sin(cycle * 1.1) * 0.10 * amplitude, 0, 0)
+        elseif name:match("^CrossroadSignal[1-4]$") then
+            return CFrame.Angles(0, 0,
+                math.sin(cycle * 0.90) * math.rad(2.2) * amplitude)
+        end
+    end
+    -- Tower bands and Orbital retain their existing pulse and orbit motion.
+    return nil
+end
+
 return ArenaIdentityMotionRules

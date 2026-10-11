@@ -210,6 +210,18 @@ task.spawn(function()
                     0.56
                 )
             end
+
+            -- Distinct tiny mechanical gestures for the existing anchored,
+            -- collision-free survey crowns, gantries and machinery.
+            -- The original CFrame is always the base (no accumulated drift).
+            if currentVariant ~= "Orbital" then
+                local offset = MotionRules.ornamentOffset(
+                    currentVariant, part.Name, now, item.index, scale
+                )
+                if offset then
+                    part.CFrame = item.baseCFrame * offset
+                end
+            end
         end
         end
 

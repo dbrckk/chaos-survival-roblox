@@ -590,6 +590,58 @@ describe("Android arena identity ornament motion", function()
         root:Destroy()
     end)
 
+    it("uses six distinct bounded 3D micro-motions with stable original frames", function()
+        local cases = {
+            {"Classic", "GridMarkerGlow1"},
+            {"Classic", "ClassicBroadcastGlow1"},
+            {"Towers", "TowerMachineryCap1"},
+            {"Towers", "TowerAntenna1"},
+            {"Crossroads", "CrossroadGate1"},
+            {"Crossroads", "CrossroadSignal1"},
+        }
+        local base = CFrame.new(19, 8, -7)
+            * CFrame.Angles(math.rad(7), math.rad(45), math.rad(-5))
+        for _, entry in ipairs(cases) do
+            local variant, name = entry[1], entry[2]
+            local high = IdentityMotionRules.ornamentOffset(
+                variant, name, 1.37, 1, 1
+            )
+            local low = IdentityMotionRules.ornamentOffset(
+                variant, name, 1.37, 1, 0.38
+            )
+            expect(high ~= nil).toBe(true)
+            expect(low ~= nil).toBe(true)
+            local function distanceFromRest(cf)
+                return cf.Position.Magnitude
+                    + (cf.RightVector - Vector3.new(1, 0, 0)).Magnitude
+                    + (cf.UpVector - Vector3.new(0, 1, 0)).Magnitude
+            end
+            expect(distanceFromRest(high) > distanceFromRest(low)).toBe(true)
+            expect(high.Position.Magnitude <= 0.181).toBe(true)
+            expect(low.Position.Magnitude <= high.Position.Magnitude + 0.0001)
+                .toBe(true)
+            local localPose = base:ToObjectSpace(base * high)
+            expect((localPose.Position - high.Position).Magnitude < 0.0001)
+                .toBe(true)
+            expect((localPose.UpVector - high.UpVector).Magnitude < 0.0001)
+                .toBe(true)
+            -- No accumulation: evaluating the same time always yields the
+            -- same local transform, independent of the prior animation frame.
+            expect(IdentityMotionRules.ornamentOffset(
+                variant, name, 1.37, 1, 1)).toBe(high)
+        end
+        expect(IdentityMotionRules.ornamentOffset(
+            "Towers", "TowerBand1_1", 1, 1, 1) == nil).toBe(true)
+        expect(IdentityMotionRules.ornamentOffset(
+            "Orbital", "OrbitalCrown1", 1, 1, 1) == nil).toBe(true)
+        expect(IdentityMotionRules.ornamentOffset(
+            "Classic", "RoundMeteor", 1, 1, 1) == nil).toBe(true)
+        expect(IdentityMotionRules.ornamentOffset(
+            "Classic", "GridMarkerGlow1", 1, 1, 0) == nil).toBe(true)
+        expect(IdentityMotionRules.ornamentOffset(
+            "Classic", "GridMarkerGlow1", math.huge, 1, 1) == nil).toBe(true)
+    end)
+
     it("watches only the named direct-decor ornaments in each arena", function()
         local valid = {
             Classic = {"GridMarkerGlow1", "ClassicBroadcastGlow4"},
