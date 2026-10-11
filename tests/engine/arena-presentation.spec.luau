@@ -630,14 +630,16 @@ describe("Android arena identity ornament motion", function()
         root:Destroy()
     end)
 
-    it("uses six distinct bounded 3D micro-motions with stable original frames", function()
+    it("uses eight distinct bounded 3D micro-motions with stable original frames", function()
         local cases = {
             {"Classic", "GridMarkerGlow1"},
             {"Classic", "ClassicBroadcastGlow1"},
+            {"Towers", "TowerBand1_1"},
             {"Towers", "TowerMachineryCap1"},
             {"Towers", "TowerAntenna1"},
             {"Crossroads", "CrossroadGate1"},
             {"Crossroads", "CrossroadSignal1"},
+            {"Orbital", "OrbitalReactorNode1"},
         }
         local base = CFrame.new(19, 8, -7)
             * CFrame.Angles(math.rad(7), math.rad(45), math.rad(-5))
@@ -667,11 +669,21 @@ describe("Android arena identity ornament motion", function()
                 .toBe(true)
             -- No accumulation: evaluating the same time always yields the
             -- same local transform, independent of the prior animation frame.
-            expect(IdentityMotionRules.ornamentOffset(
-                variant, name, 1.37, 1, 1)).toBe(high)
+            local repeatPose = IdentityMotionRules.ornamentOffset(
+                variant, name, 1.37, 1, 1)
+            expect((repeatPose.Position - high.Position).Magnitude < 0.0001)
+                .toBe(true)
+            expect(repeatPose.RightVector:Dot(high.RightVector) > 0.99999)
+                .toBe(true)
+            local wrapped = IdentityMotionRules.ornamentOffset(
+                variant, name, 4097.37, 1, 1)
+            expect((wrapped.Position - high.Position).Magnitude < 0.0001)
+                .toBe(true)
+            expect(wrapped.RightVector:Dot(high.RightVector) > 0.99999)
+                .toBe(true)
         end
         expect(IdentityMotionRules.ornamentOffset(
-            "Towers", "TowerBand1_1", 1, 1, 1) == nil).toBe(true)
+            "Towers", "TowerBand1_1", 1, 1, 1) ~= nil).toBe(true)
         expect(IdentityMotionRules.ornamentOffset(
             "Orbital", "OrbitalCrown1", 1, 1, 1) == nil).toBe(true)
         expect(IdentityMotionRules.ornamentOffset(
@@ -680,6 +692,16 @@ describe("Android arena identity ornament motion", function()
             "Classic", "GridMarkerGlow1", 1, 1, 0) == nil).toBe(true)
         expect(IdentityMotionRules.ornamentOffset(
             "Classic", "GridMarkerGlow1", math.huge, 1, 1) == nil).toBe(true)
+        for _, bad in ipairs({math.huge, -math.huge, 0/0}) do
+            expect(IdentityMotionRules.ornamentOffset(
+                "Classic", "GridMarkerGlow1", 1, bad, 1) == nil).toBe(true)
+            expect(IdentityMotionRules.ornamentOffset(
+                "Classic", "GridMarkerGlow1", 1, 1, bad) == nil).toBe(true)
+        end
+        expect(IdentityMotionRules.ornamentOffset(
+            "Classic", "GridMarkerGlow1", 1, 65, 1) == nil).toBe(true)
+        expect(IdentityMotionRules.ornamentOffset(
+            "Classic", "GridMarkerGlow1", 1, 1.5, 1) == nil).toBe(true)
     end)
 
     it("watches only the named direct-decor ornaments in each arena", function()

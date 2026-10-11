@@ -118,3 +118,29 @@ for unwanted movement jumps, visual distractions during a sudden disaster
 warning, smoothness at Low quality, and stability after repeated phase
 messages. Automated engine rules cannot establish subjective appearance or
 mobile FPS; no such claim is made.
+
+## Precision collar and reactor-node articulation (11 October 2026)
+
+Two additional existing MapBuilder ornaments now receive subtle original
+3D choreography, without new geometry, light sources or GPU emitters:
+
+- **Towers**: each of the twelve anchored `TowerBand*` collars counter-rotates
+  up to 2.6 degrees around its local Y axis, phase-shifted per collar. The
+  fixed tower spine remains unchanged.
+- **Orbital**: each of the eight anchored `OrbitalReactorNode*` spheres
+  levitates within 0.12 studs relative to its existing authored base frame.
+  This combines with the existing Orbital wobble in a **single CFrame write**
+  per ornament/tick. The twelve Orbital crowns retain their existing motion.
+
+The shared `ornamentOffset` guard rejects non-finite timestamps, indices and
+amplitudes; index must be an integer from 1 to 64. A 4096-second phase wrap
+keeps sine arguments bounded in long-running sessions. All eight named
+motions retain tier amplitudes Low=0.38, Medium=0.68, High=1 and zero motion
+with ReduceMotion. Hidden ornaments remain skipped by the existing LOD gate.
+
+Engine `core_a` regression now covers eight 3D signatures, deterministic
+local-space composition, wrapped timestamps, and malformed numeric inputs.
+The previous six-motion tests are preserved. No live Roblox Studio/Android
+visual acceptance or physical FPS, battery, thermals or GPU profiling has
+been performed. Check collars and nodes at close range on all tiers, including
+accessibility toggles and map streaming, before marking production-ready.

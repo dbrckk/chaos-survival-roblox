@@ -76,12 +76,14 @@ end
 function ArenaIdentityMotionRules.ornamentOffset(variant, name, now, index, scale)
     if type(now) ~= "number" or type(index) ~= "number"
         or type(scale) ~= "number" or now ~= now or index ~= index
-        or math.abs(now) == math.huge or scale <= 0
+        or scale ~= scale or math.abs(now) == math.huge
+        or math.abs(index) == math.huge or math.abs(scale) == math.huge
+        or index < 1 or index > 64 or index % 1 ~= 0 or scale <= 0
         or not ArenaIdentityMotionRules.isIdentityPart(variant, name)
     then return nil end
 
     local amplitude = math.clamp(scale, 0, 1)
-    local cycle = now + index * 0.73
+    local cycle = (now % 4096) + index * 0.73
     if variant == "Classic" then
         if name:match("^GridMarkerGlow[1-4]$") then
             return CFrame.new(0, math.sin(cycle * 1.15) * 0.16 * amplitude, 0)
@@ -90,7 +92,10 @@ function ArenaIdentityMotionRules.ornamentOffset(variant, name, now, index, scal
                 math.sin(cycle * 0.68) * math.rad(4) * amplitude, 0)
         end
     elseif variant == "Towers" then
-        if name:match("^TowerMachineryCap[1-4]$") then
+        if name:match("^TowerBand[1-4]_[1-3]$") then
+            return CFrame.Angles(0,
+                math.sin(cycle * 0.54) * math.rad(2.6) * amplitude, 0)
+        elseif name:match("^TowerMachineryCap[1-4]$") then
             return CFrame.new(0, math.sin(cycle * 0.92) * 0.18 * amplitude, 0)
         elseif name:match("^TowerAntenna[1-4]$") then
             return CFrame.Angles(0, 0,
@@ -103,8 +108,12 @@ function ArenaIdentityMotionRules.ornamentOffset(variant, name, now, index, scal
             return CFrame.Angles(0, 0,
                 math.sin(cycle * 0.90) * math.rad(2.2) * amplitude)
         end
+    elseif variant == "Orbital" then
+        if name:match("^OrbitalReactorNode%d+$") then
+            return CFrame.new(0, math.sin(cycle * 0.81) * 0.12 * amplitude, 0)
+        end
     end
-    -- Tower bands and Orbital retain their existing pulse and orbit motion.
+    -- Orbital crowns retain their existing motion.
     return nil
 end
 

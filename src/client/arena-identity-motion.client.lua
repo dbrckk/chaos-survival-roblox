@@ -218,9 +218,14 @@ task.spawn(function()
             elseif currentVariant == "Orbital" then
                 local angle = math.rad(math.sin(now * 0.9 + item.index * 0.31) * 2.2 * scale)
                 local lift = math.sin(now * 1.25 + item.index * 0.46) * 0.32 * scale
+                local nodeOffset = MotionRules.ornamentOffset(
+                    currentVariant, part.Name, now, item.index, scale
+                )
+                -- Compose all Orbital motion before one CFrame write.
                 part.CFrame = item.baseCFrame
                     * CFrame.new(0, lift, 0)
                     * CFrame.Angles(0, angle, 0)
+                    * (nodeOffset or CFrame.identity)
                 part.Transparency = math.clamp(
                     item.baseTransparency + (0.10 - wave * 0.08) * scale,
                     0.06,
