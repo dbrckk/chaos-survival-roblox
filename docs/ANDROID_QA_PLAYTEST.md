@@ -564,3 +564,19 @@ Roblox Studio follow-up: join late during a round, reconnect, rotate arenas,
 switch ReduceMotion on/off and verify that returning to READY/ROUND restores
 normal animated landmarks. Full exact-head automated checks and physical
 Android observation remain required before release.
+
+## PR #19 — localized practice-pad world signs (11 October 2026)
+
+The server-created BillboardGui above each PracticeBoostPad used a fixed
+English "PRACTICE BOOST" caption, despite central EN/FR localization
+being available. The client now applies the existing PRACTICE_BOOST string
+("TRY BOOST" in English; "ESSAIE LE BOOST" in French) locally. A
+per-pad DescendantAdded subscription also catches the label if it
+replicates after the pad/marker on Android or StreamingEnabled.
+
+The subscription is released in LobbyPracticeVisualKit.destroy when
+the pad streams out, so no render loop or long-lived character listener
+is added. Roblox engine tests cover absent, late-arriving and existing
+BillboardGui/TextLabel cases, along with both text variants. Gameplay,
+the server-owned sign and the three-dimensional visual budget do not
+change. Verify French text width/legibility at small mobile viewports.

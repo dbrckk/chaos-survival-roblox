@@ -68,8 +68,26 @@ function Kit.create(pad)
     }
 end
 
+-- Localize the server-authored 3D practice sign on this client only.
+-- A late-streaming BillboardGui/TextLabel may arrive after the pad.
+function Kit.localizePadLabel(pad, text)
+    if typeof(pad) ~= "Instance" or not pad:IsA("BasePart")
+        or type(text) ~= "string" or text == "" then
+        return false
+    end
+    local billboard = pad:FindFirstChild("PracticeLabel")
+    if not billboard or not billboard:IsA("BillboardGui") then
+        return false
+    end
+    local label = billboard:FindFirstChildOfClass("TextLabel")
+    if not label then return false end
+    if label.Text ~= text then label.Text = text end
+    return true
+end
+
 function Kit.destroy(bundle)
     if not bundle then return end
+    if bundle.labelConnection then bundle.labelConnection:Disconnect() end
     if bundle.attachment then bundle.attachment:Destroy() end
     if bundle.folder then bundle.folder:Destroy() end
 end

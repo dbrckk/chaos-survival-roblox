@@ -11,6 +11,7 @@ local PracticePadRegistry = require(script.Parent.LobbyPracticePadRegistry)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
+local practiceSignText = CoreLocalization.text(localeId, "PRACTICE_BOOST")
 local tracked = {}
 
 local gui = Instance.new("ScreenGui")
@@ -155,6 +156,15 @@ local function attach(pad)
     if not bundle then return end
     tracked[pad] = bundle
     refreshBundle(pad, bundle)
+    -- A streamed-in pad's BillboardGui or TextLabel can replicate later
+    -- than its LobbyPracticePad attribute. Keep its label localized.
+    bundle.labelConnection = pad.DescendantAdded:Connect(function(descendant)
+        if descendant.Name == "PracticeLabel"
+            or descendant:IsA("TextLabel") then
+            PracticeVisualKit.localizePadLabel(pad, practiceSignText)
+        end
+    end)
+    PracticeVisualKit.localizePadLabel(pad, practiceSignText)
 end
 
 local function triggerNearestPractice()

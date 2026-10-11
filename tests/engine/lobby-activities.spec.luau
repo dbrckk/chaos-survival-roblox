@@ -48,6 +48,30 @@ describe("Lobby activities", function()
         root:Destroy()
     end)
 
+    it("localizes server-created 3D practice signs after late replication", function()
+        local pad = Instance.new("Part")
+        pad:SetAttribute("LobbyPracticePad", true)
+        expect(PracticeVisualKit.localizePadLabel(pad, "ESSAIE LE BOOST"))
+            .toBe(false)
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "PracticeLabel"
+        billboard.Parent = pad
+        expect(PracticeVisualKit.localizePadLabel(pad, "ESSAIE LE BOOST"))
+            .toBe(false)
+        local label = Instance.new("TextLabel")
+        label.Text = "PRACTICE BOOST"
+        label.Parent = billboard
+        expect(PracticeVisualKit.localizePadLabel(pad, "ESSAIE LE BOOST"))
+            .toBe(true)
+        expect(label.Text).toBe("ESSAIE LE BOOST")
+        expect(PracticeVisualKit.localizePadLabel(pad, "TRY BOOST"))
+            .toBe(true)
+        expect(label.Text).toBe("TRY BOOST")
+        expect(PracticeVisualKit.localizePadLabel(pad, ""))
+            .toBe(false)
+        pad:Destroy()
+    end)
+
     it("gates practice motes on Reduce Motion without hiding pad guidance", function()
         expect(PracticeVisualKit.rate({Name = "High", ParticleScale = 1}, false))
             .toBe(4)
