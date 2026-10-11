@@ -669,9 +669,11 @@ describe("Android arena identity ornament motion", function()
         expect(part.CFrame.RightVector:Dot(baseline.baseCFrame.RightVector)
             > 0.99999).toBe(true)
         expect(part.Color).toBe(baseline.baseColor)
-        expect(part.Transparency).toBe(baseline.baseTransparency)
+        expect(math.abs(part.Transparency - baseline.baseTransparency) < 1e-5)
+            .toBe(true)
         -- Scenery LOD alone owns the local visibility modifier.
-        expect(part.LocalTransparencyModifier).toBe(0.42)
+        expect(math.abs(part.LocalTransparencyModifier - 0.42) < 1e-5)
+            .toBe(true)
         expect(part:GetAttribute("SceneryLodHidden")).toBe(true)
 
         part:SetAttribute("SceneryLodHidden", false)

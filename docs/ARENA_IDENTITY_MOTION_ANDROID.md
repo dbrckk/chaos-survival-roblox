@@ -211,3 +211,15 @@ unchanged ornaments continue their original animation when one new part
 streams in. Verify mobile Low/Medium/High and hazard cue readability.
 Record Studio and physical Android frame-time, FPS and thermal
 observations separately; none have been measured in this change.
+
+## Core_a Roblox floating-point regression (11 October)
+
+The Open Cloud `core_a` run for `af489e1` reported 218/219 assertions
+passing. The sole failure was an exact `BasePart.Transparency` comparison:
+`0.31` versus the engine-stored `0.3100000023841858`. The restoration
+implementation was not changed. The regression now checks transparency and
+`LocalTransparencyModifier` with a strict absolute tolerance of `1e-5`;
+CFrame and Color assertions, LOD ownership, accessibility and tier budgets
+remain in place. This handles engine property precision without masking a
+visible or material deviation. Verify Build Validation and all five Open
+Cloud shards on the resulting exact HEAD before considering CI green.
