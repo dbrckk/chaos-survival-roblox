@@ -178,7 +178,10 @@ localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshAll)
 localPlayer:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshAll)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    local nextFinalRush = state.phase == "round" and state.finalRush == true
+    -- RoundState can briefly be malformed during streaming or reconnect.
+    -- A bad payload must not crash the client cosmetic-quality controller.
+    local nextFinalRush = type(state) == "table"
+        and state.phase == "round" and state.finalRush == true
     if nextFinalRush ~= finalRush then
         finalRush = nextFinalRush
         refreshAll()

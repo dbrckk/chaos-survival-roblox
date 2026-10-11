@@ -534,3 +534,18 @@ watch protection, marker false→true changes, cleanup, disconnection,
 and rejecting unrelated map Parts. Device verification should stream the
 lobby in/out at Low quality and check that all four pads regain their
 individual particle/Highlight styling.
+
+## PR #19 — cosmetic-quality RoundState input guard (11 October 2026)
+
+The character/bot cosmetic quality controller now checks that incoming
+RoundState data is a table before accessing `phase` and `finalRush`.
+Missing, invalid or unexpected snapshots safely reset the local final-rush
+cosmetic throttle instead of raising a Lua event-handler exception.
+Legitimate round snapshots, quality tier rates, trail lifetimes, motion
+accessibility and server gameplay decisions are unchanged. No new FX or
+loops are introduced.
+
+Studio/Android follow-up: reconnect during a round, join late and respawn
+while final rush toggles; check cosmetic Trails, aura emitters and highlights
+stay stable and do not leak. Build and real Roblox Open Cloud checks are
+required on the exact new commit; a physical Android test remains pending.
