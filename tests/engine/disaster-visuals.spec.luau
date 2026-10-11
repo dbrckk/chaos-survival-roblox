@@ -118,7 +118,20 @@ describe("Disaster visual identities", function()
             expect(finishes).toBe(4)
             parts:Destroy()
         end
-        expect(ImpactSetpiece.spawn(root, {kind = "Meteor"}, "High", false) == nil).toBe(true)
+        -- Explicitly exercise the no-injected-rules cloud module path.
+        -- Incomplete payloads must be rejected before looking up
+        -- ReplicatedStorage.Shared.ImpactSetpieceRules.
+        for _, invalid in ipairs({
+            {kind = "Meteor"},
+            {kind = "Meteor", position = Vector3.zero},
+            {kind = "Bomb", color = Color3.new(1, 0, 0)},
+        }) do
+            local ok, result = pcall(ImpactSetpiece.spawn, root, invalid,
+                "High", false)
+            expect(ok).toBe(true)
+            expect(result == nil).toBe(true)
+        end
+        expect(#root:GetChildren()).toBe(0)
         expect(ImpactSetpiece.spawn(root, {
             kind = "Meteor", position = Vector3.zero, color = Color3.new(1, 1, 1),
         }, "Low", false, ImpactSetpieceRules) == nil).toBe(true)

@@ -341,3 +341,16 @@ positions, colors and radii, pcall-no-throw, no allocations and normal
 radius limits. No new emitters, lights, beams, hitboxes, render loops,
 damage, camera motion or monetization changes were added. Actual Roblox
 Studio visuals and physical Android thermal/FPS checks remain required.
+
+## PR #19 — Open Cloud gameplay exact-head regression repair (11 October 2026)
+
+The isolated `gameplay` Open Cloud job exposed a malformed-input exception
+in `ImpactSetpiece.spawn`: module lookup of `Shared.ImpactSetpieceRules`
+ran before rejecting payloads without position/color. The renderer now checks
+required types first, then retains the full finite-value validation and
+original tiers/shape budgets from the shared rules. The existing gameplay
+spec exercises three incomplete meteor/bomb events via `pcall` without
+rules injection, verifying no exception and no allocated 3D parts.
+The earlier failed exact-head run was #38163970237 (193/194 gameplay tests,
+four other shards green). A new complete exact-head CI is required before
+signoff; studio and Android FPS/visual checks are still unperformed.
