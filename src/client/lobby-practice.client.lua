@@ -55,6 +55,19 @@ local function showFeedback(color)
     labelStroke.Transparency = 1
     scale.Scale = 0.82
 
+    -- ReduceMotion keeps the success message readable without any pop,
+    -- scaling, slide or opacity tween (the only timer hides a static label).
+    if player:GetAttribute("ReduceMotion") == true then
+        scale.Scale = 1
+        label.TextTransparency = 0
+        label.BackgroundTransparency = 0.12
+        labelStroke.Transparency = 0.24
+        task.delay(0.65, function()
+            if current == token then label.Visible = false end
+        end)
+        return
+    end
+
     TweenService:Create(label, TweenInfo.new(0.12), {
         TextTransparency = 0,
         BackgroundTransparency = 0.12,

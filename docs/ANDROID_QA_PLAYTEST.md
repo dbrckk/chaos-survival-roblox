@@ -483,3 +483,15 @@ one 8-bit channel step). The existing test now tolerates at most one
 actual color, accent variation, part cap and collision-free geometry.
 No production color, shader, VFX budget, movement or gameplay code changed.
 Re-run all engine shards on the updated exact commit before release.
+
+## PR #19 — Open Cloud core_a color quantization fix / reduced-motion feedback
+
+The BasePart.Color quantization regression was fixed in a preceding
+concurrent commit (654d73a5); this change builds on that fix.
+
+The lobby practice success overlay now uses a static, readable message
+instead of enter/exit scale and opacity tweens while ReduceMotion is
+enabled. The feedback still expires after 0.65 seconds and does not add
+new rendering loops. Engine lobby tests additionally verify that the
+particle anchor follows the actual pad after it moves. Android screenshots
+and accessibility testing remain outstanding.
