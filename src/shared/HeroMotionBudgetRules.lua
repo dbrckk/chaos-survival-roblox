@@ -13,6 +13,18 @@ function HeroMotionBudgetRules.motionScale(tier, reduceMotion)
     return MOTION[tier] or MOTION.Low
 end
 
+-- Reintroduce original landmark movement from its authored rest pose
+-- after accessibility toggles, map streaming or scenery LOD changes.
+-- No TweenService objects or additional update loop are needed.
+function HeroMotionBudgetRules.resumeEnvelope(elapsed)
+    if type(elapsed) ~= "number" or elapsed ~= elapsed
+        or math.abs(elapsed) == math.huge or elapsed <= 0 then
+        return 0
+    end
+    local t = math.clamp(elapsed / 0.48, 0, 1)
+    return t * t * (3 - 2 * t)
+end
+
 function HeroMotionBudgetRules.interval(tier, reduceMotion, hasTracked)
     if hasTracked ~= true then
         -- New scenery is still picked up by ChildAdded and the scan timer.

@@ -54,3 +54,41 @@ repeating that same write on every quiet loop iteration. Existing
 Low/Medium/High amplitudes, ReduceMotion static poses, hazards,
 collisions and LOD rules are unchanged. Engine core_a regression checks
 rotated 3D composition. Physical Android profiling remains necessary.
+
+## Authored rest-to-motion transitions (11 October 2026)
+
+The client-only hero landmark controller now eases **existing** authored
+3D movement in over 480 ms when an ornament first appears, re-enters the
+scenery LOD, or when the player turns ReduceMotion **off**. A smoothstep
+envelope multiplies each existing Low/Medium/High displacement amplitude,
+including disaster reaction translations and rotations. This prevents the
+TowerServiceCar, crane cable and OrbitalReactorArm pieces from instantly
+jumping from a static authored pose into a distant sine-wave pose.
+
+For parts hidden by scenery LOD, the controller restores their captured
+CFrame and Size **once while hidden**, without changing transparency (which
+belongs to the LOD owner). The first visible animation frame resumes from
+rest. On ReduceMotion **on**, the established immediate one-shot still-pose
+path remains in effect; no animation is permitted. New tracked parts begin
+with their own start time, so streamed-in geometry also enters gently.
+
+The existing signal, tally, crown and reactor glow offsets are scaled from
+their captured transparency baseline during entry, rather than retaining
+a constant offset when animation strength is zero. Hazard color accents
+remain immediate for danger recognition; gameplay hazard warnings are not
+dimmed or delayed.
+
+**Cost:** one scalar smoothstep evaluation per visible tracked landmark
+per existing animation tick; no new parts, tweens, loops, remotes, server
+work, particles or lights. Current cadence is unchanged.
+
+**Engine regression:** `tests/engine/landmark-disaster-reactions.spec.luau`
+(core_a) checks entry endpoints, halfway interpolation, invalid times,
+rotated 3D baseline displacement and combined tier/ReduceMotion gating.
+
+**Physical acceptance still outstanding:** Roblox Studio and Android
+inspection of the Tower lift/cable, Orbital arms, Crossroads signals and
+Classic tally during late streaming, LOD hide/show and rapid
+ReduceMotion toggles. Confirm no residual size/pose changes, flicker,
+obscured hazard telegraphs or frame-time regression at Low/Medium/High.
+No physical FPS, GPU, battery or thermal measurement is claimed.

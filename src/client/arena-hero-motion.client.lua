@@ -47,6 +47,8 @@ local function track(nextTracked, part, role, index)
         baseTransparency = part.Transparency,
         baseColor = part.Color,
         baseSize = part.Size,
+        resumeAt = clock,
+        wasLodHidden = false,
     }
 end
 
@@ -136,6 +138,13 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     refreshReaction()
+    if player:GetAttribute("ReduceMotion") ~= true then
+        -- Returning from a still pose must not teleport the lift or arms
+        -- straight into their full sine-wave displacement.
+        for _, state in pairs(tracked) do
+            state.resumeAt = clock
+        end
+    end
     applyReducedPose()
 end)
 
@@ -160,7 +169,7 @@ task.spawn(function()
     if reduced then
         continue
     end
-    local scale = HeroMotionBudget.motionScale(tier, reduced)
+    local tierScale = HeroMotionBudget.motionScale(tier, reduced)
 
     for part, state in pairs(tracked) do
         if not part.Parent then
@@ -170,9 +179,24 @@ task.spawn(function()
         -- Scenery LOD has already hidden this client-only landmark. Avoid
         -- animating off-screen parts until their original visibility returns.
         if not HeroMotionBudget.shouldUpdate(part) then
+            if not state.wasLodHidden then
+                -- Return the hidden monument to its authored geometry once,
+                -- leaving LOD-owned visibility/transparency untouched.
+                part.CFrame = state.baseCFrame
+                part.Size = state.baseSize
+                state.wasLodHidden = true
+            end
             continue
         end
+        if state.wasLodHidden then
+            state.wasLodHidden = false
+            state.resumeAt = clock
+        end
 
+        local resume = HeroMotionBudget.resumeEnvelope(
+            clock - (state.resumeAt or clock)
+        )
+        local scale = tierScale * resume
         local i = state.index
         local frame = state.baseCFrame
         local ownsAnimatedCFrame = state.role == "lift"
@@ -183,7 +207,7 @@ task.spawn(function()
         elseif state.role == "pulse" then
             local wave = (math.sin(clock * 2.2) + 1) * 0.5
             part.Transparency = math.clamp(
-                state.baseTransparency + 0.16 - wave * 0.18 * scale,
+                state.baseTransparency + (0.16 - wave * 0.18) * scale,
                 0.12,
                 0.70
             )
@@ -195,7 +219,7 @@ task.spawn(function()
             local sizeScale = 1 + wave * 0.08 * scale
             part.Size = state.baseSize * sizeScale
             part.Transparency = math.clamp(
-                state.baseTransparency + 0.08 - wave * 0.12 * scale,
+                state.baseTransparency + (0.08 - wave * 0.12) * scale,
                 0.10,
                 0.62
             )
@@ -207,14 +231,14 @@ task.spawn(function()
         elseif state.role == "scan" then
             local wave = (math.sin(clock * 3.1) + 1) * 0.5
             part.Transparency = math.clamp(
-                state.baseTransparency + 0.18 - wave * 0.22 * scale,
+                state.baseTransparency + (0.18 - wave * 0.22) * scale,
                 0.12,
                 0.70
             )
         elseif state.role == "antenna" then
             local wave = (math.sin(clock * 2.1 + i * 1.9) + 1) * 0.5
             part.Transparency = math.clamp(
-                state.baseTransparency + 0.12 - wave * 0.16 * scale,
+                state.baseTransparency + (0.12 - wave * 0.16) * scale,
                 0.16,
                 0.72
             )
@@ -236,7 +260,9 @@ task.spawn(function()
             local shift, bank, yaw, tint = LandmarkReactions.offset(
                 state.role, state.index, clock, reaction
             )
-            frame = HeroMotionBudget.reactiveFrame(frame, shift, yaw, bank)
+            frame = HeroMotionBudget.reactiveFrame(
+                frame, shift * resume, yaw * resume, bank * resume
+            )
             -- Core and crossing-signal animation authored its own color
             -- earlier this tick; all other roles restore captured base color.
             local animatedColor = (state.role == "reactorCore"
