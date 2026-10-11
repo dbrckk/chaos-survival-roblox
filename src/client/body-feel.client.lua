@@ -56,6 +56,7 @@ local bindSerial = 0
 local humanoidStateConnection = nil
 local rigDescendantConnection = nil
 local rigPoseScale = 0
+local emoteBlend = 1
 
 local function jointReferences()
     return {
@@ -194,6 +195,7 @@ local function bind(nextCharacter)
     lastGroundCueAt = -math.huge
     readyPose = 0
     rigPoseScale = 0
+    emoteBlend = 1
 
     -- One observer heals late-streamed Motor6Ds without a polling loop,
     -- including R6 rigs with a delayed Torso or RootJoint.
@@ -238,6 +240,7 @@ player.CharacterRemoving:Connect(function()
     leftShoulder = nil
     rightShoulder = nil
     rigPoseScale = 0
+    emoteBlend = 1
 end)
 
 local function expAlpha(speed, dt)
@@ -389,6 +392,12 @@ RunService:BindToRenderStep(
         local moving = humanoid.MoveDirection.Magnitude > 0.05 and speed > 2.5
         local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
         local reduced = player:GetAttribute("ReduceMotion") == true
+        -- Native Showtime Action tracks take priority while dancing.
+        -- Blend C0 corrections to neutral without stopping the track.
+        emoteBlend = BodyMotionRules.emotePoseBlend(
+            emoteBlend, player:GetAttribute("ChaosShowtimeEmoteActive") == true,
+            dt
+        )
         local scale = BodyMotionRules.motionScale(reduced)
 
         local acceleration = (speed - lastSpeed) / math.max(dt, 1 / 240)
@@ -636,7 +645,8 @@ RunService:BindToRenderStep(
                 -- same cues at a more restrained joint amplitude.
                 local addition = rigPoseScale == 1 and offset
                     or CFrame.identity:Lerp(offset, rigPoseScale)
-                joint.C0 = joint.C0:Lerp(original * addition, alpha)
+                local layered = CFrame.identity:Lerp(addition, emoteBlend)
+                joint.C0 = joint.C0:Lerp(original * layered, alpha)
             end
         end
 

@@ -139,9 +139,20 @@ local function available()
     return hum ~= nil and Showtime.canEmote(phase, voteOptions, hum.Health)
 end
 
+-- Shared client-local animation ownership marker. It prevents our
+-- independent body-feel layer from fighting native Showtime Action tracks.
+local function markEmoteActive(active)
+    if player:GetAttribute("ChaosShowtimeEmoteActive") ~= active then
+        player:SetAttribute("ChaosShowtimeEmoteActive", active)
+    end
+end
+
+markEmoteActive(false)
+
 local function stopEmote()
     local active = currentEmote
     currentEmote = nil
+    markEmoteActive(false)
     if active and active.track then
         active.track:Stop(0.17)
     end
@@ -351,6 +362,7 @@ local function playEmote(id, automatic)
         track.Stopped:Connect(function()
             if currentEmote and currentEmote.track == track then
                 currentEmote = nil
+                markEmoteActive(false)
             end
         end)
     end
@@ -362,6 +374,7 @@ local function playEmote(id, automatic)
         return
     end
     currentEmote = {id = id, track = entry.track}
+    markEmoteActive(true)
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if root and root:IsA("BasePart") then
         lastEmoteStarted = os.clock()

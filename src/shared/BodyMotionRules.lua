@@ -142,6 +142,16 @@ function BodyMotionRules.blastResponse(rootFrame, sourcePosition, radius)
         math.clamp(-localAway.Z, -1, 1)
 end
 
+-- Showtime's action-priority emotes need exclusive authored body poses.
+-- Fade our additive Motor6D C0 offsets out/in, but leave Roblox Animator
+-- tracks, controls and physics completely untouched.
+function BodyMotionRules.emotePoseBlend(current, showtimeActive, dt)
+    local value = math.clamp(tonumber(current) or 1, 0, 1)
+    local target = showtimeActive == true and 0 or 1
+    local elapsed = math.clamp(tonumber(dt) or 0, 0, 0.25)
+    return value + (target - value) * (1 - math.exp(-14 * elapsed))
+end
+
 function BodyMotionRules.motionScale(reduceMotion)
     return reduceMotion == true and 0.18 or 1
 end

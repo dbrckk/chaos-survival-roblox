@@ -505,3 +505,31 @@ Existing engine tests also exercise R15, ReduceMotion and bad instances.
 Runtime acceptance remains pending for real Roblox R6/R15 avatars
 and emotes, rapid respawns, partial character replication, restoration
 on shutdown, and on-device Android motion/thermal profiling.
+
+## Native Showtime emotes vs. R6/R15 authored body offsets
+
+`lobby-showtime.client.lua` plays Roblox Animator Action-priority
+clips, while the independently rendered body-feel layer modifies
+Motor6D.C0. Until now, the two animations could overlap or pull a
+dancer's shoulders and hips toward competing poses. The Showtime
+owner now sets a **client-local** `ChaosShowtimeEmoteActive` attribute
+on the local Player when an emote begins and clears it on manual
+stop, natural track completion, humanoid movement/death or character
+replacement. The marker changes only if needed; the original
+AnimationTrack, clip priority, asset licensing and UI are preserved.
+
+`BodyMotionRules.emotePoseBlend` smoothly reduces the authored
+C0 offset toward the skeleton's original pose during Showtime,
+then restores the full R6/R15 body-feel layer after the emote. The
+blend is exponential and frame-time-aware, with bounded dt; it runs
+inside the **existing** body-feel render callback. No new camera
+loop, Animator polling, default emote override, input changes or
+gameplay physics. Roblox's native Action animation remains the
+exclusive presentation while active, without snapping C0 to its
+original offset instantaneously.
+
+Engine regression covers one-second fade-out/in at 60 FPS,
+interruptions, missing dt and clamped blending. Studio QA still
+needs to verify authentic R6 and R15 Dance/Shuffle/Groove/Robot/Orbit
+clips, rapid switching, emote cancellation on movement, respawns,
+ReduceMotion and Android screenshot/FPS/thermal profiling.

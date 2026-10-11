@@ -8,6 +8,29 @@ local LocomotionDynamics = require("../../src/shared/LocomotionDynamics")
 local GroundFx = require("../../src/client/LocomotionGroundFx")
 
 describe("Body motion rules", function()
+    it("crossfades additional R6/R15 body poses around Showtime emotes", function()
+        local blend = BodyMotionRules.emotePoseBlend
+        expect(blend(1, false, 0.10)).toBe(1)
+        expect(blend(1, true, 0)).toBe(1)
+        local falling = blend(1, true, 0.10)
+        expect(falling > 0 and falling < 0.35).toBe(true)
+        local softer = blend(falling, true, 0.10)
+        expect(softer >= 0 and softer < falling).toBe(true)
+        local rising = blend(softer, false, 0.10)
+        expect(rising > softer and rising < 1).toBe(true)
+        local stable = 1
+        for _ = 1, 60 do stable = blend(stable, true, 1 / 60) end
+        expect(stable < 0.001).toBe(true)
+        for _ = 1, 60 do stable = blend(stable, false, 1 / 60) end
+        expect(stable > 0.999).toBe(true)
+        expect(blend(-20, false, 0)).toBe(0)
+        expect(blend(20, true, 0)).toBe(1)
+        expect(blend(1, true, -3)).toBe(1)
+        expect(blend(1, true, nil)).toBe(1)
+        expect(blend(1, nil, 0.10)).toBe(1)
+    end)
+
+
     it("compacts R6 motor references past the intentionally missing Waist", function()
         local model = Instance.new("Model")
         local torso = Instance.new("Part")
