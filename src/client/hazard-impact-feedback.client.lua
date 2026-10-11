@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ImpactSetpiece = require(script.Parent.ImpactSetpiece)
+local ImpactSetpieceRules = require(ReplicatedStorage.Shared.ImpactSetpieceRules)
 local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 local ImpactPulseRules = require(ReplicatedStorage.Shared.ImpactPulseRules)
 local ImpactMaterialRules = require(ReplicatedStorage.Shared.ImpactMaterialRules)
@@ -102,14 +103,13 @@ local function makeAftermath(kind, profile, style, frame, radius)
 end
 
 local function renderBurst(payload)
-    local position = payload.position
-    local color = payload.color
-    local radius = math.clamp(tonumber(payload.radius) or 8, 1, 40)
-    local kind = tostring(payload.kind or "")
-
-    if typeof(position) ~= "Vector3" or typeof(color) ~= "Color3" then
+    if not ImpactSetpieceRules.validPayload(payload) then
         return
     end
+    local position = payload.position
+    local color = payload.color
+    local radius = ImpactSetpieceRules.safeRadius(payload.radius)
+    local kind = tostring(payload.kind or "")
 
     local spectating = player:GetAttribute("RoundEliminated") == true
         or player:GetAttribute("RoundParticipant") ~= true

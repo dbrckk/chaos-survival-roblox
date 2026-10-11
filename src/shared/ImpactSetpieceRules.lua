@@ -3,6 +3,35 @@
 -- Only Meteor and Bomb events are known to the HazardImpactFeedback protocol.
 local ImpactSetpieceRules = {}
 
+-- Network-sourced impact data must not reach CFrame/Tween/raycast math
+-- with non-finite coordinates or colors. Gameplay remains server-owned.
+local function finite(number)
+    return type(number) == "number" and number == number
+        and math.abs(number) < math.huge
+end
+
+function ImpactSetpieceRules.validPayload(payload)
+    if type(payload) ~= "table" or typeof(payload.position) ~= "Vector3"
+        or typeof(payload.color) ~= "Color3" then
+        return false
+    end
+    local p, c = payload.position, payload.color
+    return finite(p.X) and finite(p.Y) and finite(p.Z)
+        and math.abs(p.X) <= 1e7 and math.abs(p.Y) <= 1e7
+        and math.abs(p.Z) <= 1e7
+        and finite(c.R) and finite(c.G) and finite(c.B)
+        and c.R >= 0 and c.R <= 1
+        and c.G >= 0 and c.G <= 1
+        and c.B >= 0 and c.B <= 1
+end
+
+-- Invalid/missing radii produce bounded neutral art, never NaN geometry.
+function ImpactSetpieceRules.safeRadius(value)
+    local radius = tonumber(value)
+    if not finite(radius) then return 8 end
+    return math.clamp(radius, 1, 40)
+end
+
 local VARIANTS = {
     Meteor = {
         Kind = "Meteor",
@@ -45,7 +74,7 @@ function ImpactSetpieceRules.get(kind, tier, reduceMotion, radius)
         Kind = variant.Kind,
         Count = count,
         Lifetime = variant.Lifetime,
-        Radius = math.clamp(tonumber(radius) or 8, 1, 40),
+        Radius = ImpactSetpieceRules.safeRadius(radius),
         ColorMix = variant.ColorMix,
         Material = variant.Material,
         Prefix = variant.Prefix,
@@ -64,7 +93,7 @@ function ImpactSetpieceRules.finish(kind, index, total, radius)
     if kind ~= "Meteor" and kind ~= "Bomb" then
         return nil
     end
-    local size = math.clamp(tonumber(radius) or 8, 1, 40)
+    local size = ImpactSetpieceRules.safeRadius(radius)
     local segments = math.max(1, math.floor(tonumber(total) or 1))
     local slot = math.clamp(math.floor(tonumber(index) or 1), 1, segments)
     local angle = ((slot - 0.5) / segments) * math.pi * 2
@@ -82,7 +111,7 @@ end
 -- Static deterministic positioning avoids random visual flicker and makes
 -- every client see a recognizable radial signature at each impact.
 function ImpactSetpieceRules.fragment(kind, index, count, radius)
-    local size = math.max(1, math.clamp(tonumber(radius) or 8, 1, 40))
+    local size = ImpactSetpieceRules.safeRadius(radius)
     local total = math.max(1, math.floor(tonumber(count) or 1))
     local i = math.clamp(math.floor(tonumber(index) or 1), 1, total)
     local angle = (i - 1) / total * math.pi * 2

@@ -41,6 +41,45 @@ describe("Disaster visual identities", function()
         expect(ImpactSetpieceRules.get("Meteor", "High", false, -5).Radius).toBe(1)
     end)
 
+    it("rejects malformed impact payloads before allocating any 3D pieces", function()
+        local rules = ImpactSetpieceRules
+        local root = Instance.new("Folder")
+        local valid = {kind = "Meteor", position = Vector3.new(0, 4, 0),
+            color = Color3.fromRGB(255, 130, 75), radius = 9}
+        expect(rules.validPayload(valid)).toBe(true)
+        expect(rules.validPayload(nil)).toBe(false)
+        expect(rules.validPayload("bad")).toBe(false)
+        expect(rules.validPayload({position = Vector3.zero})).toBe(false)
+        for _, bad in ipairs({0/0, math.huge, -math.huge}) do
+            expect(rules.validPayload({position = Vector3.new(bad, 1, 0),
+                color = valid.color})).toBe(false)
+            expect(rules.validPayload({position = Vector3.new(0, bad, 0),
+                color = valid.color})).toBe(false)
+            expect(rules.validPayload({position = valid.position,
+                color = Color3.new(bad, 0.5, 0.5)})).toBe(false)
+            expect(rules.safeRadius(bad)).toBe(8)
+            expect(rules.get("Meteor", "High", false, bad).Radius).toBe(8)
+            local ok, spawned = pcall(ImpactSetpiece.spawn, root,
+                {kind = "Meteor", position = Vector3.new(bad, 0, 0),
+                    color = valid.color, radius = 8},
+                "High", false, rules)
+            expect(ok).toBe(true)
+            expect(spawned == nil).toBe(true)
+        end
+        expect(rules.validPayload({position = Vector3.new(1e8, 0, 0),
+            color = valid.color})).toBe(false)
+        expect(rules.safeRadius(nil)).toBe(8)
+        expect(rules.safeRadius(-4)).toBe(1)
+        expect(rules.safeRadius(400)).toBe(40)
+        expect(rules.safeRadius(14)).toBe(14)
+        expect(rules.finish("Bomb", 1, 4, math.huge).Width > 0).toBe(true)
+        expect(rules.fragment("Meteor", 1, 7, 0/0).Length > 0).toBe(true)
+        expect(ImpactSetpiece.spawn(nil, valid, "High", false, rules) == nil)
+            .toBe(true)
+        expect(#root:GetChildren()).toBe(0)
+        root:Destroy()
+    end)
+
     it("builds non-colliding meteor shards and bomb spokes with bounded geometry", function()
         local root = Instance.new("Folder")
         for _, case in ipairs({

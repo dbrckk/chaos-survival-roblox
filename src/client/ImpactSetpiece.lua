@@ -10,14 +10,9 @@ local TweenService = game:GetService("TweenService")
 local ImpactSetpiece = {}
 
 function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesOverride)
-    if type(payload) ~= "table"
-        or typeof(payload.position) ~= "Vector3"
-        or typeof(payload.color) ~= "Color3"
-    then
-        return nil
-    end
-
+    if typeof(parent) ~= "Instance" then return nil end
     local rules = rulesOverride or require(ReplicatedStorage.Shared.ImpactSetpieceRules)
+    if not rules.validPayload(payload) then return nil end
     local recipe = rules.get(payload.kind, qualityTier, reduceMotion, payload.radius)
     if not recipe then
         return nil

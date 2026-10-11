@@ -326,3 +326,18 @@ runtime Trail properties, low-tier gating, zero extra instances and
 nonfinite velocity/distance/time rejection. Client RoundState also
 handles malformed snapshots. Android visual quality, timing and
 GPU overdraw still need real-device and Studio assessment.
+
+## PR #19 — malformed impact VFX payload isolation (11 October 2026)
+
+The client impact event rejects absent/non-table payloads, invalid Vector3
+coordinates (NaN, infinities, excessive distance), and invalid Color3
+channels before sampling a surface, allocating temporary 3D pieces, or
+advancing the local burst budget. ImpactSetpiece validates its own inputs
+as a second safety boundary. Missing or invalid radius values fall back
+to 8 studs; valid numbers still follow the original 1..40 clamp.
+
+The existing `disaster-visuals.spec.luau` cloud suite now checks malformed
+positions, colors and radii, pcall-no-throw, no allocations and normal
+radius limits. No new emitters, lights, beams, hitboxes, render loops,
+damage, camera motion or monetization changes were added. Actual Roblox
+Studio visuals and physical Android thermal/FPS checks remain required.
