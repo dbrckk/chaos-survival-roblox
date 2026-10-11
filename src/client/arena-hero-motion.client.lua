@@ -58,7 +58,12 @@ end
 local function applyReducedPose()
     if player:GetAttribute("ReduceMotion") ~= true then return end
     for part, state in pairs(tracked) do
-        HeroMotionBudget.applyStillPose(part, state, reaction)
+        -- Scenery LOD owns hidden-part transparency. A ReduceMotion event
+        -- must never reveal a culled monument by restoring its base alpha.
+        -- scan() reapplies the authored still pose once it becomes visible.
+        if HeroMotionBudget.shouldUpdate(part) then
+            HeroMotionBudget.applyStillPose(part, state, reaction)
+        end
     end
 end
 
