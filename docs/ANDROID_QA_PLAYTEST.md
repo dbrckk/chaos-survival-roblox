@@ -169,3 +169,29 @@ Acceptance still requires a physical Android pass near shrinking map
 corners, frequent map changes and Darkness+ShrinkingArena, together
 with Studio visual review and thermal/FPS measurement. Do not
 interpret an engine green status as a visual production approval.
+
+## PR #19 — streamed character reaction rig lifecycle (11 October 2026)
+
+The event-driven landing VFX controller now uses
+`CharacterReactionRigRegistry.lua`, a single model-scoped lifecycle
+owner. It waits for both Humanoid and HumanoidRootPart without a
+time-based permanent registration failure: late rig components,
+including those arriving after the former 8-second deadline, can
+enable the same landing feedback. Root/Humanoid replacements
+disconnect the previous Humanoid.StateChanged listener and discard
+stale airborne timestamps; only the active root may display an effect.
+Unparented or destroyed characters, CharacterRemoving and removed AI
+models explicitly release registered signals. Replaced AISurvivors
+folders disconnect their ChildAdded/ChildRemoved listeners, preventing
+old folders from retaining callbacks and stale bot rigs.
+
+The existing `survival-feedback.spec.luau` engine shard now checks
+partial replication, replacement of either required rig component,
+repeated watch deduplication, explicit teardown, model unparenting,
+streaming back, and destruction. The RoundState callback additionally
+handles malformed/nil snapshots without crashing.
+
+This is client-owned visual lifecycle only: no extra render loop,
+new Beam, Animator action, physics, damage, server event or
+monetization change. The full five-shard Open Cloud run and physical
+Android streaming/respawn/AI movement QA must pass before signoff.

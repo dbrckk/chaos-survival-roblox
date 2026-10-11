@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local SurvivalFeedback = require("../../src/server/SurvivalFeedback")
 local CharacterReactionRules = require("../../src/shared/CharacterReactionRules")
 local CharacterReactionVisuals = require("../../src/client/CharacterReactionVisuals")
+local CharacterReactionRigRegistry = require("../../src/client/CharacterReactionRigRegistry")
 
 describe("Survival feedback", function()
     it("marks living players at or below twenty percent health as critical", function()
@@ -283,6 +284,63 @@ describe("Character cinematic reactions", function()
         expect(CharacterReactionRules.humanEligible(false, false)).toBe(false)
         expect(CharacterReactionRules.humanEligible(nil, nil)).toBe(false)
         expect(CharacterReactionRules.humanEligible(true, true)).toBe(false)
+    end)
+
+    it("rebinds streamed character roots and drops old Humanoid events", function()
+        local calls = 0
+        local lastRoot = nil
+        local registry = CharacterReactionRigRegistry.new(function(model, root)
+            calls += 1
+            lastRoot = root
+        end)
+        local model = Instance.new("Model")
+        model.Name = "DelayedCinematicSurvivor"
+        model.Parent = workspace
+        expect(registry.watch(model)).toBe(true)
+        expect(registry.watch(model)).toBe(false)
+        expect(registry.count()).toBe(1)
+        expect(registry.rig(model) == nil).toBe(true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = model
+        expect(registry.rig(model) == nil).toBe(true)
+        local firstRoot = Instance.new("Part")
+        firstRoot.Name = "HumanoidRootPart"
+        firstRoot.Parent = model
+        local bound, boundHumanoid = registry.rig(model)
+        expect(bound).toBe(firstRoot)
+        expect(boundHumanoid).toBe(humanoid)
+        -- Streaming one component out unbinds the old state listener.
+        firstRoot.Parent = nil
+        expect(registry.rig(model) == nil).toBe(true)
+        local secondRoot = Instance.new("Part")
+        secondRoot.Name = "HumanoidRootPart"
+        secondRoot.Parent = model
+        expect(registry.rig(model)).toBe(secondRoot)
+        expect(registry.count()).toBe(1)
+        -- A Humanoid swap similarly invalidates old airborne history.
+        humanoid.Parent = nil
+        expect(registry.rig(model) == nil).toBe(true)
+        local replacement = Instance.new("Humanoid")
+        replacement.Parent = model
+        local currentRoot, currentHumanoid = registry.rig(model)
+        expect(currentRoot).toBe(secondRoot)
+        expect(currentHumanoid).toBe(replacement)
+        -- Late replication isn't discarded after an arbitrary 8s TTL;
+        -- the model itself owns the listener until it is detached.
+        registry.stop(model)
+        expect(registry.count()).toBe(0)
+        expect(registry.rig(model) == nil).toBe(true)
+        expect(registry.watch(model)).toBe(true)
+        model.Parent = nil
+        expect(registry.count()).toBe(0)
+        model.Parent = workspace
+        expect(registry.watch(model)).toBe(true)
+        model:Destroy()
+        expect(registry.count()).toBe(0)
+        expect(calls).toBe(0)
+        expect(lastRoot == nil).toBe(true)
+        firstRoot:Destroy()
+        humanoid:Destroy()
     end)
 
     it("recognizes direct land-to-run transitions while clearing airborne time", function()

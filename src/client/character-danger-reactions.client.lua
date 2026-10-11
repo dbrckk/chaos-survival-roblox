@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Rules = require(ReplicatedStorage.Shared.CharacterReactionRules)
 local ReactionVisuals = require(script.Parent.CharacterReactionVisuals)
+local RigRegistry = require(script.Parent.CharacterReactionRigRegistry)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -19,10 +20,9 @@ local lastDodge = -math.huge
 local lastImpact = -math.huge
 local impactByModel = setmetatable({}, {__mode = "k"})
 local landingByModel = setmetatable({}, {__mode = "k"})
-local watched = setmetatable({}, {__mode = "k"})
-local pendingRigs = setmetatable({}, {__mode = "k"})
 local activePieces = setmetatable({}, {__mode = "k"})
 local botFolderConnection = nil
+local botFolderRemovedConnection = nil
 local botFolder = nil
 
 local function profile()
@@ -165,93 +165,73 @@ local function impact(payload)
     lastImpact = Rules.cooldownAfterEmission(lastImpact, now, n)
 end
 
+-- Only a currently attached HumanoidRootPart can receive its own landing.
+-- Streamed replacements must not replay a stale airborne start timestamp.
+local rigRegistry = RigRegistry.new(function(model, root, state, entry)
+    if state == Enum.HumanoidStateType.Freefall then
+        entry.airborneAt = entry.airborneAt or os.clock()
+    elseif state == Enum.HumanoidStateType.Dead then
+        entry.airborneAt = nil
+    elseif Rules.isLandingTransition(state) then
+        local started = entry.airborneAt
+        entry.airborneAt = nil
+        if not started or liveRoot(model) ~= root then return end
+        local now = os.clock()
+        local strength = Rules.landingStrength(now - started)
+        local settings = profile()
+        if strength == 0 or settings.Landing == 0
+            or not Rules.cooldownReady(now, landingByModel[model], 1.20)
+        then
+            return
+        end
+        local viewer = viewerPosition()
+        if not viewer or (root.Position - viewer).Magnitude > settings.Range then
+            return
+        end
+        local emitted = ReactionVisuals.burst(root, "Landing", "",
+            settings.Landing, strength, activePieces)
+        landingByModel[model] = Rules.cooldownAfterEmission(
+            landingByModel[model], now, emitted)
+    end
+end)
+
 local function watchLanding(model)
-    if watched[model] then
-        return
-    end
-    -- Replication may deliver the model before its root/Humanoid. Keep one
-    -- temporary ChildAdded listener, removed as soon as both exist.
-    local humanoid = model:FindFirstChildOfClass("Humanoid")
-    local root = model:FindFirstChild("HumanoidRootPart")
-    if not humanoid or not root or not root:IsA("BasePart") then
-        if not pendingRigs[model] then
-            pendingRigs[model] = model.ChildAdded:Connect(function(child)
-                if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
-                    task.defer(watchLanding, model)
-                end
-            end)
-            -- Abandoned partial rigs are common under StreamingEnabled and
-            -- rapid respawn. Do not retain their connections indefinitely.
-            task.delay(8, function()
-                local connection = pendingRigs[model]
-                if connection then
-                    connection:Disconnect()
-                    pendingRigs[model] = nil
-                end
-            end)
-        end
-        return
-    end
-    if pendingRigs[model] then
-        pendingRigs[model]:Disconnect()
-        pendingRigs[model] = nil
-    end
-    watched[model] = true
-    local airborneAt = nil
-    humanoid.StateChanged:Connect(function(_, state)
-        if state == Enum.HumanoidStateType.Freefall then
-            airborneAt = airborneAt or os.clock()
-        elseif state == Enum.HumanoidStateType.Dead then
-            airborneAt = nil
-        elseif Rules.isLandingTransition(state) then
-            local started = airborneAt
-            airborneAt = nil
-            if not started then
-                return
-            end
-            -- Do not play battle recovery on a lobby avatar or eliminated
-            -- survivor even if the humanoid has just landed.
-            if not liveRoot(model) then
-                return
-            end
-            local now = os.clock()
-            local strength = Rules.landingStrength(now - started)
-            local settings = profile()
-            if strength == 0 or settings.Landing == 0
-                or not Rules.cooldownReady(now, landingByModel[model], 1.20)
-            then
-                return
-            end
-            local viewer = viewerPosition()
-            if not viewer or (root.Position - viewer).Magnitude > settings.Range then
-                return
-            end
-            local emitted = ReactionVisuals.burst(root, "Landing", "",
-                settings.Landing, strength, activePieces)
-            landingByModel[model] = Rules.cooldownAfterEmission(
-                landingByModel[model], now, emitted)
-        end
-    end)
+    rigRegistry.watch(model)
 end
 
 local function watchPlayer(p)
     p.CharacterAdded:Connect(function(character)
-        task.spawn(watchLanding, character)
+        task.defer(watchLanding, character)
     end)
-    if p.Character then
-        task.defer(watchLanding, p.Character)
-    end
+    p.CharacterRemoving:Connect(function(character)
+        rigRegistry.stop(character)
+        landingByModel[character] = nil
+        impactByModel[character] = nil
+    end)
+    if p.Character then task.defer(watchLanding, p.Character) end
 end
 
 for _, p in ipairs(Players:GetPlayers()) do
     watchPlayer(p)
 end
 Players.PlayerAdded:Connect(watchPlayer)
+Players.PlayerRemoving:Connect(function(p)
+    if p.Character then rigRegistry.stop(p.Character) end
+end)
 
 local function bindBots(folder)
     if botFolderConnection then
         botFolderConnection:Disconnect()
         botFolderConnection = nil
+    end
+    if botFolderRemovedConnection then
+        botFolderRemovedConnection:Disconnect()
+        botFolderRemovedConnection = nil
+    end
+    if botFolder and botFolder ~= folder then
+        for _, model in ipairs(botFolder:GetChildren()) do
+            if model:IsA("Model") then rigRegistry.stop(model) end
+        end
     end
     botFolder = folder
     if folder then
@@ -263,6 +243,13 @@ local function bindBots(folder)
         botFolderConnection = folder.ChildAdded:Connect(function(model)
             if model:IsA("Model") then
                 task.defer(watchLanding, model)
+            end
+        end)
+        botFolderRemovedConnection = folder.ChildRemoved:Connect(function(model)
+            if model:IsA("Model") then
+                rigRegistry.stop(model)
+                landingByModel[model] = nil
+                impactByModel[model] = nil
             end
         end)
     end
@@ -292,7 +279,8 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 roundEvent.OnClientEvent:Connect(function(snapshot)
-    phase = tostring(snapshot.phase or "waiting")
+    phase = tostring(type(snapshot) == "table"
+        and snapshot.phase or "waiting")
     if phase ~= "round" then
         killPieces()
     end
