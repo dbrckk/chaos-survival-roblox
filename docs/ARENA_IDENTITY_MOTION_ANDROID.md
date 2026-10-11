@@ -84,3 +84,37 @@ remain coherent with their fixed supporting architecture. Record close and
 wide view, Low/Medium/High and ReduceMotion, and watch for occlusion,
 distraction from hazard warnings, and performance regressions. No FPS or
 premium quality pass is asserted by these automated geometry tests.
+
+## Phase-aware cinematic ease-in
+
+Anchored arena ornaments now fade into their existing movement when a round
+state changes instead of immediately jumping from a static pose to full swing.
+The existing RoundState remote is reused; no new event, object, texture,
+sound or update loop is introduced. The local owner only resets the clock on
+an *actual phase change*, so repeated RoundState updates do not restart
+animation.
+
+* Ready: 68% of tier amplitude (anticipation without overpowering UI).
+* Round: 100% of tier amplitude (active arena character).
+* Result: 46% of tier amplitude (calmer visual finish).
+* Waiting, vote, other inactive phases: 0%, with original transforms restored.
+* Inactive-to-active transitions ease from 0%, while ready-to-round and
+  round-to-result transitions ease from the previous displayed intensity
+  (including interrupted transitions). No sudden reset to rest mid-round.
+  The smoothstep interpolation takes 340 ms.
+* Re-enabling ReduceMotion eases in from rest; enabling it restores the
+  captured authored pose immediately.
+* Existing quality-tier amplitude caps, ReduceMotion zero gate and update
+  intervals are unchanged. The function controls scenery only, not hazard
+  telegraphs, camera, player inputs or collision.
+
+The core_a engine tests verify 0/170/340 ms, crossfades from the previous
+pose (including interrupted transitions), steady-state targets, inactive
+phases and interaction with Low graphics and ReduceMotion.
+
+Android/Studio manual acceptance still required: check ready-to-round,
+round-to-result and result-to-lobby transitions in all four arenas. Watch
+for unwanted movement jumps, visual distractions during a sudden disaster
+warning, smoothness at Low quality, and stability after repeated phase
+messages. Automated engine rules cannot establish subjective appearance or
+mobile FPS; no such claim is made.

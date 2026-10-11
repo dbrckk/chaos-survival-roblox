@@ -12,6 +12,26 @@ function ArenaIdentityMotionRules.motionScale(tier, reduceMotion)
     return SCALE[tier] or SCALE.Low
 end
 
+-- Ornamental motion eases in on state changes rather than snapping to a
+-- full-scale pose on the first client frame. Hazard telegraphs are unrelated.
+-- Ready sets visual anticipation; round reaches full scale; result calms down.
+function ArenaIdentityMotionRules.phaseEnvelope(phase, elapsed, previousIntensity)
+    local target = if phase == "round" then 1
+        elseif phase == "ready" then 0.68
+        elseif phase == "result" then 0.46
+        else 0
+    if target == 0 or type(elapsed) ~= "number"
+        or elapsed ~= elapsed or elapsed < 0 then
+        return 0
+    end
+    local previous = if type(previousIntensity) == "number"
+        and previousIntensity == previousIntensity
+        then math.clamp(previousIntensity, 0, 1) else 0
+    local progress = math.clamp(elapsed / 0.34, 0, 1)
+    local ease = progress * progress * (3 - 2 * progress)
+    return previous + (target - previous) * ease
+end
+
 function ArenaIdentityMotionRules.interval(tier, reduceMotion, active, hasTracked)
     if active ~= true or hasTracked ~= true or reduceMotion == true then
         return 0.60

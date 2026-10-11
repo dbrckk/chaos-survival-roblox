@@ -12,6 +12,8 @@ local currentArena = nil
 local currentVariant = nil
 local tracked = {}
 local phase = "waiting"
+local phaseStartedAt = os.clock()
+local phaseFromIntensity = 0
 local disconnectStructure = nil
 local watchedMap = nil
 local rebuildQueued = false
@@ -133,7 +135,15 @@ bindMap()
 
 stateEvent.OnClientEvent:Connect(function(state)
     local previousPhase = phase
-    phase = tostring(state and state.phase or "waiting")
+    local incomingPhase = tostring(state and state.phase or "waiting")
+    if incomingPhase ~= phase then
+        local now = os.clock()
+        phaseFromIntensity = MotionRules.phaseEnvelope(
+            phase, now - phaseStartedAt, phaseFromIntensity
+        )
+        phaseStartedAt = now
+    end
+    phase = incomingPhase
 
     local wasActive = previousPhase == "ready"
         or previousPhase == "round"
@@ -152,6 +162,10 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
         -- A frozen Orbital crown should return to the original authored pose,
         -- not stay suspended at the last animation frame.
         restoreTracked()
+    else
+        -- Resume authored ornament motion from rest, not a full-scale jump.
+        phaseFromIntensity = 0
+        phaseStartedAt = os.clock()
     end
 end)
 
@@ -163,8 +177,11 @@ task.spawn(function()
 
         local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
         local reduced = player:GetAttribute("ReduceMotion") == true
-        local scale = MotionRules.motionScale(tier, reduced)
         local now = os.clock()
+        local scale = MotionRules.motionScale(tier, reduced)
+            * MotionRules.phaseEnvelope(
+                phase, now - phaseStartedAt, phaseFromIntensity
+            )
 
         if active and scale > 0 then
             for _, item in ipairs(tracked) do

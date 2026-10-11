@@ -555,6 +555,46 @@ end)
 
 
 describe("Android arena identity ornament motion", function()
+    it("eases in mechanical ornaments without stealing hazard cue priority", function()
+        local rules = IdentityMotionRules
+        for _, phase in ipairs({"ready", "round", "result"}) do
+            expect(rules.phaseEnvelope(phase, 0)).toBe(0)
+            expect(rules.phaseEnvelope(phase, -1)).toBe(0)
+            expect(rules.phaseEnvelope(phase, "0.3")).toBe(0)
+            expect(rules.phaseEnvelope(phase, 0 / 0)).toBe(0)
+            local middle = rules.phaseEnvelope(phase, 0.17)
+            local full = rules.phaseEnvelope(phase, 0.34)
+            expect(middle > 0).toBe(true)
+            expect(middle < full).toBe(true)
+            expect(math.abs(middle - full * 0.5) < 0.0001).toBe(true)
+            expect(rules.phaseEnvelope(phase, 1.5)).toBe(full)
+        end
+        expect(rules.phaseEnvelope("round", 2)).toBe(1)
+        expect(rules.phaseEnvelope("ready", 2)).toBe(0.68)
+        expect(rules.phaseEnvelope("result", 2)).toBe(0.46)
+        -- Active-to-active transitions ease from their actual previous pose.
+        expect(rules.phaseEnvelope("round", 0, 0.68)).toBe(0.68)
+        expect(math.abs(rules.phaseEnvelope("round", 0.17, 0.68) - 0.84)
+            < 0.0001).toBe(true)
+        expect(rules.phaseEnvelope("round", 0.34, 0.68)).toBe(1)
+        expect(rules.phaseEnvelope("result", 0, 1)).toBe(1)
+        expect(math.abs(rules.phaseEnvelope("result", 0.17, 1) - 0.73)
+            < 0.0001).toBe(true)
+        expect(rules.phaseEnvelope("result", 0.34, 1)).toBe(0.46)
+        -- Early interruptions retain the previous fractional strength.
+        expect(rules.phaseEnvelope("round", 0, 0.27)).toBe(0.27)
+        expect(rules.phaseEnvelope("round", 0.34, 0.27)).toBe(1)
+        expect(rules.phaseEnvelope("waiting", 0, 1)).toBe(0)
+        for _, phase in ipairs({"waiting", "unknown", "vote", ""}) do
+            expect(rules.phaseEnvelope(phase, 10)).toBe(0)
+        end
+        -- Reduced motion and tier budgets still gate the whole presentation.
+        expect(rules.motionScale("High", true)
+            * rules.phaseEnvelope("round", 1)).toBe(0)
+        expect(rules.motionScale("Low", false)
+            * rules.phaseEnvelope("round", 1)).toBe(0.38)
+    end)
+
     it("keeps authored tier scales and fully disables continuous ReduceMotion", function()
         expect(IdentityMotionRules.motionScale("Low", false)).toBe(0.38)
         expect(IdentityMotionRules.motionScale("Medium", false)).toBe(0.68)
