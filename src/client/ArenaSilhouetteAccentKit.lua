@@ -104,6 +104,14 @@ function ArenaSilhouetteAccentKit.build(parent, base, variant, tierName, theme)
     return built
 end
 
+-- Keep the Crossroads' service beam in the pylons' local frame. A world-Y
+-- midpoint would detach visually when a streamed arena is rotated or tilted.
+function ArenaSilhouetteAccentKit.crossroadsBeamFrame(left, right)
+    return left.CFrame:Lerp(right.CFrame, 0.5)
+        * CFrame.new(0, 3.8, 0)
+        * CFrame.Angles(math.rad(9), 0, 0)
+end
+
 -- Anchor all existing client-only skyline pieces to their authored arena
 -- transform. Roblox map streaming may shift or rotate the base after build.
 -- One property-change connection replaces per-frame updates or new Parts.

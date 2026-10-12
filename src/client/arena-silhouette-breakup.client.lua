@@ -223,8 +223,7 @@ local function crossroads(base, theme, high)
     makePart(
         "CrossroadsServiceBeam",
         Vector3.new(2.0, 0.9, hz * 0.28),
-        CFrame.new((left.Position + right.Position) * 0.5 + Vector3.new(0, 3.8, 0))
-            * CFrame.Angles(math.rad(9), 0, 0),
+        ArenaSilhouetteAccentKit.crossroadsBeamFrame(left, right),
         theme.Detail,
         Enum.Material.DiamondPlate,
         0.10,

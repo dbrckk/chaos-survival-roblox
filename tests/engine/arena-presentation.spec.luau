@@ -455,6 +455,29 @@ describe("Arena skyline visual identity", function()
         base:Destroy()
     end)
 
+    it("keeps Crossroads service beam aligned with rotated and tilted pylons", function()
+        local left = Instance.new("Part")
+        local right = Instance.new("Part")
+        for _, frame in ipairs({
+            CFrame.new(0, 12, 0),
+            CFrame.new(21, 18, -9) * CFrame.Angles(0, math.rad(53), 0),
+            CFrame.new(-15, 24, 36)
+                * CFrame.Angles(math.rad(13), math.rad(-37), math.rad(8)),
+        }) do
+            left.CFrame = frame * CFrame.new(-63, 7.2, 12)
+            right.CFrame = frame * CFrame.new(-63, 5.2, 18)
+            local actual = ArenaSilhouetteAccentKit.crossroadsBeamFrame(left, right)
+            local expected = frame * CFrame.new(-63, 10, 15)
+                * CFrame.Angles(math.rad(9), 0, 0)
+            expect((actual.Position - expected.Position).Magnitude < 0.001).toBe(true)
+            expect(actual.LookVector:Dot(expected.LookVector) > 0.9999).toBe(true)
+            expect(actual.UpVector:Dot(expected.UpVector) > 0.9999).toBe(true)
+            expect(actual.RightVector:Dot(expected.RightVector) > 0.9999).toBe(true)
+        end
+        left:Destroy()
+        right:Destroy()
+    end)
+
     it("keeps static outboard 3D landmarks registered to a moving arena", function()
         local root = Instance.new("Folder")
         local scenery = Instance.new("Folder")

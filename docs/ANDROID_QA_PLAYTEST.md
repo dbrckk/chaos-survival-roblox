@@ -813,3 +813,10 @@ unchanged Base.CFrame may be assigned repeatedly. The follower now remembers
 the last applied transform and skips redundant cosmetic CFrame writes; no
 quality budgets, play-area geometry or authoritative shrink rules change.
 The arena-presentation regression also covers size-only shrink updates.
+
+The Crossroads service beam previously used a world-space midpoint and
+world-space pitch, which could misalign with its two local-frame pylons when
+an arena spawned or streamed at a rotated/tilted CFrame. The beam now derives
+its frame from the two pylons. An engine regression covers level, yaw-rotated,
+and tilted bases; no extra scene Parts, VFX emitters, lights, physics or network
+traffic are introduced, and Low/Medium/High/ReduceMotion budgets are unchanged.
