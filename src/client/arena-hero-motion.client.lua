@@ -222,7 +222,10 @@ task.spawn(function()
         if signature then
             frame = frame * signature
         end
-        local ownsAnimatedCFrame = state.role == "lift"
+        local serviceMotion = (state.role == "scan"
+            or state.role == "closureBar") and tierScale > 0.18
+        local ownsAnimatedCFrame = serviceMotion or state.hadServiceMotion == true
+            or state.role == "lift"
             or state.role == "cable" or state.role == "reactorArm"
             or state.role == "antenna" or state.role == "signal"
             or state.role == "craneWeight" or state.role == "opsAntenna"
@@ -281,7 +284,15 @@ task.spawn(function()
                 state.baseTransparency + (0.08 - glow * 0.16) * scale,
                 0.08, 0.85
             )
+            if state.role == "closureBar" then
+                frame = state.baseCFrame
+                    * HeroMotionBudget.serviceDetailOffset(
+                        "closureBar", i, clock, scale
+                    )
+            end
         elseif state.role == "scan" then
+            frame = state.baseCFrame
+                * HeroMotionBudget.serviceDetailOffset("scan", i, clock, scale)
             local wave = (math.sin(clock * 3.1) + 1) * 0.5
             part.Transparency = math.clamp(
                 state.baseTransparency + (0.18 - wave * 0.22) * scale,
@@ -336,6 +347,7 @@ task.spawn(function()
         state.hadReaction = reacts
         -- Reset once if graphics drop to Low after a Medium/High frame.
         state.hadCoreMotion = state.role == "reactorCore" and tierScale > 0.18
+        state.hadServiceMotion = serviceMotion
     end
     end
 end)

@@ -52,6 +52,37 @@ function HeroMotionBudgetRules.signatureOffset(role, index, now, scale)
         * CFrame.Angles(0, 0, sweep * math.rad(1.1) * strength)
 end
 
+-- Two additional original service gestures for existing noncolliding art:
+-- the Classic broadcast tally surveys laterally, while Crossroads closure
+-- strips perform a phase-staggered mechanical stroke. High and Medium only;
+-- Low/ReduceMotion return the exact authored pose. No new Instances.
+function HeroMotionBudgetRules.serviceDetailOffset(role, index, now, scale)
+    if role ~= "scan" and role ~= "closureBar" then
+        return CFrame.identity
+    end
+    local limit = role == "scan" and 1 or 3
+    if type(index) ~= "number" or index ~= index or index % 1 ~= 0
+        or index < 1 or index > limit
+        or type(now) ~= "number" or now ~= now or now < 0 or now > 1e7
+        or type(scale) ~= "number" or scale ~= scale
+        or scale < 0 or scale > 1 then
+        return CFrame.identity
+    end
+    local strength = math.clamp(
+        (scale - MOTION.Low) / (MOTION.High - MOTION.Low), 0, 1
+    )
+    if strength == 0 then return CFrame.identity end
+    if role == "scan" then
+        local sweep = math.sin(now * 0.88 + 0.5) * strength
+        local yaw = math.sin(now * 0.51) * math.rad(0.7) * strength
+        return CFrame.new(sweep * 0.18, 0, 0) * CFrame.Angles(0, yaw, 0)
+    end
+    local cycle = now * 1.35 + (index - 1) * (2 * math.pi / 3)
+    local stroke = math.sin(cycle) * strength
+    return CFrame.new(0, stroke * 0.10, 0)
+        * CFrame.Angles(0, 0, stroke * math.rad(0.45))
+end
+
 -- Opposing micro-travel for the existing Towers crane counterweight.
 -- Same 0.72 Hz-phase as its cable; authored base pose prevents drift.
 -- The scene piece is anchored, client-only and never a gameplay collider.

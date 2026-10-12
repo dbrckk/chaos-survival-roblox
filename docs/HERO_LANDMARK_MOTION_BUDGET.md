@@ -289,3 +289,27 @@ checks pose, size, authored alpha/color, preserved visibility mask and
 the subsequent show transition. Existing Low/Medium/High cadence and
 ReduceMotion stillness remain unchanged. Visual clearance and frame
 time on Roblox Studio/Android hardware remain unverified.
+
+## Bounded service microkinetics: Classic scan / Crossroads lane closures (12 October 2026)
+
+The existing Classic `ClassicBroadcastTally` now executes an authored 3D
+lateral surveying motion (at most 0.18 stud plus 0.7 degree yaw).
+The three Crossroads `CrossroadsClosedLaneBarrier*` detail strips execute
+small, phase-offset vertical strokes (at most 0.10 stud and 0.45 degree
+roll). These are *decorative* structures, not authoritative road-closure
+collision barriers or hazard telegraphs.
+
+The shared `HeroMotionBudgetRules.serviceDetailOffset` computes each
+gesture in the landmark's original local reference frame; the existing
+hero-motion update composes it with the active disaster reaction before a
+single CFrame property write. No geometry, Lights, GPU Effects, remotes,
+additional loops or server behavior are introduced. Motion is static for
+Low and ReduceMotion. The pre-existing stream/LOD resume envelope applies,
+and a Medium/High -> Low switch restores the original frame once via
+`hadServiceMotion`. Each stroke is bounded and invalid time/scale inputs
+fail closed to the rest pose.
+
+Engine regression checks the 0.18/0.10-stud budgets, scale transitions,
+accessibility, rotated-frame composition and malformed values.
+Roblox Studio inspection and Android CPU/GPU, FPS and thermal
+measurements have **not** been performed.

@@ -173,6 +173,52 @@ describe("Hero landmark animation scheduling and accessibility", function()
         expect(Budget.signatureOffset("signal", 1, 1, 0/0) == nil).toBe(true)
     end)
 
+    it("adds bounded mechanical 3D sweep and closure strokes above Low only", function()
+        local frame = CFrame.new(10, 12, -6)
+            * CFrame.Angles(math.rad(11), math.rad(37), math.rad(5))
+        for _, entry in ipairs({
+            {"scan", 1},
+            {"closureBar", 1}, {"closureBar", 2}, {"closureBar", 3},
+        }) do
+            local role, index = entry[1], entry[2]
+            local low = Budget.serviceDetailOffset(role, index, 1.37, 0.18)
+            local medium = Budget.serviceDetailOffset(role, index, 1.37, 0.62)
+            local high = Budget.serviceDetailOffset(role, index, 1.37, 1)
+            local still = Budget.serviceDetailOffset(role, index, 1.37,
+                Budget.motionScale("High", true))
+            expect(low).toBe(CFrame.identity)
+            expect(still).toBe(CFrame.identity)
+            expect(medium.Position.Magnitude > 0).toBe(true)
+            expect(high.Position.Magnitude > medium.Position.Magnitude).toBe(true)
+            local maximum = role == "scan" and 0.181 or 0.101
+            for _, clock in ipairs({0, 0.41, 1.37, 7.2, 4097.37}) do
+                local offset = Budget.serviceDetailOffset(role, index, clock, 1)
+                expect(offset.Position.Magnitude <= maximum).toBe(true)
+                local angle = role == "scan" and 0.71 or 0.46
+                expect(offset.UpVector:Dot(Vector3.yAxis)
+                    >= math.cos(math.rad(angle))).toBe(true)
+                local localPose = frame:ToObjectSpace(frame * offset)
+                expect((localPose.Position - offset.Position).Magnitude < 0.0001)
+                    .toBe(true)
+                expect(localPose.LookVector:Dot(offset.LookVector) > 0.99999)
+                    .toBe(true)
+            end
+        end
+        expect(Budget.serviceDetailOffset("lift", 1, 1, 1)).toBe(CFrame.identity)
+        expect(Budget.serviceDetailOffset("scan", 2, 1, 1)).toBe(CFrame.identity)
+        expect(Budget.serviceDetailOffset("closureBar", 4, 1, 1)).toBe(CFrame.identity)
+        for _, invalid in ipairs({-1, math.huge, -math.huge, 1e8, 0/0}) do
+            expect(Budget.serviceDetailOffset("scan", 1, invalid, 1))
+                .toBe(CFrame.identity)
+            expect(Budget.serviceDetailOffset("closureBar", 1, 1, invalid))
+                .toBe(CFrame.identity)
+        end
+        expect(Budget.serviceDetailOffset("scan", 1, 1, 1.01))
+            .toBe(CFrame.identity)
+        expect(Budget.serviceDetailOffset("closureBar", 1, 1, -0.01))
+            .toBe(CFrame.identity)
+    end)
+
     it("counterbalances the Towers crane cable without adding moving physics", function()
         local base = CFrame.new(10, 12, -6)
             * CFrame.Angles(math.rad(11), math.rad(37), 0)
