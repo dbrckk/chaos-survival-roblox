@@ -126,9 +126,14 @@ function ArenaSilhouetteAccentKit.follow(folder, base)
     end
     if #pieces == 0 then return nil end
 
+    local lastFrame = restFrame
     return base:GetPropertyChangedSignal("CFrame"):Connect(function()
         if not folder.Parent or not base.Parent then return end
         local frame = base.CFrame
+        -- ShrinkingArena may reassign the identical base pose every tick
+        -- while reducing Size. Avoid repeating every cosmetic CFrame write.
+        if frame == lastFrame then return end
+        lastFrame = frame
         for _, entry in ipairs(pieces) do
             if entry.part.Parent == folder then
                 entry.part.CFrame = frame * entry.offset

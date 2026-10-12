@@ -494,6 +494,19 @@ describe("Arena skyline visual identity", function()
                     expect(part.CanTouch).toBe(false)
                     expect(part.CanQuery).toBe(false)
                 end
+                -- ShrinkingArena can reassign the same base CFrame during
+                -- its size-only updates. The outboard pose must remain exact.
+                local previousFrame = base.CFrame
+                local previousPieceFrames = {}
+                for index, part in ipairs(pieces) do
+                    previousPieceFrames[index] = part.CFrame
+                end
+                base.Size = Vector3.new(78, 3, 63)
+                base.CFrame = previousFrame
+                task.wait()
+                for index, part in ipairs(pieces) do
+                    expect(part.CFrame).toBe(previousPieceFrames[index])
+                end
                 following:Disconnect()
                 expect(following.Connected).toBe(false)
                 local retained = pieces[1].CFrame

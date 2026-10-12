@@ -807,3 +807,9 @@ successful complete rebuild. Arena-presentation engine regression tests cover
 translated and tilted rotated bases, unchanged tier counts, retained physics
 disabling, and disconnection. Manual Studio/Android inspection is still needed
 to confirm no shifted geometry, flicker, or device frame-time regression.
+
+During the server-owned ShrinkingArena effect, Base.Size changes while the
+unchanged Base.CFrame may be assigned repeatedly. The follower now remembers
+the last applied transform and skips redundant cosmetic CFrame writes; no
+quality budgets, play-area geometry or authoritative shrink rules change.
+The arena-presentation regression also covers size-only shrink updates.
