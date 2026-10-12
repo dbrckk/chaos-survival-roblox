@@ -868,3 +868,24 @@ Roblox CharacterAdded can arrive before a rig is first parented into
 workspace. Observers accept that initially unparented Model, refresh
 on its first parent, and release it only after a previously parented
 rig is actually removed. Engine tests cover that ordering as well.
+
+## PR #19 — streamed human momentum-ribbon registration (12 October 2026)
+
+The human-only CharacterMotionTrailRegistry previously discarded models
+when CharacterAdded fired before their first workspace parenting. Once
+the rig subsequently streamed in, no model observer remained, so that
+participant never received the client momentum ribbon until respawn.
+
+The registry now keeps an initially unparented character pending and
+binds its Humanoid/Root when first attached to workspace. After the
+first live attachment, streaming out or destroying it disconnects
+all rig listeners; the existing CharacterRemoving path still stops
+it explicitly. Per-player CharacterAdded/Removing connections are
+also now owned and disconnected on PlayerRemoving, rejecting late
+stale spawn callbacks. The original Flow/Drive/Surge visual styles,
+tier and ReduceMotion policies, camera caps and server physics are
+unchanged. No extra rendering work is scheduled per frame.
+
+Core engine regressions cover pending first attach, duplicate watch,
+stream-out cleanup, explicit rewatch, player departure and stale
+CharacterAdded. Android/Studio physical validation remains outstanding.

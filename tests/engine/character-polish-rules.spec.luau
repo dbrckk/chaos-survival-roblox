@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local CharacterPolishRules = require("../../src/shared/CharacterPolishRules")
 local TrailRules = require("../../src/shared/CharacterMotionTrailRules")
 local PolishRegistry = require("../../src/client/CharacterPolishRegistry")
+local MotionTrailRegistry = require("../../src/client/CharacterMotionTrailRegistry")
 local CosmeticQualityRegistry = require("../../src/client/CosmeticQualityRegistry")
 local ViewportRules = require("../../src/shared/VisualViewportRules")
 
@@ -232,6 +233,87 @@ describe("Client avatar light allocation and rig handoff", function()
         expect(#root:GetChildren()).toBe(1)
         expect(root:GetChildren()[1].Enabled).toBe(false)
         model:Destroy()
+    end)
+end)
+
+describe("Human momentum trail spawn and streaming lifecycle", function()
+    it("keeps an initially unparented CharacterAdded rig watchable", function()
+        local fakePlayers = {
+            GetPlayerFromCharacter = function() return nil end,
+        }
+        local tracked, stop, watch, watchedCount = MotionTrailRegistry.create(fakePlayers)
+        local rig = Instance.new("Model")
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = rig
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = rig
+
+        watch(rig)
+        expect(watchedCount()).toBe(1)
+        expect(tracked[rig] == nil).toBe(true)
+        watch(rig)
+        expect(watchedCount()).toBe(1)
+        rig.Parent = workspace
+        task.wait()
+        expect(tracked[rig] ~= nil).toBe(true)
+        expect(tracked[rig].root).toBe(root)
+        expect(tracked[rig].humanoid).toBe(humanoid)
+
+        -- A streamed-out character must be fully unregistered.
+        rig.Parent = nil
+        task.wait()
+        expect(tracked[rig] == nil).toBe(true)
+        expect(watchedCount()).toBe(0)
+        rig.Parent = workspace
+        task.wait()
+        expect(tracked[rig] == nil).toBe(true)
+        watch(rig)
+        expect(tracked[rig] ~= nil).toBe(true)
+        stop(rig)
+        expect(watchedCount()).toBe(0)
+        rig:Destroy()
+    end)
+
+    it("disconnects owner CharacterAdded on departure and avoids stale rewatches", function()
+        local added = Instance.new("BindableEvent")
+        local removed = Instance.new("BindableEvent")
+        local joined = Instance.new("BindableEvent")
+        local left = Instance.new("BindableEvent")
+        local rig = Instance.new("Model")
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = rig
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = rig
+        local player = {
+            Character = rig,
+            CharacterAdded = added.Event,
+            CharacterRemoving = removed.Event,
+        }
+        local players = {
+            GetPlayers = function() return {player} end,
+            GetPlayerFromCharacter = function() return player end,
+            PlayerAdded = joined.Event,
+            PlayerRemoving = left.Event,
+        }
+        local tracked = MotionTrailRegistry.start(players)
+        -- Initial watch is retained before the first parent.
+        rig.Parent = workspace
+        task.wait()
+        expect(tracked[rig] ~= nil).toBe(true)
+
+        left:Fire(player)
+        task.wait()
+        expect(tracked[rig] == nil).toBe(true)
+        added:Fire(rig)
+        task.wait()
+        expect(tracked[rig] == nil).toBe(true)
+        rig:Destroy()
+        added:Destroy()
+        removed:Destroy()
+        joined:Destroy()
+        left:Destroy()
     end)
 end)
 

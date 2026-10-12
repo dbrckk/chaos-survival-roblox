@@ -38,10 +38,15 @@ function Registry.create(players)
     end
 
     local function refresh(model, entry)
-        if watches[model] ~= entry or not model:IsDescendantOf(workspace) then
-            stop(model)
+        if watches[model] ~= entry then return end
+        if not model:IsDescendantOf(workspace) then
+            -- CharacterAdded may precede workspace parenting. Retain a
+            -- lightweight watcher only until its first live attachment;
+            -- once streamed out, detach all listeners.
+            if entry.everInWorkspace then stop(model) end
             return
         end
+        entry.everInWorkspace = true
         local humanoid = model:FindFirstChildOfClass("Humanoid")
         local root = model:FindFirstChild("HumanoidRootPart")
         if not root or not root:IsA("BasePart") then root = nil end
@@ -71,8 +76,10 @@ function Registry.create(players)
     end
 
     local function watch(model, owner)
-        if not model or not model:IsA("Model")
-            or not model:IsDescendantOf(workspace) then return end
+        if not model or not model:IsA("Model") then return end
+        if model.Parent ~= nil and not model:IsDescendantOf(workspace) then
+            return
+        end
         local entry = watches[model]
         if entry then
             if owner then entry.player = owner end
@@ -81,6 +88,7 @@ function Registry.create(players)
         end
         entry = {
             root = nil, humanoid = nil, airborne = false, order = 0,
+            everInWorkspace = model:IsDescendantOf(workspace),
             player = owner or players:GetPlayerFromCharacter(model),
             stateChanged = nil, connections = {},
         }
@@ -96,7 +104,7 @@ function Registry.create(players)
             end
         end))
         table.insert(entry.connections, model.AncestryChanged:Connect(function()
-            if not model:IsDescendantOf(workspace) then stop(model) end
+            refresh(model, entry)
         end))
         table.insert(entry.connections, model.Destroying:Connect(function()
             stop(model)
@@ -114,17 +122,29 @@ end
 
 function Registry.start(players)
     local tracked, stop, watch = Registry.create(players)
+    local connectionsByPlayer = {}
+
     local function watchPlayer(player)
-        player.CharacterAdded:Connect(function(model)
+        if connectionsByPlayer[player] then return end
+        local connections = {}
+        connectionsByPlayer[player] = connections
+        connections[#connections + 1] = player.CharacterAdded:Connect(function(model)
             watch(model, player)
         end)
-        player.CharacterRemoving:Connect(stop)
+        connections[#connections + 1] = player.CharacterRemoving:Connect(stop)
         if player.Character then watch(player.Character, player) end
     end
     for _, player in ipairs(players:GetPlayers()) do watchPlayer(player) end
     players.PlayerAdded:Connect(watchPlayer)
     players.PlayerRemoving:Connect(function(player)
         if player.Character then stop(player.Character) end
+        local connections = connectionsByPlayer[player]
+        if connections then
+            for _, connection in ipairs(connections) do
+                connection:Disconnect()
+            end
+            connectionsByPlayer[player] = nil
+        end
     end)
     return tracked, stop, watch
 end
