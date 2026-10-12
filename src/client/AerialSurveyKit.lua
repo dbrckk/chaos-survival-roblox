@@ -159,6 +159,25 @@ function AerialSurveyKit.build(parent, arenaBase, variant, tier, theme)
     return fleet
 end
 
+-- Accessibility and inactive-round transitions must cut off GPU Light and
+-- Trail instances synchronously, without waiting for the fleet's next
+-- 0.10/0.22/0.60/0.65-second cosmetic update.
+function AerialSurveyKit.suspendEffects(fleet)
+    if type(fleet) ~= "table" then return 0 end
+    local disabled = 0
+    for _, drone in ipairs(fleet.drones or {}) do
+        if drone.light and drone.light.Enabled then
+            drone.light.Enabled = false
+            disabled += 1
+        end
+        if drone.trail and drone.trail.Enabled then
+            drone.trail.Enabled = false
+            disabled += 1
+        end
+    end
+    return disabled
+end
+
 function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRush, disasterIds, visible)
     if not fleet or not fleet.folder.Parent or not fleet.base.Parent then return end
     -- Hide distant client-only geometry, not merely its animation.

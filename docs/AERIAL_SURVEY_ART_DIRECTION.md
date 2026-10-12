@@ -91,3 +91,21 @@ both handed turbines at all three drone indices. No extra parts,
 connections, loops, tweens, lights or emitters are added; the fleet
 still has 6/22/51 parts across quality tiers. Studio camera clearance
 and Android visual performance remain to be tested.
+
+## Immediate accessibility and round-end effect cutoff (12 October 2026)
+
+High-tier survey Trails and PointLights were previously disabled only on
+the fleet's next update, which could occur up to 0.65 seconds after
+a ReduceMotion toggle or phase transition. The existing RoundState and
+LocalPlayer attribute event handlers now call a small
+`AerialSurveyKit.suspendEffects` method synchronously when a round becomes
+inactive, ReduceMotion becomes true, or VfxQualityTier drops to Low.
+This switches off existing High effects immediately while leaving
+the 51/22/6 client-local Parts and their authored geometry unchanged.
+The regular update and rebuild still own all later animation/resumption.
+
+Core engine tests confirm all 3 Lights and 3 Trails become disabled,
+repeated suspend does no work, Low/Medium remain unaffected and no
+geometry is allocated or destroyed. No server calls, extra render
+loops, new VFX objects or persistent state are added. Physical Android
+frame timing and visual response are not yet observed.

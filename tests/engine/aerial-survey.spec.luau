@@ -287,6 +287,38 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         base:Destroy()
     end)
 
+    it("disables existing drone GPU effects immediately without rebuilding geometry", function()
+        local base = Instance.new("Part")
+        base.Parent = workspace
+        local folder = Instance.new("Folder")
+        folder.Parent = workspace
+        local high = Kit.build(folder, base, "Classic", "High", theme)
+        Kit.update(high, 20, "round", false, theme.Accent, false, {"Meteors"}, true)
+        expect(Kit.suspendEffects(high)).toBe(6)
+        expect(Kit.suspendEffects(high)).toBe(0)
+        expect(#high.drones).toBe(3)
+        local count = 0
+        for _, drone in ipairs(high.drones) do
+            expect(drone.light.Enabled).toBe(false)
+            expect(drone.trail.Enabled).toBe(false)
+            for _, part in ipairs(drone.sections) do
+                expect(part.part.Parent ~= nil).toBe(true)
+                count += 1
+            end
+        end
+        expect(count).toBe(51)
+        expect(Kit.suspendEffects(nil)).toBe(0)
+        folder:ClearAllChildren()
+        for _, tier in ipairs({"Low", "Medium"}) do
+            local lesser = Kit.build(folder, base, "Classic", tier, theme)
+            Kit.update(lesser, 20, "round", false, theme.Accent, false,
+                {"Meteors"}, true)
+            expect(Kit.suspendEffects(lesser)).toBe(0)
+        end
+        folder:Destroy()
+        base:Destroy()
+    end)
+
     it("maps round hazards and final rush to a readable, non-damaging warning", function()
         expect(Rules.alert("waiting", {"Meteors"}, true)).toBe("standby")
         expect(Rules.alert("round", {"Meteors"}, false)).toBe("hazard")

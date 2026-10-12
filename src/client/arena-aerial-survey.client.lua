@@ -26,6 +26,21 @@ roundEvent.OnClientEvent:Connect(function(state)
     phase = tostring(type(state) == "table" and state.phase or "waiting")
     activeDisasters = type(state) == "table" and state.disasterIds or {}
     finalRush = type(state) == "table" and state.finalRush == true
+    if phase ~= "ready" and phase ~= "round" then
+        AerialSurveyKit.suspendEffects(fleet)
+    end
+end)
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion") == true then
+        AerialSurveyKit.suspendEffects(fleet)
+    end
+end)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    if VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name == "Low" then
+        AerialSurveyKit.suspendEffects(fleet)
+    end
 end)
 
 local function context()
