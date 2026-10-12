@@ -40,10 +40,9 @@ local FOLDERS = {
         LowDistance = 145,
         MediumDistance = 220,
     },
-    AerialSurveyLocal = {
-        LowDistance = 145,
-        MediumDistance = 215,
-    },
+    -- AerialSurveyLocal intentionally omitted: AerialSurveyKit owns its
+    -- own part masking, Light/Trail gating and camera-distance hysteresis.
+    -- A second LOD writer could reveal distant drones at the cutoff.
     ArenaMidgroundMassLocal = {
         LowDistance = 145,
         MediumDistance = 215,

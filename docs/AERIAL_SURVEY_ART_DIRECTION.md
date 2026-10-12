@@ -33,3 +33,30 @@ No new parts, remotes, per-frame listeners, gameplay or server changes.
 The existing `aerial-survey.spec.luau` verifies reversible masking,
 unchanged alpha, collision safety and effects for all tiers. Physical
 Roblox Studio/Android GPU, FPS, thermal and visual tests remain pending.
+
+## Single-owner drone distance visibility and mobile hysteresis (12 October 2026)
+
+The survey controller's 145/215/300-stud Low/Medium/High camera cutoffs
+already hid drone Parts using `LocalTransparencyModifier` and gated the
+High-tier Trail/PointLight. The generic scene LOD controller also
+registered `AerialSurveyLocal`, giving two independent writers ownership
+of the same visibility masks. At the camera cutoff the writers could
+alternately reveal/hide a drone, creating flicker and repeated GPU-mask
+property writes.
+
+`AerialSurveyLocal` is no longer registered as a generic LOD folder.
+The fleet builder/controller is its sole visibility owner and reuses the
+exact same 145/215/300 thresholds. A pure `AerialSurveyRules.inRange`
+policy adds 8-stud hysteresis (initial cutoff exact, previously visible
+until +8, previously hidden until -8), including NaN/infinity/distance
+guards. It keeps the previous decision on the fleet object; no new
+instances, render loops, light sources, remotes, gameplay geometry or
+per-frame table allocations are introduced. The generic
+`VisualBudgetRules.collect` still counts all aerial geometry and
+effects in the total mobile budget.
+
+The engine aerial survey regression checks boundaries and invalid
+inputs for Low/Medium/High; the existing scene test already checks
+reversible local Part masks and High effects without alpha corruption.
+Studio camera-edge and physical Android FPS/GPU measurements remain
+unverified.

@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local AerialSurveyRules = require(ReplicatedStorage.Shared.AerialSurveyRules)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local AerialSurveyKit = require(script.Parent.AerialSurveyKit)
@@ -66,11 +67,14 @@ task.spawn(function()
             rebuild(base, variant, tier)
         end
         local camera = workspace.CurrentCamera
-        local close = fleet and camera
-            and (camera.CFrame.Position - base.Position).Magnitude
-                <= (tier == "Low" and 145 or (tier == "Medium" and 215 or 300))
+        local distance = fleet and camera
+            and (camera.CFrame.Position - base.Position).Magnitude or nil
+        local close = fleet and AerialSurveyRules.inRange(
+            distance, tier, fleet.inRange)
         if fleet then
-            -- Distant viewers pay no animation cost; all movement is cosmetic.
+            -- The survey kit is the sole owner of drone geometry masking.
+            -- Retain the previous visibility for camera-edge hysteresis.
+            fleet.inRange = close
             AerialSurveyKit.update(fleet, close and os.clock() or 0,
                 phase, player:GetAttribute("ReduceMotion") == true or not close,
                 alertColor(), finalRush, activeDisasters, close == true)

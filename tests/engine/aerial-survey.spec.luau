@@ -33,6 +33,26 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         expect(math.abs(Rules.silhouette("Orbital").Wing.X - 5.2) < 0.0001).toBe(true)
     end)
 
+    it("uses one stable 8-stud drone distance band on all mobile tiers", function()
+        for _, entry in ipairs({
+            {"Low", 145}, {"Medium", 215}, {"High", 300},
+        }) do
+            local tier, cutoff = entry[1], entry[2]
+            expect(Rules.inRange(cutoff, tier, nil)).toBe(true)
+            expect(Rules.inRange(cutoff + 0.1, tier, nil)).toBe(false)
+            expect(Rules.inRange(cutoff + 7.9, tier, true)).toBe(true)
+            expect(Rules.inRange(cutoff + 8.1, tier, true)).toBe(false)
+            expect(Rules.inRange(cutoff - 7.9, tier, false)).toBe(false)
+            expect(Rules.inRange(cutoff - 8.1, tier, false)).toBe(true)
+        end
+        expect(Rules.inRange(math.huge, "High", true)).toBe(false)
+        expect(Rules.inRange(0/0, "High", true)).toBe(false)
+        expect(Rules.inRange(-1, "High", true)).toBe(false)
+        expect(Rules.inRange(nil, "High", true)).toBe(false)
+        expect(Rules.inRange(145, "Unknown", nil)).toBe(true)
+        expect(Rules.inRange(145.1, "Unknown", nil)).toBe(false)
+    end)
+
     it("integrates speed changes continuously and pauses without catch-up jumps", function()
         local elapsed, last = Rules.advanceClock(0, nil, 12, true, 1)
         expect(elapsed).toBe(0)

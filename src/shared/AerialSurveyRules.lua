@@ -12,6 +12,24 @@ function AerialSurveyRules.profile(tier)
     return AerialSurveyRules.Profiles[tier] or AerialSurveyRules.Profiles.Medium
 end
 
+-- Camera-distance LOD belongs solely to the drone controller. Use a small
+-- hysteresis band to avoid rewriting 6/22/51 translucent part masks when
+-- a mobile camera oscillates around the visibility cutoff.
+function AerialSurveyRules.inRange(distance, tier, previouslyVisible)
+    if type(distance) ~= "number" or distance ~= distance
+        or distance < 0 or distance == math.huge then
+        return false
+    end
+    local cutoff = tier == "High" and 300
+        or (tier == "Medium" and 215 or 145)
+    if previouslyVisible == true then
+        return distance <= cutoff + 8
+    elseif previouslyVisible == false then
+        return distance <= cutoff - 8
+    end
+    return distance <= cutoff
+end
+
 local SILHOUETTES = {
     Classic = {
         Body = Vector3.new(2.6, 1.05, 4.4),
