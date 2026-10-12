@@ -196,7 +196,10 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
         end
         fleet.visible = show
     end
-    local active = AerialSurveyRules.animated(phase, fleet.tier, reduced)
+    -- Off-screen geometry must never animate even if a future caller
+    -- forgets to pass distance culling through the reduced-motion flag.
+    -- This check remains separate from the accessibility setting.
+    local active = show and AerialSurveyRules.animated(phase, fleet.tier, reduced)
     local behavior = active and AerialSurveyRules.behavior(disasterIds) or nil
     -- The speed factor belongs to the integrated delta, not absolute uptime.
     -- Pausing for ReduceMotion, Low, distance or a phase change preserves

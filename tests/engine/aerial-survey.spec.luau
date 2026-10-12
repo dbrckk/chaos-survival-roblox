@@ -405,6 +405,70 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         base:Destroy()
     end)
 
+    it("does not animate or relight a culled fleet even if reduced is false", function()
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        base.Parent = workspace
+        local parent = Instance.new("Folder")
+        parent.Parent = workspace
+
+        for _, tier in ipairs({"Medium", "High"}) do
+            parent:ClearAllChildren()
+            local fleet = Kit.build(parent, base, "Classic", tier, theme)
+            Kit.update(fleet, 10, "round", false, theme.Accent,
+                false, {"Meteors"}, true)
+            Kit.update(fleet, 10.2, "round", false, theme.Accent,
+                false, {"Meteors"}, true)
+            local beforeClock = fleet.flightTime
+            local first = fleet.drones[1].sections[1].part
+            local beforePose = first.CFrame
+            expect(beforeClock > 0).toBe(true)
+
+            -- Caller deliberately supplies reduced=false while not visible.
+            Kit.update(fleet, 100, "round", false, theme.Accent,
+                false, {"Meteors"}, false)
+            expect(fleet.visible).toBe(false)
+            expect(fleet.flightTime).toBe(beforeClock)
+            expect(fleet.lastNow).toBe(nil)
+            expect(first.CFrame).toBe(beforePose)
+            Kit.update(fleet, 500, "round", false, theme.Accent,
+                false, {"Meteors"}, false)
+            expect(fleet.flightTime).toBe(beforeClock)
+            expect(first.CFrame).toBe(beforePose)
+            for _, drone in ipairs(fleet.drones) do
+                for _, section in ipairs(drone.sections) do
+                    expect(section.part.LocalTransparencyModifier).toBe(1)
+                end
+                if drone.light then
+                    expect(drone.light.Enabled).toBe(false)
+                    expect(drone.trail.Enabled).toBe(false)
+                end
+            end
+
+            Kit.update(fleet, 800, "round", false, theme.Accent,
+                false, {"Meteors"}, true)
+            expect(fleet.flightTime).toBe(beforeClock)
+            expect(first.CFrame).toBe(beforePose)
+            expect(fleet.visible).toBe(true)
+            expect(fleet.lastNow).toBe(800)
+            for _, drone in ipairs(fleet.drones) do
+                for _, section in ipairs(drone.sections) do
+                    expect(section.part.LocalTransparencyModifier).toBe(0)
+                end
+                if drone.light then
+                    expect(drone.light.Enabled).toBe(true)
+                    expect(drone.trail.Enabled).toBe(true)
+                end
+            end
+            Kit.update(fleet, 800.1, "round", false, theme.Accent,
+                false, {"Meteors"}, true)
+            expect(fleet.flightTime > beforeClock).toBe(true)
+            expect(#fleet.drones).toBe(Rules.profile(tier).Drones)
+        end
+        parent:Destroy()
+        base:Destroy()
+    end)
+
     it("disables existing drone GPU effects immediately without rebuilding geometry", function()
         local base = Instance.new("Part")
         base.Parent = workspace

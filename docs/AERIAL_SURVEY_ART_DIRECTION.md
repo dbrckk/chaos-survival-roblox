@@ -164,3 +164,16 @@ and compares transparency with a narrow 1e-5 tolerance. Exact tier
 budgets, zero-collision geometry, alert colors and ReduceMotion behavior
 remain unchanged. Studio/physical Android visual and frame-time QA
 are still required.
+
+## Fail-closed drone animation culling (12 October 2026)
+
+`AerialSurveyKit.update` independently gates animation with its explicit
+`visible` parameter, rather than relying exclusively on the caller to
+translate a distant camera into `reduced=true`. This prevents off-screen
+CFrame work, associated orbit calculations and accidentally enabled
+High-tier Lights/Trails if another client caller supplies
+`visible=false, reduced=false`. The existing on-screen flight phase,
+ReduceMotion contract, 6/22/51-part limits and authored 3D geometry are
+unchanged. An Open Cloud regression covers Medium/High hiding, long
+pauses without catch-up, return and effect restoration. This is a
+source-level safeguard, not a measured Android FPS improvement.
