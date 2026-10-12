@@ -169,6 +169,60 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         base:Destroy()
     end)
 
+    it("culls distant geometry and restores all three tiers without altering alpha", function()
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        base.Parent = workspace
+        local parent = Instance.new("Folder")
+        parent.Parent = workspace
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            parent:ClearAllChildren()
+            local fleet = Kit.build(parent, base, "Orbital", tier, theme)
+            Kit.update(fleet, 10, "round", false, theme.Accent, false, {"Meteors"}, true)
+            Kit.update(fleet, 10.2, "round", false, theme.Accent, false, {"Meteors"}, true)
+            -- Capture the hazard-authored alpha after the alert update:
+            -- exhaust and navigation accents legitimately change alpha.
+            local original = {}
+            for _, drone in ipairs(fleet.drones) do
+                for _, item in ipairs(drone.sections) do
+                    original[item.part] = item.part.Transparency
+                end
+            end
+            if tier == "High" then
+                expect(fleet.drones[1].light.Enabled).toBe(true)
+                expect(fleet.drones[1].trail.Enabled).toBe(true)
+            end
+            Kit.update(fleet, 11, "round", true, theme.Accent, false, {"Meteors"}, false)
+            expect(fleet.visible).toBe(false)
+            for _, drone in ipairs(fleet.drones) do
+                for _, item in ipairs(drone.sections) do
+                    expect(item.part.LocalTransparencyModifier).toBe(1)
+                    expect(item.part.Transparency).toBe(original[item.part])
+                    expect(item.part.CanCollide).toBe(false)
+                end
+                if drone.light then
+                    expect(drone.light.Enabled).toBe(false)
+                    expect(drone.trail.Enabled).toBe(false)
+                end
+            end
+            Kit.update(fleet, 12, "round", false, theme.Accent, false, {"Meteors"}, true)
+            expect(fleet.visible).toBe(true)
+            for _, drone in ipairs(fleet.drones) do
+                for _, item in ipairs(drone.sections) do
+                    expect(item.part.LocalTransparencyModifier).toBe(0)
+                    expect(item.part.Transparency).toBe(original[item.part])
+                end
+                if drone.light then
+                    expect(drone.light.Enabled).toBe(true)
+                    expect(drone.trail.Enabled).toBe(true)
+                end
+            end
+            expect(#fleet.drones).toBe(Rules.profile(tier).Drones)
+        end
+        parent:Destroy()
+        base:Destroy()
+    end)
+
     it("maps round hazards and final rush to a readable, non-damaging warning", function()
         expect(Rules.alert("waiting", {"Meteors"}, true)).toBe("standby")
         expect(Rules.alert("round", {"Meteors"}, false)).toBe("hazard")

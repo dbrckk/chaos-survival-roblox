@@ -146,6 +146,7 @@ function AerialSurveyKit.build(parent, arenaBase, variant, tier, theme)
         lastNow = nil,
         lastBaseFrame = arenaBase.CFrame,
         lastBaseSize = arenaBase.Size,
+        visible = true,
     }
     local totalParts = 0
     for i = 1, profile.Drones do
@@ -158,8 +159,21 @@ function AerialSurveyKit.build(parent, arenaBase, variant, tier, theme)
     return fleet
 end
 
-function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRush, disasterIds)
+function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRush, disasterIds, visible)
     if not fleet or not fleet.folder.Parent or not fleet.base.Parent then return end
+    -- Hide distant client-only geometry, not merely its animation.
+    -- Preserve authored Transparency and only write on visibility changes.
+    local show = visible ~= false
+    if fleet.visible ~= show then
+        for _, drone in ipairs(fleet.drones) do
+            for _, item in ipairs(drone.sections) do
+                if item.part.Parent then
+                    item.part.LocalTransparencyModifier = show and 0 or 1
+                end
+            end
+        end
+        fleet.visible = show
+    end
     local active = AerialSurveyRules.animated(phase, fleet.tier, reduced)
     local behavior = active and AerialSurveyRules.behavior(disasterIds) or nil
     -- The speed factor belongs to the integrated delta, not absolute uptime.
@@ -210,11 +224,11 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
         end
         if drone.light then
             if colorDirty then drone.light.Color = tint or drone.accent end
-            local enabled = active and alert ~= "standby"
+            local enabled = active and show and alert ~= "standby"
             if drone.light.Enabled ~= enabled then drone.light.Enabled = enabled end
         end
         if drone.trail then
-            local enabled = active and alert ~= "standby"
+            local enabled = active and show and alert ~= "standby"
             if drone.trail.Enabled ~= enabled then drone.trail.Enabled = enabled end
             if colorDirty then
                 drone.trail.Color = ColorSequence.new(tint or drone.accent)

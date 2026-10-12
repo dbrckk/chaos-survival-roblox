@@ -17,3 +17,19 @@ deliberately steady amber urgent color (no high-frequency strobing). This makes 
 **QA required before publication:** inspect actual mobile silhouette readability, camera clipping on all aspect ratios, scene part count with **all** effects and all disasters active, fleet visibility through Darkness and Meteor bursts, 3D depth sorting, unexpected material rendering and actual Android FPS (goal >=30 stable). Automated tests check exact part caps, non-physical construction, spatial patrol transforms, reduced-motion freeze, tiered lights/trails and VisualBudget inclusion. Passing scripted tests cannot certify AAA art quality or a published Roblox asset.
 
 **Continuous animation and Android idle optimization:** Flight phase now integrates bounded elapsed time (at most 0.30 seconds per update) rather than multiplying wall-clock uptime by a changing hazard speed. Switching between Tornado, Freeze, Speed Surge and normal patrol therefore does not jump the fleet to a new orbit angle. ReduceMotion, Low, inactive phases and distance culling retain the last position instead of teleporting drones to their start pose; the first resumed tick only resynchronizes its clock. Stationary fleets skip redundant part CFrame writes, and unchanged warning colors skip part/Trail/Light color assignments. If the physical arena base moves or resizes, the frozen fleet realigns to it. Engine regression checks cover speed changes, paused/resumed time, bounded stalls and 3D pose preservation; physical Android FPS remains unmeasured.
+
+
+## Explicit distance culling (12 October 2026)
+
+Previously the drone controller paused distant animation but retained
+visible client-owned drone geometry. The existing 145/215/300-stud
+Low/Medium/High camera thresholds now also mask parts using
+`LocalTransparencyModifier` on visibility transitions only, without
+changing authored Transparency or the exact 6/22/51-part budgets.
+High-tier PointLights and Trails are disabled while culled and restored
+on re-entry. The existing bounded flight clock prevents catch-up jumps.
+No new parts, remotes, per-frame listeners, gameplay or server changes.
+
+The existing `aerial-survey.spec.luau` verifies reversible masking,
+unchanged alpha, collision safety and effects for all tiers. Physical
+Roblox Studio/Android GPU, FPS, thermal and visual tests remain pending.
