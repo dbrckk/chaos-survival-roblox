@@ -664,3 +664,27 @@ Listeners disconnect on VfxQualityTier rebuild and on streaming/removal
 through the existing bundle destructor; engine lobby-activities tests verify
 translation, rotation, collision-free anchored strokes and disconnection.
 The renderer still requires physical Android and Roblox Studio observation.
+
+## PR #19 — complete client character/bot visual accounting (12 October 2026)
+
+The local character-polish controller attaches a Highlight directly to
+each human/solo-bot Model and a PointLight to its rig BasePart. The
+existing VisualBudgetRules.collect(root) counted top-level local folders,
+selected hazard effects, and nested lobby pads, but entirely missed these
+live avatar cosmetics. This understated GPU-effect/light counts and could
+hide mobile-tier budget overruns in a crowded or bot-populated server.
+
+The visual collector now includes distinctly named
+ChaosCharacterPolishHighlight / ChaosCharacterPolishLight Instances
+on immediate player-character models and the immediate models in the
+workspace.AISurvivors folder. It excludes physical rig geometry and
+unrelated lights/highlights, does not traverse the entire map, and counts
+disabled or duplicate allocated lights so the metric reflects resident
+client allocations. The existing mobile budget caps are unchanged.
+
+Engine visual-budget tests check one human plus two bots (3 additional
+Highlights and 3 additional lights), legitimate removals, disabled
+light accounting, duplicate allocated lights, and excluding unrelated
+server-owned visuals. This changes telemetry, not actual renderer load.
+Test GPU/CPU frame times and memory in Roblox Studio/Android before
+claiming a performance improvement.

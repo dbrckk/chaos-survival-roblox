@@ -151,6 +151,92 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("audits avatar and solo-bot polish without server rig geometry", function()
+        local root = Instance.new("Folder")
+        local bots = Instance.new("Folder")
+        bots.Name = "AISurvivors"
+        bots.Parent = root
+        local models = {}
+
+        for index = 1, 3 do
+            local model = Instance.new("Model")
+            model.Name = index == 1 and "LivePlayerCharacter" or "SoloBot" .. index
+            if index > 1 then model:SetAttribute("AISurvivor", true) end
+            model.Parent = index == 1 and root or bots
+            local torso = Instance.new("Part")
+            torso.Name = "UpperTorso"
+            torso.Parent = model
+            local rootPart = Instance.new("Part")
+            rootPart.Name = "HumanoidRootPart"
+            rootPart.Parent = model
+            local polish = Instance.new("Highlight")
+            polish.Name = "ChaosCharacterPolishHighlight"
+            polish.Parent = model
+            local light = Instance.new("PointLight")
+            light.Name = "ChaosCharacterPolishLight"
+            light.Parent = torso
+            local serverLight = Instance.new("PointLight")
+            serverLight.Name = "ServerGameplayLight"
+            serverLight.Parent = torso
+            local serverAura = Instance.new("Highlight")
+            serverAura.Name = "ServerGameplayAura"
+            serverAura.Parent = model
+            models[index] = {model = model, light = light}
+        end
+
+        -- The visual audit counts allocated Instances even when a quality
+        -- tier temporarily disables a cosmetic; no hidden GPU allocations.
+        models[3].light.Enabled = false
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(0)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Lights).toBe(3)
+        expect(metrics.Effects).toBe(3)
+        expect(VisualBudgetRules.withinBudget("Low", metrics)).toBe(true)
+
+        -- An unrelated nested map rig is not owned by the character polish
+        -- client controller and must not enter its budget accounting.
+        local unrelatedFolder = Instance.new("Folder")
+        unrelatedFolder.Parent = root
+        local unrelated = Instance.new("Model")
+        unrelated.Parent = unrelatedFolder
+        Instance.new("Highlight").Parent = unrelated
+        local unrelatedLight = Instance.new("PointLight")
+        unrelatedLight.Name = "ChaosCharacterPolishLight"
+        unrelatedLight.Parent = unrelated
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Lights).toBe(3)
+        expect(metrics.Effects).toBe(3)
+
+        models[2].model:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Lights).toBe(2)
+        expect(metrics.Effects).toBe(2)
+        models[1].model:Destroy()
+        models[3].model:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(0)
+        root:Destroy()
+    end)
+
+    it("counts duplicate orphan polish lights as actual allocated lights", function()
+        local root = Instance.new("Folder")
+        local model = Instance.new("Model")
+        model.Parent = root
+        local torso = Instance.new("Part")
+        torso.Parent = model
+        for _ = 1, 3 do
+            local light = Instance.new("PointLight")
+            light.Name = "ChaosCharacterPolishLight"
+            light.Parent = torso
+        end
+        local metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Lights).toBe(3)
+        expect(metrics.Parts).toBe(0)
+        root:Destroy()
+    end)
+
     it("collects parts lights and effects from registered visual folders", function()
         local root = Instance.new("Folder")
         local layer = Instance.new("Folder")

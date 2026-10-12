@@ -94,6 +94,27 @@ function VisualBudgetRules.isEffect(instance)
         )
 end
 
+-- Character polish is attached directly to live player/bot rigs, not under
+-- any registered workspace Local folder. Audit only distinctly named
+-- client-created cosmetics, never server rig Parts or unrelated lighting.
+local function collectCharacterPolish(model, metrics)
+    if not model or not model:IsA("Model") then return end
+    local highlight = model:FindFirstChild("ChaosCharacterPolishHighlight")
+    if highlight and highlight:IsA("Highlight") then
+        metrics.Effects += 1
+    end
+    for _, part in ipairs(model:GetChildren()) do
+        if part:IsA("BasePart") then
+            for _, light in ipairs(part:GetChildren()) do
+                if light.Name == "ChaosCharacterPolishLight"
+                    and light:IsA("PointLight") then
+                    metrics.Lights += 1
+                end
+            end
+        end
+    end
+end
+
 function VisualBudgetRules.collect(root)
     local metrics = {
         Parts = 0,
@@ -199,6 +220,21 @@ function VisualBudgetRules.collect(root)
                     end
                 end
             end
+        end
+    end
+
+    -- Player characters sit directly in workspace; solo AI contestants sit
+    -- in workspace.AISurvivors. Both use the same client-only Polish owner.
+    -- Only inspect these immediate model collections, not the entire map.
+    for _, model in ipairs(root:GetChildren()) do
+        if model:IsA("Model") then
+            collectCharacterPolish(model, metrics)
+        end
+    end
+    local bots = root:FindFirstChild("AISurvivors")
+    if bots and bots:IsA("Folder") then
+        for _, model in ipairs(bots:GetChildren()) do
+            collectCharacterPolish(model, metrics)
         end
     end
 
