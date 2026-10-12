@@ -204,20 +204,23 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
                 if item.part.Parent then
                     if frame then
                         local animation = CFrame.identity
-                        if item.role == "rotor" and active then
-                            animation = CFrame.Angles(0, elapsed * 8, 0)
-                        elseif item.role == "wing" and active then
+                        if item.role == "wing" and active then
                             animation = CFrame.Angles(0, 0,
                                 item.part.Name:find("-1", 1, true)
                                     and wingBank or -wingBank)
-                        elseif (item.role == "engine" or item.role == "tail")
-                            and active then
-                            -- Articulate existing turbine nacelles and tail
-                            -- within their authored non-colliding silhouettes.
+                        elseif active and (item.role == "engine"
+                            or item.role == "exhaust" or item.role == "rotor"
+                            or item.role == "tail") then
+                            -- Nacelle, exhaust and rotating blade share the
+                            -- same micro-servo angle: one coherent assembly.
                             local side = item.role == "tail" and 0
                                 or (item.frame.Position.X < 0 and -1 or 1)
                             animation = AerialSurveyRules.servoOffset(
                                 item.role, drone.index, side, elapsed)
+                            if item.role == "rotor" then
+                                animation = animation
+                                    * CFrame.Angles(0, elapsed * 8, 0)
+                            end
                         end
                         item.part.CFrame = frame * item.frame * animation
                     end

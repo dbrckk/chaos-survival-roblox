@@ -78,3 +78,16 @@ checks valid poses, all three drone indices, both handed nacelles,
 rotated-frame composition, hard angular bounds, and invalid inputs.
 Visual clearance, real Android frame time and subjective AAA fidelity
 remain unverified pending device/Studio review.
+
+## Coherent turbine group animation (12 October 2026)
+
+The servo movement now applies identically to an existing turbine
+nacelle, its paired emissive exhaust and its High-tier rotor. The rotor
+adds its previous local spin *after* the shared bounded servo tilt,
+preserving the distinct rotor silhouette and a consistent engine group.
+The existing split-tail counter-motion is unchanged. Engine tests verify
+that all three group pieces return the same local servo transform for
+both handed turbines at all three drone indices. No extra parts,
+connections, loops, tweens, lights or emitters are added; the fleet
+still has 6/22/51 parts across quality tiers. Studio camera clearance
+and Android visual performance remain to be tested.

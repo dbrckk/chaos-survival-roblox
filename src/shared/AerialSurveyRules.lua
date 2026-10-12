@@ -61,14 +61,17 @@ end
 -- distinct gentle servo settling makes the fleet feel mechanically authored
 -- without adding a single 3D object or CFrame write to its existing update.
 function AerialSurveyRules.servoOffset(role, index, side, elapsed)
-    if role ~= "engine" and role ~= "tail" then return CFrame.identity end
+    if role ~= "engine" and role ~= "exhaust"
+        and role ~= "rotor" and role ~= "tail" then
+        return CFrame.identity
+    end
     if type(index) ~= "number" or index ~= index
         or index < 1 or index % 1 ~= 0 or index > 3
         or type(elapsed) ~= "number" or elapsed ~= elapsed
         or elapsed < 0 or elapsed > 1e7 then
         return CFrame.identity
     end
-    if role == "engine" then
+    if role ~= "tail" then
         if side ~= -1 and side ~= 1 then return CFrame.identity end
         local tilt = math.sin(elapsed * 1.12 + index * 0.71 + side * 0.33)
             * math.rad(0.85) * side
