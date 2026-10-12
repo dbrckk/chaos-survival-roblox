@@ -154,7 +154,7 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
             local wingRight = first.folder:FindFirstChild("SurveyDeltaWing1")
             expect(hull ~= nil and wingLeft ~= nil and wingRight ~= nil)
                 .toBe(true)
-            expect((hull.Position - first.root.Position).Magnitude).toBeLessThan(50)
+            expect((hull.Position - first.root.Position).Magnitude < 50).toBe(true)
             -- Flight anchor for every 3D section matches the same
             -- authored local offset even while wing-bank animation runs.
             local wave = math.sin(fleet.flightTime * 1.7 + first.index)
@@ -165,10 +165,11 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
                     if section.part == part then authored = section.frame break end
                 end
                 expect(authored ~= nil).toBe(true)
+                local reaction = Rules.behavior({"Meteors"})
+                reaction.Speed = 1 -- flightTime already integrated hazard speed
                 local worldExpected = Rules.flightFrame(
                     base, "Crossroads", first.index, first.total,
-                    fleet.flightTime, {Speed = 1, Climb = 0, Bank = 1, Sway = 0})
-                    * authored
+                    fleet.flightTime, reaction) * authored
                 expect((part.Position - worldExpected.Position).Magnitude
                     < 0.0001).toBe(true)
                 expect(math.abs(part.CFrame.UpVector:Dot(worldExpected.UpVector))
