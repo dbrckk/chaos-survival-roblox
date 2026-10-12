@@ -56,8 +56,21 @@ function Registry.new(onUpdate, onStop)
                 entry.healthConnection = nil
             end
             entry.healthHumanoid = nextHumanoid
+            entry.healthAlive = nextHumanoid ~= nil
+                and nextHumanoid.Health > 0 or false
             if nextHumanoid then
-                entry.healthConnection = nextHumanoid.HealthChanged:Connect(function()
+                entry.healthConnection = nextHumanoid.HealthChanged:Connect(function(health)
+                    -- The current visual rules only distinguish a live
+                    -- survivor from an eliminated one. Skipping each
+                    -- intermediate damage/heal avoids redundant glow and
+                    -- light updates while combat damage is arriving.
+                    if entries[model] ~= entry
+                        or entry.healthHumanoid ~= nextHumanoid then
+                        return
+                    end
+                    local isAlive = health > 0
+                    if isAlive == entry.healthAlive then return end
+                    entry.healthAlive = isAlive
                     refresh(model)
                 end)
             end

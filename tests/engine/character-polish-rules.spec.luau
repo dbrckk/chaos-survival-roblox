@@ -526,7 +526,7 @@ describe("Character polish lifecycle and late streaming", function()
         root:Destroy()
     end)
 
-    it("reacts to solo bot injury, defeat and rig streaming without polling", function()
+    it("refreshes solo-bot cosmetics only on elimination-state transitions", function()
         local updates, stopped = 0, 0
         local registry = PolishRegistry.new(function()
             updates += 1
@@ -547,11 +547,13 @@ describe("Character polish lifecycle and late streaming", function()
         local activated = updates
         humanoid.Health = 25
         task.wait()
-        expect(updates > activated).toBe(true)
-        local injured = updates
+        expect(updates).toBe(activated)
+        humanoid.Health = 10
+        task.wait()
+        expect(updates).toBe(activated)
         humanoid.Health = 0
         task.wait()
-        expect(updates > injured).toBe(true)
+        expect(updates > activated).toBe(true)
 
         humanoid.Parent = nil
         local detached = updates
@@ -562,6 +564,9 @@ describe("Character polish lifecycle and late streaming", function()
         replacement.Parent = model
         local resynced = updates
         replacement.Health = 30
+        task.wait()
+        expect(updates).toBe(resynced)
+        replacement.Health = 0
         task.wait()
         expect(updates > resynced).toBe(true)
 

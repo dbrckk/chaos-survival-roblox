@@ -769,3 +769,22 @@ animation loops are introduced. Engine tests verify normal, duplicated,
 disabled, removed, and incorrectly-parented ribbons and transitions of
 a tracked model into the AISurvivors folder. Real Android frame times
 and thermal behavior remain unmeasured.
+
+## PR #19 — eliminate redundant bot polish refreshes on every hit
+
+CharacterPolishRegistry subscribed to solo-bot HealthChanged but invoked
+the entire polish/lighting refresh on every hit and nonlethal heal.
+CharacterPolishRules uses the bot's health only to determine
+Health > 0 (active) versus Health <= 0 (eliminated). Refreshing
+between those two states did not change the bot's cosmetic state and
+could cause repeated property writes during a crowded round.
+
+The existing per-bot HealthChanged connection now snapshots the
+alive/eliminated boolean and updates cosmetics only on a transition,
+so elimination feedback remains immediate. It still switches when a
+Humanoid streams in/out or AISurvivor toggles, and the connection
+is disconnected on unwatch. Client visual assets, gameplay, damage,
+network traffic, cooldowns and server authority are unchanged.
+Engine tests cover several nonlethal damage ticks, death, a
+replacement Humanoid, and unregistering the bot. Actual frame-time
+savings require Android/Studio instrumentation.
