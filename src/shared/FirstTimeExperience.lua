@@ -33,6 +33,31 @@ function FirstTimeExperience.hasVoteOptions(state)
         and FirstTimeExperience.validVoteOptions(state.voteOptions)
 end
 
+-- Cheap, deterministic UI invalidation key. A new server RoundState (usually
+-- every countdown second) does not imply that vote cards changed. The key
+-- covers every card field displayed by the client, local selection and the
+-- compact Android layout. Length-prefix fields to avoid separator collisions.
+function FirstTimeExperience.voteRenderKey(options, selected, compact)
+    if not FirstTimeExperience.validVoteOptions(options) then
+        return nil
+    end
+
+    local pieces = {compact == true and "compact" or "normal"}
+    local function add(value)
+        local text = tostring(value or "")
+        pieces[#pieces + 1] = tostring(#text) .. ":" .. text
+    end
+
+    add(selected)
+    for _, option in ipairs(options) do
+        add(option.id)
+        add(option.name or "CHAOS")
+        add(option.hint)
+        add(tonumber(option.votes) or 0)
+    end
+    return table.concat(pieces, "|")
+end
+
 
 -- Identify only map-owned first-run cues. Their marker attributes may
 -- replicate after the BasePart, so callers observe those attributes too.

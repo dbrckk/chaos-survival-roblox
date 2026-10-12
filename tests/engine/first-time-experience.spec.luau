@@ -105,6 +105,42 @@ describe("First time experience", function()
         practice:Destroy()
     end)
 
+    it("avoids rebuilding unchanged voting cards on each countdown tick", function()
+        local old = {
+            {id = "Meteors", name = "Meteors", hint = "Dodge", votes = 0},
+            {id = "Freeze", name = "Freeze", hint = "Move", votes = 1},
+        }
+        local oldKey = FirstTimeExperience.voteRenderKey(old, nil, false)
+        expect(type(oldKey)).toBe("string")
+        local same = {
+            {id = "Meteors", name = "Meteors", hint = "Dodge", votes = "0"},
+            {id = "Freeze", name = "Freeze", hint = "Move", votes = 1},
+        }
+        expect(FirstTimeExperience.voteRenderKey(same, nil, false))
+            .toBe(oldKey)
+        expect(FirstTimeExperience.voteRenderKey({}, nil, false)).toBe(nil)
+        expect(FirstTimeExperience.voteRenderKey("bad", nil, false)).toBe(nil)
+        same[2].votes = 2
+        expect(FirstTimeExperience.voteRenderKey(same, nil, false) ~= oldKey)
+            .toBe(true)
+        same[2].votes = 1
+        same[1].hint = "Jump"
+        expect(FirstTimeExperience.voteRenderKey(same, nil, false) ~= oldKey)
+            .toBe(true)
+        same[1].hint = "Dodge"
+        same[1].name = "Fire"
+        expect(FirstTimeExperience.voteRenderKey(same, nil, false) ~= oldKey)
+            .toBe(true)
+        same[1].name = "Meteors"
+        expect(FirstTimeExperience.voteRenderKey(same, "Freeze", false) ~= oldKey)
+            .toBe(true)
+        expect(FirstTimeExperience.voteRenderKey(same, nil, true) ~= oldKey)
+            .toBe(true)
+        same[1].id = "Bombs"
+        expect(FirstTimeExperience.voteRenderKey(same, nil, false) ~= oldKey)
+            .toBe(true)
+    end)
+
     it("only accepts distinct, renderable one-to-three-card ballots", function()
         local valid = {{id = "Meteors"}, {id = "Freeze"}, {id = "Bombs"}}
         expect(FirstTimeExperience.validVoteOptions(valid)).toBe(true)

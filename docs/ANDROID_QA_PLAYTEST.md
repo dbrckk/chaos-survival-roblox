@@ -1137,3 +1137,23 @@ cards during voting, and zero old vote targets when voting closes.
 Rejoin mid-intermission, trigger a short portrait viewport, and observe
 quality changes and ReduceMotion. These are required tests, not claimed
 successful observations.
+
+## PR #19 — vote card UI retention on Android (12 October 2026)
+
+The main vote panel now uses a small deterministic signature of its
+actionable option IDs, displayed names/hints/vote counts, local selection,
+and compact touch layout. Repeated RoundState countdown packets with
+unchanged votes no longer destroy/recreate every button, glyph and UI
+constraint. A change of votes, choice, or viewport class still rebuilds
+the affected display. Empty/malformed/closed ballots clear old buttons.
+
+The button activation handler additionally checks that the authoritative
+current client snapshot is still in an active intermission vote and still
+contains the chosen ID before sending VoteDisaster; the existing server
+rate limit, phase and option checks remain authoritative.
+
+The existing first-time-experience engine spec tests stable keys and
+invalidation on count, name, hint, ID, selection and compact changes.
+Physical Android QA still needs a staged first-run and 30-minute test;
+this change alone is **not** an FPS measurement, a playtest or proof of
+release readiness.

@@ -2436,15 +2436,29 @@ local function clearVotes()
     end
 end
 
-local function showVotes(options)
-    clearVotes()
-    votes.Visible = options ~= nil and #options > 0
-    if not votes.Visible then return end
+local lastRenderedVoteKey = nil
 
+local function showVotes(options)
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     local voteClass = UIResponsive.classify(viewport, touchDevice)
     local compactVote = touchDevice and voteClass.tinyHeight
+    local nextKey = FirstTimeExperience.voteRenderKey(
+        options, selectedVote, compactVote
+    )
+    local actionable = nextKey ~= nil
+
+    -- The countdown changes every second, but recreating every Frame,
+    -- glyph, constraint and button listener when cards are unchanged is
+    -- unnecessary work (especially on lower-end Android devices).
+    if nextKey == lastRenderedVoteKey and votes.Visible == actionable then
+        return
+    end
+
+    lastRenderedVoteKey = nextKey
+    clearVotes()
+    votes.Visible = actionable
+    if not actionable then return end
 
     local maxVotes = 0
     for _, option in ipairs(options) do
@@ -2622,6 +2636,22 @@ local function showVotes(options)
         UITheme.addCorner(votePill, UITheme.Corners.Pill)
 
         button.Activated:Connect(function()
+            -- A queued tap from a removed card must not submit a vote after
+            -- the window closed or the server replaced the ballot.
+            if currentHudPhase ~= "intermission"
+                or not FirstTimeExperience.validVoteOptions(currentHudVoteOptions)
+            then
+                return
+            end
+            local available = false
+            for _, current in ipairs(currentHudVoteOptions) do
+                if current.id == option.id then
+                    available = true
+                    break
+                end
+            end
+            if not available then return end
+
             cardScale.Scale = 0.94
             TweenService:Create(
                 cardScale,
@@ -2631,7 +2661,7 @@ local function showVotes(options)
 
             selectedVote = option.id
             voteEvent:FireServer(option.id)
-            showVotes(options)
+            showVotes(currentHudVoteOptions)
         end)
     end
 end
