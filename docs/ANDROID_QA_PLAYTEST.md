@@ -991,3 +991,17 @@ to moderate allocation churn as players exchange positions. Engine body-motion
 tests cover successive High/Medium/Low selections, capped allocated Trails
 and unrelated attachment preservation. This improves the source-level bound;
 actual Android FPS, CPU, GPU and churn remain unmeasured and require device QA.
+
+
+## PR #19 — Open Cloud Core A fake-player signal correction (12 October 2026)
+
+Open Cloud run 38234038182 (commit 0e101c1) reported 253/254 passing
+Core A tests. The failing CharacterAdded disconnect test sent a synthetic
+Lua-table Player through BindableEvent: Roblox copies table arguments so
+the emitted PlayerRemoving value is no longer the dictionary key used by
+the mock registry. In production, PlayerRemoving passes a Roblox Player
+Instance, not a copied table. This test now uses a synchronous, in-process
+signal with explicit Disconnect and the same mock-player reference for
+the complete lifecycle. The original unregistration and stale-rewatch
+assertions remain; runtime registry code is unchanged. Run Core A again
+to validate. This does not constitute physical Studio/Android QA.

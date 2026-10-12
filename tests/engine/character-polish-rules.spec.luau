@@ -276,10 +276,29 @@ describe("Human momentum trail spawn and streaming lifecycle", function()
     end)
 
     it("disconnects owner CharacterAdded on departure and avoids stale rewatches", function()
-        local added = Instance.new("BindableEvent")
-        local removed = Instance.new("BindableEvent")
-        local joined = Instance.new("BindableEvent")
-        local left = Instance.new("BindableEvent")
+        -- BindableEvent copies table arguments: a synthetic player table
+        -- loses its identity between PlayerRemoving and the connection map.
+        -- Real Player instances preserve identity. Use a small synchronous
+        -- signal to retain the same mock reference throughout this test.
+        local function signal()
+            local slots = {}
+            local event = {}
+            function event:Connect(callback)
+                local slot = {callback = callback, active = true}
+                slots[#slots + 1] = slot
+                return {Disconnect = function() slot.active = false end}
+            end
+            local function fire(...)
+                for _, slot in ipairs(slots) do
+                    if slot.active then slot.callback(...) end
+                end
+            end
+            return event, fire
+        end
+        local added, fireAdded = signal()
+        local removed = signal()
+        local joined = signal()
+        local left, fireLeft = signal()
         local rig = Instance.new("Model")
         local humanoid = Instance.new("Humanoid")
         humanoid.Parent = rig
@@ -288,14 +307,14 @@ describe("Human momentum trail spawn and streaming lifecycle", function()
         root.Parent = rig
         local player = {
             Character = rig,
-            CharacterAdded = added.Event,
-            CharacterRemoving = removed.Event,
+            CharacterAdded = added,
+            CharacterRemoving = removed,
         }
         local players = {
             GetPlayers = function() return {player} end,
             GetPlayerFromCharacter = function() return player end,
-            PlayerAdded = joined.Event,
-            PlayerRemoving = left.Event,
+            PlayerAdded = joined,
+            PlayerRemoving = left,
         }
         local tracked = MotionTrailRegistry.start(players)
         -- Initial watch is retained before the first parent.
@@ -303,17 +322,13 @@ describe("Human momentum trail spawn and streaming lifecycle", function()
         task.wait()
         expect(tracked[rig] ~= nil).toBe(true)
 
-        left:Fire(player)
+        fireLeft(player)
         task.wait()
         expect(tracked[rig] == nil).toBe(true)
-        added:Fire(rig)
+        fireAdded(rig)
         task.wait()
         expect(tracked[rig] == nil).toBe(true)
         rig:Destroy()
-        added:Destroy()
-        removed:Destroy()
-        joined:Destroy()
-        left:Destroy()
     end)
 end)
 
