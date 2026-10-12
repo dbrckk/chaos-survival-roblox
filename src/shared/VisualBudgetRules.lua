@@ -94,9 +94,20 @@ function VisualBudgetRules.isEffect(instance)
         )
 end
 
--- Character polish is attached directly to live player/bot rigs, not under
--- any registered workspace Local folder. Audit only distinctly named
--- client-created cosmetics, never server rig Parts or unrelated lighting.
+-- Cosmetic owner names created on a character's HumanoidRootPart. These
+-- are not descendants of the workspace-wide local visual folders.
+-- The AI's server-owned motion trail is deliberately not attributed here.
+local rootEffectTypes = {
+    ChaosMotionTrail = "Trail",
+    PhaseDashRibbon = "Trail",
+    ChaosReactionDodge = "Beam",
+    ChaosReactionShock = "Beam",
+    ChaosReactionLanding = "Beam",
+}
+
+-- Local character/bot polish, human motion, dash and hazard feedback live
+-- under character rigs. Count only named client-created GPU objects, never
+-- server-owned rig Parts, lights or unrelated visual effects.
 local function collectCharacterPolish(model, metrics)
     if not model or not model:IsA("Model") then return end
     local highlight = model:FindFirstChild("ChaosCharacterPolishHighlight")
@@ -109,12 +120,13 @@ local function collectCharacterPolish(model, metrics)
                 if effect.Name == "ChaosCharacterPolishLight"
                     and effect:IsA("PointLight") then
                     metrics.Lights += 1
-                elseif part.Name == "HumanoidRootPart"
-                    and effect.Name == "PhaseDashRibbon"
-                    and effect:IsA("Trail") then
-                    -- Dash ribbons are attached to player rigs, rather
-                    -- than to the root PhaseDashVfxLocal ring folder.
-                    metrics.Effects += 1
+                elseif part.Name == "HumanoidRootPart" then
+                    local effectType = rootEffectTypes[effect.Name]
+                    if effectType and effect:IsA(effectType) then
+                        -- Disabled transient Effects still own Instances
+                        -- until Debris/owner cleanup; audit both states.
+                        metrics.Effects += 1
+                    end
                 end
             end
         end

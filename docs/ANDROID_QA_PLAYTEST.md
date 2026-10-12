@@ -820,3 +820,23 @@ an arena spawned or streamed at a rotated/tilted CFrame. The beam now derives
 its frame from the two pylons. An engine regression covers level, yaw-rotated,
 and tilted bases; no extra scene Parts, VFX emitters, lights, physics or network
 traffic are introduced, and Low/Medium/High/ReduceMotion budgets are unchanged.
+
+## PR #19 — account for avatar motion and reactive GPU trails (12 October 2026)
+
+VisualBudgetRules.collect(root) previously counted local avatar Highlights,
+PointLights and transient PhaseDashRibbon Trails, but did not include the
+per-human ChaosMotionTrail or temporary ChaosReactionDodge/Shock/Landing
+Beams. All are parented directly to a HumanoidRootPart, not one of the
+registered workspace-level local visual folders.
+
+The same existing per-character pass now counts those explicitly owned
+Trail/Beam names alongside Phase Dash, with no extra traversal pass,
+remote events or graphics allocations. Unrelated server or bot-owned
+trails, rig Parts, and wrongly-parented/wrong-class lookalikes are not
+attributed to the client GPU budget. Disabled effects continue to count
+until the actual Instance is destroyed; budget caps are unchanged.
+
+A core_b2 engine regression checks five human root effects, one solo-bot
+shock Beam, disabled effects, exclusions, and removal at each lifecycle
+stage. This is telemetry accuracy, not a measured FPS improvement;
+verify all five engine shards and Android visual/memory/FPS separately.

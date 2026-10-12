@@ -273,6 +273,74 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("counts human motion ribbons and hazard reaction beams on avatar roots", function()
+        local root = Instance.new("Folder")
+        local model = Instance.new("Model")
+        model.Name = "RealCharacter"
+        model.Parent = root
+        local hrp = Instance.new("Part")
+        hrp.Name = "HumanoidRootPart"
+        hrp.Parent = model
+
+        local names = {
+            "ChaosMotionTrail", "PhaseDashRibbon",
+            "ChaosReactionDodge", "ChaosReactionShock",
+            "ChaosReactionLanding",
+        }
+        local effects = {}
+        for _, name in ipairs(names) do
+            local effect = Instance.new(
+                (name == "ChaosMotionTrail" or name == "PhaseDashRibbon")
+                    and "Trail" or "Beam"
+            )
+            effect.Name = name
+            effect.Enabled = name ~= "ChaosReactionShock"
+            effect.Parent = hrp
+            effects[#effects + 1] = effect
+        end
+        local excludedServerTrail = Instance.new("Trail")
+        excludedServerTrail.Name = "AISurvivorCosmeticTrail"
+        excludedServerTrail.Parent = hrp
+        local fake = Instance.new("Part")
+        fake.Name = "ChaosReactionShock"
+        fake.Parent = hrp
+        local unrelated = Instance.new("Beam")
+        unrelated.Name = "ServerExplosionBeam"
+        unrelated.Parent = hrp
+        local wrongParent = Instance.new("Beam")
+        wrongParent.Name = "ChaosReactionLanding"
+        wrongParent.Parent = model
+
+        local bots = Instance.new("Folder")
+        bots.Name = "AISurvivors"
+        bots.Parent = root
+        local bot = Instance.new("Model")
+        bot:SetAttribute("AISurvivor", true)
+        bot.Parent = bots
+        local botRoot = Instance.new("Part")
+        botRoot.Name = "HumanoidRootPart"
+        botRoot.Parent = bot
+        local botShock = Instance.new("Beam")
+        botShock.Name = "ChaosReactionShock"
+        botShock.Parent = botRoot
+
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(0)
+        expect(metrics.Effects).toBe(6)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Lights).toBe(0)
+        effects[2]:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(5)
+        bot:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(4)
+        model:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(0)
+        root:Destroy()
+    end)
+
     it("counts duplicate orphan polish lights as actual allocated lights", function()
         local root = Instance.new("Folder")
         local model = Instance.new("Model")
