@@ -645,3 +645,22 @@ valid directional facet descriptors and unchanged normal counts.
 This reduces per-dash client Part/Tween creation under ReduceMotion; it
 is not a measured FPS, GPU, battery or thermal result. Confirm on an
 Android device that the cue is readable without visual discomfort.
+
+## PR #19 — vector-paint transform following for moving pads (12 October 2026)
+
+The original client-only 3D chevrons were positioned once with anchored
+world-space CFrames. If a generated map or its lobby pads were translated
+or rotated after cosmetics were created, the painted arrows could be left
+behind while their particle Attachment correctly followed the pad.
+
+The LobbyPracticeGlyphKit now attaches one property-change listener to a
+pad's CFrame for the existing 2/4/6 anchored local motif Parts. Each
+stroke's original pad-relative CFrame is stored in memory and restored
+against the new pad transform when needed. This preserves the authored
+shapes and their exact mobile tier limits without adding RenderStepped,
+Heartbeat, unanchored physics or GPU effects.
+
+Listeners disconnect on VfxQualityTier rebuild and on streaming/removal
+through the existing bundle destructor; engine lobby-activities tests verify
+translation, rotation, collision-free anchored strokes and disconnection.
+The renderer still requires physical Android and Roblox Studio observation.

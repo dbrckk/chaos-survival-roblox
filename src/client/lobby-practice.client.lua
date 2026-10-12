@@ -142,10 +142,17 @@ local function refreshBundle(pad, bundle)
     -- Rebuild only when the graphics tier changes. Static, cosmetic
     -- chevrons live under the audited and LOD-managed local pad folder.
     if bundle.glyphTier ~= quality.Name then
+        if bundle.glyphConnection then
+            bundle.glyphConnection:Disconnect()
+            bundle.glyphConnection = nil
+        end
         if bundle.glyph then bundle.glyph:Destroy() end
         bundle.glyph = PracticeGlyphKit.build(
             bundle.folder, pad, quality.Name, Config.LobbyCenter
         )
+        if bundle.glyph then
+            bundle.glyphConnection = PracticeGlyphKit.follow(bundle.glyph, pad)
+        end
         bundle.glyphTier = quality.Name
     end
 

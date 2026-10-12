@@ -88,6 +88,7 @@ end
 function Kit.destroy(bundle)
     if not bundle then return end
     if bundle.labelConnection then bundle.labelConnection:Disconnect() end
+    if bundle.glyphConnection then bundle.glyphConnection:Disconnect() end
     if bundle.attachment then bundle.attachment:Destroy() end
     if bundle.folder then bundle.folder:Destroy() end
 end

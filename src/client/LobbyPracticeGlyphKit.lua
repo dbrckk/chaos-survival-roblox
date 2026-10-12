@@ -90,4 +90,38 @@ function Kit.build(parent, pad, tier, center)
     return model
 end
 
+-- The motif is painted on the pad: keep the six-or-fewer anchored visual
+-- strokes registered to its transform when a streamed/rebuilt arena moves.
+-- This listens for pad CFrame changes only; no RenderStepped or physics.
+function Kit.follow(glyph, pad)
+    if typeof(glyph) ~= "Instance" or not glyph:IsA("Folder")
+        or glyph.Name ~= "PracticeVectorGlyphLocal" or not glyph.Parent
+        or typeof(pad) ~= "Instance" or not pad:IsA("BasePart")
+        or not pad.Parent then
+        return nil
+    end
+
+    local relativeParts = {}
+    local padFrame = pad.CFrame
+    for _, part in ipairs(glyph:GetChildren()) do
+        if part:IsA("BasePart") then
+            relativeParts[#relativeParts + 1] = {
+                part = part,
+                localFrame = padFrame:ToObjectSpace(part.CFrame),
+            }
+        end
+    end
+    if #relativeParts == 0 then return nil end
+
+    return pad:GetPropertyChangedSignal("CFrame"):Connect(function()
+        if not glyph.Parent or not pad.Parent then return end
+        local nextFrame = pad.CFrame
+        for _, record in ipairs(relativeParts) do
+            if record.part.Parent == glyph then
+                record.part.CFrame = nextFrame * record.localFrame
+            end
+        end
+    end)
+end
+
 return Kit

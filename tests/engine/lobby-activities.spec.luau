@@ -122,6 +122,55 @@ describe("Lobby activities", function()
         root:Destroy()
     end)
 
+    it("keeps painted chevrons aligned with moved and rotated pads", function()
+        local root = Instance.new("Folder")
+        local pad = Instance.new("Part")
+        pad.Size = Vector3.new(7.2, 0.3, 7.2)
+        pad.Position = Vector3.new(-22, 1.45, -150)
+        pad:SetAttribute("LobbyPracticePad", true)
+        pad.Parent = root
+        local bundle = PracticeVisualKit.create(pad)
+        local glyph = PracticeGlyphKit.build(bundle.folder, pad,
+            "High", Vector3.new(0, 0, -150))
+        expect(glyph ~= nil).toBe(true)
+        local stroke = glyph:GetChildren()[1]
+        local relative = pad.CFrame:ToObjectSpace(stroke.CFrame)
+        local connection = PracticeGlyphKit.follow(glyph, pad)
+        expect(connection ~= nil and connection.Connected).toBe(true)
+        bundle.glyphConnection = connection
+
+        pad.CFrame = CFrame.new(12, 4, -161)
+            * CFrame.Angles(0, math.rad(31), 0)
+        task.wait()
+        local expected = pad.CFrame * relative
+        expect((stroke.Position - expected.Position).Magnitude < 0.001)
+            .toBe(true)
+        expect(stroke.CFrame.LookVector:Dot(expected.LookVector) > 0.9999)
+            .toBe(true)
+        expect(stroke.CanCollide).toBe(false)
+        expect(stroke.Anchored).toBe(true)
+
+        PracticeVisualKit.destroy(bundle)
+        expect(connection.Connected).toBe(false)
+        expect(#pad:GetChildren()).toBe(0)
+        pad:Destroy()
+        root:Destroy()
+    end)
+
+    it("refuses to follow orphaned or empty glyph folders", function()
+        local root = Instance.new("Folder")
+        local pad = Instance.new("Part")
+        pad.Parent = root
+        local glyph = Instance.new("Folder")
+        glyph.Name = "PracticeVectorGlyphLocal"
+        glyph.Parent = root
+        expect(PracticeGlyphKit.follow(glyph, pad) == nil).toBe(true)
+        expect(PracticeGlyphKit.follow(nil, pad) == nil).toBe(true)
+        glyph:Destroy()
+        pad:Destroy()
+        root:Destroy()
+    end)
+
     it("rejects invalid pad glyph input without allocating Parts", function()
         local root = Instance.new("Folder")
         local pad = Instance.new("Part")
