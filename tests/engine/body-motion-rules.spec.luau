@@ -645,6 +645,58 @@ describe("Directional character impact and cinematic AI footwork", function()
         expect(visible("High", false, "round", true, 1, nil, true)).toBe(false)
     end)
 
+    it("selects bounded nearest human motion trails without full sorting", function()
+        local rules = require("../../src/shared/CharacterMotionTrailRules")
+        local function person(id, distance, active)
+            return {order = id, distance = distance,
+                trail = {Enabled = active == true}}
+        end
+        local distant = person(10, 80)
+        local retained = person(2, 21, true) -- effective distance: 18
+        local equalLate = person(5, 18)
+        local equalEarly = person(1, 18)
+        local closest = person(9, 2)
+        local third = person(8, 11)
+        local others = person(7, 37)
+        local candidates = {distant, equalLate, retained, others,
+            equalEarly, closest, third}
+        local selected = {[distant] = true}
+        expect(rules.selectRemote(candidates, "Low", selected)).toBe(selected)
+        expect(next(selected) == nil).toBe(true)
+
+        expect(rules.selectRemote(candidates, "Medium", selected)).toBe(selected)
+        expect(selected[closest]).toBe(true)
+        expect(selected[third]).toBe(true)
+        expect(selected[equalEarly]).toBe(true)
+        expect(selected[retained]).toBe(true)
+        expect(selected[equalLate] == true).toBe(false)
+        expect(selected[distant] == true).toBe(false)
+        local count = 0
+        for _ in pairs(selected) do count += 1 end
+        expect(count).toBe(4)
+        expect(rules.remoteBudget("Medium")).toBe(4)
+        expect(rules.remoteBudget("High")).toBe(8)
+        expect(rules.remoteBudget("Low")).toBe(0)
+
+        local many = {}
+        for n = 16, 1, -1 do
+            many[#many + 1] = person(n, n * 4)
+        end
+        many[#many + 1] = person(30, math.huge)
+        many[#many + 1] = person(31, 0/0)
+        rules.selectRemote(many, "High", selected)
+        for _, state in ipairs(many) do
+            expect(selected[state] == true).toBe(state.order <= 8)
+        end
+        local small = {person(4, 8), person(3, 2)}
+        rules.selectRemote(small, "High", selected)
+        expect(selected[small[1]]).toBe(true)
+        expect(selected[small[2]]).toBe(true)
+        count = 0
+        for _ in pairs(selected) do count += 1 end
+        expect(count).toBe(2)
+    end)
+
     it("shares stable camera-frustum limits for AI and human optional trails", function()
         local Viewport = require("../../src/shared/VisualViewportRules")
         local Humans = require("../../src/shared/CharacterMotionTrailRules")
