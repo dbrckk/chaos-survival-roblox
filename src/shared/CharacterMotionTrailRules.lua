@@ -69,6 +69,20 @@ function Rules.momentumStyle(tier, band)
         Peak = peak, Emission = emission, Opacity = opacity}
 end
 
+-- Motion ribbons are absent outside active rounds, in final rush,
+-- and in Low/ReduceMotion. Poll their already-registered rigs less often
+-- while disabled; keep original Medium/High active animation cadence.
+-- Use exact positive intervals; never introduce a per-frame connection.
+function Rules.updateInterval(tier, phase, reduceMotion, finalRush)
+    if phase ~= "round" or reduceMotion == true or finalRush == true
+        or tier == "Low" then
+        return 0.12
+    end
+    if tier == "High" then return 1 / 30 end
+    if tier == "Medium" then return 1 / 24 end
+    return 0.12
+end
+
 -- A hard limit on simultaneously rendered remote human trails prevents
 -- crowded rounds from multiplying translucent GPU overdraw.
 function Rules.remoteBudget(tier)
