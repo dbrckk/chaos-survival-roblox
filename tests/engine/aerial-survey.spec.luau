@@ -135,6 +135,31 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
             .toBe(CFrame.identity)
     end)
 
+    it("retains warning-color exhausts while the shared turbine gimbal moves", function()
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        base.Parent = workspace
+        local parent = Instance.new("Folder")
+        parent.Parent = workspace
+        local danger = Color3.fromRGB(255, 90, 40)
+        for _, tier in ipairs({"Medium", "High"}) do
+            parent:ClearAllChildren()
+            local fleet = Kit.build(parent, base, "Classic", tier, theme)
+            Kit.update(fleet, 10, "round", false, danger, false, {"Meteors"}, true)
+            Kit.update(fleet, 10.2, "round", false, danger, false, {"Meteors"}, true)
+            for _, drone in ipairs(fleet.drones) do
+                for _, item in ipairs(drone.sections) do
+                    if item.role == "exhaust" then
+                        expect(item.part.Color).toBe(danger)
+                        expect(item.part.Transparency).toBe(0.22)
+                    end
+                end
+            end
+        end
+        parent:Destroy()
+        base:Destroy()
+    end)
+
     it("integrates speed changes continuously and pauses without catch-up jumps", function()
         local elapsed, last = Rules.advanceClock(0, nil, 12, true, 1)
         expect(elapsed).toBe(0)
