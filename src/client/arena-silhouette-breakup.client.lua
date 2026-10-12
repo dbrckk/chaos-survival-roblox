@@ -13,9 +13,16 @@ folder.Name = "ArenaSilhouetteBreakupLocal"
 folder.Parent = workspace
 
 local disconnectMapWatch = nil
+local followArenaConnection = nil
 local refreshPending = false
 
 local function clear()
+    -- Old geometry/rig references must not remain subscribed after a map
+    -- swap, stream-out, or tier rebuild.
+    if followArenaConnection then
+        followArenaConnection:Disconnect()
+        followArenaConnection = nil
+    end
     folder:ClearAllChildren()
 end
 
@@ -333,6 +340,7 @@ local function rebuild()
             classic(base, theme, high)
         end
     end
+    followArenaConnection = ArenaSilhouetteAccentKit.follow(folder, base)
 end
 
 local function scheduleRefresh()

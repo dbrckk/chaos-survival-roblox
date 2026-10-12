@@ -104,4 +104,37 @@ function ArenaSilhouetteAccentKit.build(parent, base, variant, tierName, theme)
     return built
 end
 
+-- Anchor all existing client-only skyline pieces to their authored arena
+-- transform. Roblox map streaming may shift or rotate the base after build.
+-- One property-change connection replaces per-frame updates or new Parts.
+function ArenaSilhouetteAccentKit.follow(folder, base)
+    if typeof(folder) ~= "Instance" or not folder:IsA("Folder")
+        or not folder.Parent or typeof(base) ~= "Instance"
+        or not base:IsA("BasePart") or not base.Parent then
+        return nil
+    end
+
+    local restFrame = base.CFrame
+    local pieces = {}
+    for _, part in ipairs(folder:GetChildren()) do
+        if part:IsA("BasePart") then
+            pieces[#pieces + 1] = {
+                part = part,
+                offset = restFrame:ToObjectSpace(part.CFrame),
+            }
+        end
+    end
+    if #pieces == 0 then return nil end
+
+    return base:GetPropertyChangedSignal("CFrame"):Connect(function()
+        if not folder.Parent or not base.Parent then return end
+        local frame = base.CFrame
+        for _, entry in ipairs(pieces) do
+            if entry.part.Parent == folder then
+                entry.part.CFrame = frame * entry.offset
+            end
+        end
+    end)
+end
+
 return ArenaSilhouetteAccentKit

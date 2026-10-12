@@ -455,6 +455,61 @@ describe("Arena skyline visual identity", function()
         base:Destroy()
     end)
 
+    it("keeps static outboard 3D landmarks registered to a moving arena", function()
+        local root = Instance.new("Folder")
+        local scenery = Instance.new("Folder")
+        scenery.Name = "ArenaSilhouetteBreakupLocal"
+        scenery.Parent = root
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(110, 3, 90)
+        base.CFrame = CFrame.new(9, 14, 22)
+        base.Parent = root
+
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+                local pieces = ArenaSilhouetteAccentKit.build(
+                    scenery, base, variant, tier, VisualTheme.arena(variant)
+                )
+                local expectedCount = ArenaSilhouetteAccentKit.count(tier)
+                expect(#pieces).toBe(expectedCount)
+                local relativeFrames = {}
+                for index, part in ipairs(pieces) do
+                    relativeFrames[index] = base.CFrame:ToObjectSpace(part.CFrame)
+                end
+                local following = ArenaSilhouetteAccentKit.follow(scenery, base)
+                expect(following ~= nil and following.Connected).toBe(true)
+                base.CFrame = CFrame.new(41, 28, -19)
+                    * CFrame.Angles(math.rad(4), math.rad(57), math.rad(-7))
+                task.wait()
+                expect(#scenery:GetChildren()).toBe(expectedCount)
+                for index, part in ipairs(pieces) do
+                    local expectedFrame = base.CFrame * relativeFrames[index]
+                    expect((part.Position - expectedFrame.Position).Magnitude < 0.001)
+                        .toBe(true)
+                    expect(part.CFrame.LookVector:Dot(expectedFrame.LookVector) > 0.9999)
+                        .toBe(true)
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                end
+                following:Disconnect()
+                expect(following.Connected).toBe(false)
+                local retained = pieces[1].CFrame
+                base.CFrame = CFrame.new(-23, 20, 61)
+                task.wait()
+                expect(pieces[1].CFrame).toBe(retained)
+                scenery:ClearAllChildren()
+            end
+        end
+        expect(ArenaSilhouetteAccentKit.follow(scenery, base) == nil).toBe(true)
+        expect(ArenaSilhouetteAccentKit.follow(nil, base) == nil).toBe(true)
+        expect(ArenaSilhouetteAccentKit.follow(scenery, nil) == nil).toBe(true)
+        base:Destroy()
+        root:Destroy()
+    end)
+
     it("ignores unexpected inputs without creating scenery", function()
         local folder = Instance.new("Folder")
         local base = Instance.new("Part")

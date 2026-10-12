@@ -788,3 +788,22 @@ network traffic, cooldowns and server authority are unchanged.
 Engine tests cover several nonlethal damage ticks, death, a
 replacement Humanoid, and unregistering the bot. Actual frame-time
 savings require Android/Studio instrumentation.
+
+
+## PR #19 — skyline follows streamed arena transforms (12 October 2026)
+
+The previous client-only outboard silhouettes were built from the arena Base
+CFrame only once, leaving anchored scenic pieces behind if the streamed arena
+base moved or rotated later. ArenaSilhouetteAccentKit now follows that Base's
+CFrame changes with one event connection per built scene, applying each
+existing part's captured local rest frame. Both the 2/3/4-piece Low/Medium/High
+signature and the existing richer Medium/High industrial structures are moved
+together. No extra Parts, emitters, lights, per-frame loops, collision or game
+mechanics were introduced; ReduceMotion remains entirely static.
+
+The silhouette controller disconnects the previous listener before tearing
+down its scenery on quality changes or map streaming and binds only after a
+successful complete rebuild. Arena-presentation engine regression tests cover
+translated and tilted rotated bases, unchanged tier counts, retained physics
+disabling, and disconnection. Manual Studio/Android inspection is still needed
+to confirm no shifted geometry, flicker, or device frame-time regression.
