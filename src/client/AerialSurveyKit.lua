@@ -244,9 +244,9 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
                                 animation = CFrame.Angles(0, elapsed * 8, 0)
                             end
                             item.part.CFrame = frame * authored * animation
-                            continue
+                        else
+                            item.part.CFrame = frame * item.frame * animation
                         end
-                        item.part.CFrame = frame * item.frame * animation
                     end
                     if colorDirty and (item.role == "beacon"
                         or item.role == "navigation" or item.role == "exhaust")
