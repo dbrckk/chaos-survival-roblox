@@ -2,10 +2,19 @@
 -- Distances are in studs; tier caps prevent unnecessary GPU trail rendering.
 local Rules = {}
 
+local function finiteNonnegative(value)
+    return type(value) == "number" and value == value
+        and value >= 0 and value < math.huge
+end
+
 function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, distance, wasVisible)
     if phase ~= "round" or finalRush == true or airborne == true
         or reduceMotion == true or (tier ~= "Medium" and tier ~= "High")
     then
+        return false
+    end
+    -- Bad numeric telemetry must never enable a ribbon, even when retained.
+    if not finiteNonnegative(ratio) or not finiteNonnegative(distance) then
         return false
     end
     -- Hysteresis avoids rapidly recreating translucent segments when
@@ -15,8 +24,7 @@ function Rules.visible(phase, finalRush, airborne, ratio, tier, reduceMotion, di
     local retained = wasVisible == true
     local limit = (tier == "High" and 90 or 60) + (retained and 3 or 0)
     local threshold = retained and 0.76 or 0.82
-    return (tonumber(ratio) or 0) > threshold
-        and (tonumber(distance) or math.huge) <= limit
+    return ratio > threshold and distance <= limit
 end
 
 -- Pure human trail rules are loadable by Lest via source path without script.Parent.
@@ -96,9 +104,7 @@ end
 -- select that small nearest set without sorting the full candidate list.
 -- Retain a 3-stud bias for already-enabled trails to prevent flicker.
 local function distanceScore(entry)
-    if type(entry) ~= "table" or type(entry.distance) ~= "number"
-        or entry.distance ~= entry.distance or entry.distance < 0
-        or entry.distance == math.huge then
+    if type(entry) ~= "table" or not finiteNonnegative(entry.distance) then
         return math.huge
     end
     return entry.distance - ((entry.trail and entry.trail.Enabled) and 3 or 0)

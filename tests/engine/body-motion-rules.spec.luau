@@ -645,6 +645,32 @@ describe("Directional character impact and cinematic AI footwork", function()
         expect(visible("High", false, "round", true, 1, nil, true)).toBe(false)
     end)
 
+    it("rejects malformed human trail telemetry without bypassing tier caps", function()
+        local rules = require("../../src/shared/CharacterMotionTrailRules")
+        local function visible(ratio, distance, retained)
+            return rules.visible("round", false, false, ratio,
+                "High", false, distance, retained)
+        end
+        expect(visible(1, 0, false)).toBe(true)
+        expect(visible(1, 90, false)).toBe(true)
+        expect(visible(1, 93, true)).toBe(true)
+        expect(visible(1, 94, true)).toBe(false)
+        for _, bad in ipairs({-1, math.huge, -math.huge, 0/0}) do
+            expect(visible(bad, 5, false)).toBe(false)
+            expect(visible(bad, 5, true)).toBe(false)
+            expect(visible(1, bad, false)).toBe(false)
+            expect(visible(1, bad, true)).toBe(false)
+        end
+        expect(visible(nil, 5, true)).toBe(false)
+        expect(visible(1, nil, true)).toBe(false)
+        expect(visible("1", 5, false)).toBe(false)
+        expect(visible(1, "5", false)).toBe(false)
+        expect(rules.visible("round", false, false, 1,
+            "Low", false, 5, true)).toBe(false)
+        expect(rules.visible("round", false, false, 1,
+            "High", true, 5, true)).toBe(false)
+    end)
+
     it("reduces idle human ribbon work without slowing active Medium and High", function()
         local rules = require("../../src/shared/CharacterMotionTrailRules")
         expect(rules.updateInterval("High", "round", false, false)).toBe(1 / 30)

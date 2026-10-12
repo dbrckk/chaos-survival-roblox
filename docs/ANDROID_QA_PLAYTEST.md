@@ -961,3 +961,18 @@ Engine regression tests verify both active cadences and every disabled state.
 These source-level reductions are not yet measured Android CPU, FPS, memory
 or thermal benefits. Verify disable/enable transitions and spectator/respawn
 visibility on a physical device before considering the feature complete.
+
+
+## PR #19 — reject malformed human ribbon telemetry (12 October 2026)
+
+Human-only momentum ribbon eligibility now rejects nonnumeric, negative,
+NaN and infinite speed ratios or camera distances, including when the trail
+was already visible. Previously a negative distance or infinite ratio could
+pass the culling gate. The same finite-number predicate is reused by the
+bounded remote-candidate selector. Normal distance hysteresis (90/93 High,
+60/63 Medium) and Low/ReduceMotion suppression remain unchanged.
+
+Engine body-motion regression checks invalid and retained inputs, both
+boundary distances and accessibility gates. This only changes local
+cosmetic rendering decisions; it does not affect server movement, damage,
+physics or replication. Physical Android/Studio validation is outstanding.
