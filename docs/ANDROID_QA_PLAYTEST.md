@@ -688,3 +688,25 @@ light accounting, duplicate allocated lights, and excluding unrelated
 server-owned visuals. This changes telemetry, not actual renderer load.
 Test GPU/CPU frame times and memory in Roblox Studio/Android before
 claiming a performance improvement.
+
+## PR #19 — reuse avatar lighting through rig streaming (12 October 2026)
+
+The previous client-only CharacterPolishLightKit allocated another
+ChaosCharacterPolishLight when UpperTorso streamed in after the
+HumanoidRootPart, then kept the older light disabled on the root.
+Repeated model priority shifts could multiply resident PointLights.
+
+The kit now re-parents a previously allocated managed PointLight to the
+currently preferred rig part rather than allocating a duplicate. It
+also destroys existing excess managed PointLights on refresh, including
+during Low/ReduceMotion; it preserves one disabled reusable light
+when glow is off to avoid churn on the next promotion. Unrelated lights
+and all server-owned geometry are untouched. This can reduce resident
+local lights without changing accent, brightness, range, outline or
+gameplay/physics behavior. A streaming-out detached torso still needs
+the normal rig-removal lifecycle; no per-frame listeners are added.
+
+Core engine regressions cover identity reuse, one-light invariant,
+dormant consolidation, Low/ReduceMotion, quality restoration, and
+fallback when a preferred torso is removed. Actual visual and
+performance behavior on Android requires playtesting.

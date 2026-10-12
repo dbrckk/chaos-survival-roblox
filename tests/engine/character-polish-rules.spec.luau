@@ -147,10 +147,10 @@ describe("Client avatar light allocation and rig handoff", function()
         torso.Name = "UpperTorso"
         torso.Parent = model
         local selected = LightKit.apply(model, bright, accent, true)
-        expect(selected ~= first).toBe(true)
+        expect(selected).toBe(first)
         expect(selected.Parent).toBe(torso)
         expect(selected.Enabled).toBe(true)
-        expect(first.Enabled).toBe(false)
+        expect(#root:GetChildren()).toBe(0)
         expect(LightKit.apply(model, bright, accent, true)).toBe(selected)
         expect(#torso:GetChildren()).toBe(1)
 
@@ -160,7 +160,6 @@ describe("Client avatar light allocation and rig handoff", function()
         expect(reduced).toBe(0)
         expect(LightKit.apply(model, reduced, accent, true)).toBe(nil)
         expect(selected.Enabled).toBe(false)
-        expect(first.Enabled).toBe(false)
         expect(#torso:GetChildren()).toBe(1)
         local otherAccent = Color3.fromRGB(255, 120, 80)
         expect(LightKit.apply(model, bright, otherAccent, false)).toBe(selected)
@@ -172,13 +171,66 @@ describe("Client avatar light allocation and rig handoff", function()
         expect(#torso:GetChildren()).toBe(1)
 
         torso.Parent = nil
-        expect(LightKit.apply(model, bright, accent, true)).toBe(first)
-        expect(first.Enabled).toBe(true)
+        local fallback = LightKit.apply(model, bright, accent, true)
+        expect(fallback ~= nil and fallback ~= selected).toBe(true)
+        expect(fallback.Parent).toBe(root)
+        expect(fallback.Enabled).toBe(true)
         expect(#root:GetChildren()).toBe(1)
         expect(LightKit.apply(model, math.huge, accent, true)).toBe(nil)
-        expect(first.Enabled).toBe(false)
+        expect(fallback.Enabled).toBe(false)
         model:Destroy()
         torso:Destroy()
+    end)
+    it("reuses a torso light and removes orphan duplicates on tier refresh", function()
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        local torso = Instance.new("Part")
+        torso.Name = "UpperTorso"
+        torso.Parent = model
+        local accent = Color3.fromRGB(120, 190, 255)
+        local a = Instance.new("PointLight")
+        a.Name = "ChaosCharacterPolishLight"
+        a.Parent = root
+        local b = Instance.new("PointLight")
+        b.Name = "ChaosCharacterPolishLight"
+        b.Parent = torso
+        local c = Instance.new("PointLight")
+        c.Name = "ChaosCharacterPolishLight"
+        c.Parent = root
+        expect(LightKit.apply(model, 0.42, accent, true)).toBe(b)
+        expect(a.Parent).toBe(nil)
+        expect(c.Parent).toBe(nil)
+        expect(#root:GetChildren()).toBe(0)
+        expect(#torso:GetChildren()).toBe(1)
+        expect(b.Enabled).toBe(true)
+        expect(LightKit.apply(model, 0, accent, true)).toBe(nil)
+        expect(b.Enabled).toBe(false)
+        expect(#torso:GetChildren()).toBe(1)
+        expect(LightKit.apply(model, 0.22, accent, false)).toBe(b)
+        expect(#torso:GetChildren()).toBe(1)
+        expect(b.Range).toBe(6)
+        model:Destroy()
+    end)
+
+    it("consolidates dormant duplicate lights without allocating on Low", function()
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        for _ = 1, 3 do
+            local light = Instance.new("PointLight")
+            light.Name = "ChaosCharacterPolishLight"
+            light.Parent = root
+        end
+        expect(LightKit.apply(model, 0, Color3.new(1, 1, 1), true))
+            .toBe(nil)
+        expect(#root:GetChildren()).toBe(1)
+        expect(root:GetChildren()[1].Enabled).toBe(false)
+        model:Destroy()
     end)
 end)
 

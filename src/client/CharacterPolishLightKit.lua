@@ -28,30 +28,57 @@ function LightKit.apply(model, brightness, accent, isLocal)
         and typeof(accent) == "Color3"
     local target = wantsLight and preferredPart(model) or nil
     local chosen = target and existingLight(target) or nil
-    if target and not chosen then
-        chosen = Instance.new("PointLight")
-        chosen.Name = NAME
-        chosen.Brightness = 0
-        chosen.Range = 7
-        chosen.Shadows = false
-        chosen.Enabled = false
-        chosen.Parent = target
-    end
+    local spare = nil
 
-    -- Switch off stale lights after streaming or torso priority changes.
-    -- A currently selected, already-enabled light is never toggled off/on.
+    -- Reuse the original PointLight when the preferred torso streams in.
+    -- The previous implementation allocated a new light and left the old
+    -- disabled on the root, multiplying resident GPU light instances.
     for _, part in ipairs(model:GetChildren()) do
         if part:IsA("BasePart") then
             for _, child in ipairs(part:GetChildren()) do
                 if child:IsA("PointLight") and child.Name == NAME
-                    and child ~= chosen and child.Enabled then
-                    child.Enabled = false
+                    and child ~= chosen and not spare then
+                    spare = child
                 end
             end
         end
     end
 
-    if not chosen then return nil end
+    if target and not chosen then
+        chosen = spare
+        if chosen then
+            chosen.Parent = target
+        else
+            chosen = Instance.new("PointLight")
+            chosen.Name = NAME
+            chosen.Brightness = 0
+            chosen.Range = 7
+            chosen.Shadows = false
+            chosen.Enabled = false
+            chosen.Parent = target
+        end
+    end
+
+    -- Keep one dormant light during Low/ReduceMotion, for cheap recovery,
+    -- but destroy any duplicate stale instances rather than accumulating
+    -- them on repeatedly streamed/changed character rigs.
+    local keeper = chosen or spare
+    for _, part in ipairs(model:GetChildren()) do
+        if part:IsA("BasePart") then
+            for _, child in ipairs(part:GetChildren()) do
+                if child:IsA("PointLight") and child.Name == NAME
+                    and child ~= keeper then
+                    child.Enabled = false
+                    child:Destroy()
+                end
+            end
+        end
+    end
+
+    if not chosen then
+        if keeper and keeper.Enabled then keeper.Enabled = false end
+        return nil
+    end
     local range = isLocal == true and 8 or 6
     if chosen.Color ~= accent then chosen.Color = accent end
     if chosen.Brightness ~= brightness then chosen.Brightness = brightness end
