@@ -177,3 +177,17 @@ ReduceMotion contract, 6/22/51-part limits and authored 3D geometry are
 unchanged. An Open Cloud regression covers Medium/High hiding, long
 pauses without catch-up, return and effect restoration. This is a
 source-level safeguard, not a measured Android FPS improvement.
+
+## Arena-local drone heading on rotated platforms (12 October 2026)
+
+Survey patrol positions already followed the arena Base's full CFrame, but
+the tangent heading was accidentally left in world axes. Consequently a
+rotated Crossroads/Towers arena could show visually sideways drone flight.
+The flight frame now rotates the local tangent and UpVector through the
+same Base CFrame before applying its existing bounded bank. An engine
+regression checks rigid-transform invariance of position, forward vector
+and up vector for all four maps, all three slots, several timestamps,
+and a combined hazard reaction under yaw, pitch and roll. This changes
+only cosmetic headings; flight clearance, non-collision, server state,
+quality tiers and 6/22/51 geometry budgets remain unchanged. Roblox
+Studio/Android perceptual QA is still required.

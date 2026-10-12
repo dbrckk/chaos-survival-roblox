@@ -267,6 +267,39 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         base:Destroy()
     end)
 
+
+    it("rotates flight facing and bank with the arena reference frame", function()
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(260, 2, 140)
+        base.CFrame = CFrame.identity
+        local turned = Instance.new("Part")
+        turned.Size = base.Size
+        local worldTransform = CFrame.new(47, 16, -81)
+            * CFrame.Angles(math.rad(7), math.rad(57), math.rad(-5))
+        turned.CFrame = worldTransform * base.CFrame
+
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            for slot = 1, 3 do
+                for _, time in ipairs({0, 8.5, 27}) do
+                    local reaction = Rules.behavior({"Tornado", "Meteors"})
+                    local original = Rules.flightFrame(base, variant,
+                        slot, 3, time, reaction)
+                    local transformed = Rules.flightFrame(turned, variant,
+                        slot, 3, time, reaction)
+                    local expected = worldTransform * original
+                    expect((transformed.Position - expected.Position).Magnitude
+                        < 0.005).toBe(true)
+                    expect(transformed.LookVector:Dot(expected.LookVector)
+                        > 0.9999).toBe(true)
+                    expect(transformed.UpVector:Dot(expected.UpVector)
+                        > 0.9999).toBe(true)
+                end
+            end
+        end
+        turned:Destroy()
+        base:Destroy()
+    end)
+
     it("uses distinct disaster animation reactions without changing collision bounds", function()
         local base = Instance.new("Part")
         base.Size = Vector3.new(100, 2, 100)

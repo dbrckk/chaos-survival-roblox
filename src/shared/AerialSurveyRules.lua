@@ -189,13 +189,17 @@ function AerialSurveyRules.flightFrame(base, variant, index, count, t, behavior)
     )
     -- Fly outside the arena; there is never an apparent landing platform
     -- nor a moving collider over traversable decks.
-    local direction = Vector3.new(
+    local localDirection = Vector3.new(
         -math.sin(angle) * rx, 0, math.cos(angle) * rz
     ).Unit
+    -- The orbit was built in arena-local coordinates, so its tangent and
+    -- up vector must be rotated with the arena as well as its position.
+    -- Otherwise drones fly sideways across rotated/tilted arenas.
+    local direction = base.CFrame:VectorToWorldSpace(localDirection)
     local position = base.CFrame:PointToWorldSpace(offset)
     local bank = math.sin(angle * 1.4)
         * math.rad(7) * (tonumber(reaction.Bank) or 1)
-    return CFrame.lookAt(position, position + direction)
+    return CFrame.lookAt(position, position + direction, base.CFrame.UpVector)
         * CFrame.Angles(0, 0, bank)
 end
 
