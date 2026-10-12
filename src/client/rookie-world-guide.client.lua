@@ -294,8 +294,9 @@ local function refresh()
         return
     end
 
-    if currentState.phase == "intermission"
-        and currentState.voteOptions
+    local votingOpen = FirstTimeExperience.hasVoteOptions(currentState)
+    if (currentState.phase == "intermission" or currentState.phase == "waiting")
+        and votingOpen
     then
         clearMarker()
         return
@@ -316,7 +317,7 @@ local function refresh()
     if games == 0
         and (tonumber(player:GetAttribute("LobbyPracticeUses")) or 0) > 0
         and (currentState.phase == "waiting" or currentState.phase == "intermission")
-        and not currentState.voteOptions
+        and not votingOpen
     then
         mark(
             arenaRunway(),
@@ -339,7 +340,10 @@ local function refresh()
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    currentState = state or currentState
+    -- Malformed RoundState must not replace a table with a scalar and
+    -- crash later marker refreshes. Fail closed to the ordinary lobby cue.
+    currentState = type(state) == "table"
+        and state or {phase = "waiting", voteOptions = nil}
     refresh()
 end)
 

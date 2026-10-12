@@ -1074,3 +1074,20 @@ all four cases and preserves ready/round behavior. This changes no server
 voting rules, gameplay, timing, rewards, map parts or graphics budgets.
 Check on physical Android whether vote button hit targets and small-screen
 coach wording are readable; no actual device test is claimed.
+
+## Rookie 3D wayfinding matches the vote cue (12 October 2026)
+
+The world-space rookie guide still treated an empty Lua voteOptions table
+as true even after the beginner text was corrected. It could therefore
+remove the practice/arena direction marker despite there being no
+clickable vote choices, or remain visible while the coach said VOTE in
+waiting phase. Both client displays now use
+`FirstTimeExperience.hasVoteOptions` to require a non-empty table.
+The RookieWorldGuide RoundState listener also rejects non-table payloads
+instead of assigning a scalar to its current state and later crashing
+when reading `currentState.phase`. A malformed event safely returns
+cosmetic guidance to waiting, without touching server-owned voting.
+
+Engine core_a regression covers empty/invalid ballots and real options;
+no new Instances, loops, remotes, collisions, gameplay rewards or VFX
+assets are added. Physical Android and Studio onboarding QA is pending.

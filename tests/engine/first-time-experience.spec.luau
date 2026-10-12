@@ -41,6 +41,22 @@ describe("First time experience", function()
     end)
 
 
+    it("shares actionable vote availability with the world guide", function()
+        for _, value in ipairs({false, 0, "vote", {}, {phase = "intermission"},
+            {phase = "intermission", voteOptions = {}},
+            {phase = "intermission", voteOptions = "invalid"},
+        }) do
+            expect(FirstTimeExperience.hasVoteOptions(value)).toBe(false)
+        end
+        expect(FirstTimeExperience.hasVoteOptions(nil)).toBe(false)
+        expect(FirstTimeExperience.hasVoteOptions(
+            {phase = "intermission", voteOptions = {{id = "Meteors"}}}
+        )).toBe(true)
+        expect(FirstTimeExperience.hasVoteOptions(
+            {phase = "waiting", voteOptions = {{id = "Freeze"}}}
+        )).toBe(true)
+    end)
+
     it("does not advertise voting before actionable options arrive", function()
         local state = {phase = "intermission"}
         local newbie = {games = 0, practiceUses = 0}

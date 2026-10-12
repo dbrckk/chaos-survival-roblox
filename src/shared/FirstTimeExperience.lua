@@ -8,6 +8,14 @@ function FirstTimeExperience.isRookie(games)
     return math.max(0, math.floor(tonumber(games) or 0)) <= 2
 end
 
+-- One predicate for the on-screen rookie coach and its world-space guide:
+-- an absent/empty/malformed vote list is never actionable.
+function FirstTimeExperience.hasVoteOptions(state)
+    return type(state) == "table"
+        and type(state.voteOptions) == "table"
+        and #state.voteOptions > 0
+end
+
 function FirstTimeExperience.allowDoubleChaos(gamesValues)
     if type(gamesValues) ~= "table" then
         return true
@@ -39,7 +47,7 @@ function FirstTimeExperience.coachText(state, metrics)
     if phase == "waiting" or phase == "intermission" then
         -- Empty or malformed voteOptions are not an actionable vote.
         -- Match the lobby's shared presentation predicate.
-        if type(state.voteOptions) == "table" and #state.voteOptions > 0 then
+        if FirstTimeExperience.hasVoteOptions(state) then
             return firstRound
                 and "VOTE  •  TAP THE CHAOS YOU WANT TO FACE"
                 or "VOTE  •  PICK THE NEXT CHAOS"
