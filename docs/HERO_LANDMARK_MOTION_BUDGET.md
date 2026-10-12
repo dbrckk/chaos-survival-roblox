@@ -325,3 +325,26 @@ existing one-shot ReduceMotion pose handler is unchanged; the new
 read eliminates post-event visual reactivation without introducing any
 extra render cycles, 3D objects, physics or RemoteEvents. Client
 event-timing and Android FPS remain to be verified in Studio/device.
+
+## Late-streamed arena Base and VariantId hero-art readiness (12 October 2026)
+
+The client hero-scenery builder previously watched only the creation of
+`GeneratedMap/Arena`. If that model arrived ahead of its `Base`, the
+builder cleared all client-owned hero art then returned without retrying
+until a quality-tier event or a new map. Likewise, late-replicated
+`VariantId` could leave the wrong signature landmark on screen.
+
+The builder now reuses the existing engine-tested
+`MapVisualReadiness.watch(generated, "Arena", "Base", ...)` API.
+The single watcher responds to Arena and Base arrival/removal and a
+VariantId change; all listeners are disconnected on map replacement.
+A deferred, coalesced rebuild prevents redundant client part creation
+when related streaming events occur within one scheduler turn. The
+builder continues to use the existing authored art and tier budgets;
+no remote calls, gameplay colliders, extra render loops or lights are
+introduced.
+
+Related `arena-presentation.spec.luau` already exercises late Base,
+section replacements and VariantId on the shared readiness watcher.
+CI on this exact commit remains required, followed by Roblox Studio
+streaming and physical Android visual/performance QA.
