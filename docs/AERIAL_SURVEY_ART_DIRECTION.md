@@ -139,3 +139,13 @@ time samples, exact exhaust/rotor offsets at the shared hinge,
 world-frame composition on a rotated rig and invalid roles/inputs.
 Low-tier geometry and ReduceMotion/paused or distant poses never run
 the new articulation path; real device visual QA is still outstanding.
+
+## Authored wing pose preservation in pivot animation
+
+The shared-gimbal compose path must write a CFrame for **every** section,
+not only for the engine/tail branch. The code now computes an optional
+articulated local frame then performs one common CFrame write for every
+wing, hull, rotor, exhaust, tail and beacon. A regression exercises
+wing position and orientation against a corresponding flight frame on
+Low/Medium/High. This also preserves the hazard-warning color path for
+exhausts.

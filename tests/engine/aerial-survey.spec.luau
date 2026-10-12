@@ -135,6 +135,50 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
             .toBe(CFrame.identity)
     end)
 
+    it("keeps the delta wings attached to the moving craft while servos articulate", function()
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        base.Parent = workspace
+        local parent = Instance.new("Folder")
+        parent.Parent = workspace
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            parent:ClearAllChildren()
+            local fleet = Kit.build(parent, base, "Crossroads", tier, theme)
+            local first = fleet.drones[1]
+            Kit.update(fleet, 30, "round", false, theme.Accent, false,
+                {"Meteors"}, true)
+            Kit.update(fleet, 30.2, "round", false, theme.Accent, false,
+                {"Meteors"}, true)
+            local hull = first.folder:FindFirstChild("SurveyArmoredHull")
+            local wingLeft = first.folder:FindFirstChild("SurveyDeltaWing-1")
+            local wingRight = first.folder:FindFirstChild("SurveyDeltaWing1")
+            expect(hull ~= nil and wingLeft ~= nil and wingRight ~= nil)
+                .toBe(true)
+            expect((hull.Position - first.root.Position).Magnitude).toBeLessThan(50)
+            -- Flight anchor for every 3D section matches the same
+            -- authored local offset even while wing-bank animation runs.
+            local wave = math.sin(fleet.flightTime * 1.7 + first.index)
+                * math.rad(2)
+            for _, part in ipairs({wingLeft, wingRight}) do
+                local authored
+                for _, section in ipairs(first.sections) do
+                    if section.part == part then authored = section.frame break end
+                end
+                expect(authored ~= nil).toBe(true)
+                local worldExpected = Rules.flightFrame(
+                    base, "Crossroads", first.index, first.total,
+                    fleet.flightTime, {Speed = 1, Climb = 0, Bank = 1, Sway = 0})
+                    * authored
+                expect((part.Position - worldExpected.Position).Magnitude
+                    < 0.0001).toBe(true)
+                expect(math.abs(part.CFrame.UpVector:Dot(worldExpected.UpVector))
+                    > 0.99).toBe(true)
+            end
+        end
+        parent:Destroy()
+        base:Destroy()
+    end)
+
     it("retains warning-color exhausts while the shared turbine gimbal moves", function()
         local base = Instance.new("Part")
         base.Size = Vector3.new(100, 2, 100)

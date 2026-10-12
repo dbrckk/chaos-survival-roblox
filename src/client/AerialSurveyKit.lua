@@ -226,6 +226,7 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
                 if item.part.Parent then
                     if frame then
                         local animation = CFrame.identity
+                        local articulatedFrame = item.frame
                         if item.role == "wing" and active then
                             animation = CFrame.Angles(0, 0,
                                 item.part.Name:find("-1", 1, true)
@@ -238,15 +239,15 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
                             -- A local rotor spin follows *after* that hinge.
                             local side = item.role == "tail" and 0
                                 or (item.frame.Position.X < 0 and -1 or 1)
-                            local authored = AerialSurveyRules.articulatedSectionFrame(
+                            articulatedFrame = AerialSurveyRules.articulatedSectionFrame(
                                 item.role, drone.index, side, elapsed, item.frame)
                             if item.role == "rotor" then
                                 animation = CFrame.Angles(0, elapsed * 8, 0)
                             end
-                            item.part.CFrame = frame * authored * animation
-                        else
-                            item.part.CFrame = frame * item.frame * animation
                         end
+                        -- Every section (including wings, hull and beacon)
+                        -- follows the shared flight frame every active tick.
+                        item.part.CFrame = frame * articulatedFrame * animation
                     end
                     if colorDirty and (item.role == "beacon"
                         or item.role == "navigation" or item.role == "exhaust")
