@@ -56,7 +56,7 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
     it("articulates nonphysical turbine and tail servos within one degree", function()
         for index = 1, 3 do
             for _, role in ipairs({"engine", "exhaust", "rotor", "tail"}) do
-                for _, side in ipairs(role == "engine" and {-1, 1} or {0}) do
+                for _, side in ipairs(role == "tail" and {0} or {-1, 1}) do
                     local animated = Rules.servoOffset(role, index, side, 1.37)
                     expect(animated ~= CFrame.identity).toBe(true)
                     for _, now in ipairs({0, 0.5, 1.37, 8.0, 10000}) do
