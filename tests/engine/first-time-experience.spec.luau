@@ -105,6 +105,22 @@ describe("First time experience", function()
         practice:Destroy()
     end)
 
+    it("only accepts distinct, renderable one-to-three-card ballots", function()
+        local valid = {{id = "Meteors"}, {id = "Freeze"}, {id = "Bombs"}}
+        expect(FirstTimeExperience.validVoteOptions(valid)).toBe(true)
+        expect(FirstTimeExperience.validVoteOptions({{id = "Meteors"}})).toBe(true)
+        for _, invalid in ipairs({
+            {}, {"Meteors"}, {{name = "Meteors"}}, {{id = ""}},
+            {{id = "Freeze"}, {id = "Freeze"}},
+            {{id = "A"}, {id = "B"}, {id = "C"}, {id = "D"}},
+            {{id = "Meteors"}, false},
+        }) do
+            expect(FirstTimeExperience.validVoteOptions(invalid)).toBe(false)
+            expect(FirstTimeExperience.hasVoteOptions({voteOptions = invalid})).toBe(false)
+        end
+        expect(FirstTimeExperience.validVoteOptions(nil)).toBe(false)
+    end)
+
     it("does not advertise voting before actionable options arrive", function()
         local state = {phase = "intermission"}
         local newbie = {games = 0, practiceUses = 0}

@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local LocalizationService = game:GetService("LocalizationService")
 
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
@@ -653,7 +654,7 @@ local function applyState()
         local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
         if games <= 0
             and currentState.phase == "intermission"
-            and currentState.voteOptions == nil
+            and not FirstTimeExperience.hasVoteOptions(currentState)
         then
             mainText = frenchLocale and "BOUGE + SAUTE" or "MOVE + JUMP"
             subText = frenchLocale and "SURVIS JUSQU'À 0" or "SURVIVE UNTIL 0"
@@ -919,7 +920,9 @@ local function lobbyReturnPulse()
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    local nextState = state or currentState
+    -- Malformed packets must not replace a valid lobby snapshot.
+    if type(state) ~= "table" then return end
+    local nextState = state
     local nextPhase = tostring(nextState.phase or "waiting")
 
     if previousPhase == "result"

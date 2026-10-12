@@ -1,3 +1,4 @@
+local FirstTimeExperience = require(script.Parent.FirstTimeExperience)
 local LobbyPresentationRules = {}
 
 -- A malformed RoundState snapshot must not abort lobby visual updates.
@@ -27,8 +28,7 @@ end
 function LobbyPresentationRules.mode(phase, voteOptions)
     local value = tostring(phase or "waiting")
     if value == "intermission"
-        and type(voteOptions) == "table"
-        and #voteOptions > 0
+        and FirstTimeExperience.validVoteOptions(voteOptions)
     then
         return "vote"
     elseif value == "vote" then

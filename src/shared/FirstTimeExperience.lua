@@ -8,12 +8,29 @@ function FirstTimeExperience.isRookie(games)
     return math.max(0, math.floor(tonumber(games) or 0)) <= 2
 end
 
--- One predicate for the on-screen rookie coach and its world-space guide:
--- an absent/empty/malformed vote list is never actionable.
+-- All visual voting surfaces must agree on an actionable ballot.
+-- The authoritative server sends one to three distinct {id=...} entries.
+-- Reject malformed payloads instead of constructing dead buttons.
+function FirstTimeExperience.validVoteOptions(options)
+    if type(options) ~= "table" or #options < 1 or #options > 3 then
+        return false
+    end
+    local seen = {}
+    for index = 1, #options do
+        local option = options[index]
+        if type(option) ~= "table"
+            or type(option.id) ~= "string" or option.id == ""
+            or seen[option.id] then
+            return false
+        end
+        seen[option.id] = true
+    end
+    return true
+end
+
 function FirstTimeExperience.hasVoteOptions(state)
     return type(state) == "table"
-        and type(state.voteOptions) == "table"
-        and #state.voteOptions > 0
+        and FirstTimeExperience.validVoteOptions(state.voteOptions)
 end
 
 

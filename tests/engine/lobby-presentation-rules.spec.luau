@@ -69,6 +69,10 @@ describe("Lobby presentation rules", function()
             {id = "Freeze"},
         })).toBe("vote")
         expect(LobbyPresentationRules.mode("intermission", nil)).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {})).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {{id = ""}})).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {"Meteors"})).toBe("social")
+        expect(LobbyPresentationRules.mode("ready", {{id = "Meteors"}})).toBe("launch")
     end)
 
     it("prioritizes the correct lobby zone by phase", function()

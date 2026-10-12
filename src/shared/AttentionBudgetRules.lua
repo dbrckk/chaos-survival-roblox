@@ -1,9 +1,9 @@
+local FirstTimeExperience = require(script.Parent.FirstTimeExperience)
 local AttentionBudgetRules = {}
 
 function AttentionBudgetRules.voteActive(phase, voteOptions)
     return tostring(phase or "") == "intermission"
-        and type(voteOptions) == "table"
-        and #voteOptions > 0
+        and FirstTimeExperience.validVoteOptions(voteOptions)
 end
 
 function AttentionBudgetRules.canShowMetaNotification(phase, voteOptions, games)

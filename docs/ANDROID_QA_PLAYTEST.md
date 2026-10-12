@@ -1113,3 +1113,27 @@ join on a throttled network and verify practice -> runway -> ready mobility
 markers when both folders and their attributes arrive late; swap maps during
 streaming and inspect for lingering guides. No server gameplay or hitbox
 logic, new permanent render loops, or production publishing is involved.
+
+## PR #19 — consistent, actionable voting on Android (12 October 2026)
+
+The main HUD previously treated an empty Lua voteOptions table as truthy.
+It could announce voting before a usable ballot existed, suppress the
+first-time movement hint, and leave stale touch vote cards on screen when
+voteOptions later disappeared during an intermission.
+
+A shared ballot predicate validates the current server contract (one to
+three distinct entries carrying nonempty string IDs). The HUD, rookie
+guide, lobby presentation and attention budget now use the same rule.
+In the HUD, a missing or invalid intermission ballot always clears old
+vote cards and the previous local selection. Malformed non-table
+RoundState events are ignored. All server-side voting rules, timing,
+damage, physics, AI voting, rewards and RemoteEvents remain untouched.
+
+Existing engine specs for first-run coaching, lobby presentation, and
+attention budgets cover empty, malformed, duplicate and oversized lists.
+Android/Studio acceptance still requires a physical staged first-run:
+verify movement/jump hints before voting, three tappable and readable
+cards during voting, and zero old vote targets when voting closes.
+Rejoin mid-intermission, trigger a short portrait viewport, and observe
+quality changes and ReduceMotion. These are required tests, not claimed
+successful observations.

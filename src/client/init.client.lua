@@ -2974,7 +2974,7 @@ local function localizedStateCopy(state)
     local displayHint = state.hint or ""
     local phase = tostring(state.phase or "")
 
-    if phase == "intermission" and state.voteOptions then
+    if phase == "intermission" and FirstTimeExperience.hasVoteOptions(state) then
         displayTitle = CoreLocalization.text(localeId, "VOTE_TITLE")
         displayHint = CoreLocalization.text(
             localeId,
@@ -2998,6 +2998,8 @@ local function localizedStateCopy(state)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    -- A malformed RoundState must not crash or replace a valid HUD.
+    if type(state) ~= "table" then return end
     presentCountdown(state)
 
     local previousHudPhase = currentHudPhase
@@ -3018,6 +3020,8 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     local gamesPlayed = tonumber(player:GetAttribute("Games")) or 0
     local firstLobby = gamesPlayed <= 0
+    local votingOpen = currentHudPhase == "intermission"
+        and FirstTimeExperience.hasVoteOptions(state)
     local activeGameplay = state.phase == "round" or state.phase == "ready"
     metaControlsSuppressed = AttentionBudgetRules.suppressMetaControls(
         state.phase,
@@ -3107,16 +3111,13 @@ stateEvent.OnClientEvent:Connect(function(state)
         shards = player:GetAttribute("RoundChaosShards"),
     })
     if firstLobby
-        and state.phase == "intermission"
-        and not state.voteOptions
+        and currentHudPhase == "intermission"
+        and not votingOpen
     then
         local controlsKey = touchDevice and "TOUCH_CONTROLS"
             or (UserInputService.GamepadEnabled and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS")
         coachText = CoreLocalization.text(localeId, controlsKey)
-    elseif touchDevice
-        and state.phase == "intermission"
-        and state.voteOptions
-    then
+    elseif touchDevice and votingOpen then
         -- The top HUD already says exactly what to tap. Hiding the rookie
         -- coach prevents it from colliding with vote cards on short phones.
         coachText = nil
@@ -3162,9 +3163,10 @@ stateEvent.OnClientEvent:Connect(function(state)
         )
     end
 
-    if state.voteOptions then
+    -- Remove stale touch targets when an intermission vote closes.
+    if votingOpen then
         showVotes(state.voteOptions)
-    elseif state.phase ~= "intermission" then
+    else
         selectedVote = nil
         showVotes(nil)
     end
