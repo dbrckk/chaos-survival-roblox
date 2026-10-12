@@ -88,6 +88,16 @@ describe("Movement safety", function()
 
     it("limits distant remote dash visuals without changing close-range budgets", function()
         local art = DashVisualRules
+        -- Validate both transition boundaries and invalid distance inputs.
+        expect(art.isDistantRemote(false, 71.99)).toBe(false)
+        expect(art.isDistantRemote(false, 72)).toBe(true)
+        expect(art.isDistantRemote(false, 110)).toBe(true)
+        expect(art.isDistantRemote(false, 110.01)).toBe(false)
+        expect(art.isDistantRemote(true, 90)).toBe(false)
+        expect(art.isDistantRemote(false, 0/0)).toBe(false)
+        expect(art.isDistantRemote(false, math.huge)).toBe(false)
+        expect(art.isDistantRemote(false, nil)).toBe(false)
+        expect(art.isDistantRemote(false, "90")).toBe(false)
         local caps = {Low = 3, Medium = 4, High = 5}
         for _, tier in ipairs({"Low", "Medium", "High"}) do
             local full = art.count(tier, false, false)

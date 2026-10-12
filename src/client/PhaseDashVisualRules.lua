@@ -3,6 +3,12 @@
 -- increasing 5/7/10-part per-ring device budgets.
 local Rules = {}
 
+-- Pure distance policy: no remote dash LOD for local/invalid/offscreen targets.
+function Rules.isDistantRemote(isLocal, distance)
+    return isLocal == false and type(distance) == "number"
+        and distance == distance and distance >= 72 and distance <= 110
+end
+
 function Rules.count(tier, reducedMotion, distant)
     -- Close-up signatures keep the authored full-detail silhouettes.
     -- Accessibility and distant non-local avatars share conservative caps.

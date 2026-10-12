@@ -197,8 +197,9 @@ local function playDashEffect(character)
     if viewerDistance > 110 then return end
     -- Preserve full gamefeel for the local avatar and nearby survivors.
     -- Far remote avatars keep one low-cost directional ring, not ribbons.
-    local distant = viewer ~= nil and character ~= player.Character
-        and viewerDistance >= 72
+    local distant = viewer ~= nil and DashVisualRules.isDistantRemote(
+        character == player.Character, viewerDistance
+    )
     local reduced = player:GetAttribute("ReduceMotion") == true
     local tier = quality()
     local position = root.Position - Vector3.new(0, 2.45, 0)
