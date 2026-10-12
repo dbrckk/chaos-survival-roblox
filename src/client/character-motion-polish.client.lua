@@ -12,11 +12,25 @@ local tracked, stop, watch = Registry.start(Players, Builder.release)
 local phase, finalRush = "waiting", false
 local remoteCandidates, selectedRemote = {}, {}
 
+local function suspendIfDisabled()
+    local quality = Quality.get(localPlayer:GetAttribute("VfxQualityTier"))
+    if Rules.suspended(phase, finalRush, quality.Name,
+        localPlayer:GetAttribute("ReduceMotion") == true) then
+        Rules.suspendOwned(tracked, localPlayer.Character, Builder.release)
+    end
+end
+
 event.OnClientEvent:Connect(function(state)
     local snapshot = type(state) == "table" and state or {}
     phase = tostring(snapshot.phase or "waiting")
     finalRush = phase == "round" and snapshot.finalRush == true
+    suspendIfDisabled()
 end)
+
+-- Accessibility and quality changes must hide ribbons in the same event,
+-- rather than leaving a visible frame for the next 120ms idle poll.
+localPlayer:GetAttributeChangedSignal("ReduceMotion"):Connect(suspendIfDisabled)
+localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(suspendIfDisabled)
 
 task.spawn(function()
     while true do
@@ -24,8 +38,8 @@ task.spawn(function()
         task.wait(Rules.updateInterval(tier.Name, phase,
             localPlayer:GetAttribute("ReduceMotion") == true, finalRush))
         local reduceMotion = localPlayer:GetAttribute("ReduceMotion") == true
-        local ribbonPhaseActive = phase == "round" and not finalRush
-            and not reduceMotion and tier.Name ~= "Low"
+        local ribbonPhaseActive = not Rules.suspended(
+            phase, finalRush, tier.Name, reduceMotion)
         local camera = workspace.CurrentCamera
         local localRoot = localPlayer.Character
             and localPlayer.Character:FindFirstChild("HumanoidRootPart")

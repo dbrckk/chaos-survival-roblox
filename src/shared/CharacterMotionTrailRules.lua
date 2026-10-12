@@ -77,13 +77,45 @@ function Rules.momentumStyle(tier, band)
         Peak = peak, Emission = emission, Opacity = opacity}
 end
 
+-- One shared gate controls both the idle cadence and immediate disabling
+-- of decorative ribbons on phase/quality/accessibility transitions.
+function Rules.suspended(phase, finalRush, tier, reduceMotion)
+    return phase ~= "round" or finalRush == true or reduceMotion == true
+        or (tier ~= "Medium" and tier ~= "High")
+end
+
+-- Called on events only, not from a per-frame connection. The local Trail
+-- remains allocated but is disabled immediately; remote GPU objects are
+-- released within the same remote/attachment budget already enforced.
+-- A failed release still disables its Trail safely.
+function Rules.suspendOwned(tracked, localModel, releaseTrail)
+    if type(tracked) ~= "table" then return 0 end
+    local disabled = 0
+    for model, state in pairs(tracked) do
+        state.eligible = false
+        local trail = state.trail
+        if trail and trail.Parent then
+            disabled += 1
+            if model ~= localModel and type(releaseTrail) == "function"
+                and releaseTrail(state.root, trail) then
+                state.trail = nil
+                state.appliedTier = nil
+                state.appliedBand = nil
+                state.appliedAccent = nil
+            else
+                trail.Enabled = false
+            end
+        end
+    end
+    return disabled
+end
+
 -- Motion ribbons are absent outside active rounds, in final rush,
 -- and in Low/ReduceMotion. Poll their already-registered rigs less often
 -- while disabled; keep original Medium/High active animation cadence.
 -- Use exact positive intervals; never introduce a per-frame connection.
 function Rules.updateInterval(tier, phase, reduceMotion, finalRush)
-    if phase ~= "round" or reduceMotion == true or finalRush == true
-        or tier == "Low" then
+    if Rules.suspended(phase, finalRush, tier, reduceMotion) then
         return 0.12
     end
     if tier == "High" then return 1 / 30 end

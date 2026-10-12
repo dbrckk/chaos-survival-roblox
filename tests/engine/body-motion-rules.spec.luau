@@ -715,6 +715,46 @@ describe("Directional character impact and cinematic AI footwork", function()
             "High", true, 5, true)).toBe(false)
     end)
 
+    it("suspends local and remote ribbons immediately without foreign cleanup", function()
+        local rules = require("../../src/shared/CharacterMotionTrailRules")
+        local localModel = Instance.new("Model")
+        local remoteModel = Instance.new("Model")
+        local localRoot = Instance.new("Part")
+        local remoteRoot = Instance.new("Part")
+        localRoot.Name, remoteRoot.Name = "HumanoidRootPart", "HumanoidRootPart"
+        localRoot.Parent, remoteRoot.Parent = localModel, remoteModel
+        local accent = Color3.fromRGB(90, 190, 255)
+        local localTrail = MotionTrailBuilder.ensure(localRoot, accent)
+        local remoteTrail = MotionTrailBuilder.ensure(remoteRoot, accent)
+        localTrail.Enabled, remoteTrail.Enabled = true, true
+        local tracked = {
+            [localModel] = {root = localRoot, trail = localTrail,
+                appliedTier = "High", eligible = true},
+            [remoteModel] = {root = remoteRoot, trail = remoteTrail,
+                appliedTier = "High", eligible = true},
+        }
+        local disabled = rules.suspendOwned(
+            tracked, localModel, MotionTrailBuilder.release)
+        expect(disabled).toBe(2)
+        expect(localTrail.Parent).toBe(localRoot)
+        expect(localTrail.Enabled).toBe(false)
+        expect(tracked[localModel].eligible).toBe(false)
+        expect(remoteTrail.Parent == nil).toBe(true)
+        expect(remoteRoot:FindFirstChild("ChaosMotionTrailLeft") == nil)
+            .toBe(true)
+        expect(remoteRoot:FindFirstChild("ChaosMotionTrailRight") == nil)
+            .toBe(true)
+        expect(tracked[remoteModel].trail == nil).toBe(true)
+        expect(tracked[remoteModel].appliedTier == nil).toBe(true)
+        expect(tracked[remoteModel].eligible).toBe(false)
+        expect(rules.suspendOwned(tracked, localModel, MotionTrailBuilder.release))
+            .toBe(1)
+        expect(rules.suspendOwned(nil, localModel, MotionTrailBuilder.release))
+            .toBe(0)
+        localModel:Destroy()
+        remoteModel:Destroy()
+    end)
+
     it("reduces idle human ribbon work without slowing active Medium and High", function()
         local rules = require("../../src/shared/CharacterMotionTrailRules")
         expect(rules.updateInterval("High", "round", false, false)).toBe(1 / 30)
@@ -729,6 +769,13 @@ describe("Directional character impact and cinematic AI footwork", function()
         expect(rules.updateInterval("Unknown", "round", false, false)).toBe(0.12)
         expect(rules.updateInterval(nil, "round", false, false)).toBe(0.12)
         expect(rules.updateInterval("High", nil, false, false)).toBe(0.12)
+        expect(rules.suspended("round", false, "High", false)).toBe(false)
+        expect(rules.suspended("round", false, "Medium", false)).toBe(false)
+        expect(rules.suspended("ready", false, "High", false)).toBe(true)
+        expect(rules.suspended("round", true, "High", false)).toBe(true)
+        expect(rules.suspended("round", false, "Low", false)).toBe(true)
+        expect(rules.suspended("round", false, "High", true)).toBe(true)
+        expect(rules.suspended("round", false, "Unknown", false)).toBe(true)
     end)
 
     it("selects bounded nearest human motion trails without full sorting", function()

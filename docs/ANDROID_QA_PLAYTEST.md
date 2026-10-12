@@ -1025,3 +1025,22 @@ Core A covers old-avatar cleanup on PlayerRemoving, while the body-motion
 engine spec tests streaming removal, late root replacement, explicit stop,
 absence of leaked named attachment instances, and watcher-count stability.
 No real Roblox Studio/Android visual, memory or GPU profiling has been done.
+
+## PR #19 — event-driven immediate accessibility ribbon suspension (12 October 2026)
+
+Human character motion trails previously waited for a decorative loop tick
+(up to 120 ms during inactive states) before disappearing after entering
+Final Rush or changing to Low/ReduceMotion. The existing RoundState listener
+now performs an immediate synchronous suspend on the transition, alongside
+lightweight LocalPlayer attribute listeners for ReduceMotion and
+VfxQualityTier. Shared `CharacterMotionTrailRules.suspended` ensures the
+event and polling path use the same authoritative cosmetic eligibility gate.
+
+The local player's existing Trail is disabled rather than reallocated;
+remote Trails and their two named attachments are released immediately.
+No additional heartbeat/render-step loop, server event, terrain or gameplay
+property is introduced. Engine body-motion regressions exercise High/Medium
+eligibility, every forbidden state, event suspend idempotence, local ownership
+retention, remote reclamation, and safe cleanup without unrelated objects.
+This is functional source and engine-test coverage, not a real Android
+frame-by-frame or accessibility playtest.
