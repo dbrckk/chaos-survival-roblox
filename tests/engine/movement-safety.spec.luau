@@ -63,6 +63,44 @@ describe("Movement safety", function()
         expect(primary.Bank ~= accent.Bank).toBe(true)
     end)
 
+    it("authors shallow directional 3D relief without new mobile instances", function()
+        local rules = DashVisualRules
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local fullCount = rules.count(tier, false, false)
+            local reducedCount = rules.count(tier, true, false)
+            local distantCount = rules.count(tier, false, true)
+            local sawLift = false
+            local sawTilt = false
+            for index = 1, fullCount do
+                local blade = rules.facet(tier, index, false, false, false)
+                local again = rules.facet(tier, index, false, false, false)
+                expect(blade.Count).toBe(fullCount)
+                expect(blade.Rise).toBe(again.Rise)
+                expect(blade.Pitch).toBe(again.Pitch)
+                expect(blade.Rise >= 0 and blade.Rise <= 0.151).toBe(true)
+                expect(math.abs(blade.Pitch) <= math.rad(6.01)).toBe(true)
+                if blade.Rise > 0 then sawLift = true end
+                if blade.Pitch ~= 0 then sawTilt = true end
+                local secondary = rules.facet(tier, index, true, false, false)
+                expect(secondary.Rise <= blade.Rise).toBe(true)
+            end
+            expect(sawLift and sawTilt).toBe(true)
+            for index = 1, reducedCount do
+                local still = rules.facet(tier, index, false, true, false)
+                expect(still.Rise).toBe(0)
+                expect(still.Pitch).toBe(0)
+            end
+            for index = 1, distantCount do
+                local far = rules.facet(tier, index, false, false, true)
+                expect(far.Rise).toBe(0)
+                expect(far.Pitch).toBe(0)
+            end
+            expect(rules.count(tier)).toBe(fullCount)
+            expect(rules.count(tier, true)).toBe(reducedCount)
+            expect(rules.count(tier, false, true)).toBe(distantCount)
+        end
+    end)
+
     it("halves moving Phase Dash facet load under ReduceMotion without removing the cue", function()
         local art = DashVisualRules
         local expected = {Low = 3, Medium = 4, High = 5}

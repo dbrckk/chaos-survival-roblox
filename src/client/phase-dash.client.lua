@@ -107,16 +107,21 @@ local function cosmeticRing(position, color, growth, age, forward, secondary, re
     local heading = horizontal.Magnitude > 0.1 and horizontal.Unit
         or Vector3.new(0, 0, -1)
     local side = Vector3.new(-heading.Z, 0, heading.X)
+    if count == 0 then return end
+    -- Reuse immutable tween timing and chord step for all facets in one ring.
+    local timing = TweenInfo.new(age, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+    local chordStep = 2 * math.sin(math.pi / count)
     for index = 1, count do
         local design = DashVisualRules.facet(tier, index, secondary, reducedMotion, distant)
         local angle = design.Angle
-        local radial = side * math.sin(angle) + heading * math.cos(angle)
-        local tangent = side * math.cos(angle) - heading * math.sin(angle)
+        local sinus = math.sin(angle)
+        local cosinus = math.cos(angle)
+        local radial = side * sinus + heading * cosinus
+        local tangent = side * cosinus - heading * sinus
         local startRadius = fromRadius * design.StartScale
         local endRadius = toRadius * design.EndScale
-        local rotation = CFrame.Angles(0, 0, design.Bank)
-        local chord = 2 * fromRadius * math.sin(math.pi / count)
-            * design.ChordScale
+        local rotation = CFrame.Angles(design.Pitch, 0, design.Bank)
+        local chord = fromRadius * chordStep * design.ChordScale
         local facet = Instance.new("Part")
         facet.Name = "PhaseDashRingFacet"
         facet.Size = Vector3.new(design.Thickness, design.Height, chord)
@@ -131,14 +136,15 @@ local function cosmeticRing(position, color, growth, age, forward, secondary, re
         facet.CanTouch = false
         facet.CanQuery = false
         facet.Parent = fxFolder
+        local tipPosition = position + radial * endRadius
+            + Vector3.new(0, design.Rise, 0)
         TweenService:Create(facet,
-            TweenInfo.new(age, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+            timing,
             {
                 Size = Vector3.new(design.Thickness * 0.70, 0.05,
-                    2 * endRadius * math.sin(math.pi / count)
-                        * design.ChordScale),
-                CFrame = CFrame.lookAt(position + radial * endRadius,
-                    position + radial * endRadius + tangent) * rotation,
+                    endRadius * chordStep * design.ChordScale),
+                CFrame = CFrame.lookAt(tipPosition,
+                    tipPosition + tangent) * rotation,
                 Transparency = 1,
             }
         ):Play()

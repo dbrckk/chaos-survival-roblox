@@ -728,3 +728,25 @@ messages or gameplay rules; visual identity and motion accessibility
 remain subject to existing quality policies. Engine tests cover injury,
 elimination, late rig replacement, declassification and listener cleanup.
 Physical Studio and Android verification is still required.
+
+
+## PR #19 — Phase Dash authored 3D relief without instance growth (12 October 2026)
+
+Nearby full-motion Phase Dash pressure blades now have a deterministic,
+shallow upward relief (up to 0.15 studs at the dissipating tip) and alternating
+per-facet cant (at most 6 degrees). The primary and High-tier accent rings
+keep their original cyan/purple materials, directions, chord budgets, fade
+lifetimes, collisions disabled and 5/7/10 primary Part caps. The accent
+relief is shallower for distinct layered 3D depth, not an extra VFX layer.
+
+ReduceMotion and distance-LOD facets use zero added rise or pitch. The client
+shares a single TweenInfo and chord-step calculation per existing ring and
+reuses each facet's sine/cosine values. No new Parts, particles, lights,
+connections or server gameplay code were introduced. Engine movement tests
+check relief bounds and determinism across all tiers and that accessibility
+and distance LOD retain flat 3D profiles and the existing instance caps.
+
+Physical QA is still outstanding: inspect blades at normal and reduced
+motion from ground/camera-low perspectives and in Low/Medium/High; ensure
+no ground clipping or obscured hazards. Compare Android frame times and
+memory with the prior commit before claiming actual performance gains.
