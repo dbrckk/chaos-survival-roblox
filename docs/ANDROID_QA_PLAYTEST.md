@@ -820,3 +820,21 @@ an arena spawned or streamed at a rotated/tilted CFrame. The beam now derives
 its frame from the two pylons. An engine regression covers level, yaw-rotated,
 and tilted bases; no extra scene Parts, VFX emitters, lights, physics or network
 traffic are introduced, and Low/Medium/High/ReduceMotion budgets are unchanged.
+
+
+## PR #19 — bounded remote human ribbon selection (12 October 2026)
+
+The human momentum ribbon controller previously performed a full in-place sort
+of all eligible remote humans at every decorative update, although only four
+Medium or eight High candidates can render a Trail (Low and ReduceMotion
+continue to render none). The pure CharacterMotionTrailRules selection now
+performs at most four or eight nearest-candidate passes with no temporary
+arrays. Its existing 3-stud persistence bias and stable player-order tie
+break are unchanged. Invalid nonfinite candidate distances cannot win a slot.
+
+Engine body-motion tests verify four/eight limits, tie handling, bias,
+exclusion of invalid distances, Low disabling and recycling of the same
+selection map across updates. The controller still owns the same Trail,
+attachment geometry, opacity, color, and lifetime: no gameplay movement,
+server, remote protocol or hazard visibility changes. This is a source-level
+work bound, not measured CPU/FPS/thermal improvement; profile on Android.
