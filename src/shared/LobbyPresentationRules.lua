@@ -1,4 +1,22 @@
-local FirstTimeExperience = require(script.Parent.FirstTimeExperience)
+-- Pure rules are loaded by Lest without a ModuleScript 'script' global.
+-- Keep the ballot guard dependency-free; parity is asserted by core_b1 specs.
+local function validVoteOptions(options)
+    if type(options) ~= "table" or #options < 1 or #options > 3 then
+        return false
+    end
+    local seen = {}
+    for index = 1, #options do
+        local option = options[index]
+        if type(option) ~= "table"
+            or type(option.id) ~= "string" or option.id == ""
+            or seen[option.id] then
+            return false
+        end
+        seen[option.id] = true
+    end
+    return true
+end
+
 local LobbyPresentationRules = {}
 
 -- A malformed RoundState snapshot must not abort lobby visual updates.
@@ -28,7 +46,7 @@ end
 function LobbyPresentationRules.mode(phase, voteOptions)
     local value = tostring(phase or "waiting")
     if value == "intermission"
-        and FirstTimeExperience.validVoteOptions(voteOptions)
+        and validVoteOptions(voteOptions)
     then
         return "vote"
     elseif value == "vote" then

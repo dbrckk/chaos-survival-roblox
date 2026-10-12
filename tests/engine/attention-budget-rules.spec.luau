@@ -10,6 +10,10 @@ describe("attention budget rules", function()
         expect(AttentionBudgetRules.voteActive("intermission", {})).toBe(false)
         expect(AttentionBudgetRules.voteActive("intermission", {{id = ""}})).toBe(false)
         expect(AttentionBudgetRules.voteActive("intermission", {"A"})).toBe(false)
+        expect(AttentionBudgetRules.voteActive("intermission", {{id = "A"}, {id = "A"}})).toBe(false)
+        expect(AttentionBudgetRules.voteActive("intermission", {
+            {id = "A"}, {id = "B"}, {id = "C"}, {id = "D"}
+        })).toBe(false)
         expect(AttentionBudgetRules.voteActive("round", {{id = "A"}})).toBe(false)
     end)
 

@@ -72,6 +72,12 @@ describe("Lobby presentation rules", function()
         expect(LobbyPresentationRules.mode("intermission", {})).toBe("social")
         expect(LobbyPresentationRules.mode("intermission", {{id = ""}})).toBe("social")
         expect(LobbyPresentationRules.mode("intermission", {"Meteors"})).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {
+            {id = "A"}, {id = "A"}
+        })).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {
+            {id = "A"}, {id = "B"}, {id = "C"}, {id = "D"}
+        })).toBe("social")
         expect(LobbyPresentationRules.mode("ready", {{id = "Meteors"}})).toBe("launch")
     end)
 
