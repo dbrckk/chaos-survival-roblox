@@ -5,6 +5,17 @@ local ArenaIdentityMotionRules = {}
 
 local SCALE = {Low = 0.38, Medium = 0.68, High = 1}
 
+-- Cosmetic-only parsing of network RoundState. A malformed payload must
+-- return the decorations to their idle pose, not crash the listener.
+-- Legitimate phase and Final Rush values retain their existing semantics.
+function ArenaIdentityMotionRules.roundSnapshot(snapshot)
+    if type(snapshot) ~= "table" then
+        return "waiting", false
+    end
+    local phase = tostring(snapshot.phase or "waiting")
+    return phase, phase == "round" and snapshot.finalRush == true
+end
+
 function ArenaIdentityMotionRules.motionScale(tier, reduceMotion)
     if reduceMotion == true then
         return 0

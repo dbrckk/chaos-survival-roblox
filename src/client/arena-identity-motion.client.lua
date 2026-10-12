@@ -171,7 +171,8 @@ bindMap()
 
 stateEvent.OnClientEvent:Connect(function(state)
     local previousPhase = phase
-    local incomingPhase = tostring(state and state.phase or "waiting")
+    -- Untrusted/late network snapshots must not abort this cosmetic listener.
+    local incomingPhase, incomingFinalRush = MotionRules.roundSnapshot(state)
     if incomingPhase ~= phase then
         local now = os.clock()
         phaseFromIntensity = MotionRules.phaseEnvelope(
@@ -183,9 +184,7 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     -- Final Rush is updated by the existing RoundState payload even when
     -- the phase remains "round". Decorative motion gives danger cues room.
-    local nextFocus = MotionRules.focusTarget(
-        phase, state and state.finalRush == true
-    )
+    local nextFocus = MotionRules.focusTarget(phase, incomingFinalRush)
     if nextFocus ~= focusTarget then
         local now = os.clock()
         focusFromScale = MotionRules.focusEnvelope(

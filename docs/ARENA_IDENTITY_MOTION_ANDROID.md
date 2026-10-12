@@ -296,3 +296,15 @@ change is introduced.
 This is automated engine coverage, not physical Android acceptance:
 real-device streaming and repeated distance-boundary traversal still
 need a visual and performance pass at all quality tiers.
+
+
+## RoundState resilience (12 October 2026)
+
+The client-only arena ornament listener now reads RoundState through
+ArenaIdentityMotionRules.roundSnapshot. Non-table or late malformed event
+payloads reset decorative state to waiting without throwing and disrupting
+future decorative phase transitions. Valid ready/round/result transitions
+and Final Rush pressure retain their earlier meaning; this changes no
+server state, collision, damage, or hazard telegraph. The engine arena
+presentation suite exercises malformed payloads and valid transitions.
+Studio and physical Android rendering remain untested.
