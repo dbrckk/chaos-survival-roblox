@@ -582,6 +582,60 @@ describe("Character polish lifecycle and late streaming", function()
         model:Destroy()
     end)
 
+    it("retains pre-parented avatar polish until the first workspace attachment", function()
+        local updates, stops = 0, 0
+        local registry = PolishRegistry.new(function()
+            updates += 1
+        end, function()
+            stops += 1
+        end)
+        local rig = Instance.new("Model")
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = rig
+        expect(registry.watch(rig)).toBe(true)
+        expect(registry.watch(rig)).toBe(false)
+        expect(registry.count()).toBe(1)
+        expect(updates).toBe(0)
+
+        rig.Parent = workspace
+        task.wait()
+        expect(updates).toBe(1)
+        expect(registry.count()).toBe(1)
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = rig
+        task.wait()
+        expect(updates > 1).toBe(true)
+
+        rig.Parent = nil
+        task.wait()
+        expect(registry.count()).toBe(0)
+        expect(stops).toBe(1)
+        local prior = updates
+        rig:SetAttribute("ChaosAccent", Color3.fromRGB(92, 189, 240))
+        task.wait()
+        expect(updates).toBe(prior)
+        rig.Parent = workspace
+        task.wait()
+        expect(registry.count()).toBe(0)
+        expect(registry.watch(rig)).toBe(true)
+        expect(registry.count()).toBe(1)
+        registry.stop(rig)
+        expect(registry.count()).toBe(0)
+        rig:Destroy()
+    end)
+
+    it("rejects pre-parented invalid models without retaining listeners", function()
+        local registry = PolishRegistry.new(function() end)
+        local holder = Instance.new("Folder")
+        local rig = Instance.new("Model")
+        rig.Parent = holder
+        expect(registry.watch(rig)).toBe(false)
+        expect(registry.watch(nil)).toBe(false)
+        expect(registry.count()).toBe(0)
+        holder:Destroy()
+    end)
+
     it("refreshes bound models without extra listeners through rig streaming", function()
         local updates = 0
         local registry = PolishRegistry.new(function()

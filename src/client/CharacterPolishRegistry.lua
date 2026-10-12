@@ -25,22 +25,29 @@ function Registry.new(onUpdate, onStop)
     local function refresh(model)
         if not entries[model] then return end
         if not model:IsDescendantOf(workspace) then
-            stop(model)
+            -- CharacterAdded may precede workspace parenting: preserve
+            -- the pending observation, but retire a rig that streamed out
+            -- after it had previously entered the world.
+            if entries[model].everInWorkspace then stop(model) end
             return
         end
+        entries[model].everInWorkspace = true
         onUpdate(model)
     end
 
     local function watch(model)
         if not model or not model:IsA("Model")
-            or not model:IsDescendantOf(workspace) then
+            or (model.Parent ~= nil and not model:IsDescendantOf(workspace)) then
             return false
         end
         if entries[model] then
             refresh(model)
             return false
         end
-        local entry = {connections = {}}
+        local entry = {
+            connections = {},
+            everInWorkspace = model:IsDescendantOf(workspace),
+        }
         entries[model] = entry
 
         -- Only bot health is used by CharacterPolishRules. Player damage
@@ -99,7 +106,7 @@ function Registry.new(onUpdate, onStop)
             if relevant(child) then refresh(model) end
         end))
         table.insert(entry.connections, model.AncestryChanged:Connect(function()
-            if not model:IsDescendantOf(workspace) then stop(model) end
+            refresh(model)
         end))
         table.insert(entry.connections, model.Destroying:Connect(function()
             stop(model)

@@ -906,3 +906,22 @@ polling, added visual objects or gameplay event is introduced.
 Engine survival-feedback tests cover pre-parent duplicate watch, first
 bind, stream-out cleanup, explicit rewatch and non-workspace rejection.
 No physical device visual or FPS measurements are yet available.
+
+## PR #19 — late-parented character polish highlights and fill lights
+
+The character-polish registry that owns ChaosCharacterPolishHighlight
+and its small optional PointLight previously refused models if
+CharacterAdded fired before their first workspace parenting. With no
+later watch, those client-owned cosmetics could be missing for that
+player's entire spawn, despite the separate cosmetic-quality registry
+having recently gained correct pre-parent support.
+
+The registry now keeps lightweight listeners on an initially unparented
+model, binds visuals on its first insertion into workspace, and fully
+releases the entry once a previously active model streams out or is
+destroyed. Unrelated models parented outside workspace remain rejected.
+All existing refreshes, quality tiers, reduced-motion budgets, server
+gameplay and light styling are unchanged. Engine character-polish
+regressions cover pending first-parent models, delayed Humanoid/Root,
+no duplicate registration, cleanup, and a fresh explicit rewatch.
+Physical Roblox Studio and Android rendering still require verification.
