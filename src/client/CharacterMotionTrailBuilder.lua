@@ -91,4 +91,26 @@ function Builder.ensure(root, accent)
     t.Parent = root
     return t
 end
+-- Free a deselected remote player's GPU object rather than retaining every
+-- Trail ever seen in a crowded round. Only our own named attachment pair
+-- is removed; unrelated attachments and other cosmetics are untouched.
+function Builder.release(root, trail)
+    if not root or not root:IsA("BasePart")
+        or not trail or not trail:IsA("Trail")
+        or trail.Name ~= "ChaosMotionTrail" or trail.Parent ~= root then
+        return false
+    end
+    local left, right = trail.Attachment0, trail.Attachment1
+    trail.Enabled = false
+    trail:Destroy()
+    if left and left.Parent == root and left.Name == "ChaosMotionTrailLeft" then
+        left:Destroy()
+    end
+    if right and right ~= left and right.Parent == root
+        and right.Name == "ChaosMotionTrailRight" then
+        right:Destroy()
+    end
+    return true
+end
+
 return Builder

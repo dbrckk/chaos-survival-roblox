@@ -101,6 +101,16 @@ task.spawn(function()
                     state.appliedAccent = color
                 end
             end
+            -- Selection caps must bound allocated remote Trails, not only
+            -- Enabled instances. Releasing unselected ribbons also makes
+            -- Low/ReduceMotion immediately reclaim existing GPU objects.
+            if not visible and model ~= localPlayer.Character and state.trail
+                and Builder.release(state.root, state.trail) then
+                state.trail = nil
+                state.appliedTier = nil
+                state.appliedBand = nil
+                state.appliedAccent = nil
+            end
             local trail = state.trail
             if trail and trail.Parent then
                 local band = state.momentumBand or "Flow"

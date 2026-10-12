@@ -976,3 +976,18 @@ Engine body-motion regression checks invalid and retained inputs, both
 boundary distances and accessibility gates. This only changes local
 cosmetic rendering decisions; it does not affect server movement, damage,
 physics or replication. Physical Android/Studio validation is outstanding.
+
+
+## PR #19 — bound allocated remote human ribbons (12 October 2026)
+
+The previous four/eight selection cap limited visible remote Trails but retained
+inactive Trail and Attachment instances on every previously selected human.
+Crowded rounds could therefore accumulate more GPU effect instances than the
+advertised remote cap. The client now releases unselected remote Trail owners
+and their two specifically named attachments; the local player's ribbon and
+unrelated avatar attachments/effects are untouched. Low and ReduceMotion
+also reclaim existing remote Trails. Nearest-selection hysteresis is retained
+to moderate allocation churn as players exchange positions. Engine body-motion
+tests cover successive High/Medium/Low selections, capped allocated Trails
+and unrelated attachment preservation. This improves the source-level bound;
+actual Android FPS, CPU, GPU and churn remain unmeasured and require device QA.

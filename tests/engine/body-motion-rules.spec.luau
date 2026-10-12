@@ -7,6 +7,7 @@ local BotMotionPresentationRules = require("../../src/shared/BotMotionPresentati
 local LocomotionDynamics = require("../../src/shared/LocomotionDynamics")
 local GroundFx = require("../../src/client/LocomotionGroundFx")
 local MotionTrailRegistry = require("../../src/client/CharacterMotionTrailRegistry")
+local MotionTrailBuilder = require("../../src/client/CharacterMotionTrailBuilder")
 
 describe("Body motion rules", function()
     it("crossfades additional R6/R15 body poses around Showtime emotes", function()
@@ -737,6 +738,59 @@ describe("Directional character impact and cinematic AI footwork", function()
         count = 0
         for _ in pairs(selected) do count += 1 end
         expect(count).toBe(2)
+    end)
+
+    it("bounds allocated human ribbons and leaves foreign attachments intact", function()
+        local rules = require("../../src/shared/CharacterMotionTrailRules")
+        local folder = Instance.new("Folder")
+        local crowd, selected = {}, {}
+        for i = 1, 12 do
+            local root = Instance.new("Part")
+            root.Name = "HumanoidRootPart"
+            root.Parent = folder
+            local foreign = Instance.new("Attachment")
+            foreign.Name = "ForeignAttachment"
+            foreign.Parent = root
+            crowd[i] = {root = root, foreign = foreign,
+                distance = i * 4, order = i}
+        end
+        local function update(tier, reverse)
+            for i, state in ipairs(crowd) do
+                state.distance = (reverse and (13 - i) or i) * 4
+            end
+            rules.selectRemote(crowd, tier, selected)
+            local allocated = 0
+            for _, state in ipairs(crowd) do
+                if selected[state] then
+                    if not state.trail then
+                        state.trail = MotionTrailBuilder.ensure(state.root,
+                            Color3.fromRGB(80, 180, 255))
+                    end
+                elseif state.trail then
+                    expect(MotionTrailBuilder.release(state.root, state.trail)).toBe(true)
+                    state.trail = nil
+                end
+                if state.trail then allocated += 1 end
+                expect(state.foreign.Parent).toBe(state.root)
+            end
+            expect(allocated <= rules.remoteBudget(tier)).toBe(true)
+            return allocated
+        end
+        expect(update("High", false)).toBe(8)
+        expect(update("High", true)).toBe(8)
+        expect(update("Medium", true)).toBe(4)
+        expect(update("Low", true)).toBe(0)
+        local unrelated = Instance.new("Trail")
+        unrelated.Name = "UnrelatedEffect"
+        unrelated.Parent = crowd[1].root
+        expect(MotionTrailBuilder.release(crowd[1].root, unrelated)).toBe(false)
+        expect(unrelated.Parent).toBe(crowd[1].root)
+        for _, state in ipairs(crowd) do
+            expect(state.root:FindFirstChild("ChaosMotionTrail") == nil).toBe(true)
+            expect(state.root:FindFirstChild("ChaosMotionTrailLeft") == nil).toBe(true)
+            expect(state.root:FindFirstChild("ChaosMotionTrailRight") == nil).toBe(true)
+        end
+        folder:Destroy()
     end)
 
     it("shares stable camera-frustum limits for AI and human optional trails", function()
