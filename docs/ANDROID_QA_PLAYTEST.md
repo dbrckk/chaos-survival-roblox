@@ -1091,3 +1091,25 @@ cosmetic guidance to waiting, without touching server-owned voting.
 Engine core_a regression covers empty/invalid ballots and real options;
 no new Instances, loops, remotes, collisions, gameplay rewards or VFX
 assets are added. Physical Android and Studio onboarding QA is pending.
+
+## PR #19 — streamed rookie 3D markers and late avatar roots (12 October 2026)
+
+The first-run world guide now observes the current GeneratedMap's relevant
+nested anchors, not only the top-level map insertion. A practice or mobility
+BasePart may arrive before its `LobbyPracticePad` / `ArenaMobilityPad`
+attribute; the matching attribute signal re-evaluates the guide when it arrives.
+A late `ArenaRunway` is likewise discovered. Map regeneration disconnects
+the previous descendant and attribute listeners; a streamed-out selected
+anchor requests a new target. A late HumanoidRootPart requests a refresh,
+including when the avatar existed before the LocalScript started. Batched
+deferred updates avoid scanning all map descendants on every visual frame.
+
+Regression coverage in existing `first-time-experience.spec.luau` checks that
+anchor candidates are restricted to the correct nested map sections and
+remain eligible before their marker attributes replicate. The actual event
+ordering, billboard appearance, stale-marker cleanup, and FPS still require
+an unpublished Studio candidate and physical Android review. Specifically,
+join on a throttled network and verify practice -> runway -> ready mobility
+markers when both folders and their attributes arrive late; swap maps during
+streaming and inspect for lingering guides. No server gameplay or hitbox
+logic, new permanent render loops, or production publishing is involved.

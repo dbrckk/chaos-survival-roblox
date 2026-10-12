@@ -57,6 +57,54 @@ describe("First time experience", function()
         )).toBe(true)
     end)
 
+
+    it("restricts streamed rookie guide anchors to their map sections", function()
+        local map = Instance.new("Folder")
+        map.Name = "GeneratedMap"
+        local lobby = Instance.new("Folder")
+        lobby.Name = "Lobby"
+        lobby.Parent = map
+        local activities = Instance.new("Folder")
+        activities.Name = "Activities"
+        activities.Parent = lobby
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = lobby
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = map
+        local mechanics = Instance.new("Folder")
+        mechanics.Name = "Mechanics"
+        mechanics.Parent = arena
+
+        local practice = Instance.new("Part")
+        practice.Parent = activities
+        -- Delayed attribute replication still needs a watcher.
+        expect(FirstTimeExperience.guideAnchorKind(practice, map)).toBe("practice")
+        practice:SetAttribute("LobbyPracticePad", true)
+        expect(FirstTimeExperience.guideAnchorKind(practice, map)).toBe("practice")
+
+        local runway = Instance.new("Part")
+        runway.Name = "ArenaRunway"
+        runway.Parent = decor
+        expect(FirstTimeExperience.guideAnchorKind(runway, map)).toBe("runway")
+
+        local mobility = Instance.new("Part")
+        mobility.Parent = mechanics
+        expect(FirstTimeExperience.guideAnchorKind(mobility, map)).toBe("mobility")
+
+        local unrelated = Instance.new("Part")
+        unrelated.Parent = decor
+        expect(FirstTimeExperience.guideAnchorKind(unrelated, map)).toBe(nil)
+        expect(FirstTimeExperience.guideAnchorKind(nil, map)).toBe(nil)
+        expect(FirstTimeExperience.guideAnchorKind(practice, nil)).toBe(nil)
+
+        practice.Parent = nil
+        expect(FirstTimeExperience.guideAnchorKind(practice, map)).toBe(nil)
+        map:Destroy()
+        practice:Destroy()
+    end)
+
     it("does not advertise voting before actionable options arrive", function()
         local state = {phase = "intermission"}
         local newbie = {games = 0, practiceUses = 0}

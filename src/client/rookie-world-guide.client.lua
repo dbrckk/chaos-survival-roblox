@@ -339,6 +339,95 @@ local function refresh()
     clearMarker()
 end
 
+
+-- The map's top-level model can arrive before its nested pads/runway,
+-- and a pad can precede its replicated marker attribute. Listen only to
+-- relevant direct children and their marker attributes, without polling
+-- the full map or adding RenderStepped work on mobile.
+local watchedMap = nil
+local mapConnections = {}
+local anchorConnections = {}
+local refreshQueued = false
+
+local function queueRefresh()
+    if refreshQueued then return end
+    refreshQueued = true
+    task.defer(function()
+        refreshQueued = false
+        refresh()
+    end)
+end
+
+local function releaseMap()
+    for _, connection in ipairs(mapConnections) do
+        connection:Disconnect()
+    end
+    table.clear(mapConnections)
+    for part, connection in pairs(anchorConnections) do
+        connection:Disconnect()
+        anchorConnections[part] = nil
+    end
+    watchedMap = nil
+end
+
+local function watchAnchor(part)
+    local kind = FirstTimeExperience.guideAnchorKind(part, watchedMap)
+    if not kind then return end
+
+    if (kind == "practice" or kind == "mobility")
+        and not anchorConnections[part] then
+        local attribute = kind == "practice"
+            and "LobbyPracticePad" or "ArenaMobilityPad"
+        anchorConnections[part] = part:GetAttributeChangedSignal(attribute)
+            :Connect(queueRefresh)
+    end
+    queueRefresh()
+end
+
+local function bindMap(generated)
+    releaseMap()
+    clearMarker()
+    watchedMap = generated
+    if not generated then return end
+
+    table.insert(mapConnections, generated.DescendantAdded:Connect(watchAnchor))
+    table.insert(mapConnections, generated.DescendantRemoving:Connect(function(part)
+        local connection = anchorConnections[part]
+        if connection then
+            connection:Disconnect()
+            anchorConnections[part] = nil
+        end
+        if part == currentTarget then
+            queueRefresh()
+        end
+    end))
+
+    for _, descendant in ipairs(generated:GetDescendants()) do
+        watchAnchor(descendant)
+    end
+    queueRefresh()
+end
+
+local characterRootConnection = nil
+local function watchCharacter(character)
+    if characterRootConnection then
+        characterRootConnection:Disconnect()
+        characterRootConnection = nil
+    end
+    if not character then
+        clearMarker()
+        return
+    end
+    characterRootConnection = character.ChildAdded:Connect(function(child)
+        if child.Name == "HumanoidRootPart" then
+            queueRefresh()
+        end
+    end)
+    task.delay(0.35, function()
+        if player.Character == character then queueRefresh() end
+    end)
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
     -- Malformed RoundState must not replace a table with a scalar and
     -- crash later marker refreshes. Fail closed to the ordinary lobby cue.
@@ -360,20 +449,28 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     refresh()
 end)
 
-player.CharacterAdded:Connect(function()
-    task.delay(0.35, refresh)
-end)
-
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        task.delay(0.35, refresh)
-    end
-end)
-
-workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+player.CharacterAdded:Connect(watchCharacter)
+player.CharacterRemoving:Connect(function(character)
+    if player.Character == character then
+        if characterRootConnection then
+            characterRootConnection:Disconnect()
+            characterRootConnection = nil
+        end
         clearMarker()
     end
 end)
 
-task.defer(refresh)
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        bindMap(child)
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child == watchedMap then
+        bindMap(workspace:FindFirstChild("GeneratedMap"))
+    end
+end)
+
+watchCharacter(player.Character)
+bindMap(workspace:FindFirstChild("GeneratedMap"))

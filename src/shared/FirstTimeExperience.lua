@@ -16,6 +16,31 @@ function FirstTimeExperience.hasVoteOptions(state)
         and #state.voteOptions > 0
 end
 
+
+-- Identify only map-owned first-run cues. Their marker attributes may
+-- replicate after the BasePart, so callers observe those attributes too.
+function FirstTimeExperience.guideAnchorKind(part, generated)
+    if typeof(part) ~= "Instance" or not part:IsA("BasePart")
+        or typeof(generated) ~= "Instance" then
+        return nil
+    end
+    local container = part.Parent
+    local section = container and container.Parent
+    if not section or section.Parent ~= generated then
+        return nil
+    end
+    if section.Name == "Lobby" then
+        if container.Name == "Activities" then
+            return "practice"
+        elseif container.Name == "Decor" and part.Name == "ArenaRunway" then
+            return "runway"
+        end
+    elseif section.Name == "Arena" and container.Name == "Mechanics" then
+        return "mobility"
+    end
+    return nil
+end
+
 function FirstTimeExperience.allowDoubleChaos(gamesValues)
     if type(gamesValues) ~= "table" then
         return true
