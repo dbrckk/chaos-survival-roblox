@@ -1,5 +1,29 @@
 local LobbyPresentationRules = {}
 
+-- A malformed RoundState snapshot must not abort lobby visual updates.
+function LobbyPresentationRules.roundPhase(snapshot)
+    if type(snapshot) ~= "table" or type(snapshot.phase) ~= "string" then
+        return "waiting"
+    end
+    return snapshot.phase
+end
+
+-- Resolve the actual streamed lobby platform, not just the initial fallback.
+-- Pure locator: the existing orbit update owns the low-frequency polling.
+function LobbyPresentationRules.coreOrbitCenter(root, lobbyCenter)
+    local fallback = typeof(lobbyCenter) == "Vector3"
+        and lobbyCenter or Vector3.zero
+    local generated = typeof(root) == "Instance"
+        and root:FindFirstChild("GeneratedMap") or nil
+    local lobby = generated and generated:FindFirstChild("Lobby")
+    local decor = lobby and lobby:FindFirstChild("Decor")
+    local platform = decor and decor:FindFirstChild("CenterPlatform")
+    if platform and platform:IsA("BasePart") then
+        return platform.Position + Vector3.new(0, 5.2, 0)
+    end
+    return fallback + Vector3.new(0, 6.6, 0)
+end
+
 function LobbyPresentationRules.mode(phase, voteOptions)
     local value = tostring(phase or "waiting")
     if value == "intermission"

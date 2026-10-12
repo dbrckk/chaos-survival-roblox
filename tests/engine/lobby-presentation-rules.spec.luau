@@ -7,6 +7,62 @@ local LobbyGateCueKit = require("../../src/client/LobbyGateCueKit")
 local VisualTheme = require("../../src/shared/VisualTheme")
 
 describe("Lobby presentation rules", function()
+
+    it("keeps core orbit visible after malformed or late RoundState", function()
+        expect(LobbyPresentationRules.roundPhase(nil)).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase(false)).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase(42)).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase({})).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase({phase = {}})).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase({phase = 20})).toBe("waiting")
+        for _, phase in ipairs({"waiting", "intermission", "vote", "ready",
+            "round", "result"}) do
+            expect(LobbyPresentationRules.roundPhase({phase = phase})).toBe(phase)
+        end
+    end)
+
+    it("reanchors orbit after late lobby decor and platform streaming", function()
+        local root = Instance.new("Folder")
+        local fallback = Vector3.new(0, 0, -150)
+        local expectedFallback = fallback + Vector3.new(0, 6.6, 0)
+        expect(LobbyPresentationRules.coreOrbitCenter(root, fallback))
+            .toBe(expectedFallback)
+
+        local generated = Instance.new("Model")
+        generated.Name = "GeneratedMap"
+        generated.Parent = root
+        local lobby = Instance.new("Model")
+        lobby.Name = "Lobby"
+        lobby.Parent = generated
+        expect(LobbyPresentationRules.coreOrbitCenter(root, fallback))
+            .toBe(expectedFallback)
+
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = lobby
+        local wrongType = Instance.new("Folder")
+        wrongType.Name = "CenterPlatform"
+        wrongType.Parent = decor
+        expect(LobbyPresentationRules.coreOrbitCenter(root, fallback))
+            .toBe(expectedFallback)
+        wrongType:Destroy()
+
+        local platform = Instance.new("Part")
+        platform.Name = "CenterPlatform"
+        platform.Position = Vector3.new(35, 2, -71)
+        platform.Parent = decor
+        expect((LobbyPresentationRules.coreOrbitCenter(root, fallback)
+            - Vector3.new(35, 7.2, -71)).Magnitude < 0.0001).toBe(true)
+
+        platform.Position = Vector3.new(65, 3, -51)
+        expect((LobbyPresentationRules.coreOrbitCenter(root, fallback)
+            - Vector3.new(65, 8.2, -51)).Magnitude < 0.0001).toBe(true)
+
+        decor:Destroy()
+        expect(LobbyPresentationRules.coreOrbitCenter(root, fallback))
+            .toBe(expectedFallback)
+        root:Destroy()
+    end)
     it("detects voting from intermission vote options", function()
         expect(LobbyPresentationRules.mode("intermission", {
             {id = "Meteors"},
