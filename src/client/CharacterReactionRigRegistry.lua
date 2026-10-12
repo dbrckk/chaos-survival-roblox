@@ -27,10 +27,15 @@ function RigRegistry.new(onState)
     end
 
     local function bind(model, entry)
-        if entries[model] ~= entry or not model:IsDescendantOf(workspace) then
-            stop(model)
+        if entries[model] ~= entry then return end
+        if not model:IsDescendantOf(workspace) then
+            -- CharacterAdded may precede the first workspace parent.
+            -- Keep the lightweight watcher pending until that arrival;
+            -- a previously active rig is still fully retired on stream-out.
+            if entry.everInWorkspace then stop(model) end
             return
         end
+        entry.everInWorkspace = true
         local humanoid = model:FindFirstChildOfClass("Humanoid")
         local root = model:FindFirstChild("HumanoidRootPart")
         if not root or not root:IsA("BasePart") then root = nil end
@@ -56,7 +61,7 @@ function RigRegistry.new(onState)
 
     local function watch(model)
         if not model or not model:IsA("Model")
-            or not model:IsDescendantOf(workspace) then
+            or (model.Parent ~= nil and not model:IsDescendantOf(workspace)) then
             return false
         end
         local existing = entries[model]
@@ -73,6 +78,7 @@ function RigRegistry.new(onState)
             humanoid = nil,
             root = nil,
             airborneAt = nil,
+            everInWorkspace = model:IsDescendantOf(workspace),
         }
         entries[model] = entry
         table.insert(entry.connections, model.ChildAdded:Connect(function(child)
@@ -86,7 +92,7 @@ function RigRegistry.new(onState)
             end
         end))
         table.insert(entry.connections, model.AncestryChanged:Connect(function()
-            if not model:IsDescendantOf(workspace) then stop(model) end
+            bind(model, entry)
         end))
         table.insert(entry.connections, model.Destroying:Connect(function()
             stop(model)

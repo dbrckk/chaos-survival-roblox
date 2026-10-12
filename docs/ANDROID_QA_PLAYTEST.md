@@ -889,3 +889,20 @@ unchanged. No extra rendering work is scheduled per frame.
 Core engine regressions cover pending first attach, duplicate watch,
 stream-out cleanup, explicit rewatch, player departure and stale
 CharacterAdded. Android/Studio physical validation remains outstanding.
+
+## PR #19 — cinematic reaction registry survives early CharacterAdded
+
+The short Dodge/Shock/Landing reaction registry previously declined
+CharacterAdded models that were not yet parented to workspace. After
+the initial callback was dropped, delayed root and Humanoid streaming
+could leave the character without landing-reactive beams until respawn.
+
+CharacterReactionRigRegistry now accepts an initially unparented Model,
+subscribes to its first workspace attachment and binds the existing
+Humanoid/Root listeners at that point. If an already-active rig later
+streams out, all listeners and airborne history are released as before;
+explicit CharacterRemoving still cleans it immediately. No per-frame
+polling, added visual objects or gameplay event is introduced.
+Engine survival-feedback tests cover pre-parent duplicate watch, first
+bind, stream-out cleanup, explicit rewatch and non-workspace rejection.
+No physical device visual or FPS measurements are yet available.

@@ -286,6 +286,55 @@ describe("Character cinematic reactions", function()
         expect(CharacterReactionRules.humanEligible(true, true)).toBe(false)
     end)
 
+    it("binds cinematic landing reactions after pre-workspace CharacterAdded", function()
+        local calls = 0
+        local registry = CharacterReactionRigRegistry.new(function()
+            calls += 1
+        end)
+        local rig = Instance.new("Model")
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = rig
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = rig
+        expect(registry.watch(rig)).toBe(true)
+        expect(registry.watch(rig)).toBe(false)
+        expect(registry.count()).toBe(1)
+        expect(registry.rig(rig) == nil).toBe(true)
+
+        rig.Parent = workspace
+        task.wait()
+        local activeRoot, activeHumanoid = registry.rig(rig)
+        expect(activeRoot).toBe(root)
+        expect(activeHumanoid).toBe(humanoid)
+        registry.clearAirborne()
+        expect(registry.rig(rig)).toBe(root)
+
+        rig.Parent = nil
+        task.wait()
+        expect(registry.count()).toBe(0)
+        expect(registry.rig(rig) == nil).toBe(true)
+        rig.Parent = workspace
+        task.wait()
+        expect(registry.rig(rig) == nil).toBe(true)
+        expect(registry.watch(rig)).toBe(true)
+        expect(registry.rig(rig)).toBe(root)
+        registry.stop(rig)
+        expect(registry.count()).toBe(0)
+        expect(calls).toBe(0) -- no fabricated Humanoid StateChanged
+        rig:Destroy()
+    end)
+
+    it("does not follow models temporarily parented outside workspace", function()
+        local registry = CharacterReactionRigRegistry.new(function() end)
+        local holder = Instance.new("Folder")
+        local rig = Instance.new("Model")
+        rig.Parent = holder
+        expect(registry.watch(rig)).toBe(false)
+        expect(registry.count()).toBe(0)
+        holder:Destroy()
+    end)
+
     it("rebinds streamed character roots and drops old Humanoid events", function()
         local calls = 0
         local lastRoot = nil
