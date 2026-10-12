@@ -37,7 +37,9 @@ function FirstTimeExperience.coachText(state, metrics)
     local shards = math.max(0, math.floor(tonumber(metrics.shards) or 0))
 
     if phase == "waiting" or phase == "intermission" then
-        if state.voteOptions then
+        -- Empty or malformed voteOptions are not an actionable vote.
+        -- Match the lobby's shared presentation predicate.
+        if type(state.voteOptions) == "table" and #state.voteOptions > 0 then
             return firstRound
                 and "VOTE  •  TAP THE CHAOS YOU WANT TO FACE"
                 or "VOTE  •  PICK THE NEXT CHAOS"

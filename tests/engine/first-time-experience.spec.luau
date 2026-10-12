@@ -40,6 +40,26 @@ describe("First time experience", function()
         expect(learned).toBe("ROUND GOAL  •  SURVIVE UNTIL 0  •  AVOID RED/ORANGE WARNINGS")
     end)
 
+
+    it("does not advertise voting before actionable options arrive", function()
+        local state = {phase = "intermission"}
+        local newbie = {games = 0, practiceUses = 0}
+        for _, options in ipairs({{}, "not-a-ballot", true, 0}) do
+            state.voteOptions = options
+            expect(FirstTimeExperience.coachText(state, newbie))
+                .toBe("HOW TO PLAY  •  SURVIVE UNTIL 0  •  MOVE + JUMP  •  SHARDS = BONUS")
+        end
+        state.voteOptions = nil
+        expect(FirstTimeExperience.coachText(state, newbie))
+            .toBe("HOW TO PLAY  •  SURVIVE UNTIL 0  •  MOVE + JUMP  •  SHARDS = BONUS")
+        state.voteOptions = {{id = "Freeze"}}
+        expect(FirstTimeExperience.coachText(state, newbie))
+            .toBe("VOTE  •  TAP THE CHAOS YOU WANT TO FACE")
+        state.voteOptions = {}
+        expect(FirstTimeExperience.coachText(state,
+            {games = 1, practiceUses = 1})).toBe(nil)
+    end)
+
     it("states the survival goal clearly during the ready phase", function()
         local text = FirstTimeExperience.coachText({
             phase = "ready",

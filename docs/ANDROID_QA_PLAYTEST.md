@@ -1062,3 +1062,15 @@ No new polling loops, listeners, effects, remotes or physics are added.
 Engine CI exercises the shared eligibility/accessibility policies, but a
 real device event-timing reproduction is still required before claiming
 an empirically verified flicker-free Android result.
+
+## Rookie vote guidance with streamed / empty options (12 October 2026)
+
+The first-time coach now shows **VOTE** only when RoundState has a nonempty
+`voteOptions` table. Empty, absent, or malformed vote lists retain the
+existing onboarding text instead of telling a new player to tap a
+nonexistent ballot. Once at least one option appears, the original
+localized voting guidance is unchanged. Engine `core_a` coverage checks
+all four cases and preserves ready/round behavior. This changes no server
+voting rules, gameplay, timing, rewards, map parts or graphics budgets.
+Check on physical Android whether vote button hit targets and small-screen
+coach wording are readable; no actual device test is claimed.
