@@ -645,3 +645,25 @@ valid directional facet descriptors and unchanged normal counts.
 This reduces per-dash client Part/Tween creation under ReduceMotion; it
 is not a measured FPS, GPU, battery or thermal result. Confirm on an
 Android device that the cue is readable without visual discomfort.
+
+
+## PR #19 — distance-aware Phase Dash visual LOD (12 October 2026)
+
+Remote survivor or bot dashes between 72 and 110 studs from the viewer
+now show the same authored directional pressure-blade motif with only
+3/4/5 facets (Low/Medium/High). Close-range dashes, including the local
+player's dash, retain the full 5/7/10 primary ring, High secondary ring,
+and Medium/High ribbon. Far remote dashes skip the secondary ring and
+ribbon entirely. The existing 110-stud distance cull is unchanged.
+
+ReduceMotion still caps the primary ring to 3/4/5 facets independently
+of distance and still disables the secondary ring and ribbons. No lights,
+persistent loops, new replicated data, movement parameters, hitboxes or
+server files were changed. The movement engine tests assert the nearby,
+distant, and ReduceMotion part caps and valid facet geometry.
+
+This caps the number of transient Parts, Tweens, Attachments and Trails
+created for remote dashes, but is **not** an observed Android FPS, battery
+or thermal gain. Manual QA: dash at <72, exactly 72, 72–110 and >110 studs
+from another avatar on Low/Medium/High; compare with ReduceMotion and
+inspect visibility and cleanup across repeated rounds.

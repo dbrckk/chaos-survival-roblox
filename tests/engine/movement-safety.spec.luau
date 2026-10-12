@@ -86,6 +86,30 @@ describe("Movement safety", function()
         expect(art.facet("High", 0/0, false, true)).toBe(nil)
     end)
 
+    it("limits distant remote dash visuals without changing close-range budgets", function()
+        local art = DashVisualRules
+        local caps = {Low = 3, Medium = 4, High = 5}
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local full = art.count(tier, false, false)
+            local far = art.count(tier, false, true)
+            expect(full).toBe(art.count(tier))
+            expect(far).toBe(caps[tier])
+            expect(far < full).toBe(true)
+            expect(art.count(tier, true, true)).toBe(caps[tier])
+            expect(art.count(tier, true, false)).toBe(caps[tier])
+            for index = 1, far do
+                local part = art.facet(tier, index, false, false, true)
+                expect(part ~= nil and part.Count == far).toBe(true)
+                expect(part.EndScale > 0 and part.ChordScale > 0).toBe(true)
+            end
+            expect(art.facet(tier, far + 1, false, false, true)).toBe(nil)
+            expect(art.facet(tier, 1, false, false, false).Count)
+                .toBe(full)
+        end
+        expect(art.count("Unknown", false, true)).toBe(0)
+        expect(art.facet("High", 0/0, false, false, true)).toBe(nil)
+    end)
+
     it("disconnects remote avatar pulse listeners on respawn and departure", function()
         local added = Instance.new("BindableEvent")
         local removing = Instance.new("BindableEvent")
