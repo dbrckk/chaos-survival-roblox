@@ -157,16 +157,25 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
             expect((hull.Position - first.root.Position).Magnitude < 50).toBe(true)
             -- Flight anchor for every 3D section matches the same
             -- authored local offset even while wing-bank animation runs.
-            local wave = math.sin(fleet.flightTime * 1.7 + first.index)
-                * math.rad(2)
+            if tier == "Low" then
+                expect(fleet.flightTime).toBe(0)
+            else
+                expect(fleet.flightTime > 0).toBe(true)
+            end
             for _, part in ipairs({wingLeft, wingRight}) do
                 local authored
                 for _, section in ipairs(first.sections) do
                     if section.part == part then authored = section.frame break end
                 end
                 expect(authored ~= nil).toBe(true)
-                local reaction = Rules.behavior({"Meteors"})
-                reaction.Speed = 1 -- flightTime already integrated hazard speed
+                -- Low never animates, so it must retain the original
+                -- non-hazard frame. Medium/High integrate meteor speed
+                -- into flightTime before applying the disaster sway.
+                local reaction = tier ~= "Low"
+                    and Rules.behavior({"Meteors"}) or nil
+                if reaction then
+                    reaction.Speed = 1
+                end
                 local worldExpected = Rules.flightFrame(
                     base, "Crossroads", first.index, first.total,
                     fleet.flightTime, reaction) * authored
@@ -196,7 +205,8 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
                 for _, item in ipairs(drone.sections) do
                     if item.role == "exhaust" then
                         expect(item.part.Color).toBe(danger)
-                        expect(item.part.Transparency).toBe(0.22)
+                        expect(math.abs(item.part.Transparency - 0.22)
+                            < 0.00001).toBe(true)
                     end
                 end
             end

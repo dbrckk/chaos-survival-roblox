@@ -149,3 +149,18 @@ wing, hull, rotor, exhaust, tail and beacon. A regression exercises
 wing position and orientation against a corresponding flight frame on
 Low/Medium/High. This also preserves the hazard-warning color path for
 exhausts.
+
+## Open Cloud test corrections for drone pose and alpha (12 October 2026)
+
+Core B2's first live Roblox engine run at e2890d65 exposed two test
+assumptions rather than a runtime drone regression: Low-quality survey
+craft never animate, so their authored wing positions must be compared
+against the initial non-disaster flight frame (not the Meteors sway
+frame); and Roblox BasePart.Transparency is stored with floating-point
+rounding (0.22 reads back as approximately 0.2199999988). The engine
+regression now explicitly checks Low's frozen flight clock versus
+Medium/High motion, applies disaster offsets only to animated tiers,
+and compares transparency with a narrow 1e-5 tolerance. Exact tier
+budgets, zero-collision geometry, alert colors and ReduceMotion behavior
+remain unchanged. Studio/physical Android visual and frame-time QA
+are still required.
