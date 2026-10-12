@@ -121,3 +121,21 @@ without applying a stale interval or visually jumping the patrol.
 The engine regression explicitly simulates a long pause, asserts that
 the flight phase is unchanged on resumption and that the three existing
 Trails/PointLights are still safely gated.
+
+## Physically coherent drone gimbal pivots (12 October 2026)
+
+The original service-nacelle motion rotated each turbine, its attached
+exhaust and its rotor blade about a *different part center*. Despite
+shared angles, offset geometry could slide apart visibly during motion.
+`AerialSurveyRules.articulatedSectionFrame` now composes the three
+existing pieces about the same authored turbine hinge
+(`X = side * 1.08, Y = -0.35, Z = 1.65` in local drone space).
+The tail retains its own smaller pitch. Rotor spin remains centered
+around the rotor after the shared hinge rotation, with no additional
+art geometry, network calls, loops or gameplay colliders.
+
+The dedicated engine regression checks two handed nacelles, three
+time samples, exact exhaust/rotor offsets at the shared hinge,
+world-frame composition on a rotated rig and invalid roles/inputs.
+Low-tier geometry and ReduceMotion/paused or distant poses never run
+the new articulation path; real device visual QA is still outstanding.

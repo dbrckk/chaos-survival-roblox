@@ -97,6 +97,44 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         end
     end)
 
+    it("hinges engine, exhaust and High-tier rotor as one coherent nacelle", function()
+        for _, side in ipairs({-1, 1}) do
+            local engine = CFrame.new(side * 1.08, -0.35, 1.65)
+            local exhaust = engine * CFrame.new(0, 0, 0.90)
+            local rotor = CFrame.new(side * 1.08, 0.28, 1.65)
+            for _, at in ipairs({0, 1.37, 7.21}) do
+                local angle = Rules.servoOffset("engine", 1, side, at)
+                local pivot = engine
+                local enginePose = Rules.articulatedSectionFrame(
+                    "engine", 1, side, at, engine)
+                local exhaustPose = Rules.articulatedSectionFrame(
+                    "exhaust", 1, side, at, exhaust)
+                local rotorPose = Rules.articulatedSectionFrame(
+                    "rotor", 1, side, at, rotor)
+                expect((enginePose.Position - pivot.Position).Magnitude < 0.0001)
+                    .toBe(true)
+                expect((exhaustPose.Position -
+                    (pivot * angle * CFrame.new(0, 0, 0.9)).Position).Magnitude
+                    < 0.0001).toBe(true)
+                expect((rotorPose.Position -
+                    (pivot * angle * CFrame.new(0, 0.63, 0)).Position).Magnitude
+                    < 0.0001).toBe(true)
+                local spatial = CFrame.new(50, 30, -17)
+                    * CFrame.Angles(0, math.rad(37), 0)
+                local world = spatial * rotorPose
+                expect((world.Position - spatial:PointToWorldSpace(
+                    rotorPose.Position)).Magnitude < 0.0001).toBe(true)
+            end
+        end
+        local fixed = CFrame.new(1, 2, 3)
+        expect(Rules.articulatedSectionFrame("hull", 1, 0, 1, fixed))
+            .toBe(fixed)
+        expect(Rules.articulatedSectionFrame("engine", 1, 0, 1, fixed))
+            .toBe(fixed)
+        expect(Rules.articulatedSectionFrame("engine", 1, 1, 1, nil))
+            .toBe(CFrame.identity)
+    end)
+
     it("integrates speed changes continuously and pauses without catch-up jumps", function()
         local elapsed, last = Rules.advanceClock(0, nil, 12, true, 1)
         expect(elapsed).toBe(0)

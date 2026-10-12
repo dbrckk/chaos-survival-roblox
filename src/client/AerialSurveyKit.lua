@@ -233,16 +233,18 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
                         elseif active and (item.role == "engine"
                             or item.role == "exhaust" or item.role == "rotor"
                             or item.role == "tail") then
-                            -- Nacelle, exhaust and rotating blade share the
-                            -- same micro-servo angle: one coherent assembly.
+                            -- Mechanical gimbal hinge is shared by turbine,
+                            -- rear exhaust and the rotating High-tier rotor.
+                            -- A local rotor spin follows *after* that hinge.
                             local side = item.role == "tail" and 0
                                 or (item.frame.Position.X < 0 and -1 or 1)
-                            animation = AerialSurveyRules.servoOffset(
-                                item.role, drone.index, side, elapsed)
+                            local authored = AerialSurveyRules.articulatedSectionFrame(
+                                item.role, drone.index, side, elapsed, item.frame)
                             if item.role == "rotor" then
-                                animation = animation
-                                    * CFrame.Angles(0, elapsed * 8, 0)
+                                animation = CFrame.Angles(0, elapsed * 8, 0)
                             end
+                            item.part.CFrame = frame * authored * animation
+                            continue
                         end
                         item.part.CFrame = frame * item.frame * animation
                     end

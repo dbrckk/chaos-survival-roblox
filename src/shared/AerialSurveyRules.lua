@@ -83,6 +83,25 @@ function AerialSurveyRules.servoOffset(role, index, side, elapsed)
     return CFrame.Angles(pitch, 0, 0)
 end
 
+-- Servo rotation applies about the shared turbine hinge rather than each
+-- piece's center. Otherwise a gimballed engine, its exhaust nozzle and its
+-- High-tier rotor separate slightly despite having equal angular offsets.
+-- Authored hinge matches the built nacelle center in AerialSurveyKit.
+function AerialSurveyRules.articulatedSectionFrame(role, index, side, elapsed, authoredFrame)
+    if typeof(authoredFrame) ~= "CFrame" then return CFrame.identity end
+    if role == "tail" then
+        return authoredFrame * AerialSurveyRules.servoOffset(
+            role, index, side, elapsed)
+    end
+    if role ~= "engine" and role ~= "exhaust" and role ~= "rotor" then
+        return authoredFrame
+    end
+    if side ~= -1 and side ~= 1 then return authoredFrame end
+    local pivot = CFrame.new(side * 1.08, -0.35, 1.65)
+    return pivot * AerialSurveyRules.servoOffset(
+        role, index, side, elapsed) * pivot:Inverse() * authoredFrame
+end
+
 -- Physical disasters have no effect on these non-colliding actors, but
 -- their animation language is distinct: evade meteors, bank in storms,
 -- rise above lava, float in low gravity, idle slowly during a freeze.
