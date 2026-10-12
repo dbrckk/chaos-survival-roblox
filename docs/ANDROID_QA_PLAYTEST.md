@@ -943,3 +943,21 @@ selection map across updates. The controller still owns the same Trail,
 attachment geometry, opacity, color, and lifetime: no gameplay movement,
 server, remote protocol or hazard visibility changes. This is a source-level
 work bound, not measured CPU/FPS/thermal improvement; profile on Android.
+
+
+## PR #19 — idle human ribbon polling limits (12 October 2026)
+
+The human-only momentum ribbon controller used the normal decorative update
+frequency even when ribbon rendering was unconditionally disabled. The
+shared CharacterMotionTrailRules.updateInterval now keeps the existing
+30/24 Hz High/Medium active round cadence, but polls only about 8.3 Hz
+(120 ms) outside rounds, on Low, with ReduceMotion, or during final rush.
+Its client loop also avoids speed, distance, camera projection and motion
+band work while the entire ribbon layer is disabled. Rig lifecycle watchers
+still run independently and surviving Trails are disabled by the next poll;
+there are no new loops, events, Parts, Lights, Trails or server changes.
+
+Engine regression tests verify both active cadences and every disabled state.
+These source-level reductions are not yet measured Android CPU, FPS, memory
+or thermal benefits. Verify disable/enable transitions and spectator/respawn
+visibility on a physical device before considering the feature complete.

@@ -645,6 +645,22 @@ describe("Directional character impact and cinematic AI footwork", function()
         expect(visible("High", false, "round", true, 1, nil, true)).toBe(false)
     end)
 
+    it("reduces idle human ribbon work without slowing active Medium and High", function()
+        local rules = require("../../src/shared/CharacterMotionTrailRules")
+        expect(rules.updateInterval("High", "round", false, false)).toBe(1 / 30)
+        expect(rules.updateInterval("Medium", "round", false, false)).toBe(1 / 24)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            for _, phase in ipairs({"waiting", "ready", "result"}) do
+                expect(rules.updateInterval(tier, phase, false, false)).toBe(0.12)
+            end
+            expect(rules.updateInterval(tier, "round", true, false)).toBe(0.12)
+            expect(rules.updateInterval(tier, "round", false, true)).toBe(0.12)
+        end
+        expect(rules.updateInterval("Unknown", "round", false, false)).toBe(0.12)
+        expect(rules.updateInterval(nil, "round", false, false)).toBe(0.12)
+        expect(rules.updateInterval("High", nil, false, false)).toBe(0.12)
+    end)
+
     it("selects bounded nearest human motion trails without full sorting", function()
         local rules = require("../../src/shared/CharacterMotionTrailRules")
         local function person(id, distance, active)

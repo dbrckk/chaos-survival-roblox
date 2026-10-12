@@ -21,8 +21,11 @@ end)
 task.spawn(function()
     while true do
         local tier = Quality.get(localPlayer:GetAttribute("VfxQualityTier"))
-        task.wait(tier.DecorUpdateInterval)
+        task.wait(Rules.updateInterval(tier.Name, phase,
+            localPlayer:GetAttribute("ReduceMotion") == true, finalRush))
         local reduceMotion = localPlayer:GetAttribute("ReduceMotion") == true
+        local ribbonPhaseActive = phase == "round" and not finalRush
+            and not reduceMotion and tier.Name ~= "Low"
         local camera = workspace.CurrentCamera
         local localRoot = localPlayer.Character
             and localPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -47,7 +50,8 @@ task.spawn(function()
             local visible = false
             local distance = math.huge
             local owner = state.player
-            if humanoid.Health > 0 and owner and owner.Parent == Players
+            if ribbonPhaseActive and humanoid.Health > 0
+                and owner and owner.Parent == Players
                 and Rules.humanEligible(owner:GetAttribute("RoundParticipant"),
                     owner:GetAttribute("RoundEliminated")) then
                 local velocity = root.AssemblyLinearVelocity
