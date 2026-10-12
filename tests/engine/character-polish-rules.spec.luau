@@ -316,15 +316,23 @@ describe("Human momentum trail spawn and streaming lifecycle", function()
             PlayerAdded = joined,
             PlayerRemoving = left,
         }
-        local tracked = MotionTrailRegistry.start(players)
+        local tracked = MotionTrailRegistry.start(players,
+            require("../../src/client/CharacterMotionTrailBuilder").release)
         -- Initial watch is retained before the first parent.
         rig.Parent = workspace
         task.wait()
         expect(tracked[rig] ~= nil).toBe(true)
+        local ribbon = require("../../src/client/CharacterMotionTrailBuilder")
+            .ensure(root, Color3.fromRGB(90, 190, 255))
+        ribbon.Enabled = true
+        tracked[rig].trail = ribbon
 
         fireLeft(player)
         task.wait()
         expect(tracked[rig] == nil).toBe(true)
+        expect(ribbon.Parent == nil).toBe(true)
+        expect(root:FindFirstChild("ChaosMotionTrailLeft") == nil).toBe(true)
+        expect(root:FindFirstChild("ChaosMotionTrailRight") == nil).toBe(true)
         fireAdded(rig)
         task.wait()
         expect(tracked[rig] == nil).toBe(true)

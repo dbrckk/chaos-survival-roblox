@@ -241,6 +241,49 @@ describe("Body motion rules", function()
         humanoid:Destroy()
     end)
 
+    it("releases owned ribbon geometry when a human rig streams out or is replaced", function()
+        local mock = {GetPlayerFromCharacter = function() return nil end}
+        local tracked, stop, watch, count =
+            MotionTrailRegistry.create(mock, MotionTrailBuilder.release)
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = model
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Parent = model
+        watch(model)
+        expect(count()).toBe(1)
+        local original = MotionTrailBuilder.ensure(root,
+            Color3.fromRGB(80, 160, 255))
+        original.Enabled = true
+        tracked[model].trail = original
+        root.Parent = nil
+        task.wait()
+        expect(original.Parent == nil).toBe(true)
+        expect(root:FindFirstChild("ChaosMotionTrailLeft") == nil).toBe(true)
+        expect(root:FindFirstChild("ChaosMotionTrailRight") == nil).toBe(true)
+        expect(tracked[model] == nil).toBe(true)
+        expect(count()).toBe(1)
+        local replacement = Instance.new("Part")
+        replacement.Name = "HumanoidRootPart"
+        replacement.Parent = model
+        task.wait()
+        expect(tracked[model] ~= nil).toBe(true)
+        local nextTrail = MotionTrailBuilder.ensure(replacement,
+            Color3.fromRGB(255, 120, 80))
+        tracked[model].trail = nextTrail
+        stop(model)
+        expect(nextTrail.Parent == nil).toBe(true)
+        expect(replacement:FindFirstChild("ChaosMotionTrailLeft") == nil)
+            .toBe(true)
+        expect(replacement:FindFirstChild("ChaosMotionTrailRight") == nil)
+            .toBe(true)
+        expect(count()).toBe(0)
+        model:Destroy()
+        root:Destroy()
+    end)
+
     it("stays responsive to sharp corner cuts and 180-degree turnarounds", function()
         local sign, weight = LocomotionDynamics.cut(
             Vector3.new(0, 0, -1), Vector3.new(1, 0, 0), 18, true

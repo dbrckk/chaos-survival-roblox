@@ -8,7 +8,7 @@ local Builder = require(script.Parent.CharacterMotionTrailBuilder)
 local Registry = require(script.Parent.CharacterMotionTrailRegistry)
 local localPlayer = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
-local tracked, stop, watch = Registry.start(Players)
+local tracked, stop, watch = Registry.start(Players, Builder.release)
 local phase, finalRush = "waiting", false
 local remoteCandidates, selectedRemote = {}, {}
 

@@ -2,7 +2,7 @@
 -- watchable through delayed Humanoid/Root streaming without any expiry timer.
 local Registry = {}
 
-function Registry.create(players)
+function Registry.create(players, releaseTrail)
     local tracked = setmetatable({}, {__mode = "k"})
     local watches = setmetatable({}, {__mode = "k"})
     local nextOrder = 0
@@ -13,7 +13,14 @@ function Registry.create(players)
             entry.stateChanged = nil
         end
         if entry.trail and entry.trail.Parent then
-            entry.trail.Enabled = false
+            -- Streaming a root, replacing a Humanoid or removing a player
+            -- must release our allocated GPU Trail, not merely hide it.
+            -- Fail soft for callers that do not provide a cleanup owner.
+            local released = type(releaseTrail) == "function"
+                and releaseTrail(entry.root, entry.trail)
+            if not released and entry.trail.Parent then
+                entry.trail.Enabled = false
+            end
         end
         entry.trail = nil
         entry.appliedTier = nil
@@ -120,8 +127,8 @@ function Registry.create(players)
     return tracked, stop, watch, watchedCount
 end
 
-function Registry.start(players)
-    local tracked, stop, watch = Registry.create(players)
+function Registry.start(players, releaseTrail)
+    local tracked, stop, watch = Registry.create(players, releaseTrail)
     local connectionsByPlayer = {}
 
     local function watchPlayer(player)

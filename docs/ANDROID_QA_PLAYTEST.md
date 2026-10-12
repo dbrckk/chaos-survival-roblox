@@ -1005,3 +1005,23 @@ signal with explicit Disconnect and the same mock-player reference for
 the complete lifecycle. The original unregistration and stale-rewatch
 assertions remain; runtime registry code is unchanged. Run Core A again
 to validate. This does not constitute physical Studio/Android QA.
+
+## PR #19 — retire human ribbon GPU ownership on rig replacement (12 October 2026)
+
+Human motion registry retirement previously disabled a Trail but kept the
+client-created Trail and both root Attachments allocated when a character's
+RootPart or Humanoid streamed out, was replaced, or its owner departed.
+This could leave disabled decorative GPU objects on abandoned rigs.
+The existing registry now accepts its visual owner's optional release
+callback; the running human-ribbon controller passes
+`CharacterMotionTrailBuilder.release`. Retirement removes only the
+`ChaosMotionTrail` and its specifically named attachments, before losing
+the old root reference. Pending unparented rigs remain watchable,
+and later replacement roots still bind normally. This adds no listeners,
+loops or per-frame allocations. The fallback for standalone registry
+consumers remains disabling the trail when no release callback is passed.
+
+Core A covers old-avatar cleanup on PlayerRemoving, while the body-motion
+engine spec tests streaming removal, late root replacement, explicit stop,
+absence of leaked named attachment instances, and watcher-count stability.
+No real Roblox Studio/Android visual, memory or GPU profiling has been done.
