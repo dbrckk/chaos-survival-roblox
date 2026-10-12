@@ -164,6 +164,9 @@ end
 -- 0.10/0.22/0.60/0.65-second cosmetic update.
 function AerialSurveyKit.suspendEffects(fleet)
     if type(fleet) ~= "table" then return 0 end
+    -- A pause can begin and end entirely between scheduled visual ticks.
+    -- Drop the old time sample now so motion cannot catch up after resume.
+    fleet.lastNow = nil
     local disabled = 0
     for _, drone in ipairs(fleet.drones or {}) do
         if drone.light and drone.light.Enabled then

@@ -109,3 +109,15 @@ repeated suspend does no work, Low/Medium remain unaffected and no
 geometry is allocated or destroyed. No server calls, extra render
 loops, new VFX objects or persistent state are added. Physical Android
 frame timing and visual response are not yet observed.
+
+## Rapid pause/resume clock normalization (12 October 2026)
+
+An accessibility or round-end event can pause the drone effects and
+resume them before the next 0.1–0.65-second update. Effect suspension
+now also clears the fleet's previous wall-clock sample, leaving its
+already accumulated animation phase intact. On the first resumed tick,
+the integration rule therefore re-baselines at the current clock
+without applying a stale interval or visually jumping the patrol.
+The engine regression explicitly simulates a long pause, asserts that
+the flight phase is unchanged on resumption and that the three existing
+Trails/PointLights are still safely gated.

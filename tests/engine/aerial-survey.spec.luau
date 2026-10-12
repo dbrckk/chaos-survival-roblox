@@ -294,7 +294,11 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         folder.Parent = workspace
         local high = Kit.build(folder, base, "Classic", "High", theme)
         Kit.update(high, 20, "round", false, theme.Accent, false, {"Meteors"}, true)
+        Kit.update(high, 20.2, "round", false, theme.Accent, false, {"Meteors"}, true)
+        local beforePause = high.flightTime
+        expect(beforePause > 0).toBe(true)
         expect(Kit.suspendEffects(high)).toBe(6)
+        expect(high.lastNow).toBe(nil)
         expect(Kit.suspendEffects(high)).toBe(0)
         expect(#high.drones).toBe(3)
         local count = 0
@@ -307,6 +311,10 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
             end
         end
         expect(count).toBe(51)
+        Kit.update(high, 200, "round", false, theme.Accent, false,
+            {"Meteors"}, true)
+        expect(high.flightTime).toBe(beforePause)
+        expect(Kit.suspendEffects(high)).toBe(6)
         expect(Kit.suspendEffects(nil)).toBe(0)
         folder:ClearAllChildren()
         for _, tier in ipairs({"Low", "Medium"}) do
