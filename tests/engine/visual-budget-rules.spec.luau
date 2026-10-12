@@ -220,6 +220,59 @@ describe("visual budget rules", function()
         root:Destroy()
     end)
 
+    it("counts temporary Phase Dash ribbons on actual avatar roots", function()
+        local root = Instance.new("Folder")
+        local player = Instance.new("Model")
+        player.Name = "PlayerCharacter"
+        player.Parent = root
+        local hrp = Instance.new("Part")
+        hrp.Name = "HumanoidRootPart"
+        hrp.Parent = player
+
+        local ribbon = Instance.new("Trail")
+        ribbon.Name = "PhaseDashRibbon"
+        ribbon.Parent = hrp
+        local orphan = Instance.new("Trail")
+        orphan.Name = "PhaseDashRibbon"
+        orphan.Parent = hrp
+        orphan.Enabled = false
+
+        local unrelated = Instance.new("Trail")
+        unrelated.Name = "ServerCharacterTrail"
+        unrelated.Parent = hrp
+        local wrongType = Instance.new("Part")
+        wrongType.Name = "PhaseDashRibbon"
+        wrongType.Parent = hrp
+        local torso = Instance.new("Part")
+        torso.Name = "UpperTorso"
+        torso.Parent = player
+        local wrongParent = Instance.new("Trail")
+        wrongParent.Name = "PhaseDashRibbon"
+        wrongParent.Parent = torso
+
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(audited).toBe(0)
+        expect(metrics.Effects).toBe(2)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Lights).toBe(0)
+        ribbon:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(1)
+
+        -- Phase Dash does not normally run for bots, but the client-only
+        -- accounting must also track a named ribbon on any streamed model.
+        local bots = Instance.new("Folder")
+        bots.Name = "AISurvivors"
+        bots.Parent = root
+        player.Parent = bots
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(1)
+        orphan:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(0)
+        root:Destroy()
+    end)
+
     it("counts duplicate orphan polish lights as actual allocated lights", function()
         local root = Instance.new("Folder")
         local model = Instance.new("Model")

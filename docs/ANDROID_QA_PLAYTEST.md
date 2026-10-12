@@ -750,3 +750,22 @@ Physical QA is still outstanding: inspect blades at normal and reduced
 motion from ground/camera-low perspectives and in Low/Medium/High; ensure
 no ground clipping or obscured hazards. Compare Android frame times and
 memory with the prior commit before claiming actual performance gains.
+
+## PR #19 — Phase Dash avatar ribbon budget accounting (12 October 2026)
+
+The Phase Dash ring Parts are correctly audited in the workspace-level
+PhaseDashVfxLocal folder, but the transient PhaseDashRibbon Trail is
+parented to the player HumanoidRootPart. This part is server-owned rig
+geometry, so the previous visual-budget collector skipped the client's
+temporary ribbon and underreported live GPU effects during dashes.
+
+The character/bot collector now counts only direct Trail children named
+PhaseDashRibbon under the direct HumanoidRootPart of a tracked avatar.
+It excludes the rig itself, attachments, unrelated trails, and
+non-Avatar cosmetics. Disabled/duplicate ribbons are counted as
+allocated Effects until Debris removes them. Existing budgets, Part
+allocation and dash behavior are unchanged, and no additional scans or
+animation loops are introduced. Engine tests verify normal, duplicated,
+disabled, removed, and incorrectly-parented ribbons and transitions of
+a tracked model into the AISurvivors folder. Real Android frame times
+and thermal behavior remain unmeasured.

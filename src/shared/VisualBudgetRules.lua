@@ -105,10 +105,16 @@ local function collectCharacterPolish(model, metrics)
     end
     for _, part in ipairs(model:GetChildren()) do
         if part:IsA("BasePart") then
-            for _, light in ipairs(part:GetChildren()) do
-                if light.Name == "ChaosCharacterPolishLight"
-                    and light:IsA("PointLight") then
+            for _, effect in ipairs(part:GetChildren()) do
+                if effect.Name == "ChaosCharacterPolishLight"
+                    and effect:IsA("PointLight") then
                     metrics.Lights += 1
+                elseif part.Name == "HumanoidRootPart"
+                    and effect.Name == "PhaseDashRibbon"
+                    and effect:IsA("Trail") then
+                    -- Dash ribbons are attached to player rigs, rather
+                    -- than to the root PhaseDashVfxLocal ring folder.
+                    metrics.Effects += 1
                 end
             end
         end
