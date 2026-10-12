@@ -1044,3 +1044,21 @@ eligibility, every forbidden state, event suspend idempotence, local ownership
 retention, remote reclamation, and safe cleanup without unrelated objects.
 This is functional source and engine-test coverage, not a real Android
 frame-by-frame or accessibility playtest.
+
+## PR #19 — render-state resampling across quality / ReduceMotion waits (12 October 2026)
+
+Both the human-ribbon loop and the client-owned hero landmark animator
+previously captured device tier *before* `task.wait` and reused it after
+waking. The landmark loop also reused the pre-wait `ReduceMotion` flag.
+An accessibility/tier event during the sleep could briefly restart or
+re-enable a cosmetic movement with a stale setting immediately after the
+event handler had hidden/restored it.
+
+The interval still uses the previous settings solely to schedule the
+current sleep; immediately after each wait, the render path reads the
+current tier and ReduceMotion flag. Existing shared `Rules.suspended`
+and `HeroMotionBudget.motionScale` then gate the actual animation.
+No new polling loops, listeners, effects, remotes or physics are added.
+Engine CI exercises the shared eligibility/accessibility policies, but a
+real device event-timing reproduction is still required before claiming
+an empirically verified flicker-free Android result.

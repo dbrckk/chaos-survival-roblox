@@ -313,3 +313,15 @@ Engine regression checks the 0.18/0.10-stud budgets, scale transitions,
 accessibility, rotated-frame composition and malformed values.
 Roblox Studio inspection and Android CPU/GPU, FPS and thermal
 measurements have **not** been performed.
+
+## Quality and ReduceMotion after-sleep refresh (12 October 2026)
+
+The existing hero landmark loop now uses the pre-wait tier and
+ReduceMotion flag solely for sleep cadence, then re-reads both values
+after `task.wait` before computing/restoring animated poses. This closes
+the transient old-setting animation window when the player changes
+accessibility or visual quality while the coroutine is asleep. The
+existing one-shot ReduceMotion pose handler is unchanged; the new
+read eliminates post-event visual reactivation without introducing any
+extra render cycles, 3D objects, physics or RemoteEvents. Client
+event-timing and Android FPS remain to be verified in Studio/device.

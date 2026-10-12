@@ -34,9 +34,12 @@ localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(suspendIfDisable
 
 task.spawn(function()
     while true do
-        local tier = Quality.get(localPlayer:GetAttribute("VfxQualityTier"))
-        task.wait(Rules.updateInterval(tier.Name, phase,
+        local waitTier = Quality.get(localPlayer:GetAttribute("VfxQualityTier"))
+        task.wait(Rules.updateInterval(waitTier.Name, phase,
             localPlayer:GetAttribute("ReduceMotion") == true, finalRush))
+        -- An attribute or RoundState event may run during task.wait.
+        -- Render with current settings, not the scheduling snapshot.
+        local tier = Quality.get(localPlayer:GetAttribute("VfxQualityTier"))
         local reduceMotion = localPlayer:GetAttribute("ReduceMotion") == true
         local ribbonPhaseActive = not Rules.suspended(
             phase, finalRush, tier.Name, reduceMotion)

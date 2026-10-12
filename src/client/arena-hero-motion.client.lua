@@ -170,11 +170,16 @@ scan()
 
 task.spawn(function()
     while true do
-        local tier = tierName()
-        local reduced = player:GetAttribute("ReduceMotion") == true
-        local interval = HeroMotionBudget.interval(tier, reduced, next(tracked) ~= nil)
+        -- The tier/reduced snapshot here schedules only the sleep. Never
+        -- reuse it for rendering after a settings event during task.wait().
+        local waitTier = tierName()
+        local waitReduced = player:GetAttribute("ReduceMotion") == true
+        local interval = HeroMotionBudget.interval(
+            waitTier, waitReduced, next(tracked) ~= nil)
         local dt = task.wait(interval)
         clock += dt
+        local tier = tierName()
+        local reduced = player:GetAttribute("ReduceMotion") == true
 
     if clock - lastScan > 2.5 then
         lastScan = clock
