@@ -78,19 +78,39 @@ function Rules.remoteBudget(tier)
 end
 
 -- Reuse the caller's arrays/maps to avoid per-frame allocations.
--- Existing trails receive a small distance bias to prevent flicker
--- when two players trade places at the visibility cutoff.
+-- Only four Medium or eight High remote human ribbons may be visible:
+-- select that small nearest set without sorting the full candidate list.
+-- Retain a 3-stud bias for already-enabled trails to prevent flicker.
+local function distanceScore(entry)
+    if type(entry) ~= "table" or type(entry.distance) ~= "number"
+        or entry.distance ~= entry.distance or entry.distance < 0
+        or entry.distance == math.huge then
+        return math.huge
+    end
+    return entry.distance - ((entry.trail and entry.trail.Enabled) and 3 or 0)
+end
+
 function Rules.selectRemote(candidates, tier, selected)
     table.clear(selected)
     local budget = Rules.remoteBudget(tier)
     if budget == 0 then return selected end
-    table.sort(candidates, function(a, b)
-        local da = a.distance - ((a.trail and a.trail.Enabled) and 3 or 0)
-        local db = b.distance - ((b.trail and b.trail.Enabled) and 3 or 0)
-        if da == db then return a.order < b.order end
-        return da < db
-    end)
+
+    -- In-place partial selection: at most 4/8 passes, no temporary tables
+    -- and no need to order candidates that cannot receive a ribbon.
     for i = 1, math.min(budget, #candidates) do
+        local bestIndex = i
+        local bestScore = distanceScore(candidates[i])
+        for j = i + 1, #candidates do
+            local score = distanceScore(candidates[j])
+            if score < bestScore
+                or (score == bestScore and score ~= math.huge
+                    and candidates[j].order < candidates[bestIndex].order) then
+                bestIndex = j
+                bestScore = score
+            end
+        end
+        if bestScore == math.huge then break end
+        candidates[i], candidates[bestIndex] = candidates[bestIndex], candidates[i]
         selected[candidates[i]] = true
     end
     return selected
