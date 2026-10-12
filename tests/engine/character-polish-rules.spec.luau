@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local CharacterPolishRules = require("../../src/shared/CharacterPolishRules")
 local TrailRules = require("../../src/shared/CharacterMotionTrailRules")
 local PolishRegistry = require("../../src/client/CharacterPolishRegistry")
+local CosmeticQualityRegistry = require("../../src/client/CosmeticQualityRegistry")
 local ViewportRules = require("../../src/shared/VisualViewportRules")
 
 describe("Character polish rules", function()
@@ -585,6 +586,88 @@ describe("Character polish lifecycle and late streaming", function()
         expect(registry.count()).toBe(0)
         model:Destroy()
         humanoid:Destroy()
+    end)
+end)
+
+describe("Cosmetic-quality rig streaming and listener cleanup", function()
+    it("tracks only genuine aura and trail classes", function()
+        local trail = Instance.new("Trail")
+        trail.Name = "ChaosTrail"
+        expect(CosmeticQualityRegistry.relevant(trail)).toBe(true)
+        trail.Name = "OtherTrail"
+        expect(CosmeticQualityRegistry.relevant(trail)).toBe(false)
+        local fake = Instance.new("Part")
+        fake.Name = "ChaosTrail"
+        expect(CosmeticQualityRegistry.relevant(fake)).toBe(false)
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ChaosAuraHighlight"
+        expect(CosmeticQualityRegistry.relevant(highlight)).toBe(true)
+        expect(CosmeticQualityRegistry.relevant(nil)).toBe(false)
+        trail:Destroy()
+        fake:Destroy()
+        highlight:Destroy()
+    end)
+
+    it("watches characters created before their first workspace parent", function()
+        local refreshes = 0
+        local registry = CosmeticQualityRegistry.new(function()
+            refreshes += 1
+        end, function() end)
+        local pending = Instance.new("Model")
+        expect(registry.watch(pending)).toBe(true)
+        expect(registry.count()).toBe(1)
+        expect(refreshes).toBe(0)
+        pending.Parent = workspace
+        task.wait()
+        expect(refreshes).toBe(1)
+        pending.Parent = nil
+        task.wait()
+        expect(registry.count()).toBe(0)
+        pending:Destroy()
+    end)
+
+    it("releases stale deferred additions and supports streaming rewatch", function()
+        local refreshes, effects = 0, 0
+        local registry = CosmeticQualityRegistry.new(function()
+            refreshes += 1
+        end, function()
+            effects += 1
+        end)
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        expect(registry.watch(model)).toBe(true)
+        expect(registry.watch(model)).toBe(false)
+        expect(registry.count()).toBe(1)
+        expect(refreshes).toBe(1)
+
+        local part = Instance.new("Part")
+        part.Parent = model
+        local aura = Instance.new("ParticleEmitter")
+        aura.Name = "ChaosAura"
+        aura.Parent = part
+        task.wait()
+        expect(effects).toBe(1)
+        expect(registry.refresh(model)).toBe(true)
+        expect(refreshes).toBe(2)
+        registry.refreshAll()
+        expect(refreshes).toBe(3)
+
+        local stale = Instance.new("Trail")
+        stale.Name = "ChaosTrail"
+        stale.Parent = part
+        expect(registry.stop(model)).toBe(true)
+        expect(registry.stop(model)).toBe(false)
+        task.wait()
+        expect(effects).toBe(1)
+        expect(registry.count()).toBe(0)
+        expect(registry.refresh(model)).toBe(false)
+
+        expect(registry.watch(model)).toBe(true)
+        expect(refreshes).toBe(4)
+        model.Parent = nil
+        task.wait()
+        expect(registry.count()).toBe(0)
+        model:Destroy()
     end)
 end)
 

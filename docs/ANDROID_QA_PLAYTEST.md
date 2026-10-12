@@ -840,3 +840,31 @@ A core_b2 engine regression checks five human root effects, one solo-bot
 shock Beam, disabled effects, exclusions, and removal at each lifecycle
 stage. This is telemetry accuracy, not a measured FPS improvement;
 verify all five engine shards and Android visual/memory/FPS separately.
+
+## PR #19 — explicit lifetime of cosmetic-quality observers (12 October 2026)
+
+The existing client cosmetic-quality controller subscribed to each
+character's DescendantAdded but did not release this connection when a
+player respawned or a bot streamed out. A delayed bot addition could
+also be processed after removal, and first-seen bots were sometimes
+scanned twice during a tier/ReduceMotion refresh.
+
+A dedicated CosmeticQualityRegistry now owns each model's listener
+and unregisters it on CharacterRemoving, PlayerRemoving, bot ChildRemoved,
+bot-folder replacement, instance unparenting or Destroying. Deferred
+cosmetic adjustments confirm that both the model and the effect still
+belong to the active subscription. All quality updates traverse each
+already-tracked model exactly once, without rescanning player and bot
+lists on every change. Matching is constrained by effect class and name.
+
+This is a lifecycle/CPU-memory hygiene change only. It introduces no
+new rendering, gameplay loops, network actions, player abilities or
+graphics assets; existing color, tier and accessibility recipes remain
+unchanged. Engine regression tests cover class filters, deduplication,
+deferred stale work and streaming rewatch. Verify the exact-head CI and
+Android reload/respawn behavior before making performance claims.
+
+Roblox CharacterAdded can arrive before a rig is first parented into
+workspace. Observers accept that initially unparented Model, refresh
+on its first parent, and release it only after a previously parented
+rig is actually removed. Engine tests cover that ordering as well.
