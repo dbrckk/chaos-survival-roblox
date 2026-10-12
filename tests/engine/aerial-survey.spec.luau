@@ -53,6 +53,41 @@ describe("Aerial survey fleet: 3D art, motion and mobile performance", function(
         expect(Rules.inRange(145.1, "Unknown", nil)).toBe(false)
     end)
 
+    it("articulates nonphysical turbine and tail servos within one degree", function()
+        for index = 1, 3 do
+            for _, role in ipairs({"engine", "tail"}) do
+                for _, side in ipairs(role == "engine" and {-1, 1} or {0}) do
+                    local animated = Rules.servoOffset(role, index, side, 1.37)
+                    expect(animated ~= CFrame.identity).toBe(true)
+                    for _, now in ipairs({0, 0.5, 1.37, 8.0, 10000}) do
+                        local offset = Rules.servoOffset(role, index, side, now)
+                        local limit = role == "engine" and 0.86 or 0.61
+                        expect(offset.Position).toBe(Vector3.zero)
+                        expect(offset.UpVector:Dot(Vector3.yAxis)
+                            >= math.cos(math.rad(limit))).toBe(true)
+                        local base = CFrame.new(12, 24, -8)
+                            * CFrame.Angles(0, math.rad(41), 0)
+                        local composed = base:ToObjectSpace(base * offset)
+                        expect(composed.UpVector:Dot(offset.UpVector)
+                            > 0.99999).toBe(true)
+                    end
+                end
+            end
+        end
+        expect(Rules.servoOffset("hull", 1, 0, 1))
+            .toBe(CFrame.identity)
+        expect(Rules.servoOffset("engine", 0, 1, 1))
+            .toBe(CFrame.identity)
+        expect(Rules.servoOffset("engine", 1, 0, 1))
+            .toBe(CFrame.identity)
+        expect(Rules.servoOffset("tail", 1, 1, 1))
+            .toBe(CFrame.identity)
+        for _, bad in ipairs({-1, 0/0, math.huge, -math.huge, 1e8}) do
+            expect(Rules.servoOffset("engine", 1, 1, bad))
+                .toBe(CFrame.identity)
+        end
+    end)
+
     it("integrates speed changes continuously and pauses without catch-up jumps", function()
         local elapsed, last = Rules.advanceClock(0, nil, 12, true, 1)
         expect(elapsed).toBe(0)

@@ -210,6 +210,14 @@ function AerialSurveyKit.update(fleet, now, phase, reduced, threatColor, finalRu
                             animation = CFrame.Angles(0, 0,
                                 item.part.Name:find("-1", 1, true)
                                     and wingBank or -wingBank)
+                        elseif (item.role == "engine" or item.role == "tail")
+                            and active then
+                            -- Articulate existing turbine nacelles and tail
+                            -- within their authored non-colliding silhouettes.
+                            local side = item.role == "tail" and 0
+                                or (item.frame.Position.X < 0 and -1 or 1)
+                            animation = AerialSurveyRules.servoOffset(
+                                item.role, drone.index, side, elapsed)
                         end
                         item.part.CFrame = frame * item.frame * animation
                     end

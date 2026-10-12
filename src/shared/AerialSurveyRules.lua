@@ -57,6 +57,29 @@ function AerialSurveyRules.silhouette(variant)
     return SILHOUETTES[variant] or SILHOUETTES.Classic
 end
 
+-- Micro-articulation of existing nonphysical engine nacelles and tail:
+-- distinct gentle servo settling makes the fleet feel mechanically authored
+-- without adding a single 3D object or CFrame write to its existing update.
+function AerialSurveyRules.servoOffset(role, index, side, elapsed)
+    if role ~= "engine" and role ~= "tail" then return CFrame.identity end
+    if type(index) ~= "number" or index ~= index
+        or index < 1 or index % 1 ~= 0 or index > 3
+        or type(elapsed) ~= "number" or elapsed ~= elapsed
+        or elapsed < 0 or elapsed > 1e7 then
+        return CFrame.identity
+    end
+    if role == "engine" then
+        if side ~= -1 and side ~= 1 then return CFrame.identity end
+        local tilt = math.sin(elapsed * 1.12 + index * 0.71 + side * 0.33)
+            * math.rad(0.85) * side
+        return CFrame.Angles(0, 0, tilt)
+    end
+    if side ~= 0 then return CFrame.identity end
+    local pitch = math.sin(elapsed * 0.75 + index * 0.51)
+        * math.rad(0.60)
+    return CFrame.Angles(pitch, 0, 0)
+end
+
 -- Physical disasters have no effect on these non-colliding actors, but
 -- their animation language is distinct: evade meteors, bank in storms,
 -- rise above lava, float in low gravity, idle slowly during a freeze.

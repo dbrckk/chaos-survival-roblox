@@ -60,3 +60,21 @@ inputs for Low/Medium/High; the existing scene test already checks
 reversible local Part masks and High effects without alpha corruption.
 Studio camera-edge and physical Android FPS/GPU measurements remain
 unverified.
+
+## Survey craft servo articulation without extra assets (12 October 2026)
+
+The Medium/High service turbines now perform small independent 3D bank
+gestures (maximum 0.85 degree); the existing split tail counterbalances
+with a quieter pitch (maximum 0.60 degree). The gestures are applied in
+the drone's already-running, already-writing geometry update after its
+authored flight frame, not in another loop or Tween. Low has neither
+component. A reduced-motion, inactive or distance-culled fleet does not
+advance or write these servo poses; it preserves its last accessible
+static position under the existing freeze contract.
+
+No new Part, Trail, Attachment, Light, sound, collision, network event,
+DataStore access or animation cycle is introduced. The engine regression
+checks valid poses, all three drone indices, both handed nacelles,
+rotated-frame composition, hard angular bounds, and invalid inputs.
+Visual clearance, real Android frame time and subjective AAA fidelity
+remain unverified pending device/Studio review.
