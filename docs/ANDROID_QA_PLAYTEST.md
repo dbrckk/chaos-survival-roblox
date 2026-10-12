@@ -710,3 +710,21 @@ Core engine regressions cover identity reuse, one-light invariant,
 dormant consolidation, Low/ReduceMotion, quality restoration, and
 fallback when a preferred torso is removed. Actual visual and
 performance behavior on Android requires playtesting.
+
+## PR #19 — immediate bot glow response to injury and elimination
+
+The character polish rule already used AI Humanoid.Health to dim
+eliminated/non-active bots and turn off extra PointLights. However
+CharacterPolishRegistry observed only model, rig and attribute changes,
+not ongoing HealthChanged. A bot eliminated mid-round could therefore
+retain the previous glow until another phase or quality refresh.
+
+The registry now subscribes to HealthChanged only while AISurvivor=true
+and a current Humanoid exists. It detaches when the Humanoid streams out,
+when AISurvivor clears or when the bot is removed, and reconnects when a
+replacement rig arrives. Player-only health changes do not trigger any
+extra polish work. This adds no per-frame loop, new Instances, server
+messages or gameplay rules; visual identity and motion accessibility
+remain subject to existing quality policies. Engine tests cover injury,
+elimination, late rig replacement, declassification and listener cleanup.
+Physical Studio and Android verification is still required.

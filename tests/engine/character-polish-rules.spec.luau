@@ -525,6 +525,62 @@ describe("Character polish lifecycle and late streaming", function()
         model:Destroy()
         root:Destroy()
     end)
+
+    it("reacts to solo bot injury, defeat and rig streaming without polling", function()
+        local updates, stopped = 0, 0
+        local registry = PolishRegistry.new(function()
+            updates += 1
+        end, function()
+            stopped += 1
+        end)
+        local model = Instance.new("Model")
+        model.Parent = workspace
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = model
+        expect(registry.watch(model)).toBe(true)
+        local humanCount = updates
+        humanoid.Health = 80
+        task.wait()
+        expect(updates).toBe(humanCount) -- human damage isn't cosmetic AI work
+
+        model:SetAttribute("AISurvivor", true)
+        local activated = updates
+        humanoid.Health = 25
+        task.wait()
+        expect(updates > activated).toBe(true)
+        local injured = updates
+        humanoid.Health = 0
+        task.wait()
+        expect(updates > injured).toBe(true)
+
+        humanoid.Parent = nil
+        local detached = updates
+        humanoid.Health = 50
+        task.wait()
+        expect(updates).toBe(detached)
+        local replacement = Instance.new("Humanoid")
+        replacement.Parent = model
+        local resynced = updates
+        replacement.Health = 30
+        task.wait()
+        expect(updates > resynced).toBe(true)
+
+        model:SetAttribute("AISurvivor", false)
+        local noLongerBot = updates
+        replacement.Health = 10
+        task.wait()
+        expect(updates).toBe(noLongerBot)
+        model:SetAttribute("AISurvivor", true)
+        registry.stop(model)
+        local afterStop = updates
+        replacement.Health = 5
+        task.wait()
+        expect(updates).toBe(afterStop)
+        expect(stopped).toBe(1)
+        expect(registry.count()).toBe(0)
+        model:Destroy()
+        humanoid:Destroy()
+    end)
 end)
 
 return nil

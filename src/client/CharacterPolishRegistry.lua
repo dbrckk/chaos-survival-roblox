@@ -11,6 +11,10 @@ function Registry.new(onUpdate, onStop)
         local entry = entries[model]
         if not entry then return end
         entries[model] = nil
+        if entry.healthConnection then
+            entry.healthConnection:Disconnect()
+            entry.healthConnection = nil
+        end
         for _, connection in ipairs(entry.connections) do
             connection:Disconnect()
         end
@@ -38,12 +42,34 @@ function Registry.new(onUpdate, onStop)
         end
         local entry = {connections = {}}
         entries[model] = entry
+
+        -- Only bot health is used by CharacterPolishRules. Player damage
+        -- must not cause unnecessary client visual refreshes.
+        local function syncBotHealth()
+            local nextHumanoid = nil
+            if model:GetAttribute("AISurvivor") == true then
+                nextHumanoid = model:FindFirstChildOfClass("Humanoid")
+            end
+            if entry.healthHumanoid == nextHumanoid then return end
+            if entry.healthConnection then
+                entry.healthConnection:Disconnect()
+                entry.healthConnection = nil
+            end
+            entry.healthHumanoid = nextHumanoid
+            if nextHumanoid then
+                entry.healthConnection = nextHumanoid.HealthChanged:Connect(function()
+                    refresh(model)
+                end)
+            end
+        end
+
         table.insert(entry.connections,
             model:GetAttributeChangedSignal("ChaosAccent"):Connect(function()
                 refresh(model)
             end))
         table.insert(entry.connections,
             model:GetAttributeChangedSignal("AISurvivor"):Connect(function()
+                syncBotHealth()
                 refresh(model)
             end))
         local function relevant(child)
@@ -52,9 +78,11 @@ function Registry.new(onUpdate, onStop)
                 or child.Name == "ChaosAuraHighlight"
         end
         table.insert(entry.connections, model.ChildAdded:Connect(function(child)
+            if child:IsA("Humanoid") then syncBotHealth() end
             if relevant(child) then refresh(model) end
         end))
         table.insert(entry.connections, model.ChildRemoved:Connect(function(child)
+            if child:IsA("Humanoid") then syncBotHealth() end
             if relevant(child) then refresh(model) end
         end))
         table.insert(entry.connections, model.AncestryChanged:Connect(function()
@@ -63,6 +91,7 @@ function Registry.new(onUpdate, onStop)
         table.insert(entry.connections, model.Destroying:Connect(function()
             stop(model)
         end))
+        syncBotHealth()
         refresh(model)
         return true
     end
