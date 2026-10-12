@@ -85,6 +85,31 @@ describe("Reactive arena landmarks during active disasters", function()
 end)
 
 
+describe("Client-owned hero scene rebuild observer", function()
+    local Watcher = require("../../src/client/HeroScenerySourceWatcher")
+
+    it("coalesces late BasePart arrivals via owner callback and disconnects", function()
+        local folder = Instance.new("Folder")
+        folder.Parent = workspace
+        local calls = 0
+        local dispose = Watcher.watch(folder, function()
+            calls += 1
+        end)
+        local unrelated = Instance.new("Folder")
+        unrelated.Parent = folder
+        expect(calls).toBe(0)
+        local piece = Instance.new("Part")
+        piece.Parent = folder
+        expect(calls).toBe(1)
+        piece.Parent = nil
+        expect(calls).toBe(2)
+        dispose()
+        piece.Parent = folder
+        expect(calls).toBe(2)
+        folder:Destroy()
+    end)
+end)
+
 describe("Hero landmark animation scheduling and accessibility", function()
     local Budget = require("../../src/shared/HeroMotionBudgetRules")
 

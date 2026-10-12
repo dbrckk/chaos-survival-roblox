@@ -348,3 +348,27 @@ Related `arena-presentation.spec.luau` already exercises late Base,
 section replacements and VariantId on the shared readiness watcher.
 CI on this exact commit remains required, followed by Roblox Studio
 streaming and physical Android visual/performance QA.
+
+## Hero motion ownership follows scene rebuild without a 2.5-second static gap (12 October 2026)
+
+The scene builder can replace the children of the persistent
+`workspace.ArenaHeroSceneryLocal` Folder after a streamed arena Base,
+VariantId or graphics-tier change. The hero animator previously scanned
+new scene pieces every 2.5 seconds and watched only the outer Folder's
+creation/removal. As a result, newly rebuilt 3D ornament pieces could
+remain static for up to the next recovery scan.
+
+The animated-ornament controller now attaches one lightweight
+`HeroScenerySourceWatcher` to the current owner Folder's direct
+`BasePart` child additions/removals. A deferred, coalesced scan runs
+after the synchronous scene rebuild, so newly created parts receive a
+fresh authored reference pose and resumed animation without immediate
+per-Part work. Old listeners are disconnected on Folder replacement.
+The existing 2.5-second fallback scan stays in place for resilience.
+No additional periodic loops, server events, physics, GPU objects or
+scene Parts are introduced.
+
+Core A engine regression covers the watcher emitting for added/removed
+BaseParts, not for unrelated child types, and detaching cleanly.
+Physical Android frame pacing and Roblox Studio streaming remain
+unverified.

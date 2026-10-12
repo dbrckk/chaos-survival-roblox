@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LandmarkReactions = require(ReplicatedStorage.Shared.LandmarkDisasterReactionRules)
 local HeroMotionBudget = require(ReplicatedStorage.Shared.HeroMotionBudgetRules)
+local SourceWatcher = require(script.Parent.HeroScenerySourceWatcher)
 local player = Players.LocalPlayer
 local roundEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local source = workspace:WaitForChild("ArenaHeroSceneryLocal", 10)
@@ -134,19 +135,46 @@ roundEvent.OnClientEvent:Connect(function(state)
     applyReducedPose()
 end)
 
+-- Hero scenery can rebuild all its Parts in one scheduler turn when a
+-- new arena variant or device tier arrives. React to owned children instead
+-- of waiting up to 2.5 seconds for the periodic recovery scan.
+local disconnectSource = nil
+local scanQueued = false
+local function scheduleSourceScan()
+    if scanQueued then return end
+    scanQueued = true
+    task.defer(function()
+        scanQueued = false
+        scan()
+    end)
+end
+
+local function bindSource(folder)
+    if disconnectSource then
+        disconnectSource()
+        disconnectSource = nil
+    end
+    source = folder
+    if folder then
+        disconnectSource = SourceWatcher.watch(folder, scheduleSourceScan)
+    end
+    scheduleSourceScan()
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "ArenaHeroSceneryLocal" then
-        source = child
-        task.delay(0.12, scan)
+        bindSource(child)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child == source then
-        source = nil
+        bindSource(workspace:FindFirstChild("ArenaHeroSceneryLocal"))
         table.clear(tracked)
     end
 end)
+
+bindSource(source)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     scan()
@@ -166,7 +194,6 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
 end)
 
 refreshReaction()
-scan()
 
 task.spawn(function()
     while true do
