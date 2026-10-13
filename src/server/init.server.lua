@@ -1575,6 +1575,9 @@ while true do
             doubleChaos = #selectedSet > 1,
             fusionName = fusionName,
             soloMode = readyCount == 1,
+            -- This is the authoritative human roster at the ready boundary.
+            -- Late joiners and unready characters are not round contestants.
+            readyHumanCount = readyCount,
             arenaName = roundSettings.ArenaName,
             arenaId = currentArenaVariant,
             disasterIds = readyDisasterIds,

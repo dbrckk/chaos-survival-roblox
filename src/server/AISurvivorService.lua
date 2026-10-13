@@ -855,7 +855,10 @@ local function reconcile(enteringReady)
         return
     end
 
-    local desired = AISurvivorRules.desiredBotCount(humanCount())
+    local humanRosterSize = AISurvivorRules.rosterHumanCount(
+        currentState.phase, enteringReady, humanCount(), currentState.readyHumanCount
+    )
+    local desired = AISurvivorRules.desiredBotCount(humanRosterSize)
 
     for slot = #records, desired + 1, -1 do
         local record = records[slot]

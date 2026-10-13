@@ -110,6 +110,24 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.rosterLocked("ready")).toBe(true)
     end)
 
+    it("counts admitted ready contestants, not connected spectators, against solo bots", function()
+        local count = AISurvivorRules.rosterHumanCount
+        local desired = AISurvivorRules.desiredBotCount
+
+        expect(count("ready", true, 3, 1)).toBe(1)
+        expect(desired(count("ready", true, 3, 1))).toBe(3)
+        expect(count("ready", true, 4, 2)).toBe(2)
+        expect(desired(count("ready", true, 4, 2))).toBe(2)
+        -- A late arrival cannot change an already committed roster.
+        expect(count("ready", false, 3, 1)).toBe(3)
+        expect(count("intermission", false, 3, 1)).toBe(3)
+        -- Old or malformed payloads safely fall back to connected humans.
+        expect(count("ready", true, 2, nil)).toBe(2)
+        expect(count("ready", true, 2, 0)).toBe(2)
+        expect(count("ready", true, 2, math.huge)).toBe(2)
+        expect(count("ready", true, 2, 0 / 0)).toBe(2)
+    end)
+
     it("rotates distinct behavior profiles", function()
         expect(AISurvivorRules.profileForSlot(1).Id).toBe("Cautious")
         expect(AISurvivorRules.profileForSlot(2).Id).toBe("Balanced")

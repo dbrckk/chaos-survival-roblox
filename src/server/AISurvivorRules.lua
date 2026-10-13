@@ -70,6 +70,25 @@ function AISurvivorRules.rosterReconciliationAllowed(phase, enteringReady)
         or (phase == "ready" and enteringReady == true)
 end
 
+-- Only players who actually made it into the ready roster should count
+-- against the solo AI population. Connected spectators / late arrivals are
+-- not contestants, so they must not silently displace a competitor.
+function AISurvivorRules.rosterHumanCount(phase, enteringReady, connectedCount, readyCount)
+    if phase == "ready" and enteringReady == true then
+        local eligible = tonumber(readyCount)
+        if eligible and eligible == eligible and eligible >= 1
+            and eligible < math.huge then
+            return math.floor(eligible)
+        end
+    end
+    local connected = tonumber(connectedCount)
+    if not connected or connected ~= connected or connected == math.huge
+        or connected == -math.huge then
+        return 0
+    end
+    return math.max(0, math.floor(connected))
+end
+
 function AISurvivorRules.profileForSlot(slot)
     local count = #AISurvivorRules.Profiles
     local index = ((math.max(1, math.floor(tonumber(slot) or 1)) - 1) % count) + 1

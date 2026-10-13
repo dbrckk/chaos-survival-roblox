@@ -1413,3 +1413,25 @@ then join with another player mid-round to confirm bots are not despawned.
 A second round should rebalance the roster during intermission. Automated
 rules tests do not themselves prove that Roblox successfully creates
 humanoid rigs on every device.
+
+## PR #19 — reserve solo AI slots for admitted human contestants (13 October 2026)
+
+The ready-boundary roster reconciliation must use the number of actual
+ready humans, not the total people connected to the Roblox server. At
+this stage, joining spectators and players whose character could not be
+prepared are intentionally excluded from the round, but were still
+counted by Players:GetPlayers(), potentially leaving solo competitors
+missing even after the ready-phase reconciliation fix.
+
+The ready broadcast now includes readyHumanCount, taken from the actual
+ready contestants immediately before the server locks the roster. The
+AI service uses this value only on its one authorized ready-boundary
+reconciliation; ordinary lobby reconciliation still uses live connected
+players, while ready/round/result remain locked afterwards. Invalid or
+older missing readyHumanCount payloads safely fall back to connected
+players. No extra bots are created beyond the existing MaxBots=3.
+
+The existing AI engine spec covers solo + spectators, multiple ready
+contestants, later joins, and malformed metadata. Manual Studio QA:
+start with one eligible human and another unready client, confirm three
+bots appear during ready and remain stable once the round begins.
