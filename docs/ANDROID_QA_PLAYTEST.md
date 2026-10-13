@@ -1206,3 +1206,31 @@ with simulated delayed ArenaMetadata, rotate screen while briefing is
 visible, validate no 1-second flashing, then transition ready to round
 and waiting. Confirm the old arena label never appears for the new map.
 No physical device/FPS result is claimed from this source change.
+
+## PR #19 — mobile round-focus tween lifecycle and ReduceMotion (13 October 2026)
+
+The live round FocusBar now keeps at most one active Tween per visual
+target (bar, scale, shard feedback and intensity fill). The previous
+hide callback is invalidated if the player re-enters a round before
+the fade ends. Repeated late RoundState packets while hidden do not
+restart the same fade. A changed intensity triggers one new animation,
+instead of allocating a Tween on every countdown/attribute refresh.
+
+ReduceMotion uses immediate state changes for entrance/exit and the
+intensity fill, with static completion/shard feedback instead of
+spring-like scale pulses. Switching ReduceMotion while a transition
+runs cancels the previous Tween, resets its visual state and refreshes
+the current round snapshot. Non-table RoundState packets are ignored.
+
+No authoritative gameplay, health, physics, player input, reward or
+server replication logic changes. Static hazard colors, survivor
+objectives and other textual information remain intact.
+
+Unpublished Android/Studio acceptance: toggle ReduceMotion during
+entrance, mid-round, a challenge completion, shard pickup, and exit;
+verify no pulse/flash and clean static visuals. Toggle while an exit
+fade is in progress, then rejoin a round immediately to confirm that
+no delayed callback hides the focus bar. Confirm intensity fill changes
+only with intensity, status timer still advances each second, and the
+FocusBar doesn't obstruct movement/jump buttons at 540x320, 640x360,
+960x440 and 1280x720. Device FPS and real touch QA remain unmeasured.
