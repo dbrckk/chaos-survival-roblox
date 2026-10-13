@@ -1157,3 +1157,27 @@ invalidation on count, name, hint, ID, selection and compact changes.
 Physical Android QA still needs a staged first-run and 30-minute test;
 this change alone is **not** an FPS measurement, a playtest or proof of
 release readiness.
+
+## PR #19 — accessibility settings during empty votes, motion-safe buttons (13 October 2026)
+
+AccessibilityQuickSettings previously treated `voteOptions = {}` as voting
+because any non-nil table is truthy. It could hide the settings button
+during a calm intermission even though the voting HUD and rookie coach
+correctly found no actionable options. It now uses the existing shared
+`FirstTimeExperience.hasVoteOptions` predicate **and** the intermission
+phase, and ignores invalid non-table RoundState packets.
+
+The shared UITheme press-feedback helper also avoids tweening button scale
+when the local `ReduceMotion` setting is true. The explicit vote-card
+selection bounce follows the same setting while preserving selection
+feedback through static highlighting. No per-frame polling or extra
+per-button settings listener is introduced.
+
+Mobile/Studio acceptance: enter a first-run lobby before the vote opens
+and verify that Settings can be opened (if DataLoaded); send no options
+and then an empty option table during intermission and confirm Settings
+remains accessible; open valid voting and confirm Settings hides so
+cards are unobstructed; verify it reappears afterward. Enable
+ReduceMotion and tap lobby controls and voting cards, observing no
+press-scale animations. Retest quick rotations and map reloads.
+Actual device performance and QA are still unverified.

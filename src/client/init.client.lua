@@ -2652,12 +2652,17 @@ local function showVotes(options)
             end
             if not available then return end
 
-            cardScale.Scale = 0.94
-            TweenService:Create(
-                cardScale,
-                TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-                {Scale = 1}
-            ):Play()
+            -- Do not use spring-like feedback in reduced-motion mode.
+            if player:GetAttribute("ReduceMotion") == true then
+                cardScale.Scale = 1
+            else
+                cardScale.Scale = 0.94
+                TweenService:Create(
+                    cardScale,
+                    TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                    {Scale = 1}
+                ):Play()
+            end
 
             selectedVote = option.id
             voteEvent:FireServer(option.id)
