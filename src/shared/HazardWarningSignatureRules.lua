@@ -97,4 +97,27 @@ function HazardWarningSignatureRules.label(kind, localeId, localization)
     return label or string.upper(kind)
 end
 
+-- Alert timing derives from the authoritative warning start, so players
+-- joining during an active hazard see the remaining animation rather than
+-- a fresh full-duration countdown.
+function HazardWarningSignatureRules.window(startedAt, duration, now)
+    local start = tonumber(startedAt)
+    local span = tonumber(duration)
+    local clock = tonumber(now)
+    if not start or not span or not clock
+        or start ~= start or span ~= span or clock ~= clock
+        or math.abs(start) == math.huge or math.abs(clock) == math.huge
+        or span < 0.05 or span == math.huge then
+        return nil, nil
+    end
+    span = math.clamp(span, 0.05, 2.5)
+    local progress = math.clamp((clock - start) / span, 0, 1)
+    return span * (1 - progress), progress
+end
+
+function HazardWarningSignatureRules.activeLimit(tier, reduced)
+    if reduced == true then return 4 end
+    return ({Low = 6, Medium = 10, High = 14})[tier] or 6
+end
+
 return HazardWarningSignatureRules

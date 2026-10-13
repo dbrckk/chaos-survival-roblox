@@ -1274,3 +1274,33 @@ camera targets. Mobile QA: run multiple rounds with ReduceMotion
 on/off, verify FOV remains steady through countdown changes, check
 banner readability and stable danger warnings, and record actual
 Android frame-time metrics. No device test or measured FPS is claimed.
+
+## PR #19 — late-join meteor and bomb silhouettes (13 October 2026)
+
+Meteor and bomb warning cosmetics now read the authoritative WarningStartedAt
+and WarningDuration attributes instead of playing a complete animation on
+late replication. The warning kind and start time are both observed, so an
+attribute arriving after the warning Part is not missed. Warnings already in
+workspace when the client script starts are also registered.
+
+Each warning gets a locally owned transient Folder which is destroyed early
+when its server warning leaves workspace. The number of concurrent signature
+folders is bounded to 6/10/14 in Low/Medium/High, or 4 in ReduceMotion.
+Oldest cosmetic groups are evicted first; server-owned warning rings,
+damage timing and hitboxes are never altered.
+
+High graphics adds authored, short-lived incoming wedge fins to meteor
+and bomb bodies. Under ReduceMotion, the incoming meteor column and bomb
+marker remain static rather than using falling or expanding Tweens. The
+two-axis bomb cross remains legible even in reduced-motion Low mode.
+
+The existing hazard-warning engine spec covers partial/expired warning
+windows, invalid timing metadata and the tier caps. Manual Android QA:
+join mid-Meteors and mid-Bombs, switch ReduceMotion and each graphics
+tier, ensure each warning has no duplicate local silhouettes, and verify
+cleanup across multiple rounds and spectator transitions. No physical
+mobile FPS result is implied by engine tests alone.
+
+Quality-tier and ReduceMotion changes during a live server warning now
+release the local signature and rebuild only its remaining portion; changing
+a setting never extends the authoritative warning countdown.

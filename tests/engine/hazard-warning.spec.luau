@@ -58,6 +58,37 @@ describe("Premium frost and electric warning silhouettes", function()
         expect(count("Freeze", "Unknown", false)).toBe(4)
     end)
 
+    it("starts late-arriving bomb and meteor signatures at the remaining warning time", function()
+        local window = WarningSignatures.window
+        local remaining, progress = window(100, 1.25, 100)
+        expect(remaining).toBe(1.25)
+        expect(progress).toBe(0)
+
+        local halfRemaining, halfProgress = window(100, 1.25, 100.625)
+        expect(math.abs(halfRemaining - 0.625) < 0.001).toBe(true)
+        expect(math.abs(halfProgress - 0.5) < 0.001).toBe(true)
+        local over, done = window(100, 1.25, 102)
+        expect(over).toBe(0)
+        expect(done).toBe(1)
+        expect(window(nil, 1.25, 100)).toBe(nil)
+        expect(window(100, 0, 100)).toBe(nil)
+        expect(window(100, 1, nil)).toBe(nil)
+        expect(window(100, 1, math.huge)).toBe(nil)
+        expect(window(100, 1, 0 / 0)).toBe(nil)
+        local capped = window(100, 50, 100)
+        expect(capped).toBe(2.5)
+    end)
+
+    it("bounds concurrent warning silhouettes across graphics tiers", function()
+        local limit = WarningSignatures.activeLimit
+        expect(limit("Low", false)).toBe(6)
+        expect(limit("Medium", false)).toBe(10)
+        expect(limit("High", false)).toBe(14)
+        expect(limit("High", true)).toBe(4)
+        expect(limit("Low", true)).toBe(4)
+        expect(limit("Invalid", false)).toBe(6)
+    end)
+
     it("keeps ice and shock signatures distinct at all warning stages", function()
         for _, kind in ipairs({"Freeze", "JumpShock"}) do
             for _, tier in ipairs({"Low", "Medium", "High"}) do
