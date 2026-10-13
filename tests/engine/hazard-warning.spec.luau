@@ -76,7 +76,8 @@ describe("Premium frost and electric warning silhouettes", function()
         )
         expect(meteor.part.Size.X > 16).toBe(true)
         expect(meteor.part.Size.X < 20).toBe(true)
-        expect(meteor.part.Size.Y).toBe(0.08)
+        -- Roblox stores Part.Size components in 32-bit floats.
+        expect(math.abs(meteor.part.Size.Y - 0.08) < 0.001).toBe(true)
         expect(meteor.inner.Enabled).toBe(true)
         expect(meteor.ticks[1].Visible).toBe(true)
 
