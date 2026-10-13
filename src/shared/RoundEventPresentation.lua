@@ -67,6 +67,14 @@ function RoundEventPresentation.cameraKick(previousPhase, state, lastFinalRush, 
     return 0
 end
 
+-- Avoid resetting identical camera tweens for each countdown packet.
+function RoundEventPresentation.cameraTargetChanged(previous, requested)
+    local target = tonumber(requested)
+    if not target then return false end
+    local last = tonumber(previous)
+    return not last or math.abs(target - last) >= 0.05
+end
+
 function RoundEventPresentation.priority(kind)
     local priorities = {
         finalRush = 50,

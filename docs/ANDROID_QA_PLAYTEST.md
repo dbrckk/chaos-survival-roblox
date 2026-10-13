@@ -1256,3 +1256,21 @@ acceptance: cycle four maps and force a late VariantId change, verify
 ArenaGuide never displays the previous map's strategy, and check no
 growth in persistent server connections. No production publication or
 physical Android FPS result is implied.
+
+## PR #19 — camera/touch visual stability (13 October 2026)
+
+ChaosJuice no longer cancels/recreates the same base-FOV tween on
+every one-second countdown packet. A changed hazard/phase still
+moves the camera normally. With ReduceMotion, FOV targets snap
+without tweening, result zoom bursts are skipped, and enabling
+ReduceMotion during an active animation cancels it and the damage
+FOV kick. Banners retain text but avoid scale transitions; repeated
+banner arrivals cancel previous tweens. Oscillating danger strokes,
+vignette and beacon effects become steady at reduced motion.
+Invalid non-table RoundState packets no longer interrupt the mood.
+
+Existing round-event-presentation tests cover unchanged and changed
+camera targets. Mobile QA: run multiple rounds with ReduceMotion
+on/off, verify FOV remains steady through countdown changes, check
+banner readability and stable danger warnings, and record actual
+Android frame-time metrics. No device test or measured FPS is claimed.

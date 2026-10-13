@@ -126,6 +126,14 @@ describe("Round event presentation", function()
         }, false, false)).toBe(0)
     end)
 
+    it("retains unchanged FOV targets across repeated countdown packets", function()
+        expect(RoundEventPresentation.cameraTargetChanged(nil, 76)).toBe(true)
+        expect(RoundEventPresentation.cameraTargetChanged(76, 76)).toBe(false)
+        expect(RoundEventPresentation.cameraTargetChanged(76, 76.01)).toBe(false)
+        expect(RoundEventPresentation.cameraTargetChanged(76, 79)).toBe(true)
+        expect(RoundEventPresentation.cameraTargetChanged(76, nil)).toBe(false)
+    end)
+
     it("keeps final rush above all other transition priorities", function()
         expect(
             RoundEventPresentation.priority("finalRush")

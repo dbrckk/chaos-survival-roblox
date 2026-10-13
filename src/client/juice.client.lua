@@ -14,6 +14,7 @@ local CloudLayer = require(script.Parent.CloudLayer)
 local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
 
 local player = Players.LocalPlayer
@@ -30,6 +31,7 @@ local baseFovValue = Instance.new("NumberValue")
 baseFovValue.Name = "ChaosBaseFovDriver"
 baseFovValue.Value = camera and camera.FieldOfView or 70
 local baseFovTween = nil
+local lastCameraFovTarget = nil
 local damageFovKick = 0
 
 local clouds = CloudLayer.getOrCreate()
@@ -147,6 +149,8 @@ streak.Parent = gui
 Instance.new("UICorner", streak).CornerRadius = UDim.new(1, 0)
 
 local bannerToken = 0
+local bannerFadingOut = false
+local bannerTweens = {}
 local lastPhase = nil
 local lastRoundTitle = nil
 local pulseClock = 0
@@ -211,22 +215,55 @@ local function resetActiveBeacon()
 end
 
 local function tweenCamera(targetFov, duration)
+    local target = math.clamp(tonumber(targetFov) or 70, 60, 90)
+    if not RoundEventPresentation.cameraTargetChanged(lastCameraFovTarget, target) then
+        return
+    end
+    lastCameraFovTarget = target
     if baseFovTween then
         baseFovTween:Cancel()
         baseFovTween = nil
     end
-
+    if player:GetAttribute("ReduceMotion") == true then
+        baseFovValue.Value = target
+        return
+    end
     baseFovTween = TweenService:Create(
         baseFovValue,
         TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Value = math.clamp(tonumber(targetFov) or 70, 60, 90)}
+        {Value = target}
     )
     baseFovTween:Play()
+end
+
+local function cancelBannerTweens()
+    for item, tween in pairs(bannerTweens) do
+        tween:Cancel()
+        bannerTweens[item] = nil
+    end
+end
+
+local function animateBanner(item, info, properties)
+    if bannerTweens[item] then
+        bannerTweens[item]:Cancel()
+        bannerTweens[item] = nil
+    end
+    if player:GetAttribute("ReduceMotion") == true then
+        for property, value in pairs(properties) do
+            item[property] = value
+        end
+        return
+    end
+    local tween = TweenService:Create(item, info, properties)
+    bannerTweens[item] = tween
+    tween:Play()
 end
 
 local function showBanner(mainText, subText, accent, duration)
     bannerToken += 1
     local token = bannerToken
+    bannerFadingOut = false
+    cancelBannerTweens()
 
     local resolvedAccent = accent or UITheme.Colors.Blue
     banner.BackgroundColor3 = UITheme.Colors.Panel
@@ -238,30 +275,65 @@ local function showBanner(mainText, subText, accent, duration)
     bannerTitle.Text = mainText or ""
     bannerSub.Text = subText or ""
     banner.Visible = true
-    banner.BackgroundTransparency = 1
-    bannerScale.Scale = 0.72
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    banner.BackgroundTransparency = reduced and 0.08 or 1
+    bannerScale.Scale = reduced and 1 or 0.72
 
-    TweenService:Create(
-        banner,
-        TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0.08}
-    ):Play()
-    TweenService:Create(
-        bannerScale,
-        TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Scale = 1}
-    ):Play()
+    if not reduced then
+        animateBanner(
+            banner,
+            TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 0.08}
+        )
+        animateBanner(
+            bannerScale,
+            TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = 1}
+        )
+    end
 
     task.delay(duration or 1.8, function()
         if token ~= bannerToken then return end
-        TweenService:Create(banner, TweenInfo.new(0.22), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(bannerScale, TweenInfo.new(0.22), {Scale = 0.88}):Play()
+        bannerFadingOut = true
+        if player:GetAttribute("ReduceMotion") == true then
+            cancelBannerTweens()
+            banner.BackgroundTransparency = 1
+            bannerScale.Scale = 1
+            banner.Visible = false
+            return
+        end
+        animateBanner(banner, TweenInfo.new(0.22), {BackgroundTransparency = 1})
+        animateBanner(bannerScale, TweenInfo.new(0.22), {Scale = 0.88})
         task.wait(0.24)
         if token == bannerToken then
             banner.Visible = false
         end
     end)
 end
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion") ~= true then
+        return
+    end
+    if baseFovTween then
+        baseFovTween:Cancel()
+        baseFovTween = nil
+    end
+    if lastCameraFovTarget then
+        baseFovValue.Value = lastCameraFovTarget
+    end
+    damageFovKick = 0
+    cancelBannerTweens()
+    if banner.Visible then
+        if bannerFadingOut then
+            banner.Visible = false
+            banner.BackgroundTransparency = 1
+        else
+            banner.BackgroundTransparency = 0.08
+        end
+        bannerScale.Scale = 1
+    end
+end)
 
 local function setMood(state)
     local phase = state.phase
@@ -446,6 +518,7 @@ player:GetAttributeChangedSignal("RoundParticipant"):Connect(refreshParticipantM
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refreshParticipantMood)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     currentState = state
     currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     setMood(state)
@@ -555,15 +628,21 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
             )
         end
 
-        tweenCamera(67, 0.12)
-        task.delay(0.13, function()
-            tweenCamera(72, 0.28)
-        end)
+        if player:GetAttribute("ReduceMotion") ~= true then
+            tweenCamera(67, 0.12)
+            task.delay(0.13, function()
+                -- Always settle after a result pulse. Reduced motion snaps
+                -- instead of leaving the camera at a temporary zoom level.
+                tweenCamera(72, 0.28)
+            end)
+        end
     else
-        tweenCamera(76, 0.10)
-        task.delay(0.12, function()
-            tweenCamera(72, 0.30)
-        end)
+        if player:GetAttribute("ReduceMotion") ~= true then
+            tweenCamera(76, 0.10)
+            task.delay(0.12, function()
+                tweenCamera(72, 0.30)
+            end)
+        end
     end
 end)
 
@@ -574,8 +653,10 @@ RunService.RenderStepped:Connect(function(dt)
     if camera then
         camera.FieldOfView = math.clamp(
             baseFovValue.Value
-                + CameraFeelBus.getMovementFovOffset()
-                + damageFovKick,
+                + (player:GetAttribute("ReduceMotion") == true
+                    and 0 or CameraFeelBus.getMovementFovOffset())
+                + (player:GetAttribute("ReduceMotion") == true
+                    and 0 or damageFovKick),
             60,
             90
         )
@@ -676,8 +757,9 @@ RunService.RenderStepped:Connect(function(dt)
     end
     visualUpdateClock = 0
 
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
     local pulseSpeed = (activeDoubleChaos and 5.2 or 3.6) * currentIntensity
-    local wave = (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
+    local wave = reducedMotion and 0.5 or (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
     local accent = activeAccent
 
     if activeDoubleChaos and secondaryAccent then
@@ -704,8 +786,7 @@ RunService.RenderStepped:Connect(function(dt)
         and player:GetAttribute("RoundEliminated") ~= true
 
     if finalRushActive then
-        local reduced = player:GetAttribute("ReduceMotion") == true
-        local finalWave = reduced
+        local finalWave = reducedMotion
             and 0.5
             or ((math.sin(pulseClock * 6.6) + 1) * 0.5)
         targetTransparency = 0.865 + finalWave * 0.055
@@ -713,7 +794,9 @@ RunService.RenderStepped:Connect(function(dt)
         criticalStroke.Thickness = 5 + finalWave * 2.5
         criticalStroke.Transparency = 0.44 + finalWave * 0.22
     elseif roundDanger then
-        targetTransparency = 0.91 + math.sin(pulseClock * 8) * 0.035
+        targetTransparency = reducedMotion
+            and 0.91
+            or (0.91 + math.sin(pulseClock * 8) * 0.035)
     end
 
     local criticalHealth = currentState
@@ -725,8 +808,8 @@ RunService.RenderStepped:Connect(function(dt)
 
     if criticalHealth and not finalRushActive then
         criticalStroke.Color = UITheme.Colors.Red
-        criticalStroke.Transparency = 0.54 + wave * 0.24
-        criticalStroke.Thickness = 4 + wave * 2
+        criticalStroke.Transparency = reducedMotion and 0.60 or (0.54 + wave * 0.24)
+        criticalStroke.Thickness = reducedMotion and 5 or (4 + wave * 2)
     elseif not finalRushActive then
         criticalStroke.Transparency += (1 - criticalStroke.Transparency) * math.min(1, dt * 10)
     end
