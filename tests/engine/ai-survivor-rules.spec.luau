@@ -95,6 +95,21 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.rosterLocked(nil)).toBe(false)
     end)
 
+    it("fills missing solo bots exactly at ready entry, never on later joins", function()
+        local allowed = AISurvivorRules.rosterReconciliationAllowed
+        expect(allowed("waiting", false)).toBe(true)
+        expect(allowed("intermission", false)).toBe(true)
+        expect(allowed("ready", true)).toBe(true)
+        expect(allowed("ready", false)).toBe(false)
+        expect(allowed("ready", nil)).toBe(false)
+        expect(allowed("round", true)).toBe(false)
+        expect(allowed("result", true)).toBe(false)
+
+        -- One human needs three AI competitors at the committed transition.
+        expect(AISurvivorRules.desiredBotCount(1)).toBe(3)
+        expect(AISurvivorRules.rosterLocked("ready")).toBe(true)
+    end)
+
     it("rotates distinct behavior profiles", function()
         expect(AISurvivorRules.profileForSlot(1).Id).toBe("Cautious")
         expect(AISurvivorRules.profileForSlot(2).Id).toBe("Balanced")

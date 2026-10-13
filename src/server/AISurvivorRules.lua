@@ -62,6 +62,14 @@ function AISurvivorRules.rosterLocked(phase)
     return phase == "ready" or phase == "round" or phase == "result"
 end
 
+-- The roster is locked after ready starts, but the exact transition into
+-- ready is the last opportunity to fill missing bot slots. Ordinary
+-- PlayerAdded / brain reconciliation never receives this boundary flag.
+function AISurvivorRules.rosterReconciliationAllowed(phase, enteringReady)
+    return not AISurvivorRules.rosterLocked(phase)
+        or (phase == "ready" and enteringReady == true)
+end
+
 function AISurvivorRules.profileForSlot(slot)
     local count = #AISurvivorRules.Profiles
     local index = ((math.max(1, math.floor(tonumber(slot) or 1)) - 1) % count) + 1

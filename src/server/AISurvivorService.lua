@@ -841,15 +841,17 @@ local function newRecord(slot)
     return record
 end
 
-local function reconcile()
+local function reconcile(enteringReady)
     if not started then
         return
     end
 
-    -- Lock the entire ready/round/result journey: late joiners cannot become
-    -- participants and must not despawn AI competitors or celebration actors.
-    -- Rebalance once the next intermission starts.
-    if AISurvivorRules.rosterLocked(currentState.phase) then
+    -- Ordinary joins cannot rebalance committed competitors. Reconcile only
+    -- once on the actual ready transition so the solo round can recover
+    -- missing AI slots before locking the participant roster.
+    if not AISurvivorRules.rosterReconciliationAllowed(
+        currentState.phase, enteringReady
+    ) then
         return
     end
 
@@ -876,13 +878,11 @@ local function reconcile()
             or not humanoid
             or humanoid.Health <= 0
 
-        if missingRig then
-            if currentState.phase == "ready" then
-                sendToArena(record)
-            else
-                sendToLobby(record)
-            end
+        if missingRig and currentState.phase ~= "ready" then
+            sendToLobby(record)
         end
+        -- At the ready boundary, the caller spawns/teleports each record
+        -- exactly once with sendToArena after round traits are assigned.
     end
 end
 
@@ -2327,7 +2327,7 @@ function AISurvivorService.setRoundState(state)
         if phase == "ready" then
             voteActive = false
             roundSerial += 1
-            reconcile()
+            reconcile(true)
             for _, record in ipairs(records) do
                 record.roundTraits = AISurvivorRules.roundTraits(
                     record.profile,

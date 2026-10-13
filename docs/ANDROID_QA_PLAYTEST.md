@@ -1389,3 +1389,27 @@ Meteor/Bomb disc, verify that ESCAPE alerts show inside the final radius
 before the visual ring reaches it, then die/spectate and confirm no
 stranded world chevrons. Repeat with ReduceMotion and Low graphics; check
 that moving arrows remain stable while static motion preferences apply.
+
+## PR #19 — restore missing AI survivor roster at ready entry (13 October 2026)
+
+The server previously called AISurvivorService.reconcile() immediately
+after setting the round phase to "ready". The same function returned early
+for all "ready" phases, so it could not fill AI slots if a bot rig was
+missing just before the countdown. This could leave solo rounds without
+the intended three AI competitors, despite the regular lobby reconciliation.
+
+The ready-phase entry now explicitly authorizes **one** roster reconciliation.
+Ordinary PlayerAdded / background checks remain locked for the entire
+ready, round and result period. Bot records are added or removed once
+at the ready boundary; the existing sendToArena pass creates each needed
+rig, assigns round traits and teleports it exactly once. No per-frame
+work, new NPC asset, extra respawn path, or monetization is introduced.
+
+An existing AI engine spec verifies that ready-boundary reconciliation
+is allowed while subsequent ready callbacks and all active/result
+reconciliation remain blocked. Manual Studio / Android QA should launch
+with one player, verify 3 bots visible before and throughout a round,
+then join with another player mid-round to confirm bots are not despawned.
+A second round should rebalance the roster during intermission. Automated
+rules tests do not themselves prove that Roblox successfully creates
+humanoid rigs on every device.
