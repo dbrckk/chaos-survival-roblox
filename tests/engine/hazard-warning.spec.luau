@@ -23,6 +23,26 @@ describe("Hazard warning metadata", function()
         part:Destroy()
     end)
 
+    it("keeps the meteor warning through the falling projectile until impact", function()
+        local lead = HazardWarning.impactLeadDuration(0.9, 0.5)
+        expect(math.abs(lead - 1.4) < 0.001).toBe(true)
+        expect(HazardWarning.impactLeadDuration(-2, 0.5) >= 0.55).toBe(true)
+        expect(HazardWarning.impactLeadDuration(0.9, -1)).toBe(0.9)
+        expect(HazardWarning.impactLeadDuration(nil, nil)).toBe(0.05)
+
+        local marker = Instance.new("Part")
+        marker.Name = "MeteorWarning"
+        HazardWarning.configure(marker, "Meteor", lead, 5.5, 16)
+        local started = marker:GetAttribute("WarningStartedAt")
+        -- A 0.9-second pre-fall warning must still be present at the
+        -- midpoint of the subsequent 0.5-second projectile descent.
+        local inFlight = WarningSignatures.snapshot(marker, started + 1.1)
+        expect(inFlight ~= nil).toBe(true)
+        expect(inFlight.Progress > 0.75 and inFlight.Progress < 0.85).toBe(true)
+        expect(WarningSignatures.snapshot(marker, started + lead + 0.01)).toBe(nil)
+        marker:Destroy()
+    end)
+
     it("covers rectangular arena corners with global warnings", function()
         local diameter = HazardWarning.coverageDiameter(Vector3.new(104, 2, 104), 6)
         local half = diameter * 0.5

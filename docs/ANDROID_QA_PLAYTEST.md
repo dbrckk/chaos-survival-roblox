@@ -1459,3 +1459,25 @@ Manual Studio / Android QA: observe a bot standing 12–16 studs from a
 new Bomb/Meteor warning. Confirm it may choose to react while the small
 visual circle is still visible; risk profiles must still yield occasional
 mistakes and losses. Verify CPU/load remains unchanged.
+
+## PR #19 — meteor warnings remain visible until impact (13 October 2026)
+
+Meteors first displayed an approximately 0.9-second ground warning, then
+spawned a descending projectile that still took about 0.5 seconds to
+reach its damage event. Previously, the server destroyed the warning at
+the beginning of descent; client ground contours, distance alerts and
+meteor silhouettes disappeared during the final, most dangerous interval.
+
+The server now sets WarningDuration to the time until actual damage,
+using HazardWarning.impactLeadDuration(warningSeconds, travelSeconds).
+It keeps the same non-colliding marker through the projectile descent
+and destroys it immediately after the impact (or on cancellation).
+No projectile timings, damage radius, hitbox, collision rules, or hazard
+frequency are changed. Client warning visuals, silhouettes, accessibility
+text and escape route cues use the same authoritative time-to-impact.
+
+The existing engine warning spec checks that the metadata stays valid
+through the descent and expires at the impact timestamp. Real-device QA:
+during Meteor Shower, verify the ground warning remains visible while
+the meteor is visibly falling, disappears at damage, and cleans up when
+the round ends. Repeat on Low quality and ReduceMotion.

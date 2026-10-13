@@ -34,7 +34,14 @@ function D.start(ctx)
             marker.Parent = workspace
             ctx.Cleanup[#ctx.Cleanup+1] = marker
 
-            HazardWarning.configure(marker, "Meteor", warningSeconds, 5.5, radius * 2)
+            -- The server inflicts damage AFTER both the warning interval
+            -- and the falling meteor's travel time. Keep the warning alive
+            -- through descent so the danger indicator never vanishes early.
+            HazardWarning.configure(
+                marker, "Meteor",
+                HazardWarning.impactLeadDuration(warningSeconds, travelSeconds),
+                5.5, radius * 2
+            )
             task.wait(warningSeconds)
 
             if not ctx.Active() then
@@ -62,15 +69,16 @@ function D.start(ctx)
                 {Position = impactVisualPosition}
             ):Play()
 
-            if marker.Parent then marker:Destroy() end
+            -- Do not remove the warning at the start of the meteor's fall.
+            -- Its ground contour and accessible escape cue remain visible
+            -- until the actual damage event.
             ctx.Cleanup[#ctx.Cleanup+1] = meteor
             Debris:AddItem(meteor, travelSeconds + 1)
 
             task.delay(travelSeconds, function()
                 if not ctx.Active() then
-                    if meteor.Parent then
-                        meteor:Destroy()
-                    end
+                    if marker.Parent then marker:Destroy() end
+                    if meteor.Parent then meteor:Destroy() end
                     return
                 end
 
@@ -84,6 +92,9 @@ function D.start(ctx)
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 120, 40), radius, "Meteor")
                 end
 
+                if marker.Parent then
+                    marker:Destroy()
+                end
                 if meteor.Parent then
                     meteor:Destroy()
                 end

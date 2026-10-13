@@ -18,6 +18,20 @@ function HazardWarning.arenaCoverageDiameter(fallback)
     return math.max(1, tonumber(fallback) or 150)
 end
 
+-- The warning remains active through projectile descent, until the actual
+-- server-side impact. Pure helper so timing can be verified in engine specs.
+function HazardWarning.impactLeadDuration(warningSeconds, descentSeconds)
+    local warning = tonumber(warningSeconds)
+    if not warning or warning ~= warning or math.abs(warning) == math.huge then
+        warning = 0.05
+    end
+    local descent = tonumber(descentSeconds)
+    if not descent or descent ~= descent or math.abs(descent) == math.huge then
+        descent = 0
+    end
+    return math.max(0.05, warning) + math.max(0, descent)
+end
+
 function HazardWarning.configure(part, kind, duration, startSize, endSize)
     local safeDuration = math.max(0.05, tonumber(duration) or 0.05)
     part:SetAttribute("WarningDuration", safeDuration)
