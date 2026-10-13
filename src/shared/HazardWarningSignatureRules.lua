@@ -75,6 +75,50 @@ function HazardWarningSignatureRules.recipe(kind, index, count, diameter, progre
     }
 end
 
+
+-- A replicated warning Part may arrive before its attributes, regardless of
+-- their write order on the server. Never guess a 0.05-second warning from
+-- partial metadata: that would hide the hazard cue before it is usable.
+local WARNING_PARTS = {
+    MeteorWarning = "Meteor",
+    BombWarning = "Bomb",
+    FreezeWarning = "Freeze",
+    JumpShockWarning = "JumpShock",
+}
+
+local function finitePositive(value, minimum)
+    return type(value) == "number" and value == value
+        and math.abs(value) < math.huge and value >= minimum
+end
+
+function HazardWarningSignatureRules.snapshot(part, now)
+    if typeof(part) ~= "Instance" or not part:IsA("BasePart") then return nil end
+    local kind = WARNING_PARTS[part.Name]
+    if not kind or part:GetAttribute("WarningKind") ~= kind then return nil end
+
+    local startedAt = part:GetAttribute("WarningStartedAt")
+    local duration = part:GetAttribute("WarningDuration")
+    local startSize = part:GetAttribute("WarningStartSize")
+    local endSize = part:GetAttribute("WarningEndSize")
+    if not finitePositive(startedAt, 0) or not finitePositive(duration, 0.05)
+        or not finitePositive(startSize, 0.1)
+        or not finitePositive(endSize, 0.1)
+        or not finitePositive(now, 0) then
+        return nil
+    end
+
+    local elapsed = math.max(0, now - startedAt)
+    if elapsed >= duration then return nil end
+    return {
+        Kind = kind,
+        StartedAt = startedAt,
+        Duration = duration,
+        StartSize = startSize,
+        EndSize = endSize,
+        Progress = math.clamp(elapsed / duration, 0, 1),
+    }
+end
+
 -- The world-space warning should describe the danger accurately, not
 -- suggest that jumping evades JumpShock (the server applies its impulse
 -- regardless of the player's jump state). Localized from the shared HUD copy.

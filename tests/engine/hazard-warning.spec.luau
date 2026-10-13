@@ -31,6 +31,54 @@ describe("Hazard warning metadata", function()
         expect(half > cornerDistance).toBe(true)
     end)
 
+    it("waits for late attributes instead of inventing a 0.05-second warning", function()
+        local part = Instance.new("Part")
+        part.Name = "MeteorWarning"
+        part:SetAttribute("WarningKind", "Meteor")
+        expect(WarningSignatures.snapshot(part, 100)).toBe(nil)
+
+        part:SetAttribute("WarningDuration", 0.9)
+        part:SetAttribute("WarningStartSize", 5.5)
+        part:SetAttribute("WarningEndSize", 16)
+        expect(WarningSignatures.snapshot(part, 100)).toBe(nil)
+
+        part:SetAttribute("WarningStartedAt", 99.5)
+        local snapshot = WarningSignatures.snapshot(part, 100)
+        expect(snapshot ~= nil).toBe(true)
+        expect(snapshot.Kind).toBe("Meteor")
+        expect(snapshot.Duration).toBe(0.9)
+        expect(snapshot.StartSize).toBe(5.5)
+        expect(snapshot.EndSize).toBe(16)
+        expect(snapshot.Progress > 0.5 and snapshot.Progress < 0.6).toBe(true)
+        expect(WarningSignatures.snapshot(part, 100.5)).toBe(nil)
+
+        part:SetAttribute("WarningKind", "Bomb")
+        expect(WarningSignatures.snapshot(part, 100)).toBe(nil)
+        part:Destroy()
+    end)
+
+    it("rejects expired or malformed replicated warnings before creating graphics", function()
+        local part = Instance.new("Part")
+        part.Name = "BombWarning"
+        HazardWarning.configure(part, "Bomb", 1.25, 5.5, 16)
+        local now = workspace:GetServerTimeNow()
+        expect(WarningSignatures.snapshot(part, now) ~= nil).toBe(true)
+        expect(WarningSignatures.snapshot(part, now + 2)).toBe(nil)
+
+        part:SetAttribute("WarningStartSize", 0)
+        expect(WarningSignatures.snapshot(part, now)).toBe(nil)
+        part:SetAttribute("WarningStartSize", 5.5)
+        part:SetAttribute("WarningDuration", "invalid")
+        expect(WarningSignatures.snapshot(part, now)).toBe(nil)
+        part:SetAttribute("WarningDuration", 1.25)
+        part.Name = "UnrelatedPart"
+        expect(WarningSignatures.snapshot(part, now)).toBe(nil)
+        part.Name = "FreezeWarning"
+        expect(WarningSignatures.snapshot(part, now)).toBe(nil)
+        expect(WarningSignatures.snapshot(nil, now)).toBe(nil)
+        part:Destroy()
+    end)
+
     it("sanitizes invalid durations and sizes", function()
         local part = Instance.new("Part")
         HazardWarning.configure(part, "Bomb", -2, -5, 0)

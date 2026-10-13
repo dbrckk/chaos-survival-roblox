@@ -1332,3 +1332,29 @@ secondary warning no longer obscures the map as a solid neon disc, danger
 remains recognizable with Low/Medium/High graphics, and multiple warnings
 do not obscure player movement. Test Rotate and ReduceMotion on a real
 phone; CI alone does not confirm render or FPS quality.
+
+## PR #19 — warning billboard / outline replication readiness (13 October 2026)
+
+Hazard-warning-visuals.client.lua previously registered any Part that
+already had WarningKind, even when WarningDuration, WarningStartedAt
+or diameter attributes had not replicated. It substituted 0.05 seconds
+as a default lifespan, which could immediately remove the warning label
+and hollow contour on a slow join. It also disconnected the only
+WarningKind listener after one second even if metadata never arrived.
+
+The client now observes all five server warning attributes, registers
+only the four known Part-name / WarningKind combinations after a complete
+finite metadata bundle arrives, rejects expired warning snapshots, and
+keeps watchers only while the warning is present and not yet registered.
+Connections are disconnected upon successful registration or removal;
+no polling/render loop is added.
+
+The existing hazard-warning Open Cloud spec covers out-of-order
+attributes, missing metadata, stale/expired warnings and malformed
+numeric input. The authoritative server marker remains unchanged.
+
+Unpublished Android acceptance checks: join a round while a warning
+is active, throttle attribute replication, confirm no premature loss
+of warning text/contour, and check zero orphaned local decorations
+after the warning Part disappears. There is no physical Android
+benchmark attached to this source-only update.

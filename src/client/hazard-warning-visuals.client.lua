@@ -240,15 +240,12 @@ local function addWarningGlyph(parent, kind, color)
     end
 end
 
-local function register(part)
-    if not part:IsA("BasePart") or tracked[part] then
+local function register(part, snapshot)
+    if not part:IsA("BasePart") or tracked[part] or not snapshot then
         return
     end
 
-    local kind = part:GetAttribute("WarningKind")
-    if type(kind) ~= "string" or kind == "" then
-        return
-    end
+    local kind = snapshot.Kind
 
     local ring = nil
     if kind == "Meteor" or kind == "Bomb" then
@@ -315,54 +312,83 @@ local function register(part)
     stroke.Parent = warningText
 
     tracked[part] = {
-        startedAt = tonumber(part:GetAttribute("WarningStartedAt")) or workspace:GetServerTimeNow(),
+        startedAt = snapshot.StartedAt,
         kind = kind,
-        duration = math.max(0.05, tonumber(part:GetAttribute("WarningDuration")) or 0.05),
-        startSize = math.max(0.1, tonumber(part:GetAttribute("WarningStartSize")) or part.Size.X),
-        endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
+        duration = snapshot.Duration,
+        startSize = snapshot.StartSize,
+        endSize = snapshot.EndSize,
         ring = ring,
         signature = signature,
         deck = signatureDeck,
         label = label,
     }
 
+    -- Initial client appearance must also use the authoritative elapsed
+    -- fraction; otherwise a late join first shows the wrong impact radius.
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local diameter = reduced and snapshot.EndSize
+        or (snapshot.StartSize
+            + (snapshot.EndSize - snapshot.StartSize) * snapshot.Progress)
+    if ring then
+        GroundOutline.update(
+            ring, part.Position, diameter, snapshot.Progress,
+            reduced, 0.5, currentTier.Name
+        )
+    end
     if kind == "JumpShock" then
-        local state = tracked[part]
-        local reduced = player:GetAttribute("ReduceMotion") == true
-        syncShockSignature(part, state, state.startSize, 0, reduced)
+        syncShockSignature(part, tracked[part], diameter, snapshot.Progress, reduced)
     end
     ensureRenderLoop()
 end
 
+-- Listen until the exact server metadata bundle has replicated. Timers are
+-- not reliable here: slow Android networks may deliver WarningStartedAt or
+-- the final diameter well after the warning instance itself.
+local pendingWarnings = {}
+
+local function disconnectPending(part)
+    local connections = pendingWarnings[part]
+    if not connections then return end
+    pendingWarnings[part] = nil
+    for _, connection in ipairs(connections) do
+        connection:Disconnect()
+    end
+end
+
 local function maybeRegister(part)
-    if not part:IsA("BasePart") then
+    if not part:IsA("BasePart") or not warningNames[part.Name]
+        or part.Parent ~= workspace or tracked[part] then
         return
     end
 
-    if part:GetAttribute("WarningKind") then
-        register(part)
+    local snapshot = HazardWarningSignatureRules.snapshot(
+        part, workspace:GetServerTimeNow()
+    )
+    if snapshot then
+        disconnectPending(part)
+        register(part, snapshot)
         return
     end
+    if pendingWarnings[part] then return end
 
-    if not warningNames[part.Name] then
-        return
+    local connections = {}
+    pendingWarnings[part] = connections
+    for _, name in ipairs({
+        "WarningKind", "WarningStartedAt", "WarningDuration",
+        "WarningStartSize", "WarningEndSize",
+    }) do
+        table.insert(connections,
+            part:GetAttributeChangedSignal(name):Connect(function()
+                if part.Parent == workspace then
+                    maybeRegister(part)
+                else
+                    disconnectPending(part)
+                end
+            end))
     end
-
-    local connection
-    connection = part:GetAttributeChangedSignal("WarningKind"):Connect(function()
-        if part:GetAttribute("WarningKind") then
-            if connection then
-                connection:Disconnect()
-            end
-            register(part)
-        end
-    end)
-
-    task.delay(1, function()
-        if connection and connection.Connected then
-            connection:Disconnect()
-        end
-    end)
+    -- Close the subscription race if metadata became complete while
+    -- the five listeners were being installed.
+    maybeRegister(part)
 end
 
 for _, child in ipairs(workspace:GetChildren()) do
@@ -371,6 +397,7 @@ end
 
 workspace.ChildAdded:Connect(maybeRegister)
 workspace.ChildRemoved:Connect(function(child)
+    disconnectPending(child)
     local state = tracked[child]
     if state and state.ring then
         GroundOutline.destroy(state.ring)
