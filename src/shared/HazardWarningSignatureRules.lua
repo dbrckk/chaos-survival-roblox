@@ -76,6 +76,24 @@ function HazardWarningSignatureRules.recipe(kind, index, count, diameter, progre
 end
 
 
+-- The ring grows toward the final impact diameter on ordinary graphics.
+-- With ReduceMotion, display the full footprint without any growth.
+-- Pure and bounded for late-arriving metadata and reduced-motion clients.
+function HazardWarningSignatureRules.visualDiameter(startSize, endSize, progress, reduced)
+    local function valid(value)
+        return type(value) == "number" and value == value
+            and math.abs(value) < math.huge and value > 0
+    end
+    if not valid(startSize) or not valid(endSize) then
+        return nil
+    end
+    if reduced == true then
+        return endSize
+    end
+    local t = math.clamp(tonumber(progress) or 0, 0, 1)
+    return startSize + (endSize - startSize) * t
+end
+
 -- A replicated warning Part may arrive before its attributes, regardless of
 -- their write order on the server. Never guess a 0.05-second warning from
 -- partial metadata: that would hide the hazard cue before it is usable.

@@ -1481,3 +1481,26 @@ through the descent and expires at the impact timestamp. Real-device QA:
 during Meteor Shower, verify the ground warning remains visible while
 the meteor is visibly falling, disappears at damage, and cleans up when
 the round ends. Repeat on Low quality and ReduceMotion.
+
+## PR #19 — ReducedMotion static danger footprint (13 October 2026)
+
+The hollow contour already removed tick animations with ReduceMotion, but
+the server-replicated MeteorWarning and BombWarning discs were still
+expanded locally every frame from the small initial disc to the final
+impact diameter. Some labels and contour transparencies also changed
+throughout the countdown. This contradicted the static presentation users
+selected and could obscure the actual danger boundary early in the alert.
+
+The local warning renderer now uses a pure visualDiameter rule. Under
+ReduceMotion, the full final impact diameter appears immediately, including
+on the very first registered frame; the primary disc opacity, caption
+opacity/stroke and both contour opacities stay constant until the marker
+is removed. Ordinary graphics retain their existing interpolation and
+pulses. Physics, server-authoritative hitboxes, timings, and damage are
+unchanged. Existing JumpShock static coverage follows the same rule.
+
+The existing engine warning spec verifies constant reduced-motion sizes and
+contour opacity across the full countdown, invalid metadata, and the
+normal growing-ring behavior. Android QA: toggle ReduceMotion ON before
+a Meteor/Bomb warning and confirm a static full-radius marker; toggle
+OFF and verify the growing warning returns for subsequent hazards.

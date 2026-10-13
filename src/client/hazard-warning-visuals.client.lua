@@ -125,19 +125,21 @@ local function ensureRenderLoop()
                 elseif state.kind == "JumpShock" then
                     -- In ReduceMotion, show the final hazard coverage at once
                     -- instead of sweeping a large luminous disc across sightlines.
-                    local diameter = reduced and state.endSize
-                        or (state.startSize
-                            + ((state.endSize - state.startSize) * alpha))
+                    local diameter = HazardWarningSignatureRules.visualDiameter(
+                        state.startSize, state.endSize, alpha, reduced
+                    )
                     part.Size = Vector3.new(part.Size.X, diameter, diameter)
                     part.Transparency = reduced and 0.78
                         or (0.62 + 0.27 * alpha)
 
                     syncShockSignature(part, state, diameter, alpha, reduced)
                 else
-                    local diameter = state.startSize
-                        + ((state.endSize - state.startSize) * alpha)
+                    local diameter = HazardWarningSignatureRules.visualDiameter(
+                        state.startSize, state.endSize, alpha, reduced
+                    )
                     part.Size = Vector3.new(diameter, part.Size.Y, diameter)
-                    part.Transparency = 0.12 + (pulse * 0.24)
+                    part.Transparency = reduced and 0.24
+                        or (0.12 + pulse * 0.24)
 
                     if state.ring then
                         -- Hollow world-space surface contours preserve the
@@ -157,16 +159,10 @@ local function ensureRenderLoop()
                     )
                     local text = state.label:FindFirstChild("WarningText")
                     if text and text:IsA("TextLabel") then
-                        text.TextTransparency = math.clamp(
-                            0.02 + alpha * 0.22,
-                            0,
-                            1
-                        )
-                        text.TextStrokeTransparency = math.clamp(
-                            0.42 + alpha * 0.30,
-                            0,
-                            1
-                        )
+                        text.TextTransparency = reduced and 0.02
+                            or math.clamp(0.02 + alpha * 0.22, 0, 1)
+                        text.TextStrokeTransparency = reduced and 0.42
+                            or math.clamp(0.42 + alpha * 0.30, 0, 1)
                     end
                 end
 
@@ -326,10 +322,15 @@ local function register(part, snapshot)
     -- Initial client appearance must also use the authoritative elapsed
     -- fraction; otherwise a late join first shows the wrong impact radius.
     local reduced = player:GetAttribute("ReduceMotion") == true
-    local diameter = reduced and snapshot.EndSize
-        or (snapshot.StartSize
-            + (snapshot.EndSize - snapshot.StartSize) * snapshot.Progress)
+    local diameter = HazardWarningSignatureRules.visualDiameter(
+        snapshot.StartSize, snapshot.EndSize, snapshot.Progress, reduced
+    )
     if ring then
+        if reduced then
+            -- Never flash a small growing disc on the first replicated frame.
+            part.Size = Vector3.new(diameter, part.Size.Y, diameter)
+            part.Transparency = 0.24
+        end
         GroundOutline.update(
             ring, part.Position, diameter, snapshot.Progress,
             reduced, 0.5, currentTier.Name

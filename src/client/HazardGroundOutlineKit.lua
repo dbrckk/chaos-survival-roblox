@@ -35,7 +35,8 @@ function Kit.recipe(kind, diameter, progress, reduced, pulse, tier)
         return nil
     end
     local d = math.clamp(diameter, 0.1, 220)
-    local alpha = math.clamp(tonumber(progress) or 0, 0, 1)
+    local alpha = reduced and 0.35
+        or math.clamp(tonumber(progress) or 0, 0, 1)
     local wave = reduced and 0.5 or math.clamp(tonumber(pulse) or 0.5, 0, 1)
     return {
         Diameter = d * (reduced and 1.12 or (1.10 + wave * 0.12)),
