@@ -1435,3 +1435,27 @@ The existing AI engine spec covers solo + spectators, multiple ready
 contestants, later joins, and malformed metadata. Manual Studio QA:
 start with one eligible human and another unready client, confirm three
 bots appear during ready and remain stable once the round begins.
+
+## PR #19 — AI survivors anticipate the server's final hazard radius (13 October 2026)
+
+The bots' immediate-threat scanner previously passed the small initial
+5.5-stud warning marker radius to warningDetectionRadius. Meteors and
+Bombs can damage within eight studs, but their detection threshold was
+only 2.75 + 9 = 11.75 studs at the beginning of an alert. Real players
+received more accurate final-footprint cues than the supposedly humanlike
+AI opponents.
+
+The existing scanner now supplies server WarningEndSize when available,
+so bots may notice a bomb/meteor out to 8 + 9 = 17 studs. Their existing
+personalities, reaction delays, mistake probabilities and steering paths
+are untouched; this does not make them perfectly dodge hazards. Invalid
+metadata falls back to previous visual sizing; sizes are bounded against
+invalid/infinite values. Global Freeze and JumpShock detection stays
+unchanged at 80 studs. No additional scans, NPCs, physics, or render loops.
+
+The existing AI engine spec checks starting marker vs final diameter,
+invalid/absent metadata, bounds, and unchanged Freeze/JumpShock behavior.
+Manual Studio / Android QA: observe a bot standing 12–16 studs from a
+new Bomb/Meteor warning. Confirm it may choose to react while the small
+visual circle is still visible; risk profiles must still yield occasional
+mistakes and losses. Verify CPU/load remains unchanged.

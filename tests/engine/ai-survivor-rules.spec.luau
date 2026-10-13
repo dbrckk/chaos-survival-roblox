@@ -567,6 +567,22 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.warningDetectionRadius("BombWarning", -10)).toBe(9)
     end)
 
+    it("lets bots anticipate the final blast radius rather than the starting marker", function()
+        local radius = AISurvivorRules.warningDetectionRadius
+        -- Both hazards start with a 5.5 stud-wide marker, but ultimately
+        -- hit within eight studs of their impact center.
+        expect(radius("MeteorWarning", 2.75, 16)).toBe(17)
+        expect(radius("BombWarning", 2.75, 16)).toBe(17)
+        expect(radius("BombWarning", 10, 16)).toBe(19)
+        expect(radius("MeteorWarning", 2.75, 0)).toBe(11.75)
+        expect(radius("MeteorWarning", 2.75, nil)).toBe(11.75)
+        expect(radius("MeteorWarning", 2.75, math.huge)).toBe(11.75)
+        expect(radius("MeteorWarning", 2.75, 0 / 0)).toBe(11.75)
+        expect(radius("FreezeWarning", 12, 40)).toBe(80)
+        expect(radius("JumpShockWarning", 12, 40)).toBe(80)
+        expect(radius("MeteorWarning", 1, 1000000)).toBe(129)
+    end)
+
     it("consumes each Freeze pulse only once even if the bot declines jumping", function()
         local handled = setmetatable({}, {__mode = "k"})
         local freeze = Instance.new("Part")

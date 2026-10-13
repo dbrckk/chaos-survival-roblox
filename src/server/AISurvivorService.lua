@@ -1049,7 +1049,7 @@ local function immediateThreat(record, root, now)
         local distance = math.min(currentDistance, predictedDistance)
         local warningRadius = math.max(warning.Size.X, warning.Size.Z, warning.Size.Y) * 0.5
         local threshold = AISurvivorRules.warningDetectionRadius(
-            warning.Name, warningRadius
+            warning.Name, warningRadius, warning:GetAttribute("WarningEndSize")
         )
 
         if distance <= threshold and distance < nearestDistance then

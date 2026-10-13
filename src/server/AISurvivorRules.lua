@@ -585,11 +585,28 @@ end
 
 -- Always return a NUMBER: a Lua `or` chain with a bare equality can
 -- produce boolean true for FreezeWarning and crash distance comparisons.
-function AISurvivorRules.warningDetectionRadius(warningName, visualRadius)
+-- Meteor and Bomb damage uses the final server WarningEndSize, not the
+-- little initial warning disc. Keep nine studs of humanlike anticipation
+-- outside that radius, but retain each personality's reaction delay.
+function AISurvivorRules.warningDetectionRadius(warningName, visualRadius, endDiameter)
     if warningName == "FreezeWarning" or warningName == "JumpShockWarning" then
         return 80
     end
-    return math.max(0, tonumber(visualRadius) or 0) + 9
+
+    local radius = tonumber(visualRadius) or 0
+    if radius ~= radius or math.abs(radius) == math.huge then
+        radius = 0
+    end
+    radius = math.max(0, radius)
+
+    if warningName == "MeteorWarning" or warningName == "BombWarning" then
+        local finalDiameter = tonumber(endDiameter)
+        if finalDiameter and finalDiameter == finalDiameter
+            and math.abs(finalDiameter) < math.huge and finalDiameter > 0 then
+            radius = math.max(radius, finalDiameter * 0.5)
+        end
+    end
+    return math.min(120, radius) + 9
 end
 
 -- A single pulse should generate at most one deliberate jump per survivor.
