@@ -58,6 +58,59 @@ describe("Premium frost and electric warning silhouettes", function()
         expect(count("Freeze", "Unknown", false)).toBe(4)
     end)
 
+    it("draws a genuinely hollow, collisionless world-space warning contour", function()
+        local GroundOutline = require("../../src/client/HazardGroundOutlineKit")
+        local decor = Instance.new("Folder")
+        local meteor = GroundOutline.create(decor, "Meteor")
+        expect(meteor ~= nil).toBe(true)
+        expect(meteor.part.Transparency).toBe(1)
+        expect(meteor.part.CanCollide).toBe(false)
+        expect(meteor.part.CanTouch).toBe(false)
+        expect(meteor.part.CanQuery).toBe(false)
+        expect(meteor.canvas.Face).toBe(Enum.NormalId.Top)
+        expect(meteor.outer.Parent.BackgroundTransparency).toBe(1)
+        expect(meteor.inner.Parent.BackgroundTransparency).toBe(1)
+
+        GroundOutline.update(
+            meteor, Vector3.new(8, 2, -5), 16, 0.25, false, 0.5, "High"
+        )
+        expect(meteor.part.Size.X > 16).toBe(true)
+        expect(meteor.part.Size.X < 20).toBe(true)
+        expect(meteor.part.Size.Y).toBe(0.08)
+        expect(meteor.inner.Enabled).toBe(true)
+        expect(meteor.ticks[1].Visible).toBe(true)
+
+        local initialWidth = meteor.part.Size.X
+        GroundOutline.update(
+            meteor, Vector3.new(8, 2, -5), 16, 0.25, true, 0.9, "Low"
+        )
+        expect(meteor.inner.Enabled).toBe(false)
+        expect(meteor.ticks[1].Visible).toBe(false)
+        expect(meteor.part.Size.X ~= initialWidth).toBe(true)
+
+        local bomb = GroundOutline.create(decor, "Bomb")
+        expect(bomb ~= nil).toBe(true)
+        expect(bomb.outer.Color ~= meteor.outer.Color).toBe(true)
+        GroundOutline.destroy(meteor)
+        GroundOutline.destroy(bomb)
+        expect(#decor:GetChildren()).toBe(0)
+        decor:Destroy()
+    end)
+
+    it("keeps reduced-motion outlines static and rejects malformed sizing", function()
+        local GroundOutline = require("../../src/client/HazardGroundOutlineKit")
+        expect(GroundOutline.recipe("Other", 16, 0, false, 0.5, "High")).toBe(nil)
+        expect(GroundOutline.recipe("Meteor", 0, 0, false, 0.5, "High")).toBe(nil)
+        expect(GroundOutline.recipe("Bomb", math.huge, 0, false, 0.5, "High")).toBe(nil)
+        local huge = GroundOutline.recipe("Meteor", 1e8, 3, false, 0.5, "Low")
+        expect(huge.Diameter <= 270).toBe(true)
+        expect(huge.OuterTransparency < 1).toBe(true)
+        local still = GroundOutline.recipe("Bomb", 16, 0.3, true, 0.1, "High")
+        local other = GroundOutline.recipe("Bomb", 16, 0.3, true, 0.9, "High")
+        expect(still.Diameter).toBe(other.Diameter)
+        expect(still.OuterTransparency).toBe(other.OuterTransparency)
+    end)
+
     it("starts late-arriving bomb and meteor signatures at the remaining warning time", function()
         local window = WarningSignatures.window
         local remaining, progress = window(100, 1.25, 100)

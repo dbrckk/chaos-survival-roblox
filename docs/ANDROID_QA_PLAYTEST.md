@@ -1304,3 +1304,31 @@ mobile FPS result is implied by engine tests alone.
 Quality-tier and ReduceMotion changes during a live server warning now
 release the local signature and rebuild only its remaining portion; changing
 a setting never extends the authoritative warning countdown.
+
+## PR #19 — hollow world-space impact outlines (13 October 2026)
+
+The local secondary Meteor/Bomb warning "ring" was actually a filled Neon
+Cylinder over the authoritative warning disc, obscuring the arena floor
+without improving its perimeter. Replace only that client-owned decorative
+Cylinder with a transparent, anchored, non-collidable carrier Part displaying
+an actual hollow circular SurfaceGui outline. The primary luminous contour
+and a secondary thin contour share one carrier Part; High additionally uses
+four authored directional bearing ticks (diagonal for Meteor, cardinal for
+Bomb). The palette remains amber vs. red.
+
+The authoritative server warning marker, damage radius, warning timing,
+collision rules and input are unchanged. The existing adaptive visual
+update loop sizes and fades the new contour, with no new heartbeat loops.
+Low uses one contour, Medium two, High adds four ticks; ReduceMotion
+eliminates pulse variation and hides directional ticks.
+
+The existing hazard-warning Open Cloud spec checks the transparent carrier,
+non-collision, actual no-fill UI strokes, tier changes, proper cleanup,
+dimension bounds and static reduced-motion appearance.
+
+Manual, unpublished Android/Studio QA: inspect the Meteor and Bomb warning
+from low camera and top-down angles over a visible arena floor. Ensure the
+secondary warning no longer obscures the map as a solid neon disc, danger
+remains recognizable with Low/Medium/High graphics, and multiple warnings
+do not obscure player movement. Test Rotate and ReduceMotion on a real
+phone; CI alone does not confirm render or FPS quality.

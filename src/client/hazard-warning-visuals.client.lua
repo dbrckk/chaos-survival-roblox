@@ -5,6 +5,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
+local GroundOutline = require(script.Parent.HazardGroundOutlineKit)
 
 local player = Players.LocalPlayer
 local tracked = {}
@@ -93,8 +94,8 @@ local function ensureRenderLoop()
 
             for part, state in pairs(tracked) do
                 if not part.Parent then
-                    if state.ring and state.ring.Parent then
-                        state.ring:Destroy()
+                    if state.ring then
+                        GroundOutline.destroy(state.ring)
                     end
                     if state.label and state.label.Parent then
                         state.label:Destroy()
@@ -138,19 +139,13 @@ local function ensureRenderLoop()
                     part.Size = Vector3.new(diameter, part.Size.Y, diameter)
                     part.Transparency = 0.12 + (pulse * 0.24)
 
-                    if state.ring and state.ring.Parent then
-                        local ringScale = reduced and 1.12 or (1.10 + pulse * 0.12)
-                        state.ring.Size = Vector3.new(
-                            0.10,
-                            diameter * ringScale,
-                            diameter * ringScale
+                    if state.ring then
+                        -- Hollow world-space surface contours preserve the
+                        -- arena floor and avoid a duplicate solid disc.
+                        GroundOutline.update(
+                            state.ring, part.Position, diameter,
+                            alpha, reduced, pulse, currentTier.Name
                         )
-                        state.ring.CFrame = CFrame.new(
-                            part.Position + Vector3.new(0, 0.06, 0)
-                        ) * CFrame.Angles(0, 0, math.rad(90))
-                        state.ring.Transparency = 0.42
-                            + (0.28 * alpha)
-                            + (pulse * 0.08)
                     end
                 end
 
@@ -176,8 +171,8 @@ local function ensureRenderLoop()
                 end
 
                 if alpha >= 1 then
-                    if state.ring and state.ring.Parent then
-                        state.ring:Destroy()
+                    if state.ring then
+                        GroundOutline.destroy(state.ring)
                     end
                     if state.label and state.label.Parent then
                         state.label:Destroy()
@@ -257,25 +252,7 @@ local function register(part)
 
     local ring = nil
     if kind == "Meteor" or kind == "Bomb" then
-        ring = Instance.new("Part")
-        ring.Name = kind .. "WarningRingLocal"
-        ring.Shape = Enum.PartType.Cylinder
-        ring.Anchored = true
-        ring.CanCollide = false
-        ring.CanTouch = false
-        ring.CanQuery = false
-        ring.CastShadow = false
-        ring.Material = Enum.Material.Neon
-        ring.Color = kind == "Meteor"
-            and Color3.fromRGB(255, 190, 78)
-            or (kind == "JumpShock"
-                and Color3.fromRGB(70, 230, 255)
-                or Color3.fromRGB(255, 72, 72))
-        ring.Transparency = 0.48
-        ring.Size = Vector3.new(0.10, part.Size.X * 1.12, part.Size.Z * 1.12)
-        ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.06, 0))
-            * CFrame.Angles(0, 0, math.rad(90))
-        ring.Parent = localDecor
+        ring = GroundOutline.create(localDecor, kind)
     end
 
     local signature = nil
@@ -395,8 +372,8 @@ end
 workspace.ChildAdded:Connect(maybeRegister)
 workspace.ChildRemoved:Connect(function(child)
     local state = tracked[child]
-    if state and state.ring and state.ring.Parent then
-        state.ring:Destroy()
+    if state and state.ring then
+        GroundOutline.destroy(state.ring)
     end
     if state and state.label and state.label.Parent then
         state.label:Destroy()
