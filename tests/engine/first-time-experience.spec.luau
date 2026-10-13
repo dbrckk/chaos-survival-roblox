@@ -105,6 +105,38 @@ describe("First time experience", function()
         practice:Destroy()
     end)
 
+    it("uses the ready-phase arena ID over stale replicated metadata", function()
+        local staleId, staleMatches = FirstTimeExperience.arenaGuideIdentity(
+            {arenaId = "Orbital", arenaName = "ORBITAL GRID"}, "Classic"
+        )
+        expect(staleId).toBe("Orbital")
+        expect(staleMatches).toBe(false)
+
+        local currentId, currentMatches = FirstTimeExperience.arenaGuideIdentity(
+            {arenaId = "Towers", arenaName = "TOWER RUN"}, "Towers"
+        )
+        expect(currentId).toBe("Towers")
+        expect(currentMatches).toBe(true)
+
+        local fallbackName, hasMetadata = FirstTimeExperience.arenaGuideIdentity(
+            {arenaName = "TOWER RUN"}, "Classic"
+        )
+        expect(fallbackName).toBe("TOWER RUN")
+        expect(hasMetadata).toBe(false)
+
+        local fallbackId, fallbackMatches = FirstTimeExperience.arenaGuideIdentity(
+            {}, "Classic"
+        )
+        expect(fallbackId).toBe("Classic")
+        expect(fallbackMatches).toBe(true)
+
+        local missingId, missingMatches = FirstTimeExperience.arenaGuideIdentity(
+            false, "Classic"
+        )
+        expect(missingId).toBe(nil)
+        expect(missingMatches).toBe(false)
+    end)
+
     it("avoids rebuilding unchanged voting cards on each countdown tick", function()
         local old = {
             {id = "Meteors", name = "Meteors", hint = "Dodge", votes = 0},

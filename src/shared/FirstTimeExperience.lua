@@ -59,6 +59,25 @@ function FirstTimeExperience.voteRenderKey(options, selected, compact)
 end
 
 
+-- The ready-phase RoundState carries the server-owned arena ID. Replicated
+-- ArenaMetadata can still describe the previous map for a short time.
+-- Never display strategy/mechanic hints from mismatched metadata.
+function FirstTimeExperience.arenaGuideIdentity(state, replicatedId)
+    if type(state) ~= "table" then
+        return nil, false
+    end
+    if type(state.arenaId) == "string" and state.arenaId ~= "" then
+        return state.arenaId, state.arenaId == replicatedId
+    end
+    if type(state.arenaName) == "string" and state.arenaName ~= "" then
+        return state.arenaName, false
+    end
+    if type(replicatedId) == "string" and replicatedId ~= "" then
+        return replicatedId, true
+    end
+    return nil, false
+end
+
 -- Identify only map-owned first-run cues. Their marker attributes may
 -- replicate after the BasePart, so callers observe those attributes too.
 function FirstTimeExperience.guideAnchorKind(part, generated)

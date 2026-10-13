@@ -6,6 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -97,6 +98,35 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 bindCamera()
 
 local token = 0
+local readyState = nil
+local isHiding = false
+local cardTween = nil
+local labelTween = nil
+
+local function stopTransitions()
+    if cardTween then
+        cardTween:Cancel()
+        cardTween = nil
+    end
+    if labelTween then
+        labelTween:Cancel()
+        labelTween = nil
+    end
+end
+
+local function transition(background, text, seconds)
+    stopTransitions()
+    if player:GetAttribute("ReduceMotion") == true then
+        card.BackgroundTransparency = background
+        label.TextTransparency = text
+        return
+    end
+    local info = TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    cardTween = TweenService:Create(card, info, {BackgroundTransparency = background})
+    labelTween = TweenService:Create(label, info, {TextTransparency = text})
+    cardTween:Play()
+    labelTween:Play()
+end
 
 local function replicatedHints()
     local variantId = arenaMetadata:GetAttribute("VariantId")
@@ -118,57 +148,80 @@ local function replicatedHints()
 end
 
 local function hide()
+    if not card.Visible or isHiding then
+        return
+    end
     token += 1
     local thisToken = token
-    TweenService:Create(card, TweenInfo.new(0.16), {BackgroundTransparency = 1}):Play()
-    TweenService:Create(label, TweenInfo.new(0.16), {TextTransparency = 1}):Play()
+    isHiding = true
+    transition(1, 1, 0.16)
+    if player:GetAttribute("ReduceMotion") == true then
+        card.Visible = false
+        isHiding = false
+        return
+    end
     task.delay(0.18, function()
-        if token == thisToken then
+        if token == thisToken and isHiding then
             card.Visible = false
+            isHiding = false
         end
     end)
 end
 
 local function reveal(arenaName, hint, mechanicName, mechanicHint)
-    token += 1
+    local copy
     if mechanicName and mechanicHint then
-        label.Text = string.format("%s  •  %s\n%s  •  %s", arenaName or "ARENA", hint, mechanicName, mechanicHint)
+        copy = string.format(
+            "%s  •  %s\n%s  •  %s",
+            arenaName or "ARENA", hint, mechanicName, mechanicHint
+        )
     else
-        label.Text = string.format("%s  •  %s", arenaName or "ARENA", hint)
+        copy = string.format("%s  •  %s", arenaName or "ARENA", hint)
     end
+
+    -- The ready countdown broadcasts every second. Repeating the same
+    -- reveal would flash the panel and allocate new Tweens each time.
+    if card.Visible and not isHiding then
+        if label.Text ~= copy then
+            label.Text = copy
+        end
+        return
+    end
+
+    token += 1
+    isHiding = false
+    stopTransitions()
+    label.Text = copy
     card.Visible = true
     card.BackgroundTransparency = 1
     label.TextTransparency = 1
-    TweenService:Create(card, TweenInfo.new(0.18), {BackgroundTransparency = 0.10}):Play()
-    TweenService:Create(label, TweenInfo.new(0.18), {TextTransparency = 0}):Play()
+    transition(0.10, 0, 0.18)
 end
 
-local function show(arenaName, stateHint)
-    local variantId, replicatedStrategy, mechanicName, mechanicHint = replicatedHints()
-    local fallbackStrategy = stateHint
+local function show(state)
+    local publishedId, strategy, mechanicName, mechanicHint = replicatedHints()
+    local arenaId, metadataMatches = FirstTimeExperience.arenaGuideIdentity(
+        state, publishedId
+    )
+    if not metadataMatches then
+        strategy, mechanicName, mechanicHint = nil, nil, nil
+    end
+    local fallbackStrategy = state.arenaStrategy
     if type(fallbackStrategy) ~= "string" or fallbackStrategy == "" then
-        fallbackStrategy = replicatedStrategy
+        fallbackStrategy = strategy
     end
 
     local localizedArenaName = CoreLocalization.arenaName(
-        localeId,
-        variantId or arenaName,
-        arenaName
+        localeId, arenaId, state.arenaName
     )
     local localizedStrategy = CoreLocalization.arenaStrategy(
-        localeId,
-        variantId or arenaName,
-        fallbackStrategy
+        localeId, arenaId, fallbackStrategy
     )
     local localizedMechanicName = CoreLocalization.arenaMechanicName(
-        localeId,
-        variantId or arenaName,
-        mechanicName
+        localeId, arenaId, mechanicName
     )
     local localizedMechanicHint = CoreLocalization.arenaMechanicHint(
-        localeId,
-        variantId or arenaName,
-        mechanicHint
+        localeId, arenaId, mechanicHint
     )
 
     if localizedStrategy then
@@ -184,9 +237,38 @@ local function show(arenaName, stateHint)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    -- A malformed payload cannot replace the current briefing.
+    if type(state) ~= "table" then return end
     if state.phase == "ready" then
-        show(state.arenaName, state.arenaStrategy)
-    elseif state.phase == "round" or state.phase == "waiting" then
+        readyState = state
+        show(state)
+    else
+        readyState = nil
         hide()
+    end
+end)
+
+-- Strategy and mechanic attributes can replicate after the ready event.
+-- Refresh only a still-active briefing and only when its text changes.
+for _, attribute in ipairs({
+    "VariantId", "StrategyHint", "MechanicName", "MechanicHint",
+}) do
+    arenaMetadata:GetAttributeChangedSignal(attribute):Connect(function()
+        if readyState then
+            show(readyState)
+        end
+    end)
+end
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    stopTransitions()
+    if isHiding then
+        token += 1
+        card.Visible = false
+        isHiding = false
+    end
+    if card.Visible then
+        card.BackgroundTransparency = 0.10
+        label.TextTransparency = 0
     end
 end)

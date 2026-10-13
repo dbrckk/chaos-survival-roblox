@@ -1181,3 +1181,28 @@ cards are unobstructed; verify it reappears afterward. Enable
 ReduceMotion and tap lobby controls and voting cards, observing no
 press-scale animations. Retest quick rotations and map reloads.
 Actual device performance and QA are still unverified.
+
+## PR #19 — arena briefing stability on replicated metadata changes (13 October 2026)
+
+ArenaGuide previously preferred the replicated ArenaMetadata VariantId even
+when a ready-phase RoundState already contained the correct server arenaId.
+On slow mobile replication, the metadata could still describe the previous
+arena; the strategy panel could therefore display incorrect route guidance.
+It also started new reveal Tweens every second for identical ready countdown
+updates, causing a repeated visible flash.
+
+The guide now uses the authoritative ready-state arenaId for localized
+copy, accepts replicated fallback hints only when that VariantId matches,
+and refreshes its still-active briefing on relevant metadata attributes.
+Repeated identical messages do not create new Tweens. Text updates while
+visible do not blank the panel. A non-ready phase, including intermission
+and result, hides old guidance. Invalid RoundState payloads are ignored.
+ReduceMotion presents/hides the panel directly and cancels active card
+transitions on preference changes.
+
+An existing first-run engine spec covers late/mismatched arena identity.
+Required unpublished Android/Studio QA: join during the ready countdown
+with simulated delayed ArenaMetadata, rotate screen while briefing is
+visible, validate no 1-second flashing, then transition ready to round
+and waiting. Confirm the old arena label never appears for the new map.
+No physical device/FPS result is claimed from this source change.
