@@ -70,6 +70,41 @@ describe("Arena variants", function()
         expect(fallbackZ).toBe(42)
     end)
 
+    it("never publishes metadata for a removed or not-yet-ready arena", function()
+        local map = Instance.new("Folder")
+        map.Name = "GeneratedMap"
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = map
+
+        expect(ArenaVariants.activeDefinition(arena, map)).toBe(nil)
+        arena:SetAttribute("VariantId", "Towers")
+        expect(ArenaVariants.activeDefinition(arena, map).Id).toBe("Towers")
+
+        arena:SetAttribute("VariantId", "Unknown")
+        expect(ArenaVariants.activeDefinition(arena, map)).toBe(nil)
+        arena:SetAttribute("VariantId", "Orbital")
+        expect(ArenaVariants.activeDefinition(arena, map).Id).toBe("Orbital")
+
+        local replacement = Instance.new("Folder")
+        replacement.Name = "GeneratedMap"
+        expect(ArenaVariants.activeDefinition(arena, replacement)).toBe(nil)
+
+        arena.Parent = nil
+        expect(ArenaVariants.activeDefinition(arena, map)).toBe(nil)
+        arena.Parent = replacement
+        expect(ArenaVariants.activeDefinition(arena, replacement).Id).toBe("Orbital")
+
+        arena.Name = "OldArena"
+        expect(ArenaVariants.activeDefinition(arena, replacement)).toBe(nil)
+        arena.Name = "Arena"
+        replacement.Name = "RemovedMap"
+        expect(ArenaVariants.activeDefinition(arena, replacement)).toBe(nil)
+
+        map:Destroy()
+        replacement:Destroy()
+    end)
+
     it("gives every arena concise actionable strategy guidance", function()
         local seenHints = {}
         for _, id in ipairs(ArenaVariants.Order) do

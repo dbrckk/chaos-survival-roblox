@@ -149,6 +149,23 @@ function ArenaVariants.get(id)
     return ArenaVariants.Definitions[id]
 end
 
+-- Server metadata may only be sourced from a live Arena belonging to the
+-- currently tracked GeneratedMap, and never from a not-yet-ready default.
+-- Kept pure so the existing Open Cloud arena tests can exercise late
+-- attributes and removed/replaced folders without running server scripts.
+function ArenaVariants.activeDefinition(arena, generated)
+    if typeof(arena) ~= "Instance" or typeof(generated) ~= "Instance"
+        or arena.Parent ~= generated or not arena:IsA("Folder")
+        or arena.Name ~= "Arena" or generated.Name ~= "GeneratedMap" then
+        return nil
+    end
+    local id = arena:GetAttribute("VariantId")
+    if type(id) ~= "string" or id == "" then
+        return nil
+    end
+    return ArenaVariants.get(id)
+end
+
 function ArenaVariants.chooseRecent(recentIds)
     local excluded = {}
     for _, id in ipairs(recentIds or {}) do

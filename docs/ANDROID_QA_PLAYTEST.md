@@ -1234,3 +1234,25 @@ no delayed callback hides the focus bar. Confirm intensity fill changes
 only with intensity, status timer still advances each second, and the
 FocusBar doesn't obstruct movement/jump buttons at 540x320, 640x360,
 960x440 and 1280x720. Device FPS and real touch QA remain unmeasured.
+
+## PR #19 — server arena metadata lifecycle (13 October 2026)
+
+ArenaMetadata.server.lua previously retained ChildAdded connections for old
+GeneratedMap folders, ran unguarded deferred metadata updates, and only
+read the arena VariantId once. Replacing the map could therefore publish
+stale visual/strategy information, and a late VariantId was not observed.
+
+The publisher now binds to exactly one active GeneratedMap and Arena,
+disconnects connections when either changes, observes VariantId changes,
+and rejects removed/invalid arenas through the pure ArenaVariants
+activeDefinition selector. It clears old metadata when no valid arena
+exists. Startup retains the initial Classic fallback, but does not
+pretend a not-yet-ready active arena is Classic. VariantId is published
+after the other hint attributes for a consistent visual transition.
+
+The existing arena-variants Open Cloud spec covers late IDs, unknown
+IDs, replacement maps, renamed folders and removed arenas. Manual
+acceptance: cycle four maps and force a late VariantId change, verify
+ArenaGuide never displays the previous map's strategy, and check no
+growth in persistent server connections. No production publication or
+physical Android FPS result is implied.
