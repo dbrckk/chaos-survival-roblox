@@ -1358,3 +1358,34 @@ is active, throttle attribute replication, confirm no premature loss
 of warning text/contour, and check zero orphaned local decorations
 after the warning Part disappears. There is no physical Android
 benchmark attached to this source-only update.
+
+## PR #19 — accurate escape guidance and spectator cleanup (13 October 2026)
+
+Hazard-route-readability previously inferred a player's proximity to a
+Meteor/Bomb threat from the ANIMATED ring diameter, which begins at 5.5
+studs despite a larger server damage radius. This understated the true
+unsafe footprint until the very end of an impact countdown.
+
+Escape guidance now uses the authoritative final WarningEndSize from a
+fully replicated warning snapshot, independent of ring animation.
+The guide starts only after all server warning attributes arrive,
+never guesses a 0.5-second fallback, and releases pending attribute
+listeners once they are no longer needed. The existing route-arrow loop
+remains the only update loop (no new heartbeats).
+
+For the local player, the guidance chevrons stop pulsing under
+ReduceMotion, hide on elimination, spectator transition, missing
+character, or phase exit, and never persist at an old avatar position.
+Warning risk uses the full 3D distance, matching the actual
+DisasterImpact.applyRadialDamage server routine. Raised platforms therefore
+do not receive false danger arrows when the player is above blast range.
+
+The existing hazard-warning engine spec now tests the final-radius
+escape-clearance calculation including elevated characters, invalid arguments, and points inside vs.
+outside the spherical blast footprint.
+
+Unpublished manual Android QA: approach the outside edge of an expanding
+Meteor/Bomb disc, verify that ESCAPE alerts show inside the final radius
+before the visual ring reaches it, then die/spectate and confirm no
+stranded world chevrons. Repeat with ReduceMotion and Low graphics; check
+that moving arrows remain stable while static motion preferences apply.

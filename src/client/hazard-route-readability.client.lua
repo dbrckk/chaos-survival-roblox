@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local WarningRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -120,6 +121,7 @@ bindCamera()
 local currentPhase = "waiting"
 local finalRush = false
 local warningStates = {}
+local pendingWarnings = {}
 local loopStarted = false
 local ensureRenderLoop
 
@@ -170,7 +172,17 @@ local function rootPart()
     return nil
 end
 
+local function releasePending(warning)
+    local list = pendingWarnings[warning]
+    if not list then return end
+    pendingWarnings[warning] = nil
+    for _, connection in ipairs(list) do
+        connection:Disconnect()
+    end
+end
+
 local function destroyState(warning)
+    releasePending(warning)
     local state = warningStates[warning]
     if not state then
         return
@@ -199,17 +211,20 @@ local function makeArrowPart(name, color)
     return part
 end
 
-local function createState(warning, kind)
+local function createState(warning, snapshot)
     if warningStates[warning] or not warning:IsA("BasePart") then
         return
     end
-
+    local kind = snapshot.Kind
     local color = KIND_COLORS[kind] or warning.Color
     local left = makeArrowPart("HazardEscapeL_" .. kind, color)
     local right = makeArrowPart("HazardEscapeR_" .. kind, color)
 
     warningStates[warning] = {
         kind = kind,
+        startedAt = snapshot.StartedAt,
+        duration = snapshot.Duration,
+        endSize = snapshot.EndSize,
         instances = {left, right},
         left = left,
         right = right,
@@ -221,22 +236,38 @@ local function createState(warning, kind)
 end
 
 local function maybeBind(instance)
-    if not instance:IsA("BasePart") or not WARNING_NAMES[instance.Name] then
+    if not instance:IsA("BasePart") or not WARNING_NAMES[instance.Name]
+        or instance.Parent ~= workspace or warningStates[instance] then
         return
     end
 
-    local kind = instance:GetAttribute("WarningKind")
-    if type(kind) == "string" and SUPPORTED[kind] then
-        createState(instance, kind)
+    -- A late WarningKind without WarningEndSize cannot yield a truthful
+    -- escape direction. Wait for the same complete server snapshot as the
+    -- companion world-label controller; release watchers on removal.
+    local snapshot = WarningRules.snapshot(instance, workspace:GetServerTimeNow())
+    if snapshot and SUPPORTED[snapshot.Kind] then
+        releasePending(instance)
+        createState(instance, snapshot)
         return
     end
+    if pendingWarnings[instance] then return end
 
-    instance:GetAttributeChangedSignal("WarningKind"):Connect(function()
-        local nextKind = instance:GetAttribute("WarningKind")
-        if type(nextKind) == "string" and SUPPORTED[nextKind] then
-            createState(instance, nextKind)
-        end
-    end)
+    local watchers = {}
+    pendingWarnings[instance] = watchers
+    for _, attribute in ipairs({
+        "WarningKind", "WarningStartedAt", "WarningDuration",
+        "WarningStartSize", "WarningEndSize",
+    }) do
+        table.insert(watchers,
+            instance:GetAttributeChangedSignal(attribute):Connect(function()
+                if instance.Parent == workspace then
+                    maybeBind(instance)
+                else
+                    releasePending(instance)
+                end
+            end))
+    end
+    maybeBind(instance)
 end
 
 local function hideState(state)
@@ -247,38 +278,55 @@ local function hideState(state)
     end
 end
 
+local function hideAllStates()
+    for _, state in pairs(warningStates) do
+        hideState(state)
+    end
+end
+
 local function updateState(warning, state, root, tier, now)
     if not warning.Parent or not root then
         hideState(state)
         return math.huge
     end
 
-    local startSize = tonumber(warning:GetAttribute("WarningStartSize")) or math.max(warning.Size.X, warning.Size.Z)
-    local endSize = tonumber(warning:GetAttribute("WarningEndSize")) or startSize
-    local duration = math.max(0.05, tonumber(warning:GetAttribute("WarningDuration")) or 0.5)
-    local startedAt = tonumber(warning:GetAttribute("WarningStartedAt")) or workspace:GetServerTimeNow()
-    local alpha = math.clamp((workspace:GetServerTimeNow() - startedAt) / duration, 0, 1)
-    local dangerRadius = math.max(1, (startSize + (endSize - startSize) * alpha) * 0.5)
+    if workspace:GetServerTimeNow() >= state.startedAt + state.duration then
+        hideState(state)
+        return math.huge
+    end
 
+    -- The luminous disc expands for readability, but damage uses the final
+    -- server warning radius. Guide players away from the FULL danger footprint
+    -- from the start, including during Double Chaos.
     local playerPosition = root.Position
+    -- Meteors and bombs both resolve server damage one stud above their
+    -- warning marker. Match that impact center for elevated arena routes.
+    local clearance = WarningRules.escapeClearance(
+        playerPosition, warning.Position + Vector3.new(0, 1, 0),
+        state.endSize
+    )
+    if clearance == nil then
+        hideState(state)
+        return math.huge
+    end
     local delta = Vector3.new(
         playerPosition.X - warning.Position.X,
         0,
         playerPosition.Z - warning.Position.Z
     )
     local distance = delta.Magnitude
-    local proximity = dangerRadius + (tier.Name == "High" and 7 or 5)
-
-    if distance > proximity or distance < 0.15 then
+    if clearance > (tier.Name == "High" and 7 or 5)
+        or distance < 0.15 then
         hideState(state)
-        return distance - dangerRadius
+        return clearance
     end
 
     local direction = delta.Unit
     local lateral = Vector3.new(direction.Z, 0, -direction.X)
     local origin = playerPosition + Vector3.new(0, -2.65, 0) + direction * 3.1
     local yaw = math.atan2(-direction.X, -direction.Z)
-    local pulse = (math.sin(now * 7.5) + 1) * 0.5
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local pulse = reduced and 0.5 or (math.sin(now * 7.5) + 1) * 0.5
     local transparency = (tier.Name == "Low" and 0.42 or 0.28) + pulse * 0.20
     if finalRush then
         transparency += 0.10
@@ -303,14 +351,12 @@ local function updateState(warning, state, root, tier, now)
     state.left.Size = Vector3.new(length, 0.06, width)
     state.right.Size = Vector3.new(length, 0.06, width)
 
-    return distance - dangerRadius
+    return clearance
 end
 
 workspace.ChildAdded:Connect(maybeBind)
 workspace.ChildRemoved:Connect(function(instance)
-    if warningStates[instance] then
-        destroyState(instance)
-    end
+    destroyState(instance)
 end)
 
 for _, child in ipairs(workspace:GetChildren()) do
@@ -318,15 +364,14 @@ for _, child in ipairs(workspace:GetChildren()) do
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     currentPhase = tostring(state.phase or "waiting")
     finalRush = state.finalRush == true
 
     if currentPhase ~= "round" then
         cue.Visible = false
         offscreenArrow.Visible = false
-        for _, warningState in pairs(warningStates) do
-            hideState(warningState)
-        end
+        hideAllStates()
     elseif ensureRenderLoop then
         ensureRenderLoop()
     end
@@ -343,6 +388,7 @@ ensureRenderLoop = function()
             if currentPhase ~= "round" or next(warningStates) == nil then
                 cue.Visible = false
                 offscreenArrow.Visible = false
+                hideAllStates()
                 task.wait(0.18)
                 continue
             end
@@ -356,6 +402,7 @@ ensureRenderLoop = function()
             then
                 cue.Visible = false
                 offscreenArrow.Visible = false
+                hideAllStates()
                 continue
             end
 
@@ -363,6 +410,7 @@ ensureRenderLoop = function()
             if not root then
                 cue.Visible = false
                 offscreenArrow.Visible = false
+                hideAllStates()
                 continue
             end
 

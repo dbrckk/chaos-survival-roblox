@@ -181,6 +181,24 @@ describe("Premium frost and electric warning silhouettes", function()
         expect(capped).toBe(2.5)
     end)
 
+    it("guides escape using final radius and actual 3D damage distance", function()
+        local clearance = WarningSignatures.escapeClearance
+        local impact = Vector3.new(0, 0, 0)
+        -- The initial MeteorWarning disc is 5.5 studs, but the final
+        -- radius is 8 studs. A player 7 studs away is NOT safe.
+        expect(clearance(Vector3.new(7, 0, 0), impact, 16)).toBe(-1)
+        expect(clearance(Vector3.new(7, 50, 0), impact, 16) > 40).toBe(true)
+        -- In the Towers arena a player on a raised deck may be outside
+        -- the 3D blast while still directly above the visual ground disc.
+        expect(clearance(Vector3.new(0, 10, 0), impact, 16)).toBe(2)
+        expect(clearance(Vector3.new(10, 0, 0), impact, 16)).toBe(2)
+        expect(clearance(Vector3.new(0, 0, 0), impact, 16)).toBe(-8)
+        expect(clearance(nil, impact, 16)).toBe(nil)
+        expect(clearance(impact, nil, 16)).toBe(nil)
+        expect(clearance(impact, impact, 0)).toBe(nil)
+        expect(clearance(impact, impact, math.huge)).toBe(nil)
+    end)
+
     it("bounds concurrent warning silhouettes across graphics tiers", function()
         local limit = WarningSignatures.activeLimit
         expect(limit("Low", false)).toBe(6)

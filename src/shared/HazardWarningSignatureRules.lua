@@ -164,4 +164,18 @@ function HazardWarningSignatureRules.activeLimit(tier, reduced)
     return ({Low = 6, Medium = 10, High = 14})[tier] or 6
 end
 
+-- The shown ring is a countdown animation. Escape guidance must use
+-- the FINAL damage radius, never the ring's interim size. Match the
+-- authoritative DisasterImpact.applyRadialDamage 3D distance: elevated
+-- platforms can be outside a blast even when directly above the marker.
+function HazardWarningSignatureRules.escapeClearance(playerPosition, impactPosition, endDiameter)
+    if typeof(playerPosition) ~= "Vector3" or typeof(impactPosition) ~= "Vector3"
+        or type(endDiameter) ~= "number" or endDiameter ~= endDiameter
+        or math.abs(endDiameter) == math.huge or endDiameter <= 0 then
+        return nil
+    end
+    return (playerPosition - impactPosition).Magnitude
+        - math.max(1, endDiameter * 0.5)
+end
+
 return HazardWarningSignatureRules
