@@ -345,7 +345,10 @@ local function finishSignature(bundle, cf, theme, variant)
         elseif variant == "Orbital" then
             -- Ceramic containment petals create a readable, segmented
             -- frame around the heart without adding bloom or a new light.
-            local angle = (i - 1) * math.pi * 0.5 + math.pi * 0.25
+            -- Medium uses opposite petals to preserve a balanced reactor
+            -- silhouette; High completes the four-quadrant containment.
+            local angle = (i - 1) * (high and math.pi * 0.5 or math.pi)
+                + math.pi * 0.25
             local radius = 3.02
             local frame = cf * CFrame.new(
                 math.cos(angle) * radius, 6.3,
