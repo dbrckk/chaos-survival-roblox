@@ -56,6 +56,39 @@ code compilation, or engine checks alone. Require a side-by-side
 comparison with polished reference experiences and at least one independent
 art/animation review using captured footage.
 
+## Weighted R6/R15 landing — motion finishing candidate (14 October 2026)
+
+The existing `body-feel.client.lua` owner now layers a short, damped
+compression/rebound pair over the original landing flinch, based on the
+avatar's actual downward speed before the Humanoid landing transition.
+Torso, root, hips and arm counterbalance share this envelope. The shared
+`LocomotionDynamics.landingRecovery` function computes the two bounded
+normalized weights; no new AnimationIds, Motor6Ds, physics forces,
+camera shakes, GPU particles, lights, or server mutations are added.
+
+Graphics tier scaling, ReduceMotion dampening, existing R6 amplitude
+limits, and Showtime's action-track blend remain in control. Render
+integration is limited to 1/15 s of visual time per frame after Android
+suspension. Frame gaps above 0.30 s discard false acceleration, braking
+and turning impulses (and associated foot-ground VFX) instead of reacting
+to a stale movement sample.
+
+**Visual acceptance required, not yet performed:**
+- Compare neutral jump/landing against falls that exceed the existing
+  20-studs/s threshold. Review anticipation, compression, rebound,
+  arm counterbalance, feet clearance, and absence of joint snapping.
+- Record R6 and R15 in Studio at 30 and 60 FPS, including sprint-to-jump,
+  quick pivots, hard stops, Speed Surge and Low Gravity.
+- Dance/emote immediately upon landing and confirm Showtime Action
+  tracks continue to override additive C0 offsets. Test simultaneous
+  explosion reactions and rapid respawns.
+- Repeat with Low, Medium, High and ReduceMotion on Android; switch
+  settings while falling, return from background after 1+ second, then
+  inspect whether false ground scuffs or sudden angular poses appear.
+- Compare CPU/frame timing and character Motor6D count before/after.
+  No claim of 9/10 animation quality or measured FPS improvement without
+  native capture and independent visual review.
+
 ## Human momentum ribbon: mobile and accessibility gate
 
 The human sprint ribbon uses one sculpted, three-point tapered Trail, lazily
