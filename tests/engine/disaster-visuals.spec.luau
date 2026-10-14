@@ -470,6 +470,54 @@ describe("Bounded active meteor signatures", function()
             "High", false, 0)).toBe(false)
     end)
 
+    it("sculpts unique, cached ember silhouettes without extra Trail instances", function()
+        local style = MeteorSignatureRules.trailStyle
+        local medium = style("Medium", false)
+        local high = style("High", false)
+        expect(medium ~= nil and high ~= nil).toBe(true)
+        expect(style("Low", false)).toBe(nil)
+        expect(style("High", true)).toBe(nil)
+        expect(style("Unknown", false)).toBe(nil)
+        -- One cached recipe per tier; live updates do not allocate sequences.
+        expect(style("High", false)).toBe(high)
+        expect(#medium.WidthScale.Keypoints).toBe(4)
+        expect(#high.WidthScale.Keypoints).toBe(6)
+        expect(high.WidthScale.Keypoints[2].Value).toBe(1)
+        expect(high.WidthScale.Keypoints[3].Value <
+            high.WidthScale.Keypoints[4].Value).toBe(true)
+        expect(high.WidthScale.Keypoints[#high.WidthScale.Keypoints].Value).toBe(0)
+        expect(high.Transparency.Keypoints[#high.Transparency.Keypoints].Value).toBe(1)
+        expect(high.LightEmission > medium.LightEmission).toBe(true)
+        expect(high.Span > medium.Span).toBe(true)
+        expect(MeteorSignatureRules.profile("High", false).MaxTrails).toBe(6)
+        expect(MeteorSignatureRules.profile("Medium", false).MaxTrails).toBe(3)
+    end)
+
+    it("ignores broken RoundState packets without resetting meteor signatures", function()
+        local read = MeteorSignatureRules.readRoundState
+        local phase, active = read({
+            phase = "round",
+            disasterIds = {"Meteors", "Bombs"},
+        })
+        expect(phase).toBe("round")
+        expect(active).toBe(true)
+        local waiting, inactive = read({
+            phase = "waiting",
+            disasterIds = {"Meteors"},
+        })
+        expect(waiting).toBe("waiting")
+        expect(inactive).toBe(false)
+        local unknown, noMeteor = read({
+            phase = "round",
+            disasterIds = "Meteors",
+        })
+        expect(unknown).toBe("round")
+        expect(noMeteor).toBe(false)
+        expect(read(nil)).toBe(nil)
+        expect(read("broken")).toBe(nil)
+        expect(read(42)).toBe(nil)
+    end)
+
     it("orders only valid, live meteor parts by camera proximity", function()
         local folder = Instance.new("Folder")
         local children = {}

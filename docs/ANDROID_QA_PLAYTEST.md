@@ -1558,3 +1558,33 @@ Successive near-miss notices also cancel any prior card/fade/flash tweens
 before starting the new notice. This prevents a late fade-out from
 visually overriding a newly arrived combo message. Check rapid consecutive
 near misses on Android with both motion settings.
+
+## PR #19 — Authored comet silhouettes under mobile visual budgets (14 October 2026)
+
+The existing single Trail per RoundMeteor now has a custom multi-knot
+thermal ribbon: pale hot center, orange mantle and fading ash tip, plus a
+nonlinear width envelope in High quality. Medium uses a cheaper 4-point
+shape. NumberSequences are cached once per quality tier and reused for
+every meteor. One Trail, two Attachments, the same distance culling and
+0/3/6 trail caps remain; no extra lights, particles, remote events or
+physics changes. The appearance also updates in place when automatic
+VFX quality changes during a fall, without duplicating the Trail.
+
+Android QA: preview meteor storms in Medium/High, move camera and compare
+silhouettes; force Low and ReduceMotion to confirm Trail removal. Toggle
+Medium/High during a fall and confirm the same Trail changes appearance
+without overlap or leaked Attachments. Inject an invalid RoundState packet
+in Studio and confirm the client retains its last valid state.
+
+## PR #19 — Defensive client haptics packets (14 October 2026)
+
+Malformed or missing ArenaMechanicFeedback, ChaosShardCollected,
+RoundFeedback, or RoundState network payloads no longer trigger an
+unrelated vibration or index invalid Lua values. Valid server packets
+retain the exact pulse intensities, cooldowns and motor cleanup behavior.
+No extra client loop or mobile vibration is introduced.
+
+Studio QA: fire each remote with nil, a string and an empty table and
+confirm the haptics client continues without runtime errors; fire valid
+normal and golden shard, round survivor and finale payloads to confirm
+existing vibrations still work on a supported Android/controller device.

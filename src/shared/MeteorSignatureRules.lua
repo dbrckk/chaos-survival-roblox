@@ -7,9 +7,67 @@ local PROFILES = {
     High = {MaxTrails = 6, Range = 165, Lifetime = 0.23},
 }
 
+-- Hand-sculpted comet ribbon silhouettes; one existing Trail per meteor.
+-- These constant sequences are shared by every meteor and never allocated
+-- during the 0.25-second visibility scanner.
+local STYLES = {
+    Medium = {
+        WidthScale = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.78),
+            NumberSequenceKeypoint.new(0.24, 0.93),
+            NumberSequenceKeypoint.new(0.68, 0.32),
+            NumberSequenceKeypoint.new(1, 0),
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.22),
+            NumberSequenceKeypoint.new(0.42, 0.38),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+        LightEmission = 0.70,
+        Span = 0.22,
+    },
+    High = {
+        WidthScale = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.82),
+            NumberSequenceKeypoint.new(0.15, 1),
+            NumberSequenceKeypoint.new(0.35, 0.55),
+            NumberSequenceKeypoint.new(0.53, 0.71),
+            NumberSequenceKeypoint.new(0.77, 0.26),
+            NumberSequenceKeypoint.new(1, 0),
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.13),
+            NumberSequenceKeypoint.new(0.30, 0.22),
+            NumberSequenceKeypoint.new(0.70, 0.62),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+        LightEmission = 0.84,
+        Span = 0.26,
+    },
+}
+
+function MeteorSignatureRules.trailStyle(tier, reducedMotion)
+    if reducedMotion == true then return nil end
+    return STYLES[tostring(tier or "")]
+end
+
 function MeteorSignatureRules.profile(tier, reducedMotion)
     if reducedMotion == true then return PROFILES.Low end
     return PROFILES[tostring(tier or "")] or PROFILES.Low
+end
+
+-- A RoundState packet is optional/late on join. Reject malformed packets
+-- without clearing the last valid visual state or throwing in a client script.
+function MeteorSignatureRules.readRoundState(state)
+    if type(state) ~= "table" then return nil, nil end
+    local phase = tostring(state.phase or "waiting")
+    if phase ~= "round" then return phase, false end
+    local ids = type(state.disasterIds) == "table"
+        and state.disasterIds or {}
+    for _, id in ipairs(ids) do
+        if id == "Meteors" then return phase, true end
+    end
+    return phase, false
 end
 
 function MeteorSignatureRules.shouldTrail(phase, meteorsActive, viewerPosition,
