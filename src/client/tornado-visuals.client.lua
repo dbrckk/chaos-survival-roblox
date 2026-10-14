@@ -32,6 +32,25 @@ local function clearDebris()
     debrisFolder = nil
 end
 
+-- One authored helical pose per debris shard. Reuse the same 5/8/12
+-- Parts for all tiers; no extra emitters, lights or collision instances.
+local function poseShard(state, center, time)
+    local angle = state.angle + time * state.speed
+    local orbit = state.radius + math.sin(time * 1.15 + state.index * 0.83) * 0.38
+    local lift = math.sin(time * 2.2 + state.index * 1.7) * 0.46
+    local position = center + Vector3.new(
+        math.cos(angle) * orbit,
+        -5 + state.height + lift,
+        math.sin(angle) * orbit
+    )
+    state.part.CFrame = CFrame.new(position)
+        * CFrame.Angles(
+            math.rad(state.pitch) + math.sin(time * 1.4 + state.index) * 0.11,
+            -angle + math.pi * 0.5,
+            math.rad(state.bank) + math.sin(time * 2.0 + state.index) * 0.16
+        )
+end
+
 local function buildDebris()
     clearDebris()
     if not activeModel or not activeModel.Parent or not middle then
@@ -46,31 +65,43 @@ local function buildDebris()
     debrisFolder.Parent = workspace
 
     for i = 1, count do
-        local piece = Instance.new("Part")
+        local glint = i % 4 == 0
+        local piece = Instance.new("WedgePart")
         piece.Name = "WindDebris" .. i
         piece.Anchored = true
         piece.CanCollide = false
         piece.CanTouch = false
         piece.CanQuery = false
         piece.CastShadow = false
-        piece.Material = i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal
-        piece.Color = i % 3 == 0
-            and Color3.fromRGB(115, 235, 235)
-            or Color3.fromRGB(95, 115, 125)
+        -- A few pale glass facets catch the storm's light; the majority
+        -- remain matte, wind-sheared metal, not glowing generic cubes.
+        piece.Material = glint and Enum.Material.Glass or Enum.Material.Metal
+        piece.Color = glint and Color3.fromRGB(122, 211, 220)
+            or (i % 3 == 0 and Color3.fromRGB(72, 106, 121)
+                or Color3.fromRGB(98, 115, 125))
         piece.Size = Vector3.new(
-            0.35 + ((i * 7) % 5) * 0.10,
-            0.25 + ((i * 3) % 4) * 0.08,
-            0.9 + ((i * 5) % 7) * 0.14
+            0.30 + ((i * 7) % 5) * 0.11,
+            0.24 + ((i * 3) % 4) * 0.09,
+            1.20 + ((i * 5) % 7) * 0.19
         )
-        piece.Transparency = i % 3 == 0 and 0.20 or 0.08
+        piece.Transparency = glint and 0.29 or 0.08
         piece.Parent = debrisFolder
-        table.insert(debris, {
+        local height = 2 + ((i * 7) % 13)
+        local state = {
             part = piece,
-            angle = ((i - 1) / count) * math.pi * 2,
-            radius = 5 + ((i * 11) % 18),
-            height = 2 + ((i * 7) % 13),
-            speed = 1.6 + ((i * 5) % 7) * 0.14,
-        })
+            index = i,
+            angle = ((i - 1) / count) * math.pi * 2
+                + (height / 16) * math.pi * 0.85,
+            radius = 5 + ((i * 11) % 16) * 0.81,
+            height = height,
+            speed = 1.55 + ((i * 5) % 7) * 0.13,
+            pitch = (i % 2 == 0 and -1 or 1) * (8 + i % 4 * 5),
+            bank = (i % 2 == 0 and 1 or -1) * (13 + i % 5 * 7),
+        }
+        -- Never let a newly streamed shard flash at world origin before
+        -- the visual update loop's next quality-dependent tick.
+        poseShard(state, middle.Position, pulseClock)
+        table.insert(debris, state)
     end
 end
 
@@ -156,15 +187,16 @@ ensureRenderLoop = function()
                 continue
             end
 
-            pulseClock += dt
-
             local reduceMotion = player:GetAttribute("ReduceMotion") == true
-            local motionScale = reduceMotion and 0.18 or 1
-            local pulse = (
-                math.sin(pulseClock * (reduceMotion and 1.1 or 4)) + 1
-            ) * 0.5
-
-            local pulseScale = reduceMotion and 0.32 or 1
+            -- Pausing the visual clock keeps reduced-motion debris completely
+            -- still. Clamping lost frames avoids a giant jump when Android
+            -- resumes from the background; server tornado timing is untouched.
+            if not reduceMotion then
+                pulseClock += math.clamp(tonumber(dt) or 0, 0, 0.22)
+            end
+            local pulse = reduceMotion and 0.5
+                or (math.sin(pulseClock * 4) + 1) * 0.5
+            local pulseScale = reduceMotion and 0 or 1
             if dangerZone and dangerZone.Parent then
                 dangerZone.Transparency = 0.90 + pulse * 0.05 * pulseScale
             end
@@ -184,24 +216,9 @@ ensureRenderLoop = function()
 
             if middle and middle.Parent then
                 local center = middle.Position
-                for i, state in ipairs(debris) do
-                    local piece = state.part
-                    if piece and piece.Parent then
-                        local angle = state.angle + pulseClock * state.speed * motionScale
-                        local wobble = math.sin(
-                            pulseClock * 3.4 * motionScale + i
-                        ) * 0.55 * motionScale
-                        local position = center + Vector3.new(
-                            math.cos(angle) * state.radius,
-                            -5 + state.height + wobble,
-                            math.sin(angle) * state.radius
-                        )
-                        piece.CFrame = CFrame.new(position)
-                            * CFrame.Angles(
-                                pulseClock * 2.2 * motionScale + i,
-                                -angle,
-                                pulseClock * 1.3 * motionScale
-                            )
+                for _, state in ipairs(debris) do
+                    if state.part.Parent then
+                        poseShard(state, center, pulseClock)
                     end
                 end
             end
