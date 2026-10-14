@@ -311,11 +311,15 @@ local function removePlatformHighlight(part)
     end
 end
 
+local function clearPlatformHighlights()
+    for part in pairs(platformHighlights) do
+        removePlatformHighlight(part)
+    end
+end
+
 local function updatePlatformHighlights()
     if not disappearingActive then
-        for part in pairs(platformHighlights) do
-            removePlatformHighlight(part)
-        end
+        clearPlatformHighlights()
         return
     end
 
@@ -323,10 +327,15 @@ local function updatePlatformHighlights()
     local arena = generated and generated:FindFirstChild("Arena")
     local platforms = arena and arena:FindFirstChild("Platforms")
     if not platforms then
+        -- Streaming or map replacement can remove the deck while the
+        -- disaster is still active. Local Highlights keep an Adornee
+        -- reference alive, so clear them rather than retaining old maps.
+        clearPlatformHighlights()
         return
     end
 
     local tier = profile()
+    local style = WarningRules.platformHighlightStyle(tier.Name)
     local seen = {}
 
     for _, part in ipairs(platforms:GetChildren()) do
@@ -342,10 +351,17 @@ local function updatePlatformHighlights()
                 highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                 highlight.FillColor = Color3.fromRGB(255, 190, 45)
                 highlight.OutlineColor = Color3.fromRGB(255, 235, 120)
-                highlight.FillTransparency = tier.Name == "Low" and 0.92 or 0.84
-                highlight.OutlineTransparency = tier.Name == "Low" and 0.36 or 0.18
                 highlight.Parent = folder
                 platformHighlights[part] = highlight
+            end
+            -- Auto-quality can change mid-disaster. Reconfigure the same
+            -- Highlight; no new Instance or per-frame tween is required.
+            local highlight = platformHighlights[part]
+            if highlight.FillTransparency ~= style.FillTransparency then
+                highlight.FillTransparency = style.FillTransparency
+            end
+            if highlight.OutlineTransparency ~= style.OutlineTransparency then
+                highlight.OutlineTransparency = style.OutlineTransparency
             end
         end
     end

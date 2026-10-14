@@ -1600,3 +1600,22 @@ physics remain unchanged.
 Android/Studio QA: stream meteors in and out, switch quality tiers and
 ReduceMotion repeatedly, then inspect for zero orphaned local attachments.
 A deliberately separate same-named child must survive signature cleanup.
+
+## PR #19 — Live platform warning highlights on Android (14 October 2026)
+
+A DisappearingPlatforms highlight originally received Low/Medium/High
+transparency only at creation. If adaptive VFX quality switched during an
+active round, existing Highlights kept the old brightness and could crowd
+the mobile display. The local controller now reads cached contrast recipes
+and updates the same Highlight in place, without spawning extra effects.
+
+If GeneratedMap, Arena or Platforms streams out during the disaster, the
+controller immediately clears its locally owned Highlights instead of
+keeping Adornee references to an obsolete map. Server collision, platform
+timers, hazard warnings and damage behavior remain unchanged.
+
+Android/Studio QA: activate DisappearingPlatforms, switch High → Low → High
+without ending the round and verify amber Highlight contrast updates on
+the existing parts without blinking or duplicates. Stream or remove the
+arena temporarily while the hazard remains active and verify the old
+Highlights disappear; restore the arena and confirm cues come back.

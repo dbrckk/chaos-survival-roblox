@@ -112,6 +112,32 @@ describe("Hazard warning metadata", function()
 end)
 
 describe("Premium frost and electric warning silhouettes", function()
+    it("restyles one platform highlight when automatic mobile quality changes", function()
+        local style = WarningSignatures.platformHighlightStyle
+        local low = style("Low")
+        local high = style("High")
+        expect(low.FillTransparency).toBe(0.92)
+        expect(low.OutlineTransparency).toBe(0.36)
+        expect(high.FillTransparency).toBe(0.84)
+        expect(high.OutlineTransparency).toBe(0.18)
+        expect(style("Medium")).toBe(high)
+        expect(style("Invalid")).toBe(high)
+        expect(style("Low")).toBe(low)
+
+        local highlight = Instance.new("Highlight")
+        highlight.FillTransparency = high.FillTransparency
+        highlight.OutlineTransparency = high.OutlineTransparency
+        -- Restyling is an in-place property update, not a replacement.
+        highlight.FillTransparency = low.FillTransparency
+        highlight.OutlineTransparency = low.OutlineTransparency
+        expect(highlight.FillTransparency).toBe(low.FillTransparency)
+        expect(highlight.OutlineTransparency).toBe(low.OutlineTransparency)
+        highlight.FillTransparency = high.FillTransparency
+        highlight.OutlineTransparency = high.OutlineTransparency
+        expect(highlight.FillTransparency).toBe(high.FillTransparency)
+        highlight:Destroy()
+    end)
+
     it("provides tier-bounded outlines and a smaller reduced-motion budget", function()
         local count = WarningSignatures.count
         expect(count("Freeze", "Low", false)).toBe(4)

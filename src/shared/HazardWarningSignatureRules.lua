@@ -8,6 +8,17 @@ local COUNTS = {
 }
 local REDUCED = {Freeze = 2, JumpShock = 1}
 
+-- Cached warning contrast recipes. Live automatic quality changes must
+-- restyle existing Highlights rather than leave their previous intensity.
+local PLATFORM_STYLES = {
+    Low = {FillTransparency = 0.92, OutlineTransparency = 0.36},
+    Standard = {FillTransparency = 0.84, OutlineTransparency = 0.18},
+}
+
+function HazardWarningSignatureRules.platformHighlightStyle(tier)
+    return tier == "Low" and PLATFORM_STYLES.Low or PLATFORM_STYLES.Standard
+end
+
 function HazardWarningSignatureRules.count(kind, tier, reduced)
     local limits = COUNTS[kind]
     if not limits then return 0 end
