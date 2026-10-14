@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-14 — Four-map sculptural finish and motion continuity (unreleased)
+
+- Original client-local machine detail passes on Classic radar, Towers lift, Crossroads transit signals and Orbital reactor containment: 0 Low / 2 Medium / 4 High extra cosmetic pieces per sculpture, with wedge-based sculpted detail on three maps.
+- Towers guide shoes travel with the pre-existing lift animation; all additions are anchored, noncolliding, non-touchable and non-queryable.
+- Existing signature foundation light has a subtle slow opacity treatment, with an unchanged static ReduceMotion pose; no new light/particle/sound asset IDs.
+- Replaced uptime-based arena-signature choreography with a bounded accumulated visual clock to avoid position jumps after mobile app suspension and phase transitions; malformed round snapshots are handled.
+- Build and Roblox Open Cloud results must be checked on the same exact candidate SHA; physical Studio/Android captures and profiling are still required for any AAA-quality claim.
+
 ## 2026-10-14 — Solo AI hazard-priority correction (unreleased)
 
 - Moved server-side live meteor/bomb and collapsing-platform threat detection ahead of bot idle pauses, stuck recovery and cosmetic hesitation, so imminent hazards can interrupt pauses instead of waiting for their expiry.
