@@ -321,16 +321,20 @@ ensureRenderLoop = function()
                 continue
             end
 
-            clock += dt
-
             local reduceMotion = player:GetAttribute("ReduceMotion") == true
-            local motionScale = reduceMotion and 0.18 or 1
+            if not reduceMotion then
+                -- Pause decorative phase in accessibility mode and clamp
+                -- backgrounded/mobile frame gaps, without altering lava
+                -- collision, damage or the server's warning geometry.
+                clock += math.clamp(tonumber(dt) or 0, 0, 0.22)
+            end
 
     if lavaState and lavaState.lava and lavaState.lava.Parent then
         local lava = lavaState.lava
         local surface = lavaState.surface
         if surface and surface.Parent then
-            local pulse = (math.sin(clock * (reduceMotion and 0.9 or 2.8)) + 1) * 0.5
+            local pulse = reduceMotion and 0.5
+                or (math.sin(clock * 2.8) + 1) * 0.5
             surface.Size = Vector3.new(
                 math.max(1, lava.Size.X - 1.2),
                 0.12,
@@ -340,10 +344,11 @@ ensureRenderLoop = function()
                 * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
             surface.Color = Color3.fromRGB(
                 255,
-                128 + math.floor(pulse * (reduceMotion and 12 or 40)),
+                128 + math.floor(pulse * 40),
                 25
             )
-            surface.Transparency = 0.22 + pulse * (reduceMotion and 0.05 or 0.16)
+            surface.Transparency = (tier.Name == "Low" and 0.33 or 0.22)
+                + pulse * (reduceMotion and 0 or 0.13)
         end
         if lavaState.embers and lavaState.embers.Parent then
             local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduceMotion)
@@ -353,9 +358,8 @@ ensureRenderLoop = function()
         end
         if lavaState.light and lavaState.light.Parent then
             lavaState.light.Brightness = (
-                1.0 + math.sin(clock * (reduceMotion and 0.8 or 3.1))
-                    * 0.22
-                    * motionScale
+                1.0 + math.sin(clock * 3.1)
+                    * (reduceMotion and 0 or 0.22)
             ) * tier.Scale
         end
     end
