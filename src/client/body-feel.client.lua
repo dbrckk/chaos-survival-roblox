@@ -23,6 +23,8 @@ local rightHip = nil
 local leftShoulder = nil
 local rightShoulder = nil
 local landing = 0
+local landingRecoveryStrength = 0
+local landingRecoveryClock = 0
 local celebrationKind = nil
 local celebrationWeight = 0
 local celebrationUntil = 0
@@ -112,8 +114,12 @@ local function attachRig(nextCharacter, serial)
             if serial ~= bindSerial then return end
             if state == Enum.HumanoidStateType.Jumping then
                 jumpWeight = math.max(jumpWeight, 1)
+                landingRecoveryStrength = 0
+                landingRecoveryClock = 0
             elseif state == Enum.HumanoidStateType.Freefall then
                 airborne = true
+                landingRecoveryStrength = 0
+                landingRecoveryClock = 0
             elseif airborne and (
                 state == Enum.HumanoidStateType.Landed
                 or state == Enum.HumanoidStateType.Running
@@ -124,6 +130,12 @@ local function attachRig(nextCharacter, serial)
                 if fallSpeed > 20 then
                     landing = math.max(landing,
                         math.clamp((fallSpeed - 20) / 60, 0.08, 0.65))
+                    -- One impulse captured from the *real* fall speed.
+                    -- The additive crouch / counterbalance plays entirely
+                    -- locally and never influences the server's landing.
+                    landingRecoveryStrength = math.clamp(
+                        (fallSpeed - 16) / 58, 0, 0.85)
+                    landingRecoveryClock = 0
                 end
             end
         end)
@@ -169,6 +181,8 @@ local function bind(nextCharacter)
     leftShoulder = nil
     rightShoulder = nil
     landing = 0
+    landingRecoveryStrength = 0
+    landingRecoveryClock = 0
     celebrationKind = nil
     celebrationWeight = 0
     celebrationUntil = 0
@@ -378,6 +392,12 @@ RunService:BindToRenderStep(
     "ChaosBodyFeel",
     Enum.RenderPriority.Character.Value + 1,
     function(dt)
+        -- Android app suspension can hand the render callback a long dt.
+        -- Clamp only cosmetic spring and blend advancement; simulation and
+        -- server-authoritative velocity are never altered.
+        dt = tonumber(dt) or 0
+        if dt ~= dt or dt < 0 then return end
+        dt = math.min(dt, 1 / 15)
         if not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
             return
         end
@@ -521,6 +541,18 @@ RunService:BindToRenderStep(
             celebrationLeftHip,
             celebrationRightHip = celebrationTargets(celebrationScale)
 
+        local landingCompression, landingRebound = 0, 0
+        if grounded and landingRecoveryStrength > 0 then
+            landingRecoveryClock += dt
+            landingCompression, landingRebound = LocomotionDynamics.landingRecovery(
+                landingRecoveryStrength, landingRecoveryClock)
+            if landingRecoveryClock >= 0.75 then
+                landingRecoveryStrength = 0
+            end
+        end
+        landingCompression *= dynamicScale
+        landingRebound *= dynamicScale
+
         local surgeLean = speedSurgeActive and math.min(4.2, speed * 0.12) or 0
         local moonFloat = lowGravityActive and not grounded
             and math.sin(os.clock() * 2.0) * 1.4
@@ -540,6 +572,7 @@ RunService:BindToRenderStep(
             math.rad(
                 -3.2 * forward * moveWeight
                 - landing * 5.5
+                - landingCompression * 4.6 + landingRebound * 2.2
                 - readyPose * 5.2
                 - surgeLean
                 + moonFloat
@@ -562,6 +595,7 @@ RunService:BindToRenderStep(
             0,
             grounded and (
                 -0.035 * moveWeight - landing * 0.075
+                - landingCompression * 0.060 + landingRebound * 0.025
                 - footPlantPose * 0.022
                 - skidPose * 0.025
             ) * scale or (-0.03 * jumpWeight + 0.025 * fallWeight) * scale,
@@ -570,6 +604,7 @@ RunService:BindToRenderStep(
             math.rad(
                 1.4 * forward * moveWeight
                 + landing * 2.4
+                + landingCompression * 3.1 - landingRebound * 1.6
                 - launchWeight * 3.5
                 + readyPose * 2.8
                 + fallWeight * 2.0
@@ -593,7 +628,8 @@ RunService:BindToRenderStep(
             (jumpWeight * 9.0)
             + (fallWeight * 5.5)
             + (readyPose * 3.6)
-        ) * scale
+        ) * scale + math.rad(landingCompression * 4.5
+            - landingRebound * 2.2)
         local strideTurnScale = 1 - turnSeverityPose * 0.28
         local strideHip = math.rad(3.4) * strideWave * strideTurnScale
         local pivotHip = math.rad(cutPose * 3.0) * dynamicScale
@@ -615,7 +651,8 @@ RunService:BindToRenderStep(
             + jumpWeight * 10
             + fallWeight * 18
             - landing * 11
-        ) * scale
+        ) * scale + math.rad(landingCompression * 8.0
+            - landingRebound * 4.0)
         local impactArmRoll = math.rad(impactWeight * 11) * scale
         local impactAsymmetry = math.rad(impactSide * impactWeight * 9) * scale
         local strideArm = math.rad(4.6) * strideWave * strideTurnScale
