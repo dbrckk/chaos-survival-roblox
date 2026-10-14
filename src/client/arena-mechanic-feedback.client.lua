@@ -1,10 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArenaMechanicFeedback")
 
 local gui = Instance.new("ScreenGui")
@@ -189,11 +192,12 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         titleToken += 1
         local token = titleToken
         stopTitleTweens()
-        overdriveLabel.Text = overdrive and "OVERDRIVE BOOST"
+        local serverCue = overdrive and "OVERDRIVE BOOST"
             or (gridClear and "GRID CIRCUIT CLEAR"
                 or (fluxWeave and tostring(payload.mechanicName)
                     or (skyrail and tostring(payload.mechanicName)
                         or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY"))))
+        overdriveLabel.Text = CoreLocalization.mechanicFeedback(localeId, serverCue)
         overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce or fluxMaster)
             and Color3.fromRGB(255, 225, 115)
             or (gridClear and Color3.fromRGB(197, 255, 218)
