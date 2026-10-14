@@ -81,6 +81,27 @@ function LocomotionDynamics.flight(verticalVelocity, grounded, lowGravity)
         math.clamp((-velocity - 7) / 35, 0, 1) * scale
 end
 
+-- A very short, damped landing-response silhouette. This is an
+-- additive joint pose only: no camera offset, Humanoid force or Animator
+-- track. The second value counterbalances the first, avoiding a hard snap
+-- from an instant squat to the standing pose. Values remain normalized.
+function LocomotionDynamics.landingRecovery(strength, elapsed)
+    local intensity = tonumber(strength)
+    local t = tonumber(elapsed)
+    if type(intensity) ~= "number" or intensity ~= intensity
+        or math.abs(intensity) == math.huge
+        or type(t) ~= "number" or t ~= t
+        or math.abs(t) == math.huge then
+        return 0, 0
+    end
+    intensity = math.clamp(intensity, 0, 1)
+    t = math.clamp(t, 0, 1)
+    local oscillation = math.sin(t * 15 + 0.45)
+    local damping = math.exp(-7.8 * t) * intensity
+    return math.max(0, oscillation) * damping,
+        math.max(0, -oscillation) * damping
+end
+
 -- Match server-owned participation: spectators, late joiners and eliminated
 -- players can still move, but must not leave active-survivor battle scuffs.
 function LocomotionDynamics.footworkEligible(phase, participant, eliminated, health)
