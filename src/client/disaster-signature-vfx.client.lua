@@ -14,11 +14,13 @@ local meteorsActive = false
 local trails = setmetatable({}, {__mode = "k"})
 local dirty = true
 local function clear(meteor)
-    local trail = meteor:FindFirstChild("SignatureMeteorTrail")
-    if trail then trail:Destroy() end
-    for _, name in ipairs({"SignatureMeteorTrailLeft", "SignatureMeteorTrailRight"}) do
-        local attachment = meteor:FindFirstChild(name)
-        if attachment then attachment:Destroy() end
+    -- Only destroy the exact locally created instances. Name-based cleanup
+    -- could remove another system's same-named Trail after StreamingEnabled
+    -- recreates a meteor, leaving unrelated VFX broken.
+    local state = trails[meteor]
+    if not state then return end
+    for _, instance in ipairs({state.trail, state.left, state.right}) do
+        if instance then instance:Destroy() end
     end
     trails[meteor] = nil
 end

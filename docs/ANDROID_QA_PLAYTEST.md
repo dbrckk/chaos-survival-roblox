@@ -1588,3 +1588,15 @@ Studio QA: fire each remote with nil, a string and an empty table and
 confirm the haptics client continues without runtime errors; fire valid
 normal and golden shard, round survivor and finale payloads to confirm
 existing vibrations still work on a supported Android/controller device.
+
+## PR #19 — Ownership-safe meteor trail cleanup (14 October 2026)
+
+Meteor visual cleanup now destroys only the exact locally created Trail
+and its two Attachment instances, rather than any child with matching
+names. This avoids removing another system's effects if streamed-in parts
+reuse a visual name. Trail counts, culling, motion preferences and hazard
+physics remain unchanged.
+
+Android/Studio QA: stream meteors in and out, switch quality tiers and
+ReduceMotion repeatedly, then inspect for zero orphaned local attachments.
+A deliberately separate same-named child must survive signature cleanup.
