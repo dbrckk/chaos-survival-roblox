@@ -186,6 +186,35 @@ end
 -- the FINAL damage radius, never the ring's interim size. Match the
 -- authoritative DisasterImpact.applyRadialDamage 3D distance: elevated
 -- platforms can be outside a blast even when directly above the marker.
+-- Ground escape arrows must remain available for a player exactly at the
+-- impact center, where horizontal displacement is zero. Prefer the true
+-- outward radial bearing, then the character's horizontal facing direction.
+-- A missing or vertical facing vector cannot safely imply an escape path.
+function HazardWarningSignatureRules.escapeDirection(playerPosition, impactPosition, facing)
+    if typeof(playerPosition) ~= "Vector3"
+        or typeof(impactPosition) ~= "Vector3" then
+        return nil
+    end
+
+    local delta = Vector3.new(
+        playerPosition.X - impactPosition.X,
+        0,
+        playerPosition.Z - impactPosition.Z
+    )
+    if delta.Magnitude >= 0.15 then
+        return delta.Unit
+    end
+
+    if typeof(facing) ~= "Vector3" then
+        return nil
+    end
+    local flatFacing = Vector3.new(facing.X, 0, facing.Z)
+    if flatFacing.Magnitude < 0.15 then
+        return nil
+    end
+    return flatFacing.Unit
+end
+
 function HazardWarningSignatureRules.escapeClearance(playerPosition, impactPosition, endDiameter)
     if typeof(playerPosition) ~= "Vector3" or typeof(impactPosition) ~= "Vector3"
         or type(endDiameter) ~= "number" or endDiameter ~= endDiameter

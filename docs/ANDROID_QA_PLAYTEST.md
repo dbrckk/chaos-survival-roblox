@@ -1504,3 +1504,19 @@ contour opacity across the full countdown, invalid metadata, and the
 normal growing-ring behavior. Android QA: toggle ReduceMotion ON before
 a Meteor/Bomb warning and confirm a static full-radius marker; toggle
 OFF and verify the growing warning returns for subsequent hazards.
+
+## PR #19 — Escape arrows at the impact center (14 October 2026)
+
+At the exact center of a Meteor/Bomb warning, the horizontal displacement
+vector is zero. The local route helper formerly suppressed both escape
+arrows when distance < 0.15 studs, despite the greatest damage risk.
+The renderer now computes a radial escape bearing when possible, falling
+back to the character's horizontal LookVector at the exact center. It
+still hides the arrows when no defensible horizontal bearing is available.
+The directional helper does not alter server collision, damage or bot AI.
+
+Manual Android check: stand directly over a warning marker and verify the
+escape chevrons remain displayed; step outside its center and confirm the
+chevrons point radially away from the actual impact location. Elevated
+platforms outside the server's 3D damage radius should not show false
+urgent arrows.

@@ -309,19 +309,18 @@ local function updateState(warning, state, root, tier, now)
         hideState(state)
         return math.huge
     end
-    local delta = Vector3.new(
-        playerPosition.X - warning.Position.X,
-        0,
-        playerPosition.Z - warning.Position.Z
-    )
-    local distance = delta.Magnitude
-    if clearance > (tier.Name == "High" and 7 or 5)
-        or distance < 0.15 then
+    if clearance > (tier.Name == "High" and 7 or 5) then
         hideState(state)
         return clearance
     end
 
-    local direction = delta.Unit
+    local direction = WarningRules.escapeDirection(
+        playerPosition, warning.Position, root.CFrame.LookVector
+    )
+    if not direction then
+        hideState(state)
+        return clearance
+    end
     local lateral = Vector3.new(direction.Z, 0, -direction.X)
     local origin = playerPosition + Vector3.new(0, -2.65, 0) + direction * 3.1
     local yaw = math.atan2(-direction.X, -direction.Z)

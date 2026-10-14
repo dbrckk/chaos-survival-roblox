@@ -243,6 +243,33 @@ describe("Premium frost and electric warning silhouettes", function()
         expect(clearance(impact, impact, math.huge)).toBe(nil)
     end)
 
+    it("keeps a usable escape direction at the exact center of an impact", function()
+        local direction = WarningSignatures.escapeDirection
+        local impact = Vector3.new(10, 1.2, -4)
+        local facing = Vector3.new(0, 0, -1)
+
+        local center = direction(Vector3.new(10, 1.2, -4), impact, facing)
+        expect(center).toBe(facing)
+
+        -- Characters can be above or below the marker: the horizontal
+        -- radial escape is still undefined, so use the facing fallback.
+        local elevated = direction(Vector3.new(10, 13, -4), impact, facing)
+        expect(elevated).toBe(facing)
+
+        -- Outside the marker center, actual escape direction takes precedence
+        -- over orientation, including the minimum 0.15-stud threshold.
+        local outward = direction(Vector3.new(13, 1.2, -4), impact, facing)
+        expect(outward).toBe(Vector3.new(1, 0, 0))
+        expect(direction(Vector3.new(10.2, 1.2, -4), impact, facing)).toBe(
+            Vector3.new(1, 0, 0)
+        )
+
+        expect(direction(Vector3.new(10, 1.2, -4), impact, nil)).toBe(nil)
+        expect(direction(Vector3.new(10, 1.2, -4), impact, Vector3.yAxis)).toBe(nil)
+        expect(direction(nil, impact, facing)).toBe(nil)
+        expect(direction(impact, nil, facing)).toBe(nil)
+    end)
+
     it("bounds concurrent warning silhouettes across graphics tiers", function()
         local limit = WarningSignatures.activeLimit
         expect(limit("Low", false)).toBe(6)
