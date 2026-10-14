@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-14 — Solo AI hazard-priority correction (unreleased)
+
+- Moved server-side live meteor/bomb and collapsing-platform threat detection ahead of bot idle pauses, stuck recovery and cosmetic hesitation, so imminent hazards can interrupt pauses instead of waiting for their expiry.
+- A valid urgent escape clears any stale turn delay and skips the ordinary arrival idle and random jumps. Existing humanlike pacing is retained when no danger is present.
+- No immunity, teleport, boosted movement speed, collision edits, damage tuning or reward changes.
+- Expanded the authenticated Studio/Android playtest report with reproducible danger-response checks. Automated build, full engine suite and physical devices must still confirm the candidate before release.
+
 ## 2026-10-14 — Mobile mechanic-feedback hardening (unreleased)
 
 - Cancel overlapping screen-flash and milestone-banner tweens when mobility pads, Skyrail, Flux and Helix events arrive in rapid succession.
