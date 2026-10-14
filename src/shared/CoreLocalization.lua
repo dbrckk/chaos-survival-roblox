@@ -718,6 +718,30 @@ function CoreLocalization.challengeShort(localeId, challengeId, fallback)
         or fallback
 end
 
+-- Server mechanic IDs are stable English tokens. Translate only the short
+-- reward banner; do not change IDs used by analytics or gameplay state.
+local MECHANIC_FEEDBACK_FR = {
+    ["OVERDRIVE BOOST"] = "BOOST SURCHARGÉ",
+    ["GRID CIRCUIT CLEAR"] = "CIRCUIT TERMINÉ",
+    ["SKYRAIL SLIPSTREAM"] = "ÉLAN SKYRAIL",
+    ["SKYRAIL CHAIN x2"] = "ENCHAÎNEMENT SKYRAIL x2",
+    ["SKYRAIL ACE"] = "AS DU SKYRAIL",
+    ["FLUX RELAY"] = "RELAIS DE FLUX",
+    ["FLUX WEAVE x2"] = "ENCHAÎNEMENT FLUX x2",
+    ["FLUX MASTER"] = "MAÎTRE DU FLUX",
+    ["HELIX FLOW"] = "FLUX HÉLICE",
+    ["HELIX CHAIN x2"] = "CHAÎNE HÉLICE x2",
+    ["ORBIT MASTER"] = "MAÎTRE DE L'ORBITE",
+}
+
+function CoreLocalization.mechanicFeedback(localeId, mechanicId)
+    if type(mechanicId) ~= "string" then return "" end
+    if CoreLocalization.language(localeId) == "fr" then
+        return MECHANIC_FEEDBACK_FR[mechanicId] or mechanicId
+    end
+    return mechanicId
+end
+
 function CoreLocalization.coach(localeId, value)
     if value == nil then
         return nil
