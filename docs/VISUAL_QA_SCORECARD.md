@@ -18,6 +18,44 @@ Use this file to review a **rendered build**, not its source code. Do not assign
 
 Release blocks: unlicensed assets, unreadable warnings, visual blockers/colliders, persistent camera seizure, severe mobile frame drops, missing model after replication, duplicated UI/lighting, dangling VFX after multiple rounds.
 
+## Four-map hero finish — 14 October 2026 (unreleased)
+
+The existing `ArenaSignatureKit` now constructs **two extra machined
+signature details on Medium, four on High, and none on Low** without new
+light sources, sounds, particles, or external asset IDs. The new optical
+baffles (Classic), elevator guide shoes/rail stops (Towers), traffic
+switch fins (Crossroads) and containment petals (Orbital) have materially
+distinct 3D silhouettes. The moving Towers guide shoes share the cabin's
+existing animation timebase. The existing foundation emissive plate
+breathes very slowly; it is static in ReduceMotion.
+
+The arena controller now integrates a bounded **0.25-second maximum
+per visual update**, rather than feeding arbitrary device uptime to
+animated monuments. This avoids large catch-up jumps after an Android
+suspension and starts a new round/graphics reconstruction from an authored
+rest pose. It does not affect player/bot motion, hazard timing or physics.
+
+**Physical art acceptance:**
+- Capture wide and close views of the four signatures in Low, Medium
+  and High, with hazard markers visible. Verify no misleading safe
+  paths or neon dominance, and check the original map silhouettes.
+- In Towers, verify both carriage shoes stay attached to the visual
+  cabin throughout the full up/down travel. Inspect the upper rail
+  stops for intersecting geometry.
+- In Classic/Crossroads/Orbital, inspect newly sculpted WedgeParts
+  from front/side and in darkness. Check glass sorting and minimum
+  30 FPS on the target Android phone during Double Chaos.
+- Toggle ReduceMotion while active; confirm no pulsing, safe rest
+  pose and graceful restart. Suspend/resume Android and change maps
+  rapidly; no fast-forward jump, duplicate art or runtime warnings.
+- Record candidate SHA, Studio/client version, before/after screenshots,
+  FPS, memory, local Part/Light/Effect counts and reviewer notes.
+
+**9/10 gate:** do not award an AAA-quality rating based on new geometry,
+code compilation, or engine checks alone. Require a side-by-side
+comparison with polished reference experiences and at least one independent
+art/animation review using captured footage.
+
 ## Human momentum ribbon: mobile and accessibility gate
 
 The human sprint ribbon uses one sculpted, three-point tapered Trail, lazily
