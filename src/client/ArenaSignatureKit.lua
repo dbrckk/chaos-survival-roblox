@@ -17,8 +17,8 @@ function ArenaSignatureKit.profile(tier)
     return PROFILES[tier] or PROFILES.Medium
 end
 
-local function add(bundle, name, size, cf, color, material, transparency, shape)
-    local p = Instance.new("Part")
+local function add(bundle, name, size, cf, color, material, transparency, shape, className)
+    local p = Instance.new(className or "Part")
     p.Name = name
     p.Size = size
     p.CFrame = cf
@@ -30,7 +30,7 @@ local function add(bundle, name, size, cf, color, material, transparency, shape)
     p.Material = material or Enum.Material.Metal
     p.Transparency = transparency or 0
     p.Color = color
-    if shape then
+    if shape and p:IsA("Part") then
         p.Shape = shape
     end
     p.Parent = bundle.folder
@@ -309,7 +309,7 @@ local function finishSignature(bundle, cf, theme, variant)
                 frame,
                 i <= 2 and theme.Detail or theme.Structure,
                 i <= 2 and Enum.Material.Glass or Enum.Material.Metal,
-                i <= 2 and 0.34 or 0.10)
+                i <= 2 and 0.34 or 0.10, nil, "WedgePart")
             optic:SetAttribute("ChaosSignatureFinish", true)
         elseif variant == "Towers" then
             if i <= 2 then
@@ -340,7 +340,7 @@ local function finishSignature(bundle, cf, theme, variant)
                 Vector3.new(2.15, 0.29, 0.70),
                 frame,
                 i <= 2 and theme.Detail or theme.Structure,
-                Enum.Material.DiamondPlate, 0.08)
+                Enum.Material.DiamondPlate, 0.08, nil, "WedgePart")
             fin:SetAttribute("ChaosSignatureFinish", true)
         elseif variant == "Orbital" then
             -- Ceramic containment petals create a readable, segmented
@@ -355,7 +355,7 @@ local function finishSignature(bundle, cf, theme, variant)
                 Vector3.new(0.58, 1.35, 1.90),
                 frame, i % 2 == 0 and theme.Secondary or theme.Detail,
                 i % 2 == 0 and Enum.Material.Glass or Enum.Material.Metal,
-                i % 2 == 0 and 0.37 or 0.10)
+                i % 2 == 0 and 0.37 or 0.10, nil, "WedgePart")
             petal:SetAttribute("ChaosSignatureFinish", true)
         end
     end
