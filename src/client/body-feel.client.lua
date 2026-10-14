@@ -395,9 +395,10 @@ RunService:BindToRenderStep(
         -- Android app suspension can hand the render callback a long dt.
         -- Clamp only cosmetic spring and blend advancement; simulation and
         -- server-authoritative velocity are never altered.
-        dt = tonumber(dt) or 0
-        if dt ~= dt or dt < 0 then return end
-        dt = math.min(dt, 1 / 15)
+        local rawDt = tonumber(dt) or 0
+        if rawDt ~= rawDt or rawDt < 0 then return end
+        local interrupted = rawDt > 0.30
+        dt = math.min(rawDt, 1 / 15)
         if not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
             return
         end
@@ -424,6 +425,11 @@ RunService:BindToRenderStep(
         local launchTarget, skidTarget = LocomotionDynamics.acceleration(
             speed, lastSpeed, dt, grounded
         )
+        -- Never turn a background/resume speed delta into a fake sprint,
+        -- skid or ground VFX. Sample the new physical speed as baseline.
+        if interrupted then
+            launchTarget, skidTarget = 0, 0
+        end
         lastSpeed = speed
         local dynamicScale = LocomotionDynamics.profile(
             player:GetAttribute("VfxQualityTier"), reduced
@@ -437,6 +443,9 @@ RunService:BindToRenderStep(
             previousMoveDirection,
             moveDirection
         )
+        if interrupted then
+            signedTurn, turnSeverity = 0, 0
+        end
         if moveDirection.Magnitude > 0.05 then
             lastMoveDirection = moveDirection
         end
@@ -446,6 +455,7 @@ RunService:BindToRenderStep(
         local cutTarget = LocomotionDynamics.cut(
             previousMoveDirection, moveDirection, speed, grounded
         )
+        if interrupted then cutTarget = 0 end
         cutPose += (cutTarget - cutPose) * expAlpha(11, dt)
 
         local cue, cueStrength = LocomotionDynamics.groundCue(
