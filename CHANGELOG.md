@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-14 — Mobile mechanic-feedback hardening (unreleased)
+
+- Cancel overlapping screen-flash and milestone-banner tweens when mobility pads, Skyrail, Flux and Helix events arrive in rapid succession.
+- Preserve high-value Skyrail Ace, Flux Master and Orbit Master success cues despite the cosmetic event throttle.
+- Honor Reduce Motion by removing full-screen mechanic flashes and character burst particles, including when the preference changes mid-animation.
+- Skip temporary mechanic-burst particle allocation in Low graphics quality, while preserving the textual reward banner.
+- Translate live mechanic success banners into French using stable server mechanic IDs; the server's physics, damage, rewards, analytics and thresholds remain unchanged.
+- Code changes have not yet been physically verified in Roblox Studio or on Android; exact-head automated CI remains the prerequisite for review.
+
 ## 2026-10-01 — Release-candidate game-feel and mobile polish
 
 - Added optional server-authoritative Chaos Shards with coin rewards, daily-quest progress, analytics and round-result breakdown.
