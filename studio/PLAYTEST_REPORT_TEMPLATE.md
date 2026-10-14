@@ -74,6 +74,19 @@ Copy this file for each release-candidate certification run.
 | Shrinking Arena |  |  |  |  |  |
 | Jump Shock |  |  |  |  |  |
 
+## Solo AI hazard-response acceptance (authenticated Roblox Studio + Android)
+
+- Start a real one-human Solo Rush session. Confirm three live AI rigs under `Workspace.AISurvivors` and no artificial respawns during an active round.
+- During Meteor Shower and Bomb Rain, observe bots that are stopped or hesitating **before** the warning appears. Once the warning has been visible for a profile's reaction delay, bots must start a legitimate `Humanoid` escape movement rather than remain frozen by the prior idle/turn pause. Record short video and warning-to-first-movement timing for all three bot profiles (Cautious / Balanced / Bold).
+- During Disappearing Platforms, observe a bot standing on a platform at the `Warning` collapse phase: it must abandon an idle/turn pause and attempt an escape. An occasional genuine elimination is acceptable; scripted invulnerability or teleporting is not.
+- Check the same hazards while no warning is nearby: natural hesitation, idle pauses and normal movement speed should remain; bots must not dodge an invisible hazard.
+- Repeat with a late human joining mid-round: existing AI contestants must not disappear or restart, and should still evade hazards. Confirm client and server Output contain no AI step warnings or exceptions.
+- On Android, verify three AI rigs remain visible, responsive and animated on Low and Medium quality. Record FPS and whether threat reactions survive performance downshifts.
+- Result: PASS / FAIL / NOT RUN
+- Evidence (video/screenshots and timestamped Output):
+- Physical Studio version / device:
+- Notes:
+
 ## Mobile UX
 
 - Touch-only navigation: PASS / FAIL
