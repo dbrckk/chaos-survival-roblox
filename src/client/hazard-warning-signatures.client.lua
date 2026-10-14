@@ -357,10 +357,13 @@ local function updatePlatformHighlights()
             -- Auto-quality can change mid-disaster. Reconfigure the same
             -- Highlight; no new Instance or per-frame tween is required.
             local highlight = platformHighlights[part]
-            if highlight.FillTransparency ~= style.FillTransparency then
+            -- Roblox stores Highlight transparencies as float32. Exact
+            -- equality would rewrite the same value every 0.12 seconds
+            -- (for example 0.92 becomes 0.9200000167 on readback).
+            if math.abs(highlight.FillTransparency - style.FillTransparency) > 0.0001 then
                 highlight.FillTransparency = style.FillTransparency
             end
-            if highlight.OutlineTransparency ~= style.OutlineTransparency then
+            if math.abs(highlight.OutlineTransparency - style.OutlineTransparency) > 0.0001 then
                 highlight.OutlineTransparency = style.OutlineTransparency
             end
         end

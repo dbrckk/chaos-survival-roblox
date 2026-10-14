@@ -130,11 +130,14 @@ describe("Premium frost and electric warning silhouettes", function()
         -- Restyling is an in-place property update, not a replacement.
         highlight.FillTransparency = low.FillTransparency
         highlight.OutlineTransparency = low.OutlineTransparency
-        expect(highlight.FillTransparency).toBe(low.FillTransparency)
-        expect(highlight.OutlineTransparency).toBe(low.OutlineTransparency)
+        -- Highlight uses 32-bit float storage, while Luau recipe numbers
+        -- are 64-bit. Check the visible precision rather than bit-exactness.
+        expect(math.abs(highlight.FillTransparency - low.FillTransparency) < 0.0001).toBe(true)
+        expect(math.abs(highlight.OutlineTransparency - low.OutlineTransparency) < 0.0001).toBe(true)
         highlight.FillTransparency = high.FillTransparency
         highlight.OutlineTransparency = high.OutlineTransparency
-        expect(highlight.FillTransparency).toBe(high.FillTransparency)
+        expect(math.abs(highlight.FillTransparency - high.FillTransparency) < 0.0001).toBe(true)
+        expect(math.abs(highlight.OutlineTransparency - high.OutlineTransparency) < 0.0001).toBe(true)
         highlight:Destroy()
     end)
 

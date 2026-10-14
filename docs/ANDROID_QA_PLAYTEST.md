@@ -1619,3 +1619,16 @@ without ending the round and verify amber Highlight contrast updates on
 the existing parts without blinking or duplicates. Stream or remove the
 arena temporarily while the hazard remains active and verify the old
 Highlights disappear; restore the arena and confirm cues come back.
+
+## PR #19 — Roblox float32 highlight precision (14 October 2026)
+
+CI detected a strict-equality failure when a Highlight transparency of
+0.92 round-tripped through Roblox's 32-bit property representation as
+0.9200000167. The engine assertion now uses a 0.0001 tolerance, including
+both fill and outline on transitions Low → High. The runtime uses the same
+tolerance to avoid redundant property writes every 0.12 seconds. This
+preserves highlight contrast, mobile quality budgets and cleanup behavior.
+
+Android QA: switch visual quality High → Low → High during disappearing
+platforms; verify contrast updates with no flicker, no redundant local
+instances and no orphan highlights after changing maps.
