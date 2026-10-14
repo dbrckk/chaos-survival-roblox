@@ -13,8 +13,40 @@ local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
 local MovementSafety = require("../../src/server/MovementSafety")
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
+local PlatformVisualRules = require("../../src/shared/DisappearingPlatformVisualRules")
 
 describe("Arena mechanics", function()
+    it("tracks only collapsing parts owned by the current platform folder", function()
+        local rules = PlatformVisualRules
+        local old = Instance.new("Folder")
+        local current = Instance.new("Folder")
+        local part = Instance.new("Part")
+        part.Parent = current
+        expect(rules.ownsPart(part, current)).toBe(true)
+        expect(rules.shouldDisplay(part, current)).toBe(false)
+
+        part:SetAttribute("CollapsePhase", "Warning")
+        expect(rules.shouldDisplay(part, current)).toBe(true)
+        part:SetAttribute("CollapsePhase", "Gone")
+        expect(rules.shouldDisplay(part, current)).toBe(true)
+        part:SetAttribute("CollapsePhase", "Restored")
+        expect(rules.shouldDisplay(part, current)).toBe(false)
+
+        part:SetAttribute("CollapsePhase", "Warning")
+        expect(rules.shouldDisplay(part, old)).toBe(false)
+        part.Parent = old
+        expect(rules.shouldDisplay(part, current)).toBe(false)
+        expect(rules.shouldDisplay(part, old)).toBe(true)
+        part.Parent = nil
+        expect(rules.shouldDisplay(part, old)).toBe(false)
+        expect(rules.shouldDisplay(nil, current)).toBe(false)
+        expect(rules.shouldDisplay(part, nil)).toBe(false)
+
+        part:Destroy()
+        old:Destroy()
+        current:Destroy()
+    end)
+
     it("defines one mobility mechanic for every playable arena", function()
         local seenNames = {}
 

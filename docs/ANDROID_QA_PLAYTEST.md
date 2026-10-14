@@ -1632,3 +1632,20 @@ preserves highlight contrast, mobile quality budgets and cleanup behavior.
 Android QA: switch visual quality High → Low → High during disappearing
 platforms; verify contrast updates with no flicker, no redundant local
 instances and no orphan highlights after changing maps.
+
+## PR #19 — Clean collapsing platform VFX across arena streaming (14 October 2026)
+
+The client now scopes collapse contour listeners and the six locally owned
+edge/cross parts to the current Platforms folder. ChildRemoved and a full
+map replacement disconnect stale attribute listeners and destroy visuals;
+non-active (reparented) platforms cannot keep warning edges on screen.
+
+Map discovery is now event-driven: Arena/Platforms can stream in later
+without a five-second timeout, and an old map cannot rebind while a new
+GeneratedMap is active. The 0.075–0.12s visual cadence and collapse physics
+are unchanged, with no additional per-frame rendering or remote calls.
+
+Android/Studio QA: while a platform is warned, remove/reparent it and verify
+its six local contour pieces vanish. Replace GeneratedMap mid-round, then
+stream Arena/Platforms back in: only the current map's collapse markers
+may appear. Repeat with ReduceMotion and auto-Low quality enabled.
