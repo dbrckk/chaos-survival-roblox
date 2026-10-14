@@ -162,6 +162,11 @@ local function bindFreeze(warning)
             end
             local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
             if current.mist.Rate ~= rate then current.mist.Rate = rate end
+            if reduced then
+                -- Rate = 0 stops future emissions, but particles from the
+                -- previous setting remain visible without an explicit clear.
+                current.mist:Clear()
+            end
             return
         end
     end
@@ -206,17 +211,33 @@ local function bindFreeze(warning)
     local mist = Instance.new("ParticleEmitter")
     mist.Name = "FreezeMist"
     mist.Rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
-    mist.Lifetime = NumberRange.new(0.45, 0.9)
-    mist.Speed = NumberRange.new(0.8, 2)
-    mist.SpreadAngle = Vector2.new(180, 180)
-    mist.LightEmission = 0.75
-    mist.Color = ColorSequence.new(Color3.fromRGB(185, 240, 255), Color3.fromRGB(85, 165, 255))
+    -- One existing emitter now reads as a short cold condensation plume:
+    -- small crystal seed -> wide translucent frost -> dissolved vapour.
+    -- No extra Part, Light, ParticleEmitter or Texture asset is allocated.
+    mist.Lifetime = NumberRange.new(0.48, 0.92)
+    mist.Speed = NumberRange.new(0.75, 1.9)
+    mist.Drag = 2.2
+    mist.Acceleration = Vector3.new(0, 0.7, 0)
+    mist.SpreadAngle = Vector2.new(145, 145)
+    mist.Rotation = NumberRange.new(-22, 22)
+    mist.RotSpeed = NumberRange.new(-18, 18)
+    mist.LightEmission = 0.38
+    mist.LightInfluence = 0.45
+    mist.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 250, 255)),
+        ColorSequenceKeypoint.new(0.38, Color3.fromRGB(162, 225, 248)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(88, 153, 205)),
+    })
     mist.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.28),
+        NumberSequenceKeypoint.new(0, 0.18),
+        NumberSequenceKeypoint.new(0.32, 0.55),
+        NumberSequenceKeypoint.new(0.72, 0.48),
         NumberSequenceKeypoint.new(1, 0),
     })
     mist.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.35),
+        NumberSequenceKeypoint.new(0, 0.78),
+        NumberSequenceKeypoint.new(0.26, 0.46),
+        NumberSequenceKeypoint.new(0.68, 0.77),
         NumberSequenceKeypoint.new(1, 1),
     })
     mist.Parent = attachment
