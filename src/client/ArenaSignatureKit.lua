@@ -286,6 +286,81 @@ local function craftSignature(bundle, cf, theme, profile, variant)
     end
 end
 
+-- Surface treatment follows the shape of each machine, rather than adding
+-- more unrelated neon blocks. Two details on Medium and four on High;
+-- nothing extra on Low. Every piece reuses the hero's existing animation
+-- update and remains inside its existing hard per-tier part cap.
+local function finishSignature(bundle, cf, theme, variant)
+    local tier = bundle.tier
+    if tier == "Low" then return end
+    local high = tier == "High"
+    local count = high and 4 or 2
+
+    for i = 1, count do
+        local side = i % 2 == 1 and -1 or 1
+        if variant == "Classic" then
+            -- Paired slanted optical baffles make the survey halo feel
+            -- engineered: glass optics above, bolted housing below.
+            local frame = cf * CFrame.new(side * 3.45,
+                i <= 2 and 8.0 or 6.15, -0.45)
+                * CFrame.Angles(0, math.rad(side * 13), math.rad(side * 18))
+            local optic = add(bundle, "ClassicOpticalBaffle" .. i,
+                Vector3.new(0.78, i <= 2 and 2.2 or 1.35, 0.42),
+                frame,
+                i <= 2 and theme.Detail or theme.Structure,
+                i <= 2 and Enum.Material.Glass or Enum.Material.Metal,
+                i <= 2 and 0.34 or 0.10)
+            optic:SetAttribute("ChaosSignatureFinish", true)
+        elseif variant == "Towers" then
+            if i <= 2 then
+                -- Guide shoes travel with the cabin, maintaining its
+                -- load-bearing relationship to the stationary lift rails.
+                local frame = cf * CFrame.new(side * 1.92, 5.23, -0.14)
+                local shoe = add(bundle, "TowerCarriageGuideShoe" .. i,
+                    Vector3.new(0.40, 1.35, 1.10),
+                    frame, theme.Detail, Enum.Material.DiamondPlate, 0.08)
+                moving(bundle, shoe, "elevator", frame, i)
+                shoe:SetAttribute("ChaosSignatureFinish", true)
+            else
+                local frame = cf * CFrame.new(side * 2.08, 11.3, -0.15)
+                local stop = add(bundle, "TowerUpperRailStop" .. i,
+                    Vector3.new(0.86, 0.64, 1.06),
+                    frame, theme.Structure, Enum.Material.Metal, 0.04)
+                stop:SetAttribute("ChaosSignatureFinish", true)
+            end
+        elseif variant == "Crossroads" then
+            -- These mechanical arrowhead fins form an X-shaped traffic
+            -- switching motif around the illuminated signal panels.
+            local frame = cf * CFrame.new(
+                side * (i <= 2 and 4.25 or 2.95),
+                i <= 2 and 6.54 or 5.25, -0.28)
+                * CFrame.Angles(0, math.rad(side * 18),
+                    math.rad(side * (i <= 2 and 28 or -28)))
+            local fin = add(bundle, "CrossroadRouteSwitchFin" .. i,
+                Vector3.new(2.15, 0.29, 0.70),
+                frame,
+                i <= 2 and theme.Detail or theme.Structure,
+                Enum.Material.DiamondPlate, 0.08)
+            fin:SetAttribute("ChaosSignatureFinish", true)
+        elseif variant == "Orbital" then
+            -- Ceramic containment petals create a readable, segmented
+            -- frame around the heart without adding bloom or a new light.
+            local angle = (i - 1) * math.pi * 0.5 + math.pi * 0.25
+            local radius = 3.02
+            local frame = cf * CFrame.new(
+                math.cos(angle) * radius, 6.3,
+                math.sin(angle) * radius)
+                * CFrame.Angles(0, -angle, math.rad(21))
+            local petal = add(bundle, "OrbitalFieldPetal" .. i,
+                Vector3.new(0.58, 1.35, 1.90),
+                frame, i % 2 == 0 and theme.Secondary or theme.Detail,
+                i % 2 == 0 and Enum.Material.Glass or Enum.Material.Metal,
+                i % 2 == 0 and 0.37 or 0.10)
+            petal:SetAttribute("ChaosSignatureFinish", true)
+        end
+    end
+end
+
 function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOverride)
     VisualTheme = themeOverride or VisualTheme
         or require(ReplicatedStorage.Shared.VisualTheme)
@@ -310,9 +385,11 @@ function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOver
     }
     add(bundle, "SignatureFoundation", Vector3.new(9.4, 0.7, 9.4),
         cf, theme.Structure, Enum.Material.Metal)
-    add(bundle, "SignatureFoundationLight", Vector3.new(8.6, 0.10, 8.6),
+    local foundationLight = add(bundle, "SignatureFoundationLight",
+        Vector3.new(8.6, 0.10, 8.6),
         cf * CFrame.new(0, 0.39, 0),
         theme.Accent, Enum.Material.Neon, 0.55)
+    moving(bundle, foundationLight, "foundation", foundationLight.CFrame)
     labelOn(bundle, cf, theme.Accent, 
         variant == "Towers" and "LIFT SYSTEM" or (
             variant == "Crossroads" and "TRANSIT CTRL" or (
@@ -331,6 +408,7 @@ function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOver
     end
 
     craftSignature(bundle, cf, theme, profile, variant)
+    finishSignature(bundle, cf, theme, variant)
     assert(#bundle.parts <= profile.MaxParts,
         "Arena signature exceeded the visual part budget for " .. tostring(variant))
 
@@ -358,7 +436,13 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion)
     for _, entry in ipairs(bundle.animated) do
         local p = entry.part
         if p.Parent then
-            if entry.role == "radar" then
+            if entry.role == "foundation" then
+                -- Subtle slow luminaire breathing, not a hazard-like flash.
+                -- Reduced motion restores exactly the authored rest opacity.
+                p.Transparency = reduceMotion == true and entry.transparency
+                    or math.clamp(entry.transparency
+                        + math.sin(now * 0.72) * 0.045, 0, 1)
+            elseif entry.role == "radar" then
                 p.CFrame = entry.frame * CFrame.Angles(0, now * 0.47, 0)
             elseif entry.role == "elevator" then
                 p.CFrame = entry.frame * CFrame.new(0, math.sin(now * 0.64) * 2.0, 0)
