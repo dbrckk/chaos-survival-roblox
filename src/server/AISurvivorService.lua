@@ -2031,20 +2031,34 @@ local function stepRecord(record, now)
         return
     end
 
-    if recoverIfStuck(record, humanoid, root, now) then
-        return
+    -- Survival has priority over the bot's humanlike hesitation, idle,
+    -- turn pause, and stuck-recovery routines. Previously these routines
+    -- returned before warning detection, allowing a bot to stand still
+    -- through an incoming impact or a collapsing deck.
+    local urgentTarget = nil
+    if record.inRound and currentState.phase == "round" then
+        urgentTarget = disappearingPlatformEscape(record, root, now)
+        if not urgentTarget then
+            urgentTarget = immediateThreat(record, root, now)
+        end
     end
 
-    if maybeSocialGesture(record, humanoid, root, now) then
-        return
+    if not urgentTarget then
+        if recoverIfStuck(record, humanoid, root, now) then
+            return
+        end
+
+        if maybeSocialGesture(record, humanoid, root, now) then
+            return
+        end
+
+        if now < (record.idleUntil or 0) then
+            humanoid:Move(Vector3.zero)
+            return
+        end
     end
 
-    if now < (record.idleUntil or 0) then
-        humanoid:Move(Vector3.zero)
-        return
-    end
-
-    if now >= record.nextJump then
+    if not urgentTarget and now >= record.nextJump then
         local _, pressure = decisionTraits(record)
         local jumpChance = AISurvivorRules.freeJumpChance(
             record.profile.JumpChance,
@@ -2060,22 +2074,18 @@ local function stepRecord(record, now)
     if record.inRound and (currentState.phase == "ready" or currentState.phase == "round") then
         tryPadImpulse(record, root, now)
 
-        local urgentTarget = nil
-        if currentState.phase == "round" then
-            urgentTarget = disappearingPlatformEscape(record, root, now)
-            if not urgentTarget then
-                urgentTarget = immediateThreat(record, root, now)
-            end
-
-            if urgentTarget then
-                -- Survival reactions always override a cinematic Skyrail run.
-                record.targetIsPad = false
-                record.targetIsSkyrail = false
-                record.skyrailDirection = nil
-                record.targetPart = nil
-                record.target = separateTarget(record, urgentTarget)
-                record.nextThink = now + 0.55
-            end
+        if urgentTarget then
+            -- An imminent hazard cancels cosmetic indecision immediately.
+            -- No new speed/health advantage: locomotion remains Humanoid
+            -- movement with the existing server-owned target clamping.
+            record.idleUntil = 0
+            record.turnPauseUntil = 0
+            record.targetIsPad = false
+            record.targetIsSkyrail = false
+            record.skyrailDirection = nil
+            record.targetPart = nil
+            record.target = separateTarget(record, urgentTarget)
+            record.nextThink = now + 0.55
         end
 
         if record.targetPart and record.targetPart.Parent then
@@ -2145,7 +2155,9 @@ local function stepRecord(record, now)
             end
         end
 
-        if record.target and (root.Position - record.target).Magnitude < 4.2 then
+        if not urgentTarget and record.target
+            and (root.Position - record.target).Magnitude < 4.2
+        then
             record.target = nil
             record.targetPart = nil
             record.targetIsPad = false
