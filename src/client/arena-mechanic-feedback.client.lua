@@ -85,6 +85,8 @@ local function currentVfxTier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
+local activeBursts = {}
+
 local function pulseCharacter(accent)
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -109,6 +111,7 @@ local function pulseCharacter(accent)
         NumberSequenceKeypoint.new(1, 1),
     })
     emitter.Parent = root
+    activeBursts[emitter] = true
     local tierName = player:GetAttribute("VfxQualityTier")
     local reduced = player:GetAttribute("ReduceMotion") == true
     emitter:Emit(
@@ -120,6 +123,7 @@ local function pulseCharacter(accent)
     )
 
     task.delay(0.45, function()
+        activeBursts[emitter] = nil
         if emitter.Parent then
             emitter:Destroy()
         end
@@ -250,6 +254,12 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
         flashTween = nil
     end
     flash.BackgroundTransparency = 1
+    for emitter in pairs(activeBursts) do
+        activeBursts[emitter] = nil
+        if emitter.Parent then
+            emitter:Destroy()
+        end
+    end
     stopTitleTweens()
     if overdriveLabel.Visible then
         overdriveLabel.TextTransparency = 0
