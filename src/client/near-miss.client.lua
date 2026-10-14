@@ -8,6 +8,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local NearMissVisualRules = require(ReplicatedStorage.Shared.NearMissVisualRules)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -139,6 +140,20 @@ detail.Parent = card
 local combo = 0
 local lastNearMissAt = 0
 local token = 0
+local activeCardTweens = {}
+
+local function cancelCardTweens()
+    for _, tween in ipairs(activeCardTweens) do
+        tween:Cancel()
+    end
+    table.clear(activeCardTweens)
+end
+
+local function playCardTween(instance, info, goals)
+    local tween = TweenService:Create(instance, info, goals)
+    table.insert(activeCardTweens, tween)
+    tween:Play()
+end
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -233,6 +248,13 @@ local function readableKind(kind)
 end
 
 local function show(payload)
+    if type(payload) ~= "table" then return end
+    -- A new near miss can arrive while an old exit tween is fading the
+    -- panel; cancel it before showing the new card at full visibility.
+    cancelCardTweens()
+    local visual = NearMissVisualRules.profile(
+        player:GetAttribute("ReduceMotion") == true
+    )
     local now = os.clock()
     if now - lastNearMissAt <= 5 then
         combo += 1
@@ -276,45 +298,56 @@ local function show(payload)
         severity = math.clamp(1.35 - dangerRatio, 0.25, 1)
     end
 
-    pulseWorld(accent, severity)
+    -- Reduced motion retains the readable near-miss result, but removes
+    -- the expanding ground shock, edge flash and spring-scale card reveal.
+    if visual.WorldPulse then
+        pulseWorld(accent, severity)
+    end
 
     card.Visible = true
-    card.BackgroundTransparency = 1
-    scale.Scale = 0.82
-    flash.Visible = true
+    card.BackgroundTransparency = visual.Animate and 1 or 0.08
+    scale.Scale = visual.Animate and 0.82 or 1
+    flash.Visible = visual.EdgeFlash
     flash.BackgroundTransparency = 0.88
 
-    TweenService:Create(
-        card,
-        TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0.08}
-    ):Play()
-    TweenService:Create(
-        scale,
-        TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Scale = 1}
-    ):Play()
-    TweenService:Create(
-        flash,
-        TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 1}
-    ):Play()
+    if visual.Animate then
+        playCardTween(
+            card,
+            TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 0.08}
+        )
+        playCardTween(
+            scale,
+            TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = 1}
+        )
+        playCardTween(
+            flash,
+            TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        )
+    end
 
     task.delay(0.85, function()
         if current ~= token then
             return
         end
+        if not visual.Animate then
+            card.Visible = false
+            flash.Visible = false
+            return
+        end
 
-        TweenService:Create(
+        playCardTween(
             card,
             TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
             {BackgroundTransparency = 1}
-        ):Play()
-        TweenService:Create(
+        )
+        playCardTween(
             scale,
             TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
             {Scale = 0.90}
-        ):Play()
+        )
 
         task.wait(0.21)
         if current == token then

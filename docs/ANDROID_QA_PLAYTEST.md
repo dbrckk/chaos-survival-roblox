@@ -1539,3 +1539,22 @@ Android QA: join or stream into a Meteor, Bomb, or JumpShock alert after
 it has started; ensure the filled disc and outline start at the same
 current radius without shrinking or flashing to the minimum size. Repeat
 on Low graphics and with ReduceMotion ON.
+
+## PR #19 — Accessible near-miss presentation (14 October 2026)
+
+A near-miss still triggered an expanding world ring, edge flash and
+spring-scale UI card despite ReduceMotion. The settings now suppress these
+three motion-heavy effects while preserving the instant, readable near-miss
+card, localized title, danger information and existing limited haptics.
+Normal graphics remain unchanged. Non-table network payloads are discarded.
+
+Android QA: with ReduceMotion ON, narrowly dodge a meteor/bomb and confirm
+the near-miss card appears immediately without expanding ground rings, screen
+flash or scaling, then disappears without a fade. With ReduceMotion OFF,
+confirm the original animated presentation remains. Test successive near
+misses for correct combo text and no stale card removal.
+
+Successive near-miss notices also cancel any prior card/fade/flash tweens
+before starting the new notice. This prevents a late fade-out from
+visually overriding a newly arrived combo message. Check rapid consecutive
+near misses on Android with both motion settings.
