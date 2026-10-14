@@ -326,15 +326,24 @@ local function register(part, snapshot)
         snapshot.StartSize, snapshot.EndSize, snapshot.Progress, reduced
     )
     if ring then
-        if reduced then
-            -- Never flash a small growing disc on the first replicated frame.
-            part.Size = Vector3.new(diameter, part.Size.Y, diameter)
-            part.Transparency = 0.24
-        end
+        -- A late-joining mobile client must not show the initial server
+        -- disc while the local contour already reflects elapsed warning time.
+        part.Size = Vector3.new(diameter, part.Size.Y, diameter)
+        local pulse = reduced and 0.5
+            or (math.sin(snapshot.Progress * math.pi * 6) + 1) * 0.5
+        part.Transparency = reduced and 0.24 or (0.12 + pulse * 0.24)
         GroundOutline.update(
             ring, part.Position, diameter, snapshot.Progress,
-            reduced, 0.5, currentTier.Name
+            reduced, pulse, currentTier.Name
         )
+    elseif kind == "JumpShock" then
+        -- Shock's cylinder uses Y/Z for its warning diameter. Match the
+        -- replicated elapsed fraction on the first frame as well.
+        part.Size = Vector3.new(part.Size.X, diameter, diameter)
+        part.Transparency = reduced and 0.78
+            or (0.62 + 0.27 * snapshot.Progress)
+    elseif kind == "Freeze" and reduced then
+        part.Transparency = 0.82
     end
     if kind == "JumpShock" then
         syncShockSignature(part, tracked[part], diameter, snapshot.Progress, reduced)

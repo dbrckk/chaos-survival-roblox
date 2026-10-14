@@ -1520,3 +1520,22 @@ escape chevrons remain displayed; step outside its center and confirm the
 chevrons point radially away from the actual impact location. Elevated
 platforms outside the server's 3D damage radius should not show false
 urgent arrows.
+
+## PR #19 — First-frame warning synchronization (14 October 2026)
+
+A newly replicated hazard can have complete metadata before its first
+client render update. Before this change, the ground contour already
+used the elapsed duration, but the original Meteor/Bomb warning disc was
+left at its initial 5.5-stud size (or the initial JumpShock 8-stud size)
+until the next render tick. This produced a brief, contradictory ring
+on late joins and lower-frame-rate Android devices.
+
+All three animated warning types now apply the same authoritative elapsed
+size and opacity immediately during initial registration. Freeze also
+matches the chosen reduced-motion opacity at first registration. The
+existing update loop and server damage timing remain unchanged.
+
+Android QA: join or stream into a Meteor, Bomb, or JumpShock alert after
+it has started; ensure the filled disc and outline start at the same
+current radius without shrinking or flashing to the minimum size. Repeat
+on Low graphics and with ReduceMotion ON.

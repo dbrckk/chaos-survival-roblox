@@ -204,6 +204,21 @@ describe("Premium frost and electric warning silhouettes", function()
         expect(animated.OuterTransparency > first.OuterTransparency).toBe(true)
     end)
 
+    it("uses the correct initial diameter for late-joining warning viewers", function()
+        -- The local Part and contour must agree immediately, even before
+        -- the first 30 Hz render update on a slower Android device.
+        local diameter = WarningSignatures.visualDiameter
+        local startSize, endSize, elapsedFraction = 5.5, 16, 0.75
+        local initial = diameter(startSize, endSize, elapsedFraction, false)
+        expect(math.abs(initial - 13.375) < 0.001).toBe(true)
+        expect(diameter(startSize, endSize, elapsedFraction, true)).toBe(16)
+
+        -- Global JumpShock also starts at its replicated elapsed fraction;
+        -- it must not flash an 8-stud cylinder on a 150-stud arena.
+        expect(diameter(8, 150, 0.75, false)).toBe(114.5)
+        expect(diameter(8, 150, 0.75, true)).toBe(150)
+    end)
+
     it("starts late-arriving bomb and meteor signatures at the remaining warning time", function()
         local window = WarningSignatures.window
         local remaining, progress = window(100, 1.25, 100)
