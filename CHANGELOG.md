@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-14 — Disaster VFX sculptural finishing (unreleased)
+
+- Replaced generic orbiting Tornado debris blocks with original, angled WedgePart wind shards: a height-offset helical arrangement, matte storm-metal with occasional cold glass glints, no increase over the existing 5/8/12 Low/Medium/High part budgets.
+- Positioned storm shards at the live funnel immediately on replication. Tornado motion and glow now freeze in ReduceMotion; visual time advancement is capped after mobile app suspension.
+- Reshaped the existing Freeze warning emitter into a drifting, low-emission crystalline condensation profile (size/transparency/color ramps) without extra emitters; enabling ReduceMotion clears already-emitted mist immediately.
+- Kept full cinematic Meteor/Bomb impact sculpture, plume, core light and sparks for near viewers; at distance, preserve the short impact pulse while omitting costly secondary overdraw and local shrapnel. Authoritative danger markers/damage remain untouched.
+- Stabilized the existing lava danger glow during ReduceMotion and capped its decorative timing after Android background/resume. No changes to gameplay, physics, visual-warning ownership, damage, monetization or external assets.
+- Release gate: exact-head Roblox build and Open Cloud engine-suite success, then authenticated Studio/Android side-by-side art review and performance/thermal measurement. A 9/10 AAA claim is not certified by code changes alone.
+
 ## 2026-10-14 — Four-map sculptural finish and motion continuity (unreleased)
 
 - Original client-local machine detail passes on Classic radar, Towers lift, Crossroads transit signals and Orbital reactor containment: 0 Low / 2 Medium / 4 High extra cosmetic pieces per sculpture, with wedge-based sculpted detail on three maps.
