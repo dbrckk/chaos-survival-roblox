@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-14 — R6/R15 physical-feel animation finishing (unreleased)
+
+- Added a bounded, damped compression-to-rebound response on real character landing: torso/root weight shift, hip tuck and arm counterbalance, with fall-speed intensity rather than a fixed theatrical bounce.
+- Reused the existing local C0 additive rig owner, original R6/R15 joint mapping, tier scaling, ReduceMotion envelope and Showtime emote priority. No extra Motor6Ds, new AnimationIds, physics impulses, camera controls or paid assets.
+- Clamped cosmetic RenderStep time after app suspension and prevented stale inter-frame speed/turn deltas from triggering fake Launch, Skid or Pivot floor effects when Android resumes.
+- Expanded the visual acceptance scorecard for grounded jumps, large falls, rapid pivots, emote transitions, Android frame delays and real render/performance comparisons. No device or AAA-rating claim is made without physical validation.
+
 ## 2026-10-14 — Disaster VFX sculptural finishing (unreleased)
 
 - Replaced generic orbiting Tornado debris blocks with original, angled WedgePart wind shards: a height-offset helical arrangement, matte storm-metal with occasional cold glass glints, no increase over the existing 5/8/12 Low/Medium/High part budgets.
