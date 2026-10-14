@@ -130,6 +130,13 @@ local function renderBurst(payload)
         return
     end
     activeBursts += 1
+    -- Preserve rich impact sculpture for nearby play. Distant bursts still
+    -- retain their authoritative warnings and a compact visual pulse, but
+    -- skip high-overdraw smoke, bloom light and additional shrapnel. This
+    -- matters most on Android during overlapping Meteor/Bomb hazards.
+    local detailRange = profile.Name == "High" and 100 or 72
+    local richDetail = not reduced and profile.Name ~= "Low"
+        and viewerDistance <= detailRange
     local materialStyle, groundFrame = sampleGround(
         position, color, kind, profile, reduced
     )
@@ -159,7 +166,7 @@ local function renderBurst(payload)
         color = color,
         radius = radius,
         kind = kind,
-    }, profile.Name, reduced)
+    }, richDetail and profile.Name or "Low", reduced)
 
     local burst = Instance.new("Part")
     burst.Name = "LocalHazardImpactBurst"
@@ -178,7 +185,7 @@ local function renderBurst(payload)
 
     -- Hollow arcs above replace screen-covering circular pressure discs.
     local plumeAnchor = nil
-    if profile.Name ~= "Low" and not reduced then
+    if richDetail then
         plumeAnchor = Instance.new("Part")
         plumeAnchor.Name = "LocalHazardImpactPlumeAnchor"
         plumeAnchor.Size = Vector3.new(0.2, 0.2, 0.2)
@@ -250,7 +257,7 @@ local function renderBurst(payload)
     end
 
     local core = nil
-    if profile.Name ~= "Low" and not reduced then
+    if richDetail then
         core = Instance.new("Part")
         core.Name = "LocalHazardImpactCore"
         core.Shape = Enum.PartType.Ball
@@ -270,7 +277,7 @@ local function renderBurst(payload)
     end
 
     local light
-    if profile.Name ~= "Low" and not reduced then
+    if richDetail then
         light = Instance.new("PointLight")
         light.Color = color
         light.Brightness = 2.2 * profile.Scale
@@ -317,7 +324,7 @@ local function renderBurst(payload)
         ):Play()
     end
 
-    if profile.Name == "High" and not reduced then
+    if richDetail and profile.Name == "High" then
         local emitter = Instance.new("ParticleEmitter")
         emitter.Name = "ImpactSparks"
         emitter.Rate = 0
@@ -361,7 +368,7 @@ local function renderBurst(payload)
         })
         dust.Parent = burst
         dust:Emit(VfxQuality.particleCount("High", 14, 6))
-    elseif profile.Name == "Medium" and not reduced then
+    elseif richDetail and profile.Name == "Medium" then
         local emitter = Instance.new("ParticleEmitter")
         emitter.Name = "ImpactSparks"
         emitter.Rate = 0
