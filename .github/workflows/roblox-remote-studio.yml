@@ -90,6 +90,54 @@ jobs:
           Set-Content (Join-Path $desktop "READ_ME_VisualQA.txt") -Value $instructions
           Write-Host "Exact-SHA staging build created on temporary Windows desktop."
 
+      - name: Preinstall official signed Roblox Studio on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $installer = Join-Path $env:RUNNER_TEMP "RobloxStudioInstaller.exe"
+          Invoke-WebRequest -Uri "https://setup.rbxcdn.com/RobloxStudioInstaller.exe" -OutFile $installer
+          $sig = Get-AuthenticodeSignature $installer
+          if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "Roblox") {
+            throw "Roblox Studio installer signature invalid; aborting."
+          }
+          $process = Start-Process -FilePath $installer -PassThru
+          $deadline = (Get-Date).AddMinutes(6)
+          $studio = $null
+          while ((Get-Date) -lt $deadline) {
+            $running = Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            if ($running -and $running.Path) {
+              $studio = $running.Path
+            }
+            if (!$studio) {
+              $roots = @(
+                "$env:LOCALAPPDATA\Roblox",
+                "$env:USERPROFILE\AppData\Local\Roblox",
+                "C:\Program Files\Roblox",
+                "C:\Program Files (x86)\Roblox"
+              ) | Where-Object { Test-Path $_ }
+              foreach ($root in $roots) {
+                $candidate = Get-ChildItem $root -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+                  Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                if ($candidate) { $studio = $candidate.FullName; break }
+              }
+            }
+            if ($studio) { break }
+            if ($process.HasExited -and $process.ExitCode -ne 0) {
+              throw "Roblox Studio installer failed with exit code $($process.ExitCode)."
+            }
+            Start-Sleep -Seconds 3
+          }
+          if (!$studio) { throw "Roblox Studio installer did not complete within six minutes." }
+          $exeSig = Get-AuthenticodeSignature $studio
+          if ($exeSig.Status -ne "Valid" -or $exeSig.SignerCertificate.Subject -notmatch "Roblox") {
+            throw "Installed Roblox Studio executable signature invalid."
+          }
+          Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+          Write-Host "Official Roblox Studio preinstalled and signature verified."
+          Write-Host "No Roblox account authentication is attempted by the workflow."
+
       - name: Enable secure Windows RDP only from Tailscale
         shell: pwsh
         env:
