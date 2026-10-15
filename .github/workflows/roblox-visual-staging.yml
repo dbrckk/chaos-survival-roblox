@@ -173,11 +173,27 @@ jobs:
               payload = json.loads(Path("build/staging-publish-response.json").read_text())
               if not isinstance(payload, dict):
                   raise ValueError("unexpected response shape")
-              for field in ("code", "message"):
-                  value = payload.get(field)
-                  if isinstance(value, str):
-                      safe = value.replace(os.environ.get("STAGING_API_KEY", ""), "[REDACTED]") if os.environ.get("STAGING_API_KEY") else value
-                      print(f"Roblox {field}: {safe[:400].replace(chr(10), ' ')}")
+              api_key = os.environ.get("STAGING_API_KEY", "")
+              def safe_text(value):
+                  if not isinstance(value, (str, int)):
+                      return ""
+                  raw = str(value)
+                  if api_key:
+                      raw = raw.replace(api_key, "[REDACTED]")
+                  return raw[:320].replace(chr(10), " ").replace(chr(13), " ")
+              for field in ("code", "message", "error"):
+                  value = safe_text(payload.get(field))
+                  if value:
+                      print(f"Roblox {field}: {value}")
+              errors = payload.get("errors", [])
+              if isinstance(errors, list):
+                  for index, error in enumerate(errors[:3]):
+                      if isinstance(error, dict):
+                          for field in ("code", "message"):
+                              value = safe_text(error.get(field))
+                              if value:
+                                  print(f"Roblox errors[{index}].{field}: {value}")
+              print("Roblox response keys: " + ", ".join(sorted(str(k) for k in payload.keys())[:12]))
           except (ValueError, OSError, UnicodeError):
               print("Roblox response is not a readable JSON error object.")
           PY
