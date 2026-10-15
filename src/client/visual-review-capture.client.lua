@@ -53,7 +53,7 @@ UITheme.addTextConstraint(launcher, 10, 14)
 
 local panel = Instance.new("Frame")
 panel.Name = "VisualReviewMenu"
-panel.Size = UDim2.fromOffset(194, 210)
+panel.Size = UDim2.fromOffset(194, 258)
 panel.Position = UDim2.fromOffset(12, 150)
 panel.BackgroundColor3 = UITheme.Colors.Panel
 panel.BackgroundTransparency = 0.04
@@ -96,6 +96,8 @@ end
 
 local cleanButton = action("CaptureWorld", french and "PHOTO 3D" or "3D PHOTO")
 local hudButton = action("CaptureHud", french and "PHOTO + HUD" or "PHOTO + HUD")
+local videoButton = action("RecordShortVideo",
+    french and "VIDEO 8 SEC" or "8 SEC VIDEO")
 local nextButton = action("CaptureNextImpact",
     french and "PROCHAIN IMPACT" or "NEXT IMPACT")
 
@@ -120,7 +122,7 @@ local function layoutForCamera()
     launcher.Position = UDim2.fromOffset(left, top)
     panel.Position = UDim2.fromOffset(left, top + 51)
     -- Keep the panel narrow enough for portrait Android layouts.
-    panel.Size = UDim2.fromOffset(mobile.veryNarrow and 182 or 194, 210)
+    panel.Size = UDim2.fromOffset(mobile.veryNarrow and 182 or 194, 258)
 end
 
 local function bindCamera()
@@ -218,12 +220,80 @@ local function takeNativeCapture(mode)
     end)
 end
 
+-- The native video is recorded by Roblox, not synthesized from scripted
+-- scene geometry or a collection of fake still frames. Saving remains
+-- opt-in through Roblox's own gallery confirmation on supported devices.
+local function takeNativeVideo()
+    if busy then return end
+    armed = false
+    busy = true
+    captureSerial += 1
+    local token = captureSerial
+    panel.Visible = false
+    gui.Enabled = false
+
+    task.spawn(function()
+        RunService.RenderStepped:Wait()
+        if token ~= captureSerial then return end
+        local ok, started = pcall(function()
+            return CaptureService:StartVideoCaptureAsync(function(result, video)
+                if token ~= captureSerial then return end
+                gui.Enabled = true
+                if not video or (
+                    result ~= Enum.VideoCaptureResult.Success
+                    and result ~= Enum.VideoCaptureResult.TimeLimitReached
+                ) then
+                    finishCapture(token, french and "Vidéo indisponible"
+                        or "Video unavailable")
+                    return
+                end
+                local promptOk = pcall(function()
+                    CaptureService:PromptSaveCapturesToGallery({video},
+                        function(saveResults)
+                            if token ~= captureSerial then return end
+                            local saved = type(saveResults) == "table"
+                                and saveResults[video] == true
+                            finishCapture(token, saved
+                                and (french and "Vidéo sauvegardée"
+                                    or "Video saved")
+                                or (french and "Vidéo non sauvegardée"
+                                    or "Video not saved"))
+                        end)
+                end)
+                if not promptOk then
+                    finishCapture(token, french and "Galerie indisponible"
+                        or "Gallery unavailable")
+                end
+            end, {})
+        end)
+        if not ok or started ~= Enum.VideoCaptureStartedResult.Success then
+            finishCapture(token, french and "Vidéo non compatible"
+                or "Video recording unsupported")
+            return
+        end
+        task.delay(8, function()
+            if token == captureSerial and busy then
+                pcall(function() CaptureService:StopVideoCapture() end)
+            end
+        end)
+    end)
+
+    task.delay(25, function()
+        if token == captureSerial and busy and not gui.Enabled then
+            pcall(function() CaptureService:StopVideoCapture() end)
+            finishCapture(token, french and "Vidéo expirée"
+                or "Video timed out")
+        end
+    end)
+end
+
 cleanButton.Activated:Connect(function()
     takeNativeCapture(Enum.UICaptureMode.None)
 end)
 hudButton.Activated:Connect(function()
     takeNativeCapture(Enum.UICaptureMode.All)
 end)
+videoButton.Activated:Connect(takeNativeVideo)
 nextButton.Activated:Connect(function()
     if busy then return end
     armed = not armed
