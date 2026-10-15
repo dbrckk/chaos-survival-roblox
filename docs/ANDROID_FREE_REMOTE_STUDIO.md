@@ -86,6 +86,10 @@ sur le runner : les captures réelles afficheront l'identité du commit.
 1. Dans les **nouvelles exécutions** du workflow, l'installateur de
    Roblox Studio officiel est téléchargé, vérifié par signature
    Authenticode, puis installé automatiquement sur le Windows temporaire.
+   Le programme est configuré pour s'ouvrir automatiquement au premier
+   démarrage d'une session Windows interactive par Bureau à distance.
+   L'utilisateur doit encore approuver la connexion Roblox dans l'interface
+   officielle (par exemple Connexion rapide depuis l'application Roblox).
    Si cette étape échoue, le workflow refuse d'ouvrir le Bureau à distance.
    **Les sessions démarrées avant l'ajout de cette étape ne sont pas
    modifiées rétroactivement** : utiliser le raccourci
