@@ -43,6 +43,12 @@ local function colorFor(kind, mode)
         return Color3.fromRGB(255, 107, 127)
     elseif kind == "Meteor" then
         return Color3.fromRGB(255, 184, 86)
+    elseif kind == "Tornado" then
+        return Color3.fromRGB(165, 132, 255)
+    elseif kind == "Lightning" then
+        return Color3.fromRGB(128, 203, 255)
+    elseif kind == "Lava" then
+        return Color3.fromRGB(255, 130, 74)
     end
     return Color3.fromRGB(106, 220, 235)
 end
