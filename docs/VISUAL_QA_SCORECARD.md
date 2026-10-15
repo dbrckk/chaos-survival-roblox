@@ -18,6 +18,35 @@ Use this file to review a **rendered build**, not its source code. Do not assign
 
 Release blocks: unlicensed assets, unreadable warnings, visual blockers/colliders, persistent camera seizure, severe mobile frame drops, missing model after replication, duplicated UI/lighting, dangling VFX after multiple rounds.
 
+## Hazard dodge / mixed human-AI visibility — 15 October 2026 (unreleased)
+
+New changes to the existing camera-gated character reaction owners:
+
+- **Velocity-aligned dodge:** the already-owned two/three short Beam strokes
+  rotate into the actual horizontal velocity vector for moving survivors.
+  Stationary and very slow avatars retain the neutral front-facing shape.
+  No extra Beam, Attachment, physics force, Animator track or frame loop.
+- **Camera-visible secondary reactions:** the same shared
+  `VisualViewportRules.contains` predicate used by human/bot motion ribbons
+  now limits optional remote shock and landing strokes to the visible
+  viewport (with the existing overscan margin). Only candidates within the
+  established tier-specific reaction distance and shock reach are considered.
+  The local active participant always retains immediate feedback.
+- The current camera position owns render-distance selection, including
+  spectating a bot. The previous nearest-human-or-AI ordering is preserved
+  for eligible visible remote characters; max reactors and 12-Beam shared
+  cap are unchanged.
+
+**Native acceptance (not completed):** record a sprint, strafe,
+backpedal, 180-degree turn and idle near-miss in R6/R15. Verify beam
+orientation relative to travel, no visible foot sliding, and graceful
+fallback at low speed. During simultaneous Bomb/Meteor impacts, compare
+a full lobby, offscreen actors, and spectating bots on Android; ensure
+all server damage and warning cues remain unaffected. Check Medium,
+High, Low, ReduceMotion, quality changes, camera swaps and StreamingEnabled.
+Capture FPS, worst-frame time and overdraw; there are no measured
+improvements or AAA-score claims until rendered footage exists.
+
 ## Character reaction and Showtime finishing — 15 October 2026 (unreleased)
 
 Four existing client visual owners received additive polish without new
