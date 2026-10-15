@@ -28,8 +28,15 @@ de capacités graphiques : la connexion à Roblox Studio reste **à tester**.
    compte et autorise son VPN. Tailscale reliera ton Android au
    Windows temporaire dans un réseau privé.
 3. Depuis https://login.tailscale.com/admin/settings/keys,
-   crée une **Auth key** Tailscale à durée courte. Si possible,
-   sélectionne le caractère *ephemeral* pour le runner temporaire.
+   crée une **Auth key** Tailscale avec les options **Reusable
+   (réutilisable) activée** et **Ephemeral activée** pour le runner
+   temporaire. Fixe une courte expiration selon la durée de tes essais.
+   **IMPORTANT :** une clé non réutilisable est consommée dès la première
+   session GitHub. Lors d'un deuxième lancement, GitHub peut afficher
+   `backend error: invalid key` et Windows devient inaccessible.
+   Dans ce cas, génère une NOUVELLE clé réutilisable puis remplace
+   exclusivement le secret `TAILSCALE_AUTHKEY` dans GitHub.
+   Ne modifie pas le mot de passe Windows.
 4. Depuis les paramètres
    https://github.com/dbrckk/chaos-survival-roblox/settings/secrets/actions
    ajoute **deux Repository Secrets** :
