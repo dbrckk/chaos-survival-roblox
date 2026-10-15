@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-15 — Character VFX, bot motion and Showtime transitions (unreleased)
+
+- Crossfaded the six existing 3D Showtime hologram parts between robot/shuffle/orbit and other dance poses, using the stage's current update cadence and without creating new geometry. Reduced Motion keeps an immediate still pose.
+- Prevented synthetic AI launch/skid/pivot effects after mobile app suspension by rejecting stale velocity intervals and clearing obsolete bot cue styling; gameplay AI, physics and native Roblox animation tracks are unchanged.
+- Improved Meteor/Bomb pressure-reaction selection: prioritize the local player and then the nearest eligible human or AI, instead of exhausting limited shock-reactor slots on the Players iteration order. Actor and concurrent Beam limits remain intact.
+- Restyled existing character reaction Beams with a four-stop thermal highlight/cooling gradient and softened alpha tail without increasing allocations or event cadence.
+- Documented Studio/Android acceptance for hologram motion, mixed human/AI impacts and continued multi-round cleanup. Automated checks alone do not certify the requested 9/10 AAA quality.
+
 ## 2026-10-14 — R6/R15 physical-feel animation finishing (unreleased)
 
 - Added a bounded, damped compression-to-rebound response on real character landing: torso/root weight shift, hip tuck and arm counterbalance, with fall-speed intensity rather than a fixed theatrical bounce.
