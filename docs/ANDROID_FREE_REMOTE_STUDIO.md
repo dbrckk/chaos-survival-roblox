@@ -83,8 +83,13 @@ Sur le bureau Windows temporaire, le workflow a généré
 Ce fichier contient un marqueur visuel STAGING injecté seulement
 sur le runner : les captures réelles afficheront l'identité du commit.
 
-1. Ouvre `Official_Roblox_Studio.url` sur le bureau et installe
-   Roblox Studio depuis **Roblox Creator Hub officiel**.
+1. Dans les **nouvelles exécutions** du workflow, l'installateur de
+   Roblox Studio officiel est téléchargé, vérifié par signature
+   Authenticode, puis installé automatiquement sur le Windows temporaire.
+   Si cette étape échoue, le workflow refuse d'ouvrir le Bureau à distance.
+   **Les sessions démarrées avant l'ajout de cette étape ne sont pas
+   modifiées rétroactivement** : utiliser le raccourci
+   `Official_Roblox_Studio.url` dans l'ancienne session.
 2. Connecte-toi dans **Roblox Studio**. Utilise ton système 2FA normal.
    Ne donne aucune information Roblox à GitHub Actions ou ChatGPT.
 3. Studio → File → Open From File → sélectionne
