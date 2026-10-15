@@ -160,6 +160,20 @@ jobs:
           Set-ItemProperty -Path "$base\WinStations\RDP-Tcp" -Name "SecurityLayer" -Value 2
           Get-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue | Disable-NetFirewallRule
           New-NetFirewallRule -DisplayName "ChaosVisualQA-TailscaleOnly" -Direction Inbound -Protocol TCP -LocalPort 3389 -RemoteAddress "100.64.0.0/10" -Profile Any -Action Allow | Out-Null
+          # Registry switches alone are insufficient if the listener is stopped.
+          $rdpService = Get-Service -Name "TermService" -ErrorAction Stop
+          if ($rdpService.Status -ne "Running") {
+            Start-Service -Name "TermService" -ErrorAction Stop
+          }
+          Start-Sleep -Seconds 3
+          $rdpListener = Get-NetTCPConnection -LocalPort 3389 -State Listen -ErrorAction SilentlyContinue
+          if (-not $rdpListener) {
+            throw "RDP not listening on TCP/3389 despite enabled registry settings."
+          }
+          if (-not (Test-NetConnection -ComputerName 127.0.0.1 -Port 3389 -InformationLevel Quiet -WarningAction SilentlyContinue)) {
+            throw "RDP local loopback TCP/3389 check failed."
+          }
+          Write-Host "RDP local TCP/3389 listener verified with Windows TermService running."
           Write-Host "RDP has NLA/TLS enabled and only permits connections from private Tailscale addresses."
 
       - name: Join owner's private Tailscale network
@@ -175,6 +189,13 @@ jobs:
           $ip = ((& tailscale ip -4 | Select-Object -First 1) | Out-String).Trim()
           if ($ip -notmatch "^100\.[0-9]+\.[0-9]+\.[0-9]+$") {
             throw "Tailscale private IP unavailable; cannot connect securely."
+          }
+          $tsState = (& tailscale status --json | ConvertFrom-Json).BackendState
+          if ($tsState -ne "Running") {
+            throw "Tailscale backend not running; refusing to advertise RDP as ready."
+          }
+          if (-not (Get-NetTCPConnection -LocalPort 3389 -State Listen -ErrorAction SilentlyContinue)) {
+            throw "RDP port stopped listening after Tailscale startup."
           }
           @(
             "### Android remote Roblox Studio: ready",
@@ -195,5 +216,21 @@ jobs:
       - name: Allow temporary interactive Studio session
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           Write-Host "Temporary remote development computer available. Do not publish to production."
-          Start-Sleep -Seconds 4800
+          # Keep GitHub Actions stdout alive instead of a silent 80-minute sleep.
+          # This also detects a stopped RDP listener or Tailscale exit.
+          $until = (Get-Date).AddMinutes(78)
+          while ((Get-Date) -lt $until) {
+            Start-Sleep -Seconds 60
+            $rdp = @(Get-NetTCPConnection -LocalPort 3389 -State Listen -ErrorAction SilentlyContinue)
+            if ($rdp.Count -eq 0) {
+              throw "RDP listener stopped; remote Windows cannot be used."
+            }
+            $state = (& tailscale status --json | ConvertFrom-Json).BackendState
+            if ($state -ne "Running") {
+              throw "Tailscale connection lost; remote Windows cannot be used."
+            }
+            Write-Host ("HEARTBEAT {0:u}: private VPN active; RDP TCP/3389 listening" -f (Get-Date).ToUniversalTime())
+          }
+          Write-Host "Remote Windows scheduled session ended; sign out of Roblox Studio."
