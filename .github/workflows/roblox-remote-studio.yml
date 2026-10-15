@@ -1,0 +1,145 @@
+name: Chaos Studio Remote Bootstrap (Android)
+# Manual-only Windows cloud workstation for creating a separate Roblox test universe.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/visual-identity-hero-landmarks-20261008
+    paths:
+      - "studio/REMOTE_STUDIO_TRIGGER"
+
+concurrency:
+  group: chaos-studio-remote-bootstrap
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  remote-studio:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/feat/visual-identity-hero-landmarks-20261008'
+    runs-on: windows-latest
+    timeout-minutes: 100
+    steps:
+      - name: Validate opt-in secrets
+        shell: pwsh
+        env:
+          TS_KEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+          RDP_PASS: ${{ secrets.CHAOS_REMOTE_RDP_PASSWORD }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:TS_KEY)) {
+            throw "Missing TAILSCALE_AUTHKEY GitHub secret. Remote Windows NOT started."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:RDP_PASS) -or $env:RDP_PASS.Length -lt 16) {
+            throw "Missing or short CHAOS_REMOTE_RDP_PASSWORD GitHub secret (16+ characters)."
+          }
+          Write-Host "Secrets configured; no Roblox password, 2FA code or account cookie is needed by this workflow."
+
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Build visual QA place file for remote Studio
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force build | Out-Null
+          $zip = Join-Path $env:RUNNER_TEMP "chaos-rojo.zip"
+          $dir = Join-Path $env:RUNNER_TEMP "chaos-rojo"
+          Invoke-WebRequest -Uri "https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-windows-x86_64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+          $rojo = Get-ChildItem $dir -Filter "rojo.exe" -Recurse | Select-Object -First 1
+          if (-not $rojo) { throw "Rojo missing" }
+          if (Test-Path "src/shared/VisualStagingStamp.lua") {
+            throw "Staging-only marker must not be committed to source."
+          }
+          $stamp = "return { Environment = 'STAGING', Commit = '" + $env:GITHUB_SHA + "', RunId = '" + $env:GITHUB_RUN_ID + "' }"
+          Set-Content "src/shared/VisualStagingStamp.lua" -Value $stamp -Encoding utf8
+          & $rojo.FullName build default.project.json -o build/ChaosSurvival.rbxlx
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path "build/ChaosSurvival.rbxlx")) {
+            throw "Rojo build failed"
+          }
+          $contents = Get-Content "build/ChaosSurvival.rbxlx" -Raw
+          if (!$contents.Contains($env:GITHUB_SHA) -or !$contents.Contains("VisualStagingStamp")) {
+            throw "Exact commit identity missing from built place"
+          }
+          $desktop = [Environment]::GetFolderPath("Desktop")
+          if (!$desktop) { $desktop = Join-Path $env:USERPROFILE "Desktop" }
+          New-Item -ItemType Directory -Path $desktop -Force | Out-Null
+          Copy-Item "build/ChaosSurvival.rbxlx" (Join-Path $desktop "ChaosSurvival_VisualQA.rbxlx") -Force
+          $shortcut = "[InternetShortcut]" + [Environment]::NewLine + "URL=https://create.roblox.com/docs/studio/setup"
+          Set-Content (Join-Path $desktop "Official_Roblox_Studio.url") -Value $shortcut
+          $instructions = @(
+            "CHAOS SURVIVAL - VISUAL QA - STAGING CREATION",
+            "",
+            "1. Open Official_Roblox_Studio.url. Install the official Roblox Studio.",
+            "2. Sign into Studio inside this private remote Windows session.",
+            "3. Open ChaosSurvival_VisualQA.rbxlx from the Desktop.",
+            "4. File > Publish to Roblox As > Create NEW experience.",
+            "5. Name it Chaos Survival - Visual QA, keep it PRIVATE.",
+            "6. DO NOT OVERWRITE your existing public Chaos Survival.",
+            "7. Copy the new Universe ID and Place ID from Creator Dashboard.",
+            "8. Log out of Studio before leaving this temporary computer.",
+            "Never share Roblox passwords, .ROBLOSECURITY cookies or 2FA codes."
+          )
+          Set-Content (Join-Path $desktop "READ_ME_VisualQA.txt") -Value $instructions
+          Write-Host "Exact-SHA staging build created on temporary Windows desktop."
+
+      - name: Enable secure Windows RDP only from Tailscale
+        shell: pwsh
+        env:
+          RDP_PASS: ${{ secrets.CHAOS_REMOTE_RDP_PASSWORD }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $account = Get-LocalUser -Name "runneradmin" -ErrorAction SilentlyContinue
+          if (-not $account) { throw "runneradmin not found; refusing insecure RDP fallback." }
+          $secure = ConvertTo-SecureString $env:RDP_PASS -AsPlainText -Force
+          Set-LocalUser -Name "runneradmin" -Password $secure
+          $base = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server"
+          Set-ItemProperty -Path $base -Name "fDenyTSConnections" -Value 0
+          Set-ItemProperty -Path "$base\WinStations\RDP-Tcp" -Name "UserAuthentication" -Value 1
+          Set-ItemProperty -Path "$base\WinStations\RDP-Tcp" -Name "SecurityLayer" -Value 2
+          Get-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue | Disable-NetFirewallRule
+          New-NetFirewallRule -DisplayName "ChaosVisualQA-TailscaleOnly" -Direction Inbound -Protocol TCP -LocalPort 3389 -RemoteAddress "100.64.0.0/10" -Profile Any -Action Allow | Out-Null
+          Write-Host "RDP has NLA/TLS enabled and only permits connections from private Tailscale addresses."
+
+      - name: Join owner's private Tailscale network
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: latest
+
+      - name: Show private IP and temporary instructions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ip = ((& tailscale ip -4 | Select-Object -First 1) | Out-String).Trim()
+          if ($ip -notmatch "^100\.[0-9]+\.[0-9]+\.[0-9]+$") {
+            throw "Tailscale private IP unavailable; cannot connect securely."
+          }
+          @(
+            "### Android remote Roblox Studio: ready",
+            "",
+            "- Connect the Android Tailscale app to this same personal network.",
+            "- Open the official Microsoft Remote Desktop Android application.",
+            "- RDP address: " + $ip,
+            "- Windows username: runneradmin",
+            "- RDP password: the private value of CHAOS_REMOTE_RDP_PASSWORD (NOT your Roblox password).",
+            "- On the temporary Windows Desktop open READ_ME_VisualQA.txt.",
+            "- The build ChaosSurvival_VisualQA.rbxlx is prepared from commit " + $env:GITHUB_SHA,
+            "- This Windows session expires after 100 minutes.",
+            "- Production Roblox game was not accessed or modified."
+          ) | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          Write-Host "Private Tailscale IP: $ip"
+          Write-Host "RDP user: runneradmin (password never printed)."
+
+      - name: Allow temporary interactive Studio session
+        shell: pwsh
+        run: |
+          Write-Host "Temporary remote development computer available. Do not publish to production."
+          Start-Sleep -Seconds 4800
