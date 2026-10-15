@@ -178,10 +178,23 @@ local function stroke(root, mode, kind, index, strength, activePieces, orientati
     beam.Width1 = 0.015
     beam.CurveSize0 = design.Curve0
     beam.CurveSize1 = design.Curve1
-    beam.Color = ColorSequence.new(design.Color, Color3.fromRGB(230, 248, 255))
+    -- The existing Beam itself carries a four-stop colour/opacity
+    -- treatment: bright pressure crest, saturated hazard tint and a
+    -- quickly cooling tail. This replaces the generic two-colour gradient
+    -- without allocating additional ribbons, lights, or emitters.
+    local glint = design.Color:Lerp(Color3.fromRGB(238, 250, 255),
+        mode == "Landing" and 0.22 or 0.42)
+    local cooling = design.Color:Lerp(Color3.fromRGB(34, 54, 75), 0.58)
+    beam.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, design.Color),
+        ColorSequenceKeypoint.new(0.24, glint),
+        ColorSequenceKeypoint.new(0.64, design.Color),
+        ColorSequenceKeypoint.new(1, cooling),
+    })
     beam.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.15),
-        NumberSequenceKeypoint.new(0.60, 0.38),
+        NumberSequenceKeypoint.new(0, mode == "Shock" and 0.36 or 0.26),
+        NumberSequenceKeypoint.new(0.18, 0.12),
+        NumberSequenceKeypoint.new(0.62, 0.50),
         NumberSequenceKeypoint.new(1, 1),
     })
     beam:SetAttribute("ChaosReactionMode", mode)
