@@ -112,52 +112,67 @@ local function impact(payload)
     if not viewer or (payload.position - viewer).Magnitude > p.Range + 40 then
         return
     end
-    local n = 0
-
-    local function candidate(model)
-        if n >= p.MaxReactors then
-            return
-        end
+    -- Prioritize the local participant, then the closest visible combatants,
+    -- regardless of whether they are humans or AI. Previously, the Player
+    -- iteration order exhausted the small 2/3-reactor budget before bots
+    -- were considered in populated rounds.
+    local contenders = {}
+    local function consider(model)
         local root = liveRoot(model)
-        if not root or (root.Position - viewer).Magnitude > p.Range then
+        if not root then return end
+        local cameraDistance = (root.Position - viewer).Magnitude
+        if cameraDistance > p.Range then return end
+        local intensity = Rules.airShockStrength(
+            (root.Position - payload.position).Magnitude, payload.radius
+        )
+        if intensity <= 0 or not Rules.cooldownReady(
+            now, impactByModel[model], 0.95
+        ) then
             return
         end
-        local d = (root.Position - payload.position).Magnitude
-        local intensity = Rules.airShockStrength(d, payload.radius)
-        if intensity <= 0 then
-            return
-        end
-        if not Rules.cooldownReady(now, impactByModel[model], 0.95) then
-            return
-        end
-        local emitted = ReactionVisuals.burst(root, "Shock",
-            tostring(payload.kind or ""), p.Shock, intensity,
-            activePieces, payload.position)
-        if emitted > 0 then
-            impactByModel[model] = now
-            n += 1
-        end
+        table.insert(contenders, {
+            model = model,
+            root = root,
+            strength = intensity,
+            distance = cameraDistance,
+            localOwned = model == player.Character,
+        })
     end
 
-    candidate(player.Character)
+    consider(player.Character)
     for _, other in ipairs(Players:GetPlayers()) do
-        if n >= p.MaxReactors then
-            break
-        end
         if other ~= player then
-            candidate(other.Character)
+            consider(other.Character)
         end
     end
-    if n < p.MaxReactors then
-        local bots = workspace:FindFirstChild("AISurvivors")
-        if bots then
-            for _, model in ipairs(bots:GetChildren()) do
-                if n >= p.MaxReactors then
-                    break
-                end
-                if model:IsA("Model") then
-                    candidate(model)
-                end
+    local bots = workspace:FindFirstChild("AISurvivors")
+    if bots then
+        for _, model in ipairs(bots:GetChildren()) do
+            if model:IsA("Model") then consider(model) end
+        end
+    end
+    table.sort(contenders, function(a, b)
+        if a.localOwned ~= b.localOwned then
+            return a.localOwned
+        end
+        if a.distance ~= b.distance then
+            return a.distance < b.distance
+        end
+        return a.model.Name < b.model.Name
+    end)
+
+    local n = 0
+    for _, contender in ipairs(contenders) do
+        if n >= p.MaxReactors then break end
+        -- A character could be eliminated or stream out after collection.
+        if liveRoot(contender.model) == contender.root then
+            local emitted = ReactionVisuals.burst(
+                contender.root, "Shock", tostring(payload.kind or ""),
+                p.Shock, contender.strength, activePieces, payload.position
+            )
+            if emitted > 0 then
+                impactByModel[contender.model] = now
+                n += 1
             end
         end
     end
