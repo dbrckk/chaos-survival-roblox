@@ -157,6 +157,30 @@ function CharacterReactionVisuals.shockOrientation(rootCFrame, sourcePosition)
     return CFrame.lookAt(Vector3.zero, horizontal.Unit), true
 end
 
+-- Near-miss strokes follow the avatar's *actual* ground velocity,
+-- so sprinting sideways, backpedalling or cutting a corner leaves the
+-- afterimage behind that movement instead of behind the avatar's facing.
+-- Standing still intentionally keeps the neutral avatar-facing silhouette.
+function CharacterReactionVisuals.dodgeOrientation(root)
+    if not root or not root:IsA("BasePart") then
+        return CFrame.new(), false
+    end
+    local velocity = root.AssemblyLinearVelocity
+    if not finiteVector(velocity) then
+        return CFrame.new(), false
+    end
+    local planar = Vector3.new(velocity.X, 0, velocity.Z)
+    if planar.Magnitude < 3.5 then
+        return CFrame.new(), false
+    end
+    local localMotion = root.CFrame:VectorToObjectSpace(planar.Unit)
+    local horizontal = Vector3.new(localMotion.X, 0, localMotion.Z)
+    if not finiteNumber(horizontal.Magnitude) or horizontal.Magnitude < 0.05 then
+        return CFrame.new(), false
+    end
+    return CFrame.lookAt(Vector3.zero, horizontal.Unit), true
+end
+
 -- Beams follow the root, then taper progressively; no extra BaseParts,
 -- per-frame loops, physics impulses or screen-space camera movement.
 local function stroke(root, mode, kind, index, strength, activePieces, orientation, directional)
@@ -255,6 +279,8 @@ function CharacterReactionVisuals.burst(root, mode, kind, count, strength, activ
         orientation, directional = CharacterReactionVisuals.shockOrientation(
             root.CFrame, sourcePosition
         )
+    elseif mode == "Dodge" then
+        orientation, directional = CharacterReactionVisuals.dodgeOrientation(root)
     end
     for i = 1, pieces do
         stroke(root, mode, kind, i, intensity, activePieces, orientation, directional)
