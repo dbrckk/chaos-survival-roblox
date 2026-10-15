@@ -6,4 +6,4 @@
 # The workflow will then launch a temporary RDP development computer.
 #
 # Initial push: SAFE PREFLIGHT ONLY; secrets are not yet configured.
-trigger=preflight-unconfigured-20261015
+trigger=remote-studio-setup-20261015-ready
