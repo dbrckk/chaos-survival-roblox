@@ -534,6 +534,8 @@ local function makeHoloDancer(index, centerFrame, tierName)
         footL = footL, footR = footR,
         parts = {body, head, left, right, footL, footR},
         details = details,
+        poseReady = false,
+        lastPoseAt = nil,
     })
 end
 
@@ -788,6 +790,8 @@ local function updateStage(now)
             for _, part in ipairs(dancer.parts) do
                 part.Transparency = 1
             end
+            dancer.poseReady = false
+            dancer.lastPoseAt = nil
             ShowtimeHologramDetails.pose(
                 dancer.details, dancer.body.CFrame, dancer.head.CFrame,
                 dancer.left.CFrame, dancer.right.CFrame, false
@@ -814,17 +818,30 @@ local function updateStage(now)
             * CFrame.Angles(pose.ArmR, 0, 0.32 - pose.ArmSwing)
         local footStep = pose.LegSwing
 
-        dancer.body.CFrame = bodyCF
-        dancer.head.CFrame = headCF
-        dancer.left.CFrame = leftCF
-        dancer.right.CFrame = rightCF
-        dancer.footL.CFrame = bodyCF * CFrame.new(-0.3, -1.4, footStep)
+        local footLCF = bodyCF * CFrame.new(-0.3, -1.4, footStep)
             * CFrame.Angles(footStep * 0.18, 0, 0)
-        dancer.footR.CFrame = bodyCF * CFrame.new(0.3, -1.4, -footStep)
+        local footRCF = bodyCF * CFrame.new(0.3, -1.4, -footStep)
             * CFrame.Angles(-footStep * 0.18, 0, 0)
+        -- Holograms formerly snapped straight from robot/shuffle/orbit to
+        -- the next three-second pose. Crossfade their existing six parts
+        -- instead: no new assets, motors, tweens or per-frame task owners.
+        -- A newly visible figure starts at its real pose without sliding
+        -- in from an unrelated, previously hidden frame.
+        local delta = dancer.lastPoseAt and now - dancer.lastPoseAt or 0
+        local smoothing = (not dancer.poseReady or reduced) and 1
+            or 1 - math.exp(-16 * math.clamp(delta, 0, 0.12))
+        dancer.lastPoseAt = now
+        dancer.poseReady = true
+        dancer.body.CFrame = dancer.body.CFrame:Lerp(bodyCF, smoothing)
+        dancer.head.CFrame = dancer.head.CFrame:Lerp(headCF, smoothing)
+        dancer.left.CFrame = dancer.left.CFrame:Lerp(leftCF, smoothing)
+        dancer.right.CFrame = dancer.right.CFrame:Lerp(rightCF, smoothing)
+        dancer.footL.CFrame = dancer.footL.CFrame:Lerp(footLCF, smoothing)
+        dancer.footR.CFrame = dancer.footR.CFrame:Lerp(footRCF, smoothing)
 
         ShowtimeHologramDetails.pose(
-            dancer.details, bodyCF, headCF, leftCF, rightCF, true
+            dancer.details, dancer.body.CFrame, dancer.head.CFrame,
+            dancer.left.CFrame, dancer.right.CFrame, true
         )
         for _, part in ipairs(dancer.parts) do
             part.Transparency = 0.28
