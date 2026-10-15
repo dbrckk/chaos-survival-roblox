@@ -121,7 +121,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+          curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
             -o /tmp/rojo.zip \
             https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
           mkdir -p /tmp/rojo
