@@ -11,6 +11,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local ViewportRules = require(ReplicatedStorage.Shared.VisualViewportRules)
+local Shared = ReplicatedStorage:WaitForChild("Shared")
 
 local player = Players.LocalPlayer
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -24,6 +25,9 @@ local armed = false
 local busy = false
 local captureSerial = 0
 local viewportConnection = nil
+-- The module is generated only by the isolated staging publish workflow.
+-- An ordinary production build has no marker and never displays QA controls.
+local stagingEnabled = false
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosNativeVisualReview"
@@ -31,6 +35,30 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 37
 gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Independent stamp stays in HUD-enabled shots while the photo buttons
+-- hide. HUD-free 3D captures intentionally contain no UI at all.
+local stampGui = Instance.new("ScreenGui")
+stampGui.Name = "ChaosVisualStagingStamp"
+stampGui.ResetOnSpawn = false
+stampGui.IgnoreGuiInset = true
+stampGui.DisplayOrder = 36
+stampGui.Enabled = false
+stampGui.Parent = player:WaitForChild("PlayerGui")
+local stampLabel = Instance.new("TextLabel")
+stampLabel.Name = "StagingCommit"
+stampLabel.AnchorPoint = Vector2.new(0, 1)
+stampLabel.Position = UDim2.new(0, 10, 1, -10)
+stampLabel.Size = UDim2.fromOffset(190, 24)
+stampLabel.BackgroundColor3 = UITheme.Colors.Panel
+stampLabel.BackgroundTransparency = 0.35
+stampLabel.BorderSizePixel = 0
+stampLabel.Font = Enum.Font.GothamBold
+stampLabel.TextSize = 11
+stampLabel.TextColor3 = UITheme.Colors.Text
+stampLabel.Text = ""
+stampLabel.Parent = stampGui
+UITheme.addCorner(stampLabel, UITheme.Corners.Pill)
 
 local launcher = Instance.new("TextButton")
 launcher.Name = "VisualReviewPhoto"
@@ -158,7 +186,12 @@ local function bindCamera()
 end
 
 local function refresh()
-    launcher.Visible = player:GetAttribute("DataLoaded") == true
+    launcher.Visible = stagingEnabled
+        and player:GetAttribute("DataLoaded") == true
+    if not stagingEnabled then
+        panel.Visible = false
+        toast.Visible = false
+    end
     launcher.Active = not busy
     launcher.Text = busy and (french and "PHOTO..." or "CAPTURE...")
         or (armed and (french and "VFX..." or "NEXT VFX") or "PHOTO")
@@ -371,6 +404,28 @@ roundEvent.OnClientEvent:Connect(function(state)
 end)
 player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+
+local function activateStagingMarker(child)
+    if child.Name ~= "VisualStagingStamp" or not child:IsA("ModuleScript") then
+        return
+    end
+    local ok, value = pcall(require, child)
+    if not ok or type(value) ~= "table" or value.Environment ~= "STAGING"
+        or type(value.Commit) ~= "string" or #value.Commit ~= 40
+        or not string.match(value.Commit, "^[0-9a-f]+$") then
+        return
+    end
+    stagingEnabled = true
+    stampLabel.Text = "STAGING · " .. string.sub(value.Commit, 1, 10)
+    stampGui.Enabled = true
+    refresh()
+end
+
+-- ReplicatedStorage can replicate late on a slow Android connection.
+-- Bind both immediately and on arrival; an unmarked live build stays clean.
+Shared.ChildAdded:Connect(activateStagingMarker)
+local initialStamp = Shared:FindFirstChild("VisualStagingStamp")
+if initialStamp then activateStagingMarker(initialStamp) end
 
 bindCamera()
 refresh()
