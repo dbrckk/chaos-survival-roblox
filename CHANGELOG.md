@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-15 — Directional dodge and visible reaction budget (unreleased)
+
+- Turned existing near-miss avatar dodge beams into velocity-aligned afterimages for strafing, retreating and sprinting. Slow or stationary characters keep a neutral silhouette; attachment, Beam and lifetime caps remain unchanged.
+- Culled optional offscreen remote human/AI shock and landing effects using the shared viewport rule, while always preserving the local survivor's reaction. Camera position rather than avatar distance now governs spectator-friendly cosmetic selection.
+- No new animation assets, beams, lights, particles, engine forces, remotes, damage changes or pay-to-win content. Automated build/engine verification and real Studio/Android art/overdraw measurement remain required.
+
 ## 2026-10-15 — Character VFX, bot motion and Showtime transitions (unreleased)
 
 - Crossfaded the six existing 3D Showtime hologram parts between robot/shuffle/orbit and other dance poses, using the stage's current update cadence and without creating new geometry. Reduced Motion keeps an immediate still pose.
