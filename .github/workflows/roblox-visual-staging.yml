@@ -1,0 +1,199 @@
+name: Roblox Visual Staging (isolated)
+
+on:
+  push:
+    branches:
+      - feat/visual-identity-hero-landmarks-20261008
+    paths:
+      - "src/**"
+      - "default.project.json"
+      - ".github/workflows/roblox-visual-staging.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: chaos-survival-visual-staging
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Validate dedicated staging target
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.gate.outputs.ready }}
+    env:
+      STAGING_UNIVERSE: ${{ vars.ROBLOX_STAGING_UNIVERSE_ID }}
+      STAGING_PLACE: ${{ vars.ROBLOX_STAGING_PLACE_ID }}
+      PRODUCTION_UNIVERSE: ${{ vars.ROBLOX_UNIVERSE_ID }}
+      PRODUCTION_PLACE: ${{ vars.ROBLOX_PLACE_ID }}
+      STAGING_API_KEY: ${{ secrets.ROBLOX_STAGING_API_KEY }}
+    steps:
+      - name: Enforce isolated universe and place
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          blocked() {
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::$1"
+            {
+              echo "### STAGING NOT DEPLOYED"
+              echo ""
+              echo "$1"
+              echo ""
+              echo "Set up a separate private Roblox experience and the three"
+              echo "dedicated staging settings described in docs/ROBLOX_VISUAL_STAGING.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+
+          if [ -z "$STAGING_UNIVERSE" ] || [ -z "$STAGING_PLACE" ] \
+             || [ -z "$STAGING_API_KEY" ]; then
+            blocked "The dedicated staging IDs or staging API key are not configured."
+          fi
+          if [ -z "$PRODUCTION_UNIVERSE" ] || [ -z "$PRODUCTION_PLACE" ]; then
+            blocked "Production IDs are unavailable for comparison. Refusing blind staging publication."
+          fi
+
+          for value in "$STAGING_UNIVERSE" "$STAGING_PLACE" \
+                       "$PRODUCTION_UNIVERSE" "$PRODUCTION_PLACE"; do
+            if ! [[ "$value" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::Roblox universe/place IDs must be positive integers."
+              exit 1
+            fi
+          done
+          if [ "$STAGING_UNIVERSE" = "$PRODUCTION_UNIVERSE" ] \
+             || [ "$STAGING_PLACE" = "$PRODUCTION_PLACE" ]; then
+            echo "::error::Staging target equals a production universe/place. Nothing published."
+            exit 1
+          fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Staging target verified"
+            echo ""
+            echo "- Production and staging use different Universe IDs AND Place IDs."
+            echo "- Target staging universe: \`$STAGING_UNIVERSE\`"
+            echo "- Target staging place: \`$STAGING_PLACE\`"
+            echo "- Candidate SHA: \`$GITHUB_SHA\`"
+            echo "- No publication has happened at this preflight step."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Publish only isolated staging place
+    needs: preflight
+    if: >-
+      ${{ needs.preflight.outputs.ready == 'true' &&
+          github.repository == 'dbrckk/chaos-survival-roblox' &&
+          github.ref == 'refs/heads/feat/visual-identity-hero-landmarks-20261008' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      STAGING_UNIVERSE: ${{ vars.ROBLOX_STAGING_UNIVERSE_ID }}
+      STAGING_PLACE: ${{ vars.ROBLOX_STAGING_PLACE_ID }}
+      PRODUCTION_UNIVERSE: ${{ vars.ROBLOX_UNIVERSE_ID }}
+      PRODUCTION_PLACE: ${{ vars.ROBLOX_PLACE_ID }}
+      STAGING_API_KEY: ${{ secrets.ROBLOX_STAGING_API_KEY }}
+    steps:
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Check SHA, environment and safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$STAGING_UNIVERSE" != "$PRODUCTION_UNIVERSE"
+          test "$STAGING_PLACE" != "$PRODUCTION_PLACE"
+          test -n "$STAGING_API_KEY"
+          test ! -e src/shared/VisualStagingStamp.lua || {
+            echo "::error::The staging-only identity marker must never be committed to source."
+            exit 1
+          }
+
+      - name: Install pinned Rojo 7.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -o /tmp/rojo.zip \
+            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          mkdir -p /tmp/rojo
+          unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          echo /tmp/rojo >> "$GITHUB_PATH"
+          /tmp/rojo/rojo --version
+
+      - name: Build exact-SHA place with staging-only visual QA watermark
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Generated only in the runner workspace, never committed.
+          printf "return { Environment = 'STAGING', Commit = '%s', RunId = '%s' }\n" \
+            "$GITHUB_SHA" "$GITHUB_RUN_ID" > src/shared/VisualStagingStamp.lua
+          mkdir -p build
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          test -s build/ChaosSurvival.rbxlx
+          grep -q "VisualStagingStamp" build/ChaosSurvival.rbxlx || {
+            echo "::error::Staging stamp missing from generated Roblox place."
+            exit 1
+          }
+          grep -q "$GITHUB_SHA" build/ChaosSurvival.rbxlx || {
+            echo "::error::Exact commit identity missing from generated Roblox place."
+            exit 1
+          }
+
+      - name: Upload strictly to dedicated Roblox staging universe
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$STAGING_UNIVERSE" != "$PRODUCTION_UNIVERSE"
+          test "$STAGING_PLACE" != "$PRODUCTION_PLACE"
+          http_status="$(curl --silent --show-error \
+            --connect-timeout 15 --max-time 120 \
+            --output build/staging-publish-response.json \
+            --write-out "%{http_code}" \
+            --request POST \
+            --header "x-api-key: $STAGING_API_KEY" \
+            --header "Content-Type: application/xml" \
+            --data-binary @build/ChaosSurvival.rbxlx \
+            "https://apis.roblox.com/universes/v1/$STAGING_UNIVERSE/places/$STAGING_PLACE/versions?versionType=Published")"
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Staging publish returned HTTP $http_status. No production API was called."
+            exit 1
+          fi
+          version="$(python3 -c 'import json,sys; x=json.load(open(sys.argv[1])); v=x.get("versionNumber"); assert type(v) is int and v>0; print(v)' build/staging-publish-response.json)"
+          {
+            printf 'environment=STAGING\n'
+            printf 'source_commit=%s\n' "$GITHUB_SHA"
+            printf 'source_branch=%s\n' "$GITHUB_REF_NAME"
+            printf 'workflow_run=%s\n' "$GITHUB_RUN_ID"
+            printf 'staging_universe=%s\n' "$STAGING_UNIVERSE"
+            printf 'staging_place=%s\n' "$STAGING_PLACE"
+            printf 'published_version=%s\n' "$version"
+            printf 'play_url=https://www.roblox.com/games/%s\n' "$STAGING_PLACE"
+          } > build/visual-staging-publish-metadata.txt
+          {
+            echo "### Real Roblox staging publish completed"
+            echo ""
+            echo "- SHA: \`$GITHUB_SHA\`"
+            echo "- Staging universe: \`$STAGING_UNIVERSE\`"
+            echo "- Staging place: \`$STAGING_PLACE\`"
+            echo "- Published version: \`$version\`"
+            echo "- Test link: https://www.roblox.com/games/$STAGING_PLACE"
+            echo ""
+            echo "**Production remains unchanged.**"
+            echo "The staging experience must already be private / playtest-limited in Roblox Creator Dashboard."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-staging-publish-proof
+          path: build/visual-staging-publish-metadata.txt
+          if-no-files-found: error
