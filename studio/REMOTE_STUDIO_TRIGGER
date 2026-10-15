@@ -1,0 +1,9 @@
+# Chaos Survival — one-time Android remote Studio request
+# This file is intentionally a GitHub Actions push trigger.
+# Edit its LAST line on the feature branch only AFTER setting:
+#   TAILSCALE_AUTHKEY
+#   CHAOS_REMOTE_RDP_PASSWORD
+# The workflow will then launch a temporary RDP development computer.
+#
+# Initial push: SAFE PREFLIGHT ONLY; secrets are not yet configured.
+trigger=preflight-unconfigured-20261015
