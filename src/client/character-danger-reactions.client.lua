@@ -8,6 +8,7 @@ local Rules = require(ReplicatedStorage.Shared.CharacterReactionRules)
 local ReactionVisuals = require(script.Parent.CharacterReactionVisuals)
 local RigRegistry = require(script.Parent.CharacterReactionRigRegistry)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local Viewport = require(ReplicatedStorage.Shared.VisualViewportRules)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -56,12 +57,25 @@ local function liveRoot(model)
 end
 
 local function viewerPosition()
-    local root = liveRoot(player.Character)
-    if root then
-        return root.Position
-    end
+    -- Spectators follow other players or AI; even active survivors can
+    -- use offset cameras. Presentation distance should match the actual
+    -- rendered view, not an off-screen avatar's root.
     local camera = workspace.CurrentCamera
-    return camera and camera.CFrame.Position or nil
+    if camera then return camera.CFrame.Position end
+    local root = liveRoot(player.Character)
+    return root and root.Position or nil
+end
+
+local function visibleToCamera(model, root)
+    -- Keep first-person feedback for the local participant even if the
+    -- root projects behind the camera due to native camera offsets.
+    if model == player.Character then return true end
+    local camera = workspace.CurrentCamera
+    if not camera then return true end
+    local screen = camera:WorldToViewportPoint(root.Position)
+    local bounds = camera.ViewportSize
+    return Viewport.contains(screen.X, screen.Y, screen.Z,
+        bounds.X, bounds.Y, false)
 end
 
 local function killPieces()
@@ -121,7 +135,9 @@ local function impact(payload)
         local root = liveRoot(model)
         if not root then return end
         local cameraDistance = (root.Position - viewer).Magnitude
-        if cameraDistance > p.Range then return end
+        if cameraDistance > p.Range or not visibleToCamera(model, root) then
+            return
+        end
         local intensity = Rules.airShockStrength(
             (root.Position - payload.position).Magnitude, payload.radius
         )
@@ -201,7 +217,8 @@ local rigRegistry = RigRegistry.new(function(model, root, state, entry)
             return
         end
         local viewer = viewerPosition()
-        if not viewer or (root.Position - viewer).Magnitude > settings.Range then
+        if not viewer or (root.Position - viewer).Magnitude > settings.Range
+            or not visibleToCamera(model, root) then
             return
         end
         local emitted = ReactionVisuals.burst(root, "Landing", "",
