@@ -51,6 +51,22 @@ UITheme.addStroke(launcher, UITheme.Colors.Cyan, 1, 0.42)
 UITheme.addPressFeedback(launcher, 0.96)
 UITheme.addTextConstraint(launcher, 10, 14)
 
+-- Save/failure feedback must remain visible after the capture menu closes.
+local toast = Instance.new("TextLabel")
+toast.Name = "VisualReviewNotice"
+toast.Size = UDim2.fromOffset(194, 34)
+toast.Position = UDim2.fromOffset(12, 150)
+toast.BackgroundColor3 = UITheme.Colors.Panel
+toast.BackgroundTransparency = 0.08
+toast.BorderSizePixel = 0
+toast.Font = Enum.Font.GothamBold
+toast.TextScaled = true
+toast.TextColor3 = UITheme.Colors.Text
+toast.Visible = false
+toast.Parent = gui
+UITheme.addCorner(toast, UITheme.Corners.Medium)
+UITheme.addTextConstraint(toast, 10, 14)
+
 local panel = Instance.new("Frame")
 panel.Name = "VisualReviewMenu"
 panel.Size = UDim2.fromOffset(194, 258)
@@ -121,8 +137,11 @@ local function layoutForCamera()
     local top = touch and mobile.topHeight + 12 or 96
     launcher.Position = UDim2.fromOffset(left, top)
     panel.Position = UDim2.fromOffset(left, top + 51)
+    toast.Position = UDim2.fromOffset(left, top + 51)
     -- Keep the panel narrow enough for portrait Android layouts.
-    panel.Size = UDim2.fromOffset(mobile.veryNarrow and 182 or 194, 258)
+    local width = mobile.veryNarrow and 182 or 194
+    panel.Size = UDim2.fromOffset(width, 258)
+    toast.Size = UDim2.fromOffset(width, 34)
 end
 
 local function bindCamera()
@@ -153,7 +172,12 @@ local function finishCapture(token, message)
     gui.Enabled = true
     panel.Visible = false
     status.Text = message
+    toast.Text = message
+    toast.Visible = true
     refresh()
+    task.delay(2.4, function()
+        if token == captureSerial then toast.Visible = false end
+    end)
 end
 
 local function takeNativeCapture(mode)
@@ -165,6 +189,7 @@ local function takeNativeCapture(mode)
     -- Hide only our capture controls, not the actual game's HUD.
     -- UICaptureMode.None gives a completely HUD-free 3D capture.
     panel.Visible = false
+    toast.Visible = false
     gui.Enabled = false
 
     task.spawn(function()
@@ -230,6 +255,7 @@ local function takeNativeVideo()
     captureSerial += 1
     local token = captureSerial
     panel.Visible = false
+    toast.Visible = false
     gui.Enabled = false
 
     task.spawn(function()
