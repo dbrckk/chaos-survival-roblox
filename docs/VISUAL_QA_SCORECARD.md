@@ -18,6 +18,47 @@ Use this file to review a **rendered build**, not its source code. Do not assign
 
 Release blocks: unlicensed assets, unreadable warnings, visual blockers/colliders, persistent camera seizure, severe mobile frame drops, missing model after replication, duplicated UI/lighting, dangling VFX after multiple rounds.
 
+## Character reaction and Showtime finishing — 15 October 2026 (unreleased)
+
+Four existing client visual owners received additive polish without new
+particle, light, Beam, Motor6D, collision, or remote-event families.
+
+- **Showtime holograms:** the existing six-Part performers interpolate
+  `CFrame` poses across dance changes using the established quality-tier
+  update cadence. Switching Reduced Motion snaps to a quiet still pose;
+  hiding/revealing the stage invalidates old interpolation history.
+- **AI ground cues:** when an Android client resumes after a rendering gap
+  above 0.30 seconds, `bot-motion-polish` resets velocity baselines and
+  expired cue styling instead of fabricating a sprint, skid, or pivot. Its
+  server-owned AI navigation, animation tracks and original trail survive.
+- **Impact reaction fairness:** the local survivor retains priority, then
+  nearby human and AI survivors compete equally for the existing Medium 2 /
+  High 3 shock-reaction actor limits. Inactive, eliminated and streamed-out
+  rigs remain ineligible, with the same cooldowns and Beam cap.
+- **Character beams:** existing Dodge/Shock/Landing Beam instances now have
+  a four-stop colour gradient and a sharpened-to-soft opacity envelope,
+  instead of plain two-stop neon. The existing per-stroke Debris cleanup
+  and 12 concurrent-Beam cap are unchanged.
+
+**Physical acceptance needed:**
+1. Film Showtime robot/shuffle/orbit/wave transitions and two holograms
+   at 30/60 FPS; confirm silhouettes never pop or appear detached from
+   the head and limb detailing. Toggle Reduced Motion and repeat.
+2. On Android, background/resume mid-bot sprint, mid-pivot, and during a
+   frozen dance pose. Confirm no false ground effects, ghost trails or
+   catch-up jumps. Check Low, Medium and High.
+3. In Studio with one human and three AI, fire Meteors/Bombs near bots;
+   verify nearby bot and human pressure ribbons are coherent and stay
+   readable against warning radii. With several human players present,
+   verify visible near-camera bots are not starved by iteration order.
+4. Run successive rounds/respawns/StreamingEnabled transitions and
+   capture live Parts/Lights/Effects budgets; compare device FPS,
+   thermals and GPU overdraw before assigning any visual-quality rating.
+
+The reported quality target remains **at least 9/10 against premium
+reference footage**; these commits are implementation evidence, not a
+certified rendered-art score.
+
 ## Four-map hero finish — 14 October 2026 (unreleased)
 
 The existing `ArenaSignatureKit` now constructs **two extra machined
