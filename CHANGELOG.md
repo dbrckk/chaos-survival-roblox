@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-15 — Native Roblox VFX photo/video review (unreleased)
+
+- Added a small opt-in PHOTO menu available on a loaded client: live Roblox-engine screenshots without UI, screenshots with HUD, and an eight-second native video of rendered gameplay (supported devices only).
+- Added a one-shot **NEXT IMPACT** capture: a server-reported hazard impact must be in range and on-camera before a real engine frame is taken, without spawning or simulating any effects. The action is disarmed after a round.
+- Roblox prompts the player before saving any photo or video to their in-app Captures gallery. Nothing is silently saved, uploaded, sent to GitHub or shared with ChatGPT.
+- Documented Android capture and export to device storage for independent visual QA. **No genuine screenshot was produced by GitHub CI**, and this branch still requires an explicitly deployed staging candidate plus real Roblox client/device review.
+
 ## 2026-10-15 — Directional dodge and visible reaction budget (unreleased)
 
 - Turned existing near-miss avatar dodge beams into velocity-aligned afterimages for strafing, retreating and sprinting. Slow or stationary characters keep a neutral silhouette; attachment, Beam and lifetime caps remain unchanged.
