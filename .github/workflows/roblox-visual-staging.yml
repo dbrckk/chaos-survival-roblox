@@ -165,6 +165,22 @@ jobs:
             --data-binary @build/ChaosSurvival.rbxlx \
             "https://apis.roblox.com/universes/v1/$STAGING_UNIVERSE/places/$STAGING_PLACE/versions?versionType=Published")"
           if [ "$http_status" != "200" ]; then
+            # Report only non-sensitive Roblox error fields; never display the API key.
+            python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          try:
+              payload = json.loads(Path("build/staging-publish-response.json").read_text())
+              if not isinstance(payload, dict):
+                  raise ValueError("unexpected response shape")
+              for field in ("code", "message"):
+                  value = payload.get(field)
+                  if isinstance(value, str):
+                      safe = value.replace(os.environ.get("STAGING_API_KEY", ""), "[REDACTED]") if os.environ.get("STAGING_API_KEY") else value
+                      print(f"Roblox {field}: {safe[:400].replace(chr(10), ' ')}")
+          except (ValueError, OSError, UnicodeError):
+              print("Roblox response is not a readable JSON error object.")
+          PY
             echo "::error::Staging publish returned HTTP $http_status. No production API was called."
             exit 1
           fi
