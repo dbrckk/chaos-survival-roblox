@@ -136,6 +136,12 @@ jobs:
           Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
           Write-Host "Official Roblox Studio preinstalled and signature verified."
+          # Studio opens on the first interactive RDP sign-in, without storing
+          # Roblox credentials or trying to bypass account authentication.
+          $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+          New-Item -Path $runKey -Force | Out-Null
+          Set-ItemProperty -Path $runKey -Name "ChaosVisualQAStudio" -Value ('"' + $studio + '"')
+          Write-Host "Studio automatic launch configured for interactive Windows sign-in."
           Write-Host "No Roblox account authentication is attempted by the workflow."
 
       - name: Enable secure Windows RDP only from Tailscale
