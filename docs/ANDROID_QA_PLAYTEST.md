@@ -2,6 +2,52 @@
 
 This is a **hands-on test plan, not proof of completion**. Do not mark a check as passed unless it was observed on the actual tested PR #19 candidate based on PR #18. The existing public Roblox place may run an older published build: it cannot certify an unpublished pull request.
 
+## Genuine native Roblox evidence capture — 15 October 2026
+
+The `visual-review-capture.client.lua` script creates a small **PHOTO**
+launcher on the client after player data loads. It operates on **live Roblox
+rendered frames**, not a generated illustration, mockup, offline shader
+simulator, or Roblox Open Cloud engine-spec output. No screenshots or
+videos are available merely because this code exists in a GitHub branch.
+
+**Only inspect a playable, explicitly staged/published candidate whose
+SHA matches the commit being assessed.** The GitHub branch and Open Cloud
+test-place execution do not automatically publish that candidate for the
+Android Roblox app. Do not overwrite the live game to obtain evidence.
+
+On a supported Android build of that exact candidate:
+
+1. Launch the test experience in the **Roblox Android app**, play a round,
+   and tap **PHOTO** (small button at the upper left).
+2. Tap **PHOTO 3D** to record a frame with game interface removed, or
+   **PHOTO + HUD** to inspect gameplay readability and the touch UI.
+3. Tap **PROCHAIN IMPACT** before a Meteor/Bomb impact. It waits until a
+   server-reported impact is in front of the camera and near the viewport,
+   then captures the *real* visible VFX after a short render delay. It is
+   one-shot, does not spawn effects, and disarms on round exit.
+4. Tap **VIDEO 8 SEC** to record real-time animation and effect movement
+   using Roblox's native video capture API, if supported by the device.
+5. Accept Roblox's **save to Captures gallery** prompt for any item worth
+   keeping. Captures are **not** automatically uploaded to GitHub, this
+   chat, or another service.
+6. To place that evidence in Android Photos, use the Roblox in-game menu
+   **Captures → select screenshot/video → Save to device**; then attach
+   the original file in the ChatGPT conversation. The Captures gallery and
+   the Android Photos gallery are distinct. Recording sound is not assured
+   by a screenshot; submit an original video for motion analysis.
+
+If an API is unsupported, use the app's own menu **Captures** to record a
+real screenshot/video, or the Android screen recorder. The same exact-SHA
+candidate requirement still applies.
+
+**Required review footage:** four-map wide/close views, at least one
+Meteor, Bomb, Tornado, Freeze and Lava activation; clear safety warnings
+and invisible/offscreen VFX gating; humans and AI; R6/R15 movement,
+Showtime dancing; Low/High comparisons; and 30-minute cleanup/soak.
+Record the graphics tier, Reduce Motion, device model and whether any
+capture failed. Do not mark this checklist visually accepted from CI
+syntax/build or Open Cloud engine-test success alone.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
