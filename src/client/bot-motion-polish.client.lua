@@ -157,7 +157,12 @@ task.spawn(function()
         local q = tier()
         task.wait(q.DecorUpdateInterval or math.max(1 / 30, q.UpdateInterval))
         local now = os.clock()
-        local dt = math.clamp(now - lastSampleAt, 1 / 120, 0.25)
+        local sampleGap = now - lastSampleAt
+        local dt = math.clamp(sampleGap, 1 / 120, 0.25)
+        -- Suspended/backgrounded Android clients can resume with stale bot
+        -- velocity samples. Motion-timed effects must never interpret that
+        -- gap as an instantaneous launch, brake or pivot.
+        local continuousSample = sampleGap >= 0 and sampleGap <= 0.30
         lastSampleAt = now
         local reduceMotion = player:GetAttribute("ReduceMotion") == true
         local botProfile = BotRules.profile(q.Name, reduceMotion)
@@ -190,7 +195,15 @@ task.spawn(function()
             local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
             local previousVelocity = state.lastVelocity
             state.lastVelocity = velocity
-            state.lastSpeed += (speed - state.lastSpeed) * 0.22
+            if not continuousSample then
+                -- Reset cached motion immediately. Keep the existing
+                -- server-owned bot Trail and its original native animation.
+                state.lastSpeed = speed
+                state.cueKind = nil
+                state.cueUntil = 0
+            else
+                state.lastSpeed += (speed - state.lastSpeed) * 0.22
+            end
 
             local distance = viewerPosition
                 and (state.root.Position - viewerPosition).Magnitude or math.huge
@@ -266,7 +279,7 @@ task.spawn(function()
                 end
             end
 
-            if emissions < botProfile.MaxPerScan
+            if continuousSample and emissions < botProfile.MaxPerScan
                 and now - lastGlobalCueAt >= 0.55
                 and now - state.lastCueAt >= botProfile.Cooldown
                 and viewerPosition ~= nil and onScreen
