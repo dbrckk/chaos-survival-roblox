@@ -1,5 +1,6 @@
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -53,6 +54,14 @@ end
 
 local function showHazardHologram(arena, state)
     if not arena or not arena.Parent or not state then
+        clearHazardHologram()
+        return
+    end
+
+    -- The top HUD already owns ready-phase hazard identification on touch.
+    -- A world-centered billboard competes with the player and escape lanes.
+    -- Keep it only for desktop spectacle, without affecting disaster cues.
+    if UserInputService.TouchEnabled then
         clearHazardHologram()
         return
     end
