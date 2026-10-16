@@ -159,15 +159,17 @@ local function applyMood(duration)
 
     local colorShiftScale = quality.Name == "Low" and 0.42
         or (quality.Name == "Medium" and 0.72 or 1)
-    local bloomBase = quality.Name == "Low" and 0.045
-        or (quality.Name == "Medium" and 0.11 or 0.18)
+    -- A small halo is enough for neon; high settings previously made
+    -- cyan trim bleed over silhouettes, especially on OLED phones.
+    local bloomBase = quality.Name == "Low" and 0.035
+        or (quality.Name == "Medium" and 0.075 or 0.135)
     local bloomPhaseScale = phase == "round" and 0.16
         or (phase == "ready" and 0.52 or 1)
     local bloomIntensity = bloomBase * bloomPhaseScale
     local bloomSize = quality.Name == "Low" and 12
         or (quality.Name == "Medium" and 18 or 24)
-    local bloomThreshold = phase == "round" and 1.42
-        or (phase == "ready" and 1.30 or 1.18)
+    local bloomThreshold = phase == "round" and 1.48
+        or (phase == "ready" and 1.38 or 1.30)
     local depthQualityScale = quality.Name == "Low" and 0
         or (quality.Name == "Medium" and 0.45 or 1)
     local depthPhaseScale = phase == "round" and 0
