@@ -58,11 +58,12 @@ Roblox reference:
 
 The workflow [Roblox Visual Staging (isolated)](../.github/workflows/roblox-visual-staging.yml)
 only automatically triggers when relevant source or this workflow changes
-on `feat/visual-identity-hero-landmarks-20261008`. After initial setup,
-push a **new approved source change** to this branch or explicitly
-dispatch that workflow from the branch if GitHub offers that workflow in
-Actions. The user or assistant must not assume a configuration-only change
-triggers a workflow automatically.
+on `main`. After initial setup, merge an **approved source change** to
+`main` or explicitly dispatch the workflow from `main` in GitHub Actions.
+The workflow must not automatically deploy unmerged feature branches. A
+configuration-only change outside the declared paths does not trigger a
+staging publication. The release commit shown in the in-game staging stamp
+must match the current deployed `main` candidate before collecting evidence.
 
 Preflight: verifies all five inputs: staging Universe, staging Place,
 staging API key, production Universe, production Place. Missing stage
@@ -115,6 +116,6 @@ stability, and only then score 3D, VFX, animation and game feeling.
 This workflow has **no write access to the public experience**. For
 staging rollback use the staging place's Version History from Creator
 Dashboard. The public publish workflow retains its independent explicit
-certification and confirmation gates. Do not merge PR #19, change the
-production place variables or change the staging experience's audience
-without a separate decision.
+certification and confirmation gates. Do not change production place variables or the staging experience's
+audience without a separate decision. PR #19 and its integration PR #18
+were merged on 16 October 2026; new staging builds follow `main` only.

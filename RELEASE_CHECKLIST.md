@@ -8,7 +8,7 @@ All items below must be green on the **exact release commit**. The checkboxes de
 
 - [ ] Build Validation succeeds on release SHA.
 - [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
-- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 67 specs).
+- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 72 specs).
 - [ ] Rojo produces a non-empty place file.
 - [ ] Luau syntax validation succeeds.
 - [ ] Fair-play monetization guard succeeds.
@@ -80,7 +80,7 @@ Record:
 
 ## Unified visual candidate acceptance (#12–#16)
 
-- [ ] Build Validation and Roblox Open Cloud Engine Tests both pass on the exact candidate SHA (67 uniquely assigned engine specs).
+- [ ] Build Validation and Roblox Open Cloud Engine Tests both pass on the exact candidate SHA (72 uniquely assigned engine specs).
 - [ ] Studio confirms a full ordered intermission > ready > round > result journey on a single client, without double-counting repeated states.
 - [ ] Authenticated Studio E2E checks Showtime 3D stage identity, static part safety and hidden ROUND / visible RESULT transitions.
 - [ ] Studio confirms six R6/R15 emotes and no conflict with Settings or locomotion.
