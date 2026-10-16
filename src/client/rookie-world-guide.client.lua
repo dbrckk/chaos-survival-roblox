@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalizationService = game:GetService("LocalizationService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
@@ -328,11 +329,18 @@ local function refresh()
     end
 
     if currentState.phase == "ready" then
-        mark(
-            nearestPart(arenaPads()),
-            CoreLocalization.text(localeId, "ESCAPE_PAD"),
-            Color3.fromRGB(120, 225, 255)
-        )
+        -- Touch players already see the arena pads and top HUD guidance.
+        -- A world-space AlwaysOnTop billboard during the opening countdown
+        -- obscured the avatar and other players' escape paths.
+        if UserInputService.TouchEnabled then
+            clearMarker()
+        else
+            mark(
+                nearestPart(arenaPads()),
+                CoreLocalization.text(localeId, "ESCAPE_PAD"),
+                Color3.fromRGB(120, 225, 255)
+            )
+        end
         return
     end
 
