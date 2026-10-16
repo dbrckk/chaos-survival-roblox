@@ -102,8 +102,15 @@ local function renderRuntimeTelemetry()
     end
 
     local entry = "LOBBY"
-    -- Players are teleported for READY, before RoundParticipant is set.
-    if phase == "ready" or phase == "round" then
+    -- RoundParticipant is not set until a round actually starts, but
+    -- eliminated players can respawn in the lobby before it finishes.
+    -- Never report CLEAR for spectators or eliminated avatars.
+    if phase == "round" and player:GetAttribute("RoundEliminated") == true then
+        entry = "OUT"
+    elseif phase == "round"
+        and player:GetAttribute("RoundParticipant") ~= true then
+        entry = "SPECTATE"
+    elseif phase == "ready" or phase == "round" then
         local clear = player:GetAttribute("ArenaSpawnClear")
         entry = clear == true and "CLEAR"
             or (clear == false and "BLOCKED" or "CHECKING")
@@ -504,6 +511,7 @@ player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
 for _, attribute in ipairs({
     "DataLoaded", "DataPersistenceAvailable", "DataSaveConflict",
     "LastSaveFailed", "ArenaSpawnClear", "LobbySpawnRecovered",
+    "RoundParticipant", "RoundEliminated",
 }) do
     player:GetAttributeChangedSignal(attribute):Connect(renderRuntimeTelemetry)
 end
