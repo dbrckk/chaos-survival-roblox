@@ -510,6 +510,42 @@ local function teleportToArena(player, index)
     return true
 end
 
+-- Survivors must be back in the safe lobby before the next map hot-swap.
+-- A finished round is the ONLY time this transition runs; hazards, physics
+-- and elimination during an active round remain server authoritative.
+local function returnSurvivorToLobby(player)
+    if player.Parent ~= Players then return false end
+
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local lobby = generated and generated:FindFirstChild("Lobby")
+    local floor = lobby and lobby:FindFirstChild("Floor")
+    local spawn = lobby and lobby:FindFirstChild("LobbySpawn")
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+
+    if not floor or not floor:IsA("BasePart")
+        or not spawn or not spawn:IsA("SpawnLocation")
+        or not humanoid or humanoid.Health <= 0
+        or not root or not root:IsA("BasePart") then
+        return false
+    end
+
+    local floorTop = floor.Position.Y + floor.Size.Y * 0.5
+    local clearance = math.max(3.5, humanoid.HipHeight + root.Size.Y * 0.5 + 1.0)
+    character:PivotTo(CFrame.new(
+        spawn.Position.X,
+        floorTop + clearance,
+        spawn.Position.Z
+    ) * spawn.CFrame.Rotation)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    root.Anchored = false
+    if humanoid.Sit then humanoid.Sit = false end
+    if humanoid.PlatformStand then humanoid.PlatformStand = false end
+    return true
+end
+
 local function ensureContestantReady(player, timeoutSeconds)
     local deadline = os.clock() + math.max(0.5, tonumber(timeoutSeconds) or 4)
 
@@ -1945,6 +1981,10 @@ while true do
         if p.Parent == Players then
             p:SetAttribute("RoundParticipant", false)
             p:SetAttribute("RoundEliminated", false)
+            -- Preserve earned progress and results, then return surviving
+            -- characters to the lobby before the next arena is rebuilt.
+            -- Eliminated characters keep Roblox's ordinary respawn handling.
+            returnSurvivorToLobby(p)
         end
     end
 end
