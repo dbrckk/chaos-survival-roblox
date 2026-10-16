@@ -472,7 +472,7 @@ describe("Arena skyline visual identity", function()
                 end
             end
         end
-        expect(ArenaSilhouetteAccentKit.count("Low")).toBe(2)
+        expect(ArenaSilhouetteAccentKit.count("Low")).toBe(3)
         expect(ArenaSilhouetteAccentKit.count("Medium")).toBe(3)
         expect(ArenaSilhouetteAccentKit.count("High")).toBe(4)
         holder:Destroy()
