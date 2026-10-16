@@ -364,7 +364,9 @@ local function addOutboardSafetyStations(base, theme, tier, variant)
         if variant == "Towers" then
             bodySize = Vector3.new(4.5, high and 23 or 17, 4.5)
             material = Enum.Material.CorrodedMetal
-            shape = Enum.PartType.Cylinder
+            -- Use a vertical rectangular exhaust body; Roblox cylinders use
+            -- their X axis as the cylinder axis and would lay this tall stack sideways.
+            shape = nil
         elseif variant == "Crossroads" then
             bodySize = Vector3.new(3.0, high and 16 or 12, 5.4)
             material = Enum.Material.Concrete
