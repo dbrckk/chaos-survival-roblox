@@ -192,6 +192,30 @@ Validate on the isolated staging experience with a real Android device:
 This is cosmetic/client-only: no server physics, scoring, DataStore ownership,
 paid content or public production publish is affected.
 
+### Multi-survivor lobby return regression
+
+At round end, living contestants previously returned to the *same* lobby
+SpawnLocation world position, causing R6/R15 avatars to overlap. The server
+now lays out separate return slots around that same native spawn, using the
+actual flat lobby floor, spawn orientation and collidable raised scenery.
+The native SpawnLocation remains unchanged for new connections and respawns.
+
+Acceptance with authenticated clients:
+
+- Have 2–16 humans (or as many authorised Studio test clients as available)
+  survive the same round. After RESULTS, they should stand at **separate**
+  positions on the lobby floor, not occupy one point or get trapped inside
+  the central stage, decorative pylons or the edge.
+- Rotate four arenas across successive rounds; verify nobody remains in
+  the soon-to-be-rebuilt arena when a round ends.
+- Include R6 and R15 rigs, mid-round deaths and spectator respawns. This
+  fan-out applies only to living contestants and must not interfere with
+  Roblox's normal respawn logic.
+- Check unexpected join/leave and extreme occupancy. When the lobby lacks
+  enough available clearance, the native spawn is the conservative fallback.
+- Log actual device, SHA, safe return evidence and check FPS/hitches over
+  30 minutes. Engine geometry tests alone do not certify live multiplayer.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
