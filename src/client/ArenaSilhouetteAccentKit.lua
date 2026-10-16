@@ -2,7 +2,10 @@
 -- These props are purely local art: they cannot collide, touch or be queried.
 local ArenaSilhouetteAccentKit = {}
 
-local LIMITS = { Low = 2, Medium = 3, High = 4 }
+-- A third distinct architectural feature costs only one local Part per
+-- Low-tier arena and makes the authored skyline readable without bloom.
+-- Optic / second baffle / elevated route / opposing orbital petal.
+local LIMITS = { Low = 3, Medium = 3, High = 4 }
 
 local NAMES = {
     Classic = {"SurveyCounterweight", "SurveyDiagonalBrace", "SurveyOpticDrum", "SurveySignalVane"},
