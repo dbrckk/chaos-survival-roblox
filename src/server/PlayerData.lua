@@ -205,6 +205,23 @@ function PlayerData.load(player)
         savedOrError = "DataStore session ownership could not be acquired"
     end
 
+    -- UpdateAsync can finish after PlayerRemoving. If that request claimed
+    -- a session, the departing player never reaches active/player save paths.
+    -- Release the just-acquired token now; otherwise a rapid rejoin waits
+    -- for forced handoff and can lose its initial persistence window.
+    if player.Parent ~= Players then
+        if ok then
+            sessionTokens[player] = sessionToken
+            local released = PlayerData.releaseSession(player)
+            if not released then
+                warn("Abandoned load session could not be released:", player.UserId)
+            end
+            sessionTokens[player] = nil
+        end
+        loading[player] = nil
+        return false
+    end
+
     local data
     if ok then
         sessionTokens[player] = sessionToken
@@ -218,11 +235,6 @@ function PlayerData.load(player)
             player.UserId,
             savedOrError
         )
-    end
-
-    if player.Parent ~= Players then
-        loading[player] = nil
-        return false
     end
 
     applyAttributes(player, data)
