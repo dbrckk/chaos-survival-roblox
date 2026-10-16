@@ -141,6 +141,30 @@ and Low/Medium/High plus ReduceMotion settings. Record device,
 commit and graphics tier. Compare clarity, clipping, aliasing, motion
 stability, and only then score 3D, VFX, animation and game feeling.
 
+### Cinematic-depth regression check (mobile performance)
+
+The cinematic skyline is **client-only**. This build coalesces requests to
+recreate it from map-ready, VFX-tier, ReduceMotion and round-phase signals
+within the same scheduler turn. The content, arena-specific architecture and
+per-tier geometry remain unchanged.
+
+In isolated staging, verify the following with a physical Android device:
+
+- Join with slow/streaming map replication: no missing architecture or
+  duplicate `ArenaCinematicDepthLocal` geometry after the map appears.
+- Rotate through Classic, Towers, Crossroads and Orbital. Confirm the
+  distant silhouettes match each arena and do not flash or pop twice at
+  the same READY/ROUND boundary.
+- Switch graphics Low → Medium → High → Low and ReduceMotion on/off.
+  Geometry should stabilize after each setting change; sky traffic
+  should remain absent in active ROUND and with ReduceMotion.
+- Observe FPS, worst-frame duration and visual budget in PHOTO + HUD,
+  then repeat for 30 minutes. Compare to the previous staging candidate;
+  a successful build alone does **not** prove an actual FPS improvement.
+
+This regression check is separate from the authenticated Studio four-player
+gate, DataStore rejoin validation and release certification.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
