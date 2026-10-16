@@ -117,7 +117,9 @@ next to the `STAGING · <commit-prefix>` watermark when using PHOTO + HUD:
 Orange text warns about sub-30 FPS, graphics over budget, blocked entry,
 temporary saves, save retry or session conflict. This HUD does not fetch
 private data, expose tokens/IDs, make DataStore writes or add a frame listener.
-It samples existing replicated state every four seconds and has **no effect**
+The expensive visual budget snapshot is sampled every four seconds, while
+READY/ROUND and save/spawn attribute changes **refresh the status text
+immediately**, so short READY phases are not missed. This has **no effect**
 on production builds without a valid ephemeral staging marker. Save one
 PHOTO + HUD in the lobby, one in the arena, and one after rejoining for
 diagnostics; record the full SHA in the GitHub staging publish artifact.
