@@ -166,6 +166,7 @@ local lastSurvivorAnnounced = false
 local vfxTierName = VfxQuality.initialTier(UserInputService.TouchEnabled)
 local vfxTier = VfxQuality.get(vfxTierName)
 local frameTimeAccumulator = 0
+local sampleWorstFrameDt = 0
 local frameSampleCount = 0
 local qualitySampleClock = 0
 local qualityCandidate = nil
@@ -664,6 +665,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     pulseClock += dt
     frameTimeAccumulator += dt
+    sampleWorstFrameDt = math.max(sampleWorstFrameDt, dt)
     frameSampleCount += 1
     qualitySampleClock += dt
 
@@ -711,6 +713,11 @@ RunService.RenderStepped:Connect(function(dt)
     if qualitySampleClock >= 2.5 and frameSampleCount > 0 then
         local averageDt = frameTimeAccumulator / frameSampleCount
         local averageFps = averageDt > 0 and (1 / averageDt) or 60
+        -- Reuse this authoritative existing frame sampler for staging QA.
+        -- Avoid a second RenderStepped owner on weaker Android devices.
+        player:SetAttribute("ClientObservedFps", math.floor(math.clamp(averageFps, 0, 240) + 0.5))
+        player:SetAttribute("ClientObservedWorstFrameMs",
+            math.floor(math.clamp(sampleWorstFrameDt * 1000, 0, 2000) + 0.5))
         local nextTierName = VfxQuality.nextTier(vfxTierName, averageFps)
 
         if nextTierName == vfxTierName then
@@ -747,6 +754,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
 
         frameTimeAccumulator = 0
+        sampleWorstFrameDt = 0
         frameSampleCount = 0
         qualitySampleClock = 0
     end
