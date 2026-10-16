@@ -50,7 +50,9 @@ stampGui.Parent = player:WaitForChild("PlayerGui")
 local stampLabel = Instance.new("TextLabel")
 stampLabel.Name = "StagingCommit"
 stampLabel.AnchorPoint = Vector2.new(0, 1)
-stampLabel.Position = UDim2.new(0, 10, 1, -10)
+-- Keep commit provenance above the bottom-centred runtime panel. On
+-- portrait Android both occupied the same bottom strip and overlapped.
+stampLabel.Position = UDim2.new(0, 10, 1, -80)
 stampLabel.Size = UDim2.fromOffset(190, 24)
 stampLabel.BackgroundColor3 = UITheme.Colors.Panel
 stampLabel.BackgroundTransparency = 0.35
@@ -255,10 +257,14 @@ local function layoutForCamera()
     launcher.Position = UDim2.fromOffset(left, top)
     panel.Position = UDim2.fromOffset(left, top + 51)
     toast.Position = UDim2.fromOffset(left, top + 51)
-    -- Keep the panel narrow enough for portrait Android layouts.
+    -- Keep the capture menu and HUD diagnostics within narrow viewports.
     local width = mobile.veryNarrow and 182 or 194
     panel.Size = UDim2.fromOffset(width, 258)
     toast.Size = UDim2.fromOffset(width, 34)
+    telemetry.Size = UDim2.fromOffset(
+        math.min(300, math.max(120, viewport.X - 20)),
+        60
+    )
 end
 
 local function bindCamera()
