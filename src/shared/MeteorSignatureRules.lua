@@ -5,8 +5,8 @@ local NONE = {MaxTrails = 0, Range = 0, Lifetime = 0}
 local PROFILES = {
     -- A single near-camera comet silhouette makes Meteor Shower legible
     -- even after the adaptive tier drops on an Android phone.
-    Low = {MaxTrails = 1, Range = 85, Lifetime = 0.10},
-    Medium = {MaxTrails = 3, Range = 115, Lifetime = 0.15},
+    Low = {MaxTrails = 1, Range = 85, Lifetime = 0.17},
+    Medium = {MaxTrails = 3, Range = 115, Lifetime = 0.20},
     High = {MaxTrails = 6, Range = 165, Lifetime = 0.23},
 }
 
@@ -22,11 +22,11 @@ local STYLES = {
             NumberSequenceKeypoint.new(1, 0),
         }),
         Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.34),
-            NumberSequenceKeypoint.new(0.50, 0.58),
+            NumberSequenceKeypoint.new(0, 0.23),
+            NumberSequenceKeypoint.new(0.50, 0.51),
             NumberSequenceKeypoint.new(1, 1),
         }),
-        LightEmission = 0.54,
+        LightEmission = 0.58,
         Span = 0.16,
     },
     Medium = {
