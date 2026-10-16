@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -291,9 +292,12 @@ local function updateDynamicIndicators()
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    shrinkingActive = state
+    -- A malformed snapshot or disaster list must not crash a guidance UI.
+    local ids = type(state) == "table"
+        and type(state.disasterIds) == "table" and state.disasterIds or {}
+    shrinkingActive = type(state) == "table"
         and state.phase == "round"
-        and table.find(state.disasterIds or {}, "ShrinkingArena") ~= nil
+        and table.find(ids, "ShrinkingArena") ~= nil
 end)
 
 task.spawn(function()
@@ -307,6 +311,46 @@ task.spawn(function()
     end
 end)
 
+-- Readiness and replication order differ on Android streaming:
+-- Arena, Base, Mechanics, pads, marker and impulse attributes may arrive
+-- on separate scheduler turns. Track each level, and release old signals.
+local watchedMap = nil
+local watchedArena = nil
+local disconnectBaseWatch = nil
+local disconnectPadAttributes = nil
+local rootRemovedConnection = nil
+local refreshPending = false
+
+local function scheduleRebuild()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        -- Rebuild using the CURRENT map; queued callbacks never capture
+        -- an old arena or a pad removed during a round transition.
+        rebuild()
+    end)
+end
+
+local function bindMechanics(mechanics)
+    if disconnectPadAttributes then
+        disconnectPadAttributes()
+        disconnectPadAttributes = nil
+    end
+
+    if mechanics then
+        disconnectPadAttributes = MapVisualReadiness.watchChildrenAttributes(
+            mechanics,
+            {"ArenaMobilityPad", "ImpulseX", "ImpulseY", "ImpulseZ"},
+            scheduleRebuild
+        )
+    else
+        -- Do not retain stale floating arrows if mechanics stream out.
+        clear()
+    end
+    scheduleRebuild()
+end
+
 local function bindArena(arena)
     if arenaAddedConnection then
         arenaAddedConnection:Disconnect()
@@ -316,27 +360,24 @@ local function bindArena(arena)
         arenaRemovedConnection:Disconnect()
         arenaRemovedConnection = nil
     end
+    watchedArena = arena
 
     if not arena then
+        bindMechanics(nil)
         return
-    end
-
-    local mechanics = arena:FindFirstChild("Mechanics")
-    if mechanics then
-        task.defer(rebuild)
     end
 
     arenaAddedConnection = arena.ChildAdded:Connect(function(child)
         if child.Name == "Mechanics" then
-            task.defer(rebuild)
+            bindMechanics(child)
         end
     end)
-
     arenaRemovedConnection = arena.ChildRemoved:Connect(function(child)
         if child.Name == "Mechanics" then
-            clear()
+            bindMechanics(arena:FindFirstChild("Mechanics"))
         end
     end)
+    bindMechanics(arena:FindFirstChild("Mechanics"))
 end
 
 local function bindGeneratedMap(root)
@@ -344,42 +385,50 @@ local function bindGeneratedMap(root)
         rootConnection:Disconnect()
         rootConnection = nil
     end
+    if rootRemovedConnection then
+        rootRemovedConnection:Disconnect()
+        rootRemovedConnection = nil
+    end
+    if disconnectBaseWatch then
+        disconnectBaseWatch()
+        disconnectBaseWatch = nil
+    end
     bindArena(nil)
+    watchedMap = root
 
-    if not root then
-        clear()
-        return
-    end
+    if not root then return end
 
-    local arena = root:FindFirstChild("Arena")
-    if arena then
-        bindArena(arena)
-    end
-
+    -- Base and VariantId are needed for the four distinct center motifs.
+    disconnectBaseWatch = MapVisualReadiness.watch(
+        root, "Arena", "Base", scheduleRebuild
+    )
     rootConnection = root.ChildAdded:Connect(function(child)
         if child.Name == "Arena" then
             bindArena(child)
         end
     end)
+    rootRemovedConnection = root.ChildRemoved:Connect(function(child)
+        if child == watchedArena then
+            bindArena(root:FindFirstChild("Arena"))
+        end
+    end)
+    bindArena(root:FindFirstChild("Arena"))
+    scheduleRebuild()
 end
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        task.defer(bindGeneratedMap, child)
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
+        bindGeneratedMap(child)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bindGeneratedMap(nil)
+    if child == watchedMap then
+        bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
     end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 
-local existing = workspace:FindFirstChild("GeneratedMap")
-if existing then
-    task.defer(bindGeneratedMap, existing)
-end
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))

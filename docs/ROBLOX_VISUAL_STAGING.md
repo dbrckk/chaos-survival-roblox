@@ -192,6 +192,32 @@ Validate on the isolated staging experience with a real Android device:
 This is cosmetic/client-only: no server physics, scoring, DataStore ownership,
 paid content or public production publish is affected.
 
+### Mobility-pad route markers after delayed replication
+
+The client-only arena route-arrow renderer now observes Base, VariantId,
+Mechanics, every mobility pad and each pad's marker/impulse attributes.
+Those items can replicate independently on a slow Android connection.
+Once attributes arrive, guidance is rebuilt without needing a graphics-tier
+change or relaunch. Old signals and geometry are disposed on map change.
+
+Verify in isolated Roblox Android staging:
+
+- On all four arenas, look for center direction motifs plus route arrows
+  adjacent to each visible mobility pad after the map fully streams in.
+- Join during slow replication, with network interruptions, or after a
+  round changes arena: guidance must appear/reappear without toggling
+  graphics or restarting the Roblox client.
+- In Towers, vertical route beacons must match actual lift-pad positions;
+  in Classic/Crossroads/Orbital, chevrons must point using the server
+  pad's impulse attributes, even when they arrive after its BasePart.
+- During ShrinkingArena, arrows should follow moving pads. Check Low,
+  Medium, High, spectator/elimination transitions and ReduceMotion.
+- PHOTO + HUD and 30-minute Android FPS/memory soak remain the release
+  evidence; green CI alone does not certify these device behaviors.
+
+No server collisions, mobility impulses, scoring, DataStore or monetization
+were changed by this client-only guidance update.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
