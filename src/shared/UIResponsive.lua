@@ -28,8 +28,8 @@ end
 function UIResponsive.mobileProfile(viewport)
     local c = UIResponsive.classify(viewport, true)
 
-    local topHeight = c.tinyHeight and 56 or (c.compactHeight and 60 or 68)
-    local timerSize = c.tinyHeight and 44 or (c.compactHeight and 48 or 54)
+    local topHeight = c.tinyHeight and 46 or (c.compactHeight and 50 or 54)
+    local timerSize = c.tinyHeight and 42 or (c.compactHeight and 44 or 46)
     local dockHeight = c.tinyHeight and 52 or 58
     local buttonHeight = c.tinyHeight and 44 or 48
     local coachHeight = c.tinyHeight and 40 or (c.compactHeight and 42 or 44)
@@ -49,7 +49,9 @@ function UIResponsive.mobileProfile(viewport)
         tinyHeight = c.tinyHeight,
         compactHeight = c.compactHeight,
         wide = c.wide,
-        topWidthScale = c.veryNarrow and 0.96 or (c.narrowWidth and 0.92 or (c.wide and 0.82 or 0.88)),
+        -- On wide touch screens, reserve distinct lanes for PHOTO (left)
+        -- and DASH (right) instead of extending the top header underneath.
+        topWidthScale = c.veryNarrow and 0.94 or (c.narrowWidth and 0.90 or (c.wide and 0.68 or 0.82)),
         topHeight = topHeight,
         timerSize = timerSize,
         dockWidthScale = c.veryNarrow and 0.98 or 0.94,
@@ -64,7 +66,7 @@ function UIResponsive.mobileProfile(viewport)
         panelWidthScale = c.veryNarrow and 0.96 or (c.narrowWidth and 0.92 or 0.84),
         panelBottomOffset = dockHeight + 12,
         toastWidthScale = c.veryNarrow and 0.92 or 0.84,
-        roundFocusWidthScale = c.veryNarrow and 0.90 or (c.narrowWidth and 0.82 or (c.wide and 0.52 or 0.68)),
+        roundFocusWidthScale = c.veryNarrow and 0.90 or (c.narrowWidth and 0.82 or (c.wide and 0.48 or 0.68)),
         roundFocusHeight = c.tinyHeight and 42 or 46,
         roundFocusBottomOffset = c.tinyHeight and 72 or (c.compactHeight and 84 or 96),
     }
