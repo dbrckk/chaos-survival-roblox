@@ -117,7 +117,6 @@ local rootRemovedConnection = nil
 local arenaAddedConnection = nil
 local arenaRemovedConnection = nil
 local disconnectPadAttributes = nil
-local padScanQueued = false
 
 local function clearAll()
     local pads = {}
@@ -141,6 +140,9 @@ local function bindMechanics(mechanics, token)
     releasePadWatch()
     if not mechanics or token ~= bindToken then return end
 
+    -- Queue ownership belongs to THIS mechanics folder, not a global flag:
+    -- an old deferred scan must never suppress the new map's first scan.
+    local padScanQueued = false
     local function schedulePadScan()
         if padScanQueued then return end
         padScanQueued = true
