@@ -12,6 +12,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local ViewportRules = require(ReplicatedStorage.Shared.VisualViewportRules)
+local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 
 local player = Players.LocalPlayer
@@ -60,6 +61,57 @@ stampLabel.TextColor3 = UITheme.Colors.Text
 stampLabel.Text = ""
 stampLabel.Parent = stampGui
 UITheme.addCorner(stampLabel, UITheme.Corners.Pill)
+
+-- Live on-device measurements appear only in the isolated test experience.
+-- Camera captures with HUD keep these numbers alongside the source SHA.
+local telemetry = Instance.new("TextLabel")
+telemetry.Name = "StagingRuntimeBudget"
+telemetry.AnchorPoint = Vector2.new(0.5, 1)
+telemetry.Position = UDim2.new(0.5, 0, 1, -10)
+telemetry.Size = UDim2.fromOffset(290, 42)
+telemetry.BackgroundColor3 = UITheme.Colors.Panel
+telemetry.BackgroundTransparency = 0.22
+telemetry.BorderSizePixel = 0
+telemetry.Font = Enum.Font.GothamBold
+telemetry.TextSize = 11
+telemetry.TextWrapped = true
+telemetry.TextColor3 = UITheme.Colors.Text
+telemetry.Text = "STAGING / profiling graphics..."
+telemetry.Parent = stampGui
+UITheme.addCorner(telemetry, UITheme.Corners.Medium)
+
+local performanceConnection = nil
+local function startPerformanceTelemetry()
+    if performanceConnection then return end
+    local frames = 0
+    local total = 0
+    local worst = 0
+    performanceConnection = RunService.RenderStepped:Connect(function(dt)
+        local interval = math.clamp(tonumber(dt) or 0, 0, 2)
+        frames += 1
+        total += interval
+        worst = math.max(worst, interval)
+        if total < 4 then return end
+
+        local fps = total > 0 and math.floor(frames / total + 0.5) or 0
+        local tier = tostring(player:GetAttribute("VfxQualityTier") or "High")
+        local budget = VisualBudgetRules.forTier(tier)
+        local counts = VisualBudgetRules.collect(workspace)
+        local status = VisualBudgetRules.status(tier, counts)
+        telemetry.Text = string.format(
+            "FPS %d | WORST %.0fms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
+            fps, worst * 1000, tier, status,
+            counts.Parts, budget.Parts,
+            counts.Lights, budget.Lights,
+            counts.Effects, budget.Effects
+        )
+        telemetry.TextColor3 = (fps < 30 or status ~= "OK")
+            and UITheme.Colors.Orange or UITheme.Colors.Text
+        frames = 0
+        total = 0
+        worst = 0
+    end)
+end
 
 local launcher = Instance.new("TextButton")
 launcher.Name = "VisualReviewPhoto"
@@ -417,6 +469,7 @@ local function activateStagingMarker(child)
         return
     end
     stagingEnabled = true
+    startPerformanceTelemetry()
     stampLabel.Text = "STAGING · " .. string.sub(value.Commit, 1, 10)
     stampGui.Enabled = true
     refresh()
