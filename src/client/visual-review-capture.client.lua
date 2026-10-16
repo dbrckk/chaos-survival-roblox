@@ -68,7 +68,7 @@ local telemetry = Instance.new("TextLabel")
 telemetry.Name = "StagingRuntimeBudget"
 telemetry.AnchorPoint = Vector2.new(0.5, 1)
 telemetry.Position = UDim2.new(0.5, 0, 1, -10)
-telemetry.Size = UDim2.fromOffset(290, 42)
+telemetry.Size = UDim2.fromOffset(300, 60)
 telemetry.BackgroundColor3 = UITheme.Colors.Panel
 telemetry.BackgroundTransparency = 0.22
 telemetry.BorderSizePixel = 0
@@ -95,16 +95,42 @@ local function startPerformanceTelemetry()
             local budget = VisualBudgetRules.forTier(tier)
             local counts = VisualBudgetRules.collect(workspace)
             local status = VisualBudgetRules.status(tier, counts)
+
+            -- Inspect replicated server facts only. No new remotes, timers
+            -- or frame samplers, and no save/session mutation from the UI.
+            local save = "LOADING"
+            if player:GetAttribute("DataSaveConflict") == true then
+                save = "CONFLICT"
+            elseif player:GetAttribute("DataPersistenceAvailable") == true then
+                save = player:GetAttribute("LastSaveFailed") == true
+                    and "RETRY" or "READY"
+            elseif player:GetAttribute("DataLoaded") == true then
+                save = "TEMP"
+            end
+
+            local entry = "LOBBY"
+            if player:GetAttribute("RoundParticipant") == true then
+                local clear = player:GetAttribute("ArenaSpawnClear")
+                entry = clear == true and "CLEAR"
+                    or (clear == false and "BLOCKED" or "CHECKING")
+            elseif player:GetAttribute("LobbySpawnRecovered") == true then
+                entry = "RESCUED"
+            end
+
             telemetry.Text = string.format(
-                "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
+                "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d\nENTRY %s   SAVE %s",
                 fps and tostring(fps) or "--",
                 worst and tostring(worst) or "--",
                 tier, status,
                 counts.Parts, budget.Parts,
                 counts.Lights, budget.Lights,
-                counts.Effects, budget.Effects
+                counts.Effects, budget.Effects,
+                entry, save
             )
-            telemetry.TextColor3 = ((fps and fps < 30) or status ~= "OK")
+            telemetry.TextColor3 = ((fps and fps < 30)
+                or status ~= "OK" or entry == "BLOCKED"
+                or save == "CONFLICT" or save == "TEMP"
+                or save == "RETRY")
                 and UITheme.Colors.Orange or UITheme.Colors.Text
         end
         telemetryRunning = false
