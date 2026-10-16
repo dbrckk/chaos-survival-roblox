@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -109,9 +110,14 @@ local function attach(pad)
 end
 
 local bindToken = 0
-local arenaConnection = nil
-local mechanicsAddedConnection = nil
-local mechanicsRemovedConnection = nil
+local watchedMap = nil
+local watchedArena = nil
+local rootAddedConnection = nil
+local rootRemovedConnection = nil
+local arenaAddedConnection = nil
+local arenaRemovedConnection = nil
+local disconnectPadAttributes = nil
+local padScanQueued = false
 
 local function clearAll()
     local pads = {}
@@ -123,93 +129,133 @@ local function clearAll()
     end
 end
 
+local function releasePadWatch()
+    if disconnectPadAttributes then
+        disconnectPadAttributes()
+        disconnectPadAttributes = nil
+    end
+    clearAll()
+end
+
 local function bindMechanics(mechanics, token)
-    if mechanicsAddedConnection then
-        mechanicsAddedConnection:Disconnect()
-        mechanicsAddedConnection = nil
-    end
-    if mechanicsRemovedConnection then
-        mechanicsRemovedConnection:Disconnect()
-        mechanicsRemovedConnection = nil
+    releasePadWatch()
+    if not mechanics or token ~= bindToken then return end
+
+    local function schedulePadScan()
+        if padScanQueued then return end
+        padScanQueued = true
+        task.defer(function()
+            padScanQueued = false
+            -- A stale deferred signal cannot attach pads to a newer map.
+            if token ~= bindToken or mechanics.Parent ~= watchedArena then
+                return
+            end
+
+            local eligible = {}
+            for _, pad in ipairs(mechanics:GetChildren()) do
+                if pad:IsA("BasePart")
+                    and pad:GetAttribute("ArenaMobilityPad") == true then
+                    eligible[pad] = true
+                    attach(pad)
+                end
+            end
+            local removed = {}
+            for pad in pairs(visuals) do
+                if not eligible[pad] then
+                    table.insert(removed, pad)
+                end
+            end
+            for _, pad in ipairs(removed) do
+                destroyVisual(pad)
+            end
+            -- A newly marked pad inherits current tier / overdrive state.
+            refreshRates()
+        end)
     end
 
-    if not mechanics or token ~= bindToken then
-        return
-    end
+    disconnectPadAttributes = MapVisualReadiness.watchChildrenAttributes(
+        mechanics, {"ArenaMobilityPad"}, schedulePadScan
+    )
+end
 
-    for _, child in ipairs(mechanics:GetChildren()) do
-        attach(child)
+local function bindArena(arena, token)
+    if arenaAddedConnection then
+        arenaAddedConnection:Disconnect()
+        arenaAddedConnection = nil
     end
+    if arenaRemovedConnection then
+        arenaRemovedConnection:Disconnect()
+        arenaRemovedConnection = nil
+    end
+    releasePadWatch()
+    watchedArena = arena
+    if not arena or token ~= bindToken then return end
 
-    mechanicsAddedConnection = mechanics.ChildAdded:Connect(function(child)
-        if token == bindToken then
-            attach(child)
+    arenaAddedConnection = arena.ChildAdded:Connect(function(child)
+        if token == bindToken and child.Name == "Mechanics" then
+            bindMechanics(child, token)
         end
     end)
-
-    mechanicsRemovedConnection = mechanics.ChildRemoved:Connect(function(child)
-        if visuals[child] then
-            destroyVisual(child)
+    arenaRemovedConnection = arena.ChildRemoved:Connect(function(child)
+        if token == bindToken and child.Name == "Mechanics" then
+            bindMechanics(arena:FindFirstChild("Mechanics"), token)
         end
     end)
+    bindMechanics(arena:FindFirstChild("Mechanics"), token)
 end
 
 local function bindGeneratedMap(generated)
     bindToken += 1
     local token = bindToken
 
-    if arenaConnection then
-        arenaConnection:Disconnect()
-        arenaConnection = nil
+    if rootAddedConnection then
+        rootAddedConnection:Disconnect()
+        rootAddedConnection = nil
     end
-    bindMechanics(nil, token)
-
-    clearAll()
-
-    if not generated then
-        return
+    if rootRemovedConnection then
+        rootRemovedConnection:Disconnect()
+        rootRemovedConnection = nil
     end
+    bindArena(nil, token)
+    watchedMap = generated
 
-    task.defer(function()
-        local arena = generated:FindFirstChild("Arena") or generated:WaitForChild("Arena", 5)
-        if token ~= bindToken or not arena then
-            return
+    if not generated then return end
+
+    -- Do not time out after 5 seconds. Under slow mobile streaming the Arena,
+    -- Mechanics folder and its pad marker attributes may all arrive later.
+    rootAddedConnection = generated.ChildAdded:Connect(function(child)
+        if token == bindToken and child.Name == "Arena" then
+            bindArena(child, token)
         end
-
-        local mechanics = arena:FindFirstChild("Mechanics")
-        if mechanics then
-            bindMechanics(mechanics, token)
-        end
-
-        arenaConnection = arena.ChildAdded:Connect(function(child)
-            if token == bindToken and child.Name == "Mechanics" then
-                bindMechanics(child, token)
-            end
-        end)
     end)
+    rootRemovedConnection = generated.ChildRemoved:Connect(function(child)
+        if token == bindToken and child == watchedArena then
+            bindArena(generated:FindFirstChild("Arena"), token)
+        end
+    end)
+    bindArena(generated:FindFirstChild("Arena"), token)
 end
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
         bindGeneratedMap(child)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bindGeneratedMap(nil)
+    if child == watchedMap then
+        bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
     end
 end)
 
-local existing = workspace:FindFirstChild("GeneratedMap")
-if existing then
-    bindGeneratedMap(existing)
-end
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshRates)
 
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     local nextOverdrive = state.phase == "round" and state.overdrive == true
     if nextOverdrive ~= overdriveActive then
         overdriveActive = nextOverdrive
