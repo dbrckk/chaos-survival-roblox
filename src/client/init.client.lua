@@ -150,7 +150,7 @@ title.TextScaled = true
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Text = "CHAOS SURVIVAL"
 title.Parent = top
-UITheme.addTextConstraint(title, 14, 30)
+local titleTextConstraint = UITheme.addTextConstraint(title, 14, 30)
 
 local hint = Instance.new("TextLabel")
 hint.Size = UDim2.new(1, -100, 0.32, 0)
@@ -579,7 +579,7 @@ local function presentCountdown(state)
                 state.disasterIds,
                 cleanReadyTitle(state.title)
             )
-            countdownSub.Text = hazardGuidance(state, false)
+            countdownSub.Text = hazardGuidance(state, touchDevice)
                 or (survivorCount > 1
                     and CoreLocalization.text(localeId, "SURVIVORS_READY", survivorCount)
                     or CoreLocalization.text(localeId, "SURVIVE_ZERO"))
@@ -1799,6 +1799,7 @@ local function applyResponsiveLayout()
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
 
     if not touchDevice then
+        titleTextConstraint.MaxTextSize = 30
         top.Position = UDim2.fromScale(0.5, 0.025)
         top.Size = UDim2.fromScale(0.88, 0.13)
         topHazardGlyph.Position = UDim2.new(0, 16, 0.5, 0)
@@ -1826,6 +1827,7 @@ local function applyResponsiveLayout()
     end
 
     local profile = UIResponsive.mobileProfile(viewport)
+    titleTextConstraint.MaxTextSize = profile.tinyHeight and 21 or 25
     local panelHeight = math.max(
         170,
         math.min(
@@ -1879,13 +1881,15 @@ local function applyResponsiveLayout()
     votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
 
     rookieCoach.Size = UDim2.new(profile.coachWidthScale, 0, 0, profile.coachHeight)
+    -- The hazard is already named in the top header; keep only a short
+    -- pre-round cue and preserve the camera view of warning circles.
     countdownCard.Size = UDim2.new(
-        profile.wide and 0.44 or (profile.veryNarrow and 0.72 or 0.56),
+        profile.wide and 0.40 or (profile.veryNarrow and 0.72 or 0.54),
         0,
         0,
-        profile.tinyHeight and 104 or 122
+        profile.tinyHeight and 82 or 94
     )
-    countdownCard.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.46 or 0.44)
+    countdownCard.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.42 or 0.43)
 
     if metaDock then
         metaDock.Position = UDim2.new(0.5, 0, 1, -8)
@@ -3152,9 +3156,10 @@ stateEvent.OnClientEvent:Connect(function(state)
         local controlsKey = touchDevice and "TOUCH_CONTROLS"
             or (UserInputService.GamepadEnabled and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS")
         coachText = CoreLocalization.text(localeId, controlsKey)
-    elseif touchDevice and votingOpen then
-        -- The top HUD already says exactly what to tap. Hiding the rookie
-        -- coach prevents it from colliding with vote cards on short phones.
+    elseif touchDevice and (votingOpen or activeGameplay) then
+        -- One owner per instruction during touch gameplay: the top HUD,
+        -- countdown, and round-focus bar already explain the hazard.
+        -- A second coach panel obscures the avatar and warning circles.
         coachText = nil
     end
     coachText = CoreLocalization.coach(localeId, coachText)
