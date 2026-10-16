@@ -26,6 +26,7 @@ if RunService:IsStudio() then
     end
 end
 local MapBuilder = require(script.MapBuilder)
+local SpawnSafety = require(script.SpawnSafety)
 local LobbyActivities = require(script.LobbyActivities)
 local PlayerData = require(script.PlayerData)
 local PlayerReadiness = require(script.PlayerReadiness)
@@ -442,23 +443,68 @@ local function teleportToArena(player, index)
         return false, "arena spawns unavailable"
     end
 
-    local spawns = spawnFolder:GetChildren()
-    if #spawns == 0 then
-        return false, "arena has no spawns"
+    local spawns = {}
+    for _, entry in ipairs(spawnFolder:GetChildren()) do
+        if entry:IsA("BasePart") then table.insert(spawns, entry) end
     end
+    if #spawns == 0 then
+        return false, "arena has no valid spawns"
+    end
+    table.sort(spawns, function(a, b)
+        local ai = tonumber(string.match(a.Name, "^Spawn(%d+)$")) or 99999
+        local bi = tonumber(string.match(b.Name, "^Spawn(%d+)$")) or 99999
+        return ai < bi
+    end)
 
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not root then
-        return false, "character root unavailable"
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not root or not root:IsA("BasePart") or not humanoid
+        or humanoid.Health <= 0 then
+        return false, "character root or humanoid unavailable"
     end
 
-    local spawn = spawns[((index - 1) % #spawns) + 1]
-    if not spawn:IsA("BasePart") then
-        return false, "invalid arena spawn"
+    local marker = spawns[((index - 1) % #spawns) + 1]
+    local landing, selected = SpawnSafety.resolve(arena, marker, humanoid, root)
+    if not landing then
+        player:SetAttribute("ArenaSpawnClear", false)
+        return false, tostring(selected)
     end
 
-    root.CFrame = spawn.CFrame + Vector3.new(0, 4, 0)
+    -- Move the full rig so R6/R15 body parts never remain in an overhead
+    -- deck. Clear old physics from the previous lobby/arena after teleport.
+    character:PivotTo(landing)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    if root.Anchored then root.Anchored = false end
+    if humanoid.Sit then humanoid.Sit = false end
+    if humanoid.PlatformStand then humanoid.PlatformStand = false end
+    player:SetAttribute("ArenaSpawnClear", true)
+    player:SetAttribute("ArenaSpawnCandidate", selected)
+
+    -- Validate once after physics settles; never auto-teleport someone
+    -- during a disaster merely for standing still or not touching controls.
+    task.delay(0.35, function()
+        if player.Parent ~= Players or player.Character ~= character
+            or root.Parent ~= character or humanoid.Health <= 0
+            or not arena.Parent then return end
+        local base = arena:FindFirstChild("Base")
+        local floorY = base and base.Position.Y + base.Size.Y * 0.5
+        local fellThrough = floorY ~= nil and root.Position.Y < floorY - 0.5
+        if fellThrough or not SpawnSafety.clearAt(arena, root.Position) then
+            local corrected, detail = SpawnSafety.resolve(arena, marker, humanoid, root)
+            if corrected then
+                character:PivotTo(corrected)
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.AssemblyAngularVelocity = Vector3.zero
+                warn("Arena spawn recovered after collision check:", player.UserId,
+                    tostring(arena:GetAttribute("VariantId")))
+            else
+                player:SetAttribute("ArenaSpawnClear", false)
+                warn("Arena spawn could not be recovered:", tostring(detail))
+            end
+        end
+    end)
     return true
 end
 
