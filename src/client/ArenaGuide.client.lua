@@ -239,7 +239,12 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     -- A malformed payload cannot replace the current briefing.
     if type(state) ~= "table" then return end
-    if state.phase == "ready" then
+    -- Touch players already receive the hazard name and guidance in the
+    -- top HUD + ready countdown; this large duplicate blocks the world.
+    if touchDevice then
+        readyState = nil
+        hide()
+    elseif state.phase == "ready" then
         readyState = state
         show(state)
     else
