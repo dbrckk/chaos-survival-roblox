@@ -49,13 +49,14 @@ local VARIANTS = {
     },
 }
 -- Accent geometry is independently budgeted below the debris/shard budget.
--- No extra pieces are introduced on Low or with reduced motion.
+-- Low devices get at most two inexpensive, short-lived fragments; reduced
+-- motion continues to suppress all decorative shrapnel.
 local FINISH_BUDGETS = {
     Medium = {Meteor = 2, Bomb = 2},
     High = {Meteor = 4, Bomb = 4},
 }
 local BUDGETS = {
-    Low = {Meteor = 0, Bomb = 0},
+    Low = {Meteor = 2, Bomb = 2},
     Medium = {Meteor = 4, Bomb = 4},
     High = {Meteor = 7, Bomb = 8},
 }
