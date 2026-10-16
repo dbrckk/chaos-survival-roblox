@@ -26,6 +26,19 @@ describe("Chaos Survival engine", function()
         local lobbyDecor = lobby and lobby:FindFirstChild("Decor")
         expect(lobbyDecor ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("CenterPlatform") ~= nil).toBe(true)
+        -- Regression check: default Roblox spawn must be on solid lobby
+        -- ground, outside the raised platform and away from practice boosts.
+        local lobbySpawn = lobby and lobby:FindFirstChild("LobbySpawn")
+        local stage = (lobbyDecor :: Folder):FindFirstChild("CenterPlatform")
+        expect(lobbySpawn ~= nil and lobbySpawn:IsA("SpawnLocation")).toBe(true)
+        if lobbySpawn and lobbySpawn:IsA("SpawnLocation")
+            and stage and stage:IsA("BasePart") then
+            local spawnLocal = stage.CFrame:PointToObjectSpace(lobbySpawn.Position)
+            expect(math.abs(spawnLocal.Z) > stage.Size.Z * 0.5 + 2.5).toBe(true)
+            expect(lobbySpawn.CanCollide).toBe(false)
+            expect(math.abs(lobbySpawn.Position.Z - (Config.LobbyCenter.Z - 22)) > 5)
+                .toBe(true)
+        end
         expect((lobbyDecor :: Folder):FindFirstChild("CenterGlow") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("ArenaGateTop") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("ArenaRunway") ~= nil).toBe(true)
