@@ -517,6 +517,17 @@ local function presentCountdown(state)
     local phase = tostring(state.phase or "")
     local seconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
 
+    -- The top HUD already contains the disaster name, guidance and a
+    -- high-contrast numeric countdown. On touch devices a second central
+    -- announcement hides the avatar and blocks the very escape route the
+    -- player must inspect during the final three seconds.
+    -- Keep the cinematic countdown on desktop, where it has room.
+    if touchDevice then
+        countdownToken += 1
+        countdownCard.Visible = false
+        return
+    end
+
     if phase == "ready" then
         if previousRoundPhase ~= "ready" then
             revealedPlayerChoice = selectedVote
