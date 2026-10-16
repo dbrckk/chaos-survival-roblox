@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
+local DisasterCosmeticRules = require(ReplicatedStorage.Shared.DisasterCosmeticRules)
 
 local player = Players.LocalPlayer
 local localFolder = Instance.new("Folder")
@@ -18,8 +20,8 @@ local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function localPart(name, size, color, material)
-    local p = Instance.new("Part")
+local function localPart(name, size, color, material, className)
+    local p = Instance.new(className or "Part")
     p.Name = name
     p.Anchored = true
     p.CanCollide = false
@@ -38,20 +40,27 @@ local function clearLava()
         return
     end
     for _, instance in ipairs(lavaState.instances) do
-        if instance and instance.Parent then
-            instance:Destroy()
-        end
+        if instance then instance:Destroy() end
     end
     lavaState = nil
 end
 
 local function bindLava(lava)
-    clearLava()
-    if not lava:IsA("BasePart") then
+    if not lava:IsA("BasePart") then return end
+    local tier = quality()
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    if DisasterCosmeticRules.reusableLava(lavaState, lava) then
+        -- Reconfigure existing GPU instances instead of recreating them
+        -- when accessibility or tier changes during an active hazard.
+        local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced)
+        if lavaState.embers.Rate ~= rate then lavaState.embers.Rate = rate end
+        lavaState.light.Range = 20 + 8 * tier.Scale
+        lavaState.light.Brightness = 1.25 * tier.Scale
+        lavaState.surface.Transparency = tier.Name == "Low" and 0.38 or 0.24
         return
     end
 
-    local tier = quality()
+    clearLava()
     local instances = {}
 
     local surface = localPart(
@@ -60,6 +69,9 @@ local function bindLava(lava)
         Color3.fromRGB(255, 145, 35),
         Enum.Material.Neon
     )
+    -- Place the overlay immediately: the dormant renderer may be sleeping
+    -- when a new lava part replicates, and must never show a piece at (0,0,0).
+    surface.CFrame = lava.CFrame * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
     surface.Transparency = tier.Name == "Low" and 0.38 or 0.24
     table.insert(instances, surface)
 
@@ -70,7 +82,7 @@ local function bindLava(lava)
 
     local embers = Instance.new("ParticleEmitter")
     embers.Name = "LavaEmbers"
-    embers.Rate = 10 * tier.ParticleScale
+    embers.Rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced)
     embers.Lifetime = NumberRange.new(0.7, 1.5)
     embers.Speed = NumberRange.new(2.5, 6.5)
     embers.Acceleration = Vector3.new(0, 4.5, 0)
@@ -106,6 +118,7 @@ local function bindLava(lava)
     lavaState = {
         lava = lava,
         surface = surface,
+        attachment = attachment,
         embers = embers,
         light = light,
         instances = instances,
@@ -123,47 +136,72 @@ local function clearFreeze(warning)
     end
     freezeStates[warning] = nil
     for _, instance in ipairs(state.instances) do
-        if instance and instance.Parent then
-            instance:Destroy()
-        end
+        if instance then instance:Destroy() end
     end
 end
 
 local function bindFreeze(warning)
-    if freezeStates[warning] or not warning:IsA("BasePart") then
-        return
+    if not warning:IsA("BasePart") then return end
+    local current = freezeStates[warning]
+    if current and DisasterCosmeticRules.reusableFreeze(current, warning) then
+        -- Same-piece-count refreshes reuse the glass ring and mist emitter.
+        local tier = quality()
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
+        if #current.segments == count then
+            local frame = HazardWarningSignatureRules.frame(warning.Position, current.deck)
+            local elapsed = workspace:GetServerTimeNow() - current.startedAt
+            local alpha = math.clamp(elapsed / current.duration, 0, 1)
+            for index, segment in ipairs(current.segments) do
+                local style = HazardWarningSignatureRules.recipe(
+                    "Freeze", index, count, current.diameter, reduced and 0 or alpha
+                )
+                segment.Size = style.Size
+                segment.CFrame = frame * CFrame.new(style.Offset) * style.Rotation
+                segment.Transparency = reduced and 0.66 or style.Transparency
+            end
+            local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
+            if current.mist.Rate ~= rate then current.mist.Rate = rate end
+            if reduced then
+                -- Rate = 0 stops future emissions, but particles from the
+                -- previous setting remain visible without an explicit clear.
+                current.mist:Clear()
+            end
+            return
+        end
     end
+    if current then clearFreeze(warning) end
 
     local tier = quality()
-    local count = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 8 or 10)
-    local radius = math.max(warning.Size.Y, warning.Size.Z) * 0.5
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local diameter = math.max(warning.Size.Y, warning.Size.Z)
+    local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local base = arena and arena:FindFirstChild("Base")
+    local deck = base and base:IsA("BasePart") and base.CFrame or nil
+    local frame = HazardWarningSignatureRules.frame(warning.Position, deck)
     local instances = {}
     local segments = {}
 
+    -- Short crystalline needles replace the former full neon perimeter bars
+    -- and central opaque cylinder. The authoritative freeze warning remains.
     for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local length = math.max(4.5, (2 * math.pi * radius / count) * 0.72)
-        local segment = localPart(
-            "FreezeRingSegment" .. i,
-            Vector3.new(length, 0.18, 0.65),
-            i % 2 == 0 and Color3.fromRGB(180, 245, 255) or Color3.fromRGB(90, 190, 255),
-            Enum.Material.Neon
+        local design = HazardWarningSignatureRules.recipe(
+            "Freeze", i, count, diameter, 0
         )
-        segment.Transparency = tier.Name == "Low" and 0.48 or 0.30
-        segment:SetAttribute("FreezeAngle", angle)
+        local segment = localPart(
+            "FreezeFacetWarning" .. i,
+            design.Size,
+            design.Secondary and design.SecondaryColor or design.Color,
+            design.Material,
+            design.Wedge and "WedgePart" or "Part"
+        )
+        segment.CFrame = frame * CFrame.new(design.Offset) * design.Rotation
+        segment.Transparency = reduced and 0.66 or design.Transparency
         table.insert(instances, segment)
         table.insert(segments, segment)
     end
-
-    local center = localPart(
-        "FreezeCenterMist",
-        Vector3.new(3.5, 0.12, 3.5),
-        Color3.fromRGB(175, 235, 255),
-        Enum.Material.Glass
-    )
-    center.Shape = Enum.PartType.Cylinder
-    center.Transparency = 0.54
-    table.insert(instances, center)
 
     local attachment = Instance.new("Attachment")
     attachment.Name = "FreezeMistLocal"
@@ -172,29 +210,47 @@ local function bindFreeze(warning)
 
     local mist = Instance.new("ParticleEmitter")
     mist.Name = "FreezeMist"
-    mist.Rate = 10 * tier.ParticleScale
-    mist.Lifetime = NumberRange.new(0.45, 0.9)
-    mist.Speed = NumberRange.new(0.8, 2)
-    mist.SpreadAngle = Vector2.new(180, 180)
-    mist.LightEmission = 0.75
-    mist.Color = ColorSequence.new(Color3.fromRGB(185, 240, 255), Color3.fromRGB(85, 165, 255))
+    mist.Rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
+    -- One existing emitter now reads as a short cold condensation plume:
+    -- small crystal seed -> wide translucent frost -> dissolved vapour.
+    -- No extra Part, Light, ParticleEmitter or Texture asset is allocated.
+    mist.Lifetime = NumberRange.new(0.48, 0.92)
+    mist.Speed = NumberRange.new(0.75, 1.9)
+    mist.Drag = 2.2
+    mist.Acceleration = Vector3.new(0, 0.7, 0)
+    mist.SpreadAngle = Vector2.new(145, 145)
+    mist.Rotation = NumberRange.new(-22, 22)
+    mist.RotSpeed = NumberRange.new(-18, 18)
+    mist.LightEmission = 0.38
+    mist.LightInfluence = 0.45
+    mist.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 250, 255)),
+        ColorSequenceKeypoint.new(0.38, Color3.fromRGB(162, 225, 248)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(88, 153, 205)),
+    })
     mist.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.28),
+        NumberSequenceKeypoint.new(0, 0.18),
+        NumberSequenceKeypoint.new(0.32, 0.55),
+        NumberSequenceKeypoint.new(0.72, 0.48),
         NumberSequenceKeypoint.new(1, 0),
     })
     mist.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.35),
+        NumberSequenceKeypoint.new(0, 0.78),
+        NumberSequenceKeypoint.new(0.26, 0.46),
+        NumberSequenceKeypoint.new(0.68, 0.77),
         NumberSequenceKeypoint.new(1, 1),
     })
     mist.Parent = attachment
 
     freezeStates[warning] = {
         warning = warning,
+        attachment = attachment,
         segments = segments,
-        center = center,
         instances = instances,
-        radius = radius,
-        startedAt = workspace:GetServerTimeNow(),
+        diameter = diameter,
+        deck = deck,
+        startedAt = tonumber(warning:GetAttribute("WarningStartedAt"))
+            or workspace:GetServerTimeNow(),
         duration = math.max(0.1, tonumber(warning:GetAttribute("WarningDuration")) or 0.7),
         mist = mist,
     }
@@ -228,11 +284,21 @@ workspace.ChildRemoved:Connect(function(child)
     clearFreeze(child)
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+local function rebuildQuality()
     if lavaState and lavaState.lava and lavaState.lava.Parent then
         bindLava(lavaState.lava)
     end
-end)
+    local warnings = {}
+    for warning in pairs(freezeStates) do
+        table.insert(warnings, warning)
+    end
+    for _, warning in ipairs(warnings) do
+        if warning.Parent then bindFreeze(warning) else clearFreeze(warning) end
+    end
+end
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildQuality)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(rebuildQuality)
 
 ensureRenderLoop = function()
     if loopStarted then
@@ -242,44 +308,58 @@ ensureRenderLoop = function()
 
     task.spawn(function()
         while true do
+            -- The warning/lava renderer should not wake at 30 Hz in the
+            -- lobby or between hazards on Android devices.
+            if not lavaState and next(freezeStates) == nil then
+                task.wait(0.16)
+                continue
+            end
             local tier = quality()
-            local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
-
+            local dt = task.wait(VfxQuality.decorativeInterval(tier.Name,
+                player:GetAttribute("ReduceMotion") == true))
             if not lavaState and next(freezeStates) == nil then
                 continue
             end
 
-            clock += dt
-
             local reduceMotion = player:GetAttribute("ReduceMotion") == true
-            local motionScale = reduceMotion and 0.18 or 1
+            if not reduceMotion then
+                -- Pause decorative phase in accessibility mode and clamp
+                -- backgrounded/mobile frame gaps, without altering lava
+                -- collision, damage or the server's warning geometry.
+                clock += math.clamp(tonumber(dt) or 0, 0, 0.22)
+            end
 
     if lavaState and lavaState.lava and lavaState.lava.Parent then
         local lava = lavaState.lava
         local surface = lavaState.surface
         if surface and surface.Parent then
-            local pulse = (math.sin(clock * (reduceMotion and 0.9 or 2.8)) + 1) * 0.5
+            local pulse = reduceMotion and 0.5
+                or (math.sin(clock * 2.8) + 1) * 0.5
             surface.Size = Vector3.new(
                 math.max(1, lava.Size.X - 1.2),
                 0.12,
                 math.max(1, lava.Size.Z - 1.2)
             )
-            surface.CFrame = lava.CFrame + Vector3.new(0, (lava.Size.Y * 0.5) + 0.08, 0)
+            surface.CFrame = lava.CFrame
+                * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
             surface.Color = Color3.fromRGB(
                 255,
-                128 + math.floor(pulse * (reduceMotion and 12 or 40)),
+                128 + math.floor(pulse * 40),
                 25
             )
-            surface.Transparency = 0.22 + pulse * (reduceMotion and 0.05 or 0.16)
+            surface.Transparency = (tier.Name == "Low" and 0.33 or 0.22)
+                + pulse * (reduceMotion and 0 or 0.13)
         end
         if lavaState.embers and lavaState.embers.Parent then
-            lavaState.embers.Rate = 10 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
+            local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduceMotion)
+            if lavaState.embers.Rate ~= rate then
+                lavaState.embers.Rate = rate
+            end
         end
         if lavaState.light and lavaState.light.Parent then
             lavaState.light.Brightness = (
-                1.0 + math.sin(clock * (reduceMotion and 0.8 or 3.1))
-                    * 0.22
-                    * motionScale
+                1.0 + math.sin(clock * 3.1)
+                    * (reduceMotion and 0 or 0.22)
             ) * tier.Scale
         end
     end
@@ -290,33 +370,34 @@ ensureRenderLoop = function()
             continue
         end
 
+        if not DisasterCosmeticRules.reusableFreeze(state, warning) then
+            clearFreeze(warning)
+            bindFreeze(warning)
+            continue
+        end
         local elapsed = workspace:GetServerTimeNow() - state.startedAt
         local alpha = math.clamp(elapsed / state.duration, 0, 1)
-        local expansion = 0.92 + alpha * 0.08
-        local y = warning.Position.Y + 0.18
-
+        local count = #state.segments
+        local frame = HazardWarningSignatureRules.frame(warning.Position, state.deck)
         for i, segment in ipairs(state.segments) do
             if segment.Parent then
-                local angle = segment:GetAttribute("FreezeAngle") or 0
-                local radius = state.radius * expansion
-                local position = Vector3.new(
-                    warning.Position.X + math.cos(angle) * radius,
-                    y + math.sin(clock * (reduceMotion and 1.1 or 5) + i) * 0.07 * motionScale,
-                    warning.Position.Z + math.sin(angle) * radius
+                local design = HazardWarningSignatureRules.recipe(
+                    "Freeze", i, count, state.diameter,
+                    reduceMotion and 0 or alpha
                 )
-                segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
-                segment.Transparency = 0.26 + alpha * 0.34
+                segment.CFrame = frame * CFrame.new(design.Offset)
+                    * design.Rotation
+                segment.Size = design.Size
+                segment.Transparency = reduceMotion and 0.66
+                    or design.Transparency
             end
         end
 
         if state.mist and state.mist.Parent then
-            state.mist.Rate = 8 * tier.ParticleScale * (reduceMotion and 0.35 or 1)
-        end
-
-        if state.center and state.center.Parent then
-            state.center.CFrame = CFrame.new(warning.Position + Vector3.new(0, 0.18, 0))
-                * CFrame.Angles(0, 0, math.rad(90))
-            state.center.Transparency = 0.58 + alpha * 0.30
+            local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduceMotion)
+            if state.mist.Rate ~= rate then
+                state.mist.Rate = rate
+            end
         end
     end
         end

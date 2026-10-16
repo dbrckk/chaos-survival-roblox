@@ -4,6 +4,8 @@ local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local ArenaSceneryFrames = require(ReplicatedStorage.Shared.ArenaSceneryFrames)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -15,7 +17,8 @@ folder.Parent = workspace
 local currentPhase = "waiting"
 local currentAccent = nil
 local motionToken = 0
-local mapConnection = nil
+local disconnectMapWatch = nil
+local refreshPending = false
 
 local function clear()
     motionToken += 1
@@ -42,7 +45,7 @@ end
 local function arenaContext()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return nil
     end
@@ -93,11 +96,11 @@ local function addHorizonArchitecture(base, variant, theme, tier)
             depth = 8 + ((i * 3) % 6)
         end
 
-        local position = base.Position + radial * radius + Vector3.new(0, (height * 0.5) - 8, 0)
+        local localPosition = radial * radius + Vector3.new(0, (height * 0.5) - 8, 0)
         local structure = makePart(
             "CinemaHorizonStructure" .. i,
             Vector3.new(width, height, depth),
-            CFrame.new(position) * CFrame.Angles(0, -tangent, 0),
+            ArenaSceneryFrames.frame(base, localPosition, -tangent),
             VisualTheme.World.Deep:Lerp(theme.Structure, variant == "Towers" and 0.42 or 0.28),
             variant == "Crossroads" and Enum.Material.Concrete or Enum.Material.Metal,
             phaseTransparency(tier.Name == "Low" and 0.34 or 0.20),
@@ -117,8 +120,10 @@ local function addHorizonArchitecture(base, variant, theme, tier)
         local crown = makePart(
             "CinemaHorizonCrown" .. i,
             crownSize,
-            CFrame.new(position + Vector3.new(0, (height * 0.5) + 0.28, 0))
-                * CFrame.Angles(0, -tangent, 0),
+            ArenaSceneryFrames.frame(base,
+                    localPosition + Vector3.new(0, (height * 0.5) + 0.28, 0),
+                    -tangent
+                ),
             crownLit and (currentAccent or accent) or theme.Detail,
             crownLit and Enum.Material.Neon or Enum.Material.Metal,
             phaseTransparency(
@@ -176,11 +181,11 @@ local function addHeroSilhouette(base, variant, theme, tier)
         end
     elseif variant == "Towers" then
         for side = -1, 1, 2 do
-            local pos = base.Position + Vector3.new(side * (hx + 52), 36, -hz - 50)
+            local spineFrame = ArenaSceneryFrames.frame(base, Vector3.new(side * (hx + 52), 36, -hz - 50))
             local spine = makePart(
                 side < 0 and "CinemaTowerMegaspineL" or "CinemaTowerMegaspineR",
                 Vector3.new(9, 92, 9),
-                CFrame.new(pos),
+                spineFrame,
                 VisualTheme.World.Deep:Lerp(theme.Structure, 0.56),
                 Enum.Material.CorrodedMetal,
                 phaseTransparency(0.14),
@@ -207,7 +212,7 @@ local function addHeroSilhouette(base, variant, theme, tier)
             local gate = makePart(
                 "CinemaCrossroadsGate" .. i,
                 def.size,
-                CFrame.new(base.Position + def.offset),
+                ArenaSceneryFrames.frame(base, def.offset),
                 VisualTheme.World.Metal,
                 Enum.Material.Metal,
                 phaseTransparency(0.20),
@@ -232,7 +237,7 @@ local function addHeroSilhouette(base, variant, theme, tier)
         for i = 1, segments do
             local angle = ((i - 1) / segments) * math.pi * 2
             local tangent = angle + math.pi * 0.5
-            local pos = base.Position + Vector3.new(
+            local localPos = Vector3.new(
                 math.cos(angle) * radius,
                 34 + math.sin(angle * 2) * 5,
                 math.sin(angle) * radius
@@ -240,7 +245,8 @@ local function addHeroSilhouette(base, variant, theme, tier)
             makePart(
                 "CinemaOrbitalHalo" .. i,
                 Vector3.new(34, 1.5, 3.6),
-                CFrame.new(pos) * CFrame.Angles(0, -tangent, math.rad(math.sin(angle) * 7)),
+                ArenaSceneryFrames.frame(base, localPos, -tangent)
+                    * CFrame.Angles(0, 0, math.rad(math.sin(angle) * 7)),
                 i % 4 == 0 and theme.Secondary or (i % 3 == 0 and theme.Accent or theme.Detail),
                 i % 4 == 0 and Enum.Material.Neon or Enum.Material.Metal,
                 phaseTransparency(i % 4 == 0 and 0.56 or 0.22),
@@ -259,11 +265,11 @@ local function addAtmosphericBeacons(base, variant, theme, tier)
     local radius = variant == "Orbital" and 100 or 94
     for i = 1, count do
         local angle = ((i - 1) / count) * math.pi * 2 + math.rad(22)
-        local pos = base.Position + Vector3.new(math.cos(angle) * radius, 24, math.sin(angle) * radius)
+        local localPos = Vector3.new(math.cos(angle) * radius, 24, math.sin(angle) * radius)
         local beam = makePart(
             "CinemaBeacon" .. i,
             Vector3.new(0.34, tier.Name == "High" and 42 or 30, 0.34),
-            CFrame.new(pos),
+            ArenaSceneryFrames.frame(base, localPos),
             i % 2 == 0 and theme.Secondary or theme.Accent,
             Enum.Material.Neon,
             phaseTransparency(tier.Name == "High" and 0.78 or 0.84),
@@ -281,7 +287,8 @@ local function addAtmosphericBeacons(base, variant, theme, tier)
 end
 
 local function addSkyTraffic(base, variant, theme, tier, token)
-    if tier.Name == "Low" or player:GetAttribute("ReduceMotion") == true then
+    if tier.Name == "Low" or currentPhase == "round"
+        or player:GetAttribute("ReduceMotion") == true then
         return
     end
 
@@ -291,17 +298,17 @@ local function addSkyTraffic(base, variant, theme, tier, token)
     for i = 1, craftCount do
         local startAngle = ((i - 1) / craftCount) * math.pi * 2
         local y = 28 + ((i * 7) % 18)
-        local startPos = base.Position + Vector3.new(
+        local startPos = ArenaSceneryFrames.point(base, Vector3.new(
             math.cos(startAngle) * radius,
             y,
             math.sin(startAngle) * radius
-        )
+        ))
         local endAngle = startAngle + math.rad(76 + i * 9)
-        local endPos = base.Position + Vector3.new(
+        local endPos = ArenaSceneryFrames.point(base, Vector3.new(
             math.cos(endAngle) * radius,
             y + ((i % 2 == 0) and 5 or -3),
             math.sin(endAngle) * radius
-        )
+        ))
 
         local craft = makePart(
             "CinemaTraffic" .. i,
@@ -367,35 +374,40 @@ local function rebuild()
     refreshAccent(theme)
 end
 
-local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
-    end
+-- Map sections and attributes replicate asynchronously. Rebuild exactly
+-- once per frame; motionToken cancels the prior traffic tween group.
+local function scheduleRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+    end)
+end
 
-    local generated = workspace:FindFirstChild("GeneratedMap")
+local function bindMap(generated)
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
+    end
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.08, rebuild)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(function()
-            bindMap()
-            rebuild()
-        end)
+        bindMap(child)
+        scheduleRefresh()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindMap(nil)
         clear()
-        bindMap()
     end
 end)
 
@@ -431,5 +443,5 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 end)
 
-bindMap()
+bindMap(workspace:FindFirstChild("GeneratedMap"))
 rebuild()

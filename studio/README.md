@@ -25,6 +25,21 @@ Install/sync the project into an authenticated Roblox Studio session, install `s
 
 The plugin starts a four-client test and prints either `PASS: ...` or `FAIL: ...`.
 
+### One-player AI acceptance (new)
+
+The same Studio plugin also adds **Chaos Solo AI**. With the current source synced into an authenticated Roblox Studio instance, click that button to execute a real **one-player / one-server** simulation. Its server-side `SoloAIStudioE2E.server.lua` checks:
+
+- exactly one human plus three distinct living AI survivor rigs;
+- valid unanchored HumanoidRootPart/Humanoid on each bot;
+- `GetNetworkOwner() == nil` for each bot assembly after the bounded network-ownership initialization;
+- at least two distinct bots moving horizontally, including an actual playing locomotion animation track (not just a MoveDirection signal).
+- all three living bots entering the arena in the same solo session, flagged `AISurvivorInRound=true` on their rig; idle lobby bots are not valid spectator camera targets.
+
+The AI roster also stays fixed from **ready** through **round** and **result** when other human clients join or leave. New players are considered for AI-count reconciliation at the next intermission, not halfway through an active survival contest.
+
+The test returns `PASS:` or `FAIL:` through official `StudioTestService:EndTest`. It does **not** prove client rendering quality, real-device FPS, or all disaster decisions. This test is not silently counted as passed by ordinary Build Validation or Open Cloud engine tests; it requires an actual Studio session. Use it before Android solo acceptance and record its candidate commit and exact result.
+
+
 ## GitHub Actions
 
 `.github/workflows/roblox-studio-smoke.yml` is manual-only and intentionally targets a Windows **self-hosted runner**.

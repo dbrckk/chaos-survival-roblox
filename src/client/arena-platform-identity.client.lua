@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 
 local player = Players.LocalPlayer
 
@@ -217,6 +219,8 @@ local function rebuild()
                 continue
             end
 
+            PlatformFinishKit.build(folder, platform, variant, tier.Name, theme)
+
             if variant == "Towers" then
                 decorateTowers(platform, index, theme, tier)
             elseif variant == "Crossroads" then
@@ -230,27 +234,69 @@ local function rebuild()
     end
 end
 
-local mapConnection = nil
+local disconnectBaseWatch = nil
+local disconnectPlatformsWatch = nil
+local platformsConnection = nil
+local platformsRemoveConnection = nil
+local watchedPlatforms = nil
+local rebuildPending = false
+
+local function scheduleRebuild()
+    if rebuildPending then return end
+    rebuildPending = true
+    task.defer(function()
+        rebuildPending = false
+        rebuild()
+    end)
+end
+
+local function watchPlatforms(generated)
+    local arena = generated and generated:FindFirstChild("Arena")
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    if platforms == watchedPlatforms then return end
+    if platformsConnection then platformsConnection:Disconnect() end
+    if platformsRemoveConnection then platformsRemoveConnection:Disconnect() end
+    platformsConnection = nil
+    platformsRemoveConnection = nil
+    watchedPlatforms = platforms
+    if platforms then
+        platformsConnection = platforms.ChildAdded:Connect(function(child)
+            if child:IsA("BasePart") then scheduleRebuild() end
+        end)
+        platformsRemoveConnection = platforms.ChildRemoved:Connect(function(child)
+            if child:IsA("BasePart") then scheduleRebuild() end
+        end)
+    end
+end
 
 local function bindGeneratedMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
-    end
-
+    if disconnectBaseWatch then disconnectBaseWatch() end
+    if disconnectPlatformsWatch then disconnectPlatformsWatch() end
+    disconnectBaseWatch = nil
+    disconnectPlatformsWatch = nil
+    watchPlatforms(nil)
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.defer(rebuild)
+        disconnectBaseWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", function()
+                watchPlatforms(generated)
+                scheduleRebuild()
             end
-        end)
+        )
+        -- The Platforms folder is not a BasePart. This second watch is used
+        -- solely for its ChildAdded/Removed notifications and variant signal.
+        disconnectPlatformsWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Platforms", function()
+                watchPlatforms(generated)
+                scheduleRebuild()
+            end
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bindGeneratedMap(child)
-        task.defer(rebuild)
+        scheduleRebuild()
     end
 end)
 
@@ -263,8 +309,6 @@ end)
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 
 rebuild()

@@ -1,6 +1,7 @@
 --!strict
 local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
+local RoundJourneyRules = require("../../src/shared/RoundJourneyRules")
 
 local RoundVariety = require("../../src/server/RoundVariety")
 
@@ -67,6 +68,46 @@ describe("Round variety", function()
         expect(#recent).toBe(2)
         expect(recent[1]).toBe("C")
         expect(recent[2]).toBe("B")
+    end)
+end)
+
+
+describe("Complete round journey", function()
+    it("recognizes a full live sequence despite repeated phase snapshots", function()
+        local stage = 0
+        local completed = 0
+        for _, phase in ipairs({
+            "waiting", "intermission", "intermission",
+            "ready", "ready", "round", "round", "result", "result",
+        }) do
+            local finished
+            stage, finished = RoundJourneyRules.advance(stage, phase)
+            if finished then completed += 1 end
+        end
+        expect(stage).toBe(4)
+        expect(completed).toBe(1)
+    end)
+
+    it("rejects invalid phase order and restarts with a fresh intermission", function()
+        local rules = RoundJourneyRules
+        local stage, complete = rules.advance(0, "round")
+        expect(stage).toBe(0)
+        expect(complete).toBe(false)
+        stage, complete = rules.advance(1, "round")
+        expect(stage).toBe(0)
+        expect(complete).toBe(false)
+        stage, complete = rules.advance(2, "result")
+        expect(stage).toBe(0)
+        expect(complete).toBe(false)
+        stage, complete = rules.advance(3, "result")
+        expect(stage).toBe(4)
+        expect(complete).toBe(true)
+        stage, complete = rules.advance(4, "intermission")
+        expect(stage).toBe(1)
+        expect(complete).toBe(false)
+        stage, complete = rules.advance(4, "waiting")
+        expect(stage).toBe(0)
+        expect(complete).toBe(false)
     end)
 end)
 

@@ -3,13 +3,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CharacterPolishRules = require(ReplicatedStorage.Shared.CharacterPolishRules)
+local CosmeticQualityRegistry = require(script.Parent.CosmeticQualityRegistry)
 
 local localPlayer = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
-local watchedCharacters = setmetatable({}, {__mode = "k"})
 local finalRush = false
 local botFolder = nil
 local botFolderConnection = nil
+local botFolderRemovedConnection = nil
+local playerConnections = {}
 
 local function profile()
     return VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
@@ -87,53 +89,34 @@ local function applyCharacter(character)
     end
 end
 
-local function watchCharacter(character)
-    if watchedCharacters[character] then
-        return
-    end
-    watchedCharacters[character] = true
-
-    applyCharacter(character)
-    character.DescendantAdded:Connect(function(descendant)
-        if descendant.Name == "ChaosAura"
-            or descendant.Name == "ChaosAuraLight"
-            or descendant.Name == "ChaosTrail"
-            or descendant.Name == "AISurvivorCosmeticTrail"
-            or descendant.Name == "ChaosAuraHighlight"
-        then
-            task.defer(applyObject, descendant)
-        end
-    end)
-end
+local observers = CosmeticQualityRegistry.new(applyCharacter, applyObject)
 
 local function watchPlayer(player)
-    player.CharacterAdded:Connect(watchCharacter)
-    if player.Character then
-        watchCharacter(player.Character)
-    end
+    if playerConnections[player] then return end
+    local connections = {}
+    playerConnections[player] = connections
+    table.insert(connections, player.CharacterAdded:Connect(observers.watch))
+    table.insert(connections, player.CharacterRemoving:Connect(observers.stop))
+    if player.Character then observers.watch(player.Character) end
 end
 
 for _, player in ipairs(Players:GetPlayers()) do
     watchPlayer(player)
 end
 Players.PlayerAdded:Connect(watchPlayer)
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character then observers.stop(player.Character) end
+    local connections = playerConnections[player]
+    if connections then
+        for _, connection in ipairs(connections) do connection:Disconnect() end
+        playerConnections[player] = nil
+    end
+end)
 
+-- Models are registered on spawn/stream-in; changing quality traverses
+-- each watched rig once, without rescanning Players and all bot children.
 local function refreshAll()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
-            applyCharacter(player.Character)
-        end
-    end
-
-    local bots = workspace:FindFirstChild("AISurvivors")
-    if bots then
-        for _, model in ipairs(bots:GetChildren()) do
-            if model:IsA("Model") then
-                watchCharacter(model)
-                applyCharacter(model)
-            end
-        end
-    end
+    observers.refreshAll()
 end
 
 local function watchBotFolder(folder)
@@ -141,22 +124,31 @@ local function watchBotFolder(folder)
         botFolderConnection:Disconnect()
         botFolderConnection = nil
     end
-    botFolder = folder
-
-    if not folder then
-        return
+    if botFolderRemovedConnection then
+        botFolderRemovedConnection:Disconnect()
+        botFolderRemovedConnection = nil
     end
+    if botFolder and botFolder ~= folder then
+        for _, model in ipairs(botFolder:GetChildren()) do
+            if model:IsA("Model") then observers.stop(model) end
+        end
+    end
+    botFolder = folder
+    if not folder then return end
 
     for _, model in ipairs(folder:GetChildren()) do
-        if model:IsA("Model") then
-            watchCharacter(model)
-        end
+        if model:IsA("Model") then observers.watch(model) end
     end
-
     botFolderConnection = folder.ChildAdded:Connect(function(model)
-        if model:IsA("Model") then
-            task.defer(watchCharacter, model)
-        end
+        if not model:IsA("Model") then return end
+        task.defer(function()
+            if botFolder == folder and model.Parent == folder then
+                observers.watch(model)
+            end
+        end)
+    end)
+    botFolderRemovedConnection = folder.ChildRemoved:Connect(function(model)
+        if model:IsA("Model") then observers.stop(model) end
     end)
 end
 
@@ -178,7 +170,10 @@ localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshAll)
 localPlayer:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshAll)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    local nextFinalRush = state.phase == "round" and state.finalRush == true
+    -- RoundState can briefly be malformed during streaming or reconnect.
+    -- A bad payload must not crash the client cosmetic-quality controller.
+    local nextFinalRush = type(state) == "table"
+        and state.phase == "round" and state.finalRush == true
     if nextFinalRush ~= finalRush then
         finalRush = nextFinalRush
         refreshAll()

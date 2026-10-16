@@ -4,10 +4,12 @@ local TweenService = game:GetService("TweenService")
 local LocalizationService = game:GetService("LocalizationService")
 
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local LobbyGateCueKit = require(script.Parent.LobbyGateCueKit)
 
 local player = Players.LocalPlayer
 local frenchLocale = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -36,6 +38,7 @@ local approachRibs = {}
 local practicePads = {}
 local gateIndicators = {}
 local gateInnerGlow = nil
+local gateCue = nil
 local presentationToken = 0
 local pulseCursor = 0
 
@@ -61,6 +64,7 @@ local function clearLocal()
     practicePads = {}
     gateIndicators = {}
     gateInnerGlow = nil
+    gateCue = nil
     currentLobby = nil
     currentDecor = nil
     currentActivities = nil
@@ -169,11 +173,12 @@ local function makeStatusGui()
     local gui = Instance.new("BillboardGui")
     gui.Name = "LobbyLiveStatus"
     gui.Adornee = anchor
-    gui.AlwaysOnTop = true
+    -- A floating lobby sign must never draw over the arena or avatar.
+    gui.AlwaysOnTop = false
     gui.LightInfluence = 0
     gui.Size = UDim2.fromOffset(300, 72)
     gui.StudsOffsetWorldSpace = Vector3.new(0, 5.2, 0)
-    gui.MaxDistance = 105
+    gui.MaxDistance = 65
     gui.Parent = player:WaitForChild("PlayerGui")
 
     local panel = Instance.new("Frame")
@@ -511,7 +516,20 @@ local function applyState()
     )
     local accent = modeColor(mode)
     local q = quality()
-    local duration = player:GetAttribute("ReduceMotion") == true and 0.10 or 0.24
+    local reducedMotion = player:GetAttribute("ReduceMotion") == true
+    local duration = reducedMotion and 0.10 or 0.24
+
+    -- Decor and its gate parts may replicate after Lobby.Floor.
+    if not gateCue and currentDecor then
+        local gateTop = currentDecor:FindFirstChild("ArenaGateTop")
+        local runway = currentDecor:FindFirstChild("ArenaRunway")
+        if gateTop and runway then
+            gateCue = LobbyGateCueKit.build(
+                folder, gateTop, runway, q.Name, VisualTheme.Accents
+            )
+        end
+    end
+    LobbyGateCueKit.apply(gateCue, mode, VisualTheme.Accents, reducedMotion)
 
     applyGatePresentation(mode, accent, q, duration)
 
@@ -637,7 +655,7 @@ local function applyState()
         local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
         if games <= 0
             and currentState.phase == "intermission"
-            and currentState.voteOptions == nil
+            and not FirstTimeExperience.hasVoteOptions(currentState)
         then
             mainText = frenchLocale and "BOUGE + SAUTE" or "MOVE + JUMP"
             subText = frenchLocale and "SURVIS JUSQU'À 0" or "SURVIVE UNTIL 0"
@@ -903,7 +921,9 @@ local function lobbyReturnPulse()
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    local nextState = state or currentState
+    -- Malformed packets must not replace a valid lobby snapshot.
+    if type(state) ~= "table" then return end
+    local nextState = state
     local nextPhase = tostring(nextState.phase or "waiting")
 
     if previousPhase == "result"

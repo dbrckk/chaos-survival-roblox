@@ -1,14 +1,17 @@
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
+local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+
+local folder = Instance.new("Folder")
+folder.Name = "RoundTransitionPulsesLocal"
+folder.Parent = workspace
 
 local previousPhase = "waiting"
 local lastFinalRush = false
@@ -21,81 +24,44 @@ local function arenaBase()
     return base and base:IsA("BasePart") and base or nil
 end
 
-local function makeArenaRing(name, center, color, startRadius, endRadius, duration, reduced)
-    local ring = Instance.new("Part")
-    ring.Name = name
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(
-        0.055,
-        reduced and endRadius or startRadius,
-        reduced and endRadius or startRadius
+local function emitRing(name, frame, color, startDiameter, endDiameter, duration, tier, reduced, alpha)
+    return CinematicPulseRingKit.emit(
+        folder, name, frame, color,
+        startDiameter, endDiameter, duration, tier.Name, reduced, alpha
     )
-    ring.CFrame = CFrame.new(center) * CFrame.Angles(0, 0, math.rad(90))
-    ring.Anchored = true
-    ring.CanCollide = false
-    ring.CanTouch = false
-    ring.CanQuery = false
-    ring.CastShadow = false
-    ring.Material = Enum.Material.Neon
-    ring.Color = color
-    ring.Transparency = reduced and 0.72 or 0.32
-    ring.Parent = workspace
-
-    TweenService:Create(
-        ring,
-        TweenInfo.new(
-            reduced and math.min(duration, 0.34) or duration,
-            Enum.EasingStyle.Quad,
-            Enum.EasingDirection.Out
-        ),
-        {
-            Size = Vector3.new(0.055, endRadius, endRadius),
-            Transparency = 1,
-        }
-    ):Play()
-    Debris:AddItem(ring, duration + 0.2)
 end
 
 local function pulseArena(state, finalRush)
     local base = arenaBase()
-    if not base then
-        return
-    end
-
+    if not base then return end
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced = player:GetAttribute("ReduceMotion") == true
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    local radius = math.max(base.Size.X, base.Size.Z)
+    local frame = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.22, 0)
+    local diameter = math.max(base.Size.X, base.Size.Z)
     local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
-    local firstColor = finalRush
-        and UITheme.Colors.Orange
+    local firstColor = finalRush and UITheme.Colors.Orange
         or UITheme.disasterAccent(ids[1], UITheme.Colors.Cyan)
-    local secondColor = finalRush
-        and UITheme.Colors.Red
+    local secondColor = finalRush and UITheme.Colors.Red
         or UITheme.disasterAccent(ids[2], UITheme.Colors.Violet)
 
-    makeArenaRing(
+    emitRing(
         finalRush and "FinalRushArenaPulse" or "RoundStartArenaPulse",
-        center,
-        firstColor,
-        finalRush and radius * 0.34 or 5,
-        finalRush and radius * 0.96 or radius * 0.84,
+        frame, firstColor,
+        finalRush and diameter * 0.34 or 5,
+        finalRush and diameter * 0.96 or diameter * 0.84,
         tier.Name == "Low" and 0.40 or 0.56,
-        reduced
+        tier, reduced, 0.46
     )
-
     local secondRing = finalRush or (state.doubleChaos == true and ids[2] ~= nil)
-    if secondRing and tier.Name ~= "Low" then
-        task.delay(reduced and 0.04 or 0.09, function()
+    if secondRing and tier.Name ~= "Low" and not reduced then
+        task.delay(0.09, function()
             if base.Parent then
-                makeArenaRing(
+                emitRing(
                     finalRush and "FinalRushArenaPulseRed" or "RoundStartArenaPulseSecondary",
-                    center + Vector3.new(0, 0.05, 0),
-                    secondColor,
-                    finalRush and radius * 0.44 or 8,
-                    finalRush and radius * 1.04 or radius * 0.95,
-                    0.62,
-                    reduced
+                    frame * CFrame.new(0, 0.08, 0), secondColor,
+                    finalRush and diameter * 0.44 or 8,
+                    finalRush and diameter * 1.04 or diameter * 0.95,
+                    0.62, tier, false, 0.57
                 )
             end
         end)
@@ -110,55 +76,29 @@ end
 
 local function pulse(color, strength, doubleRing)
     local root = rootPart()
-    if not root then
-        return
-    end
-
+    if not root then return end
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced = player:GetAttribute("ReduceMotion") == true
     local scale = reduced and 0.42 or 1
-    local radius = (10 + strength * 8) * scale
+    local diameter = (10 + strength * 8) * scale
     local duration = reduced and 0.24 or (0.34 + strength * 0.12)
 
-    local function makeRing(extraRadius, delaySeconds, alpha)
-        task.delay(delaySeconds or 0, function()
+    local function makeRing(extraDiameter, delaySeconds, alpha)
+        task.delay(delaySeconds, function()
             local currentRoot = rootPart()
-            if not currentRoot then
-                return
-            end
-
-            local ring = Instance.new("Part")
-            ring.Name = "RoundTransitionPulseLocal"
-            ring.Shape = Enum.PartType.Cylinder
-            ring.Size = Vector3.new(0.06, 1, 1)
-            ring.CFrame = CFrame.new(
-                currentRoot.Position + Vector3.new(0, -2.35, 0)
-            ) * CFrame.Angles(0, 0, math.rad(90))
-            ring.Anchored = true
-            ring.CanCollide = false
-            ring.CanTouch = false
-            ring.CanQuery = false
-            ring.CastShadow = false
-            ring.Material = Enum.Material.Neon
-            ring.Color = color
-            ring.Transparency = alpha or 0.22
-            ring.Parent = workspace
-
-            TweenService:Create(
-                ring,
-                TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {
-                    Size = Vector3.new(0.06, radius + extraRadius, radius + extraRadius),
-                    Transparency = 1,
-                }
-            ):Play()
-            Debris:AddItem(ring, duration + 0.08)
+            if not currentRoot then return end
+            emitRing(
+                "RoundTransitionPulseLocal",
+                CFrame.new(currentRoot.Position + Vector3.new(0, -2.35, 0)),
+                color, 1, diameter + extraDiameter,
+                duration, tier, reduced, alpha
+            )
         end)
     end
 
-    makeRing(0, 0, reduced and 0.52 or 0.20)
+    makeRing(0, 0, reduced and 0.70 or 0.48)
     if doubleRing and tier.Name ~= "Low" and not reduced then
-        makeRing(7, 0.07, 0.34)
+        makeRing(7, 0.07, 0.58)
     end
 end
 

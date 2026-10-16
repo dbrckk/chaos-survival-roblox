@@ -23,6 +23,37 @@ describe("Arena variants", function()
         end
     end)
 
+    it("adds a connected high-route skybridge circuit to the Tower Run arena", function()
+        local towers = ArenaVariants.get("Towers")
+        local links = {}
+        local mid = {}
+        for _, entry in ipairs(towers.Platforms) do
+            if entry.Skybridge == true then
+                table.insert(links, entry)
+            elseif entry.offset.Y == 12 then
+                table.insert(mid, entry)
+            end
+        end
+        expect(#links).toBe(4)
+        expect(#mid).toBe(4)
+        for _, bridge in ipairs(links) do
+            local top = bridge.offset.Y + bridge.size.Y * 0.5
+            expect(math.abs(top - 13) < 0.001).toBe(true)
+            expect(math.max(bridge.size.X, bridge.size.Z) >= 49).toBe(true)
+            expect(math.min(bridge.size.X, bridge.size.Z) >= 4).toBe(true)
+            local aligned = 0
+            for _, deck in ipairs(mid) do
+                local delta = deck.offset - bridge.offset
+                local reachX = deck.size.X * 0.5 + bridge.size.X * 0.5
+                local reachZ = deck.size.Z * 0.5 + bridge.size.Z * 0.5
+                if math.abs(delta.X) <= reachX and math.abs(delta.Z) <= reachZ then
+                    aligned += 1
+                end
+            end
+            expect(aligned).toBe(2)
+        end
+    end)
+
     it("derives hazard targeting bounds from arena footprints", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
@@ -37,6 +68,41 @@ describe("Arena variants", function()
         local fallbackX, fallbackZ = ArenaTargeting.halfExtents(nil, 6, 42)
         expect(fallbackX).toBe(42)
         expect(fallbackZ).toBe(42)
+    end)
+
+    it("never publishes metadata for a removed or not-yet-ready arena", function()
+        local map = Instance.new("Folder")
+        map.Name = "GeneratedMap"
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = map
+
+        expect(ArenaVariants.activeDefinition(arena, map)).toBe(nil)
+        arena:SetAttribute("VariantId", "Towers")
+        expect(ArenaVariants.activeDefinition(arena, map).Id).toBe("Towers")
+
+        arena:SetAttribute("VariantId", "Unknown")
+        expect(ArenaVariants.activeDefinition(arena, map)).toBe(nil)
+        arena:SetAttribute("VariantId", "Orbital")
+        expect(ArenaVariants.activeDefinition(arena, map).Id).toBe("Orbital")
+
+        local replacement = Instance.new("Folder")
+        replacement.Name = "GeneratedMap"
+        expect(ArenaVariants.activeDefinition(arena, replacement)).toBe(nil)
+
+        arena.Parent = nil
+        expect(ArenaVariants.activeDefinition(arena, map)).toBe(nil)
+        arena.Parent = replacement
+        expect(ArenaVariants.activeDefinition(arena, replacement).Id).toBe("Orbital")
+
+        arena.Name = "OldArena"
+        expect(ArenaVariants.activeDefinition(arena, replacement)).toBe(nil)
+        arena.Name = "Arena"
+        replacement.Name = "RemovedMap"
+        expect(ArenaVariants.activeDefinition(arena, replacement)).toBe(nil)
+
+        map:Destroy()
+        replacement:Destroy()
     end)
 
     it("gives every arena concise actionable strategy guidance", function()

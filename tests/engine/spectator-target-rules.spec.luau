@@ -8,6 +8,25 @@ describe("Spectator target stability", function()
     local beta = {}
     local gamma = {}
 
+    it("gives the spectator camera exclusive ownership during active rounds", function()
+        expect(Rules.isSpectating(true, true, false)).toBe(false)
+        expect(Rules.isSpectating(true, true, true)).toBe(true)
+        expect(Rules.isSpectating(true, false, false)).toBe(true)
+        expect(Rules.isSpectating(true, nil, false)).toBe(true)
+        expect(Rules.isSpectating(false, true, true)).toBe(false)
+        expect(Rules.isSpectating(false, false, false)).toBe(false)
+    end)
+
+    it("only spectates living AI survivors committed to this round", function()
+        expect(Rules.isEligibleBot(true, 100)).toBe(true)
+        expect(Rules.isEligibleBot(true, 1)).toBe(true)
+        expect(Rules.isEligibleBot(true, 0)).toBe(false)
+        expect(Rules.isEligibleBot(true, -1)).toBe(false)
+        expect(Rules.isEligibleBot(false, 100)).toBe(false)
+        expect(Rules.isEligibleBot(nil, 100)).toBe(false)
+        expect(Rules.isEligibleBot(true, nil)).toBe(false)
+    end)
+
     it("keeps the same character when targets are reordered", function()
         expect(Rules.resolveIndex({
             {Character = alpha},

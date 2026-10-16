@@ -9,6 +9,12 @@ local arenaPresentationModule = shared and shared:FindFirstChild("ArenaPresentat
 local ArenaPresentation = if arenaPresentationModule
     then require(arenaPresentationModule)
     else require("../shared/ArenaPresentation")
+-- Cloud engine specs can import new source modules before the published
+-- place has received them; prefer sibling ModuleScript, otherwise source.
+local helixModule = script and script.Parent:FindFirstChild("OrbitalHelix")
+local OrbitalHelix = if helixModule
+    then require(helixModule)
+    else require("./OrbitalHelix")
 
 local MapBuilder = {}
 
@@ -568,6 +574,38 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
                 VisualTheme.Materials.Glow
             )
             lane.Transparency = 0.84
+        end
+
+        -- Flux Relay navigation is physically readable from the floor.
+        -- Inlaid cyan chevrons teach the return-to-hub loop rather than
+        -- forcing the player to decode a HUD paragraph during a disaster.
+        for laneIndex = 1, 4 do
+            local direction = laneIndex == 1 and Vector3.new(1, 0, 0)
+                or (laneIndex == 2 and Vector3.new(0, 0, 1)
+                    or (laneIndex == 3 and Vector3.new(-1, 0, 0)
+                        or Vector3.new(0, 0, -1)))
+            for stepIndex = 1, 3 do
+                local distance = 23 + stepIndex * 3.15
+                local position = center + direction * distance
+                    + Vector3.new(0, 1.29, 0)
+                local facing = CFrame.lookAt(position,
+                    center + Vector3.new(0, 1.29, 0))
+                for side = -1, 1, 2 do
+                    local mark = decorPart(
+                        decor,
+                        "FluxRouteChevron" .. laneIndex .. "_" ..
+                            stepIndex .. "_" .. tostring(side),
+                        Vector3.new(0.13, 0.05, 0.95),
+                        position,
+                        stepIndex == 3 and theme.Accent or theme.Secondary,
+                        VisualTheme.Materials.Glow
+                    )
+                    mark.CFrame = facing * CFrame.new(side * 0.38, 0, 0)
+                        * CFrame.Angles(0, math.rad(side * 34), 0)
+                    mark.Transparency = 0.36 + (3 - stepIndex) * 0.06
+                    mark.CastShadow = false
+                end
+            end
         end
 
         local hub = decorPart(
@@ -1303,7 +1341,10 @@ local function buildLobby(root, config)
     local lobbySpawn = Instance.new("SpawnLocation")
     lobbySpawn.Name = "LobbySpawn"
     lobbySpawn.Size = Vector3.new(8, 1, 8)
-    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2.8, 0)
+    -- Spawn on the flat floor outside the raised centre stage, with more
+    -- than a character radius of clearance from the south practice pad.
+    -- Native spawns must not depend on post-spawn recovery to be playable.
+    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2.8, -15)
     lobbySpawn.Anchored = true
     lobbySpawn.Neutral = true
     lobbySpawn.Transparency = 1
@@ -1379,11 +1420,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     entryGuides.Parent = arena
 
     for i, offset in ipairs(variant.SpawnOffsets) do
-        local spawnPosition = config.ArenaCenter + offset
+        -- Markers sit ON the arena floor, never as floating solid slabs
+        -- directly inside the player's feet or beneath a mezzanine.
+        local spawnPosition = config.ArenaCenter + Vector3.new(
+            offset.X, variant.BaseSize.Y * 0.5 + 0.14, offset.Z
+        )
         local s = part(
             spawnFolder,
             "Spawn" .. i,
-            Vector3.new(4.6, 0.7, 4.6),
+            Vector3.new(4.6, 0.12, 4.6),
             spawnPosition,
             theme.Detail:Lerp(Color3.new(1, 1, 1), 0.10),
             VisualTheme.Materials.Structure
@@ -1393,7 +1438,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             spawnPosition,
             config.ArenaCenter
         )
-        s.Transparency = 0.08
+        -- Spawns are cosmetic locators. The floor is the only support;
+        -- solid marker slabs formerly trapped avatars below raised decks.
+        s.CanCollide = false
+        s.CanTouch = false
+        s.CanQuery = false
+        s.Transparency = 0.34
 
         local guideColor = i % 2 == 0 and theme.Secondary or theme.Accent
         for side = -1, 1, 2 do
@@ -1406,7 +1456,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
                 VisualTheme.Materials.Glow
             )
             guide.CFrame = s.CFrame
-                * CFrame.new(side * 0.78, -0.32, -3.0)
+                * CFrame.new(side * 0.78, 0.04, -3.0)
                 * CFrame.Angles(0, math.rad(side * 34), 0)
             guide.Transparency = 0.22
         end
@@ -1415,7 +1465,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             arena,
             "SpawnGlow" .. i,
             Vector3.new(5.2, 0.12, 5.2),
-            spawnPosition + Vector3.new(0, -0.4, 0),
+            spawnPosition + Vector3.new(0, -0.03, 0),
             (i % 2 == 0) and theme.Secondary or theme.Accent,
             VisualTheme.Materials.Glow
         )
@@ -1517,6 +1567,54 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         )
         platform.Color = theme.Detail:Lerp(theme.Surface, 0.28)
 
+        if definition.Skybridge == true then
+            platform.Name = "Skybridge" .. tostring(i)
+            platform:SetAttribute("ChaosSkybridge", true)
+            platform.Material = VisualTheme.Materials.Structure
+            -- Clean parallel luminous rails make the route legible without
+            -- opaque barriers that interfere with dodge/parkour.
+            local alongX = platform.Size.X > platform.Size.Z
+            local span = math.max(platform.Size.X, platform.Size.Z) - 0.8
+            local width = math.min(platform.Size.X, platform.Size.Z)
+            for side = -1, 1, 2 do
+                local railOffset = (width * 0.5 - 0.34) * side
+                local rail = decorPart(
+                    decor,
+                    "SkybridgeRail" .. i .. "_" .. tostring(side),
+                    alongX and Vector3.new(span, 0.14, 0.20)
+                        or Vector3.new(0.20, 0.14, span),
+                    platform.Position + Vector3.new(
+                        alongX and 0 or railOffset,
+                        (platform.Size.Y * 0.5) + 0.10,
+                        alongX and railOffset or 0
+                    ),
+                    side < 0 and theme.Accent or theme.Secondary,
+                    VisualTheme.Materials.Glow
+                )
+                rail.Transparency = 0.16
+                rail.CastShadow = false
+            end
+            -- Three under-deck ribs per bridge suggest structural engineering
+            -- at no collision cost. The bridge itself remains the only
+            -- physical route.
+            for ribIndex = -1, 1 do
+                local rib = decorPart(
+                    decor,
+                    "SkybridgeRib" .. i .. "_" .. tostring(ribIndex),
+                    alongX and Vector3.new(0.46, 0.38, width + 0.22)
+                        or Vector3.new(width + 0.22, 0.38, 0.46),
+                    platform.Position + Vector3.new(
+                        alongX and ribIndex * span * 0.27 or 0,
+                        -(platform.Size.Y * 0.5) - 0.24,
+                        alongX and 0 or ribIndex * span * 0.27
+                    ),
+                    theme.Structure,
+                    VisualTheme.Materials.Structure
+                )
+                rib.CastShadow = false
+            end
+        end
+
         local trim = decorPart(
             decor,
             "PlatformGlow" .. i,
@@ -1530,6 +1628,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         trim.CanQuery = false
         trim.Transparency = 0.18
         addPlatformFinish(decor, platform, i, theme)
+    end
+
+    if variant.Id == "Orbital" then
+        -- Fully physical sloped routes between the outer and inner decks.
+        -- No scripted platform movement or client-controlled collisions.
+        OrbitalHelix.build(arena, variant, config.ArenaCenter, theme)
     end
 
     local beaconOffsets = {

@@ -150,7 +150,7 @@ title.TextScaled = true
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Text = "CHAOS SURVIVAL"
 title.Parent = top
-UITheme.addTextConstraint(title, 14, 30)
+local titleTextConstraint = UITheme.addTextConstraint(title, 14, 30)
 
 local hint = Instance.new("TextLabel")
 hint.Size = UDim2.new(1, -100, 0.32, 0)
@@ -517,6 +517,17 @@ local function presentCountdown(state)
     local phase = tostring(state.phase or "")
     local seconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
 
+    -- The top HUD already contains the disaster name, guidance and a
+    -- high-contrast numeric countdown. On touch devices a second central
+    -- announcement hides the avatar and blocks the very escape route the
+    -- player must inspect during the final three seconds.
+    -- Keep the cinematic countdown on desktop, where it has room.
+    if touchDevice then
+        countdownToken += 1
+        countdownCard.Visible = false
+        return
+    end
+
     if phase == "ready" then
         if previousRoundPhase ~= "ready" then
             revealedPlayerChoice = selectedVote
@@ -579,7 +590,7 @@ local function presentCountdown(state)
                 state.disasterIds,
                 cleanReadyTitle(state.title)
             )
-            countdownSub.Text = hazardGuidance(state, false)
+            countdownSub.Text = hazardGuidance(state, touchDevice)
                 or (survivorCount > 1
                     and CoreLocalization.text(localeId, "SURVIVORS_READY", survivorCount)
                     or CoreLocalization.text(localeId, "SURVIVE_ZERO"))
@@ -1799,6 +1810,7 @@ local function applyResponsiveLayout()
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
 
     if not touchDevice then
+        titleTextConstraint.MaxTextSize = 30
         top.Position = UDim2.fromScale(0.5, 0.025)
         top.Size = UDim2.fromScale(0.88, 0.13)
         topHazardGlyph.Position = UDim2.new(0, 16, 0.5, 0)
@@ -1826,6 +1838,7 @@ local function applyResponsiveLayout()
     end
 
     local profile = UIResponsive.mobileProfile(viewport)
+    titleTextConstraint.MaxTextSize = profile.tinyHeight and 21 or 25
     local panelHeight = math.max(
         170,
         math.min(
@@ -1879,13 +1892,15 @@ local function applyResponsiveLayout()
     votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
 
     rookieCoach.Size = UDim2.new(profile.coachWidthScale, 0, 0, profile.coachHeight)
+    -- The hazard is already named in the top header; keep only a short
+    -- pre-round cue and preserve the camera view of warning circles.
     countdownCard.Size = UDim2.new(
-        profile.wide and 0.44 or (profile.veryNarrow and 0.72 or 0.56),
+        profile.wide and 0.40 or (profile.veryNarrow and 0.72 or 0.54),
         0,
         0,
-        profile.tinyHeight and 104 or 122
+        profile.tinyHeight and 82 or 94
     )
-    countdownCard.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.46 or 0.44)
+    countdownCard.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.42 or 0.43)
 
     if metaDock then
         metaDock.Position = UDim2.new(0.5, 0, 1, -8)
@@ -2436,15 +2451,29 @@ local function clearVotes()
     end
 end
 
-local function showVotes(options)
-    clearVotes()
-    votes.Visible = options ~= nil and #options > 0
-    if not votes.Visible then return end
+local lastRenderedVoteKey = nil
 
+local function showVotes(options)
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     local voteClass = UIResponsive.classify(viewport, touchDevice)
     local compactVote = touchDevice and voteClass.tinyHeight
+    local nextKey = FirstTimeExperience.voteRenderKey(
+        options, selectedVote, compactVote
+    )
+    local actionable = nextKey ~= nil
+
+    -- The countdown changes every second, but recreating every Frame,
+    -- glyph, constraint and button listener when cards are unchanged is
+    -- unnecessary work (especially on lower-end Android devices).
+    if nextKey == lastRenderedVoteKey and votes.Visible == actionable then
+        return
+    end
+
+    lastRenderedVoteKey = nextKey
+    clearVotes()
+    votes.Visible = actionable
+    if not actionable then return end
 
     local maxVotes = 0
     for _, option in ipairs(options) do
@@ -2622,16 +2651,37 @@ local function showVotes(options)
         UITheme.addCorner(votePill, UITheme.Corners.Pill)
 
         button.Activated:Connect(function()
-            cardScale.Scale = 0.94
-            TweenService:Create(
-                cardScale,
-                TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-                {Scale = 1}
-            ):Play()
+            -- A queued tap from a removed card must not submit a vote after
+            -- the window closed or the server replaced the ballot.
+            if currentHudPhase ~= "intermission"
+                or not FirstTimeExperience.validVoteOptions(currentHudVoteOptions)
+            then
+                return
+            end
+            local available = false
+            for _, current in ipairs(currentHudVoteOptions) do
+                if current.id == option.id then
+                    available = true
+                    break
+                end
+            end
+            if not available then return end
+
+            -- Do not use spring-like feedback in reduced-motion mode.
+            if player:GetAttribute("ReduceMotion") == true then
+                cardScale.Scale = 1
+            else
+                cardScale.Scale = 0.94
+                TweenService:Create(
+                    cardScale,
+                    TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                    {Scale = 1}
+                ):Play()
+            end
 
             selectedVote = option.id
             voteEvent:FireServer(option.id)
-            showVotes(options)
+            showVotes(currentHudVoteOptions)
         end)
     end
 end
@@ -2974,7 +3024,7 @@ local function localizedStateCopy(state)
     local displayHint = state.hint or ""
     local phase = tostring(state.phase or "")
 
-    if phase == "intermission" and state.voteOptions then
+    if phase == "intermission" and FirstTimeExperience.hasVoteOptions(state) then
         displayTitle = CoreLocalization.text(localeId, "VOTE_TITLE")
         displayHint = CoreLocalization.text(
             localeId,
@@ -2998,6 +3048,8 @@ local function localizedStateCopy(state)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    -- A malformed RoundState must not crash or replace a valid HUD.
+    if type(state) ~= "table" then return end
     presentCountdown(state)
 
     local previousHudPhase = currentHudPhase
@@ -3018,6 +3070,8 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     local gamesPlayed = tonumber(player:GetAttribute("Games")) or 0
     local firstLobby = gamesPlayed <= 0
+    local votingOpen = currentHudPhase == "intermission"
+        and FirstTimeExperience.hasVoteOptions(state)
     local activeGameplay = state.phase == "round" or state.phase == "ready"
     metaControlsSuppressed = AttentionBudgetRules.suppressMetaControls(
         state.phase,
@@ -3107,18 +3161,16 @@ stateEvent.OnClientEvent:Connect(function(state)
         shards = player:GetAttribute("RoundChaosShards"),
     })
     if firstLobby
-        and state.phase == "intermission"
-        and not state.voteOptions
+        and currentHudPhase == "intermission"
+        and not votingOpen
     then
         local controlsKey = touchDevice and "TOUCH_CONTROLS"
             or (UserInputService.GamepadEnabled and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS")
         coachText = CoreLocalization.text(localeId, controlsKey)
-    elseif touchDevice
-        and state.phase == "intermission"
-        and state.voteOptions
-    then
-        -- The top HUD already says exactly what to tap. Hiding the rookie
-        -- coach prevents it from colliding with vote cards on short phones.
+    elseif touchDevice and (votingOpen or activeGameplay) then
+        -- One owner per instruction during touch gameplay: the top HUD,
+        -- countdown, and round-focus bar already explain the hazard.
+        -- A second coach panel obscures the avatar and warning circles.
         coachText = nil
     end
     coachText = CoreLocalization.coach(localeId, coachText)
@@ -3162,9 +3214,10 @@ stateEvent.OnClientEvent:Connect(function(state)
         )
     end
 
-    if state.voteOptions then
+    -- Remove stale touch targets when an intermission vote closes.
+    if votingOpen then
         showVotes(state.voteOptions)
-    elseif state.phase ~= "intermission" then
+    else
         selectedVote = nil
         showVotes(nil)
     end

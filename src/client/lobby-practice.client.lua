@@ -1,11 +1,19 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local PracticeVisualKit = require(script.Parent.LobbyPracticeVisualKit)
+local PracticePadRegistry = require(script.Parent.LobbyPracticePadRegistry)
+local PracticeGlyphKit = require(script.Parent.LobbyPracticeGlyphKit)
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
+local practiceSignText = CoreLocalization.text(localeId, "PRACTICE_BOOST")
 local tracked = {}
 
 local gui = Instance.new("ScreenGui")
@@ -23,7 +31,7 @@ label.BackgroundColor3 = UITheme.Colors.Panel
 label.BackgroundTransparency = 1
 label.BorderSizePixel = 0
 label.Font = Enum.Font.GothamBlack
-label.Text = "PRACTICE BOOST"
+label.Text = CoreLocalization.text(localeId, "PRACTICE_BOOST_APPLIED")
 label.TextColor3 = UITheme.Colors.Cyan
 label.TextScaled = true
 label.TextTransparency = 1
@@ -37,6 +45,20 @@ scale.Scale = 0.82
 scale.Parent = label
 
 local token = 0
+local activeTweens = {}
+
+local function cancelTweens()
+    for _, tween in ipairs(activeTweens) do
+        tween:Cancel()
+    end
+    table.clear(activeTweens)
+end
+
+local function playTween(target, info, values)
+    local tween = TweenService:Create(target, info, values)
+    activeTweens[#activeTweens + 1] = tween
+    tween:Play()
+end
 
 local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -46,6 +68,9 @@ local function showFeedback(color)
     token += 1
     local current = token
 
+    -- A second boost can arrive while the previous entry/exit animations
+    -- are still running. Cancel old owners before writing fresh UI state.
+    cancelTweens()
     label.TextColor3 = color
     labelStroke.Color = color
     label.Visible = true
@@ -54,28 +79,41 @@ local function showFeedback(color)
     labelStroke.Transparency = 1
     scale.Scale = 0.82
 
-    TweenService:Create(label, TweenInfo.new(0.12), {
+    -- ReduceMotion keeps the success message readable without any pop,
+    -- scaling, slide or opacity tween (the only timer hides a static label).
+    if player:GetAttribute("ReduceMotion") == true then
+        scale.Scale = 1
+        label.TextTransparency = 0
+        label.BackgroundTransparency = 0.12
+        labelStroke.Transparency = 0.24
+        task.delay(0.65, function()
+            if current == token then label.Visible = false end
+        end)
+        return
+    end
+
+    playTween(label, TweenInfo.new(0.12), {
         TextTransparency = 0,
         BackgroundTransparency = 0.12,
-    }):Play()
-    TweenService:Create(labelStroke, TweenInfo.new(0.12), {Transparency = 0.24}):Play()
-    TweenService:Create(
+    })
+    playTween(labelStroke, TweenInfo.new(0.12), {Transparency = 0.24})
+    playTween(
         scale,
         TweenInfo.new(0.20, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {Scale = 1}
-    ):Play()
+    )
 
     task.delay(0.65, function()
         if current ~= token then
             return
         end
 
-        TweenService:Create(label, TweenInfo.new(0.16), {
+        playTween(label, TweenInfo.new(0.16), {
             TextTransparency = 1,
             BackgroundTransparency = 1,
-        }):Play()
-        TweenService:Create(labelStroke, TweenInfo.new(0.16), {Transparency = 1}):Play()
-        TweenService:Create(scale, TweenInfo.new(0.16), {Scale = 0.92}):Play()
+        })
+        playTween(labelStroke, TweenInfo.new(0.16), {Transparency = 1})
+        playTween(scale, TweenInfo.new(0.16), {Scale = 0.92})
 
         task.wait(0.18)
         if current == token then
@@ -91,16 +129,32 @@ local function remove(pad)
     end
     tracked[pad] = nil
 
-    if bundle.folder and bundle.folder.Parent then
-        bundle.folder:Destroy()
-    end
+    PracticeVisualKit.destroy(bundle)
 end
 
 local function refreshBundle(pad, bundle)
     local quality = tier()
-    bundle.emitter.Rate = quality.Name == "Low" and 0.8 or (4 * quality.ParticleScale)
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    bundle.emitter.Rate = PracticeVisualKit.rate(quality, reduced)
     bundle.highlight.FillTransparency = quality.Name == "Low" and 1 or 0.90
     bundle.highlight.OutlineTransparency = quality.Name == "Low" and 0.45 or 0.18
+
+    -- Rebuild only when the graphics tier changes. Static, cosmetic
+    -- chevrons live under the audited and LOD-managed local pad folder.
+    if bundle.glyphTier ~= quality.Name then
+        if bundle.glyphConnection then
+            bundle.glyphConnection:Disconnect()
+            bundle.glyphConnection = nil
+        end
+        if bundle.glyph then bundle.glyph:Destroy() end
+        bundle.glyph = PracticeGlyphKit.build(
+            bundle.folder, pad, quality.Name, Config.LobbyCenter
+        )
+        if bundle.glyph then
+            bundle.glyphConnection = PracticeGlyphKit.follow(bundle.glyph, pad)
+        end
+        bundle.glyphTier = quality.Name
+    end
 
     local light = pad:FindFirstChild("PracticePadLight")
     if light and light:IsA("PointLight") then
@@ -117,50 +171,19 @@ local function attach(pad)
         return
     end
 
-    local folder = Instance.new("Folder")
-    folder.Name = "PracticePadPolishLocal"
-    folder.Parent = pad
-
-    local attachment = Instance.new("Attachment")
-    attachment.Name = "PracticeMotesAttachment"
-    attachment.Position = Vector3.new(0, 0.25, 0)
-    attachment.Parent = folder
-
-    local emitter = Instance.new("ParticleEmitter")
-    emitter.Name = "PracticeMotes"
-    emitter.Rate = 4
-    emitter.Lifetime = NumberRange.new(0.25, 0.45)
-    emitter.Speed = NumberRange.new(1.2, 2.8)
-    emitter.SpreadAngle = Vector2.new(35, 35)
-    emitter.LightEmission = 0.9
-    emitter.Color = ColorSequence.new(pad.Color, Color3.new(1, 1, 1))
-    emitter.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.18),
-        NumberSequenceKeypoint.new(1, 0),
-    })
-    emitter.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.25),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    emitter.Parent = attachment
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "PracticeHighlight"
-    highlight.Adornee = pad
-    highlight.FillColor = pad.Color
-    highlight.FillTransparency = 0.90
-    highlight.OutlineColor = pad.Color:Lerp(Color3.new(1, 1, 1), 0.42)
-    highlight.OutlineTransparency = 0.18
-    highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-    highlight.Parent = folder
-
-    local bundle = {
-        folder = folder,
-        emitter = emitter,
-        highlight = highlight,
-    }
+    local bundle = PracticeVisualKit.create(pad)
+    if not bundle then return end
     tracked[pad] = bundle
     refreshBundle(pad, bundle)
+    -- A streamed-in pad's BillboardGui or TextLabel can replicate later
+    -- than its LobbyPracticePad attribute. Keep its label localized.
+    bundle.labelConnection = pad.DescendantAdded:Connect(function(descendant)
+        if descendant.Name == "PracticeLabel"
+            or descendant:IsA("TextLabel") then
+            PracticeVisualKit.localizePadLabel(pad, practiceSignText)
+        end
+    end)
+    PracticeVisualKit.localizePadLabel(pad, practiceSignText)
 end
 
 local function triggerNearestPractice()
@@ -190,32 +213,28 @@ local function triggerNearestPractice()
     end
 
     showFeedback(nearestPad.Color:Lerp(Color3.new(1, 1, 1), 0.22))
-    nearestBundle.emitter:Emit(
-        VfxQuality.particleCount(tier().Name, 16, 4)
-    )
+    if player:GetAttribute("ReduceMotion") ~= true then
+        nearestBundle.emitter:Emit(
+            VfxQuality.particleCount(tier().Name, 16, 4)
+        )
+    end
 end
+
+-- A pad can arrive via StreamingEnabled before its attributes. Observe
+-- the marker independently of arrival order and release the subscription
+-- when the pad streams out or the lobby is regenerated.
+local padObservers = PracticePadRegistry.new(attach, remove)
 
 local function scan(root)
     for _, descendant in ipairs(root:GetDescendants()) do
-        if descendant:IsA("BasePart") and descendant:GetAttribute("LobbyPracticePad") == true then
-            attach(descendant)
-        end
+        padObservers.watch(descendant)
     end
 end
 
-workspace.DescendantAdded:Connect(function(descendant)
-    if descendant:IsA("BasePart") and descendant:GetAttribute("LobbyPracticePad") == true then
-        attach(descendant)
-    end
-end)
+workspace.DescendantAdded:Connect(padObservers.watch)
+workspace.DescendantRemoving:Connect(padObservers.stop)
 
-workspace.DescendantRemoving:Connect(function(descendant)
-    if tracked[descendant] then
-        remove(descendant)
-    end
-end)
-
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+local function refreshAll()
     for pad, bundle in pairs(tracked) do
         if pad.Parent then
             refreshBundle(pad, bundle)
@@ -223,7 +242,20 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
             remove(pad)
         end
     end
+end
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshAll)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    refreshAll()
+    -- If accessibility is enabled mid-animation, stop every current
+    -- tween immediately and replace it with a stationary confirmation.
+    if player:GetAttribute("ReduceMotion") == true and label.Visible then
+        showFeedback(label.TextColor3)
+    end
 end)
+
+-- Refreshing no longer recreates particle attachments or effects.
+-- Existing tracked pads stay stable across graphics/accessibility changes.
 
 scan(workspace)
 

@@ -3,14 +3,82 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local LobbyPresentationRules = require("../../src/shared/LobbyPresentationRules")
+local LobbyGateCueKit = require("../../src/client/LobbyGateCueKit")
+local VisualTheme = require("../../src/shared/VisualTheme")
 
 describe("Lobby presentation rules", function()
+
+    it("keeps core orbit visible after malformed or late RoundState", function()
+        expect(LobbyPresentationRules.roundPhase(nil)).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase(false)).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase(42)).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase({})).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase({phase = {}})).toBe("waiting")
+        expect(LobbyPresentationRules.roundPhase({phase = 20})).toBe("waiting")
+        for _, phase in ipairs({"waiting", "intermission", "vote", "ready",
+            "round", "result"}) do
+            expect(LobbyPresentationRules.roundPhase({phase = phase})).toBe(phase)
+        end
+    end)
+
+    it("reanchors orbit after late lobby decor and platform streaming", function()
+        local root = Instance.new("Folder")
+        local fallback = Vector3.new(0, 0, -150)
+        local expectedFallback = fallback + Vector3.new(0, 6.6, 0)
+        expect(LobbyPresentationRules.coreOrbitCenter(root, fallback))
+            .toBe(expectedFallback)
+
+        local generated = Instance.new("Model")
+        generated.Name = "GeneratedMap"
+        generated.Parent = root
+        local lobby = Instance.new("Model")
+        lobby.Name = "Lobby"
+        lobby.Parent = generated
+        expect(LobbyPresentationRules.coreOrbitCenter(root, fallback))
+            .toBe(expectedFallback)
+
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = lobby
+        local wrongType = Instance.new("Folder")
+        wrongType.Name = "CenterPlatform"
+        wrongType.Parent = decor
+        expect(LobbyPresentationRules.coreOrbitCenter(root, fallback))
+            .toBe(expectedFallback)
+        wrongType:Destroy()
+
+        local platform = Instance.new("Part")
+        platform.Name = "CenterPlatform"
+        platform.Position = Vector3.new(35, 2, -71)
+        platform.Parent = decor
+        expect((LobbyPresentationRules.coreOrbitCenter(root, fallback)
+            - Vector3.new(35, 7.2, -71)).Magnitude < 0.0001).toBe(true)
+
+        platform.Position = Vector3.new(65, 3, -51)
+        expect((LobbyPresentationRules.coreOrbitCenter(root, fallback)
+            - Vector3.new(65, 8.2, -51)).Magnitude < 0.0001).toBe(true)
+
+        decor:Destroy()
+        expect(LobbyPresentationRules.coreOrbitCenter(root, fallback))
+            .toBe(expectedFallback)
+        root:Destroy()
+    end)
     it("detects voting from intermission vote options", function()
         expect(LobbyPresentationRules.mode("intermission", {
             {id = "Meteors"},
             {id = "Freeze"},
         })).toBe("vote")
         expect(LobbyPresentationRules.mode("intermission", nil)).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {})).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {{id = ""}})).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {"Meteors"})).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {
+            {id = "A"}, {id = "A"}
+        })).toBe("social")
+        expect(LobbyPresentationRules.mode("intermission", {
+            {id = "A"}, {id = "B"}, {id = "C"}, {id = "D"}
+        })).toBe("social")
+        expect(LobbyPresentationRules.mode("ready", {{id = "Meteors"}})).toBe("launch")
     end)
 
     it("prioritizes the correct lobby zone by phase", function()
@@ -105,6 +173,73 @@ describe("Lobby presentation rules", function()
             < LobbyPresentationRules.decorBudget("Medium")).toBe(true)
         expect(LobbyPresentationRules.decorBudget("Medium")
             < LobbyPresentationRules.decorBudget("High")).toBe(true)
+    end)
+end)
+
+
+describe("Premium lobby gate transition cues", function()
+    it("builds safe decorative wings and route arrows for each graphics tier", function()
+        local gate = Instance.new("Part")
+        gate.Size = Vector3.new(23, 3, 3)
+        gate.CFrame = CFrame.new(3, 12, 21) * CFrame.Angles(0, math.rad(31), 0)
+        local runway = Instance.new("Part")
+        runway.Size = Vector3.new(14, 0.1, 29)
+        runway.CFrame = CFrame.new(3, 1, 12) * CFrame.Angles(0, math.rad(31), 0)
+        local container = Instance.new("Folder")
+        local counts = {Low = 2, Medium = 4, High = 6}
+        local names = {}
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local kit = LobbyGateCueKit.build(
+                container, gate, runway, tier, VisualTheme.Accents
+            )
+            expect(#kit.pieces).toBe(counts[tier])
+            for _, entry in ipairs(kit.pieces) do
+                local p = entry.part
+                expect(p:IsA("BasePart")).toBe(true)
+                expect(p:GetAttribute("ChaosLobbyGateCue")).toBe(true)
+                expect(p.Anchored).toBe(true)
+                expect(p.CanCollide).toBe(false)
+                expect(p.CanTouch).toBe(false)
+                expect(p.CanQuery).toBe(false)
+                expect(p.CastShadow).toBe(false)
+                expect(p.Material == Enum.Material.Neon).toBe(false)
+                names[p.Name] = true
+            end
+            LobbyGateCueKit.apply(kit, "launch", VisualTheme.Accents, true)
+            for _, entry in ipairs(kit.pieces) do
+                expect(entry.part.Transparency < 0.30).toBe(true)
+                expect(entry.part.Color).toBe(VisualTheme.Accents.Gold)
+            end
+            LobbyGateCueKit.apply(kit, "vote", VisualTheme.Accents, true)
+            expect(kit.mode).toBe("vote")
+            expect(kit.pieces[1].part.Color).toBe(VisualTheme.Accents.Magenta)
+            LobbyGateCueKit.apply(kit, "inactive", VisualTheme.Accents, true)
+            for _, entry in ipairs(kit.pieces) do
+                expect(entry.part.Transparency).toBe(1)
+                entry.part:Destroy()
+            end
+        end
+        expect(names.GateVectorFinL).toBe(true)
+        expect(names.RunwayArrowForwardR).toBe(true)
+        expect(names.RunwayApproachMarkerR).toBe(true)
+        expect(#container:GetChildren()).toBe(0)
+        gate:Destroy()
+        runway:Destroy()
+        container:Destroy()
+    end)
+
+    it("refuses invalid lobby anchor and profile inputs", function()
+        local container = Instance.new("Folder")
+        local anchor = Instance.new("Part")
+        local accent = VisualTheme.Accents
+        expect(#LobbyGateCueKit.build(nil, anchor, anchor, "High", accent).pieces).toBe(0)
+        expect(#LobbyGateCueKit.build(container, nil, anchor, "High", accent).pieces).toBe(0)
+        expect(#LobbyGateCueKit.build(container, anchor, nil, "High", accent).pieces).toBe(0)
+        expect(#LobbyGateCueKit.build(container, anchor, anchor, "Unknown", accent).pieces).toBe(0)
+        expect(#LobbyGateCueKit.build(container, anchor, anchor, "High", nil).pieces).toBe(0)
+        expect(#container:GetChildren()).toBe(0)
+        anchor:Destroy()
+        container:Destroy()
     end)
 end)
 

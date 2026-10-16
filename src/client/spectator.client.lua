@@ -377,7 +377,10 @@ local function addBotTargets()
     for _, model in ipairs(folder:GetChildren()) do
         if model:IsA("Model") and model:GetAttribute("AISurvivor") == true then
             local hum = model:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
+            if hum and SpectatorTargetRules.isEligibleBot(
+                model:GetAttribute("AISurvivorInRound"),
+                hum.Health
+            ) then
                 table.insert(targets, {
                     Character = model,
                     DisplayName = hum.DisplayName ~= "" and hum.DisplayName or model.Name,
@@ -512,7 +515,9 @@ end
 local function refresh()
     local eliminated = player:GetAttribute("RoundEliminated") == true
     local participant = player:GetAttribute("RoundParticipant") == true
-    local shouldSpectate = roundActive and (eliminated or not participant)
+    local shouldSpectate = SpectatorTargetRules.isSpectating(
+        roundActive, participant, eliminated
+    )
 
     if shouldSpectate then
         if not card.Visible then
@@ -545,7 +550,9 @@ player.CharacterAdded:Connect(function()
     local eliminated = player:GetAttribute("RoundEliminated") == true
     local participant = player:GetAttribute("RoundParticipant") == true
 
-    if roundActive and (eliminated or not participant) then
+    if SpectatorTargetRules.isSpectating(
+        roundActive, participant, eliminated
+    ) then
         spectateIndex(false)
     else
         restoreCamera()

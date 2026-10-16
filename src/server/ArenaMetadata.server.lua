@@ -9,55 +9,116 @@ metadata.Name = "ArenaMetadata"
 metadata.Parent = ReplicatedStorage
 
 local function publish(definition)
-    metadata:SetAttribute("VariantId", definition.Id)
+    local mechanic = ArenaMechanics.get(definition.Id)
+    -- Publish the identity last. Clients can use it to reject hints
+    -- from the previous arena while this bundle is being replaced.
     metadata:SetAttribute("VariantName", definition.Name)
     metadata:SetAttribute("StrategyHint", definition.StrategyHint)
-
-    local mechanic = ArenaMechanics.get(definition.Id)
     metadata:SetAttribute("MechanicName", mechanic and mechanic.Name or "")
     metadata:SetAttribute("MechanicHint", mechanic and mechanic.Hint or "")
+    metadata:SetAttribute("VariantId", definition.Id)
 end
 
-local function applyMetadata(arena)
-    if not arena or not arena:IsA("Folder") or arena.Name ~= "Arena" then
-        return
+local function clearMetadata()
+    for _, attribute in ipairs({
+        "VariantId", "VariantName", "StrategyHint", "MechanicName", "MechanicHint",
+    }) do
+        metadata:SetAttribute(attribute, nil)
     end
+end
 
-    local variantId = arena:GetAttribute("VariantId") or "Classic"
-    local definition = ArenaVariants.get(variantId)
+local activeRoot = nil
+local activeArena = nil
+local arenaVariantConnection = nil
+local rootAddedConnection = nil
+local rootRemovedConnection = nil
+
+local function applyCurrentMetadata()
+    -- Never republish an old arena from a removed/replaced GeneratedMap.
+    if not activeRoot or activeRoot.Parent ~= Workspace then return end
+    local definition = ArenaVariants.activeDefinition(activeArena, activeRoot)
     if not definition then
+        clearMetadata()
         return
     end
-
-    arena:SetAttribute("StrategyHint", definition.StrategyHint)
+    activeArena:SetAttribute("StrategyHint", definition.StrategyHint)
     publish(definition)
 end
 
-local function watchGeneratedMap(root)
-    local arena = root:FindFirstChild("Arena")
-    if arena then
-        task.defer(applyMetadata, arena)
+local function bindArena(arena)
+    if arena == activeArena then
+        -- A new map can start without an Arena child. Even when both
+        -- pointers are nil, invalidate metadata from the previous map.
+        applyCurrentMetadata()
+        return
     end
-
-    root.ChildAdded:Connect(function(child)
-        if child.Name == "Arena" then
-            task.defer(applyMetadata, child)
-        end
-    end)
+    if arenaVariantConnection then
+        arenaVariantConnection:Disconnect()
+        arenaVariantConnection = nil
+    end
+    activeArena = nil
+    if arena and arena:IsA("Folder") and arena.Name == "Arena"
+        and arena.Parent == activeRoot then
+        activeArena = arena
+        -- A late or changed VariantId must update the presentation too.
+        arenaVariantConnection = arena:GetAttributeChangedSignal("VariantId")
+            :Connect(applyCurrentMetadata)
+    end
+    applyCurrentMetadata()
 end
 
+local function bindMap(root)
+    if root == activeRoot then return end
+    if rootAddedConnection then
+        rootAddedConnection:Disconnect()
+        rootAddedConnection = nil
+    end
+    if rootRemovedConnection then
+        rootRemovedConnection:Disconnect()
+        rootRemovedConnection = nil
+    end
+    bindArena(nil)
+
+    activeRoot = nil
+    if root and root:IsA("Folder") and root.Name == "GeneratedMap"
+        and root.Parent == Workspace then
+        activeRoot = root
+        rootAddedConnection = root.ChildAdded:Connect(function(child)
+            if activeRoot == root and child.Name == "Arena" then
+                bindArena(child)
+            end
+        end)
+        rootRemovedConnection = root.ChildRemoved:Connect(function(child)
+            if activeRoot == root and child == activeArena then
+                bindArena(root:FindFirstChild("Arena"))
+            end
+        end)
+        bindArena(root:FindFirstChild("Arena"))
+    else
+        clearMetadata()
+    end
+end
+
+-- Preserve the original harmless startup fallback until a generated map
+-- arrives; absent or invalid active arenas do not masquerade as Classic.
 local initialDefinition = ArenaVariants.get("Classic")
 if initialDefinition then
     publish(initialDefinition)
 end
 
-local root = Workspace:FindFirstChild("GeneratedMap")
-if root then
-    watchGeneratedMap(root)
+local initialRoot = Workspace:FindFirstChild("GeneratedMap")
+if initialRoot then
+    bindMap(initialRoot)
 end
 
 Workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        watchGeneratedMap(child)
+        bindMap(child)
+    end
+end)
+
+Workspace.ChildRemoved:Connect(function(child)
+    if child == activeRoot then
+        bindMap(Workspace:FindFirstChild("GeneratedMap"))
     end
 end)

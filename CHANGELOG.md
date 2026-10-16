@@ -1,5 +1,66 @@
 # Changelog
 
+## 2026-10-15 — Native Roblox VFX photo/video review (unreleased)
+
+- Added a small opt-in PHOTO menu available on a loaded client: live Roblox-engine screenshots without UI, screenshots with HUD, and an eight-second native video of rendered gameplay (supported devices only).
+- Added a one-shot **NEXT IMPACT** capture: a server-reported hazard impact must be in range and on-camera before a real engine frame is taken, without spawning or simulating any effects. The action is disarmed after a round.
+- Roblox prompts the player before saving any photo or video to their in-app Captures gallery. Nothing is silently saved, uploaded, sent to GitHub or shared with ChatGPT.
+- Documented Android capture and export to device storage for independent visual QA. **No genuine screenshot was produced by GitHub CI**, and this branch still requires an explicitly deployed staging candidate plus real Roblox client/device review.
+
+## 2026-10-15 — Directional dodge and visible reaction budget (unreleased)
+
+- Turned existing near-miss avatar dodge beams into velocity-aligned afterimages for strafing, retreating and sprinting. Slow or stationary characters keep a neutral silhouette; attachment, Beam and lifetime caps remain unchanged.
+- Culled optional offscreen remote human/AI shock and landing effects using the shared viewport rule, while always preserving the local survivor's reaction. Camera position rather than avatar distance now governs spectator-friendly cosmetic selection.
+- No new animation assets, beams, lights, particles, engine forces, remotes, damage changes or pay-to-win content. Automated build/engine verification and real Studio/Android art/overdraw measurement remain required.
+
+## 2026-10-15 — Character VFX, bot motion and Showtime transitions (unreleased)
+
+- Crossfaded the six existing 3D Showtime hologram parts between robot/shuffle/orbit and other dance poses, using the stage's current update cadence and without creating new geometry. Reduced Motion keeps an immediate still pose.
+- Prevented synthetic AI launch/skid/pivot effects after mobile app suspension by rejecting stale velocity intervals and clearing obsolete bot cue styling; gameplay AI, physics and native Roblox animation tracks are unchanged.
+- Improved Meteor/Bomb pressure-reaction selection: prioritize the local player and then the nearest eligible human or AI, instead of exhausting limited shock-reactor slots on the Players iteration order. Actor and concurrent Beam limits remain intact.
+- Restyled existing character reaction Beams with a four-stop thermal highlight/cooling gradient and softened alpha tail without increasing allocations or event cadence.
+- Documented Studio/Android acceptance for hologram motion, mixed human/AI impacts and continued multi-round cleanup. Automated checks alone do not certify the requested 9/10 AAA quality.
+
+## 2026-10-14 — R6/R15 physical-feel animation finishing (unreleased)
+
+- Added a bounded, damped compression-to-rebound response on real character landing: torso/root weight shift, hip tuck and arm counterbalance, with fall-speed intensity rather than a fixed theatrical bounce.
+- Reused the existing local C0 additive rig owner, original R6/R15 joint mapping, tier scaling, ReduceMotion envelope and Showtime emote priority. No extra Motor6Ds, new AnimationIds, physics impulses, camera controls or paid assets.
+- Clamped cosmetic RenderStep time after app suspension and prevented stale inter-frame speed/turn deltas from triggering fake Launch, Skid or Pivot floor effects when Android resumes.
+- Expanded the visual acceptance scorecard for grounded jumps, large falls, rapid pivots, emote transitions, Android frame delays and real render/performance comparisons. No device or AAA-rating claim is made without physical validation.
+
+## 2026-10-14 — Disaster VFX sculptural finishing (unreleased)
+
+- Replaced generic orbiting Tornado debris blocks with original, angled WedgePart wind shards: a height-offset helical arrangement, matte storm-metal with occasional cold glass glints, no increase over the existing 5/8/12 Low/Medium/High part budgets.
+- Positioned storm shards at the live funnel immediately on replication. Tornado motion and glow now freeze in ReduceMotion; visual time advancement is capped after mobile app suspension.
+- Reshaped the existing Freeze warning emitter into a drifting, low-emission crystalline condensation profile (size/transparency/color ramps) without extra emitters; enabling ReduceMotion clears already-emitted mist immediately.
+- Kept full cinematic Meteor/Bomb impact sculpture, plume, core light and sparks for near viewers; at distance, preserve the short impact pulse while omitting costly secondary overdraw and local shrapnel. Authoritative danger markers/damage remain untouched.
+- Stabilized the existing lava danger glow during ReduceMotion and capped its decorative timing after Android background/resume. No changes to gameplay, physics, visual-warning ownership, damage, monetization or external assets.
+- Release gate: exact-head Roblox build and Open Cloud engine-suite success, then authenticated Studio/Android side-by-side art review and performance/thermal measurement. A 9/10 AAA claim is not certified by code changes alone.
+
+## 2026-10-14 — Four-map sculptural finish and motion continuity (unreleased)
+
+- Original client-local machine detail passes on Classic radar, Towers lift, Crossroads transit signals and Orbital reactor containment: 0 Low / 2 Medium / 4 High extra cosmetic pieces per sculpture, with wedge-based sculpted detail on three maps.
+- Towers guide shoes travel with the pre-existing lift animation; all additions are anchored, noncolliding, non-touchable and non-queryable.
+- Existing signature foundation light has a subtle slow opacity treatment, with an unchanged static ReduceMotion pose; no new light/particle/sound asset IDs.
+- Replaced uptime-based arena-signature choreography with a bounded accumulated visual clock to avoid position jumps after mobile app suspension and phase transitions; malformed round snapshots are handled.
+- Build and Roblox Open Cloud results must be checked on the same exact candidate SHA; physical Studio/Android captures and profiling are still required for any AAA-quality claim.
+
+## 2026-10-14 — Solo AI hazard-priority correction (unreleased)
+
+- Moved server-side live meteor/bomb and collapsing-platform threat detection ahead of bot idle pauses, stuck recovery and cosmetic hesitation, so imminent hazards can interrupt pauses instead of waiting for their expiry.
+- A valid urgent escape clears any stale turn delay and skips the ordinary arrival idle and random jumps. Existing humanlike pacing is retained when no danger is present.
+- No immunity, teleport, boosted movement speed, collision edits, damage tuning or reward changes.
+- Expanded the authenticated Studio/Android playtest report with reproducible danger-response checks. Automated build, full engine suite and physical devices must still confirm the candidate before release.
+
+## 2026-10-14 — Mobile mechanic-feedback hardening (unreleased)
+
+- Cancel overlapping screen-flash and milestone-banner tweens when mobility pads, Skyrail, Flux and Helix events arrive in rapid succession.
+- Preserve high-value Skyrail Ace, Flux Master and Orbit Master success cues despite the cosmetic event throttle.
+- Honor Reduce Motion by removing full-screen mechanic flashes and character burst particles, including when the preference changes mid-animation.
+- Skip temporary mechanic-burst particle allocation in Low graphics quality, while preserving the textual reward banner.
+- Translate live mechanic success banners into French using stable server mechanic IDs; the server's physics, damage, rewards, analytics and thresholds remain unchanged.
+- Code changes have not yet been physically verified in Roblox Studio or on Android; exact-head automated CI remains the prerequisite for review.
+
 ## 2026-10-01 — Release-candidate game-feel and mobile polish
 
 - Added optional server-authoritative Chaos Shards with coin rewards, daily-quest progress, analytics and round-result breakdown.
@@ -13,6 +74,14 @@
 - Preserved cosmetic-only monetization and server-authoritative gameplay.
 
 All notable changes to Chaos Survival are documented here.
+
+## 2026-10-08 — Unified mobile/visual candidate
+
+- Combined Showtime social features, animated arena signatures, impact meshes, spectator-aware character reactions and expressive R15 movement onto one branch.
+- Reconciled the three new local visual-budget folders: LobbyShowtimeLocal, ArenaSignatureLocal and ImpactSetpieceLocal.
+- Preserved spectator coverage, added Showtime to CI engine sharding and retained rate-limit-aware Open Cloud retries.
+- New candidate is not shipped or certified; awaiting exact-commit validation and a physical Android/Studio run.
+
 
 ## 2026-10-08 — Spectator stability and mobile UX
 

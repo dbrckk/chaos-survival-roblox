@@ -5,6 +5,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -28,14 +29,7 @@ local function quality()
 end
 
 local function findCenter()
-    local generated = workspace:FindFirstChild("GeneratedMap")
-    local lobby = generated and generated:FindFirstChild("Lobby")
-    local decor = lobby and lobby:FindFirstChild("Decor")
-    local platform = decor and decor:FindFirstChild("CenterPlatform")
-    if platform and platform:IsA("BasePart") then
-        return platform.Position + Vector3.new(0, 5.2, 0)
-    end
-    return Config.LobbyCenter + Vector3.new(0, 6.6, 0)
+    return LobbyPresentationRules.coreOrbitCenter(workspace, Config.LobbyCenter)
 end
 
 local function rebuild()
@@ -116,7 +110,7 @@ local function refreshVisibility()
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    phase = tostring(state.phase or "waiting")
+    phase = LobbyPresentationRules.roundPhase(state)
     refreshVisibility()
 end)
 
@@ -141,6 +135,12 @@ task.defer(rebuild)
 
 task.spawn(function()
     while true do
+        -- CenterPlatform may stream in after GeneratedMap. Recenter the
+        -- same authored shards here without new loops or allocations.
+        local newCenter = findCenter()
+        if center ~= newCenter then
+            center = newCenter
+        end
         local active = phase ~= "round" and phase ~= "ready"
 
         if active then

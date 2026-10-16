@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local UIResponsive = require("../../src/shared/UIResponsive")
+local NearMissVisualRules = require("../../src/shared/NearMissVisualRules")
 
 describe("UI responsive profiles", function()
     it("classifies short landscape phones as tiny height", function()
@@ -75,6 +76,18 @@ describe("UI responsive profiles", function()
         expect(profile.roundFocusWidthScale <= 0.52).toBe(true)
         expect(profile.roundFocusBottomOffset >= 96).toBe(true)
         expect(profile.topHeight <= 68).toBe(true)
+    end)
+
+    it("preserves a static near-miss card without moving flashes in ReduceMotion", function()
+        local normal = NearMissVisualRules.profile(false)
+        local reduced = NearMissVisualRules.profile(true)
+        expect(normal.Animate).toBe(true)
+        expect(normal.WorldPulse).toBe(true)
+        expect(normal.EdgeFlash).toBe(true)
+        expect(reduced.Animate).toBe(false)
+        expect(reduced.WorldPulse).toBe(false)
+        expect(reduced.EdgeFlash).toBe(false)
+        expect(NearMissVisualRules.profile(nil).Animate).toBe(true)
     end)
 
     it("reserves panel space above the bottom dock", function()

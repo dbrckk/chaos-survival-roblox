@@ -1,5 +1,70 @@
 local BodyMotionRules = {}
 
+-- Both Roblox skeletons can receive mild *local* joint-offset polish.
+-- All bindings target the rig's original Motor6Ds, never the Animator,
+-- physics assembly, server-owned movement or replicated character assets.
+local function existingMotor(part, name)
+    local joint = part and part:FindFirstChild(name)
+    return joint and joint:IsA("Motor6D") and joint or nil
+end
+
+function BodyMotionRules.joints(character, rigType)
+    if not character or not character:IsA("Model") then return nil end
+    if rigType == Enum.HumanoidRigType.R15 then
+        local lower = character:FindFirstChild("LowerTorso")
+        local upper = character:FindFirstChild("UpperTorso")
+        return {
+            waist = existingMotor(upper, "Waist"),
+            rootJoint = existingMotor(lower, "Root"),
+            leftHip = existingMotor(lower, "LeftHip"),
+            rightHip = existingMotor(lower, "RightHip"),
+            leftShoulder = existingMotor(upper, "LeftShoulder"),
+            rightShoulder = existingMotor(upper, "RightShoulder"),
+        }
+    elseif rigType == Enum.HumanoidRigType.R6 then
+        local torso = character:FindFirstChild("Torso")
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        return {
+            waist = nil, -- R6 has no waist; all lean stays on RootJoint.
+            rootJoint = existingMotor(hrp, "RootJoint")
+                or existingMotor(torso, "RootJoint"),
+            leftHip = existingMotor(torso, "Left Hip"),
+            rightHip = existingMotor(torso, "Right Hip"),
+            leftShoulder = existingMotor(torso, "Left Shoulder"),
+            rightShoulder = existingMotor(torso, "Right Shoulder"),
+        }
+    end
+    return nil
+end
+
+-- Never use ipairs on a fixed positional joint array: R6 has no Waist,
+-- so a nil in position one would skip every remaining Motor6D. This
+-- returns a compact, deterministic ordered list for C0 snapshots/restores.
+local JOINT_ORDER = {
+    "waist", "rootJoint", "leftHip", "rightHip",
+    "leftShoulder", "rightShoulder",
+}
+
+function BodyMotionRules.activeJoints(joints)
+    local result = {}
+    if type(joints) ~= "table" then return result end
+    for _, key in ipairs(JOINT_ORDER) do
+        local joint = joints[key]
+        if typeof(joint) == "Instance" and joint:IsA("Motor6D") then
+            table.insert(result, joint)
+        end
+    end
+    return result
+end
+
+-- R6's single rigid Torso and wide-offset shoulders need less additive
+-- lean than R15. Avoid dramatic inversions when switching avatar rigs.
+function BodyMotionRules.rigPoseScale(rigType)
+    if rigType == Enum.HumanoidRigType.R15 then return 1 end
+    if rigType == Enum.HumanoidRigType.R6 then return 0.46 end
+    return 0
+end
+
 function BodyMotionRules.stride(speed, grounded, speedSurge)
     local safeSpeed = math.max(0, tonumber(speed) or 0)
     if grounded ~= true or safeSpeed < 2.5 then
@@ -52,6 +117,39 @@ function BodyMotionRules.readyStance(phase, grounded, speed)
 
     local safeSpeed = math.max(0, tonumber(speed) or 0)
     return math.clamp(1 - (safeSpeed / 12), 0, 1)
+end
+
+-- A directional, short-lived *cosmetic* flinch from the explosion source.
+-- X is the local rightward escape vector; Forward is -local Z.
+-- The contact/damage authority is elsewhere: this never adds force or damage.
+function BodyMotionRules.blastResponse(rootFrame, sourcePosition, radius)
+    if typeof(rootFrame) ~= "CFrame" or typeof(sourcePosition) ~= "Vector3" then
+        return 0, 0, 0
+    end
+    local fromBlast = rootFrame.Position - sourcePosition
+    local distance = fromBlast.Magnitude
+    local reach = math.max(20, math.clamp(tonumber(radius) or 8, 1, 40) * 4.2)
+    if distance >= reach then
+        return 0, 0, 0
+    end
+    local strength = math.clamp(1 - distance / reach, 0, 1)
+    local flat = Vector3.new(fromBlast.X, 0, fromBlast.Z)
+    if flat.Magnitude < 0.05 then
+        return strength, 0, 0
+    end
+    local localAway = rootFrame:VectorToObjectSpace(flat.Unit)
+    return strength, math.clamp(localAway.X, -1, 1),
+        math.clamp(-localAway.Z, -1, 1)
+end
+
+-- Showtime's action-priority emotes need exclusive authored body poses.
+-- Fade our additive Motor6D C0 offsets out/in, but leave Roblox Animator
+-- tracks, controls and physics completely untouched.
+function BodyMotionRules.emotePoseBlend(current, showtimeActive, dt)
+    local value = math.clamp(tonumber(current) or 1, 0, 1)
+    local target = showtimeActive == true and 0 or 1
+    local elapsed = math.clamp(tonumber(dt) or 0, 0, 0.25)
+    return value + (target - value) * (1 - math.exp(-14 * elapsed))
 end
 
 function BodyMotionRules.motionScale(reduceMotion)

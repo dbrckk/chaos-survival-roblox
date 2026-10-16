@@ -3,8 +3,22 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local DisasterImpact = require("../../src/server/DisasterImpact")
+local HazardImpactAudience = require("../../src/shared/HazardImpactAudience")
 
 describe("Disaster impact", function()
+    it("routes nearby impacts to active players and visible events to spectators", function()
+        local p = Vector3.new(0, 0, 0)
+        local a = HazardImpactAudience
+        expect(a.shouldSend(p, Vector3.new(100, 0, 0), true, false, 180)).toBe(true)
+        expect(a.shouldSend(p, Vector3.new(181, 0, 0), true, false, 180)).toBe(false)
+        expect(a.shouldSend(p, Vector3.new(1000, 0, 0), true, true, 180)).toBe(true)
+        expect(a.shouldSend(p, nil, false, false, 180)).toBe(true)
+        expect(a.shouldSend(p, nil, nil, nil, 180)).toBe(true)
+        expect(a.shouldSend(p, nil, true, false, 180)).toBe(false)
+        expect(a.shouldSend(nil, nil, false, true, 180)).toBe(false)
+        expect(a.shouldSend(p, Vector3.new(180, 0, 0), true, false, 180)).toBe(true)
+    end)
+
     it("deals maximum damage at the impact center", function()
         expect(DisasterImpact.damageForDistance(0, 8, 50)).toBe(50)
     end)

@@ -38,6 +38,8 @@ Copy this file for each release-candidate certification run.
 | Check | PASS / FAIL | Notes |
 | --- | --- | --- |
 | Lobby loads correctly |  |  |
+| Fresh join: avatar never trapped inside the central lobby platform |  |  |
+| LobbySpawnRecovered fires only for an embedded or immobilized fresh avatar |  |  |
 | Intermission is readable |  |  |
 | Vote works |  |  |
 | READY transition is clear |  |  |
@@ -73,6 +75,19 @@ Copy this file for each release-candidate certification run.
 | Blackout |  |  |  |  |  |
 | Shrinking Arena |  |  |  |  |  |
 | Jump Shock |  |  |  |  |  |
+
+## Solo AI hazard-response acceptance (authenticated Roblox Studio + Android)
+
+- Start a real one-human Solo Rush session. Confirm three live AI rigs under `Workspace.AISurvivors` and no artificial respawns during an active round.
+- During Meteor Shower and Bomb Rain, observe bots that are stopped or hesitating **before** the warning appears. Once the warning has been visible for a profile's reaction delay, bots must start a legitimate `Humanoid` escape movement rather than remain frozen by the prior idle/turn pause. Record short video and warning-to-first-movement timing for all three bot profiles (Cautious / Balanced / Bold).
+- During Disappearing Platforms, observe a bot standing on a platform at the `Warning` collapse phase: it must abandon an idle/turn pause and attempt an escape. An occasional genuine elimination is acceptable; scripted invulnerability or teleporting is not.
+- Check the same hazards while no warning is nearby: natural hesitation, idle pauses and normal movement speed should remain; bots must not dodge an invisible hazard.
+- Repeat with a late human joining mid-round: existing AI contestants must not disappear or restart, and should still evade hazards. Confirm client and server Output contain no AI step warnings or exceptions.
+- On Android, verify three AI rigs remain visible, responsive and animated on Low and Medium quality. Record FPS and whether threat reactions survive performance downshifts.
+- Result: PASS / FAIL / NOT RUN
+- Evidence (video/screenshots and timestamped Output):
+- Physical Studio version / device:
+- Notes:
 
 ## Mobile UX
 
@@ -122,6 +137,10 @@ Duration target: 30–60 minutes.
 - Visual budget warning observed: yes / no
 - Latest PerformancePulse Visual: P/L/E:
 - Latest PerformancePulse Budget status: OK / OVER / UNKNOWN
+- Staging HUD real FPS / worst-frame milliseconds (on-device, 4 s sample):
+- Staging HUD VisualBudget status and part/light/effect counts per arena:
+- Staging evidence: screenshot with commit stamp + performance overlay:
+- Verify staging diagnostic UI is ABSENT from production:
 - Latest PerformancePulse context: phase / chaos count / final rush
 - Device heat/battery notes:
 
@@ -178,6 +197,31 @@ List only issues that prevent this build from becoming the next release candidat
 1.
 2.
 3.
+
+
+## Premium acceptance gates (not an automatic AAA certification)
+
+A release candidate is **not ready** when any mandatory item below fails or has
+no supporting device/Studio evidence. Compilation and upload alone are not
+proof of visual quality or playable performance.
+
+| Gate | Objective evidence | PASS / FAIL / NOT RUN |
+| --- | --- | --- |
+| First 90 seconds | Fresh Android join, clear orientation, avatar can walk/jump/vote before first round; no forced manual unstuck |  |
+| All four arenas | HUD-free captures of Classic/Towers/Crossroads/Orbital at Low/Medium/High; distinctive architecture remains legible |  |
+| Gameplay/skill | Genuine movement and hazard escape; no false collisions or unreachable valid platforms in 4 arenas |  |
+| Disaster clarity | 11 single disasters plus supported Double Chaos pairs; warnings take precedence over cosmetic neon |  |
+| AI competition | Solo bots are present, visibly animate, dodge signaled threats and never receive unfair invulnerability |  |
+| Responsive controls | Phone portrait/landscape when supported; no jump/vote/settings/timer overlap; spectator input works |  |
+| Performance | Android Medium typical >= 45 FPS target, sustained >= 30 FPS; no budget OVER; diagnose each significant stutter |  |
+| Accessibility | ReduceMotion/AudioMuted/HapticsDisabled effective and persistent; hazards are understandable without sound |  |
+| Reliability | 30-minute mixed solo/multiplayer soak, multiple arena swaps, late join, disconnect/rejoin, no unbounded memory growth |  |
+| Economy integrity | Rewards and persistence accurate; premium items cosmetic only; no paid gameplay advantage |  |
+| Visual/audio quality | Human evaluation of materials, composition, animation transitions, lighting, VFX impact and audio mix against reference captures |  |
+
+The FPS thresholds are **targets**, not measured results; record actual device,
+viewport, VFX tier, run SHA and sample length. Do not substitute GitHub Actions
+success for real Android gameplay and screenshot validation.
 
 ## Final decision
 

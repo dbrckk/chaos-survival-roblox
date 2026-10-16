@@ -3,13 +3,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
 folder.Name = "ArenaSurfaceReliefLocal"
 folder.Parent = workspace
 
-local mapConnection = nil
+local disconnectMapWatch = nil
+local refreshPending = false
 
 local function clear()
     folder:ClearAllChildren()
@@ -257,23 +259,70 @@ local function addOrbital(base, theme, tier)
     end
 end
 
+-- Mobile/Low should not turn into a featureless glowing rectangle.
+-- Use a handful of low-profile, matte mechanical plates near the edges
+-- (outside the spawn lanes); unlike bloom and particles they are cheap,
+-- recognizable 3D geometry and never interfere with locomotion.
+local function addEssentialDeckRelief(base, theme)
+    local hx = base.Size.X * 0.5
+    local hz = base.Size.Z * 0.5
+    local floorY = base.Size.Y * 0.5 + 0.035
+    local plateColor = theme.Surface:Lerp(theme.Structure, 0.68)
+    local metalColor = theme.Detail:Lerp(theme.Structure, 0.30)
+    local placements = {
+        {x = -hx * 0.62, z = -hz * 0.73, yaw = 0},
+        {x =  hx * 0.62, z = -hz * 0.73, yaw = 0},
+        {x = -hx * 0.62, z =  hz * 0.73, yaw = 0},
+        {x =  hx * 0.62, z =  hz * 0.73, yaw = 0},
+        {x = -hx * 0.75, z = 0, yaw = 90},
+        {x =  hx * 0.75, z = 0, yaw = 90},
+    }
+
+    for index, placement in ipairs(placements) do
+        local anchor = base.CFrame
+            * CFrame.new(placement.x, floorY, placement.z)
+            * CFrame.Angles(0, math.rad(placement.yaw), 0)
+        -- Surface-flush: no step, invisible wall or spawn blocker.
+        local plate = makePart(
+            "EssentialDeckPlate" .. index,
+            Vector3.new(9.2, 0.09, 3.2),
+            anchor,
+            plateColor,
+            index % 2 == 0 and Enum.Material.DiamondPlate or Enum.Material.Metal,
+            0.12,
+            false
+        )
+        local inset = makePart(
+            "EssentialDeckInset" .. index,
+            Vector3.new(7.5, 0.04, 0.18),
+            plate.CFrame * CFrame.new(0, 0.064, 0),
+            metalColor,
+            Enum.Material.Metal,
+            0.18,
+            false
+        )
+        inset.CastShadow = false
+    end
+end
+
 local function rebuild()
     clear()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    if tier.Name == "Low" then
-        return
-    end
-
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
+
+    if tier.Name == "Low" then
+        addEssentialDeckRelief(base, theme)
+        return
+    end
 
     addCornerBevels(base, theme, tier)
     addServiceFasteners(base, theme, tier)
@@ -289,39 +338,46 @@ local function rebuild()
     end
 end
 
-local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+-- Maps may replicate Arena, Base and VariantId in different frames.
+-- One map-scoped watcher prevents stale decor after a late Base or variant.
+local function scheduleRefresh()
+    if refreshPending then
+        return
     end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+    end)
+end
 
-    local generated = workspace:FindFirstChild("GeneratedMap")
+local function bindGeneratedMap(generated)
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
+    end
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.06, rebuild)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(function()
-            bindMap()
-            rebuild()
-        end)
+        bindGeneratedMap(child)
+        scheduleRefresh()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
+        bindGeneratedMap(nil)
         clear()
-        bindMap()
     end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
 
-bindMap()
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 rebuild()

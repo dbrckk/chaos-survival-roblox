@@ -10,6 +10,9 @@ local StudioTestService = game:GetService("StudioTestService")
 local Lighting = game:GetService("Lighting")
 
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local ArenaFocalFixtureKit = require(script.Parent.ArenaFocalFixtureKit)
+local RoundJourneyRules = require(ReplicatedStorage.Shared.RoundJourneyRules)
 
 local player = Players.LocalPlayer
 if not player then return end
@@ -25,6 +28,8 @@ end
 local reportEvent = ReplicatedStorage:WaitForChild("ChaosE2EReport")
 local failures = {}
 local roundStateReceived = false
+local roundJourneyStage = 0
+local observedJourneys = {}
 local lastRoundPhase = nil
 local visualMetrics = {
     Parts = 0,
@@ -36,6 +41,7 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
 local visualPhaseProbed = {}
 local arenaProbed = {}
+local showtimeProbed = {}
 local arenaEntryProbed = {}
 local arenaEntryPending = {}
 
@@ -64,6 +70,15 @@ local function sendVisualPhaseProbe(phase)
         local camera = workspace.CurrentCamera
         local depth = Lighting:FindFirstChild("ArenaIdentityDepth")
         local sunRays = Lighting:FindFirstChild("ArenaIdentitySunRays")
+        local gateFolder = workspace:FindFirstChild("LobbyPresentationLocal")
+        local gateFin = gateFolder and gateFolder:FindFirstChild("GateVectorFinL")
+        local gateCueReady = phase ~= "ready"
+            or (gateFin ~= nil and gateFin:IsA("BasePart")
+                and gateFin:GetAttribute("ChaosLobbyGateCue") == true
+                and gateFin.Anchored and not gateFin.CanCollide
+                and not gateFin.CanTouch and not gateFin.CanQuery
+                and gateFin.Transparency < 0.7)
+
 
         reportEvent:FireServer({
             kind = "visual_phase_probe",
@@ -74,6 +89,7 @@ local function sendVisualPhaseProbe(phase)
             auditedFolders = folders,
             visualMetrics = metrics,
             withinBudget = VisualBudgetRules.withinBudget(tierName, metrics),
+            gateCueReady = gateCueReady,
             postProcess = {
                 depthNearIntensity = depth and depth:IsA("DepthOfFieldEffect")
                     and depth.NearIntensity or -1,
@@ -88,6 +104,216 @@ local function sendVisualPhaseProbe(phase)
     end)
 end
 
+local function sendShowtimePhaseProbe(phase)
+    if phase ~= "round" and phase ~= "result" then
+        return
+    end
+    if showtimeProbed[phase] then
+        return
+    end
+    showtimeProbed[phase] = true
+
+    task.delay(0.55, function()
+        if not player.Parent then
+            return
+        end
+        local root = workspace:FindFirstChild("LobbyShowtimeLocal")
+        local deck = root and root:FindFirstChild("ShowtimeDeck")
+        local assets = root and root:FindFirstChild("Showtime3DAssets")
+        local expected = phase == "result"
+        local parts = 0
+        local visible = 0
+        local safe = true
+        if assets then
+            for _, item in ipairs(assets:GetDescendants()) do
+                if item:IsA("BasePart") then
+                    parts += 1
+                    if item.Transparency < 0.98 then
+                        visible += 1
+                    end
+                    if not item.Anchored or item.CanCollide
+                        or item.CanTouch or item.CanQuery
+                    then
+                        safe = false
+                    end
+                end
+            end
+        end
+
+        local deckVisible = deck and deck:IsA("BasePart")
+            and deck.Transparency < 0.98
+        local qualityName = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+        local dancerVisor = root and root:FindFirstChild("HoloDancerVisor1")
+        local dancerChest = root and root:FindFirstChild("HoloDancerChestCore1")
+        local holoDetailReady = qualityName == "Low"
+            or (dancerVisor ~= nil and dancerChest ~= nil
+                and dancerVisor:GetAttribute("ChaosHologramDetail") == true
+                and dancerChest:GetAttribute("ChaosHologramDetail") == true
+                and dancerVisor.Anchored and not dancerVisor.CanCollide
+                and not dancerVisor.CanTouch and not dancerVisor.CanQuery
+                and (dancerVisor.Transparency < 0.98) == expected
+                and (dancerChest.Transparency < 0.98) == expected)
+        local hero = assets and assets:FindFirstChild("ShowtimeCrownHeart")
+        local dj = assets and assets:FindFirstChild("ShowtimeDJBooth")
+        local okay = root ~= nil and deck ~= nil
+            and assets ~= nil and hero ~= nil and dj ~= nil
+            and parts >= 12 and safe and holoDetailReady
+            and deckVisible == expected
+            and ((expected and visible > 0)
+                or (not expected and visible == 0))
+
+        reportEvent:FireServer({
+            kind = "showtime_phase_probe",
+            phase = phase,
+            ok = okay,
+            propParts = parts,
+            visibleProps = visible,
+            error = okay and "" or string.format(
+                "phase=%s deck=%s props=%d visible=%d crown=%s dj=%s safe=%s holo=%s",
+                phase, tostring(deckVisible), parts, visible,
+                tostring(hero ~= nil), tostring(dj ~= nil), tostring(safe), tostring(holoDetailReady)
+            ),
+        })
+    end)
+end
+
+local function sampleArenaPresentation(arenaId)
+    local root = workspace:FindFirstChild("GeneratedMap")
+    local arena = root and root:FindFirstChild("Arena")
+    local worldArenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
+    local matchesWorld = worldArenaId == arenaId
+
+    local expectedHero = ({
+        Classic = "ClassicRadarSweep",
+        Towers = "TowerAnimatedLift",
+        Crossroads = "CrossroadAnimatedSignal1",
+        Orbital = "OrbitalGyroscopeHeart",
+    })[arenaId]
+    local signatureRoot = workspace:FindFirstChild("ArenaSignatureLocal")
+    local signatureSet = signatureRoot and signatureRoot:FindFirstChild("ArenaSignatureSet")
+    local signatureHero = signatureSet and expectedHero
+        and signatureSet:FindFirstChild(expectedHero)
+
+    local signatureParts = 0
+    local safeParts = true
+    if signatureSet then
+        for _, child in ipairs(signatureSet:GetDescendants()) do
+            if child:IsA("BasePart") then
+                signatureParts += 1
+                if not child.Anchored or child.CanCollide
+                    or child.CanTouch or child.CanQuery
+                then
+                    safeParts = false
+                end
+            end
+        end
+    end
+    local signatureReady = signatureHero ~= nil
+        and signatureHero:IsA("BasePart")
+        and signatureParts >= 6 and signatureParts <= 50
+        and safeParts
+
+    local names = ({
+        Classic = {"ClassicOpticShroud", "ClassicTrussDiagonal"},
+        Towers = {"TowerCrateSeal", "TowerCoolingVent"},
+        Crossroads = {"CrossroadsDirectionArrow", "CrossroadsTransitCornice"},
+        Orbital = {"OrbitalCanisterCollar", "OrbitalRadialSpine"},
+    })[arenaId]
+    local serviceFolder = workspace:FindFirstChild("ArenaServicePropsLocal")
+    local skylineFolder = workspace:FindFirstChild("ArenaMidgroundMassLocal")
+    local serviceMotif = names and serviceFolder and serviceFolder:FindFirstChild(names[1])
+    local skylineMotif = names and skylineFolder and skylineFolder:FindFirstChild(names[2])
+    local secondaryReady = serviceMotif ~= nil and skylineMotif ~= nil
+        and serviceMotif:GetAttribute("ChaosVisualMotif") == true
+        and skylineMotif:GetAttribute("ChaosVisualMotif") == true
+        and serviceMotif.Anchored and skylineMotif.Anchored
+        and not serviceMotif.CanCollide and not skylineMotif.CanCollide
+
+    local silhouetteName = ({
+        Classic = "SurveyCounterweight",
+        Towers = "CoolingIntakeSpine",
+        Crossroads = "TransitDirectionBeam",
+        Orbital = "DockFieldSpine",
+    })[arenaId]
+    local silhouetteRoot = workspace:FindFirstChild("ArenaSilhouetteBreakupLocal")
+    local silhouette = silhouetteRoot and silhouetteName
+        and silhouetteRoot:FindFirstChild(silhouetteName)
+    local silhouetteReady = silhouette ~= nil
+        and silhouette:IsA("BasePart")
+        and silhouette:GetAttribute("ChaosSilhouetteAccent") == true
+        and silhouette:GetAttribute("ArenaVariant") == arenaId
+        and silhouette.Anchored and not silhouette.CanCollide
+        and not silhouette.CanTouch and not silhouette.CanQuery
+
+    local deckName = ({
+        Classic = "ClassicSurveyDatumWest",
+        Towers = "TowerLoadSpreaderNorth",
+        Crossroads = "CrossroadsLaneArrowWest",
+        Orbital = "OrbitalIrisPetalNorth",
+    })[arenaId]
+    local deckRoot = workspace:FindFirstChild("ArenaSurfaceDetailLocal")
+    local deck = deckRoot and deckName and deckRoot:FindFirstChild(deckName)
+    local deckReady = deck ~= nil
+        and deck:IsA("BasePart")
+        and deck:GetAttribute("ChaosDeckFinish") == true
+        and deck:GetAttribute("ArenaVariant") == arenaId
+        and deck.Anchored and not deck.CanCollide and not deck.CanTouch
+        and not deck.CanQuery and deck.Material ~= Enum.Material.Neon
+
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local fixtureNames = ArenaFocalFixtureKit.names(arenaId)
+    local fixtureRoot = workspace:FindFirstChild("ArenaFocalLightingLocal")
+    local fixture = fixtureRoot and fixtureNames[1]
+        and fixtureRoot:FindFirstChild(fixtureNames[1] .. "1")
+    local fixtureReady = tier.Name == "Low"
+        or (fixture ~= nil and fixture:IsA("BasePart")
+            and fixture:GetAttribute("ChaosFocalFixture") == true
+            and fixture:GetAttribute("ArenaVariant") == arenaId
+            and fixture.Anchored and not fixture.CanCollide
+            and not fixture.CanTouch and not fixture.CanQuery)
+
+    local platformName = ({
+        Classic = "ClassicCalibrationPlate",
+        Towers = "TowerHoistMount",
+        Crossroads = "CrossroadsRouteChevron",
+        Orbital = "OrbitalFluxSpine",
+    })[arenaId]
+    local platformRoot = workspace:FindFirstChild("ArenaPlatformIdentityLocal")
+    local trim = platformRoot and platformName
+        and platformRoot:FindFirstChild(platformName)
+    local weld = trim and trim:FindFirstChild("ChaosPlatformTrimWeld")
+    local platformReady = trim ~= nil
+        and trim:IsA("BasePart")
+        and trim:GetAttribute("ChaosPlatformTrim") == true
+        and trim.Massless and not trim.Anchored and not trim.CanCollide
+        and not trim.CanTouch and not trim.CanQuery
+        and weld ~= nil and weld:IsA("WeldConstraint")
+        and weld.Part0 == trim and weld.Part1 ~= nil
+
+    local ok = matchesWorld and signatureReady and secondaryReady
+        and platformReady and silhouetteReady and deckReady and fixtureReady
+    return {
+        kind = "arena_probe",
+        arenaId = arenaId,
+        worldArenaId = worldArenaId,
+        ok = ok,
+        signatureReady = signatureReady,
+        secondaryReady = secondaryReady,
+        platformReady = platformReady,
+        silhouetteReady = silhouetteReady,
+        deckReady = deckReady,
+        fixtureReady = fixtureReady,
+        signatureHero = expectedHero or "Unknown",
+        signatureParts = signatureParts,
+        error = ok and "" or string.format(
+            "arena=%s world=%s hero=%s exists=%s parts=%d safe=%s secondary=%s platform=%s skyline=%s deck=%s fixture=%s",
+            arenaId, worldArenaId, tostring(expectedHero),
+            tostring(signatureHero ~= nil), signatureParts, tostring(safeParts),
+            tostring(secondaryReady), tostring(platformReady), tostring(silhouetteReady), tostring(deckReady), tostring(fixtureReady)
+        ),
+    }
+end
+
 local function sendArenaProbe(state)
     if type(state) ~= "table" or tostring(state.phase or "") ~= "result" then
         return
@@ -99,20 +325,20 @@ local function sendArenaProbe(state)
     end
     arenaProbed[arenaId] = true
 
-    local root = workspace:FindFirstChild("GeneratedMap")
-    local arena = root and root:FindFirstChild("Arena")
-    local worldArenaId = arena and tostring(arena:GetAttribute("VariantId") or "") or ""
-    local matchesWorld = worldArenaId == arenaId
-
-    reportEvent:FireServer({
-        kind = "arena_probe",
-        arenaId = arenaId,
-        worldArenaId = worldArenaId,
-        ok = matchesWorld,
-        error = matchesWorld
-            and ""
-            or ("RoundState arena " .. arenaId .. " != world arena " .. worldArenaId),
-    })
+    task.spawn(function()
+        -- The arena, decor and client-local welds can replicate in different
+        -- frames. Probe repeatedly, but never give an incorrect PASS.
+        local deadline = os.clock() + 2.0
+        local result = nil
+        while player.Parent and os.clock() < deadline do
+            result = sampleArenaPresentation(arenaId)
+            if result.ok then break end
+            task.wait(0.10)
+        end
+        if result then
+            reportEvent:FireServer(result)
+        end
+    end)
 end
 
 local function sendArenaEntryProbe(state)
@@ -217,7 +443,24 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
         if type(state) == "table" then
             roundStateReceived = true
             lastRoundPhase = state.phase
+            local stage, completed = RoundJourneyRules.advance(
+                roundJourneyStage, state.phase
+            )
+            roundJourneyStage = stage
+            if completed then
+                local arenaId = tostring(state.arenaId or "")
+                if arenaId ~= "" and not observedJourneys[arenaId] then
+                    observedJourneys[arenaId] = true
+                    reportEvent:FireServer({
+                        kind = "round_journey_probe",
+                        arenaId = arenaId,
+                        completedStages = stage,
+                        phases = {"intermission", "ready", "round", "result"},
+                    })
+                end
+            end
             sendVisualPhaseProbe(tostring(state.phase or ""))
+            sendShowtimePhaseProbe(tostring(state.phase or ""))
             sendArenaProbe(state)
             sendArenaEntryProbe(state)
         end
@@ -291,6 +534,7 @@ local shrinkGui = playerGui:WaitForChild("ShrinkPressure", 10)
 local inviteGui = playerGui:WaitForChild("ChaosSocialInvite", 10)
 local shareGui = playerGui:WaitForChild("ChaosMomentShare", 10)
 local reactionsGui = playerGui:WaitForChild("ChaosSocialReactions", 10)
+local showtimeGui = playerGui:WaitForChild("ChaosShowtime", 10)
 
 check(hud ~= nil, "ChaosHUD missing")
 check(juice ~= nil, "ChaosJuice missing")
@@ -333,6 +577,28 @@ check(shrinkGui ~= nil, "ShrinkPressure missing")
 check(inviteGui ~= nil, "ChaosSocialInvite missing")
 check(shareGui ~= nil, "ChaosMomentShare missing")
 check(reactionsGui ~= nil, "ChaosSocialReactions missing")
+
+check(showtimeGui ~= nil, "ChaosShowtime emote interface missing")
+if showtimeGui then
+    for _, controlName in ipairs({
+        "ShowtimeToggle",
+        "Emote_dance",
+        "Emote_shuffle",
+        "Emote_groove",
+        "Emote_cheer",
+        "Emote_wave",
+        "Emote_laugh",
+    }) do
+        local control = showtimeGui:FindFirstChild(controlName, true)
+        check(control ~= nil, controlName .. " missing")
+        if control and control:IsA("GuiObject") then
+            check(
+                control.Size.Y.Offset >= 44,
+                controlName .. " touch target too small"
+            )
+        end
+    end
+end
 
 do
     local minHeight = UserInputService.TouchEnabled and 44 or 36

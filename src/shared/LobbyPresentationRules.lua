@@ -1,10 +1,52 @@
+-- Pure rules are loaded by Lest without a ModuleScript 'script' global.
+-- Keep the ballot guard dependency-free; parity is asserted by core_b1 specs.
+local function validVoteOptions(options)
+    if type(options) ~= "table" or #options < 1 or #options > 3 then
+        return false
+    end
+    local seen = {}
+    for index = 1, #options do
+        local option = options[index]
+        if type(option) ~= "table"
+            or type(option.id) ~= "string" or option.id == ""
+            or seen[option.id] then
+            return false
+        end
+        seen[option.id] = true
+    end
+    return true
+end
+
 local LobbyPresentationRules = {}
+
+-- A malformed RoundState snapshot must not abort lobby visual updates.
+function LobbyPresentationRules.roundPhase(snapshot)
+    if type(snapshot) ~= "table" or type(snapshot.phase) ~= "string" then
+        return "waiting"
+    end
+    return snapshot.phase
+end
+
+-- Resolve the actual streamed lobby platform, not just the initial fallback.
+-- Pure locator: the existing orbit update owns the low-frequency polling.
+function LobbyPresentationRules.coreOrbitCenter(root, lobbyCenter)
+    local fallback = typeof(lobbyCenter) == "Vector3"
+        and lobbyCenter or Vector3.zero
+    local generated = typeof(root) == "Instance"
+        and root:FindFirstChild("GeneratedMap") or nil
+    local lobby = generated and generated:FindFirstChild("Lobby")
+    local decor = lobby and lobby:FindFirstChild("Decor")
+    local platform = decor and decor:FindFirstChild("CenterPlatform")
+    if platform and platform:IsA("BasePart") then
+        return platform.Position + Vector3.new(0, 5.2, 0)
+    end
+    return fallback + Vector3.new(0, 6.6, 0)
+end
 
 function LobbyPresentationRules.mode(phase, voteOptions)
     local value = tostring(phase or "waiting")
     if value == "intermission"
-        and type(voteOptions) == "table"
-        and #voteOptions > 0
+        and validVoteOptions(voteOptions)
     then
         return "vote"
     elseif value == "vote" then

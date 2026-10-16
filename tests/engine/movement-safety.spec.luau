@@ -3,8 +3,269 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local MovementSafety = require("../../src/server/MovementSafety")
+local PhaseDashRules = require("../../src/shared/PhaseDashRules")
+local DashVisualRules = require("../../src/client/PhaseDashVisualRules")
+local DashObserverRegistry = require("../../src/client/PhaseDashObserverRegistry")
 
 describe("Movement safety", function()
+    it("gives every active survivor one free bounded Phase Dash", function()
+        local rules = PhaseDashRules
+        expect(rules.canActivate("round", true, false, 100, true, 10, 9)).toBe(true)
+        expect(rules.canActivate("round", true, false, 100, true, 10, 10)).toBe(true)
+        expect(rules.canActivate("round", true, false, 100, true, 10, 11)).toBe(false)
+        expect(rules.canActivate("ready", true, false, 100, true, 10, 0)).toBe(false)
+        expect(rules.canActivate("result", true, false, 100, true, 10, 0)).toBe(false)
+        expect(rules.canActivate("round", false, false, 100, true, 10, 0)).toBe(false)
+        expect(rules.canActivate("round", true, true, 100, true, 10, 0)).toBe(false)
+        expect(rules.canActivate("round", true, false, 0, true, 10, 0)).toBe(false)
+        expect(rules.canActivate("round", true, false, 100, false, 10, 0)).toBe(false)
+        expect(rules.nextReadyAt(10)).toBe(10 + rules.Cooldown)
+        expect(rules.Cooldown >= 7).toBe(true)
+    end)
+
+    it("authors directional shockwave facets inside unchanged Android part caps", function()
+        local art = DashVisualRules
+        expect(art.count("High")).toBe(10)
+        expect(art.count("Medium")).toBe(7)
+        expect(art.count("Low")).toBe(5)
+        expect(art.count("Unknown")).toBe(0)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local count = art.count(tier)
+            local first = art.facet(tier, 1, false)
+            expect(first ~= nil and first.Count == count).toBe(true)
+            local differing = false
+            for i = 1, count do
+                local design = art.facet(tier, i, false)
+                local repeatDesign = art.facet(tier, i, false)
+                expect(design.Angle).toBe(repeatDesign.Angle)
+                expect(design.EndScale).toBe(repeatDesign.EndScale)
+                expect(design.Bank).toBe(repeatDesign.Bank)
+                expect(design.StartScale >= 1 and design.StartScale <= 1.04)
+                    .toBe(true)
+                expect(design.EndScale >= 0.88 and design.EndScale <= 1.20)
+                    .toBe(true)
+                expect(design.ChordScale > 0.75 and design.ChordScale <= 0.96)
+                    .toBe(true)
+                expect(math.abs(design.Bank) <= math.rad(13)).toBe(true)
+                if design.EndScale ~= first.EndScale then differing = true end
+            end
+            expect(differing).toBe(true)
+        end
+        expect(art.facet("Unknown", 1, false) == nil).toBe(true)
+        expect(art.facet("Low", 6, false) == nil).toBe(true)
+        expect(art.facet("High", 1.5, false) == nil).toBe(true)
+        expect(art.facet("High", 0/0, false) == nil).toBe(true)
+        expect(art.facet("High", math.huge, false) == nil).toBe(true)
+        local primary = art.facet("High", 2, false)
+        local accent = art.facet("High", 2, true)
+        expect(primary.Thickness > accent.Thickness).toBe(true)
+        expect(primary.ChordScale > accent.ChordScale).toBe(true)
+        expect(primary.Bank ~= accent.Bank).toBe(true)
+    end)
+
+    it("authors shallow directional 3D relief without new mobile instances", function()
+        local rules = DashVisualRules
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local fullCount = rules.count(tier, false, false)
+            local reducedCount = rules.count(tier, true, false)
+            local distantCount = rules.count(tier, false, true)
+            local sawLift = false
+            local sawTilt = false
+            for index = 1, fullCount do
+                local blade = rules.facet(tier, index, false, false, false)
+                local again = rules.facet(tier, index, false, false, false)
+                expect(blade.Count).toBe(fullCount)
+                expect(blade.Rise).toBe(again.Rise)
+                expect(blade.Pitch).toBe(again.Pitch)
+                expect(blade.Rise >= 0 and blade.Rise <= 0.151).toBe(true)
+                expect(math.abs(blade.Pitch) <= math.rad(6.01)).toBe(true)
+                if blade.Rise > 0 then sawLift = true end
+                if blade.Pitch ~= 0 then sawTilt = true end
+                local secondary = rules.facet(tier, index, true, false, false)
+                expect(secondary.Rise <= blade.Rise).toBe(true)
+            end
+            expect(sawLift and sawTilt).toBe(true)
+            for index = 1, reducedCount do
+                local still = rules.facet(tier, index, false, true, false)
+                expect(still.Rise).toBe(0)
+                expect(still.Pitch).toBe(0)
+            end
+            for index = 1, distantCount do
+                local far = rules.facet(tier, index, false, false, true)
+                expect(far.Rise).toBe(0)
+                expect(far.Pitch).toBe(0)
+            end
+            expect(rules.count(tier)).toBe(fullCount)
+            expect(rules.count(tier, true)).toBe(reducedCount)
+            expect(rules.count(tier, false, true)).toBe(distantCount)
+        end
+    end)
+
+    it("halves moving Phase Dash facet load under ReduceMotion without removing the cue", function()
+        local art = DashVisualRules
+        local expected = {Low = 3, Medium = 4, High = 5}
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local normal = art.count(tier)
+            local reduced = art.count(tier, true)
+            expect(reduced).toBe(expected[tier])
+            expect(reduced < normal).toBe(true)
+            expect(art.count(tier, false)).toBe(normal)
+            for index = 1, reduced do
+                local facet = art.facet(tier, index, false, true)
+                expect(facet ~= nil and facet.Count == reduced).toBe(true)
+                expect(facet.Angle >= 0 and facet.Angle < math.pi * 2).toBe(true)
+                expect(facet.EndScale > 0 and facet.ChordScale > 0).toBe(true)
+            end
+            expect(art.facet(tier, reduced + 1, false, true)).toBe(nil)
+            expect(art.facet(tier, 1, false, false).Count).toBe(normal)
+        end
+        expect(art.count("Unknown", true)).toBe(0)
+        expect(art.facet("Unknown", 1, false, true)).toBe(nil)
+        expect(art.facet("High", 0/0, false, true)).toBe(nil)
+    end)
+
+    it("limits distant remote dash visuals without changing close-range budgets", function()
+        local art = DashVisualRules
+        -- Validate both transition boundaries and invalid distance inputs.
+        expect(art.isDistantRemote(false, 71.99)).toBe(false)
+        expect(art.isDistantRemote(false, 72)).toBe(true)
+        expect(art.isDistantRemote(false, 110)).toBe(true)
+        expect(art.isDistantRemote(false, 110.01)).toBe(false)
+        expect(art.isDistantRemote(true, 90)).toBe(false)
+        expect(art.isDistantRemote(false, 0/0)).toBe(false)
+        expect(art.isDistantRemote(false, math.huge)).toBe(false)
+        expect(art.isDistantRemote(false, nil)).toBe(false)
+        expect(art.isDistantRemote(false, "90")).toBe(false)
+        local caps = {Low = 3, Medium = 4, High = 5}
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local full = art.count(tier, false, false)
+            local far = art.count(tier, false, true)
+            expect(full).toBe(art.count(tier))
+            expect(far).toBe(caps[tier])
+            expect(far < full).toBe(true)
+            expect(art.count(tier, true, true)).toBe(caps[tier])
+            expect(art.count(tier, true, false)).toBe(caps[tier])
+            for index = 1, far do
+                local part = art.facet(tier, index, false, false, true)
+                expect(part ~= nil and part.Count == far).toBe(true)
+                expect(part.EndScale > 0 and part.ChordScale > 0).toBe(true)
+            end
+            expect(art.facet(tier, far + 1, false, false, true)).toBe(nil)
+            expect(art.facet(tier, 1, false, false, false).Count)
+                .toBe(full)
+        end
+        expect(art.count("Unknown", false, true)).toBe(0)
+        expect(art.facet("High", 0/0, false, false, true)).toBe(nil)
+    end)
+
+    it("disconnects remote avatar pulse listeners on respawn and departure", function()
+        local added = Instance.new("BindableEvent")
+        local removing = Instance.new("BindableEvent")
+        local first = Instance.new("Model")
+        local second = Instance.new("Model")
+        local fakePlayer = {
+            Character = first,
+            CharacterAdded = added.Event,
+            CharacterRemoving = removing.Event,
+        }
+        local fired = 0
+        local observers = DashObserverRegistry.new(function()
+            fired += 1
+        end)
+        expect(observers.watch(fakePlayer)).toBe(true)
+        expect(observers.watch(fakePlayer)).toBe(false)
+        expect(observers.count()).toBe(1)
+        first:SetAttribute("PhaseDashPulse", 1)
+        expect(fired).toBe(1)
+        fakePlayer.Character = second
+        added:Fire(second)
+        task.wait() -- covers deferred RBXScriptSignal delivery in engine shards
+        first:SetAttribute("PhaseDashPulse", 2)
+        expect(fired).toBe(1)
+        second:SetAttribute("PhaseDashPulse", 1)
+        expect(fired).toBe(2)
+        removing:Fire(second)
+        task.wait()
+        second:SetAttribute("PhaseDashPulse", 2)
+        expect(fired).toBe(2)
+        expect(observers.stop(fakePlayer)).toBe(true)
+        expect(observers.stop(fakePlayer)).toBe(false)
+        expect(observers.count()).toBe(0)
+        fakePlayer.Character = first
+        added:Fire(first)
+        task.wait()
+        first:SetAttribute("PhaseDashPulse", 3)
+        expect(fired).toBe(2)
+        first:Destroy()
+        second:Destroy()
+        added:Destroy()
+        removing:Destroy()
+    end)
+
+    it("rejects nonfinite dash headings, physics and cooldown attributes", function()
+        local r = PhaseDashRules
+        local badNumbers = {0/0, math.huge, -math.huge}
+        local expected = Vector3.new(0, 0, -1)
+        for _, bad in ipairs(badNumbers) do
+            local heading = r.direction(Vector3.new(bad, 0, 1),
+                Vector3.new(bad, 0, bad))
+            expect(heading).toBe(expected)
+            local faceOnly = r.direction(Vector3.zero,
+                Vector3.new(0, 0, bad))
+            expect(faceOnly).toBe(expected)
+            local result = r.velocity(Vector3.new(bad, 1, 5),
+                Vector3.new(bad, 0, 0), Vector3.new(0, 0, -1))
+            expect(Vector3.new(result.X, 0, result.Z).Magnitude
+                <= r.MaxHorizontalSpeed).toBe(true)
+            expect(result.X == result.X and result.Y == result.Y
+                and result.Z == result.Z).toBe(true)
+            expect(result.Y >= -52 and result.Y <= 48).toBe(true)
+            expect(r.canActivate("round", true, false, 100, true,
+                bad, 0)).toBe(false)
+            expect(r.canActivate("round", true, false, bad, true,
+                10, 0)).toBe(false)
+            expect(r.canActivate("round", true, false, 100, true,
+                10, bad)).toBe(false)
+            expect(r.remaining(bad, 100)).toBe(0)
+            expect(r.remaining(100, bad)).toBe(0)
+            expect(r.nextReadyAt(bad)).toBe(r.Cooldown)
+        end
+        expect(r.direction(Vector3.new(1e8, 0, 0),
+            Vector3.new(1, 0, 0))).toBe(Vector3.new(1, 0, 0))
+        expect(r.direction(Vector3.new(1e8, 0, 0),
+            Vector3.new(1e8, 0, 0))).toBe(expected)
+        expect(r.remaining(120, 111)).toBe(9)
+        expect(r.remaining(100, 111)).toBe(0)
+        expect(r.remaining(nil, 111)).toBe(0)
+    end)
+
+    it("limits Phase Dash movement and never trusts arbitrary client vectors", function()
+        local rules = PhaseDashRules
+        local direction = rules.direction(
+            Vector3.new(2, 5, 0), Vector3.new(0, 0, -1)
+        )
+        expect(math.abs(direction.Magnitude - 1) < 0.001).toBe(true)
+        expect(direction.Y).toBe(0)
+
+        local idle = rules.direction(Vector3.zero, Vector3.new(1, 0, 0))
+        expect(idle).toBe(Vector3.new(1, 0, 0))
+
+        for _, initial in ipairs({
+            Vector3.zero,
+            Vector3.new(85, 120, 85),
+            Vector3.new(-95, -180, 20),
+        }) do
+            local result = rules.velocity(initial, Vector3.new(5, 0, -2), Vector3.zero)
+            expect(Vector3.new(result.X, 0, result.Z).Magnitude
+                <= rules.MaxHorizontalSpeed + 0.001).toBe(true)
+            expect(result.Y >= -52 and result.Y <= 48).toBe(true)
+        end
+
+        local boosted = rules.velocity(Vector3.zero, Vector3.new(1, 0, 0), nil)
+        expect(boosted.X > 25).toBe(true)
+        expect(boosted.Y >= 2).toBe(true)
+    end)
+
     it("bounds horizontal disaster velocity", function()
         local velocity = MovementSafety.addImpulse(
             Vector3.new(90, 0, -90),

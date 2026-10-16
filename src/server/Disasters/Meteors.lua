@@ -29,12 +29,21 @@ function D.start(ctx)
             marker.CastShadow = false
             marker.Material = Enum.Material.Neon
             marker.Color = Color3.fromRGB(255, 165, 60)
-            marker.Transparency = 0.15
+            -- A subtle impact wash, not a solid luminous floor that
+            -- hides the safe path before client warning contours load.
+            marker.Transparency = 0.65
             marker.Position = impactPosition
             marker.Parent = workspace
             ctx.Cleanup[#ctx.Cleanup+1] = marker
 
-            HazardWarning.configure(marker, "Meteor", warningSeconds, 5.5, radius * 2)
+            -- The server inflicts damage AFTER both the warning interval
+            -- and the falling meteor's travel time. Keep the warning alive
+            -- through descent so the danger indicator never vanishes early.
+            HazardWarning.configure(
+                marker, "Meteor",
+                HazardWarning.impactLeadDuration(warningSeconds, travelSeconds),
+                5.5, radius * 2
+            )
             task.wait(warningSeconds)
 
             if not ctx.Active() then
@@ -46,9 +55,27 @@ function D.start(ctx)
             meteor.Name = "RoundMeteor"
             meteor.Shape = Enum.PartType.Ball
             meteor.Size = Vector3.new(7,7,7)
-            meteor.Material = Enum.Material.Neon
-            meteor.Color = Color3.fromRGB(255,120,40)
-            meteor.Position = impactPosition + Vector3.new(0, fallHeight, 0)
+            -- A dark, rough core plus a separate cached comet ribbon
+            -- reads as an actual falling rock, not a generic orange neon
+            -- sphere. The server owns one immutable physics-free projectile;
+            -- the adaptive client ribbon supplies its warm silhouette.
+            meteor.Material = Enum.Material.Basalt
+            meteor.Color = Color3.fromRGB(156, 91, 66)
+            -- Approach at a shallow horizontal angle rather than falling
+            -- straight down. This is purely a visual starting pose: the
+            -- damage point, warning radius and 0.5s travel time do not change.
+            local approachAngle = impactPosition.X * 0.041
+                + impactPosition.Z * 0.067
+            local entryDrift = Vector3.new(
+                math.cos(approachAngle) * 16,
+                fallHeight,
+                math.sin(approachAngle) * 16
+            )
+            -- Tumble during descent so the textured rocky silhouette is
+            -- animated even without client particles. No spin forces or
+            -- physical interactions are applied to this anchored part.
+            meteor.CFrame = CFrame.new(impactPosition + entryDrift)
+                * CFrame.Angles(math.rad(18), approachAngle, math.rad(-38))
             meteor.Anchored = true
             meteor.CanCollide = false
             meteor.CanTouch = false
@@ -59,18 +86,22 @@ function D.start(ctx)
             TweenService:Create(
                 meteor,
                 TweenInfo.new(travelSeconds, Enum.EasingStyle.Linear),
-                {Position = impactVisualPosition}
+                {
+                    CFrame = CFrame.new(impactVisualPosition)
+                        * CFrame.Angles(math.rad(138), approachAngle + 1.2, math.rad(25)),
+                }
             ):Play()
 
-            if marker.Parent then marker:Destroy() end
+            -- Do not remove the warning at the start of the meteor's fall.
+            -- Its ground contour and accessible escape cue remain visible
+            -- until the actual damage event.
             ctx.Cleanup[#ctx.Cleanup+1] = meteor
             Debris:AddItem(meteor, travelSeconds + 1)
 
             task.delay(travelSeconds, function()
                 if not ctx.Active() then
-                    if meteor.Parent then
-                        meteor:Destroy()
-                    end
+                    if marker.Parent then marker:Destroy() end
+                    if meteor.Parent then meteor:Destroy() end
                     return
                 end
 
@@ -84,6 +115,9 @@ function D.start(ctx)
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 120, 40), radius, "Meteor")
                 end
 
+                if marker.Parent then
+                    marker:Destroy()
+                end
                 if meteor.Parent then
                     meteor:Destroy()
                 end
