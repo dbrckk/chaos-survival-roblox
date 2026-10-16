@@ -173,11 +173,12 @@ local function makeStatusGui()
     local gui = Instance.new("BillboardGui")
     gui.Name = "LobbyLiveStatus"
     gui.Adornee = anchor
-    gui.AlwaysOnTop = true
+    -- A floating lobby sign must never draw over the arena or avatar.
+    gui.AlwaysOnTop = false
     gui.LightInfluence = 0
     gui.Size = UDim2.fromOffset(300, 72)
     gui.StudsOffsetWorldSpace = Vector3.new(0, 5.2, 0)
-    gui.MaxDistance = 105
+    gui.MaxDistance = 65
     gui.Parent = player:WaitForChild("PlayerGui")
 
     local panel = Instance.new("Frame")
