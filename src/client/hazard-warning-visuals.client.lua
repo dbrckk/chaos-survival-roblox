@@ -138,8 +138,12 @@ local function ensureRenderLoop()
                         state.startSize, state.endSize, alpha, reduced
                     )
                     part.Size = Vector3.new(diameter, part.Size.Y, diameter)
-                    part.Transparency = reduced and 0.24
-                        or (0.12 + pulse * 0.24)
+                    -- An opaque warning disc conceals the platform edges
+                    -- and any escape route. Keep a restrained fill, with
+                    -- the strong hollow perimeter as the primary signal.
+                    local base = state.kind == "Meteor" and 0.69 or 0.66
+                    part.Transparency = reduced and 0.62
+                        or math.clamp(base - alpha * 0.10 - pulse * 0.05, 0.47, 0.78)
 
                     if state.ring then
                         -- Hollow world-space surface contours preserve the
@@ -262,11 +266,13 @@ local function register(part, snapshot)
     local label = Instance.new("BillboardGui")
     label.Name = kind .. "WarningLabelLocal"
     label.Adornee = part
-    label.Size = UDim2.fromOffset(154, 36)
+    label.Size = UDim2.fromOffset(132, 32)
     label.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
-    label.AlwaysOnTop = true
+    -- A dozen always-on-top world labels obscure the player's avatar on
+    -- narrow Android cameras. Depth test labels, keep the ground ring.
+    label.AlwaysOnTop = false
     label.LightInfluence = 0
-    label.MaxDistance = currentTier.Name == "Low" and 90 or 130
+    label.MaxDistance = currentTier.Name == "Low" and 68 or 105
     label.Parent = localDecor
 
     local warningText = Instance.new("TextLabel")
@@ -331,7 +337,9 @@ local function register(part, snapshot)
         part.Size = Vector3.new(diameter, part.Size.Y, diameter)
         local pulse = reduced and 0.5
             or (math.sin(snapshot.Progress * math.pi * 6) + 1) * 0.5
-        part.Transparency = reduced and 0.24 or (0.12 + pulse * 0.24)
+        local base = kind == "Meteor" and 0.69 or 0.66
+        part.Transparency = reduced and 0.62
+            or math.clamp(base - snapshot.Progress * 0.10 - pulse * 0.05, 0.47, 0.78)
         GroundOutline.update(
             ring, part.Position, diameter, snapshot.Progress,
             reduced, pulse, currentTier.Name
