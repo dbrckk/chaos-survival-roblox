@@ -80,36 +80,34 @@ telemetry.Text = "STAGING / profiling graphics..."
 telemetry.Parent = stampGui
 UITheme.addCorner(telemetry, UITheme.Corners.Medium)
 
-local performanceConnection = nil
+local telemetryRunning = false
 local function startPerformanceTelemetry()
-    if performanceConnection then return end
-    local frames = 0
-    local total = 0
-    local worst = 0
-    performanceConnection = RunService.RenderStepped:Connect(function(dt)
-        local interval = math.clamp(tonumber(dt) or 0, 0, 2)
-        frames += 1
-        total += interval
-        worst = math.max(worst, interval)
-        if total < 4 then return end
-
-        local fps = total > 0 and math.floor(frames / total + 0.5) or 0
-        local tier = tostring(player:GetAttribute("VfxQualityTier") or "High")
-        local budget = VisualBudgetRules.forTier(tier)
-        local counts = VisualBudgetRules.collect(workspace)
-        local status = VisualBudgetRules.status(tier, counts)
-        telemetry.Text = string.format(
-            "FPS %d | WORST %.0fms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
-            fps, worst * 1000, tier, status,
-            counts.Parts, budget.Parts,
-            counts.Lights, budget.Lights,
-            counts.Effects, budget.Effects
-        )
-        telemetry.TextColor3 = (fps < 30 or status ~= "OK")
-            and UITheme.Colors.Orange or UITheme.Colors.Text
-        frames = 0
-        total = 0
-        worst = 0
+    if telemetryRunning then return end
+    telemetryRunning = true
+    -- The existing juice controller owns the per-frame FPS sampler.
+    -- This staging-only 4 s task reads its measurements and counts graphics.
+    task.spawn(function()
+        while stagingEnabled and gui.Parent do
+            task.wait(4)
+            local fps = tonumber(player:GetAttribute("ClientObservedFps"))
+            local worst = tonumber(player:GetAttribute("ClientObservedWorstFrameMs"))
+            local tier = tostring(player:GetAttribute("VfxQualityTier") or "High")
+            local budget = VisualBudgetRules.forTier(tier)
+            local counts = VisualBudgetRules.collect(workspace)
+            local status = VisualBudgetRules.status(tier, counts)
+            telemetry.Text = string.format(
+                "FPS %s | WORST %sms | %s | %s\\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
+                fps and tostring(fps) or "--",
+                worst and tostring(worst) or "--",
+                tier, status,
+                counts.Parts, budget.Parts,
+                counts.Lights, budget.Lights,
+                counts.Effects, budget.Effects
+            )
+            telemetry.TextColor3 = ((fps and fps < 30) or status ~= "OK")
+                and UITheme.Colors.Orange or UITheme.Colors.Text
+        end
+        telemetryRunning = false
     end)
 end
 
