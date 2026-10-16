@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StudioTestService = game:GetService("StudioTestService")
 
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local SpawnSafety = require(script.Parent.SpawnSafety)
 
 local okArgs, args = pcall(StudioTestService.GetTestArgs, StudioTestService)
 if not okArgs or type(args) ~= "table" or args.suite ~= "ChaosE2E" then
@@ -144,10 +145,19 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             return
         end
         local worldArenaId = tostring(report.worldArenaId or "")
+        local map = workspace:FindFirstChild("GeneratedMap")
+        local arena = map and map:FindFirstChild("Arena")
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        -- Existing authenticated end-to-end arena probe now validates the
+        -- actual collision capsule too, not merely X/Z arena membership.
+        local serverSpawnClear = root and root:IsA("BasePart")
+            and SpawnSafety.clearAt(arena, root.Position) == true
         if report.ok ~= true
             or report.characterReady ~= true
             or report.insideFootprint ~= true
             or report.arenaMatches ~= true
+            or player:GetAttribute("ArenaSpawnClear") ~= true
+            or not serverSpawnClear
             or worldArenaId ~= arenaId
         then
             fail(
