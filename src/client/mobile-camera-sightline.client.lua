@@ -21,6 +21,16 @@ local function restore()
 end
 
 local function supportedTarget(part, arena, base)
+    local platforms = arena:FindFirstChild("Platforms")
+    local mechanics = arena:FindFirstChild("Mechanics")
+    local spawns = arena:FindFirstChild("Spawns")
+    -- Never fade disappearing floors, mobility pads or ordinary platforms:
+    -- players need to see their actual traversable routes. A designated
+    -- skybridge may soften slightly when it occludes the local avatar.
+    if platforms and part:IsDescendantOf(platforms)
+        and part:GetAttribute("ChaosSkybridge") ~= true then
+        return false
+    end
     return part ~= base
         and part:IsA("BasePart")
         and part:IsDescendantOf(arena)
@@ -30,8 +40,8 @@ local function supportedTarget(part, arena, base)
         and part.Material ~= Enum.Material.Neon
         -- Decorations, warning areas, lifts, and mobile wayfinding are
         -- never faded: they carry essential gameplay information.
-        and (not arena:FindFirstChild("Mechanics") or not part:IsDescendantOf(arena.Mechanics))
-        and (not arena:FindFirstChild("Spawns") or not part:IsDescendantOf(arena.Spawns))
+        and (not mechanics or not part:IsDescendantOf(mechanics))
+        and (not spawns or not part:IsDescendantOf(spawns))
 end
 
 local function update()
