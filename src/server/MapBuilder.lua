@@ -1341,10 +1341,15 @@ local function buildLobby(root, config)
     local lobbySpawn = Instance.new("SpawnLocation")
     lobbySpawn.Name = "LobbySpawn"
     lobbySpawn.Size = Vector3.new(8, 1, 8)
-    -- Spawn on the flat floor outside the raised centre stage, with more
-    -- than a character radius of clearance from the south practice pad.
-    -- Native spawns must not depend on post-spawn recovery to be playable.
-    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2.8, -15)
+    -- Native Roblox spawns scatter across the entire SpawnLocation surface.
+    -- Keep *all* spawn corners clear of the raised stage, four practice
+    -- boosts, the arena-gate columns and the lobby edge. Face the central
+    -- stage so first-time players can immediately orient themselves.
+    local spawnPosition = config.LobbyCenter + Vector3.new(20, 2.8, 20)
+    lobbySpawn.CFrame = CFrame.lookAt(
+        spawnPosition,
+        config.LobbyCenter + Vector3.new(0, 2.8, 0)
+    )
     lobbySpawn.Anchored = true
     lobbySpawn.Neutral = true
     lobbySpawn.Transparency = 1
