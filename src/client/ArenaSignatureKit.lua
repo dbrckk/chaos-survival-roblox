@@ -380,6 +380,7 @@ function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOver
     )
     local bundle = {
         folder = folder,
+        sourceBase = arenaBase,
         variant = variant,
         tier = tierName,
         profile = profile,
@@ -425,6 +426,18 @@ function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOver
         light.Parent = bundle.parts[2]
     end
     return bundle
+end
+
+-- Pure identity guard used by the client to avoid repeatedly allocating
+-- identical 3D signatures after staggered map/attribute replication.
+-- The builder always creates a fresh bundle when any source input differs.
+function ArenaSignatureKit.matches(bundle, arenaBase, variant, tierName, parent)
+    return type(bundle) == "table"
+        and bundle.folder ~= nil
+        and bundle.folder.Parent == parent
+        and bundle.sourceBase == arenaBase
+        and bundle.variant == variant
+        and bundle.tier == tierName
 end
 
 function ArenaSignatureKit.update(bundle, elapsed, reduceMotion)
