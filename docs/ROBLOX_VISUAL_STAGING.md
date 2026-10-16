@@ -115,7 +115,9 @@ next to the `STAGING · <commit-prefix>` watermark when using PHOTO + HUD:
   establish successful DataStore persistence.
 
 Orange text warns about sub-30 FPS, graphics over budget, blocked entry,
-temporary saves, save retry or session conflict. This HUD does not fetch
+temporary saves, save retry or session conflict. The commit provenance label
+is placed just above the diagnostics instead of overlapping it, and the panel
+fits the available Android portrait viewport width. This HUD does not fetch
 private data, expose tokens/IDs, make DataStore writes or add a frame listener.
 The expensive visual budget snapshot is sampled every four seconds, while
 READY/ROUND and save/spawn attribute changes **refresh the status text
