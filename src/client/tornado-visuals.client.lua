@@ -12,6 +12,8 @@ local upper = nil
 local light = nil
 local debrisFolder = nil
 local debris = {}
+local boundaryFolder = nil
+local boundarySegments = {}
 local pulseClock = 0
 local loopStarted = false
 local ensureRenderLoop
@@ -30,6 +32,55 @@ local function clearDebris()
         debrisFolder:Destroy()
     end
     debrisFolder = nil
+end
+
+-- The tornado's server wind field is a 42-stud radius; its faint cyan
+-- disc is not distinguishable from the cyan arena on Android. Only its
+-- visual perimeter is drawn here; velocity and hit detection stay server-side.
+local function clearBoundary()
+    if boundaryFolder and boundaryFolder.Parent then
+        boundaryFolder:Destroy()
+    end
+    boundaryFolder = nil
+    table.clear(boundarySegments)
+end
+
+local function buildBoundary()
+    clearBoundary()
+    if not dangerZone or not dangerZone.Parent then return end
+
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local count = tier.Name == "Low" and 8 or (tier.Name == "Medium" and 12 or 16)
+    local radius = math.max(6, math.min(dangerZone.Size.Y, dangerZone.Size.Z) * 0.5 - 0.6)
+    local length = 2 * math.pi * radius / count * 0.66
+    local center = dangerZone.Position + Vector3.new(0, 0.07, 0)
+
+    boundaryFolder = Instance.new("Folder")
+    boundaryFolder.Name = "TornadoWindBoundaryLocal"
+    boundaryFolder.Parent = workspace
+
+    for i = 1, count do
+        local angle = ((i - 0.5) / count) * math.pi * 2
+        local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        local tangent = Vector3.new(-radial.Z, 0, radial.X)
+        local segment = Instance.new("Part")
+        segment.Name = "WindBoundary" .. i
+        segment.Size = Vector3.new(length, 0.07, tier.Name == "Low" and 0.22 or 0.18)
+        segment.CFrame = CFrame.fromMatrix(center + radial * radius, tangent, Vector3.yAxis)
+        segment.Anchored = true
+        segment.CanCollide = false
+        segment.CanTouch = false
+        segment.CanQuery = false
+        segment.CastShadow = false
+        segment.Material = Enum.Material.Neon
+        -- Amber is a warning cue, not another cyan scenery light.
+        segment.Color = i % 4 == 0
+            and Color3.fromRGB(255, 205, 115)
+            or Color3.fromRGB(255, 151, 67)
+        segment.Transparency = tier.Name == "Low" and 0.30 or 0.43
+        segment.Parent = boundaryFolder
+        table.insert(boundarySegments, segment)
+    end
 end
 
 -- One authored helical pose per debris shard. Reuse the same 5/8/12
@@ -137,6 +188,7 @@ local function bind(model)
         upper = nextUpper
         light = nextMiddle and nextMiddle:FindFirstChild("TornadoGlow") or nil
         buildDebris()
+        buildBoundary()
     end)
 end
 
@@ -163,6 +215,7 @@ workspace.ChildRemoved:Connect(function(child)
         upper = nil
         light = nil
         clearDebris()
+        clearBoundary()
     end
 end)
 
@@ -171,6 +224,7 @@ findExisting()
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     if activeModel and activeModel.Parent and middle then
         buildDebris()
+        buildBoundary()
     end
 end)
 
@@ -201,6 +255,17 @@ ensureRenderLoop = function()
             local pulseScale = reduceMotion and 0 or 1
             if dangerZone and dangerZone.Parent then
                 dangerZone.Transparency = 0.965 + pulse * 0.018 * pulseScale
+            end
+            -- Stable on reduced-motion; a very slight warning heartbeat
+            -- otherwise, with no new particles or per-frame allocations.
+            if #boundarySegments > 0 then
+                local opacity = tier.Name == "Low" and 0.30
+                    or (reduceMotion and 0.42 or (0.38 + pulse * 0.11))
+                for _, segment in ipairs(boundarySegments) do
+                    if segment.Parent then
+                        segment.Transparency = opacity
+                    end
+                end
             end
             if lower and lower.Parent then
                 lower.Transparency = 0.37 + pulse * 0.10 * pulseScale
