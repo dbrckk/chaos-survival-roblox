@@ -92,7 +92,9 @@ local function buildDebris()
             index = i,
             angle = ((i - 1) / count) * math.pi * 2
                 + (height / 16) * math.pi * 0.85,
-            radius = 5 + ((i * 11) % 16) * 0.81,
+            -- Height-coupled radius makes the existing wedge shards
+            -- follow an unmistakable inverted-cone tornado silhouette.
+            radius = 2.8 + height * 0.59 + (i % 3) * 1.05,
             height = height,
             speed = 1.55 + ((i * 5) % 7) * 0.13,
             pitch = (i % 2 == 0 and -1 or 1) * (8 + i % 4 * 5),
@@ -198,19 +200,19 @@ ensureRenderLoop = function()
                 or (math.sin(pulseClock * 4) + 1) * 0.5
             local pulseScale = reduceMotion and 0 or 1
             if dangerZone and dangerZone.Parent then
-                dangerZone.Transparency = 0.90 + pulse * 0.05 * pulseScale
+                dangerZone.Transparency = 0.965 + pulse * 0.018 * pulseScale
             end
             if lower and lower.Parent then
-                lower.Transparency = 0.34 + pulse * 0.12 * pulseScale
+                lower.Transparency = 0.37 + pulse * 0.10 * pulseScale
             end
             if middle and middle.Parent then
-                middle.Transparency = 0.44 + pulse * 0.11 * pulseScale
+                middle.Transparency = 0.44 + pulse * 0.10 * pulseScale
             end
             if upper and upper.Parent then
-                upper.Transparency = 0.54 + pulse * 0.10 * pulseScale
+                upper.Transparency = 0.52 + pulse * 0.11 * pulseScale
             end
             if light and light.Parent then
-                light.Brightness = (1.0 + pulse * 0.9 * pulseScale) * tier.Scale
+                light.Brightness = (0.68 + pulse * 0.55 * pulseScale) * tier.Scale
                 light.Range = 20 + (6 * tier.Scale)
             end
 
