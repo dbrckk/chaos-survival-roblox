@@ -227,7 +227,6 @@ function PlayerData.load(player)
             sessionTokens[player] = nil
         end
         loading[player] = nil
-        departing[player] = nil
         return false
     end
 
@@ -569,7 +568,6 @@ function PlayerData.init()
     Players.PlayerRemoving:Connect(function(player)
         -- Mark departure before any yielding save; loader may still be in UpdateAsync.
         departing[player] = true
-        local loadingAtDeparture = loading[player] == true
         local saved = PlayerData.save(player, true)
         if saved then
             PlayerData.releaseSession(player)
@@ -581,10 +579,8 @@ function PlayerData.init()
         revisions[player] = nil
         savedRevisions[player] = nil
         sessionTokens[player] = nil
-        -- Let an in-flight loader observe the departure and release its claim.
-        if not loadingAtDeparture then
-            departing[player] = nil
-        end
+        -- Keep the weak-key departure marker until the Player is collected:
+        -- even a load task scheduled after this callback must not claim data.
     end)
 
     for _, player in ipairs(Players:GetPlayers()) do
