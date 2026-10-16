@@ -282,38 +282,50 @@ local function rebuild()
     end
 end
 
+-- Service structures are client-owned and expensive to recreate.
+-- Coalesce map/VariantId/Base replication and VFX tier events into one
+-- deferred build, then always resolve the current map at execution time.
+local rebuildPending = false
+local watchedMap = nil
+
+local function scheduleRebuild()
+    if rebuildPending then return end
+    rebuildPending = true
+    task.defer(function()
+        rebuildPending = false
+        rebuild()
+    end)
+end
+
 local function bindMap(generated)
     if disconnectMapWatch then
         disconnectMapWatch()
         disconnectMapWatch = nil
     end
+    watchedMap = generated
     if generated then
         disconnectMapWatch = MapVisualReadiness.watch(
-            generated, "Arena", "Base",
-            function()
-                task.defer(rebuild)
-            end
+            generated, "Arena", "Base", scheduleRebuild
         )
+    else
+        clear()
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
         bindMap(child)
-        task.defer(rebuild)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bindMap(nil)
-        clear()
+    if child == watchedMap then
+        bindMap(workspace:FindFirstChild("GeneratedMap"))
     end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 
 bindMap(workspace:FindFirstChild("GeneratedMap"))
-rebuild()
+scheduleRebuild()
