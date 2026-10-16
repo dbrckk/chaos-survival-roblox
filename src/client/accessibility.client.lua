@@ -5,6 +5,7 @@ local LocalizationService = game:GetService("LocalizationService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
@@ -222,8 +223,12 @@ for _, attribute in ipairs({
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    -- A missing, empty or malformed ballot is not an active vote.
+    -- Preserve the last valid snapshot if a malformed packet arrives.
+    if type(state) ~= "table" then return end
     currentPhase = tostring(state.phase or "waiting")
-    voteVisible = state.voteOptions ~= nil
+    voteVisible = currentPhase == "intermission"
+        and FirstTimeExperience.hasVoteOptions(state)
     refresh()
 end)
 

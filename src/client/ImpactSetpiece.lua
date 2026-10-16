@@ -10,14 +10,16 @@ local TweenService = game:GetService("TweenService")
 local ImpactSetpiece = {}
 
 function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesOverride)
-    if type(payload) ~= "table"
+    -- Reject incomplete event data *before* resolving Shared modules. Lest
+    -- engine shards intentionally load this file outside its live Rojo tree.
+    -- This cheap guard also avoids module lookups for corrupt network events.
+    if typeof(parent) ~= "Instance" or type(payload) ~= "table"
         or typeof(payload.position) ~= "Vector3"
-        or typeof(payload.color) ~= "Color3"
-    then
+        or typeof(payload.color) ~= "Color3" then
         return nil
     end
-
     local rules = rulesOverride or require(ReplicatedStorage.Shared.ImpactSetpieceRules)
+    if not rules.validPayload(payload) then return nil end
     local recipe = rules.get(payload.kind, qualityTier, reduceMotion, payload.radius)
     if not recipe then
         return nil
@@ -57,7 +59,9 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         part.Size = recipe.Kind == "Meteor"
             and Vector3.new(fragment.Width, fragment.Length, fragment.Width * 1.8)
             or Vector3.new(fragment.Width, 0.08, fragment.Length * 0.50)
-        local rotation = CFrame.Angles(0, yaw, recipe.Kind == "Meteor" and math.rad(24) or 0)
+        -- Compose authored trajectory, oblique yaw and silhouette bank.
+        -- Geometry is still one wedge/part per existing budget slot.
+        local rotation = CFrame.Angles(0, yaw + fragment.YawSkew, fragment.Bank)
         part.CFrame = CFrame.new(start) * rotation
         part.Parent = container
 
@@ -74,6 +78,50 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
             {
                 CFrame = CFrame.new(finish) * rotation,
                 Size = goalSize,
+                Transparency = 1,
+            }
+        ):Play()
+    end
+    -- Faceted crater rubble and tangent pressure-arc hardware deliberately
+    -- replace a second generic neon ring. The shapes differ even in grayscale.
+    local finishCount = rules.finishCount(recipe.Kind, qualityTier, reduceMotion)
+    for index = 1, finishCount do
+        local finish = rules.finish(recipe.Kind, index, finishCount, recipe.Radius)
+        local meteor = recipe.Kind == "Meteor"
+        local piece = meteor and Instance.new("WedgePart") or Instance.new("Part")
+        piece.Name = meteor and ("MeteorCraterRim" .. index)
+            or ("BombPressureArc" .. index)
+        piece.Anchored = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+        piece.Material = meteor and Enum.Material.Slate or Enum.Material.Metal
+        piece.Color = meteor
+            and payload.color:Lerp(Color3.fromRGB(48, 40, 35), 0.70)
+            or payload.color:Lerp(Color3.fromRGB(145, 139, 145), 0.56)
+        piece.Transparency = meteor and 0.11 or 0.18
+        piece.Size = meteor
+            and Vector3.new(finish.Width, finish.Height, finish.Width * 0.75)
+            or Vector3.new(finish.Width, 0.15, 0.25)
+        local angle = finish.Angle
+        local rotation = CFrame.Angles(0, -angle + finish.YawSkew, finish.Bank)
+        local start = payload.position + finish.Direction * finish.StartRadius
+            + Vector3.new(0, meteor and finish.Height * 0.5 or 0.16, 0)
+        local goal = payload.position + finish.Direction * finish.EndRadius
+            + Vector3.new(0, finish.Lift, 0)
+        piece.CFrame = CFrame.new(start) * rotation
+        piece.Parent = container
+        TweenService:Create(
+            piece,
+            TweenInfo.new(recipe.Lifetime * (meteor and 0.85 or 0.72),
+                Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                CFrame = CFrame.new(goal) * rotation,
+                Size = meteor
+                    and Vector3.new(finish.Width * 0.62,
+                        finish.Height * 0.43, finish.Width * 0.32)
+                    or Vector3.new(finish.Width * 1.4, 0.05, 0.18),
                 Transparency = 1,
             }
         ):Play()

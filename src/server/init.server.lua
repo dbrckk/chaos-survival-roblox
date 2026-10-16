@@ -26,6 +26,8 @@ if RunService:IsStudio() then
     end
 end
 local MapBuilder = require(script.MapBuilder)
+local SpawnSafety = require(script.SpawnSafety)
+local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyActivities = require(script.LobbyActivities)
 local PlayerData = require(script.PlayerData)
 local PlayerReadiness = require(script.PlayerReadiness)
@@ -38,6 +40,7 @@ local SoloRules = require(script.SoloRules)
 local GameAnalytics = require(script.GameAnalytics)
 local ArenaVariants = require(script.ArenaVariants)
 local ArenaMechanics = require(script.ArenaMechanics)
+local PhaseDashService = require(script.PhaseDashService)
 local DisasterBalance = require(script.DisasterBalance)
 local EliminationCauseRules = require(script.EliminationCauseRules)
 local SessionStreak = require(script.SessionStreak)
@@ -67,6 +70,7 @@ local questEvent = RemoteRegistry.ensureRemoteEvent(remotes, "QuestUpdate")
 local roundFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "RoundFeedback")
 local clientReadyEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ClientReady")
 local arenaMechanicFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ArenaMechanicFeedback")
+local phaseDashEvent = RemoteRegistry.ensureRemoteEvent(remotes, "PhaseDash")
 local hazardImpactFeedbackEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardImpactFeedback")
 local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNearMiss")
 local chaosShardCollectedEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ChaosShardCollected")
@@ -110,6 +114,7 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
 end)
 
 MapBuilder.build(Config, "Classic", ArenaVariants)
+LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
 if not lobbyActivitiesOk then
     warn("Lobby activities failed to start:", lobbyActivitiesError)
@@ -179,6 +184,12 @@ local function broadcast(payload)
     pcall(AISurvivorService.setRoundState, payload)
     stateEvent:FireAllClients(payload)
 end
+
+-- Remote only carries intent: physics, participant state, and cooldown are
+-- evaluated on the authoritative server against this live phase.
+PhaseDashService.start(phaseDashEvent, function()
+    return lastRoundState.phase
+end)
 
 performancePulseEvent.OnServerEvent:Connect(function(player, payload)
     if player.Parent ~= Players
@@ -434,23 +445,104 @@ local function teleportToArena(player, index)
         return false, "arena spawns unavailable"
     end
 
-    local spawns = spawnFolder:GetChildren()
-    if #spawns == 0 then
-        return false, "arena has no spawns"
+    local spawns = {}
+    for _, entry in ipairs(spawnFolder:GetChildren()) do
+        if entry:IsA("BasePart") then table.insert(spawns, entry) end
     end
+    if #spawns == 0 then
+        return false, "arena has no valid spawns"
+    end
+    table.sort(spawns, function(a, b)
+        local ai = tonumber(string.match(a.Name, "^Spawn(%d+)$")) or 99999
+        local bi = tonumber(string.match(b.Name, "^Spawn(%d+)$")) or 99999
+        return ai < bi
+    end)
 
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not root then
-        return false, "character root unavailable"
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not root or not root:IsA("BasePart") or not humanoid
+        or humanoid.Health <= 0 then
+        return false, "character root or humanoid unavailable"
     end
 
-    local spawn = spawns[((index - 1) % #spawns) + 1]
-    if not spawn:IsA("BasePart") then
-        return false, "invalid arena spawn"
+    local marker = spawns[((index - 1) % #spawns) + 1]
+    local landing, selected = SpawnSafety.resolve(arena, marker, humanoid, root)
+    if not landing then
+        player:SetAttribute("ArenaSpawnClear", false)
+        return false, tostring(selected)
     end
 
-    root.CFrame = spawn.CFrame + Vector3.new(0, 4, 0)
+    -- Move the full rig so R6/R15 body parts never remain in an overhead
+    -- deck. Clear old physics from the previous lobby/arena after teleport.
+    character:PivotTo(landing)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    if root.Anchored then root.Anchored = false end
+    if humanoid.Sit then humanoid.Sit = false end
+    if humanoid.PlatformStand then humanoid.PlatformStand = false end
+    player:SetAttribute("ArenaSpawnClear", true)
+    player:SetAttribute("ArenaSpawnCandidate", selected)
+
+    -- Validate once after physics settles; never auto-teleport someone
+    -- during a disaster merely for standing still or not touching controls.
+    task.delay(0.35, function()
+        if player.Parent ~= Players or player.Character ~= character
+            or root.Parent ~= character or humanoid.Health <= 0
+            or not arena.Parent then return end
+        local base = arena:FindFirstChild("Base")
+        local floorY = base and base.Position.Y + base.Size.Y * 0.5
+        local fellThrough = floorY ~= nil and root.Position.Y < floorY - 0.5
+        if fellThrough or not SpawnSafety.clearAt(arena, root.Position) then
+            local corrected, detail = SpawnSafety.resolve(arena, marker, humanoid, root)
+            if corrected then
+                character:PivotTo(corrected)
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.AssemblyAngularVelocity = Vector3.zero
+                warn("Arena spawn recovered after collision check:", player.UserId,
+                    tostring(arena:GetAttribute("VariantId")))
+            else
+                player:SetAttribute("ArenaSpawnClear", false)
+                warn("Arena spawn could not be recovered:", tostring(detail))
+            end
+        end
+    end)
+    return true
+end
+
+-- Survivors must be back in the safe lobby before the next map hot-swap.
+-- A finished round is the ONLY time this transition runs; hazards, physics
+-- and elimination during an active round remain server authoritative.
+local function returnSurvivorToLobby(player)
+    if player.Parent ~= Players then return false end
+
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local lobby = generated and generated:FindFirstChild("Lobby")
+    local floor = lobby and lobby:FindFirstChild("Floor")
+    local spawn = lobby and lobby:FindFirstChild("LobbySpawn")
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+
+    if not floor or not floor:IsA("BasePart")
+        or not spawn or not spawn:IsA("SpawnLocation")
+        or not humanoid or humanoid.Health <= 0
+        or not root or not root:IsA("BasePart") then
+        return false
+    end
+
+    local floorTop = floor.Position.Y + floor.Size.Y * 0.5
+    local clearance = math.max(3.5, humanoid.HipHeight + root.Size.Y * 0.5 + 1.0)
+    character:PivotTo(CFrame.new(
+        spawn.Position.X,
+        floorTop + clearance,
+        spawn.Position.Z
+    ) * spawn.CFrame.Rotation)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    root.Anchored = false
+    if humanoid.Sit then humanoid.Sit = false end
+    if humanoid.PlatformStand then humanoid.PlatformStand = false end
     return true
 end
 
@@ -823,6 +915,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundShardCoins", 0)
         player:SetAttribute("RoundNearMisses", 0)
         player:SetAttribute("RoundMechanicUses", 0)
+        player:SetAttribute("RoundHelixFlowChain", 0)
+        player:SetAttribute("RoundHelixFlowBest", 0)
+        player:SetAttribute("RoundSkyrailFlowCombo", 0)
+        player:SetAttribute("RoundSkyrailFlowBest", 0)
+        player:SetAttribute("RoundFluxWeaveCombo", 0)
+        player:SetAttribute("RoundFluxWeaveBest", 0)
+        player:SetAttribute("RoundFluxWeaveNextParity", -1)
+        player:SetAttribute("RoundFluxWeaveDeadline", 0)
         player:SetAttribute("RoundOverdriveUses", 0)
         player:SetAttribute("RoundFlowCoins", 0)
         player:SetAttribute("RoundMomentum", 0)
@@ -1559,6 +1659,9 @@ while true do
             doubleChaos = #selectedSet > 1,
             fusionName = fusionName,
             soloMode = readyCount == 1,
+            -- This is the authoritative human roster at the ready boundary.
+            -- Late joiners and unready characters are not round contestants.
+            readyHumanCount = readyCount,
             arenaName = roundSettings.ArenaName,
             arenaId = currentArenaVariant,
             disasterIds = readyDisasterIds,
@@ -1878,6 +1981,10 @@ while true do
         if p.Parent == Players then
             p:SetAttribute("RoundParticipant", false)
             p:SetAttribute("RoundEliminated", false)
+            -- Preserve earned progress and results, then return surviving
+            -- characters to the lobby before the next arena is rebuilt.
+            -- Eliminated characters keep Roblox's ordinary respawn handling.
+            returnSurvivorToLobby(p)
         end
     end
 end

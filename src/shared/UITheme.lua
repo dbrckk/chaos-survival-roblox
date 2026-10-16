@@ -1,4 +1,5 @@
 local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
 
 local UITheme = {}
 
@@ -100,6 +101,14 @@ function UITheme.addPressFeedback(button, pressedScale)
     local function tweenTo(value, info)
         if activeTween then
             activeTween:Cancel()
+            activeTween = nil
+        end
+        -- Read the local setting only on input; no per-button frame loop
+        -- or additional persistent attribute connection is needed.
+        local localPlayer = Players.LocalPlayer
+        if localPlayer and localPlayer:GetAttribute("ReduceMotion") == true then
+            scale.Scale = 1
+            return
         end
         activeTween = TweenService:Create(scale, info, {Scale = value})
         activeTween:Play()

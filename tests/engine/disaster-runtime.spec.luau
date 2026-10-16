@@ -149,6 +149,66 @@ describe("Headless disaster playtest", function()
         character:Destroy()
     end)
 
+    it("retains an actual meteor ground warning during projectile descent", function()
+        local meteorDisaster = require("../../src/server/Disasters/Meteors")
+        local active = true
+        local cleanup = {}
+        local impacts = 0
+        meteorDisaster.start({
+            Config = Config,
+            Cleanup = cleanup,
+            Active = function() return active end,
+            BalanceProfile = {
+                MeteorWarningSeconds = 0.20,
+                MeteorRadius = 8,
+                MeteorDamage = 50,
+            },
+            Contestants = {},
+            HazardContestants = {},
+            OnHazardImpact = function(_, _, _, kind)
+                if kind == "Meteor" then
+                    impacts += 1
+                    active = false
+                end
+            end,
+        })
+
+        local marker = nil
+        local markerDeadline = os.clock() + 1.0
+        repeat
+            marker = workspace:FindFirstChild("MeteorWarning")
+            if marker then break end
+            task.wait(0.02)
+        until os.clock() >= markerDeadline
+
+        if not marker then
+            active = false
+            runCleanup(cleanup, {})
+            expect(false).toBe(true)
+            return
+        end
+        local lead = marker:GetAttribute("WarningDuration")
+        expect(type(lead)).toBe("number")
+        expect(math.abs(lead - 0.70) < 0.01).toBe(true)
+
+        -- The 0.20-second pre-fall timer has already passed; impact is
+        -- still 0.5 seconds away, so the actual marker must survive.
+        task.wait(0.34)
+        expect(marker.Parent).toBe(workspace)
+        expect(impacts).toBe(0)
+
+        local deadline = os.clock() + 1.30
+        while impacts == 0 and os.clock() < deadline do
+            task.wait(0.03)
+        end
+        expect(impacts).toBe(1)
+        task.wait(0.04)
+        expect(marker.Parent).toBe(nil)
+
+        active = false
+        runCleanup(cleanup, {})
+    end)
+
     it("starts and cleans every disaster inside a real Roblox DataModel", function()
         local originalGravity = workspace.Gravity
 

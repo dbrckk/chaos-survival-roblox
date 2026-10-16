@@ -107,6 +107,7 @@ local TEXT = {
         SHARE_REASON_CREW = "CREW MOMENT",
         SHARE_JOINED = "%s JOINED FROM YOUR SHARED MOMENT",
         PRACTICE_BOOST = "TRY BOOST",
+        PRACTICE_BOOST_APPLIED = "BOOST ACTIVATED",
         ESCAPE_PAD = "ESCAPE PAD",
         DAILY_REWARD = "DAILY REWARD",
         QUESTS = "QUESTS",
@@ -300,6 +301,7 @@ local TEXT = {
         SHARE_REASON_CREW = "MOMENT D'ÉQUIPE",
         SHARE_JOINED = "%s A REJOINT TON MOMENT PARTAGÉ",
         PRACTICE_BOOST = "ESSAIE LE BOOST",
+        PRACTICE_BOOST_APPLIED = "BOOST ACTIVÉ",
         ESCAPE_PAD = "PAD D'ÉVASION",
         DAILY_REWARD = "RÉCOMPENSE QUOTIDIENNE",
         QUESTS = "QUÊTES",
@@ -424,7 +426,7 @@ local ARENA_COPY = {
             name = "CLASSIC GRID",
             strategy = "Balanced routes • switch height when danger closes in",
             mechanicName = "ESCAPE PADS",
-            mechanicHint = "Blue pads launch you away from the center when a route collapses",
+            mechanicHint = "Blue pads aid escape; touch all four glowing Grid Circuit nodes clockwise for mastery",
         },
         Towers = {
             name = "TOWER RUN",
@@ -436,7 +438,7 @@ local ARENA_COPY = {
             name = "CROSSROADS",
             strategy = "Four escape lanes • avoid committing to a dead end too early",
             mechanicName = "LANE BOOSTERS",
-            mechanicHint = "Pink pads accelerate you along a lane so you can switch routes quickly",
+            mechanicHint = "Pink pads launch outward; timed cyan Flux Relays return you to the hub",
         },
         Orbital = {
             name = "ORBITAL RING",
@@ -450,7 +452,7 @@ local ARENA_COPY = {
             name = "GRILLE CLASSIQUE",
             strategy = "Routes équilibrées • change de hauteur quand le danger se referme",
             mechanicName = "PADS D'ÉVASION",
-            mechanicHint = "Les pads bleus t'éloignent du centre quand une route devient dangereuse",
+            mechanicHint = "Les pads bleus aident à fuir ; touche les quatre bornes lumineuses dans le sens horaire",
         },
         Towers = {
             name = "TOURS",
@@ -462,7 +464,7 @@ local ARENA_COPY = {
             name = "CARREFOUR",
             strategy = "Quatre voies de fuite • ne t'engage pas trop tôt dans une impasse",
             mechanicName = "BOOSTERS DE VOIE",
-            mechanicHint = "Les pads roses t'accélèrent le long d'une voie pour changer vite de route",
+            mechanicHint = "Les pads roses propulsent dehors ; les relais cyan te ramènent au centre",
         },
         Orbital = {
             name = "ANNEAU ORBITAL",
@@ -714,6 +716,30 @@ function CoreLocalization.challengeShort(localeId, challengeId, fallback)
     return (CHALLENGE_SHORT[language] and CHALLENGE_SHORT[language][id])
         or CHALLENGE_SHORT.en[id]
         or fallback
+end
+
+-- Server mechanic IDs are stable English tokens. Translate only the short
+-- reward banner; do not change IDs used by analytics or gameplay state.
+local MECHANIC_FEEDBACK_FR = {
+    ["OVERDRIVE BOOST"] = "BOOST SURCHARGÉ",
+    ["GRID CIRCUIT CLEAR"] = "CIRCUIT TERMINÉ",
+    ["SKYRAIL SLIPSTREAM"] = "ÉLAN SKYRAIL",
+    ["SKYRAIL CHAIN x2"] = "ENCHAÎNEMENT SKYRAIL x2",
+    ["SKYRAIL ACE"] = "AS DU SKYRAIL",
+    ["FLUX RELAY"] = "RELAIS DE FLUX",
+    ["FLUX WEAVE x2"] = "ENCHAÎNEMENT FLUX x2",
+    ["FLUX MASTER"] = "MAÎTRE DU FLUX",
+    ["HELIX FLOW"] = "FLUX HÉLICE",
+    ["HELIX CHAIN x2"] = "CHAÎNE HÉLICE x2",
+    ["ORBIT MASTER"] = "MAÎTRE DE L'ORBITE",
+}
+
+function CoreLocalization.mechanicFeedback(localeId, mechanicId)
+    if type(mechanicId) ~= "string" then return "" end
+    if CoreLocalization.language(localeId) == "fr" then
+        return MECHANIC_FEEDBACK_FR[mechanicId] or mechanicId
+    end
+    return mechanicId
 end
 
 function CoreLocalization.coach(localeId, value)

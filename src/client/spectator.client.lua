@@ -377,7 +377,10 @@ local function addBotTargets()
     for _, model in ipairs(folder:GetChildren()) do
         if model:IsA("Model") and model:GetAttribute("AISurvivor") == true then
             local hum = model:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
+            if hum and SpectatorTargetRules.isEligibleBot(
+                model:GetAttribute("AISurvivorInRound"),
+                hum.Health
+            ) then
                 table.insert(targets, {
                     Character = model,
                     DisplayName = hum.DisplayName ~= "" and hum.DisplayName or model.Name,

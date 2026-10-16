@@ -218,6 +218,37 @@ local currentState = nil
 local visibleToken = 0
 local completedChallengeId = nil
 local rookieCompactMode = false
+local isHiding = false
+local lastIntensityScale = nil
+-- One cancellable Tween per visual target. Prevents fade/re-entry races and
+-- avoids spawning new tweens during repeated server countdown snapshots.
+local activeTweens = {}
+
+local function transition(target, duration, properties, easing)
+    local previous = activeTweens[target]
+    if previous then
+        previous:Cancel()
+        activeTweens[target] = nil
+    end
+    if player:GetAttribute("ReduceMotion") == true then
+        for key, value in pairs(properties) do
+            target[key] = value
+        end
+        return
+    end
+    local tween = TweenService:Create(
+        target,
+        TweenInfo.new(
+            duration,
+            easing or Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        ),
+        properties
+    )
+    activeTweens[target] = tween
+    tween:Play()
+end
+
 
 local function shardCount()
     return math.max(0, math.floor(tonumber(player:GetAttribute("RoundChaosShards")) or 0))
@@ -292,28 +323,42 @@ local function refresh()
 
     if not state or state.phase ~= "round" or not isParticipant or isEliminated then
         setRookieCompactMode(false)
-        if root.Visible then
+        if root.Visible and not isHiding then
             visibleToken += 1
             local token = visibleToken
-            TweenService:Create(root, TweenInfo.new(0.18), {BackgroundTransparency = 1}):Play()
-            TweenService:Create(scale, TweenInfo.new(0.18), {Scale = 0.9}):Play()
-            task.delay(0.2, function()
-                if token == visibleToken then
-                    root.Visible = false
-                    root.BackgroundTransparency = 0.12
-                end
-            end)
+            isHiding = true
+            transition(root, 0.18, {BackgroundTransparency = 1})
+            transition(scale, 0.18, {Scale = 0.9})
+            if player:GetAttribute("ReduceMotion") == true then
+                root.Visible = false
+                root.BackgroundTransparency = 0.12
+                scale.Scale = 1
+                isHiding = false
+            else
+                task.delay(0.20, function()
+                    if token == visibleToken and isHiding then
+                        root.Visible = false
+                        root.BackgroundTransparency = 0.12
+                        scale.Scale = 1
+                        isHiding = false
+                    end
+                end)
+            end
         end
         return
     end
 
-    if not root.Visible then
+    if not root.Visible or isHiding then
+        local wasHidden = not root.Visible
         visibleToken += 1
+        isHiding = false
+        if wasHidden then
+            root.BackgroundTransparency = 1
+            scale.Scale = 0.9
+        end
         root.Visible = true
-        root.BackgroundTransparency = 1
-        scale.Scale = 0.9
-        TweenService:Create(root, TweenInfo.new(0.2), {BackgroundTransparency = 0.12}):Play()
-        TweenService:Create(scale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        transition(root, 0.20, {BackgroundTransparency = 0.12})
+        transition(scale, 0.22, {Scale = 1}, Enum.EasingStyle.Back)
     end
 
     local count = shardCount()
@@ -351,8 +396,12 @@ local function refresh()
         if completed and completedChallengeId ~= challengeId then
             completedChallengeId = challengeId
             challenge.BackgroundColor3 = UITheme.Colors.Green:Lerp(UITheme.Colors.PanelSoft, 0.68)
-            scale.Scale = 1.05
-            TweenService:Create(scale, TweenInfo.new(0.20, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            if player:GetAttribute("ReduceMotion") ~= true then
+                scale.Scale = 1.05
+                transition(scale, 0.20, {Scale = 1}, Enum.EasingStyle.Back)
+            else
+                scale.Scale = 1
+            end
         elseif not completed then
             completedChallengeId = nil
             challenge.BackgroundColor3 = UITheme.Colors.PanelSoft
@@ -366,11 +415,10 @@ local function refresh()
 
     local intensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     local normalized = math.clamp((intensity - 0.85) / 0.40, 0.08, 1)
-    TweenService:Create(
-        fill,
-        TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Size = UDim2.fromScale(normalized, 1)}
-    ):Play()
+    if normalized ~= lastIntensityScale then
+        lastIntensityScale = normalized
+        transition(fill, 0.28, {Size = UDim2.fromScale(normalized, 1)})
+    end
 
     local primaryId = state.disasterIds and state.disasterIds[1]
     local text, color = dangerStatusLabel(
@@ -467,24 +515,42 @@ player:GetAttributeChangedSignal("RoundChaosShards"):Connect(function()
     local previous = shard.Text
     refresh()
 
-    if root.Visible and shard.Text ~= previous then
-        shard.TextTransparency = 0.1
-        TweenService:Create(
-            shard,
-            TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {TextTransparency = 0}
-        ):Play()
-
-        scale.Scale = 1.04
-        TweenService:Create(
-            scale,
-            TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            {Scale = 1}
-        ):Play()
+    if root.Visible and not isHiding and shard.Text ~= previous then
+        if player:GetAttribute("ReduceMotion") == true then
+            shard.TextTransparency = 0
+            scale.Scale = 1
+        else
+            shard.TextTransparency = 0.1
+            transition(shard, 0.16, {TextTransparency = 0})
+            scale.Scale = 1.04
+            transition(scale, 0.18, {Scale = 1}, Enum.EasingStyle.Back)
+        end
     end
 end)
 
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    -- A setting change during a running transition must stop that tween
+    -- immediately. This also invalidates a pending delayed hide callback.
+    for target, tween in pairs(activeTweens) do
+        tween:Cancel()
+        activeTweens[target] = nil
+    end
+    if isHiding then
+        visibleToken += 1
+        isHiding = false
+        root.Visible = false
+    end
+    root.BackgroundTransparency = 0.12
+    scale.Scale = 1
+    shard.TextTransparency = 0
+    if lastIntensityScale then
+        fill.Size = UDim2.fromScale(lastIntensityScale, 1)
+    end
+    refresh()
+end)
+
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     currentState = state
     refresh()
 end)

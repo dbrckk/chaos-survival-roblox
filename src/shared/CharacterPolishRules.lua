@@ -51,9 +51,10 @@ function CharacterPolishRules.lightBrightness(
     phase,
     localCharacter,
     finalRush,
-    activeParticipant
+    activeParticipant,
+    reduceMotion
 )
-    if finalRush == true or tostring(tierName) == "Low" then
+    if finalRush == true or reduceMotion == true or tostring(tierName) == "Low" then
         return 0
     end
 

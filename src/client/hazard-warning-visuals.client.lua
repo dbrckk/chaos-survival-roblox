@@ -3,6 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
+local GroundOutline = require(script.Parent.HazardGroundOutlineKit)
 
 local player = Players.LocalPlayer
 local tracked = {}
@@ -22,6 +25,57 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end)
 
+local function warningDeckFrame(part, deck)
+    return HazardWarningSignatureRules.frame(part.Position, deck)
+end
+
+local function destroySignature(state)
+    if not state or not state.signature then return end
+    for _, piece in ipairs(state.signature) do
+        if piece.Parent then piece:Destroy() end
+    end
+end
+
+-- Reconcile against live quality/accessibility without duplicating objects.
+-- Existing pieces are retained where possible; old excess pieces are removed
+-- on the very next render update when the player lowers their quality tier.
+local function syncShockSignature(part, state, diameter, progress, reduced)
+    if state.kind ~= "JumpShock" then return end
+    local count = HazardWarningSignatureRules.count(
+        "JumpShock", currentTier.Name, reduced
+    )
+    local pieces = state.signature
+    if not pieces then return end
+    while #pieces > count do
+        local extra = table.remove(pieces)
+        if extra and extra.Parent then extra:Destroy() end
+    end
+    local centerFrame = warningDeckFrame(part, state.deck)
+    for index = 1, count do
+        local design = HazardWarningSignatureRules.recipe(
+            "JumpShock", index, count, diameter, reduced and 0 or progress
+        )
+        local piece = pieces[index]
+        if not piece then
+            piece = Instance.new("Part")
+            piece.Name = "JumpShockAngularWarning" .. index
+            piece.Anchored = true
+            piece.CanCollide = false
+            piece.CanTouch = false
+            piece.CanQuery = false
+            piece.CastShadow = false
+            piece.Parent = localDecor
+            pieces[index] = piece
+        end
+        piece.Size = design.Size
+        piece.CFrame = centerFrame * CFrame.new(design.Offset) * design.Rotation
+        piece.Material = design.Material
+        piece.Color = design.Secondary and design.SecondaryColor or design.Color
+        piece.Transparency = reduced and 0.67 or design.Transparency
+    end
+end
+
+
 local function ensureRenderLoop()
     if loopStarted then
         return
@@ -40,12 +94,13 @@ local function ensureRenderLoop()
 
             for part, state in pairs(tracked) do
                 if not part.Parent then
-                    if state.ring and state.ring.Parent then
-                        state.ring:Destroy()
+                    if state.ring then
+                        GroundOutline.destroy(state.ring)
                     end
                     if state.label and state.label.Parent then
                         state.label:Destroy()
                     end
+                    destroySignature(state)
                     tracked[part] = nil
                     continue
                 end
@@ -61,49 +116,42 @@ local function ensureRenderLoop()
                     or ((math.sin(alpha * math.pi * 6) + 1) * 0.5)
 
                 if state.kind == "Freeze" then
-                    local freezePeak = 0.18 * currentTier.Scale
-                    part.Transparency = math.clamp(
+                    local freezePeak = 0.12 * currentTier.Scale
+                    part.Transparency = reduced and 0.82 or math.clamp(
                         0.84 - (freezePeak * math.sin(alpha * math.pi)),
-                        0.60,
+                        0.69,
                         0.92
                     )
                 elseif state.kind == "JumpShock" then
-                    local diameter = state.startSize
-                        + ((state.endSize - state.startSize) * alpha)
+                    -- In ReduceMotion, show the final hazard coverage at once
+                    -- instead of sweeping a large luminous disc across sightlines.
+                    local diameter = HazardWarningSignatureRules.visualDiameter(
+                        state.startSize, state.endSize, alpha, reduced
+                    )
                     part.Size = Vector3.new(part.Size.X, diameter, diameter)
-                    part.Transparency = 0.30 + (0.58 * alpha)
+                    part.Transparency = reduced and 0.78
+                        or (0.62 + 0.27 * alpha)
 
-                    if state.ring and state.ring.Parent then
-                        local trailingDiameter = math.max(state.startSize, diameter * 0.82)
-                        state.ring.Size = Vector3.new(
-                            0.08,
-                            trailingDiameter,
-                            trailingDiameter
-                        )
-                        state.ring.CFrame = CFrame.new(
-                            part.Position + Vector3.new(0, 0.08, 0)
-                        ) * CFrame.Angles(0, 0, math.rad(90))
-                        state.ring.Transparency = 0.38 + (0.54 * alpha)
-                    end
+                    syncShockSignature(part, state, diameter, alpha, reduced)
                 else
-                    local diameter = state.startSize
-                        + ((state.endSize - state.startSize) * alpha)
+                    local diameter = HazardWarningSignatureRules.visualDiameter(
+                        state.startSize, state.endSize, alpha, reduced
+                    )
                     part.Size = Vector3.new(diameter, part.Size.Y, diameter)
-                    part.Transparency = 0.12 + (pulse * 0.24)
+                    -- An opaque warning disc conceals the platform edges
+                    -- and any escape route. Keep a restrained fill, with
+                    -- the strong hollow perimeter as the primary signal.
+                    local base = state.kind == "Meteor" and 0.69 or 0.66
+                    part.Transparency = reduced and 0.62
+                        or math.clamp(base - alpha * 0.10 - pulse * 0.05, 0.47, 0.78)
 
-                    if state.ring and state.ring.Parent then
-                        local ringScale = reduced and 1.12 or (1.10 + pulse * 0.12)
-                        state.ring.Size = Vector3.new(
-                            0.10,
-                            diameter * ringScale,
-                            diameter * ringScale
+                    if state.ring then
+                        -- Hollow world-space surface contours preserve the
+                        -- arena floor and avoid a duplicate solid disc.
+                        GroundOutline.update(
+                            state.ring, part.Position, diameter,
+                            alpha, reduced, pulse, currentTier.Name
                         )
-                        state.ring.CFrame = CFrame.new(
-                            part.Position + Vector3.new(0, 0.06, 0)
-                        ) * CFrame.Angles(0, 0, math.rad(90))
-                        state.ring.Transparency = 0.42
-                            + (0.28 * alpha)
-                            + (pulse * 0.08)
                     end
                 end
 
@@ -115,26 +163,21 @@ local function ensureRenderLoop()
                     )
                     local text = state.label:FindFirstChild("WarningText")
                     if text and text:IsA("TextLabel") then
-                        text.TextTransparency = math.clamp(
-                            0.02 + alpha * 0.22,
-                            0,
-                            1
-                        )
-                        text.TextStrokeTransparency = math.clamp(
-                            0.42 + alpha * 0.30,
-                            0,
-                            1
-                        )
+                        text.TextTransparency = reduced and 0.02
+                            or math.clamp(0.02 + alpha * 0.22, 0, 1)
+                        text.TextStrokeTransparency = reduced and 0.42
+                            or math.clamp(0.42 + alpha * 0.30, 0, 1)
                     end
                 end
 
                 if alpha >= 1 then
-                    if state.ring and state.ring.Parent then
-                        state.ring:Destroy()
+                    if state.ring then
+                        GroundOutline.destroy(state.ring)
                     end
                     if state.label and state.label.Parent then
                         state.label:Destroy()
                     end
+                    destroySignature(state)
                     tracked[part] = nil
                 end
             end
@@ -197,48 +240,39 @@ local function addWarningGlyph(parent, kind, color)
     end
 end
 
-local function register(part)
-    if not part:IsA("BasePart") then
+local function register(part, snapshot)
+    if not part:IsA("BasePart") or tracked[part] or not snapshot then
         return
     end
 
-    local kind = part:GetAttribute("WarningKind")
-    if type(kind) ~= "string" or kind == "" then
-        return
-    end
+    local kind = snapshot.Kind
 
     local ring = nil
-    if kind == "Meteor" or kind == "Bomb" or kind == "JumpShock" then
-        ring = Instance.new("Part")
-        ring.Name = kind .. "WarningRingLocal"
-        ring.Shape = Enum.PartType.Cylinder
-        ring.Anchored = true
-        ring.CanCollide = false
-        ring.CanTouch = false
-        ring.CanQuery = false
-        ring.CastShadow = false
-        ring.Material = Enum.Material.Neon
-        ring.Color = kind == "Meteor"
-            and Color3.fromRGB(255, 190, 78)
-            or (kind == "JumpShock"
-                and Color3.fromRGB(70, 230, 255)
-                or Color3.fromRGB(255, 72, 72))
-        ring.Transparency = 0.48
-        ring.Size = Vector3.new(0.10, part.Size.X * 1.12, part.Size.Z * 1.12)
-        ring.CFrame = CFrame.new(part.Position + Vector3.new(0, 0.06, 0))
-            * CFrame.Angles(0, 0, math.rad(90))
-        ring.Parent = localDecor
+    if kind == "Meteor" or kind == "Bomb" then
+        ring = GroundOutline.create(localDecor, kind)
+    end
+
+    local signature = nil
+    local signatureDeck = nil
+    if kind == "JumpShock" then
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        local base = arena and arena:FindFirstChild("Base")
+        signatureDeck = base and base:IsA("BasePart") and base.CFrame or nil
+        signature = {}
     end
 
 
     local label = Instance.new("BillboardGui")
     label.Name = kind .. "WarningLabelLocal"
     label.Adornee = part
-    label.Size = UDim2.fromOffset(154, 36)
+    label.Size = UDim2.fromOffset(132, 32)
     label.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
-    label.AlwaysOnTop = true
+    -- A dozen always-on-top world labels obscure the player's avatar on
+    -- narrow Android cameras. Depth test labels, keep the ground ring.
+    label.AlwaysOnTop = false
     label.LightInfluence = 0
-    label.MaxDistance = currentTier.Name == "Low" and 90 or 130
+    label.MaxDistance = currentTier.Name == "Low" and 68 or 105
     label.Parent = localDecor
 
     local warningText = Instance.new("TextLabel")
@@ -248,9 +282,9 @@ local function register(part)
     warningText.BackgroundTransparency = 0.18
     warningText.BorderSizePixel = 0
     warningText.Font = Enum.Font.GothamBlack
-    warningText.Text = kind == "JumpShock"
-        and "JUMP"
-        or string.upper(kind)
+    warningText.Text = HazardWarningSignatureRules.label(
+        kind, player.LocaleId, CoreLocalization
+    ) or string.upper(kind)
     warningText.TextColor3 = kind == "Bomb"
         and Color3.fromRGB(255, 120, 120)
         or (kind == "Meteor"
@@ -280,47 +314,99 @@ local function register(part)
     stroke.Parent = warningText
 
     tracked[part] = {
-        startedAt = tonumber(part:GetAttribute("WarningStartedAt")) or workspace:GetServerTimeNow(),
+        startedAt = snapshot.StartedAt,
         kind = kind,
-        duration = math.max(0.05, tonumber(part:GetAttribute("WarningDuration")) or 0.05),
-        startSize = math.max(0.1, tonumber(part:GetAttribute("WarningStartSize")) or part.Size.X),
-        endSize = math.max(0.1, tonumber(part:GetAttribute("WarningEndSize")) or part.Size.X),
+        duration = snapshot.Duration,
+        startSize = snapshot.StartSize,
+        endSize = snapshot.EndSize,
         ring = ring,
+        signature = signature,
+        deck = signatureDeck,
         label = label,
     }
 
+    -- Initial client appearance must also use the authoritative elapsed
+    -- fraction; otherwise a late join first shows the wrong impact radius.
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local diameter = HazardWarningSignatureRules.visualDiameter(
+        snapshot.StartSize, snapshot.EndSize, snapshot.Progress, reduced
+    )
+    if ring then
+        -- A late-joining mobile client must not show the initial server
+        -- disc while the local contour already reflects elapsed warning time.
+        part.Size = Vector3.new(diameter, part.Size.Y, diameter)
+        local pulse = reduced and 0.5
+            or (math.sin(snapshot.Progress * math.pi * 6) + 1) * 0.5
+        local base = kind == "Meteor" and 0.69 or 0.66
+        part.Transparency = reduced and 0.62
+            or math.clamp(base - snapshot.Progress * 0.10 - pulse * 0.05, 0.47, 0.78)
+        GroundOutline.update(
+            ring, part.Position, diameter, snapshot.Progress,
+            reduced, pulse, currentTier.Name
+        )
+    elseif kind == "JumpShock" then
+        -- Shock's cylinder uses Y/Z for its warning diameter. Match the
+        -- replicated elapsed fraction on the first frame as well.
+        part.Size = Vector3.new(part.Size.X, diameter, diameter)
+        part.Transparency = reduced and 0.78
+            or (0.62 + 0.27 * snapshot.Progress)
+    elseif kind == "Freeze" and reduced then
+        part.Transparency = 0.82
+    end
+    if kind == "JumpShock" then
+        syncShockSignature(part, tracked[part], diameter, snapshot.Progress, reduced)
+    end
     ensureRenderLoop()
 end
 
+-- Listen until the exact server metadata bundle has replicated. Timers are
+-- not reliable here: slow Android networks may deliver WarningStartedAt or
+-- the final diameter well after the warning instance itself.
+local pendingWarnings = {}
+
+local function disconnectPending(part)
+    local connections = pendingWarnings[part]
+    if not connections then return end
+    pendingWarnings[part] = nil
+    for _, connection in ipairs(connections) do
+        connection:Disconnect()
+    end
+end
+
 local function maybeRegister(part)
-    if not part:IsA("BasePart") then
+    if not part:IsA("BasePart") or not warningNames[part.Name]
+        or part.Parent ~= workspace or tracked[part] then
         return
     end
 
-    if part:GetAttribute("WarningKind") then
-        register(part)
+    local snapshot = HazardWarningSignatureRules.snapshot(
+        part, workspace:GetServerTimeNow()
+    )
+    if snapshot then
+        disconnectPending(part)
+        register(part, snapshot)
         return
     end
+    if pendingWarnings[part] then return end
 
-    if not warningNames[part.Name] then
-        return
+    local connections = {}
+    pendingWarnings[part] = connections
+    for _, name in ipairs({
+        "WarningKind", "WarningStartedAt", "WarningDuration",
+        "WarningStartSize", "WarningEndSize",
+    }) do
+        table.insert(connections,
+            part:GetAttributeChangedSignal(name):Connect(function()
+                if part.Parent == workspace then
+                    maybeRegister(part)
+                else
+                    disconnectPending(part)
+                end
+            end))
     end
-
-    local connection
-    connection = part:GetAttributeChangedSignal("WarningKind"):Connect(function()
-        if part:GetAttribute("WarningKind") then
-            if connection then
-                connection:Disconnect()
-            end
-            register(part)
-        end
-    end)
-
-    task.delay(1, function()
-        if connection and connection.Connected then
-            connection:Disconnect()
-        end
-    end)
+    -- Close the subscription race if metadata became complete while
+    -- the five listeners were being installed.
+    maybeRegister(part)
 end
 
 for _, child in ipairs(workspace:GetChildren()) do
@@ -329,12 +415,14 @@ end
 
 workspace.ChildAdded:Connect(maybeRegister)
 workspace.ChildRemoved:Connect(function(child)
+    disconnectPending(child)
     local state = tracked[child]
-    if state and state.ring and state.ring.Parent then
-        state.ring:Destroy()
+    if state and state.ring then
+        GroundOutline.destroy(state.ring)
     end
     if state and state.label and state.label.Parent then
         state.label:Destroy()
     end
+    destroySignature(state)
     tracked[child] = nil
 end)

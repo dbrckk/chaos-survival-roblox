@@ -144,6 +144,43 @@ local function buildTruss(folder, baseCF, tier)
     end
 end
 
+-- An intentionally asymmetric sound-wave arch around the DJ booth.
+-- Its segmented metal ribs convey depth at distance; neon is reserved for
+-- a few controlled beats instead of filling every surface with emissive color.
+local function buildWaveguide(folder, baseCF, tier)
+    local count = tier == "High" and 8 or (tier == "Medium" and 6 or 4)
+    local width = 12.2
+    for i = 1, count do
+        local x = (i - (count + 1) * 0.5) * width / count
+        local normalized = x / (width * 0.5)
+        local height = 4.9 + 1.65 * (1 - normalized * normalized)
+        local accent = i == 2 or i == count - 1
+        primitive(folder, "ShowtimeWaveguideRib" .. i,
+            baseCF * CFrame.new(x, height, -6.13)
+                * CFrame.Angles(0, 0, math.rad(-x * 3.8)),
+            Vector3.new(width / count * 0.91, 0.25, 0.30),
+            accent and UITheme.Colors.Violet or Color3.fromRGB(75, 93, 122),
+            accent and Enum.Material.Neon or Enum.Material.Metal,
+            accent and 0.26 or 0.07)
+    end
+
+    for side = -1, 1, 2 do
+        primitive(folder, "ShowtimeAcousticWing" .. tostring(side),
+            baseCF * CFrame.new(side * 5.66, 5.30, -5.94)
+                * CFrame.Angles(0, 0, math.rad(side * 20)),
+            Vector3.new(0.36, 2.55, 1.05),
+            Color3.fromRGB(41, 56, 79), Enum.Material.Metal, 0.09)
+        if tier == "High" then
+            primitive(folder, "ShowtimeAcousticWingEdge" .. tostring(side),
+                baseCF * CFrame.new(side * 5.84, 5.35, -5.44)
+                    * CFrame.Angles(0, 0, math.rad(side * 20)),
+                Vector3.new(0.08, 2.17, 0.14),
+                side == -1 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
+                Enum.Material.Neon, 0.20)
+        end
+    end
+end
+
 -- A faceted prismatic crown suspended over the DJ desk. Segmented rings
 -- make a distinct 3D hero silhouette without any mesh upload or external IDs.
 -- Segments are created once and only their CFrames are updated in a calm phase.
@@ -215,6 +252,7 @@ function ShowtimeProps.build(parent, baseCF, tier, themeOverride)
     buildSpeaker(holder, baseCF, 2, settings)
     buildConsole(holder, baseCF, tier)
     buildTruss(holder, baseCF, tier)
+    buildWaveguide(holder, baseCF, tier)
     local crown = buildPrismaticCrown(holder, baseCF, tier)
 
     local equalizer = {}

@@ -33,6 +33,14 @@ function ArenaFocalLightingRules.sourceCount(tierName)
     return 2
 end
 
+-- Visually ground every focal spotlight in real architectural hardware.
+-- The Low tier disables the spotlight and housing together.
+function ArenaFocalLightingRules.fixtureParts(tierName)
+    if tierName == "Low" then return 0 end
+    if tierName == "High" then return 2 end
+    return 1
+end
+
 function ArenaFocalLightingRules.phaseScale(phase, finalRush)
     local state = tostring(phase or "waiting")
     if state == "ready" then

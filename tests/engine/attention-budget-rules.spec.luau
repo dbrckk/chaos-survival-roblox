@@ -6,9 +6,15 @@ local AttentionBudgetRules = require("../../src/shared/AttentionBudgetRules")
 
 describe("attention budget rules", function()
     it("treats only intermission with options as active voting", function()
-        expect(AttentionBudgetRules.voteActive("intermission", {"A", "B", "C"})).toBe(true)
+        expect(AttentionBudgetRules.voteActive("intermission", {{id = "A"}, {id = "B"}, {id = "C"}})).toBe(true)
         expect(AttentionBudgetRules.voteActive("intermission", {})).toBe(false)
-        expect(AttentionBudgetRules.voteActive("round", {"A"})).toBe(false)
+        expect(AttentionBudgetRules.voteActive("intermission", {{id = ""}})).toBe(false)
+        expect(AttentionBudgetRules.voteActive("intermission", {"A"})).toBe(false)
+        expect(AttentionBudgetRules.voteActive("intermission", {{id = "A"}, {id = "A"}})).toBe(false)
+        expect(AttentionBudgetRules.voteActive("intermission", {
+            {id = "A"}, {id = "B"}, {id = "C"}, {id = "D"}
+        })).toBe(false)
+        expect(AttentionBudgetRules.voteActive("round", {{id = "A"}})).toBe(false)
     end)
 
     it("keeps deferred meta notifications FIFO and bounded", function()
@@ -32,7 +38,7 @@ describe("attention budget rules", function()
     it("suppresses meta controls during vote ready round and result", function()
         expect(AttentionBudgetRules.suppressMetaControls(
             "intermission",
-            {"A", "B", "C"},
+            {{id = "A"}, {id = "B"}, {id = "C"}},
             4
         )).toBe(true)
         expect(AttentionBudgetRules.suppressMetaControls("ready", nil, 4)).toBe(true)
@@ -53,7 +59,7 @@ describe("attention budget rules", function()
         )).toBe(true)
         expect(AttentionBudgetRules.canShowMetaNotification(
             "intermission",
-            {"A", "B", "C"},
+            {{id = "A"}, {id = "B"}, {id = "C"}},
             2
         )).toBe(false)
         expect(AttentionBudgetRules.canShowMetaNotification("round", nil, 2)).toBe(false)

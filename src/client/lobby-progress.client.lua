@@ -5,9 +5,12 @@ local LocalizationService = game:GetService("LocalizationService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+local currentPhase = "waiting"
 
 local folder = Instance.new("Folder")
 folder.Name = "LobbyPersonalProgressLocal"
@@ -27,10 +30,12 @@ anchor.Parent = folder
 
 local billboard = Instance.new("BillboardGui")
 billboard.Name = "PersonalProgressBoard"
-billboard.Size = UDim2.fromOffset(560, 180)
+billboard.Size = UserInputService.TouchEnabled
+    and UDim2.fromOffset(390, 130) or UDim2.fromOffset(560, 180)
 billboard.StudsOffset = Vector3.new(0, 0, 0)
 billboard.AlwaysOnTop = false
-billboard.MaxDistance = 90
+billboard.MaxDistance = UserInputService.TouchEnabled and 56 or 90
+billboard.Enabled = false
 billboard.LightInfluence = 0
 billboard.Parent = anchor
 
@@ -156,8 +161,16 @@ local function bindMap()
     local lobby = generated and generated:FindFirstChild("Lobby")
     local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
     anchor.Position = Config.LobbyCenter + Vector3.new(0, 8.5, -18.5)
+    -- World-space lobby progression must never cover the hazard arena.
     billboard.Enabled = lobby ~= nil and games >= 1
+        and currentPhase ~= "ready" and currentPhase ~= "round"
 end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
+    currentPhase = tostring(state.phase or "waiting")
+    bindMap()
+end)
 
 player:GetAttributeChangedSignal("Games"):Connect(function()
     refresh()

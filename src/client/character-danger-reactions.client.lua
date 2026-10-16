@@ -6,7 +6,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Rules = require(ReplicatedStorage.Shared.CharacterReactionRules)
 local ReactionVisuals = require(script.Parent.CharacterReactionVisuals)
+local RigRegistry = require(script.Parent.CharacterReactionRigRegistry)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local Viewport = require(ReplicatedStorage.Shared.VisualViewportRules)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -19,10 +21,9 @@ local lastDodge = -math.huge
 local lastImpact = -math.huge
 local impactByModel = setmetatable({}, {__mode = "k"})
 local landingByModel = setmetatable({}, {__mode = "k"})
-local watched = setmetatable({}, {__mode = "k"})
-local pendingRigs = setmetatable({}, {__mode = "k"})
 local activePieces = setmetatable({}, {__mode = "k"})
 local botFolderConnection = nil
+local botFolderRemovedConnection = nil
 local botFolder = nil
 
 local function profile()
@@ -56,12 +57,25 @@ local function liveRoot(model)
 end
 
 local function viewerPosition()
-    local root = liveRoot(player.Character)
-    if root then
-        return root.Position
-    end
+    -- Spectators follow other players or AI; even active survivors can
+    -- use offset cameras. Presentation distance should match the actual
+    -- rendered view, not an off-screen avatar's root.
     local camera = workspace.CurrentCamera
-    return camera and camera.CFrame.Position or nil
+    if camera then return camera.CFrame.Position end
+    local root = liveRoot(player.Character)
+    return root and root.Position or nil
+end
+
+local function visibleToCamera(model, root)
+    -- Keep first-person feedback for the local participant even if the
+    -- root projects behind the camera due to native camera offsets.
+    if model == player.Character then return true end
+    local camera = workspace.CurrentCamera
+    if not camera then return true end
+    local screen = camera:WorldToViewportPoint(root.Position)
+    local bounds = camera.ViewportSize
+    return Viewport.contains(screen.X, screen.Y, screen.Z,
+        bounds.X, bounds.Y, false)
 end
 
 local function killPieces()
@@ -78,22 +92,25 @@ local function nearMiss(payload)
         return
     end
     local current = profile()
-    if current.Dodge == 0 or not liveRoot(player.Character) then
+    local root = liveRoot(player.Character)
+    if current.Dodge == 0 or not root then
         return
     end
     local now = os.clock()
     if not Rules.cooldownReady(now, lastDodge, 0.80) then
         return
     end
-    lastDodge = now
-    ReactionVisuals.burst(liveRoot(player.Character),
+    local intensity = Rules.dodgeStrength(payload.distance, payload.radius)
+    if intensity <= 0 then return end
+    local emitted = ReactionVisuals.burst(root,
         "Dodge", tostring(payload.kind or ""), current.Dodge,
-        Rules.dodgeStrength(payload.distance, payload.radius), activePieces)
+        intensity, activePieces)
+    lastDodge = Rules.cooldownAfterEmission(lastDodge, now, emitted)
 end
 
 local function impact(payload)
     if type(payload) ~= "table"
-        or typeof(payload.position) ~= "Vector3"
+        or not Rules.validPosition(payload.position)
     then
         return
     end
@@ -105,145 +122,149 @@ local function impact(payload)
     if not Rules.cooldownReady(now, lastImpact, 0.18) then
         return
     end
-    lastImpact = now
     local viewer = viewerPosition()
     if not viewer or (payload.position - viewer).Magnitude > p.Range + 40 then
         return
     end
-    local n = 0
-
-    local function candidate(model)
-        if n >= p.MaxReactors then
-            return
-        end
+    -- Prioritize the local participant, then the closest visible combatants,
+    -- regardless of whether they are humans or AI. Previously, the Player
+    -- iteration order exhausted the small 2/3-reactor budget before bots
+    -- were considered in populated rounds.
+    local contenders = {}
+    local function consider(model)
         local root = liveRoot(model)
-        if not root or (root.Position - viewer).Magnitude > p.Range then
+        if not root then return end
+        local cameraDistance = (root.Position - viewer).Magnitude
+        if cameraDistance > p.Range or not visibleToCamera(model, root) then
             return
         end
-        local d = (root.Position - payload.position).Magnitude
-        local intensity = Rules.airShockStrength(d, payload.radius)
-        if intensity <= 0 then
+        local intensity = Rules.airShockStrength(
+            (root.Position - payload.position).Magnitude, payload.radius
+        )
+        if intensity <= 0 or not Rules.cooldownReady(
+            now, impactByModel[model], 0.95
+        ) then
             return
         end
-        if not Rules.cooldownReady(now, impactByModel[model], 0.95) then
-            return
-        end
-        impactByModel[model] = now
-        n += 1
-        ReactionVisuals.burst(root, "Shock", tostring(payload.kind or ""),
-            p.Shock, intensity, activePieces)
+        table.insert(contenders, {
+            model = model,
+            root = root,
+            strength = intensity,
+            distance = cameraDistance,
+            localOwned = model == player.Character,
+        })
     end
 
-    candidate(player.Character)
+    consider(player.Character)
     for _, other in ipairs(Players:GetPlayers()) do
-        if n >= p.MaxReactors then
-            break
-        end
         if other ~= player then
-            candidate(other.Character)
+            consider(other.Character)
         end
     end
-    if n < p.MaxReactors then
-        local bots = workspace:FindFirstChild("AISurvivors")
-        if bots then
-            for _, model in ipairs(bots:GetChildren()) do
-                if n >= p.MaxReactors then
-                    break
-                end
-                if model:IsA("Model") then
-                    candidate(model)
-                end
+    local bots = workspace:FindFirstChild("AISurvivors")
+    if bots then
+        for _, model in ipairs(bots:GetChildren()) do
+            if model:IsA("Model") then consider(model) end
+        end
+    end
+    table.sort(contenders, function(a, b)
+        if a.localOwned ~= b.localOwned then
+            return a.localOwned
+        end
+        if a.distance ~= b.distance then
+            return a.distance < b.distance
+        end
+        return a.model.Name < b.model.Name
+    end)
+
+    local n = 0
+    for _, contender in ipairs(contenders) do
+        if n >= p.MaxReactors then break end
+        -- A character could be eliminated or stream out after collection.
+        if liveRoot(contender.model) == contender.root then
+            local emitted = ReactionVisuals.burst(
+                contender.root, "Shock", tostring(payload.kind or ""),
+                p.Shock, contender.strength, activePieces, payload.position
+            )
+            if emitted > 0 then
+                impactByModel[contender.model] = now
+                n += 1
             end
         end
     end
+    -- No visible reaction means the next valid impact must remain eligible.
+    lastImpact = Rules.cooldownAfterEmission(lastImpact, now, n)
 end
 
+-- Only a currently attached HumanoidRootPart can receive its own landing.
+-- Streamed replacements must not replay a stale airborne start timestamp.
+local rigRegistry = RigRegistry.new(function(model, root, state, entry)
+    if state == Enum.HumanoidStateType.Freefall then
+        entry.airborneAt = phase == "round" and liveRoot(model) == root
+            and (entry.airborneAt or os.clock()) or nil
+    elseif state == Enum.HumanoidStateType.Dead then
+        entry.airborneAt = nil
+    elseif Rules.isLandingTransition(state) then
+        local started = entry.airborneAt
+        entry.airborneAt = nil
+        if not started or liveRoot(model) ~= root then return end
+        local now = os.clock()
+        local strength = Rules.landingStrength(now - started)
+        local settings = profile()
+        if strength == 0 or settings.Landing == 0
+            or not Rules.cooldownReady(now, landingByModel[model], 1.20)
+        then
+            return
+        end
+        local viewer = viewerPosition()
+        if not viewer or (root.Position - viewer).Magnitude > settings.Range
+            or not visibleToCamera(model, root) then
+            return
+        end
+        local emitted = ReactionVisuals.burst(root, "Landing", "",
+            settings.Landing, strength, activePieces)
+        landingByModel[model] = Rules.cooldownAfterEmission(
+            landingByModel[model], now, emitted)
+    end
+end)
+
 local function watchLanding(model)
-    if watched[model] then
-        return
-    end
-    -- Replication may deliver the model before its root/Humanoid. Keep one
-    -- temporary ChildAdded listener, removed as soon as both exist.
-    local humanoid = model:FindFirstChildOfClass("Humanoid")
-    local root = model:FindFirstChild("HumanoidRootPart")
-    if not humanoid or not root or not root:IsA("BasePart") then
-        if not pendingRigs[model] then
-            pendingRigs[model] = model.ChildAdded:Connect(function(child)
-                if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
-                    task.defer(watchLanding, model)
-                end
-            end)
-            -- Abandoned partial rigs are common under StreamingEnabled and
-            -- rapid respawn. Do not retain their connections indefinitely.
-            task.delay(8, function()
-                local connection = pendingRigs[model]
-                if connection then
-                    connection:Disconnect()
-                    pendingRigs[model] = nil
-                end
-            end)
-        end
-        return
-    end
-    if pendingRigs[model] then
-        pendingRigs[model]:Disconnect()
-        pendingRigs[model] = nil
-    end
-    watched[model] = true
-    local airborneAt = nil
-    humanoid.StateChanged:Connect(function(_, state)
-        if state == Enum.HumanoidStateType.Freefall then
-            airborneAt = airborneAt or os.clock()
-        elseif state == Enum.HumanoidStateType.Dead then
-            airborneAt = nil
-        elseif Rules.isLandingTransition(state) then
-            local started = airborneAt
-            airborneAt = nil
-            if not started then
-                return
-            end
-            -- Do not play battle recovery on a lobby avatar or eliminated
-            -- survivor even if the humanoid has just landed.
-            if not liveRoot(model) then
-                return
-            end
-            local now = os.clock()
-            local strength = Rules.landingStrength(now - started)
-            local settings = profile()
-            if strength == 0 or settings.Landing == 0
-                or not Rules.cooldownReady(now, landingByModel[model], 1.20)
-            then
-                return
-            end
-            local viewer = viewerPosition()
-            if not viewer or (root.Position - viewer).Magnitude > settings.Range then
-                return
-            end
-            landingByModel[model] = now
-            ReactionVisuals.burst(root, "Landing", "",
-                settings.Landing, strength, activePieces)
-        end
-    end)
+    rigRegistry.watch(model)
 end
 
 local function watchPlayer(p)
     p.CharacterAdded:Connect(function(character)
-        task.spawn(watchLanding, character)
+        task.defer(watchLanding, character)
     end)
-    if p.Character then
-        task.defer(watchLanding, p.Character)
-    end
+    p.CharacterRemoving:Connect(function(character)
+        rigRegistry.stop(character)
+        landingByModel[character] = nil
+        impactByModel[character] = nil
+    end)
+    if p.Character then task.defer(watchLanding, p.Character) end
 end
 
 for _, p in ipairs(Players:GetPlayers()) do
     watchPlayer(p)
 end
 Players.PlayerAdded:Connect(watchPlayer)
+Players.PlayerRemoving:Connect(function(p)
+    if p.Character then rigRegistry.stop(p.Character) end
+end)
 
 local function bindBots(folder)
     if botFolderConnection then
         botFolderConnection:Disconnect()
         botFolderConnection = nil
+    end
+    if botFolderRemovedConnection then
+        botFolderRemovedConnection:Disconnect()
+        botFolderRemovedConnection = nil
+    end
+    if botFolder and botFolder ~= folder then
+        for _, model in ipairs(botFolder:GetChildren()) do
+            if model:IsA("Model") then rigRegistry.stop(model) end
+        end
     end
     botFolder = folder
     if folder then
@@ -255,6 +276,13 @@ local function bindBots(folder)
         botFolderConnection = folder.ChildAdded:Connect(function(model)
             if model:IsA("Model") then
                 task.defer(watchLanding, model)
+            end
+        end)
+        botFolderRemovedConnection = folder.ChildRemoved:Connect(function(model)
+            if model:IsA("Model") then
+                rigRegistry.stop(model)
+                landingByModel[model] = nil
+                impactByModel[model] = nil
             end
         end)
     end
@@ -284,8 +312,10 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 roundEvent.OnClientEvent:Connect(function(snapshot)
-    phase = tostring(snapshot.phase or "waiting")
+    phase = tostring(type(snapshot) == "table"
+        and snapshot.phase or "waiting")
     if phase ~= "round" then
+        rigRegistry.clearAirborne()
         killPieces()
     end
 end)

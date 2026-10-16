@@ -45,9 +45,22 @@ LobbyShowtimeRules.Emotes = {
         LabelEN = "WAVE",
         LabelFR = "SALUT",
     },
+    -- Two new authored visual choreographies; avatar uses known compatible
+    -- native clips until a bespoke Roblox-uploaded avatar animation exists.
+    -- This avoids Motor6D writes that fight the default Animate controller.
+    robot = {
+        R15 = 507776043, R6 = 182436842, Loop = true,
+        VisualStyle = "robot",
+        LabelEN = "NEON ROBOT", LabelFR = "ROBOT NEON",
+    },
+    orbit = {
+        R15 = 507771019, R6 = 182435998, Loop = true,
+        VisualStyle = "orbit",
+        LabelEN = "ORBIT DANCE", LabelFR = "DANSE ORBITE",
+    },
 }
 
-LobbyShowtimeRules.Order = {"dance", "shuffle", "groove", "cheer", "wave", "laugh"}
+LobbyShowtimeRules.Order = {"dance", "shuffle", "groove", "robot", "orbit", "cheer", "wave", "laugh"}
 
 function LobbyShowtimeRules.enabled(phase, voteOptions)
     local current = tostring(phase or "")
@@ -57,6 +70,17 @@ function LobbyShowtimeRules.enabled(phase, voteOptions)
             current == "intermission"
             and not (type(voteOptions) == "table" and #voteOptions > 0)
         )
+end
+
+-- Only the latest asynchronous CharacterAdded binding can own the native
+-- Action tracks. Verify attachment after replication delay, before mutation.
+function LobbyShowtimeRules.canAdoptHumanoid(serial, activeSerial, character,
+        currentCharacter, humanoid)
+    return type(serial) == "number" and serial == activeSerial
+        and typeof(character) == "Instance" and character:IsA("Model")
+        and character == currentCharacter
+        and typeof(humanoid) == "Instance" and humanoid:IsA("Humanoid")
+        and humanoid.Parent == character
 end
 
 function LobbyShowtimeRules.canEmote(phase, voteOptions, health)
@@ -77,6 +101,7 @@ function LobbyShowtimeRules.get(id, rigType)
     return {
         AnimationId = animationId,
         Loop = definition.Loop,
+        VisualStyle = definition.VisualStyle,
         LabelEN = definition.LabelEN,
         LabelFR = definition.LabelFR,
     }
@@ -136,6 +161,36 @@ function LobbyShowtimeRules.floorPulse(distance, age, reduceMotion)
     local delta = math.abs((tonumber(distance) or math.huge) - radius)
     local ring = math.clamp(1 - delta / 2.55, 0, 1)
     return ring * math.clamp(1 - elapsed / 1.45, 0, 1)
+end
+
+-- Stage geometry and proximity are evaluated in Lobby.Floor space.
+function LobbyShowtimeRules.dancerFrame(stageFrame, index)
+    if typeof(stageFrame) ~= "CFrame" or (index ~= 1 and index ~= 2) then
+        return nil
+    end
+    return stageFrame * CFrame.new(index == 1 and -4.8 or 4.8, 0, 3.1)
+end
+
+function LobbyShowtimeRules.onDanceFloor(stageFrame, worldPosition)
+    if typeof(stageFrame) ~= "CFrame" or typeof(worldPosition) ~= "Vector3" then
+        return false
+    end
+    local localPosition = stageFrame:PointToObjectSpace(worldPosition)
+    return math.abs(localPosition.Y) < 8
+        and math.abs(localPosition.X) < 7
+        and math.abs(localPosition.Z) < 7
+end
+
+function LobbyShowtimeRules.ribbonFrame(stageFrame, now, phase)
+    if typeof(stageFrame) ~= "CFrame" or type(now) ~= "number"
+        or type(phase) ~= "number" then
+        return nil
+    end
+    return stageFrame * CFrame.new(
+        math.cos(now * 0.82 + phase) * 4,
+        1.75 + math.sin(now * 1.3 + phase) * 0.65,
+        math.sin(now * 0.82 + phase) * 4
+    )
 end
 
 function LobbyShowtimeRules.profile(tier)

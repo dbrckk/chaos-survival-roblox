@@ -12,6 +12,9 @@ local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local Showtime = require(ReplicatedStorage.Shared.LobbyShowtimeRules)
 local ShowtimeProps = require(script.Parent.ShowtimeProps)
+local ShowtimeChoreography = require(script.Parent.ShowtimeChoreography)
+local ShowtimeSignatureKit = require(script.Parent.ShowtimeSignatureKit)
+local ShowtimeHologramDetails = require(script.Parent.ShowtimeHologramDetails)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
@@ -23,6 +26,7 @@ local voteOptions = nil
 local open = false
 local currentEmote = nil
 local boundHumanoid = nil
+local humanoidBindSerial = 0
 local motionConnections = {}
 local loaded = {}
 local viewportConnection = nil
@@ -33,6 +37,7 @@ local dancers = {}
 local lights = {}
 local beams = {}
 local particles = nil
+local personalBurstAttachment = nil
 local titleBillboard = nil
 local profile = Showtime.profile("Low")
 local stageCenter = nil
@@ -76,7 +81,7 @@ UITheme.addTextConstraint(toggle, 12, 18)
 local panel = Instance.new("Frame")
 panel.Name = "ShowtimePanel"
 panel.AnchorPoint = Vector2.new(1, 0)
-panel.Size = UDim2.fromOffset(232, 217)
+panel.Size = UDim2.fromOffset(232, 271)
 panel.BackgroundColor3 = UITheme.Colors.Panel
 panel.BackgroundTransparency = 0.05
 panel.BorderSizePixel = 0
@@ -137,9 +142,27 @@ local function available()
     return hum ~= nil and Showtime.canEmote(phase, voteOptions, hum.Health)
 end
 
+-- Shared client-local animation ownership marker. It prevents our
+-- independent body-feel layer from fighting native Showtime Action tracks.
+local function markEmoteActive(active)
+    if player:GetAttribute("ChaosShowtimeEmoteActive") ~= active then
+        player:SetAttribute("ChaosShowtimeEmoteActive", active)
+    end
+end
+
+markEmoteActive(false)
+
 local function stopEmote()
     local active = currentEmote
     currentEmote = nil
+    markEmoteActive(false)
+    if active then
+        ShowtimeSignatureKit.clear(folder)
+    end
+    if personalBurstAttachment then
+        personalBurstAttachment:Destroy()
+        personalBurstAttachment = nil
+    end
     if active and active.track then
         active.track:Stop(0.17)
     end
@@ -163,11 +186,14 @@ local function clearLoaded()
     boundHumanoid = nil
 end
 
-local function bindHumanoid(character)
-    clearLoaded()
+local function bindHumanoid(character, serial)
+    -- A previous avatar's delayed WaitForChild must never destroy the
+    -- current avatar's emote tracks or clear the body-feel ownership flag.
     local hum = character:FindFirstChildOfClass("Humanoid")
         or character:WaitForChild("Humanoid", 8)
-    if not hum or character ~= player.Character then
+    if not Showtime.canAdoptHumanoid(
+        serial, humanoidBindSerial, character, player.Character, hum
+    ) then
         return
     end
     boundHumanoid = hum
@@ -193,17 +219,29 @@ local function bindHumanoid(character)
     table.insert(motionConnections, hum.Died:Connect(stopEmote))
 end
 
-player.CharacterAdded:Connect(function(character)
-    task.spawn(bindHumanoid, character)
+local function beginHumanoidBinding(character)
+    humanoidBindSerial += 1
+    -- Clear obsolete tracks immediately, before awaiting streaming.
+    clearLoaded()
+    task.spawn(bindHumanoid, character, humanoidBindSerial)
+end
+
+player.CharacterAdded:Connect(beginHumanoidBinding)
+player.CharacterRemoving:Connect(function()
+    humanoidBindSerial += 1
+    clearLoaded()
 end)
-player.CharacterRemoving:Connect(clearLoaded)
 if player.Character then
-    task.spawn(bindHumanoid, player.Character)
+    beginHumanoidBinding(player.Character)
 end
 
 local function personalConfetti()
     if player:GetAttribute("ReduceMotion") == true then
         return
+    end
+    if personalBurstAttachment then
+        personalBurstAttachment:Destroy()
+        personalBurstAttachment = nil
     end
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -214,6 +252,7 @@ local function personalConfetti()
     attachment.Name = "ShowtimePersonalBurst"
     attachment.Position = Vector3.new(0, -1.5, 0)
     attachment.Parent = root
+    personalBurstAttachment = attachment
     local emitter = Instance.new("ParticleEmitter")
     emitter.Enabled = false
     emitter.Rate = 0
@@ -235,6 +274,20 @@ local function personalConfetti()
         VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name, 12, 3
     ))
     Debris:AddItem(attachment, 1.4)
+end
+
+-- Authored dance signatures: light geometry with no humanoid or camera edits.
+-- Brief one-shots; VFX quality and accessibility bound allocation.
+-- Each native emote has an original, noncolliding 3D arrival signature.
+-- Existing visual owner; no new loop and no unlicensed animations.
+local function signatureDance(id)
+    local root = player.Character
+        and player.Character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then return end
+    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    ShowtimeSignatureKit.emit(folder, root.CFrame, id, tier,
+        player:GetAttribute("ReduceMotion") == true,
+        UITheme.Colors.Cyan, UITheme.Colors.Magenta)
 end
 
 local function emoteAudio(id)
@@ -304,6 +357,7 @@ local function playEmote(id, automatic)
         track.Stopped:Connect(function()
             if currentEmote and currentEmote.track == track then
                 currentEmote = nil
+                markEmoteActive(false)
             end
         end)
     end
@@ -315,18 +369,21 @@ local function playEmote(id, automatic)
         return
     end
     currentEmote = {id = id, track = entry.track}
+    markEmoteActive(true)
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if root and root:IsA("BasePart") then
         lastEmoteStarted = os.clock()
         lastEmotePosition = root.Position
     end
     personalConfetti()
+    signatureDance(id)
     if automatic ~= true then
         emoteAudio(id)
     end
     open = false
     panel.Visible = false
-    if particles and particles.Parent then
+    if particles and particles.Parent
+        and player:GetAttribute("ReduceMotion") ~= true then
         particles:Emit(profile.Bursts)
     end
 end
@@ -389,7 +446,7 @@ local function applyLayout()
         panel.Position = UDim2.new(1, -rightInset, 0, top + 70)
     end
     local width = math.max(1, viewport.X)
-    panel.Size = UDim2.fromOffset(math.min(232, width - 24), 217)
+    panel.Size = UDim2.fromOffset(math.min(232, width - 24), 271)
     if refreshUI then
         refreshUI()
     end
@@ -455,12 +512,12 @@ local function clearStage()
     titleBillboard = nil
 end
 
-local function makeHoloDancer(index, center)
-    local offset = index == 1 and -4.8 or 4.8
-    local base = center + Vector3.new(offset, 0, 3.1)
+local function makeHoloDancer(index, centerFrame, tierName)
+    local baseFrame = Showtime.dancerFrame(centerFrame, index)
+    if not baseFrame then return end
     local color = index == 1 and UITheme.Colors.Cyan or UITheme.Colors.Magenta
     local body = makePart("HoloDancerBody" .. index, Vector3.new(1.05, 1.70, 0.65),
-        CFrame.new(base + Vector3.new(0, 2.05, 0)), color, Enum.Material.Glass, 0.20)
+        baseFrame * CFrame.new(0, 2.05, 0), color, Enum.Material.Glass, 0.20)
     local head = makePart("HoloDancerHead" .. index, Vector3.new(0.86, 0.83, 0.82),
         body.CFrame * CFrame.new(0, 1.35, 0), color, Enum.Material.Neon, 0.17)
     local left = makePart("HoloDancerArmL" .. index, Vector3.new(0.33, 1.25, 0.38),
@@ -471,10 +528,14 @@ local function makeHoloDancer(index, center)
         body.CFrame * CFrame.new(-0.30, -1.4, 0), color, Enum.Material.Glass, 0.30)
     local footR = makePart("HoloDancerLegR" .. index, Vector3.new(0.36, 1.1, 0.40),
         body.CFrame * CFrame.new(0.30, -1.4, 0), color, Enum.Material.Glass, 0.30)
+    local details = ShowtimeHologramDetails.build(folder, tierName, index, color)
     table.insert(dancers, {
-        base = base, body = body, head = head, left = left, right = right,
-        footL = footL, footR = footR, phase = index * math.pi,
+        baseFrame = baseFrame, body = body, head = head, left = left, right = right,
+        footL = footL, footR = footR,
         parts = {body, head, left, right, footL, footR},
+        details = details,
+        poseReady = false,
+        lastPoseAt = nil,
     })
 end
 
@@ -612,7 +673,7 @@ local function buildStage()
     UITheme.addTextConstraint(banner, 12, 23)
 
     for index = 1, profile.Dancers do
-        makeHoloDancer(index, stageCenter)
+        makeHoloDancer(index, baseCF, tier.Name)
     end
 
     if tier.Name ~= "Low" then
@@ -642,7 +703,7 @@ local function buildStage()
 end
 
 local function peopleOnStage()
-    if not stageCenter then
+    if not stageBase then
         return 0
     end
     local count = 0
@@ -650,11 +711,7 @@ local function peopleOnStage()
         local character = person.Character
         local root = character and character:FindFirstChild("HumanoidRootPart")
         if root and root:IsA("BasePart") then
-            local delta = root.Position - stageCenter
-            if math.abs(delta.Y) < 8
-                and math.abs(delta.X) < 7
-                and math.abs(delta.Z) < 7
-            then
+            if Showtime.onDanceFloor(stageBase.CFrame, root.Position) then
                 count += 1
             end
         end
@@ -672,6 +729,14 @@ local function updateStage(now)
     stageBase.Transparency = enabled and 0.09 or 1
     if titleBillboard then
         titleBillboard.Enabled = enabled
+        local title = titleBillboard:FindFirstChildOfClass("TextLabel")
+        if title and title:IsA("TextLabel") then
+            local emoteId = enabled and currentEmote and currentEmote.id or nil
+            local captionText = ShowtimeChoreography.caption(emoteId, crowd, french)
+            if title.Text ~= captionText then
+                title.Text = captionText
+            end
+        end
     end
     for _, entry in ipairs(fixedPieces) do
         entry.part.Transparency = enabled and entry.transparency or 1
@@ -684,12 +749,8 @@ local function updateStage(now)
     for _, ribbon in ipairs(beams) do
         ribbon.beam.Enabled = enabled and not reduced
         if enabled and not reduced and stageCenter then
-            ribbon.target.CFrame = CFrame.new(
-                stageCenter + Vector3.new(
-                    math.cos(now * 0.82 + ribbon.phase) * 4.0,
-                    1.75 + math.sin(now * 1.3 + ribbon.phase) * 0.65,
-                    math.sin(now * 0.82 + ribbon.phase) * 4.0
-                )
+            ribbon.target.CFrame = Showtime.ribbonFrame(
+                stageBase.CFrame, now, ribbon.phase
             )
         end
     end
@@ -729,37 +790,59 @@ local function updateStage(now)
             for _, part in ipairs(dancer.parts) do
                 part.Transparency = 1
             end
+            dancer.poseReady = false
+            dancer.lastPoseAt = nil
+            ShowtimeHologramDetails.pose(
+                dancer.details, dancer.body.CFrame, dancer.head.CFrame,
+                dancer.left.CFrame, dancer.right.CFrame, false
+            )
         end
         return
     end
 
+    local leadEmote = currentEmote and currentEmote.id or nil
     for index, dancer in ipairs(dancers) do
-        -- Three complementary dance motifs, shifted per performer. Unlike
-        -- rig Animator clips, these are intentionally decorative mannequins.
-        local t = reduced and 0 or now
-        local shift = t * 2.6 + dancer.phase
-        local step = reduced and 0 or math.sin(shift)
-        local sway = reduced and 0 or math.sin(shift * 0.5) * 0.46
-        local motif = reduced and 0 or ((math.floor(t / 3.4) + index) % 3)
-        local handsHigh = motif == 1 and 0.72 or (motif == 2 and 0.38 or -0.18)
-        local torsoTurn = motif == 2 and 0.38 or 0.20
-        local bob = reduced and 0 or math.abs(step) * 0.19
-        local footStep = reduced and 0 or step * (motif == 2 and 0.39 or 0.23)
+        -- Choreography is authored exclusively for these decorative mannequins.
+        -- A performer can mirror a player's nearby emote, never control it.
+        local pose = ShowtimeChoreography.pose(
+            now, index, leadEmote, crowd, reduced
+        )
+        local bodyCF = dancer.baseFrame
+            * CFrame.new(pose.Sway * 0.40, 2.05 + pose.Bob, 0)
+            * CFrame.Angles(0, pose.Yaw, pose.Roll)
+        local headCF = bodyCF * CFrame.new(0, 1.35, 0)
+            * CFrame.Angles(0, pose.HeadYaw, 0)
+        local leftCF = bodyCF * CFrame.new(-0.78, 0.28, 0)
+            * CFrame.Angles(pose.ArmL, 0, -0.32 - pose.ArmSwing)
+        local rightCF = bodyCF * CFrame.new(0.78, 0.28, 0)
+            * CFrame.Angles(pose.ArmR, 0, 0.32 - pose.ArmSwing)
+        local footStep = pose.LegSwing
 
-        local bodyCF = CFrame.new(
-            dancer.base + Vector3.new(sway * 0.45, 2.05 + bob, 0)
-        ) * CFrame.Angles(0, sway * torsoTurn, sway * 0.18)
-        dancer.body.CFrame = bodyCF
-        dancer.head.CFrame = bodyCF * CFrame.new(0, 1.35, 0)
-            * CFrame.Angles(0, -sway * 0.30, 0)
-        dancer.left.CFrame = bodyCF * CFrame.new(-0.78, 0.28, 0)
-            * CFrame.Angles(-handsHigh, 0, -0.35 - step * 0.55)
-        dancer.right.CFrame = bodyCF * CFrame.new(0.78, 0.28, 0)
-            * CFrame.Angles(handsHigh, 0, 0.35 - step * 0.55)
-        dancer.footL.CFrame = bodyCF * CFrame.new(-0.3, -1.4, footStep)
+        local footLCF = bodyCF * CFrame.new(-0.3, -1.4, footStep)
             * CFrame.Angles(footStep * 0.18, 0, 0)
-        dancer.footR.CFrame = bodyCF * CFrame.new(0.3, -1.4, -footStep)
+        local footRCF = bodyCF * CFrame.new(0.3, -1.4, -footStep)
             * CFrame.Angles(-footStep * 0.18, 0, 0)
+        -- Holograms formerly snapped straight from robot/shuffle/orbit to
+        -- the next three-second pose. Crossfade their existing six parts
+        -- instead: no new assets, motors, tweens or per-frame task owners.
+        -- A newly visible figure starts at its real pose without sliding
+        -- in from an unrelated, previously hidden frame.
+        local delta = dancer.lastPoseAt and now - dancer.lastPoseAt or 0
+        local smoothing = (not dancer.poseReady or reduced) and 1
+            or 1 - math.exp(-16 * math.clamp(delta, 0, 0.12))
+        dancer.lastPoseAt = now
+        dancer.poseReady = true
+        dancer.body.CFrame = dancer.body.CFrame:Lerp(bodyCF, smoothing)
+        dancer.head.CFrame = dancer.head.CFrame:Lerp(headCF, smoothing)
+        dancer.left.CFrame = dancer.left.CFrame:Lerp(leftCF, smoothing)
+        dancer.right.CFrame = dancer.right.CFrame:Lerp(rightCF, smoothing)
+        dancer.footL.CFrame = dancer.footL.CFrame:Lerp(footLCF, smoothing)
+        dancer.footR.CFrame = dancer.footR.CFrame:Lerp(footRCF, smoothing)
+
+        ShowtimeHologramDetails.pose(
+            dancer.details, dancer.body.CFrame, dancer.head.CFrame,
+            dancer.left.CFrame, dancer.right.CFrame, true
+        )
         for _, part in ipairs(dancer.parts) do
             part.Transparency = 0.28
         end
@@ -793,6 +876,17 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     updateStage(os.clock())
 end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion") == true then
+        ShowtimeSignatureKit.reconcile(folder,
+            VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name, true)
+        if personalBurstAttachment then
+            personalBurstAttachment:Destroy()
+            personalBurstAttachment = nil
+        end
+        if particles and particles.Parent then
+            particles:Clear()
+        end
+    end
     updateStage(os.clock())
 end)
 player.CharacterAdded:Connect(function()

@@ -129,11 +129,18 @@ local function applyResponsive()
 
     if touchDevice then
         local profile = UIResponsive.mobileProfile(viewport)
-        card.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.42 or 0.34)
-        card.Size = UDim2.new(profile.veryNarrow and 0.90 or 0.72, 0, 0, profile.tinyHeight and 66 or 74)
+        -- Keep escalation notifications below the round header, but above
+        -- the avatar and the ground warnings. A brief compact toast is
+        -- preferable to a second full-width central announcement.
+        card.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.37 or 0.34)
+        card.Size = UDim2.new(profile.veryNarrow and 0.76 or 0.54, 0, 0, profile.tinyHeight and 52 or 56)
+        size.MinSize = Vector2.new(220, 50)
+        size.MaxSize = Vector2.new(470, 64)
     else
         card.Position = UDim2.fromScale(0.5, 0.27)
         card.Size = UDim2.new(0.54, 0, 0, 74)
+        size.MinSize = Vector2.new(250, 62)
+        size.MaxSize = Vector2.new(520, 82)
     end
 end
 
@@ -200,7 +207,9 @@ local function show(kind, mainText, subText, color, duration)
         {Scale = 1}
     ):Play()
 
-    if quality().Name ~= "Low" then
+    -- Mobile gameplay never needs a full-screen flash. Keep the brief
+    -- colored edge cue, and honor reduced-motion on all platforms.
+    if quality().Name ~= "Low" and not touchDevice and not reduceMotion then
         flash.BackgroundColor3 = color
         flash.Visible = true
         flash.BackgroundTransparency = 0.90

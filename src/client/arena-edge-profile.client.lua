@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaEdgeFinishKit = require(script.Parent.ArenaEdgeFinishKit)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
@@ -163,7 +165,7 @@ local function rebuild()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    local base = arena and arena:FindFirstChild("Base")
+    local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not arena or not base or not base:IsA("BasePart") then
         return
     end
@@ -171,10 +173,9 @@ local function rebuild()
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    local center = base.Position
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
-    local topY = center.Y + base.Size.Y * 0.5
+    local topY = base.Size.Y * 0.5
 
     local dark = theme.Structure:Lerp(VisualTheme.World.Void, 0.48)
     local lipHeight = variant == "Towers" and 2.2 or 1.6
@@ -214,7 +215,7 @@ local function rebuild()
         makePart(
             "ArenaEdgeLip" .. side.name,
             side.lipSize,
-            CFrame.new(center.X + side.lipPos.X, side.lipPos.Y, center.Z + side.lipPos.Z),
+            base.CFrame * CFrame.new(side.lipPos),
             dark,
             Enum.Material.Metal,
             tier.Name == "Low" and 0.22 or 0.10
@@ -225,7 +226,7 @@ local function rebuild()
             local trim = makePart(
                 "ArenaEdgeTrim" .. side.name,
                 side.trimSize,
-                CFrame.new(center.X + side.trimPos.X, side.trimPos.Y, center.Z + side.trimPos.Z),
+                base.CFrame * CFrame.new(side.trimPos),
                 keyEdge and (i == 1 and theme.Accent or theme.Secondary) or theme.Detail,
                 keyEdge and Enum.Material.Neon or Enum.Material.Metal,
                 keyEdge
@@ -237,6 +238,8 @@ local function rebuild()
     end
 
     addVariantEdgeLanguage(base, theme, tier, variant)
+    -- Outboard architectural fascia, separate from danger warnings.
+    ArenaEdgeFinishKit.build(folder, base, variant, tier.Name, theme)
 
     if tier.Name == "High" then
         local cornerOffsets = {
@@ -249,7 +252,7 @@ local function rebuild()
             makePart(
                 "ArenaEdgeCorner" .. i,
                 Vector3.new(1.7, 2.4, 1.7),
-                CFrame.new(center.X + pos.X, pos.Y, center.Z + pos.Z),
+                base.CFrame * CFrame.new(pos),
                 theme.Detail,
                 Enum.Material.Metal,
                 0.16
@@ -258,27 +261,34 @@ local function rebuild()
     end
 end
 
-local mapConnection = nil
+local disconnectMapWatch = nil
+local refreshPending = false
+
+local function scheduleRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+    end)
+end
 
 local function bindGeneratedMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
-
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.defer(rebuild)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bindGeneratedMap(child)
-        task.defer(rebuild)
+        scheduleRefresh()
     end
 end)
 
@@ -291,8 +301,6 @@ end)
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
 
 rebuild()

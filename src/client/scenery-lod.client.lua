@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 
 local player = Players.LocalPlayer
 
@@ -35,10 +36,17 @@ local FOLDERS = {
         LowDistance = 130,
         MediumDistance = 205,
     },
+    ArenaArchitecturalDetailsLocal = {
+        LowDistance = 145,
+        MediumDistance = 220,
+    },
     ArenaSignatureLocal = {
         LowDistance = 145,
         MediumDistance = 220,
     },
+    -- AerialSurveyLocal intentionally omitted: AerialSurveyKit owns its
+    -- own part masking, Light/Trail gating and camera-distance hysteresis.
+    -- A second LOD writer could reveal distant drones at the cutoff.
     ArenaMidgroundMassLocal = {
         LowDistance = 145,
         MediumDistance = 215,
@@ -120,6 +128,8 @@ local FOLDERS = {
         MediumDistance = 175,
         Origin = "Lobby",
     },
+    -- Practice cosmetics are owned by server-created pads, not workspace.
+    -- Nested Folder + sibling Attachment use the same safe visibility budget.
     PracticePadPolishLocal = {
         LowDistance = 100,
         MediumDistance = 150,
@@ -193,15 +203,26 @@ local function refreshCache(folder, cache)
     cache.dirty = false
 end
 
-local function applyFolder(folder, limits, profile, origin)
-    local maxDistance = profile.Name == "Low" and limits.LowDistance
-        or (profile.Name == "Medium" and limits.MediumDistance or math.huge)
-
-    local distance = (cameraPosition() - origin).Magnitude
-    local visible = distance <= maxDistance
+local function applyFolder(folder, limits, profile, origin, cameraPoint)
     local cache = ensureCache(folder)
-    if cache.dirty then
+    local distance = (cameraPoint - origin).Magnitude
+    local visible = SceneryLodRules.visible(
+        profile.Name, distance, limits.LowDistance, limits.MediumDistance,
+        cache.visible
+    )
+    local wasVisible = cache.visible
+    local wasDirty = cache.dirty
+    cache.visible = visible
+    if wasDirty then
         refreshCache(folder, cache)
+    end
+
+    -- An already-visible, unchanged folder has nothing to restore. Skip
+    -- walking hundreds of parts/effects on every Android LOD update.
+    -- Hidden folders still run each pass to enforce concealment if another
+    -- cosmetic owner changes a transparency or Enabled property.
+    if visible and wasVisible == true and not wasDirty then
+        return
     end
 
     for _, descendant in ipairs(cache.entries) do
@@ -226,7 +247,9 @@ local function applyFolder(folder, limits, profile, origin)
                 )
                 descendant:SetAttribute("SceneryLodHidden", true)
                 descendant.LocalTransparencyModifier = 1
-            else
+            elseif descendant.LocalTransparencyModifier ~= 1 then
+                -- Other cosmetic owners can still change this property;
+                -- re-hide only if the value actually drifted.
                 descendant.LocalTransparencyModifier = 1
             end
         elseif VisualBudgetRules.isEffect(descendant)
@@ -242,7 +265,7 @@ local function applyFolder(folder, limits, profile, origin)
                 descendant:SetAttribute("SceneryLodBaseEnabled", descendant.Enabled)
                 descendant:SetAttribute("SceneryLodHidden", true)
                 descendant.Enabled = false
-            else
+            elseif descendant.Enabled then
                 descendant.Enabled = false
             end
         end
@@ -272,12 +295,23 @@ task.spawn(function()
         local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 
         local arenaOrigin, lobbyOrigin = currentOrigins()
+        local cameraPoint = cameraPosition()
         for folderName, limits in pairs(FOLDERS) do
-            local folder = workspace:FindFirstChild(folderName)
-            if folder then
-                local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
-                applyFolder(folder, limits, profile, origin)
+            if folderName ~= "PracticePadPolishLocal" then
+                local folder = workspace:FindFirstChild(folderName)
+                if folder then
+                    local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
+                    applyFolder(folder, limits, profile, origin, cameraPoint)
+                end
             end
+        end
+
+        -- A pad's Highlight and particle emitter have separate parents.
+        -- Apply LOD to just these two client-owned containers; applying it
+        -- to the pad would wrongly hide the server-owned pad and light.
+        for _, owner in ipairs(SceneryLodRules.practicePadVisualOwners(workspace)) do
+            applyFolder(owner, FOLDERS.PracticePadPolishLocal,
+                profile, lobbyOrigin, cameraPoint)
         end
 
         task.wait(profile.Name == "Low" and 0.65 or 0.90)

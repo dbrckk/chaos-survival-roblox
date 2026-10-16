@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CloudLayer = require(script.Parent.CloudLayer)
 local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -138,7 +139,8 @@ local MOODS = {
 
 local phase = "waiting"
 local currentVariant = "Classic"
-local mapConnection = nil
+local disconnectMapWatch = nil
+local refreshPending = false
 
 local function readVariant()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -157,15 +159,17 @@ local function applyMood(duration)
 
     local colorShiftScale = quality.Name == "Low" and 0.42
         or (quality.Name == "Medium" and 0.72 or 1)
-    local bloomBase = quality.Name == "Low" and 0.045
-        or (quality.Name == "Medium" and 0.11 or 0.18)
+    -- A small halo is enough for neon; high settings previously made
+    -- cyan trim bleed over silhouettes, especially on OLED phones.
+    local bloomBase = quality.Name == "Low" and 0.035
+        or (quality.Name == "Medium" and 0.075 or 0.135)
     local bloomPhaseScale = phase == "round" and 0.16
         or (phase == "ready" and 0.52 or 1)
     local bloomIntensity = bloomBase * bloomPhaseScale
     local bloomSize = quality.Name == "Low" and 12
         or (quality.Name == "Medium" and 18 or 24)
-    local bloomThreshold = phase == "round" and 1.42
-        or (phase == "ready" and 1.30 or 1.18)
+    local bloomThreshold = phase == "round" and 1.48
+        or (phase == "ready" and 1.38 or 1.30)
     local depthQualityScale = quality.Name == "Low" and 0
         or (quality.Name == "Medium" and 0.45 or 1)
     local depthPhaseScale = phase == "round" and 0
@@ -303,36 +307,40 @@ local function applyMood(duration)
     end)
 end
 
-local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
-    end
+-- A map can arrive before Arena.Base and its VariantId attribute.
+-- Keep the art direction synchronized without stacking duplicate tweens.
+local function scheduleMoodRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        applyMood(0.65)
+    end)
+end
 
-    local generated = workspace:FindFirstChild("GeneratedMap")
+local function bindMap(generated)
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
+    end
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.05, function()
-                    applyMood(0.85)
-                end)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleMoodRefresh
+        )
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(function()
-            bindMap()
-            applyMood(0.85)
-        end)
+        bindMap(child)
+        scheduleMoodRefresh()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        bindMap()
+        bindMap(nil)
+        scheduleMoodRefresh()
     end
 end)
 
@@ -349,5 +357,5 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     applyMood(0.35)
 end)
 
-bindMap()
+bindMap(workspace:FindFirstChild("GeneratedMap"))
 applyMood(0)

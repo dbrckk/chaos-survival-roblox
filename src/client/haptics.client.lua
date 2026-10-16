@@ -135,7 +135,8 @@ local function pulse(strength, duration, large)
 end
 
 mechanicEvent.OnClientEvent:Connect(function(payload)
-    pulse(type(payload) == "table" and payload.overdrive == true and 0.42 or 0.28, 0.07, false)
+    if type(payload) ~= "table" then return end
+    pulse(payload.overdrive == true and 0.42 or 0.28, 0.07, false)
 end)
 
 impactEvent.OnClientEvent:Connect(function(payload)
@@ -165,10 +166,12 @@ nearMissEvent.OnClientEvent:Connect(function()
 end)
 
 shardEvent.OnClientEvent:Connect(function(payload)
-    pulse(payload and payload.golden == true and 0.34 or 0.17, 0.045, false)
+    if type(payload) ~= "table" then return end
+    pulse(payload.golden == true and 0.34 or 0.17, 0.045, false)
 end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
+    if type(feedback) ~= "table" then return end
     if feedback.survived == true then
         pulse(0.30, 0.10, false)
         if player:GetAttribute("ReduceMotion") ~= true then
@@ -182,6 +185,7 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     local finalRush = state.phase == "round" and state.finalRush == true
     if finalRush and not lastFinalRush then
         pulse(0.30, 0.08, false)

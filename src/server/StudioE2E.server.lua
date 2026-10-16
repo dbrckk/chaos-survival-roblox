@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StudioTestService = game:GetService("StudioTestService")
 
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local SpawnSafety = require(script.Parent.SpawnSafety)
 
 local okArgs, args = pcall(StudioTestService.GetTestArgs, StudioTestService)
 if not okArgs or type(args) ~= "table" or args.suite ~= "ChaosE2E" then
@@ -144,10 +145,19 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             return
         end
         local worldArenaId = tostring(report.worldArenaId or "")
+        local map = workspace:FindFirstChild("GeneratedMap")
+        local arena = map and map:FindFirstChild("Arena")
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        -- Existing authenticated end-to-end arena probe now validates the
+        -- actual collision capsule too, not merely X/Z arena membership.
+        local serverSpawnClear = root and root:IsA("BasePart")
+            and SpawnSafety.clearAt(arena, root.Position) == true
         if report.ok ~= true
             or report.characterReady ~= true
             or report.insideFootprint ~= true
             or report.arenaMatches ~= true
+            or player:GetAttribute("ArenaSpawnClear") ~= true
+            or not serverSpawnClear
             or worldArenaId ~= arenaId
         then
             fail(
@@ -192,6 +202,11 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         end
         if report.ok ~= true or worldArenaId ~= arenaId
             or report.signatureReady ~= true
+            or report.secondaryReady ~= true
+            or report.platformReady ~= true
+            or report.silhouetteReady ~= true
+            or report.deckReady ~= true
+            or report.fixtureReady ~= true
             or (tonumber(report.signatureParts) or 0) < 6
             or (tonumber(report.signatureParts) or math.huge) > 50
         then
@@ -212,7 +227,12 @@ reportEvent.OnServerEvent:Connect(function(player, report)
             "CHAOS_E2E_ARENA", player.Name, arenaId,
             "world=" .. worldArenaId,
             "hero=" .. tostring(report.signatureHero or "missing"),
-            "parts=" .. tostring(report.signatureParts or 0)
+            "parts=" .. tostring(report.signatureParts or 0),
+            "secondary=" .. tostring(report.secondaryReady),
+            "platform=" .. tostring(report.platformReady),
+            "skyline=" .. tostring(report.silhouetteReady),
+            "deck=" .. tostring(report.deckReady),
+            "fixture=" .. tostring(report.fixtureReady)
         )
         return
     end
@@ -277,6 +297,10 @@ reportEvent.OnServerEvent:Connect(function(player, report)
         then
             fail(player.Name .. ": invalid " .. phase .. " visual metrics")
             return
+        end
+
+        if phase == "ready" and report.gateCueReady ~= true then
+            fail(player.Name .. ": READY lobby gate cue missing or unsafe")
         end
 
         if fieldOfView < 60 or fieldOfView > 90 then
@@ -469,6 +493,7 @@ task.spawn(function()
             "RoundFeedback",
             "ClientReady",
             "ArenaMechanicFeedback",
+            "PhaseDash",
             "HazardImpactFeedback",
             "HazardNearMiss",
             "ChaosShardCollected",

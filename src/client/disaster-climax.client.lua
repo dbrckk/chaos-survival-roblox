@@ -1,9 +1,10 @@
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local DisasterClimax = require(ReplicatedStorage.Shared.DisasterClimax)
+local DisasterClimaxSignatureKit = require(script.Parent.DisasterClimaxSignatureKit)
+local DisasterBoundaryClimaxKit = require(script.Parent.DisasterBoundaryClimaxKit)
+local DisasterClimaxElementKit = require(script.Parent.DisasterClimaxElementKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -15,7 +16,10 @@ folder.Parent = workspace
 
 local previousPhase = "waiting"
 local stageById = {}
+local generationById = {}
 local token = 0
+local snapshotSerial = 0
+local displayedBase = nil
 
 local function arenaBase()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -24,453 +28,101 @@ local function arenaBase()
     return base and base:IsA("BasePart") and base or nil
 end
 
-local function makePart(name, size, cframe, color, transparency, shape)
-    local p = Instance.new("Part")
-    p.Name = name
-    p.Size = size
-    p.CFrame = cframe
-    p.Anchored = true
-    p.CanCollide = false
-    p.CanTouch = false
-    p.CanQuery = false
-    p.CastShadow = false
-    p.Material = Enum.Material.Neon
-    p.Color = color
-    p.Transparency = transparency or 0.35
-    if shape then
-        p.Shape = shape
-    end
-    p.Parent = folder
-    return p
-end
-
-local function tweenOut(part, duration, goal)
-    TweenService:Create(
-        part,
-        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        goal
-    ):Play()
-    Debris:AddItem(part, duration + 0.2)
-end
-
-local function lineBetween(name, from, to, width, color, transparency)
-    local delta = to - from
-    local length = math.max(0.1, delta.Magnitude)
-    local mid = from + delta * 0.5
-    return makePart(
-        name,
-        Vector3.new(width, width, length),
-        CFrame.lookAt(mid, to),
-        color,
-        transparency
-    )
-end
-
-local function ring(name, center, diameter, color, transparency)
-    return makePart(
-        name,
-        Vector3.new(0.055, diameter, diameter),
-        CFrame.new(center) * CFrame.Angles(0, 0, math.rad(90)),
-        color,
-        transparency,
-        Enum.PartType.Cylinder
-    )
-end
-
-local function stageScale(stage)
-    if stage >= 3 then
-        return 1.65
-    elseif stage == 2 then
-        return 1.30
-    end
-    return 1
-end
-
-local function countForTier(tier, low, medium, high)
-    if tier.Name == "Low" then
-        return low
-    elseif tier.Name == "Medium" then
-        return medium
-    end
-    return high
-end
-
+-- Original 3D silhouettes replace flat lava bars and meteor streaks.
+-- Count stays within 2/4/6 pieces, or one static reduced-motion wedge.
 local function playLava(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 2, 4, 6)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local radius = span * (0.34 + 0.03 * stage)
-        local position = center + Vector3.new(
-            math.cos(angle) * radius,
-            0,
-            math.sin(angle) * radius
-        )
-        local p = makePart(
-            "LavaClimaxJet" .. i,
-            Vector3.new(0.22, 1.5, 0.22),
-            CFrame.new(position),
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.28
-        )
-        tweenOut(
-            p,
-            reduced and 0.24 or 0.50,
-            {
-                Size = Vector3.new(0.14, 8 * scale, 0.14),
-                CFrame = p.CFrame * CFrame.new(0, 4 * scale, 0),
-                Transparency = 1,
-            }
-        )
-    end
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
+    DisasterClimaxElementKit.emit(folder, "lava", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playMeteor(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 2, 4, 6)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local x = (((i * 29) % 9) - 4) * span * 0.07
-        local z = (((i * 47) % 9) - 4) * span * 0.07
-        local from = center + Vector3.new(x - 7 * scale, 23 + i * 1.1, z + 5 * scale)
-        local to = center + Vector3.new(x, 3, z)
-        local streak = lineBetween(
-            "MeteorClimaxStreak" .. i,
-            from,
-            to,
-            stage >= 3 and 0.34 or 0.24,
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.30
-        )
-        tweenOut(
-            streak,
-            reduced and 0.22 or 0.46,
-            {
-                CFrame = streak.CFrame * CFrame.new(0, 0, streak.Size.Z * 0.45),
-                Transparency = 1,
-            }
-        )
-    end
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
+    DisasterClimaxElementKit.emit(folder, "meteor", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
+-- Each effect uses an arena-local authored 3D silhouette, not a plain bar.
+-- No new emitters, lights or server-side movement; same bounded part caps.
 local function playGravity(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 3, 5, 8)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local radius = span * 0.28
-        local p = makePart(
-            "GravityClimaxLift" .. i,
-            Vector3.new(0.16, 2.8, 0.16),
-            CFrame.new(center + Vector3.new(
-                math.cos(angle) * radius,
-                0,
-                math.sin(angle) * radius
-            )),
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.42
-        )
-        tweenOut(
-            p,
-            reduced and 0.26 or 0.62,
-            {
-                CFrame = p.CFrame * CFrame.new(0, 9 * scale, 0),
-                Size = Vector3.new(0.08, 5.5 * scale, 0.08),
-                Transparency = 1,
-            }
-        )
-    end
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
+    DisasterClimaxElementKit.emit(folder, "gravity", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playFracture(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.10, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 3, 5, 7)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local yaw = math.rad((i - 1) * (180 / count))
-        local p = makePart(
-            "FractureClimax" .. i,
-            Vector3.new(span * 0.36, 0.06, 0.14),
-            CFrame.new(center)
-                * CFrame.Angles(0, yaw, 0)
-                * CFrame.new((i % 2 == 0 and 1 or -1) * span * 0.08, 0, 0),
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.34
-        )
-        tweenOut(
-            p,
-            reduced and 0.22 or 0.46,
-            {
-                Size = Vector3.new(span * 0.56 * scale, 0.04, 0.06),
-                Transparency = 1,
-            }
-        )
-    end
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.10, 0)
+    DisasterClimaxElementKit.emit(folder, "fracture", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playTornado(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.2, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 3, 5, 7)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2
-        local from = center + Vector3.new(
-            math.cos(angle) * span * 0.32,
-            1,
-            math.sin(angle) * span * 0.32
-        )
-        local to = center + Vector3.new(
-            math.cos(angle + 1.15) * span * 0.08,
-            8 * scale,
-            math.sin(angle + 1.15) * span * 0.08
-        )
-        local streak = lineBetween(
-            "TornadoClimaxSpiral" .. i,
-            from,
-            to,
-            0.18,
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.38
-        )
-        tweenOut(
-            streak,
-            reduced and 0.24 or 0.52,
-            {
-                Transparency = 1,
-                Size = Vector3.new(0.08, 0.08, streak.Size.Z * 0.68),
-            }
-        )
-    end
+    -- Arena-local helix rather than long rectangular world-axis streaks.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.20, 0)
+    DisasterClimaxElementKit.emit(folder, "tornado", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playFreeze(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-
-    local outer = ring(
-        "FreezeClimaxRing",
-        center,
-        span * 0.22,
-        profile.Color,
-        0.26
+    -- Angle-breaking ice needles replace the old large opaque cylinder.
+    -- The whole silhouette inherits the rotated/pitched arena frame.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
+    DisasterClimaxSignatureKit.emit(
+        folder, "freeze", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced
     )
-    tweenOut(
-        outer,
-        reduced and 0.24 or 0.56,
-        {
-            Size = Vector3.new(0.055, span * 0.88 * scale, span * 0.88 * scale),
-            Transparency = 1,
-        }
-    )
-
-    if tier.Name ~= "Low" then
-        for i = 1, 4 do
-            local angle = math.rad(45 + (i - 1) * 90)
-            local p = makePart(
-                "FreezeClimaxSpike" .. i,
-                Vector3.new(0.20, 1.8, 0.20),
-                CFrame.new(center + Vector3.new(
-                    math.cos(angle) * span * 0.22,
-                    0,
-                    math.sin(angle) * span * 0.22
-                )),
-                profile.Secondary,
-                0.34
-            )
-            tweenOut(
-                p,
-                reduced and 0.22 or 0.50,
-                {
-                    Size = Vector3.new(0.10, 5.5 * scale, 0.10),
-                    CFrame = p.CFrame * CFrame.new(0, 2.6 * scale, 0),
-                    Transparency = 1,
-                }
-            )
-        end
-    end
 end
 
 local function playBomb(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-    local count = tier.Name == "Low" and 1 or 2
-
-    for i = 1, count do
-        local p = ring(
-            "BombClimaxRing" .. i,
-            center + Vector3.new(0, i * 0.05, 0),
-            span * (0.16 + i * 0.05),
-            i == 1 and profile.Color or profile.Secondary,
-            0.24 + i * 0.06
-        )
-        tweenOut(
-            p,
-            reduced and 0.20 or 0.42,
-            {
-                Size = Vector3.new(
-                    0.055,
-                    span * (0.60 + i * 0.12) * scale,
-                    span * (0.60 + i * 0.12) * scale
-                ),
-                Transparency = 1,
-            }
-        )
-    end
+    -- Separated impulse fins show pressure direction without covering the
+    -- playing field with a second opaque circular cylinder.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
+    DisasterBoundaryClimaxKit.emit(
+        folder, "blast", deck, base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced
+    )
 end
 
 local function playSpeed(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.10, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local count = countForTier(tier, 3, 5, 7)
-    local scale = stageScale(stage)
-
-    for i = 1, count do
-        local angle = math.rad((i - 1) * (180 / count))
-        local p = makePart(
-            "SpeedClimaxLane" .. i,
-            Vector3.new(span * 0.26, 0.055, 0.11),
-            CFrame.new(center) * CFrame.Angles(0, angle, 0),
-            i % 2 == 0 and profile.Secondary or profile.Color,
-            0.32
-        )
-        tweenOut(
-            p,
-            reduced and 0.20 or 0.42,
-            {
-                CFrame = p.CFrame * CFrame.new(0, 0, -span * 0.20 * scale),
-                Size = Vector3.new(span * 0.42 * scale, 0.04, 0.06),
-                Transparency = 1,
-            }
-        )
-    end
+    -- Swept chevrons in the deck's local basis, bounded on every tier.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.10, 0)
+    DisasterClimaxElementKit.emit(folder, "speed", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playDarkness(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-
-    local p = ring(
-        "DarknessClimaxVoid",
-        center,
-        span * 0.96,
-        profile.Color,
-        0.72
-    )
-    tweenOut(
-        p,
-        reduced and 0.24 or 0.58,
-        {
-            Size = Vector3.new(
-                0.055,
-                span * 0.18 / scale,
-                span * 0.18 / scale
-            ),
-            Transparency = 1,
-        }
-    )
-
-    if stage >= 2 and tier.Name ~= "Low" then
-        local core = makePart(
-            "DarknessClimaxCore",
-            Vector3.new(0.35, 8 * scale, 0.35),
-            CFrame.new(center + Vector3.new(0, 4 * scale, 0)),
-            profile.Secondary,
-            0.60
-        )
-        tweenOut(
-            core,
-            reduced and 0.20 or 0.40,
-            {Transparency = 1, Size = Vector3.new(0.12, 13 * scale, 0.12)}
-        )
-    end
+    -- Folded eclipse shutters replace the arena-wide neon cylinder.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
+    DisasterClimaxElementKit.emit(folder, "darkness", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced)
 end
 
 local function playShrink(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-
-    local p = ring(
-        "ShrinkClimaxRing",
-        center,
-        span * 1.02,
-        profile.Color,
-        0.28
+    -- Short rectangular perimeter segments visibly close in. The persistent
+    -- shrinking boundary is drawn elsewhere; these are transient accents.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
+    DisasterBoundaryClimaxKit.emit(
+        folder, "shrink", deck, base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced
     )
-    tweenOut(
-        p,
-        reduced and 0.24 or 0.56,
-        {
-            Size = Vector3.new(
-                0.055,
-                span * 0.48 / math.max(1, scale * 0.86),
-                span * 0.48 / math.max(1, scale * 0.86)
-            ),
-            Transparency = 1,
-        }
-    )
-
-    if tier.Name == "High" then
-        local inner = ring(
-            "ShrinkClimaxInner",
-            center + Vector3.new(0, 0.05, 0),
-            span * 0.82,
-            profile.Secondary,
-            0.42
-        )
-        tweenOut(
-            inner,
-            reduced and 0.20 or 0.48,
-            {
-                Size = Vector3.new(0.055, span * 0.38, span * 0.38),
-                Transparency = 1,
-            }
-        )
-    end
 end
 
 local function playShock(profile, base, stage, tier, reduced)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.14, 0)
-    local span = math.max(base.Size.X, base.Size.Z)
-    local scale = stageScale(stage)
-    local count = tier.Name == "Low" and 1 or 2
-
-    for i = 1, count do
-        local p = ring(
-            "ShockClimaxRing" .. i,
-            center + Vector3.new(0, i * 0.05, 0),
-            span * (0.14 + i * 0.06),
-            i == 1 and profile.Color or profile.Secondary,
-            0.24
-        )
-        tweenOut(
-            p,
-            reduced and 0.18 or 0.38,
-            {
-                Size = Vector3.new(
-                    0.055,
-                    span * (0.72 + i * 0.10) * scale,
-                    span * (0.72 + i * 0.10) * scale
-                ),
-                Transparency = 1,
-            }
-        )
-    end
+    -- Staggered zig-zag discharge strokes, not two full-floor discs.
+    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.14, 0)
+    DisasterClimaxSignatureKit.emit(
+        folder, "shock", deck,
+        base.Size, stage,
+        profile.Color, profile.Secondary, tier.Name, reduced
+    )
 end
 
 local PLAYERS = {
@@ -487,7 +139,19 @@ local PLAYERS = {
     shock = playShock,
 }
 
-local function playClimax(id, stage, base, delaySeconds, currentToken)
+-- Oldest-first eviction keeps the transient-only folder bounded across
+-- several rapidly escalating stages. It does not touch warning geometry.
+local function reserveClimaxPieces(expectedPieces, limit)
+    local children = folder:GetChildren()
+    local remove = DisasterClimax.burstEvictions(
+        #children, expectedPieces, limit
+    )
+    for i = 1, math.min(remove, #children) do
+        children[i]:Destroy()
+    end
+end
+
+local function playClimax(id, stage, base, delaySeconds, currentToken, currentGeneration, burstCount)
     local profile = DisasterClimax.get(id)
     local play = profile and PLAYERS[profile.Kind]
     if not profile or not play then
@@ -495,59 +159,99 @@ local function playClimax(id, stage, base, delaySeconds, currentToken)
     end
 
     task.delay(delaySeconds or 0, function()
-        if token ~= currentToken
-            or not base.Parent
-            or player:GetAttribute("RoundEliminated") == true
-        then
+        if not DisasterClimax.shouldPresent(
+            currentToken, token, stage, stageById[id],
+            base.Parent ~= nil and arenaBase() == base,
+            previousPhase == "round",
+            player:GetAttribute("RoundEliminated")
+        ) or (generationById[id] or 0) ~= currentGeneration then
             return
         end
 
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        -- Cosmetic Double Chaos tier scales independently of the device's
+        -- selected graphics setting; hazard telegraphs are never changed.
+        local tierName = DisasterClimax.burstTier(
+            player:GetAttribute("VfxQualityTier"), burstCount
+        )
+        local tier = VfxQuality.get(tierName)
         local reduced = player:GetAttribute("ReduceMotion") == true
+        local incoming = DisasterClimax.burstPieceCount(tierName, reduced)
+        local limit = DisasterClimax.burstPartLimit(
+            player:GetAttribute("VfxQualityTier"), burstCount, reduced
+        )
+        reserveClimaxPieces(incoming, limit)
         play(profile, base, stage, tier, reduced)
     end)
 end
 
-stateEvent.OnClientEvent:Connect(function(state)
-    local phase = tostring(state.phase or "waiting")
-
-    if phase ~= "round" then
-        token += 1
-        table.clear(stageById)
-        previousPhase = phase
+-- A round state can precede the arena Base's replication.
+-- Only the latest snapshot may retry, for at most three delayed attempts.
+local function presentAvailable(state, serial, attempt)
+    if serial ~= snapshotSerial or previousPhase ~= "round" then
+        return
+    end
+    local base = arenaBase()
+    if not base then
+        local delaySeconds = DisasterClimax.replicationRetryDelay(attempt)
+        if delaySeconds then
+            task.delay(delaySeconds, function()
+                presentAvailable(state, serial, attempt + 1)
+            end)
+        end
         return
     end
 
-    if previousPhase ~= "round" then
+    -- A replacement arena needs its own climax stage; invalidate old bursts.
+    if displayedBase ~= base then
+        displayedBase = base
         table.clear(stageById)
+        table.clear(generationById)
         token += 1
+        -- Remove old arena's live cosmetics immediately, not after Debris.
+        folder:ClearAllChildren()
     end
 
+    local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
     local stage = DisasterClimax.stageFor(
-        state.intensity,
-        state.finalRush == true,
-        state.overdrive == true
+        state.intensity, state.finalRush == true, state.overdrive == true
     )
-    local base = arenaBase()
-
-    if base and stage > 0 then
-        local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
-        local currentToken = token
-
-        for index, id in ipairs(ids) do
-            local previousStage = stageById[id] or 0
-            if stage > previousStage then
-                stageById[id] = stage
-                playClimax(
-                    id,
-                    stage,
-                    base,
-                    (index - 1) * 0.10,
-                    currentToken
-                )
-            end
+    -- Track *selected cosmetic* owners rather than all server disasters.
+    -- When the selection changes, invalidate already scheduled callbacks
+    -- even if the deselected disaster is still active server-side.
+    local presentationIds = stage > 0 and DisasterClimax.burstIds(ids) or {}
+    DisasterClimax.pruneInactive(
+        stageById, generationById, presentationIds
+    )
+    if stage <= 0 then return end
+    local currentToken = token
+    for index, id in ipairs(presentationIds) do
+        local previousStage = stageById[id] or 0
+        if stage > previousStage then
+            stageById[id] = stage
+            playClimax(id, stage, base, (index - 1) * 0.10,
+                currentToken, generationById[id] or 0, #presentationIds)
         end
     end
+end
 
+stateEvent.OnClientEvent:Connect(function(state)
+    snapshotSerial += 1
+    local phase = tostring(state.phase or "waiting")
+    if phase ~= "round" then
+        token += 1
+        table.clear(stageById)
+        table.clear(generationById)
+        folder:ClearAllChildren()
+        displayedBase = nil
+        previousPhase = phase
+        return
+    end
+    if previousPhase ~= "round" then
+        table.clear(stageById)
+        table.clear(generationById)
+        displayedBase = nil
+        token += 1
+    end
     previousPhase = phase
+    presentAvailable(state, snapshotSerial, 1)
 end)

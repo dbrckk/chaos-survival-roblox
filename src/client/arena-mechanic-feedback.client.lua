@@ -1,10 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArenaMechanicFeedback")
 
 local gui = Instance.new("ScreenGui")
@@ -56,10 +59,33 @@ overdriveStroke.Transparency = 0.25
 overdriveStroke.Parent = overdriveLabel
 
 local lastTrigger = 0
+local titleToken = 0
+local flashTween = nil
+local titleTweens = {}
+
+-- Rapidly chained pads must never allow an old fade to hide a new reward.
+local function stopTitleTweens()
+    for _, tween in ipairs(titleTweens) do
+        tween:Cancel()
+    end
+    table.clear(titleTweens)
+end
+
+local function titleTween(seconds, goals)
+    local tween = TweenService:Create(
+        overdriveLabel,
+        TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        goals
+    )
+    table.insert(titleTweens, tween)
+    tween:Play()
+end
 
 local function currentVfxTier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
+
+local activeBursts = {}
 
 local function pulseCharacter(accent)
     local character = player.Character
@@ -85,6 +111,7 @@ local function pulseCharacter(accent)
         NumberSequenceKeypoint.new(1, 1),
     })
     emitter.Parent = root
+    activeBursts[emitter] = true
     local tierName = player:GetAttribute("VfxQualityTier")
     local reduced = player:GetAttribute("ReduceMotion") == true
     emitter:Emit(
@@ -96,6 +123,7 @@ local function pulseCharacter(accent)
     )
 
     task.delay(0.45, function()
+        activeBursts[emitter] = nil
         if emitter.Parent then
             emitter:Destroy()
         end
@@ -103,46 +131,138 @@ local function pulseCharacter(accent)
 end
 
 feedbackEvent.OnClientEvent:Connect(function(payload)
+    if type(payload) ~= "table" then return end
     local now = os.clock()
-    if now - lastTrigger < 0.18 then
+    local gridClear = payload.mechanicName == "GRID CIRCUIT CLEAR"
+    local skyrail = payload.mechanicName == "SKYRAIL SLIPSTREAM"
+        or payload.mechanicName == "SKYRAIL CHAIN x2"
+        or payload.mechanicName == "SKYRAIL ACE"
+    local skyrailAce = payload.mechanicName == "SKYRAIL ACE"
+    local fluxWeave = payload.mechanicName == "FLUX WEAVE x2"
+        or payload.mechanicName == "FLUX MASTER"
+    local fluxMaster = payload.mechanicName == "FLUX MASTER"
+    -- The final challenge success should never be swallowed by a mobility
+    -- pad's short visual cooldown during a fast last-node crossing.
+    local orbitMaster = payload.mechanicName == "ORBIT MASTER"
+    local priority = gridClear or fluxWeave or skyrailAce or fluxMaster
+        or orbitMaster
+    if now - lastTrigger < 0.18 and not priority then
         return
     end
     lastTrigger = now
 
     local overdrive = payload.overdrive == true
+    local fluxRelay = payload.mechanicName == "FLUX RELAY" or fluxWeave
+    local helixFlow = payload.mechanicName == "HELIX FLOW"
+        or payload.mechanicName == "HELIX CHAIN x2"
+        or payload.mechanicName == "ORBIT MASTER"
     local accent = overdrive
         and Color3.fromRGB(255, 210, 90)
-        or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))
+        or (fluxRelay and Color3.fromRGB(88, 250, 229)
+            or (helixFlow and Color3.fromRGB(106, 245, 176)
+                or (ACCENTS[payload.variantId] or Color3.fromRGB(110, 210, 255))))
+    if gridClear and not overdrive then
+        accent = Color3.fromRGB(120, 245, 179)
+    elseif skyrail and not overdrive then
+        accent = skyrailAce and Color3.fromRGB(255, 214, 117)
+            or Color3.fromRGB(100, 230, 250)
+    elseif fluxMaster and not overdrive then
+        accent = Color3.fromRGB(255, 206, 106)
+    end
     local tier = currentVfxTier()
     local reduced = player:GetAttribute("ReduceMotion") == true
+    if flashTween then
+        flashTween:Cancel()
+        flashTween = nil
+    end
     flash.BackgroundColor3 = accent
-    flash.BackgroundTransparency = reduced
-        and 0.97
-        or (0.91 + ((1 - tier.Scale) * 0.04))
-    TweenService:Create(
-        flash,
-        TweenInfo.new(reduced and 0.12 or 0.22),
-        {BackgroundTransparency = 1}
-    ):Play()
+    if reduced then
+        -- Reduced Motion keeps the readable textual acknowledgement
+        -- without a full-screen flash or particle overdraw.
+        flash.BackgroundTransparency = 1
+    else
+        flash.BackgroundTransparency = 0.91 + ((1 - tier.Scale) * 0.04)
+        flashTween = TweenService:Create(
+            flash, TweenInfo.new(0.22), {BackgroundTransparency = 1}
+        )
+        flashTween:Play()
+    end
 
-    pulseCharacter(accent)
+    if not reduced and tier.Name ~= "Low" then
+        pulseCharacter(accent)
+    end
 
-    if overdrive then
+    if overdrive or fluxRelay or helixFlow or gridClear or skyrail then
+        titleToken += 1
+        local token = titleToken
+        stopTitleTweens()
+        local serverCue = overdrive and "OVERDRIVE BOOST"
+            or (gridClear and "GRID CIRCUIT CLEAR"
+                or (fluxWeave and tostring(payload.mechanicName)
+                    or (skyrail and tostring(payload.mechanicName)
+                        or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY"))))
+        overdriveLabel.Text = CoreLocalization.mechanicFeedback(localeId, serverCue)
+        overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce or fluxMaster)
+            and Color3.fromRGB(255, 225, 115)
+            or (gridClear and Color3.fromRGB(197, 255, 218)
+                or (helixFlow and Color3.fromRGB(184, 255, 216)
+                    or Color3.fromRGB(147, 255, 232)))
+        overdriveStroke.Color = (overdrive or orbitMaster or skyrailAce or fluxMaster)
+            and Color3.fromRGB(255, 210, 90)
+            or (gridClear and Color3.fromRGB(120, 245, 179)
+                or (helixFlow and Color3.fromRGB(106, 245, 176)
+                    or Color3.fromRGB(88, 250, 229)))
         overdriveLabel.Visible = true
         overdriveLabel.TextTransparency = 1
         overdriveLabel.BackgroundTransparency = 1
-        TweenService:Create(overdriveLabel, TweenInfo.new(0.12), {
-            TextTransparency = 0,
-            BackgroundTransparency = 0.10,
-        }):Play()
+        if reduced then
+            overdriveLabel.TextTransparency = 0
+            overdriveLabel.BackgroundTransparency = 0.10
+        else
+            titleTween(0.12, {
+                TextTransparency = 0,
+                BackgroundTransparency = 0.10,
+            })
+        end
         task.delay(0.55, function()
-            TweenService:Create(overdriveLabel, TweenInfo.new(0.18), {
+            if token ~= titleToken then return end
+            stopTitleTweens()
+            if player:GetAttribute("ReduceMotion") == true then
+                overdriveLabel.Visible = false
+                overdriveLabel.TextTransparency = 1
+                overdriveLabel.BackgroundTransparency = 1
+                return
+            end
+            titleTween(0.18, {
                 TextTransparency = 1,
                 BackgroundTransparency = 1,
-            }):Play()
-            task.delay(0.2, function()
-                overdriveLabel.Visible = false
+            })
+            task.delay(0.20, function()
+                if token == titleToken then
+                    overdriveLabel.Visible = false
+                end
             end)
         end)
+    end
+end)
+
+-- Accessibility can be toggled while a tween is running.
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion") ~= true then return end
+    if flashTween then
+        flashTween:Cancel()
+        flashTween = nil
+    end
+    flash.BackgroundTransparency = 1
+    for emitter in pairs(activeBursts) do
+        activeBursts[emitter] = nil
+        if emitter.Parent then
+            emitter:Destroy()
+        end
+    end
+    stopTitleTweens()
+    if overdriveLabel.Visible then
+        overdriveLabel.TextTransparency = 0
+        overdriveLabel.BackgroundTransparency = 0.10
     end
 end)

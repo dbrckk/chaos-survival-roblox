@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local PlatformVisualRules = require(ReplicatedStorage.Shared.DisappearingPlatformVisualRules)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
@@ -116,9 +117,15 @@ end
 local loopStarted = false
 local ensureRenderLoop
 
+-- Each active platform has one owned attribute connection. Clearing the
+-- active folder disconnects every listener and releases all six local parts.
+local bound = {}
+local activePlatforms = nil
+local platformsAddedConnection = nil
+local platformsRemovedConnection = nil
+
 local function refreshPart(part)
-    local phase = part:GetAttribute("CollapsePhase")
-    if phase ~= "Warning" and phase ~= "Gone" then
+    if not PlatformVisualRules.shouldDisplay(part, activePlatforms) then
         clearState(part)
         return
     end
@@ -128,76 +135,112 @@ local function refreshPart(part)
     end
 end
 
-local bound = setmetatable({}, {__mode = "k"})
-local platformsConnection = nil
+local function releasePart(part)
+    local connection = bound[part]
+    if connection then
+        connection:Disconnect()
+        bound[part] = nil
+    end
+    clearState(part)
+end
 
 local function bindPart(part)
-    if not part:IsA("BasePart") or bound[part] then
+    if not PlatformVisualRules.ownsPart(part, activePlatforms)
+        or bound[part] then
         return
     end
-    bound[part] = true
 
-    part:GetAttributeChangedSignal("CollapsePhase"):Connect(function()
+    bound[part] = part:GetAttributeChangedSignal("CollapsePhase"):Connect(function()
         refreshPart(part)
     end)
-
     refreshPart(part)
 end
 
 local function bindPlatformsFolder(platforms)
-    if platformsConnection then
-        platformsConnection:Disconnect()
-        platformsConnection = nil
+    if platforms == activePlatforms then return end
+    if platformsAddedConnection then
+        platformsAddedConnection:Disconnect()
+        platformsAddedConnection = nil
+    end
+    if platformsRemovedConnection then
+        platformsRemovedConnection:Disconnect()
+        platformsRemovedConnection = nil
+    end
+    for part in pairs(bound) do
+        releasePart(part)
+    end
+    -- Also handle already detached tracked parts from previous rounds.
+    for part in pairs(tracked) do
+        clearState(part)
     end
 
-    if not platforms then
-        return
-    end
+    activePlatforms = platforms
+    if not platforms then return end
 
     for _, child in ipairs(platforms:GetChildren()) do
-        if child:IsA("BasePart") then
-            bindPart(child)
-        end
+        bindPart(child)
     end
+    platformsAddedConnection = platforms.ChildAdded:Connect(bindPart)
+    platformsRemovedConnection = platforms.ChildRemoved:Connect(releasePart)
+end
 
-    platformsConnection = platforms.ChildAdded:Connect(function(child)
-        if child:IsA("BasePart") then
-            bindPart(child)
-        end
-    end)
+-- React to streaming without WaitForChild timeouts or stale task.defer
+-- callbacks. A former map may never rebind after a newer map takes over.
+local observedMap = nil
+local mapAddedConnection = nil
+local mapRemovedConnection = nil
+
+local function findPlatforms(generated)
+    local arena = generated and generated:FindFirstChild("Arena")
+    return arena and arena:FindFirstChild("Platforms") or nil
 end
 
 local function bindGeneratedMap(generated)
-    local arena = generated:FindFirstChild("Arena")
-    if not arena then
-        arena = generated:WaitForChild("Arena", 5)
+    if observedMap == generated then return end
+    if mapAddedConnection then
+        mapAddedConnection:Disconnect()
+        mapAddedConnection = nil
     end
-    local platforms = arena and arena:FindFirstChild("Platforms")
-    if not platforms and arena then
-        platforms = arena:WaitForChild("Platforms", 5)
+    if mapRemovedConnection then
+        mapRemovedConnection:Disconnect()
+        mapRemovedConnection = nil
     end
-    bindPlatformsFolder(platforms)
+    bindPlatformsFolder(nil)
+    observedMap = generated
+    if not generated then return end
+
+    mapAddedConnection = generated.DescendantAdded:Connect(function(descendant)
+        if descendant.Name == "Arena" or descendant.Name == "Platforms" then
+            if workspace:FindFirstChild("GeneratedMap") == generated
+                and generated.Parent == workspace then
+                bindPlatformsFolder(findPlatforms(generated))
+            end
+        end
+    end)
+    mapRemovedConnection = generated.DescendantRemoving:Connect(function(descendant)
+        if descendant == activePlatforms or descendant.Name == "Arena" then
+            bindPlatformsFolder(nil)
+        end
+    end)
+    bindPlatformsFolder(findPlatforms(generated))
+end
+
+local function refreshActiveMap()
+    bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(bindGeneratedMap, child)
+        refreshActiveMap()
     end
 end)
-
 workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        bindPlatformsFolder(nil)
-        for part in pairs(tracked) do
-            clearState(part)
-        end
+        refreshActiveMap()
     end
 end)
 
-local existing = workspace:FindFirstChild("GeneratedMap")
-if existing then
-    task.defer(bindGeneratedMap, existing)
-end
+refreshActiveMap()
 
 ensureRenderLoop = function()
     if loopStarted then
@@ -218,15 +261,10 @@ ensureRenderLoop = function()
             clock += dt
 
             for part, state in pairs(tracked) do
-                if not part.Parent then
+                if not PlatformVisualRules.shouldDisplay(part, activePlatforms) then
                     clearState(part)
                 else
-                    local phase = part:GetAttribute("CollapsePhase")
-                    if phase == "Warning" or phase == "Gone" then
-                        layout(part, state, phase, clock)
-                    else
-                        clearState(part)
-                    end
+                    layout(part, state, part:GetAttribute("CollapsePhase"), clock)
                 end
             end
         end
