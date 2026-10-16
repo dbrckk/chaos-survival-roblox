@@ -27,6 +27,7 @@ if RunService:IsStudio() then
 end
 local MapBuilder = require(script.MapBuilder)
 local SpawnSafety = require(script.SpawnSafety)
+local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyActivities = require(script.LobbyActivities)
 local PlayerData = require(script.PlayerData)
 local PlayerReadiness = require(script.PlayerReadiness)
@@ -113,6 +114,7 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
 end)
 
 MapBuilder.build(Config, "Classic", ArenaVariants)
+LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
 if not lobbyActivitiesOk then
     warn("Lobby activities failed to start:", lobbyActivitiesError)
