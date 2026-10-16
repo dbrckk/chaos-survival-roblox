@@ -109,7 +109,9 @@ local function startPerformanceTelemetry()
             end
 
             local entry = "LOBBY"
-            if player:GetAttribute("RoundParticipant") == true then
+            -- The player is already teleported during READY; RoundParticipant
+            -- becomes true only when the disaster simulation starts.
+            if phase == "ready" or phase == "round" then
                 local clear = player:GetAttribute("ArenaSpawnClear")
                 entry = clear == true and "CLEAR"
                     or (clear == false and "BLOCKED" or "CHECKING")
