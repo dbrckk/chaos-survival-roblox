@@ -36,6 +36,19 @@ local function rebuild()
     SignatureKit.update(bundle, 0, true)
 end
 
+-- Map streaming, a fresh GeneratedMap and a graphics-tier update can
+-- all signal the same frame. Build one set per deferred turn instead of
+-- allocating and destroying the entire landmark multiple times.
+local rebuildScheduled = false
+local function scheduleRebuild()
+    if rebuildScheduled then return end
+    rebuildScheduled = true
+    task.defer(function()
+        rebuildScheduled = false
+        rebuild()
+    end)
+end
+
 local function bind(generated)
     if disconnectMapWatch then
         disconnectMapWatch()
@@ -45,7 +58,7 @@ local function bind(generated)
         disconnectMapWatch = MapVisualReadiness.watch(
             generated, "Arena", "Base",
             function()
-                task.defer(rebuild)
+                scheduleRebuild()
             end
         )
     end
@@ -54,7 +67,7 @@ end
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bind(child)
-        task.defer(rebuild)
+        scheduleRebuild()
     end
 end)
 
@@ -67,7 +80,7 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
+    scheduleRebuild()
 end)
 
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
@@ -93,7 +106,7 @@ state.OnClientEvent:Connect(function(snapshot)
 end)
 
 bind(workspace:FindFirstChild("GeneratedMap"))
-task.defer(rebuild)
+scheduleRebuild()
 
 task.spawn(function()
     while true do
