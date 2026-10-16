@@ -1993,11 +1993,15 @@ while true do
     )
     for index, p in ipairs(contestants) do
         if p.Parent == Players then
+            local wasEliminated = p:GetAttribute("RoundEliminated") == true
             p:SetAttribute("RoundParticipant", false)
             p:SetAttribute("RoundEliminated", false)
-            -- Only still-living contestants are moved; eliminated avatars
-            -- keep Roblox's normal respawn handling and earned rewards.
-            returnSurvivorToLobby(p, returnPositions[index])
+            -- Only surviving contestants are teleported; an eliminated
+            -- player who respawned during RESULTS stays at their native
+            -- lobby spawn instead of being moved twice.
+            if not wasEliminated then
+                returnSurvivorToLobby(p, returnPositions[index])
+            end
         end
     end
 end
