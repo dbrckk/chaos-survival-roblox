@@ -34,6 +34,27 @@ describe("Arena focal lighting rules", function()
         end
     end)
 
+    it("does not retween unchanged lights on round countdown ticks", function()
+        local changed = ArenaFocalLightingRules.visualStateChanged
+        expect(changed("ready", false, {"Meteors"}, "ready", false,
+            {"Meteors"})).toBe(false)
+        expect(changed("round", false, {"Meteors", "Bombs"},
+            "round", false, {"Meteors", "Bombs"})).toBe(false)
+        expect(changed("round", false, {"Meteors"},
+            "round", true, {"Meteors"})).toBe(true)
+        expect(changed("ready", false, {"Meteors"},
+            "round", false, {"Meteors"})).toBe(true)
+        expect(changed("round", false, {"Meteors"},
+            "round", false, {"Bombs"})).toBe(true)
+        expect(changed("round", false, {"Meteors"},
+            "round", false, {"Meteors", "Bombs"})).toBe(true)
+        expect(changed("round", false, {"Meteors", "Bombs"},
+            "round", false, {"Bombs", "Meteors"})).toBe(true)
+        expect(changed("waiting", false, nil, "waiting", false, {})).toBe(false)
+        expect(changed("waiting", false, false, "waiting", false,
+            "unexpected")).toBe(false)
+    end)
+
     it("suppresses decorative lighting during high gameplay pressure", function()
         local ready = ArenaFocalLightingRules.phaseScale("ready", false)
         local round = ArenaFocalLightingRules.phaseScale("round", false)

@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
@@ -315,41 +316,51 @@ local function rebuild()
     end
 end
 
-local mapConnection = nil
+-- The arena Folder can replicate before Base and its VariantId.
+-- Track all three readiness transitions with the shared engine-tested watcher,
+-- and coalesce same-turn callbacks into one potentially expensive 3D build.
+local disconnectMapWatch = nil
+local watchedMap = nil
+local rebuildPending = false
+
+local function scheduleRebuild()
+    if rebuildPending then return end
+    rebuildPending = true
+    task.defer(function()
+        rebuildPending = false
+        rebuild()
+    end)
+end
 
 local function bindGeneratedMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
-
+    watchedMap = generated
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.defer(rebuild)
-            end
-        end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRebuild
+        )
+    else
+        clear()
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
         bindGeneratedMap(child)
-        task.defer(rebuild)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bindGeneratedMap(nil)
-        clear()
+    if child == watchedMap then
+        bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
     end
 end)
 
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
+
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
-
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
-end)
-
-rebuild()
+scheduleRebuild()

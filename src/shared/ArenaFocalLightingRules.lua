@@ -53,6 +53,29 @@ function ArenaFocalLightingRules.phaseScale(phase, finalRush)
     return 0
 end
 
+-- The RoundState transport updates seconds every tick; no focal light
+-- properties depend on seconds. Ignore identical visual snapshots instead
+-- of allocating overlapping SpotLight tweens on every timer update.
+function ArenaFocalLightingRules.visualStateChanged(
+    previousPhase, previousFinalRush, previousDisasters,
+    nextPhase, nextFinalRush, nextDisasters
+)
+    if previousPhase ~= nextPhase or previousFinalRush ~= nextFinalRush then
+        return true
+    end
+    local oldIds = type(previousDisasters) == "table" and previousDisasters or {}
+    local newIds = type(nextDisasters) == "table" and nextDisasters or {}
+    if #oldIds ~= #newIds then
+        return true
+    end
+    for index = 1, #newIds do
+        if oldIds[index] ~= newIds[index] then
+            return true
+        end
+    end
+    return false
+end
+
 function ArenaFocalLightingRules.definitions(variant)
     return ArenaFocalLightingRules.Definitions[tostring(variant or "Classic")]
         or ArenaFocalLightingRules.Definitions.Classic

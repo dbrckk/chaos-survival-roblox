@@ -294,6 +294,54 @@ describe("Late-replicated visual map readiness", function()
         generated:Destroy()
     end)
 
+    it("rebuilds understructure when Base and VariantId replicate late", function()
+        local generated = Instance.new("Folder")
+        local events = {}
+        local function record(base)
+            local arena = generated:FindFirstChild("Arena")
+            table.insert(events, {
+                present = base ~= nil,
+                variant = arena and arena:GetAttribute("VariantId") or nil,
+            })
+        end
+
+        local disconnect = MapVisualReadiness.watch(
+            generated, "Arena", "Base", record
+        )
+        expect(#events).toBe(1)
+        expect(events[#events].present).toBe(false)
+
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = generated
+        expect(#events).toBe(2)
+        expect(events[#events].present).toBe(false)
+
+        -- A client may get the Base before the correct arena attribute.
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Parent = arena
+        expect(#events).toBe(3)
+        expect(events[#events].present).toBe(true)
+        arena:SetAttribute("VariantId", "Towers")
+        expect(#events).toBe(4)
+        expect(events[#events].variant).toBe("Towers")
+
+        base:Destroy()
+        expect(events[#events].present).toBe(false)
+        local replacement = Instance.new("Part")
+        replacement.Name = "Base"
+        replacement.Parent = arena
+        expect(events[#events].present).toBe(true)
+
+        disconnect()
+        local before = #events
+        arena:SetAttribute("VariantId", "Orbital")
+        replacement:Destroy()
+        expect(#events).toBe(before)
+        generated:Destroy()
+    end)
+
     it("detects a lobby floor that appears after its parent model", function()
         local generated = Instance.new("Folder")
         local calls = 0

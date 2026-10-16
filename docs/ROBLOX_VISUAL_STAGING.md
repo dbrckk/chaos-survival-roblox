@@ -165,6 +165,33 @@ In isolated staging, verify the following with a physical Android device:
 This regression check is separate from the authenticated Studio four-player
 gate, DataStore rejoin validation and release certification.
 
+### Late arena streaming and lighting regression
+
+Understructure and midground sculptures are client-owned cosmetic geometry.
+On a slow Android connection, an Arena folder can replicate **before** its
+Base part or VariantId attribute. This candidate now uses the shared
+`MapVisualReadiness.watch` contract for both, with coalesced rebuilds.
+The focal-lighting controller also coalesces map/tier updates and skips
+unchanged countdown snapshots rather than creating new light tweens every
+second.
+
+Validate on the isolated staging experience with a real Android device:
+
+- Join on a throttled or slow network, then visit all four arenas.
+  The underside braces, scenic mass and appropriate spotlights should
+  appear even if Base/VariantId arrive after the Arena folder.
+- Play at Low, Medium and High visual tiers; quickly switch tiers
+  between rounds. There must be no duplicate understructure or
+  persistent light fixtures from a prior arena. Low disables focal lights.
+- Confirm hazard-driven focal colors, final-rush dimming, reduced-motion
+  preferences and readability of meteor/bomb warnings all remain correct.
+- Use PHOTO + HUD to capture source commit, FPS and worst-frame duration,
+  then repeat after 30 minutes and reconnection. Do not infer actual FPS
+  improvement from a green build alone.
+
+This is cosmetic/client-only: no server physics, scoring, DataStore ownership,
+paid content or public production publish is affected.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
