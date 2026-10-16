@@ -342,6 +342,54 @@ describe("Late-replicated visual map readiness", function()
         generated:Destroy()
     end)
 
+    it("tracks mobile mobility-pad markers and impulses that replicate late", function()
+        local mechanics = Instance.new("Folder")
+        local events = 0
+        local dispose = MapVisualReadiness.watchChildrenAttributes(
+            mechanics,
+            {"ArenaMobilityPad", "ImpulseX", "ImpulseY", "ImpulseZ"},
+            function()
+                events += 1
+            end
+        )
+        expect(events).toBe(1)
+
+        local pad = Instance.new("Part")
+        pad.Name = "MobilityPad"
+        pad.Parent = mechanics
+        expect(events).toBe(2)
+        -- A replicated part can arrive before the attribute that marks it.
+        pad:SetAttribute("ArenaMobilityPad", true)
+        expect(events).toBe(3)
+        pad:SetAttribute("ImpulseX", 18)
+        pad:SetAttribute("ImpulseY", 24)
+        pad:SetAttribute("ImpulseZ", -7)
+        expect(events).toBe(6)
+
+        local unrelated = Instance.new("Folder")
+        unrelated.Parent = mechanics
+        expect(events).toBe(6)
+        unrelated:Destroy()
+        expect(events).toBe(6)
+
+        pad.Parent = nil
+        expect(events).toBe(7)
+        pad:SetAttribute("ImpulseX", 99)
+        expect(events).toBe(7)
+        pad:Destroy()
+
+        local replacement = Instance.new("Part")
+        replacement:SetAttribute("ArenaMobilityPad", true)
+        replacement:SetAttribute("ImpulseZ", 11)
+        replacement.Parent = mechanics
+        expect(events).toBe(8)
+        dispose()
+        replacement:SetAttribute("ImpulseZ", 20)
+        replacement:Destroy()
+        expect(events).toBe(8)
+        mechanics:Destroy()
+    end)
+
     it("detects a lobby floor that appears after its parent model", function()
         local generated = Instance.new("Folder")
         local calls = 0
