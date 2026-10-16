@@ -1,6 +1,7 @@
 -- Native screenshots of the currently running Roblox scene.
 -- This is NOT a visual mockup: CaptureService reads the player's 3D frame.
--- Nothing uploads automatically; the player explicitly approves gallery saving.
+-- Nothing uploads automatically; the player first approves saving to Roblox Captures.
+-- Export to the Android photo gallery is a separate user action via Roblox > Captures.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CaptureService = game:GetService("CaptureService")
@@ -153,7 +154,7 @@ status.Font = Enum.Font.Gotham
 status.TextColor3 = UITheme.Colors.TextMuted or UITheme.Colors.Text
 status.TextWrapped = true
 status.TextScaled = true
-status.Text = french and "Vraies images du jeu" or "Real in-game frames"
+status.Text = french and "Après capture : Roblox > Captures > Enregistrer" or "Then: Roblox > Captures > Save"
 status.Parent = panel
 UITheme.addTextConstraint(status, 9, 12)
 
@@ -208,7 +209,7 @@ local function finishCapture(token, message)
     toast.Text = message
     toast.Visible = true
     refresh()
-    task.delay(2.4, function()
+    task.delay(5, function()
         if token == captureSerial then toast.Visible = false end
     end)
 end
@@ -239,8 +240,8 @@ local function takeNativeCapture(mode)
                             or "Capture unavailable")
                         return
                     end
-                    -- A screenshot isn't persisted, transferred, or shared
-                    -- without the user accepting the native gallery prompt.
+                    -- A screenshot isn't saved to Roblox Captures unless the player
+                    -- accepts this prompt. Export to device storage is separate.
                     local accepted = pcall(function()
                         CaptureService:PromptSaveCapturesToGallery(
                             {screenshotCapture},
@@ -249,10 +250,10 @@ local function takeNativeCapture(mode)
                                 local saved = type(saveResults) == "table"
                                     and saveResults[screenshotCapture] == true
                                 finishCapture(token, saved
-                                    and (french and "Image sauvegardée"
-                                        or "Image saved")
-                                    or (french and "Enregistrement refusé"
-                                        or "Not saved"))
+                                    and (french and "Roblox > Captures > Enregistrer"
+                                        or "Roblox > Captures > Save")
+                                    or (french and "Non enregistrée dans Roblox"
+                                        or "Not saved in Roblox"))
                             end
                         )
                     end)
@@ -313,10 +314,10 @@ local function takeNativeVideo()
                             local saved = type(saveResults) == "table"
                                 and saveResults[video] == true
                             finishCapture(token, saved
-                                and (french and "Vidéo sauvegardée"
-                                    or "Video saved")
-                                or (french and "Vidéo non sauvegardée"
-                                    or "Video not saved"))
+                                and (french and "Roblox > Captures > Enregistrer"
+                                    or "Roblox > Captures > Save")
+                                or (french and "Vidéo non enregistrée dans Roblox"
+                                    or "Video not saved in Roblox"))
                         end)
                 end)
                 if not promptOk then
