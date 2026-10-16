@@ -147,49 +147,73 @@ local function rebuild()
     refresh(0.16)
 end
 
-local function bindMap()
+-- All map, quality and late replication signals share a deferred
+-- single-flight rebuild. Avoid allocating the fixtures twice in one turn.
+local rebuildPending = false
+local watchedMap = nil
+
+local function scheduleRebuild()
+    if rebuildPending then return end
+    rebuildPending = true
+    task.defer(function()
+        rebuildPending = false
+        rebuild()
+    end)
+end
+
+local function bindMap(generated)
     if disconnectMapWatch then
         disconnectMapWatch()
         disconnectMapWatch = nil
     end
-    local generated = workspace:FindFirstChild("GeneratedMap")
+    watchedMap = generated
     if generated then
         disconnectMapWatch = MapVisualReadiness.watch(
-            generated, "Arena", "Base",
-            function()
-                task.defer(rebuild)
-            end
+            generated, "Arena", "Base", scheduleRebuild
         )
+    else
+        clear()
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        task.defer(function()
-            bindMap()
-            rebuild()
-        end)
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
+        bindMap(child)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        clear()
-        bindMap()
+    if child == watchedMap then
+        bindMap(workspace:FindFirstChild("GeneratedMap"))
     end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     refresh(0.18)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    phase = tostring(state.phase or "waiting")
-    finalRush = phase == "round" and state.finalRush == true
-    activeDisasters = state.disasterIds or {}
+    -- A malformed packet cannot terminate this client's light controller.
+    if type(state) ~= "table" then return end
+    local nextPhase = tostring(state.phase or "waiting")
+    local nextFinalRush = nextPhase == "round" and state.finalRush == true
+    local nextDisasters = type(state.disasterIds) == "table"
+        and state.disasterIds or {}
+
+    if not ArenaFocalLightingRules.visualStateChanged(
+        phase, finalRush, activeDisasters,
+        nextPhase, nextFinalRush, nextDisasters
+    ) then
+        return
+    end
+
+    phase = nextPhase
+    finalRush = nextFinalRush
+    activeDisasters = table.clone(nextDisasters)
     refresh(finalRush and 0.08 or 0.26)
 end)
 
-bindMap()
-rebuild()
+bindMap(workspace:FindFirstChild("GeneratedMap"))
+scheduleRebuild()
