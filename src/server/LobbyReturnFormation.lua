@@ -44,6 +44,7 @@ function LobbyReturnFormation.positions(spawn, floor, decor, count)
     end
 
     count = math.max(0, math.floor(tonumber(count) or 0))
+    if count == 0 then return {} end
     local positions = {}
     local colliders = decor:GetDescendants()
     local right = spawn.CFrame.RightVector
