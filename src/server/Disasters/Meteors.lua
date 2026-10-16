@@ -55,8 +55,12 @@ function D.start(ctx)
             meteor.Name = "RoundMeteor"
             meteor.Shape = Enum.PartType.Ball
             meteor.Size = Vector3.new(7,7,7)
-            meteor.Material = Enum.Material.Neon
-            meteor.Color = Color3.fromRGB(255,120,40)
+            -- A dark, rough core plus a separate cached comet ribbon
+            -- reads as an actual falling rock, not a generic orange neon
+            -- sphere. The server owns one immutable physics-free projectile;
+            -- the adaptive client ribbon supplies its warm silhouette.
+            meteor.Material = Enum.Material.Basalt
+            meteor.Color = Color3.fromRGB(156, 91, 66)
             meteor.Position = impactPosition + Vector3.new(0, fallHeight, 0)
             meteor.Anchored = true
             meteor.CanCollide = false
