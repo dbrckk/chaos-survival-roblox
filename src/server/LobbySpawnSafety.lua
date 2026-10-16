@@ -16,11 +16,13 @@ local function validLobby()
     local floor = lobby and lobby:FindFirstChild("Floor")
     local decor = lobby and lobby:FindFirstChild("Decor")
     local centerPlatform = decor and decor:FindFirstChild("CenterPlatform")
+    local lobbySpawn = lobby and lobby:FindFirstChild("LobbySpawn")
     if not floor or not floor:IsA("BasePart")
-        or not centerPlatform or not centerPlatform:IsA("BasePart") then
+        or not centerPlatform or not centerPlatform:IsA("BasePart")
+        or not lobbySpawn or not lobbySpawn:IsA("SpawnLocation") then
         return nil
     end
-    return floor, centerPlatform
+    return floor, centerPlatform, lobbySpawn
 end
 
 local function closeToLobby(floor, position)
@@ -48,7 +50,7 @@ function LobbySpawnSafety.recover(player, character)
         return false
     end
 
-    local floor, platform = validLobby()
+    local floor, platform, spawn = validLobby()
     if not floor or not closeToLobby(floor, root.Position) then
         -- Never touch an avatar already in the arena or another world area.
         return false
@@ -71,10 +73,10 @@ function LobbySpawnSafety.recover(player, character)
     local clearance = math.max(3.5, humanoid.HipHeight
         + root.Size.Y * 0.5 + 1.0)
     local landing = CFrame.new(
-        floor.Position.X,
+        spawn.Position.X,
         floorTop + clearance,
-        floor.Position.Z - 15
-    )
+        spawn.Position.Z
+    ) * spawn.CFrame.Rotation
     character:PivotTo(landing)
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
