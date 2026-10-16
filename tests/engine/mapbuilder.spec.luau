@@ -26,18 +26,67 @@ describe("Chaos Survival engine", function()
         local lobbyDecor = lobby and lobby:FindFirstChild("Decor")
         expect(lobbyDecor ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("CenterPlatform") ~= nil).toBe(true)
-        -- Regression check: default Roblox spawn must be on solid lobby
-        -- ground, outside the raised platform and away from practice boosts.
+        -- Native Roblox can place an avatar anywhere on the 8x8 spawn
+        -- surface, not just its centre. The rotated pad's entire footprint
+        -- needs a two-stud buffer from the raised stage and practice boosts.
         local lobbySpawn = lobby and lobby:FindFirstChild("LobbySpawn")
         local stage = (lobbyDecor :: Folder):FindFirstChild("CenterPlatform")
+        local floor = lobby and lobby:FindFirstChild("Floor")
         expect(lobbySpawn ~= nil and lobbySpawn:IsA("SpawnLocation")).toBe(true)
         if lobbySpawn and lobbySpawn:IsA("SpawnLocation")
-            and stage and stage:IsA("BasePart") then
-            local spawnLocal = stage.CFrame:PointToObjectSpace(lobbySpawn.Position)
-            expect(math.abs(spawnLocal.Z) > stage.Size.Z * 0.5 + 2.5).toBe(true)
+            and stage and stage:IsA("BasePart")
+            and floor and floor:IsA("BasePart") then
+            local facing = Vector3.new(
+                lobbySpawn.CFrame.LookVector.X, 0, lobbySpawn.CFrame.LookVector.Z
+            )
+            local toStage = Vector3.new(
+                stage.Position.X - lobbySpawn.Position.X, 0,
+                stage.Position.Z - lobbySpawn.Position.Z
+            )
+            expect(facing.Unit:Dot(toStage.Unit) > 0.98).toBe(true)
             expect(lobbySpawn.CanCollide).toBe(false)
-            expect(math.abs(lobbySpawn.Position.Z - (Config.LobbyCenter.Z - 22)) > 5)
-                .toBe(true)
+
+            -- Project the rotated spawn into world X/Z, including every
+            -- native Roblox spawn corner and reasonable avatar clearance.
+            local extentX = (math.abs(lobbySpawn.CFrame.RightVector.X)
+                * lobbySpawn.Size.X + math.abs(lobbySpawn.CFrame.LookVector.X)
+                * lobbySpawn.Size.Z) * 0.5
+            local extentZ = (math.abs(lobbySpawn.CFrame.RightVector.Z)
+                * lobbySpawn.Size.X + math.abs(lobbySpawn.CFrame.LookVector.Z)
+                * lobbySpawn.Size.Z) * 0.5
+            local buffer = 2
+            expect(math.abs(lobbySpawn.Position.X - stage.Position.X)
+                > stage.Size.X * 0.5 + extentX + buffer).toBe(true)
+            expect(math.abs(lobbySpawn.Position.Z - stage.Position.Z)
+                > stage.Size.Z * 0.5 + extentZ + buffer).toBe(true)
+            expect(math.abs(lobbySpawn.Position.X - floor.Position.X)
+                + extentX + buffer < floor.Size.X * 0.5).toBe(true)
+            expect(math.abs(lobbySpawn.Position.Z - floor.Position.Z)
+                + extentZ + buffer < floor.Size.Z * 0.5).toBe(true)
+
+            local boosts = {
+                Vector3.new(-22, 0, 0), Vector3.new(22, 0, 0),
+                Vector3.new(0, 0, -22), Vector3.new(0, 0, 22),
+            }
+            for _, pad in ipairs(boosts) do
+                local dx = math.abs(lobbySpawn.Position.X
+                    - (Config.LobbyCenter.X + pad.X))
+                local dz = math.abs(lobbySpawn.Position.Z
+                    - (Config.LobbyCenter.Z + pad.Z))
+                expect(dx > extentX + 3.6 + buffer
+                    or dz > extentZ + 3.6 + buffer).toBe(true)
+            end
+
+            for _, columnName in ipairs({"ArenaGateLeft", "ArenaGateRight"}) do
+                local column = (lobbyDecor :: Folder):FindFirstChild(columnName)
+                expect(column ~= nil and column:IsA("BasePart")).toBe(true)
+                if column and column:IsA("BasePart") then
+                    local dx = math.abs(lobbySpawn.Position.X - column.Position.X)
+                    local dz = math.abs(lobbySpawn.Position.Z - column.Position.Z)
+                    expect(dx > extentX + column.Size.X * 0.5 + buffer
+                        or dz > extentZ + column.Size.Z * 0.5 + buffer).toBe(true)
+                end
+            end
         end
         expect((lobbyDecor :: Folder):FindFirstChild("CenterGlow") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("ArenaGateTop") ~= nil).toBe(true)
