@@ -411,14 +411,19 @@ workspace.ChildRemoved:Connect(function(child)
     end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuild)
-player:GetAttributeChangedSignal("ReduceMotion"):Connect(rebuild)
+-- Both changes can occur next to a map-ready or phase update on mobile.
+-- Funnel them through the same deferred single-flight rebuild queue.
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(scheduleRefresh)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    -- A malformed or missing snapshot must not break cinematic updates.
+    -- Other visual clients already fail closed on invalid RoundState payloads.
+    if type(state) ~= "table" then return end
     local previousPhase = currentPhase
     currentPhase = tostring(state.phase or "waiting")
 
-    local ids = state.disasterIds or {}
+    local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
     if ids[1] then
         local shared = ReplicatedStorage:FindFirstChild("Shared")
         local disasterModule = shared and shared:FindFirstChild("DisasterVisuals")
@@ -439,9 +444,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 
     if previousPhase ~= currentPhase then
-        rebuild()
+        scheduleRefresh()
     end
 end)
 
 bindMap(workspace:FindFirstChild("GeneratedMap"))
-rebuild()
+scheduleRefresh()
