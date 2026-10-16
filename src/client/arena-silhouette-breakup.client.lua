@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
@@ -7,6 +8,7 @@ local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaSilhouetteAccentKit = require(script.Parent.ArenaSilhouetteAccentKit)
 
 local player = Players.LocalPlayer
+local roundState = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
 folder.Name = "ArenaSilhouetteBreakupLocal"
@@ -15,6 +17,9 @@ folder.Parent = workspace
 local disconnectMapWatch = nil
 local followArenaConnection = nil
 local refreshPending = false
+local currentPhase = "waiting"
+local finalRush = false
+local alertStrips = {}
 
 local function clear()
     -- Old geometry/rig references must not remain subscribed after a map
@@ -24,6 +29,7 @@ local function clear()
         followArenaConnection = nil
     end
     folder:ClearAllChildren()
+    table.clear(alertStrips)
 end
 
 local function makePart(name, size, cframe, color, material, transparency, shape, castShadow)
@@ -310,6 +316,124 @@ local function orbital(base, theme, high)
     )
 end
 
+-- Two outboard safety stations give each skyline a secondary industrial
+-- silhouette. They never enter the playfield, block the camera with full-
+-- width billboards or participate in collision/raycast logic.
+-- Hazard phases recolor their tiny warning lenses event-by-event: no loop,
+-- no extra lights or particle emitters, and no server-side changes.
+local function updateOutboardSignals(instant)
+    local active = currentPhase == "ready" or currentPhase == "round"
+    local warning = currentPhase == "round"
+        and (finalRush and Color3.fromRGB(255, 84, 68)
+            or Color3.fromRGB(255, 149, 76))
+        or Color3.fromRGB(255, 201, 108)
+    for _, entry in ipairs(alertStrips) do
+        if entry.part and entry.part.Parent then
+            local color = active and warning or entry.restColor
+            local alpha = active and 0.25 or 0.67
+            if instant then
+                entry.part.Color = color
+                entry.part.Transparency = alpha
+            else
+                TweenService:Create(
+                    entry.part,
+                    TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {Color = color, Transparency = alpha}
+                ):Play()
+            end
+        end
+    end
+end
+
+local function addOutboardSafetyStations(base, theme, tier, variant)
+    local hx, hz = base.Size.X * 0.5, base.Size.Z * 0.5
+    local top = base.Size.Y * 0.5
+    local low = tier.Name == "Low"
+    local high = tier.Name == "High"
+    local steel = theme.Structure:Lerp(VisualTheme.World.Deep, 0.26)
+    local metal = theme.Detail:Lerp(steel, 0.26)
+    for index = 1, 2 do
+        local side = index == 1 and -1 or 1
+        local localStation = base.CFrame
+            * CFrame.new(side * (hx + 17), top, side * hz * 0.30)
+            * CFrame.Angles(0, math.rad(side * 11), 0)
+        local bodySize
+        local material = Enum.Material.Metal
+        local bodyYaw = 0
+        local shape = nil
+        if variant == "Towers" then
+            bodySize = Vector3.new(4.5, high and 23 or 17, 4.5)
+            material = Enum.Material.CorrodedMetal
+            shape = Enum.PartType.Cylinder
+        elseif variant == "Crossroads" then
+            bodySize = Vector3.new(3.0, high and 16 or 12, 5.4)
+            material = Enum.Material.Concrete
+            bodyYaw = side * 9
+        elseif variant == "Orbital" then
+            bodySize = Vector3.new(3.6, high and 20 or 15, 3.6)
+            bodyYaw = side * 15
+        else
+            bodySize = Vector3.new(2.8, high and 19 or 15, 3.5)
+            bodyYaw = -side * 7
+        end
+        local body = makePart(
+            variant .. "OutboardStation" .. index,
+            bodySize,
+            localStation * CFrame.new(0, bodySize.Y * 0.5 + 0.5, 0)
+                * CFrame.Angles(0, 0, math.rad(bodyYaw)),
+            steel,
+            material,
+            low and 0.18 or 0.08,
+            shape,
+            high
+        )
+        if not low then
+            -- An asymmetric bracket makes the machinery readable as
+            -- authored architecture rather than a plain neon rectangle.
+            local bracketLength = variant == "Crossroads" and 10.5 or 7.5
+            makeWedge(
+                variant .. "OutboardBracket" .. index,
+                Vector3.new(bracketLength, 1.3, 2.2),
+                body.CFrame
+                    * CFrame.new(-side * 2.4, bodySize.Y * 0.25, 0)
+                    * CFrame.Angles(0, 0, math.rad(side * 22)),
+                metal,
+                Enum.Material.DiamondPlate,
+                0.11,
+                high
+            )
+        end
+        if high then
+            makePart(
+                variant .. "OutboardCrown" .. index,
+                Vector3.new(bodySize.X + 2.8, 0.75, bodySize.Z + 1.2),
+                body.CFrame * CFrame.new(0, bodySize.Y * 0.5 + 0.35, 0),
+                metal,
+                Enum.Material.DiamondPlate,
+                0.09,
+                nil,
+                true
+            )
+        end
+        local lens = makePart(
+            variant .. "OutboardAlert" .. index,
+            Vector3.new(0.28, low and 3.4 or 5.2, 0.22),
+            body.CFrame
+                * CFrame.new(0, bodySize.Y * 0.18, -bodySize.Z * 0.5 - 0.13),
+            theme.Secondary:Lerp(steel, 0.35),
+            Enum.Material.Neon,
+            0.67,
+            nil,
+            false
+        )
+        table.insert(alertStrips, {
+            part = lens,
+            restColor = lens.Color,
+        })
+    end
+    updateOutboardSignals(true)
+end
+
 local function rebuild()
     clear()
 
@@ -339,6 +463,7 @@ local function rebuild()
             classic(base, theme, high)
         end
     end
+    addOutboardSafetyStations(base, theme, tier, variant)
     followArenaConnection = ArenaSilhouetteAccentKit.follow(folder, base)
 end
 
@@ -382,6 +507,16 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     scheduleRefresh()
+end)
+
+roundState.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
+    local nextPhase = tostring(state.phase or "waiting")
+    local nextRush = nextPhase == "round" and state.finalRush == true
+    if currentPhase == nextPhase and finalRush == nextRush then return end
+    currentPhase = nextPhase
+    finalRush = nextRush
+    updateOutboardSignals(false)
 end)
 
 bindMap(workspace:FindFirstChild("GeneratedMap"))
