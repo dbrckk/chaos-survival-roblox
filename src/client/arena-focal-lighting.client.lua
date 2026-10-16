@@ -136,7 +136,9 @@ local function rebuild()
         local hierarchyScale = math.clamp(tonumber(definition.Intensity) or 1, 0.20, 1.25)
         light:SetAttribute(
             "BaseBrightness",
-            (tier.Name == "High" and 1.22 or 0.82) * hierarchyScale
+            -- Keep architectural light accents, but avoid washing the
+            -- dark runway and warning colors into saturated cyan.
+            (tier.Name == "High" and 1.04 or 0.70) * hierarchyScale
         )
         light.Parent = anchor
         table.insert(lights, light)
