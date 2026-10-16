@@ -80,15 +80,52 @@ telemetry.Text = "STAGING / profiling graphics..."
 telemetry.Parent = stampGui
 UITheme.addCorner(telemetry, UITheme.Corners.Medium)
 
+-- Health/provenance labels must refresh immediately: READY is only a
+-- few seconds long, and a four-second graphics sample could miss it.
+-- Expensive visual folder traversal remains on its existing 4-second timer.
+local performanceSummary = "FPS -- | WORST --ms | -- | --\nPARTS --   LIGHTS --   FX --"
+local performanceWarning = false
 local telemetryRunning = false
+
+local function renderRuntimeTelemetry()
+    if not stagingEnabled or not stampGui.Parent then return end
+    local save = "LOADING"
+    if player:GetAttribute("DataSaveConflict") == true then
+        save = "CONFLICT"
+    elseif player:GetAttribute("DataPersistenceAvailable") == true then
+        save = player:GetAttribute("LastSaveFailed") == true
+            and "RETRY" or "READY"
+    elseif player:GetAttribute("DataLoaded") == true then
+        save = "TEMP"
+    end
+
+    local entry = "LOBBY"
+    -- Players are teleported for READY, before RoundParticipant is set.
+    if phase == "ready" or phase == "round" then
+        local clear = player:GetAttribute("ArenaSpawnClear")
+        entry = clear == true and "CLEAR"
+            or (clear == false and "BLOCKED" or "CHECKING")
+    elseif player:GetAttribute("LobbySpawnRecovered") == true then
+        entry = "RESCUED"
+    end
+
+    telemetry.Text = performanceSummary
+        .. string.format("\nENTRY %s   SAVE %s", entry, save)
+    telemetry.TextColor3 = (performanceWarning or entry == "BLOCKED"
+        or save == "CONFLICT" or save == "TEMP" or save == "RETRY")
+        and UITheme.Colors.Orange or UITheme.Colors.Text
+end
+
 local function startPerformanceTelemetry()
     if telemetryRunning then return end
     telemetryRunning = true
-    -- The existing juice controller owns the per-frame FPS sampler.
-    -- This staging-only 4 s task reads its measurements and counts graphics.
+    renderRuntimeTelemetry()
+    -- Reuse the authoritative FPS sampler. Only aggregate visual objects
+    -- every four seconds; phase and persistence status are event-driven.
     task.spawn(function()
         while stagingEnabled and gui.Parent do
             task.wait(4)
+            if not stagingEnabled or not gui.Parent then break end
             local fps = tonumber(player:GetAttribute("ClientObservedFps"))
             local worst = tonumber(player:GetAttribute("ClientObservedWorstFrameMs"))
             local tier = tostring(player:GetAttribute("VfxQualityTier") or "High")
@@ -96,44 +133,17 @@ local function startPerformanceTelemetry()
             local counts = VisualBudgetRules.collect(workspace)
             local status = VisualBudgetRules.status(tier, counts)
 
-            -- Inspect replicated server facts only. No new remotes, timers
-            -- or frame samplers, and no save/session mutation from the UI.
-            local save = "LOADING"
-            if player:GetAttribute("DataSaveConflict") == true then
-                save = "CONFLICT"
-            elseif player:GetAttribute("DataPersistenceAvailable") == true then
-                save = player:GetAttribute("LastSaveFailed") == true
-                    and "RETRY" or "READY"
-            elseif player:GetAttribute("DataLoaded") == true then
-                save = "TEMP"
-            end
-
-            local entry = "LOBBY"
-            -- The player is already teleported during READY; RoundParticipant
-            -- becomes true only when the disaster simulation starts.
-            if phase == "ready" or phase == "round" then
-                local clear = player:GetAttribute("ArenaSpawnClear")
-                entry = clear == true and "CLEAR"
-                    or (clear == false and "BLOCKED" or "CHECKING")
-            elseif player:GetAttribute("LobbySpawnRecovered") == true then
-                entry = "RESCUED"
-            end
-
-            telemetry.Text = string.format(
-                "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d\nENTRY %s   SAVE %s",
+            performanceSummary = string.format(
+                "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
                 fps and tostring(fps) or "--",
                 worst and tostring(worst) or "--",
                 tier, status,
                 counts.Parts, budget.Parts,
                 counts.Lights, budget.Lights,
-                counts.Effects, budget.Effects,
-                entry, save
+                counts.Effects, budget.Effects
             )
-            telemetry.TextColor3 = ((fps and fps < 30)
-                or status ~= "OK" or entry == "BLOCKED"
-                or save == "CONFLICT" or save == "TEMP"
-                or save == "RETRY")
-                and UITheme.Colors.Orange or UITheme.Colors.Text
+            performanceWarning = ((fps and fps < 30) or status ~= "OK") == true
+            renderRuntimeTelemetry()
         end
         telemetryRunning = false
     end)
@@ -480,8 +490,17 @@ roundEvent.OnClientEvent:Connect(function(state)
         armed = false
         refresh()
     end
+    renderRuntimeTelemetry()
 end)
 player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
+-- A screen capture during short READY / rejoin now shows the current
+-- server-owned state even if the 4 s visual budget timer has not elapsed.
+for _, attribute in ipairs({
+    "DataLoaded", "DataPersistenceAvailable", "DataSaveConflict",
+    "LastSaveFailed", "ArenaSpawnClear", "LobbySpawnRecovered",
+}) do
+    player:GetAttributeChangedSignal(attribute):Connect(renderRuntimeTelemetry)
+end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 
 local function activateStagingMarker(child)
