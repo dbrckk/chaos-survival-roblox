@@ -1341,10 +1341,11 @@ local function buildLobby(root, config)
     local lobbySpawn = Instance.new("SpawnLocation")
     lobbySpawn.Name = "LobbySpawn"
     lobbySpawn.Size = Vector3.new(8, 1, 8)
-    -- Spawn on the flat floor outside the raised centre stage, with more
-    -- than a character radius of clearance from the south practice pad.
-    -- Native spawns must not depend on post-spawn recovery to be playable.
-    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2.8, -15)
+    -- Keep the ENTIRE 8-stud native spawn footprint clear of the raised
+    -- 24-stud stage, including space for R6/R15 avatars at its edges.
+    -- The flat lobby floor is still underneath, and the sign above is
+    -- non-colliding. Never rely on delayed rescue for an ordinary join.
+    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2.8, -21)
     lobbySpawn.Anchored = true
     lobbySpawn.Neutral = true
     lobbySpawn.Transparency = 1
