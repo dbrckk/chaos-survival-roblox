@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local CharacterPolishRules = require(ReplicatedStorage.Shared.CharacterPolishRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -103,8 +104,18 @@ local function applyModel(model)
         outlineTransparency = math.min(1, outlineTransparency + 0.18)
     end
 
-    highlight.FillTransparency = fillTransparency
-    highlight.OutlineTransparency = outlineTransparency
+    -- Third-person mobile cameras are frequently blocked by raised decks,
+    -- pylons and overhead structures. Only the LOCAL player gets a subtle
+    -- outline through scenery during a live round; bots and other players
+    -- retain occluded outlines. Never reveal enemies or remote positions.
+    local localMobileRound = isLocal and UserInputService.TouchEnabled
+        and activeParticipant and (phase == "ready" or phase == "round")
+    highlight.DepthMode = localMobileRound
+        and Enum.HighlightDepthMode.AlwaysOnTop
+        or Enum.HighlightDepthMode.Occluded
+    highlight.FillTransparency = localMobileRound and 1 or fillTransparency
+    highlight.OutlineTransparency = localMobileRound
+        and math.min(outlineTransparency, 0.52) or outlineTransparency
 
     local brightness = CharacterPolishRules.lightBrightness(
         quality.Name, phase, isLocal, finalRush, activeParticipant,
