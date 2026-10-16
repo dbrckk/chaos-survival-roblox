@@ -46,6 +46,21 @@ describe("Chaos Survival engine", function()
                 + lobbySpawn.Size.Z * 0.5 < lobbyFloor.Size.Z * 0.5 - 2).toBe(true)
             expect(lobbySpawn.Position.Y >
                 lobbyFloor.Position.Y + lobbyFloor.Size.Y * 0.5).toBe(true)
+            -- First join should face the arena approach, not the rear wall.
+            expect(lobbySpawn.CFrame.LookVector:Dot(Vector3.new(0, 0, 1)) > 0.95)
+                .toBe(true)
+            -- The raised stage is not the only lobby collision geometry.
+            -- In particular "02 SURVIVE" at z=-18 is a solid panel:
+            -- the full native spawn footprint must avoid ALL solid decor.
+            for _, item in ipairs((lobbyDecor :: Folder):GetDescendants()) do
+                if item:IsA("BasePart") and item.CanCollide then
+                    local dx = math.abs(lobbySpawn.Position.X - item.Position.X)
+                    local dz = math.abs(lobbySpawn.Position.Z - item.Position.Z)
+                    local clearX = dx >= (lobbySpawn.Size.X + item.Size.X) * 0.5 + 2
+                    local clearZ = dz >= (lobbySpawn.Size.Z + item.Size.Z) * 0.5 + 2
+                    expect(clearX or clearZ).toBe(true)
+                end
+            end
         end
         expect((lobbyDecor :: Folder):FindFirstChild("CenterGlow") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("ArenaGateTop") ~= nil).toBe(true)
