@@ -96,7 +96,7 @@ local function startPerformanceTelemetry()
             local counts = VisualBudgetRules.collect(workspace)
             local status = VisualBudgetRules.status(tier, counts)
             telemetry.Text = string.format(
-                "FPS %s | WORST %sms | %s | %s\\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
+                "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
                 fps and tostring(fps) or "--",
                 worst and tostring(worst) or "--",
                 tier, status,
