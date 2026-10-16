@@ -34,7 +34,7 @@ function D.start(ctx)
         Vector3.new(0.18, 84, 84),
         center + Vector3.new(0, 1.12, 0),
         Color3.fromRGB(80, 210, 215),
-        0.90
+        0.965
     )
 
     local lower = tornadoPart(
@@ -42,8 +42,8 @@ function D.start(ctx)
         "LowerFunnel",
         Vector3.new(2.0, 7, 7),
         center + Vector3.new(0, 3, 0),
-        Color3.fromRGB(115, 235, 235),
-        0.38
+        Color3.fromRGB(139, 194, 199),
+        0.40
     )
 
     local middle = tornadoPart(
@@ -51,7 +51,7 @@ function D.start(ctx)
         "MiddleFunnel",
         Vector3.new(3.5, 12, 12),
         center + Vector3.new(0, 7, 0),
-        Color3.fromRGB(95, 220, 225),
+        Color3.fromRGB(122, 172, 179),
         0.48
     )
 
@@ -60,14 +60,14 @@ function D.start(ctx)
         "UpperFunnel",
         Vector3.new(5.0, 18, 18),
         center + Vector3.new(0, 12, 0),
-        Color3.fromRGB(75, 195, 205),
-        0.58
+        Color3.fromRGB(96, 149, 159),
+        0.56
     )
 
     local light = Instance.new("PointLight")
     light.Name = "TornadoGlow"
     light.Color = Color3.fromRGB(90, 220, 225)
-    light.Brightness = 1.3
+    light.Brightness = 0.90
     light.Range = 26
     light.Shadows = false
     light.Parent = middle
