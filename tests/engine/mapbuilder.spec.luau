@@ -26,18 +26,41 @@ describe("Chaos Survival engine", function()
         local lobbyDecor = lobby and lobby:FindFirstChild("Decor")
         expect(lobbyDecor ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("CenterPlatform") ~= nil).toBe(true)
-        -- Regression check: default Roblox spawn must be on solid lobby
-        -- ground, outside the raised platform and away from practice boosts.
+        -- Roblox may choose a point anywhere inside an 8x8 SpawnLocation,
+        -- not just its center. Require avatar clearance for the FULL
+        -- footprint from the solid raised stage, plus a floor landing area.
         local lobbySpawn = lobby and lobby:FindFirstChild("LobbySpawn")
+        local lobbyFloor = lobby and lobby:FindFirstChild("Floor")
         local stage = (lobbyDecor :: Folder):FindFirstChild("CenterPlatform")
         expect(lobbySpawn ~= nil and lobbySpawn:IsA("SpawnLocation")).toBe(true)
         if lobbySpawn and lobbySpawn:IsA("SpawnLocation")
-            and stage and stage:IsA("BasePart") then
+            and stage and stage:IsA("BasePart")
+            and lobbyFloor and lobbyFloor:IsA("BasePart") then
             local spawnLocal = stage.CFrame:PointToObjectSpace(lobbySpawn.Position)
-            expect(math.abs(spawnLocal.Z) > stage.Size.Z * 0.5 + 2.5).toBe(true)
+            local minClearanceZ = (stage.Size.Z + lobbySpawn.Size.Z) * 0.5 + 2
+            expect(spawnLocal.Z < -minClearanceZ).toBe(true)
             expect(lobbySpawn.CanCollide).toBe(false)
-            expect(math.abs(lobbySpawn.Position.Z - (Config.LobbyCenter.Z - 22)) > 5)
+            expect(math.abs(lobbySpawn.Position.X - lobbyFloor.Position.X)
+                + lobbySpawn.Size.X * 0.5 < lobbyFloor.Size.X * 0.5 - 2).toBe(true)
+            expect(math.abs(lobbySpawn.Position.Z - lobbyFloor.Position.Z)
+                + lobbySpawn.Size.Z * 0.5 < lobbyFloor.Size.Z * 0.5 - 2).toBe(true)
+            expect(lobbySpawn.Position.Y >
+                lobbyFloor.Position.Y + lobbyFloor.Size.Y * 0.5).toBe(true)
+            -- First join should face the arena approach, not the rear wall.
+            expect(lobbySpawn.CFrame.LookVector:Dot(Vector3.new(0, 0, 1)) > 0.95)
                 .toBe(true)
+            -- The raised stage is not the only lobby collision geometry.
+            -- In particular "02 SURVIVE" at z=-18 is a solid panel:
+            -- the full native spawn footprint must avoid ALL solid decor.
+            for _, item in ipairs((lobbyDecor :: Folder):GetDescendants()) do
+                if item:IsA("BasePart") and item.CanCollide then
+                    local dx = math.abs(lobbySpawn.Position.X - item.Position.X)
+                    local dz = math.abs(lobbySpawn.Position.Z - item.Position.Z)
+                    local clearX = dx >= (lobbySpawn.Size.X + item.Size.X) * 0.5 + 2
+                    local clearZ = dz >= (lobbySpawn.Size.Z + item.Size.Z) * 0.5 + 2
+                    expect(clearX or clearZ).toBe(true)
+                end
+            end
         end
         expect((lobbyDecor :: Folder):FindFirstChild("CenterGlow") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("ArenaGateTop") ~= nil).toBe(true)

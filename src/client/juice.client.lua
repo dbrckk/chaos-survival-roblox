@@ -718,7 +718,9 @@ RunService.RenderStepped:Connect(function(dt)
         player:SetAttribute("ClientObservedFps", math.floor(math.clamp(averageFps, 0, 240) + 0.5))
         player:SetAttribute("ClientObservedWorstFrameMs",
             math.floor(math.clamp(sampleWorstFrameDt * 1000, 0, 2000) + 0.5))
-        local nextTierName = VfxQuality.nextTier(vfxTierName, averageFps)
+        local nextTierName = VfxQuality.nextTier(
+            vfxTierName, averageFps, UserInputService.TouchEnabled
+        )
 
         if nextTierName == vfxTierName then
             qualityCandidate = nil

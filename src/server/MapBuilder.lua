@@ -1341,10 +1341,13 @@ local function buildLobby(root, config)
     local lobbySpawn = Instance.new("SpawnLocation")
     lobbySpawn.Name = "LobbySpawn"
     lobbySpawn.Size = Vector3.new(8, 1, 8)
-    -- Spawn on the flat floor outside the raised centre stage, with more
-    -- than a character radius of clearance from the south practice pad.
-    -- Native spawns must not depend on post-spawn recovery to be playable.
-    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2.8, -15)
+    -- Keep the ENTIRE native 8x8 footprint off the raised centre stage
+    -- AND off the solid "02 SURVIVE" loop panel at z=-18. The staging
+    -- sign overhead is non-colliding, and the flat lobby floor extends
+    -- beyond every edge of the spawn footprint.
+    -- Face the arena gate (+Z) so first-time players see where to go.
+    local spawnPosition = config.LobbyCenter + Vector3.new(0, 2.8, -27)
+    lobbySpawn.CFrame = CFrame.lookAt(spawnPosition, spawnPosition + Vector3.new(0, 0, 1))
     lobbySpawn.Anchored = true
     lobbySpawn.Neutral = true
     lobbySpawn.Transparency = 1
