@@ -31,12 +31,15 @@ function VfxQuality.initialTier(isTouchDevice)
     return isTouchDevice == true and "Medium" or "High"
 end
 
-function VfxQuality.nextTier(currentTier, averageFps)
+function VfxQuality.nextTier(currentTier, averageFps, isTouchDevice)
     local fps = tonumber(averageFps) or 60
     local current = VfxQuality.Tiers[currentTier] and currentTier or "High"
+    local touch = isTouchDevice == true
 
     if current == "High" then
-        if fps < 42 then
+        -- Touch devices should lower expensive cosmetics before sustained
+        -- sub-50 FPS play turns into visible heat/throttling or input lag.
+        if fps < (touch and 48 or 42) then
             return "Medium"
         end
         return "High"
@@ -45,13 +48,13 @@ function VfxQuality.nextTier(currentTier, averageFps)
     if current == "Medium" then
         if fps < 32 then
             return "Low"
-        elseif fps > 54 then
+        elseif fps > (touch and 58 or 54) then
             return "High"
         end
         return "Medium"
     end
 
-    if fps > 44 then
+    if fps > (touch and 46 or 44) then
         return "Medium"
     end
     return "Low"
