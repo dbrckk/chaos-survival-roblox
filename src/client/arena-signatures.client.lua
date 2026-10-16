@@ -19,9 +19,6 @@ local disconnectMapWatch = nil
 -- uptime. New rounds, motion preferences and map swaps begin from a calm
 -- authored pose instead of teleporting moving sculptures to an arbitrary phase.
 local motionTime = 0
-local builtBase = nil
-local builtVariant = nil
-local builtTier = nil
 
 local function rebuild()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -32,7 +29,6 @@ local function rebuild()
         motionTime = 0
         folder:ClearAllChildren()
         bundle = nil
-        builtBase, builtVariant, builtTier = nil, nil, nil
         return
     end
 
@@ -41,19 +37,14 @@ local function rebuild()
     -- Readiness, arena identity and graphics tier can replicate on separate
     -- scheduler turns. If the requested sculpture is already alive and
     -- matches all three inputs, keep it (including animation continuity).
-    if bundle and bundle.folder.Parent == folder
-        and builtBase == base
-        and builtVariant == variant
-        and builtTier == tier.Name then
+    if SignatureKit.matches(bundle, base, variant, tier.Name, folder) then
         return
     end
 
     motionTime = 0
     folder:ClearAllChildren()
     bundle = nil
-    builtBase, builtVariant, builtTier = nil, nil, nil
     bundle = SignatureKit.build(folder, base, variant, tier.Name)
-    builtBase, builtVariant, builtTier = base, variant, tier.Name
     SignatureKit.update(bundle, 0, true)
 end
 
@@ -97,7 +88,6 @@ workspace.ChildRemoved:Connect(function(child)
         bind(nil)
         folder:ClearAllChildren()
         bundle = nil
-        builtBase, builtVariant, builtTier = nil, nil, nil
     end
 end)
 
