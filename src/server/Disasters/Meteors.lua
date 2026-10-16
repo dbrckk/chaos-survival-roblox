@@ -29,7 +29,9 @@ function D.start(ctx)
             marker.CastShadow = false
             marker.Material = Enum.Material.Neon
             marker.Color = Color3.fromRGB(255, 165, 60)
-            marker.Transparency = 0.15
+            -- A subtle impact wash, not a solid luminous floor that
+            -- hides the safe path before client warning contours load.
+            marker.Transparency = 0.65
             marker.Position = impactPosition
             marker.Parent = workspace
             ctx.Cleanup[#ctx.Cleanup+1] = marker
