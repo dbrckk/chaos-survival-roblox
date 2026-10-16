@@ -1417,11 +1417,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     entryGuides.Parent = arena
 
     for i, offset in ipairs(variant.SpawnOffsets) do
-        local spawnPosition = config.ArenaCenter + offset
+        -- Markers sit ON the arena floor, never as floating solid slabs
+        -- directly inside the player's feet or beneath a mezzanine.
+        local spawnPosition = config.ArenaCenter + Vector3.new(
+            offset.X, variant.BaseSize.Y * 0.5 + 0.14, offset.Z
+        )
         local s = part(
             spawnFolder,
             "Spawn" .. i,
-            Vector3.new(4.6, 0.7, 4.6),
+            Vector3.new(4.6, 0.12, 4.6),
             spawnPosition,
             theme.Detail:Lerp(Color3.new(1, 1, 1), 0.10),
             VisualTheme.Materials.Structure
@@ -1431,7 +1435,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             spawnPosition,
             config.ArenaCenter
         )
-        s.Transparency = 0.08
+        -- Spawns are cosmetic locators. The floor is the only support;
+        -- solid marker slabs formerly trapped avatars below raised decks.
+        s.CanCollide = false
+        s.CanTouch = false
+        s.CanQuery = false
+        s.Transparency = 0.34
 
         local guideColor = i % 2 == 0 and theme.Secondary or theme.Accent
         for side = -1, 1, 2 do
@@ -1444,7 +1453,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
                 VisualTheme.Materials.Glow
             )
             guide.CFrame = s.CFrame
-                * CFrame.new(side * 0.78, -0.32, -3.0)
+                * CFrame.new(side * 0.78, 0.04, -3.0)
                 * CFrame.Angles(0, math.rad(side * 34), 0)
             guide.Transparency = 0.22
         end
@@ -1453,7 +1462,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             arena,
             "SpawnGlow" .. i,
             Vector3.new(5.2, 0.12, 5.2),
-            spawnPosition + Vector3.new(0, -0.4, 0),
+            spawnPosition + Vector3.new(0, -0.03, 0),
             (i % 2 == 0) and theme.Secondary or theme.Accent,
             VisualTheme.Materials.Glow
         )
