@@ -96,6 +96,33 @@ describe("Kinetic arena signatures", function()
         expect(falseFlag).toBe(false)
     end)
 
+    it("reuses only live signatures with identical arena and VFX inputs", function()
+        local root = Instance.new("Folder")
+        local otherParent = Instance.new("Folder")
+        local base = Instance.new("Part")
+        local replacedBase = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        replacedBase.Size = base.Size
+
+        local built = ArenaSignatureKit.build(
+            root, base, "Classic", "Medium", VisualTheme
+        )
+        local matches = ArenaSignatureKit.matches
+        expect(matches(built, base, "Classic", "Medium", root)).toBe(true)
+        expect(matches(built, base, "Classic", "High", root)).toBe(false)
+        expect(matches(built, base, "Orbital", "Medium", root)).toBe(false)
+        expect(matches(built, replacedBase, "Classic", "Medium", root)).toBe(false)
+        expect(matches(built, base, "Classic", "Medium", otherParent)).toBe(false)
+        expect(matches(nil, base, "Classic", "Medium", root)).toBe(false)
+
+        built.folder:Destroy()
+        expect(matches(built, base, "Classic", "Medium", root)).toBe(false)
+        replacedBase:Destroy()
+        base:Destroy()
+        otherParent:Destroy()
+        root:Destroy()
+    end)
+
     it("builds four genuinely different tier-aware scenic monuments", function()
         local root = Instance.new("Folder")
         local base = Instance.new("Part")
