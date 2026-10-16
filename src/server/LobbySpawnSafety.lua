@@ -65,15 +65,15 @@ function LobbySpawnSafety.recover(player, character)
         return false
     end
 
-    -- Use a stable, unobstructed central-stage entry, not a client request.
-    -- HipHeight permits both R6 and R15 without moving the avatar into the
-    -- collision surface; the extra clearance lets Roblox settle naturally.
+    -- Restore to the same unobstructed flat-floor zone as the native spawn.
+    -- Keep this outside the central platform and practice pad collision path.
+    -- Both R6 and R15 need clearance above the actual floor surface.
     local clearance = math.max(3.5, humanoid.HipHeight
         + root.Size.Y * 0.5 + 1.0)
     local landing = CFrame.new(
-        platform.Position.X,
-        stageTop + clearance,
-        platform.Position.Z - 7
+        floor.Position.X,
+        floorTop + clearance,
+        floor.Position.Z - 15
     )
     character:PivotTo(landing)
     root.AssemblyLinearVelocity = Vector3.zero
