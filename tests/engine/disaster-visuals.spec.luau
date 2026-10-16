@@ -444,15 +444,19 @@ describe("Eleven physical disaster intro glyphs", function()
 end)
 
 describe("Bounded active meteor signatures", function()
-    it("caps comet trails at zero/three/six for low/mobile and high visuals", function()
+    it("caps comet trails at one/three/six for low/mobile and high visuals", function()
         local r = MeteorSignatureRules
-        expect(r.profile("Low", false).MaxTrails).toBe(0)
+        expect(r.profile("Low", false).MaxTrails).toBe(1)
         expect(r.profile("Medium", false).MaxTrails).toBe(3)
         expect(r.profile("High", false).MaxTrails).toBe(6)
         expect(r.profile("High", true).MaxTrails).toBe(0)
         expect(r.profile("Unknown", false).MaxTrails).toBe(0)
         local viewer = Vector3.new(0, 8, 0)
         local meteor = Vector3.new(0, 10, 35)
+        expect(r.shouldTrail("round", true, viewer, meteor,
+            "Low", false, 0)).toBe(true)
+        expect(r.shouldTrail("round", true, viewer, meteor,
+            "Low", false, 1)).toBe(false)
         expect(r.shouldTrail("round", true, viewer, meteor,
             "Medium", false, 0)).toBe(true)
         expect(r.shouldTrail("round", true, viewer, meteor,
@@ -477,10 +481,12 @@ describe("Bounded active meteor signatures", function()
 
     it("sculpts unique, cached ember silhouettes without extra Trail instances", function()
         local style = MeteorSignatureRules.trailStyle
+        local low = style("Low", false)
         local medium = style("Medium", false)
         local high = style("High", false)
-        expect(medium ~= nil and high ~= nil).toBe(true)
-        expect(style("Low", false)).toBe(nil)
+        expect(low ~= nil and medium ~= nil and high ~= nil).toBe(true)
+        expect(#low.WidthScale.Keypoints).toBe(4)
+        expect(low.LightEmission < medium.LightEmission).toBe(true)
         expect(style("High", true)).toBe(nil)
         expect(style("Unknown", false)).toBe(nil)
         -- One cached recipe per tier; live updates do not allocate sequences.
@@ -496,6 +502,7 @@ describe("Bounded active meteor signatures", function()
         expect(high.Span > medium.Span).toBe(true)
         expect(MeteorSignatureRules.profile("High", false).MaxTrails).toBe(6)
         expect(MeteorSignatureRules.profile("Medium", false).MaxTrails).toBe(3)
+        expect(MeteorSignatureRules.profile("Low", false).MaxTrails).toBe(1)
     end)
 
     it("ignores broken RoundState packets without resetting meteor signatures", function()
