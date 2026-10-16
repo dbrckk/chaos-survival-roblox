@@ -19,6 +19,8 @@ local SESSION_HANDOFF_WAIT_SECONDS = 8
 
 local active = {}
 local loading = {}
+-- PlayerRemoving may fire before Parent changes; weak keys prevent leaks.
+local departing = setmetatable({}, {__mode = "k"})
 local saving = {}
 local revisions = {}
 local savedRevisions = {}
@@ -153,6 +155,10 @@ function PlayerData.ensureWeeklyChallenges(player, nowTimestamp)
 end
 
 function PlayerData.load(player)
+    if player.Parent ~= Players or departing[player] == true then
+        return false
+    end
+
     if active[player] then
         return player:GetAttribute("DataPersistenceAvailable") == true
     end
@@ -191,11 +197,13 @@ function PlayerData.load(player)
     end
 
     local ok, savedOrError, blocked = tryClaimSession(false)
-    if ok and blocked and player.Parent == Players then
+    if ok and blocked and player.Parent == Players
+        and departing[player] ~= true then
         task.wait(SESSION_HANDOFF_WAIT_SECONDS * 0.5)
         ok, savedOrError, blocked = tryClaimSession(false)
     end
-    if ok and blocked and player.Parent == Players then
+    if ok and blocked and player.Parent == Players
+        and departing[player] ~= true then
         task.wait(SESSION_HANDOFF_WAIT_SECONDS * 0.5)
         ok, savedOrError, blocked = tryClaimSession(true)
     end
@@ -209,7 +217,7 @@ function PlayerData.load(player)
     -- a session, the departing player never reaches active/player save paths.
     -- Release the just-acquired token now; otherwise a rapid rejoin waits
     -- for forced handoff and can lose its initial persistence window.
-    if player.Parent ~= Players then
+    if player.Parent ~= Players or departing[player] == true then
         if ok then
             sessionTokens[player] = sessionToken
             local released = PlayerData.releaseSession(player)
@@ -219,6 +227,7 @@ function PlayerData.load(player)
             sessionTokens[player] = nil
         end
         loading[player] = nil
+        departing[player] = nil
         return false
     end
 
@@ -558,6 +567,9 @@ function PlayerData.init()
     end)
 
     Players.PlayerRemoving:Connect(function(player)
+        -- Mark departure before any yielding save; loader may still be in UpdateAsync.
+        departing[player] = true
+        local loadingAtDeparture = loading[player] == true
         local saved = PlayerData.save(player, true)
         if saved then
             PlayerData.releaseSession(player)
@@ -569,6 +581,10 @@ function PlayerData.init()
         revisions[player] = nil
         savedRevisions[player] = nil
         sessionTokens[player] = nil
+        -- Let an in-flight loader observe the departure and release its claim.
+        if not loadingAtDeparture then
+            departing[player] = nil
+        end
     end)
 
     for _, player in ipairs(Players:GetPlayers()) do
