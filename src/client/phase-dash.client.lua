@@ -304,16 +304,16 @@ task.spawn(function()
         local ready = active and grounded and remainingSeconds <= 0
         if ready and not introduced then
             introduced = true
-            introUntil = os.clock() + 7
+            introUntil = os.clock() + 3.5
         end
         button.Visible = active
         button.Active = ready
         intro.Visible = ready and os.clock() < introUntil
         if active then
             button.Size = UserInputService.TouchEnabled
-                and UDim2.fromOffset(91, 61) or UDim2.fromOffset(106, 57)
+                and UDim2.fromOffset(76, 48) or UDim2.fromOffset(106, 57)
             button.Position = UserInputService.TouchEnabled
-                and UDim2.new(1, -15, 1, -215)
+                and UDim2.new(1, -18, 1, -175)
                 or UDim2.new(1, -18, 1, -165)
             if remainingSeconds > 0 then
                 button.Text = string.format("%.1fs", remainingSeconds)
