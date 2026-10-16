@@ -98,6 +98,36 @@ On the **published staging experience** in the Roblox Android app:
 - **PROCHAIN IMPACT:** arms a single capture after the next visible,
   in-range, server-reported disaster impact.
 
+### On-device spawn / save / performance diagnostics
+
+On the isolated staging build only, a compact **three-line non-interactive HUD** appears
+next to the `STAGING · <commit-prefix>` watermark when using PHOTO + HUD:
+
+- **FPS / WORST / VFX tier / budget**: local 2.5-second FPS sampling, worst
+  observed frame duration, chosen adaptive VFX tier and current part/light/FX budget.
+- **ENTRY**: `LOBBY` means not actively in an arena, `RESCUED` means the
+  lobby spawn fallback has been used at least once this connection;
+  during READY or ROUND, `CLEAR`, `BLOCKED` or `CHECKING` mirrors the
+  server's arena placement status for active entrants. In ROUND,
+  `OUT` means eliminated, and `SPECTATE` means not a round participant.
+  `LOBBY` is **not** proof of a safe native spawn.
+- **SAVE**: `LOADING`, `READY`, `RETRY`, `TEMP` or `CONFLICT`.
+  `READY` means the session currently reports persistence available, **not**
+  that the current progress has already been written; only real rejoin tests
+  establish successful DataStore persistence.
+
+Orange text warns about sub-30 FPS, graphics over budget, blocked entry,
+temporary saves, save retry or session conflict. The commit provenance label
+is placed just above the diagnostics instead of overlapping it, and the panel
+fits the available Android portrait viewport width. This HUD does not fetch
+private data, expose tokens/IDs, make DataStore writes or add a frame listener.
+The expensive visual budget snapshot is sampled every four seconds, while
+READY/ROUND and save/spawn attribute changes **refresh the status text
+immediately**, so short READY phases are not missed. This has **no effect**
+on production builds without a valid ephemeral staging marker. Save one
+PHOTO + HUD in the lobby, one in the arena, and one after rejoining for
+diagnostics; record the full SHA in the GitHub staging publish artifact.
+
 The player must accept the save prompt. Open **Roblox menu → Captures**
 to save the original item to the device; attach it to the chat for
 review. None of the images/video are automatically uploaded to the repo

@@ -50,7 +50,9 @@ stampGui.Parent = player:WaitForChild("PlayerGui")
 local stampLabel = Instance.new("TextLabel")
 stampLabel.Name = "StagingCommit"
 stampLabel.AnchorPoint = Vector2.new(0, 1)
-stampLabel.Position = UDim2.new(0, 10, 1, -10)
+-- Keep commit provenance above the bottom-centred runtime panel. On
+-- portrait Android both occupied the same bottom strip and overlapped.
+stampLabel.Position = UDim2.new(0, 10, 1, -80)
 stampLabel.Size = UDim2.fromOffset(190, 24)
 stampLabel.BackgroundColor3 = UITheme.Colors.Panel
 stampLabel.BackgroundTransparency = 0.35
@@ -68,7 +70,7 @@ local telemetry = Instance.new("TextLabel")
 telemetry.Name = "StagingRuntimeBudget"
 telemetry.AnchorPoint = Vector2.new(0.5, 1)
 telemetry.Position = UDim2.new(0.5, 0, 1, -10)
-telemetry.Size = UDim2.fromOffset(290, 42)
+telemetry.Size = UDim2.fromOffset(300, 60)
 telemetry.BackgroundColor3 = UITheme.Colors.Panel
 telemetry.BackgroundTransparency = 0.22
 telemetry.BorderSizePixel = 0
@@ -80,22 +82,67 @@ telemetry.Text = "STAGING / profiling graphics..."
 telemetry.Parent = stampGui
 UITheme.addCorner(telemetry, UITheme.Corners.Medium)
 
+-- Health/provenance labels must refresh immediately: READY is only a
+-- few seconds long, and a four-second graphics sample could miss it.
+-- Expensive visual folder traversal remains on its existing 4-second timer.
+local performanceSummary = "FPS -- | WORST --ms | -- | --\nPARTS --   LIGHTS --   FX --"
+local performanceWarning = false
 local telemetryRunning = false
+
+local function renderRuntimeTelemetry()
+    if not stagingEnabled or not stampGui.Parent then return end
+    local save = "LOADING"
+    if player:GetAttribute("DataSaveConflict") == true then
+        save = "CONFLICT"
+    elseif player:GetAttribute("DataPersistenceAvailable") == true then
+        save = player:GetAttribute("LastSaveFailed") == true
+            and "RETRY" or "READY"
+    elseif player:GetAttribute("DataLoaded") == true then
+        save = "TEMP"
+    end
+
+    local entry = "LOBBY"
+    -- RoundParticipant is not set until a round actually starts, but
+    -- eliminated players can respawn in the lobby before it finishes.
+    -- Never report CLEAR for spectators or eliminated avatars.
+    if phase == "round" and player:GetAttribute("RoundEliminated") == true then
+        entry = "OUT"
+    elseif phase == "round"
+        and player:GetAttribute("RoundParticipant") ~= true then
+        entry = "SPECTATE"
+    elseif phase == "ready" or phase == "round" then
+        local clear = player:GetAttribute("ArenaSpawnClear")
+        entry = clear == true and "CLEAR"
+            or (clear == false and "BLOCKED" or "CHECKING")
+    elseif player:GetAttribute("LobbySpawnRecovered") == true then
+        entry = "RESCUED"
+    end
+
+    telemetry.Text = performanceSummary
+        .. string.format("\nENTRY %s   SAVE %s", entry, save)
+    telemetry.TextColor3 = (performanceWarning or entry == "BLOCKED"
+        or save == "CONFLICT" or save == "TEMP" or save == "RETRY")
+        and UITheme.Colors.Orange or UITheme.Colors.Text
+end
+
 local function startPerformanceTelemetry()
     if telemetryRunning then return end
     telemetryRunning = true
-    -- The existing juice controller owns the per-frame FPS sampler.
-    -- This staging-only 4 s task reads its measurements and counts graphics.
+    renderRuntimeTelemetry()
+    -- Reuse the authoritative FPS sampler. Only aggregate visual objects
+    -- every four seconds; phase and persistence status are event-driven.
     task.spawn(function()
         while stagingEnabled and gui.Parent do
             task.wait(4)
+            if not stagingEnabled or not gui.Parent then break end
             local fps = tonumber(player:GetAttribute("ClientObservedFps"))
             local worst = tonumber(player:GetAttribute("ClientObservedWorstFrameMs"))
             local tier = tostring(player:GetAttribute("VfxQualityTier") or "High")
             local budget = VisualBudgetRules.forTier(tier)
             local counts = VisualBudgetRules.collect(workspace)
             local status = VisualBudgetRules.status(tier, counts)
-            telemetry.Text = string.format(
+
+            performanceSummary = string.format(
                 "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
                 fps and tostring(fps) or "--",
                 worst and tostring(worst) or "--",
@@ -104,8 +151,8 @@ local function startPerformanceTelemetry()
                 counts.Lights, budget.Lights,
                 counts.Effects, budget.Effects
             )
-            telemetry.TextColor3 = ((fps and fps < 30) or status ~= "OK")
-                and UITheme.Colors.Orange or UITheme.Colors.Text
+            performanceWarning = ((fps and fps < 30) or status ~= "OK") == true
+            renderRuntimeTelemetry()
         end
         telemetryRunning = false
     end)
@@ -217,10 +264,14 @@ local function layoutForCamera()
     launcher.Position = UDim2.fromOffset(left, top)
     panel.Position = UDim2.fromOffset(left, top + 51)
     toast.Position = UDim2.fromOffset(left, top + 51)
-    -- Keep the panel narrow enough for portrait Android layouts.
+    -- Keep the capture menu and HUD diagnostics within narrow viewports.
     local width = mobile.veryNarrow and 182 or 194
     panel.Size = UDim2.fromOffset(width, 258)
     toast.Size = UDim2.fromOffset(width, 34)
+    telemetry.Size = UDim2.fromOffset(
+        math.min(300, math.max(120, viewport.X - 20)),
+        60
+    )
 end
 
 local function bindCamera()
@@ -452,8 +503,18 @@ roundEvent.OnClientEvent:Connect(function(state)
         armed = false
         refresh()
     end
+    renderRuntimeTelemetry()
 end)
 player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
+-- A screen capture during short READY / rejoin now shows the current
+-- server-owned state even if the 4 s visual budget timer has not elapsed.
+for _, attribute in ipairs({
+    "DataLoaded", "DataPersistenceAvailable", "DataSaveConflict",
+    "LastSaveFailed", "ArenaSpawnClear", "LobbySpawnRecovered",
+    "RoundParticipant", "RoundEliminated",
+}) do
+    player:GetAttributeChangedSignal(attribute):Connect(renderRuntimeTelemetry)
+end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 
 local function activateStagingMarker(child)
