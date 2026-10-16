@@ -192,6 +192,29 @@ Validate on the isolated staging experience with a real Android device:
 This is cosmetic/client-only: no server physics, scoring, DataStore ownership,
 paid content or public production publish is affected.
 
+### Ambient and service 3D scene-streaming acceptance
+
+This client fix watches the Arena's Base and VariantId for the locally owned
+ambient props, including delayed streaming and map replacement. It also
+coalesces direct structural service-prop rebuilds that can be requested
+multiple times when the map, variant and graphics tier arrive together.
+
+For each Classic/Towers/Crossroads/Orbital arena on real Android:
+
+- Join before the environment fully replicates, and confirm the correct
+  arena-specific ambient drones, transit markers or orbital satellites
+  appear without requiring a graphics-settings toggle.
+- Change arenas repeatedly; old ambient art must disappear promptly
+  and new art must match the current `VariantId`.
+- Verify the performance budget at Low/Medium/High, especially across
+  rapid tier changes. No duplicate locally owned `ArenaAmbientPropsLocal`
+  or `ArenaServicePropsLocal` children should accumulate.
+- Confirm ReduceMotion remains respected, critical hazard warnings are not
+  obstructed, and FPS/worst frame time is stable in a 30-minute run.
+
+These manual checks cannot be replaced by CI or synthetic screenshots.
+No server-owned gameplay geometry or production publishing is modified.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
