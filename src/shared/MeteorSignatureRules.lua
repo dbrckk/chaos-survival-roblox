@@ -1,8 +1,11 @@
 -- Runtime meteor trails are *visual only*. Cull at camera-relative range
 -- and cap total instances so multiple meteors do not exhaust mobile effects.
 local MeteorSignatureRules = {}
+local NONE = {MaxTrails = 0, Range = 0, Lifetime = 0}
 local PROFILES = {
-    Low = {MaxTrails = 0, Range = 0, Lifetime = 0},
+    -- A single near-camera comet silhouette makes Meteor Shower legible
+    -- even after the adaptive tier drops on an Android phone.
+    Low = {MaxTrails = 1, Range = 85, Lifetime = 0.10},
     Medium = {MaxTrails = 3, Range = 115, Lifetime = 0.15},
     High = {MaxTrails = 6, Range = 165, Lifetime = 0.23},
 }
@@ -11,6 +14,21 @@ local PROFILES = {
 -- These constant sequences are shared by every meteor and never allocated
 -- during the 0.25-second visibility scanner.
 local STYLES = {
+    Low = {
+        WidthScale = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.56),
+            NumberSequenceKeypoint.new(0.25, 0.68),
+            NumberSequenceKeypoint.new(0.65, 0.21),
+            NumberSequenceKeypoint.new(1, 0),
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.34),
+            NumberSequenceKeypoint.new(0.50, 0.58),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+        LightEmission = 0.54,
+        Span = 0.16,
+    },
     Medium = {
         WidthScale = NumberSequence.new({
             NumberSequenceKeypoint.new(0, 0.78),
@@ -52,8 +70,8 @@ function MeteorSignatureRules.trailStyle(tier, reducedMotion)
 end
 
 function MeteorSignatureRules.profile(tier, reducedMotion)
-    if reducedMotion == true then return PROFILES.Low end
-    return PROFILES[tostring(tier or "")] or PROFILES.Low
+    if reducedMotion == true then return NONE end
+    return PROFILES[tostring(tier or "")] or NONE
 end
 
 -- A RoundState packet is optional/late on join. Reject malformed packets
