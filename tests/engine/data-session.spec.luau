@@ -97,6 +97,34 @@ describe("Data session ownership", function()
         expect((rejoined :: any)[DataSession.TokenKey]).toBe("session-next")
     end)
 
+    it("permits immediate rejoin after a claimed load is abandoned", function()
+        -- The PlayerData loader releases a successfully claimed session
+        -- if PlayerRemoving happened while UpdateAsync was still running.
+        local claimed = DataSession.claim({
+            Coins = 73,
+            XP = 320,
+            CosmeticEquipped = "trail-aurora",
+        }, "departed-before-load", 200)
+        expect(claimed ~= nil).toBe(true)
+
+        local released = DataSession.release(claimed, "departed-before-load", 201)
+        expect(released ~= nil).toBe(true)
+        expect((released :: any).Coins).toBe(73)
+        expect((released :: any).XP).toBe(320)
+
+        local immediateRejoin = DataSession.claim(released, "new-join", 202, false)
+        expect(immediateRejoin ~= nil).toBe(true)
+        expect((immediateRejoin :: any).Coins).toBe(73)
+        expect((immediateRejoin :: any).XP).toBe(320)
+        expect((immediateRejoin :: any).CosmeticEquipped).toBe("trail-aurora")
+        expect((immediateRejoin :: any)[DataSession.TokenKey]).toBe("new-join")
+
+        -- A delayed release from the abandoned loader cannot clear a
+        -- session that another server has already acquired.
+        expect(DataSession.release(immediateRejoin, "departed-before-load", 203)
+            == nil).toBe(true)
+    end)
+
     it("refuses writes after a session has been released", function()
         local current = DataSession.claim({Coins = 10}, "session-a", 100)
         local released = DataSession.release(current, "session-a", 101)
