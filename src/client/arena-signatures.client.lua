@@ -21,19 +21,44 @@ local disconnectMapWatch = nil
 local motionTime = 0
 
 local function rebuild()
-    motionTime = 0
-    folder:ClearAllChildren()
-    bundle = nil
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local base = MapVisualReadiness.part(generated, "Arena", "Base")
     if not base or not base:IsA("BasePart") then
+        -- A streamed-out arena must release its local cosmetic instances.
+        motionTime = 0
+        folder:ClearAllChildren()
+        bundle = nil
         return
     end
+
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    -- Readiness, arena identity and graphics tier can replicate on separate
+    -- scheduler turns. If the requested sculpture is already alive and
+    -- matches all three inputs, keep it (including animation continuity).
+    if SignatureKit.matches(bundle, base, variant, tier.Name, folder) then
+        return
+    end
+
+    motionTime = 0
+    folder:ClearAllChildren()
+    bundle = nil
     bundle = SignatureKit.build(folder, base, variant, tier.Name)
     SignatureKit.update(bundle, 0, true)
+end
+
+-- Map streaming, a fresh GeneratedMap and a graphics-tier update can
+-- all signal the same frame. Build one set per deferred turn instead of
+-- allocating and destroying the entire landmark multiple times.
+local rebuildScheduled = false
+local function scheduleRebuild()
+    if rebuildScheduled then return end
+    rebuildScheduled = true
+    task.defer(function()
+        rebuildScheduled = false
+        rebuild()
+    end)
 end
 
 local function bind(generated)
@@ -45,7 +70,7 @@ local function bind(generated)
         disconnectMapWatch = MapVisualReadiness.watch(
             generated, "Arena", "Base",
             function()
-                task.defer(rebuild)
+                scheduleRebuild()
             end
         )
     end
@@ -54,7 +79,7 @@ end
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bind(child)
-        task.defer(rebuild)
+        scheduleRebuild()
     end
 end)
 
@@ -67,7 +92,7 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
+    scheduleRebuild()
 end)
 
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
@@ -93,7 +118,7 @@ state.OnClientEvent:Connect(function(snapshot)
 end)
 
 bind(workspace:FindFirstChild("GeneratedMap"))
-task.defer(rebuild)
+scheduleRebuild()
 
 task.spawn(function()
     while true do
