@@ -71,7 +71,11 @@ function D.start(ctx)
                 fallHeight,
                 math.sin(approachAngle) * 16
             )
-            meteor.Position = impactPosition + entryDrift
+            -- Tumble during descent so the textured rocky silhouette is
+            -- animated even without client particles. No spin forces or
+            -- physical interactions are applied to this anchored part.
+            meteor.CFrame = CFrame.new(impactPosition + entryDrift)
+                * CFrame.Angles(math.rad(18), approachAngle, math.rad(-38))
             meteor.Anchored = true
             meteor.CanCollide = false
             meteor.CanTouch = false
@@ -82,7 +86,10 @@ function D.start(ctx)
             TweenService:Create(
                 meteor,
                 TweenInfo.new(travelSeconds, Enum.EasingStyle.Linear),
-                {Position = impactVisualPosition}
+                {
+                    CFrame = CFrame.new(impactVisualPosition)
+                        * CFrame.Angles(math.rad(138), approachAngle + 1.2, math.rad(25)),
+                }
             ):Play()
 
             -- Do not remove the warning at the start of the meteor's fall.
