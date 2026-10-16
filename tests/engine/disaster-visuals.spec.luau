@@ -20,17 +20,19 @@ describe("Disaster visual identities", function()
         for _, tier in ipairs({"Low", "Medium", "High"}) do
             local meteor = ImpactSetpieceRules.get("Meteor", tier, false, 15)
             local bomb = ImpactSetpieceRules.get("Bomb", tier, false, 15)
+            expect(meteor ~= nil and bomb ~= nil).toBe(true)
+            expect(meteor.Prefix ~= bomb.Prefix).toBe(true)
+            expect(meteor.Material ~= bomb.Material).toBe(true)
+            expect(meteor.Count <= 7).toBe(true)
+            expect(bomb.Count <= 8).toBe(true)
             if tier == "Low" then
-                expect(meteor == nil and bomb == nil).toBe(true)
-            else
-                expect(meteor ~= nil and bomb ~= nil).toBe(true)
-                expect(meteor.Prefix ~= bomb.Prefix).toBe(true)
-                expect(meteor.Material ~= bomb.Material).toBe(true)
-                expect(meteor.Count <= 7).toBe(true)
-                expect(bomb.Count <= 8).toBe(true)
-                expect(ImpactSetpieceRules.finishCount("Meteor", tier, false) <= 4).toBe(true)
-                expect(ImpactSetpieceRules.finishCount("Bomb", tier, false) <= 4).toBe(true)
+                -- Two short-lived shards provide a readable impact without
+                -- the four mechanical finish fragments of richer tiers.
+                expect(meteor.Count).toBe(2)
+                expect(bomb.Count).toBe(2)
             end
+            expect(ImpactSetpieceRules.finishCount("Meteor", tier, false) <= 4).toBe(true)
+            expect(ImpactSetpieceRules.finishCount("Bomb", tier, false) <= 4).toBe(true)
         end
         expect(ImpactSetpieceRules.get("Meteor", "High", true, 12) == nil).toBe(true)
         expect(ImpactSetpieceRules.finishCount("Meteor", "High", true)).toBe(0)
@@ -132,9 +134,12 @@ describe("Disaster visual identities", function()
             expect(result == nil).toBe(true)
         end
         expect(#root:GetChildren()).toBe(0)
-        expect(ImpactSetpiece.spawn(root, {
+        local lowImpact = ImpactSetpiece.spawn(root, {
             kind = "Meteor", position = Vector3.zero, color = Color3.new(1, 1, 1),
-        }, "Low", false, ImpactSetpieceRules) == nil).toBe(true)
+        }, "Low", false, ImpactSetpieceRules)
+        expect(lowImpact ~= nil).toBe(true)
+        expect(#lowImpact:GetChildren()).toBe(2)
+        lowImpact:Destroy()
         root:Destroy()
     end)
 
@@ -203,7 +208,7 @@ describe("Disaster visual identities", function()
         expect(rules.fragment("Bomb", 1.5, 8, 12) == nil).toBe(true)
         expect(rules.finish("Bomb", 1, math.huge, 12) == nil).toBe(true)
         expect(rules.finish("Meteor", 5, 4, 12) == nil).toBe(true)
-        expect(rules.get("Meteor", "Low", false, 16) == nil).toBe(true)
+        expect(rules.get("Meteor", "Low", false, 16).Count).toBe(2)
         expect(rules.get("Meteor", "High", true, 16) == nil).toBe(true)
     end)
 
