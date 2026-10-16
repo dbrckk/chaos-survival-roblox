@@ -26,6 +26,26 @@ describe("Adaptive VFX quality", function()
         expect(VfxQuality.nextTier("Medium", 55)).toBe("High")
     end)
 
+    it("protects touch FPS without reducing desktop visual quality", function()
+        -- Short-lived 43–47 FPS mobile loads should not remain on High.
+        expect(VfxQuality.nextTier("High", 47, true)).toBe("Medium")
+        expect(VfxQuality.nextTier("High", 47, false)).toBe("High")
+        expect(VfxQuality.nextTier("High", 48, true)).toBe("High")
+
+        -- An ordinary 55–58 FPS touch sample is not sufficient to promote.
+        -- Existing multi-sample promotion hysteresis applies as well.
+        expect(VfxQuality.nextTier("Medium", 57, true)).toBe("Medium")
+        expect(VfxQuality.nextTier("Medium", 57, false)).toBe("High")
+        expect(VfxQuality.nextTier("Medium", 59, true)).toBe("High")
+
+        expect(VfxQuality.nextTier("Low", 45, true)).toBe("Low")
+        expect(VfxQuality.nextTier("Low", 45, false)).toBe("Medium")
+        expect(VfxQuality.nextTier("Low", 47, true)).toBe("Medium")
+        -- Emergency quality reductions stay immediate on all devices.
+        expect(VfxQuality.nextTier("Medium", 29, true)).toBe("Low")
+        expect(VfxQuality.nextTier("Medium", 29, false)).toBe("Low")
+    end)
+
     it("requires stable samples for promotions but not downgrades", function()
         expect(VfxQuality.requiredStableSamples("High", "Medium", false)).toBe(1)
         expect(VfxQuality.requiredStableSamples("Medium", "Low", true)).toBe(1)
