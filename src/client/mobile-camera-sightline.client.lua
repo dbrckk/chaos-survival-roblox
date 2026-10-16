@@ -14,7 +14,11 @@ local previousModifier = 0
 
 local function restore()
     if faded and faded.Parent then
-        faded.LocalTransparencyModifier = previousModifier
+        -- Yield to native Roblox camera/streaming writers if they adjusted
+        -- this modifier while our temporary fade was in effect.
+        if math.abs(faded.LocalTransparencyModifier - 0.72) < 0.001 then
+            faded.LocalTransparencyModifier = previousModifier
+        end
     end
     faded = nil
     previousModifier = 0
