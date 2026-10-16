@@ -7,6 +7,7 @@ VisualBudgetRules.LocalFolders = {
     "ArenaMidgroundMassLocal",
     "ArenaUnderstructureLocal",
     "ArenaHeroSceneryLocal",
+    "ArenaArchitecturalDetailsLocal",
     "ArenaSignatureLocal",
     "AerialSurveyLocal",
     "ArenaEdgeProfileLocal",
