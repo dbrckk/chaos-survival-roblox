@@ -107,7 +107,7 @@ next to the `STAGING · <commit-prefix>` watermark when using PHOTO + HUD:
   observed frame duration, chosen adaptive VFX tier and current part/light/FX budget.
 - **ENTRY**: `LOBBY` means not actively in an arena, `RESCUED` means the
   lobby spawn fallback has been used at least once this connection;
-  during a live round, `CLEAR`, `BLOCKED` or `CHECKING` mirrors the
+  during READY or ROUND, `CLEAR`, `BLOCKED` or `CHECKING` mirrors the
   server's arena placement status. `LOBBY` is **not** proof of a safe native spawn.
 - **SAVE**: `LOADING`, `READY`, `RETRY`, `TEMP` or `CONFLICT`.
   `READY` means the session currently reports persistence available, **not**
