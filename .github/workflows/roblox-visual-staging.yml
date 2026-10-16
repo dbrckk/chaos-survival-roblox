@@ -1,10 +1,11 @@
 name: Roblox Visual Staging (isolated)
-# Trigger isolated staging deploy after initial private experience setup (2026-10-15).
+# Automatically synchronize the isolated test experience with approved main changes.
+# Production publication is separate and requires its own release certification.
 
 on:
   push:
     branches:
-      - feat/visual-identity-hero-landmarks-20261008
+      - main
     paths:
       - "src/**"
       - "default.project.json"
@@ -88,7 +89,7 @@ jobs:
     if: >-
       ${{ needs.preflight.outputs.ready == 'true' &&
           github.repository == 'dbrckk/chaos-survival-roblox' &&
-          github.ref == 'refs/heads/feat/visual-identity-hero-landmarks-20261008' }}
+          github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
