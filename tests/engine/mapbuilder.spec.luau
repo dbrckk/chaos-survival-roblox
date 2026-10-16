@@ -26,18 +26,26 @@ describe("Chaos Survival engine", function()
         local lobbyDecor = lobby and lobby:FindFirstChild("Decor")
         expect(lobbyDecor ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("CenterPlatform") ~= nil).toBe(true)
-        -- Regression check: default Roblox spawn must be on solid lobby
-        -- ground, outside the raised platform and away from practice boosts.
+        -- Roblox may choose a point anywhere inside an 8x8 SpawnLocation,
+        -- not just its center. Require avatar clearance for the FULL
+        -- footprint from the solid raised stage, plus a floor landing area.
         local lobbySpawn = lobby and lobby:FindFirstChild("LobbySpawn")
+        local lobbyFloor = lobby and lobby:FindFirstChild("Floor")
         local stage = (lobbyDecor :: Folder):FindFirstChild("CenterPlatform")
         expect(lobbySpawn ~= nil and lobbySpawn:IsA("SpawnLocation")).toBe(true)
         if lobbySpawn and lobbySpawn:IsA("SpawnLocation")
-            and stage and stage:IsA("BasePart") then
+            and stage and stage:IsA("BasePart")
+            and lobbyFloor and lobbyFloor:IsA("BasePart") then
             local spawnLocal = stage.CFrame:PointToObjectSpace(lobbySpawn.Position)
-            expect(math.abs(spawnLocal.Z) > stage.Size.Z * 0.5 + 2.5).toBe(true)
+            local minClearanceZ = (stage.Size.Z + lobbySpawn.Size.Z) * 0.5 + 2
+            expect(spawnLocal.Z < -minClearanceZ).toBe(true)
             expect(lobbySpawn.CanCollide).toBe(false)
-            expect(math.abs(lobbySpawn.Position.Z - (Config.LobbyCenter.Z - 22)) > 5)
-                .toBe(true)
+            expect(math.abs(lobbySpawn.Position.X - lobbyFloor.Position.X)
+                + lobbySpawn.Size.X * 0.5 < lobbyFloor.Size.X * 0.5 - 2).toBe(true)
+            expect(math.abs(lobbySpawn.Position.Z - lobbyFloor.Position.Z)
+                + lobbySpawn.Size.Z * 0.5 < lobbyFloor.Size.Z * 0.5 - 2).toBe(true)
+            expect(lobbySpawn.Position.Y >
+                lobbyFloor.Position.Y + lobbyFloor.Size.Y * 0.5).toBe(true)
         end
         expect((lobbyDecor :: Folder):FindFirstChild("CenterGlow") ~= nil).toBe(true)
         expect((lobbyDecor :: Folder):FindFirstChild("ArenaGateTop") ~= nil).toBe(true)
