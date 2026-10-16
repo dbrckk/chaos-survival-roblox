@@ -57,6 +57,9 @@ VisualBudgetRules.LocalFolders = {
     "RoundCelebrationPulsesLocal",
     "RookieWorldGuideLocal",
     "TornadoDebrisLocal",
+    -- Persistent, non-colliding tornado warning perimeter; retain it in
+    -- the existing tiered VFX budget and runtime scenery audit.
+    "TornadoWindBoundaryLocal",
 }
 
 VisualBudgetRules.Budgets = {
