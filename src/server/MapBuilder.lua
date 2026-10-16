@@ -1341,11 +1341,13 @@ local function buildLobby(root, config)
     local lobbySpawn = Instance.new("SpawnLocation")
     lobbySpawn.Name = "LobbySpawn"
     lobbySpawn.Size = Vector3.new(8, 1, 8)
-    -- Keep the ENTIRE 8-stud native spawn footprint clear of the raised
-    -- 24-stud stage, including space for R6/R15 avatars at its edges.
-    -- The flat lobby floor is still underneath, and the sign above is
-    -- non-colliding. Never rely on delayed rescue for an ordinary join.
-    lobbySpawn.Position = config.LobbyCenter + Vector3.new(0, 2.8, -21)
+    -- Keep the ENTIRE native 8x8 footprint off the raised centre stage
+    -- AND off the solid "02 SURVIVE" loop panel at z=-18. The staging
+    -- sign overhead is non-colliding, and the flat lobby floor extends
+    -- beyond every edge of the spawn footprint.
+    -- Face the arena gate (+Z) so first-time players see where to go.
+    local spawnPosition = config.LobbyCenter + Vector3.new(0, 2.8, -27)
+    lobbySpawn.CFrame = CFrame.lookAt(spawnPosition, spawnPosition + Vector3.new(0, 0, 1))
     lobbySpawn.Anchored = true
     lobbySpawn.Neutral = true
     lobbySpawn.Transparency = 1
