@@ -40,13 +40,19 @@ function Kit.recipe(kind, diameter, progress, reduced, pulse, tier)
     local wave = reduced and 0.5 or math.clamp(tonumber(pulse) or 0.5, 0, 1)
     return {
         Diameter = d * (reduced and 1.12 or (1.10 + wave * 0.12)),
-        OuterTransparency = math.clamp(
-            0.16 + alpha * 0.35 + (reduced and 0 or wave * 0.09), 0.12, 0.75
-        ),
-        InnerTransparency = math.clamp(0.56 + alpha * 0.23, 0.56, 0.85),
-        Thickness = tier == "Low" and 3 or (tier == "High" and 5 or 4),
+        -- The dangerous footprint must become MORE legible as impact
+        -- approaches. The old contour faded at the worst possible moment.
+        -- Reduced-motion stays fixed and never pulses.
+        OuterTransparency = reduced and 0.25
+            or math.clamp(0.24 + alpha * 0.075 + wave * 0.018, 0.18, 0.40),
+        InnerTransparency = reduced and 0.56
+            or math.clamp(0.53 + alpha * 0.07, 0.53, 0.64),
+        Thickness = tier == "Low" and 3 or (tier == "High" and 6 or 5),
         InnerVisible = tier ~= "Low",
-        TicksVisible = tier == "High" and not reduced,
+        -- Medium phones get directional ticks only near impact; High
+        -- retains the authored full-time bearings.
+        TicksVisible = not reduced
+            and (tier == "High" or (tier == "Medium" and alpha >= 0.58)),
     }
 end
 
