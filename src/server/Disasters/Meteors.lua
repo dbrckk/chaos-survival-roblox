@@ -61,7 +61,17 @@ function D.start(ctx)
             -- the adaptive client ribbon supplies its warm silhouette.
             meteor.Material = Enum.Material.Basalt
             meteor.Color = Color3.fromRGB(156, 91, 66)
-            meteor.Position = impactPosition + Vector3.new(0, fallHeight, 0)
+            -- Approach at a shallow horizontal angle rather than falling
+            -- straight down. This is purely a visual starting pose: the
+            -- damage point, warning radius and 0.5s travel time do not change.
+            local approachAngle = impactPosition.X * 0.041
+                + impactPosition.Z * 0.067
+            local entryDrift = Vector3.new(
+                math.cos(approachAngle) * 16,
+                fallHeight,
+                math.sin(approachAngle) * 16
+            )
+            meteor.Position = impactPosition + entryDrift
             meteor.Anchored = true
             meteor.CanCollide = false
             meteor.CanTouch = false
