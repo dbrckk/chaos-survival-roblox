@@ -52,6 +52,57 @@ describe("Lobby survivor return formation", function()
         root:Destroy()
     end)
 
+    it("lands three R15 AI survivors away from the raised stage and players", function()
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local lobby = root:FindFirstChild("Lobby")
+        local spawn = lobby:FindFirstChild("LobbySpawn")
+        local floor = lobby:FindFirstChild("Floor")
+        local decor = lobby:FindFirstChild("Decor")
+        local stage = decor:FindFirstChild("CenterPlatform")
+        local humanPositions = LobbyReturnFormation.positions(spawn, floor, decor, 8)
+        local positions = {}
+        local floorTop = floor.Position.Y + floor.Size.Y * 0.5
+
+        for slot = 1, 3 do
+            local landing = LobbyReturnFormation.botLanding(
+                spawn, floor, decor, slot, 2.2, 1.0
+            )
+            expect(landing ~= nil).toBe(true)
+            if landing then
+                local position = landing.Position
+                table.insert(positions, position)
+                expect(math.abs(position.Y - (floorTop + 4.2)) < 0.01).toBe(true)
+                local stagePosition = stage.CFrame:PointToObjectSpace(position)
+                local outsideStage = math.abs(stagePosition.X) >= stage.Size.X * 0.5 + 2.6
+                    or math.abs(stagePosition.Z) >= stage.Size.Z * 0.5 + 2.6
+                expect(outsideStage).toBe(true)
+                for _, human in ipairs(humanPositions) do
+                    expect((Vector3.new(position.X, 0, position.Z)
+                        - Vector3.new(human.X, 0, human.Z)).Magnitude >= 5.2).toBe(true)
+                end
+                for index = 1, #positions - 1 do
+                    expect((position - positions[index]).Magnitude >= 5.2).toBe(true)
+                end
+                for _, part in ipairs(decor:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        local top = part.Position.Y + part.Size.Y * 0.5
+                        local bottom = part.Position.Y - part.Size.Y * 0.5
+                        if top > floorTop + 0.8 and bottom < floorTop + 8 then
+                            local localPart = part.CFrame:PointToObjectSpace(position)
+                            local overlaps = math.abs(localPart.X) < part.Size.X * 0.5 + 2.6
+                                and math.abs(localPart.Z) < part.Size.Z * 0.5 + 2.6
+                            expect(overlaps).toBe(false)
+                        end
+                    end
+                end
+            end
+        end
+
+        expect(LobbyReturnFormation.botLanding(spawn, floor, decor, 0, 2, 1)).toBe(nil)
+        expect(LobbyReturnFormation.botLanding(spawn, floor, decor, 4, 2, 1)).toBe(nil)
+        root:Destroy()
+    end)
+
     it("returns distinct coordinates for repeated formation requests", function()
         local root = MapBuilder.build(Config, "Classic", ArenaVariants)
         local lobby = root:FindFirstChild("Lobby")

@@ -23,6 +23,9 @@ local AISurvivorNetworkOwnership = if script
 local LobbyActivities = if script
     then require(script.Parent.LobbyActivities)
     else require("./LobbyActivities")
+local LobbyReturnFormation = if script
+    then require(script.Parent.LobbyReturnFormation)
+    else require("./LobbyReturnFormation")
 local AnimationCatalog = if script
     then require(ReplicatedStorage.Shared.AnimationCatalog)
     else require("../shared/AnimationCatalog")
@@ -133,13 +136,32 @@ local function humanCount()
     return #Players:GetPlayers()
 end
 
-local function getLobbyPosition(slot)
-    local offsets = {
-        Vector3.new(-10, 3.2, 8),
-        Vector3.new(11, 3.2, 7),
-        Vector3.new(0, 3.2, -9),
-    }
-    return config.LobbyCenter + offsets[((slot - 1) % #offsets) + 1]
+local function getLobbyPosition(record)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local lobby = generated and generated:FindFirstChild("Lobby")
+    local spawn = lobby and lobby:FindFirstChild("LobbySpawn")
+    local floor = lobby and lobby:FindFirstChild("Floor")
+    local decor = lobby and lobby:FindFirstChild("Decor")
+    local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
+    local root = record.model and record.model:FindFirstChild("HumanoidRootPart")
+    local hip = humanoid and humanoid.HipHeight or 2
+    local halfRoot = root and root.Size.Y * 0.5 or 1
+
+    local landing = LobbyReturnFormation.botLanding(
+        spawn, floor, decor, record.slot, hip, halfRoot
+    )
+    if landing then return landing end
+
+    -- Fail safely if a custom/incomplete map cannot offer enough distinct
+    -- landing slots. Never fall back inside the raised centre-stage slab.
+    if spawn and spawn:IsA("SpawnLocation")
+        and floor and floor:IsA("BasePart") then
+        local top = floor.Position.Y + floor.Size.Y * 0.5
+        local clearance = math.max(3.5, hip + halfRoot + 1)
+        return CFrame.new(spawn.Position.X, top + clearance, spawn.Position.Z)
+            * spawn.CFrame.Rotation
+    end
+    return CFrame.new(config.LobbyCenter + Vector3.new(0, 5, -27))
 end
 
 local function sortedParts(folder)
@@ -734,7 +756,7 @@ local function sendToLobby(record)
     record.resultAction = nil
     record.resultActionUntil = 0
     record.resultTarget = nil
-    pivotRecord(record, getLobbyPosition(record.slot))
+    pivotRecord(record, getLobbyPosition(record))
 end
 
 local function sendToArena(record)

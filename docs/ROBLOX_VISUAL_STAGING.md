@@ -218,6 +218,29 @@ Verify in isolated Roblox Android staging:
 No server collisions, mobility impulses, scoring, DataStore or monetization
 were changed by this client-only guidance update.
 
+### Solo AI presence: collision-safe bot return locations
+
+The three solo-fill AI survivors now return to separate flat-floor locations
+in the lobby. Previously their fixed offsets sat inside or against the edge
+of the raised centre stage, with insufficient R15 foot clearance. The new
+server-owned landing selection uses the same collision-aware lobby geometry
+check as human survivor returns and preserves the rig's native facing.
+
+For an authenticated Android or Studio playtest:
+
+- Join alone: verify three visibly moving AI survivors before the first vote.
+- Finish or lose a round: observe the AI returning without being trapped
+  below the raised stage, inside a pylon or overlapping returning players.
+- Repeat through all four rotating arenas, fast phase transitions and
+  reconnects. Confirm bot voting, social gestures, mobility-pad usage,
+  hazard reactions and round-survivor counting still work.
+- Test a four-human round where no artificial players should remain in
+  the active roster. This is **not certified** by source/unit tests alone.
+
+The native player SpawnLocation is unchanged. This only changes where
+server-controlled R15 AI rigs are initially placed or returned between
+rounds; combat, rewards, collision rules and network ownership are unchanged.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
