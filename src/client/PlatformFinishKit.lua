@@ -46,6 +46,41 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     return part
 end
 
+-- StreamingEnabled does not guarantee the order in which platform Parts
+-- enter a client's GetChildren() result. A consistent natural-name order
+-- keeps each platform's cosmetic identity and Low-tier budget stable
+-- between Android sessions, reconnects and late-replicated siblings.
+function PlatformFinishKit.orderedPlatforms(container)
+    if not container then return {} end
+    local ordered = {}
+    for _, child in ipairs(container:GetChildren()) do
+        if child:IsA("BasePart") then
+            table.insert(ordered, child)
+        end
+    end
+    table.sort(ordered, function(a, b)
+        local aPrefix, aNumber = string.match(a.Name, "^(.-)(%d+)$")
+        local bPrefix, bNumber = string.match(b.Name, "^(.-)(%d+)$")
+        if aPrefix and aPrefix == bPrefix then
+            local ai, bi = tonumber(aNumber), tonumber(bNumber)
+            if ai and bi and ai ~= bi then
+                return ai < bi
+            end
+        end
+        if a.Name ~= b.Name then
+            return a.Name < b.Name
+        end
+        -- Named duplicates are unusual but can occur in streamed or
+        -- procedural content; use spatial ties for a stable visual order.
+        local ap, bp = a.Position, b.Position
+        if ap.X ~= bp.X then return ap.X < bp.X end
+        if ap.Z ~= bp.Z then return ap.Z < bp.Z end
+        if ap.Y ~= bp.Y then return ap.Y < bp.Y end
+        return false
+    end)
+    return ordered
+end
+
 function PlatformFinishKit.build(parent, platform, variant, tier, theme)
     local names = NAMES[variant]
     if not parent or not platform or not platform:IsA("BasePart")
