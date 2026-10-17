@@ -81,6 +81,20 @@ function PlatformFinishKit.orderedPlatforms(container)
     return ordered
 end
 
+-- Procedural platforms are named PlatformN / SkybridgeN by MapBuilder.
+-- Use that server-authored identity for alternate Low-tier decoration:
+-- the selected subset must not flip when Platform1 streams in AFTER
+-- Platform2 or when a skybridge arrives later.
+function PlatformFinishKit.visualIndex(platform, fallbackIndex)
+    local suffix = platform and string.match(platform.Name, "(%d+)$")
+    local number = suffix and tonumber(suffix)
+    if number and number >= 1 and number < 10000
+        and number % 1 == 0 then
+        return number
+    end
+    return math.max(1, math.floor(tonumber(fallbackIndex) or 1))
+end
+
 function PlatformFinishKit.build(parent, platform, variant, tier, theme)
     local names = NAMES[variant]
     if not parent or not platform or not platform:IsA("BasePart")
