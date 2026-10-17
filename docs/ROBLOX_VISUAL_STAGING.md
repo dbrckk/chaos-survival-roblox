@@ -259,6 +259,25 @@ client-owned attachments and listeners.
 - Native Android and signed-in Studio testing remain mandatory; a successful
   CI run alone does not certify on-device behavior.
 
+### Streamed solo AI nameplates and Android touch readability
+
+Solo AI models, `AISurvivor` attributes, Heads, BillboardGuis, and TextLabels
+may arrive in distinct replication batches. The revised client listens for
+late identity and nameplate descendants, disconnects stale model listeners on
+stream-out and only reapplies presentation on **actual phase** or graphics
+tier changes, not every countdown second.
+
+In isolated staging on a physical Android device:
+- Join alone and confirm all visible survivor bots acquire their correct names,
+  including late arrivals and after disconnect/reconnect.
+- Rotate all four arenas and spectator/result phases. Labels must not linger
+  on destroyed models and should recover after streaming resumes.
+- Compare Low touch graphics with Medium/High and desktop: only distant
+  Low-touch bot labels shorten their max draw distance. Nearby names remain
+  legible; no player-vs-bot gameplay distinction changes.
+- Record PHOTO + HUD FPS and worst-frame timing during 30-minute solo play;
+  green CI alone is not a rendering/performance measurement.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
