@@ -123,6 +123,61 @@ describe("Kinetic arena signatures", function()
         root:Destroy()
     end)
 
+    it("eases Final Rush kinetic signatures without new pieces or flashing", function()
+        local motionRate = ArenaSignatureKit.motionRate
+        expect(motionRate(0)).toBe(1)
+        expect(motionRate(1) > 1.30 and motionRate(1) <= 1.32).toBe(true)
+        expect(motionRate(0.5) > 1 and motionRate(0.5) < motionRate(1)).toBe(true)
+        expect(motionRate(-20)).toBe(1)
+        expect(motionRate(20)).toBe(motionRate(1))
+        for _, invalid in ipairs({math.huge, -math.huge, 0 / 0, "fast"}) do
+            expect(motionRate(invalid)).toBe(1)
+        end
+
+        local root = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            local built = ArenaSignatureKit.build(
+                root, base, arenaId, "High", VisualTheme
+            )
+            local n = #built.parts
+            local foundation = built.folder:FindFirstChild("SignatureFoundationLight")
+            expect(foundation ~= nil).toBe(true)
+            ArenaSignatureKit.update(built, 1.25, false, 0)
+            local restingPulse = foundation.Transparency
+            ArenaSignatureKit.update(built, 1.25, false, 1)
+            expect(foundation.Transparency < restingPulse).toBe(true)
+            expect(#built.parts).toBe(n)
+
+            if arenaId == "Orbital" then
+                local heart = built.folder:FindFirstChild("OrbitalGyroscopeHeart")
+                ArenaSignatureKit.update(built, 1.25, false, 0)
+                local normalSize = heart.Size.X
+                ArenaSignatureKit.update(built, 1.25, false, 1)
+                expect(heart.Size.X > normalSize).toBe(true)
+            elseif arenaId == "Crossroads" then
+                local signal = built.folder:FindFirstChild("CrossroadAnimatedSignal1")
+                ArenaSignatureKit.update(built, 1.25, false, 0)
+                local normalTransparency = signal.Transparency
+                ArenaSignatureKit.update(built, 1.25, false, 1)
+                expect(signal.Transparency <= normalTransparency).toBe(true)
+            end
+
+            -- Reduced-motion always returns to the same authored rest pose,
+            -- regardless of Final Rush and without added flashes.
+            ArenaSignatureKit.update(built, 9, true, 1)
+            local stillColor = foundation.Color
+            local stillTransparency = foundation.Transparency
+            ArenaSignatureKit.update(built, 22, true, 0)
+            expect(foundation.Transparency).toBe(stillTransparency)
+            expect(foundation.Color).toBe(stillColor)
+            built.folder:Destroy()
+        end
+        base:Destroy()
+        root:Destroy()
+    end)
+
     it("builds four genuinely different tier-aware scenic monuments", function()
         local root = Instance.new("Folder")
         local base = Instance.new("Part")
