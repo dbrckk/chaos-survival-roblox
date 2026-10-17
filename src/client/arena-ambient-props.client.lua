@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -199,55 +200,66 @@ local function rebuild()
     applyPhaseVisibility()
 end
 
-local mapConnection = nil
+local disconnectMapWatch = nil
+local watchedMap = nil
+local rebuildPending = false
+
+local function scheduleRebuild()
+    if rebuildPending then return end
+    rebuildPending = true
+    task.defer(function()
+        rebuildPending = false
+        -- Source is resolved at execution time, so map swaps cannot
+        -- rebuild stale art from a removed Arena instance.
+        rebuild()
+    end)
+end
 
 local function bindGeneratedMap(generated)
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
-
+    watchedMap = generated
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.defer(rebuild)
-            end
-        end)
+        -- Arena can replicate before Base or VariantId. The shared
+        -- watcher detects all three, including later stream-out.
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", scheduleRebuild
+        )
+    else
+        clear()
+        currentArena = nil
     end
 end
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
         bindGeneratedMap(child)
-        task.defer(rebuild)
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bindGeneratedMap(nil)
-        clear()
-        currentArena = nil
+    if child == watchedMap then
+        bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
     end
 end)
 
-bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
-
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
-end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
     if phase == "round" and lastPhase ~= "round" then
         roundVisualMode = (roundVisualMode % 3) + 1
     end
     lastPhase = phase
-
     applyPhaseVisibility()
 end)
 
-task.defer(rebuild)
+bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
+scheduleRebuild()
 
 task.spawn(function()
     while true do
