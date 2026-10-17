@@ -17,6 +17,19 @@ describe("Spectator target stability", function()
         expect(Rules.isSpectating(false, false, false)).toBe(false)
     end)
 
+    it("retains the spectator camera across malformed RoundState packets", function()
+        expect(Rules.roundActive({phase = "round", seconds = 15})).toBe(true)
+        expect(Rules.roundActive({phase = "ready"})).toBe(false)
+        expect(Rules.roundActive({phase = "result"})).toBe(false)
+        expect(Rules.roundActive({phase = "waiting"})).toBe(false)
+        for _, invalid in ipairs({false, 7, "round", function() end, {}}) do
+            expect(Rules.roundActive(invalid)).toBe(nil)
+        end
+        expect(Rules.roundActive({phase = 4})).toBe(nil)
+        expect(Rules.roundActive({phase = true})).toBe(nil)
+        expect(Rules.roundActive(nil)).toBe(nil)
+    end)
+
     it("only spectates living AI survivors committed to this round", function()
         expect(Rules.isEligibleBot(true, 100)).toBe(true)
         expect(Rules.isEligibleBot(true, 1)).toBe(true)

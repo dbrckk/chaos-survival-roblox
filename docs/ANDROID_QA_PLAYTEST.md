@@ -59,6 +59,19 @@ a disabled Jumping state. Repeat with both Roblox UseJumpPower modes and
 R6/R15 avatars. Record a real device capture and Studio client/server logs.
 Automated rule tests are not evidence that these device cases passed.
 
+## Spectator camera replacement / rapid respawn QA
+
+On the exact isolated staging build, eliminate a player during a round,
+cycle the remaining human and AI survivors, and test a mid-round spectator
+join. Confirm the camera follows a **living participant** even after a
+camera reset, avatar removal or rapid character replacement. Repeat at
+poor network quality and on Android. A late old character must not steal
+camera focus from the selected survivor; when returning to the lobby,
+the current local character must receive camera control. Record video
+and client/server output from authenticated Studio/device testing.
+The automated spectator-state regression is not a substitute for those
+hands-on checks.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
