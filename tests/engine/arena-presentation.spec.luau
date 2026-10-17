@@ -390,6 +390,43 @@ describe("Late-replicated visual map readiness", function()
         mechanics:Destroy()
     end)
 
+    it("notifies mobility FX when a pad marker flips or is streamed away", function()
+        local mechanics = Instance.new("Folder")
+        local refreshes = 0
+        local dispose = MapVisualReadiness.watchChildrenAttributes(
+            mechanics, {"ArenaMobilityPad"}, function()
+                refreshes += 1
+            end
+        )
+        local baseCount = refreshes
+        local pad = Instance.new("Part")
+        pad.Parent = mechanics
+        expect(refreshes).toBe(baseCount + 1)
+        pad:SetAttribute("ArenaMobilityPad", true)
+        expect(refreshes).toBe(baseCount + 2)
+        pad:SetAttribute("ArenaMobilityPad", false)
+        expect(refreshes).toBe(baseCount + 3)
+        pad:SetAttribute("ArenaMobilityPad", true)
+        expect(refreshes).toBe(baseCount + 4)
+
+        -- Removing a streamed pad updates the client once, but the
+        -- removed pad must never keep signalling into the old map.
+        pad.Parent = nil
+        expect(refreshes).toBe(baseCount + 5)
+        pad:SetAttribute("ArenaMobilityPad", false)
+        expect(refreshes).toBe(baseCount + 5)
+
+        local replacement = Instance.new("Part")
+        replacement.Parent = mechanics
+        expect(refreshes).toBe(baseCount + 6)
+        dispose()
+        replacement:SetAttribute("ArenaMobilityPad", true)
+        expect(refreshes).toBe(baseCount + 6)
+        pad:Destroy()
+        replacement:Destroy()
+        mechanics:Destroy()
+    end)
+
     it("detects a lobby floor that appears after its parent model", function()
         local generated = Instance.new("Folder")
         local calls = 0
