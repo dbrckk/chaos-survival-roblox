@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
+local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
@@ -255,6 +256,49 @@ describe("Chaos Survival engine", function()
 
         local swapped = MapBuilder.buildArena(Config, "Classic", ArenaVariants)
         expect(swapped:FindFirstChild("HelixCircuit") == nil).toBe(true)
+        root:Destroy()
+    end)
+
+    it("returns sixteen survivors to separated, solid-free lobby slots", function()
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local lobby = root:FindFirstChild("Lobby")
+        local spawn = lobby and lobby:FindFirstChild("LobbySpawn")
+        local floor = lobby and lobby:FindFirstChild("Floor")
+        local decor = lobby and lobby:FindFirstChild("Decor")
+        expect(lobby ~= nil and spawn ~= nil and floor ~= nil and decor ~= nil).toBe(true)
+
+        local positions = LobbyReturnFormation.positions(spawn, floor, decor, 16)
+        expect(#positions).toBe(16)
+        expect(#LobbyReturnFormation.positions(nil, nil, nil, 3)).toBe(0)
+
+        local floorTop = floor.Position.Y + floor.Size.Y * 0.5
+        for index, candidate in ipairs(positions) do
+            local onFloor = floor.CFrame:PointToObjectSpace(candidate)
+            expect(math.abs(onFloor.X) + 2.6 < floor.Size.X * 0.5).toBe(true)
+            expect(math.abs(onFloor.Z) + 2.6 < floor.Size.Z * 0.5).toBe(true)
+
+            for _, obstacle in ipairs(decor:GetDescendants()) do
+                if obstacle:IsA("BasePart") and obstacle.CanCollide then
+                    local high = obstacle.Position.Y + obstacle.Size.Y * 0.5
+                    local low = obstacle.Position.Y - obstacle.Size.Y * 0.5
+                    if high > floorTop + 0.8 and low < floorTop + 8 then
+                        local localCandidate = obstacle.CFrame:PointToObjectSpace(candidate)
+                        local intersects = math.abs(localCandidate.X)
+                            < obstacle.Size.X * 0.5 + 2.6
+                            and math.abs(localCandidate.Z)
+                            < obstacle.Size.Z * 0.5 + 2.6
+                        expect(intersects).toBe(false)
+                    end
+                end
+            end
+
+            for otherIndex = index + 1, #positions do
+                local delta = candidate - positions[otherIndex]
+                local horizontal = Vector3.new(delta.X, 0, delta.Z)
+                expect(horizontal.Magnitude >= 6.4).toBe(true)
+            end
+        end
+
         root:Destroy()
     end)
 

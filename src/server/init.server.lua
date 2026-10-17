@@ -28,6 +28,7 @@ end
 local MapBuilder = require(script.MapBuilder)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
+local LobbyReturnFormation = require(script.LobbyReturnFormation)
 local LobbyActivities = require(script.LobbyActivities)
 local PlayerData = require(script.PlayerData)
 local PlayerReadiness = require(script.PlayerReadiness)
@@ -513,7 +514,7 @@ end
 -- Survivors must be back in the safe lobby before the next map hot-swap.
 -- A finished round is the ONLY time this transition runs; hazards, physics
 -- and elimination during an active round remain server authoritative.
-local function returnSurvivorToLobby(player)
+local function returnSurvivorToLobby(player, returnPosition)
     if player.Parent ~= Players then return false end
 
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -533,10 +534,12 @@ local function returnSurvivorToLobby(player)
 
     local floorTop = floor.Position.Y + floor.Size.Y * 0.5
     local clearance = math.max(3.5, humanoid.HipHeight + root.Size.Y * 0.5 + 1.0)
+    local target = typeof(returnPosition) == "Vector3"
+        and returnPosition or spawn.Position
     character:PivotTo(CFrame.new(
-        spawn.Position.X,
+        target.X,
         floorTop + clearance,
-        spawn.Position.Z
+        target.Z
     ) * spawn.CFrame.Rotation)
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
@@ -1977,14 +1980,28 @@ while true do
         task.wait(1)
     end
 
-    for _, p in ipairs(contestants) do
+    -- Allocate distinct, collision-checked arrival positions before the
+    -- next arena swaps in. Previously every survivor was pivoted onto the
+    -- same 8x8 native SpawnLocation and avatars could overlap on return.
+    local lobby = workspace:FindFirstChild("GeneratedMap")
+    lobby = lobby and lobby:FindFirstChild("Lobby")
+    local returnPositions = LobbyReturnFormation.positions(
+        lobby and lobby:FindFirstChild("LobbySpawn"),
+        lobby and lobby:FindFirstChild("Floor"),
+        lobby and lobby:FindFirstChild("Decor"),
+        #contestants
+    )
+    for index, p in ipairs(contestants) do
         if p.Parent == Players then
+            local wasEliminated = p:GetAttribute("RoundEliminated") == true
             p:SetAttribute("RoundParticipant", false)
             p:SetAttribute("RoundEliminated", false)
-            -- Preserve earned progress and results, then return surviving
-            -- characters to the lobby before the next arena is rebuilt.
-            -- Eliminated characters keep Roblox's ordinary respawn handling.
-            returnSurvivorToLobby(p)
+            -- Only surviving contestants are teleported; an eliminated
+            -- player who respawned during RESULTS stays at their native
+            -- lobby spawn instead of being moved twice.
+            if not wasEliminated then
+                returnSurvivorToLobby(p, returnPositions[index])
+            end
         end
     end
 end
