@@ -241,6 +241,33 @@ The native player SpawnLocation is unchanged. This only changes where
 server-controlled R15 AI rigs are initially placed or returned between
 rounds; combat, rewards, collision rules and network ownership are unchanged.
 
+### Mobility-pad VFX in slow Android streaming
+
+The native pads, their server-defined mobility impulse and the four arena
+layouts are unchanged. The **client-only** mobility emitter, highlight and
+pad light now rebind when Arena / Mechanics / pad Parts replicate late, even
+when `ArenaMobilityPad` arrives after the Part. The renderer no longer
+abandons an arena whose replication takes more than five seconds.
+
+For a real Android staging playtest:
+
+- Join while the arena is still streaming; each marked mobility pad should
+  acquire a visible outline and VFX once its marker arrives. Check all four
+  arenas, particularly Towers' elevated mobility pads.
+- Swap between Low, Medium and High quality after entering a round; the
+  pads must not accumulate duplicate highlights or particle emitters.
+- Enable an Overdrive round: a pad appearing late must immediately inherit
+  the live accent colors, brightness and emission rate, not default colors.
+- Rejoin, respawn, rotate maps and stream pads out/in; removed pad effects
+  must be cleaned up and recreated on the current pad only.
+- Capture PHOTO + HUD and compare 30-minute FPS and memory to the previous
+  staging candidate. Test Reduced Motion, touch control readability and
+  4-player Studio sessions separately.
+
+Automated engine tests check marker change/removal and watcher cleanup;
+they cannot certify real Android rendering. No server physics, rewards,
+paid features or production publish is changed.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
