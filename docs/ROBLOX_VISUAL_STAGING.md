@@ -241,6 +241,22 @@ The native player SpawnLocation is unchanged. This only changes where
 server-controlled R15 AI rigs are initially placed or returned between
 rounds; combat, rewards, collision rules and network ownership are unchanged.
 
+### Mobility pad VFX: accurate client budget telemetry
+
+The PHOTO + HUD graphics budget now counts client-owned
+`MobilityPulseLocal` particle emitters and `MobilityPadHighlightLocal`
+highlights nested inside server-owned `Arena/Mechanics` mobility pads.
+Previously these local GPU objects were absent from the effect total. The
+server pad geometry, `MobilityPadLight` and unrelated server effects are
+**excluded** to avoid double-counting.
+
+- On real Android, compare Low/Medium/High VFX totals with visible pads
+  across Classic, Towers, Crossroads and Orbital.
+- During late marker replication, map replacement and round switches,
+  verify counts return to baseline instead of monotonically growing.
+- Capture PHOTO + HUD with the exact staging commit and 30-minute soak.
+  The budget audit is observability, not proof of stable device FPS.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
