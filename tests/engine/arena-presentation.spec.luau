@@ -375,16 +375,28 @@ describe("Late-replicated visual map readiness", function()
         nextBase.Parent = nextArena
         local beforeOverlap = callsOnSwap
         nextArena.Parent = swapping
-        expect(MapVisualReadiness.part(swapping, "Arena", "Base")).toBe(oldBase)
-        expect(currentBase).toBe(oldBase)
-        expect(callsOnSwap).toBe(beforeOverlap)
+        -- Roblox does not promise which identically named sibling
+        -- FindFirstChild selects. The watcher must always agree with it.
+        local overlapBase = MapVisualReadiness.part(swapping, "Arena", "Base")
+        expect(currentBase).toBe(overlapBase)
+        if overlapBase == oldBase then
+            expect(callsOnSwap).toBe(beforeOverlap)
+        else
+            expect(overlapBase).toBe(nextBase)
+            expect(callsOnSwap).toBe(beforeOverlap + 1)
+        end
 
+        local beforeRemoval = callsOnSwap
         oldArena.Parent = nil
         expect(MapVisualReadiness.part(swapping, "Arena", "Base")).toBe(nextBase)
         expect(currentBase).toBe(nextBase)
-        expect(callsOnSwap).toBe(beforeOverlap + 1)
+        expect(callsOnSwap).toBe(
+            beforeRemoval + (if overlapBase == oldBase then 1 else 0)
+        )
         nextArena:SetAttribute("VariantId", "Orbital")
-        expect(callsOnSwap).toBe(beforeOverlap + 2)
+        expect(callsOnSwap).toBe(
+            beforeRemoval + (if overlapBase == oldBase then 2 else 1)
+        )
         nextBase:Destroy()
         expect(currentBase == nil).toBe(true)
         stopSwap()
