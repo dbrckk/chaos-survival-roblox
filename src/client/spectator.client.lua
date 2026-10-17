@@ -294,6 +294,17 @@ local function bindCamera()
         viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsive)
     end
     applyResponsive()
+    -- Roblox may replace CurrentCamera during streaming or a respawn.
+    -- Restore the selected spectator target immediately instead of waiting
+    -- for the next one-second RoundState update.
+    if roundActive and card.Visible and spectateIndex then
+        task.defer(function()
+            if workspace.CurrentCamera == camera
+                and roundActive and card.Visible then
+                spectateIndex(false)
+            end
+        end)
+    end
 end
 
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
@@ -545,11 +556,20 @@ end)
 
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
-player.CharacterAdded:Connect(function()
-    task.wait(0.1)
+-- A delayed Humanoid from an older respawn must not restore its camera
+-- after the newest character has become active on a slow mobile client.
+local spawnVersion = 0
+player.CharacterAdded:Connect(function(spawnedCharacter)
+    spawnVersion += 1
+    local version = spawnVersion
+    local spawnedHumanoid = spawnedCharacter:WaitForChild("Humanoid", 5)
+    if not spawnedHumanoid or not spawnedHumanoid:IsA("Humanoid")
+        or version ~= spawnVersion or player.Character ~= spawnedCharacter then
+        return
+    end
+
     local eliminated = player:GetAttribute("RoundEliminated") == true
     local participant = player:GetAttribute("RoundParticipant") == true
-
     if SpectatorTargetRules.isSpectating(
         roundActive, participant, eliminated
     ) then
@@ -560,8 +580,12 @@ player.CharacterAdded:Connect(function()
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    -- Ignore invalid snapshots: Roblox should not permanently stop the
+    -- spectator controller because of an unexpected payload.
+    local nextActive = SpectatorTargetRules.roundActive(state)
+    if nextActive == nil then return end
     latestState = state
-    roundActive = state.phase == "round"
+    roundActive = nextActive
     refreshHazardIdentity(state)
     refresh()
 end)

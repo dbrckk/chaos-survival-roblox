@@ -6,6 +6,15 @@ function SpectatorTargetRules.isSpectating(roundActive, participant, eliminated)
         and (eliminated == true or participant ~= true)
 end
 
+-- Invalid RoundState packets must not crash or reset a live spectator camera.
+-- A known non-round phase ends spectating; malformed payloads are ignored.
+function SpectatorTargetRules.roundActive(snapshot)
+    if type(snapshot) ~= "table" or type(snapshot.phase) ~= "string" then
+        return nil
+    end
+    return snapshot.phase == "round"
+end
+
 -- A living AI rig may still be in the lobby, between respawn and ready.
 -- Spectators must only follow active survivors from the current arena.
 function SpectatorTargetRules.isEligibleBot(inRound, health)
