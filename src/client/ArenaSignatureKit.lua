@@ -440,7 +440,22 @@ function ArenaSignatureKit.matches(bundle, arenaBase, variant, tierName, parent)
         and bundle.tier == tierName
 end
 
-function ArenaSignatureKit.update(bundle, elapsed, reduceMotion)
+-- At final rush, the *existing* animated parts accelerate gradually.
+-- Never increase geometry/lighting count or exceed a small mobile-friendly
+-- 32% motion rate increase. Invalid inputs safely fall back to 1x.
+local function normalizedRush(intensity)
+    if type(intensity) ~= "number" or intensity ~= intensity
+        or math.abs(intensity) == math.huge then
+        return 0
+    end
+    return math.clamp(intensity, 0, 1)
+end
+
+function ArenaSignatureKit.motionRate(intensity)
+    return 1 + normalizedRush(intensity) * 0.32
+end
+
+function ArenaSignatureKit.update(bundle, elapsed, reduceMotion, rushIntensity)
     if not bundle or not bundle.folder.Parent then
         return
     end
@@ -449,6 +464,7 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion)
     local now = if reduceMotion == true or parsed == nil
         or parsed ~= parsed or math.abs(parsed) == math.huge
         or parsed < 0 or parsed > 1e7 then 0 else parsed
+    local rush = reduceMotion == true and 0 or normalizedRush(rushIntensity)
     for _, entry in ipairs(bundle.animated) do
         local p = entry.part
         if p.Parent then
@@ -457,7 +473,8 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion)
                 -- Reduced motion restores exactly the authored rest opacity.
                 p.Transparency = reduceMotion == true and entry.transparency
                     or math.clamp(entry.transparency
-                        + math.sin(now * 0.72) * 0.045, 0, 1)
+                        + math.sin(now * 0.72) * 0.045
+                        - rush * 0.07, 0, 1)
             elseif entry.role == "radar" then
                 p.CFrame = entry.frame * CFrame.Angles(0, now * 0.47, 0)
             elseif entry.role == "elevator" then
@@ -469,10 +486,11 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion)
             elseif entry.role == "signal" then
                 local pulse = reduceMotion and 0.5
                     or (math.sin(now * 2.5 + entry.index * 1.45) + 1) * 0.5
-                p.Transparency = 0.48 - pulse * 0.30
+                p.Transparency = 0.48 - pulse * (0.30 + rush * 0.08)
                 p.Color = entry.color:Lerp(Color3.new(1, 1, 1), pulse * 0.18)
             elseif entry.role == "heart" then
-                local sizeScale = 1 + math.sin(now * 1.5) * 0.045
+                local sizeScale = 1 + math.sin(now * 1.5)
+                    * (0.045 + rush * 0.018)
                 p.Size = Vector3.new(2.25, 2.25, 2.25) * sizeScale
             elseif entry.role == "ring" then
                 local reverse = entry.index < 0

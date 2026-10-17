@@ -278,6 +278,29 @@ when dozens of pad effects survived streaming transitions.
 This only improves diagnostics; GPU utilization and frame pacing still
 require physical-device measurement.
 
+### Final Rush: kinetic monuments and motion accessibility
+
+Each arena already has a different authored moving 3D monument (Classic
+radar, Towers lift, Crossroads signal gantry, Orbital gyroscope). During
+the danger climax, the existing motion clock now smoothly accelerates by
+up to 32%, while the existing foundation luminaire, Crossroads signals
+and Orbital heart pulse more clearly. **There are no additional Parts,
+Lights, particle emitters, scripts, remotes or frame loops.** All cosmetic
+effects remain off the server's gameplay/collision path.
+
+On Android and Studio staging:
+
+- Inspect all four monuments during READY, ordinary ROUND, Final Rush
+  and return to lobby. The transition should be smooth rather than
+  snapping a rotating radar or gyroscope to a new angle.
+- Toggle ReduceMotion on and off during Final Rush: the authored rest
+  pose must remain stable when enabled, without pulsing or teleportation.
+- Compare Low/Medium/High VFX tiers, exact staging SHA, frame pacing and
+  visual counts with PHOTO + HUD in a 30-minute round-cycle soak.
+- Real device captures and authenticated Studio playtesting are still
+  required; automated geometry/animation tests do not certify AAA visual
+  quality or mobile thermals.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For

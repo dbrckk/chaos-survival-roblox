@@ -15,10 +15,13 @@ folder.Parent = workspace
 local phase = "waiting"
 local bundle = nil
 local disconnectMapWatch = nil
+local watchedMap = nil
 -- Locally integrated visual time is independent of server clock and Roblox
 -- uptime. New rounds, motion preferences and map swaps begin from a calm
 -- authored pose instead of teleporting moving sculptures to an arbitrary phase.
 local motionTime = 0
+local finalRush = false
+local rushBlend = 0
 
 local function rebuild()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -27,6 +30,7 @@ local function rebuild()
     if not base or not base:IsA("BasePart") then
         -- A streamed-out arena must release its local cosmetic instances.
         motionTime = 0
+        rushBlend = 0
         folder:ClearAllChildren()
         bundle = nil
         return
@@ -42,6 +46,7 @@ local function rebuild()
     end
 
     motionTime = 0
+    rushBlend = 0
     folder:ClearAllChildren()
     bundle = nil
     bundle = SignatureKit.build(folder, base, variant, tier.Name)
@@ -62,6 +67,8 @@ local function scheduleRebuild()
 end
 
 local function bind(generated)
+    if watchedMap == generated then return end
+    watchedMap = generated
     if disconnectMapWatch then
         disconnectMapWatch()
         disconnectMapWatch = nil
@@ -76,18 +83,23 @@ local function bind(generated)
     end
 end
 
+-- Treat streaming transitions as a change of the *current* map only.
+-- A late removal from an older instance must not dispose the new map's
+-- watcher, and an already-present replacement must get its own rebuild.
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
         bind(child)
         scheduleRebuild()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bind(nil)
+    if child == watchedMap then
+        bind(workspace:FindFirstChild("GeneratedMap"))
         folder:ClearAllChildren()
         bundle = nil
+        scheduleRebuild()
     end
 end)
 
@@ -97,6 +109,7 @@ end)
 
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     motionTime = 0
+    rushBlend = 0
     if bundle then
         SignatureKit.update(bundle, 0, true)
     end
@@ -110,8 +123,11 @@ state.OnClientEvent:Connect(function(snapshot)
     local isActive = nextPhase == "round" or nextPhase == "ready"
     if wasActive ~= isActive then
         motionTime = 0
+        rushBlend = 0
     end
     phase = nextPhase
+    finalRush = nextPhase == "round" and type(snapshot) == "table"
+        and snapshot.finalRush == true
     if bundle and not isActive then
         SignatureKit.update(bundle, 0, true)
     end
@@ -135,8 +151,12 @@ task.spawn(function()
                 and player:GetAttribute("ReduceMotion") ~= true
                 and bundle and bundle.folder.Parent
             then
-                motionTime += math.clamp(tonumber(dt) or 0, 0, 0.25)
-                SignatureKit.update(bundle, motionTime, false)
+                local step = math.clamp(tonumber(dt) or 0, 0, 0.25)
+                local targetRush = phase == "round" and finalRush and 1 or 0
+                -- Ease in/out: no sudden angular jump when Final Rush begins.
+                rushBlend += (targetRush - rushBlend) * math.min(1, step * 2.4)
+                motionTime += step * SignatureKit.motionRate(rushBlend)
+                SignatureKit.update(bundle, motionTime, false, rushBlend)
             end
         else
             task.wait(0.60)
