@@ -215,20 +215,21 @@ local function rebuild()
     for _, platform in ipairs(PlatformFinishKit.orderedPlatforms(platforms)) do
         if platform:IsA("BasePart") then
             index += 1
-            if tier.Name == "Low" and index % 2 == 0 then
+            local visualIndex = PlatformFinishKit.visualIndex(platform, index)
+            if tier.Name == "Low" and visualIndex % 2 == 0 then
                 continue
             end
 
             PlatformFinishKit.build(folder, platform, variant, tier.Name, theme)
 
             if variant == "Towers" then
-                decorateTowers(platform, index, theme, tier)
+                decorateTowers(platform, visualIndex, theme, tier)
             elseif variant == "Crossroads" then
-                decorateCrossroads(platform, index, theme, tier, base.Position)
+                decorateCrossroads(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Orbital" then
-                decorateOrbital(platform, index, theme, tier, base.Position)
+                decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             else
-                decorateClassic(platform, index, theme, tier)
+                decorateClassic(platform, visualIndex, theme, tier)
             end
         end
     end
