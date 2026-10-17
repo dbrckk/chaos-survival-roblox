@@ -138,6 +138,7 @@ jobs:
             "tests/engine/flow-combo.spec.luau",
             "tests/engine/hazard-warning.spec.luau",
             "tests/engine/lobby-activities.spec.luau",
+            "tests/engine/lobby-return-formation.spec.luau",
             "tests/engine/mapbuilder.spec.luau",
             "tests/engine/movement-safety.spec.luau",
             "tests/engine/round-challenge.spec.luau",
