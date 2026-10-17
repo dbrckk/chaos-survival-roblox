@@ -63,6 +63,75 @@ describe("visual budget rules", function()
         light:Destroy()
     end)
 
+    it("audits marked arena mobility pad effects without counting server lighting", function()
+        local root = Instance.new("Folder")
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = root
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = generated
+        local mechanics = Instance.new("Folder")
+        mechanics.Name = "Mechanics"
+        mechanics.Parent = arena
+
+        local pads = {}
+        for i = 1, 3 do
+            local pad = Instance.new("Part")
+            pad.Name = "MobilityPad" .. i
+            pad:SetAttribute("ArenaMobilityPad", true)
+            pad.Parent = mechanics
+
+            local serverLight = Instance.new("PointLight")
+            serverLight.Name = "MobilityPadLight"
+            serverLight.Parent = pad
+            local serverEmitter = Instance.new("ParticleEmitter")
+            serverEmitter.Name = "UnrelatedServerEmitter"
+            serverEmitter.Parent = pad
+
+            local attachment = Instance.new("Attachment")
+            attachment.Name = "LocalMobilityVfx"
+            attachment.Parent = pad
+            local emitter = Instance.new("ParticleEmitter")
+            emitter.Name = "MobilityPulseLocal"
+            emitter.Parent = attachment
+
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "MobilityPadHighlightLocal"
+            highlight.Parent = pad
+            pads[i] = pad
+        end
+
+        local metrics, audited = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(0)
+        expect(metrics.Lights).toBe(0)
+        expect(metrics.Effects).toBe(6)
+        expect(audited).toBe(3)
+
+        -- Late marker removal immediately excludes a pad from local budget
+        -- without confusing server-owned VFX with local ownership.
+        pads[1]:SetAttribute("ArenaMobilityPad", false)
+        metrics, audited = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(4)
+        expect(audited).toBe(2)
+
+        pads[2]:FindFirstChild("LocalMobilityVfx"):Destroy()
+        metrics, audited = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(3)
+        expect(audited).toBe(2)
+
+        pads[3]:Destroy()
+        metrics, audited = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(1)
+        expect(audited).toBe(1)
+
+        pads[2]:FindFirstChild("MobilityPadHighlightLocal"):Destroy()
+        metrics, audited = VisualBudgetRules.collect(root)
+        expect(metrics.Effects).toBe(0)
+        expect(audited).toBe(0)
+        root:Destroy()
+    end)
+
     it("counts four client practice-pad emitters and highlights nested under the lobby", function()
         local root = Instance.new("Folder")
         local generated = Instance.new("Folder")
