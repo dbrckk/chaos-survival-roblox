@@ -5,8 +5,23 @@ local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
+local LobbySpawnSafety = require("../../src/server/LobbySpawnSafety")
 
 describe("Lobby survivor return formation", function()
+    it("recovers embedded or immobilized lobby rigs without nudging healthy arrivals", function()
+        local check = LobbySpawnSafety.needsRecovery
+        -- A normal rig can float within one stud of the landing surface
+        -- while the engine settles without requiring a server teleport.
+        expect(check(9.0, 9.0, false, false)).toBe(false)
+        expect(check(8.05, 9.0, false, false)).toBe(false)
+        expect(check(7.99, 9.0, false, false)).toBe(true)
+        -- Raised centre-stage collisions are checked against its top.
+        expect(check(5.0, 7.0, false, false)).toBe(true)
+        -- An anchored or PlatformStand rig is still stranded at normal Y.
+        expect(check(9.0, 9.0, true, false)).toBe(true)
+        expect(check(9.0, 9.0, false, true)).toBe(true)
+    end)
+
     it("returns zero positions for invalid inputs or zero contestants", function()
         expect(#LobbyReturnFormation.positions(nil, nil, nil, 3)).toBe(0)
         local root = MapBuilder.build(Config, "Classic", ArenaVariants)

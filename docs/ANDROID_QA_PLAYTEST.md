@@ -72,6 +72,18 @@ and client/server output from authenticated Studio/device testing.
 The automated spectator-state regression is not a substitute for those
 hands-on checks.
 
+## Bounded lobby spawn recovery QA
+
+On the exact isolated staging commit, join a fresh Roblox Android server,
+respawn rapidly and reconnect during intermission. Inspect the first
+three seconds after HumanoidRootPart and Humanoid exist: R6/R15 characters
+must stand and move freely at the unobstructed lobby entry. Verify a
+late-settling rig embedded in the raised stage or left anchored is restored,
+but a healthy avatar is never pulled backwards after moving. Start a round
+within the recheck window: no lobby recovery may relocate contestants.
+Repeat with low network quality; capture logs and video. Only a real device
+session can mark these checks passed.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.

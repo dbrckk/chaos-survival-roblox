@@ -6,7 +6,10 @@ local Players = game:GetService("Players")
 
 local LobbySpawnSafety = {}
 
-local CHECK_DELAY = 0.9
+-- Only inspect the initial lobby spawn during the first few seconds.
+-- Delayed rig assembly or settling can occur after one check on Android.
+-- No continuous rescue loop and never during gameplay.
+local CHECK_INTERVALS = {0.9, 0.9, 1.3}
 local LOBBY_RADIUS = 52
 local EPSILON = 1.0
 
@@ -37,8 +40,15 @@ local function centerStageFloor(platform, position)
         and math.abs(localPosition.Z) < platform.Size.Z * 0.5
 end
 
+-- Shared predicate makes every bounded verification use the same rule.
+function LobbySpawnSafety.needsRecovery(footY, expectedSurface, anchored, platformStand)
+    return anchored == true or platformStand == true
+        or footY < expectedSurface - EPSILON
+end
+
 function LobbySpawnSafety.recover(player, character)
     if player.Parent ~= Players or player.Character ~= character
+        or not character or not character:IsDescendantOf(workspace)
         or player:GetAttribute("RoundParticipant") == true then
         return false
     end
@@ -61,9 +71,9 @@ function LobbySpawnSafety.recover(player, character)
     local expectedSurface = centerStageFloor(platform, root.Position)
         and stageTop or floorTop
     local footY = root.Position.Y - humanoid.HipHeight - root.Size.Y * 0.5
-    local embedded = footY < expectedSurface - EPSILON
-    local immobilized = root.Anchored or humanoid.PlatformStand
-    if not embedded and not immobilized then
+    if not LobbySpawnSafety.needsRecovery(
+        footY, expectedSurface, root.Anchored, humanoid.PlatformStand
+    ) then
         return false
     end
 
@@ -94,11 +104,23 @@ end
 local function inspectCharacter(player, character)
     task.spawn(function()
         -- CharacterAdded can precede the root/humanoid on slow connections.
-        local root = character:WaitForChild("HumanoidRootPart", 6)
-        local humanoid = character:WaitForChild("Humanoid", 6)
-        if not root or not humanoid then return end
-        task.wait(CHECK_DELAY)
-        LobbySpawnSafety.recover(player, character)
+        local root = character:WaitForChild("HumanoidRootPart", 8)
+        local humanoid = character:WaitForChild("Humanoid", 8)
+        if not root or not root:IsA("BasePart")
+            or not humanoid or not humanoid:IsA("Humanoid") then
+            return
+        end
+        -- Recheck a fixed number of times. Some rigs settle only after
+        -- the first physics step; never watch/teleport the avatar forever.
+        for _, interval in ipairs(CHECK_INTERVALS) do
+            task.wait(interval)
+            if player.Parent ~= Players or player.Character ~= character
+                or player:GetAttribute("RoundParticipant") == true
+                or humanoid.Health <= 0 or root.Parent ~= character then
+                break
+            end
+            LobbySpawnSafety.recover(player, character)
+        end
     end)
 end
 
