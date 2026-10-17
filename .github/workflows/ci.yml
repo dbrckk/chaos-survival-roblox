@@ -39,6 +39,10 @@ jobs:
           find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
             xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
 
+      - name: Self-test real-engine Cloud task batching
+        shell: bash
+        run: python tools/prepare_cloud_batches.py --self-test
+
       - name: Enforce persistent purchase session guards
         shell: bash
         run: |

@@ -212,23 +212,24 @@ local function rebuild()
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local index = 0
 
-    for _, platform in ipairs(platforms:GetChildren()) do
+    for _, platform in ipairs(PlatformFinishKit.orderedPlatforms(platforms)) do
         if platform:IsA("BasePart") then
             index += 1
-            if tier.Name == "Low" and index % 2 == 0 then
+            local visualIndex = PlatformFinishKit.visualIndex(platform, index)
+            if tier.Name == "Low" and visualIndex % 2 == 0 then
                 continue
             end
 
             PlatformFinishKit.build(folder, platform, variant, tier.Name, theme)
 
             if variant == "Towers" then
-                decorateTowers(platform, index, theme, tier)
+                decorateTowers(platform, visualIndex, theme, tier)
             elseif variant == "Crossroads" then
-                decorateCrossroads(platform, index, theme, tier, base.Position)
+                decorateCrossroads(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Orbital" then
-                decorateOrbital(platform, index, theme, tier, base.Position)
+                decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             else
-                decorateClassic(platform, index, theme, tier)
+                decorateClassic(platform, visualIndex, theme, tier)
             end
         end
     end
@@ -239,6 +240,7 @@ local disconnectPlatformsWatch = nil
 local platformsConnection = nil
 local platformsRemoveConnection = nil
 local watchedPlatforms = nil
+local watchedMap = nil
 local rebuildPending = false
 
 local function scheduleRebuild()
@@ -270,6 +272,7 @@ local function watchPlatforms(generated)
 end
 
 local function bindGeneratedMap(generated)
+    watchedMap = generated
     if disconnectBaseWatch then disconnectBaseWatch() end
     if disconnectPlatformsWatch then disconnectPlatformsWatch() end
     disconnectBaseWatch = nil
@@ -294,16 +297,18 @@ local function bindGeneratedMap(generated)
 end
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
         bindGeneratedMap(child)
         scheduleRebuild()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bindGeneratedMap(nil)
+    if child == watchedMap then
+        bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
         clear()
+        scheduleRebuild()
     end
 end)
 

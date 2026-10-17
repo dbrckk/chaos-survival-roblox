@@ -512,6 +512,100 @@ describe("Arena architectural secondary motifs", function()
 end)
 
 
+describe("Streaming-independent platform identity", function()
+    it("sorts late-replicated platforms naturally, independent of arrival order", function()
+        local folder = Instance.new("Folder")
+        local names = {"Platform10", "Platform3", "Platform1", "Platform2"}
+        local parts = {}
+        for _, name in ipairs(names) do
+            local part = Instance.new("Part")
+            part.Name = name
+            part.Parent = folder
+            parts[name] = part
+        end
+        local decoration = Instance.new("Folder")
+        decoration.Name = "NotAPlatform"
+        decoration.Parent = folder
+
+        local ordered = PlatformFinishKit.orderedPlatforms(folder)
+        expect(#ordered).toBe(4)
+        expect(ordered[1]).toBe(parts.Platform1)
+        expect(ordered[2]).toBe(parts.Platform2)
+        expect(ordered[3]).toBe(parts.Platform3)
+        expect(ordered[4]).toBe(parts.Platform10)
+
+        -- Rejoining / streaming out and back must not change which
+        -- platforms get the odd-numbered Low-tier visual budget.
+        parts.Platform2.Parent = nil
+        parts.Platform2.Parent = folder
+        local again = PlatformFinishKit.orderedPlatforms(folder)
+        for index, part in ipairs(ordered) do
+            expect(again[index]).toBe(part)
+        end
+
+        expect(#PlatformFinishKit.orderedPlatforms(nil)).toBe(0)
+        folder:Destroy()
+    end)
+
+    it("keeps Low-tier subset stable before earlier platforms stream in", function()
+        local folder = Instance.new("Folder")
+        local two = Instance.new("Part")
+        two.Name = "Platform2"
+        two.Parent = folder
+        local ten = Instance.new("Part")
+        ten.Name = "Skybridge10"
+        ten.Parent = folder
+
+        -- A client might first receive only these even-numbered Parts.
+        local before = PlatformFinishKit.orderedPlatforms(folder)
+        expect(#before).toBe(2)
+        for _, platform in ipairs(before) do
+            expect(PlatformFinishKit.visualIndex(platform, 1) % 2).toBe(0)
+        end
+
+        local one = Instance.new("Part")
+        one.Name = "Platform1"
+        one.Parent = folder
+        local three = Instance.new("Part")
+        three.Name = "Skybridge3"
+        three.Parent = folder
+        local after = PlatformFinishKit.orderedPlatforms(folder)
+        local selected = {}
+        for index, platform in ipairs(after) do
+            local visualIndex = PlatformFinishKit.visualIndex(platform, index)
+            if visualIndex % 2 == 1 then
+                selected[platform.Name] = true
+            end
+        end
+        expect(selected.Platform1).toBe(true)
+        expect(selected.Skybridge3).toBe(true)
+        expect(selected.Platform2 == nil).toBe(true)
+        expect(selected.Skybridge10 == nil).toBe(true)
+
+        local unexpected = Instance.new("Part")
+        unexpected.Name = "CustomPad"
+        expect(PlatformFinishKit.visualIndex(unexpected, 5)).toBe(5)
+        unexpected:Destroy()
+        folder:Destroy()
+    end)
+
+    it("breaks duplicate platform names by stable position", function()
+        local folder = Instance.new("Folder")
+        local right = Instance.new("Part")
+        right.Name = "MovingPlatform"
+        right.Position = Vector3.new(15, 1, 0)
+        right.Parent = folder
+        local left = Instance.new("Part")
+        left.Name = "MovingPlatform"
+        left.Position = Vector3.new(-15, 1, 0)
+        left.Parent = folder
+        local ordered = PlatformFinishKit.orderedPlatforms(folder)
+        expect(ordered[1]).toBe(left)
+        expect(ordered[2]).toBe(right)
+        folder:Destroy()
+    end)
+end)
+
 describe("Moving platform premium trim kit", function()
     it("creates four distinctive, bounded, non-colliding welded motifs", function()
         local parent = Instance.new("Folder")

@@ -15,15 +15,15 @@ permissions:
 
 jobs:
   engine:
-    name: engine (${{ matrix.suite }})
+    name: engine (all five suites)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      # Prevent simultaneous submissions from this run to the same Roblox place.
-      max-parallel: 1
-      matrix:
-        suite: [gameplay, matrix, core_a, core_b1, core_b2]
+    timeout-minutes: 80
+    # All five shards share ONE job and ONE cross-branch mutex.
+    # The previous max-parallel: 1 was per workflow run, so six PRs
+    # could still hammer the same owner-wide Roblox execution quota.
+    concurrency:
+      group: roblox-cloud-owner-single-flight
+      cancel-in-progress: false
     env:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
@@ -200,6 +200,20 @@ jobs:
           print(f"All {len(actual)} engine specs are assigned exactly once.")
           PY
 
+      - name: Batch and verify real-engine test specs
+        if: steps.config.outputs.ready == 'true'
+        shell: bash
+        run: |
+          python tools/prepare_cloud_batches.py --self-test
+          python tools/prepare_cloud_batches.py
+          # Check generated Luau after expansion; the ordinary build
+          # validates source specs but not these ephemeral bundles.
+          curl --retry 4 --retry-all-errors --retry-delay 3 -fsSL -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          mkdir -p /tmp/luau
+          unzip -q /tmp/luau.zip -d /tmp/luau
+          find tests/engine -maxdepth 1 -name '__ci_*.spec.luau' -print0 |
+            xargs -0 -r -n1 /tmp/luau/luau-compile >/dev/null
+
       - name: Run sharded tests in real Roblox engine
         if: steps.config.outputs.ready == 'true'
         shell: bash
@@ -216,7 +230,7 @@ jobs:
               echo "Attempt $attempt/$max_attempts for $suite"
 
               set +e
-              lest run --config lest.ci.toml "$suite" 2>&1 | tee "$log"
+              lest run --config lest.ci-batched.toml "$suite" 2>&1 | tee "$log"
               status=${PIPESTATUS[0]}
               set -e
 
@@ -229,7 +243,9 @@ jobs:
               # A rate limit is transient, unlike failed gameplay assertions.
               if grep -Eiq 'HTTP 429|Too Many Requests|rate.limit(ed|ing)?' "$log"; then
                 cause="Open Cloud throttling"
-                delay=$((30 * 2 ** (attempt - 1)))
+                # Back off the owner-wide rate limit, not just the local
+                # runner: every call still reaches the same Roblox owner.
+                delay=$((75 * 2 ** (attempt - 1) + RANDOM % 20))
               elif grep -Eq 'did not finish within the deadline|last state: PROCESSING' "$log"; then
                 cause="Open Cloud task timeout"
                 delay=$((12 * attempt))
@@ -251,4 +267,8 @@ jobs:
             done
           }
 
-          run_suite "${{ matrix.suite }}"
+          # Keep each suite separately named/reported for release auditing.
+          # No simultaneous jobs submit execution tasks to the same owner.
+          for suite in gameplay matrix core_a core_b1 core_b2; do
+            run_suite "$suite"
+          done
