@@ -15,6 +15,7 @@ folder.Parent = workspace
 local phase = "waiting"
 local bundle = nil
 local disconnectMapWatch = nil
+local watchedMap = nil
 -- Locally integrated visual time is independent of server clock and Roblox
 -- uptime. New rounds, motion preferences and map swaps begin from a calm
 -- authored pose instead of teleporting moving sculptures to an arbitrary phase.
@@ -66,6 +67,8 @@ local function scheduleRebuild()
 end
 
 local function bind(generated)
+    if watchedMap == generated then return end
+    watchedMap = generated
     if disconnectMapWatch then
         disconnectMapWatch()
         disconnectMapWatch = nil
@@ -80,18 +83,23 @@ local function bind(generated)
     end
 end
 
+-- Treat streaming transitions as a change of the *current* map only.
+-- A late removal from an older instance must not dispose the new map's
+-- watcher, and an already-present replacement must get its own rebuild.
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
         bind(child)
         scheduleRebuild()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bind(nil)
+    if child == watchedMap then
+        bind(workspace:FindFirstChild("GeneratedMap"))
         folder:ClearAllChildren()
         bundle = nil
+        scheduleRebuild()
     end
 end)
 
