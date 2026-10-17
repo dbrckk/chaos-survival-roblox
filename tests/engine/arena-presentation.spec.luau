@@ -492,6 +492,48 @@ describe("Streaming-independent platform identity", function()
         folder:Destroy()
     end)
 
+    it("keeps Low-tier subset stable before earlier platforms stream in", function()
+        local folder = Instance.new("Folder")
+        local two = Instance.new("Part")
+        two.Name = "Platform2"
+        two.Parent = folder
+        local ten = Instance.new("Part")
+        ten.Name = "Skybridge10"
+        ten.Parent = folder
+
+        -- A client might first receive only these even-numbered Parts.
+        local before = PlatformFinishKit.orderedPlatforms(folder)
+        expect(#before).toBe(2)
+        for _, platform in ipairs(before) do
+            expect(PlatformFinishKit.visualIndex(platform, 1) % 2).toBe(0)
+        end
+
+        local one = Instance.new("Part")
+        one.Name = "Platform1"
+        one.Parent = folder
+        local three = Instance.new("Part")
+        three.Name = "Skybridge3"
+        three.Parent = folder
+        local after = PlatformFinishKit.orderedPlatforms(folder)
+        local selected = {}
+        for index, platform in ipairs(after) do
+            local visualIndex = PlatformFinishKit.visualIndex(platform, index)
+            if visualIndex % 2 == 1 then
+                selected[platform.Name] = true
+            end
+        end
+        expect(selected.Platform1).toBe(true)
+        expect(selected.Skybridge3).toBe(true)
+        expect(selected.Platform2 == nil).toBe(true)
+        expect(selected.Skybridge10 == nil).toBe(true)
+
+        local unexpected = Instance.new("Part")
+        unexpected.Name = "CustomPad"
+        expect(PlatformFinishKit.visualIndex(unexpected, 5)).toBe(5)
+        unexpected:Destroy()
+        folder:Destroy()
+    end)
+
     it("breaks duplicate platform names by stable position", function()
         local folder = Instance.new("Folder")
         local right = Instance.new("Part")
