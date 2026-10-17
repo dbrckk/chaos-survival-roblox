@@ -212,7 +212,7 @@ local function rebuild()
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local index = 0
 
-    for _, platform in ipairs(platforms:GetChildren()) do
+    for _, platform in ipairs(PlatformFinishKit.orderedPlatforms(platforms)) do
         if platform:IsA("BasePart") then
             index += 1
             if tier.Name == "Low" and index % 2 == 0 then
@@ -239,6 +239,7 @@ local disconnectPlatformsWatch = nil
 local platformsConnection = nil
 local platformsRemoveConnection = nil
 local watchedPlatforms = nil
+local watchedMap = nil
 local rebuildPending = false
 
 local function scheduleRebuild()
@@ -270,6 +271,7 @@ local function watchPlatforms(generated)
 end
 
 local function bindGeneratedMap(generated)
+    watchedMap = generated
     if disconnectBaseWatch then disconnectBaseWatch() end
     if disconnectPlatformsWatch then disconnectPlatformsWatch() end
     disconnectBaseWatch = nil
@@ -294,16 +296,18 @@ local function bindGeneratedMap(generated)
 end
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+    if child.Name == "GeneratedMap"
+        and workspace:FindFirstChild("GeneratedMap") == child then
         bindGeneratedMap(child)
         scheduleRebuild()
     end
 end)
 
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        bindGeneratedMap(nil)
+    if child == watchedMap then
+        bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
         clear()
+        scheduleRebuild()
     end
 end)
 
