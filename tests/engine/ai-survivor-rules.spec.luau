@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local AISurvivorRules = require("../../src/server/AISurvivorRules")
 local AISurvivorService = require("../../src/server/AISurvivorService")
 local AISurvivorNetworkOwnership = require("../../src/server/AISurvivorNetworkOwnership")
+local BotNameplateRules = require("../../src/shared/BotNameplateRules")
 
 describe("AI survivor rules", function()
     it("loads the runtime AI survivor service contract in Roblox", function()
@@ -662,6 +663,38 @@ describe("AI survivor rules", function()
         expect(index >= 1).toBe(true)
         expect(index <= 3).toBe(true)
         expect(AISurvivorRules.voteIndex(3, 3, 7)).toBe(index)
+    end)
+end)
+
+
+describe("AI survivor nameplate readability", function()
+    it("emphasizes real lobby and results phases but not active hazards", function()
+        for _, phase in ipairs({"ready", "intermission", "result"}) do
+            local view = BotNameplateRules.presentation(phase, "High", false)
+            expect(view.AlwaysOnTop).toBe(true)
+            expect(view.MaxDistance).toBe(96)
+            expect(view.StrokeTransparency).toBe(0.24)
+        end
+
+        for _, phase in ipairs({"waiting", "round", "vote", "unknown"}) do
+            local view = BotNameplateRules.presentation(phase, "High", false)
+            expect(view.AlwaysOnTop).toBe(false)
+            expect(view.MaxDistance).toBe(72)
+            expect(view.StrokeTransparency).toBe(0.38)
+        end
+    end)
+
+    it("reduces low-tier touch-label overdraw without hiding nearby bots", function()
+        local ready = BotNameplateRules.presentation("ready", "Low", true)
+        local round = BotNameplateRules.presentation("round", "Low", true)
+        expect(ready.MaxDistance).toBe(78)
+        expect(round.MaxDistance).toBe(58)
+        expect(ready.AlwaysOnTop).toBe(true)
+        expect(round.AlwaysOnTop).toBe(false)
+        expect(BotNameplateRules.presentation("round", "Medium", true).MaxDistance)
+            .toBe(72)
+        expect(BotNameplateRules.presentation("round", "Low", false).MaxDistance)
+            .toBe(72)
     end)
 end)
 
