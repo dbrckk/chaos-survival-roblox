@@ -241,6 +241,24 @@ The native player SpawnLocation is unchanged. This only changes where
 server-controlled R15 AI rigs are initially placed or returned between
 rounds; combat, rewards, collision rules and network ownership are unchanged.
 
+### Slow-streamed mobility pads: live VFX and highlights
+
+The mobility-pad VFX controller now observes delayed `GeneratedMap`,
+`Arena`, `Mechanics` and `ArenaMobilityPad` replication rather than
+using a five-second fixed wait. On Android, the pad's marker or color can
+arrive after its Part; the local pulse, highlight and Overdrive colors must
+then reconcile automatically. Removed/unmarked pads must dispose their
+client-owned attachments and listeners.
+
+- Validate all four arena layouts by entering each round on a slow/mobile
+  connection; VFX must appear once the actual pads arrive.
+- Test Low/Medium/High quality, Overdrive changes, late pad colors and
+  streaming removal/replacement. No duplicate local effects may accumulate.
+- Keep a PHOTO + HUD capture and repeat after 30 minutes and reconnection
+  to observe FPS, worst frame and the object budgets.
+- Native Android and signed-in Studio testing remain mandatory; a successful
+  CI run alone does not certify on-device behavior.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
