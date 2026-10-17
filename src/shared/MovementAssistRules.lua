@@ -32,6 +32,19 @@ function MovementAssistRules.canCoyoteJump(
     return elapsed <= MovementAssistRules.CoyoteSeconds
 end
 
+-- Use only the jump control mode actually selected by Roblox. The
+-- other property may remain positive while a disaster disables jumping.
+-- SetStateEnabled(Jumping, false) must also block assisted jumps.
+function MovementAssistRules.jumpEnabled(health, useJumpPower, jumpPower, jumpHeight, stateEnabled)
+    if type(health) ~= "number" or health ~= health or health <= 0
+        or stateEnabled ~= true then
+        return false
+    end
+    local strength = if useJumpPower == true then jumpPower else jumpHeight
+    return type(strength) == "number" and strength == strength
+        and strength > 0 and strength < math.huge
+end
+
 function MovementAssistRules.bufferUntil(now)
     local t = tonumber(now) or 0
     return t + MovementAssistRules.BufferSeconds

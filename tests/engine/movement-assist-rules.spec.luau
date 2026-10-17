@@ -55,6 +55,19 @@ describe("Movement assist rules", function()
         )).toBe(false)
     end)
 
+    it("respects the active Roblox jump mode and Freeze Pulse disable", function()
+        local enabled = MovementAssistRules.jumpEnabled
+        expect(enabled(100, true, 50, 0, true)).toBe(true)
+        expect(enabled(100, false, 0, 7.2, true)).toBe(true)
+        -- The inactive control can remain at its previous nonzero default.
+        expect(enabled(100, true, 0, 7.2, true)).toBe(false)
+        expect(enabled(100, false, 50, 0, true)).toBe(false)
+        expect(enabled(100, true, 50, 7.2, false)).toBe(false)
+        expect(enabled(0, true, 50, 7.2, true)).toBe(false)
+        expect(enabled(100, true, math.huge, 7.2, true)).toBe(false)
+        expect(enabled(100, false, 50, 0 / 0, true)).toBe(false)
+    end)
+
     it("keeps the buffered jump window short and deterministic", function()
         local expires = MovementAssistRules.bufferUntil(10)
         expect(math.abs(expires - 10.12) < 0.001).toBe(true)
