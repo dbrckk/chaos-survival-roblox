@@ -245,6 +245,37 @@ function VisualBudgetRules.collect(root)
         end
     end
 
+    -- Arena mobility pads are server-owned BaseParts under GeneratedMap.
+    -- Their locally created VFX attachment and Highlight are neither
+    -- workspace-level local folders nor part of the player character.
+    -- Audit *only* the named client-created effects on genuinely marked
+    -- mobility pads. Do not count server-owned pad Parts or PointLights.
+    local arena = generated and generated:FindFirstChild("Arena")
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    if mechanics then
+        for _, pad in ipairs(mechanics:GetChildren()) do
+            if pad:IsA("BasePart")
+                and pad:GetAttribute("ArenaMobilityPad") == true then
+                local attachment = pad:FindFirstChild("LocalMobilityVfx")
+                local highlight = pad:FindFirstChild("MobilityPadHighlightLocal")
+                local emitter = attachment and attachment:IsA("Attachment")
+                    and attachment:FindFirstChild("MobilityPulseLocal")
+                local counted = false
+                if emitter and emitter:IsA("ParticleEmitter") then
+                    metrics.Effects += 1
+                    counted = true
+                end
+                if highlight and highlight:IsA("Highlight") then
+                    metrics.Effects += 1
+                    counted = true
+                end
+                if counted then
+                    auditedFolders += 1
+                end
+            end
+        end
+    end
+
     -- Player characters sit directly in workspace; solo AI contestants sit
     -- in workspace.AISurvivors. Both use the same client-only Polish owner.
     -- Only inspect these immediate model collections, not the entire map.
