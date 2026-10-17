@@ -48,6 +48,17 @@ Record the graphics tier, Reduce Motion, device model and whether any
 capture failed. Do not mark this checklist visually accepted from CI
 syntax/build or Open Cloud engine-test success alone.
 
+## Jump/respawn regression — client control ownership
+
+On the exact staging SHA, try rapid elimination/respawn cycles (including
+joining during a round) while holding and repeatedly tapping the Android
+jump control. Verify coyote/buffer timing works only on the currently alive
+character and the old rig never receives a delayed jump. Repeat during
+Freeze Pulse: jump assist must not bypass disabled JumpPower/JumpHeight or
+a disabled Jumping state. Repeat with both Roblox UseJumpPower modes and
+R6/R15 avatars. Record a real device capture and Studio client/server logs.
+Automated rule tests are not evidence that these device cases passed.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
