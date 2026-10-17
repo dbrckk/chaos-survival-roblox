@@ -50,7 +50,14 @@ function MapVisualReadiness.watch(generated, sectionName, partName, onChange)
 
     table.insert(connections, generated.ChildAdded:Connect(function(child)
         if child.Name == sectionName then
-            bindSection(child)
+            -- Roblox can briefly retain two children with the same name
+            -- while a streamed section is replaced. Keep watching the
+            -- canonical child returned by part(), not an overlapping copy.
+            -- Removal of that canonical child will select its successor.
+            local selected = generated:FindFirstChild(sectionName)
+            if selected ~= currentSection then
+                bindSection(selected)
+            end
         end
     end))
     table.insert(connections, generated.ChildRemoved:Connect(function(child)

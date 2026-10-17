@@ -347,6 +347,64 @@ describe("Late-replicated visual map readiness", function()
         replacement.Parent = arena
         expect(calls).toBe(5)
         generated:Destroy()
+
+        -- During streaming, an old Arena and its fully constructed
+        -- replacement can overlap under the same GeneratedMap. The
+        -- watcher must follow the same canonical child as part().
+        local swapping = Instance.new("Folder")
+        local callsOnSwap = 0
+        local currentBase = nil
+        local stopSwap = MapVisualReadiness.watch(
+            swapping, "Arena", "Base", function(part)
+                callsOnSwap += 1
+                currentBase = part
+            end
+        )
+        local oldArena = Instance.new("Folder")
+        oldArena.Name = "Arena"
+        oldArena.Parent = swapping
+        local oldBase = Instance.new("Part")
+        oldBase.Name = "Base"
+        oldBase.Parent = oldArena
+        expect(currentBase).toBe(oldBase)
+
+        local nextArena = Instance.new("Folder")
+        nextArena.Name = "Arena"
+        local nextBase = Instance.new("Part")
+        nextBase.Name = "Base"
+        nextBase.Parent = nextArena
+        local beforeOverlap = callsOnSwap
+        nextArena.Parent = swapping
+        -- Roblox does not promise which identically named sibling
+        -- FindFirstChild selects. The watcher must always agree with it.
+        local overlapBase = MapVisualReadiness.part(swapping, "Arena", "Base")
+        expect(currentBase).toBe(overlapBase)
+        if overlapBase == oldBase then
+            expect(callsOnSwap).toBe(beforeOverlap)
+        else
+            expect(overlapBase).toBe(nextBase)
+            expect(callsOnSwap).toBe(beforeOverlap + 1)
+        end
+
+        local beforeRemoval = callsOnSwap
+        oldArena.Parent = nil
+        expect(MapVisualReadiness.part(swapping, "Arena", "Base")).toBe(nextBase)
+        expect(currentBase).toBe(nextBase)
+        expect(callsOnSwap).toBe(
+            beforeRemoval + (if overlapBase == oldBase then 1 else 0)
+        )
+        nextArena:SetAttribute("VariantId", "Orbital")
+        expect(callsOnSwap).toBe(
+            beforeRemoval + (if overlapBase == oldBase then 2 else 1)
+        )
+        nextBase:Destroy()
+        expect(currentBase == nil).toBe(true)
+        stopSwap()
+        local beforeDispose = callsOnSwap
+        nextArena:SetAttribute("VariantId", "Crossroads")
+        expect(callsOnSwap).toBe(beforeDispose)
+        oldArena:Destroy()
+        swapping:Destroy()
     end)
 
     it("rebuilds understructure when Base and VariantId replicate late", function()
