@@ -259,6 +259,25 @@ client-owned attachments and listeners.
 - Native Android and signed-in Studio testing remain mandatory; a successful
   CI run alone does not certify on-device behavior.
 
+### Mobility pad VFX: accurate client GPU budget telemetry
+
+The PHOTO + HUD graphics budget now counts client-created pad Highlights
+and particle emitters under the server-owned `GeneratedMap/Arena/Mechanics`.
+Previously those effects were invisible to the visual-budget audit even
+when dozens of pad effects survived streaming transitions.
+
+- Only count the named client-authored `LocalMobilityVfx/MobilityPulseLocal`
+  and `MobilityPadHighlightLocal` on actual marked `ArenaMobilityPad` Parts.
+- Do **not** count server-owned pad geometry, its `MobilityPadLight`,
+  or unrelated server particles; disabled effects remain budgeted until
+  their Instances are destroyed.
+- On Android, inspect PARTS/LIGHTS/FX in PHOTO + HUD while swapping all
+  four arenas, changing Low/Medium/High and Overdrive, and replaying for
+  30 minutes. Confirm transient pad effects do not accumulate over time.
+
+This only improves diagnostics; GPU utilization and frame pacing still
+require physical-device measurement.
+
 ## Rollback / restrictions
 
 This workflow has **no write access to the public experience**. For
