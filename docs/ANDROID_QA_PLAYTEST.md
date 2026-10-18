@@ -164,6 +164,17 @@ Record the server phase transition, affected character identity,
 and original device capture. Automated callbacks do not replace a
 physical multiplayer acceptance run.
 
+## Shrinking Arena — moving deck finish
+
+On a private, verified test place, run Shrinking Arena on **Classic,
+Towers and Orbital**. From Android, watch a raised deck as it slides
+inward. Verify its upper panel, four beveled edges, thin underglow,
+underside and support columns follow the solid platform without leaving
+a ghost floor. On Towers, confirm the long skybridge glow, panels,
+bevels and rails shorten with the physical bridge. After the round,
+all pieces must return to their original pose and length. Capture
+before/during/after video and check jump collision separately.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
