@@ -5,6 +5,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
+local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
@@ -273,7 +274,9 @@ end
 local function addEssentialDeckRelief(base, theme)
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
-    local floorY = base.Size.Y * 0.5 + 0.035
+    -- Low-tier plates were buried below the opaque server 0.14-stud
+    -- ArenaDeckInset; their silhouette and machined finish never rendered.
+    local floorY = ArenaPresentation.deckArtOffset(base, 0.09)
     local plateColor = theme.Surface:Lerp(theme.Structure, 0.68)
     local metalColor = theme.Detail:Lerp(theme.Structure, 0.30)
     local placements = {
