@@ -689,7 +689,44 @@ describe("Moving platform premium trim kit", function()
                     expect(weld ~= nil).toBe(true)
                     expect(weld.Part0).toBe(item)
                     expect(weld.Part1).toBe(platform)
+                    expect(typeof(item:GetAttribute("ChaosBaseTransparency")))
+                        .toBe("number")
+                    local baseline = item.Transparency
+                    PlatformFinishKit.applyCollapseVisibility({item}, "Gone")
+                    expect(item.Transparency).toBe(1)
+                    PlatformFinishKit.applyCollapseVisibility({item}, nil)
+                    expect(item.Transparency).toBe(baseline)
                     item:Destroy()
+                end
+
+                local armor = PlatformFinishKit.buildArmor(
+                    parent, platform, variant, tier, VisualTheme.arena(variant)
+                )
+                expect(#armor).toBe(PlatformFinishKit.armorCount(tier))
+                for _, plate in ipairs(armor) do
+                    expect(plate:IsA("WedgePart")).toBe(true)
+                    expect(plate:GetAttribute("ChaosPlatformTrim")).toBe(true)
+                    expect(plate:GetAttribute("ChaosArmorCorner") ~= nil).toBe(true)
+                    expect(plate.Anchored).toBe(false)
+                    expect(plate.Massless).toBe(true)
+                    expect(plate.CanCollide).toBe(false)
+                    expect(plate.CanTouch).toBe(false)
+                    expect(plate.CanQuery).toBe(false)
+                    local weld = plate:FindFirstChild("ChaosPlatformTrimWeld")
+                    expect(weld ~= nil and weld.Part1 == platform).toBe(true)
+                    local offset = platform.CFrame:PointToObjectSpace(plate.Position)
+                    expect(math.abs(offset.X) < platform.Size.X * 0.5 + 1).toBe(true)
+                    expect(math.abs(offset.Z) < platform.Size.Z * 0.5 + 1).toBe(true)
+                end
+
+                PlatformFinishKit.applyCollapseVisibility(armor, "Gone")
+                for _, plate in ipairs(armor) do
+                    expect(plate.Transparency).toBe(1)
+                end
+                PlatformFinishKit.applyCollapseVisibility(armor, "Warning")
+                for _, plate in ipairs(armor) do
+                    expect(plate.Transparency).toBe(0.04)
+                    plate:Destroy()
                 end
             end
         end
@@ -705,6 +742,12 @@ describe("Moving platform premium trim kit", function()
         expect(#PlatformFinishKit.build(container, nil, "Classic", "High",
             VisualTheme.arena("Classic"))).toBe(0)
         expect(#PlatformFinishKit.build(nil, base, "Classic", "High",
+            VisualTheme.arena("Classic"))).toBe(0)
+        expect(#PlatformFinishKit.buildArmor(container, base, "NotAnArena", "High",
+            VisualTheme.arena("Classic"))).toBe(0)
+        expect(#PlatformFinishKit.buildArmor(nil, base, "Classic", "High",
+            VisualTheme.arena("Classic"))).toBe(0)
+        expect(#PlatformFinishKit.buildArmor(container, base, "Classic", "Low",
             VisualTheme.arena("Classic"))).toBe(0)
         base:Destroy()
         container:Destroy()
