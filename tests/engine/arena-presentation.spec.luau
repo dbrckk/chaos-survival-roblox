@@ -11,6 +11,7 @@ local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 local ArenaEdgeFinishKit = require("../../src/client/ArenaEdgeFinishKit")
 local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
 local ArenaDeckFinishKit = require("../../src/client/ArenaDeckFinishKit")
+local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 local ArenaSceneryFrames = require("../../src/shared/ArenaSceneryFrames")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local IdentityMotionRules = require("../../src/shared/ArenaIdentityMotionRules")
@@ -24,6 +25,83 @@ local function planarUnit(vector)
 end
 
 describe("Arena presentation", function()
+    it("keeps local 3D deck paint aligned with a shrinking rotated base", function()
+        local root = Instance.new("Folder")
+        root.Parent = workspace
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 80)
+        base.CFrame = CFrame.new(11, 4, -9) * CFrame.Angles(0, math.rad(28), 0)
+        base.Anchored = true
+        base.Parent = root
+
+        local localArt = Instance.new("Folder")
+        localArt.Parent = root
+        local panel = Instance.new("Part")
+        panel.Size = Vector3.new(12, 0.10, 5)
+        local relativePanel = CFrame.new(30, 1.16, -20)
+            * CFrame.Angles(0, math.rad(45), 0)
+        panel.CFrame = base.CFrame * relativePanel
+        panel.CanCollide = false
+        panel.Anchored = true
+        panel.Transparency = 0.42
+        panel.Parent = localArt
+
+        local wedge = Instance.new("WedgePart")
+        wedge.Size = Vector3.new(5.6, 0.12, 3.2)
+        local relativeWedge = CFrame.new(-25, 1.16, 10)
+            * CFrame.Angles(0, math.rad(-30), 0)
+        wedge.CFrame = base.CFrame * relativeWedge
+        wedge.CanCollide = false
+        wedge.Anchored = true
+        wedge.Parent = localArt
+
+        expect(ArenaFloorFollowerKit.capture(nil, nil) == nil).toBe(true)
+        expect(ArenaFloorFollowerKit.apply(nil)).toBe(0)
+        local snapshot = ArenaFloorFollowerKit.capture(base, localArt)
+        expect(#snapshot.parts).toBe(2)
+
+        base.Size = Vector3.new(65, 2, 40)
+        expect(ArenaFloorFollowerKit.apply(snapshot)).toBe(2)
+        local panelExpected = base.CFrame
+            * CFrame.new(19.5, 1.16, -10)
+            * CFrame.Angles(0, math.rad(45), 0)
+        local wedgeExpected = base.CFrame
+            * CFrame.new(-16.25, 1.16, 5)
+            * CFrame.Angles(0, math.rad(-30), 0)
+        expect((panel.Position - panelExpected.Position).Magnitude < 0.005)
+            .toBe(true)
+        expect((wedge.Position - wedgeExpected.Position).Magnitude < 0.005)
+            .toBe(true)
+        expect(math.abs(panel.Size.X - 7.8) < 0.005).toBe(true)
+        expect(math.abs(panel.Size.Z - 2.5) < 0.005).toBe(true)
+        expect(math.abs(wedge.Size.X - 3.64) < 0.005).toBe(true)
+        expect(math.abs(panel.Size.Y - 0.10) < 0.005).toBe(true)
+        expect(math.abs(panel.Transparency - 0.42) < 0.001).toBe(true)
+        expect(panel.CanCollide).toBe(false)
+        expect(#localArt:GetChildren()).toBe(2)
+
+        base.Size = Vector3.new(100, 2, 80)
+        ArenaFloorFollowerKit.apply(snapshot)
+        expect((panel.Position - (base.CFrame * relativePanel).Position).Magnitude
+            < 0.005).toBe(true)
+        expect((panel.Size - Vector3.new(12, 0.10, 5)).Magnitude
+            < 0.005).toBe(true)
+
+        -- The actual Size listener updates without a RenderStepped loop,
+        -- and a disconnected listener never mutates orphaned artwork.
+        local disconnect = ArenaFloorFollowerKit.bind(base, localArt)
+        base.Size = Vector3.new(75, 2, 60)
+        task.wait(0.06)
+        expect(math.abs(panel.Size.X - 9) < 0.005).toBe(true)
+        disconnect()
+        local stoppedSize = panel.Size
+        base.Size = Vector3.new(50, 2, 40)
+        task.wait(0.06)
+        expect(panel.Size).toBe(stoppedSize)
+
+        root:Destroy()
+    end)
+
     it("faces Classic spawns toward the arena center", function()
         local spawn = Vector3.new(30, 3, -30)
         local cf = ArenaPresentation.spawnCFrame("Classic", spawn, CENTER)

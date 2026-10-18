@@ -187,6 +187,17 @@ panels, seams and lane markings restore to their original size
 and position after the round, without a persistent flicker. Measure
 Android frame pacing during the shrinking animation.
 
+## Client-only arena surface art during shrinking
+
+On a verified private place, record Shrinking Arena with **Low, Medium
+and High** client VFX tiers. Watch all local painted panels, small
+3D repair plates, relief fasteners, safety edge lips and low-tier floor plates
+contract with the server-controlled Base.Size. They must never appear
+as solid space beyond the shrinking arena. After the next arena loads,
+the previous map's parts and Size change listener must be gone.
+Check Android frame pacing (no perpetual per-frame follower) and
+Reduce Motion. Capture owner-approved video before publishing.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.

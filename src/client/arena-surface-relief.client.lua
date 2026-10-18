@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
@@ -13,7 +14,13 @@ folder.Parent = workspace
 local disconnectMapWatch = nil
 local refreshPending = false
 
+local stopFollowingBase = nil
+
 local function clear()
+    if stopFollowingBase then
+        stopFollowingBase()
+        stopFollowingBase = nil
+    end
     folder:ClearAllChildren()
 end
 
@@ -321,6 +328,8 @@ local function rebuild()
 
     if tier.Name == "Low" then
         addEssentialDeckRelief(base, theme)
+        -- Android Low-tier plates must shrink too, not just richer scenes.
+        stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
         return
     end
 
@@ -336,6 +345,7 @@ local function rebuild()
     else
         addClassic(base, theme, tier)
     end
+    stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
 end
 
 -- Maps may replicate Arena, Base and VariantId in different frames.
