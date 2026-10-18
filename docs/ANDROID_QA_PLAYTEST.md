@@ -1811,3 +1811,32 @@ Android/Studio QA: while a platform is warned, remove/reparent it and verify
 its six local contour pieces vanish. Replace GeneratedMap mid-round, then
 stream Arena/Platforms back in: only the current map's collapse markers
 may appear. Repeat with ReduceMotion and auto-Low quality enabled.
+
+## Premium armored platform silhouettes — Oct 2026 candidate
+
+This is **planned device QA, not an observed capture**. Verify this exact
+source SHA on a **private, verified test experience**; the historical visual
+staging configuration points to the public universe and must stay blocked.
+
+- Visit Classic Grid, Tower Run, Crossroads and Orbital Ring. Compare the
+  real third-person silhouette and top/underside material balance (not
+  screenshots from a procedural preview). Assess whether the new beveled
+  corner armor is visible without resembling collision steps or fake paths.
+- Switch VFX tier High → Medium → Low → High: each visible platform should
+  have four / two / zero additional **local-only** corner bevels, respectively.
+  They must never add gameplay collisions, touch events, shadows or lights.
+- In Disappearing Platforms, watch one platform throughout Warning → Gone
+  → Restore. Yellow/orange warning must be clear; when collision is gone,
+  **no top panel, underside, glowing shell, support or client glyph should
+  remain to suggest a walkable surface**. All pieces return at their exact
+  baseline opacity; permanent skybridges retain their normal appearance.
+- Change arena while a platform is Gone and immediately change VFX tier.
+  Streaming or rebuilding must not create floating local armored pieces,
+  doubled graphics or retained event listeners.
+- On a budget Android device, capture FPS and client part count over a
+  sustained mixed-chaos session. This pass adds at most four local welded
+  armor pieces per decorated platform on High, two on Medium and zero on
+  Low, with zero new emitters, loops or lights.
+
+Do not mark this candidate device-approved without matching Roblox client
+captures, the exact Git commit, and measured framerate.
