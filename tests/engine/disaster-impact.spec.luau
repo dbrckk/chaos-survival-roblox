@@ -193,6 +193,85 @@ describe("Disaster impact", function()
         character:Destroy()
     end)
 
+    it("stops a blast when a previous hit ends the round", function()
+        local function makeSubject(name, position)
+            local character = Instance.new("Model")
+            character.Name = name
+            local root = Instance.new("Part")
+            root.Name = "HumanoidRootPart"
+            root.Anchored = true
+            root.Position = position
+            root.Parent = character
+            local humanoid = Instance.new("Humanoid")
+            humanoid.MaxHealth = 100
+            humanoid.Health = 100
+            humanoid.Parent = character
+            character.Parent = workspace
+            return {Character = character}, humanoid, character
+        end
+
+        local first, firstHum, firstModel = makeSubject(
+            "FirstImpactSurvivor", Vector3.new(0, 3, 0)
+        )
+        local second, secondHum, secondModel = makeSubject(
+            "NextImpactSurvivor", Vector3.new(0, 3, 0)
+        )
+        local near, nearHum, nearModel = makeSubject(
+            "NearMissSurvivor", Vector3.new(9, 3, 0)
+        )
+        local active = true
+        local notified = 0
+        local nearMisses = 0
+        local ctx = {
+            HazardContestants = {first, second, near},
+            Active = function() return active end,
+            IsContestantActive = function() return true end,
+            OnHazardDamage = function(subject)
+                notified += 1
+                if subject == first then
+                    -- Simulate a round-ending scoring/elimination callback.
+                    active = false
+                end
+            end,
+            OnHazardNearMiss = function()
+                nearMisses += 1
+            end,
+        }
+
+        local hits = DisasterImpact.applyRadialDamage(
+            ctx, Vector3.new(0, 3, 0), 8, 50, "Bomb"
+        )
+        expect(hits).toBe(1)
+        expect(notified).toBe(1)
+        expect(nearMisses).toBe(0)
+        expect(firstHum.Health).toBe(50)
+        expect(secondHum.Health).toBe(100)
+        expect(nearHum.Health).toBe(100)
+
+        -- A stale post-round call must not damage or award near misses.
+        hits = DisasterImpact.applyRadialDamage(
+            ctx, Vector3.new(0, 3, 0), 8, 50, "Bomb"
+        )
+        expect(hits).toBe(0)
+        expect(notified).toBe(1)
+        expect(nearMisses).toBe(0)
+
+        -- Normal active-round behavior, including near misses, is unchanged.
+        active = true
+        ctx.OnHazardDamage = function()
+            notified += 1
+        end
+        hits = DisasterImpact.applyRadialDamage(
+            ctx, Vector3.new(0, 3, 0), 8, 50, "Bomb"
+        )
+        expect(hits).toBe(2)
+        expect(nearMisses).toBe(1)
+
+        firstModel:Destroy()
+        secondModel:Destroy()
+        nearModel:Destroy()
+    end)
+
     it("sanitizes negative distance and damage inputs", function()
         expect(DisasterImpact.damageForDistance(-5, 8, 50)).toBe(50)
         expect(DisasterImpact.damageForDistance(0, 8, -10)).toBe(0)
