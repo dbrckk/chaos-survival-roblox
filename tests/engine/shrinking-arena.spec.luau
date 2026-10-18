@@ -90,6 +90,88 @@ describe("Shrinking Arena mobility integration", function()
         root:Destroy()
     end)
 
+    it("shrinks arena inlays with the solid floor in every variant", function()
+        local cases = {
+            {
+                id = "Classic",
+                names = {"ArenaDeckInset", "DeckLineNorth", "ClassicGridX-2"},
+            },
+            {
+                id = "Towers",
+                names = {"ArenaDeckInset", "DeckLineEast",
+                    "TowerGroundPlate1", "TowerGroundCore1"},
+            },
+            {
+                id = "Crossroads",
+                names = {"ArenaDeckInset", "DeckLineSouth",
+                    "CrossroadLaneFill1", "FluxRouteChevron1_1_-1"},
+            },
+            {
+                id = "Orbital",
+                names = {"ArenaDeckInset", "DeckLineWest"},
+            },
+        }
+
+        for _, case in ipairs(cases) do
+            local root = MapBuilder.build(Config, case.id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local base = arena:FindFirstChild("Base")
+            local decor = arena:FindFirstChild("Decor")
+            local origin = base.CFrame
+            local originalBase = base.Size
+            local floorSnapshot = {}
+            for _, name in ipairs(case.names) do
+                local part = decor:FindFirstChild(name)
+                expect(part ~= nil).toBe(true)
+                expect(part.CanCollide).toBe(false)
+                floorSnapshot[part] = {
+                    cframe = part.CFrame,
+                    size = part.Size,
+                    localPosition = origin:PointToObjectSpace(part.Position),
+                }
+            end
+
+            local active = true
+            local callbacks = {}
+            ShrinkingArena.start({
+                Config = Config,
+                RoundSeconds = 0.33,
+                Cleanup = {},
+                OnCleanup = callbacks,
+                Active = function() return active end,
+            })
+            task.wait(0.20)
+            local scale = base.Size.X / originalBase.X
+            expect(scale < 0.90).toBe(true)
+
+            for piece, before in pairs(floorSnapshot) do
+                local expectedSize, expectedPosition =
+                    ShrinkingArena.scaledFloorTransform(
+                        before.size, before.localPosition, scale
+                    )
+                local expectedWorld = origin:PointToWorldSpace(expectedPosition)
+                expect((piece.Size - expectedSize).Magnitude < 0.02)
+                    .toBe(true)
+                expect((piece.Position - expectedWorld).Magnitude < 0.02)
+                    .toBe(true)
+                expect(piece.CanCollide).toBe(false)
+            end
+            local inset = decor:FindFirstChild("ArenaDeckInset")
+            expect(inset.Size.X < base.Size.X).toBe(true)
+            expect(inset.Size.Z < base.Size.Z).toBe(true)
+
+            active = false
+            cleanup(callbacks, {})
+            for piece, before in pairs(floorSnapshot) do
+                expect((piece.CFrame.Position - before.cframe.Position).Magnitude < 0.001)
+                    .toBe(true)
+                expect((piece.Size - before.size).Magnitude < 0.001)
+                    .toBe(true)
+            end
+            root:Destroy()
+        end
+    end)
+
     it("moves mobility pads inward and restores them on cleanup", function()
         MapBuilder.build(Config, "Towers", ArenaVariants)
 
