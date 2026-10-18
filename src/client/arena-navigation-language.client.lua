@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -114,7 +115,11 @@ local function addVerticalBeacon(pad, color, tier, index)
 end
 
 local function addCenterLandmark(base, theme, variant, tier)
-    local center = base.Position + Vector3.new(0, base.Size.Y * 0.5 + 0.045, 0)
+    -- These center-route glyphs were hidden inside the server ArenaDeckInset.
+    -- Place thin local lines just above its real top face.
+    local center = (base.CFrame * CFrame.new(
+        0, ArenaPresentation.deckArtOffset(base, 0.05), 0
+    )).Position
     local span = math.min(base.Size.X, base.Size.Z)
 
     if variant == "Orbital" then
