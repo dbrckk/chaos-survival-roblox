@@ -160,7 +160,17 @@ function PlatformFinishKit.applyCollapseVisibility(parts, phase)
                 original = item.Transparency
                 item:SetAttribute("ChaosBaseTransparency", original)
             end
-            item.Transparency = phase == "Gone" and 1 or original
+            -- Fade local decorative paint and armor during the authoritative
+            -- amber warning. Otherwise opaque client trim can obscure the
+            -- yellow deck cue on Android even though the server panel fades.
+            -- Gone still hides everything; restoration is idempotent.
+            if phase == "Gone" then
+                item.Transparency = 1
+            elseif phase == "Warning" then
+                item.Transparency = math.max(original, 0.80)
+            else
+                item.Transparency = original
+            end
         end
     end
 end
