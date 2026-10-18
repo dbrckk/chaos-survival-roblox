@@ -163,6 +163,60 @@ local function addCrossroadsGuides(folder, center, theme)
     end
 end
 
+-- A few distant structural landmarks give each arena a recognizable
+-- silhouette without obstructing jumps or spawning more lights/particles.
+-- These are purely cosmetic, non-queryable and never affect hazard physics.
+local function addDistantSilhouette(folder, center, theme, variantId, base)
+    local extentX = base.Size.X * 0.5 + 10
+    local extentZ = base.Size.Z * 0.5 + 10
+    local locations = {
+        Vector3.new(-extentX, 0, -extentZ),
+        Vector3.new(extentX, 0, -extentZ),
+        Vector3.new(-extentX, 0, extentZ),
+        Vector3.new(extentX, 0, extentZ),
+    }
+    for index, offset in ipairs(locations) do
+        local height = (variantId == "Towers" and 23)
+            or (variantId == "Orbital" and 17)
+            or (variantId == "Crossroads" and 13)
+            or 11
+        local origin = center + offset + Vector3.new(0, height * 0.5, 0)
+        local spine = makePart(
+            folder,
+            "SilhouetteSpine" .. index,
+            Vector3.new(2.4, height, 2.4),
+            CFrame.new(origin),
+            Color3.fromRGB(29, 37, 53),
+            Enum.Material.Metal
+        )
+        spine.Transparency = 0.04
+
+        -- Two separated metal bands read as fabricated structure even
+        -- on low-end Android, without an expensive emissive surface.
+        for level = 1, 2 do
+            local band = makePart(
+                folder,
+                "SilhouetteBand" .. index .. "_" .. level,
+                Vector3.new(3.1, 0.32, 3.1),
+                CFrame.new(origin + Vector3.new(0, -height * 0.3 + level * height * 0.2, 0)),
+                theme.secondary,
+                Enum.Material.Metal
+            )
+            band.Transparency = 0.14
+        end
+
+        local cap = makePart(
+            folder,
+            "SilhouetteCap" .. index,
+            Vector3.new(3.7, 0.5, 3.7),
+            CFrame.new(origin + Vector3.new(0, height * 0.5 + 0.2, 0)),
+            index % 2 == 0 and theme.accent or theme.secondary,
+            Enum.Material.Neon
+        )
+        cap.Transparency = 0.25
+    end
+end
+
 local function enhanceArena(arena)
     if not arena or not arena:IsA("Folder") or arena.Name ~= "Arena" then
         return
@@ -182,12 +236,13 @@ local function enhanceArena(arena)
     local folder = Instance.new("Folder")
     folder.Name = "Atmosphere"
     folder:SetAttribute("VariantId", variantId)
-    folder:SetAttribute("VisualVersion", 1)
+    folder:SetAttribute("VisualVersion", 2)
     folder.Parent = arena
 
     local center = base.Position
     addRing(folder, center, theme)
     addTowers(folder, center, theme)
+    addDistantSilhouette(folder, center, theme, variantId, base)
 
     if variantId == "Orbital" then
         addOrbitalCore(folder, center, theme)
