@@ -725,7 +725,7 @@ describe("Moving platform premium trim kit", function()
                 end
                 PlatformFinishKit.applyCollapseVisibility(armor, "Warning")
                 for _, plate in ipairs(armor) do
-                    expect(plate.Transparency).toBe(0.04)
+                    expect(math.abs(plate.Transparency - 0.04) < 0.0001).toBe(true)
                     plate:Destroy()
                 end
             end
