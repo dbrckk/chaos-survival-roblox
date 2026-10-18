@@ -34,6 +34,19 @@ end
 -- towers 56 studs apart with 7 studs total endpoint overlap.
 -- During shrink their endpoints must remain attached to the moving
 -- middle decks, rather than retaining their pre-shrink 49-stud span.
+-- Flat decals and panel insets are decoration, not collision geometry.
+-- Scale their footprint with the base so they never show a ghost floor
+-- beyond the shrinking walkable surface.
+function D.scaledFloorTransform(originalSize, localPosition, scale)
+    local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
+    local size = typeof(originalSize) == "Vector3" and originalSize or Vector3.one
+    return Vector3.new(
+        math.max(0.05, size.X * safeScale),
+        size.Y,
+        math.max(0.05, size.Z * safeScale)
+    ), D.scaledLocalPosition(localPosition, safeScale)
+end
+
 function D.skybridgeSpan(originalSpan, scale)
     local span = math.max(1, tonumber(originalSpan) or 49)
     local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
@@ -64,6 +77,32 @@ function D.start(ctx)
                     localCFrame = originalCFrame:ToObjectSpace(edge.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(edge.Position),
                 }
+            end
+        end
+    end
+
+    local floorDetails = {}
+    if decor then
+        for _, item in ipairs(decor:GetChildren()) do
+            if item:IsA("BasePart") then
+                local name = item.Name
+                local floorArt = name == "ArenaDeckInset"
+                    or name == "DeckLineNorth" or name == "DeckLineSouth"
+                    or name == "DeckLineEast" or name == "DeckLineWest"
+                    or name:match("^ClassicGrid[XZ]%-?%d+$")
+                    or name:match("^TowerGroundPlate%d+$")
+                    or name:match("^TowerGroundCore%d+$")
+                    or name:match("^CrossroadLaneFill%d+$")
+                    or name:match("^FluxRouteChevron%d+_%d+_%-?%d+$")
+                if floorArt then
+                    floorDetails[#floorDetails+1] = {
+                        part = item,
+                        size = item.Size,
+                        cframe = item.CFrame,
+                        localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
+                        localPosition = originalCFrame:PointToObjectSpace(item.Position),
+                    }
+                end
             end
         end
     end
@@ -212,6 +251,20 @@ function D.start(ctx)
                 end
             end
 
+            -- Shrink painted routes, low-profile floor panels and arena
+            -- seams with the base, but never resize gameplay geometry.
+            for _, state in ipairs(floorDetails) do
+                local floorArt = state.part
+                if floorArt.Parent then
+                    local size, position = D.scaledFloorTransform(
+                        state.size, state.localPosition, scale
+                    )
+                    local rotationOnly = state.localCFrame - state.localCFrame.Position
+                    floorArt.Size = size
+                    floorArt.CFrame = (originalCFrame * CFrame.new(position)) * rotationOnly
+                end
+            end
+
             for _, state in ipairs(movableParts) do
                 local part = state.part
                 if part.Parent then
@@ -287,6 +340,13 @@ function D.start(ctx)
             if edge and edge.Parent then
                 edge.Size = state.size
                 edge.CFrame = state.cframe
+            end
+        end
+
+        for _, state in ipairs(floorDetails) do
+            if state.part and state.part.Parent then
+                state.part.Size = state.size
+                state.part.CFrame = state.cframe
             end
         end
 
