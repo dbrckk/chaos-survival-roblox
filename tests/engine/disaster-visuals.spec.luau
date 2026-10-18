@@ -14,8 +14,32 @@ local MeteorSignatureRules = require("../../src/shared/MeteorSignatureRules")
 local ImpactMaterialRules = require("../../src/shared/ImpactMaterialRules")
 local ImpactPulseRules = require("../../src/shared/ImpactPulseRules")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
+local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 
 describe("Disaster visual identities", function()
+    it("fades local platform trim for warning and fully hides it on collapse", function()
+        local part = Instance.new("Part")
+        part.Transparency = 0.12
+        part:SetAttribute("ChaosBaseTransparency", 0.12)
+        part.Parent = workspace
+        local pieces = {part}
+
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Warning")
+        expect(part.Transparency >= 0.799).toBe(true)
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Gone")
+        expect(part.Transparency).toBe(1)
+        PlatformFinishKit.applyCollapseVisibility(pieces, nil)
+        expect(math.abs(part.Transparency - 0.12) < 0.0001).toBe(true)
+
+        -- Repeated warning/restoration must not accidentally store the
+        -- faded alpha as the original base transparency.
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Warning")
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Restore")
+        expect(math.abs(part.Transparency - 0.12) < 0.0001).toBe(true)
+        part:Destroy()
+    end)
+
+
     it("assigns unique tiered impact accents only for meteor and bomb events", function()
         for _, tier in ipairs({"Low", "Medium", "High"}) do
             local meteor = ImpactSetpieceRules.get("Meteor", tier, false, 15)
