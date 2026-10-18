@@ -110,7 +110,8 @@ describe("Collapsing platform visual truth", function()
         for _, entry in ipairs(cosmetics) do
             expect(entry.part.Transparency).toBe(1)
         end
-        expect(unrelated.Transparency).toBe(0.27)
+        -- Roblox stores Part.Transparency as float32, not a decimal64.
+        expect(math.abs(unrelated.Transparency - 0.27) < 0.0001).toBe(true)
         expect(skybridge.Transparency).toBe(0)
 
         active = false
