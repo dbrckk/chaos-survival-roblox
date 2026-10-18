@@ -143,6 +143,16 @@ humans and AI survivors, plus rapid lobby/arena transitions; collect
 server elimination/near-miss logs and device video. Automated engine
 coverage checks intra-blast cancellation, not real-device timing.
 
+## End-of-round hazard transitions: shockwave and late FX
+
+On the exact staged SHA, finish a round at the moment Jump Shock,
+Meteor Shower or Bomb Rain activates (including when the final survivor
+is eliminated by the blast). Verify the next lobby/round never receives
+the previous round's knockback or newly emitted impact VFX, and all
+hazard warnings are cleaned up. Include Android touch input and solo
+AI-assisted rounds. Record client/server logs, actual gameplay video,
+and the stage SHA. Automated tests cannot certify rendered device FX.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
