@@ -51,6 +51,10 @@ PHASE 2 — REFONTE VISUELLE DES 4 ARENES
 [QA]   2.11 Donner aux props secondaires une vraie hiérarchie matériau : verre/métal dominants, emissive seulement sur points fonctionnels.
 [QA]   2.12 Séparer cues de navigation et décor : pads/chevrons prioritaires, centres/plateformes plus sobres.
 [QA]   2.13 Réduire l'émissif des micro-reliefs proches pour préserver warnings et hazards.
+[QA]   2.14 Plateformes mécaniques avec armor biseautée en coins, matériau mat/recessed sur tous les decks et glow réduit ; High = 4 WedgeParts client par plateforme, Medium = 2, Low = 0, toutes sans collision ni lumière.
+[QA]   2.15 Disappearing Platforms : masquer simultanément physique et décors serveur (panel, frame, underside, supports) + décor client, restaurer les transparences originales en cleanup.
+[TODO] 2.16 QA visuelle réelle sur Android et Studio : silhouettes des 4 arènes, lisibilité depuis la caméra, stress 30 min et capture des seuils de qualité.
+
 
 PHASE 3 — CIEL, ATMOSPHERE ET MONDE VIVANT
 -------------------------------------------
