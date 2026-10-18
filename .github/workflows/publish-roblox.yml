@@ -28,8 +28,11 @@ jobs:
     steps:
       - name: Validate publish confirmation
         shell: bash
+        # Dispatch input is untrusted text, never interpolate it as shell code.
+        env:
+          PUBLISH_CONFIRM: ${{ inputs.confirm }}
         run: |
-          test "${{ inputs.confirm }}" = "PUBLISH" || {
+          test "$PUBLISH_CONFIRM" = "PUBLISH" || {
             echo "Type PUBLISH to deploy the selected main commit."
             exit 1
           }
@@ -160,23 +163,40 @@ jobs:
             exit 1
           }
 
+          # No redirects with an API key and never print an untrusted response.
           response_file="$(mktemp)"
-          status="$(curl --silent --show-error             --output "$response_file"             --write-out "%{http_code}"             --request POST             "https://apis.roblox.com/universes/v1/$ROBLOX_UNIVERSE_ID/places/$ROBLOX_PLACE_ID/versions?versionType=Published"             --header "x-api-key: $ROBLOX_API_KEY"             --header "Content-Type: application/xml"             --data-binary @build/ChaosSurvival.rbxlx)"
+          status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
+            --connect-timeout 15 --max-time 120 \
+            --output "$response_file" --write-out "%{http_code}" \
+            --request POST \
+            --header "x-api-key: $ROBLOX_API_KEY" \
+            --header "Content-Type: application/xml" \
+            --data-binary @build/ChaosSurvival.rbxlx \
+            "https://apis.roblox.com/universes/v1/$ROBLOX_UNIVERSE_ID/places/$ROBLOX_PLACE_ID/versions?versionType=Published")"
 
-          cat "$response_file"
+          case "$status" in
+            2??) ;;
+            *)
+              echo "::error::Roblox publication returned HTTP $status; response body redacted."
+              exit 1
+              ;;
+          esac
 
-          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
-            echo
-            echo "Roblox publish failed with HTTP $status."
-            echo "The API key must have universe-places:write access for this universe."
-            exit 1
-          fi
+          version="$(python3 - "$response_file" <<'PY'
+          import json
+          import sys
 
-          if ! grep -q '"versionNumber"' "$response_file"; then
-            echo
-            echo "Roblox did not return a published version number."
-            exit 1
-          fi
+          try:
+              with open(sys.argv[1], encoding="utf-8") as f:
+                  payload = json.load(f)
+              version = payload.get("versionNumber")
+              if type(version) is not int or version < 1:
+                  raise ValueError("missing positive versionNumber")
+          except (ValueError, OSError, UnicodeError, AttributeError):
+              raise SystemExit("Roblox publication response lacks a valid version number (body redacted)")
+          print(version)
+          PY
+          )"
 
           mkdir -p build
           {
@@ -186,9 +206,7 @@ jobs:
             echo "utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "universe=$ROBLOX_UNIVERSE_ID"
             echo "place=$ROBLOX_PLACE_ID"
-            echo -n "roblox_response="
-            tr -d '\n' < "$response_file"
-            echo
+            echo "published_version=$version"
           } > build/publish-metadata.txt
 
       - name: Upload published place artifact
