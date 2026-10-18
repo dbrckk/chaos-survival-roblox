@@ -749,6 +749,58 @@ jobs:
           print("Accessibility setting persistence/runtime contract verified.")
           PY
 
+      - name: Enforce trusted release inputs and publish evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          publish = Path(".github/workflows/publish-roblox.yml").read_text()
+          gate = Path(".github/workflows/release-candidate-gate.yml").read_text()
+          failures = []
+
+          # These are operator-typed workflow_dispatch values. A direct
+          # ${{ inputs.* }} expansion inside Bash turns data into source.
+          # Keep inputs in step env; Bash never re-parses env values.
+          for name, text in (("publish", publish), ("candidate", gate)):
+              if 'test "${{ inputs.' in text:
+                  failures.append(f"{name}: shell-evaluated dispatch input")
+
+          if "\n  push:" in publish:
+              failures.append("publish: unattended branch-push trigger")
+          if 'PUBLISH_CONFIRM: ${{ inputs.confirm }}' not in publish:
+              failures.append("publish: safe confirmation env missing")
+          if 'test "$PUBLISH_CONFIRM" = "PUBLISH"' not in publish:
+              failures.append("publish: exact typed confirmation not enforced")
+
+          fields = (
+              "confirm", "android", "desktop", "persistence",
+              "gameplay_fairness", "accessibility", "public_alpha", "store_assets",
+          )
+          for key in fields:
+              env = "RC_" + key.upper()
+              if f"{env}: ${{{{ inputs.{key} }}}}" not in gate:
+                  failures.append(f"candidate: {key} safe env missing")
+              expected = "CERTIFY" if key == "confirm" else "PASS"
+              if f'test "${env if False else "$" + env}" = "{expected}"' not in gate:
+                  failures.append(f"candidate: {key} exact attestation missing")
+
+          if 'cat "$response_file"' in publish or "roblox_response=" in publish:
+              failures.append("publish: untrusted Roblox response leaked to logs/artifacts")
+          if 'published_version=$version' not in publish:
+              failures.append("publish: minimal version-only metadata missing")
+          if 'EXPECTED_PUBLIC_UNIVERSE: "10771083668"' not in publish:
+              failures.append("publish: known public Universe guard missing")
+          if 'EXPECTED_PUBLIC_PLACE: "95351659174730"' not in publish:
+              failures.append("publish: known public Place guard missing")
+
+          if failures:
+              for item in failures:
+                  print("ERROR:", item)
+              raise SystemExit(1)
+          print("Release confirmation, destination and response redaction verified.")
+          PY
+
       - name: Enforce production release hygiene
         shell: bash
         run: |
