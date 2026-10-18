@@ -6,7 +6,9 @@ local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local DisasterBalance = require("../../src/server/DisasterBalance")
+local MovementSafety = require("../../src/server/MovementSafety")
 local RisingLava = require("../../src/server/Disasters/RisingLava")
+local Tornado = require("../../src/server/Disasters/Tornado")
 
 local disasters = {
     {id = "RisingLava", module = require("../../src/server/Disasters/RisingLava")},
@@ -35,6 +37,50 @@ local function runCleanup(cleanup, onCleanup)
 end
 
 describe("Headless disaster playtest", function()
+    it("never offers a safe tornado eye or launches outside its 42-stud radius", function()
+        local center = Vector3.new(0, 0, 0)
+        local eye, eyeStrength = Tornado.impulseAt(
+            center, center, 17, 1
+        )
+        expect(eye ~= nil).toBe(true)
+        expect(eyeStrength).toBe(1)
+        expect(eye.X > 0 and eye.Y > 0).toBe(true)
+        expect(eye.Z).toBe(0)
+
+        for _, distance in ipairs({0.001, 0.5, 1.99, 2, 2.01, 12, 36}) do
+            local impulse, strength = Tornado.impulseAt(
+                Vector3.new(distance, 5, 0), center, 17, 1
+            )
+            expect(impulse ~= nil).toBe(true)
+            expect(strength > 0 and strength <= 1).toBe(true)
+            expect(impulse.Y > 0).toBe(true)
+            expect(impulse.X == impulse.X and impulse.Y == impulse.Y
+                and impulse.Z == impulse.Z).toBe(true)
+        end
+
+        local nearBoundary, boundaryStrength = Tornado.impulseAt(
+            Vector3.new(41.9, 0, 0), center, 17, 1
+        )
+        expect(nearBoundary ~= nil).toBe(true)
+        expect(boundaryStrength > 0 and boundaryStrength < 0.01)
+            .toBe(true)
+        local outside, outsideStrength = Tornado.impulseAt(
+            Vector3.new(42, 0, 0), center, 17, 1
+        )
+        expect(outside == nil).toBe(true)
+        expect(outsideStrength).toBe(0)
+        expect(Tornado.impulseAt(Vector3.new(60, 0, 0), center, 17, 1)
+            == nil).toBe(true)
+        expect(Tornado.impulseAt(nil, center, 17, 1) == nil).toBe(true)
+
+        local boosted = MovementSafety.addImpulse(
+            Vector3.new(60, 55, 0), eye, 62, -55, 58
+        )
+        expect(Vector3.new(boosted.X, 0, boosted.Z).Magnitude <= 62)
+            .toBe(true)
+        expect(boosted.Y <= 58).toBe(true)
+    end)
+
     it("ignores accessory-only lava contact and late round callbacks", function()
         local character = Instance.new("Model")
         character.Name = "LavaContactSubject"
@@ -161,6 +207,15 @@ describe("Headless disaster playtest", function()
             task.wait(0.05)
         end
 
+        expect(contactKind).toBe("Tornado")
+
+        -- The center was previously immune because dist > 2 excluded it.
+        contactKind = nil
+        root.Position = Config.ArenaCenter
+        local centerDeadline = os.clock() + 0.75
+        while contactKind == nil and os.clock() < centerDeadline do
+            task.wait(0.05)
+        end
         expect(contactKind).toBe("Tornado")
 
         active = false
