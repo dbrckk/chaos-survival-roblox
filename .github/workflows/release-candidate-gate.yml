@@ -48,37 +48,48 @@ jobs:
     steps:
       - name: Validate certification confirmation
         shell: bash
+        # User-supplied dispatch strings must reach Bash as data, never as
+        # interpolated source (e.g. a malicious $() in a typed field).
+        env:
+          RC_CONFIRM: ${{ inputs.confirm }}
+          RC_ANDROID: ${{ inputs.android }}
+          RC_DESKTOP: ${{ inputs.desktop }}
+          RC_PERSISTENCE: ${{ inputs.persistence }}
+          RC_GAMEPLAY_FAIRNESS: ${{ inputs.gameplay_fairness }}
+          RC_ACCESSIBILITY: ${{ inputs.accessibility }}
+          RC_PUBLIC_ALPHA: ${{ inputs.public_alpha }}
+          RC_STORE_ASSETS: ${{ inputs.store_assets }}
         run: |
-          test "${{ inputs.confirm }}" = "CERTIFY" || {
+          test "$RC_CONFIRM" = "CERTIFY" || {
             echo "Type CERTIFY to run the release candidate gate."
             exit 1
           }
 
-          test "${{ inputs.android }}" = "PASS" || {
+          test "$RC_ANDROID" = "PASS" || {
             echo "Android attestation must be PASS."
             exit 1
           }
-          test "${{ inputs.desktop }}" = "PASS" || {
+          test "$RC_DESKTOP" = "PASS" || {
             echo "Desktop attestation must be PASS."
             exit 1
           }
-          test "${{ inputs.persistence }}" = "PASS" || {
+          test "$RC_PERSISTENCE" = "PASS" || {
             echo "Persistence attestation must be PASS."
             exit 1
           }
-          test "${{ inputs.gameplay_fairness }}" = "PASS" || {
+          test "$RC_GAMEPLAY_FAIRNESS" = "PASS" || {
             echo "Gameplay/fairness attestation must be PASS."
             exit 1
           }
-          test "${{ inputs.accessibility }}" = "PASS" || {
+          test "$RC_ACCESSIBILITY" = "PASS" || {
             echo "Audio/accessibility attestation must be PASS."
             exit 1
           }
-          test "${{ inputs.public_alpha }}" = "PASS" || {
+          test "$RC_PUBLIC_ALPHA" = "PASS" || {
             echo "Public alpha attestation must be PASS."
             exit 1
           }
-          test "${{ inputs.store_assets }}" = "PASS" || {
+          test "$RC_STORE_ASSETS" = "PASS" || {
             echo "Store/page asset attestation must be PASS."
             exit 1
           }
