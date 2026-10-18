@@ -35,7 +35,34 @@ Classify failures before changing production code:
 - A timeout/429 is still a red gate until a retry succeeds on the release lineage; it is never silently treated as PASS.
 - Record passed test counts, failed shard, workflow/run number and exact SHA.
 
-## Current published candidate
+## Production destination verification (critical; 18 October 2026)
+
+Before any real production publication:
+
+- [ ] Confirm that the actual Roblox Creator Dashboard **public** experience
+  is Universe `10771083668` and Place `95351659174730`.
+- [ ] Confirm that GitHub `ROBLOX_UNIVERSE_ID` and `ROBLOX_PLACE_ID` match
+  those **verified** public IDs, not an older or unrelated experience.
+- [ ] Confirm that staging uses a **different** universe and place and
+  that its key cannot write to the published universe.
+- [ ] Inspect Creator Dashboard **Version History** for the potentially
+  unintended staging-stamped versions **64** and **65** before choosing
+  any restore version. Never guess which prior version is safe.
+- [ ] Run authenticated Studio/Android/device QA and the exact-SHA
+  Release Candidate Gate before manually dispatching production publish.
+
+The production workflow is **manual-only** and refuses publishing when
+repository variables differ from those explicitly recorded public IDs.
+Changing this pinned target must follow independent Creator Dashboard
+verification and a code review; do not weaken the check to make CI green.
+The visual staging workflow intentionally fails closed while the old
+target collision remains unresolved.
+
+## Historical published candidate — legacy Roblox target, not current production
+
+The following older publication evidence refers to a different
+Universe/Place than the owner's later public Creator Dashboard links;
+it is retained for historical audit, **not a current live target**.
 
 - Published commit: `35123d31672acbd5b7ec6e385a1020007db4eb4b`
 - Build Validation: PASS (run #1396)
