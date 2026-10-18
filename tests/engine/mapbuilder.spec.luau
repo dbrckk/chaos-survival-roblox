@@ -8,6 +8,7 @@ local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
+local SpawnSafety = require("../../src/server/SpawnSafety")
 
 describe("Chaos Survival engine", function()
     it("builds a complete playable map hierarchy", function()
@@ -117,6 +118,76 @@ describe("Chaos Survival engine", function()
         end
 
         root:Destroy()
+    end)
+
+    it("avoids other players and world obstacles at round entry", function()
+        local generated = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local arena = generated:FindFirstChild("Arena")
+        local spawns = arena and arena:FindFirstChild("Spawns")
+        local marker = spawns and spawns:FindFirstChild("Spawn1")
+        expect(marker ~= nil).toBe(true)
+
+        local character = Instance.new("Model")
+        character.Name = "RoundEntryProbe"
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = character
+        local ownRoot = Instance.new("Part")
+        ownRoot.Name = "HumanoidRootPart"
+        ownRoot.Size = Vector3.new(2, 2, 1)
+        ownRoot.CanCollide = false
+        ownRoot.Parent = character
+        character.Parent = workspace
+
+        local before, initialSlot = SpawnSafety.resolve(arena, marker, humanoid, ownRoot)
+        expect(before ~= nil).toBe(true)
+        expect(SpawnSafety.clearAt(arena, before.Position)).toBe(true)
+
+        -- A non-arena solid prop obstructs the first candidate. The
+        -- initial scan must select another safe entry while the later
+        -- arena-only post-spawn check remains unaffected by other people.
+        local obstacle = Instance.new("Part")
+        obstacle.Name = "ExternalSpawnObstacle"
+        obstacle.Anchored = true
+        obstacle.CanCollide = true
+        obstacle.Size = Vector3.new(6, 8, 6)
+        obstacle.Position = before.Position
+        obstacle.Parent = workspace
+
+        local after, nextSlot = SpawnSafety.resolve(arena, marker, humanoid, ownRoot)
+        expect(after ~= nil).toBe(true)
+        expect(nextSlot ~= initialSlot).toBe(true)
+        expect(SpawnSafety.clearAt(arena, before.Position)).toBe(true)
+
+        obstacle:Destroy()
+
+        -- A living peer with query-visible but non-colliding body parts
+        -- must also reserve the spawn area; a dead rig does not.
+        local peer = Instance.new("Model")
+        peer.Name = "OtherSurvivor"
+        local peerHumanoid = Instance.new("Humanoid")
+        peerHumanoid.Parent = peer
+        local peerPart = Instance.new("Part")
+        peerPart.Size = Vector3.new(6, 8, 6)
+        peerPart.CanCollide = false
+        peerPart.CanQuery = true
+        peerPart.Anchored = true
+        peerPart.Position = before.Position
+        peerPart.Parent = peer
+        peer.Parent = workspace
+
+        local away, awaySlot = SpawnSafety.resolve(arena, marker, humanoid, ownRoot)
+        expect(away ~= nil).toBe(true)
+        expect(awaySlot ~= initialSlot).toBe(true)
+        peerHumanoid.Health = 0
+        local freeAgain, clearSlot = SpawnSafety.resolve(
+            arena, marker, humanoid, ownRoot
+        )
+        expect(freeAgain ~= nil).toBe(true)
+        expect(clearSlot).toBe(initialSlot)
+
+        peer:Destroy()
+        character:Destroy()
+        generated:Destroy()
     end)
 
     it("resolves humanoids from nested hit descendants", function()

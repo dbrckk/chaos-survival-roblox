@@ -84,6 +84,18 @@ within the recheck window: no lobby recovery may relocate contestants.
 Repeat with low network quality; capture logs and video. Only a real device
 session can mark these checks passed.
 
+## Crowded arena entry / repeated round start
+
+On a staging candidate with the exact commit, join at least four real
+characters and repeat all four arena entries. Confirm that no two
+participants materialize on top of each other, and that solid scene
+obstacles outside the Arena folder cannot trap an arriving rig. Include
+R6, R15, slow-connection arrivals and a quick round-to-round transition.
+The 0.35-second recovery check is intentionally restricted to arena
+geometry so normal proximity between players cannot cause an involuntary
+second teleport. Capture Android/Studio footage and server output.
+Automated collision specs are not physical multiplayer certification.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.

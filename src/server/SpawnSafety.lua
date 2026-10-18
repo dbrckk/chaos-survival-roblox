@@ -35,8 +35,25 @@ local function isFree(arena, base, x, z, overlap)
         -- Floor contact is intended. Spawn pads are visual markers, not
         -- platforms; all overhead decks, bridges and future solid props
         -- must be rejected even if they are invisible to the camera.
-        if part ~= base and part:IsA("BasePart") and part.CanCollide then
-            return false
+        if part ~= base and part:IsA("BasePart") then
+            if part.CanCollide then
+                return false
+            end
+            -- Roblox character rigs often have CanCollide=false parts.
+            -- Query-visible limbs still reserve the space occupied by a
+            -- *living* avatar, even when its physics parts are non-solid.
+            -- Only the initial spawn scan includes character descendants;
+            -- the later arena-only settling check ignores player proximity.
+            local ancestor = part.Parent
+            while ancestor and ancestor ~= workspace do
+                if ancestor:IsA("Model") then
+                    local h = ancestor:FindFirstChildOfClass("Humanoid")
+                    if h and h.Health > 0 then
+                        return false
+                    end
+                end
+                ancestor = ancestor.Parent
+            end
         end
     end
     return true
@@ -52,8 +69,12 @@ function SpawnSafety.resolve(arena, marker, humanoid, root)
     end
 
     local overlap = OverlapParams.new()
-    overlap.FilterType = Enum.RaycastFilterType.Include
-    overlap.FilterDescendantsInstances = {arena}
+    -- At round entry, other living rigs and solid world obstacles matter,
+    -- not only pieces parented inside Arena. Exclude the floor and this
+    -- player's own avatar so re-entry recovery cannot block itself.
+    -- The delayed post-spawn check below deliberately remains arena-only.
+    overlap.FilterType = Enum.RaycastFilterType.Exclude
+    overlap.FilterDescendantsInstances = {base, root.Parent or root}
     overlap.MaxParts = 0
 
     local center = base.Position
