@@ -271,6 +271,122 @@ describe("Headless disaster playtest", function()
         character:Destroy()
     end)
 
+    it("rejects late Jump Shock impulses after a round closes", function()
+        local jumpShock = require("../../src/server/Disasters/JumpShock")
+        local character = Instance.new("Model")
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = character
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Anchored = true
+        root.Parent = character
+        character.Parent = workspace
+        local subject = {Character = character}
+        local contacts = 0
+
+        local active = false
+        local ctx = {
+            Active = function() return active end,
+            IsContestantActive = function() return true end,
+            OnHazardContact = function() contacts += 1 end,
+        }
+        expect(jumpShock.applyShock(ctx, subject, 8)).toBe(false)
+        expect(contacts).toBe(0)
+
+        -- An eligibility hook can synchronously close the round during
+        -- a shock iteration. Re-check phase after calling that hook.
+        active = true
+        ctx.IsContestantActive = function()
+            active = false
+            return true
+        end
+        expect(jumpShock.applyShock(ctx, subject, 8)).toBe(false)
+        expect(contacts).toBe(0)
+
+        active = true
+        ctx.IsContestantActive = function() return true end
+        expect(jumpShock.applyShock(ctx, subject, 8)).toBe(true)
+        expect(contacts).toBe(1)
+        character:Destroy()
+    end)
+
+    it("suppresses Meteor and Bomb visual callbacks when damage ends the round", function()
+        -- Each effect runs in the actual Roblox DataModel. The first
+        -- damage notification closes the round; no late impact FX may
+        -- be sent to the lobby or a newly-started round.
+        local cases = {
+            {
+                module = require("../../src/server/Disasters/Bombs"),
+                markerName = "BombWarning",
+                profile = {BombWarningSeconds = 0.4, BombRadius = 8, BombDamage = 50},
+            },
+            {
+                module = require("../../src/server/Disasters/Meteors"),
+                markerName = "MeteorWarning",
+                profile = {MeteorWarningSeconds = 0.4, MeteorRadius = 8, MeteorDamage = 50},
+            },
+        }
+
+        for _, case in ipairs(cases) do
+            local character = Instance.new("Model")
+            local humanoid = Instance.new("Humanoid")
+            humanoid.MaxHealth = 100
+            humanoid.Health = 100
+            humanoid.Parent = character
+            local root = Instance.new("Part")
+            root.Name = "HumanoidRootPart"
+            root.Size = Vector3.new(2, 2, 1)
+            root.Anchored = true
+            root.Parent = character
+            character.Parent = workspace
+
+            local subject = {Character = character}
+            local active = true
+            local damageEvents = 0
+            local visualEvents = 0
+            local cleanup = {}
+            case.module.start({
+                Config = Config,
+                Cleanup = cleanup,
+                Active = function() return active end,
+                HazardContestants = {subject},
+                IsContestantActive = function() return true end,
+                BalanceProfile = case.profile,
+                OnHazardDamage = function()
+                    damageEvents += 1
+                    active = false
+                end,
+                OnHazardImpact = function()
+                    visualEvents += 1
+                end,
+            })
+
+            local marker = nil
+            local deadline = os.clock() + 1
+            repeat
+                marker = workspace:FindFirstChild(case.markerName)
+                if marker then break end
+                task.wait(0.02)
+            until os.clock() >= deadline
+
+            if marker then
+                root.Position = marker.Position + Vector3.new(0, 1, 0)
+            end
+            local impactDeadline = os.clock() + 2
+            while active and os.clock() < impactDeadline do
+                task.wait(0.03)
+            end
+
+            active = false
+            runCleanup(cleanup, {})
+            character:Destroy()
+
+            expect(marker ~= nil).toBe(true)
+            expect(damageEvents).toBe(1)
+            expect(visualEvents).toBe(0)
+        end
+    end)
+
     it("retains an actual meteor ground warning during projectile descent", function()
         local meteorDisaster = require("../../src/server/Disasters/Meteors")
         local active = true
