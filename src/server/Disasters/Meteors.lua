@@ -111,7 +111,8 @@ function D.start(ctx)
 
                 local position = impactVisualPosition
                 DisasterImpact.applyRadialDamage(ctx, position, radius, damage, "Meteor")
-                if ctx.OnHazardImpact then
+                -- Suppress late visual impact events if the last hit closed the round.
+                if ctx.Active() and ctx.OnHazardImpact then
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 120, 40), radius, "Meteor")
                 end
 
