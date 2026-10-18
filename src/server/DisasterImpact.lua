@@ -1,9 +1,25 @@
 local DisasterImpact = {}
 
+-- Streaming/physics can yield NaN or infinite positions and parameters.
+-- Invalid impact distances must never become center hits or near misses.
+local function finiteNumber(value)
+    local number = tonumber(value)
+    if number == nil or number ~= number
+        or number == math.huge or number == -math.huge then
+        return nil
+    end
+    return number
+end
+
 function DisasterImpact.damageForDistance(distance, radius, maxDamage)
-    local safeRadius = math.max(0.001, tonumber(radius) or 0.001)
-    local safeDamage = math.max(0, tonumber(maxDamage) or 0)
-    local safeDistance = math.max(0, tonumber(distance) or 0)
+    local safeDistance = finiteNumber(distance)
+    local safeDamage = finiteNumber(maxDamage)
+    if safeDistance == nil or safeDamage == nil or safeDamage <= 0 then
+        return 0
+    end
+
+    local safeRadius = math.max(0.001, finiteNumber(radius) or 0.001)
+    safeDistance = math.max(0, safeDistance)
 
     if safeDistance > safeRadius then
         return 0
@@ -15,9 +31,13 @@ function DisasterImpact.damageForDistance(distance, radius, maxDamage)
 end
 
 function DisasterImpact.nearMissForDistance(distance, radius, margin)
-    local safeRadius = math.max(0.001, tonumber(radius) or 0.001)
-    local safeMargin = math.max(0, tonumber(margin) or 0)
-    local safeDistance = math.max(0, tonumber(distance) or 0)
+    local safeDistance = finiteNumber(distance)
+    if safeDistance == nil then
+        return false
+    end
+    local safeRadius = math.max(0.001, finiteNumber(radius) or 0.001)
+    local safeMargin = math.max(0, finiteNumber(margin) or 0)
+    safeDistance = math.max(0, safeDistance)
 
     return safeDistance > safeRadius and safeDistance <= (safeRadius + safeMargin)
 end
