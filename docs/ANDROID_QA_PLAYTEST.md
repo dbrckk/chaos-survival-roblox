@@ -132,6 +132,17 @@ engine tests validate finite server velocity calculations with NaN,
 Infinity and high finite inputs; they do not prove mobile physics under
 real network ownership or device performance.
 
+## Explosion lifecycle — end-of-round blast isolation
+
+On the exact candidate build in authenticated Studio and Roblox Android,
+trigger Meteor and Bomb explosions as a round ends (including a lethal
+final-survivor hit). Ensure no remaining player is struck in intermission,
+the lobby, or the next round by an in-flight old explosion, and no
+near-miss progress is credited after the phase ends. Repeat with several
+humans and AI survivors, plus rapid lobby/arena transitions; collect
+server elimination/near-miss logs and device video. Automated engine
+coverage checks intra-blast cancellation, not real-device timing.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
