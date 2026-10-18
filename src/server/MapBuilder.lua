@@ -696,6 +696,38 @@ local function addPlatformFinish(decor, platform, index, theme)
     -- rim now reads as a separate machined structural layer.
     topPanel.Transparency = 0.07
 
+    -- Four separate, shallow edge chamfers give the deck a deliberate
+    -- machined silhouette instead of the default square Roblox slab.
+    -- They sit OUTSIDE the walkable top surface, below foot level,
+    -- and remain non-colliding/non-queryable. Disappearing Platforms
+    -- must hide them together with the parent platform.
+    local halfX, halfZ = platform.Size.X * 0.5, platform.Size.Z * 0.5
+    local bevelDepth = math.clamp(math.min(halfX, halfZ) * 0.15, 0.28, 0.65)
+    local bevelY = platform.Position.Y + platform.Size.Y * 0.5 - 0.20
+    local edgeColor = theme.Structure:Lerp(theme.Detail, 0.40)
+    local edgeMaterial = VisualTheme.Materials.Structure
+    local edgeSpecs = {
+        {Vector3.new(platform.Size.X + 0.12, 0.30, bevelDepth),
+            Vector3.new(0, bevelY, -halfZ - bevelDepth * 0.27)},
+        {Vector3.new(platform.Size.X + 0.12, 0.30, bevelDepth),
+            Vector3.new(0, bevelY, halfZ + bevelDepth * 0.27)},
+        {Vector3.new(bevelDepth, 0.30, platform.Size.Z + 0.12),
+            Vector3.new(-halfX - bevelDepth * 0.27, bevelY, 0)},
+        {Vector3.new(bevelDepth, 0.30, platform.Size.Z + 0.12),
+            Vector3.new(halfX + bevelDepth * 0.27, bevelY, 0)},
+    }
+    for edgeIndex, spec in ipairs(edgeSpecs) do
+        local bevel = decorPart(
+            decor,
+            "PlatformBevel" .. index .. "_" .. edgeIndex,
+            spec[1],
+            Vector3.new(platform.Position.X, 0, platform.Position.Z) + spec[2],
+            edgeColor,
+            edgeMaterial
+        )
+        bevel.Transparency = 0.08
+    end
+
     local underFrame = decorPart(
         decor,
         "PlatformUnderFrame" .. index,
