@@ -106,6 +106,41 @@ describe("Chaos Survival engine", function()
         expect((decor :: Folder):FindFirstChild("CenterBeacon") ~= nil).toBe(true)
         expect((decor :: Folder):FindFirstChild("PlatformPanel1") ~= nil).toBe(true)
         expect((decor :: Folder):FindFirstChild("PlatformUnderFrame1") ~= nil).toBe(true)
+        -- All four machined edges are cosmetic and obey the server's
+        -- authoritative collapse phase (no phantom floor after hiding).
+        local platform1 = (platforms :: Folder):FindFirstChild("Platform1")
+        expect(platform1 ~= nil).toBe(true)
+        local bevels = {}
+        for edgeIndex = 1, 4 do
+            local bevel = (decor :: Folder):FindFirstChild(
+                "PlatformBevel1_" .. edgeIndex
+            )
+            expect(bevel ~= nil).toBe(true)
+            if bevel and bevel:IsA("BasePart") then
+                expect(bevel.CanCollide).toBe(false)
+                expect(bevel.CanTouch).toBe(false)
+                expect(bevel.CanQuery).toBe(false)
+                table.insert(bevels, bevel)
+            end
+        end
+        local cosmetics = DisappearingPlatforms.cosmeticsForPlatform(
+            decor, platform1
+        )
+        local tracked = {}
+        for _, entry in ipairs(cosmetics) do
+            tracked[entry.part] = true
+        end
+        for _, bevel in ipairs(bevels) do
+            expect(tracked[bevel] == true).toBe(true)
+        end
+        DisappearingPlatforms.setCosmeticsPhase(cosmetics, "Gone")
+        for _, bevel in ipairs(bevels) do
+            expect(bevel.Transparency).toBe(1)
+        end
+        DisappearingPlatforms.setCosmeticsPhase(cosmetics, nil)
+        for _, bevel in ipairs(bevels) do
+            expect(math.abs(bevel.Transparency - 0.08) < 0.0001).toBe(true)
+        end
         expect((decor :: Folder):FindFirstChild("PlatformSupport1_1") ~= nil).toBe(true)
         expect(#(decor :: Folder):GetChildren() >= 5).toBe(true)
 
