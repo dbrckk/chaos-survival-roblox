@@ -59,6 +59,14 @@ function D.contactIsLethal(ctx, player, character, humanoid, lava)
         or not lava or not lava.Parent then
         return false
     end
+    -- An eligibility hook may yield while the player is eliminated,
+    -- respawns, or the phase advances. Never kill an old/current rig after
+    -- that transition, even if the original contact was valid.
+    if not ctx.Active() or player.Character ~= character
+        or humanoid.Health <= 0 or humanoid.Parent ~= character
+        or not lava.Parent then
+        return false
+    end
     local root = character and character:FindFirstChild("HumanoidRootPart")
     return root ~= nil and root:IsA("BasePart")
         and D.rootInsideLava(root.Position, lava.Position, lava.Size, 2.5)
@@ -108,7 +116,11 @@ function D.start(ctx)
             if ctx.OnFatalHazard then
                 pcall(ctx.OnFatalHazard, player, "Lava")
             end
-            hum.Health = 0
+            -- Recording the fatal cause may itself yield or end the
+            -- round. Revalidate before mutating a Humanoid.
+            if D.contactIsLethal(ctx, player, character, hum, lava) then
+                hum.Health = 0
+            end
         end
     end)
 
@@ -127,19 +139,17 @@ function D.start(ctx)
             lava.Position = Vector3.new(lava.Position.X, startY + alpha * 25, lava.Position.Z)
 
             for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
-                if D.isActiveContestant(player, ctx) then
-                    local character = player.Character
-                    local root = character and character:FindFirstChild("HumanoidRootPart")
-                    local hum = character and character:FindFirstChildOfClass("Humanoid")
-                    if root
-                        and root:IsA("BasePart")
-                        and hum
-                        and hum.Health > 0
-                        and D.rootInsideLava(root.Position, lava.Position, lava.Size, 2.5)
-                    then
-                        if ctx.OnFatalHazard then
-                            pcall(ctx.OnFatalHazard, player, "Lava")
-                        end
+                -- Use the same round/character/health checks for the
+                -- periodic scan as for Touched. Do not let a scan already
+                -- in progress carry a fatal hit into the next round.
+                if not ctx.Active() then break end
+                local character = player.Character
+                local hum = character and character:FindFirstChildOfClass("Humanoid")
+                if D.contactIsLethal(ctx, player, character, hum, lava) then
+                    if ctx.OnFatalHazard then
+                        pcall(ctx.OnFatalHazard, player, "Lava")
+                    end
+                    if D.contactIsLethal(ctx, player, character, hum, lava) then
                         hum.Health = 0
                     end
                 end
