@@ -96,6 +96,17 @@ geometry so normal proximity between players cannot cause an involuntary
 second teleport. Capture Android/Studio footage and server output.
 Automated collision specs are not physical multiplayer certification.
 
+## Rising Lava: fair contact and end-of-round cleanup
+
+On the exact candidate commit, test a live character with long accessories,
+layered clothing and both R6/R15 rigs above the moving lava surface. A
+dangling limb or accessory alone must not eliminate a safely elevated
+survivor. The root/body near the lava surface must still cause elimination.
+Repeat during the final seconds of the hazard and return to the lobby:
+stale post-round touch callbacks must never kill a survivor. Capture real
+Android video and the server's elimination events. The automated rules
+do not replace actual physics/device validation.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.

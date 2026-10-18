@@ -6,6 +6,7 @@ local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local DisasterBalance = require("../../src/server/DisasterBalance")
+local RisingLava = require("../../src/server/Disasters/RisingLava")
 
 local disasters = {
     {id = "RisingLava", module = require("../../src/server/Disasters/RisingLava")},
@@ -34,6 +35,72 @@ local function runCleanup(cleanup, onCleanup)
 end
 
 describe("Headless disaster playtest", function()
+    it("ignores accessory-only lava contact and late round callbacks", function()
+        local character = Instance.new("Model")
+        character.Name = "LavaContactSubject"
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = character
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Anchored = true
+        root.Size = Vector3.new(2, 2, 1)
+        root.Position = Vector3.new(0, 8, 0)
+        root.Parent = character
+
+        -- A long accessory can touch first while the avatar's feet and
+        -- torso remain well above the actual rising surface.
+        local accessory = Instance.new("Part")
+        accessory.Name = "LongAccessory"
+        accessory.Anchored = true
+        accessory.Position = Vector3.new(0, 2, 0)
+        accessory.Parent = character
+        character.Parent = workspace
+
+        local lava = Instance.new("Part")
+        lava.Name = "LavaContactProbe"
+        lava.Anchored = true
+        lava.Size = Vector3.new(20, 4, 20)
+        lava.Position = Vector3.zero
+        lava.Parent = workspace
+
+        local subject = {Character = character}
+        local active = true
+        local eligible = true
+        local ctx = {
+            Active = function() return active end,
+            IsContestantActive = function() return eligible end,
+        }
+        local lethal = RisingLava.contactIsLethal
+
+        expect(lethal(ctx, subject, character, humanoid, lava)).toBe(false)
+
+        root.Position = Vector3.new(0, 4.4, 0)
+        expect(lethal(ctx, subject, character, humanoid, lava)).toBe(true)
+
+        eligible = false
+        expect(lethal(ctx, subject, character, humanoid, lava)).toBe(false)
+        eligible = true
+        active = false
+        expect(lethal(ctx, subject, character, humanoid, lava)).toBe(false)
+        active = true
+
+        root.Position = Vector3.new(40, 4.4, 0)
+        expect(lethal(ctx, subject, character, humanoid, lava)).toBe(false)
+        root.Position = Vector3.new(0, 4.4, 0)
+
+        local replaced = Instance.new("Model")
+        subject.Character = replaced
+        expect(lethal(ctx, subject, character, humanoid, lava)).toBe(false)
+        subject.Character = character
+
+        humanoid.Health = 0
+        expect(lethal(ctx, subject, character, humanoid, lava)).toBe(false)
+
+        replaced:Destroy()
+        lava:Destroy()
+        character:Destroy()
+    end)
+
     it("reports real tornado knockback contacts", function()
         MapBuilder.build(Config, "Classic", ArenaVariants)
 
