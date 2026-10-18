@@ -782,7 +782,8 @@ jobs:
               if f"{env}: ${{{{ inputs.{key} }}}}" not in gate:
                   failures.append(f"candidate: {key} safe env missing")
               expected = "CERTIFY" if key == "confirm" else "PASS"
-              if f'test "${env if False else "$" + env}" = "{expected}"' not in gate:
+              required_test = 'test "$' + env + '" = "' + expected + '"'
+              if required_test not in gate:
                   failures.append(f"candidate: {key} exact attestation missing")
 
           if 'cat "$response_file"' in publish or "roblox_response=" in publish:
