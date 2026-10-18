@@ -69,16 +69,22 @@ function D.start(ctx)
     end
 
     local movableParts = {}
+    local platformStates = {}
     local platforms = arena:FindFirstChild("Platforms")
     if platforms then
         for _, platform in ipairs(platforms:GetChildren()) do
             if platform:IsA("BasePart") then
-                movableParts[#movableParts+1] = {
+                local state = {
                     part = platform,
                     cframe = platform.CFrame,
                     localCFrame = originalCFrame:ToObjectSpace(platform.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(platform.Position),
                 }
+                movableParts[#movableParts+1] = state
+                local index = tonumber(platform.Name:match("^Platform(%d+)$"))
+                if index then
+                    platformStates[index] = state
+                end
             end
         end
     end
@@ -95,20 +101,29 @@ function D.start(ctx)
         end
     end
 
+    -- Every visible trim belongs to a physical deck, not to the arena
+    -- origin. Ordinary platforms translate intact while Tower skybridges
+    -- both translate AND contract. Moving only PlatformGlow left the bevel,
+    -- surface, frame and supports suspended at their original locations.
     local bridgeDetails = {}
+    local platformDetails = {}
     if decor then
         for _, item in ipairs(decor:GetChildren()) do
             if item:IsA("BasePart") then
-                local index = tonumber(
+                local bridgeIndex = tonumber(
                     item.Name:match("^SkybridgeRail(%d+)_")
                     or item.Name:match("^SkybridgeRib(%d+)_")
-                    or item.Name:match("^PlatformGlow(%d+)$")
+                )
+                local platformIndex = tonumber(
+                    item.Name:match("^PlatformGlow(%d+)$")
                     or item.Name:match("^PlatformPanel(%d+)$")
                     or item.Name:match("^PlatformUnderFrame(%d+)$")
                     or item.Name:match("^PlatformCoreGlow(%d+)$")
-                    or item.Name:match("^PlatformSupport(%d+)_")
+                    or item.Name:match("^PlatformSupport(%d+)_%d+$")
+                    or item.Name:match("^PlatformBevel(%d+)_%d+$")
                 )
-                local bridge = index and bridgeStates[index]
+                local bridge = bridgeStates[bridgeIndex or platformIndex]
+                local deck = platformIndex and platformStates[platformIndex]
                 if bridge then
                     table.insert(bridgeDetails, {
                         part = item,
@@ -117,13 +132,13 @@ function D.start(ctx)
                         cframe = item.CFrame,
                         localCFrame = bridge.part.CFrame:ToObjectSpace(item.CFrame),
                     })
-                elseif item.Name:match("^PlatformGlow%d+$") then
-                    movableParts[#movableParts+1] = {
+                elseif deck then
+                    table.insert(platformDetails, {
                         part = item,
+                        deck = deck,
                         cframe = item.CFrame,
-                        localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
-                        localPosition = originalCFrame:PointToObjectSpace(item.Position),
-                    }
+                        localCFrame = deck.part.CFrame:ToObjectSpace(item.CFrame),
+                    })
                 end
             end
         end
@@ -220,8 +235,15 @@ function D.start(ctx)
                 end
             end
 
-            -- Rails, glow panels, armor ribs and supports maintain their
-            -- engineering offsets from the rescaled physical deck.
+            -- Decorative assemblies follow the exact physical platform
+            -- CFrame: no ghost panels/frames/bevels outside the shrinking deck.
+            for _, detail in ipairs(platformDetails) do
+                if detail.part.Parent and detail.deck.part.Parent then
+                    detail.part.CFrame = detail.deck.part.CFrame * detail.localCFrame
+                end
+            end
+
+            -- Skybridge spans shorten with the supporting tower spacing.
             for _, detail in ipairs(bridgeDetails) do
                 local piece = detail.part
                 local bridge = detail.bridge
@@ -282,6 +304,12 @@ function D.start(ctx)
                     part:SetAttribute("ImpulseY", state.impulse.Y)
                     part:SetAttribute("ImpulseZ", state.impulse.Z)
                 end
+            end
+        end
+
+        for _, detail in ipairs(platformDetails) do
+            if detail.part and detail.part.Parent then
+                detail.part.CFrame = detail.cframe
             end
         end
 

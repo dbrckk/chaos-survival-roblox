@@ -21,6 +21,75 @@ local function cleanup(callbacks, objects)
 end
 
 describe("Shrinking Arena mobility integration", function()
+    it("keeps every ordinary platform trim on its moving deck and restores it", function()
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena and arena:FindFirstChild("Platforms")
+        local decor = arena and arena:FindFirstChild("Decor")
+        local deck = platforms and platforms:FindFirstChild("Platform1")
+        expect(deck ~= nil).toBe(true)
+        expect(decor ~= nil).toBe(true)
+        local originalDeck = deck.CFrame
+
+        -- The cosmetic pieces must remain attached to their associated
+        -- physical deck, not to the arena center or their old world pose.
+        local names = {
+            "PlatformGlow1",
+            "PlatformPanel1",
+            "PlatformUnderFrame1",
+            "PlatformCoreGlow1",
+            "PlatformSupport1_1",
+            "PlatformBevel1_1",
+            "PlatformBevel1_4",
+        }
+        local snapshot = {}
+        for _, name in ipairs(names) do
+            local piece = decor:FindFirstChild(name)
+            expect(piece ~= nil).toBe(true)
+            expect(piece.CanCollide).toBe(false)
+            snapshot[piece] = {
+                cframe = piece.CFrame,
+                size = piece.Size,
+                relative = deck.CFrame:ToObjectSpace(piece.CFrame),
+            }
+        end
+
+        local active = true
+        local callbacks = {}
+        ShrinkingArena.start({
+            Config = Config,
+            RoundSeconds = 0.32,
+            Cleanup = {},
+            OnCleanup = callbacks,
+            Active = function() return active end,
+        })
+        task.wait(0.19)
+
+        expect((deck.Position - originalDeck.Position).Magnitude > 0.2)
+            .toBe(true)
+        for piece, original in pairs(snapshot) do
+            local expected = deck.CFrame * original.relative
+            expect((piece.Position - expected.Position).Magnitude < 0.02)
+                .toBe(true)
+            expect((piece.Position - original.cframe.Position).Magnitude > 0.1)
+                .toBe(true)
+            expect((piece.Size - original.size).Magnitude < 0.001)
+                .toBe(true)
+        end
+
+        active = false
+        cleanup(callbacks, {})
+        expect((deck.Position - originalDeck.Position).Magnitude < 0.001)
+            .toBe(true)
+        for piece, original in pairs(snapshot) do
+            expect((piece.Position - original.cframe.Position).Magnitude < 0.001)
+                .toBe(true)
+            expect((piece.Size - original.size).Magnitude < 0.001)
+                .toBe(true)
+        end
+        root:Destroy()
+    end)
+
     it("moves mobility pads inward and restores them on cleanup", function()
         MapBuilder.build(Config, "Towers", ArenaVariants)
 
@@ -115,6 +184,8 @@ describe("Shrinking Arena mobility integration", function()
                 "PlatformUnderFrame" .. index,
                 "PlatformCoreGlow" .. index,
                 "PlatformSupport" .. index .. "_1",
+                "PlatformBevel" .. index .. "_1",
+                "PlatformBevel" .. index .. "_4",
             }
             originals[bridge] = {cf = bridge.CFrame, size = bridge.Size}
             details[bridge] = {}
