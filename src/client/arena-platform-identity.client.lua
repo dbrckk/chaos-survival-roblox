@@ -12,8 +12,28 @@ local folder = Instance.new("Folder")
 folder.Name = "ArenaPlatformIdentityLocal"
 folder.Parent = workspace
 
+-- All platform glyphs and bevel pieces share one bounded owner. A
+-- CollapsePhase change updates only that platform's existing local parts;
+-- it never rebuilds a whole arena or adds a per-frame loop.
+local visualsByPlatform = {}
+local collapseConnections = {}
+
 local function clear()
+    for platform, connection in pairs(collapseConnections) do
+        connection:Disconnect()
+        collapseConnections[platform] = nil
+    end
+    table.clear(visualsByPlatform)
     folder:ClearAllChildren()
+end
+
+local function registerVisual(platform, visual)
+    local visuals = visualsByPlatform[platform]
+    if not visuals then
+        visuals = {}
+        visualsByPlatform[platform] = visuals
+    end
+    table.insert(visuals, visual)
 end
 
 local function makePart(name, size, cframe, color, material, transparency, anchorPart)
@@ -29,9 +49,11 @@ local function makePart(name, size, cframe, color, material, transparency, ancho
     part.Material = material or Enum.Material.Metal
     part.Color = color
     part.Transparency = transparency or 0
+    part:SetAttribute("ChaosBaseTransparency", part.Transparency)
     part.Parent = folder
 
     if anchorPart and anchorPart:IsA("BasePart") then
+        registerVisual(anchorPart, part)
         part.Massless = true
         local weld = Instance.new("WeldConstraint")
         weld.Name = "PlatformIdentityWeld"
@@ -220,7 +242,16 @@ local function rebuild()
                 continue
             end
 
-            PlatformFinishKit.build(folder, platform, variant, tier.Name, theme)
+            for _, piece in ipairs(PlatformFinishKit.build(
+                folder, platform, variant, tier.Name, theme
+            )) do
+                registerVisual(platform, piece)
+            end
+            for _, piece in ipairs(PlatformFinishKit.buildArmor(
+                folder, platform, variant, tier.Name, theme
+            )) do
+                registerVisual(platform, piece)
+            end
 
             if variant == "Towers" then
                 decorateTowers(platform, visualIndex, theme, tier)
@@ -231,6 +262,18 @@ local function rebuild()
             else
                 decorateClassic(platform, visualIndex, theme, tier)
             end
+
+            -- A platform can enter while already Gone (streaming/late
+            -- replication) or switch phase after the visuals are built.
+            local function syncCollapse()
+                PlatformFinishKit.applyCollapseVisibility(
+                    visualsByPlatform[platform],
+                    platform:GetAttribute("CollapsePhase")
+                )
+            end
+            collapseConnections[platform] =
+                platform:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse)
+            syncCollapse()
         end
     end
 end

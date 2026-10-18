@@ -21,14 +21,15 @@ function PlatformFinishKit.count(tier)
 end
 
 local function add(parent, platform, name, localFrame, size, color, material, alpha, shape)
-    local part = Instance.new("Part")
+    local part = Instance.new(shape == "WedgePart" and "WedgePart" or "Part")
     part.Name = name
     part.Size = size
     part.CFrame = platform.CFrame * localFrame
     part.Color = color
     part.Material = material
     part.Transparency = alpha
-    if shape then part.Shape = shape end
+    part:SetAttribute("ChaosBaseTransparency", alpha)
+    if shape and shape ~= "WedgePart" then part.Shape = shape end
     part.Anchored = false
     part.Massless = true
     part.CanCollide = false
@@ -93,6 +94,75 @@ function PlatformFinishKit.visualIndex(platform, fallbackIndex)
         return number
     end
     return math.max(1, math.floor(tonumber(fallbackIndex) or 1))
+end
+
+-- Chunky, angled corner armor changes the silhouette without touching
+-- the physical collision deck. High gets all four corners, Medium an
+-- opposing diagonal, Low none (the shared metal subframe remains).
+-- New geometry is local-only, massless and welded to the actual platform.
+function PlatformFinishKit.armorCount(tier)
+    if tier == "High" then return 4 end
+    if tier == "Medium" then return 2 end
+    return 0
+end
+
+function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
+    if not parent or not platform or not platform:IsA("BasePart")
+        or not NAMES[variant] or not theme then
+        return {}
+    end
+    local count = PlatformFinishKit.armorCount(tier)
+    local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
+    if count == 0 or math.min(sx, sz) < 3.2 then
+        return {}
+    end
+
+    local armorSize = math.clamp(math.min(sx, sz) * 0.13, 0.75, 1.50)
+    local color = theme.Structure:Lerp(theme.Detail, 0.34)
+    local corners = {
+        {-1, -1, 0},
+        {1, -1, 90},
+        {1, 1, 180},
+        {-1, 1, 270},
+    }
+    local built = {}
+    for cornerIndex, def in ipairs(corners) do
+        if count == 4 or cornerIndex == 1 or cornerIndex == 3 then
+            local frame = CFrame.new(
+                def[1] * (sx * 0.5 - armorSize * 0.35),
+                -sy * 0.5 - 0.03,
+                def[2] * (sz * 0.5 - armorSize * 0.35)
+            ) * CFrame.Angles(0, math.rad(def[3]), 0)
+            local plate = add(parent, platform,
+                variant .. "CornerArmor" .. cornerIndex,
+                frame,
+                Vector3.new(armorSize, 0.55, armorSize),
+                color,
+                Enum.Material.Metal,
+                0.04,
+                "WedgePart"
+            )
+            plate:SetAttribute("ChaosArmorCorner", cornerIndex)
+            table.insert(built, plate)
+        end
+    end
+    return built
+end
+
+-- Platform disappearance is gameplay, not an artistic overlay: any local
+-- welded armor or painted glyph must also become completely invisible.
+-- Saved base transparencies survive repeated Warning/Gone/Restore cycles.
+function PlatformFinishKit.applyCollapseVisibility(parts, phase)
+    for _, item in ipairs(parts or {}) do
+        if item and item.Parent and item:IsA("BasePart") then
+            local original = item:GetAttribute("ChaosBaseTransparency")
+            if type(original) ~= "number" then
+                original = item.Transparency
+                item:SetAttribute("ChaosBaseTransparency", original)
+            end
+            item.Transparency = phase == "Gone" and 1 or original
+        end
+    end
 end
 
 function PlatformFinishKit.build(parent, platform, variant, tier, theme)

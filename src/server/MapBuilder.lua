@@ -689,34 +689,36 @@ local function addPlatformFinish(decor, platform, index, theme)
             math.max(1, platform.Size.Z - 0.8)
         ),
         platform.Position + Vector3.new(0, (platform.Size.Y * 0.5) + 0.055, 0),
-        theme.Surface:Lerp(theme.Detail, 0.28),
+        theme.Surface:Lerp(theme.Structure, 0.26),
         theme.PanelMaterial or VisualTheme.Materials.Panel
     )
-    topPanel.Transparency = 0.04
+    -- Quiet, durable walking inset: hazards keep visual priority and the
+    -- rim now reads as a separate machined structural layer.
+    topPanel.Transparency = 0.07
 
     local underFrame = decorPart(
         decor,
         "PlatformUnderFrame" .. index,
         Vector3.new(platform.Size.X + 0.5, 0.42, platform.Size.Z + 0.5),
         platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.18, 0),
-        theme.Structure,
+        theme.Structure:Lerp(VisualTheme.World.Deep, 0.30),
         VisualTheme.Materials.Structure
     )
-    underFrame.Transparency = 0.08
+    underFrame.Transparency = 0.04
 
     local core = decorPart(
         decor,
         "PlatformCoreGlow" .. index,
         Vector3.new(
-            math.max(0.8, platform.Size.X * 0.42),
-            0.16,
-            math.max(0.8, platform.Size.Z * 0.42)
+            math.max(0.8, platform.Size.X * 0.32),
+            0.12,
+            math.max(0.8, platform.Size.Z * 0.32)
         ),
         platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.42, 0),
         (index % 2 == 0) and theme.Secondary or theme.Accent,
         VisualTheme.Materials.Glow
     )
-    core.Transparency = 0.26
+    core.Transparency = 0.56
 
     local platformBottom = platform.Position.Y - (platform.Size.Y * 0.5)
     local deckTop = 1.15
@@ -1621,7 +1623,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         local trim = decorPart(
             decor,
             "PlatformGlow" .. i,
-            Vector3.new(definition.size.X + 0.5, 0.18, definition.size.Z + 0.5),
+            Vector3.new(definition.size.X + 0.28, 0.12, definition.size.Z + 0.28),
             platformPosition - Vector3.new(0, (definition.size.Y * 0.5) + 0.13, 0),
             (i % 2 == 0) and theme.Secondary or theme.Accent,
             VisualTheme.Materials.Glow
@@ -1629,7 +1631,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         trim.CanCollide = false
         trim.CanTouch = false
         trim.CanQuery = false
-        trim.Transparency = 0.18
+        -- An exposed fluorescent slab under every deck made the platforms
+        -- read like toy blocks. The engineered shadow lip is primary,
+        -- with a thinner subdued signal layer beneath it.
+        trim.Transparency = 0.64
         addPlatformFinish(decor, platform, i, theme)
     end
 

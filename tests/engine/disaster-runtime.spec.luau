@@ -36,6 +36,97 @@ local function runCleanup(cleanup, onCleanup)
     end
 end
 
+describe("Collapsing platform visual truth", function()
+    it("hides real server trims and supports along with the collision deck", function()
+        local D = require("../../src/server/Disasters/DisappearingPlatforms")
+        local existing = workspace:FindFirstChild("GeneratedMap")
+        if existing then existing:Destroy() end
+
+        local root = Instance.new("Folder")
+        root.Name = "GeneratedMap"
+        root.Parent = workspace
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = root
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = arena
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+
+        local deck = Instance.new("Part")
+        deck.Name = "Platform1"
+        deck.Anchored = true
+        deck.CanCollide = true
+        deck.Parent = platforms
+
+        local skybridge = Instance.new("Part")
+        skybridge.Name = "Skybridge2"
+        skybridge.CanCollide = true
+        skybridge:SetAttribute("ChaosSkybridge", true)
+        skybridge.Parent = platforms
+        expect(#D.eligiblePlatforms(platforms, {})).toBe(1)
+
+        local names = {
+            "PlatformPanel1", "PlatformUnderFrame1", "PlatformCoreGlow1",
+            "PlatformGlow1", "PlatformSupport1_1", "PlatformSupport1_2",
+        }
+        local cosmetics = {}
+        for i, name in ipairs(names) do
+            local piece = Instance.new("Part")
+            piece.Name = name
+            piece.Anchored = true
+            piece.CanCollide = false
+            piece.Transparency = i * 0.05
+            piece.Parent = decor
+            table.insert(cosmetics, {part = piece, alpha = piece.Transparency})
+        end
+        local unrelated = Instance.new("Part")
+        unrelated.Name = "PlatformPanel11"
+        unrelated.Transparency = 0.27
+        unrelated.Parent = decor
+
+        local owned = D.cosmeticsForPlatform(decor, deck)
+        expect(#owned).toBe(#cosmetics)
+        expect(#D.cosmeticsForPlatform(decor, skybridge)).toBe(0)
+
+        local cleanup = {}
+        local active = true
+        D.start({
+            Active = function() return active end,
+            Cleanup = {},
+            OnCleanup = cleanup,
+        })
+
+        local deadline = os.clock() + 2.0
+        while deck:GetAttribute("CollapsePhase") ~= "Gone"
+            and os.clock() < deadline do
+            task.wait(0.025)
+        end
+        expect(deck:GetAttribute("CollapsePhase")).toBe("Gone")
+        expect(deck.CanCollide).toBe(false)
+        expect(deck.Transparency).toBe(1)
+        for _, entry in ipairs(cosmetics) do
+            expect(entry.part.Transparency).toBe(1)
+        end
+        -- Roblox stores Part.Transparency as float32, not a decimal64.
+        expect(math.abs(unrelated.Transparency - 0.27) < 0.0001).toBe(true)
+        expect(skybridge.Transparency).toBe(0)
+
+        active = false
+        runCleanup({}, cleanup)
+        expect(deck:GetAttribute("CollapsePhase") == nil).toBe(true)
+        expect(deck.CanCollide).toBe(true)
+        for _, entry in ipairs(cosmetics) do
+            expect(entry.part.Transparency).toBe(entry.alpha)
+        end
+
+        -- A stale delayed restore cannot revive a different collapse.
+        root:Destroy()
+    end)
+end)
+
 describe("Headless disaster playtest", function()
     it("never offers a safe tornado eye or launches outside its 42-stud radius", function()
         local center = Vector3.new(0, 0, 0)
