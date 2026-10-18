@@ -759,16 +759,19 @@ jobs:
           gate = Path(".github/workflows/release-candidate-gate.yml").read_text()
           failures = []
 
-          # These are operator-typed workflow_dispatch values. A direct
-          # ${{ inputs.* }} expansion inside Bash turns data into source.
-          # Keep inputs in step env; Bash never re-parses env values.
+          # Keep operator-typed expressions out of Bash source. Build
+          # the expression delimiter from separate strings so Actions
+          # itself cannot interpret the audit's Python source.
+          open_expr = "$" + "{{"
+          close_expr = "}}"
           for name, text in (("publish", publish), ("candidate", gate)):
-              if 'test "${{ inputs.' in text:
+              if 'test "' + open_expr + " inputs." in text:
                   failures.append(f"{name}: shell-evaluated dispatch input")
 
           if "\n  push:" in publish:
               failures.append("publish: unattended branch-push trigger")
-          if 'PUBLISH_CONFIRM: ${{ inputs.confirm }}' not in publish:
+          if ("PUBLISH_CONFIRM: " + open_expr + " inputs.confirm " + close_expr
+                  not in publish):
               failures.append("publish: safe confirmation env missing")
           if 'test "$PUBLISH_CONFIRM" = "PUBLISH"' not in publish:
               failures.append("publish: exact typed confirmation not enforced")
@@ -779,7 +782,9 @@ jobs:
           )
           for key in fields:
               env = "RC_" + key.upper()
-              if f"{env}: ${{{{ inputs.{key} }}}}" not in gate:
+              env_declaration = (env + ": " + open_expr + " inputs."
+                  + key + " " + close_expr)
+              if env_declaration not in gate:
                   failures.append(f"candidate: {key} safe env missing")
               expected = "CERTIFY" if key == "confirm" else "PASS"
               required_test = 'test "$' + env + '" = "' + expected + '"'
