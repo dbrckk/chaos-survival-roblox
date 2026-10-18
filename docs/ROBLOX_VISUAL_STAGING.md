@@ -7,6 +7,32 @@ metadata proves the candidate has been published into the *separate* test
 experience. A green **preflight** job with a skipped deploy means **NOT
 DEPLOYED**.
 
+## 18 October 2026: production/staging identity collision — publication blocked
+
+The real deployment proof attached to [Actions run #39110752852](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/39110752852)
+identifies `source_commit=bf50b3c140486a751ef3f15c0d701124bfef8bc3`,
+`staging_universe=10771083668`, `staging_place=95351659174730`
+and published version `65`. These IDs match the **already-published
+experience/place reported by the owner**, even though the old workflow
+reported isolated staging SUCCESS. Repository production variables used
+in the previous comparison therefore cannot be relied on as the sole
+production safety check.
+
+**Treat this as an unsafe staging configuration, NOT certified isolation.**
+Do not trigger further visual staging publishing or infer that the live
+public experience was untouched. The preflight, deploy verification and
+outbound publication steps now **hard-block both known published IDs**
+independently of GitHub's mutable production variables.
+
+Before re-enabling an isolated staging workflow, create/verify a genuinely
+separate Roblox experience and place, restrict its publish API key to
+that universe, correct all four production/staging repository variables,
+and compare Dashboard IDs and the Action artifact `play_url`.
+Review the **published version history** in the owner's actual public
+Creator Dashboard for unintended deployments. Roll back only with a
+verified safe version and owner authorization; do not invent an automatic
+production restore.
+
 ## Isolation and non-negotiable safety
 
 - Staging is a **different Roblox experience (Universe ID)** with its own
