@@ -18,6 +18,29 @@ local function tornadoPart(parent, name, size, position, color, transparency)
     return part
 end
 
+-- The old dist > 2 guard created a safe pocket at the center of
+-- the tornado. Select a deterministic horizontal direction at zero
+-- distance, while keeping the same 42-stud falloff and velocity cap.
+function D.impulseAt(rootPosition, center, force, intensity)
+    if typeof(rootPosition) ~= "Vector3" or typeof(center) ~= "Vector3" then
+        return nil, 0
+    end
+
+    local delta = rootPosition - center
+    local horizontal = Vector3.new(delta.X, 0, delta.Z)
+    local dist = horizontal.Magnitude
+    if dist ~= dist or dist >= 42 then
+        return nil, 0
+    end
+
+    local tangent = if dist > 0.001
+        then Vector3.new(-horizontal.Z, 0, horizontal.X) / dist
+        else Vector3.xAxis
+    local strength = math.clamp((42 - dist) / 42, 0, 1)
+    return tangent * force * intensity * strength
+        + Vector3.new(0, 10 * intensity * strength, 0), strength
+end
+
 function D.start(ctx)
     local profile = ctx.BalanceProfile or {}
     local force = profile.TornadoForce or 17
@@ -76,24 +99,21 @@ function D.start(ctx)
         while ctx.Active() do
             local intensity = ctx.Intensity and ctx.Intensity() or 1
             for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
+                -- A round can end while an expensive contact callback runs.
+                -- Never apply stale physics to the next round/lobby.
+                if not ctx.Active() then break end
                 if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
                     continue
                 end
                 local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if root and hum and hum.Health > 0 then
-                    local delta = root.Position - center
-                    local horizontal = Vector3.new(delta.X, 0, delta.Z)
-                    local dist = horizontal.Magnitude
-                    if dist < 42 and dist > 2 then
-                        local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X).Unit
-                        local strength = math.clamp((42 - dist) / 42, 0, 1)
+                    local impulse, strength = D.impulseAt(
+                        root.Position, center, force, intensity
+                    )
+                    if impulse then
                         root.AssemblyLinearVelocity = MovementSafety.addImpulse(
-                            root.AssemblyLinearVelocity,
-                            tangent * force * intensity * strength + Vector3.new(0, 10 * intensity * strength, 0),
-                            62,
-                            -55,
-                            58
+                            root.AssemblyLinearVelocity, impulse, 62, -55, 58
                         )
                         if strength >= 0.12 and ctx.OnHazardContact then
                             pcall(ctx.OnHazardContact, player, "Tornado")
