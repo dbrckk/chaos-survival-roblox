@@ -748,6 +748,26 @@ describe("Moving platform premium trim kit", function()
         local platform = Instance.new("Part")
         platform.Size = Vector3.new(12, 2, 12)
         platform.Parent = workspace
+        -- The server panel has its upper face at physicalTop + 0.105.
+        -- Local glyph geometry must be ABOVE it or it vanishes beneath
+        -- the authoritative floor finish on Android.
+        local surfaceY = PlatformFinishKit.surfacePaintOffset(platform, 0.05)
+        expect(surfaceY - 0.025 > platform.Size.Y * 0.5 + 0.105).toBe(true)
+        -- The animated amber outline is even thinner than the paint,
+        -- so its 0.06-high bars must clear the exact same surface.
+        local warningY = PlatformFinishKit.surfacePaintOffset(platform, 0.06)
+        expect(warningY - 0.03 > platform.Size.Y * 0.5 + 0.105).toBe(true)
+        -- Tower skybridges have no PlatformPanel: their paint should sit
+        -- on the physical floor, never float at the panel clearance.
+        platform:SetAttribute("ChaosSkybridge", true)
+        local bridgePaintY = PlatformFinishKit.surfacePaintOffset(platform, 0.05)
+        expect(bridgePaintY - 0.025 > platform.Size.Y * 0.5).toBe(true)
+        expect(bridgePaintY - 0.025 < platform.Size.Y * 0.5 + 0.03).toBe(true)
+        platform:SetAttribute("ChaosSkybridge", nil)
+        expect(math.abs(
+            PlatformFinishKit.surfacePaintOffset(platform, 0.05) - surfaceY
+        ) < 0.0001).toBe(true)
+        expect(PlatformFinishKit.surfacePaintOffset(nil, 0.05) == nil).toBe(true)
         for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
             local names = PlatformFinishKit.names(variant)
             expect(#names).toBe(3)
@@ -763,6 +783,12 @@ describe("Moving platform premium trim kit", function()
                     expect(item.CanCollide).toBe(false)
                     expect(item.CanTouch).toBe(false)
                     expect(item.CanQuery).toBe(false)
+                    if variant ~= "Towers" and index <= 2 then
+                        local deckRelative = platform.CFrame:PointToObjectSpace(item.Position)
+                        -- The lowest face of paint must clear the panel.
+                        expect(deckRelative.Y - item.Size.Y * 0.5
+                            > platform.Size.Y * 0.5 + 0.105).toBe(true)
+                    end
                     local weld = item:FindFirstChild("ChaosPlatformTrimWeld")
                     expect(weld ~= nil).toBe(true)
                     expect(weld.Part0).toBe(item)
@@ -795,6 +821,15 @@ describe("Moving platform premium trim kit", function()
                     local offset = platform.CFrame:PointToObjectSpace(plate.Position)
                     expect(math.abs(offset.X) < platform.Size.X * 0.5 + 1).toBe(true)
                     expect(math.abs(offset.Z) < platform.Size.Z * 0.5 + 1).toBe(true)
+                    -- Raised wedges must be readable above the inset,
+                    -- but stay INSIDE the real floor collision outline:
+                    -- no fake walkable ledges at a disaster drop.
+                    expect(offset.Y + plate.Size.Y * 0.5
+                        > platform.Size.Y * 0.5 + 0.105).toBe(true)
+                    expect(math.abs(offset.X) + plate.Size.X * 0.5
+                        < platform.Size.X * 0.5).toBe(true)
+                    expect(math.abs(offset.Z) + plate.Size.Z * 0.5
+                        < platform.Size.Z * 0.5).toBe(true)
                 end
 
                 PlatformFinishKit.applyCollapseVisibility(armor, "Gone")
