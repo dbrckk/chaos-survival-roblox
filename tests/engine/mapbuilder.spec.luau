@@ -139,7 +139,7 @@ describe("Chaos Survival engine", function()
         end
         DisappearingPlatforms.setCosmeticsPhase(cosmetics, nil)
         for _, bevel in ipairs(bevels) do
-            expect(bevel.Transparency).toBe(0.08)
+            expect(math.abs(bevel.Transparency - 0.08) < 0.0001).toBe(true)
         end
         expect((decor :: Folder):FindFirstChild("PlatformSupport1_1") ~= nil).toBe(true)
         expect(#(decor :: Folder):GetChildren() >= 5).toBe(true)
