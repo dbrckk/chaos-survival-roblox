@@ -6,6 +6,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaDeckFinishKit = require(script.Parent.ArenaDeckFinishKit)
+local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -14,7 +15,13 @@ local folder = Instance.new("Folder")
 folder.Name = "ArenaSurfaceDetailLocal"
 folder.Parent = workspace
 
+local stopFollowingBase = nil
+
 local function clear()
+    if stopFollowingBase then
+        stopFollowingBase()
+        stopFollowingBase = nil
+    end
     folder:ClearAllChildren()
 end
 
@@ -291,6 +298,11 @@ local function rebuild()
             part:SetAttribute("SurfaceBaseColor", part.Color)
         end
     end
+
+    -- Listen only while this arena's art exists. Shrinking Arena mutates
+    -- the replicated Base.Size, so all local panels and navigation lines
+    -- must contract with the physical floor rather than becoming ghost paths.
+    stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
 end
 
 local function refreshSurfaceAccent()

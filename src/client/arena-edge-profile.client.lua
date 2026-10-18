@@ -5,13 +5,20 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaEdgeFinishKit = require(script.Parent.ArenaEdgeFinishKit)
+local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
 folder.Name = "ArenaEdgeProfileLocal"
 folder.Parent = workspace
 
+local stopFollowingBase = nil
+
 local function clear()
+    if stopFollowingBase then
+        stopFollowingBase()
+        stopFollowingBase = nil
+    end
     folder:ClearAllChildren()
 end
 
@@ -259,6 +266,11 @@ local function rebuild()
             )
         end
     end
+
+    -- Keep visible safety lips with the shrinking collision boundary.
+    -- Old fixed-size local edge rails could imply a safe floor that no
+    -- longer exists. This only listens to Base.Size replication events.
+    stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
 end
 
 local disconnectMapWatch = nil
