@@ -7,10 +7,6 @@ on:
         description: 'Type PUBLISH to deploy the current main branch to Roblox'
         required: true
         default: ''
-  push:
-    branches:
-      - publish-roblox
-
 concurrency:
   group: roblox-place-publish
   cancel-in-progress: false
@@ -23,10 +19,14 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # Public experience/place supplied in the owner's Creator Dashboard.
+      # Unlike repo variables, these are not independently user-editable.
+      EXPECTED_PUBLIC_UNIVERSE: "10771083668"
+      EXPECTED_PUBLIC_PLACE: "95351659174730"
 
     steps:
       - name: Validate publish confirmation
-        if: ${{ github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: |
           test "${{ inputs.confirm }}" = "PUBLISH" || {
@@ -39,17 +39,14 @@ jobs:
       - name: Require safe publish ref
         shell: bash
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            test "$GITHUB_REF_NAME" = "main" || {
-              echo "Manual publication must be dispatched from main."
-              exit 1
-            }
-          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            test "$GITHUB_REF_NAME" = "publish-roblox" || {
-              echo "Push publication is only allowed from publish-roblox."
-              exit 1
-            }
-          fi
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch" || {
+            echo "::error::Production publication requires an explicit manual dispatch."
+            exit 1
+          }
+          test "$GITHUB_REF_NAME" = "main" || {
+            echo "::error::Production publication must be dispatched from main."
+            exit 1
+          }
 
       - name: Verify exact SHA release certification
         shell: bash
@@ -137,6 +134,19 @@ jobs:
           ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
           ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
         run: |
+          set -euo pipefail
+          # Production variables were demonstrably inconsistent with the
+          # owner's live experience during the staging identity incident.
+          # Never send a POST to a mutable, unverified publishing target.
+          if [ "$ROBLOX_UNIVERSE_ID" != "$EXPECTED_PUBLIC_UNIVERSE" ] \
+             || [ "$ROBLOX_PLACE_ID" != "$EXPECTED_PUBLIC_PLACE" ]; then
+            echo "::error::Production publishing target does not match the owner's documented public Roblox experience/place. No API call made."
+            exit 1
+          fi
+          test ! -e src/shared/VisualStagingStamp.lua || {
+            echo "::error::Staging-only SHA marker detected in production source. No publication."
+            exit 1
+          }
           test -n "$ROBLOX_API_KEY" || {
             echo "ROBLOX_API_KEY secret is missing."
             exit 1
@@ -151,7 +161,7 @@ jobs:
           }
 
           response_file="$(mktemp)"
-          status="$(curl --silent --show-error --location             --output "$response_file"             --write-out "%{http_code}"             --request POST             "https://apis.roblox.com/universes/v1/$ROBLOX_UNIVERSE_ID/places/$ROBLOX_PLACE_ID/versions?versionType=Published"             --header "x-api-key: $ROBLOX_API_KEY"             --header "Content-Type: application/xml"             --data-binary @build/ChaosSurvival.rbxlx)"
+          status="$(curl --silent --show-error             --output "$response_file"             --write-out "%{http_code}"             --request POST             "https://apis.roblox.com/universes/v1/$ROBLOX_UNIVERSE_ID/places/$ROBLOX_PLACE_ID/versions?versionType=Published"             --header "x-api-key: $ROBLOX_API_KEY"             --header "Content-Type: application/xml"             --data-binary @build/ChaosSurvival.rbxlx)"
 
           cat "$response_file"
 
