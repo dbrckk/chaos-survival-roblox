@@ -107,6 +107,20 @@ stale post-round touch callbacks must never kill a survivor. Capture real
 Android video and the server's elimination events. The automated rules
 do not replace actual physics/device validation.
 
+## Tornado vortex eye — fairness and round-end regression
+
+In a real authenticated Roblox client on the exact candidate SHA, test
+Tornado at the visual center and within two studs of its centreline.
+Both positions must now experience the bounded swirl and lift rather
+than becoming a stationary safe exploit. At or beyond 42 studs from the
+centre the tornado must not change velocity; near the outer rim the
+push should smoothly approach zero. Repeat with R6, R15 and Android
+touch/Phase Dash controls. Exit a round while multiple contestants
+are in the vortex: a late contact callback must not push lobby avatars
+after the round has stopped. Record device footage and server logs.
+The automated Open Cloud suite tests the impulse rules and actual
+center contact, but is not physical device certification.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
