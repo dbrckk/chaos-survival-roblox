@@ -35,6 +35,17 @@ function ArenaPresentation.lookTarget(variantId, spawnPosition, arenaCenter)
     return center + Vector3.new(0, 6, 0)
 end
 
+-- MapBuilder authors the opaque ArenaDeckInset with its center 0.08
+-- studs above the physical top and thickness 0.14 studs. Markings
+-- underneath its upper face never render (especially on mobile).
+-- The small extra clearance prevents z-fighting without collision.
+-- This rule is shared by the navigation hub and Low-tier surface plates.
+function ArenaPresentation.deckArtOffset(base, thickness)
+    if not base or not base:IsA("BasePart") then return nil end
+    local halfThickness = math.max(0.005, (tonumber(thickness) or 0.05) * 0.5)
+    return base.Size.Y * 0.5 + 0.08 + 0.07 + halfThickness + 0.012
+end
+
 function ArenaPresentation.spawnCFrame(variantId, spawnPosition, arenaCenter)
     local spawn = typeof(spawnPosition) == "Vector3" and spawnPosition or Vector3.zero
     local target = ArenaPresentation.lookTarget(variantId, spawn, arenaCenter)
