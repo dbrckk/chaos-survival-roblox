@@ -175,6 +175,18 @@ bevels and rails shorten with the physical bridge. After the round,
 all pieces must return to their original pose and length. Capture
 before/during/after video and check jump collision separately.
 
+## Shrinking Arena — inlaid floor and safety lanes
+
+On a verified private Roblox test place, capture before/during/after
+Shrinking Arena in Classic, Towers, Crossroads and Orbital. Confirm the
+large floor inset, painted edge bands, route chevrons and region
+markings contract with the **solid** base; no visual floor remains
+where characters fall. Existing raised-platform finish and Tower
+skybridge trims must also track their owning deck. Confirm all
+panels, seams and lane markings restore to their original size
+and position after the round, without a persistent flicker. Measure
+Android frame pacing during the shrinking animation.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
