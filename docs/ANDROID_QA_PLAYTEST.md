@@ -121,6 +121,17 @@ after the round has stopped. Record device footage and server logs.
 The automated Open Cloud suite tests the impulse rules and actual
 center contact, but is not physical device certification.
 
+## Physics recovery — extreme velocity and rapid respawns
+
+On the exact staging candidate, test repeated Tornado, Jump Shock and
+Phase Dash overlaps with rapid R6/R15 respawns and slow connections.
+Confirm the affected avatar never becomes permanently frozen, vanishes,
+or accelerates beyond the server movement caps after an extreme knockback.
+Record Roblox Android gameplay and both client/server output. The
+engine tests validate finite server velocity calculations with NaN,
+Infinity and high finite inputs; they do not prove mobile physics under
+real network ownership or device performance.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
