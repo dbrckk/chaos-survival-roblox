@@ -266,6 +266,52 @@ describe("Movement safety", function()
         expect(boosted.Y >= 2).toBe(true)
     end)
 
+    it("never propagates nonfinite assembly velocities through hazard impulses", function()
+        for _, bad in ipairs({0 / 0, math.huge, -math.huge}) do
+            local invalid = Vector3.new(bad, bad, bad)
+            local still = MovementSafety.clampVelocity(invalid, 62, -55, 58)
+            expect(still).toBe(Vector3.zero)
+
+            local repaired = MovementSafety.addImpulse(
+                Vector3.new(bad, 12, -4),
+                Vector3.new(4, bad, 3),
+                62, -55, 58
+            )
+            expect(repaired.X).toBe(4)
+            expect(repaired.Y).toBe(12)
+            expect(repaired.Z).toBe(-1)
+        end
+
+        local huge = MovementSafety.addImpulse(
+            Vector3.new(1e8, -1e8, -1e8),
+            Vector3.new(1e8, -1e8, 1e8),
+            62, -55, 58
+        )
+        expect(huge.X == huge.X and huge.Y == huge.Y
+            and huge.Z == huge.Z).toBe(true)
+        expect(Vector3.new(huge.X, 0, huge.Z).Magnitude <= 62.001)
+            .toBe(true)
+        expect(huge.Y).toBe(-55)
+
+        -- Invalid limits must fall back to safe defaults rather than
+        -- disabling the cap or generating a NaN output.
+        local defaults = MovementSafety.clampVelocity(
+            Vector3.new(1000, 1000, 1000),
+            math.huge, -math.huge, 0 / 0
+        )
+        expect(Vector3.new(defaults.X, 0, defaults.Z).Magnitude <= 60.001)
+            .toBe(true)
+        expect(defaults.Y).toBe(60)
+
+        -- Existing normal-game behavior must remain unchanged.
+        local normal = MovementSafety.addImpulse(
+            Vector3.new(10, 2, -5),
+            Vector3.new(4, 6, 5),
+            62, -55, 58
+        )
+        expect(normal).toBe(Vector3.new(14, 8, 0))
+    end)
+
     it("bounds horizontal disaster velocity", function()
         local velocity = MovementSafety.addImpulse(
             Vector3.new(90, 0, -90),
