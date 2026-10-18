@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local DisasterImpact = require("../../src/server/DisasterImpact")
 local HazardImpactAudience = require("../../src/shared/HazardImpactAudience")
+local RisingLava = require("../../src/server/Disasters/RisingLava")
 
 describe("Disaster impact", function()
     it("routes nearby impacts to active players and visible events to spectators", function()
@@ -289,6 +290,93 @@ describe("Disaster impact", function()
         expect(DisasterImpact.nearMissForDistance(9, 8, nan)).toBe(false)
         expect(DisasterImpact.nearMissForDistance(9, 8, infinity)).toBe(false)
         expect(DisasterImpact.nearMissForDistance(9, 8, 3.5)).toBe(true)
+    end)
+
+    it("refuses stale lava deaths when eligibility or fatal attribution ends the round", function()
+        local character = Instance.new("Model")
+        character.Name = "LavaRoundOwnershipSubject"
+        local humanoid = Instance.new("Humanoid")
+        humanoid.MaxHealth = 100
+        humanoid.Health = 100
+        humanoid.Parent = character
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Anchored = true
+        root.Size = Vector3.new(2, 2, 1)
+        root.Position = Vector3.new(0, 4.4, 0)
+        root.Parent = character
+        character.Parent = workspace
+
+        local lava = Instance.new("Part")
+        lava.Name = "LavaRoundOwnershipProbe"
+        lava.Anchored = true
+        lava.Position = Vector3.zero
+        lava.Size = Vector3.new(20, 4, 20)
+        lava.Parent = workspace
+
+        local subject = {Character = character}
+        local active = true
+        local ctx = {
+            Active = function() return active end,
+            IsContestantActive = function()
+                active = false
+                return true
+            end,
+        }
+        -- A yielded eligibility callback can end the round even if it
+        -- initially reports that the player was eligible.
+        expect(RisingLava.contactIsLethal(
+            ctx, subject, character, humanoid, lava
+        )).toBe(false)
+
+        -- Respawning inside an eligibility callback invalidates the old rig.
+        active = true
+        local replacement = Instance.new("Model")
+        ctx.IsContestantActive = function()
+            subject.Character = replacement
+            return true
+        end
+        expect(RisingLava.contactIsLethal(
+            ctx, subject, character, humanoid, lava
+        )).toBe(false)
+
+        subject.Character = character
+        ctx.IsContestantActive = function() return true end
+        expect(RisingLava.contactIsLethal(
+            ctx, subject, character, humanoid, lava
+        )).toBe(true)
+
+        lava:Destroy()
+        replacement:Destroy()
+
+        -- Exercise the actual rising-lava worker as well as the helper.
+        -- A scoring callback may close the phase before the old worker
+        -- reaches Humanoid.Health=0. No stale damage is permitted.
+        local cleanup = {}
+        local causes = 0
+        root.Position = Vector3.new(0, -5, 0)
+        active = true
+        RisingLava.start({
+            Config = {ArenaCenter = Vector3.zero, RoundSeconds = 0.2},
+            RoundSeconds = 0.2,
+            Cleanup = cleanup,
+            Active = function() return active end,
+            HazardContestants = {subject},
+            IsContestantActive = function() return true end,
+            OnFatalHazard = function()
+                causes += 1
+                active = false
+            end,
+        })
+        task.wait(0.2)
+        expect(causes).toBe(1)
+        expect(humanoid.Health).toBe(100)
+
+        active = false
+        for _, instance in ipairs(cleanup) do
+            if instance and instance.Parent then instance:Destroy() end
+        end
+        character:Destroy()
     end)
 
     it("sanitizes negative distance and damage inputs", function()
