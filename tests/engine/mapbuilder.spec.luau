@@ -9,6 +9,7 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
 local SpawnSafety = require("../../src/server/SpawnSafety")
+local ArenaPresentation = require("../../src/shared/ArenaPresentation")
 
 describe("Chaos Survival engine", function()
     it("builds a complete playable map hierarchy", function()
@@ -152,6 +153,32 @@ describe("Chaos Survival engine", function()
             end
         end
 
+        root:Destroy()
+    end)
+
+    it("keeps center route glyphs and Low-tier surface plates above the arena inset", function()
+        -- Use actual authored 3D geometry, not a hand-guessed floor height.
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local base = arena and arena:FindFirstChild("Base")
+        local decor = arena and arena:FindFirstChild("Decor")
+        local inset = decor and decor:FindFirstChild("ArenaDeckInset")
+        expect(base ~= nil and inset ~= nil).toBe(true)
+
+        local platform = base :: BasePart
+        local panel = inset :: BasePart
+        local topInBase = platform.CFrame:PointToObjectSpace(panel.Position).Y
+            + panel.Size.Y * 0.5
+        for _, thickness in ipairs({0.05, 0.09}) do
+            local centerY = ArenaPresentation.deckArtOffset(platform, thickness)
+            local bottomY = centerY - thickness * 0.5
+            expect(bottomY > topInBase + 0.005).toBe(true)
+            expect(bottomY < topInBase + 0.03).toBe(true)
+        end
+
+        expect(ArenaPresentation.deckArtOffset(nil, 0.05) == nil).toBe(true)
+        expect(ArenaPresentation.deckArtOffset(Instance.new("Folder"), 0.05)
+            == nil).toBe(true)
         root:Destroy()
     end)
 
