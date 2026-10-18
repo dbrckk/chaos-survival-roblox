@@ -40,7 +40,8 @@ function D.start(ctx)
                 marker:Destroy()
 
                 DisasterImpact.applyRadialDamage(ctx, position, radius, damage, "Bomb")
-                if ctx.OnHazardImpact then
+                -- The blast may have ended the round during its damage callbacks.
+                if ctx.Active() and ctx.OnHazardImpact then
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 65, 65), radius, "Bomb")
                 end
             end)

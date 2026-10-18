@@ -22,7 +22,15 @@ local function makeWarning(ctx)
 end
 
 function D.applyShock(ctx, subject, horizontalForce)
+    -- The warning callback or a previous shock recipient may have ended
+    -- the round. Refuse stale impulses even when invoked directly.
+    if type(ctx.Active) == "function" and not ctx.Active() then
+        return false
+    end
     if ctx.IsContestantActive and not ctx.IsContestantActive(subject) then
+        return false
+    end
+    if type(ctx.Active) == "function" and not ctx.Active() then
         return false
     end
 
@@ -84,7 +92,11 @@ function D.start(ctx)
                 )
             end
 
+            -- An impact notification can close the round synchronously.
+            -- Never apply the wave after that phase transition.
+            if not ctx.Active() then break end
             for _, p in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
+                if not ctx.Active() then break end
                 D.applyShock(ctx, p, horizontal)
             end
         end
