@@ -17,6 +17,47 @@ local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 
 describe("Disaster visual identities", function()
+    it("builds budgeted non-solid side rails that follow collapse visibility", function()
+        local theme = require("../../src/shared/VisualTheme").arena("Towers")
+        local platform = Instance.new("Part")
+        platform.Name = "PlatformSideRailTest"
+        platform.Anchored = true
+        platform.Size = Vector3.new(12, 2, 10)
+        platform.CFrame = CFrame.new(0, 25, 0)
+        platform.Parent = workspace
+        local folder = Instance.new("Folder")
+        folder.Parent = workspace
+
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local parts = PlatformFinishKit.buildSideRails(folder, platform, tier, theme)
+            expect(#parts).toBe(PlatformFinishKit.sideRailCount(tier))
+            for _, rail in ipairs(parts) do
+                expect(rail.CanCollide).toBe(false)
+                expect(rail.CanTouch).toBe(false)
+                expect(rail.CanQuery).toBe(false)
+                expect(rail:FindFirstChildOfClass("WeldConstraint") ~= nil).toBe(true)
+                expect(rail.Position.Y < platform.Position.Y).toBe(true)
+            end
+            PlatformFinishKit.applyCollapseVisibility(parts, "Warning")
+            for _, rail in ipairs(parts) do
+                expect(rail.Transparency >= 0.799).toBe(true)
+            end
+            PlatformFinishKit.applyCollapseVisibility(parts, "Gone")
+            for _, rail in ipairs(parts) do
+                expect(rail.Transparency).toBe(1)
+            end
+            PlatformFinishKit.applyCollapseVisibility(parts, nil)
+            for _, rail in ipairs(parts) do
+                expect(math.abs(rail.Transparency - 0.08) < 0.0001).toBe(true)
+            end
+            folder:ClearAllChildren()
+        end
+
+        folder:Destroy()
+        platform:Destroy()
+    end)
+
+
     it("fades local platform trim for warning and fully hides it on collapse", function()
         local part = Instance.new("Part")
         part.Transparency = 0.12
