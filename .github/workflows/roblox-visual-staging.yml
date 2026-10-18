@@ -30,6 +30,10 @@ jobs:
       STAGING_PLACE: ${{ vars.ROBLOX_STAGING_PLACE_ID }}
       PRODUCTION_UNIVERSE: ${{ vars.ROBLOX_UNIVERSE_ID }}
       PRODUCTION_PLACE: ${{ vars.ROBLOX_PLACE_ID }}
+      # Pinned to the owner's already-published Dashboard URLs.
+      # Defense in depth: production variables may be misconfigured.
+      KNOWN_PUBLIC_UNIVERSE: "10771083668"
+      KNOWN_PUBLIC_PLACE: "95351659174730"
       STAGING_API_KEY: ${{ secrets.ROBLOX_STAGING_API_KEY }}
     steps:
       - name: Enforce isolated universe and place
@@ -66,6 +70,15 @@ jobs:
               exit 1
             fi
           done
+          # 2026-10-18: a prior successful "staging" publish artifact
+          # resolved to the owner's existing public experience/place.
+          # A misconfigured PRODUCTION_* variable must never bypass this.
+          if [ "$STAGING_UNIVERSE" = "$KNOWN_PUBLIC_UNIVERSE" ] \
+             || [ "$STAGING_PLACE" = "$KNOWN_PUBLIC_PLACE" ]; then
+            echo "::error::Staging IDs match the owner's already-published Roblox experience/place. Publication blocked."
+            exit 1
+          fi
+
           if [ "$STAGING_UNIVERSE" = "$PRODUCTION_UNIVERSE" ] \
              || [ "$STAGING_PLACE" = "$PRODUCTION_PLACE" ]; then
             echo "::error::Staging target equals a production universe/place. Nothing published."
@@ -97,6 +110,10 @@ jobs:
       STAGING_PLACE: ${{ vars.ROBLOX_STAGING_PLACE_ID }}
       PRODUCTION_UNIVERSE: ${{ vars.ROBLOX_UNIVERSE_ID }}
       PRODUCTION_PLACE: ${{ vars.ROBLOX_PLACE_ID }}
+      # Pinned to the owner's already-published Dashboard URLs.
+      # Defense in depth: production variables may be misconfigured.
+      KNOWN_PUBLIC_UNIVERSE: "10771083668"
+      KNOWN_PUBLIC_PLACE: "95351659174730"
       STAGING_API_KEY: ${{ secrets.ROBLOX_STAGING_API_KEY }}
     steps:
       - name: Checkout exact candidate SHA
@@ -112,6 +129,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$STAGING_UNIVERSE" != "$PRODUCTION_UNIVERSE"
           test "$STAGING_PLACE" != "$PRODUCTION_PLACE"
+          test "$STAGING_UNIVERSE" != "$KNOWN_PUBLIC_UNIVERSE"
+          test "$STAGING_PLACE" != "$KNOWN_PUBLIC_PLACE"
           test -n "$STAGING_API_KEY"
           test ! -e src/shared/VisualStagingStamp.lua || {
             echo "::error::The staging-only identity marker must never be committed to source."
@@ -156,6 +175,8 @@ jobs:
           set -euo pipefail
           test "$STAGING_UNIVERSE" != "$PRODUCTION_UNIVERSE"
           test "$STAGING_PLACE" != "$PRODUCTION_PLACE"
+          test "$STAGING_UNIVERSE" != "$KNOWN_PUBLIC_UNIVERSE"
+          test "$STAGING_PLACE" != "$KNOWN_PUBLIC_PLACE"
           http_status="$(curl --silent --show-error \
             --connect-timeout 15 --max-time 120 \
             --output build/staging-publish-response.json \
