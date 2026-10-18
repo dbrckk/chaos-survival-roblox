@@ -803,6 +803,12 @@ describe("Moving platform premium trim kit", function()
                 end
                 PlatformFinishKit.applyCollapseVisibility(armor, "Warning")
                 for _, plate in ipairs(armor) do
+                    -- The amber collapse warning must stay visible through
+                    -- client-only welded armor, including after Gone.
+                    expect(plate.Transparency >= 0.799).toBe(true)
+                end
+                PlatformFinishKit.applyCollapseVisibility(armor, nil)
+                for _, plate in ipairs(armor) do
                     expect(math.abs(plate.Transparency - 0.04) < 0.0001).toBe(true)
                     plate:Destroy()
                 end
