@@ -48,6 +48,22 @@ function D.isActiveContestant(player, ctx)
     return false
 end
 
+-- Accessories and stray limb touch events are not enough to eliminate a
+-- player. Require a living current contestant's root near the lava surface,
+-- while the disaster is still active.
+function D.contactIsLethal(ctx, player, character, humanoid, lava)
+    if not ctx or type(ctx.Active) ~= "function" or not ctx.Active()
+        or not player or player.Character ~= character
+        or not D.isActiveContestant(player, ctx)
+        or not humanoid or humanoid.Parent ~= character or humanoid.Health <= 0
+        or not lava or not lava.Parent then
+        return false
+    end
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    return root ~= nil and root:IsA("BasePart")
+        and D.rootInsideLava(root.Position, lava.Position, lava.Size, 2.5)
+end
+
 function D.start(ctx)
     local generatedMap = workspace:FindFirstChild("GeneratedMap")
     local arena = generatedMap and generatedMap:FindFirstChild("Arena")
@@ -71,6 +87,7 @@ function D.start(ctx)
     lava.Parent = workspace
 
     lava.Touched:Connect(function(hit)
+        if not ctx.Active() then return end
         local current = hit
         local character = nil
         local player = nil
@@ -87,7 +104,7 @@ function D.start(ctx)
         end
 
         local hum = character and character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Health > 0 and D.isActiveContestant(player, ctx) then
+        if D.contactIsLethal(ctx, player, character, hum, lava) then
             if ctx.OnFatalHazard then
                 pcall(ctx.OnFatalHazard, player, "Lava")
             end
