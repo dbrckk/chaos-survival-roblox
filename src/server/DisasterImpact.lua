@@ -26,6 +26,13 @@ function DisasterImpact.applyRadialDamage(ctx, position, radius, maxDamage, haza
     local hits = 0
 
     for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
+        -- An impact may eliminate the last survivor and end the round while
+        -- its damage callbacks are still being delivered. Do not carry a
+        -- single blast into the next lobby/round or credit a stale near miss.
+        -- Some pure test contexts deliberately omit Active.
+        if type(ctx.Active) == "function" and not ctx.Active() then
+            break
+        end
         if ctx.IsContestantActive and not ctx.IsContestantActive(player) then
             continue
         end
