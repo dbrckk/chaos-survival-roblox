@@ -37,6 +37,13 @@ describe("Disaster visual identities", function()
                 expect(rail.CanQuery).toBe(false)
                 expect(rail:FindFirstChildOfClass("WeldConstraint") ~= nil).toBe(true)
                 expect(rail.Position.Y < platform.Position.Y).toBe(true)
+                -- A rail buried inside the opaque deck is invisible in
+                -- third-person view; its outer face must be exposed.
+                local offset = rail.Position - platform.Position
+                expect(
+                    math.abs(offset.X) > platform.Size.X * 0.5
+                    or math.abs(offset.Z) > platform.Size.Z * 0.5
+                ).toBe(true)
             end
             PlatformFinishKit.applyCollapseVisibility(parts, "Warning")
             for _, rail in ipairs(parts) do
