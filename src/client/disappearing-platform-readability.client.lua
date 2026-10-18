@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PlatformVisualRules = require(ReplicatedStorage.Shared.DisappearingPlatformVisualRules)
+local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
@@ -88,7 +89,12 @@ local function layout(part, state, phase, now)
     state.west.Size = Vector3.new(thickness, 0.06, part.Size.Z + 0.35)
     state.east.Size = state.west.Size
 
-    local topFrame = part.CFrame * CFrame.new(0, part.Size.Y * 0.5 + 0.08, 0)
+    -- Warning contour must clear the opaque server-authored deck panel.
+    -- At +0.08 its six thin bars were mostly inside the top panel and
+    -- barely visible even while the platform itself was flashing amber.
+    local topFrame = part.CFrame * CFrame.new(
+        0, PlatformFinishKit.surfacePaintOffset(part, 0.06), 0
+    )
     state.north.CFrame = topFrame * CFrame.new(0, 0, -halfZ)
     state.south.CFrame = topFrame * CFrame.new(0, 0, halfZ)
     state.west.CFrame = topFrame * CFrame.new(-halfX, 0, 0)

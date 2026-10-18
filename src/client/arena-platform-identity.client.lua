@@ -66,7 +66,7 @@ local function makePart(name, size, cframe, color, material, transparency, ancho
 end
 
 local function decorateClassic(platform, index, theme, tier)
-    local top = platform.CFrame * CFrame.new(0, platform.Size.Y * 0.5 + 0.075, 0)
+    local top = platform.CFrame * CFrame.new(0, PlatformFinishKit.surfacePaintOffset(platform, 0.05), 0)
     local length = math.max(2.6, math.min(platform.Size.X, platform.Size.Z) * 0.56)
     local transparency = tier.Name == "Low" and 0.68 or 0.46
 
@@ -127,7 +127,7 @@ local function decorateTowers(platform, index, theme, tier)
 end
 
 local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
-    local center = platform.CFrame * CFrame.new(0, platform.Size.Y * 0.5 + 0.075, 0)
+    local center = platform.CFrame * CFrame.new(0, PlatformFinishKit.surfacePaintOffset(platform, 0.05), 0)
     local arenaDelta = Vector3.new(
         platform.Position.X - arenaCenter.X,
         0,
@@ -190,7 +190,7 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
     local tangent = Vector3.new(-radial.Z, 0, radial.X)
     local yaw = math.atan2(-tangent.Z, tangent.X)
     local center = CFrame.new(
-        platform.Position + Vector3.new(0, platform.Size.Y * 0.5 + 0.075, 0)
+        platform.Position + Vector3.new(0, PlatformFinishKit.surfacePaintOffset(platform, 0.05), 0)
     ) * CFrame.Angles(0, yaw, 0)
 
     local length = math.max(2.6, math.min(platform.Size.X, platform.Size.Z) * 0.70)

@@ -97,13 +97,32 @@ function PlatformFinishKit.visualIndex(platform, fallbackIndex)
 end
 
 -- Chunky, angled corner armor changes the silhouette without touching
--- the physical collision deck. High gets all four corners, Medium an
--- opposing diagonal, Low none (the shared metal subframe remains).
+-- the physical collision deck. Earlier armor sat below the deck bottom:
+-- invisible from the mobile third-person camera. Wedges now sit above
+-- the panel near the corners but INSIDE the true collision footprint,
+-- so decorative armor never suggests a safe overhanging walkway.
+-- High gets all four corners, Medium an opposing diagonal, Low none.
 -- New geometry is local-only, massless and welded to the actual platform.
 function PlatformFinishKit.armorCount(tier)
     if tier == "High" then return 4 end
     if tier == "Medium" then return 2 end
     return 0
+end
+
+-- Server MapBuilder covers each deck with a 0.10-thick PlatformPanel
+-- centered 0.055 above the physical surface. Earlier local markings
+-- were centered at +0.055 and hidden *inside* that panel on device.
+-- Keep a narrow clearance above its actual upper face, regardless
+-- of which client module paints the surface.
+function PlatformFinishKit.surfacePaintOffset(platform, thickness)
+    if not platform or not platform:IsA("BasePart") then return nil end
+    local halfThickness = math.max(0.005, (tonumber(thickness) or 0.05) * 0.5)
+    -- Tower skybridges have physical deck + two elevated edge rails,
+    -- but NO server PlatformPanel. Avoid floating paint above empty air.
+    if platform:GetAttribute("ChaosSkybridge") == true then
+        return platform.Size.Y * 0.5 + halfThickness + 0.012
+    end
+    return platform.Size.Y * 0.5 + 0.055 + 0.05 + halfThickness + 0.012
 end
 
 function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
@@ -129,14 +148,14 @@ function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
     for cornerIndex, def in ipairs(corners) do
         if count == 4 or cornerIndex == 1 or cornerIndex == 3 then
             local frame = CFrame.new(
-                def[1] * (sx * 0.5 - armorSize * 0.35),
-                -sy * 0.5 - 0.03,
-                def[2] * (sz * 0.5 - armorSize * 0.35)
+                def[1] * (sx * 0.5 - armorSize * 0.53),
+                sy * 0.5 + 0.05,
+                def[2] * (sz * 0.5 - armorSize * 0.53)
             ) * CFrame.Angles(0, math.rad(def[3]), 0)
             local plate = add(parent, platform,
                 variant .. "CornerArmor" .. cornerIndex,
                 frame,
-                Vector3.new(armorSize, 0.55, armorSize),
+                Vector3.new(armorSize, 0.34, armorSize),
                 color,
                 Enum.Material.Metal,
                 0.04,
@@ -184,7 +203,7 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme)
     end
 
     local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
-    local top = sy * 0.5 + 0.055
+    local top = PlatformFinishKit.surfacePaintOffset(platform, 0.05)
     local count = PlatformFinishKit.count(tier)
     local built = {}
     local function piece(i, localFrame, size, color, material, alpha, shape)
