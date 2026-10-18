@@ -41,6 +41,7 @@ function D.cosmeticsForPlatform(decor, platform)
                 or item.Name:match("^PlatformUnderFrame(%d+)$")
                 or item.Name:match("^PlatformCoreGlow(%d+)$")
                 or item.Name:match("^PlatformSupport(%d+)_%d+$")
+                or item.Name:match("^PlatformBevel(%d+)_%d+$")
             if attachedIndex == index then
                 table.insert(result, {
                     part = item,
