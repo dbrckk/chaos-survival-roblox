@@ -153,6 +153,17 @@ hazard warnings are cleaned up. Include Android touch input and solo
 AI-assisted rounds. Record client/server logs, actual gameplay video,
 and the stage SHA. Automated tests cannot certify rendered device FX.
 
+## Rising Lava: termination inside a fatal-contact callback
+
+On the exact private staging SHA with Studio server and Android client,
+eliminate the final survivor using Rising Lava at the same moment a
+round ends. Also test rapid R6/R15 replacement and solo AI elimination
+while lava is rising. The next lobby/round must never inherit a fatal
+hit or an eliminated old Humanoid from the previous lava worker.
+Record the server phase transition, affected character identity,
+and original device capture. Automated callbacks do not replace a
+physical multiplayer acceptance run.
+
 ## Before testing
 
 Record the exact deployed **candidate commit**, experience/place ID, phone model, Android version, graphics quality, display orientation, network type, and UTC/local test date. A preview/staging Roblox place must be explicitly linked to that commit; do not overwrite production merely to test. Enable Roblox's in-client performance statistics if the version/device supports them. Capture screenshots or a short recording of each problem and the precise phase/time.
