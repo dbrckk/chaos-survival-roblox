@@ -187,14 +187,17 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme)
     if count == 0 or math.min(sx, sz) < 4 then return {} end
 
     local railHeight = math.min(0.30, math.max(0.12, sy * 0.18))
+    -- The deck's opaque physical Part otherwise occludes an inset rail.
+    -- Expose the narrow vertical side face just outside the deck footprint,
+    -- below the top so it cannot be mistaken for a walkable ledge.
     local y = -sy * 0.5 + railHeight * 0.5
-    local inset = 0.055
+    local outside = 0.055
     local color = theme.Detail:Lerp(theme.Structure, 0.38)
     local segments = {
-        {Vector3.new(0, y, -sz * 0.5 + inset), Vector3.new(sx * 0.72, railHeight, 0.13)},
-        {Vector3.new(0, y, sz * 0.5 - inset), Vector3.new(sx * 0.72, railHeight, 0.13)},
-        {Vector3.new(-sx * 0.5 + inset, y, 0), Vector3.new(0.13, railHeight, sz * 0.72)},
-        {Vector3.new(sx * 0.5 - inset, y, 0), Vector3.new(0.13, railHeight, sz * 0.72)},
+        {Vector3.new(0, y, -sz * 0.5 - outside), Vector3.new(sx * 0.72, railHeight, 0.13)},
+        {Vector3.new(0, y, sz * 0.5 + outside), Vector3.new(sx * 0.72, railHeight, 0.13)},
+        {Vector3.new(-sx * 0.5 - outside, y, 0), Vector3.new(0.13, railHeight, sz * 0.72)},
+        {Vector3.new(sx * 0.5 + outside, y, 0), Vector3.new(0.13, railHeight, sz * 0.72)},
     }
     local built = {}
     for index, segment in ipairs(segments) do
