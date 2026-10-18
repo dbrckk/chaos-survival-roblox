@@ -272,6 +272,25 @@ describe("Disaster impact", function()
         nearModel:Destroy()
     end)
 
+    it("never treats nonfinite physics distances as direct hits or near misses", function()
+        local nan = 0 / 0
+        local infinity = math.huge
+
+        for _, invalid in ipairs({nan, infinity, -infinity}) do
+            expect(DisasterImpact.damageForDistance(invalid, 8, 50)).toBe(0)
+            expect(DisasterImpact.nearMissForDistance(invalid, 8, 3.5)).toBe(false)
+        end
+
+        expect(DisasterImpact.damageForDistance(0, nan, 50)).toBe(50)
+        expect(DisasterImpact.damageForDistance(0, infinity, 50)).toBe(50)
+        expect(DisasterImpact.damageForDistance(0, 8, nan)).toBe(0)
+        expect(DisasterImpact.damageForDistance(0, 8, infinity)).toBe(0)
+        expect(DisasterImpact.damageForDistance(0, 8, -infinity)).toBe(0)
+        expect(DisasterImpact.nearMissForDistance(9, 8, nan)).toBe(false)
+        expect(DisasterImpact.nearMissForDistance(9, 8, infinity)).toBe(false)
+        expect(DisasterImpact.nearMissForDistance(9, 8, 3.5)).toBe(true)
+    end)
+
     it("sanitizes negative distance and damage inputs", function()
         expect(DisasterImpact.damageForDistance(-5, 8, 50)).toBe(50)
         expect(DisasterImpact.damageForDistance(0, 8, -10)).toBe(0)
