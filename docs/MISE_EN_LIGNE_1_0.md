@@ -76,7 +76,7 @@ Rapports : [checklist de certification](../RELEASE_CHECKLIST.md),
 
 À confirmer sur le compte propriétaire et sur la fiche de jeu :
 
-- [ ] Nom définitif, description exacte, genre, icône, miniatures, captures
+- [ ] Nom définitif, description exacte (brouillons [FR/EN](FICHE_ROBLOX_1_0.md)), genre, icône, miniatures, captures
       représentatives **du vrai jeu**, traduction et permissions de collaboration.
 - [ ] Questionnaire **Content Maturity & Compliance** rempli fidèlement ;
       contrôler la classification attribuée et l'audience autorisée.
