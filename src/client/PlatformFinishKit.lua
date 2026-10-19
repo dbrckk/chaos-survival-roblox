@@ -39,10 +39,19 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     part:SetAttribute("ChaosPlatformTrim", true)
     part.Parent = parent
 
-    local joint = Instance.new("WeldConstraint")
+    -- Skybridge spans change during Shrinking Arena. A WeldConstraint
+    -- preserves the old offset and snaps resized trim back into place.
+    -- Use an adjustable Weld only for skybridges; ordinary moving decks
+    -- keep their existing lightweight WeldConstraint behavior.
+    local skybridge = platform:GetAttribute("ChaosSkybridge") == true
+    local joint = Instance.new(skybridge and "Weld" or "WeldConstraint")
     joint.Name = "ChaosPlatformTrimWeld"
     joint.Part0 = part
     joint.Part1 = platform
+    if skybridge then
+        joint.C0 = CFrame.identity
+        joint.C1 = localFrame
+    end
     joint.Parent = part
     return part
 end
@@ -266,7 +275,15 @@ function PlatformFinishKit.applySkybridgeFootprint(snapshot)
                     size.Y, size.Z)
                 or Vector3.new(size.X, size.Y,
                     size.Z > 2.2 and size.Z * ratio or size.Z)
-            piece.CFrame = platform.CFrame * CFrame.new(scaled) * rotation
+            local localFrame = CFrame.new(scaled) * rotation
+            local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+            if joint and joint:IsA("Weld") then
+                -- C0 is identity, so C1 is the exact platform-relative
+                -- frame. Updating it changes the physical weld offset.
+                joint.C1 = localFrame
+            else
+                piece.CFrame = platform.CFrame * localFrame
+            end
             updated += 1
         end
     end
