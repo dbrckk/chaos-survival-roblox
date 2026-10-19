@@ -822,6 +822,12 @@ describe("Moving platform premium trim kit", function()
             end
         end
         expect(#rails).toBe(4)
+        for _, part in ipairs(pieces) do
+            local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
+            expect(joint ~= nil and joint:IsA("Weld")).toBe(true)
+            expect(joint.Part0).toBe(part)
+            expect(joint.Part1).toBe(platform)
+        end
         local originalRailSize = rails[1].Size
         local originalRigidSize = armor[1].Size
         local endBefore = platform.CFrame:PointToObjectSpace(rails[3].Position)
