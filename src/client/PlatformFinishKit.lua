@@ -310,6 +310,58 @@ function PlatformFinishKit.bindSkybridgeFootprint(platform, pieces)
     end
 end
 
+-- Art direction: load-bearing diagonal steel gives floating decks an
+-- engineered underside, not a floating plastic slab. Each brace starts
+-- under a real deck corner and terminates under its central frame.
+-- Only Medium/High allocate them; no extra light, mesh or physics owner.
+function PlatformFinishKit.braceCount(tier)
+    if tier == "High" then return 4 end
+    if tier == "Medium" then return 2 end
+    return 0
+end
+
+function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, theme)
+    if not parent or not platform or not platform:IsA("BasePart")
+        or not NAMES[variant] or not theme
+        or platform:GetAttribute("ChaosSkybridge") == true then
+        return {}
+    end
+
+    local count = PlatformFinishKit.braceCount(tier)
+    local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
+    if count == 0 or math.min(sx, sz) < 9 then return {} end
+
+    local drop = math.clamp(math.min(sx, sz) * 0.24, 1.5, 3.0)
+    local color = theme.Structure:Lerp(theme.Detail, 0.28)
+    local corners = {
+        {-1, -1},
+        {1, 1},
+        {-1, 1},
+        {1, -1},
+    }
+    local built = {}
+    for i = 1, count do
+        local dir = corners[i]
+        local start = Vector3.new(
+            dir[1] * sx * 0.36, -sy * 0.5 - 0.22, dir[2] * sz * 0.30
+        )
+        local finish = Vector3.new(
+            dir[1] * sx * 0.11, -sy * 0.5 - drop, dir[2] * sz * 0.08
+        )
+        local midpoint = (start + finish) * 0.5
+        local length = (finish - start).Magnitude
+        local brace = add(
+            parent, platform, variant .. "LoadBrace" .. i,
+            CFrame.lookAt(midpoint, finish),
+            Vector3.new(0.44, 0.55, length),
+            color, Enum.Material.Metal, tier == "High" and 0.08 or 0.14
+        )
+        brace:SetAttribute("ChaosLoadBrace", true)
+        built[#built + 1] = brace
+    end
+    return built
+end
+
 -- Platform disappearance is gameplay, not an artistic overlay: any local
 -- welded armor or painted glyph must also become completely invisible.
 -- Saved base transparencies survive repeated Warning/Gone/Restore cycles.

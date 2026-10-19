@@ -17,6 +17,69 @@ local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 
 describe("Disaster visual identities", function()
+    it("adds bounded structural diagonal braces only under safe visual decks", function()
+        local root = Instance.new("Folder")
+        root.Parent = workspace
+        local platform = Instance.new("Part")
+        platform.Size = Vector3.new(12, 2, 11)
+        platform.CFrame = CFrame.new(18, 22, -15)
+            * CFrame.Angles(0, math.rad(33), 0)
+        platform.Anchored = true
+        platform.Parent = root
+        local decor = Instance.new("Folder")
+        decor.Parent = root
+
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            local theme = require("../../src/shared/VisualTheme").arena(variant)
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local braces = PlatformFinishKit.buildLoadBraces(
+                    decor, platform, variant, tier, theme
+                )
+                expect(#braces).toBe(PlatformFinishKit.braceCount(tier))
+                for _, brace in ipairs(braces) do
+                    expect(brace:GetAttribute("ChaosLoadBrace")).toBe(true)
+                    expect(brace:GetAttribute("ChaosPlatformTrim")).toBe(true)
+                    expect(brace.Anchored).toBe(false)
+                    expect(brace.Massless).toBe(true)
+                    expect(brace.CanCollide).toBe(false)
+                    expect(brace.CanTouch).toBe(false)
+                    expect(brace.CanQuery).toBe(false)
+                    expect(brace.CastShadow).toBe(false)
+                    expect(brace.Material).toBe(Enum.Material.Metal)
+                    expect(platform.CFrame:PointToObjectSpace(brace.Position).Y
+                        < -platform.Size.Y * 0.5).toBe(true)
+                    local weld = brace:FindFirstChildOfClass("WeldConstraint")
+                    expect(weld ~= nil and weld.Part1 == platform).toBe(true)
+                end
+                PlatformFinishKit.applyCollapseVisibility(braces, "Gone")
+                for _, brace in ipairs(braces) do
+                    expect(brace.Transparency).toBe(1)
+                end
+                PlatformFinishKit.applyCollapseVisibility(braces, nil)
+                for _, brace in ipairs(braces) do
+                    expect(brace.Transparency < 0.2).toBe(true)
+                end
+                decor:ClearAllChildren()
+            end
+        end
+
+        -- Bridges have a different permanent underframe and must remain
+        -- clean. Tiny decks should not allocate disproportionate beams.
+        platform:SetAttribute("ChaosSkybridge", true)
+        expect(#PlatformFinishKit.buildLoadBraces(
+            decor, platform, "Towers", "High",
+            require("../../src/shared/VisualTheme").arena("Towers")
+        )).toBe(0)
+        platform:SetAttribute("ChaosSkybridge", nil)
+        platform.Size = Vector3.new(7, 2, 7)
+        expect(#PlatformFinishKit.buildLoadBraces(
+            decor, platform, "Classic", "High",
+            require("../../src/shared/VisualTheme").arena("Classic")
+        )).toBe(0)
+        root:Destroy()
+    end)
+
+
     it("builds budgeted non-solid side rails that follow collapse visibility", function()
         local theme = require("../../src/shared/VisualTheme").arena("Towers")
         local platform = Instance.new("Part")
