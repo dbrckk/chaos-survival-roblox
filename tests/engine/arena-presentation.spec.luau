@@ -25,6 +25,61 @@ local function planarUnit(vector)
 end
 
 describe("Arena presentation", function()
+    it("shrinks center wayfinding paint but leaves pad-owned route indicators untouched", function()
+        local root = Instance.new("Folder")
+        root.Parent = workspace
+        local base = Instance.new("Part")
+        base.Anchored = true
+        base.Size = Vector3.new(100, 2, 80)
+        base.CFrame = CFrame.new(12, 7, -17)
+            * CFrame.Angles(0, math.rad(35), 0)
+        base.Parent = root
+        local visuals = Instance.new("Folder")
+        visuals.Parent = root
+
+        local center = Instance.new("Part")
+        center.Name = "CenterGridX"
+        center.Size = Vector3.new(24, 0.05, 0.18)
+        center.CFrame = base.CFrame * CFrame.new(18, 1.2, -12)
+        center.Parent = visuals
+        local route = Instance.new("Part")
+        route.Name = "RouteChevronL1"
+        route.Size = Vector3.new(1.7, 0.05, 0.18)
+        route.CFrame = base.CFrame * CFrame.new(-28, 1.5, 22)
+        route.Parent = visuals
+        local initialRoute = route.CFrame
+        local initialRouteSize = route.Size
+
+        local snapshot = ArenaFloorFollowerKit.capture(base, visuals, {
+            namePrefix = "Center",
+        })
+        expect(snapshot ~= nil and #snapshot.parts == 1).toBe(true)
+        base.Size = Vector3.new(50, 2, 40)
+        expect(ArenaFloorFollowerKit.apply(snapshot)).toBe(1)
+        local expected = base.CFrame * CFrame.new(9, 1.2, -6)
+        expect((center.Position - expected.Position).Magnitude < 0.005).toBe(true)
+        expect(math.abs(center.Size.X - 12) < 0.005).toBe(true)
+        expect(route.CFrame).toBe(initialRoute)
+        expect(route.Size).toBe(initialRouteSize)
+
+        base.Size = Vector3.new(100, 2, 80)
+        ArenaFloorFollowerKit.apply(snapshot)
+        local disconnect = ArenaFloorFollowerKit.bind(base, visuals, {
+            namePrefix = "Center",
+        })
+        base.Size = Vector3.new(75, 2, 60)
+        task.wait(0.06)
+        expect(math.abs(center.Size.X - 18) < 0.005).toBe(true)
+        expect(route.CFrame).toBe(initialRoute)
+        disconnect()
+        local stopped = center.CFrame
+        base.Size = Vector3.new(50, 2, 40)
+        task.wait(0.06)
+        expect(center.CFrame).toBe(stopped)
+        root:Destroy()
+    end)
+
+
     it("moves rigid visual machinery inward without shrinking its parts", function()
         local root = Instance.new("Folder")
         root.Parent = workspace

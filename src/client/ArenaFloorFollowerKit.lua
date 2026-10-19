@@ -24,6 +24,14 @@ function ArenaFloorFollowerKit.capture(base, container, options)
         return nil
     end
 
+    -- Some visual owners mix static floor guides with moving pad markers.
+    -- Select only the floor-bound pieces to avoid fighting their own
+    -- attribute-driven marker updates during Shrinking Arena.
+    local prefix = type(options) == "table"
+        and type(options.namePrefix) == "string"
+        and options.namePrefix ~= ""
+        and options.namePrefix or nil
+
     local snapshot = {
         base = base,
         baseSize = base.Size,
@@ -33,7 +41,8 @@ function ArenaFloorFollowerKit.capture(base, container, options)
         parts = {},
     }
     for _, piece in ipairs(container:GetChildren()) do
-        if piece:IsA("BasePart") then
+        if piece:IsA("BasePart")
+            and (not prefix or string.sub(piece.Name, 1, #prefix) == prefix) then
             snapshot.parts[#snapshot.parts+1] = {
                 part = piece,
                 size = piece.Size,

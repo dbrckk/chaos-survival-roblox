@@ -5,6 +5,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
+local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -14,12 +15,17 @@ folder.Name = "ArenaNavigationLanguageLocal"
 folder.Parent = workspace
 
 local dynamicIndicators = {}
+local stopCenterFollowing = nil
 local shrinkingActive = false
 local rootConnection = nil
 local arenaAddedConnection = nil
 local arenaRemovedConnection = nil
 
 local function clear()
+    if stopCenterFollowing then
+        stopCenterFollowing()
+        stopCenterFollowing = nil
+    end
     folder:ClearAllChildren()
     table.clear(dynamicIndicators)
 end
@@ -208,6 +214,13 @@ local function rebuild()
     local low = tier.Name == "Low"
 
     addCenterLandmark(base, theme, variant, tier)
+    -- Center paint is anchored to the floor, not to mobility pads.
+    -- Scale it with the real shrinking collision deck, while pad beacons
+    -- and route chevrons remain owned by their existing pad follower.
+    -- No new Instances or RenderStepped callback.
+    stopCenterFollowing = ArenaFloorFollowerKit.bind(
+        base, folder, {namePrefix = "Center"}
+    )
 
     local pads = {}
     for _, child in ipairs(mechanics:GetChildren()) do
