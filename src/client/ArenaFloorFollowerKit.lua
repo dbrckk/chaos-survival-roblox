@@ -18,7 +18,7 @@ local function ratio(current, original)
     return math.clamp(value, 0.05, 4)
 end
 
-function ArenaFloorFollowerKit.capture(base, container)
+function ArenaFloorFollowerKit.capture(base, container, options)
     if typeof(base) ~= "Instance" or not base:IsA("BasePart")
         or typeof(container) ~= "Instance" then
         return nil
@@ -27,6 +27,9 @@ function ArenaFloorFollowerKit.capture(base, container)
     local snapshot = {
         base = base,
         baseSize = base.Size,
+        -- Solid-looking service equipment moves with the shrinking arena,
+        -- but should not turn into miniature crates or camera rigs.
+        preserveSize = type(options) == "table" and options.preserveSize == true,
         parts = {},
     }
     for _, piece in ipairs(container:GetChildren()) do
@@ -56,11 +59,13 @@ function ArenaFloorFollowerKit.apply(snapshot)
         if part and part.Parent then
             local position = data.localCFrame.Position
             local rotation = data.localCFrame - position
-            part.Size = Vector3.new(
-                math.max(0.02, data.size.X * scaleX),
-                data.size.Y,
-                math.max(0.02, data.size.Z * scaleZ)
-            )
+            if not snapshot.preserveSize then
+                part.Size = Vector3.new(
+                    math.max(0.02, data.size.X * scaleX),
+                    data.size.Y,
+                    math.max(0.02, data.size.Z * scaleZ)
+                )
+            end
             part.CFrame = base.CFrame
                 * CFrame.new(position.X * scaleX, position.Y, position.Z * scaleZ)
                 * rotation
@@ -72,8 +77,8 @@ end
 
 -- Bind exactly one event per visual owner. No RenderStepped, no polling,
 -- and disconnect before deleting/replacing art after a streamed map swap.
-function ArenaFloorFollowerKit.bind(base, container)
-    local snapshot = ArenaFloorFollowerKit.capture(base, container)
+function ArenaFloorFollowerKit.bind(base, container, options)
+    local snapshot = ArenaFloorFollowerKit.capture(base, container, options)
     if not snapshot then
         return function() end
     end

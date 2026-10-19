@@ -25,6 +25,54 @@ local function planarUnit(vector)
 end
 
 describe("Arena presentation", function()
+    it("moves rigid visual machinery inward without shrinking its parts", function()
+        local root = Instance.new("Folder")
+        root.Parent = workspace
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 80)
+        base.CFrame = CFrame.new(30, 10, -14) * CFrame.Angles(0, math.rad(25), 0)
+        base.Parent = root
+
+        local props = Instance.new("Folder")
+        props.Parent = root
+        local crate = Instance.new("Part")
+        crate.Size = Vector3.new(3.6, 2.2, 2.8)
+        crate.CFrame = base.CFrame * CFrame.new(38, 1.2, -25)
+        crate.Parent = props
+        local nameplate = Instance.new("Part")
+        nameplate.Size = Vector3.new(1.8, 0.15, 0.22)
+        nameplate.CFrame = crate.CFrame * CFrame.new(0, 1.2, 0)
+        nameplate.Parent = props
+
+        local snapshot = ArenaFloorFollowerKit.capture(base, props, {
+            preserveSize = true,
+        })
+        expect(snapshot.preserveSize).toBe(true)
+        base.Size = Vector3.new(45, 2, 36)
+        expect(ArenaFloorFollowerKit.apply(snapshot)).toBe(2)
+        local expected = base.CFrame * CFrame.new(38 * 0.45, 1.2, -25 * 0.45)
+        expect((crate.Position - expected.Position).Magnitude < 0.005).toBe(true)
+        expect((crate.Size - Vector3.new(3.6, 2.2, 2.8)).Magnitude < 0.005)
+            .toBe(true)
+        expect((nameplate.Size - Vector3.new(1.8, 0.15, 0.22)).Magnitude < 0.005)
+            .toBe(true)
+
+        base.Size = Vector3.new(100, 2, 80)
+        expect(ArenaFloorFollowerKit.apply(snapshot)).toBe(2)
+        expect((crate.Position - (base.CFrame * CFrame.new(38, 1.2, -25)).Position)
+            .Magnitude < 0.005).toBe(true)
+
+        local disconnect = ArenaFloorFollowerKit.bind(base, props, {preserveSize = true})
+        base.Size = Vector3.new(65, 2, 52)
+        task.wait(0.06)
+        expect((crate.Position - (base.CFrame * CFrame.new(38 * 0.65, 1.2, -25 * 0.65)).Position)
+            .Magnitude < 0.005).toBe(true)
+        expect((crate.Size - Vector3.new(3.6, 2.2, 2.8)).Magnitude < 0.005).toBe(true)
+        disconnect()
+        root:Destroy()
+    end)
+
+
     it("keeps local 3D deck paint aligned with a shrinking rotated base", function()
         local root = Instance.new("Folder")
         root.Parent = workspace
