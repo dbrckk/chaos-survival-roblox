@@ -252,6 +252,11 @@ local function rebuild()
             )) do
                 registerVisual(platform, piece)
             end
+            for _, piece in ipairs(PlatformFinishKit.buildSideRails(
+                folder, platform, tier.Name, theme
+            )) do
+                registerVisual(platform, piece)
+            end
 
             if variant == "Towers" then
                 decorateTowers(platform, visualIndex, theme, tier)
