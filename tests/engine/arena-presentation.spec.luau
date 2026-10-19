@@ -834,10 +834,18 @@ describe("Moving platform premium trim kit", function()
         platform.Size = Vector3.new(29, 2, 7)
         expect(PlatformFinishKit.applySkybridgeFootprint(snapshot))
             .toBe(#pieces)
-        print("SKYBRIDGE_DIAGNOSTIC_1", rails[1].Size.X,
-            originalRailSize.X, armor[1].Size.X, originalRigidSize.X,
-            platform.CFrame:PointToObjectSpace(rails[3].Position).X,
-            endBefore.X)
+        local function assertNear(label, actual, expected, tolerance)
+            if math.abs(actual - expected) >= tolerance then
+                error("Skybridge " .. label .. ": actual=" .. tostring(actual)
+                    .. " expected=" .. tostring(expected))
+            end
+        end
+        assertNear("rail span", rails[1].Size.X,
+            originalRailSize.X * 0.5, 0.005)
+        assertNear("rigid armor", armor[1].Size.X,
+            originalRigidSize.X, 0.005)
+        assertNear("rail end", platform.CFrame:PointToObjectSpace(rails[3].Position).X,
+            endBefore.X * 0.5, 0.01)
         expect(math.abs(rails[1].Size.X - originalRailSize.X * 0.5)
             < 0.005).toBe(true)
         expect((armor[1].Size - originalRigidSize).Magnitude < 0.005)
@@ -859,8 +867,8 @@ describe("Moving platform premium trim kit", function()
         )
         platform.Size = Vector3.new(43.5, 2, 7)
         task.wait(0.06)
-        print("SKYBRIDGE_DIAGNOSTIC_2", rails[1].Size.X,
-            originalRailSize.X, platform.Size.X)
+        assertNear("size listener", rails[1].Size.X,
+            originalRailSize.X * 0.75, 0.005)
         expect(math.abs(rails[1].Size.X - originalRailSize.X * 0.75)
             < 0.005).toBe(true)
         disconnect()
