@@ -10,6 +10,7 @@ local DisasterIntroMotionKit = require("../../src/client/DisasterIntroMotionKit"
 local DisasterBoundaryClimaxKit = require("../../src/client/DisasterBoundaryClimaxKit")
 local LocomotionGroundFx = require("../../src/client/LocomotionGroundFx")
 local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit")
+local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 
 describe("visual budget rules", function()
     it("uses progressively smaller budgets for lower tiers", function()
@@ -914,6 +915,52 @@ end)
 
 
 describe("Android decorative scenery LOD stability", function()
+    it("keeps floating arena supports underneath a shrinking collision floor", function()
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Anchored = true
+        base.Size = Vector3.new(100, 2, 80)
+        base.CFrame = CFrame.new(35, 12, -20)
+        base.Parent = workspace
+
+        local decor = Instance.new("Folder")
+        decor.Name = "ArenaUnderstructureLocal"
+        decor.Parent = workspace
+
+        local support = Instance.new("Part")
+        support.Size = Vector3.new(3, 12, 3)
+        support.CFrame = base.CFrame * CFrame.new(32, -7, 24)
+        support.Anchored = true
+        support.CanCollide = false
+        support.Parent = decor
+
+        local beam = Instance.new("Part")
+        beam.Size = Vector3.new(55, 0.8, 2)
+        beam.CFrame = base.CFrame * CFrame.new(0, -2.5, -24)
+        beam.Anchored = true
+        beam.Parent = decor
+
+        local snapshot = ArenaFloorFollowerKit.capture(base, decor)
+        expect(snapshot ~= nil).toBe(true)
+        base.Size = Vector3.new(45, 2, 36)
+        expect(ArenaFloorFollowerKit.apply(snapshot)).toBe(2)
+        expect(math.abs(support.Position.X - (35 + 32 * 0.45)) < 0.001).toBe(true)
+        expect(math.abs(support.Position.Z - (-20 + 24 * 0.45)) < 0.001).toBe(true)
+        expect(math.abs(support.Position.Y - 5) < 0.001).toBe(true)
+        expect(math.abs(beam.Size.X - 55 * 0.45) < 0.001).toBe(true)
+        expect(math.abs(beam.Size.Y - 0.8) < 0.001).toBe(true)
+
+        base.Size = Vector3.new(100, 2, 80)
+        expect(ArenaFloorFollowerKit.apply(snapshot)).toBe(2)
+        expect(math.abs(support.Position.X - 67) < 0.001).toBe(true)
+        expect(math.abs(support.Position.Z - 4) < 0.001).toBe(true)
+        expect(math.abs(beam.Size.X - 55) < 0.001).toBe(true)
+
+        decor:Destroy()
+        base:Destroy()
+    end)
+
+
     it("locates nested pad cosmetics but never server-owned lobby scenery", function()
         local root = Instance.new("Folder")
         expect(#SceneryLodRules.practicePadVisualOwners(root)).toBe(0)

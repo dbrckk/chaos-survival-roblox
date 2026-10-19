@@ -4,13 +4,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
 folder.Name = "ArenaUnderstructureLocal"
 folder.Parent = workspace
 
+local stopFollowingBase = nil
+
 local function clear()
+    if stopFollowingBase then
+        stopFollowingBase()
+        stopFollowingBase = nil
+    end
     folder:ClearAllChildren()
 end
 
@@ -314,6 +321,12 @@ local function rebuild()
             end
         end
     end
+
+    -- Shrinking Arena scales the real floor during play. Keep the floating
+    -- undercarriage, support pylons and cosmetic reactor aligned to it so
+    -- they never protrude beyond the smaller collision deck.
+    -- One base Size listener; no per-frame polling or new scene parts.
+    stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
 end
 
 -- The arena Folder can replicate before Base and its VariantId.
