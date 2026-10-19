@@ -263,6 +263,12 @@ local function rebuild()
                 registerVisual(platform, piece)
             end
 
+            for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(
+                folder, platform, variant, tier.Name, theme
+            )) do
+                registerVisual(platform, piece)
+            end
+
             if variant == "Towers" then
                 decorateTowers(platform, visualIndex, theme, tier)
             elseif variant == "Crossroads" then
