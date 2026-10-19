@@ -8,7 +8,7 @@ All items below must be green on the **exact release commit**. The checkboxes de
 
 - [ ] Build Validation succeeds on release SHA.
 - [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
-- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 72 specs).
+- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 73 specs).
 - [ ] Rojo produces a non-empty place file.
 - [ ] Luau syntax validation succeeds.
 - [ ] Fair-play monetization guard succeeds.
@@ -20,7 +20,7 @@ All items below must be green on the **exact release commit**. The checkboxes de
 - [ ] Single client Clouds owner guard succeeds.
 - [ ] Production source contains no TODO/FIXME/HACK markers or obvious placeholder IDs.
 
-Latest historical full automated certification: commit `70681aabc40c493467ffbc13ca0078b63eb90f56` on 2026-10-06 (Build Validation run `37454113205` + Roblox Open Cloud Engine Tests run `37454113207`). Both completed successfully on the exact SHA. This is historical evidence only and does **not** certify later commits.
+Latest verified pre-release automated baseline: commit `43237198b610c0514ba5ae6c3cf09cea46b57f82` on 2026-10-19 ([Build Validation run 39240966371](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/39240966371) + [all-five Roblox engine run 39240966382](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/39240966382)). Both completed successfully on that exact SHA. This is **historical CI evidence only**; any new source or documentation commit requires its own exact-SHA checks and it is **not** Studio/device/publication certification.
 
 > Every candidate SHA must re-run both automated workflows. A later code/doc commit invalidates the automated certification until the new exact SHA is green.
 
@@ -34,6 +34,24 @@ Classify failures before changing production code:
 - **INFRA FAILURE:** Roblox Open Cloud remains PROCESSING past deadline, returns HTTP 429/5xx, or runner infrastructure stops after otherwise passing specs -> preserve the evidence, retry, and do not mislabel it as a gameplay regression.
 - A timeout/429 is still a red gate until a retry succeeds on the release lineage; it is never silently treated as PASS.
 - Record passed test counts, failed shard, workflow/run number and exact SHA.
+
+## Build artifact provenance and integrity (pre-release)
+
+The ordinary `Build Validation` workflow creates `chaos-survival-place` for
+each successfully compiled SHA. It contains:
+
+- `ChaosSurvival.rbxlx` — built place file, **not automatically published**;
+- `ChaosSurvival.rbxlx.sha256` — SHA-256 digest of that place;
+- `candidate-provenance.txt` — exact source SHA, workflow run and explicit
+  `NOT_PUBLISHED` / `NOT_VERIFIED` / `NOT_CERTIFIED` flags.
+
+After downloading and unzipping the Actions artifact, verify it with
+`sha256sum --check ChaosSurvival.rbxlx.sha256` on Linux/macOS or by comparing
+the SHA-256 digest using Windows `Get-FileHash` in PowerShell. Compare
+`source_sha` to the exact candidate commit, not just the branch name.
+The artifact is useful for **offline review and loading into authenticated
+Studio**; it is not evidence of a live Roblox deployment, performance,
+persistence, safe monetization or publication authorization.
 
 ## Production destination verification (critical; 18 October 2026)
 
@@ -107,7 +125,7 @@ Record:
 
 ## Unified visual candidate acceptance (#12–#16)
 
-- [ ] Build Validation and Roblox Open Cloud Engine Tests both pass on the exact candidate SHA (72 uniquely assigned engine specs).
+- [ ] Build Validation and Roblox Open Cloud Engine Tests both pass on the exact candidate SHA (73 uniquely assigned engine specs).
 - [ ] Studio confirms a full ordered intermission > ready > round > result journey on a single client, without double-counting repeated states.
 - [ ] Authenticated Studio E2E checks Showtime 3D stage identity, static part safety and hidden ROUND / visible RESULT transitions.
 - [ ] Studio confirms six R6/R15 emotes and no conflict with Settings or locomotion.
@@ -241,6 +259,7 @@ Only after retention/device UX are acceptable:
 - [x] Keep a documented rollback path via `ROLLBACK_RUNBOOK.md`; select and record the last known-good certified SHA before release.
 - [ ] Verify Roblox experience icon, thumbnails, description and screenshots.
 - [x] Publish Roblox Place workflow refuses uncertified SHAs unless exact-SHA Build Validation + Open Cloud + Release Candidate Gate are green.
+- [ ] Compare the downloaded candidate place SHA-256 with its checksum and ensure its provenance SHA matches the certified release commit.
 - [ ] Archive the publish artifact containing place file + publish-metadata.txt.
 - [ ] Run a final smoke test immediately after publication.
 
