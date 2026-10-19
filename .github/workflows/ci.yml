@@ -867,6 +867,33 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -s build/ChaosSurvival.rbxlx
+          python3 - <<'PY'
+          from collections import Counter
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          file = Path("build/ChaosSurvival.rbxlx")
+          root = ET.parse(file).getroot()
+          if root.tag != "roblox":
+              raise SystemExit("Rojo output is not a Roblox XML place.")
+          classes = Counter(item.get("class") for item in root.iter("Item"))
+          services = {
+              item.get("class") for item in root.findall("Item")
+          }
+          for service in ("ReplicatedStorage", "ServerScriptService", "StarterPlayer"):
+              if service not in services:
+                  raise SystemExit(f"Missing core Roblox service: {service}")
+          # Detect a truncated Rojo project that still produces a nonempty XML.
+          minima = {"ModuleScript": 120, "LocalScript": 70, "Script": 3}
+          for name, minimum in minima.items():
+              if classes[name] < minimum:
+                  raise SystemExit(f"Incomplete Roblox place: {name} count {classes[name]} < {minimum}")
+          for item in root.iter("Item"):
+              title = item.find('./Properties/string[@name="Name"]')
+              if title is not None and title.text == "VisualStagingStamp":
+                  raise SystemExit("Staging-only identity marker entered release place.")
+          print("Built place hierarchy verified:", dict(classes))
+          PY
           test ! -e src/shared/VisualStagingStamp.lua || {
             echo "::error::Staging-only watermark must not enter an ordinary release build."
             exit 1
