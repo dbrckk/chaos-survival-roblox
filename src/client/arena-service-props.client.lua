@@ -5,6 +5,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local ArenaDetailKit = require(script.Parent.ArenaDetailKit)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
 
 local player = Players.LocalPlayer
 
@@ -13,8 +14,13 @@ folder.Name = "ArenaServicePropsLocal"
 folder.Parent = workspace
 
 local disconnectMapWatch = nil
+local stopFollowingBase = nil
 
 local function clear()
+    if stopFollowingBase then
+        stopFollowingBase()
+        stopFollowingBase = nil
+    end
     folder:ClearAllChildren()
 end
 
@@ -280,6 +286,13 @@ local function rebuild()
     else
         addClassic(base, theme, tier)
     end
+
+    -- Move rigid machines and their diegetic labels inward with the
+    -- shrinking floor, without changing their dimensions or collision.
+    -- Otherwise crates and camera tripods appear beyond the walkable edge.
+    stopFollowingBase = ArenaFloorFollowerKit.bind(
+        base, folder, {preserveSize = true}
+    )
 end
 
 -- Service structures are client-owned and expensive to recreate.
