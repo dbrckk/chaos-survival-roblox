@@ -94,6 +94,9 @@ For DataStore tests in Studio, use a test experience and enable:
 - Authenticated Studio/device report template: [studio/PLAYTEST_REPORT_TEMPLATE.md](studio/PLAYTEST_REPORT_TEMPLATE.md)
 - Change history: [CHANGELOG.md](CHANGELOG.md)
 - Rollback procedure: [ROLLBACK_RUNBOOK.md](ROLLBACK_RUNBOOK.md)
+- French public launch runbook: [docs/MISE_EN_LIGNE_1_0.md](docs/MISE_EN_LIGNE_1_0.md)
+- Reviewed bilingual launch-copy draft: [docs/FICHE_ROBLOX_1_0.md](docs/FICHE_ROBLOX_1_0.md)
+- Successful Build Validation provides a non-published `.rbxlx` candidate, SHA-256 checksum and exact-commit provenance in the `chaos-survival-place` GitHub Actions artifact. This is a test package, **not** Roblox release certification.
 - Manual **Release Candidate Gate** workflow: verifies Build Validation + Open Cloud on the exact SHA and emits a release-evidence artifact without publishing.
 - Roblox publication workflow refuses uncertified SHAs and archives publish metadata.
 

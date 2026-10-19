@@ -861,8 +861,68 @@ jobs:
           rojo build default.project.json -o build/ChaosSurvival.rbxlx
           test -s build/ChaosSurvival.rbxlx
 
+      - name: Verify packaged place integrity and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -s build/ChaosSurvival.rbxlx
+          python3 - <<'PY'
+          from collections import Counter
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          file = Path("build/ChaosSurvival.rbxlx")
+          root = ET.parse(file).getroot()
+          if root.tag != "roblox":
+              raise SystemExit("Rojo output is not a Roblox XML place.")
+          classes = Counter(item.get("class") for item in root.iter("Item"))
+          services = {
+              item.get("class") for item in root.findall("Item")
+          }
+          for service in ("ReplicatedStorage", "ServerScriptService", "StarterPlayer"):
+              if service not in services:
+                  raise SystemExit(f"Missing core Roblox service: {service}")
+          # Detect a truncated Rojo project that still produces a nonempty XML.
+          minima = {"ModuleScript": 120, "LocalScript": 70, "Script": 3}
+          for name, minimum in minima.items():
+              if classes[name] < minimum:
+                  raise SystemExit(f"Incomplete Roblox place: {name} count {classes[name]} < {minimum}")
+          for item in root.iter("Item"):
+              title = item.find('./Properties/string[@name="Name"]')
+              if title is not None and title.text == "VisualStagingStamp":
+                  raise SystemExit("Staging-only identity marker entered release place.")
+          print("Built place hierarchy verified:", dict(classes))
+          PY
+          test ! -e src/shared/VisualStagingStamp.lua || {
+            echo "::error::Staging-only watermark must not enter an ordinary release build."
+            exit 1
+          }
+          (
+            cd build
+            sha256sum ChaosSurvival.rbxlx > ChaosSurvival.rbxlx.sha256
+            sha256sum --check ChaosSurvival.rbxlx.sha256
+          )
+          {
+            printf 'source_sha=%s\n' "$GITHUB_SHA"
+            printf 'source_ref=%s\n' "$GITHUB_REF"
+            printf 'workflow_run=%s\n' "$GITHUB_RUN_ID"
+            printf 'built_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf 'package=ChaosSurvival.rbxlx\n'
+            printf 'publication=NOT_PUBLISHED\n'
+            printf 'studio_device_certification=NOT_VERIFIED\n'
+            printf 'release_gate=NOT_CERTIFIED\n'
+          } > build/candidate-provenance.txt
+          grep -Fxq "source_sha=$GITHUB_SHA" build/candidate-provenance.txt
+          grep -Fxq 'publication=NOT_PUBLISHED' build/candidate-provenance.txt
+          echo "Build archive includes SHA-256 checksum and explicit non-certified provenance."
+
       - name: Upload built place
         uses: actions/upload-artifact@v4
         with:
           name: chaos-survival-place
-          path: build/ChaosSurvival.rbxlx
+          path: |
+            build/ChaosSurvival.rbxlx
+            build/ChaosSurvival.rbxlx.sha256
+            build/candidate-provenance.txt
+          if-no-files-found: error

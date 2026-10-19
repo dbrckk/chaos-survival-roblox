@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-19 — 1.0 release packaging hardening (unreleased)
+
+- Build Validation now archives the compiled Roblox `.rbxlx`, its SHA-256 checksum and a provenance manifest identifying its exact source SHA and explicitly marking the package **NOT_PUBLISHED / NOT_CERTIFIED**.
+- Replaced obsolete `publish-roblox` branch rollback instructions: production publication is manual-only from certified `main`, with a verified Creator Version History restore as the separate owner-operated recovery option.
+- Reconciled the release checklist with 73 engine specs and the latest verified exact-SHA automated baseline; automated checks remain distinct from authenticated Studio, device, persistence and real-player acceptance.
+- Added a French step-by-step Creator Dashboard release guide, including staging isolation, current Roblox audience/maturity checks, owner confirmations and exact-SHA release evidence. No public Roblox deploy, rollback or audience change performed.
+
+
 ## 2026-10-15 — Native Roblox VFX photo/video review (unreleased)
 
 - Added a small opt-in PHOTO menu available on a loaded client: live Roblox-engine screenshots without UI, screenshots with HUD, and an eight-second native video of rendered gameplay (supported devices only).
