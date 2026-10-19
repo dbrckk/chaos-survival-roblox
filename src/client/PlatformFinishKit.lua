@@ -39,10 +39,19 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     part:SetAttribute("ChaosPlatformTrim", true)
     part.Parent = parent
 
-    local joint = Instance.new("WeldConstraint")
+    -- Skybridge spans change during Shrinking Arena. A WeldConstraint
+    -- preserves the old offset and snaps resized trim back into place.
+    -- Use an adjustable Weld only for skybridges; ordinary moving decks
+    -- keep their existing lightweight WeldConstraint behavior.
+    local skybridge = platform:GetAttribute("ChaosSkybridge") == true
+    local joint = Instance.new(skybridge and "Weld" or "WeldConstraint")
     joint.Name = "ChaosPlatformTrimWeld"
     joint.Part0 = part
     joint.Part1 = platform
+    if skybridge then
+        joint.C0 = CFrame.identity
+        joint.C1 = localFrame
+    end
     joint.Parent = part
     return part
 end
@@ -117,11 +126,10 @@ end
 function PlatformFinishKit.surfacePaintOffset(platform, thickness)
     if not platform or not platform:IsA("BasePart") then return nil end
     local halfThickness = math.max(0.005, (tonumber(thickness) or 0.05) * 0.5)
-    -- Tower skybridges have physical deck + two elevated edge rails,
-    -- but NO server PlatformPanel. Avoid floating paint above empty air.
-    if platform:GetAttribute("ChaosSkybridge") == true then
-        return platform.Size.Y * 0.5 + halfThickness + 0.012
-    end
+    -- MapBuilder calls addPlatformFinish for ALL decks, including the
+    -- Towers Skybridges. Their server-owned PlatformPanel is centered
+    -- at physicalTop + 0.055 with thickness 0.10, too. Painting directly
+    -- above the physical Part would be buried beneath that inset.
     return platform.Size.Y * 0.5 + 0.055 + 0.05 + halfThickness + 0.012
 end
 
@@ -209,6 +217,97 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme)
         end
     end
     return built
+end
+
+-- A Tower skybridge is a solid permanent route. Shrinking Arena contracts
+-- its long axis (unlike ordinary platforms, which only translate).
+-- Local welded paint, side rails and corner armor must contract too;
+-- otherwise they imply a phantom walkable route beyond the real bridge.
+-- Capture once per generated set, then change ONLY existing client Parts.
+function PlatformFinishKit.captureSkybridgeFootprint(platform, pieces)
+    if not platform or not platform:IsA("BasePart")
+        or platform:GetAttribute("ChaosSkybridge") ~= true then
+        return nil
+    end
+    local size = platform.Size
+    local alongX = size.X >= size.Z
+    local snapshot = {
+        platform = platform,
+        originalSpan = alongX and size.X or size.Z,
+        alongX = alongX,
+        entries = {},
+    }
+    for _, piece in ipairs(pieces or {}) do
+        if piece and piece:IsA("BasePart") and piece.Parent then
+            snapshot.entries[#snapshot.entries + 1] = {
+                part = piece,
+                size = piece.Size,
+                localCFrame = platform.CFrame:ToObjectSpace(piece.CFrame),
+            }
+        end
+    end
+    return snapshot
+end
+
+function PlatformFinishKit.applySkybridgeFootprint(snapshot)
+    if not snapshot or not snapshot.platform
+        or not snapshot.platform.Parent or snapshot.originalSpan <= 0 then
+        return 0
+    end
+
+    local platform = snapshot.platform
+    local span = snapshot.alongX and platform.Size.X or platform.Size.Z
+    local ratio = math.clamp(span / snapshot.originalSpan, 0.05, 4)
+    local updated = 0
+    for _, data in ipairs(snapshot.entries) do
+        local piece = data.part
+        if piece and piece.Parent then
+            local position = data.localCFrame.Position
+            local rotation = data.localCFrame - position
+            local scaled = snapshot.alongX
+                and Vector3.new(position.X * ratio, position.Y, position.Z)
+                or Vector3.new(position.X, position.Y, position.Z * ratio)
+            -- Short bolts, trims and armor stay rigid, while long paint and
+            -- side bands shorten with the real deck. No fake walkway edges.
+            local size = data.size
+            piece.Size = snapshot.alongX
+                and Vector3.new(size.X > 2.2 and size.X * ratio or size.X,
+                    size.Y, size.Z)
+                or Vector3.new(size.X, size.Y,
+                    size.Z > 2.2 and size.Z * ratio or size.Z)
+            local localFrame = CFrame.new(scaled) * rotation
+            local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+            if joint and joint:IsA("Weld") then
+                -- C0 is identity, so C1 is the exact platform-relative
+                -- frame. Updating it changes the physical weld offset.
+                joint.C1 = localFrame
+            else
+                piece.CFrame = platform.CFrame * localFrame
+            end
+            updated += 1
+        end
+    end
+    return updated
+end
+
+function PlatformFinishKit.bindSkybridgeFootprint(platform, pieces)
+    local snapshot = PlatformFinishKit.captureSkybridgeFootprint(platform, pieces)
+    if not snapshot then return function() end end
+
+    local connected = true
+    local scheduled = false
+    local connection = platform:GetPropertyChangedSignal("Size"):Connect(function()
+        if not connected or scheduled then return end
+        scheduled = true
+        task.defer(function()
+            scheduled = false
+            if connected then PlatformFinishKit.applySkybridgeFootprint(snapshot) end
+        end)
+    end)
+    return function()
+        connected = false
+        connection:Disconnect()
+    end
 end
 
 -- Platform disappearance is gameplay, not an artistic overlay: any local
