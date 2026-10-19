@@ -791,6 +791,83 @@ describe("Streaming-independent platform identity", function()
 end)
 
 describe("Moving platform premium trim kit", function()
+    it("shrinks client-painted Tower skybridge bands with real bridge spans", function()
+        local root = Instance.new("Folder")
+        root.Parent = workspace
+        local platform = Instance.new("Part")
+        platform.Name = "Skybridge18"
+        platform.Size = Vector3.new(58, 2, 7)
+        platform.Anchored = true
+        platform.CFrame = CFrame.new(22, 14, -19)
+            * CFrame.Angles(0, math.rad(27), 0)
+        platform:SetAttribute("ChaosSkybridge", true)
+        platform.Parent = root
+
+        local visual = Instance.new("Folder")
+        visual.Parent = root
+        local theme = VisualTheme.arena("Towers")
+        local rails = PlatformFinishKit.buildSideRails(
+            visual, platform, "High", theme
+        )
+        local paint = PlatformFinishKit.build(
+            visual, platform, "Towers", "High", theme
+        )
+        local armor = PlatformFinishKit.buildArmor(
+            visual, platform, "Towers", "High", theme
+        )
+        local pieces = {}
+        for _, family in ipairs({rails, paint, armor}) do
+            for _, piece in ipairs(family) do
+                table.insert(pieces, piece)
+            end
+        end
+        expect(#rails).toBe(4)
+        local originalRailSize = rails[1].Size
+        local originalRigidSize = armor[1].Size
+        local endBefore = platform.CFrame:PointToObjectSpace(rails[3].Position)
+        local snapshot = PlatformFinishKit.captureSkybridgeFootprint(
+            platform, pieces
+        )
+        expect(snapshot ~= nil).toBe(true)
+        expect(#snapshot.entries).toBe(#pieces)
+
+        platform.Size = Vector3.new(29, 2, 7)
+        expect(PlatformFinishKit.applySkybridgeFootprint(snapshot))
+            .toBe(#pieces)
+        expect(math.abs(rails[1].Size.X - originalRailSize.X * 0.5)
+            < 0.005).toBe(true)
+        expect((armor[1].Size - originalRigidSize).Magnitude < 0.005)
+            .toBe(true)
+        local endAfter = platform.CFrame:PointToObjectSpace(rails[3].Position)
+        expect(math.abs(endAfter.X - endBefore.X * 0.5) < 0.01)
+            .toBe(true)
+        for _, piece in ipairs(pieces) do
+            expect(piece.CanCollide).toBe(false)
+            expect(piece.CanTouch).toBe(false)
+            expect(piece.CanQuery).toBe(false)
+        end
+
+        -- A disconnected watcher stops responding to future bridge resizes.
+        platform.Size = Vector3.new(58, 2, 7)
+        PlatformFinishKit.applySkybridgeFootprint(snapshot)
+        local disconnect = PlatformFinishKit.bindSkybridgeFootprint(
+            platform, pieces
+        )
+        platform.Size = Vector3.new(43.5, 2, 7)
+        task.wait(0.06)
+        expect(math.abs(rails[1].Size.X - originalRailSize.X * 0.75)
+            < 0.005).toBe(true)
+        disconnect()
+        local sizeBeforeStop = rails[1].Size
+        platform.Size = Vector3.new(29, 2, 7)
+        task.wait(0.06)
+        expect((rails[1].Size - sizeBeforeStop).Magnitude < 0.005)
+            .toBe(true)
+
+        root:Destroy()
+    end)
+
+
     it("creates four distinctive, bounded, non-colliding welded motifs", function()
         local parent = Instance.new("Folder")
         local platform = Instance.new("Part")
@@ -805,12 +882,12 @@ describe("Moving platform premium trim kit", function()
         -- so its 0.06-high bars must clear the exact same surface.
         local warningY = PlatformFinishKit.surfacePaintOffset(platform, 0.06)
         expect(warningY - 0.03 > platform.Size.Y * 0.5 + 0.105).toBe(true)
-        -- Tower skybridges have no PlatformPanel: their paint should sit
-        -- on the physical floor, never float at the panel clearance.
+        -- MapBuilder adds PlatformPanel even to permanent Tower skybridges;
+        -- the local glyph must clear the actual panel there as well.
         platform:SetAttribute("ChaosSkybridge", true)
         local bridgePaintY = PlatformFinishKit.surfacePaintOffset(platform, 0.05)
-        expect(bridgePaintY - 0.025 > platform.Size.Y * 0.5).toBe(true)
-        expect(bridgePaintY - 0.025 < platform.Size.Y * 0.5 + 0.03).toBe(true)
+        expect(bridgePaintY - 0.025 > platform.Size.Y * 0.5 + 0.105).toBe(true)
+        expect(math.abs(bridgePaintY - surfaceY) < 0.0001).toBe(true)
         platform:SetAttribute("ChaosSkybridge", nil)
         expect(math.abs(
             PlatformFinishKit.surfacePaintOffset(platform, 0.05) - surfaceY

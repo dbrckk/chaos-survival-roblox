@@ -305,6 +305,14 @@ describe("Chaos Survival engine", function()
                 bridges += 1
                 expect(p.CanCollide).toBe(true)
                 expect(p:IsA("BasePart")).toBe(true)
+                -- The server panel exists on every skybridge too; client
+                -- markings must clear its actual upper face.
+                local index = p.Name:match("^Skybridge(%d+)$")
+                expect(index ~= nil).toBe(true)
+                local panel = decor:FindFirstChild("PlatformPanel" .. index)
+                expect(panel ~= nil).toBe(true)
+                expect(panel.CanCollide).toBe(false)
+                expect(panel.Size.Y > 0).toBe(true)
                 expect(math.abs(p.Position.Y + p.Size.Y * 0.5
                     - (Config.ArenaCenter.Y + 13)) < 0.001).toBe(true)
             end

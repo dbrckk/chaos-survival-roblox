@@ -17,11 +17,16 @@ folder.Parent = workspace
 -- it never rebuilds a whole arena or adds a per-frame loop.
 local visualsByPlatform = {}
 local collapseConnections = {}
+local footprintDisconnects = {}
 
 local function clear()
     for platform, connection in pairs(collapseConnections) do
         connection:Disconnect()
         collapseConnections[platform] = nil
+    end
+    for platform, disconnect in pairs(footprintDisconnects) do
+        disconnect()
+        footprintDisconnects[platform] = nil
     end
     table.clear(visualsByPlatform)
     folder:ClearAllChildren()
@@ -266,6 +271,16 @@ local function rebuild()
                 decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             else
                 decorateClassic(platform, visualIndex, theme, tier)
+            end
+
+            -- Permanent Tower skybridges shorten during Shrinking Arena.
+            -- Their welded client trims must track the authoritative span
+            -- without regenerating geometry, allocating new Parts or polling.
+            if platform:GetAttribute("ChaosSkybridge") == true then
+                footprintDisconnects[platform] =
+                    PlatformFinishKit.bindSkybridgeFootprint(
+                        platform, visualsByPlatform[platform]
+                    )
             end
 
             -- A platform can enter while already Gone (streaming/late
