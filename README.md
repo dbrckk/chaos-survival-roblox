@@ -2,6 +2,16 @@
 
 Fast multiplayer disaster-survival game built with Luau + Rojo.
 
+## Public experience status
+
+[**Play Chaos Survival on Roblox**](https://www.roblox.com/games/95351659174730/Chaos-Survival) · [Creator Dashboard](https://create.roblox.com/dashboard/creations/experiences/10771083668/overview)
+
+The experience is **public to eligible 16+ Roblox players**, with a completed content rating (mild/occasional stylized violence). The currently published place is **Roblox version 65** (18 October 2026). **Do not equate publication of version 65 with deployment or certification of the latest GitHub source.** Physical Android/desktop QA, authenticated Roblox Studio E2E, persistence/rejoin, and real-player testing remain unverified for the current GitHub candidate.
+
+The public experience icon is still the default Roblox icon, and the publicly reported game-media listing is empty. Original 1024×1024 icon and 1920×1080 promotional thumbnail concepts are prepared, but they have **not been uploaded to Roblox**. Roblox Creator's icon and Experience Detail Page media controls currently require local file uploads. The editor's auto-generated icon preview showed only sky/clouds and was not saved. Thumbnail Personalization Open Cloud is limited to Home Page thumbnails and requires a separate `universe.thumbnail:write` scope that is not configured on the inspected keys; it does not replace the main icon. Avoid changing broad-scope API credentials to bypass this.
+
+For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-19.md), [launch runbook](docs/MISE_EN_LIGNE_1_0.md), and [release gate issue #79](https://github.com/dbrckk/chaos-survival-roblox/issues/79).
+
 ## Implemented
 
 - Runtime-generated lobby and arena
