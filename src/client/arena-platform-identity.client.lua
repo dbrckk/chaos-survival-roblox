@@ -105,14 +105,16 @@ local function decorateTowers(platform, index, theme, tier)
     local core = makePart(
         "TowerPlatformLiftCore" .. index,
         Vector3.new(radius, 0.24, radius),
-        bottom,
+        -- Establish the final cylinder orientation BEFORE welding it
+        -- to the authoritative platform. Rotating an already-welded
+        -- Part can fight the constraint and move/snaps its assembly.
+        bottom * CFrame.Angles(0, 0, math.rad(90)),
         index % 2 == 0 and theme.Secondary or theme.Accent,
         tier.Name == "High" and index % 3 == 1 and Enum.Material.Neon or Enum.Material.Metal,
         tier.Name == "High" and index % 3 == 1 and 0.48 or (tier.Name == "Low" and 0.36 or 0.22),
         platform
     )
     core.Shape = Enum.PartType.Cylinder
-    core.CFrame = bottom * CFrame.Angles(0, 0, math.rad(90))
 
     if tier.Name == "High" and platform.Position.Y >= 10 then
         makePart(
