@@ -23,7 +23,7 @@ Description enregistrée dans Creator le 19 octobre :
 
 > Survis au chaos ! Vote pour la prochaine catastrophe et affronte 11 dangers dans 4 arènes : lave, météorites, tornades, plateformes instables et bien plus. Joue entre amis ou lance un Solo Rush avec des survivants contrôlés par l'IA. Gagne des pièces et de l'XP, termine des quêtes quotidiennes et débloque des cosmétiques. Aucun cosmétique ne donne d'avantage en jeu. Combien de manches survivras-tu ?
 
-À la dernière inspection, **l'icône et la miniature publiques restent des illustrations par défaut de Roblox** ; leur présence dans la fiche ne signifie pas qu'elles sont finalisées. Deux **illustrations promotionnelles conceptuelles** de format `1024×1024` et `1920×1080` ont été importées dans les éléments Canva du propriétaire, mais **ne sont pas encore téléversées dans Roblox**. Avant import, vérifier qu'elles illustrent honnêtement des éléments présents dans le vrai jeu et que Roblox les accepte. Ne pas les présenter comme des captures natives du gameplay.
+**Mise à jour du 20 octobre 2026 :** une capture de la page du jeu fournie par le propriétaire montre que l'**icône Chaos Survival personnalisée est maintenant visible** sur Android. La **grande miniature reste le placeholder Roblox**, et l'API publique des médias de l'expérience retourne une galerie vide lors du contrôle du 20 octobre. Les deux **illustrations promotionnelles conceptuelles** Canva (1024 × 1024 et 1920 × 1080) existent toujours, mais aucune image de gameplay native n'a été vérifiée. Ne pas présenter ces concepts comme des captures réelles. Aucune nouvelle publication de place n'est requise pour corriger la miniature.
 
 ## Point de sécurité
 
@@ -40,9 +40,13 @@ Le commit `4f07961d6a786fd019ddac52854ec9dd5e361195` du 19 octobre avait **Build
 
 ## Suite à donner
 
-1. Remplacer les placeholders par une vraie icône et une miniature représentatives du gameplay ; vérifier l'issue de la modération Roblox.
+1. **Conserver l'icône personnalisée désormais visible** ; installer une miniature authentique et représentative du gameplay, puis vérifier son affichage public après modération.
 2. Examiner le place actuellement servi, puis valider sur appareil physique et petit groupe réel ; consigner les preuves.
 3. Mettre en place un staging séparé avant de certifier et pousser le dernier SHA GitHub.
 4. Évaluer l'accès Kids/Select ultérieurement seulement après confirmation des conditions Roblox, sans engager de Robux sans décision explicite du propriétaire.
 
 Références : [procédure de mise en ligne 1.0](MISE_EN_LIGNE_1_0.md), [checklist de release](../RELEASE_CHECKLIST.md), [ticket de certification #79](https://github.com/dbrckk/chaos-survival-roblox/issues/79).
+
+## Mesure de conversion première session (code GitHub, non publié)
+
+Sur la branche de suivi ouverte le 20 octobre, l'instrumentation `GameAnalytics` enregistre les latences jusqu'au HUD (`TimeToClientReadySeconds`), au premier vote, à la première manche et à sa première fin, ainsi que `SessionExitStage`. Le statut de publication de cette instrumentation doit être vérifié séparément. Ces événements Roblox ne démontrent pas l'absence de bugs et ne sont pas une mesure d'audience tant que des joueurs réels n'ont pas été observés.

@@ -113,15 +113,42 @@ function GameAnalytics.onboarding(player, step, stepName, solo)
     end)
 end
 
+-- Measure the first-session funnel from the authoritative server clock. Each
+-- checkpoint fires once per visit, even if the same remote/action is retried.
+-- This lets us distinguish joining, seeing the HUD, voting and truly playing.
 function GameAnalytics.sessionStarted(player, playerCount)
+    local solo = (tonumber(playerCount) or 1) <= 1
     sessions[player.UserId] = {
         startedAt = os.clock(),
         rounds = 0,
+        joinedSolo = solo,
     }
 
-    local solo = (tonumber(playerCount) or 1) <= 1
     GameAnalytics.custom(player, "SessionStarted", 1, "Mode:" .. GameAnalytics.modeLabel(solo))
     GameAnalytics.onboarding(player, 1, "Joined", solo)
+end
+
+local function markFirstSessionMilestone(player, key, eventName, solo)
+    local session = sessions[player.UserId]
+    if not session or session[key] then return end
+
+    local reachedAt = os.clock()
+    session[key] = reachedAt
+    GameAnalytics.custom(
+        player,
+        eventName,
+        math.max(0, reachedAt - session.startedAt),
+        "Mode:" .. GameAnalytics.modeLabel(solo),
+        "Device:" .. tostring(player:GetAttribute("ClientDeviceClass") or "Unknown")
+    )
+end
+
+function GameAnalytics.clientReady(player)
+    local session = sessions[player.UserId]
+    if not session then return end
+    markFirstSessionMilestone(
+        player, "clientReadyAt", "TimeToClientReadySeconds", session.joinedSolo
+    )
 end
 
 function GameAnalytics.sessionEnded(player)
@@ -136,6 +163,28 @@ function GameAnalytics.sessionEnded(player)
         "Rounds:" .. tostring(session.rounds)
     )
 
+    -- Attribute drop-off without guessing why the player left. Roblox
+    -- disconnects, voluntary exits and crashes all reach this same hook.
+    local stage = "BeforeHUD"
+    if session.firstCompletedAt then
+        stage = "RoundCompleted"
+    elseif session.firstRoundAt then
+        stage = "InRound"
+    elseif session.firstVoteAt then
+        stage = "Voted"
+    elseif session.clientReadyAt then
+        stage = "Lobby"
+    end
+
+    GameAnalytics.custom(
+        player,
+        "SessionExitStage",
+        1,
+        "Stage:" .. stage,
+        "Rounds:" .. tostring(session.rounds),
+        "Device:" .. tostring(player:GetAttribute("ClientDeviceClass") or "Unknown")
+    )
+
     sessions[player.UserId] = nil
     onboardingSteps[player.UserId] = nil
 end
@@ -145,6 +194,9 @@ function GameAnalytics.roundStarted(player, roundNumber, solo, disasterId, doubl
     if session then
         session.rounds += 1
     end
+    markFirstSessionMilestone(
+        player, "firstRoundAt", "TimeToFirstRoundSeconds", solo
+    )
 
     GameAnalytics.custom(
         player,
@@ -158,6 +210,9 @@ function GameAnalytics.roundStarted(player, roundNumber, solo, disasterId, doubl
 end
 
 function GameAnalytics.roundCompleted(player, survived, solo, disasterId, doubleChaos, elapsedSeconds)
+    markFirstSessionMilestone(
+        player, "firstCompletedAt", "TimeToFirstCompletionSeconds", solo
+    )
     GameAnalytics.custom(
         player,
         "RoundCompleted",
@@ -184,6 +239,9 @@ function GameAnalytics.roundCompleted(player, survived, solo, disasterId, double
 end
 
 function GameAnalytics.vote(player, disasterId, solo)
+    markFirstSessionMilestone(
+        player, "firstVoteAt", "TimeToFirstVoteSeconds", solo
+    )
     GameAnalytics.custom(
         player,
         "DisasterVote",

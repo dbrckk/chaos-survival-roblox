@@ -635,6 +635,7 @@ local function syncInitialClientState(player)
         return
     end
     clientReady[player] = true
+    GameAnalytics.clientReady(player)
     stateEvent:FireClient(player, lastRoundState)
 
     task.spawn(function()
