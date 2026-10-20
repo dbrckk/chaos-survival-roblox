@@ -3067,10 +3067,10 @@ stateEvent.OnClientEvent:Connect(function(state)
         player:GetAttribute("Games"),
         player:GetAttribute("SessionRoundsPlayed")
     )
-    -- Compact phones previously HID the hazard instruction during actual
-    -- gameplay. New players must always see the disaster-specific hint.
-    compactRoundTop = touchDevice and currentHudPhase == "round"
-        and not FirstTimeExperience.isRookie(gamesPlayed)
+    -- Live hazard instructions are vital even after the first few rounds.
+    -- Previously compact touch HUD hid them for EVERY Android player.
+    -- Retain the readable two-line top HUD through gameplay at all levels.
+    compactRoundTop = false
     refreshTopHazardIdentity(state)
     top.Visible = currentHudPhase ~= "result"
 
