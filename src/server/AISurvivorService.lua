@@ -20,6 +20,9 @@ local FluxRelayRules = if fluxRulesInPlace
 local AISurvivorNetworkOwnership = if script
     then require(script.Parent.AISurvivorNetworkOwnership)
     else require("./AISurvivorNetworkOwnership")
+local SpawnSafety = if script
+    then require(script.Parent.SpawnSafety)
+    else require("./SpawnSafety")
 local LobbyActivities = if script
     then require(script.Parent.LobbyActivities)
     else require("./LobbyActivities")
@@ -199,25 +202,30 @@ local function arenaVariantId()
     return tostring(arena and arena:GetAttribute("VariantId") or "Classic")
 end
 
-local function arenaSpawnCFrame(slot)
+-- Humans use SpawnSafety.resolve; AI must obey the same physical
+-- clearance rules. A raw marker + 4 studs can put an NPC inside an
+-- overhead deck or on top of another contestant.
+local function arenaSpawnCFrame(slot, humanoid, root)
     local _, arena = arenaParts()
     local spawns = arena and arena:FindFirstChild("Spawns")
     local list = sortedParts(spawns)
-    local humanSlots = math.max(1, humanCount())
-    local botSpawnIndex = slot + humanSlots
-
     if #list == 0 then
-        local position = config.ArenaCenter
-            + Vector3.new((botSpawnIndex - 2) * 7, 4, 0)
-        return ArenaPresentation.spawnCFrame(
-            tostring(arena and arena:GetAttribute("VariantId") or "Classic"),
-            position,
-            config.ArenaCenter
-        )
+        return nil
     end
 
-    local spawn = list[((botSpawnIndex - 1) % #list) + 1]
-    return spawn.CFrame + Vector3.new(0, 4, 0)
+    -- Preserve the bot's preferred slot, but try the remaining markers
+    -- before skipping an unsafe entry. resolve() also checks nearby rigs
+    -- and has bounded floor-level offsets for obstructed markers.
+    local humanSlots = math.max(1, humanCount())
+    local startIndex = ((slot + humanSlots - 1) % #list) + 1
+    for offset = 0, #list - 1 do
+        local marker = list[((startIndex + offset - 1) % #list) + 1]
+        local resolved = SpawnSafety.resolve(arena, marker, humanoid, root)
+        if resolved then
+            return resolved
+        end
+    end
+    return nil
 end
 
 local function destroyTracks(record)
@@ -764,6 +772,19 @@ local function sendToArena(record)
         return
     end
 
+    local humanoid = record.model:FindFirstChildOfClass("Humanoid")
+    local root = record.model:FindFirstChild("HumanoidRootPart")
+    local spawn = arenaSpawnCFrame(record.slot, humanoid, root)
+    if not spawn then
+        -- An unsafe bot must never be counted as an active contestant.
+        -- Keep its rig in the lobby for the next round instead.
+        record.inRound = false
+        record.model:SetAttribute("AISurvivorInRound", false)
+        pivotRecord(record, getLobbyPosition(record))
+        warn("No collision-free AI round spawn for slot", record.slot)
+        return
+    end
+
     record.inRound = true
     record.model:SetAttribute("AISurvivorInRound", true)
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
@@ -779,7 +800,7 @@ local function sendToArena(record)
     record.resultAction = nil
     record.resultActionUntil = 0
     record.resultTarget = nil
-    pivotRecord(record, arenaSpawnCFrame(record.slot))
+    pivotRecord(record, spawn)
 end
 
 local function destroyRecord(record)
