@@ -1795,6 +1795,19 @@ local function chooseLobbyTarget(record)
                 pool = targets
             end
 
+            -- The teammate seeks real players instead of spending every
+            -- lobby cycle beside another bot; other roles remain varied.
+            if record.profile.Id == "Balanced" and math.random() < 0.78 then
+                local humanPartners = {}
+                for _, candidate in ipairs(pool) do
+                    if candidate.partnerSlot >= 1000 then
+                        table.insert(humanPartners, candidate)
+                    end
+                end
+                if #humanPartners > 0 then
+                    pool = humanPartners
+                end
+            end
             local selected = pool[math.random(1, #pool)]
             record.lastSocialPartnerSlot = selected.partnerSlot
             record.lobbyActivity = "social"
@@ -2276,9 +2289,14 @@ local function stepRecord(record, now)
             record.targetIsSkyrail = false
             record.skyrailDirection = nil
             local _, pressure = decisionTraits(record)
-            local pauseChance = 0.38 * (1 - pressure * 0.58)
+            -- Competitors don't stand still for a second after every
+            -- waypoint. The daredevil sometimes showboats, while the
+            -- tactician tends to stay in motion.
+            local basePause = record.profile.Id == "Bold" and 0.24
+                or (record.profile.Id == "Balanced" and 0.18 or 0.10)
+            local pauseChance = basePause * (1 - pressure * 0.58)
             if math.random() < pauseChance then
-                record.idleUntil = now + 0.35 + math.random() * 1.25
+                record.idleUntil = now + 0.16 + math.random() * 0.55
                 humanoid:Move(Vector3.zero)
                 return
             end
@@ -2483,7 +2501,8 @@ function AISurvivorService.setRoundState(state)
                     humanoid:Move(Vector3.zero)
 
                     local traits = record.roundTraits or record.profile
-                    local action = AISurvivorRules.resultReaction(
+                    local action = AISurvivorRules.personalityResultAction(
+                        record.profile,
                         math.random(),
                         traits.Risk or record.profile.Risk
                     )
@@ -2545,7 +2564,9 @@ function AISurvivorService.beginVote(options, roundNumber)
                 return
             end
 
-            local optionIndex = AISurvivorRules.voteIndex(record.slot, #options, roundNumber)
+            local optionIndex = AISurvivorRules.personalityVoteIndex(
+                record.profile, options, record.slot, roundNumber
+            )
             local option = options[optionIndex]
             if option and option.Id then
                 voteIds[record.slot] = option.Id
