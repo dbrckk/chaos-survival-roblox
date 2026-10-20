@@ -652,7 +652,10 @@ local function applyState()
             currentState.title,
             currentState.voteOptions
         )
-        local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
+        local games = FirstTimeExperience.effectiveGames(
+            player:GetAttribute("Games"),
+            player:GetAttribute("SessionRoundsPlayed")
+        )
         if games <= 0
             and currentState.phase == "intermission"
             and not FirstTimeExperience.hasVoteOptions(currentState)

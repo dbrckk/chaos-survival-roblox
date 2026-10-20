@@ -1,5 +1,15 @@
 local FirstTimeExperience = {}
 
+-- Games are persisted only while DataStore ownership is available. During a
+-- temporary/no-save visit, count rounds entered in this server session so the
+-- first-round tutorial and difficulty do not reset forever. Never write this
+-- fallback back to player data or use it for purchase/unlock eligibility.
+function FirstTimeExperience.effectiveGames(savedGames, sessionRoundsPlayed)
+    local saved = math.max(0, math.floor(tonumber(savedGames) or 0))
+    local played = math.max(0, math.floor(tonumber(sessionRoundsPlayed) or 0))
+    return math.max(saved, played)
+end
+
 function FirstTimeExperience.isFirstRound(games)
     return math.max(0, math.floor(tonumber(games) or 0)) <= 1
 end

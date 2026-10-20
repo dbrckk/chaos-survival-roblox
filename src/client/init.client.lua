@@ -3068,7 +3068,10 @@ stateEvent.OnClientEvent:Connect(function(state)
         metaNotificationShownThisIntermission = false
     end
 
-    local gamesPlayed = tonumber(player:GetAttribute("Games")) or 0
+    local gamesPlayed = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"),
+        player:GetAttribute("SessionRoundsPlayed")
+    )
     local firstLobby = gamesPlayed <= 0
     local votingOpen = currentHudPhase == "intermission"
         and FirstTimeExperience.hasVoteOptions(state)
@@ -3155,7 +3158,10 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 
     local coachText = FirstTimeExperience.coachText(state, {
-        games = player:GetAttribute("Games"),
+        games = FirstTimeExperience.effectiveGames(
+            player:GetAttribute("Games"),
+            player:GetAttribute("SessionRoundsPlayed")
+        ),
         practiceUses = player:GetAttribute("LobbyPracticeUses"),
         mechanicUses = player:GetAttribute("RoundMechanicUses"),
         shards = player:GetAttribute("RoundChaosShards"),

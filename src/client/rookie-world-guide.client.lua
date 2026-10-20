@@ -289,7 +289,10 @@ local function refresh()
         return
     end
 
-    local games = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0))
+    local games = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"),
+        player:GetAttribute("SessionRoundsPlayed")
+    )
     if not FirstTimeExperience.isFirstRound(games) then
         clearMarker()
         return
@@ -446,6 +449,7 @@ end)
 
 player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
 player:GetAttributeChangedSignal("Games"):Connect(refresh)
+player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 player:GetAttributeChangedSignal("LobbyPracticeUses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
