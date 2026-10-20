@@ -1,0 +1,295 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalizationService = game:GetService("LocalizationService")
+local UserInputService = game:GetService("UserInputService")
+
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local UITheme = require(ReplicatedStorage.Shared.UITheme)
+
+local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
+local touchDevice = UserInputService.TouchEnabled
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+
+-- A clear, replayable explanation for every player. The automatic introduction
+-- only appears in a quiet first-time lobby and disappears before a vote starts.
+-- No DataStore writes, client polling, remote messages or extra gameplay steps.
+local gui = Instance.new("ScreenGui")
+gui.Name = "ChaosHowToPlay"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = false
+gui.DisplayOrder = 46
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local help = Instance.new("TextButton")
+help.Name = "HowToPlayButton"
+help.AnchorPoint = Vector2.new(0, 0)
+help.Size = UDim2.fromOffset(48, 48)
+help.BackgroundColor3 = UITheme.Colors.Panel
+help.BackgroundTransparency = 0.08
+help.Text = "?"
+help.Font = Enum.Font.GothamBlack
+help.TextSize = 27
+help.TextColor3 = UITheme.Colors.Cyan
+help.BorderSizePixel = 0
+help.AutoButtonColor = true
+help.ZIndex = 30
+help.Parent = gui
+UITheme.addCorner(help, UITheme.Corners.Medium)
+UITheme.addStroke(help, UITheme.Colors.Cyan, 1.25, 0.20)
+
+local backdrop = Instance.new("Frame")
+backdrop.Name = "HowToPlayOverlay"
+backdrop.Size = UDim2.fromScale(1, 1)
+backdrop.BackgroundColor3 = Color3.fromRGB(3, 8, 15)
+backdrop.BackgroundTransparency = 0.30
+backdrop.BorderSizePixel = 0
+backdrop.Active = true
+backdrop.Visible = false
+backdrop.ZIndex = 40
+backdrop.Parent = gui
+
+local card = Instance.new("Frame")
+card.Name = "ThreeStepGuide"
+card.AnchorPoint = Vector2.new(0.5, 0.5)
+card.Position = UDim2.fromScale(0.5, 0.5)
+card.BackgroundColor3 = UITheme.Colors.Panel
+card.BorderSizePixel = 0
+card.ZIndex = 41
+card.Parent = backdrop
+UITheme.addCorner(card, UITheme.Corners.Large)
+UITheme.addStroke(card, UITheme.Colors.Cyan, 1.5, 0.17)
+UITheme.addGradient(card, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+
+local header = Instance.new("TextLabel")
+header.Name = "Title"
+header.Position = UDim2.new(0, 16, 0, 13)
+header.Size = UDim2.new(1, -32, 0, 30)
+header.BackgroundTransparency = 1
+header.Text = CoreLocalization.text(localeId, "HELP_TITLE")
+header.TextColor3 = UITheme.Colors.Text
+header.TextXAlignment = Enum.TextXAlignment.Center
+header.TextScaled = true
+header.Font = Enum.Font.GothamBlack
+header.ZIndex = 42
+header.Parent = card
+UITheme.addTextConstraint(header, 18, 28)
+
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "Instructions"
+contentFrame.Position = UDim2.new(0, 18, 0, 51)
+contentFrame.Size = UDim2.new(1, -36, 1, -112)
+contentFrame.BackgroundTransparency = 1
+contentFrame.ZIndex = 42
+contentFrame.Parent = card
+
+local accentColors = {
+    UITheme.Colors.Cyan,
+    UITheme.Colors.Green,
+    UITheme.Colors.Orange,
+    UITheme.Colors.Muted,
+}
+for index, key in ipairs({
+    "HELP_STEP_ONE", "HELP_STEP_TWO", "HELP_STEP_THREE", "HELP_STEP_FOUR"
+}) do
+    local row = Instance.new("TextLabel")
+    row.Name = "Step" .. tostring(index)
+    row.Position = UDim2.new(0, 0, (index - 1) * 0.25, 0)
+    row.Size = UDim2.new(1, 0, 0.25, -2)
+    row.BackgroundTransparency = 1
+    local instructionKey = key
+    if index == 2 and not touchDevice then
+        instructionKey = UserInputService.GamepadEnabled
+            and "HELP_STEP_TWO_GAMEPAD" or "HELP_STEP_TWO_DESKTOP"
+    end
+    row.Text = CoreLocalization.text(localeId, instructionKey)
+    row.TextXAlignment = Enum.TextXAlignment.Left
+    row.TextYAlignment = Enum.TextYAlignment.Center
+    row.TextWrapped = true
+    row.TextScaled = true
+    row.Font = index == 4 and Enum.Font.GothamMedium or Enum.Font.GothamBold
+    row.TextColor3 = accentColors[index]
+    row.ZIndex = 42
+    row.Parent = contentFrame
+    UITheme.addTextConstraint(row, 11, index == 4 and 15 or 17)
+end
+
+local close = Instance.new("TextButton")
+close.Name = "UnderstoodButton"
+close.AnchorPoint = Vector2.new(0.5, 1)
+close.Position = UDim2.new(0.5, 0, 1, -12)
+close.Size = UDim2.new(0.66, 0, 0, 46)
+close.BackgroundColor3 = UITheme.Colors.Cyan
+close.TextColor3 = Color3.fromRGB(6, 16, 25)
+close.Text = CoreLocalization.text(localeId, "HELP_OK")
+close.Font = Enum.Font.GothamBlack
+close.TextScaled = true
+close.AutoButtonColor = true
+close.BorderSizePixel = 0
+close.ZIndex = 43
+close.Parent = card
+UITheme.addTextConstraint(close, 14, 20)
+UITheme.addCorner(close, UITheme.Corners.Medium)
+
+-- Short, non-blocking objective for newcomers even if their data loads late
+-- or they join while a round is already in progress.
+local objective = Instance.new("TextLabel")
+objective.Name = "FirstSessionObjective"
+objective.AnchorPoint = Vector2.new(0.5, 1)
+objective.Position = UDim2.new(0.5, 0, 1, -18)
+objective.Size = UDim2.fromOffset(520, 44)
+objective.BackgroundColor3 = Color3.fromRGB(8, 18, 31)
+objective.BackgroundTransparency = 0.08
+objective.TextColor3 = Color3.fromRGB(255, 255, 255)
+objective.Font = Enum.Font.GothamBold
+objective.TextScaled = true
+objective.TextWrapped = true
+objective.BorderSizePixel = 0
+objective.Active = false
+objective.ZIndex = 10
+objective.Visible = false
+objective.Parent = gui
+UITheme.addCorner(objective, UITheme.Corners.Medium)
+UITheme.addStroke(objective, UITheme.Colors.Cyan, 1.2, 0.20)
+UITheme.addTextConstraint(objective, 12, 19)
+
+local currentState = nil
+local introduced = false
+local openedManually = false
+
+local function refreshObjective()
+    local played = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    if played >= 2 or not currentState then
+        objective.Visible = false
+        return
+    end
+    local french = string.sub(string.lower(tostring(localeId)), 1, 2) == "fr"
+    local phase = tostring(currentState.phase or "")
+    local hasVote = FirstTimeExperience.hasVoteOptions(currentState)
+    if phase == "waiting" or phase == "intermission" then
+        if hasVote then
+            objective.Text = french
+                and "CHOISIS UNE CATASTROPHE (FACULTATIF) • DÉPART AUTOMATIQUE"
+                or "PICK A DISASTER (OPTIONAL) • ROUND STARTS AUTOMATICALLY"
+        else
+            objective.Text = french
+                and "ATTENDS LE DÉPART • BUT : RESTER EN VIE JUSQU'À 0"
+                or "WAIT FOR THE ROUND • GOAL: STAY ALIVE UNTIL 0"
+        end
+    elseif phase == "ready" or phase == "round" then
+        objective.Text = french
+            and "BOUGE ET SAUTE • ÉVITE LES DANGERS • SURVIS JUSQU'À 0"
+            or "MOVE AND JUMP • DODGE DANGER • SURVIVE UNTIL 0"
+    elseif phase == "result" then
+        objective.Text = french
+            and "MANCHE TERMINÉE • LA SUIVANTE DÉMARRE SEULE"
+            or "ROUND OVER • NEXT ROUND STARTS AUTOMATICALLY"
+    else
+        objective.Visible = false
+        return
+    end
+    objective.Visible = not backdrop.Visible
+end
+
+local function showGuide(manual)
+    openedManually = manual == true
+    backdrop.Visible = true
+    refreshObjective()
+end
+
+local function hideGuide()
+    openedManually = false
+    backdrop.Visible = false
+    refreshObjective()
+end
+
+help.Activated:Connect(function()
+    if backdrop.Visible then
+        hideGuide()
+    else
+        showGuide(true)
+    end
+end)
+close.Activated:Connect(hideGuide)
+
+local function applyResponsive()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local topMargin
+    if touchDevice then
+        topMargin = UIResponsive.mobileProfile(viewport).topHeight + 10
+    else
+        topMargin = math.floor(viewport.Y * 0.19)
+    end
+    help.Position = UDim2.new(0, 6, 0, topMargin)
+    local cardWidth = math.min(560, math.max(230, viewport.X - 32))
+    local cardHeight = math.min(272, math.max(190, viewport.Y - 32))
+    card.Size = UDim2.fromOffset(cardWidth, cardHeight)
+    objective.Size = UDim2.fromOffset(math.min(610, math.max(220, viewport.X - 30)), viewport.Y < 480 and 38 or 48)
+    objective.Position = UDim2.new(0.5, 0, 1, touchDevice and -8 or -18)
+end
+
+local viewportConnection = nil
+local function bindCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(
+            applyResponsive
+        )
+    end
+    applyResponsive()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+bindCamera()
+
+local function tryInitialGuide()
+    if introduced or not currentState
+        or player:GetAttribute("DataLoaded") ~= true
+    then
+        return
+    end
+    local games = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    if games > 0 then
+        introduced = true
+        return
+    end
+    local phase = tostring(currentState.phase or "")
+    local quiet = phase == "waiting"
+        or (phase == "intermission"
+            and not FirstTimeExperience.hasVoteOptions(currentState))
+    if quiet then
+        introduced = true
+        showGuide(false)
+    end
+end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
+    currentState = state
+    refreshObjective()
+    local phase = tostring(state.phase or "")
+    local busy = phase == "ready" or phase == "round" or phase == "result"
+        or (phase == "intermission" and FirstTimeExperience.hasVoteOptions(state))
+    if busy and backdrop.Visible and not openedManually then
+        hideGuide()
+    end
+    tryInitialGuide()
+end)
+
+player:GetAttributeChangedSignal("DataLoaded"):Connect(tryInitialGuide)
+player:GetAttributeChangedSignal("Games"):Connect(function()
+    tryInitialGuide()
+    refreshObjective()
+end)
+player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refreshObjective)
