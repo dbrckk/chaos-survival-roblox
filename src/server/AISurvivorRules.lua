@@ -17,38 +17,38 @@ AISurvivorRules.Profiles = {
         TargetHoldMin = 0.95,
         TargetHoldMax = 1.85,
         MistakeChance = 0.035,
-        SocialChance = 0.18,
-        GestureChance = 0.42,
+        SocialChance = 0.24,
+        GestureChance = 0.68,
         FreezeJumpChance = 0.84,
     },
     {
         Id = "Balanced",
         Role = "TEAMMATE",
         WalkSpeed = 16.0,
-        ReactionSeconds = 0.23,
+        ReactionSeconds = 0.19,
         Risk = 0.43,
-        PadChance = 0.38,
-        JumpChance = 0.21,
+        PadChance = 0.44,
+        JumpChance = 0.24,
         TargetHoldMin = 0.85,
         TargetHoldMax = 1.75,
-        MistakeChance = 0.065,
+        MistakeChance = 0.050,
         SocialChance = 0.39,
-        GestureChance = 0.78,
+        GestureChance = 0.90,
         FreezeJumpChance = 0.76,
     },
     {
         Id = "Bold",
         Role = "DAREDEVIL",
         WalkSpeed = 16.0,
-        ReactionSeconds = 0.28,
+        ReactionSeconds = 0.20,
         Risk = 0.72,
-        PadChance = 0.54,
-        JumpChance = 0.30,
+        PadChance = 0.59,
+        JumpChance = 0.32,
         TargetHoldMin = 0.75,
         TargetHoldMax = 1.50,
-        MistakeChance = 0.10,
-        SocialChance = 0.36,
-        GestureChance = 0.66,
+        MistakeChance = 0.075,
+        SocialChance = 0.38,
+        GestureChance = 0.84,
         FreezeJumpChance = 0.68,
     },
 }
@@ -118,7 +118,7 @@ function AISurvivorRules.roundTraits(profile, slot, roundNumber)
 
     local risk = math.clamp((tonumber(base.Risk) or 0.5) + wave(17, 11) * 0.10, 0.12, 0.88)
     local social = math.clamp((tonumber(base.SocialChance) or 0.2) + wave(23, 7) * 0.075, 0.06, 0.46)
-    local mistake = math.clamp((tonumber(base.MistakeChance) or 0.12) + wave(31, 3) * 0.055, 0.035, 0.27)
+    local mistake = math.clamp((tonumber(base.MistakeChance) or 0.12) + wave(31, 3) * 0.045, 0.035, 0.27)
     local padChance = math.clamp((tonumber(base.PadChance) or 0.2) + wave(13, 19) * 0.07, 0.07, 0.52)
 
     return {
