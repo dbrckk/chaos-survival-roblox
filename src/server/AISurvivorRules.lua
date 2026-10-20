@@ -140,6 +140,57 @@ function AISurvivorRules.voteIndex(slot, optionCount, roundNumber)
     return ((safeSlot * 2 + safeRound - 2) % count) + 1
 end
 
+-- Votes reveal each archetype's taste for risk while still respecting
+-- the actual three disaster choices and deterministic round variation.
+-- Balanced players rotate interests; tacticians avoid high-chaos choices;
+-- daredevils seek the most spectacular options.
+local VOTE_DANGER = {
+    RisingLava = 5, Meteors = 7, Tornado = 8, Bombs = 8,
+    ShrinkingArena = 8, DisappearingPlatforms = 7, Darkness = 5,
+    Freeze = 5, JumpShock = 6, LowGravity = 3, SpeedSurge = 4,
+}
+
+function AISurvivorRules.personalityVoteIndex(profile, options, slot, roundNumber)
+    local count = type(options) == "table" and #options or 0
+    local default = AISurvivorRules.voteIndex(slot, math.max(1, count), roundNumber)
+    if count == 0 then
+        return default
+    end
+
+    local id = type(profile) == "table" and profile.Id or "Balanced"
+    if id == "Balanced" then
+        return default
+    end
+
+    local bestIndex = default
+    local bestScore = -math.huge
+    for index, option in ipairs(options) do
+        local danger = type(option) == "table"
+            and (VOTE_DANGER[option.Id] or 5) or 5
+        local score = id == "Bold" and danger or (10 - danger)
+        -- Stable deterministic tie breaking, different each round.
+        score += (1 - math.abs(index - default) / math.max(1, count)) * 0.05
+        if score > bestScore then
+            bestScore = score
+            bestIndex = index
+        end
+    end
+    return bestIndex
+end
+
+function AISurvivorRules.personalityResultAction(profile, roll, risk)
+    local kind = type(profile) == "table" and profile.Id or "Balanced"
+    local value = math.clamp(tonumber(roll) or 0, 0, 0.999)
+    if kind == "Cautious" and value < 0.65 then
+        return "acknowledge"
+    elseif kind == "Balanced" and value < 0.54 then
+        return "acknowledge"
+    elseif kind == "Bold" and value < 0.70 then
+        return "jump"
+    end
+    return AISurvivorRules.resultReaction(value, risk)
+end
+
 function AISurvivorRules.lobbyActivity(roll, socialChance, practiceChance, voteActive)
     if voteActive == true then
         return "vote"
