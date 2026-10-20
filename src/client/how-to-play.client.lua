@@ -99,7 +99,12 @@ for index, key in ipairs({
     row.Position = UDim2.new(0, 0, (index - 1) * 0.25, 0)
     row.Size = UDim2.new(1, 0, 0.25, -2)
     row.BackgroundTransparency = 1
-    row.Text = CoreLocalization.text(localeId, key)
+    local instructionKey = key
+    if index == 2 and not touchDevice then
+        instructionKey = UserInputService.GamepadEnabled
+            and "HELP_STEP_TWO_GAMEPAD" or "HELP_STEP_TWO_DESKTOP"
+    end
+    row.Text = CoreLocalization.text(localeId, instructionKey)
     row.TextXAlignment = Enum.TextXAlignment.Left
     row.TextYAlignment = Enum.TextYAlignment.Center
     row.TextWrapped = true
