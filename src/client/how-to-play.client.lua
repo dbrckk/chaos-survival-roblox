@@ -26,7 +26,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local help = Instance.new("TextButton")
 help.Name = "HowToPlayButton"
 help.AnchorPoint = Vector2.new(0, 0)
-help.Size = UDim2.fromOffset(42, 42)
+help.Size = UDim2.fromOffset(48, 48)
 help.BackgroundColor3 = UITheme.Colors.Panel
 help.BackgroundTransparency = 0.08
 help.Text = "?"
@@ -120,7 +120,7 @@ local close = Instance.new("TextButton")
 close.Name = "UnderstoodButton"
 close.AnchorPoint = Vector2.new(0.5, 1)
 close.Position = UDim2.new(0.5, 0, 1, -12)
-close.Size = UDim2.new(0.66, 0, 0, 42)
+close.Size = UDim2.new(0.66, 0, 0, 46)
 close.BackgroundColor3 = UITheme.Colors.Cyan
 close.TextColor3 = Color3.fromRGB(6, 16, 25)
 close.Text = CoreLocalization.text(localeId, "HELP_OK")
@@ -165,7 +165,7 @@ local function applyResponsive()
     else
         topMargin = math.floor(viewport.Y * 0.19)
     end
-    help.Position = UDim2.new(0, 10, 0, topMargin)
+    help.Position = UDim2.new(0, 6, 0, topMargin)
     local cardWidth = math.min(560, math.max(230, viewport.X - 32))
     local cardHeight = math.min(272, math.max(190, viewport.Y - 32))
     card.Size = UDim2.fromOffset(cardWidth, cardHeight)
