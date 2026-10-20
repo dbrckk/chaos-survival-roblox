@@ -869,6 +869,13 @@ local function winningOption()
     return winners[math.random(1, #winners)]
 end
 
+local function roundExperience(player)
+    return FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"),
+        player:GetAttribute("SessionRoundsPlayed")
+    )
+end
+
 local function runDisasterSet(selected, contestants, roundSettings)
     local roundStartedAt = os.clock()
     local fusionName = #selected > 1 and ChaosFusion.name(selected[1].Id, selected[2].Id) or nil
@@ -881,7 +888,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local overdriveEndRemaining = math.max(0, overdriveStartRemaining - overdriveDuration)
     local firstRoundContestant = false
     for _, player in ipairs(contestants) do
-        if FirstTimeExperience.isFirstRound(player:GetAttribute("Games")) then
+        if FirstTimeExperience.isFirstRound(roundExperience(player)) then
             firstRoundContestant = true
             break
         end
@@ -1408,7 +1415,7 @@ while true do
     local firstSessionVote = false
     for _, player in ipairs(Players:GetPlayers()) do
         if player:GetAttribute("DataLoaded") == true
-            and math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0)) <= 0
+            and roundExperience(player) <= 0
         then
             firstSessionVote = true
             break
@@ -1552,6 +1559,13 @@ while true do
 
             if teleported then
                 table.insert(readyContestants, p)
+                -- Always advance first-time coaching during this visit, even
+                -- if the persistent DataStore is temporarily unavailable.
+                -- The session counter is deliberately not persisted.
+                p:SetAttribute(
+                    "SessionRoundsPlayed",
+                    (tonumber(p:GetAttribute("SessionRoundsPlayed")) or 0) + 1
+                )
                 PlayerData.add(p, "Games", 1)
                 progressQuest(p, "play_round", 1)
             else
@@ -1584,7 +1598,7 @@ while true do
     local contestantGames = {}
     local firstRoundBriefing = false
     for _, player in ipairs(contestants) do
-        local games = player:GetAttribute("Games")
+        local games = roundExperience(player)
         table.insert(contestantGames, games)
         if FirstTimeExperience.isFirstRound(games) then
             firstRoundBriefing = true
@@ -1836,7 +1850,7 @@ while true do
             local challengeXP = challengeCompleted and roundChallenge.XP or 0
 
             local medals = RoundMedals.evaluate({
-                firstRound = math.max(0, tonumber(p:GetAttribute("Games")) or 0) == 1,
+                firstRound = roundExperience(p) == 1,
                 shards = roundShardCount,
                 pads = roundMechanicUses,
                 nearMisses = roundNearMissCount,
