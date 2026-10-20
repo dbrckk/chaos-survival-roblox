@@ -2124,6 +2124,104 @@ local function maybeSocialGesture(record, humanoid, root, now)
     return true
 end
 
+-- Brief, low-frequency reactions to nearby competitors. Unlike scripted
+-- chat, these visible glances, celebratory hops and teammate jump-mirroring
+-- use the normal rig and never impersonate a connected player.
+local function maybeRoundGesture(record, humanoid, root, now)
+    if not record.inRound or currentState.phase ~= "round"
+        or now < (record.nextRoundGestureAt or 0)
+    then
+        return false
+    end
+
+    record.nextRoundGestureAt = now + 5.5 + math.random() * 5.5
+    local _, pressure = decisionTraits(record)
+    if pressure > 0.50 or record.threat or record.platformThreat
+        or currentState.finalRush == true
+    then
+        return false
+    end
+
+    local nearby = nil
+    local nearbyHumanoid = nil
+    local nearest = record.profile.Id == "Balanced" and 17 or 13
+    local function consider(candidateRoot, candidateHumanoid)
+        if not candidateRoot or not candidateRoot:IsA("BasePart")
+            or not candidateHumanoid or candidateHumanoid.Health <= 0
+        then
+            return
+        end
+        local difference = candidateRoot.Position - root.Position
+        local horizontal = Vector3.new(difference.X, 0, difference.Z).Magnitude
+        if horizontal < nearest and math.abs(difference.Y) < 5 then
+            nearest = horizontal
+            nearby = candidateRoot
+            nearbyHumanoid = candidateHumanoid
+        end
+    end
+
+    -- Prefer actual round participants. NPC-to-NPC gestures fill the gaps
+    -- only when nobody eligible is standing close to this AI.
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player:GetAttribute("RoundParticipant") == true
+            and player:GetAttribute("RoundEliminated") ~= true
+        then
+            local character = player.Character
+            consider(
+                character and character:FindFirstChild("HumanoidRootPart"),
+                character and character:FindFirstChildOfClass("Humanoid")
+            )
+        end
+    end
+    if not nearby then
+        for _, other in ipairs(records) do
+            if other ~= record and other.inRound and other.alive
+                and other.model and other.model.Parent
+            then
+                consider(
+                    other.model:FindFirstChild("HumanoidRootPart"),
+                    other.model:FindFirstChildOfClass("Humanoid")
+                )
+            end
+        end
+    end
+    if not nearby then
+        return false
+    end
+
+    -- An acknowledgement is legible on mobile but lasts only a fraction
+    -- of a second. The urgent-hazard path runs before every gesture check.
+    local look = Vector3.new(nearby.Position.X, root.Position.Y, nearby.Position.Z)
+    if (look - root.Position).Magnitude > 0.5 then
+        root.CFrame = root.CFrame:Lerp(CFrame.lookAt(root.Position, look), 0.32)
+    end
+
+    if humanoid.FloorMaterial ~= Enum.Material.Air
+        and not hasDisaster("LowGravity")
+    then
+        local peerState = nearbyHumanoid:GetState()
+        local peerJumping = peerState == Enum.HumanoidStateType.Jumping
+            or peerState == Enum.HumanoidStateType.Freefall
+        if record.profile.Id == "Bold" and math.random() < 0.70 then
+            -- The rival loves a show-off hop on the way past someone.
+            humanoid.Jump = true
+        elseif record.profile.Id == "Balanced" and peerJumping
+            and math.random() < 0.78
+        then
+            -- Copy a teammate's visible movement occasionally, not blindly.
+            humanoid.Jump = true
+        end
+    end
+
+    if record.profile.Id == "Balanced" and nearest < 10 then
+        -- A quick friendly nod, never a long stop in the danger zone.
+        record.idleUntil = now + 0.18
+        humanoid:Move(Vector3.zero)
+        return true
+    end
+    return false
+end
+
 local function stepRecord(record, now)
     local model = record.model
     local humanoid = model and model:FindFirstChildOfClass("Humanoid")
@@ -2216,6 +2314,10 @@ local function stepRecord(record, now)
         end
 
         if maybeSocialGesture(record, humanoid, root, now) then
+            return
+        end
+
+        if maybeRoundGesture(record, humanoid, root, now) then
             return
         end
 
@@ -2522,6 +2624,7 @@ function AISurvivorService.setRoundState(state)
                     roundSerial
                 )
                 record.nextHesitationAt = os.clock() + 0.8 + math.random() * 2.4
+                record.nextRoundGestureAt = os.clock() + 4 + math.random() * 4
                 record.nextReconsiderAt = os.clock() + 1.0 + math.random() * 1.8
                 record.strafeBias = math.clamp(
                     (record.roundTraits.DirectionBias or 0) * 0.32,
