@@ -368,9 +368,11 @@ local compactRoundTop = false
 
 local rookieCoach = Instance.new("TextLabel")
 rookieCoach.Name = "RookieCoach"
-rookieCoach.AnchorPoint = Vector2.new(0.5, 1)
-rookieCoach.Position = UDim2.fromScale(0.5, touchDevice and 0.70 or 0.94)
-rookieCoach.Size = UDim2.fromScale(touchDevice and 0.68 or 0.88, touchDevice and 0.042 or 0.055)
+rookieCoach.AnchorPoint = Vector2.new(0.5, 0)
+-- One persistent, readable instruction lane for new players. Never put it
+-- over the mobile vote cards, movement controls or live danger markers.
+rookieCoach.Position = UDim2.fromScale(0.5, 0.18)
+rookieCoach.Size = UDim2.new(0.82, 0, 0, 44)
 rookieCoach.BackgroundColor3 = UITheme.Colors.Panel
 rookieCoach.BackgroundTransparency = 0.05
 rookieCoach.BorderSizePixel = 0
@@ -1888,10 +1890,22 @@ local function applyResponsiveLayout()
         hint.Visible = true
     end
 
-    votes.Position = UDim2.fromScale(0.5, profile.voteHeight <= 140 and 0.49 or 0.54)
+    -- Preserve a separate lane for the rookie objective above the vote
+    -- cards even on a 320px-high Android viewport.
+    local voteCenterY = profile.voteHeight <= 140
+        and (viewport.Y < 340 and 0.56 or 0.49)
+        or 0.54
+    votes.Position = UDim2.fromScale(0.5, voteCenterY)
     votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
 
-    rookieCoach.Size = UDim2.new(profile.coachWidthScale, 0, 0, profile.coachHeight)
+    -- The ? help button lives on the left. Keep the first-run cue centered
+    -- beside it and below the top HUD, above the vote cards on short phones.
+    rookieCoach.Position = UDim2.new(0.5, 0, 0, profile.topHeight + 10)
+    rookieCoach.Size = UDim2.new(
+        profile.veryNarrow and 0.66
+            or (profile.narrowWidth and 0.76 or (profile.wide and 0.70 or 0.82)),
+        0, 0, profile.tinyHeight and 40 or 44
+    )
     -- The hazard is already named in the top header; keep only a short
     -- pre-round cue and preserve the camera view of warning circles.
     countdownCard.Size = UDim2.new(
@@ -3055,7 +3069,14 @@ stateEvent.OnClientEvent:Connect(function(state)
     local previousHudPhase = currentHudPhase
     currentHudPhase = tostring(state.phase or "waiting")
     currentHudVoteOptions = state.voteOptions
-    compactRoundTop = touchDevice and currentHudPhase == "round"
+    local gamesPlayed = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"),
+        player:GetAttribute("SessionRoundsPlayed")
+    )
+    -- Live hazard instructions are vital even after the first few rounds.
+    -- Previously compact touch HUD hid them for EVERY Android player.
+    -- Retain the readable two-line top HUD through gameplay at all levels.
+    compactRoundTop = false
     refreshTopHazardIdentity(state)
     top.Visible = currentHudPhase ~= "result"
 
@@ -3068,10 +3089,6 @@ stateEvent.OnClientEvent:Connect(function(state)
         metaNotificationShownThisIntermission = false
     end
 
-    local gamesPlayed = FirstTimeExperience.effectiveGames(
-        player:GetAttribute("Games"),
-        player:GetAttribute("SessionRoundsPlayed")
-    )
     local firstLobby = gamesPlayed <= 0
     local votingOpen = currentHudPhase == "intermission"
         and FirstTimeExperience.hasVoteOptions(state)
@@ -3157,36 +3174,39 @@ stateEvent.OnClientEvent:Connect(function(state)
         aliveCounter.Visible = false
     end
 
-    local coachText = FirstTimeExperience.coachText(state, {
-        games = FirstTimeExperience.effectiveGames(
-            player:GetAttribute("Games"),
-            player:GetAttribute("SessionRoundsPlayed")
-        ),
-        practiceUses = player:GetAttribute("LobbyPracticeUses"),
-        mechanicUses = player:GetAttribute("RoundMechanicUses"),
-        shards = player:GetAttribute("RoundChaosShards"),
-    })
-    if firstLobby
-        and currentHudPhase == "intermission"
-        and not votingOpen
-    then
-        local controlsKey = touchDevice and "TOUCH_CONTROLS"
-            or (UserInputService.GamepadEnabled and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS")
-        coachText = CoreLocalization.text(localeId, controlsKey)
-    elseif touchDevice and (votingOpen or activeGameplay) then
-        -- One owner per instruction during touch gameplay: the top HUD,
-        -- countdown, and round-focus bar already explain the hazard.
-        -- A second coach panel obscures the avatar and warning circles.
-        coachText = nil
+    -- First real-player feedback: people could not tell what to do.
+    -- Previously touch devices suppressed this cue DURING voting and
+    -- survival, precisely when a newcomer needed it most. Show one simple
+    -- phase instruction at a time for the first three rounds.
+    local coachKey = nil
+    if FirstTimeExperience.isRookie(gamesPlayed) then
+        if currentHudPhase == "intermission" and votingOpen then
+            coachKey = "FIRST_VOTE"
+        elseif currentHudPhase == "waiting" or currentHudPhase == "intermission" then
+            coachKey = "FIRST_WAIT"
+        elseif currentHudPhase == "ready" then
+            coachKey = "FIRST_READY"
+        elseif currentHudPhase == "round" then
+            if player:GetAttribute("RoundEliminated") == true then
+                coachKey = "FIRST_OUT"
+            elseif player:GetAttribute("RoundParticipant") == false then
+                coachKey = "FIRST_WATCH"
+            else
+                coachKey = "FIRST_ROUND"
+            end
+        elseif currentHudPhase == "result" then
+            coachKey = "FIRST_RESULT"
+        end
     end
-    coachText = CoreLocalization.coach(localeId, coachText)
-    rookieCoach.Visible = coachText ~= nil
-    if coachText then
-        rookieCoach.Text = coachText
-        if touchDevice then
-            rookieCoach.Position = UDim2.fromScale(0.5, 0.70)
+
+    rookieCoach.Visible = coachKey ~= nil
+    if coachKey then
+        if coachKey == "FIRST_READY" and not touchDevice then
+            local controlsKey = UserInputService.GamepadEnabled
+                and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS"
+            rookieCoach.Text = CoreLocalization.text(localeId, controlsKey)
         else
-            rookieCoach.Position = UDim2.fromScale(0.5, 0.94)
+            rookieCoach.Text = CoreLocalization.text(localeId, coachKey)
         end
     end
 
