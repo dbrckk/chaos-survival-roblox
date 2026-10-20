@@ -467,11 +467,29 @@ local function teleportToArena(player, index)
         return false, "character root or humanoid unavailable"
     end
 
-    local marker = spawns[((index - 1) % #spawns) + 1]
-    local landing, selected = SpawnSafety.resolve(arena, marker, humanoid, root)
+    -- A preferred marker may be blocked by a bridge, dynamic scenery or
+    -- another living avatar. Trying only that marker can exclude a newcomer
+    -- from an entire round even when other spawn markers are safe. Retain
+    -- deterministic ordering but try each alternative before giving up.
+    local preferredIndex = ((index - 1) % #spawns) + 1
+    local marker = nil
+    local landing = nil
+    local selected = nil
+    for offset = 0, #spawns - 1 do
+        local candidate = spawns[((preferredIndex + offset - 1) % #spawns) + 1]
+        local candidateLanding, candidateSlot =
+            SpawnSafety.resolve(arena, candidate, humanoid, root)
+        if candidateLanding then
+            marker = candidate
+            landing = candidateLanding
+            selected = candidateSlot
+            break
+        end
+        selected = candidateSlot
+    end
     if not landing then
         player:SetAttribute("ArenaSpawnClear", false)
-        return false, tostring(selected)
+        return false, tostring(selected or "no safe arena marker")
     end
 
     -- Move the full rig so R6/R15 body parts never remain in an overhead
