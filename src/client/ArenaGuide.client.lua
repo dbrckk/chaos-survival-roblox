@@ -239,9 +239,14 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     -- A malformed payload cannot replace the current briefing.
     if type(state) ~= "table" then return end
-    -- Touch players already receive the hazard name and guidance in the
-    -- top HUD + ready countdown; this large duplicate blocks the world.
-    if touchDevice then
+    -- The first three rounds have one phase-by-phase coach instead of
+    -- multiple overlapping briefings. Touch players already see the
+    -- hazard instruction in the top HUD, so never obscure the world.
+    local games = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"),
+        player:GetAttribute("SessionRoundsPlayed")
+    )
+    if touchDevice or FirstTimeExperience.isRookie(games) then
         readyState = nil
         hide()
     elseif state.phase == "ready" then
