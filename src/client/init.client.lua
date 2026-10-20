@@ -1902,7 +1902,8 @@ local function applyResponsiveLayout()
     -- beside it and below the top HUD, above the vote cards on short phones.
     rookieCoach.Position = UDim2.new(0.5, 0, 0, profile.topHeight + 10)
     rookieCoach.Size = UDim2.new(
-        profile.veryNarrow and 0.66 or (profile.wide and 0.70 or 0.82),
+        profile.veryNarrow and 0.66
+            or (profile.narrowWidth and 0.76 or (profile.wide and 0.70 or 0.82)),
         0, 0, profile.tinyHeight and 40 or 44
     )
     -- The hazard is already named in the top header; keep only a short
