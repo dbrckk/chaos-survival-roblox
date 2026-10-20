@@ -842,7 +842,7 @@ local function newRecord(slot)
     local baseProfile = AISurvivorRules.profileForSlot(slot)
     local profile = table.clone(baseProfile)
 
-    -- Persistent per-server variance prevents three recognizable fixed NPC archetypes.
+    -- Individual variance preserves identity while keeping each slot's archetype distinct.
     -- All personas stay at or below normal player walking speed.
     profile.WalkSpeed = math.clamp(baseProfile.WalkSpeed + (math.random() - 0.5) * 0.20, 15.6, 16.0)
     profile.ReactionSeconds = math.clamp(baseProfile.ReactionSeconds + (math.random() - 0.5) * 0.055, 0.14, 0.34)
@@ -1331,7 +1331,12 @@ local function scoreCandidate(record, root, candidate, traits)
 end
 
 local function socialArenaTarget(record, root, traits, now)
-    if math.random() >= (traits.SocialChance or record.profile.SocialChance or 0) then
+    -- Role-specific behavior changes interaction frequency without
+    -- inflating the bounded SocialChance temperament used by other systems.
+    local baseSocial = traits.SocialChance or record.profile.SocialChance or 0
+    local socialMultiplier = record.profile.Id == "Balanced" and 1.55
+        or (record.profile.Id == "Bold" and 1.18 or 0.85)
+    if math.random() >= math.clamp(baseSocial * socialMultiplier, 0, 0.70) then
         return nil
     end
 
@@ -1769,7 +1774,11 @@ local function chooseLobbyTarget(record)
 
     local traits = record.roundTraits or record.profile
     local socialChance = now >= (record.nextSocialAt or 0)
-        and math.clamp((traits.SocialChance or record.profile.SocialChance or 0.2) * 0.78, 0.08, 0.48)
+        and math.clamp(
+            (traits.SocialChance or record.profile.SocialChance or 0.2)
+                * (record.profile.Id == "Balanced" and 1.55 or 0.95),
+            0.08, 0.48
+        )
         or 0
     local practiceChance = now >= (record.nextPracticeAt or 0)
         and math.clamp(0.14 + (traits.Risk or record.profile.Risk or 0.5) * 0.12, 0.14, 0.25)
