@@ -845,7 +845,7 @@ local function newRecord(slot)
     -- Individual variance preserves identity while keeping each slot's archetype distinct.
     -- All personas stay at or below normal player walking speed.
     profile.WalkSpeed = math.clamp(baseProfile.WalkSpeed + (math.random() - 0.5) * 0.20, 15.6, 16.0)
-    profile.ReactionSeconds = math.clamp(baseProfile.ReactionSeconds + (math.random() - 0.5) * 0.055, 0.14, 0.34)
+    profile.ReactionSeconds = math.clamp(baseProfile.ReactionSeconds + (math.random() - 0.5) * 0.035, 0.12, 0.26)
     profile.Risk = math.clamp(baseProfile.Risk + (math.random() - 0.5) * 0.07, 0.12, 0.79)
     profile.JumpChance = math.clamp(baseProfile.JumpChance + (math.random() - 0.5) * 0.04, 0.10, 0.33)
 
