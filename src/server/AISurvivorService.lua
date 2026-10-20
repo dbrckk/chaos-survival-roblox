@@ -2555,6 +2555,19 @@ function AISurvivorService.aliveRoundCount()
     return count
 end
 
+-- A living lobby rig is not an arena contestant. Keep the roster
+-- denominator stable after deaths/removal until the next intermission:
+-- record.inRound remains true for bots admitted at READY.
+function AISurvivorService.roundRosterCount()
+    local count = 0
+    for _, record in ipairs(records) do
+        if record.inRound then
+            count += 1
+        end
+    end
+    return count
+end
+
 function AISurvivorService.activeCount()
     return #records
 end

@@ -1311,7 +1311,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
                     arenaName = roundSettings.ArenaName or currentArenaVariant,
                     disasterIds = spectateDisasterIds,
                     survivorsAlive = aiSurvivorsAlive,
-                    contestantCount = #contestants + AISurvivorService.visibleCount(),
+                    contestantCount = #contestants + AISurvivorService.roundRosterCount(),
                     aiSurvivors = aiSurvivorsAlive,
                     spectating = true,
                 })
@@ -1356,7 +1356,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             arenaName = roundSettings.ArenaName or currentArenaVariant,
             disasterIds = disasterIds,
             survivorsAlive = survivorsAlive,
-            contestantCount = #contestants + AISurvivorService.visibleCount(),
+            contestantCount = #contestants + AISurvivorService.roundRosterCount(),
             aiSurvivors = aiSurvivorsAlive,
             lastSurvivorUserId = (survivorsAlive == 1 and humanSurvivorsAlive == 1) and lastSurvivorUserId() or nil,
             arenaMechanicName = arenaMechanic and arenaMechanic.name or nil,
@@ -1685,6 +1685,10 @@ while true do
             displayTitle = "QUICK RUSH: " .. selectedSet[1].Name
         end
 
+        -- Alive AI and admitted AI are different measurements: an NPC can
+        -- have entered safely and then died during the countdown.
+        local aiReadyAlive = AISurvivorService.aliveRoundCount()
+        local aiRoundRoster = AISurvivorService.roundRosterCount()
         broadcast({
             phase = "ready",
             title = "READY: " .. displayTitle,
@@ -1701,9 +1705,9 @@ while true do
             arenaName = roundSettings.ArenaName,
             arenaId = currentArenaVariant,
             disasterIds = readyDisasterIds,
-            survivorsAlive = readyCount + AISurvivorService.visibleCount(),
-            contestantCount = readyCount + AISurvivorService.visibleCount(),
-            aiSurvivors = AISurvivorService.visibleCount(),
+            survivorsAlive = readyCount + aiReadyAlive,
+            contestantCount = readyCount + aiRoundRoster,
+            aiSurvivors = aiReadyAlive,
         })
         task.wait(1)
     end
@@ -1990,7 +1994,7 @@ while true do
         arenaId = currentArenaVariant,
         disasterIds = readyDisasterIds,
         survivorsAlive = displayedSurvivors,
-        contestantCount = #contestants + AISurvivorService.activeCount(),
+        contestantCount = #contestants + AISurvivorService.roundRosterCount(),
         survivorUserIds = survivorUserIds,
     })
 
@@ -2007,7 +2011,7 @@ while true do
             arenaId = currentArenaVariant,
             disasterIds = readyDisasterIds,
             survivorsAlive = displayedSurvivors,
-            contestantCount = #contestants + AISurvivorService.activeCount(),
+            contestantCount = #contestants + AISurvivorService.roundRosterCount(),
             survivorUserIds = survivorUserIds,
         })
         task.wait(1)
