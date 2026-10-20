@@ -4,41 +4,52 @@ AISurvivorRules.TargetVisibleParticipants = 4
 AISurvivorRules.MaxBots = 3
 
 AISurvivorRules.Profiles = {
+    -- All three competitors move at normal player speed or slower. Skill
+    -- comes from situational awareness and intentional decisions, not buffs.
     {
         Id = "Cautious",
-        WalkSpeed = 15.2,
-        ReactionSeconds = 0.20,
-        Risk = 0.22,
-        PadChance = 0.16,
-        JumpChance = 0.14,
-        TargetHoldMin = 1.4,
-        TargetHoldMax = 2.8,
-        MistakeChance = 0.08,
-        SocialChance = 0.16,
+        Role = "TACTICIAN",
+        WalkSpeed = 15.8,
+        ReactionSeconds = 0.17,
+        Risk = 0.18,
+        PadChance = 0.28,
+        JumpChance = 0.13,
+        TargetHoldMin = 0.95,
+        TargetHoldMax = 1.85,
+        MistakeChance = 0.035,
+        SocialChance = 0.22,
+        GestureChance = 0.42,
+        FreezeJumpChance = 0.84,
     },
     {
         Id = "Balanced",
-        WalkSpeed = 16.1,
-        ReactionSeconds = 0.34,
-        Risk = 0.48,
-        PadChance = 0.28,
-        JumpChance = 0.20,
-        TargetHoldMin = 1.2,
-        TargetHoldMax = 2.5,
-        MistakeChance = 0.13,
-        SocialChance = 0.24,
+        Role = "TEAMMATE",
+        WalkSpeed = 16.0,
+        ReactionSeconds = 0.23,
+        Risk = 0.43,
+        PadChance = 0.38,
+        JumpChance = 0.21,
+        TargetHoldMin = 0.85,
+        TargetHoldMax = 1.75,
+        MistakeChance = 0.065,
+        SocialChance = 0.68,
+        GestureChance = 0.78,
+        FreezeJumpChance = 0.76,
     },
     {
         Id = "Bold",
-        WalkSpeed = 17.0,
-        ReactionSeconds = 0.50,
-        Risk = 0.74,
-        PadChance = 0.40,
-        JumpChance = 0.27,
-        TargetHoldMin = 0.9,
-        TargetHoldMax = 2.1,
-        MistakeChance = 0.20,
-        SocialChance = 0.31,
+        Role = "DAREDEVIL",
+        WalkSpeed = 16.0,
+        ReactionSeconds = 0.28,
+        Risk = 0.72,
+        PadChance = 0.54,
+        JumpChance = 0.30,
+        TargetHoldMin = 0.75,
+        TargetHoldMax = 1.50,
+        MistakeChance = 0.10,
+        SocialChance = 0.56,
+        GestureChance = 0.66,
+        FreezeJumpChance = 0.68,
     },
 }
 
@@ -106,7 +117,7 @@ function AISurvivorRules.roundTraits(profile, slot, roundNumber)
     end
 
     local risk = math.clamp((tonumber(base.Risk) or 0.5) + wave(17, 11) * 0.10, 0.12, 0.88)
-    local social = math.clamp((tonumber(base.SocialChance) or 0.2) + wave(23, 7) * 0.09, 0.06, 0.46)
+    local social = math.clamp((tonumber(base.SocialChance) or 0.2) + wave(23, 7) * 0.075, 0.06, 0.76)
     local mistake = math.clamp((tonumber(base.MistakeChance) or 0.12) + wave(31, 3) * 0.055, 0.035, 0.27)
     local padChance = math.clamp((tonumber(base.PadChance) or 0.2) + wave(13, 19) * 0.07, 0.07, 0.52)
 
@@ -323,7 +334,7 @@ function AISurvivorRules.pressuredTraits(traits, pressure)
 
     return {
         Risk = math.clamp((tonumber(source.Risk) or 0.5) * (1 - p * 0.36), 0.10, 0.88),
-        SocialChance = math.clamp((tonumber(source.SocialChance) or 0.2) * (1 - p * 0.58), 0.02, 0.46),
+        SocialChance = math.clamp((tonumber(source.SocialChance) or 0.2) * (1 - p * 0.58), 0.02, 0.76),
         MistakeChance = math.clamp((tonumber(source.MistakeChance) or 0.12) * (1 - p * 0.18), 0.03, 0.27),
         PadChance = math.clamp((tonumber(source.PadChance) or 0.2) + p * 0.08, 0.07, 0.58),
         HesitationChance = math.clamp((tonumber(source.HesitationChance) or 0.08) * (1 - p * 0.32), 0.035, 0.18),
@@ -627,7 +638,7 @@ end
 
 -- One-shot state lives in the server NPC record, never globally. Keys may be
 -- weak so expired warning instances are collectable during long sessions.
-function AISurvivorRules.consumeWarningJump(handled, warning, roll)
+function AISurvivorRules.consumeWarningJump(handled, warning, roll, freezeJumpChance)
     if type(handled) ~= "table" or typeof(warning) ~= "Instance" then
         return false
     end
@@ -639,6 +650,9 @@ function AISurvivorRules.consumeWarningJump(handled, warning, roll)
         return false
     end
     handled[warning] = true
+    if name == "FreezeWarning" and type(freezeJumpChance) == "number" then
+        return (tonumber(roll) or 1) < math.clamp(freezeJumpChance, 0, 1)
+    end
     return AISurvivorRules.shouldJumpForWarning(name, false, roll)
 end
 
