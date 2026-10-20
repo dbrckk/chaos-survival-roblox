@@ -1890,7 +1890,12 @@ local function applyResponsiveLayout()
         hint.Visible = true
     end
 
-    votes.Position = UDim2.fromScale(0.5, profile.voteHeight <= 140 and 0.49 or 0.54)
+    -- Preserve a separate lane for the rookie objective above the vote
+    -- cards even on a 320px-high Android viewport.
+    local voteCenterY = profile.voteHeight <= 140
+        and (viewport.Y < 340 and 0.56 or 0.49)
+        or 0.54
+    votes.Position = UDim2.fromScale(0.5, voteCenterY)
     votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
 
     -- The ? help button lives on the left. Keep the first-run cue centered
