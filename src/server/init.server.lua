@@ -1685,6 +1685,10 @@ while true do
             displayTitle = "QUICK RUSH: " .. selectedSet[1].Name
         end
 
+        -- Alive AI and admitted AI are different measurements: an NPC can
+        -- have entered safely and then died during the countdown.
+        local aiReadyAlive = AISurvivorService.aliveRoundCount()
+        local aiRoundRoster = AISurvivorService.roundRosterCount()
         broadcast({
             phase = "ready",
             title = "READY: " .. displayTitle,
@@ -1701,9 +1705,9 @@ while true do
             arenaName = roundSettings.ArenaName,
             arenaId = currentArenaVariant,
             disasterIds = readyDisasterIds,
-            survivorsAlive = readyCount + AISurvivorService.roundRosterCount(),
-            contestantCount = readyCount + AISurvivorService.roundRosterCount(),
-            aiSurvivors = AISurvivorService.roundRosterCount(),
+            survivorsAlive = readyCount + aiReadyAlive,
+            contestantCount = readyCount + aiRoundRoster,
+            aiSurvivors = aiReadyAlive,
         })
         task.wait(1)
     end
