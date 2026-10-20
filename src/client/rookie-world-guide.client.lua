@@ -306,28 +306,13 @@ local function refresh()
         return
     end
 
+    -- First-time players need the survival objective, not two competing
+    -- world beacons saying "TRY BOOST" or "ENTER ARENA". Lobby minigames
+    -- are optional; the round automatically teleports participants.
     if games == 0
-        and (tonumber(player:GetAttribute("LobbyPracticeUses")) or 0) <= 0
         and (currentState.phase == "waiting" or currentState.phase == "intermission")
     then
-        mark(
-            nearestPart(practicePads()),
-            CoreLocalization.text(localeId, "PRACTICE_BOOST"),
-            Color3.fromRGB(80, 220, 255)
-        )
-        return
-    end
-
-    if games == 0
-        and (tonumber(player:GetAttribute("LobbyPracticeUses")) or 0) > 0
-        and (currentState.phase == "waiting" or currentState.phase == "intermission")
-        and not votingOpen
-    then
-        mark(
-            arenaRunway(),
-            CoreLocalization.text(localeId, "ENTER_ARENA"),
-            Color3.fromRGB(95, 215, 255)
-        )
+        clearMarker()
         return
     end
 
