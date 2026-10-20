@@ -702,6 +702,9 @@ local function createRig(record)
     record.threat = nil
     record.threatSeenAt = nil
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
+    record.escapeWarning = nil
+    record.escapeTarget = nil
+    record.escapeUntil = 0
     record.lastObservedHealth = 100
     record.lastDamageSignalAt = -math.huge
 
@@ -910,6 +913,10 @@ local function newRecord(slot)
         stuckCount = 0,
         nextEmoteAt = os.clock() + 3 + math.random() * 6,
         emoteUntil = 0,
+        nextHazardSignalAt = 0,
+        escapeWarning = nil,
+        escapeTarget = nil,
+        escapeUntil = 0,
         roundTraits = AISurvivorRules.roundTraits(profile, slot, 1),
         nextHesitationAt = 0,
         nextReconsiderAt = 0,
@@ -1079,6 +1086,121 @@ local function warningParts()
     return cachedWarningParts
 end
 
+-- Avoid repeating a giant AI-branded phrase every brain tick. Gestures and
+-- warnings are visible above bots, never in the actual player chat.
+local function warnNearbyContestants(record, now)
+    if now < (record.nextHazardSignalAt or 0) then
+        return
+    end
+    record.nextHazardSignalAt = now + 8
+    local cue = record.profile.Id == "Cautious" and "DODGE NOW!"
+        or (record.profile.Id == "Bold" and "NOT TODAY!" or "WATCH OUT!")
+    showBotSignal(record, cue, now)
+end
+
+-- Sample several WALKABLE escape headings rather than committing to one
+-- random tangent. This matters at arena edges, on narrow platforms, and
+-- when two growing meteor/bomb warnings overlap. Bounded to six headings,
+-- two ground probes per heading, and one re-plan about every half-second.
+local function saferThreatEscape(record, root, predictedPosition, warning)
+    local away = predictedPosition - warning.Position
+    away = Vector3.new(away.X, 0, away.Z)
+    if away.Magnitude < 0.2 then
+        local angle = record.slot * 2.13 + (roundSerial % 7)
+        away = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    else
+        away = away.Unit
+    end
+    local tangent = Vector3.new(-away.Z, 0, away.X)
+    local headings = {
+        away + tangent * 0.30,
+        away - tangent * 0.30,
+        away * 0.60 + tangent * 0.85,
+        away * 0.60 - tangent * 0.85,
+        tangent,
+        -tangent,
+    }
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = botsFolder and {botsFolder}
+        or (record.model and {record.model} or {})
+    params.RespectCanCollide = true
+
+    local length = 17 + (1 - record.profile.Risk) * 7
+    local best = nil
+    local bestScore = -math.huge
+    local activeWarnings = warningParts()
+    for _, heading in ipairs(headings) do
+        local destination = clampToArena(
+            root.Position + heading.Unit * length
+        )
+        local shifted = destination - root.Position
+        local walked = Vector3.new(shifted.X, 0, shifted.Z).Magnitude
+        local warningDistance = Vector3.new(
+            destination.X - warning.Position.X, 0,
+            destination.Z - warning.Position.Z
+        ).Magnitude
+        local score = walked * 0.20 + math.min(55, warningDistance) * 0.90
+
+        -- A safe endpoint is not sufficient if the middle of the route is
+        -- a gap. Never reward a route whose floor has already collapsed.
+        for _, fraction in ipairs({0.55, 1.0}) do
+            local sample = root.Position:Lerp(destination, fraction)
+            local support = workspace:Raycast(
+                sample + Vector3.new(0, 4, 0),
+                Vector3.new(0, -18, 0),
+                params
+            )
+            if not support then
+                score -= 100
+            else
+                local part = support.Instance
+                if part.Parent and part.Parent.Name == "Platforms"
+                    and not AISurvivorRules.platformAvailable(
+                        part.CanCollide, part.Transparency,
+                        part:GetAttribute("CollapsePhase")
+                    )
+                then
+                    score -= 110
+                end
+                local verticalDrop = root.Position.Y - support.Position.Y
+                if verticalDrop > 8 then
+                    score -= 65
+                elseif verticalDrop < -4 then
+                    score -= 45
+                end
+            end
+        end
+
+        for _, threat in ipairs(activeWarnings) do
+            if threat.Name == "MeteorWarning" or threat.Name == "BombWarning" then
+                local radius = math.max(5, AISurvivorRules.warningDetectionRadius(
+                    threat.Name,
+                    math.max(threat.Size.X, threat.Size.Z) * 0.5,
+                    threat:GetAttribute("WarningEndSize")
+                ) - 9)
+                score -= AISurvivorRules.routeWarningPenalty(
+                    root.Position, destination, threat.Position, radius
+                ) * 1.4
+                local clearance = Vector3.new(
+                    destination.X - threat.Position.X, 0,
+                    destination.Z - threat.Position.Z
+                ).Magnitude - radius
+                if clearance < 4 then
+                    score -= (4 - clearance) * 4
+                end
+            end
+        end
+
+        if score > bestScore then
+            bestScore = score
+            best = destination
+        end
+    end
+    return best or clampToArena(root.Position + away * length)
+end
+
 local function disappearingPlatformEscape(record, root, now)
     if not hasDisaster("DisappearingPlatforms") then
         record.platformThreat = nil
@@ -1162,6 +1284,12 @@ local function immediateThreat(record, root, now)
     if nearest ~= record.threat then
         record.threat = nearest
         record.threatSeenAt = nearest and now or nil
+        record.escapeTarget = nil
+        record.escapeWarning = nil
+        record.escapeUntil = 0
+        if nearest then
+            warnNearbyContestants(record, now)
+        end
     end
 
     if not nearest
@@ -1194,27 +1322,19 @@ local function immediateThreat(record, root, now)
         return nil
     end
 
-    local escapeOrigin = predictedPosition
-    local away = escapeOrigin - nearest.Position
-    local horizontal = Vector3.new(away.X, 0, away.Z)
-    if horizontal.Magnitude < 0.1 then
-        horizontal = Vector3.new(math.random() - 0.5, 0, math.random() - 0.5)
-    end
-    horizontal = horizontal.Unit
-
-    local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X)
-    local wobble = (math.random() - 0.5) * (8 + record.profile.Risk * 8)
-    local momentumCorrection = Vector3.new(-horizontalVelocity.X, 0, -horizontalVelocity.Z)
-    if momentumCorrection.Magnitude > 8 then
-        momentumCorrection = momentumCorrection.Unit * math.min(7, momentumCorrection.Magnitude * 0.22)
+    -- Commit for a short time so the bot does not twitch left and right
+    -- on every 0.18s brain tick. Re-evaluate if the warning moves/changes.
+    if record.escapeWarning == nearest and record.escapeTarget
+        and now < (record.escapeUntil or 0)
+        and (root.Position - record.escapeTarget).Magnitude >= 4
+    then
+        return record.escapeTarget
     end
 
-    return clampToArena(
-        root.Position
-            + horizontal * (16 + (1 - record.profile.Risk) * 10)
-            + tangent * wobble
-            + momentumCorrection
-    )
+    record.escapeWarning = nearest
+    record.escapeTarget = saferThreatEscape(record, root, predictedPosition, nearest)
+    record.escapeUntil = now + 0.54
+    return record.escapeTarget
 end
 
 local function mechanicsPads()
@@ -1339,11 +1459,17 @@ local function scoreCandidate(record, root, candidate, traits)
 
     for _, warning in ipairs(warningParts()) do
         if warning.Name == "MeteorWarning" or warning.Name == "BombWarning" then
-            local warningDistance = (position - warning.Position).Magnitude
-            local radius = math.max(warning.Size.X, warning.Size.Z) * 0.5 + 7
-            if warningDistance < radius then
-                score -= 90 * (1 - risk * 0.40)
-            end
+            -- The painted warning starts small and can grow to the server's
+            -- final blast radius. Avoid crossing its FUTURE footprint, even
+            -- when the waypoint itself lies safely on the far side.
+            local radius = math.max(5, AISurvivorRules.warningDetectionRadius(
+                warning.Name,
+                math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                warning:GetAttribute("WarningEndSize")
+            ) - 9)
+            score -= AISurvivorRules.routeWarningPenalty(
+                root.Position, position, warning.Position, radius
+            ) * (1 - risk * 0.25)
         end
     end
 
@@ -2697,6 +2823,11 @@ function AISurvivorService.setRoundState(state)
                     record.resultAction = action
                     record.resultActionUntil = os.clock() + 0.65 + math.random() * 0.55
                     record.resultTarget = nil
+                    local celebration = record.profile.Id == "Cautious"
+                        and "I KNEW IT!"
+                        or (record.profile.Id == "Bold"
+                            and "TOO EASY!" or "WE MADE IT!")
+                    showBotSignal(record, celebration, os.clock())
 
                     if action == "jump" then
                         humanoid.Jump = true
@@ -2758,6 +2889,15 @@ function AISurvivorService.beginVote(options, roundNumber)
             local option = options[optionIndex]
             if option and option.Id then
                 voteIds[record.slot] = option.Id
+                if record.model and record.model.Parent
+                    and currentState.phase ~= "round"
+                then
+                    local reaction = record.profile.Id == "Cautious"
+                        and "SAFE PICK!"
+                        or (record.profile.Id == "Bold"
+                            and "BRING CHAOS!" or "GOOD LUCK!")
+                    showBotSignal(record, reaction, os.clock())
+                end
             end
         end)
     end
