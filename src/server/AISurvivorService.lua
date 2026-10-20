@@ -894,6 +894,7 @@ local function newRecord(slot)
         nextPracticeAt = 0,
         socialPartnerUserId = nil,
         socialPartnerUntil = 0,
+        nextRoundGestureAt = os.clock() + 5 + math.random() * 4,
         lastSocialPartnerSlot = nil,
         lobbyRoamCycle = 0,
     }
@@ -1331,8 +1332,9 @@ local function scoreCandidate(record, root, candidate, traits)
 end
 
 local function socialArenaTarget(record, root, traits, now)
-    -- Role-specific behavior changes interaction frequency without
-    -- inflating the bounded SocialChance temperament used by other systems.
+    -- Choose a consistent human or NPC rival/teammate instead of turning
+    -- toward an unrelated random location every time the brain replans.
+    -- All simulated contestants remain explicitly marked as AI.
     local baseSocial = traits.SocialChance or record.profile.SocialChance or 0
     local socialMultiplier = record.profile.Id == "Balanced" and 1.55
         or (record.profile.Id == "Bold" and 1.18 or 0.85)
@@ -1344,61 +1346,90 @@ local function socialArenaTarget(record, root, traits, now)
     for _, player in ipairs(Players:GetPlayers()) do
         local humanRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local humanHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-        local roundEligible = not record.inRound
-            or (
-                player:GetAttribute("RoundParticipant") == true
-                and player:GetAttribute("RoundEliminated") ~= true
-            )
+        local roundEligible = player:GetAttribute("RoundParticipant") == true
+            and player:GetAttribute("RoundEliminated") ~= true
 
-        if roundEligible
-            and humanRoot
-            and humanRoot:IsA("BasePart")
-            and humanHumanoid
-            and humanHumanoid.Health > 0
+        if roundEligible and humanRoot and humanRoot:IsA("BasePart")
+            and humanHumanoid and humanHumanoid.Health > 0
             and AISurvivorRules.reachableElevation(
-                root.Position.Y,
-                humanRoot.Position.Y,
-                arenaVariantId()
+                root.Position.Y, humanRoot.Position.Y, arenaVariantId()
             )
         then
             table.insert(eligible, {
-                player = player,
+                partnerId = player.UserId,
                 root = humanRoot,
+                human = true,
             })
         end
     end
 
+    -- NPC-to-NPC relationships make a solo round look like a group contest.
+    -- Only target lower numbered bots, preventing mutual endless follow loops.
+    for _, other in ipairs(records) do
+        if other ~= record and other.slot < record.slot
+            and other.inRound and other.alive and other.model
+            and other.model.Parent
+        then
+            local otherRoot = other.model:FindFirstChild("HumanoidRootPart")
+            local otherHumanoid = other.model:FindFirstChildOfClass("Humanoid")
+            if otherRoot and otherRoot:IsA("BasePart")
+                and otherHumanoid and otherHumanoid.Health > 0
+                and AISurvivorRules.reachableElevation(
+                    root.Position.Y, otherRoot.Position.Y, arenaVariantId()
+                )
+            then
+                table.insert(eligible, {
+                    partnerId = other.proxy.UserId,
+                    root = otherRoot,
+                    human = false,
+                })
+            end
+        end
+    end
+
     if #eligible == 0 then
+        record.socialPartnerUserId = nil
         return nil
     end
 
-    -- Preserve a single partner across decisions instead of randomly
-    -- changing targets every time the brain re-plans.
     local selected = nil
     if now < (record.socialPartnerUntil or 0) then
         for _, entry in ipairs(eligible) do
-            if entry.player.UserId == record.socialPartnerUserId then
+            if entry.partnerId == record.socialPartnerUserId then
                 selected = entry
                 break
             end
         end
     end
     if not selected then
-        if record.profile.Id == "Balanced" then
-            table.sort(eligible, function(a, b)
-                return (a.root.Position - root.Position).Magnitude
-                    < (b.root.Position - root.Position).Magnitude
-            end)
-            selected = eligible[1]
-        else
-            selected = eligible[math.random(1, #eligible)]
+        -- Real users remain the main social focus. Bot rivalries add variety
+        -- rather than stealing the whole match from the human tester.
+        local humanCandidates = {}
+        for _, entry in ipairs(eligible) do
+            if entry.human then
+                table.insert(humanCandidates, entry)
+            end
         end
-        record.socialPartnerUserId = selected.player.UserId
-        record.socialPartnerUntil = now + 6 + math.random() * 5
+        local humanPreference = record.profile.Id == "Balanced" and 0.86
+            or (record.profile.Id == "Bold" and 0.72 or 0.64)
+        local pool = #humanCandidates > 0 and math.random() < humanPreference
+            and humanCandidates or eligible
+
+        if record.profile.Id == "Balanced" then
+            table.sort(pool, function(left, right)
+                return (left.root.Position - root.Position).Magnitude
+                    < (right.root.Position - root.Position).Magnitude
+            end)
+            selected = pool[1]
+        else
+            selected = pool[math.random(1, #pool)]
+        end
+        record.socialPartnerUserId = selected.partnerId
+        record.socialPartnerUntil = now + 7 + math.random() * 5
     end
 
-    local humanRoot = selected.root
-    local delta = root.Position - humanRoot.Position
+    local partnerRoot = selected.root
+    local delta = root.Position - partnerRoot.Position
     local away = Vector3.new(delta.X, 0, delta.Z)
     if away.Magnitude < 0.5 then
         local angle = record.slot * 2.21
@@ -1407,7 +1438,7 @@ local function socialArenaTarget(record, root, traits, now)
         away = away.Unit
     end
 
-    local velocity = humanRoot.AssemblyLinearVelocity
+    local velocity = partnerRoot.AssemblyLinearVelocity
     local flat = Vector3.new(velocity.X, 0, velocity.Z)
     local moving = flat.Magnitude > 2
     local forward = moving and flat.Unit or -away
@@ -1416,16 +1447,18 @@ local function socialArenaTarget(record, root, traits, now)
 
     local target
     if record.profile.Id == "Bold" then
-        -- The daredevil races ahead, while the teammate shadows a flank.
-        target = humanRoot.Position + lead + forward * (7 + math.random() * 4)
+        -- Rival: try to beat the other contestant to the next safe spot.
+        target = partnerRoot.Position + lead + forward * (7 + math.random() * 4)
     elseif record.profile.Id == "Balanced" then
-        target = humanRoot.Position + lead + away * (5 + math.random() * 3)
+        -- Teammate: shadow a flank without crowding or body blocking.
+        target = partnerRoot.Position + lead + away * (5 + math.random() * 3)
     else
-        target = humanRoot.Position + lead + away * (9 + math.random() * 3)
+        -- Tactician: watch the group's route from a safer distance.
+        target = partnerRoot.Position + lead + away * (9 + math.random() * 3)
     end
 
     target = clampToArena(target)
-    -- Following somebody must not override the server's hazard awareness.
+    -- A social impulse may not override the existing server hazard evaluator.
     if scoreCandidate(record, root, {position = target}, traits) < -32 then
         return nil
     end
