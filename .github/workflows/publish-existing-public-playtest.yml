@@ -147,10 +147,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
+          # GitHub releases redirect to their signed asset URL. Omitting
+          # --location downloads the redirect response, not the ZIP file.
+          # CI already installs this exact pinned Rojo asset with -L.
+          curl --fail --location --silent --show-error \
+            --retry 3 --retry-all-errors --retry-delay 2 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
             --max-time 90 \
             -o /tmp/rojo.zip \
             https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          test "$(stat -c%s /tmp/rojo.zip)" -gt 1000000 || {
+            echo '::error::Rojo download unexpectedly small; refusing to run a non-archive.'
+            exit 1
+          }
+          unzip -tq /tmp/rojo.zip >/dev/null || {
+            echo '::error::Rojo archive is invalid or truncated.'
+            exit 1
+          }
           mkdir -p /tmp/rojo
           unzip -q /tmp/rojo.zip -d /tmp/rojo
           chmod +x /tmp/rojo/rojo
