@@ -594,6 +594,18 @@ local function addNameplate(record, model)
     roleSize.MinTextSize = 9
     roleSize.MaxTextSize = 12
     roleSize.Parent = role
+    record.roleLabel = role
+    record.signalExpire = 0
+end
+
+-- A short, explicitly AI-labelled nameplate signal adds emotion without
+-- spoofing Roblox chat, writing user messages or needing new remotes.
+local function showBotSignal(record, message, now)
+    local label = record.roleLabel
+    if label and label.Parent then
+        label.Text = message
+        record.signalExpire = now + 1.5
+    end
 end
 
 local function makeDescription(record)
@@ -690,6 +702,8 @@ local function createRig(record)
     record.threat = nil
     record.threatSeenAt = nil
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
+    record.lastObservedHealth = 100
+    record.lastDamageSignalAt = -math.huge
 
     addPrimitiveAccessory(record, model)
     addCosmeticTrail(record, root)
@@ -714,6 +728,23 @@ local function createRig(record)
             warn("AI Survivor server network ownership unavailable:", record.identity.Username)
         end
     end)
+
+    table.insert(record.connections, humanoid.HealthChanged:Connect(function(health)
+        local previous = record.lastObservedHealth or 100
+        record.lastObservedHealth = health
+        local now = os.clock()
+        if record.model ~= model or not record.inRound
+            or currentState.phase ~= "round"
+            or previous - health < 8
+            or now - (record.lastDamageSignalAt or -math.huge) < 7
+        then
+            return
+        end
+        record.lastDamageSignalAt = now
+        local signal = record.profile.Id == "Cautious" and "WATCH OUT!"
+            or (record.profile.Id == "Bold" and "STILL HERE!" or "OUCH!")
+        showBotSignal(record, signal, now)
+    end))
 
     table.insert(record.connections, humanoid.Died:Connect(function()
         record.alive = false
@@ -2213,6 +2244,10 @@ local function maybeRoundGesture(record, humanoid, root, now)
         end
     end
 
+    local greeting = record.profile.Id == "Cautious" and "STAY SHARP!"
+        or (record.profile.Id == "Bold" and "RACE YOU!" or "LET'S GO!")
+    showBotSignal(record, greeting, now)
+
     if record.profile.Id == "Balanced" and nearest < 10 then
         -- A quick friendly nod, never a long stop in the danger zone.
         record.idleUntil = now + 0.18
@@ -2228,6 +2263,14 @@ local function stepRecord(record, now)
     local root = model and model:FindFirstChild("HumanoidRootPart")
     if not model or not model.Parent or not humanoid or humanoid.Health <= 0 or not root then
         return
+    end
+
+    if (record.signalExpire or 0) > 0 and now >= record.signalExpire then
+        local label = record.roleLabel
+        if label and label.Parent then
+            label.Text = record.profile.Role or "SURVIVOR"
+        end
+        record.signalExpire = 0
     end
 
     if voteActive and not record.inRound then
