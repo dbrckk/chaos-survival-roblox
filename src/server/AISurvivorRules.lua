@@ -669,8 +669,12 @@ function AISurvivorRules.routeWarningPenalty(origin, destination, warningCenter,
     local fromDistance = start.Magnitude
     local toDistance = finish.Magnitude
     if fromDistance <= radius then
-        -- Do not trap a bot inside a warning by penalizing every escape.
-        return toDistance >= fromDistance + 1 and 0 or 90
+        -- Escaping outward is preferred, but a waypoint STILL inside the
+        -- final impact footprint is not considered fully safe.
+        if toDistance >= fromDistance + 1 then
+            return math.clamp((radius + 2 - toDistance) / (radius + 2), 0, 1) * 90
+        end
+        return 90
     end
 
     local travel = finish - start
