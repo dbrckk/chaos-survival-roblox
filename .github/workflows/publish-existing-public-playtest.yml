@@ -1,0 +1,265 @@
+name: Publish Existing Chaos Survival (Public Playtest Update)
+
+# This is a deliberately uncertified public iteration path, separate from
+# the fully certified release workflow. It is never invoked automatically.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type PUBLISH_EXISTING_10771083668 to update the existing public game'
+        required: true
+        type: string
+      acknowledge_untested:
+        description: 'I understand this is a PUBLIC playtest update without physical-device/Studio certification'
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: roblox-place-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  publish-public-playtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPECTED_PUBLIC_UNIVERSE: '10771083668'
+      EXPECTED_PUBLIC_PLACE: '95351659174730'
+
+    steps:
+      - name: Require unambiguous owner confirmation
+        shell: bash
+        env:
+          PUBLISH_CONFIRM: ${{ inputs.confirm }}
+          ACK_UNCERTIFIED: ${{ inputs.acknowledge_untested }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' || {
+            echo '::error::Only an explicit manual workflow dispatch may publish.'
+            exit 1
+          }
+          test "${GITHUB_REF_NAME}" = 'main' || {
+            echo '::error::Dispatch this workflow from main, never a feature branch.'
+            exit 1
+          }
+          test "${PUBLISH_CONFIRM}" = 'PUBLISH_EXISTING_10771083668' || {
+            echo '::error::Exact public-experience confirmation was not provided.'
+            exit 1
+          }
+          test "${ACK_UNCERTIFIED}" = 'true' || {
+            echo '::error::You must acknowledge the missing physical-device and Studio certification.'
+            exit 1
+          }
+          echo '::warning::PUBLIC PLAYTEST UPDATE: physical Android/desktop QA, persistence and Studio E2E are NOT certified.'
+
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Verify live production target and exclude staging source
+        shell: bash
+        env:
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
+        run: |
+          set -euo pipefail
+          test "${ROBLOX_UNIVERSE_ID}" = "${EXPECTED_PUBLIC_UNIVERSE}" || {
+            echo '::error::ROBLOX_UNIVERSE_ID is not the documented public Chaos Survival universe. No publication.'
+            exit 1
+          }
+          test "${ROBLOX_PLACE_ID}" = "${EXPECTED_PUBLIC_PLACE}" || {
+            echo '::error::ROBLOX_PLACE_ID is not the documented public start place. No publication.'
+            exit 1
+          }
+          test ! -e src/shared/VisualStagingStamp.lua || {
+            echo '::error::A staging-only marker was found in source. No publication.'
+            exit 1
+          }
+          echo "Target verified: Universe ${EXPECTED_PUBLIC_UNIVERSE} / Place ${EXPECTED_PUBLIC_PLACE}."
+
+      - name: Verify green build and real-engine tests for exact main SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          sha = os.environ["GITHUB_SHA"]
+          token = os.environ["GH_TOKEN"]
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+
+          def get_json(path):
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/{path}", headers=headers
+              )
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+
+          head = get_json("git/ref/heads/main")["object"]["sha"]
+          if sha != head:
+              raise SystemExit(
+                  "Refusing publish: selected workflow commit is no longer main HEAD."
+              )
+
+          runs = get_json(f"actions/runs?head_sha={sha}&per_page=100")
+          requirements = {
+              "Build Validation": False,
+              "Roblox Open Cloud Engine Tests": False,
+          }
+          for run in runs.get("workflow_runs", []):
+              if run.get("name") not in requirements:
+                  continue
+              if (
+                  run.get("head_sha") == sha
+                  and run.get("head_branch") == "main"
+                  and run.get("event") == "push"
+                  and run.get("status") == "completed"
+                  and run.get("conclusion") == "success"
+              ):
+                  requirements[run["name"]] = True
+
+          missing = [name for name, passed in requirements.items() if not passed]
+          if missing:
+              raise SystemExit(
+                  "Refusing public playtest publish: missing green checks on "
+                  + sha + ": " + ", ".join(missing)
+              )
+          print("Exact main SHA checks verified:", sha)
+          print("Note: this is NOT a physical-device or Studio certification.")
+          PY
+
+      - name: Install pinned Rojo 7.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
+            --max-time 90 \
+            -o /tmp/rojo.zip \
+            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          mkdir -p /tmp/rojo
+          unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          echo '/tmp/rojo' >> "${GITHUB_PATH}"
+          /tmp/rojo/rojo --version
+
+      - name: Build exact source place
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          test -s build/ChaosSurvival.rbxlx
+          sha256sum build/ChaosSurvival.rbxlx > build/ChaosSurvival.rbxlx.sha256
+          echo "Built main candidate ${GITHUB_SHA} (uncertified public playtest)."
+
+      - name: Publish ONLY the existing public starting place
+        shell: bash
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -n "${ROBLOX_API_KEY}" || {
+            echo '::error::ROBLOX_API_KEY missing (key must permit universe-places:write for the public universe).'
+            exit 1
+          }
+          test "${ROBLOX_UNIVERSE_ID}" = "${EXPECTED_PUBLIC_UNIVERSE}" || exit 1
+          test "${ROBLOX_PLACE_ID}" = "${EXPECTED_PUBLIC_PLACE}" || exit 1
+
+          # Prevent a stale queued dispatch from overwriting a newer main build.
+          head_sha="$(python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/git/ref/heads/main",
+              headers={
+                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+              },
+          )
+          with urllib.request.urlopen(req, timeout=30) as response:
+              print(json.load(response)["object"]["sha"])
+          PY
+          )"
+          test "${head_sha}" = "${GITHUB_SHA}" || {
+            echo '::error::A newer main commit exists. Aborting instead of publishing outdated content.'
+            exit 1
+          }
+
+          response_file="$(mktemp)"
+          trap 'rm -f "${response_file}"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
+            --connect-timeout 15 --max-time 120 \
+            --output "${response_file}" --write-out '%{http_code}' \
+            --request POST \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header 'Content-Type: application/xml' \
+            --data-binary @build/ChaosSurvival.rbxlx \
+            "https://apis.roblox.com/universes/v1/${EXPECTED_PUBLIC_UNIVERSE}/places/${EXPECTED_PUBLIC_PLACE}/versions?versionType=Published")"
+
+          case "${status}" in
+            2??) ;;
+            *) echo "::error::Roblox publishing returned HTTP ${status}; response body redacted. No automatic retry."; exit 1 ;;
+          esac
+          version="$(python3 - "${response_file}" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], encoding="utf-8") as source:
+              response = json.load(source)
+          number = response.get("versionNumber")
+          if type(number) is not int or number <= 0:
+              raise SystemExit(
+                  "Roblox returned success but no valid versionNumber; "
+                  "publication state uncertain, do not retry blindly."
+              )
+          print(number)
+          PY
+          )"
+
+          {
+            echo "source_commit=${GITHUB_SHA}"
+            echo "experience_universe=${EXPECTED_PUBLIC_UNIVERSE}"
+            echo "start_place=${EXPECTED_PUBLIC_PLACE}"
+            echo "published_version=${version}"
+            echo "certification=UNCERTIFIED_PUBLIC_PLAYTEST_UPDATE"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "published_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > build/public-playtest-publish-metadata.txt
+          {
+            echo '### Chaos Survival — PUBLIC playtest update submitted'
+            echo ''
+            echo "- GitHub SHA: \`${GITHUB_SHA}\`"
+            echo "- Existing Universe/Place: \`${EXPECTED_PUBLIC_UNIVERSE}\` / \`${EXPECTED_PUBLIC_PLACE}\`"
+            echo "- Published version: \`${version}\`"
+            echo '- Certification: **NOT certified on physical devices / Studio**'
+            echo '- Verify the game as a real player immediately; use the Creator Dashboard place version history to revert if broken.'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Preserve exact public-update evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-public-playtest-update
+          if-no-files-found: warn
+          path: |
+            build/ChaosSurvival.rbxlx
+            build/ChaosSurvival.rbxlx.sha256
+            build/public-playtest-publish-metadata.txt
