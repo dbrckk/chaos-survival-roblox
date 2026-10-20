@@ -556,16 +556,16 @@ local function addNameplate(record, model)
     billboard.Adornee = head
     billboard.AlwaysOnTop = false
     billboard.MaxDistance = 90
-    billboard.Size = UDim2.fromOffset(126, 28)
+    billboard.Size = UDim2.fromOffset(160, 44)
     billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.2, 0)
     billboard.Parent = head
 
     local label = Instance.new("TextLabel")
     label.Name = "DisplayName"
-    label.Size = UDim2.fromScale(1, 1)
+    label.Size = UDim2.new(1, 0, 0, 24)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamSemibold
-    label.Text = record.identity.DisplayName
+    label.Text = record.identity.DisplayName .. "  ·  AI"
     label.TextColor3 = Color3.fromRGB(245, 248, 255)
     label.TextStrokeColor3 = Color3.fromRGB(10, 14, 20)
     label.TextStrokeTransparency = 0.38
@@ -576,6 +576,24 @@ local function addNameplate(record, model)
     constraint.MinTextSize = 11
     constraint.MaxTextSize = 16
     constraint.Parent = label
+
+    local role = Instance.new("TextLabel")
+    role.Name = "Personality"
+    role.Position = UDim2.fromOffset(0, 23)
+    role.Size = UDim2.new(1, 0, 0, 18)
+    role.BackgroundTransparency = 1
+    role.Font = Enum.Font.GothamBold
+    role.Text = record.profile.Role or "SURVIVOR"
+    role.TextColor3 = record.identity.Accent
+    role.TextStrokeColor3 = Color3.fromRGB(10, 14, 20)
+    role.TextStrokeTransparency = 0.35
+    role.TextScaled = true
+    role.Parent = billboard
+
+    local roleSize = Instance.new("UITextSizeConstraint")
+    roleSize.MinTextSize = 9
+    roleSize.MaxTextSize = 12
+    roleSize.Parent = role
 end
 
 local function makeDescription(record)
@@ -635,6 +653,7 @@ local function createRig(record)
     model:SetAttribute("AISurvivorInRound", false)
     model:SetAttribute("AISurvivorSlot", record.slot)
     model:SetAttribute("AISurvivorProfile", record.profile.Id)
+    model:SetAttribute("AISurvivorPersonality", record.profile.Role)
     model:SetAttribute("ChaosAccent", record.identity.Accent)
 
     local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -764,6 +783,8 @@ local function sendToLobby(record)
     record.resultAction = nil
     record.resultActionUntil = 0
     record.resultTarget = nil
+    record.socialPartnerUserId = nil
+    record.socialPartnerUntil = 0
     pivotRecord(record, getLobbyPosition(record))
 end
 
@@ -800,6 +821,8 @@ local function sendToArena(record)
     record.resultAction = nil
     record.resultActionUntil = 0
     record.resultTarget = nil
+    record.socialPartnerUserId = nil
+    record.socialPartnerUntil = 0
     pivotRecord(record, spawn)
 end
 
@@ -819,11 +842,12 @@ local function newRecord(slot)
     local baseProfile = AISurvivorRules.profileForSlot(slot)
     local profile = table.clone(baseProfile)
 
-    -- Persistent per-server variance prevents three recognizable fixed NPC archetypes.
-    profile.WalkSpeed = math.clamp(baseProfile.WalkSpeed + (math.random() - 0.5) * 1.1, 14.6, 17.6)
-    profile.ReactionSeconds = math.clamp(baseProfile.ReactionSeconds + (math.random() - 0.5) * 0.12, 0.16, 0.58)
-    profile.Risk = math.clamp(baseProfile.Risk + (math.random() - 0.5) * 0.12, 0.16, 0.82)
-    profile.JumpChance = math.clamp(baseProfile.JumpChance + (math.random() - 0.5) * 0.06, 0.10, 0.32)
+    -- Individual variance preserves identity while keeping each slot's archetype distinct.
+    -- All personas stay at or below normal player walking speed.
+    profile.WalkSpeed = math.clamp(baseProfile.WalkSpeed + (math.random() - 0.5) * 0.20, 15.6, 16.0)
+    profile.ReactionSeconds = math.clamp(baseProfile.ReactionSeconds + (math.random() - 0.5) * 0.055, 0.14, 0.34)
+    profile.Risk = math.clamp(baseProfile.Risk + (math.random() - 0.5) * 0.07, 0.12, 0.79)
+    profile.JumpChance = math.clamp(baseProfile.JumpChance + (math.random() - 0.5) * 0.04, 0.10, 0.33)
 
     local record = {
         slot = slot,
@@ -868,6 +892,8 @@ local function newRecord(slot)
         lobbyActivity = "roam",
         nextSocialAt = 0,
         nextPracticeAt = 0,
+        socialPartnerUserId = nil,
+        socialPartnerUntil = 0,
         lastSocialPartnerSlot = nil,
         lobbyRoamCycle = 0,
     }
@@ -1125,7 +1151,9 @@ local function immediateThreat(record, root, now)
             handled = setmetatable({}, {__mode = "k"})
             record.reactedWarnings = handled
         end
-        if AISurvivorRules.consumeWarningJump(handled, nearest, math.random()) then
+        if AISurvivorRules.consumeWarningJump(
+            handled, nearest, math.random(), record.profile.FreezeJumpChance
+        ) then
             local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 humanoid.Jump = true
@@ -1302,8 +1330,13 @@ local function scoreCandidate(record, root, candidate, traits)
     return score
 end
 
-local function socialArenaTarget(record, root, traits)
-    if math.random() >= (traits.SocialChance or record.profile.SocialChance or 0) then
+local function socialArenaTarget(record, root, traits, now)
+    -- Role-specific behavior changes interaction frequency without
+    -- inflating the bounded SocialChance temperament used by other systems.
+    local baseSocial = traits.SocialChance or record.profile.SocialChance or 0
+    local socialMultiplier = record.profile.Id == "Balanced" and 1.55
+        or (record.profile.Id == "Bold" and 1.18 or 0.85)
+    if math.random() >= math.clamp(baseSocial * socialMultiplier, 0, 0.70) then
         return nil
     end
 
@@ -1339,26 +1372,64 @@ local function socialArenaTarget(record, root, traits)
         return nil
     end
 
-    local selected = eligible[math.random(1, #eligible)]
+    -- Preserve a single partner across decisions instead of randomly
+    -- changing targets every time the brain re-plans.
+    local selected = nil
+    if now < (record.socialPartnerUntil or 0) then
+        for _, entry in ipairs(eligible) do
+            if entry.player.UserId == record.socialPartnerUserId then
+                selected = entry
+                break
+            end
+        end
+    end
+    if not selected then
+        if record.profile.Id == "Balanced" then
+            table.sort(eligible, function(a, b)
+                return (a.root.Position - root.Position).Magnitude
+                    < (b.root.Position - root.Position).Magnitude
+            end)
+            selected = eligible[1]
+        else
+            selected = eligible[math.random(1, #eligible)]
+        end
+        record.socialPartnerUserId = selected.player.UserId
+        record.socialPartnerUntil = now + 6 + math.random() * 5
+    end
+
     local humanRoot = selected.root
-    local humanVelocity = humanRoot.AssemblyLinearVelocity
-    local lead = Vector3.new(humanVelocity.X, 0, humanVelocity.Z)
-    if lead.Magnitude > 5 then
-        lead = lead.Unit * math.min(5, lead.Magnitude * 0.22)
+    local delta = root.Position - humanRoot.Position
+    local away = Vector3.new(delta.X, 0, delta.Z)
+    if away.Magnitude < 0.5 then
+        local angle = record.slot * 2.21
+        away = Vector3.new(math.cos(angle), 0, math.sin(angle))
     else
-        lead = Vector3.zero
+        away = away.Unit
     end
 
-    local offset = root.Position - (humanRoot.Position + lead)
-    local horizontal = Vector3.new(offset.X, 0, offset.Z)
-    if horizontal.Magnitude < 0.5 then
-        local angle = math.random() * math.pi * 2
-        horizontal = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    local velocity = humanRoot.AssemblyLinearVelocity
+    local flat = Vector3.new(velocity.X, 0, velocity.Z)
+    local moving = flat.Magnitude > 2
+    local forward = moving and flat.Unit or -away
+    local lead = moving and forward * math.min(6, flat.Magnitude * 0.30)
+        or Vector3.zero
+
+    local target
+    if record.profile.Id == "Bold" then
+        -- The daredevil races ahead, while the teammate shadows a flank.
+        target = humanRoot.Position + lead + forward * (7 + math.random() * 4)
+    elseif record.profile.Id == "Balanced" then
+        target = humanRoot.Position + lead + away * (5 + math.random() * 3)
     else
-        horizontal = horizontal.Unit
+        target = humanRoot.Position + lead + away * (9 + math.random() * 3)
     end
 
-    return clampToArena(humanRoot.Position + lead + horizontal * (5 + math.random() * 5))
+    target = clampToArena(target)
+    -- Following somebody must not override the server's hazard awareness.
+    if scoreCandidate(record, root, {position = target}, traits) < -32 then
+        return nil
+    end
+    return target
 end
 
 local function separateTarget(record, target)
@@ -1451,7 +1522,7 @@ local function chooseArenaTarget(record, root, now)
     local traits = decisionTraits(record)
     record.targetIsSkyrail = false
     record.skyrailDirection = nil
-    local socialTarget = socialArenaTarget(record, root, traits)
+    local socialTarget = socialArenaTarget(record, root, traits, now)
     if socialTarget then
         record.targetIsPad = false
         record.targetPart = nil
@@ -1703,7 +1774,11 @@ local function chooseLobbyTarget(record)
 
     local traits = record.roundTraits or record.profile
     local socialChance = now >= (record.nextSocialAt or 0)
-        and math.clamp((traits.SocialChance or record.profile.SocialChance or 0.2) * 0.78, 0.08, 0.32)
+        and math.clamp(
+            (traits.SocialChance or record.profile.SocialChance or 0.2)
+                * (record.profile.Id == "Balanced" and 1.55 or 0.95),
+            0.08, 0.48
+        )
         or 0
     local practiceChance = now >= (record.nextPracticeAt or 0)
         and math.clamp(0.14 + (traits.Risk or record.profile.Risk or 0.5) * 0.12, 0.14, 0.25)
@@ -1729,10 +1804,24 @@ local function chooseLobbyTarget(record)
                 pool = targets
             end
 
+            -- The teammate seeks real players instead of spending every
+            -- lobby cycle beside another bot; other roles remain varied.
+            if record.profile.Id == "Balanced" and math.random() < 0.78 then
+                local humanPartners = {}
+                for _, candidate in ipairs(pool) do
+                    if candidate.partnerSlot >= 1000 then
+                        table.insert(humanPartners, candidate)
+                    end
+                end
+                if #humanPartners > 0 then
+                    pool = humanPartners
+                end
+            end
             local selected = pool[math.random(1, #pool)]
             record.lastSocialPartnerSlot = selected.partnerSlot
             record.lobbyActivity = "social"
-            record.nextSocialAt = now + 5 + math.random() * 7
+            record.nextSocialAt = now + (record.profile.Id == "Balanced" and 3 or 5)
+                + math.random() * 5
             local offset = AISurvivorRules.socialSpacing(
                 record.slot,
                 selected.partnerSlot
@@ -1957,14 +2046,16 @@ end
 
 local function maybeSocialGesture(record, humanoid, root, now)
     if now < (record.nextEmoteAt or 0)
-        or currentState.phase == "round"
+        or record.inRound
         or voteActive
     then
         return false
     end
 
-    record.nextEmoteAt = now + 5 + math.random() * 9
-    if math.random() > 0.46 then
+    local teammate = record.profile.Id == "Balanced"
+    record.nextEmoteAt = now + (teammate and 3 or 5)
+        + math.random() * (teammate and 5 or 8)
+    if math.random() > (record.profile.GestureChance or 0.46) then
         return false
     end
 
@@ -1994,7 +2085,7 @@ local function maybeSocialGesture(record, humanoid, root, now)
     record.targetPart = nil
     record.lobbyActivity = "social"
 
-    if math.random() < 0.28 then
+    if math.random() < (record.profile.Id == "Bold" and 0.60 or 0.20) then
         humanoid.Jump = true
     end
     return true
@@ -2207,9 +2298,14 @@ local function stepRecord(record, now)
             record.targetIsSkyrail = false
             record.skyrailDirection = nil
             local _, pressure = decisionTraits(record)
-            local pauseChance = 0.38 * (1 - pressure * 0.58)
+            -- Competitors don't stand still for a second after every
+            -- waypoint. The daredevil sometimes showboats, while the
+            -- tactician tends to stay in motion.
+            local basePause = record.profile.Id == "Bold" and 0.24
+                or (record.profile.Id == "Balanced" and 0.18 or 0.10)
+            local pauseChance = basePause * (1 - pressure * 0.58)
             if math.random() < pauseChance then
-                record.idleUntil = now + 0.35 + math.random() * 1.25
+                record.idleUntil = now + 0.16 + math.random() * 0.55
                 humanoid:Move(Vector3.zero)
                 return
             end
@@ -2414,7 +2510,8 @@ function AISurvivorService.setRoundState(state)
                     humanoid:Move(Vector3.zero)
 
                     local traits = record.roundTraits or record.profile
-                    local action = AISurvivorRules.resultReaction(
+                    local action = AISurvivorRules.personalityResultAction(
+                        record.profile,
                         math.random(),
                         traits.Risk or record.profile.Risk
                     )
@@ -2476,7 +2573,9 @@ function AISurvivorService.beginVote(options, roundNumber)
                 return
             end
 
-            local optionIndex = AISurvivorRules.voteIndex(record.slot, #options, roundNumber)
+            local optionIndex = AISurvivorRules.personalityVoteIndex(
+                record.profile, options, record.slot, roundNumber
+            )
             local option = options[optionIndex]
             if option and option.Id then
                 voteIds[record.slot] = option.Id
