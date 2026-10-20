@@ -645,6 +645,48 @@ function AISurvivorRules.brainCadence(recordCount, phase)
     return 0.18
 end
 
+-- Rank a planned route against the full danger footprint, not merely
+-- the destination. A contestant outside a meteor warning should not cut
+-- across its center just because the far-side waypoint is technically safe.
+-- When already inside the footprint, moving outward must remain possible.
+function AISurvivorRules.routeWarningPenalty(origin, destination, warningCenter, warningRadius)
+    if typeof(origin) ~= "Vector3" or typeof(destination) ~= "Vector3"
+        or typeof(warningCenter) ~= "Vector3"
+    then
+        return 0
+    end
+
+    local radius = tonumber(warningRadius) or 0
+    if radius ~= radius or radius <= 0 or math.abs(radius) == math.huge then
+        return 0
+    end
+    radius = math.min(radius, 120)
+
+    local start = Vector3.new(origin.X - warningCenter.X, 0, origin.Z - warningCenter.Z)
+    local finish = Vector3.new(
+        destination.X - warningCenter.X, 0, destination.Z - warningCenter.Z
+    )
+    local fromDistance = start.Magnitude
+    local toDistance = finish.Magnitude
+    if fromDistance <= radius then
+        -- Do not trap a bot inside a warning by penalizing every escape.
+        return toDistance >= fromDistance + 1 and 0 or 90
+    end
+
+    local travel = finish - start
+    local distanceSquared = travel:Dot(travel)
+    if distanceSquared < 0.01 then
+        return toDistance < radius and 90 or 0
+    end
+    local time = math.clamp(-start:Dot(travel) / distanceSquared, 0, 1)
+    local closest = (start + travel * time).Magnitude
+    local buffer = radius + 3
+    if closest >= buffer then
+        return 0
+    end
+    return math.clamp(1 - closest / buffer, 0, 1) * 90
+end
+
 -- Always return a NUMBER: a Lua `or` chain with a bare equality can
 -- produce boolean true for FreezeWarning and crash distance comparisons.
 -- Meteor and Bomb damage uses the final server WarningEndSize, not the
