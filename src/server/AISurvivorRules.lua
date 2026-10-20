@@ -16,9 +16,9 @@ AISurvivorRules.Profiles = {
         JumpChance = 0.13,
         TargetHoldMin = 0.95,
         TargetHoldMax = 1.85,
-        MistakeChance = 0.018,
-        SocialChance = 0.32,
-        GestureChance = 0.62,
+        MistakeChance = 0.035,
+        SocialChance = 0.24,
+        GestureChance = 0.68,
         FreezeJumpChance = 0.84,
     },
     {
@@ -31,8 +31,8 @@ AISurvivorRules.Profiles = {
         JumpChance = 0.24,
         TargetHoldMin = 0.85,
         TargetHoldMax = 1.75,
-        MistakeChance = 0.035,
-        SocialChance = 0.52,
+        MistakeChance = 0.050,
+        SocialChance = 0.39,
         GestureChance = 0.90,
         FreezeJumpChance = 0.76,
     },
@@ -46,8 +46,8 @@ AISurvivorRules.Profiles = {
         JumpChance = 0.32,
         TargetHoldMin = 0.75,
         TargetHoldMax = 1.50,
-        MistakeChance = 0.055,
-        SocialChance = 0.47,
+        MistakeChance = 0.075,
+        SocialChance = 0.38,
         GestureChance = 0.84,
         FreezeJumpChance = 0.68,
     },
@@ -117,8 +117,8 @@ function AISurvivorRules.roundTraits(profile, slot, roundNumber)
     end
 
     local risk = math.clamp((tonumber(base.Risk) or 0.5) + wave(17, 11) * 0.10, 0.12, 0.88)
-    local social = math.clamp((tonumber(base.SocialChance) or 0.2) + wave(23, 7) * 0.075, 0.06, 0.60)
-    local mistake = math.clamp((tonumber(base.MistakeChance) or 0.12) + wave(31, 3) * 0.035, 0.015, 0.22)
+    local social = math.clamp((tonumber(base.SocialChance) or 0.2) + wave(23, 7) * 0.075, 0.06, 0.46)
+    local mistake = math.clamp((tonumber(base.MistakeChance) or 0.12) + wave(31, 3) * 0.045, 0.035, 0.27)
     local padChance = math.clamp((tonumber(base.PadChance) or 0.2) + wave(13, 19) * 0.07, 0.07, 0.52)
 
     return {
@@ -385,8 +385,8 @@ function AISurvivorRules.pressuredTraits(traits, pressure)
 
     return {
         Risk = math.clamp((tonumber(source.Risk) or 0.5) * (1 - p * 0.36), 0.10, 0.88),
-        SocialChance = math.clamp((tonumber(source.SocialChance) or 0.2) * (1 - p * 0.58), 0.02, 0.60),
-        MistakeChance = math.clamp((tonumber(source.MistakeChance) or 0.12) * (1 - p * 0.18), 0.015, 0.22),
+        SocialChance = math.clamp((tonumber(source.SocialChance) or 0.2) * (1 - p * 0.58), 0.02, 0.46),
+        MistakeChance = math.clamp((tonumber(source.MistakeChance) or 0.12) * (1 - p * 0.18), 0.03, 0.27),
         PadChance = math.clamp((tonumber(source.PadChance) or 0.2) + p * 0.08, 0.07, 0.58),
         HesitationChance = math.clamp((tonumber(source.HesitationChance) or 0.08) * (1 - p * 0.32), 0.035, 0.18),
         ReconsiderChance = math.clamp((tonumber(source.ReconsiderChance) or 0.08) + p * 0.025, 0.05, 0.15),
