@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-21 — CRITICAL: winner-result crash and silent post-round recovery (candidate)
+
+- **Root cause fixed:** `runDisasterSet` created `roundChallenge` as a local variable but the caller performed payout, mastery, reward events and result broadcasts outside that scope. Accessing `roundChallenge.Target` at settlement attempted to index nil, aborting the main server `while true` loop after a match. Return the exact played challenge as a sixth value, validate the settlement contract and reuse it for victory and loss rewards, HUD result metadata, and round replay.
+- Stamp the authoritative `roundNumber` on all `RoundFeedback` receipts and RESULT `RoundState` countdown updates so clients can associate a reward with the correct finished match.
+- **Client fallback:** reconstruct a truthful local result from the replicated survivor roster if the personalized reward RemoteEvent is missed or late. Do not fabricate Coins/XP; show localized “rewards syncing” until the real receipt arrives. Spectators never receive a false victory. First-session RESULT ticks no longer dismiss the win card when player progress attributes replicate late. Preserve the next-round countdown on each tick.
+- Extend the existing Roblox engine result-presentation tests for winner/defeat/spectator recovery and FR/EN fallback strings, plus the existing authenticated four-client Studio E2E probe to require the actual per-player reward receipt before it counts the result UX as passed.
+- **Publishing still gated:** Open Cloud engine CI cannot prove authenticated Roblox Studio multiplayer gameplay or the public place deployment. Test on real Android before using the explicitly confirmed public playtest publish workflow.
+
 ## 2026-10-21 — Humanlike AI dodging during multi-warning rounds (candidate)
 
 - **AI reaction stability:** when a bot is already aware of a live hazard, prefer that warning if another active warning is only marginally closer (within 4 studs). This prevents alternating between two bomb/meteor warnings on consecutive 0.18-second brain ticks and repeatedly restarting the bot's existing humanlike reaction delay. A substantially nearer warning, a warning that is no longer active, or a bot that has exited its detection radius still prompts a new decision.

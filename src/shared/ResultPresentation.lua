@@ -136,6 +136,42 @@ function ResultPresentation.visualHazardOrder(feedback)
     return primary, secondary
 end
 
+-- Server RoundState is sent every result tick and when a client connects
+-- during results. The personalized RoundFeedback event can occasionally
+-- arrive late or be missed; recover a truthful, non-reward-claiming result
+-- card from the authoritative participant/survivor roster instead of
+-- leaving an empty screen. Never infer victory for a spectator.
+function ResultPresentation.fallbackFeedback(state, userId, participating)
+    if type(state) ~= "table" or state.phase ~= "result" then return nil end
+    local survivors = type(state.survivorUserIds) == "table"
+        and state.survivorUserIds or {}
+    local won = false
+    local id = tonumber(userId)
+    -- The server-owned survivor roster is authoritative even if the
+    -- player's RoundParticipant attribute reaches the client one frame late.
+    if id and id > 0 then
+        for _, survivorId in ipairs(survivors) do
+            if tonumber(survivorId) == id then
+                won = true
+                break
+            end
+        end
+    end
+    local played = participating == true or won
+    return {
+        survived = won,
+        spectating = not played,
+        pendingRewards = played,
+        roundNumber = state.roundNumber,
+        arenaId = state.arenaId,
+        arenaName = state.arenaName,
+        disasterIds = state.disasterIds,
+        doubleChaos = state.doubleChaos == true,
+        fusionName = state.fusionName,
+        soloMode = state.soloMode == true,
+    }
+end
+
 function ResultPresentation.kind(feedback)
     feedback = type(feedback) == "table" and feedback or {}
 

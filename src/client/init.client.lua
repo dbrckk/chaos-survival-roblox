@@ -1994,6 +1994,7 @@ bindResponsiveCamera()
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindResponsiveCamera)
 
 local resultToken = 0
+local lastResolvedResultRoundNumber = nil
 local lastRoundHint = ""
 
 local function dismissResultCard()
@@ -2103,7 +2104,9 @@ local function showRoundFeedback(feedback)
     local masterRound = survived and feedback.challengeCompleted == true and momentumBest >= 4
 
     local resultKind = ResultPresentation.kind(feedback)
-    resultTitle.Text = ResultPresentation.title(feedback, localeId)
+    resultTitle.Text = feedback.spectating == true
+        and CoreLocalization.text(localeId, "RESULT_SPECTATOR_TITLE")
+        or ResultPresentation.title(feedback, localeId)
     resultStroke.Color = resultKind == "master"
         and UITheme.Colors.Gold
         or (resultKind == "clutch"
@@ -2174,9 +2177,13 @@ local function showRoundFeedback(feedback)
         table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_FUSION", fusionBonusCoins))
     end
 
-    resultReward.Text = CoreLocalization.text(localeId, "COINS_XP", shownCoins, shownXP)
+    resultReward.Text = feedback.spectating == true
+        and CoreLocalization.text(localeId, "RESULT_SPECTATOR_REWARD")
+        or (feedback.pendingRewards == true
+            and CoreLocalization.text(localeId, "RESULT_REWARDS_PENDING")
+            or CoreLocalization.text(localeId, "COINS_XP", shownCoins, shownXP))
     resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_SOON")
-    if #extras > 0 and not touchDevice then
+    if feedback.pendingRewards ~= true and #extras > 0 and not touchDevice then
         resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")
     end
 
@@ -2323,7 +2330,11 @@ local function showRoundFeedback(feedback)
         end
     end
 
-    if not survived then
+    if feedback.spectating == true then
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_SPECTATOR_TIP")
+    elseif feedback.pendingRewards == true then
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_REWARDS_TIP")
+    elseif not survived then
         local _, eliminationTip = ResultPresentation.eliminationCopy(feedback, localeId)
         resultTip.Text = CoreLocalization.text(localeId, "RESULT_NEXT_TRY", eliminationTip)
     elseif firstChaos then
@@ -2919,6 +2930,8 @@ local function showOnePendingMetaNotification()
 end
 
 roundFeedbackEvent.OnClientEvent:Connect(function(feedback)
+    if type(feedback) ~= "table" then return end
+    lastResolvedResultRoundNumber = tonumber(feedback.roundNumber)
     showRoundFeedback(feedback)
 end)
 
@@ -3140,7 +3153,9 @@ stateEvent.OnClientEvent:Connect(function(state)
         hideMetaNotifications()
     end
 
-    if activeGameplay or firstLobby then
+    -- Do not dismiss the winner card during the first session's RESULT
+    -- countdown. Earlier code hid it whenever Games had not replicated.
+    if activeGameplay or (firstLobby and currentHudPhase ~= "result") then
         if resultCard.Visible then
             dismissResultCard()
         else
@@ -3162,9 +3177,25 @@ stateEvent.OnClientEvent:Connect(function(state)
     hint.Text = displayHint
     timer.Text = tostring(state.seconds or 0)
 
-    if state.phase == "result" and resultCard.Visible then
-        local nextSeconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
-        resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_IN", nextSeconds)
+    if state.phase == "result" then
+        -- Personalized RoundFeedback is the primary rich reward receipt.
+        -- RoundState is an independent recovery route for packet/GUI timing
+        -- races and clients joining midway through the result countdown.
+        -- Do not invent Coins/XP until the actual reward receipt arrives.
+        local resultRound = tonumber(state.roundNumber)
+        if not resultCard.Visible
+            and lastResolvedResultRoundNumber ~= resultRound
+        then
+            local fallback = ResultPresentation.fallbackFeedback(
+                state, player.UserId,
+                player:GetAttribute("RoundParticipant") == true
+            )
+            if fallback then showRoundFeedback(fallback) end
+        end
+        if resultCard.Visible then
+            local nextSeconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
+            resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_IN", nextSeconds)
+        end
     elseif state.phase ~= "result" then
         resultNext.Text = ""
     end
