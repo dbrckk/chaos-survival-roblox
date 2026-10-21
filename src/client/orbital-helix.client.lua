@@ -7,7 +7,10 @@ local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local OrbitalRouteSignKit = require(script.Parent.OrbitalRouteSignKit)
+local LocalizationService = game:GetService("LocalizationService")
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 
 local folder = Instance.new("Folder")
 folder.Name = "OrbitalHelixLocal"
@@ -18,6 +21,7 @@ local currentTier = nil
 local currentReduced = nil
 local runners = {}
 local orderedRamps = {}
+local orderedAccessRamps = {}
 local flowFolder = nil
 local flowConnections = {}
 
@@ -28,18 +32,26 @@ local function resolveCircuit()
 end
 
 local function readRamps(circuit)
-    if not circuit then return {} end
+    if not circuit then return {}, {} end
     local ramps = {}
+    local access = {}
     for _, part in ipairs(circuit:GetChildren()) do
-        if part:IsA("BasePart") and part:GetAttribute("OrbitalHelixRamp") == true then
-            table.insert(ramps, part)
+        if part:IsA("BasePart") then
+            if part:GetAttribute("OrbitalHelixRamp") == true then
+                table.insert(ramps, part)
+            elseif OrbitalRouteSignKit.kind(part) ~= nil then
+                table.insert(access, part)
+            end
         end
     end
     table.sort(ramps, function(a, b)
         return (a:GetAttribute("HelixLane") or 0)
             < (b:GetAttribute("HelixLane") or 0)
     end)
-    return ramps
+    -- Order is deterministic even when Roblox streams the connector parts
+    -- after the containing folder. HelixRamp9 is the preserved core link.
+    table.sort(access, function(a, b) return a.Name < b.Name end)
+    return ramps, access
 end
 
 local function flowBurst(sensor)
@@ -165,6 +177,7 @@ local function reset()
     folder:ClearAllChildren()
     table.clear(runners)
     table.clear(orderedRamps)
+    table.clear(orderedAccessRamps)
 end
 
 local function createRunner(ramp, index, lane, tier)
@@ -190,12 +203,19 @@ local function createRunner(ramp, index, lane, tier)
     })
 end
 
-local function rebuild(circuit, tier, reduced, ramps)
+local function rebuild(circuit, tier, reduced, ramps, access)
     reset()
     currentCircuit = circuit
     currentTier = tier
     currentReduced = reduced
     orderedRamps = ramps
+    orderedAccessRamps = access
+    -- Motion-free wayfinding belongs on real traversable ramps and stays
+    -- legible on Low/ReduceMotion. A SurfaceGui follows shrinking/rotation
+    -- automatically: unlike a Neon 3D part it costs no per-frame transform.
+    for _, ramp in ipairs(access) do
+        OrbitalRouteSignKit.create(ramp, folder, tier, localeId)
+    end
     -- Still track the actual eight ramp identities on Low/reduced motion.
     -- Otherwise the controller rebuilds empty visual arrays every poll.
     if reduced or tier == "Low" then return end
@@ -240,21 +260,30 @@ task.spawn(function()
         local circuit = resolveCircuit()
         local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
         local reduced = player:GetAttribute("ReduceMotion") == true
-        local ramps = readRamps(circuit)
+        local ramps, access = readRamps(circuit)
         local stale = circuit ~= currentCircuit or tier ~= currentTier
             or reduced ~= currentReduced or #ramps ~= #orderedRamps
+            or #access ~= #orderedAccessRamps
         if not stale then
             for index, ramp in ipairs(ramps) do
                 if ramp ~= orderedRamps[index] then
-                    -- Handle StreamingEnabled replacing ramp instances while
-                    -- the parent HelixCircuit folder remains unchanged.
+                    -- StreamingEnabled can replace a ramp while the folder
+                    -- instance remains unchanged.
+                    stale = true
+                    break
+                end
+            end
+        end
+        if not stale then
+            for index, ramp in ipairs(access) do
+                if ramp ~= orderedAccessRamps[index] then
                     stale = true
                     break
                 end
             end
         end
         if stale then
-            rebuild(circuit, tier, reduced, ramps)
+            rebuild(circuit, tier, reduced, ramps, access)
         end
         bindFlowCircuit()
 
