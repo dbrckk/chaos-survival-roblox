@@ -1446,7 +1446,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         dynamicActive = arenaMechanic ~= nil
             and arenaMechanic.dynamicStarted == true,
         botsStarted = math.max(0, #hazardContestants - #contestants),
-    }
+    }, roundChallenge
 end
 
 while true do
@@ -1803,8 +1803,16 @@ while true do
         GameAnalytics.roundStarted(p, roundNumber, roundSettings.Solo, selected.Id, #selectedSet > 1)
     end
 
-    local eliminated, endedEarly, roundElapsed, eliminationCauses, balanceMetrics =
+    -- The same server-authoritative challenge used in the live HUD MUST
+    -- reach settlement. Previously runDisasterSet kept it local, so the
+    -- result loop indexed nil at roundChallenge.Target and died forever.
+    local eliminated, endedEarly, roundElapsed, eliminationCauses,
+        balanceMetrics, roundChallenge =
         runDisasterSet(selectedSet, contestants, roundSettings)
+    assert(type(roundChallenge) == "table"
+        and type(roundChallenge.Target) == "number"
+        and type(roundChallenge.Id) == "string",
+        "Round settlement missing the played challenge")
 
     local survivors = 0
     local survivorUserIds = {}
@@ -1987,6 +1995,7 @@ while true do
 
             roundFeedbackEvent:FireClient(p, {
                 survived = survived,
+                roundNumber = roundNumber,
                 coins = survived and (winCoins + streakBonusCoins + fusionBonusCoins) or Config.ParticipationCoins,
                 xp = survived and winXP or Config.ParticipationXP,
                 streak = survivalStreak,
@@ -2064,6 +2073,7 @@ while true do
 
     broadcast({
         phase = "result",
+        roundNumber = roundNumber,
         title = resultTitle,
         hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
         seconds = roundSettings.PostRoundSeconds,
@@ -2081,6 +2091,7 @@ while true do
     for t = roundSettings.PostRoundSeconds, 1, -1 do
         broadcast({
             phase = "result",
+            roundNumber = roundNumber,
             title = resultTitle,
             hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
             seconds = t,
