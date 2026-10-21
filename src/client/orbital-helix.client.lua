@@ -54,6 +54,7 @@ local function flowBurst(sensor)
     end
 
     local mastery = math.clamp(tonumber(sensor:GetAttribute("HelixFlowTier")) or 1, 1, 3)
+    local pulseAward = sensor:GetAttribute("HelixPulseAward") == true
     local count = tier == "High" and (mastery == 3 and 12 or 8)
         or (mastery == 3 and 7 or 5)
     local origin = sensor.Position - Vector3.new(0, 1.6, 0)
@@ -67,11 +68,14 @@ local function flowBurst(sensor)
         piece.Name = "HelixFlowCelebrationFacet"
         piece.Size = Vector3.new(0.13, 0.075, 1.1)
         piece.CFrame = CFrame.lookAt(inner, inner + tangent)
-        piece.Color = mastery == 3
+        piece.Color = pulseAward
             and (index % 2 == 0 and Color3.fromRGB(255, 210, 112)
-                or Color3.fromRGB(166, 252, 230))
-            or (index % 2 == 0 and Color3.fromRGB(115, 255, 187)
-                or Color3.fromRGB(77, 201, 252))
+                or Color3.fromRGB(255, 241, 164))
+            or (mastery == 3
+                and (index % 2 == 0 and Color3.fromRGB(255, 210, 112)
+                    or Color3.fromRGB(166, 252, 230))
+                or (index % 2 == 0 and Color3.fromRGB(115, 255, 187)
+                    or Color3.fromRGB(77, 201, 252)))
         piece.Material = Enum.Material.Neon
         piece.Transparency = 0.24
         piece.Anchored = true
@@ -217,6 +221,16 @@ local function draw(time)
             runner.Part.CFrame = ramp.CFrame * CFrame.new(
                 x, ramp.Size.Y * 0.5 + 0.13, z
             )
+            -- Reuse the existing 8/24 moving glyphs to signal which two
+            -- routes are charged. Low/ReduceMotion see server gold rails.
+            local charged = ramp:GetAttribute("HelixPulseActive") == true
+            runner.Part.Color = charged
+                and Color3.fromRGB(255, 215, 102)
+                or (runner.Lane % 2 == 0
+                    and Color3.fromRGB(121, 253, 209)
+                    or Color3.fromRGB(95, 201, 255))
+            runner.Part.Transparency = charged and 0.12
+                or (currentTier == "High" and 0.24 or 0.40)
         end
     end
 end
