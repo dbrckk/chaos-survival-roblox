@@ -117,7 +117,7 @@ end
 function SkyrailSlipstream.tryTrigger(ctx, sensor, bridge, hit, ready, now)
     if not ctx or not ctx.Active or not ctx.Active()
         or not sensor or not sensor.Parent
-        or not bridge or not bridge.Parent
+        or not bridge or not bridge.Parent or not bridge.CanCollide
         or bridge:GetAttribute("ChaosSkybridge") ~= true
     then
         return false
