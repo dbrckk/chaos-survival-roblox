@@ -440,22 +440,33 @@ describe("Chaos Survival engine", function()
         expect(circuit ~= nil).toBe(true)
         expect(OrbitalHelix.Count).toBe(8)
 
-        local physical = 0
-        local noncolliding = 0
+        local helixCount, entryCount, coreCount, noncolliding = 0, 0, 0, 0
         for _, obj in ipairs((circuit :: Folder):GetChildren()) do
             expect(obj:IsA("BasePart")).toBe(true)
             expect(obj.Anchored).toBe(true)
-            if obj:GetAttribute("OrbitalHelixRamp") == true then
-                physical += 1
-                local index = obj:GetAttribute("HelixLane")
-                local route = OrbitalHelix.route(variant, center, index)
+            expect(type(obj:GetAttribute("OrbitRouteGroup"))).toBe("string")
+            local isHelix = obj:GetAttribute("OrbitalHelixRamp") == true
+            local isEntry = obj:GetAttribute("OrbitalAccessRamp") == true
+            local isCore = obj:GetAttribute("OrbitalCoreRamp") == true
+            if isHelix or isEntry or isCore then
+                if isHelix then helixCount += 1 end
+                if isEntry then entryCount += 1 end
+                if isCore then coreCount += 1 end
+                local index = isHelix
+                    and obj:GetAttribute("HelixLane")
+                    or tonumber(obj.Name:match("%d+$"))
+                local route = isHelix
+                    and OrbitalHelix.route(variant, center, index)
+                    or OrbitalHelix.accessRoute(variant, center, index,
+                        isEntry and "Entry" or "Core")
                 expect(route ~= nil).toBe(true)
                 expect(obj.CanCollide).toBe(true)
                 expect(obj.CanTouch).toBe(true)
                 expect(obj.CanQuery).toBe(true)
-                expect(obj.Size.X >= 5).toBe(true)
-                expect(obj.Size.Z >= 12).toBe(true)
-                expect((obj.Position - route.CFrame.Position).Magnitude < 0.01).toBe(true)
+                expect(obj.Size.X >= 4.5).toBe(true)
+                expect(obj.Size.Z >= 7).toBe(true)
+                expect((obj.Position - route.CFrame.Position).Magnitude < 0.01)
+                    .toBe(true)
                 expect(obj.CFrame.LookVector:Dot(
                     (route.Finish - route.Start).Unit) > 0.999).toBe(true)
             else
@@ -466,8 +477,10 @@ describe("Chaos Survival engine", function()
                 expect(obj.CastShadow).toBe(false)
             end
         end
-        expect(physical).toBe(8)
-        expect(noncolliding).toBe(64)
+        expect(helixCount).toBe(8)
+        expect(entryCount).toBe(8)
+        expect(coreCount).toBe(8)
+        expect(noncolliding).toBe(128)
 
         local swapped = MapBuilder.buildArena(Config, "Classic", ArenaVariants)
         expect(swapped:FindFirstChild("HelixCircuit") == nil).toBe(true)
