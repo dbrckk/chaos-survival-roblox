@@ -14,6 +14,13 @@ local D = {Name = "BOMB RAIN", Hint = "WATCH THE RED MARKERS!"}
 D.canComplete = canComplete
 
 function D.start(ctx)
+    -- Shared with the other impact disaster during Double Chaos; no new
+    -- polling loop and no markers persist beyond the current round.
+    local pending = ctx.PendingImpactWarnings
+    if type(pending) ~= "table" then
+        pending = setmetatable({}, {__mode = "k"})
+        ctx.PendingImpactWarnings = pending
+    end
     local profile = ctx.BalanceProfile or {}
     local warningSeconds = profile.BombWarningSeconds or 1.25
     local damage = profile.BombDamage or 48
@@ -24,7 +31,9 @@ function D.start(ctx)
             if not canComplete(ctx, os.clock(), warningSeconds, 0) then
                 break
             end
-            local offset = ArenaTargeting.randomOffset(6, 42)
+            local offset = ArenaTargeting.randomSeparatedOffset(
+                6, 42, ctx.Config.ArenaCenter, pending, 22
+            )
             local impactPosition = ctx.Config.ArenaCenter + offset + Vector3.new(0, 1.2, 0)
 
             local marker = Instance.new("Part")
@@ -39,16 +48,19 @@ function D.start(ctx)
             marker.Color = Color3.fromRGB(255,50,50)
             marker.Position = impactPosition
             marker.Parent = workspace
+            pending[marker] = true
             ctx.Cleanup[#ctx.Cleanup+1] = marker
 
             task.spawn(function()
                 HazardWarning.configure(marker, "Bomb", warningSeconds, 5.5, radius * 2)
                 task.wait(warningSeconds)
                 if not marker.Parent or not ctx.Active() then
+                    pending[marker] = nil
                     return
                 end
 
                 local position = marker.Position + Vector3.new(0, 1, 0)
+                pending[marker] = nil
                 marker:Destroy()
 
                 DisasterImpact.applyRadialDamage(ctx, position, radius, damage, "Bomb")

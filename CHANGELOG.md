@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-21 — Shared impact warning separation (candidate)
+
+- **Meteor Shower + Bomb Rain:** coordinate their still-pending ground-warning positions through a small server-only per-round registry, including when both disasters run together during Double Chaos. Sample up to eight bounded arena-footprint locations for a new warning and prefer a centre at least **22 studs** from all active warnings in the horizontal plane; if shrinking geography cannot fit it, choose the best available location instead of blocking the disaster.
+- Preserve the real warning-to-impact timers, radius, damage, hazard AI vision, existing visual cues and spawn cadence. No new client polling, remotes, gameplay reward or persistent data. Warning markers are unregistered as strikes resolve or cancel and destroyed references are purged.
+- Extend the existing Roblox engine arena-variant spec with deterministic multi-warning separation, vertical projection, constrained-floor fallback and stale-marker cleanup. Pending exact-head build and real-engine checks before merge.
+- GitHub-only gameplay change; the live Roblox place is not updated by this pull request.
+
 ## 2026-10-21 — Meteor and bomb round-end readability (candidate)
 
 - Meteor Shower and Bomb Rain now stop **creating new lethal telegraphs** when their complete warning and impact cannot resolve before the server's authoritative round deadline. This closes the same late-round surprise window already addressed for collapsing platforms and dynamic arena challenges.
