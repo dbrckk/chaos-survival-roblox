@@ -17,6 +17,7 @@ folder.Parent = workspace
 -- it never rebuilds a whole arena or adds a per-frame loop.
 local visualsByPlatform = {}
 local collapseConnections = {}
+local routeAttributeConnections = {}
 local footprintDisconnects = {}
 
 local function clear()
@@ -27,6 +28,10 @@ local function clear()
     for platform, disconnect in pairs(footprintDisconnects) do
         disconnect()
         footprintDisconnects[platform] = nil
+    end
+    for platform, connection in pairs(routeAttributeConnections) do
+        connection:Disconnect()
+        routeAttributeConnections[platform] = nil
     end
     table.clear(visualsByPlatform)
     folder:ClearAllChildren()
@@ -250,6 +255,18 @@ local function rebuild()
         if platform:IsA("BasePart") then
             index += 1
             local visualIndex = PlatformFinishKit.visualIndex(platform, index)
+
+            -- The physical deck may stream before its RouteTier attribute.
+            -- Rebuild once the replicated metadata arrives so the first
+            -- streamed-in ornaments use resizable Welds, not rigid
+            -- WeldConstraints that could imply ghost ledges while shrinking.
+            if variant == "Classic"
+                and tonumber(platform:GetAttribute("RouteTier")) == nil then
+                routeAttributeConnections[platform] =
+                    platform:GetAttributeChangedSignal("RouteTier"):Connect(function()
+                        task.defer(rebuild)
+                    end)
+            end
             if tier.Name == "Low" and visualIndex % 2 == 0 then
                 continue
             end
