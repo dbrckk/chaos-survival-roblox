@@ -1455,6 +1455,11 @@ local function scoreCandidate(record, root, candidate, traits)
         -- Encourage genuine use of authored sloped routes instead of only
         -- choosing isolated platform centers and jumping unrealistically.
         score += 7
+        if candidate.part:GetAttribute("HelixPulseActive") == true then
+            -- Charged ramps offer a mild routing preference, never enough
+            -- to outweigh urgent hazard warnings or elevation safety.
+            score += 3.5
+        end
     end
 
     if hasDisaster("RisingLava") then
