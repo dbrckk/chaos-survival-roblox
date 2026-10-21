@@ -1,15 +1,10 @@
 name: Roblox Visual Staging (isolated)
-# Automatically synchronize the isolated test experience with approved main changes.
-# Production publication is separate and requires its own release certification.
+# Opt-in only. The owner deploys updates to the existing public experience
+# and has not authorized creation or automatic use of a separate staging place.
+# The preflight safeguards below remain intact if manual staging is ever needed.
+# Public place publication uses a separate guarded workflow.
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/**"
-      - "default.project.json"
-      - ".github/workflows/roblox-visual-staging.yml"
   workflow_dispatch:
 
 concurrency:
