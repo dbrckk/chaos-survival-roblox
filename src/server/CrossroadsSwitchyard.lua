@@ -183,12 +183,12 @@ function CrossroadsSwitchyard.start(ctx, mechanics, center)
         signalSets[index] = {
             signal(folder, "JunctionChevron" .. index .. "A",
                 pad, thin, Vector3.new(
-                    alongX and -0.65 or 0, -2.32,
+                    alongX and -0.65 or 0, -2.04,
                     alongX and 0 or -0.65
                 ), idle),
             signal(folder, "JunctionChevron" .. index .. "B",
                 pad, thin, Vector3.new(
-                    alongX and 0.65 or 0, -2.32,
+                    alongX and 0.65 or 0, -2.04,
                     alongX and 0 or 0.65
                 ), idle),
         }
