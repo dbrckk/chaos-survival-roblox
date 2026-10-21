@@ -100,6 +100,29 @@ function MeteorSignatureRules.shouldTrail(phase, meteorsActive, viewerPosition,
     return (viewerPosition - meteorPosition).Magnitude <= profile.Range
 end
 
+-- Reuse one tiny candidate buffer rather than allocating a copy of the
+-- entire Workspace children array every quarter-second during Meteor Shower.
+-- A set is maintained by Workspace.ChildAdded/ChildRemoved; this validation
+-- also prunes parts removed while client streaming catches up.
+function MeteorSignatureRules.collectTracked(meteorSet, buffer, root)
+    local output = type(buffer) == "table" and buffer or {}
+    table.clear(output)
+    if type(meteorSet) ~= "table" or typeof(root) ~= "Instance" then
+        return output
+    end
+    for meteor in pairs(meteorSet) do
+        if typeof(meteor) == "Instance"
+            and meteor:IsA("BasePart")
+            and meteor.Name == "RoundMeteor"
+            and meteor.Parent == root then
+            output[#output + 1] = meteor
+        else
+            meteorSet[meteor] = nil
+        end
+    end
+    return output
+end
+
 -- Prioritize the closest visible hazards; avoids child creation order determining
 -- which meteors receive the limited effects in dense storm rounds.
 function MeteorSignatureRules.orderedCandidates(children, viewerPosition)

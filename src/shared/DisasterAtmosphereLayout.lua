@@ -23,6 +23,27 @@ function DisasterAtmosphereLayout.beamFrame(baseFrame, baseSize, angle, radius, 
         baseFrame.RightVector, baseFrame.UpVector, -baseFrame.LookVector)
 end
 
+-- No GPU objects exist in the lobby or between catastrophe phases.
+-- Dormant polling is deliberately slower, while active High/Medium/Low
+-- retains the original exact per-tier animation cadence.
+function DisasterAtmosphereLayout.updateCadence(active, interval)
+    if active ~= true then return 0.50 end
+    if type(interval) == "number" and interval > 0
+        and interval == interval and interval < math.huge then
+        return interval
+    end
+    return 1 / 30
+end
+
+-- Scenery LOD owns visibility on weaker devices. Its hidden attributes
+-- are authoritative for the local cosmetic scene; physics and server
+-- telegraphs never call this function.
+function DisasterAtmosphereLayout.shouldAnimate(part)
+    return typeof(part) == "Instance" and part:IsA("BasePart")
+        and part.Parent ~= nil
+        and part:GetAttribute("SceneryLodHidden") ~= true
+end
+
 function DisasterAtmosphereLayout.beaconCount(tier, active)
     if active ~= true then return 0 end
     if tier == "Low" then return 4 end

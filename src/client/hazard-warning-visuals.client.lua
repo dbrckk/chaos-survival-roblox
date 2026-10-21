@@ -92,6 +92,11 @@ local function ensureRenderLoop()
             currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
             task.wait(math.max(1 / 30, currentTier.UpdateInterval))
 
+            -- All simultaneous warnings must use the SAME authoritative
+            -- server-time snapshot: fewer engine calls and synchronized
+            -- countdown rings during Bomb Rain + Meteor Shower.
+            local serverNow = workspace:GetServerTimeNow()
+            local reduced = player:GetAttribute("ReduceMotion") == true
             for part, state in pairs(tracked) do
                 if not part.Parent then
                     if state.ring then
@@ -106,11 +111,10 @@ local function ensureRenderLoop()
                 end
 
                 local alpha = math.clamp(
-                    (workspace:GetServerTimeNow() - state.startedAt) / state.duration,
+                    (serverNow - state.startedAt) / state.duration,
                     0,
                     1
                 )
-                local reduced = player:GetAttribute("ReduceMotion") == true
                 local pulse = reduced
                     and 0.5
                     or ((math.sin(alpha * math.pi * 6) + 1) * 0.5)
@@ -161,8 +165,11 @@ local function ensureRenderLoop()
                         reduced and 2.66 or (2.6 + pulse * 0.18),
                         0
                     )
-                    local text = state.label:FindFirstChild("WarningText")
-                    if text and text:IsA("TextLabel") then
+                    -- Registered warning labels do not change identity.
+                    -- Avoid an Instance tree search on every 30 Hz tick
+                    -- for every simultaneous hazard.
+                    local text = state.warningText
+                    if text and text.Parent then
                         text.TextTransparency = reduced and 0.02
                             or math.clamp(0.02 + alpha * 0.22, 0, 1)
                         text.TextStrokeTransparency = reduced and 0.42
@@ -323,6 +330,7 @@ local function register(part, snapshot)
         signature = signature,
         deck = signatureDeck,
         label = label,
+        warningText = warningText,
     }
 
     -- Initial client appearance must also use the authoritative elapsed

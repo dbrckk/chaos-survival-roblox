@@ -293,10 +293,16 @@ local function refreshRates()
 
     for _, emitter in ipairs(emitters) do
         if emitter and emitter.Parent then
-            emitter.Enabled = phase == "round"
-            emitter.Rate = phase == "round"
-                and baseRate * tier.ParticleScale * (finalRush and 1.45 or 1) * (reduced and 0.35 or 1)
+            local enabled = phase == "round"
+            local rate = enabled
+                and baseRate * tier.ParticleScale
+                    * (finalRush and 1.45 or 1)
+                    * (reduced and 0.35 or 1)
                 or 0
+            -- RoundState can be rebroadcast without a quality/intensity
+            -- change. Avoid resubmitting identical GPU emitter properties.
+            if emitter.Enabled ~= enabled then emitter.Enabled = enabled end
+            if emitter.Rate ~= rate then emitter.Rate = rate end
         end
     end
 end
@@ -310,15 +316,24 @@ local function ensureRenderLoop()
     task.spawn(function()
         while true do
             local tier = quality()
-            local dt = task.wait(
-                tier.DecorUpdateInterval or math.max(1 / 30, tier.UpdateInterval)
+            local active = #beaconParts > 0 or #beamStates > 0
+            -- In the lobby and between rounds the previous loop woke
+            -- 15-30 times per second despite having no visual instances.
+            -- RoundState and map events still rebuild immediately.
+            local cadence = Layout.updateCadence(
+                active,
+                tier.DecorUpdateInterval
+                    or math.max(1 / 30, tier.UpdateInterval)
             )
+            local dt = task.wait(cadence)
 
             if #beaconParts == 0 and #beamStates == 0 then
                 continue
             end
 
-            clock += dt
+            -- A backgrounded Android app can resume after seconds;
+            -- bound the cosmetic phase jump without slowing live pulses.
+            clock += math.clamp(tonumber(dt) or 0, 0, 0.22)
 
         local reduced = player:GetAttribute("ReduceMotion") == true
         local motion = reduced and 0.16 or 1
@@ -328,7 +343,10 @@ local function ensureRenderLoop()
         end
 
         for i, beacon in ipairs(beaconParts) do
-            if beacon and beacon.Parent then
+            if Layout.shouldAnimate(beacon) then
+                -- The dedicated LOD controller has already hidden the
+                -- entire faraway cinematic layer on Medium/Low. Don't
+                -- animate invisible beacon shaders as well.
                 local baseTransparency = tonumber(beacon:GetAttribute("BaseTransparency")) or 0.34
                 local pulse = (math.sin(clock * (2.4 + i * 0.13) * motion) + 1) * 0.5
                 beacon.Transparency = math.clamp(
@@ -342,7 +360,7 @@ local function ensureRenderLoop()
         for _, state in ipairs(beamStates) do
             local part = state.part
             local base = state.base
-            if part and part.Parent and base and base.Parent then
+            if Layout.shouldAnimate(part) and base and base.Parent then
                 local sweep = math.sin(clock * 0.38 * motion + state.index * 0.9) * 0.12
                 local angle = state.angle + sweep
                 local deckFrame = Layout.beamFrame(

@@ -41,6 +41,35 @@ describe("Slope-correct live disaster atmosphere", function()
         expect(Layout.beaconCount("High", false)).toBe(0)
         expect(Layout.beaconCount("Medium", false)).toBe(0)
         expect(Layout.beaconCount("Unknown", true)).toBe(0)
+
+        -- Zero client GPU instances in the lobby: no 30 Hz wakeups.
+        expect(Layout.updateCadence(false, 1 / 30)).toBe(0.50)
+        expect(Layout.updateCadence(false, 1 / 15)).toBe(0.50)
+        -- Active hazards keep the exact authored High/Medium/Low cadence.
+        for _, cadence in ipairs({1 / 30, 1 / 24, 1 / 15}) do
+            expect(Layout.updateCadence(true, cadence)).toBe(cadence)
+        end
+        expect(math.abs(Layout.updateCadence(true, nil) - 1 / 30) < 0.001)
+            .toBe(true)
+        expect(math.abs(Layout.updateCadence(true, -1) - 1 / 30) < 0.001)
+            .toBe(true)
+
+        -- Distance LOD must pause invisible cosmetic motion only.
+        -- On reentry, exact same Part is animated again, no reallocation.
+        local folder = Instance.new("Folder")
+        folder.Parent = workspace
+        local beacon = Instance.new("Part")
+        beacon.Parent = folder
+        expect(Layout.shouldAnimate(beacon)).toBe(true)
+        beacon:SetAttribute("SceneryLodHidden", true)
+        expect(Layout.shouldAnimate(beacon)).toBe(false)
+        beacon:SetAttribute("SceneryLodHidden", false)
+        expect(Layout.shouldAnimate(beacon)).toBe(true)
+        beacon.Parent = nil
+        expect(Layout.shouldAnimate(beacon)).toBe(false)
+        expect(Layout.shouldAnimate(nil)).toBe(false)
+        beacon:Destroy()
+        folder:Destroy()
     end)
 end)
 
