@@ -480,15 +480,18 @@ describe("Shrinking Arena mobility integration", function()
 
         local originals = {}
         local source = OrbitalHelix.capture(helix)
-        -- Shrink both the eight competitive lanes and the ninth physical
-        -- observation-deck connector, without inventing a scoring lane.
-        expect(#source).toBe(9)
+        expect(#source).toBe(24)
+        local states = {}
         for _, state in ipairs(source) do
+            states[state.ramp] = state
             originals[state.ramp] = {
                 cf = state.ramp.CFrame,
                 size = state.ramp.Size,
             }
-            expect(#state.decorations).toBe(8)
+            expect(#state.decorations).toBe(
+                (state.ramp:GetAttribute("OrbitalHelixRamp") == true
+                    or state.ramp.Name == "HelixRamp9") and 8 or 4
+            )
             for _, d in ipairs(state.decorations) do
                 originals[d.part] = {cf = d.part.CFrame, size = d.part.Size}
             end
@@ -506,6 +509,8 @@ describe("Shrinking Arena mobility integration", function()
         })
         task.wait(0.22)
 
+        local factor = arena:FindFirstChild("Base").Size.X
+            / ArenaVariants.get("Orbital").BaseSize.X
         local advanced = 0
         for index = 1, 8 do
             local outer = platforms:FindFirstChild("Platform" .. index)
@@ -530,25 +535,45 @@ describe("Shrinking Arena mobility integration", function()
             expect(rail ~= nil).toBe(true)
             expect(rail.CanCollide).toBe(false)
             expect((rail.CFrame.Position - originals[rail].cf.Position).Magnitude > 0.3).toBe(true)
+
+            for _, kind in ipairs({"Entry", "Core"}) do
+                local name = kind == "Core" and index == 2
+                    and "HelixRamp9" or (kind .. "Ramp" .. index)
+                local access = helix:FindFirstChild(name)
+                expect(access ~= nil).toBe(true)
+                local route = states[access]
+                expect(route ~= nil).toBe(true)
+                local function moved(point)
+                    local relative = point - Config.ArenaCenter
+                    return Config.ArenaCenter + Vector3.new(
+                        relative.X * factor, relative.Y, relative.Z * factor
+                    )
+                end
+                local expectedFrom, expectedTo =
+                    moved(route.from), moved(route.to)
+                expect((access.Position
+                    - (expectedFrom + expectedTo) * 0.5).Magnitude < 0.1)
+                    .toBe(true)
+                expect(math.abs(access.Size.Z
+                    - ((expectedTo - expectedFrom).Magnitude + route.padding))
+                    < 0.1).toBe(true)
+                expect(access.Size.X < originals[access].size.X).toBe(true)
+                expect(access.CanCollide).toBe(true)
+                local trimName = kind == "Core" and index == 2
+                    and "HelixEdgeSignal9_1"
+                    or (kind .. "Signal" .. index .. "_1")
+                local trim = helix:FindFirstChild(trimName)
+                expect(trim ~= nil).toBe(true)
+                expect(trim.CanCollide).toBe(false)
+                expect((trim.Position - originals[trim].cf.Position).Magnitude > 0.3)
+                    .toBe(true)
+            end
         end
         expect(advanced).toBe(8)
-
-        local core = helix:FindFirstChild("HelixRamp9")
-        local entrance = platforms:FindFirstChild("Platform10")
-        local observation = platforms:FindFirstChild("Platform18")
-        expect(core ~= nil and entrance ~= nil and observation ~= nil).toBe(true)
-        expect(core:GetAttribute("OrbitalCoreRamp")).toBe(true)
-        local coreFrom = entrance.Position
-            + Vector3.new(0, entrance.Size.Y * 0.5 - 0.15, 0)
-        local coreTo = observation.Position
-            + Vector3.new(0, observation.Size.Y * 0.5 - 0.15, 0)
-        expect((core.Position - (coreFrom + coreTo) * 0.5).Magnitude < 0.1)
-            .toBe(true)
-        expect((core.CFrame.LookVector - (coreTo - coreFrom).Unit).Magnitude < 0.02)
-            .toBe(true)
-        expect((core.Position - originals[core].cf.Position).Magnitude > 0.3)
-            .toBe(true)
-        expect(core.CanCollide).toBe(true)
+        local preservedCore = helix:FindFirstChild("HelixRamp9")
+        expect(preservedCore:GetAttribute("OrbitalCoreRamp")).toBe(true)
+        expect(preservedCore:GetAttribute("OrbitalHelixRamp") == nil).toBe(true)
+        expect(states[preservedCore] ~= nil).toBe(true)
 
         active = false
         cleanup(callbacks, objects)
