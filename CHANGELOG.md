@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-21 — Humanlike AI dodging during multi-warning rounds (candidate)
+
+- **AI reaction stability:** when a bot is already aware of a live hazard, prefer that warning if another active warning is only marginally closer (within 4 studs). This prevents alternating between two bomb/meteor warnings on consecutive 0.18-second brain ticks and repeatedly restarting the bot's existing humanlike reaction delay. A substantially nearer warning, a warning that is no longer active, or a bot that has exited its detection radius still prompts a new decision.
+- **Keep genuinely safe routes:** the six-heading emergency escape planner checks actual walkable floor support and all current meteor/bomb corridors. Preserve its chosen destination exactly; do not add a later random social-spacing offset that could steer an AI back into the impact or off a platform. Normal arena roaming and social separation remain unchanged.
+- Existing engine AI rules specs cover warning-focus hysteresis, priority switches, disabled/stale values and bounds. No extra bot speed, reflex privileges, teleport, remote, UI loop, unit test file or economic modification.
+- Changes are GitHub-side only. Production Roblox publication and Android playtests are not implied by passing CI.
+
 ## 2026-10-21 — Shared impact warning separation (candidate)
 
 - **Meteor Shower + Bomb Rain:** coordinate their still-pending ground-warning positions through a small server-only per-round registry, including when both disasters run together during Double Chaos. Sample up to eight bounded arena-footprint locations for a new warning and prefer a centre at least **22 studs** from all active warnings in the horizontal plane; if shrinking geography cannot fit it, choose the best available location instead of blocking the disaster.
