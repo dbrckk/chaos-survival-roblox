@@ -498,20 +498,20 @@ describe("Chaos Survival engine", function()
         -- World signs must label actual solid access routes, not create
         -- fake walkable geometry. Check all eight entries and eight cores,
         -- including the legacy ninth (transit-only) connector.
-        local signRoot = Instance.new("Folder")
-        signRoot.Name = "OrbitalWayfindingRegression"
-        signRoot.Parent = workspace
+        local signs = {}
         local count = 0
         for _, obj in ipairs(circuit:GetChildren()) do
             local kind = OrbitalRouteSignKit.kind(obj)
             if kind then
                 count += 1
                 local sign = OrbitalRouteSignKit.create(
-                    obj, signRoot, "High", "fr-fr"
+                    obj, obj, "High", "fr-fr"
                 )
                 expect(sign ~= nil).toBe(true)
                 expect(sign:IsA("SurfaceGui")).toBe(true)
+                expect(sign.Parent).toBe(obj)
                 expect(sign.Adornee).toBe(obj)
+                table.insert(signs, sign)
                 expect(sign.Face).toBe(Enum.NormalId.Top)
                 expect(sign.AlwaysOnTop).toBe(false)
                 expect(sign.MaxDistance <= 115).toBe(true)
@@ -525,11 +525,11 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(count).toBe(16)
-        expect(#signRoot:GetChildren()).toBe(16)
+        expect(#signs).toBe(16)
         expect(OrbitalRouteSignKit.kind(core)).toBe("Core")
         local helixOne = circuit:FindFirstChild("HelixRamp1")
         expect(OrbitalRouteSignKit.kind(helixOne) == nil).toBe(true)
-        expect(OrbitalRouteSignKit.create(helixOne, signRoot, "High", "en"))
+        expect(OrbitalRouteSignKit.create(helixOne, helixOne, "High", "en"))
             .toBe(nil)
         expect(OrbitalRouteSignKit.copy("Entry", "en-us")[1]).toBe("ASCEND")
         expect(OrbitalRouteSignKit.copy("Core", "fr-fr")[2])
@@ -537,21 +537,28 @@ describe("Chaos Survival engine", function()
 
         -- Low-end mobile hardware keeps concise static wayfinding, but
         -- no extra decorative caption, lights, collisions or local parts.
-        local low = OrbitalRouteSignKit.create(core, signRoot, "Low", "en-us")
+        local low = OrbitalRouteSignKit.create(core, core, "Low", "en-us")
+        table.insert(signs, low)
         expect(low ~= nil and low.Adornee == core).toBe(true)
         expect(low.PixelsPerStud).toBe(16)
         expect(low:FindFirstChild("EtchedWayfindingPlate")
             :FindFirstChild("DestinationHint") == nil).toBe(true)
         expect(low:FindFirstChild("EtchedWayfindingPlate")
             :FindFirstChild("RouteName").Text).toBe("REACTOR")
-        for _, descendant in ipairs(signRoot:GetDescendants()) do
-            expect(descendant:IsA("BasePart")).toBe(false)
-            expect(descendant:IsA("PointLight")).toBe(false)
-            expect(descendant:IsA("ParticleEmitter")).toBe(false)
+        for _, sign in ipairs(signs) do
+            for _, descendant in ipairs(sign:GetDescendants()) do
+                expect(descendant:IsA("BasePart")).toBe(false)
+                expect(descendant:IsA("PointLight")).toBe(false)
+                expect(descendant:IsA("ParticleEmitter")).toBe(false)
+            end
+            -- Exactly these locally owned SurfaceGuis are removed on a
+            -- streamed arena replacement or VFX quality change.
+            sign:Destroy()
         end
         -- Existing collision/deck transform remains authoritative.
         expect(core.CanCollide).toBe(true)
-        signRoot:Destroy()
+        expect(core:FindFirstChild("OrbitalCoreNavigation") == nil)
+            .toBe(true)
 
         local swapped = MapBuilder.buildArena(Config, "Classic", ArenaVariants)
         expect(swapped:FindFirstChild("HelixCircuit") == nil).toBe(true)
