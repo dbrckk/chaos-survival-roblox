@@ -138,15 +138,20 @@ ArenaVariants.Definitions = {
     Orbital = {
         Id = "Orbital",
         Name = "ORBITAL RING",
-        StrategyHint = "Circular routes • keep moving around the ring instead of getting boxed in",
+        StrategyHint = "Enter by the outer ramps • cross a Helix lane • climb the reactor spokes",
         BaseSize = Vector3.new(100, 2, 100),
         BaseColor = Color3.fromRGB(72, 82, 102),
         PlatformColor = Color3.fromRGB(90, 185, 175),
         SpawnOffsets = (function()
             local result = {}
+            -- Eight safe entry lanes BETWEEN the outer radial ramps.
+            -- The old spawns sat inside 7-9-stud-high outer platforms,
+            -- trapping newly spawned R15 avatars before the round began.
             for i = 0, 7 do
-                local angle = math.rad(i * 45)
-                table.insert(result, Vector3.new(math.cos(angle) * 35, 3, math.sin(angle) * 35))
+                local angle = math.rad(i * 45 + 15)
+                table.insert(result, Vector3.new(
+                    math.cos(angle) * 42, 3, math.sin(angle) * 42
+                ))
             end
             return result
         end)(),
@@ -155,25 +160,29 @@ ArenaVariants.Definitions = {
             for i = 0, 7 do
                 local angle = math.rad(i * 45)
                 table.insert(result, {
-                    offset = Vector3.new(math.cos(angle) * 31, 6 + ((i % 2) * 2), math.sin(angle) * 31),
+                    offset = Vector3.new(math.cos(angle) * 31, 4, math.sin(angle) * 31),
                     size = Vector3.new(13, 2, 13),
+                    RouteTier = 1,
                 })
             end
             for i = 0, 7 do
                 local angle = math.rad((i * 45) + 22.5)
                 table.insert(result, {
-                    offset = Vector3.new(math.cos(angle) * 18, 11 + ((i % 2) * 2), math.sin(angle) * 18),
+                    offset = Vector3.new(math.cos(angle) * 18, 9 + (i % 2), math.sin(angle) * 18),
                     size = Vector3.new(11, 2, 11),
+                    RouteTier = 2,
                 })
             end
-            table.insert(result, {offset = Vector3.new(0, 7, 0), size = Vector3.new(18, 2, 18)})
-            -- Leave 10 studs of clear R15 headroom above the lower hub
-            -- (top Y=8 versus upper bottom Y=18). Previously the upper
-            -- podium bottomed at Y=14 and trapped characters below it.
-            -- An authored ninth physical connector reaches this deck from
-            -- inner platform 10; there are still only eight Helix skills.
+            -- Ground-accessible central rescue hub and elevated reactor podium.
+            -- The 14-stud clear gap between them admits full-size R15 rigs;
+            -- every inner lane also has a physical spoke to the upper core.
             table.insert(result, {
-                offset = Vector3.new(0, 19, 0),
+                offset = Vector3.new(0, 4, 0),
+                size = Vector3.new(18, 2, 18),
+                RouteTier = 1,
+            })
+            table.insert(result, {
+                offset = Vector3.new(0, 18, 0),
                 size = Vector3.new(11, 2, 11),
                 RouteTier = 4,
             })

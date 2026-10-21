@@ -1472,7 +1472,15 @@ local function arenaCandidates(root)
     if variantId == "Orbital" then
         local helix = arena:FindFirstChild("HelixCircuit")
         for _, ramp in ipairs(sortedParts(helix)) do
-            if ramp:GetAttribute("OrbitalHelixRamp") == true and ramp.CanCollide then
+            -- The authored Entry/Helix/Core route is physical for bots too.
+            -- A bot approaching the outer deck should seek the floor ramp,
+            -- not repeatedly try to jump through the underside of a deck.
+            -- Keep the same bounded elevation/proximity filter to avoid
+            -- selecting the high core from the floor.
+            local isWalkway = ramp:GetAttribute("OrbitalHelixRamp") == true
+                or ramp:GetAttribute("OrbitalAccessRamp") == true
+                or ramp:GetAttribute("OrbitalCoreRamp") == true
+            if isWalkway and ramp.CanCollide then
                 local waypoint = ramp.Position
                     + ramp.CFrame.UpVector * (ramp.Size.Y * 0.5 + 2.4)
                 if AISurvivorRules.helixWaypointReachable(
@@ -1524,10 +1532,13 @@ local function scoreCandidate(record, root, candidate, traits)
         (record.roundTraits and record.roundTraits.DirectionBias) or record.strafeBias
     )
     if candidate.part
-        and candidate.part:GetAttribute("OrbitalHelixRamp") == true
+        and (candidate.part:GetAttribute("OrbitalHelixRamp") == true
+            or candidate.part:GetAttribute("OrbitalAccessRamp") == true
+            or candidate.part:GetAttribute("OrbitalCoreRamp") == true)
     then
-        -- Encourage genuine use of authored sloped routes instead of only
-        -- choosing isolated platform centers and jumping unrealistically.
+        -- Bot intent should use the actual geometry from floor to reactor.
+        -- An elevated core link is not a candidate until near enough in
+        -- height; no teleport, scoring boost, or extra navigation loop.
         score += 7
         if candidate.part:GetAttribute("HelixPulseActive") == true then
             -- Charged ramps offer a mild routing preference, never enough

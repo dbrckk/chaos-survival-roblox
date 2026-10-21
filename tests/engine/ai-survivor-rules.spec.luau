@@ -6,6 +6,8 @@ local AISurvivorRules = require("../../src/server/AISurvivorRules")
 local AISurvivorService = require("../../src/server/AISurvivorService")
 local AISurvivorNetworkOwnership = require("../../src/server/AISurvivorNetworkOwnership")
 local BotNameplateRules = require("../../src/shared/BotNameplateRules")
+local ArenaVariants = require("../../src/server/ArenaVariants")
+local OrbitalHelix = require("../../src/server/OrbitalHelix")
 
 describe("AI survivor rules", function()
     it("loads the runtime AI survivor service contract in Roblox", function()
@@ -71,6 +73,37 @@ describe("AI survivor rules", function()
         expect(rules.helixWaypointReachable(Vector3.new(-19, 10, 8), waypoint)).toBe(false)
         expect(rules.helixWaypointReachable(nil, waypoint)).toBe(false)
         expect(rules.helixWaypointReachable(waypoint, nil)).toBe(false)
+
+        -- With real Orbital navigation the entry is reachable from a
+        -- fresh floor spawn. The high reactor route must remain a later
+        -- objective, reachable only after actually climbing a Helix.
+        local orbital = ArenaVariants.get("Orbital")
+        for index = 1, OrbitalHelix.Count do
+            local entry = OrbitalHelix.accessRoute(
+                orbital, Vector3.zero, index, "Entry"
+            )
+            local core = OrbitalHelix.accessRoute(
+                orbital, Vector3.zero, index, "Core"
+            )
+            local function waypointFor(route)
+                return route.CFrame.Position + route.CFrame.UpVector
+                    * (route.Size.Y * 0.5 + 2.4)
+            end
+            local floorRoot = orbital.SpawnOffsets[index]
+                + Vector3.new(0, 1.5, 0)
+            local inner = orbital.Platforms[index + OrbitalHelix.Count]
+            local innerRoot = inner.offset
+                + Vector3.new(0, inner.size.Y * 0.5 + 2.4, 0)
+            expect(rules.helixWaypointReachable(
+                floorRoot, waypointFor(entry)
+            )).toBe(true)
+            expect(rules.helixWaypointReachable(
+                floorRoot, waypointFor(core)
+            )).toBe(false)
+            expect(rules.helixWaypointReachable(
+                innerRoot, waypointFor(core)
+            )).toBe(true)
+        end
     end)
 
     it("fills a small server toward four visible participants", function()
