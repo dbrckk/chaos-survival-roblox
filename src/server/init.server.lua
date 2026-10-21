@@ -48,6 +48,7 @@ local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
 local RoundIntensity = require(script.RoundIntensity)
 local RoundCleanup = require(script.RoundCleanup)
+local RoundSettlement = require(script.RoundSettlement)
 local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
 local RoundChallenge = require(script.RoundChallenge)
@@ -1829,7 +1830,10 @@ while true do
 
     local winCoins = SoloRules.reward(Config.WinCoins, roundSettings.WinCoinMultiplier)
     local winXP = SoloRules.reward(Config.WinXP, roundSettings.WinXPMultiplier)
-    for _, p in ipairs(contestants) do
+    -- One player's malformed save/progression/achievement state must not
+    -- strand every other participant on a finished match. Do not retry
+    -- partial mutations here: replaying could double-award Coins or Wins.
+    RoundSettlement.eachPlayer(contestants, function(p)
         if p.Parent == Players then
             local survived = eliminated[p.UserId] ~= true and alive(p)
             local survivalStreak, bestSessionStreak = SessionStreak.update(
@@ -2051,7 +2055,9 @@ while true do
                 masteryGain = masteryGain,
             })
         end
-    end
+    end, function(p, err)
+        warn("Round settlement player failure:", p and p.UserId, err)
+    end)
 
     -- One AI aggregate per server round: attribute to a single connected
     -- human only because AnalyticsService requires a Player. Never emit

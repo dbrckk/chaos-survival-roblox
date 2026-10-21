@@ -3,6 +3,52 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local RoundCleanup = require("../../src/server/RoundCleanup")
+local RoundSettlement = require("../../src/server/RoundSettlement")
+
+describe("Round settlement resilience", function()
+    it("processes the remaining players when an earlier player fails", function()
+        local seen = {}
+        local errors = {}
+        local completed, failed = RoundSettlement.eachPlayer(
+            {"alice", "bob", "charlie"},
+            function(player)
+                table.insert(seen, player)
+                if player == "bob" then error("simulated achievement failure") end
+            end,
+            function(player, message)
+                table.insert(errors, {player = player, message = message})
+            end
+        )
+        expect(completed).toBe(2)
+        expect(failed).toBe(1)
+        expect(#seen).toBe(3)
+        expect(seen[3]).toBe("charlie")
+        expect(#errors).toBe(1)
+        expect(errors[1].player).toBe("bob")
+        expect(string.find(errors[1].message, "simulated achievement failure") ~= nil)
+            .toBe(true)
+    end)
+
+    it("contains errors from the error reporter without retrying payouts", function()
+        local calls = 0
+        local completed, failed = RoundSettlement.eachPlayer(
+            {1, 2},
+            function(player)
+                calls += 1
+                if player == 1 then error("partial reward") end
+            end,
+            function()
+                error("broken logging sink")
+            end
+        )
+        expect(calls).toBe(2)
+        expect(completed).toBe(1)
+        expect(failed).toBe(1)
+        expect(select(1, RoundSettlement.eachPlayer({}, function()
+            error("should not execute")
+        end))).toBe(0)
+    end)
+end)
 
 describe("Round cleanup", function()
     it("continues after callback failures and reports them", function()

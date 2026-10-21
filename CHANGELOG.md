@@ -8,6 +8,15 @@
 - Extend existing Roblox engine survival-feedback and result-presentation specs for dead-rig guard, custom maximum health, and replay transition ordering; no new test files, remotes or extra loops.
 - No real public Roblox publication or authenticated Studio E2E result is claimed from CI alone.
 
+
+## 2026-10-21 — Isolated per-player end-of-round settlement (candidate)
+
+- After fixing the shared `roundChallenge` scope crash (#112), protect each participant's end-of-round progression/reward/achievement receipt processing from **other players' unexpected exceptions**. The original whole-server loop ran all player settlements without an error boundary: one bad achievement or quest handler could strand an entire lobby before the RESULTS countdown and next READY phase.
+- Introduce a tiny sequential server-only `RoundSettlement.eachPlayer` dispatcher: record a warning with the failing UserId, continue other players and the global phase loop, and **never automatically retry a partially applied payout** (which could double-award Wins or Coins). Both the callbacks and diagnostic sink are protected.
+- Extend the existing engine round-cleanup-resilience spec to simulate a failed player mid-batch and a broken error reporter. No extra unit spec files, remote events, per-frame loops, rewards or performance cost in gameplay.
+- Limit: this is crash containment; a participant whose settlement throws can still have an incomplete reward receipt. Any such logged error requires investigation, not silent compensation.
+- GitHub tests and merge do not publish the new code to the public Roblox game.
+
 ## 2026-10-21 — CRITICAL: winner-result crash and silent post-round recovery (candidate)
 
 - **Root cause fixed:** `runDisasterSet` created `roundChallenge` as a local variable but the caller performed payout, mastery, reward events and result broadcasts outside that scope. Accessing `roundChallenge.Target` at settlement attempted to index nil, aborting the main server `while true` loop after a match. Return the exact played challenge as a sixth value, validate the settlement contract and reuse it for victory and loss rewards, HUD result metadata, and round replay.
