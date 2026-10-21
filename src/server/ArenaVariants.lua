@@ -54,7 +54,7 @@ ArenaVariants.Definitions = {
     Towers = {
         Id = "Towers",
         Name = "TOWER RUN",
-        StrategyHint = "Vertical arena • high ground helps until escape routes narrow",
+        StrategyHint = "Four reachable tower ascents • climb from the central hub to skybridges",
         BaseSize = Vector3.new(94, 2, 94),
         BaseColor = Color3.fromRGB(78, 88, 112),
         PlatformColor = Color3.fromRGB(105, 155, 185),
@@ -64,33 +64,75 @@ ArenaVariants.Definitions = {
             Vector3.new(0,3,-38), Vector3.new(0,3,38),
             Vector3.new(-38,3,0), Vector3.new(38,3,0),
         },
-        Platforms = {
-            {offset=Vector3.new(-28,6,-28),size=Vector3.new(14,2,14)},
-            {offset=Vector3.new(-28,12,-28),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(-28,18,-28),size=Vector3.new(7,2,7)},
-            {offset=Vector3.new(28,6,-28),size=Vector3.new(14,2,14)},
-            {offset=Vector3.new(28,12,-28),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(28,18,-28),size=Vector3.new(7,2,7)},
-            {offset=Vector3.new(-28,6,28),size=Vector3.new(14,2,14)},
-            {offset=Vector3.new(-28,12,28),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(-28,18,28),size=Vector3.new(7,2,7)},
-            {offset=Vector3.new(28,6,28),size=Vector3.new(14,2,14)},
-            {offset=Vector3.new(28,12,28),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(28,18,28),size=Vector3.new(7,2,7)},
-            {offset=Vector3.new(0,8,0),size=Vector3.new(18,2,18)},
-            {offset=Vector3.new(0,14,-24),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(0,14,24),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(-24,14,0),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(24,14,0),size=Vector3.new(12,2,12)},
-            -- Skybridge Circuit: four contiguous high-level routes. Tops are
-            -- Y=13, aligned with the middle decks of the corner towers.
-            -- Unlike decorative beams these are real collision platforms and
-            -- participate in DisappearingPlatforms / hazard gameplay.
-            {offset=Vector3.new(0,12.5,-28),size=Vector3.new(49,1,4.5),Skybridge=true},
-            {offset=Vector3.new(0,12.5,28),size=Vector3.new(49,1,4.5),Skybridge=true},
-            {offset=Vector3.new(-28,12.5,0),size=Vector3.new(4.5,1,49),Skybridge=true},
-            {offset=Vector3.new(28,12.5,0),size=Vector3.new(4.5,1,49),Skybridge=true},
-        },
+        Platforms = (function()
+            -- Four authored, mirrored ascent circuits. The old Tower Run
+            -- stacked three decks at identical X/Z, leaving 4-stud ceiling
+            -- voids that R15 avatars could not traverse. Instead, each
+            -- actual jump is 1–3.6 studs across and at most 4 studs up.
+            -- Order preserves bridge IDs 18–21 for Skyrail/SkybridgePressure.
+            local result = {}
+            local corners = {
+                {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
+            }
+            for _, signs in ipairs(corners) do
+                local x, z = signs[1], signs[2]
+                -- Entry top Y=5, reachable directly from the arena floor
+                -- and across a half-stud gap from the central safe hub.
+                table.insert(result, {
+                    offset = Vector3.new(x * 6, 4, z * 14),
+                    size = Vector3.new(9, 2, 9),
+                    RouteTier = 1,
+                })
+                -- Destination at bridge elevation. Kept at the original
+                -- corner center so each skybridge still overlaps both ends.
+                table.insert(result, {
+                    offset = Vector3.new(x * 28, 12, z * 28),
+                    size = Vector3.new(10, 2, 10),
+                    RouteTier = 3,
+                })
+                -- Offset inward in BOTH axes, clear of the north/west
+                -- bridge underpasses and the terminal deck's footprint.
+                table.insert(result, {
+                    offset = Vector3.new(x * 16, 8, z * 16),
+                    size = Vector3.new(9, 2, 9),
+                    RouteTier = 2,
+                })
+            end
+            -- Shared playable central platform (not an unreachable roof).
+            table.insert(result, {
+                offset = Vector3.new(0, 4, 0),
+                size = Vector3.new(18, 2, 18),
+                RouteTier = 1,
+            })
+            -- Optional upper lookouts off the terminal decks; no deck
+            -- hangs directly over a lower avatar landing area.
+            for _, signs in ipairs(corners) do
+                table.insert(result, {
+                    offset = Vector3.new(signs[1] * 39, 15, signs[2] * 28),
+                    size = Vector3.new(8, 2, 8),
+                    RouteTier = 4,
+                })
+            end
+            -- Keep exactly four real, fixed 13-stud-high skybridge lanes
+            -- with their original index/name/extent for every subsystem.
+            table.insert(result, {
+                offset = Vector3.new(0, 12.5, -28),
+                size = Vector3.new(49, 1, 4.5), Skybridge = true,
+            })
+            table.insert(result, {
+                offset = Vector3.new(0, 12.5, 28),
+                size = Vector3.new(49, 1, 4.5), Skybridge = true,
+            })
+            table.insert(result, {
+                offset = Vector3.new(-28, 12.5, 0),
+                size = Vector3.new(4.5, 1, 49), Skybridge = true,
+            })
+            table.insert(result, {
+                offset = Vector3.new(28, 12.5, 0),
+                size = Vector3.new(4.5, 1, 49), Skybridge = true,
+            })
+            return result
+        end)(),
     },
 
     Orbital = {
