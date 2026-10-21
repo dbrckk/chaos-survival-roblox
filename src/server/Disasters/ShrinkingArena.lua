@@ -93,6 +93,7 @@ function D.start(ctx)
                     or name:match("^ClassicEntryChevron%d+_%-?%d+$")
                     or name:match("^TowerGroundPlate%d+$")
                     or name:match("^TowerGroundCore%d+$")
+                    or name:match("^TowerAscentChevron%d+_%-?%d+$")
                     or name:match("^CrossroadLaneFill%d+$")
                     or name:match("^FluxRouteChevron%d+_%d+_%-?%d+$")
                 if floorArt then
