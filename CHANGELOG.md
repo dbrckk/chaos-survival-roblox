@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-21 — Four-arena balance and truthful round guidance (candidate, not published)
+
+- All **four** arena round briefs now reflect the dynamic mechanic actually started in the server, rather than a generic announcement even when the corresponding extra challenge is disabled. Beginners still see accurate help for their baseline pads, bridges, Flux Relays, and Grid Circuit.
+- Tower Run bridge outages are suppressed during forced-movement disasters (Tornado, JumpShock, LowGravity, SpeedSurge), in addition to existing floor/freeze conflicts. The physical Skyrails remain open and functional.
+- Orbital Pulse and Crossroads Switchyard keep their baseline movement skills while disabling only the *optional charged impulse* in rounds with forced motion, Freeze, Rising Lava and other incompatible interactions. This protects genuine steering skill from uncontrolled disaster velocity, especially on touch devices.
+- Tower bridge collapses and Classic floor waves cannot start in the final seconds unless their entire warning and active phase will finish with two seconds spare. This includes short Solo Rush rounds and avoids hard-to-interpret end-of-round drops.
+- Extended **existing** real Roblox engine arena integration tests to cover conflicting live disaster contexts, accurate replicated hints for enabled/disabled mechanics on all four maps, default mechanic preservation, and Solo Rush event deadlines. No new test suites, client loops, remotes, economy changes or published Roblox game build.
+- **Pending:** exact-head compilation + Roblox Open Cloud engine tests, then Android game-feel and multi-round playtesting before public publication.
+
 ## 2026-10-21 — Classic Grid floor sweep (candidate, not published)
 
 - Classic Grid gains a **distinct nonlethal survival timing challenge**. One of four fixed floor rows glows amber for 2.6 seconds, flashes red for 0.9 seconds, then rests. Rows rotate with the round seed, separated by six-second intervals; the first wave cannot start until six seconds into the round.

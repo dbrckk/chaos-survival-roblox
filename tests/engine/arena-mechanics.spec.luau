@@ -66,6 +66,84 @@ describe("Arena mechanics", function()
         end
     end)
 
+    it("only advertises live arena challenges and avoids forced-motion disaster stacking", function()
+        expect(SkybridgePressure.canComplete({RoundEndsAt = 30}, 23.5)).toBe(true)
+        expect(SkybridgePressure.canComplete({RoundEndsAt = 30}, 24)).toBe(false)
+        expect(ClassicGridSweep.canComplete({RoundEndsAt = 30}, 24)).toBe(true)
+        expect(ClassicGridSweep.canComplete({RoundEndsAt = 30}, 25)).toBe(false)
+        expect(ClassicGridSweep.canComplete({}, 99)).toBe(true)
+        expect(SkybridgePressure.canComplete({}, 99)).toBe(true)
+
+        local forbidden = {
+            {id = "Classic", danger = "Freeze", dynamic = "GridSweep"},
+            {id = "Towers", danger = "Tornado", dynamic = "SkybridgePressure"},
+            {id = "Crossroads", danger = "SpeedSurge", dynamic = "JunctionSwitchyard"},
+            {id = "Orbital", danger = "LowGravity", dynamic = "HelixPulse"},
+        }
+        for _, setting in ipairs(forbidden) do
+            local base = ArenaMechanics.BaselineHints[setting.id]
+            local advanced = ArenaMechanics.get(setting.id).Hint
+            expect(type(base)).toBe("string")
+            expect(#base <= 96 and #base >= 24).toBe(true)
+            expect(base ~= advanced).toBe(true)
+            expect(ArenaMechanics.effectiveHint(setting.id, false)).toBe(base)
+            expect(ArenaMechanics.effectiveHint(setting.id, true)).toBe(advanced)
+
+            -- Directly pass a conflicting round to ensure the individual
+            -- mechanics reject it even if a caller misconfigures flags.
+            local generated = MapBuilder.build(Config, setting.id, ArenaVariants)
+            local ctx = {
+                Active = function() return true end,
+                IsContestantActive = function() return false end,
+                Cleanup = {},
+                OnCleanup = {},
+                Contestants = {},
+                RoundNumber = 4,
+                ActiveDisasters = {[setting.danger] = true},
+                EnableClassicGridSweep = true,
+                EnableSkybridgePressure = true,
+                EnableJunctionSwitchyard = true,
+                EnableOrbitalPulse = true,
+            }
+            local result = ArenaMechanics.start(ctx, setting.id)
+            local arena = generated:FindFirstChild("Arena")
+            local mechanics = arena:FindFirstChild("Mechanics")
+            expect(result.hint).toBe(base)
+            expect(mechanics:GetAttribute("MechanicHint")).toBe(base)
+            expect(mechanics:GetAttribute("DynamicRouteActive")).toBe(false)
+            if setting.id == "Classic" then
+                expect(mechanics:FindFirstChild("GridCircuit") ~= nil).toBe(true)
+                expect(mechanics:FindFirstChild("GridSweep") == nil).toBe(true)
+            elseif setting.id == "Towers" then
+                expect(mechanics:FindFirstChild("SkyrailSlipstream") ~= nil).toBe(true)
+                expect(#ctx.OnCleanup).toBe(0)
+            elseif setting.id == "Crossroads" then
+                expect(mechanics:FindFirstChild("FluxRelays") ~= nil).toBe(true)
+                expect(mechanics:FindFirstChild("JunctionSwitchyard") == nil).toBe(true)
+            else
+                expect(mechanics:FindFirstChild("HelixFlow") ~= nil).toBe(true)
+                expect(ctx.HelixPulseClaims == nil).toBe(true)
+            end
+            generated:Destroy()
+
+            -- No base mechanic is accidentally hidden when an optional
+            -- dynamic skill actually starts in a compatible round.
+            local liveMap = MapBuilder.build(Config, setting.id, ArenaVariants)
+            ctx.ActiveDisasters = {Meteors = true}
+            ctx.OnCleanup = {}
+            ctx.Cleanup = {}
+            local live = ArenaMechanics.start(ctx, setting.id)
+            local liveMechanics = liveMap:FindFirstChild("Arena")
+                :FindFirstChild("Mechanics")
+            expect(live.hint).toBe(advanced)
+            expect(liveMechanics:GetAttribute("MechanicHint")).toBe(advanced)
+            expect(liveMechanics:GetAttribute("DynamicRouteActive")).toBe(true)
+            for _, cleanup in ipairs(ctx.OnCleanup) do cleanup() end
+            liveMap:Destroy()
+        end
+        expect(ArenaMechanics.effectiveHint("Unknown", true) == nil).toBe(true)
+    end)
+
     it("sets bounded compass-arrow detail tiers and consistent clockwise neighbors", function()
         expect(GridCircuitRules.routeChevrons("High")).toBe(3)
         expect(GridCircuitRules.routeChevrons("Medium")).toBe(2)

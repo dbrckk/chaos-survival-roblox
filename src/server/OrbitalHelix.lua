@@ -237,6 +237,29 @@ OrbitalHelix.PulsePairSeconds = 8
 OrbitalHelix.PulseBoost = 7
 OrbitalHelix.PulseSpeedCap = 42
 
+-- Helix ramps are permanently traversable. Only the optional pulse bonus
+-- is suspended in rounds where unrelated physics can force a crossing or
+-- where a shove is hard to control on mobile.
+local PULSE_CONFLICTS = {
+    Tornado = true,
+    JumpShock = true,
+    Freeze = true,
+    LowGravity = true,
+    RisingLava = true,
+    SpeedSurge = true,
+}
+
+function OrbitalHelix.pulseAllowed(ctx)
+    if type(ctx) ~= "table" or ctx.EnableOrbitalPulse ~= true
+        or type(ctx.Active) ~= "function"
+        or type(ctx.OnCleanup) ~= "table"
+    then return false end
+    for name in pairs(ctx.ActiveDisasters or {}) do
+        if PULSE_CONFLICTS[name] then return false end
+    end
+    return true
+end
+
 function OrbitalHelix.pulsePair(roundNumber, cycle)
     local round = math.max(1, math.floor(tonumber(roundNumber) or 1))
     local step = math.max(0, math.floor(tonumber(cycle) or 0))
@@ -372,7 +395,7 @@ function OrbitalHelix.tryFlow(ctx, sensor, hit, ready, now)
     -- the two currently charged lanes. Once per rig/lane per round prevents
     -- standing at a sensor and farming the acceleration or celebration.
     local pulsed = false
-    if ctx.EnableOrbitalPulse == true
+    if OrbitalHelix.pulseAllowed(ctx)
         and sensor:GetAttribute("HelixPulseActive") == true
         and type(ctx.HelixPulseClaims) == "table"
     then
@@ -461,9 +484,7 @@ function OrbitalHelix.startFlow(ctx, mechanics, arena)
         end
     end
 
-    if ctx.EnableOrbitalPulse == true
-        and type(ctx.OnCleanup) == "table"
-        and type(ctx.Active) == "function"
+    if OrbitalHelix.pulseAllowed(ctx)
         and #laneRamps == OrbitalHelix.Count
     then
         ctx.HelixPulseClaims = setmetatable({}, {__mode = "k"})

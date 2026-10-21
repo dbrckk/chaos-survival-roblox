@@ -1047,6 +1047,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local ctx = {
         Config = Config,
         RoundSeconds = roundSettings.RoundSeconds,
+        -- Explicit monotonic deadline; late hazard telegraphs must have
+        -- enough time to complete and restore before the round ends.
+        RoundEndsAt = roundStartedAt + roundSettings.RoundSeconds,
         RoundNumber = roundNumber,
         ActiveDisasters = activeHazards,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
@@ -1054,11 +1057,22 @@ local function runDisasterSet(selected, contestants, roundSettings)
         EnableClassicGridSweep = currentArenaVariant == "Classic"
             and #selected == 1 and allowDynamicArenas,
         EnableOrbitalPulse = currentArenaVariant == "Orbital"
-            and #selected == 1 and allowDynamicArenas,
+            and #selected == 1 and allowDynamicArenas
+            and not activeHazards.Tornado
+            and not activeHazards.JumpShock
+            and not activeHazards.Freeze
+            and not activeHazards.LowGravity
+            and not activeHazards.RisingLava
+            and not activeHazards.SpeedSurge,
         EnableJunctionSwitchyard = currentArenaVariant == "Crossroads"
             and #selected == 1 and allowDynamicArenas
             and not activeHazards.RisingLava
-            and not activeHazards.ShrinkingArena,
+            and not activeHazards.ShrinkingArena
+            and not activeHazards.Freeze
+            and not activeHazards.Tornado
+            and not activeHazards.JumpShock
+            and not activeHazards.LowGravity
+            and not activeHazards.SpeedSurge,
         Cleanup = cleanup,
         OnCleanup = onCleanup,
         Active = function() return roundActive end,

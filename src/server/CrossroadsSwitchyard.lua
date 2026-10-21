@@ -14,6 +14,29 @@ CrossroadsSwitchyard.Cooldown = 4
 CrossroadsSwitchyard.Offset = 13
 CrossroadsSwitchyard.SideImpulse = 20
 
+-- A forced spin, freeze or arena deformation makes a lateral cut look
+-- deliberate when it is not. Keep Flux Relays and all normal paths active.
+local CONFLICTS = {
+    RisingLava = true,
+    ShrinkingArena = true,
+    Freeze = true,
+    Tornado = true,
+    JumpShock = true,
+    LowGravity = true,
+    SpeedSurge = true,
+}
+
+function CrossroadsSwitchyard.allowed(ctx)
+    if type(ctx) ~= "table" or ctx.EnableJunctionSwitchyard ~= true
+        or type(ctx.Active) ~= "function"
+        or type(ctx.OnCleanup) ~= "table"
+    then return false end
+    for name in pairs(ctx.ActiveDisasters or {}) do
+        if CONFLICTS[name] then return false end
+    end
+    return true
+end
+
 local OFFSETS = {
     Vector3.new(1, 0, 0),
     Vector3.new(0, 0, 1),
@@ -143,9 +166,7 @@ local function signal(parent, name, pad, size, localOffset, color)
 end
 
 function CrossroadsSwitchyard.start(ctx, mechanics, center)
-    if not ctx or ctx.EnableJunctionSwitchyard ~= true
-        or type(ctx.Active) ~= "function"
-        or type(ctx.OnCleanup) ~= "table"
+    if not CrossroadsSwitchyard.allowed(ctx)
         or not mechanics or typeof(center) ~= "Vector3"
     then return nil end
 

@@ -25,6 +25,14 @@ local CONFLICTS = {
     LowGravity = true,
 }
 
+-- An event must finish both its warning and physical effect with a safe
+-- two-second transition buffer, including in 30-second Solo Rush rounds.
+function ClassicGridSweep.canComplete(ctx, now)
+    local deadline = tonumber(ctx and ctx.RoundEndsAt)
+    if not deadline then return true end
+    return (tonumber(now) or 0) + ClassicGridSweep.WarningSeconds + ClassicGridSweep.PulseSeconds + 2 <= deadline
+end
+
 function ClassicGridSweep.allowed(ctx)
     if type(ctx) ~= "table" or ctx.EnableClassicGridSweep ~= true
         or type(ctx.Active) ~= "function"
@@ -161,6 +169,9 @@ function ClassicGridSweep.start(ctx, arena)
         task.wait(ClassicGridSweep.InitialDelay)
         local event = 0
         while active and ctx.Active() and folder.Parent and arena.Parent do
+            -- Never start an unavoidable late-round event which cannot
+            -- finish and restore before the end-of-round transition.
+            if not ClassicGridSweep.canComplete(ctx, os.clock()) then break end
             local index = ClassicGridSweep.indexFor(ctx.RoundNumber, event)
             current = bands[index]
             if not current or not current.Parent then break end

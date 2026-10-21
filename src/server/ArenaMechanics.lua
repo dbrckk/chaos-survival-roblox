@@ -81,6 +81,23 @@ ArenaMechanics.Definitions = {
     },
 }
 
+-- Optional dynamic challenges are deliberately disabled in early or
+-- incompatible rounds. Never teach a newcomer to search for a nonexistent
+-- collapsing bridge, gold impulse lane or floor shockwave.
+ArenaMechanics.BaselineHints = {
+    Classic = "Blue escape pads launch outward; four Grid Circuit nodes lead clockwise",
+    Towers = "Cyan updrafts lift you; Skyrails boost speed on solid tower bridges",
+    Crossroads = "Pink pads launch outward; timed cyan Flux Relays return you toward hub",
+    Orbital = "Green boosters circle the ring; inward Helix crossings build skill chains",
+}
+
+function ArenaMechanics.effectiveHint(variantId, dynamicStarted)
+    local definition = ArenaMechanics.Definitions[variantId]
+    if not definition then return nil end
+    if dynamicStarted == true then return definition.Hint end
+    return ArenaMechanics.BaselineHints[variantId] or definition.Hint
+end
+
 local function createPad(folder, center, definition, index)
     local padDefinition = definition.Pads[index]
     local pad = Instance.new("Part")
@@ -191,7 +208,7 @@ function ArenaMechanics.start(ctx, variantId)
     local folder = Instance.new("Folder")
     folder.Name = "Mechanics"
     folder:SetAttribute("MechanicName", definition.Name)
-    folder:SetAttribute("MechanicHint", definition.Hint)
+    folder:SetAttribute("MechanicHint", ArenaMechanics.effectiveHint(variantId, false))
     folder.Parent = arena
     table.insert(ctx.Cleanup, folder)
 
@@ -231,31 +248,33 @@ function ArenaMechanics.start(ctx, variantId)
         end)
     end
 
+    local dynamicStarted = false
     if variantId == "Classic" then
-        -- Optional non-pay-to-win navigation skill inside the stable base.
+        -- The four-station skill course and blue pads remain available even
+        -- in a beginner-friendly round with no floor waves.
         GridCircuitService.start(ctx, folder, base.Position)
-        ClassicGridSweep.start(ctx, arena)
+        dynamicStarted = ClassicGridSweep.start(ctx, arena) ~= nil
     elseif variantId == "Towers" then
-        -- Active elevated movement route that does not alter bridge physics.
         SkyrailSlipstream.start(ctx, folder, arena)
-        -- Mature rounds gain one highly telegraphed, temporary bridge
-        -- outage. New-player and conflicting-hazard rounds stay unchanged.
-        SkybridgePressure.start(ctx, arena)
+        dynamicStarted = SkybridgePressure.start(ctx, arena) == true
     elseif variantId == "Crossroads" then
-        -- Secondary timed traversal loop, sharing the mechanics lifecycle and
-        -- round cleanup. Unlike pads, only the charged alternating lane pair
-        -- relays the runner inward.
         CrossroadsFluxRelay.start(ctx, folder, base.Position)
-        CrossroadsSwitchyard.start(ctx, folder, base.Position)
+        dynamicStarted = CrossroadsSwitchyard.start(
+            ctx, folder, base.Position
+        ) ~= nil
     elseif variantId == "Orbital" then
-        -- Reward intentional skill-route traversal as a style mechanic.
-        -- Invisible checkpoints travel with their ramp during shrink.
+        -- Skill chains always work; only the charged movement bonuses are
+        -- disabled by rookie and externally forced movement safeguards.
         OrbitalHelix.startFlow(ctx, folder, arena)
+        dynamicStarted = type(ctx.HelixPulseClaims) == "table"
     end
 
+    local hint = ArenaMechanics.effectiveHint(variantId, dynamicStarted)
+    folder:SetAttribute("MechanicHint", hint)
+    folder:SetAttribute("DynamicRouteActive", dynamicStarted)
     return {
         name = definition.Name,
-        hint = definition.Hint,
+        hint = hint,
     }
 end
 
