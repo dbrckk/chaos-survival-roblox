@@ -372,7 +372,7 @@ local function refresh()
     local played = FirstTimeExperience.effectiveGames(
         player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
     )
-    local rookieRound = FirstTimeExperience.isRookie(played)
+    local rookieRound = FirstTimeExperience.isGuidedPhase(played, state.phase)
     setRookieCompactMode(rookieRound and count <= 0)
     local challengeId = state.challengeId
     local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
@@ -511,6 +511,8 @@ end
 
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
+player:GetAttributeChangedSignal("Games"):Connect(refresh)
+player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 
 player:GetAttributeChangedSignal("RoundNearMisses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundMechanicUses"):Connect(refresh)
