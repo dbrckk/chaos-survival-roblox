@@ -1820,8 +1820,15 @@ while true do
         and type(roundChallenge.Id) == "string",
         "Round settlement missing the played challenge")
 
-    local survivors = 0
-    local survivorUserIds = {}
+    -- Freeze the actual result BEFORE any reward or progression handler.
+    -- One player's corrupt data or failed analytics must never remove that
+    -- survivor from the winning roster or falsely reduce the public count.
+    local participantUserIds, survivorUserIds, survivedById =
+        RoundSettlement.snapshot(
+            contestants, eliminated,
+            function(player) return player.Parent == Players end, alive
+        )
+    local survivors = #survivorUserIds
     local aiSurvivorsAtFinish = AISurvivorService.aliveRoundCount()
     local feedbackDisasterName = selectedSet[1].Name
     if #selectedSet > 1 then
@@ -1835,7 +1842,7 @@ while true do
     -- partial mutations here: replaying could double-award Coins or Wins.
     RoundSettlement.eachPlayer(contestants, function(p)
         if p.Parent == Players then
-            local survived = eliminated[p.UserId] ~= true and alive(p)
+            local survived = survivedById[p.UserId] == true
             local survivalStreak, bestSessionStreak = SessionStreak.update(
                 p:GetAttribute("SessionSurvivalStreak"),
                 p:GetAttribute("BestSessionSurvivalStreak"),
@@ -1857,8 +1864,6 @@ while true do
             end
 
             if survived then
-                survivors += 1
-                table.insert(survivorUserIds, p.UserId)
                 PlayerData.add(p, "Coins", winCoins + streakBonusCoins + fusionBonusCoins)
                 PlayerData.add(p, "XP", winXP)
                 PlayerData.add(p, "Wins", 1)
@@ -2057,6 +2062,25 @@ while true do
         end
     end, function(p, err)
         warn("Round settlement player failure:", p and p.UserId, err)
+        -- A partial payment must NEVER be retried automatically: doing so
+        -- could duplicate earlier Coins/Wins. But the player should still
+        -- receive an honest win/loss result rather than an endless
+        -- "rewards syncing" placeholder.
+        if p and p.Parent == Players then
+            pcall(function()
+                roundFeedbackEvent:FireClient(p, {
+                    roundNumber = roundNumber,
+                    survived = survivedById[p.UserId] == true,
+                    rewardsUnavailable = true,
+                    arenaId = currentArenaVariant,
+                    arenaName = roundSettings.ArenaName,
+                    disasterIds = readyDisasterIds,
+                    doubleChaos = #selectedSet > 1,
+                    fusionName = fusionName,
+                    soloMode = roundSettings.Solo,
+                })
+            end)
+        end
     end)
 
     -- One AI aggregate per server round: attribute to a single connected
@@ -2097,6 +2121,7 @@ while true do
         survivorsAlive = displayedSurvivors,
         contestantCount = #contestants + AISurvivorService.roundRosterCount(),
         survivorUserIds = survivorUserIds,
+        participantUserIds = participantUserIds,
     })
 
     for t = roundSettings.PostRoundSeconds, 1, -1 do
@@ -2115,6 +2140,7 @@ while true do
             survivorsAlive = displayedSurvivors,
             contestantCount = #contestants + AISurvivorService.roundRosterCount(),
             survivorUserIds = survivorUserIds,
+            participantUserIds = participantUserIds,
         })
         task.wait(1)
     end
