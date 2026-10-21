@@ -238,6 +238,83 @@ function GameAnalytics.roundCompleted(player, survived, solo, disasterId, double
     end
 end
 
+-- One lightweight ArenaSurvived and one ArenaTimeAliveSeconds sample per
+-- human at round completion. Existing ArenaMechanicUsed samples provide the
+-- interaction counts; no per-tick or per-hazard telemetry is introduced.
+-- Restrict the field values to known, stable dimensions to preserve Roblox's
+-- cross-experience custom-field cardinality budget.
+local KNOWN_ARENAS = {
+    Classic = true, Towers = true, Crossroads = true, Orbital = true,
+}
+
+local function finiteNonnegative(value, maxValue)
+    local number = tonumber(value)
+    if not number or number ~= number
+        or number == math.huge or number == -math.huge
+    then return 0 end
+    return math.clamp(number, 0, maxValue)
+end
+
+function GameAnalytics.arenaRoundFields(arenaId, solo, primaryId, doubleChaos, dynamicActive)
+    local arena = KNOWN_ARENAS[arenaId] and arenaId or "Unknown"
+    local primary = tostring(primaryId or "Unknown")
+    -- No free-form values from clients and no growing round number fields.
+    if not primary:match("^[%w_]+$") or #primary > 25 then
+        primary = "Unknown"
+    end
+    return "Arena:" .. arena,
+        "Mode:" .. GameAnalytics.modeLabel(solo),
+        "Primary:" .. primary
+            .. "|Fusion:" .. (doubleChaos == true and "Yes" or "No")
+            .. "|Extra:" .. (dynamicActive == true and "Yes" or "No")
+end
+
+function GameAnalytics.arenaRoundMetrics(player, metrics)
+    if not player or type(metrics) ~= "table" then return false end
+    local arena, mode, context = GameAnalytics.arenaRoundFields(
+        metrics.arenaId, metrics.solo, metrics.primaryId,
+        metrics.doubleChaos, metrics.dynamicActive
+    )
+    local survived = metrics.survived == true
+    local aliveSeconds = finiteNonnegative(metrics.aliveSeconds, 120)
+    local resultLogged = GameAnalytics.custom(
+        player, "ArenaSurvived", survived and 1 or 0,
+        arena, mode, context
+    )
+    local durationLogged = GameAnalytics.custom(
+        player, "ArenaTimeAliveSeconds", aliveSeconds,
+        arena, mode, context
+    )
+    return resultLogged and durationLogged
+end
+
+-- This is ONE server-round aggregate, attributed to the first present
+-- human solely because Roblox custom events require a Player. It must not
+-- be interpreted as that particular human's bot performance or win rate.
+function GameAnalytics.botSurvivalFraction(started, survived)
+    local initial = math.floor(finiteNonnegative(started, 20))
+    if initial <= 0 then return nil end
+    return math.clamp(finiteNonnegative(survived, 20) / initial, 0, 1)
+end
+
+function GameAnalytics.arenaBotMetrics(anchorPlayer, metrics)
+    if not anchorPlayer or type(metrics) ~= "table" then return false end
+    local fraction = GameAnalytics.botSurvivalFraction(
+        metrics.botsStarted, metrics.botsSurvived
+    )
+    if fraction == nil then return false end
+    local arena = KNOWN_ARENAS[metrics.arenaId]
+        and metrics.arenaId or "Unknown"
+    local roster = math.floor(finiteNonnegative(metrics.botsStarted, 20))
+    return GameAnalytics.custom(
+        anchorPlayer, "ArenaBotSurvivalFraction", fraction,
+        "Arena:" .. arena,
+        "Mode:" .. GameAnalytics.modeLabel(metrics.solo),
+        "Bots:" .. tostring(roster)
+            .. "|Early:" .. (metrics.endedEarly == true and "Yes" or "No")
+    )
+end
+
 function GameAnalytics.vote(player, disasterId, solo)
     markFirstSessionMilestone(
         player, "firstVoteAt", "TimeToFirstVoteSeconds", solo
