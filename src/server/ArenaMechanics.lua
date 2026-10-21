@@ -63,13 +63,15 @@ ArenaMechanics.Definitions = {
     },
     Orbital = {
         Name = "ORBIT BOOSTERS",
-        Hint = "Green boosters circle the ring; golden Helix ramps offer timed inward pulses",
+        Hint = "Use outer access ramps, cross a Helix, then climb the glowing reactor spokes",
         Color = Color3.fromRGB(65, 255, 205),
         Pads = (function()
             local result = {}
             for index = 0, 7 do
-                local angle = math.rad(index * 45)
-                local radius = 31
+                -- Pads stay at floor height, between access ramps and elevated
+                -- decks, so they cannot be buried by a collision roof.
+                local angle = math.rad(index * 45 + 22.5)
+                local radius = 34
                 local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
                 table.insert(result, {
                     offset = Vector3.new(math.cos(angle) * radius, 1.7, math.sin(angle) * radius),
@@ -88,7 +90,7 @@ ArenaMechanics.BaselineHints = {
     Classic = "Blue escape pads launch outward; four Grid Circuit nodes lead clockwise",
     Towers = "Climb from the hub through low-to-high decks; cyan updrafts assist when safe",
     Crossroads = "Reach the hub, then climb an outer lane and its elevated side branch",
-    Orbital = "Green boosters circle the ring; inward Helix crossings build skill chains",
+    Orbital = "Follow a floor-level green booster to an outer ramp and cross a Helix",
 }
 
 function ArenaMechanics.effectiveHint(variantId, dynamicStarted)
