@@ -161,6 +161,108 @@ describe("Arena variants", function()
         end
     end)
 
+    it("keeps all four Tower Run ascent circuits reachable and R15 clear", function()
+        local towers = ArenaVariants.get("Towers")
+        expect(#towers.Platforms).toBe(21)
+        local hub = towers.Platforms[13]
+        expect(hub.RouteTier).toBe(1)
+        expect(hub.offset.Y + hub.size.Y * 0.5).toBe(5)
+
+        local function boundsGap(a, b)
+            local dx = math.max(0, math.abs(a.offset.X - b.offset.X)
+                - (a.size.X + b.size.X) * 0.5)
+            local dz = math.max(0, math.abs(a.offset.Z - b.offset.Z)
+                - (a.size.Z + b.size.Z) * 0.5)
+            return math.sqrt(dx * dx + dz * dz)
+        end
+        local function reachable(from, target)
+            local ascent = target.offset.Y + target.size.Y * 0.5
+                - from.offset.Y - from.size.Y * 0.5
+            return ascent >= 0 and ascent <= 4.05
+                and boundsGap(from, target) <= 3.7
+        end
+
+        local routes = {}
+        for quadrant = 1, 4 do
+            local start = towers.Platforms[(quadrant - 1) * 3 + 1]
+            local terminal = towers.Platforms[(quadrant - 1) * 3 + 2]
+            local transfer = towers.Platforms[(quadrant - 1) * 3 + 3]
+            local lookout = towers.Platforms[13 + quadrant]
+            expect(start.RouteTier).toBe(1)
+            expect(transfer.RouteTier).toBe(2)
+            expect(terminal.RouteTier).toBe(3)
+            expect(lookout.RouteTier).toBe(4)
+            expect(reachable(hub, start)).toBe(true)
+            expect(reachable(start, transfer)).toBe(true)
+            expect(reachable(transfer, terminal)).toBe(true)
+            expect(reachable(terminal, lookout)).toBe(true)
+            routes[#routes + 1] = {start, transfer, terminal, lookout}
+
+            -- All floor-entry and outer lookout decks are inside the real
+            -- playable base, not hovering beyond the fall boundary.
+            for _, deck in ipairs(routes[#routes]) do
+                expect(math.abs(deck.offset.X) + deck.size.X * 0.5 <= 43)
+                    .toBe(true)
+                expect(math.abs(deck.offset.Z) + deck.size.Z * 0.5 <= 43)
+                    .toBe(true)
+            end
+        end
+
+        -- No lower deck may have a solid roof immediately above it.
+        -- The old stacked towers had 3-4 studs of avatar headroom.
+        for i, deck in ipairs(towers.Platforms) do
+            if deck.Skybridge ~= true then
+                for j = i + 1, 17 do
+                    local other = towers.Platforms[j]
+                    if other and other.offset.Y ~= deck.offset.Y then
+                        local separateX = math.abs(deck.offset.X - other.offset.X)
+                            >= (deck.size.X + other.size.X) * 0.5
+                        local separateZ = math.abs(deck.offset.Z - other.offset.Z)
+                            >= (deck.size.Z + other.size.Z) * 0.5
+                        expect(separateX or separateZ).toBe(true)
+                    end
+                end
+            end
+        end
+
+        -- Eight existing spawn slots must keep R15-safe headroom below
+        -- elevated destination decks, without client-side teleports.
+        for _, spawn in ipairs(towers.SpawnOffsets) do
+            for _, deck in ipairs(towers.Platforms) do
+                if deck.Skybridge ~= true then
+                    local overhead = math.abs(spawn.X - deck.offset.X)
+                        < deck.size.X * 0.5 + 2.8
+                        and math.abs(spawn.Z - deck.offset.Z)
+                        < deck.size.Z * 0.5 + 2.8
+                    if overhead then
+                        local clearance = deck.offset.Y - deck.size.Y * 0.5
+                            - towers.BaseSize.Y * 0.5
+                        expect(clearance >= 8.4).toBe(true)
+                    end
+                end
+            end
+        end
+
+        -- Preserve bridge identities, world height, and both end landings.
+        for index = 18, 21 do
+            local link = towers.Platforms[index]
+            expect(link.Skybridge).toBe(true)
+            expect(link.offset.Y + link.size.Y * 0.5).toBe(13)
+            local endpoints = 0
+            for _, route in ipairs(routes) do
+                local terminal = route[3]
+                local dx = math.abs(terminal.offset.X - link.offset.X)
+                local dz = math.abs(terminal.offset.Z - link.offset.Z)
+                if dx <= (terminal.size.X + link.size.X) * 0.5
+                    and dz <= (terminal.size.Z + link.size.Z) * 0.5
+                then
+                    endpoints += 1
+                end
+            end
+            expect(endpoints).toBe(2)
+        end
+    end)
+
     it("derives hazard targeting bounds from arena footprints", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
