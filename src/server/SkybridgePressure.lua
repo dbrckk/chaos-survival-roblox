@@ -16,6 +16,12 @@ local CONFLICTS = {
     ShrinkingArena = true,
     RisingLava = true,
     Freeze = true,
+    -- Forced lateral/vertical motion can strand a player after an otherwise
+    -- fair warning. These disaster-only rounds keep all bridges available.
+    Tornado = true,
+    JumpShock = true,
+    LowGravity = true,
+    SpeedSurge = true,
 }
 
 function SkybridgePressure.allowed(ctx)
