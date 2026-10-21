@@ -1,6 +1,9 @@
 -- Eight inclined, physically traversable routes between the outer and
 -- inner rings of Orbital. No moving collision or per-frame server physics.
 local Players = game:GetService("Players")
+local movementModule = script and script.Parent:FindFirstChild("MovementSafety")
+local MovementSafety = if movementModule
+    then require(movementModule) else require("./MovementSafety")
 local OrbitalHelix = {}
 
 OrbitalHelix.Count = 8
@@ -228,6 +231,37 @@ OrbitalHelix.FlowCooldown = 4.2
 OrbitalHelix.ChainWindow = 18
 OrbitalHelix.ChainCap = 3
 
+-- Orbital Pulse: two opposing ramps charge at once, changing every eight
+-- seconds. All eight solid ramps stay walkable, even when not charged.
+OrbitalHelix.PulsePairSeconds = 8
+OrbitalHelix.PulseBoost = 7
+OrbitalHelix.PulseSpeedCap = 42
+
+function OrbitalHelix.pulsePair(roundNumber, cycle)
+    local round = math.max(1, math.floor(tonumber(roundNumber) or 1))
+    local step = math.max(0, math.floor(tonumber(cycle) or 0))
+    return ((round - 1 + step) % 4) + 1
+end
+
+function OrbitalHelix.pulseActive(lane, pair)
+    local id = tonumber(lane)
+    local selected = tonumber(pair)
+    return id ~= nil and selected ~= nil
+        and id % 1 == 0 and selected % 1 == 0
+        and selected >= 1 and selected <= 4
+        and (id == selected or id == selected + 4)
+end
+
+function OrbitalHelix.pulseVelocity(velocity, inward)
+    if typeof(inward) ~= "Vector3" then return velocity end
+    local flat = Vector3.new(inward.X, 0, inward.Z)
+    if flat.Magnitude <= 0.01 then return velocity end
+    return MovementSafety.addImpulse(
+        velocity, flat.Unit * OrbitalHelix.PulseBoost,
+        OrbitalHelix.PulseSpeedCap, -52, 58
+    )
+end
+
 -- A new lane inside the time window advances a skill chain, while
 -- revisiting the same ramp cannot farm consecutive mastery ranks.
 -- State is held only for a round by startFlow and keyed weakly by rig.
@@ -334,9 +368,32 @@ function OrbitalHelix.tryFlow(ctx, sensor, hit, ready, now)
         chainState[rig] = newChain
     end
 
+    -- Pulse boosts are earned by an intentional inward crossing, only on
+    -- the two currently charged lanes. Once per rig/lane per round prevents
+    -- standing at a sensor and farming the acceleration or celebration.
+    local pulsed = false
+    if ctx.EnableOrbitalPulse == true
+        and sensor:GetAttribute("HelixPulseActive") == true
+        and type(ctx.HelixPulseClaims) == "table"
+    then
+        local claimed = ctx.HelixPulseClaims[rig]
+        if not claimed or not claimed[lane] then
+            if not claimed then
+                claimed = {}
+                ctx.HelixPulseClaims[rig] = claimed
+            end
+            claimed[lane] = true
+            root.AssemblyLinearVelocity = OrbitalHelix.pulseVelocity(
+                root.AssemblyLinearVelocity, sensor.CFrame.LookVector
+            )
+            pulsed = true
+        end
+    end
+
     -- The server owns the rank; replicated attributes drive the exact same
     -- celebration for nearby spectators and bots.
     sensor:SetAttribute("HelixFlowTier", newChain.tier)
+    sensor:SetAttribute("HelixPulseAward", pulsed)
     sensor:SetAttribute("HelixFlowAt", workspace:GetServerTimeNow())
     if player then
         player:SetAttribute("RoundHelixFlowChain", newChain.tier)
@@ -344,10 +401,12 @@ function OrbitalHelix.tryFlow(ctx, sensor, hit, ready, now)
             tonumber(player:GetAttribute("RoundHelixFlowBest")) or 0,
             newChain.tier
         ))
-        if ctx.OnArenaMechanicUsed and advanced then
-            local title = newChain.tier == 3 and "ORBIT MASTER"
-                or (newChain.tier == 2 and "HELIX CHAIN x2"
-                    or "HELIX FLOW")
+        if ctx.OnArenaMechanicUsed and (advanced or pulsed) then
+            local title = (newChain.tier == 3 and advanced)
+                and "ORBIT MASTER"
+                or (pulsed and "ORBIT PULSE"
+                    or (newChain.tier == 2 and "HELIX CHAIN x2"
+                        or "HELIX FLOW"))
             pcall(ctx.OnArenaMechanicUsed, player, "Orbital", title, false)
         end
     end
@@ -362,6 +421,8 @@ function OrbitalHelix.startFlow(ctx, mechanics, arena)
     folder.Parent = mechanics
     local ready = setmetatable({}, {__mode = "k"})
     ctx.HelixChains = setmetatable({}, {__mode = "k"})
+    local laneRamps = {}
+    local laneSensors = {}
 
     for _, ramp in ipairs(circuit:GetChildren()) do
         if ramp:IsA("BasePart")
@@ -382,8 +443,13 @@ function OrbitalHelix.startFlow(ctx, mechanics, arena)
             trigger.CastShadow = false
             trigger.Size = Vector3.new(ramp.Size.X + 1, 4.2, 2.6)
             trigger.CFrame = ramp.CFrame * CFrame.new(0, 2.1, 0)
-            trigger:SetAttribute("HelixLane", ramp:GetAttribute("HelixLane"))
+            local lane = ramp:GetAttribute("HelixLane")
+            trigger:SetAttribute("HelixLane", lane)
             trigger.Parent = folder
+            if type(lane) == "number" then
+                laneRamps[lane] = ramp
+                laneSensors[lane] = trigger
+            end
             local weld = Instance.new("WeldConstraint")
             weld.Name = "HelixFlowFollowRamp"
             weld.Part0 = ramp
@@ -394,6 +460,85 @@ function OrbitalHelix.startFlow(ctx, mechanics, arena)
             end)
         end
     end
+
+    if ctx.EnableOrbitalPulse == true
+        and type(ctx.OnCleanup) == "table"
+        and type(ctx.Active) == "function"
+        and #laneRamps == OrbitalHelix.Count
+    then
+        ctx.HelixPulseClaims = setmetatable({}, {__mode = "k"})
+        local originalSignals = {}
+        for _, part in ipairs(circuit:GetChildren()) do
+            if part:IsA("BasePart")
+                and type(part:GetAttribute("HelixLane")) == "number"
+                and (part.Name:match("^HelixEdgeSignal")
+                    or part.Name:match("^HelixCenterGrain"))
+            then
+                originalSignals[#originalSignals + 1] = {
+                    part = part,
+                    lane = part:GetAttribute("HelixLane"),
+                    color = part.Color,
+                    transparency = part.Transparency,
+                }
+            end
+        end
+
+        local alive = true
+        local cycle = 0
+        local gold = Color3.fromRGB(255, 205, 95)
+        local function paint(pair)
+            for lane = 1, OrbitalHelix.Count do
+                local charged = OrbitalHelix.pulseActive(lane, pair)
+                local ramp, sensor = laneRamps[lane], laneSensors[lane]
+                if ramp and ramp.Parent then
+                    ramp:SetAttribute("HelixPulseActive", charged)
+                end
+                if sensor and sensor.Parent then
+                    sensor:SetAttribute("HelixPulseActive", charged)
+                end
+            end
+            -- The original server-authored rail signals remain visible on
+            -- Low-tier Android; no extra geometry, light or render loop.
+            for _, entry in ipairs(originalSignals) do
+                if entry.part.Parent then
+                    local charged = OrbitalHelix.pulseActive(entry.lane, pair)
+                    entry.part.Color = charged and gold or entry.color
+                    entry.part.Transparency = charged
+                        and math.min(entry.transparency, 0.08)
+                        or entry.transparency
+                end
+            end
+        end
+
+        paint(OrbitalHelix.pulsePair(ctx.RoundNumber, cycle))
+        ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
+            alive = false
+            for lane = 1, OrbitalHelix.Count do
+                if laneRamps[lane] and laneRamps[lane].Parent then
+                    laneRamps[lane]:SetAttribute("HelixPulseActive", nil)
+                end
+                if laneSensors[lane] and laneSensors[lane].Parent then
+                    laneSensors[lane]:SetAttribute("HelixPulseActive", nil)
+                end
+            end
+            for _, entry in ipairs(originalSignals) do
+                if entry.part.Parent then
+                    entry.part.Color = entry.color
+                    entry.part.Transparency = entry.transparency
+                end
+            end
+        end
+        task.spawn(function()
+            while alive and ctx.Active() and circuit.Parent and folder.Parent do
+                task.wait(OrbitalHelix.PulsePairSeconds)
+                if not alive or not ctx.Active()
+                    or not circuit.Parent or not folder.Parent then break end
+                cycle += 1
+                paint(OrbitalHelix.pulsePair(ctx.RoundNumber, cycle))
+            end
+        end)
+    end
+
     return folder
 end
 

@@ -55,7 +55,7 @@ ArenaMechanics.Definitions = {
     },
     Orbital = {
         Name = "ORBIT BOOSTERS",
-        Hint = "Green pads push you around the ring to keep circular routes flowing",
+        Hint = "Green boosters circle the ring; golden Helix ramps offer timed inward pulses",
         Color = Color3.fromRGB(65, 255, 205),
         Pads = (function()
             local result = {}
