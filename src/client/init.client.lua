@@ -2472,9 +2472,19 @@ local function showVotes(options)
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     local voteClass = UIResponsive.classify(viewport, touchDevice)
     local compactVote = touchDevice and voteClass.tinyHeight
+    -- During the first three ballots, three card numbers plus vote counts
+    -- look like mandatory objectives. Prefer one visible "CHOOSE" action.
+    local gamesPlayed = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    local beginnerVote = FirstTimeExperience.isRookie(gamesPlayed)
     local nextKey = FirstTimeExperience.voteRenderKey(
         options, selectedVote, compactVote
     )
+    if nextKey then
+        -- Invalidate cached card visuals when the rookie threshold changes.
+        nextKey ..= beginnerVote and "|beginner" or "|normal"
+    end
     local actionable = nextKey ~= nil
 
     -- The countdown changes every second, but recreating every Frame,
@@ -2549,6 +2559,7 @@ local function showVotes(options)
         indexBadge.TextColor3 = UITheme.Colors.Text
         indexBadge.TextScaled = true
         indexBadge.Parent = button
+        indexBadge.Visible = not beginnerVote
         UITheme.addTextConstraint(indexBadge, 12, 20)
         UITheme.addCorner(indexBadge, UITheme.Corners.Pill)
 
@@ -2583,6 +2594,7 @@ local function showVotes(options)
         statusBadge.TextColor3 = selected and UITheme.Colors.Panel or UITheme.Colors.Text
         statusBadge.TextScaled = true
         statusBadge.Parent = button
+        statusBadge.Visible = not beginnerVote or selected
         UITheme.addTextConstraint(statusBadge, compactVote and 10 or 11, 18)
         UITheme.addCorner(statusBadge, UITheme.Corners.Pill)
 
@@ -2628,7 +2640,7 @@ local function showVotes(options)
         local action = CoreLocalization.hazardAction(localeId, option.id)
         local localizedHint = CoreLocalization.hazardHint(localeId, option.id)
             or tostring(option.hint or "")
-        if compactVote and action then
+        if (compactVote or beginnerVote) and action then
             hintLabel.Text = action
         else
             hintLabel.Text = action and (action .. "  •  " .. localizedHint) or localizedHint
@@ -2653,6 +2665,7 @@ local function showVotes(options)
         votePill.Font = Enum.Font.GothamBold
         votePill.Text = selected
             and CoreLocalization.text(localeId, "VOTE_SAVED")
+            or (beginnerVote and CoreLocalization.text(localeId, "FIRST_TAP_TO_VOTE"))
             or CoreLocalization.text(
                 localeId,
                 optionVotes == 1 and "VOTE_ONE" or "VOTE_MANY",
@@ -2710,11 +2723,13 @@ local pendingDailyRewards = {}
 local pendingGenericMetaNotifications = {}
 
 shouldDeferMetaNotification = function()
-    return not AttentionBudgetRules.canShowMetaNotification(
-        currentHudPhase,
-        currentHudVoteOptions,
-        player:GetAttribute("Games")
+    local played = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
     )
+    return FirstTimeExperience.isGuidedPhase(played, currentHudPhase)
+        or not AttentionBudgetRules.canShowMetaNotification(
+            currentHudPhase, currentHudVoteOptions, played
+        )
 end
 
 local function showQuestCompletion(quest)
@@ -2860,11 +2875,8 @@ local function hideMetaNotifications()
 end
 
 local function showOnePendingMetaNotification()
-    if not AttentionBudgetRules.canShowMetaNotification(
-        currentHudPhase,
-        currentHudVoteOptions,
-        player:GetAttribute("Games")
-    )
+    -- A queued reward is not urgent enough to interrupt the learning loop.
+    if shouldDeferMetaNotification()
         or metaNotificationShownThisIntermission
     then
         return
@@ -3097,8 +3109,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     -- move, then survive. The rewards/shop/collections dock can wait until
     -- they have actually completed three rounds. This is client UI only;
     -- server-side rewards and persistence continue uninterrupted.
-    metaControlsSuppressed = FirstTimeExperience.isRookie(gamesPlayed)
-        or AttentionBudgetRules.suppressMetaControls(
+    metaControlsSuppressed = FirstTimeExperience.isGuidedPhase(
+        gamesPlayed, currentHudPhase
+    ) or AttentionBudgetRules.suppressMetaControls(
             state.phase,
             state.voteOptions,
             gamesPlayed
@@ -3123,11 +3136,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         closeAllPanels()
     end
 
-    if not AttentionBudgetRules.canShowMetaNotification(
-        currentHudPhase,
-        currentHudVoteOptions,
-        gamesPlayed
-    ) then
+    if shouldDeferMetaNotification() then
         hideMetaNotifications()
     end
 
@@ -3184,7 +3193,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     -- survival, precisely when a newcomer needed it most. Show one simple
     -- phase instruction at a time for the first three rounds.
     local coachKey = nil
-    if FirstTimeExperience.isRookie(gamesPlayed) then
+    if FirstTimeExperience.isGuidedPhase(gamesPlayed, currentHudPhase) then
         if currentHudPhase == "intermission" and votingOpen then
             coachKey = "FIRST_VOTE"
         elseif currentHudPhase == "waiting" or currentHudPhase == "intermission" then
