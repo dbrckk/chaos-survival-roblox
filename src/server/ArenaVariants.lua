@@ -182,7 +182,7 @@ ArenaVariants.Definitions = {
                 RouteTier = 1,
             })
             table.insert(result, {
-                offset = Vector3.new(0, 20, 0),
+                offset = Vector3.new(0, 18, 0),
                 size = Vector3.new(11, 2, 11),
                 RouteTier = 4,
             })
