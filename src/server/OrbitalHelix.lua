@@ -93,9 +93,6 @@ function OrbitalHelix.accessRoute(variant, center, index, kind)
         local flat = Vector3.new(inner.offset.X, 0, inner.offset.Z)
         if flat.Magnitude < 0.1 then return nil end
         local axis = flat.Unit
-        local extent = math.min(inner.size.X, inner.size.Z) * 0.5
-            / math.max(math.abs(axis.X), math.abs(axis.Z))
-        local innerDistance = flat.Magnitude
         local coreReach = math.min(crown.size.X, crown.size.Z) * 0.5
             / math.max(math.abs(axis.X), math.abs(axis.Z))
         -- Begin exactly at the existing Helix landing. Starting above
