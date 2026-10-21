@@ -7,6 +7,8 @@ local MovementSafety = if movementModule
 local OrbitalHelix = {}
 
 OrbitalHelix.Count = 8
+-- Ninth walkway is physical transit, not a scoring/pulse lane.
+OrbitalHelix.CoreLane = OrbitalHelix.Count + 1
 OrbitalHelix.Width = 5.4
 
 local function physicalPart(parent, name, size, cf, color, material, solid)
@@ -30,11 +32,18 @@ end
 function OrbitalHelix.route(variant, center, index)
     if not variant or variant.Id ~= "Orbital"
         or type(index) ~= "number"
-        or index < 1 or index > OrbitalHelix.Count then
+        or index < 1 or index > OrbitalHelix.CoreLane then
         return nil
     end
-    local outer = variant.Platforms[index]
-    local inner = variant.Platforms[index + OrbitalHelix.Count]
+    -- The eight original outer-to-inner circuits retain their exact IDs.
+    -- Lane 9 alone climbs from the second inner deck (top 14) to the
+    -- elevated central observation platform (top 20), without a low roof.
+    local outer = index == OrbitalHelix.CoreLane
+        and variant.Platforms[OrbitalHelix.Count + 2]
+        or variant.Platforms[index]
+    local inner = index == OrbitalHelix.CoreLane
+        and variant.Platforms[OrbitalHelix.Count * 2 + 2]
+        or variant.Platforms[index + OrbitalHelix.Count]
     if not outer or not inner then return nil end
     local hub = typeof(center) == "Vector3" and center or Vector3.zero
     local start = hub + outer.offset
@@ -64,7 +73,7 @@ function OrbitalHelix.build(arena, variant, center, theme)
     folder.Name = "HelixCircuit"
     folder.Parent = arena
 
-    for index = 1, OrbitalHelix.Count do
+    for index = 1, OrbitalHelix.CoreLane do
         local route = OrbitalHelix.route(variant, center, index)
         if route then
             local bridge = physicalPart(
@@ -73,7 +82,13 @@ function OrbitalHelix.build(arena, variant, center, theme)
                 theme.Structure:Lerp(theme.Detail, 0.14),
                 Enum.Material.DiamondPlate, true
             )
-            bridge:SetAttribute("OrbitalHelixRamp", true)
+            if index == OrbitalHelix.CoreLane then
+                -- Decorative/passable observation access; do not add a
+                -- ninth scoring checkpoint or disrupt eight-lane pulses.
+                bridge:SetAttribute("OrbitalCoreRamp", true)
+            else
+                bridge:SetAttribute("OrbitalHelixRamp", true)
+            end
             bridge:SetAttribute("HelixLane", index)
             bridge:SetAttribute("HelixStart", route.Start)
             bridge:SetAttribute("HelixFinish", route.Finish)
@@ -132,7 +147,10 @@ function OrbitalHelix.capture(circuit)
     local snapshot = {}
     if not circuit then return snapshot end
     for _, ramp in ipairs(circuit:GetChildren()) do
-        if ramp:IsA("BasePart") and ramp:GetAttribute("OrbitalHelixRamp") == true then
+        if ramp:IsA("BasePart")
+            and (ramp:GetAttribute("OrbitalHelixRamp") == true
+                or ramp:GetAttribute("OrbitalCoreRamp") == true)
+        then
             local from = ramp:GetAttribute("HelixStart")
             local to = ramp:GetAttribute("HelixFinish")
             local lane = ramp:GetAttribute("HelixLane")
