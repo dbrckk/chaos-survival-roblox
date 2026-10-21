@@ -185,25 +185,36 @@ ArenaVariants.Definitions = {
             Vector3.new(-18,3,-36), Vector3.new(18,3,-36),
             Vector3.new(-18,3,36), Vector3.new(18,3,36),
         },
-        Platforms = {
-            {offset=Vector3.new(0,5,0),size=Vector3.new(18,2,18)},
-            {offset=Vector3.new(-18,7,0),size=Vector3.new(14,2,12)},
-            {offset=Vector3.new(-34,10,0),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(18,7,0),size=Vector3.new(14,2,12)},
-            {offset=Vector3.new(34,10,0),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(0,7,-18),size=Vector3.new(12,2,14)},
-            {offset=Vector3.new(0,10,-34),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(0,7,18),size=Vector3.new(12,2,14)},
-            {offset=Vector3.new(0,10,34),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(-25,13,-25),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(25,13,-25),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(-25,13,25),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(25,13,25),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(-12,18,-12),size=Vector3.new(8,2,8)},
-            {offset=Vector3.new(12,18,-12),size=Vector3.new(8,2,8)},
-            {offset=Vector3.new(-12,18,12),size=Vector3.new(8,2,8)},
-            {offset=Vector3.new(12,18,12),size=Vector3.new(8,2,8)},
-        },
+        -- Four deliberate cardinal escape lanes: a central meeting point
+        -- plus four rising routes. The former isolated diagonal decks were
+        -- impossible to reach without unusually high jumping or equipment.
+        -- All physical decks remain inside the 104-stud base, and none
+        -- blocks an entry spawn at (+/-36,+/-18) or (+/-18,+/-36).
+        Platforms = (function()
+            local decks = {
+                {offset = Vector3.new(0, 4, 0),
+                    size = Vector3.new(18, 2, 18), RouteTier = 1},
+            }
+            local directions = {
+                Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0),
+                Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
+            }
+            local distances = {14, 26, 37, 45}
+            local heights = {4, 7, 10, 13}
+            local widths = {12, 10, 10, 8}
+            for _, direction in ipairs(directions) do
+                for tier = 1, 4 do
+                    local offset = direction * distances[tier]
+                        + Vector3.new(0, heights[tier], 0)
+                    table.insert(decks, {
+                        offset = offset,
+                        size = Vector3.new(widths[tier], 2, widths[tier]),
+                        RouteTier = tier,
+                    })
+                end
+            end
+            return decks
+        end)(),
     },
 }
 
