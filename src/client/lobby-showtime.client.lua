@@ -135,7 +135,14 @@ local function humanoid()
 end
 
 local function activePhase()
-    return Showtime.enabled(phase, voteOptions)
+    -- A dance stage next to the first spawn reads like a mandatory activity.
+    -- Hide this client-only decoration and its captions during the three
+    -- guided rounds; mature sessions retain the full stage.
+    local games = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    return not FirstTimeExperience.isRookie(games)
+        and Showtime.enabled(phase, voteOptions)
 end
 
 local function available()
