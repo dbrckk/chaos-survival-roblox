@@ -104,11 +104,34 @@ local function layout(part, state, phase, now)
         edge.Transparency = alpha
     end
 
-    local diagonal = math.sqrt(part.Size.X * part.Size.X + part.Size.Z * part.Size.Z) * 0.86
-    state.crossA.Size = Vector3.new(diagonal, 0.055, low and 0.11 or 0.14)
-    state.crossB.Size = state.crossA.Size
-    state.crossA.CFrame = topFrame * CFrame.Angles(0, math.rad(45), 0)
-    state.crossB.CFrame = topFrame * CFrame.Angles(0, math.rad(-45), 0)
+    if part:GetAttribute("ChaosSkybridge") == true then
+        -- A 49x4.5 Skybridge cannot use the square-platform diagonal X:
+        -- that would draw floating warning bars far beyond the walkable deck.
+        -- Two transverse warning stripes remain entirely on the actual span.
+        local alongX = part.Size.X >= part.Size.Z
+        local length = math.max(part.Size.X, part.Size.Z)
+        local width = math.min(part.Size.X, part.Size.Z)
+        local stripeOffset = math.min(5, length * 0.18)
+        local stripe = alongX
+            and Vector3.new(0.22, 0.055, width * 0.85)
+            or Vector3.new(width * 0.85, 0.055, 0.22)
+        state.crossA.Size = stripe
+        state.crossB.Size = stripe
+        state.crossA.CFrame = topFrame * CFrame.new(
+            alongX and -stripeOffset or 0, 0,
+            alongX and 0 or -stripeOffset
+        )
+        state.crossB.CFrame = topFrame * CFrame.new(
+            alongX and stripeOffset or 0, 0,
+            alongX and 0 or stripeOffset
+        )
+    else
+        local diagonal = math.sqrt(part.Size.X * part.Size.X + part.Size.Z * part.Size.Z) * 0.86
+        state.crossA.Size = Vector3.new(diagonal, 0.055, low and 0.11 or 0.14)
+        state.crossB.Size = state.crossA.Size
+        state.crossA.CFrame = topFrame * CFrame.Angles(0, math.rad(45), 0)
+        state.crossB.CFrame = topFrame * CFrame.Angles(0, math.rad(-45), 0)
+    end
 
     if phase == "Warning" then
         local crossAlpha = math.clamp((low and 0.56 or 0.34) + pulse * 0.20, 0, 0.88)
