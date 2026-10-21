@@ -9,8 +9,10 @@ local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundFeedback")
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local lastCelebrationAt = 0
+local lastCelebratedRound = nil
 local folder = Instance.new("Folder")
 folder.Name = "RoundCelebrationPulsesLocal"
 folder.Parent = workspace
@@ -68,16 +70,24 @@ local function makeBurst(root, color, count, speed)
 end
 
 local function celebrate(feedback)
-    local now = os.clock()
-    if now - lastCelebrationAt < 0.7 then
+    if type(feedback) ~= "table" then return end
+    local round = tonumber(feedback.roundNumber)
+    if not round or round < 1 or round ~= math.floor(round)
+        or round == math.huge or round ~= round
+        or round == lastCelebratedRound
+    then
         return
     end
-    lastCelebrationAt = now
 
     local root = rootPart()
-    if not root then
-        return
-    end
+    if not root then return end
+    local now = os.clock()
+    if now - lastCelebrationAt < 0.7 then return end
+
+    -- A server result preview and its later reward receipt refer to the
+    -- same event. Never spawn the expensive celebration twice.
+    lastCelebratedRound = round
+    lastCelebrationAt = now
 
     local tier = profile()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -190,5 +200,18 @@ local function celebrate(feedback)
         end)
     end
 end
+
+-- A slow or lost personalized receipt must not delay a real survivor's
+-- celebration. Only celebrate when the server's frozen winner list proves
+-- that this specific player won; spectators never receive a false victory.
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" or state.phase ~= "result" then return end
+    local preview = ResultPresentation.fallbackFeedback(
+        state, player.UserId, player:GetAttribute("RoundParticipant") == true
+    )
+    if preview and preview.survived then
+        celebrate(preview)
+    end
+end)
 
 feedbackEvent.OnClientEvent:Connect(celebrate)
