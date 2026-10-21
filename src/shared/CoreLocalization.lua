@@ -490,7 +490,7 @@ local ARENA_COPY = {
         },
         Crossroads = {
             name = "CROSSROADS",
-            strategy = "Four escape lanes • avoid committing to a dead end too early",
+            strategy = "Four connected switchbacks • climb a side lane to reach the upper interchange",
             mechanicName = "LANE BOOSTERS",
             mechanicHint = "Pink pads launch outward; timed cyan Flux Relays return you to the hub",
         },
@@ -516,7 +516,7 @@ local ARENA_COPY = {
         },
         Crossroads = {
             name = "CARREFOUR",
-            strategy = "Quatre voies de fuite • ne t'engage pas trop tôt dans une impasse",
+            strategy = "Quatre voies montantes reliées • prends une branche pour atteindre les hauteurs",
             mechanicName = "BOOSTERS DE VOIE",
             mechanicHint = "Les pads roses propulsent dehors ; les relais cyan te ramènent au centre",
         },

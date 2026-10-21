@@ -52,7 +52,7 @@ ArenaMechanics.Definitions = {
     },
     Crossroads = {
         Name = "LANE BOOSTERS",
-        Hint = "Pink pads launch; cyan Flux returns; gold junctions boost deliberate sideways turns",
+        Hint = "Climb four switchbacks; pink pads launch, cyan Flux returns, gold junctions cut sideways",
         Color = Color3.fromRGB(235, 105, 220),
         Pads = {
             {offset = Vector3.new(18, 1.7, 0), impulse = Vector3.new(46, 8, 0)},
@@ -87,7 +87,7 @@ ArenaMechanics.Definitions = {
 ArenaMechanics.BaselineHints = {
     Classic = "Blue escape pads launch outward; four Grid Circuit nodes lead clockwise",
     Towers = "Climb from the hub through low-to-high decks; cyan updrafts assist when safe",
-    Crossroads = "Pink pads launch outward; timed cyan Flux Relays return you toward hub",
+    Crossroads = "Reach the hub, then climb an outer lane and its elevated side branch",
     Orbital = "Green boosters circle the ring; inward Helix crossings build skill chains",
 }
 

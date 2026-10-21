@@ -401,6 +401,24 @@ describe("Shrinking Arena mobility integration", function()
         local relays = mechanics and mechanics:FindFirstChild("FluxRelays")
         expect(relays ~= nil).toBe(true)
         expect(#relays:GetChildren()).toBe(4)
+
+        local base = arena:FindFirstChild("Base")
+        local platforms = arena:FindFirstChild("Platforms")
+        local decor = arena:FindFirstChild("Decor")
+        local initialFloorWidth = base.Size.X
+        local routePieces = {}
+        for _, index in ipairs({1, 3, 10, 14}) do
+            local deck = platforms:FindFirstChild("Platform" .. index)
+            local panel = decor:FindFirstChild("PlatformPanel" .. index)
+            expect(deck ~= nil).toBe(true)
+            expect(panel ~= nil).toBe(true)
+            expect(deck:GetAttribute("RouteTier") ~= nil).toBe(true)
+            routePieces[#routePieces + 1] = {
+                deck = deck, panel = panel,
+                deckCFrame = deck.CFrame, panelCFrame = panel.CFrame,
+                deckSize = deck.Size, panelSize = panel.Size,
+            }
+        end
         local original = {}
         for _, gate in ipairs(relays:GetChildren()) do
             original[gate] = gate.CFrame
@@ -414,6 +432,18 @@ describe("Shrinking Arena mobility integration", function()
             Active = function() return active end,
         })
         task.wait(0.22)
+        local scale = base.Size.X / initialFloorWidth
+        expect(scale < 0.98).toBe(true)
+        for _, route in ipairs(routePieces) do
+            expect(math.abs(route.deck.Size.X - route.deckSize.X * scale) < 0.03)
+                .toBe(true)
+            expect(math.abs(route.deck.Size.Z - route.deckSize.Z * scale) < 0.03)
+                .toBe(true)
+            expect(math.abs(route.panel.Size.X - route.panelSize.X * scale) < 0.03)
+                .toBe(true)
+            expect(math.abs(route.panel.Size.Z - route.panelSize.Z * scale) < 0.03)
+                .toBe(true)
+        end
         for gate, old in pairs(original) do
             local current = gate.Position - Config.ArenaCenter
             local before = old.Position - Config.ArenaCenter
@@ -426,6 +456,14 @@ describe("Shrinking Arena mobility integration", function()
         end
         active = false
         cleanup(callbacks, {})
+        for _, route in ipairs(routePieces) do
+            expect((route.deck.Size - route.deckSize).Magnitude < 0.001).toBe(true)
+            expect((route.panel.Size - route.panelSize).Magnitude < 0.001).toBe(true)
+            expect((route.deck.Position - route.deckCFrame.Position).Magnitude < 0.001)
+                .toBe(true)
+            expect((route.panel.Position - route.panelCFrame.Position).Magnitude < 0.001)
+                .toBe(true)
+        end
         for gate, old in pairs(original) do
             expect((gate.CFrame.Position - old.Position).Magnitude < 0.001).toBe(true)
         end
