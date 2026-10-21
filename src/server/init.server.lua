@@ -1051,6 +1051,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         ActiveDisasters = activeHazards,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
+        EnableClassicGridSweep = currentArenaVariant == "Classic"
+            and #selected == 1 and allowDynamicArenas,
         EnableOrbitalPulse = currentArenaVariant == "Orbital"
             and #selected == 1 and allowDynamicArenas,
         EnableJunctionSwitchyard = currentArenaVariant == "Crossroads"
