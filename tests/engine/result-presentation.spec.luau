@@ -5,6 +5,43 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ResultPresentation = require("../../src/shared/ResultPresentation")
 
 describe("Result presentation", function()
+    it("rebuilds a truthful victory card when the personalized result event is delayed", function()
+        local state = {
+            phase = "result",
+            roundNumber = 9,
+            arenaId = "Classic",
+            arenaName = "CLASSIC GRID",
+            disasterIds = {"Meteors"},
+            survivorUserIds = {101, 203},
+            soloMode = true,
+        }
+        local won = ResultPresentation.fallbackFeedback(state, 203, true)
+        expect(won.survived).toBe(true)
+        expect(won.pendingRewards).toBe(true)
+        expect(won.spectating).toBe(false)
+        expect(won.roundNumber).toBe(9)
+        expect(won.arenaId).toBe("Classic")
+        expect(won.coins == nil).toBe(true)
+        expect(won.xp == nil).toBe(true)
+        expect(ResultPresentation.title(won, "fr-fr")).toBe("SURVÉCU !")
+
+        local eliminated = ResultPresentation.fallbackFeedback(state, 204, true)
+        expect(eliminated.survived).toBe(false)
+        expect(eliminated.pendingRewards).toBe(true)
+
+        local spectator = ResultPresentation.fallbackFeedback(state, 203, false)
+        expect(spectator.survived).toBe(false)
+        expect(spectator.spectating).toBe(true)
+        expect(spectator.pendingRewards).toBe(false)
+
+        expect(ResultPresentation.fallbackFeedback({phase = "round"}, 203, true) == nil)
+            .toBe(true)
+        expect(ResultPresentation.fallbackFeedback(nil, 203, true) == nil)
+            .toBe(true)
+        expect(ResultPresentation.fallbackFeedback({phase = "result"}, 0, true).survived)
+            .toBe(false)
+    end)
+
     it("prioritizes master over clutch", function()
         expect(ResultPresentation.kind({
             survived = true,
