@@ -686,7 +686,42 @@ describe("Bounded active meteor signatures", function()
         expect(ordered[4].Distance).toBe(100)
         expect(#MeteorSignatureRules.orderedCandidates(children, nil)).toBe(0)
         expect(#MeteorSignatureRules.orderedCandidates(nil, Vector3.zero)).toBe(0)
+
+        -- The live client now tracks only direct RoundMeteor instances,
+        -- not every Workspace child, when refreshing comet silhouettes.
+        local tracked = {}
+        for _, child in ipairs(children) do
+            if child.Name == "RoundMeteor" then tracked[child] = true end
+        end
+        local buffer = {}
+        local candidates = MeteorSignatureRules.collectTracked(tracked, buffer, folder)
+        expect(candidates).toBe(buffer)
+        expect(#candidates).toBe(4)
+        local fromCache = MeteorSignatureRules.orderedCandidates(
+            candidates, Vector3.zero
+        )
+        for index, candidate in ipairs(ordered) do
+            expect(fromCache[index].Part).toBe(candidate.Part)
+            expect(fromCache[index].Distance).toBe(candidate.Distance)
+        end
+        -- Frame-to-frame reuse does not allocate a new candidate buffer.
+        for _ = 1, 60 do
+            expect(MeteorSignatureRules.collectTracked(tracked, buffer, folder))
+                .toBe(buffer)
+            expect(#buffer).toBe(4)
+        end
+
+        -- Streaming-out and renamed parts must be pruned immediately.
+        children[1].Parent = nil
+        children[3].Name = "MeteorDebris"
+        expect(#MeteorSignatureRules.collectTracked(tracked, buffer, folder))
+            .toBe(2)
+        expect(tracked[children[1]] == nil).toBe(true)
+        expect(tracked[children[3]] == nil).toBe(true)
+        expect(#MeteorSignatureRules.collectTracked(nil, buffer, folder)).toBe(0)
+        expect(#MeteorSignatureRules.collectTracked(tracked, buffer, nil)).toBe(0)
         folder:Destroy()
+        children[1]:Destroy()
     end)
 end)
 
