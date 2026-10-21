@@ -34,4 +34,65 @@ function ArenaTargeting.randomOffset(padding, fallbackHalfExtent)
     )
 end
 
+
+-- A new lethal circle must not silently pile onto another active warning.
+-- Check only X/Z: warnings appear on the arena floor, and their projected
+-- circular dodge corridors are what a player sees on a small screen.
+-- Return the first adequately separated candidate, or the furthest one if
+-- the shrinking arena has no room for the requested separation.
+function ArenaTargeting.chooseSeparatedOffset(candidates, center, occupied, gap)
+    local origin = typeof(center) == "Vector3" and center or Vector3.zero
+    local minGap = math.max(0, tonumber(gap) or 0)
+    local best = nil
+    local bestDistance = -math.huge
+    for _, offset in ipairs(candidates or {}) do
+        if typeof(offset) == "Vector3" then
+            local point = origin + offset
+            local nearest = math.huge
+            for _, position in ipairs(occupied or {}) do
+                if typeof(position) == "Vector3" then
+                    local dx = point.X - position.X
+                    local dz = point.Z - position.Z
+                    nearest = math.min(nearest, math.sqrt(dx * dx + dz * dz))
+                end
+            end
+            if nearest >= minGap then
+                return offset
+            end
+            if nearest > bestDistance then
+                best = offset
+                bestDistance = nearest
+            end
+        end
+    end
+    return best or Vector3.zero
+end
+
+-- The same per-round registry is shared by Bomb Rain and Meteor Shower,
+-- including Double Chaos. Only pending warnings are counted, not impacts
+-- that have already resolved. Stale destroyed markers are purged on access.
+function ArenaTargeting.randomSeparatedOffset(padding, fallback, center, pending, gap)
+    local occupied = {}
+    for marker in pairs(pending or {}) do
+        if typeof(marker) == "Instance" and marker:IsA("BasePart")
+            and marker.Parent
+        then
+            occupied[#occupied + 1] = marker.Position
+        else
+            pending[marker] = nil
+        end
+    end
+    if #occupied == 0 then
+        return ArenaTargeting.randomOffset(padding, fallback)
+    end
+    -- Eight candidate samples is bounded work, independent of player count.
+    local candidates = {}
+    for _ = 1, 8 do
+        candidates[#candidates + 1] = ArenaTargeting.randomOffset(padding, fallback)
+    end
+    return ArenaTargeting.chooseSeparatedOffset(
+        candidates, center, occupied, gap
+    )
+end
+
 return ArenaTargeting
