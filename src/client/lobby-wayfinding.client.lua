@@ -6,6 +6,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -117,7 +118,13 @@ end
 
 local function refresh()
     local mode = LobbyPresentationRules.mode(phase, voteOptions)
-    local visible = mode == "social"
+    -- World-space signs for optional practice/time trials compete with the
+    -- actual survival objective when a player is new. Hide all of these until
+    -- they have played three rounds; the main HUD explains the mandatory loop.
+    local games = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    local visible = mode == "social" and not FirstTimeExperience.isRookie(games)
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced = player:GetAttribute("ReduceMotion") == true
 
@@ -145,5 +152,7 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refresh)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(refresh)
+player:GetAttributeChangedSignal("Games"):Connect(refresh)
+player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 
 refresh()
