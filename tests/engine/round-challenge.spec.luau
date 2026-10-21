@@ -24,7 +24,15 @@ describe("Round challenge", function()
         expect(RoundChallenge.progress(first, 0, 0, 0, 0, 0, true)).toBe(1)
         expect(RoundChallenge.completed(first, 0, 0, 0, 0, 0, true)).toBe(true)
 
+        -- The server passes its shared first-three-round protection state,
+        -- not just the first-ever-round flag. Preserve the achievable
+        -- objective across the entire learning window.
+        for _, round in ipairs({1, 2, 3, 17, 99}) do
+            expect(RoundChallenge.forContext(round, true).Id).toBe("FIRST_SURVIVAL")
+        end
         expect(RoundChallenge.forContext(1, false).Id).toBe("SHARD_HUNT")
+        expect(RoundChallenge.forContext(2, false).Id).toBe("MOBILITY_MASTER")
+        expect(RoundChallenge.forContext(3, false).Id).toBe("DANGER_DANCE")
     end)
 
     it("reads only the metric required by the challenge", function()
