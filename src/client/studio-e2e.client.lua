@@ -30,6 +30,8 @@ local failures = {}
 local roundStateReceived = false
 local roundJourneyStage = 0
 local observedJourneys = {}
+local lastCompletedRound = nil
+local replayReportedFor = nil
 local lastRoundPhase = nil
 local visualMetrics = {
     Parts = 0,
@@ -456,6 +458,34 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                 roundJourneyStage, state.phase
             )
             roundJourneyStage = stage
+            if tostring(state.phase or "") == "result" then
+                local finished = tonumber(state.roundNumber)
+                if finished and finished > 0 then
+                    lastCompletedRound = finished
+                end
+            elseif RoundJourneyRules.replayStarted(lastCompletedRound, state)
+                and replayReportedFor ~= tonumber(state.roundNumber)
+            then
+                -- Verify a real post-win transition, not merely a result
+                -- GUI animation. The round server has already accepted
+                -- a fresh arena spawn before broadcasting READY.
+                replayReportedFor = tonumber(state.roundNumber)
+                local prior = lastCompletedRound
+                task.delay(0.15, function()
+                    local character = player.Character
+                    local humanoid = character
+                        and character:FindFirstChildOfClass("Humanoid")
+                    reportEvent:FireServer({
+                        kind = "round_replay_probe",
+                        finishedRound = prior,
+                        nextRound = tonumber(state.roundNumber),
+                        fullHealth = humanoid ~= nil
+                            and humanoid.Health > 0
+                            and math.abs(humanoid.Health - humanoid.MaxHealth) < 0.1,
+                        validSpawn = player:GetAttribute("ArenaSpawnClear") == true,
+                    })
+                end)
+            end
             if completed then
                 local arenaId = tostring(state.arenaId or "")
                 if arenaId ~= "" and not observedJourneys[arenaId] then
