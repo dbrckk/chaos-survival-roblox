@@ -11,6 +11,7 @@ local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local GridCircuitService = require("../../src/server/GridCircuitService")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
+local CrossroadsSwitchyard = require("../../src/server/CrossroadsSwitchyard")
 local MovementSafety = require("../../src/server/MovementSafety")
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
@@ -564,6 +565,112 @@ describe("Arena mechanics", function()
 
         bot:Destroy()
         root:Destroy()
+    end)
+
+    it("runs a real Crossroads junction with intentional sideways steering", function()
+        local rules = CrossroadsSwitchyard
+        expect(rules.pair(1, 0)).toBe(1)
+        expect(rules.pair(1, 1)).toBe(0)
+        expect(rules.pair(2, 0)).toBe(0)
+        expect(rules.activeLane(1, 1)).toBe(true)
+        expect(rules.activeLane(3, 1)).toBe(true)
+        expect(rules.activeLane(2, 1)).toBe(false)
+        expect(rules.activeLane(4, 0)).toBe(true)
+
+        local xAxis = Vector3.xAxis
+        local forward = rules.tangentVelocity(
+            Vector3.new(-9, 0, 13), xAxis
+        )
+        expect(forward).toBe(Vector3.zAxis)
+        expect(rules.tangentVelocity(
+            Vector3.new(-40, 0, 2), xAxis) == nil).toBe(true)
+        expect(rules.tangentVelocity(
+            Vector3.new(-7, 0, 3), xAxis) == nil).toBe(true)
+        expect(rules.tangentVelocity(
+            Vector3.new(0, 0, -13), xAxis)).toBe(-Vector3.zAxis)
+        expect(rules.tangentVelocity(
+            Vector3.new(13, 0, 0), Vector3.zAxis)).toBe(-Vector3.xAxis)
+        local launched = rules.velocity(
+            Vector3.new(-9, 4, 13), forward
+        )
+        expect(launched.Z > 32).toBe(true)
+        expect(launched.Y).toBe(4)
+        local capped = rules.velocity(
+            Vector3.new(30, 95, 80), Vector3.zAxis
+        )
+        expect(Vector3.new(capped.X, 0, capped.Z).Magnitude <= 48.01).toBe(true)
+        expect(capped.Y).toBe(58)
+
+        local map = MapBuilder.build(Config, "Crossroads", ArenaVariants)
+        local enabled = true
+        local cleanups = {}
+        local ctx = {
+            Active = function() return enabled end,
+            EnableJunctionSwitchyard = true,
+            RoundNumber = 1,
+            Cleanup = {},
+            OnCleanup = cleanups,
+            IsContestantActive = function() return false end,
+        }
+        ArenaMechanics.start(ctx, "Crossroads")
+        local arena = map:FindFirstChild("Arena")
+        local mechanics = arena:FindFirstChild("Mechanics")
+        local switches = mechanics:FindFirstChild("JunctionSwitchyard")
+        expect(switches ~= nil).toBe(true)
+        local pads = {}
+        for index = 1, 4 do
+            local pad = switches:FindFirstChild("JunctionSwitch" .. index)
+            expect(pad ~= nil).toBe(true)
+            expect(pad.CanCollide).toBe(false)
+            expect(pad.CanTouch).toBe(true)
+            expect(pad.Transparency).toBe(1)
+            expect(pad:GetAttribute("JunctionActive")).toBe(index % 2 == 1)
+            local marker = switches:FindFirstChild("JunctionRouteSign" .. index)
+            expect(marker.Enabled).toBe(index % 2 == 1)
+            pads[index] = pad
+        end
+
+        local bot = Instance.new("Model")
+        bot.Name = "JunctionRegressionBot"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = bot
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.Anchored = false
+        root.CanCollide = false
+        root.Parent = bot
+        bot.Parent = workspace
+        root.Position = pads[1].Position
+        root.AssemblyLinearVelocity = Vector3.new(0, 0, 13)
+        local ready = {}
+        local claimed = {}
+        expect(rules.tryTrigger(ctx, pads[2], root, ready, claimed, 10)).toBe(false)
+        expect(rules.tryTrigger(ctx, pads[1], root, ready, claimed, 10)).toBe(true)
+        expect(claimed[bot][1]).toBe(true)
+        expect(root.AssemblyLinearVelocity.Z > 30).toBe(true)
+        expect(type(pads[1]:GetAttribute("JunctionTriggeredAt"))).toBe("number")
+        expect(rules.tryTrigger(ctx, pads[1], root, ready, claimed, 20)).toBe(false)
+
+        root.Position = pads[3].Position + Vector3.new(18, 0, 0)
+        root.AssemblyLinearVelocity = Vector3.new(0, 0, -13)
+        expect(rules.tryTrigger(ctx, pads[3], root, ready, claimed, 24)).toBe(false)
+        root.Position = pads[3].Position
+        expect(rules.tryTrigger(ctx, pads[3], root, ready, claimed, 24)).toBe(true)
+        expect(claimed[bot][3]).toBe(true)
+
+        enabled = false
+        for _, cleanup in ipairs(cleanups) do cleanup() end
+        for index, pad in ipairs(pads) do
+            expect(pad:GetAttribute("JunctionActive") == nil).toBe(true)
+            expect(switches:FindFirstChild("JunctionRouteSign" .. index).Enabled)
+                .toBe(false)
+        end
+        expect(rules.tryTrigger(ctx, pads[1], root, ready, claimed, 40)).toBe(false)
+        bot:Destroy()
+        map:Destroy()
     end)
 
     it("requires alternating Flux Relay pairs and three unique gates for Flux Master", function()
