@@ -263,6 +263,86 @@ describe("Arena variants", function()
         end
     end)
 
+    it("keeps every Crossroads upper sector reachable from its assigned lane", function()
+        local crossroads = ArenaVariants.get("Crossroads")
+        expect(#crossroads.Platforms).toBe(17)
+
+        local function gap(a, b)
+            local dx = math.max(0, math.abs(a.offset.X - b.offset.X)
+                - (a.size.X + b.size.X) * 0.5)
+            local dz = math.max(0, math.abs(a.offset.Z - b.offset.Z)
+                - (a.size.Z + b.size.Z) * 0.5)
+            return math.sqrt(dx * dx + dz * dz)
+        end
+        local paths = {
+            {1, 2, 3, 10, 14},  -- west -> northwest
+            {1, 6, 7, 11, 15},  -- north -> northeast
+            {1, 4, 5, 12, 16},  -- east -> southeast
+            {1, 8, 9, 13, 17},  -- south -> southwest
+        }
+        local visited = {}
+        for _, path in ipairs(paths) do
+            local elevations = {}
+            for step, index in ipairs(path) do
+                local deck = crossroads.Platforms[index]
+                expect(deck ~= nil).toBe(true)
+                expect(deck.RouteTier ~= nil).toBe(true)
+                local elevation = deck.offset.Y + deck.size.Y * 0.5
+                elevations[#elevations + 1] = elevation
+                visited[index] = true
+                if step > 1 then
+                    local prior = crossroads.Platforms[path[step - 1]]
+                    local rise = elevation
+                        - (prior.offset.Y + prior.size.Y * 0.5)
+                    expect(rise >= 0 and rise <= 4).toBe(true)
+                    expect(gap(prior, deck) <= 3.05).toBe(true)
+                end
+            end
+            expect(elevations[1]).toBe(5)
+            expect(elevations[2]).toBe(8)
+            expect(elevations[3]).toBe(11)
+            expect(elevations[4]).toBe(14)
+            expect(elevations[5]).toBe(18)
+        end
+        for index = 1, 17 do expect(visited[index]).toBe(true) end
+
+        -- A lower walkway cannot sit directly below a ceiling with
+        -- less than the full R15 standing clearance (8.4 studs).
+        for index, first in ipairs(crossroads.Platforms) do
+            expect(math.abs(first.offset.X) + first.size.X * 0.5 < 48).toBe(true)
+            expect(math.abs(first.offset.Z) + first.size.Z * 0.5 < 48).toBe(true)
+            for j = index + 1, #crossroads.Platforms do
+                local second = crossroads.Platforms[j]
+                local overlapX = math.abs(first.offset.X - second.offset.X)
+                    < (first.size.X + second.size.X) * 0.5
+                local overlapZ = math.abs(first.offset.Z - second.offset.Z)
+                    < (first.size.Z + second.size.Z) * 0.5
+                if overlapX and overlapZ then
+                    local lower = first.offset.Y < second.offset.Y and first or second
+                    local upper = lower == first and second or first
+                    local clearance = upper.offset.Y - upper.size.Y * 0.5
+                        - (lower.offset.Y + lower.size.Y * 0.5)
+                    expect(clearance >= 8.4).toBe(true)
+                end
+            end
+        end
+
+        -- No stock arena spawn may be sealed beneath a low crossing.
+        for _, spawn in ipairs(crossroads.SpawnOffsets) do
+            for _, deck in ipairs(crossroads.Platforms) do
+                local overlapsAvatar = math.abs(spawn.X - deck.offset.X)
+                    < deck.size.X * 0.5 + 2.8
+                    and math.abs(spawn.Z - deck.offset.Z)
+                    < deck.size.Z * 0.5 + 2.8
+                if overlapsAvatar then
+                    local headroom = deck.offset.Y - deck.size.Y * 0.5
+                        - crossroads.BaseSize.Y * 0.5
+                    expect(headroom >= 8.4).toBe(true)
+                end
+            end
+        end
+    end)
+
     it("derives hazard targeting bounds from arena footprints", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
