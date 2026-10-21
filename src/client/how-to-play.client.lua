@@ -203,9 +203,8 @@ local function tryInitialGuide()
         return
     end
     local phase = tostring(currentState.phase or "")
-    local quiet = phase == "waiting"
-        or (phase == "intermission"
-            and not FirstTimeExperience.hasVoteOptions(currentState))
+    local quiet = (phase == "waiting" or phase == "intermission")
+        and not FirstTimeExperience.hasVoteOptions(currentState)
     if quiet then
         introduced = true
         showGuide(false)
@@ -214,11 +213,18 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
+    local previousPhase = currentState and tostring(currentState.phase or "") or ""
+    local hadVote = FirstTimeExperience.hasVoteOptions(currentState)
     currentState = state
     local phase = tostring(state.phase or "")
+    local hasVote = FirstTimeExperience.hasVoteOptions(state)
     local busy = phase == "ready" or phase == "round" or phase == "result"
-        or (phase == "intermission" and FirstTimeExperience.hasVoteOptions(state))
-    if busy and backdrop.Visible and not openedManually then
+        or ((phase == "waiting" or phase == "intermission") and hasVote)
+    -- An explicitly reopened guide remains readable during a stable phase.
+    -- However, never leave it covering a new ballot or an entering round:
+    -- these require immediate movement or a live UI decision.
+    local enteredBusy = phase ~= previousPhase or (hasVote and not hadVote)
+    if busy and backdrop.Visible and (not openedManually or enteredBusy) then
         hideGuide()
     end
     tryInitialGuide()
