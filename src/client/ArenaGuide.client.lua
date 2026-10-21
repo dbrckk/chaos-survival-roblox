@@ -239,6 +239,9 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     -- A malformed payload cannot replace the current briefing.
     if type(state) ~= "table" then return end
+    -- Preserve the same guided HUD in all three entered rounds (including
+    -- the third READY phase) instead of displaying overlapping strategy
+    -- cards before the beginner progression is complete.
     -- The first three rounds have one phase-by-phase coach instead of
     -- multiple overlapping briefings. Touch players already see the
     -- hazard instruction in the top HUD, so never obscure the world.
@@ -246,7 +249,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         player:GetAttribute("Games"),
         player:GetAttribute("SessionRoundsPlayed")
     )
-    if touchDevice or FirstTimeExperience.isRookie(games) then
+    if touchDevice or FirstTimeExperience.isGuidedPhase(games, state.phase) then
         readyState = nil
         hide()
     elseif state.phase == "ready" then
