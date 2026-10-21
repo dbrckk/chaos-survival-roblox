@@ -68,7 +68,7 @@ For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-
 - Real-engine gameplay matrix: every arena × every disaster + every allowed Double Chaos pair
 - Four-client Studio E2E harness with virtual UI clicks, movement, voting, joins and leaves
 - AI Survivor animation state blending (idle/walk/run/jump/fall) and map-aware/hazard-aware navigation
-- 73 engine specs assigned exactly once across Open Cloud CI shards
+- 74 engine specs assigned exactly once across Open Cloud CI shards
 - No paid assets required
 
 ## Current disasters
