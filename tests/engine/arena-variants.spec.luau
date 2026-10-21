@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaTargeting = require("../../src/server/ArenaTargeting")
+local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 
 describe("Arena variants", function()
     it("defines four distinct playable layouts", function()
@@ -41,6 +42,17 @@ describe("Arena variants", function()
                 local dz = math.abs(spawn.Z - deck.offset.Z)
                 local clearX = dx > deck.size.X * 0.5 + 3.8
                 local clearZ = dz > deck.size.Z * 0.5 + 3.8
+                expect(clearX or clearZ).toBe(true)
+            end
+
+            -- Grid Circuit is an active floor mechanic at four diagonal
+            -- nodes. Elevated decks must not bury their touch sensors:
+            -- account for the full 7.2-stud box and an extra buffer.
+            for _, node in ipairs(GridCircuitRules.Offsets) do
+                local dx = math.abs(node.X - deck.offset.X)
+                local dz = math.abs(node.Z - deck.offset.Z)
+                local clearX = dx > deck.size.X * 0.5 + 4.1
+                local clearZ = dz > deck.size.Z * 0.5 + 4.1
                 expect(clearX or clearZ).toBe(true)
             end
         end
