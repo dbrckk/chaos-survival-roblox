@@ -161,6 +161,11 @@ function ClassicGridSweep.start(ctx, arena)
         task.wait(ClassicGridSweep.InitialDelay)
         local event = 0
         while active and ctx.Active() and folder.Parent and arena.Parent do
+            -- Never start an unavoidable late-round event which cannot
+            -- finish and restore before the end-of-round transition.
+            local deadline = tonumber(ctx.RoundEndsAt)
+            if deadline and os.clock() + ClassicGridSweep.WarningSeconds + ClassicGridSweep.PulseSeconds + 2 > deadline
+            then break end
             local index = ClassicGridSweep.indexFor(ctx.RoundNumber, event)
             current = bands[index]
             if not current or not current.Parent then break end
