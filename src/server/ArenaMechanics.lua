@@ -275,6 +275,7 @@ function ArenaMechanics.start(ctx, variantId)
     return {
         name = definition.Name,
         hint = hint,
+        dynamicStarted = dynamicStarted,
     }
 end
 
