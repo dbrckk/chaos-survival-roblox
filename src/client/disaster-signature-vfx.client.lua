@@ -30,15 +30,7 @@ local function registerMeteor(instance)
 end
 
 local function candidates()
-    table.clear(candidateBuffer)
-    for meteor in pairs(meteors) do
-        if meteor.Parent == workspace then
-            candidateBuffer[#candidateBuffer + 1] = meteor
-        else
-            meteors[meteor] = nil
-        end
-    end
-    return candidateBuffer
+    return MeteorRules.collectTracked(meteors, candidateBuffer, workspace)
 end
 local function clear(meteor)
     -- Only destroy the exact locally created instances. Name-based cleanup
