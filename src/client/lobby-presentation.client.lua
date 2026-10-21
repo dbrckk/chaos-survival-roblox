@@ -656,12 +656,17 @@ local function applyState()
             player:GetAttribute("Games"),
             player:GetAttribute("SessionRoundsPlayed")
         )
-        if games <= 0
-            and currentState.phase == "intermission"
+        if FirstTimeExperience.isRookie(games)
+            and (currentState.phase == "waiting" or currentState.phase == "intermission")
             and not FirstTimeExperience.hasVoteOptions(currentState)
         then
-            mainText = frenchLocale and "BOUGE + SAUTE" or "MOVE + JUMP"
-            subText = frenchLocale and "SURVIS JUSQU'À 0" or "SURVIVE UNTIL 0"
+            -- The server starts rounds automatically. "Enter arena" and
+            -- "move + jump" appeared to be required lobby interactions.
+            -- Make the same real objective visible in the physical lobby.
+            mainText = frenchLocale and "DÉPART AUTOMATIQUE"
+                or "ROUND STARTS AUTOMATICALLY"
+            subText = frenchLocale and "SURVIS JUSQU'À 0"
+                or "SURVIVE UNTIL 0"
         end
 
         if title and title:IsA("TextLabel") then
