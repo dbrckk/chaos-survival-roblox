@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaTargeting = require("../../src/server/ArenaTargeting")
+local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 
 describe("Arena variants", function()
     it("defines four distinct playable layouts", function()
@@ -20,6 +21,112 @@ describe("Arena variants", function()
             expect(#variant.Platforms >= 14).toBe(true)
             expect(variant.BaseSize.X >= 90).toBe(true)
             expect(variant.BaseSize.Z >= 90).toBe(true)
+        end
+    end)
+
+    it("gives Classic four authored, spawn-safe, continuously reachable tiers", function()
+        local classic = ArenaVariants.get("Classic")
+        local tiers = {{}, {}, {}, {}}
+        expect(#classic.Platforms).toBe(16)
+        for _, deck in ipairs(classic.Platforms) do
+            local tier = deck.RouteTier
+            expect(type(tier)).toBe("number")
+            expect(tier >= 1 and tier <= 4).toBe(true)
+            table.insert(tiers[tier], deck)
+
+            -- A mobile avatar arriving at any native spawn marker must not
+            -- materialize inside a high deck, regardless of its height.
+            -- Model R15 horizontal dimensions plus a one-stud margin.
+            for _, spawn in ipairs(classic.SpawnOffsets) do
+                local dx = math.abs(spawn.X - deck.offset.X)
+                local dz = math.abs(spawn.Z - deck.offset.Z)
+                local clearX = dx > deck.size.X * 0.5 + 3.8
+                local clearZ = dz > deck.size.Z * 0.5 + 3.8
+                expect(clearX or clearZ).toBe(true)
+            end
+
+            -- Grid Circuit is an active floor mechanic at four diagonal
+            -- nodes. Elevated decks must not bury their touch sensors:
+            -- account for the full 7.2-stud box and an extra buffer.
+            for _, node in ipairs(GridCircuitRules.Offsets) do
+                local dx = math.abs(node.X - deck.offset.X)
+                local dz = math.abs(node.Z - deck.offset.Z)
+                local clearX = dx > deck.size.X * 0.5 + 4.1
+                local clearZ = dz > deck.size.Z * 0.5 + 4.1
+                expect(clearX or clearZ).toBe(true)
+            end
+        end
+        for tier = 1, 4 do expect(#tiers[tier]).toBe(4) end
+
+        -- Four floor-to-entry corridors must stay open to full-height R15
+        -- characters; raised transfer decks must not form a low ceiling
+        -- between the native spawn and the accessible first terrace.
+        local corridors = {
+            {x=29,z=0,sx=10,sz=7}, {x=-29,z=0,sx=10,sz=7},
+            {x=0,z=29,sx=7,sz=10}, {x=0,z=-29,sx=7,sz=10},
+        }
+        for i, first in ipairs(classic.Platforms) do
+            if first.RouteTier > 1 then
+                for _, corridor in ipairs(corridors) do
+                    local freeX = math.abs(first.offset.X - corridor.x)
+                        >= (first.size.X + corridor.sx) * 0.5
+                    local freeZ = math.abs(first.offset.Z - corridor.z)
+                        >= (first.size.Z + corridor.sz) * 0.5
+                    expect(freeX or freeZ).toBe(true)
+                end
+            end
+
+            -- A deck directly above another with 1-3 studs of headroom
+            -- would trap the player and make an apparent jump unusable.
+            for j = i + 1, #classic.Platforms do
+                local other = classic.Platforms[j]
+                if other.RouteTier ~= first.RouteTier then
+                    local separateX = math.abs(first.offset.X - other.offset.X)
+                        >= (first.size.X + other.size.X) * 0.5
+                    local separateZ = math.abs(first.offset.Z - other.offset.Z)
+                        >= (first.size.Z + other.size.Z) * 0.5
+                    expect(separateX or separateZ).toBe(true)
+                end
+            end
+
+            -- Even the final lookouts remain comfortably inside the
+            -- walkable floor, never hanging beyond the map boundary.
+            expect(math.abs(first.offset.X) + first.size.X * 0.5
+                <= classic.BaseSize.X * 0.5 - 5).toBe(true)
+            expect(math.abs(first.offset.Z) + first.size.Z * 0.5
+                <= classic.BaseSize.Z * 0.5 - 5).toBe(true)
+        end
+
+        local baseTop = classic.BaseSize.Y * 0.5
+        for _, entry in ipairs(tiers[1]) do
+            -- The floor -> starter leap is shorter than a standard jump.
+            local top = entry.offset.Y + entry.size.Y * 0.5
+            expect(top - baseTop <= 4.5).toBe(true)
+        end
+
+        local function canJump(from, target)
+            local ascent = target.offset.Y + target.size.Y * 0.5
+                - from.offset.Y - from.size.Y * 0.5
+            local gapX = math.max(0, math.abs(from.offset.X - target.offset.X)
+                - (from.size.X + target.size.X) * 0.5)
+            local gapZ = math.max(0, math.abs(from.offset.Z - target.offset.Z)
+                - (from.size.Z + target.size.Z) * 0.5)
+            return ascent >= 0 and ascent <= 4.5
+                and (gapX * gapX + gapZ * gapZ) <= 16
+        end
+
+        -- Every advanced deck has an explicit adjacent route from a lower
+        -- tier; no decorative platform is an impossible floating island.
+        for tier = 2, 4 do
+            for _, target in ipairs(tiers[tier]) do
+                local reachable = false
+                for _, source in ipairs(tiers[tier - 1]) do
+                    if canJump(source, target) then
+                        reachable = true
+                    end
+                end
+                expect(reachable).toBe(true)
+            end
         end
     end)
 

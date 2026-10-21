@@ -30,6 +30,9 @@ describe("Shrinking Arena mobility integration", function()
         expect(deck ~= nil).toBe(true)
         expect(decor ~= nil).toBe(true)
         local originalDeck = deck.CFrame
+        local originalDeckSize = deck.Size
+        local base = arena:FindFirstChild("Base")
+        local originalFloorX = base.Size.X
 
         -- The cosmetic pieces must remain attached to their associated
         -- physical deck, not to the arena center or their old world pose.
@@ -67,19 +70,34 @@ describe("Shrinking Arena mobility integration", function()
 
         expect((deck.Position - originalDeck.Position).Magnitude > 0.2)
             .toBe(true)
+        local scale = base.Size.X / originalFloorX
+        expect(scale < 0.98).toBe(true)
+        expect(math.abs(deck.Size.X - originalDeckSize.X * scale) < 0.02)
+            .toBe(true)
+        expect(math.abs(deck.Size.Z - originalDeckSize.Z * scale) < 0.02)
+            .toBe(true)
         for piece, original in pairs(snapshot) do
-            local expected = deck.CFrame * original.relative
+            local p = original.relative.Position
+            local expected = deck.CFrame
+                * CFrame.new(p.X * scale, p.Y, p.Z * scale)
+                * (original.relative - p)
             expect((piece.Position - expected.Position).Magnitude < 0.02)
                 .toBe(true)
-            expect((piece.Position - original.cframe.Position).Magnitude > 0.1)
+            local size = Vector3.new(
+                original.size.X * scale,
+                original.size.Y,
+                original.size.Z * scale
+            )
+            expect((piece.Size - size).Magnitude < 0.02)
                 .toBe(true)
-            expect((piece.Size - original.size).Magnitude < 0.001)
-                .toBe(true)
+            expect(piece.CanCollide).toBe(false)
         end
 
         active = false
         cleanup(callbacks, {})
         expect((deck.Position - originalDeck.Position).Magnitude < 0.001)
+            .toBe(true)
+        expect((deck.Size - originalDeckSize).Magnitude < 0.001)
             .toBe(true)
         for piece, original in pairs(snapshot) do
             expect((piece.Position - original.cframe.Position).Magnitude < 0.001)
@@ -94,7 +112,8 @@ describe("Shrinking Arena mobility integration", function()
         local cases = {
             {
                 id = "Classic",
-                names = {"ArenaDeckInset", "DeckLineNorth", "ClassicGridX-2"},
+                names = {"ArenaDeckInset", "DeckLineNorth", "ClassicGridX-2",
+                    "ClassicEntryChevron1_-1"},
             },
             {
                 id = "Towers",

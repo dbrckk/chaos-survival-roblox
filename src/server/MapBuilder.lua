@@ -529,6 +529,38 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
                 zLine.Transparency = 0.54
             end
         end
+
+        -- Four restrained, flush floor chevrons guide new players toward
+        -- the reachable tier-one terraces (jump from floor to their tops).
+        -- They avoid orange/red hazard colors, cast no shadows and cannot
+        -- obscure collision or intercept touch controls.
+        local routeDirections = {
+            Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0),
+            Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
+        }
+        for routeIndex, direction in ipairs(routeDirections) do
+            -- Outside the raised tiers, adjacent to each cardinal entry
+            -- spawn. The arrow points IN toward the first reachable deck;
+            -- avoid marking low headroom directly below the transfers.
+            local position = center + direction * 32
+                + Vector3.new(0, 1.28, 0)
+            local facing = CFrame.lookAt(position,
+                position - direction, Vector3.yAxis)
+            for side = -1, 1, 2 do
+                local marker = decorPart(
+                    decor,
+                    "ClassicEntryChevron" .. routeIndex .. "_" .. tostring(side),
+                    Vector3.new(0.15, 0.05, 1.35),
+                    position,
+                    routeIndex % 2 == 0 and theme.Secondary or theme.Accent,
+                    VisualTheme.Materials.Glow
+                )
+                marker.CFrame = facing
+                    * CFrame.new(side * 0.36, 0, 0)
+                    * CFrame.Angles(0, math.rad(side * 36), 0)
+                marker.Transparency = 0.47
+            end
+        end
     elseif variant.Id == "Towers" then
         local pads = {
             Vector3.new(-28, 1.20, -28),
@@ -695,6 +727,15 @@ local function addPlatformFinish(decor, platform, index, theme)
     -- Quiet, durable walking inset: hazards keep visual priority and the
     -- rim now reads as a separate machined structural layer.
     topPanel.Transparency = 0.07
+    local routeTier = tonumber(platform:GetAttribute("RouteTier"))
+    if routeTier then
+        -- Tiers stay predominantly machined metal. Subtle cold-color
+        -- differences reveal the height route without competing with
+        -- orange/red disaster warnings or introducing extra draw calls.
+        topPanel.Color = theme.Surface:Lerp(
+            theme.Detail, 0.24 + (math.clamp(routeTier, 1, 4) - 1) * 0.06
+        )
+    end
 
     -- Four separate, shallow edge chamfers give the deck a deliberate
     -- machined silhouette instead of the default square Roblox slab.
@@ -704,7 +745,10 @@ local function addPlatformFinish(decor, platform, index, theme)
     local halfX, halfZ = platform.Size.X * 0.5, platform.Size.Z * 0.5
     local bevelDepth = math.clamp(math.min(halfX, halfZ) * 0.15, 0.28, 0.65)
     local bevelY = platform.Position.Y + platform.Size.Y * 0.5 - 0.20
-    local edgeColor = theme.Structure:Lerp(theme.Detail, 0.40)
+    local edgeColor = theme.Structure:Lerp(
+        routeTier and theme.Secondary or theme.Detail,
+        routeTier and (0.14 + math.clamp(routeTier, 1, 4) * 0.04) or 0.40
+    )
     local edgeMaterial = VisualTheme.Materials.Structure
     local edgeSpecs = {
         {Vector3.new(platform.Size.X + 0.12, 0.30, bevelDepth),
@@ -750,7 +794,8 @@ local function addPlatformFinish(decor, platform, index, theme)
         (index % 2 == 0) and theme.Secondary or theme.Accent,
         VisualTheme.Materials.Glow
     )
-    core.Transparency = 0.56
+    core.Transparency = routeTier and
+        (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
 
     local platformBottom = platform.Position.Y - (platform.Size.Y * 0.5)
     local deckTop = 1.15
@@ -1603,6 +1648,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             theme.StructureMaterial or VisualTheme.Materials.Structure
         )
         platform.Color = theme.Detail:Lerp(theme.Surface, 0.28)
+        local routeTier = tonumber(definition.RouteTier)
+        if routeTier and routeTier >= 1 and routeTier <= 4 then
+            platform:SetAttribute("RouteTier", routeTier)
+        end
 
         if definition.Skybridge == true then
             platform.Name = "Skybridge" .. tostring(i)
@@ -1666,7 +1715,16 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         -- An exposed fluorescent slab under every deck made the platforms
         -- read like toy blocks. The engineered shadow lip is primary,
         -- with a thinner subdued signal layer beneath it.
-        trim.Transparency = 0.64
+        if routeTier then
+            local tierColor = routeTier == 1 and theme.Accent
+                or (routeTier == 2 and theme.Accent:Lerp(theme.Secondary, 0.30)
+                    or (routeTier == 3 and theme.Secondary
+                        or theme.Secondary:Lerp(theme.Accent, 0.55)))
+            trim.Color = tierColor
+            trim.Transparency = 0.72 - routeTier * 0.04
+        else
+            trim.Transparency = 0.64
+        end
         addPlatformFinish(decor, platform, i, theme)
     end
 

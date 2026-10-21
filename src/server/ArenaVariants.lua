@@ -6,7 +6,7 @@ ArenaVariants.Definitions = {
     Classic = {
         Id = "Classic",
         Name = "CLASSIC GRID",
-        StrategyHint = "Balanced routes • switch height when danger closes in",
+        StrategyHint = "Four rising escape routes • jump between low, mid and high decks",
         BaseSize = Vector3.new(100, 2, 100),
         BaseColor = Color3.fromRGB(92, 103, 125),
         PlatformColor = Color3.fromRGB(120, 145, 190),
@@ -16,17 +16,39 @@ ArenaVariants.Definitions = {
             Vector3.new(0,3,-35), Vector3.new(0,3,35),
             Vector3.new(-35,3,0), Vector3.new(35,3,0),
         },
-        Platforms = (function()
-            local result = {}
-            local heights = {5, 10, 15, 20}
-            for i = 1, 18 do
-                table.insert(result, {
-                    offset = Vector3.new(((i * 23) % 75) - 37, heights[(i % #heights) + 1], ((i * 41) % 75) - 37),
-                    size = Vector3.new(12, 2, 12),
-                })
-            end
-            return result
-        end)(),
+        -- Four authored ascending zigzag routes, each with genuine jump
+        -- gaps and no vertical stacking: entry (+4) -> transfer (+7)
+        -- -> elevated turn (+9) -> exposed lookout (+11).
+        -- A stacked deck with only 1-3 studs of headroom would TRAP R15
+        -- avatars on the lower tier even if a 2D "reachable" check passed.
+        -- All routes also preserve every native spawn and Grid Circuit
+        -- sensor at (+/-16, +/-16), plus a six-stud outer floor margin.
+        -- Platform1 stays high enough for engineered support cosmetics.
+        Platforms = {
+            -- Tier 3: exposed turn from the cardinal transfer.
+            {offset=Vector3.new(39,9,12),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(-12,9,39),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(-39,9,-12),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(12,9,-39),size=Vector3.new(10,2,10),RouteTier=3},
+            -- Tier 1: floor-accessible takeoff terraces.
+            {offset=Vector3.new(12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
+            {offset=Vector3.new(0,4,12),size=Vector3.new(12,2,12),RouteTier=1},
+            {offset=Vector3.new(-12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
+            {offset=Vector3.new(0,4,-12),size=Vector3.new(12,2,12),RouteTier=1},
+            -- Tier 2: lateral takeoffs clear the straight floor-to-entry
+            -- corridor. Diagonal jumps are short and well within range.
+            {offset=Vector3.new(26,7,12),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(-12,7,26),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(-26,7,-12),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(12,7,-26),size=Vector3.new(10,2,10),RouteTier=2},
+            -- Tier 4: turn outward once more for the final exposed lookout.
+            -- No spawn pads
+            -- or sensor volumes underneath, no inaccessible islands.
+            {offset=Vector3.new(39,11,25),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-25,11,39),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-39,11,-25),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(25,11,-39),size=Vector3.new(10,2,10),RouteTier=4},
+        },
     },
 
     Towers = {

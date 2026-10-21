@@ -153,6 +153,12 @@ describe("Core localization", function()
         expect(CoreLocalization.text("fr-fr", "WAYFIND_ARENA")).toBe("ARÈNE")
         expect(CoreLocalization.text("fr-fr", "WAYFIND_PRACTICE")).toBe("ENTRAÎNEMENT")
         expect(CoreLocalization.arenaName("fr-fr", "Classic", "fallback")).toBe("GRILLE CLASSIQUE")
+        expect(CoreLocalization.arenaStrategy("fr-fr", "Classic", "fallback")).toBe(
+            "Quatre parcours ascendants • saute entre les plateformes basses et hautes"
+        )
+        expect(CoreLocalization.arenaStrategy("en-us", "Classic", "fallback")).toBe(
+            "Four rising escape routes • jump between low, mid and high decks"
+        )
         expect(CoreLocalization.arenaStrategy("fr-fr", "Towers", "fallback")).toBe(
             "Arène verticale • prends de la hauteur sans te faire enfermer"
         )

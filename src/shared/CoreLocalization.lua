@@ -478,7 +478,7 @@ local ARENA_COPY = {
     en = {
         Classic = {
             name = "CLASSIC GRID",
-            strategy = "Balanced routes • switch height when danger closes in",
+            strategy = "Four rising escape routes • jump between low, mid and high decks",
             mechanicName = "ESCAPE PADS",
             mechanicHint = "Blue pads aid escape; touch all four glowing Grid Circuit nodes clockwise for mastery",
         },
@@ -504,7 +504,7 @@ local ARENA_COPY = {
     fr = {
         Classic = {
             name = "GRILLE CLASSIQUE",
-            strategy = "Routes équilibrées • change de hauteur quand le danger se referme",
+            strategy = "Quatre parcours ascendants • saute entre les plateformes basses et hautes",
             mechanicName = "PADS D'ÉVASION",
             mechanicHint = "Les pads bleus aident à fuir ; touche les quatre bornes lumineuses dans le sens horaire",
         },

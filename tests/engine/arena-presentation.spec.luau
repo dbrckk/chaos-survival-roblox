@@ -846,6 +846,60 @@ describe("Streaming-independent platform identity", function()
 end)
 
 describe("Moving platform premium trim kit", function()
+    it("scales Classic's welded route paint with actual shrinking geometry", function()
+        local root = Instance.new("Folder")
+        root.Parent = workspace
+        local deck = Instance.new("Part")
+        deck.Name = "Platform1"
+        deck.Size = Vector3.new(10, 2, 10)
+        deck.CFrame = CFrame.new(22, 12, 12)
+        deck.Anchored = true
+        deck:SetAttribute("RouteTier", 3)
+        deck.Parent = root
+        local visuals = Instance.new("Folder")
+        visuals.Parent = root
+        local pieces = PlatformFinishKit.build(
+            visuals, deck, "Classic", "High", VisualTheme.arena("Classic")
+        )
+        expect(#pieces > 0).toBe(true)
+        local first = pieces[1]
+        local weld = first:FindFirstChild("ChaosPlatformTrimWeld")
+        expect(weld ~= nil and weld:IsA("Weld")).toBe(true)
+        expect(weld.Part1).toBe(deck)
+        local firstSize = first.Size
+        local firstOffset = deck.CFrame:ToObjectSpace(first.CFrame).Position
+
+        local snapshot = PlatformFinishKit.captureRouteFootprint(deck, pieces)
+        expect(snapshot ~= nil).toBe(true)
+        expect(#snapshot.entries).toBe(#pieces)
+        deck.Size = Vector3.new(4.5, 2, 4.5)
+        expect(PlatformFinishKit.applyRouteFootprint(snapshot)).toBe(#pieces)
+        expect(math.abs(first.Size.X - firstSize.X * 0.45) < 0.01).toBe(true)
+        expect(math.abs(first.Size.Z - firstSize.Z * 0.45) < 0.01).toBe(true)
+        expect((weld.C1.Position
+            - Vector3.new(firstOffset.X * 0.45,
+                firstOffset.Y, firstOffset.Z * 0.45)).Magnitude < 0.01)
+            .toBe(true)
+
+        deck.Size = Vector3.new(10, 2, 10)
+        PlatformFinishKit.applyRouteFootprint(snapshot)
+        expect((first.Size - firstSize).Magnitude < 0.005).toBe(true)
+        expect((weld.C1.Position - firstOffset).Magnitude < 0.01).toBe(true)
+
+        -- Resizing remains bounded and event-driven: no per-frame polling.
+        local disconnect = PlatformFinishKit.bindRouteFootprint(deck, pieces)
+        deck.Size = Vector3.new(7, 2, 7)
+        task.wait(0.06)
+        expect(math.abs(first.Size.X - firstSize.X * 0.7) < 0.01)
+            .toBe(true)
+        disconnect()
+        local frozen = first.Size
+        deck.Size = Vector3.new(5, 2, 5)
+        task.wait(0.06)
+        expect((first.Size - frozen).Magnitude < 0.005).toBe(true)
+        root:Destroy()
+    end)
+
     it("shrinks client-painted Tower skybridge bands with real bridge spans", function()
         local root = Instance.new("Folder")
         root.Parent = workspace

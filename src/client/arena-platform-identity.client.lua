@@ -17,6 +17,7 @@ folder.Parent = workspace
 -- it never rebuilds a whole arena or adds a per-frame loop.
 local visualsByPlatform = {}
 local collapseConnections = {}
+local routeAttributeConnections = {}
 local footprintDisconnects = {}
 
 local function clear()
@@ -27,6 +28,10 @@ local function clear()
     for platform, disconnect in pairs(footprintDisconnects) do
         disconnect()
         footprintDisconnects[platform] = nil
+    end
+    for platform, connection in pairs(routeAttributeConnections) do
+        connection:Disconnect()
+        routeAttributeConnections[platform] = nil
     end
     table.clear(visualsByPlatform)
     folder:ClearAllChildren()
@@ -60,10 +65,15 @@ local function makePart(name, size, cframe, color, material, transparency, ancho
     if anchorPart and anchorPart:IsA("BasePart") then
         registerVisual(anchorPart, part)
         part.Massless = true
-        local weld = Instance.new("WeldConstraint")
+        local compactRoute = tonumber(anchorPart:GetAttribute("RouteTier")) ~= nil
+        local weld = Instance.new(compactRoute and "Weld" or "WeldConstraint")
         weld.Name = "PlatformIdentityWeld"
         weld.Part0 = part
         weld.Part1 = anchorPart
+        if compactRoute then
+            weld.C0 = CFrame.identity
+            weld.C1 = anchorPart.CFrame:ToObjectSpace(part.CFrame)
+        end
         weld.Parent = part
     end
 
@@ -245,6 +255,18 @@ local function rebuild()
         if platform:IsA("BasePart") then
             index += 1
             local visualIndex = PlatformFinishKit.visualIndex(platform, index)
+
+            -- The physical deck may stream before its RouteTier attribute.
+            -- Rebuild once the replicated metadata arrives so the first
+            -- streamed-in ornaments use resizable Welds, not rigid
+            -- WeldConstraints that could imply ghost ledges while shrinking.
+            if variant == "Classic"
+                and tonumber(platform:GetAttribute("RouteTier")) == nil then
+                routeAttributeConnections[platform] =
+                    platform:GetAttributeChangedSignal("RouteTier"):Connect(function()
+                        task.defer(rebuild)
+                    end)
+            end
             if tier.Name == "Low" and visualIndex % 2 == 0 then
                 continue
             end
@@ -287,6 +309,13 @@ local function rebuild()
             if platform:GetAttribute("ChaosSkybridge") == true then
                 footprintDisconnects[platform] =
                     PlatformFinishKit.bindSkybridgeFootprint(
+                        platform, visualsByPlatform[platform]
+                    )
+            elseif tonumber(platform:GetAttribute("RouteTier")) ~= nil then
+                -- All visible Classic trims track the physical footprint as
+                -- Shrinking Arena contracts both axes. No ghost ledges.
+                footprintDisconnects[platform] =
+                    PlatformFinishKit.bindRouteFootprint(
                         platform, visualsByPlatform[platform]
                     )
             end
