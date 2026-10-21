@@ -2185,7 +2185,7 @@ local function showRoundFeedback(feedback)
             or (feedback.pendingRewards == true
                 and CoreLocalization.text(localeId, "RESULT_REWARDS_PENDING")
                 or CoreLocalization.text(localeId, "COINS_XP", shownCoins, shownXP)))
-    resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_SOON")
+    resultNext.Text = CoreLocalization.text(localeId, "RESULT_LOBBY_SOON")
     if feedback.pendingRewards ~= true and feedback.rewardsUnavailable ~= true
         and #extras > 0 and not touchDevice then
         resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")
@@ -3203,7 +3203,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
         if resultCard.Visible then
             local nextSeconds = math.max(0, math.floor(tonumber(state.seconds) or 0))
-            resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_IN", nextSeconds)
+            resultNext.Text = CoreLocalization.text(localeId, "RESULT_LOBBY_IN", nextSeconds)
         end
     elseif state.phase ~= "result" then
         resultNext.Text = ""
