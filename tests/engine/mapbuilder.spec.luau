@@ -545,7 +545,11 @@ describe("Chaos Survival engine", function()
         expect(low:FindFirstChild("EtchedWayfindingPlate")
             :FindFirstChild("DestinationHint") == nil).toBe(true)
         expect(low:FindFirstChild("EtchedWayfindingPlate")
-            :FindFirstChild("RouteName").Text).toBe("REACTOR")
+            :FindFirstChild("RouteName").Text).toBe("CORE")
+        local lowFr = OrbitalRouteSignKit.create(core, core, "Low", "fr-fr")
+        table.insert(signs, lowFr)
+        expect(lowFr:FindFirstChild("EtchedWayfindingPlate")
+            :FindFirstChild("RouteName").Text).toBe("NOYAU")
         for _, sign in ipairs(signs) do
             for _, descendant in ipairs(sign:GetDescendants()) do
                 expect(descendant:IsA("BasePart")).toBe(false)
