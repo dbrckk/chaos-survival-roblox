@@ -9,6 +9,7 @@ local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
 local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local GridCircuitService = require("../../src/server/GridCircuitService")
+local ClassicGridSweep = require("../../src/server/ClassicGridSweep")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
 local CrossroadsSwitchyard = require("../../src/server/CrossroadsSwitchyard")
@@ -76,6 +77,108 @@ describe("Arena mechanics", function()
         end
         expect(GridCircuitRules.previous(0) == nil).toBe(true)
         expect(GridCircuitRules.previous(5) == nil).toBe(true)
+    end)
+
+    it("warns, pulses and restores nonlethal Classic floor rows in live engine", function()
+        local sweep = ClassicGridSweep
+        expect(sweep.indexFor(1, 0)).toBe(1)
+        expect(sweep.indexFor(1, 1)).toBe(2)
+        expect(sweep.indexFor(1, 4)).toBe(1)
+        expect(sweep.indexFor(3, 0)).toBe(3)
+        expect(sweep.allowed({
+            EnableClassicGridSweep = true,
+            Active = function() return true end,
+            OnCleanup = {},
+            ActiveDisasters = {Freeze = true},
+        })).toBe(false)
+        expect(sweep.allowed({
+            EnableClassicGridSweep = false,
+            Active = function() return true end,
+            OnCleanup = {},
+        })).toBe(false)
+
+        local map = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local running = true
+        local cleanup = {}
+        local ctx = {
+            EnableClassicGridSweep = true,
+            Active = function() return running end,
+            ActiveDisasters = {Meteors = true},
+            RoundNumber = 1,
+            OnCleanup = cleanup,
+            Cleanup = {},
+            Contestants = {},
+            IsContestantActive = function() return true end,
+        }
+        local mechanic = ArenaMechanics.start(ctx, "Classic")
+        expect(mechanic ~= nil).toBe(true)
+        local arena = map:FindFirstChild("Arena")
+        local mechanics = arena:FindFirstChild("Mechanics")
+        local circuit = mechanics:FindFirstChild("GridCircuit")
+        expect(#circuit:GetChildren()).toBe(4)
+        local folder = mechanics:FindFirstChild("GridSweep")
+        expect(folder ~= nil).toBe(true)
+        expect(#folder:GetChildren()).toBe(4)
+        expect(#cleanup).toBe(1)
+        local negativeX = folder:FindFirstChild("GridSweepBand1")
+        local negativeZ = folder:FindFirstChild("GridSweepBand2")
+        local positiveX = folder:FindFirstChild("GridSweepBand3")
+        expect(negativeX.CanCollide).toBe(false)
+        expect(negativeX.CanTouch).toBe(false)
+        expect(negativeX.CanQuery).toBe(false)
+        expect(negativeX.Size.X < negativeX.Size.Z).toBe(true)
+        expect(negativeZ.Size.Z < negativeZ.Size.X).toBe(true)
+        expect(sweep.velocity(Vector3.zero, negativeX).X > 0).toBe(true)
+        expect(sweep.velocity(Vector3.zero, positiveX).X < 0).toBe(true)
+        expect(sweep.velocity(Vector3.zero, negativeZ).Z > 0).toBe(true)
+
+        local bot = Instance.new("Model")
+        bot.Name = "ClassicSweepRegressionBot"
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local hum = Instance.new("Humanoid")
+        hum.Parent = bot
+        local body = Instance.new("Part")
+        body.Name = "HumanoidRootPart"
+        body.Size = Vector3.new(2, 2, 1)
+        body.CanCollide = false
+        body.Parent = bot
+        bot.Parent = workspace
+        body.Position = negativeX.Position + Vector3.new(0, 2.5, 0)
+        body.AssemblyLinearVelocity = Vector3.zero
+        local subject = {Character = bot}
+        local once = {}
+
+        expect(sweep.inside(body.Position, negativeX)).toBe(true)
+        expect(sweep.inside(
+            body.Position + Vector3.new(0, 5.5, 0), negativeX
+        )).toBe(false)
+        sweep.setPhase(negativeX, "Warning", workspace:GetServerTimeNow())
+        expect(negativeX:GetAttribute("GridSweepPhase")).toBe("Warning")
+        expect(sweep.apply(ctx, negativeX, subject, once)).toBe(false)
+        sweep.setPhase(negativeX, "Pulse")
+        expect(sweep.apply(ctx, negativeX, subject, once)).toBe(true)
+        expect(once[subject]).toBe(true)
+        expect(body.AssemblyLinearVelocity.X > 16).toBe(true)
+        expect(sweep.apply(ctx, negativeX, subject, once)).toBe(false)
+
+        -- A high platform or successful jump must never be affected.
+        body.Position = negativeX.Position + Vector3.new(0, 8, 0)
+        expect(sweep.apply(ctx, negativeX, subject, {})).toBe(false)
+        body.Position = negativeX.Position + Vector3.new(0, 2.5, 0)
+        sweep.setPhase(negativeX, nil)
+        expect(sweep.apply(ctx, negativeX, subject, {})).toBe(false)
+
+        running = false
+        for _, finish in ipairs(cleanup) do finish() end
+        for index = 1, 4 do
+            local band = folder:FindFirstChild("GridSweepBand" .. index)
+            expect(band:GetAttribute("GridSweepPhase") == nil).toBe(true)
+            expect(math.abs(band.Transparency - 0.92) < 0.0001).toBe(true)
+        end
+        expect(arena:FindFirstChild("Base").CanCollide).toBe(true)
+        bot:Destroy()
+        map:Destroy()
     end)
 
     it("builds four welded Skyrail Slipstream checkpoints on permanent Tower bridges", function()

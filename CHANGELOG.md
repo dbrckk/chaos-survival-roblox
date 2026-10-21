@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-21 — Classic Grid floor sweep (candidate, not published)
+
+- Classic Grid gains a **distinct nonlethal survival timing challenge**. One of four fixed floor rows glows amber for 2.6 seconds, flashes red for 0.9 seconds, then rests. Rows rotate with the round seed, separated by six-second intervals; the first wave cannot start until six seconds into the round.
+- A grounded real player or in-round bot standing in the red row gets a **small, centre-directed horizontal knockback**, capped at 42 horizontal velocity. Jumping or changing lanes avoids it entirely. High platforms are unaffected; floor collision is never removed and there is no additional health damage, teleport, reward or new remote.
+- Four simple server-authored noncolliding row lights are visible on Low Android graphics without local Part spawning, heartbeat connections or a new HUD. An existing Classic client loop plays one quiet, spatialized warning cue per wave near the player (respecting mute). The existing four-station clockwise Grid Circuit and blue escape pads are unchanged.
+- Survivor AI recognizes the wave, waits its normal reaction time, and moves across the nearest band edge without speed/jump benefits. Regular meteor/bomb threat avoidance retains priority.
+- The feature runs only in experienced single-disaster rounds, and is disabled alongside freezing, falling floors, rising lava, shrinking arena, tornadoes, jump-shock and low gravity. Cleanup restores every warning row.
+- Extended the existing real Roblox engine integration suite to inspect live rows, collision invariants, direction/speed, player/bot eligibility, elevated/jumping exemption, one impact per wave and cleanup. **No new unit-test suite.**
+- **Source candidate only:** PR CI, Roblox Studio/device gameplay QA, frame-rate checks and controlled public deployment remain separate gates.
+
 ## 2026-10-21 — Crossroads Switchyard (candidate, not published)
 
 - Added **Crossroads Switchyard**, a skill-based lateral route cut at four central junctions. Two opposite junctions light up gold at a time; the active pair rotates every nine seconds. The existing inward Flux Relays, outer launch pads, arena floor and all four original routes remain unchanged.

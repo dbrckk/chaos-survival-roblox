@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalizationService = game:GetService("LocalizationService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local SoundService = game:GetService("SoundService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local GridCircuitRules = require(ReplicatedStorage.Shared.GridCircuitRules)
@@ -33,6 +34,8 @@ local currentFolder = nil
 local tierName = nil
 local reducedMotion = nil
 local lastStyleKey = ""
+local lastSweepBand = nil
+local lastSweepAt = nil
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "GridCircuitProgress"
@@ -263,6 +266,43 @@ local function findCircuit()
     return mechanics and mechanics:FindFirstChild("GridCircuit")
 end
 
+-- The same existing 0.22s Classic controller observes the server's pulse
+-- warning, so mobile players hear one localized cue before the row lights
+-- turn red. No extra rendering or polling loop is introduced.
+local function playGridSweepWarning()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    local sweep = mechanics and mechanics:FindFirstChild("GridSweep")
+    if not sweep or not currentFolder then return end
+    for _, band in ipairs(sweep:GetChildren()) do
+        if band:IsA("BasePart")
+            and band:GetAttribute("GridSweepPhase") == "Warning"
+        then
+            local at = band:GetAttribute("GridSweepWarningAt")
+            if band == lastSweepBand and at == lastSweepAt then return end
+            lastSweepBand, lastSweepAt = band, at
+            if player:GetAttribute("AudioMuted") == true then return end
+            local camera = workspace.CurrentCamera
+            if camera and (camera.CFrame.Position - band.Position).Magnitude > 95 then
+                return
+            end
+            local tone = Instance.new("Sound")
+            tone.Name = "GridSweepChargeCue"
+            tone.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+            tone.Volume = 0.18
+            tone.PlaybackSpeed = 0.58
+            tone.RollOffMinDistance = 6
+            tone.RollOffMaxDistance = 70
+            tone.SoundGroup = SoundService:FindFirstChild("ChaosSFX")
+            tone.Parent = band
+            tone:Play()
+            Debris:AddItem(tone, 2)
+            return
+        end
+    end
+end
+
 -- Connect the four compass stations with shallow noncolliding
 -- floor chevrons. Highlight only the player's next clockwise edge.
 -- No moving parts/Heartbeat and no route glyphs on Low devices.
@@ -409,6 +449,7 @@ task.spawn(function()
         end
         if changed then bindCircuit(circuit) end
         updateLook()
+        if circuit then playGridSweepWarning() end
         task.wait(circuit and 0.22 or 0.65)
     end
 end)
