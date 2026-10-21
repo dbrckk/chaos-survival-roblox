@@ -25,8 +25,8 @@ function RoundResultState.snapshot(context)
         roundNumber = context.roundNumber,
         title = title,
         hint = context.fusionName
-            and (tostring(context.fusionName) .. " complete • Next round soon")
-            or "Next round soon",
+            and (tostring(context.fusionName) .. " complete • Back to lobby, then vote")
+            or "Returning to lobby • Vote and play again automatically",
         seconds = nonnegativeInt(context.seconds),
         doubleChaos = context.doubleChaos == true,
         fusionName = context.fusionName,
