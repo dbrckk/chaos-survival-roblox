@@ -269,6 +269,15 @@ function GameAnalytics.arenaRoundFields(arenaId, solo, primaryId, doubleChaos, d
             .. "|Extra:" .. (dynamicActive == true and "Yes" or "No")
 end
 
+-- Character deaths are measured on the same monotonic clock as the
+-- round, not from the latest HUD countdown. Clamp unavailable timestamps
+-- conservatively rather than inventing an exact instant of elimination.
+function GameAnalytics.roundAliveSeconds(roundElapsed, deathSeconds, survived)
+    local elapsed = finiteNonnegative(roundElapsed, 120)
+    if survived == true or deathSeconds == nil then return elapsed end
+    return math.min(elapsed, finiteNonnegative(deathSeconds, 120))
+end
+
 function GameAnalytics.arenaRoundMetrics(player, metrics)
     if not player or type(metrics) ~= "table" then return false end
     local arena, mode, context = GameAnalytics.arenaRoundFields(
