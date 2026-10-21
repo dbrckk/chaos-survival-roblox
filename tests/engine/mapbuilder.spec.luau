@@ -406,6 +406,28 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(count).toBe(24)
+
+        -- Every authored interchange deck is actually physical, with a
+        -- visible tier code that contracts alongside its collision.
+        local platforms = arena:FindFirstChild("Platforms")
+        expect(platforms ~= nil).toBe(true)
+        expect(#(platforms :: Folder):GetChildren()).toBe(17)
+        local tiers = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
+        for index = 1, 17 do
+            local deck = platforms:FindFirstChild("Platform" .. index)
+            expect(deck ~= nil).toBe(true)
+            expect(deck.CanCollide).toBe(true)
+            local tier = tonumber(deck:GetAttribute("RouteTier"))
+            expect(tier ~= nil).toBe(true)
+            tiers[tier] += 1
+            local finish = decor:FindFirstChild("PlatformPanel" .. index)
+            expect(finish ~= nil).toBe(true)
+            expect(finish.CanCollide).toBe(false)
+        end
+        expect(tiers[1]).toBe(5)
+        expect(tiers[2]).toBe(4)
+        expect(tiers[3]).toBe(4)
+        expect(tiers[4]).toBe(4)
         root:Destroy()
     end)
 
