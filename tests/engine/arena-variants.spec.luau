@@ -23,6 +23,64 @@ describe("Arena variants", function()
         end
     end)
 
+    it("gives Classic four authored, spawn-safe, continuously reachable tiers", function()
+        local classic = ArenaVariants.get("Classic")
+        local tiers = {{}, {}, {}, {}}
+        expect(#classic.Platforms).toBe(16)
+        for _, deck in ipairs(classic.Platforms) do
+            local tier = deck.RouteTier
+            expect(type(tier)).toBe("number")
+            expect(tier >= 1 and tier <= 4).toBe(true)
+            table.insert(tiers[tier], deck)
+
+            -- A mobile avatar arriving at any native spawn marker must not
+            -- materialize inside a high deck, regardless of its height.
+            -- Model R15 horizontal dimensions plus a one-stud margin.
+            for _, spawn in ipairs(classic.SpawnOffsets) do
+                local dx = math.abs(spawn.X - deck.offset.X)
+                local dz = math.abs(spawn.Z - deck.offset.Z)
+                local clearX = dx > deck.size.X * 0.5 + 3.8
+                local clearZ = dz > deck.size.Z * 0.5 + 3.8
+                expect(clearX or clearZ).toBe(true)
+            end
+        end
+        for tier = 1, 4 do expect(#tiers[tier]).toBe(4) end
+
+        local baseTop = classic.BaseSize.Y * 0.5
+        for _, entry in ipairs(tiers[1]) do
+            -- The floor -> starter leap is shorter than a standard jump.
+            local top = entry.offset.Y + entry.size.Y * 0.5
+            expect(top - baseTop <= 4.5).toBe(true)
+        end
+
+        local function canJump(from, target)
+            local ascent = target.offset.Y + target.size.Y * 0.5
+                - from.offset.Y - from.size.Y * 0.5
+            local gapX = math.max(0, math.abs(from.offset.X - target.offset.X)
+                - (from.size.X + target.size.X) * 0.5)
+            local gapZ = math.max(0, math.abs(from.offset.Z - target.offset.Z)
+                - (from.size.Z + target.size.Z) * 0.5)
+            return ascent >= 0 and ascent <= 4.5
+                and (gapX * gapX + gapZ * gapZ) <= 16
+        end
+
+        -- Every advanced deck has an explicit adjacent route from a lower
+        -- tier; no decorative platform is an impossible floating island.
+        for tier = 2, 4 do
+            for _, target in ipairs(tiers[tier]) do
+                local reachable = false
+                for previousTier = 1, tier - 1 do
+                    for _, source in ipairs(tiers[previousTier]) do
+                        if canJump(source, target) then
+                            reachable = true
+                        end
+                    end
+                end
+                expect(reachable).toBe(true)
+            end
+        end
+    end)
+
     it("adds a connected high-route skybridge circuit to the Tower Run arena", function()
         local towers = ArenaVariants.get("Towers")
         local links = {}
