@@ -14,6 +14,7 @@ folder.Parent = workspace
 
 local tracked = {}
 local clock = 0
+local lastCollapseWarningCueAt = -math.huge
 
 local function profile()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -162,19 +163,31 @@ local function refreshPart(part)
     end
     local firstVisibleWarning = tracked[part] == nil
         and part:GetAttribute("CollapsePhase") == "Warning"
-        and part:GetAttribute("ChaosSkybridge") == true
     ensureState(part)
     if firstVisibleWarning and player:GetAttribute("AudioMuted") ~= true then
         local camera = workspace.CurrentCamera
-        if camera and (camera.CFrame.Position - part.Position).Magnitude <= 90 then
-            -- One local, spatial warning only on the bridge that will fall.
-            -- Never broadcast four identical sirens or allocate audio per frame.
+        local rig = player.Character
+        local root = rig and rig:FindFirstChild("HumanoidRootPart")
+        local skybridge = part:GetAttribute("ChaosSkybridge") == true
+        -- Ordinary collapse warnings are deliberately personal and nearby;
+        -- distant empty platforms must not spam audio across the arena.
+        -- Bridge warnings can travel farther because elevated routes are
+        -- long and the loss of a 49-stud span is more dangerous.
+        local audibleDistance = skybridge and 90 or 26
+        local nearby = root and root:IsA("BasePart")
+            and (root.Position - part.Position).Magnitude <= audibleDistance
+        if camera and nearby
+            and (camera.CFrame.Position - part.Position).Magnitude <= 90
+            and os.clock() - lastCollapseWarningCueAt >= 1.0
+        then
+            lastCollapseWarningCueAt = os.clock()
             local cue = Instance.new("Sound")
-            cue.Name = "SkybridgeOutageWarning"
+            cue.Name = skybridge and "SkybridgeOutageWarning"
+                or "PlatformCollapseWarning"
             cue.SoundId = "rbxasset://sounds/electronicpingshort.wav"
-            cue.Volume = 0.23
-            cue.PlaybackSpeed = 0.78
-            cue.RollOffMaxDistance = 90
+            cue.Volume = skybridge and 0.23 or 0.18
+            cue.PlaybackSpeed = skybridge and 0.78 or 0.70
+            cue.RollOffMaxDistance = skybridge and 90 or 34
             cue.RollOffMinDistance = 8
             cue.SoundGroup = SoundService:FindFirstChild("ChaosSFX")
             cue.Parent = part
