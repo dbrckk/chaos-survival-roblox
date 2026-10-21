@@ -14,6 +14,13 @@ local COPY = {
     },
 }
 
+-- Low-tier canvases are only ~74 pixels wide on narrow core ramps.
+-- Keep the destination recognizable without reducing text to illegible type.
+local SHORT_COPY = {
+    en = {Entry = "UP", Core = "CORE"},
+    fr = {Entry = "MONTE", Core = "NOYAU"},
+}
+
 local SIGNAL = {
     Entry = Color3.fromRGB(88, 235, 222),
     Core = Color3.fromRGB(255, 213, 118),
@@ -106,7 +113,9 @@ function OrbitalRouteSignKit.create(ramp, parent, tierName, locale)
     name.TextColor3 = accent
     name.TextStrokeColor3 = Color3.fromRGB(2, 10, 15)
     name.TextStrokeTransparency = 0.70
-    name.Text = copy[1]
+    local language = tostring(locale or "en"):sub(1, 2):lower()
+    local short = SHORT_COPY[language] or SHORT_COPY.en
+    name.Text = tier == "Low" and short[kind] or copy[1]
     name.Parent = panel
 
     local textConstraint = Instance.new("UITextSizeConstraint")
