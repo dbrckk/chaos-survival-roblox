@@ -14,6 +14,32 @@ describe("Survival feedback", function()
         expect(SurvivalFeedback.isCriticalHealth(20.1, 100)).toBe(false)
     end)
 
+    it("restores health only for living humans between rounds, matching AI starts", function()
+        local humanoid = Instance.new("Humanoid")
+        humanoid.MaxHealth = 135
+        humanoid.Health = 17
+        expect(SurvivalFeedback.isCriticalHealth(
+            humanoid.Health, humanoid.MaxHealth
+        )).toBe(true)
+        expect(SurvivalFeedback.restoreForNextRound(humanoid)).toBe(true)
+        expect(humanoid.Health).toBe(135)
+        expect(SurvivalFeedback.isCriticalHealth(
+            humanoid.Health, humanoid.MaxHealth
+        )).toBe(false)
+
+        -- Dead rigs must respawn normally rather than get resurrected at
+        -- the arena teleport. Invalid inputs cannot crash the round loop.
+        humanoid.Health = 0
+        expect(SurvivalFeedback.restoreForNextRound(humanoid)).toBe(false)
+        expect(humanoid.Health).toBe(0)
+        expect(SurvivalFeedback.restoreForNextRound(nil)).toBe(false)
+        expect(SurvivalFeedback.restoreForNextRound("player")).toBe(false)
+        local part = Instance.new("Part")
+        expect(SurvivalFeedback.restoreForNextRound(part)).toBe(false)
+        part:Destroy()
+        humanoid:Destroy()
+    end)
+
     it("does not mark invalid or dead health states as critical", function()
         expect(SurvivalFeedback.isCriticalHealth(0, 100)).toBe(false)
         expect(SurvivalFeedback.isCriticalHealth(10, 0)).toBe(false)
