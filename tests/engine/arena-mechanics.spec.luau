@@ -174,7 +174,7 @@ describe("Arena mechanics", function()
         for index = 1, 4 do
             local band = folder:FindFirstChild("GridSweepBand" .. index)
             expect(band:GetAttribute("GridSweepPhase") == nil).toBe(true)
-            expect(band.Transparency).toBe(0.92)
+            expect(math.abs(band.Transparency - 0.92) < 0.0001).toBe(true)
         end
         expect(arena:FindFirstChild("Base").CanCollide).toBe(true)
         bot:Destroy()
