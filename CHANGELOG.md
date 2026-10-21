@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-21 — Result card continuity and late reward ordering (candidate)
+
+- Keep the result card visible until the server actually leaves RESULT; remove the ten-second local timeout that could repeatedly restart winner animations during longer multiplayer countdowns.
+- Reject stale previous-round reward receipts and receipts received during the next READY, intermission or waiting. Keep valid current-round reward receipts arriving just before the RESULT phase.
+- Extend the existing engine result-presentation tests; no new test file, remote, network loop or economy changes. Built on top of #115's authoritative outcome snapshot.
+
 ## 2026-10-21 — Authoritative round outcomes despite reward errors (candidate)
 
 - **Frozen game results:** establish the human participant roster and winner roster immediately after the hazard finishes, *before* calling any per-player Coins, XP, quest, achievement or analytics handler. Previously the winner count and survivor list were updated inside the individually protected reward handler: if that handler failed, the actual survivor vanished from RESULT despite having won. The new round-owned outcome snapshot remains stable even when player data or late character updates change during payouts.
