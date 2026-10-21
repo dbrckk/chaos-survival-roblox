@@ -9,6 +9,7 @@ local SoundService = game:GetService("SoundService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local Showtime = require(ReplicatedStorage.Shared.LobbyShowtimeRules)
 local ShowtimeProps = require(script.Parent.ShowtimeProps)
@@ -138,6 +139,15 @@ local function activePhase()
 end
 
 local function available()
+    -- Optional dance emotes do not compete with the essential controls
+    -- until the player has completed three rounds. Stage and emotes
+    -- are cosmetic only: this does not change core game access.
+    local games = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    if FirstTimeExperience.isRookie(games) then
+        return false
+    end
     local hum = humanoid()
     return hum ~= nil and Showtime.canEmote(phase, voteOptions, hum.Health)
 end
@@ -892,6 +902,8 @@ end)
 player.CharacterAdded:Connect(function()
     task.defer(refreshUI)
 end)
+player:GetAttributeChangedSignal("Games"):Connect(refreshUI)
+player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refreshUI)
 local function bindStageSource(generated)
     if disconnectStageSource then
         disconnectStageSource()
