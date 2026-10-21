@@ -12,7 +12,34 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local phase = "waiting"
 local meteorsActive = false
 local trails = setmetatable({}, {__mode = "k"})
+-- The previous 250ms effect refresh allocated workspace:GetChildren()
+-- on every meteor frame. Double Chaos may have hundreds of unrelated
+-- arena parts; track only direct server-owned RoundMeteor candidates.
+local meteors = {}
+local candidateBuffer = {}
 local dirty = true
+
+local function registerMeteor(instance)
+    if instance:IsA("BasePart")
+        and instance.Name == "RoundMeteor"
+        and instance.Parent == workspace
+    then
+        meteors[instance] = true
+        dirty = true
+    end
+end
+
+local function candidates()
+    table.clear(candidateBuffer)
+    for meteor in pairs(meteors) do
+        if meteor.Parent == workspace then
+            candidateBuffer[#candidateBuffer + 1] = meteor
+        else
+            meteors[meteor] = nil
+        end
+    end
+    return candidateBuffer
+end
 local function clear(meteor)
     -- Only destroy the exact locally created instances. Name-based cleanup
     -- could remove another system's same-named Trail after StreamingEnabled
@@ -106,7 +133,7 @@ local function sync()
     end
 
     local ordered = MeteorRules.orderedCandidates(
-        workspace:GetChildren(), viewerPosition
+        candidates(), viewerPosition
     )
     local eligible = {}
     local allocated = 0
@@ -148,12 +175,19 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     if player:GetAttribute("ReduceMotion") == true then clearAll() end
 end)
 
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "RoundMeteor" then dirty = true end
-end)
+-- Subscribe before the initial sweep to avoid missing meteors arriving
+-- during client startup. Existing meteors are discovered just once.
+workspace.ChildAdded:Connect(registerMeteor)
 workspace.ChildRemoved:Connect(function(child)
+    if meteors[child] then
+        meteors[child] = nil
+        dirty = true
+    end
     if trails[child] then clear(child) end
 end)
+for _, child in ipairs(workspace:GetChildren()) do
+    registerMeteor(child)
+end
 
 task.spawn(function()
     while true do
