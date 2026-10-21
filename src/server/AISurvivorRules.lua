@@ -525,6 +525,41 @@ function AISurvivorRules.skyrailExitTarget(bridgeFrame, size, sign)
             or Vector3.new(0, altitude, finish))
 end
 
+-- A collapsing Tower skybridge should make an in-round AI run toward
+-- one of its *real supported tower decks*, not dodge sideways into the void.
+-- This reuses the live bridge dimensions, works on either long axis and
+-- rejects positions not actually on the elevated route.
+function AISurvivorRules.skybridgeEscapeTarget(position, bridgeFrame, size, velocity)
+    if typeof(position) ~= "Vector3"
+        or typeof(bridgeFrame) ~= "CFrame"
+        or typeof(size) ~= "Vector3"
+    then return nil end
+    local alongX = size.X > size.Z
+    local span, width = math.max(size.X, size.Z), math.min(size.X, size.Z)
+    if span < 16 or width < 4 then return nil end
+    local localPosition = bridgeFrame:PointToObjectSpace(position)
+    local distance = alongX and localPosition.X or localPosition.Z
+    local lateral = alongX and localPosition.Z or localPosition.X
+    local height = size.Y * 0.5 + 2.4
+    if math.abs(lateral) > width * 0.5 + 1.6
+        or math.abs(localPosition.Y - height) > 3.2
+        or math.abs(distance) > span * 0.5 + 1.5
+    then return nil end
+
+    local localVelocity = typeof(velocity) == "Vector3"
+        and bridgeFrame:VectorToObjectSpace(velocity) or Vector3.zero
+    local speed = alongX and localVelocity.X or localVelocity.Z
+    -- Near an endpoint, choose the short exit, never a 49-stud sprint.
+    -- At midspan, retain the existing heading if clearly moving.
+    local sign = if math.abs(distance) >= 4 then math.sign(distance)
+        elseif math.abs(speed) >= 5 then math.sign(speed)
+        elseif distance < 0 then -1 else 1
+    local finish = sign * (span * 0.5 + 2.8)
+    return bridgeFrame:PointToWorldSpace(
+        alongX and Vector3.new(finish, height, 0)
+            or Vector3.new(0, height, finish))
+end
+
 function AISurvivorRules.skyrailCrossingTarget(root, bridgeFrame, size)
     if typeof(root) ~= "Vector3"
         or typeof(bridgeFrame) ~= "CFrame"
