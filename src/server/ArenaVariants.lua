@@ -6,7 +6,7 @@ ArenaVariants.Definitions = {
     Classic = {
         Id = "Classic",
         Name = "CLASSIC GRID",
-        StrategyHint = "Balanced routes • switch height when danger closes in",
+        StrategyHint = "Four rising escape routes • jump between low, mid and high decks",
         BaseSize = Vector3.new(100, 2, 100),
         BaseColor = Color3.fromRGB(92, 103, 125),
         PlatformColor = Color3.fromRGB(120, 145, 190),
@@ -16,17 +16,36 @@ ArenaVariants.Definitions = {
             Vector3.new(0,3,-35), Vector3.new(0,3,35),
             Vector3.new(-35,3,0), Vector3.new(35,3,0),
         },
-        Platforms = (function()
-            local result = {}
-            local heights = {5, 10, 15, 20}
-            for i = 1, 18 do
-                table.insert(result, {
-                    offset = Vector3.new(((i * 23) % 75) - 37, heights[(i % #heights) + 1], ((i * 41) % 75) - 37),
-                    size = Vector3.new(12, 2, 12),
-                })
-            end
-            return result
-        end)(),
+        -- Authored, symmetrical skill routes rather than pseudorandom
+        -- floating boxes. Each quadrant is reachable from the base floor:
+        -- entry (+4y) -> transfer (+7y) -> high (+9/+11y).
+        -- The four sectors reconnect through the low cardinal decks.
+        -- Leave every spawn marker's full R15 footprint unobstructed.
+        -- Keep Platform1 high enough to retain the existing engineered
+        -- underside supports and the collapsing-platform art contract.
+        Platforms = {
+            -- High perimeter escapes (tier 3): linked to the transfer ring.
+            {offset=Vector3.new(-24,9,0),size=Vector3.new(12,2,12),RouteTier=3},
+            {offset=Vector3.new(24,9,0),size=Vector3.new(12,2,12),RouteTier=3},
+            {offset=Vector3.new(0,9,-24),size=Vector3.new(12,2,12),RouteTier=3},
+            {offset=Vector3.new(0,9,24),size=Vector3.new(12,2,12),RouteTier=3},
+            -- Accessible starter terraces, just four studs above the floor.
+            {offset=Vector3.new(-12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
+            {offset=Vector3.new(12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
+            {offset=Vector3.new(0,4,-12),size=Vector3.new(12,2,12),RouteTier=1},
+            {offset=Vector3.new(0,4,12),size=Vector3.new(12,2,12),RouteTier=1},
+            -- Interlinked diagonal transfers, a three-stud rise.
+            {offset=Vector3.new(-12,7,-12),size=Vector3.new(11,2,11),RouteTier=2},
+            {offset=Vector3.new(12,7,-12),size=Vector3.new(11,2,11),RouteTier=2},
+            {offset=Vector3.new(-12,7,12),size=Vector3.new(11,2,11),RouteTier=2},
+            {offset=Vector3.new(12,7,12),size=Vector3.new(11,2,11),RouteTier=2},
+            -- Risk/reward overlooks, reached through diagonal transfers.
+            -- Their footprints finish before the four diagonal spawn pads.
+            {offset=Vector3.new(-20,11,-20),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(20,11,-20),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-20,11,20),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(20,11,20),size=Vector3.new(10,2,10),RouteTier=4},
+        },
     },
 
     Towers = {
