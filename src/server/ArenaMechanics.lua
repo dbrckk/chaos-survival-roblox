@@ -52,7 +52,7 @@ ArenaMechanics.Definitions = {
     },
     Crossroads = {
         Name = "LANE BOOSTERS",
-        Hint = "Four upper switchbacks connect lanes; pink pads launch, cyan Flux returns, gold junctions cut sideways",
+        Hint = "Climb four switchbacks; pink pads launch, cyan Flux returns, gold junctions cut sideways",
         Color = Color3.fromRGB(235, 105, 220),
         Pads = {
             {offset = Vector3.new(18, 1.7, 0), impulse = Vector3.new(46, 8, 0)},
