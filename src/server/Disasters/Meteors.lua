@@ -16,6 +16,13 @@ local D = {Name = "METEOR SHOWER", Hint = "WATCH THE WARNING CIRCLES!"}
 D.canComplete = canComplete
 
 function D.start(ctx)
+    -- Shared with the other impact disaster during Double Chaos; no new
+    -- polling loop and no markers persist beyond the current round.
+    local pending = ctx.PendingImpactWarnings
+    if type(pending) ~= "table" then
+        pending = setmetatable({}, {__mode = "k"})
+        ctx.PendingImpactWarnings = pending
+    end
     local profile = ctx.BalanceProfile or {}
     local warningSeconds = profile.MeteorWarningSeconds or 0.9
     local damage = profile.MeteorDamage or 50
@@ -28,7 +35,9 @@ function D.start(ctx)
             if not canComplete(ctx, os.clock(), warningSeconds, travelSeconds) then
                 break
             end
-            local offset = ArenaTargeting.randomOffset(6, 42)
+            local offset = ArenaTargeting.randomSeparatedOffset(
+                6, 42, ctx.Config.ArenaCenter, pending, 22
+            )
             local impactPosition = ctx.Config.ArenaCenter + offset + Vector3.new(0, 1.2, 0)
 
             local marker = Instance.new("Part")
@@ -46,6 +55,7 @@ function D.start(ctx)
             marker.Transparency = 0.65
             marker.Position = impactPosition
             marker.Parent = workspace
+            pending[marker] = true
             ctx.Cleanup[#ctx.Cleanup+1] = marker
 
             -- The server inflicts damage AFTER both the warning interval
@@ -59,6 +69,7 @@ function D.start(ctx)
             task.wait(warningSeconds)
 
             if not ctx.Active() then
+                pending[marker] = nil
                 if marker.Parent then marker:Destroy() end
                 break
             end
@@ -112,6 +123,7 @@ function D.start(ctx)
 
             task.delay(travelSeconds, function()
                 if not ctx.Active() then
+                    pending[marker] = nil
                     if marker.Parent then marker:Destroy() end
                     if meteor.Parent then meteor:Destroy() end
                     return
@@ -128,6 +140,7 @@ function D.start(ctx)
                     pcall(ctx.OnHazardImpact, position, Color3.fromRGB(255, 120, 40), radius, "Meteor")
                 end
 
+                pending[marker] = nil
                 if marker.Parent then
                     marker:Destroy()
                 end
