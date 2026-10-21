@@ -154,6 +154,11 @@ function SkybridgePressure.start(ctx, arena)
         while active and ctx.Active() and arena.Parent and platforms.Parent do
             -- Visit all four links in a changing order across rounds, never
             -- taking two simultaneous shortcuts away from a player.
+            -- Never start an unavoidable late-round event which cannot
+            -- finish and restore before the end-of-round transition.
+            local deadline = tonumber(ctx.RoundEndsAt)
+            if deadline and os.clock() + SkybridgePressure.WarningSeconds + SkybridgePressure.OutageSeconds + 2 > deadline
+            then break end
             local index = ((seed + sequence) % #bridges) + 1
             sequence += 1
             local bridge = bridges[index]
