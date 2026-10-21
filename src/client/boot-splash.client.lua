@@ -209,7 +209,8 @@ kicker.Position = UDim2.fromScale(0.29, 0.10)
 kicker.Size = UDim2.fromScale(0.64, 0.14)
 kicker.BackgroundTransparency = 1
 kicker.Font = Enum.Font.GothamBold
-kicker.Text = CoreLocalization.text(localeId, "ENTER_ARENA")
+-- First visible message should say what happens; there is no manual arena gate.
+kicker.Text = CoreLocalization.text(localeId, "BOOT_AUTO_START")
 kicker.TextColor3 = UITheme.Colors.Cyan
 kicker.TextScaled = true
 kicker.Parent = card
