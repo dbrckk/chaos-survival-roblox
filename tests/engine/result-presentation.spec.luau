@@ -4,8 +4,25 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ResultPresentation = require("../../src/shared/ResultPresentation")
 local CoreLocalization = require("../../src/shared/CoreLocalization")
+local RoundJourneyRules = require("../../src/shared/RoundJourneyRules")
 
 describe("Result presentation", function()
+    it("requires a new authoritative READY after a finished win to certify replay", function()
+        local replay = RoundJourneyRules.replayStarted
+        expect(replay(7, {phase = "ready", roundNumber = 8})).toBe(true)
+        expect(replay(7, {phase = "intermission", roundNumber = 8})).toBe(false)
+        expect(replay(7, {phase = "round", roundNumber = 8})).toBe(false)
+        expect(replay(7, {phase = "result", roundNumber = 7})).toBe(false)
+        expect(replay(7, {phase = "ready", roundNumber = 7})).toBe(false)
+        expect(replay(7, {phase = "ready", roundNumber = 9})).toBe(false)
+        expect(replay(7, {phase = "ready"})).toBe(false)
+        expect(replay(7, false)).toBe(false)
+        expect(replay(nil, {phase = "ready", roundNumber = 8})).toBe(false)
+        expect(replay(0, {phase = "ready", roundNumber = 1})).toBe(false)
+        expect(replay(math.huge, {phase = "ready", roundNumber = math.huge}))
+            .toBe(false)
+    end)
+
     it("rebuilds a truthful victory card when the personalized result event is delayed", function()
         local state = {
             phase = "result",
