@@ -496,9 +496,9 @@ local ARENA_COPY = {
         },
         Orbital = {
             name = "ORBITAL RING",
-            strategy = "Circular routes • keep moving around the ring instead of getting boxed in",
+            strategy = "Climb the outer ramps • cross the Helix ring • reach the raised reactor",
             mechanicName = "ORBIT BOOSTERS",
-            mechanicHint = "Green pads push you around the ring to keep circular routes flowing",
+            mechanicHint = "Green pads circle the lower floor; amber Helix lanes and core ramps lead upward",
         },
     },
     fr = {
@@ -522,9 +522,9 @@ local ARENA_COPY = {
         },
         Orbital = {
             name = "ANNEAU ORBITAL",
-            strategy = "Routes circulaires • continue de tourner pour éviter d'être bloqué",
+            strategy = "Monte par les rampes extérieures • traverse les hélices • rejoins le réacteur",
             mechanicName = "BOOSTERS ORBITAUX",
-            mechanicHint = "Les pads verts te poussent autour de l'anneau pour maintenir ton mouvement",
+            mechanicHint = "Les pads verts sont au sol ; les rampes de l'anneau mènent au réacteur surélevé"
         },
     },
 }
