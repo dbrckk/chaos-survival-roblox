@@ -7,7 +7,8 @@ local MovementSafety = if movementModule
 local OrbitalHelix = {}
 
 OrbitalHelix.Count = 8
--- Ninth walkway is physical transit, not a scoring/pulse lane.
+-- The ninth pre-existing observation access keeps its stable name/ID.
+-- It is transit only: eight original Helix scoring lanes remain unchanged.
 OrbitalHelix.CoreLane = OrbitalHelix.Count + 1
 OrbitalHelix.Width = 5.4
 
@@ -35,15 +36,11 @@ function OrbitalHelix.route(variant, center, index)
         or index < 1 or index > OrbitalHelix.CoreLane then
         return nil
     end
-    -- The eight original outer-to-inner circuits retain their exact IDs.
-    -- Lane 9 alone climbs from the second inner deck (top 14) to the
-    -- elevated central observation platform (top 20), without a low roof.
-    local outer = index == OrbitalHelix.CoreLane
-        and variant.Platforms[OrbitalHelix.Count + 2]
-        or variant.Platforms[index]
-    local inner = index == OrbitalHelix.CoreLane
-        and variant.Platforms[OrbitalHelix.Count * 2 + 2]
-        or variant.Platforms[index + OrbitalHelix.Count]
+    if index == OrbitalHelix.CoreLane then
+        return OrbitalHelix.accessRoute(variant, center, 2, "Core")
+    end
+    local outer = variant.Platforms[index]
+    local inner = variant.Platforms[index + OrbitalHelix.Count]
     if not outer or not inner then return nil end
     local hub = typeof(center) == "Vector3" and center or Vector3.zero
     local start = hub + outer.offset
@@ -61,6 +58,112 @@ function OrbitalHelix.route(variant, center, index)
     }
 end
 
+
+-- Physical access links make the eight outer decks and central reactor
+-- playable without paid mobility or an unusually powerful avatar jump.
+-- Entry starts ON the floor; core links start at the OUTER edge of each
+-- inner deck. Endpoints meet the exact exposed edge of the solid target.
+function OrbitalHelix.accessRoute(variant, center, index, kind)
+    if not variant or variant.Id ~= "Orbital"
+        or type(index) ~= "number"
+        or index < 1 or index > OrbitalHelix.Count
+        or (kind ~= "Entry" and kind ~= "Core")
+    then return nil end
+    local hub = typeof(center) == "Vector3" and center or Vector3.zero
+    local outer = variant.Platforms[index]
+    local inner = variant.Platforms[index + OrbitalHelix.Count]
+    local crown = variant.Platforms[18]
+    if not outer or not inner or not crown then return nil end
+
+    local angle = math.rad((index - 1) * 45)
+    local outward = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    local start, finish
+    if kind == "Entry" then
+        local reach = outer.size.X * 0.5
+            / math.max(math.abs(outward.X), math.abs(outward.Z))
+        local distance = Vector3.new(outer.offset.X, 0, outer.offset.Z).Magnitude
+        local lip = distance + reach - 0.35
+        if lip >= 46.5 then return nil end
+        start = hub + outward * 47
+            + Vector3.new(0, variant.BaseSize.Y * 0.5 - 0.35, 0)
+        finish = hub + outward * lip
+            + Vector3.new(0, outer.offset.Y + outer.size.Y * 0.5 - 0.35, 0)
+    else
+        -- The inner platforms rotate half a sector relative to the outer.
+        local flat = Vector3.new(inner.offset.X, 0, inner.offset.Z)
+        if flat.Magnitude < 0.1 then return nil end
+        local axis = flat.Unit
+        local extent = math.min(inner.size.X, inner.size.Z) * 0.5
+            / math.max(math.abs(axis.X), math.abs(axis.Z))
+        local innerDistance = flat.Magnitude
+        local coreReach = math.min(crown.size.X, crown.size.Z) * 0.5
+            / math.max(math.abs(axis.X), math.abs(axis.Z))
+        start = hub + axis * (innerDistance + extent - 0.35)
+            + Vector3.new(0, inner.offset.Y + inner.size.Y * 0.5 - 0.35, 0)
+        finish = hub + axis * (coreReach - 0.35)
+            + Vector3.new(0, crown.offset.Y + crown.size.Y * 0.5 - 0.35, 0)
+    end
+    local delta = finish - start
+    if delta.Magnitude < 2 then return nil end
+    return {
+        CFrame = CFrame.lookAt((start + finish) * 0.5, finish, Vector3.yAxis),
+        Size = Vector3.new(kind == "Entry" and 5.4 or 4.6, 0.92, delta.Magnitude + 0.65),
+        Start = start,
+        Finish = finish,
+    }
+end
+
+local function buildAccessRamp(folder, route, index, kind, theme)
+    if not route then return end
+    local group = kind .. tostring(index)
+    local entrance = kind == "Entry"
+    local ramp = physicalPart(
+        folder, kind .. "Ramp" .. index,
+        route.Size, route.CFrame,
+        theme.Structure:Lerp(theme.Detail, entrance and 0.20 or 0.40),
+        Enum.Material.DiamondPlate, true
+    )
+    ramp:SetAttribute("OrbitRouteGroup", group)
+    ramp:SetAttribute(entrance and "OrbitalAccessRamp" or "OrbitalCoreRamp", true)
+    ramp:SetAttribute("HelixStart", route.Start)
+    ramp:SetAttribute("HelixFinish", route.Finish)
+    ramp:SetAttribute("OrbitalRouteTier", entrance and 1 or 4)
+
+    for side = -1, 1, 2 do
+        local sideLine = physicalPart(
+            folder, kind .. "Signal" .. index .. "_" .. tostring(side),
+            Vector3.new(0.16, 0.07, route.Size.Z - 0.24),
+            route.CFrame * CFrame.new(
+                side * (route.Size.X * 0.5 - 0.22), 0.49, 0
+            ),
+            side < 0 and theme.Accent or theme.Secondary,
+            Enum.Material.Neon, false
+        )
+        sideLine.Transparency = entrance and 0.28 or 0.18
+        sideLine:SetAttribute("OrbitRouteGroup", group)
+    end
+
+    local spine = physicalPart(
+        folder, kind .. "Spine" .. index,
+        Vector3.new(0.26, 0.07, route.Size.Z - 0.35),
+        route.CFrame * CFrame.new(0, 0.50, 0),
+        entrance and theme.Accent or theme.Secondary,
+        Enum.Material.Neon, false
+    )
+    spine.Transparency = 0.5
+    spine:SetAttribute("OrbitRouteGroup", group)
+
+    local chassis = physicalPart(
+        folder, kind .. "Chassis" .. index,
+        Vector3.new(route.Size.X - 0.38, 0.22, route.Size.Z - 0.45),
+        route.CFrame * CFrame.new(0, -0.58, 0),
+        theme.Structure, Enum.Material.Metal, false
+    )
+    chassis.Transparency = 0.14
+    chassis:SetAttribute("OrbitRouteGroup", group)
+end
+
+
 function OrbitalHelix.build(arena, variant, center, theme)
     if not arena or not variant or variant.Id ~= "Orbital"
         or typeof(center) ~= "Vector3" or not theme then
@@ -75,6 +178,8 @@ function OrbitalHelix.build(arena, variant, center, theme)
 
     for index = 1, OrbitalHelix.CoreLane do
         local route = OrbitalHelix.route(variant, center, index)
+        local group = index == OrbitalHelix.CoreLane
+            and "Core2" or ("Helix" .. tostring(index))
         if route then
             local bridge = physicalPart(
                 folder, "HelixRamp" .. index,
@@ -83,13 +188,12 @@ function OrbitalHelix.build(arena, variant, center, theme)
                 Enum.Material.DiamondPlate, true
             )
             if index == OrbitalHelix.CoreLane then
-                -- Decorative/passable observation access; do not add a
-                -- ninth scoring checkpoint or disrupt eight-lane pulses.
                 bridge:SetAttribute("OrbitalCoreRamp", true)
             else
                 bridge:SetAttribute("OrbitalHelixRamp", true)
             end
             bridge:SetAttribute("HelixLane", index)
+            bridge:SetAttribute("OrbitRouteGroup", group)
             bridge:SetAttribute("HelixStart", route.Start)
             bridge:SetAttribute("HelixFinish", route.Finish)
 
@@ -101,6 +205,7 @@ function OrbitalHelix.build(arena, variant, center, theme)
             )
             lip.Transparency = 0.38
             lip:SetAttribute("HelixLane", index)
+            lip:SetAttribute("OrbitRouteGroup", group)
 
             for side = -1, 1, 2 do
                 local rail = physicalPart(
@@ -112,6 +217,7 @@ function OrbitalHelix.build(arena, variant, center, theme)
                 )
                 rail.Transparency = 0.22
                 rail:SetAttribute("HelixLane", index)
+                rail:SetAttribute("OrbitRouteGroup", group)
 
                 local frame = physicalPart(
                     folder, "HelixUnderframe" .. index .. "_" .. side,
@@ -121,6 +227,7 @@ function OrbitalHelix.build(arena, variant, center, theme)
                 )
                 frame.Transparency = 0.08
                 frame:SetAttribute("HelixLane", index)
+                frame:SetAttribute("OrbitRouteGroup", group)
             end
 
             for braceIndex = -1, 1 do
@@ -132,7 +239,24 @@ function OrbitalHelix.build(arena, variant, center, theme)
                 )
                 brace.Transparency = 0.22
                 brace:SetAttribute("HelixLane", index)
+                brace:SetAttribute("OrbitRouteGroup", group)
             end
+        end
+    end
+
+    -- Entry, flow and final reactor spokes form one continuous set of
+    -- physical routes. All are captured/restored by the same shrinking
+    -- arena routine; cosmetic rails stay welded to each route's transform.
+    for index = 1, OrbitalHelix.Count do
+        buildAccessRamp(folder,
+            OrbitalHelix.accessRoute(variant, center, index, "Entry"),
+            index, "Entry", theme)
+        -- The previously certified HelixRamp9 already fills Core2.
+        -- Preserve that route and its eight authored trims verbatim.
+        if index ~= 2 then
+            buildAccessRamp(folder,
+                OrbitalHelix.accessRoute(variant, center, index, "Core"),
+                index, "Core", theme)
         end
     end
 
@@ -147,15 +271,16 @@ function OrbitalHelix.capture(circuit)
     local snapshot = {}
     if not circuit then return snapshot end
     for _, ramp in ipairs(circuit:GetChildren()) do
-        if ramp:IsA("BasePart")
-            and (ramp:GetAttribute("OrbitalHelixRamp") == true
-                or ramp:GetAttribute("OrbitalCoreRamp") == true)
-        then
+        if ramp:IsA("BasePart") and (
+            ramp:GetAttribute("OrbitalHelixRamp") == true
+            or ramp:GetAttribute("OrbitalAccessRamp") == true
+            or ramp:GetAttribute("OrbitalCoreRamp") == true
+        ) then
             local from = ramp:GetAttribute("HelixStart")
             local to = ramp:GetAttribute("HelixFinish")
-            local lane = ramp:GetAttribute("HelixLane")
+            local group = ramp:GetAttribute("OrbitRouteGroup")
             if typeof(from) == "Vector3" and typeof(to) == "Vector3"
-                and type(lane) == "number"
+                and type(group) == "string" and group ~= ""
             then
                 local entry = {
                     ramp = ramp,
@@ -163,11 +288,13 @@ function OrbitalHelix.capture(circuit)
                     to = to,
                     originalCFrame = ramp.CFrame,
                     originalSize = ramp.Size,
+                    padding = ramp.Size.Z - (to - from).Magnitude,
+                    compact = ramp:GetAttribute("OrbitalHelixRamp") ~= true,
                     decorations = {},
                 }
                 for _, piece in ipairs(circuit:GetChildren()) do
                     if piece:IsA("BasePart") and piece ~= ramp
-                        and piece:GetAttribute("HelixLane") == lane
+                        and piece:GetAttribute("OrbitRouteGroup") == group
                     then
                         table.insert(entry.decorations, {
                             part = piece,
@@ -198,10 +325,14 @@ function OrbitalHelix.scale(snapshot, center, amount)
             local from = move(entry.from)
             local to = move(entry.to)
             local cf = CFrame.lookAt((from + to) * 0.5, to, Vector3.yAxis)
-            local length = (to - from).Magnitude + 4.4
+            local length = (to - from).Magnitude + entry.padding
             local prior = entry.originalSize.Z
+            local width = entry.compact
+                and math.max(2.4, entry.originalSize.X * factor)
+                or entry.originalSize.X
+            local lateralScale = width / entry.originalSize.X
             ramp.CFrame = cf
-            ramp.Size = Vector3.new(entry.originalSize.X, entry.originalSize.Y, length)
+            ramp.Size = Vector3.new(width, entry.originalSize.Y, length)
 
             for _, d in ipairs(entry.decorations) do
                 if d.part and d.part.Parent then
@@ -209,7 +340,7 @@ function OrbitalHelix.scale(snapshot, center, amount)
                     local p = localCf.Position
                     local rotationOnly = localCf - p
                     d.part.CFrame = cf
-                        * CFrame.new(p.X, p.Y, p.Z * (length / prior))
+                        * CFrame.new(p.X * lateralScale, p.Y, p.Z * (length / prior))
                         * rotationOnly
                     local dz = d.originalSize.Z
                     -- Rails and spines extend with the ramp; short transverse
@@ -218,7 +349,9 @@ function OrbitalHelix.scale(snapshot, center, amount)
                         dz = math.max(0.25, dz + length - prior)
                     end
                     d.part.Size = Vector3.new(
-                        d.originalSize.X, d.originalSize.Y, dz
+                        d.originalSize.X > 1
+                            and d.originalSize.X * lateralScale or d.originalSize.X,
+                        d.originalSize.Y, dz
                     )
                 end
             end
