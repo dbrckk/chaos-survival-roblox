@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-21 — Observable four-arena difficulty and AI fairness (candidate, not published)
+
+- Added two **server-authoritative, end-of-round Roblox AnalyticsService samples per connected human**: `ArenaSurvived` (0/1) and `ArenaTimeAliveSeconds` (first actual death vs live round duration). Grouped by one of four arena IDs, Solo/Multiplayer, primary disaster, Double Chaos and whether the dynamic arena mechanic truly started.
+- Added `ArenaBotSurvivalFraction` once per server round (not once per AI or player), if real in-round AI survivors started, attributed to one connected human solely because `AnalyticsService:LogCustomEvent` requires a Player. Initial AI roster and early-ending status are recorded in bounded dimensions; samples never include bot identity.
+- Preserve existing `ArenaMechanicUsed`, shard, session, quest and economy events; **no DataStore changes, new remotes, gameplay difficulty modifications, ticker, extra physics or per-frame analytics**. Precise death timing captured by the existing Humanoid.Died connection.
+- Extended existing Roblox engine suites for finite time bounds, human/bot fractions, sanitized low-cardinality arena dimensions, and actual dynamic mechanic activation for all four playable arenas.
+- Added `docs/ARENA_BALANCE_TELEMETRY.md` with explicit Explore aggregation instructions, fair same-disaster comparisons, survivorship/disconnect biases, AI early-end caveats and Android playtest gates.
+- Source changes alone do **not** provide any live metrics or publish the public Roblox experience. Review the real Creator Dashboard data only after a safe, verified deployment and sufficient observed rounds.
+
 ## 2026-10-21 — Four-arena balance and truthful round guidance (candidate, not published)
 
 - All **four** arena round briefs now reflect the dynamic mechanic actually started in the server, rather than a generic announcement even when the corresponding extra challenge is disabled. Beginners still see accurate help for their baseline pads, bridges, Flux Relays, and Grid Circuit.

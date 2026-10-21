@@ -927,6 +927,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local onCleanup = {}
     local eliminated = {}
     local eliminationCauses = {}
+    local deathElapsed = {}
     local recentHazards = {}
     local deathConnections = {}
     local lastMechanicAt = {}
@@ -967,6 +968,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
         if hum then
             deathConnections[player.UserId] = hum.Died:Connect(function()
                 eliminated[player.UserId] = true
+                if deathElapsed[player.UserId] == nil then
+                    deathElapsed[player.UserId] = math.max(0, os.clock() - roundStartedAt)
+                end
 
                 local cause = EliminationCauseRules.recentHazardKind(
                     recentHazards[player.UserId],
@@ -1431,7 +1435,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
         warn("Round cleanup completed with failures:", cleanupFailures)
     end
 
-    return eliminated, endedEarly, roundElapsed, eliminationCauses
+    return eliminated, endedEarly, roundElapsed, eliminationCauses, {
+        deathSeconds = deathElapsed,
+        -- Capture real server-created mechanics, not just eligibility flags:
+        -- a missing arena/bridge folder must be classified as Extra:No.
+        dynamicActive = arenaMechanic ~= nil
+            and arenaMechanic.dynamicStarted == true,
+        botsStarted = math.max(0, #hazardContestants - #contestants),
+    }
 end
 
 while true do
@@ -1788,7 +1799,7 @@ while true do
         GameAnalytics.roundStarted(p, roundNumber, roundSettings.Solo, selected.Id, #selectedSet > 1)
     end
 
-    local eliminated, endedEarly, roundElapsed, eliminationCauses =
+    local eliminated, endedEarly, roundElapsed, eliminationCauses, balanceMetrics =
         runDisasterSet(selectedSet, contestants, roundSettings)
 
     local survivors = 0
@@ -1941,6 +1952,21 @@ while true do
                 #selectedSet > 1,
                 roundElapsed
             )
+            -- Two end-of-round samples, no new Heartbeat/polling or remote.
+            -- Lifetime is recorded on Humanoid.Died, rather than treating
+            -- the entire round as survived by someone eliminated at 4s.
+            local lifeSeconds = GameAnalytics.roundAliveSeconds(
+                roundElapsed, balanceMetrics.deathSeconds[p.UserId], survived
+            )
+            GameAnalytics.arenaRoundMetrics(p, {
+                arenaId = currentArenaVariant,
+                primaryId = selected.Id,
+                solo = roundSettings.Solo,
+                doubleChaos = #selectedSet > 1,
+                dynamicActive = balanceMetrics.dynamicActive,
+                survived = survived,
+                aliveSeconds = math.min(roundElapsed, lifeSeconds),
+            })
 
             if criticalSurvival then
                 GameAnalytics.custom(
@@ -2006,6 +2032,24 @@ while true do
                 disasterMasteryName = selected.Name,
                 masteryGain = masteryGain,
             })
+        end
+    end
+
+    -- One AI aggregate per server round: attribute to a single connected
+    -- human only because AnalyticsService requires a Player. Never emit
+    -- an artificial per-bot user record or duplicate for each human.
+    if balanceMetrics.botsStarted > 0 then
+        for _, participant in ipairs(contestants) do
+            if participant.Parent == Players then
+                GameAnalytics.arenaBotMetrics(participant, {
+                    arenaId = currentArenaVariant,
+                    solo = roundSettings.Solo,
+                    botsStarted = balanceMetrics.botsStarted,
+                    botsSurvived = aiSurvivorsAtFinish,
+                    endedEarly = endedEarly,
+                })
+                break
+            end
         end
     end
 
