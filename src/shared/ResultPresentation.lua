@@ -147,7 +147,9 @@ function ResultPresentation.fallbackFeedback(state, userId, participating)
         and state.survivorUserIds or {}
     local won = false
     local id = tonumber(userId)
-    if participating == true and id and id > 0 then
+    -- The server-owned survivor roster is authoritative even if the
+    -- player's RoundParticipant attribute reaches the client one frame late.
+    if id and id > 0 then
         for _, survivorId in ipairs(survivors) do
             if tonumber(survivorId) == id then
                 won = true
@@ -155,10 +157,11 @@ function ResultPresentation.fallbackFeedback(state, userId, participating)
             end
         end
     end
+    local played = participating == true or won
     return {
         survived = won,
-        spectating = participating ~= true,
-        pendingRewards = participating == true,
+        spectating = not played,
+        pendingRewards = played,
         roundNumber = state.roundNumber,
         arenaId = state.arenaId,
         arenaName = state.arenaName,
