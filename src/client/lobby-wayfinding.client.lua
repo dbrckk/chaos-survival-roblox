@@ -6,6 +6,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -117,7 +118,13 @@ end
 
 local function refresh()
     local mode = LobbyPresentationRules.mode(phase, voteOptions)
-    local visible = mode == "social"
+    -- The round auto-teleports participants. Three destination beacons at
+    -- first join wrongly suggest that practice or time trials are required.
+    -- Hide only these local, optional billboards during the first three rounds.
+    local games = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    local visible = mode == "social" and not FirstTimeExperience.isRookie(games)
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced = player:GetAttribute("ReduceMotion") == true
 
@@ -145,5 +152,7 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refresh)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(refresh)
+player:GetAttributeChangedSignal("Games"):Connect(refresh)
+player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 
 refresh()

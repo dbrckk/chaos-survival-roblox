@@ -209,7 +209,9 @@ kicker.Position = UDim2.fromScale(0.29, 0.10)
 kicker.Size = UDim2.fromScale(0.64, 0.14)
 kicker.BackgroundTransparency = 1
 kicker.Font = Enum.Font.GothamBold
-kicker.Text = CoreLocalization.text(localeId, "ENTER_ARENA")
+-- The first thing a new player reads must be the actual rule, not a
+-- misleading instruction to enter an arena (round entry is automatic).
+kicker.Text = CoreLocalization.text(localeId, "SPLASH_GOAL")
 kicker.TextColor3 = UITheme.Colors.Cyan
 kicker.TextScaled = true
 kicker.Parent = card
@@ -229,11 +231,11 @@ UITheme.addTextConstraint(title, 26, 48)
 
 local subtitle = Instance.new("TextLabel")
 subtitle.Name = "Subtitle"
-subtitle.Position = UDim2.fromScale(0.29, 0.59)
-subtitle.Size = UDim2.fromScale(0.63, 0.12)
+subtitle.Position = UDim2.fromScale(0.29, 0.58)
+subtitle.Size = UDim2.fromScale(0.63, 0.16)
 subtitle.BackgroundTransparency = 1
 subtitle.Font = Enum.Font.GothamMedium
-subtitle.Text = CoreLocalization.text(localeId, "SURVIVE_ADAPT_ESCAPE")
+subtitle.Text = CoreLocalization.text(localeId, "SPLASH_RULE")
 subtitle.TextColor3 = UITheme.Colors.Muted
 subtitle.TextScaled = true
 subtitle.Parent = card

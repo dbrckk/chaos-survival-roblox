@@ -3093,11 +3093,16 @@ stateEvent.OnClientEvent:Connect(function(state)
     local votingOpen = currentHudPhase == "intermission"
         and FirstTimeExperience.hasVoteOptions(state)
     local activeGameplay = state.phase == "round" or state.phase == "ready"
-    metaControlsSuppressed = AttentionBudgetRules.suppressMetaControls(
-        state.phase,
-        state.voteOptions,
-        gamesPlayed
-    )
+    -- A first-time player should learn ONE thing: wait, optionally vote,
+    -- move, then survive. The rewards/shop/collections dock can wait until
+    -- they have actually completed three rounds. This is client UI only;
+    -- server-side rewards and persistence continue uninterrupted.
+    metaControlsSuppressed = FirstTimeExperience.isRookie(gamesPlayed)
+        or AttentionBudgetRules.suppressMetaControls(
+            state.phase,
+            state.voteOptions,
+            gamesPlayed
+        )
     if metaDock then
         metaDock.Visible = not metaControlsSuppressed
     end
