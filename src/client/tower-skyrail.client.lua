@@ -21,6 +21,7 @@ local bridges = {}
 local canopy = {}
 local signalConnections = {}
 local activeSurges = {}
+local draw
 
 local colors = {
     Armor = Color3.fromRGB(28, 42, 63),
@@ -69,7 +70,11 @@ local function createPart(parts, name, size, bridge, localCf, color, material, o
     p.CanQuery = false
     p.CastShadow = false
     p.Parent = art
-    table.insert(parts, {Part = p, LocalCf = localCf})
+    table.insert(parts, {
+        Part = p,
+        LocalCf = localCf,
+        BaseTransparency = opacity,
+    })
     return p
 end
 
@@ -169,7 +174,9 @@ end
 -- One-shot courier flare. It uses existing bridge transforms, with
 -- a bounded local part count and no per-frame server replication.
 local function surgeBurst(bridge, tier, reduced)
-    if reduced or tier == "Low" or not bridge or not bridge.Parent then
+    if reduced or tier == "Low" or not bridge or not bridge.Parent
+        or not bridge.CanCollide
+        or bridge:GetAttribute("CollapsePhase") ~= nil then
         return
     end
     local camera = workspace.CurrentCamera
@@ -258,10 +265,23 @@ local function rebuild(platforms, tier, reduced, ordered)
     bridges = ordered
     for _, bridge in ipairs(bridges) do
         table.insert(canopy, buildCanopy(bridge, tier, reduced))
+        -- Sync disappearance immediately, even at Low (0.65s draw cadence).
+        -- Reuse the existing draw path, with no extra render loop.
+        table.insert(signalConnections, bridge:GetAttributeChangedSignal(
+            "CollapsePhase"
+        ):Connect(function()
+            if draw then draw(os.clock()) end
+        end))
+        table.insert(signalConnections, bridge:GetPropertyChangedSignal(
+            "CanCollide"
+        ):Connect(function()
+            if draw then draw(os.clock()) end
+        end))
         table.insert(signalConnections, bridge:GetAttributeChangedSignal(
             "SkyrailUsedAt"
         ):Connect(function()
-            if bridge.Parent == currentPlatforms then
+            if bridge.Parent == currentPlatforms and bridge.CanCollide
+                and bridge:GetAttribute("CollapsePhase") == nil then
                 activeSurges[bridge] = os.clock() + 0.8
                 surgeBurst(bridge, tier, reduced)
             end
@@ -269,19 +289,33 @@ local function rebuild(platforms, tier, reduced, ordered)
     end
 end
 
-local function draw(timestamp)
+draw = function(timestamp)
     for _, structure in ipairs(canopy) do
         local bridge = structure.Bridge
         if bridge.Parent then
-            local surging = (activeSurges[bridge] or 0) > timestamp
+            local phase = bridge:GetAttribute("CollapsePhase")
+            local gone = phase == "Gone" or not bridge.CanCollide
+            local warning = phase == "Warning"
+            if gone or warning then
+                activeSurges[bridge] = nil
+            end
+            local surging = not warning and not gone
+                and (activeSurges[bridge] or 0) > timestamp
             for _, item in ipairs(structure.Parts) do
                 if item.Part.Parent then
                     item.Part.CFrame = bridge.CFrame * item.LocalCf
-                    if item.Part.Name:find("SkyrailInsetFiber") or
-                        item.Part.Name:find("SkyrailCrownBeam")
-                    then
-                        item.Part.Transparency = surging and 0.03 or 0.23
+                    local alpha = item.BaseTransparency
+                    if gone then
+                        alpha = 1
+                    elseif warning then
+                        -- Client canopy must never conceal the amber
+                        -- authoritative bridge warning or suggest safety.
+                        alpha = math.max(alpha, 0.78)
+                    elseif item.Part.Name:find("SkyrailInsetFiber")
+                        or item.Part.Name:find("SkyrailCrownBeam") then
+                        alpha = surging and 0.03 or 0.23
                     end
+                    item.Part.Transparency = alpha
                 end
             end
 
@@ -292,8 +326,8 @@ local function draw(timestamp)
                 local cf = routeTransform(structure.AlongX, distance,
                     bridge.Size.Y * 0.5 + 5.50, 0)
                 runner.Part.CFrame = bridge.CFrame * cf
-                runner.Part.Transparency = 0.34 + 0.28
-                    * math.abs(2 * progress - 1)
+                runner.Part.Transparency = (gone or warning) and 1
+                    or (0.34 + 0.28 * math.abs(2 * progress - 1))
             end
         end
     end

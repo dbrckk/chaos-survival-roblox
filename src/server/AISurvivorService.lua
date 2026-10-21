@@ -1202,7 +1202,10 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
 end
 
 local function disappearingPlatformEscape(record, root, now)
-    if not hasDisaster("DisappearingPlatforms") then
+    -- Inspect live platform warnings on Towers as well as the dedicated
+    -- collapse disaster. Other arenas avoid a new per-bot raycast each tick.
+    if not hasDisaster("DisappearingPlatforms")
+        and arenaVariantId() ~= "Towers" then
         record.platformThreat = nil
         record.platformThreatSeenAt = nil
         return nil
@@ -1238,6 +1241,15 @@ local function disappearingPlatformEscape(record, root, now)
         record.profile.ReactionSeconds
     ) then
         return nil
+    end
+
+    if part:GetAttribute("ChaosSkybridge") == true then
+        -- Tower links are narrow elevated spans. Dodging toward the arena
+        -- centre crosses open air; run along the bridge to the nearest
+        -- supported corner tower instead, without a teleport or speed buff.
+        return AISurvivorRules.skybridgeEscapeTarget(
+            root.Position, part.CFrame, part.Size, root.AssemblyLinearVelocity
+        )
     end
 
     local base = arenaBase()
@@ -2522,7 +2534,13 @@ local function stepRecord(record, now)
             record.targetIsSkyrail = false
             record.skyrailDirection = nil
             record.targetPart = nil
-            record.target = separateTarget(record, urgentTarget)
+            -- Separation offsets would push a Skybridge escape target off
+            -- the narrow deck. Keep the server-planned centre-line path.
+            local skybridgeEscape = record.platformThreat
+                and record.platformThreat.Parent
+                and record.platformThreat:GetAttribute("ChaosSkybridge") == true
+            record.target = skybridgeEscape
+                and urgentTarget or separateTarget(record, urgentTarget)
             record.nextThink = now + 0.55
         end
 
