@@ -17,6 +17,8 @@ It verifies in a real Studio client/server simulation:
 - real disaster voting;
 - real virtual keyboard movement;
 - at least one accelerated gameplay round;
+- an actual per-player `RoundFeedback` reward receipt for each active player at RESULT (not just a fallback or decorative victory card), with matching round number and non-placeholder Coins/XP;
+- the server continuing through RESULT and the next automatic countdown without a nil-challenge settlement crash;
 - one simulated client leaving and server cleanup.
 
 ## One-click local run
