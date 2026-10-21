@@ -118,7 +118,8 @@ describe("Shrinking Arena mobility integration", function()
             {
                 id = "Towers",
                 names = {"ArenaDeckInset", "DeckLineEast",
-                    "TowerGroundPlate1", "TowerGroundCore1"},
+                    "TowerGroundPlate1", "TowerGroundCore1",
+                    "TowerAscentChevron1_-1"},
             },
             {
                 id = "Crossroads",
@@ -270,6 +271,28 @@ describe("Shrinking Arena mobility integration", function()
         local originals = {}
         local details = {}
 
+        -- The new tower traversal must shrink as a complete connected
+        -- physical system, not leave its decks full-sized under small
+        -- moving skybridges.
+        local tiers = {}
+        for _, index in ipairs({1, 2, 3, 13, 14}) do
+            local deck = platforms:FindFirstChild("Platform" .. index)
+            local panel = decor:FindFirstChild("PlatformPanel" .. index)
+            expect(deck ~= nil).toBe(true)
+            expect(panel ~= nil).toBe(true)
+            expect(deck:GetAttribute("RouteTier") ~= nil).toBe(true)
+            tiers[#tiers + 1] = {
+                deck = deck,
+                panel = panel,
+                deckCFrame = deck.CFrame,
+                deckSize = deck.Size,
+                panelCFrame = panel.CFrame,
+                panelSize = panel.Size,
+            }
+        end
+        local base = arena:FindFirstChild("Base")
+        local baseOriginalX = base.Size.X
+
         expect(ShrinkingArena.skybridgeSpan(49, 1)).toBe(49)
         expect(math.abs(ShrinkingArena.skybridgeSpan(49, 0.45) - 18.2) < 0.01).toBe(true)
         for index = 18, 21 do
@@ -307,6 +330,19 @@ describe("Shrinking Arena mobility integration", function()
         })
         task.wait(0.22)
 
+        local shrinkScale = base.Size.X / baseOriginalX
+        expect(shrinkScale < 1).toBe(true)
+        for _, tier in ipairs(tiers) do
+            expect(math.abs(tier.deck.Size.X
+                - tier.deckSize.X * shrinkScale) < 0.03).toBe(true)
+            expect(math.abs(tier.deck.Size.Z
+                - tier.deckSize.Z * shrinkScale) < 0.03).toBe(true)
+            expect(math.abs(tier.panel.Size.X
+                - tier.panelSize.X * shrinkScale) < 0.03).toBe(true)
+            expect(math.abs(tier.panel.Size.Z
+                - tier.panelSize.Z * shrinkScale) < 0.03).toBe(true)
+        end
+
         for bridge, old in pairs(originals) do
             if bridge:GetAttribute("ChaosSkybridge") == true then
                 local alongX = old.size.X > old.size.Z
@@ -334,6 +370,16 @@ describe("Shrinking Arena mobility integration", function()
 
         running = false
         cleanup(callbacks, {})
+        for _, tier in ipairs(tiers) do
+            expect((tier.deck.Position - tier.deckCFrame.Position).Magnitude < 0.001)
+                .toBe(true)
+            expect((tier.panel.Position - tier.panelCFrame.Position).Magnitude < 0.001)
+                .toBe(true)
+            expect((tier.deck.Size - tier.deckSize).Magnitude < 0.001)
+                .toBe(true)
+            expect((tier.panel.Size - tier.panelSize).Magnitude < 0.001)
+                .toBe(true)
+        end
         for part, old in pairs(originals) do
             expect((part.Position - old.cf.Position).Magnitude < 0.001).toBe(true)
             expect((part.Size - old.size).Magnitude < 0.001).toBe(true)

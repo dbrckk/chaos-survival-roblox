@@ -41,7 +41,7 @@ ArenaMechanics.Definitions = {
     },
     Towers = {
         Name = "UPDRAFT PADS",
-        Hint = "Cyan updrafts lift you; Skyrails boost speed; amber bridges vanish briefly",
+        Hint = "Climb four marked tower routes; use cyan updrafts and Skyrails; warning bridges can vanish",
         Color = Color3.fromRGB(65, 220, 255),
         Pads = {
             {offset = Vector3.new(-28, 1.7, -28), impulse = Vector3.new(8, 55, 8)},
@@ -86,7 +86,7 @@ ArenaMechanics.Definitions = {
 -- collapsing bridge, gold impulse lane or floor shockwave.
 ArenaMechanics.BaselineHints = {
     Classic = "Blue escape pads launch outward; four Grid Circuit nodes lead clockwise",
-    Towers = "Cyan updrafts lift you; Skyrails boost speed on solid tower bridges",
+    Towers = "Climb from the hub through low-to-high decks; cyan updrafts assist when safe",
     Crossroads = "Pink pads launch outward; timed cyan Flux Relays return you toward hub",
     Orbital = "Green boosters circle the ring; inward Helix crossings build skill chains",
 }

@@ -160,7 +160,13 @@ describe("Core localization", function()
             "Four rising escape routes • jump between low, mid and high decks"
         )
         expect(CoreLocalization.arenaStrategy("fr-fr", "Towers", "fallback")).toBe(
-            "Arène verticale • prends de la hauteur sans te faire enfermer"
+            "Quatre voies montantes • rejoins les ponts depuis le centre"
+        )
+        expect(CoreLocalization.arenaStrategy("en-us", "Towers", "fallback")).toBe(
+            "Four ascending routes • reach the bridges from the central hub"
+        )
+        expect(CoreLocalization.arenaMechanicHint("fr-fr", "Towers", "fallback")).toBe(
+            "Monte les paliers indiqués ; les pads cyan aident à prendre de la hauteur"
         )
         expect(CoreLocalization.arenaMechanicName("fr-fr", "Orbital", "fallback")).toBe(
             "BOOSTERS ORBITAUX"

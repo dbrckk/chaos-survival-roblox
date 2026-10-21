@@ -354,6 +354,38 @@ describe("Chaos Survival engine", function()
             end
         end
         expect((decor :: Folder):FindFirstChild("SkybridgeRail18_-1") ~= nil).toBe(true)
+
+        -- The world model must actually build the four authored climbing
+        -- routes (not merely declare them in ArenaVariants metadata).
+        local tierCount = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
+        for _, platform in ipairs((platforms :: Folder):GetChildren()) do
+            local tier = tonumber(platform:GetAttribute("RouteTier"))
+            if tier then
+                expect(platform.CanCollide).toBe(true)
+                tierCount[tier] += 1
+            end
+        end
+        expect(#(platforms :: Folder):GetChildren()).toBe(21)
+        expect(tierCount[1]).toBe(5)
+        expect(tierCount[2]).toBe(4)
+        expect(tierCount[3]).toBe(4)
+        expect(tierCount[4]).toBe(4)
+
+        -- Floor guidance must be genuinely visible but never obstruct
+        -- escape movement, hazard collision or updraft pads.
+        local guides = 0
+        for _, item in ipairs((decor :: Folder):GetChildren()) do
+            if item.Name:match("^TowerAscentChevron%d+_%-?%d+$") then
+                guides += 1
+                expect(item:IsA("BasePart")).toBe(true)
+                expect(item.CanCollide).toBe(false)
+                expect(item.CanTouch).toBe(false)
+                expect(item.CanQuery).toBe(false)
+                expect(item.CastShadow).toBe(false)
+                expect(item.Transparency < 0.7).toBe(true)
+            end
+        end
+        expect(guides).toBe(8)
         root:Destroy()
     end)
 

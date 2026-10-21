@@ -589,6 +589,34 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             )
             core.Transparency = 0.42
         end
+
+        -- Eight small floor-inlaid chevrons at four genuine tower ascent
+        -- approaches, not false arrows beneath elevated collision decks.
+        -- Two restrained cyan wings per route are visible to first-time
+        -- players arriving at the original corner and cardinal spawns.
+        local approaches = {
+            {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
+        }
+        for index, signs in ipairs(approaches) do
+            local x, z = signs[1], signs[2]
+            local origin = center + Vector3.new(x * 10, 1.22, z * 23)
+            local firstDeck = center + Vector3.new(x * 6, 1.22, z * 14)
+            local facing = CFrame.lookAt(origin, firstDeck, Vector3.yAxis)
+            for side = -1, 1, 2 do
+                local arrow = decorPart(
+                    decor,
+                    "TowerAscentChevron" .. index .. "_" .. tostring(side),
+                    Vector3.new(0.14, 0.055, 1.25),
+                    origin,
+                    index % 2 == 0 and theme.Accent or theme.Secondary,
+                    VisualTheme.Materials.Glow
+                )
+                arrow.CFrame = facing
+                    * CFrame.new(side * 0.37, 0, 0)
+                    * CFrame.Angles(0, math.rad(side * 34), 0)
+                arrow.Transparency = 0.47
+            end
+        end
     elseif variant.Id == "Crossroads" then
         local laneDefs = {
             {size = Vector3.new(13, 0.08, 56), offset = Vector3.new(0, 1.20, -25)},
