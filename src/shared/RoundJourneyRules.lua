@@ -26,9 +26,15 @@ function RoundJourneyRules.replayStarted(lastFinishedRound, nextState)
     end
     local finished = tonumber(lastFinishedRound)
     local nextId = tonumber(nextState.roundNumber)
+    -- Infinity + 1 is still infinity in IEEE-754. It must never count as
+    -- proof that the server launched a new match after RESULTS.
     return finished ~= nil and nextId ~= nil
         and finished == finished and nextId == nextId
-        and finished > 0 and nextId == finished + 1
+        and finished > 0 and finished < math.huge
+        and nextId < math.huge
+        and finished == math.floor(finished)
+        and nextId == math.floor(nextId)
+        and nextId == finished + 1
 end
 
 return RoundJourneyRules
