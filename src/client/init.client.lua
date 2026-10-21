@@ -2101,6 +2101,7 @@ local function showRoundFeedback(feedback)
     local token = resultToken
 
     local survived = feedback.survived == true
+    local soleSurvivor = survived and feedback.soleSurvivor == true
     local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
     local masterRound = survived and feedback.challengeCompleted == true and momentumBest >= 4
 
@@ -2112,19 +2113,23 @@ local function showRoundFeedback(feedback)
         and UITheme.Colors.Gold
         or (resultKind == "clutch"
             and UITheme.Colors.Cyan
-            or (survived and UITheme.Colors.Green or UITheme.Colors.Red))
+            or (soleSurvivor and UITheme.Colors.Gold
+                or (survived and UITheme.Colors.Green or UITheme.Colors.Red)))
     resultAccent.BackgroundColor3 = resultKind == "master"
         and UITheme.Colors.Cyan
         or (resultKind == "clutch"
             and UITheme.Colors.Blue
-            or (survived and UITheme.Colors.Green or UITheme.Colors.Red))
+            or (soleSurvivor and UITheme.Colors.Gold
+                or (survived and UITheme.Colors.Green or UITheme.Colors.Red)))
     resultGradient.Color = resultKind == "master"
         and ColorSequence.new(Color3.fromRGB(35, 73, 82), Color3.fromRGB(45, 34, 18))
         or (resultKind == "clutch"
             and ColorSequence.new(Color3.fromRGB(24, 60, 78), Color3.fromRGB(18, 38, 48))
-            or (survived
-                and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
-                or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel)))
+            or (soleSurvivor
+                and ColorSequence.new(Color3.fromRGB(77, 57, 28), UITheme.Colors.Panel)
+                or (survived
+                    and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
+                    or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel))))
 
     local resultPrimaryId, resultSecondaryId =
         ResultPresentation.visualHazardOrder(feedback)
@@ -2208,6 +2213,9 @@ local function showRoundFeedback(feedback)
         feedback.disasterName or "CHAOS"
     )
     table.insert(tags, tostring(localizedDisasterName))
+    if soleSurvivor then
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_SOLE_SURVIVOR"))
+    end
     if feedback.doubleChaos then
         table.insert(
             tags,
@@ -2308,7 +2316,9 @@ local function showRoundFeedback(feedback)
             tostring(localizedDisasterName),
         }
 
-        if feedback.challengeCompleted then
+        if soleSurvivor then
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_SOLE_SURVIVOR"))
+        elseif feedback.challengeCompleted then
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CHALLENGE_TAG"))
         elseif feedback.criticalSurvival then
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CLUTCH_TAG"))
@@ -2398,12 +2408,14 @@ local function showRoundFeedback(feedback)
         and Color3.fromRGB(30, 64, 69)
         or (resultKind == "clutch"
             and Color3.fromRGB(24, 58, 76)
-            or (survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40)))
+            or (soleSurvivor and Color3.fromRGB(70, 54, 29)
+                or (survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40))))
     resultFlash.BackgroundColor3 = resultKind == "master"
         and Color3.fromRGB(255, 220, 95)
         or (resultKind == "clutch"
             and Color3.fromRGB(85, 205, 255)
-            or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95)))
+            or (soleSurvivor and Color3.fromRGB(255, 224, 112)
+                or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95))))
 
     resultCard.Visible = true
     resultCard.BackgroundTransparency = 1
