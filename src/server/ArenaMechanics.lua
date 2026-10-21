@@ -13,6 +13,10 @@ local skyrailModule = script and script.Parent:FindFirstChild("SkyrailSlipstream
 local SkyrailSlipstream = if skyrailModule
     then require(skyrailModule)
     else require("./SkyrailSlipstream")
+local pressureModule = script and script.Parent:FindFirstChild("SkybridgePressure")
+local SkybridgePressure = if pressureModule
+    then require(pressureModule)
+    else require("./SkybridgePressure")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
@@ -225,6 +229,9 @@ function ArenaMechanics.start(ctx, variantId)
     elseif variantId == "Towers" then
         -- Active elevated movement route that does not alter bridge physics.
         SkyrailSlipstream.start(ctx, folder, arena)
+        -- Mature rounds gain one highly telegraphed, temporary bridge
+        -- outage. New-player and conflicting-hazard rounds stay unchanged.
+        SkybridgePressure.start(ctx, arena)
     elseif variantId == "Crossroads" then
         -- Secondary timed traversal loop, sharing the mechanics lifecycle and
         -- round cleanup. Unlike pads, only the charged alternating lane pair
