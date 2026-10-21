@@ -263,6 +263,50 @@ describe("Arena variants", function()
         end
     end)
 
+    it("makes all four Crossroads escape lanes physically reachable", function()
+        local arena = ArenaVariants.get("Crossroads")
+        expect(#arena.Platforms).toBe(17)
+        local hub = arena.Platforms[1]
+        expect(hub.RouteTier).toBe(1)
+        local function gap(a, b)
+            local x = math.max(0, math.abs(a.offset.X - b.offset.X)
+                - (a.size.X + b.size.X) * 0.5)
+            local z = math.max(0, math.abs(a.offset.Z - b.offset.Z)
+                - (a.size.Z + b.size.Z) * 0.5)
+            return math.sqrt(x * x + z * z)
+        end
+        for lane = 1, 4 do
+            local previous = hub
+            for tier = 1, 4 do
+                local deck = arena.Platforms[2 + (lane - 1) * 4 + tier - 1]
+                expect(deck.RouteTier).toBe(tier)
+                local height = deck.offset.Y + deck.size.Y * 0.5
+                    - previous.offset.Y - previous.size.Y * 0.5
+                expect(height >= 0 and height <= 3.1).toBe(true)
+                expect(gap(previous, deck) <= 1.1).toBe(true)
+                expect(math.abs(deck.offset.X) + deck.size.X * 0.5 <= 49)
+                    .toBe(true)
+                expect(math.abs(deck.offset.Z) + deck.size.Z * 0.5 <= 49)
+                    .toBe(true)
+                previous = deck
+            end
+        end
+        -- All existing entry spawns have at least R15 headroom: a
+        -- decorative roof must not obstruct the real arrival position.
+        for _, spawn in ipairs(arena.SpawnOffsets) do
+            for _, deck in ipairs(arena.Platforms) do
+                local overhead = math.abs(spawn.X - deck.offset.X)
+                    < deck.size.X * 0.5 + 2.8
+                    and math.abs(spawn.Z - deck.offset.Z)
+                    < deck.size.Z * 0.5 + 2.8
+                if overhead then
+                    expect(deck.offset.Y - deck.size.Y * 0.5
+                        - arena.BaseSize.Y * 0.5 >= 8.4).toBe(true)
+                end
+            end
+        end
+    end)
+
     it("derives hazard targeting bounds from arena footprints", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
