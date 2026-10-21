@@ -23,6 +23,22 @@ describe("Result presentation", function()
             .toBe(false)
     end)
 
+    it("accepts the current result receipt but rejects stale or next-round overlays", function()
+        local accepts = ResultPresentation.acceptReceipt
+        expect(accepts({roundNumber = 8}, "round", 8, 7)).toBe(true)
+        expect(accepts({roundNumber = 8}, "result", 8, 8)).toBe(true)
+        expect(accepts({roundNumber = 7}, "round", 8, 7)).toBe(false)
+        expect(accepts({roundNumber = 8}, "ready", 9, 8)).toBe(false)
+        expect(accepts({roundNumber = 9}, "intermission", 9, 8)).toBe(false)
+        expect(accepts({roundNumber = 8}, "waiting", 8, 7)).toBe(false)
+        expect(accepts({roundNumber = 7}, "result", 8, 8)).toBe(false)
+        expect(accepts({roundNumber = 8}, "result", 8, 9)).toBe(false)
+        expect(accepts({roundNumber = 0}, "round", nil, nil)).toBe(false)
+        expect(accepts({roundNumber = math.huge}, "round", nil, nil)).toBe(false)
+        expect(accepts({roundNumber = "bad"}, "round", nil, nil)).toBe(false)
+        expect(accepts(nil, "round", nil, nil)).toBe(false)
+    end)
+
     it("rebuilds a truthful victory card when the personalized result event is delayed", function()
         local state = {
             phase = "result",
