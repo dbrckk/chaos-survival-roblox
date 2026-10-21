@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ResultPresentation = require("../../src/shared/ResultPresentation")
+local CoreLocalization = require("../../src/shared/CoreLocalization")
 
 describe("Result presentation", function()
     it("rebuilds a truthful victory card when the personalized result event is delayed", function()
@@ -24,6 +25,12 @@ describe("Result presentation", function()
         expect(won.coins == nil).toBe(true)
         expect(won.xp == nil).toBe(true)
         expect(ResultPresentation.title(won, "fr-fr")).toBe("SURVÉCU !")
+        expect(CoreLocalization.text("fr-fr", "RESULT_REWARDS_PENDING"))
+            .toBe("RÉCOMPENSES EN COURS...")
+        expect(CoreLocalization.text("en-us", "RESULT_REWARDS_PENDING"))
+            .toBe("REWARDS SYNCING...")
+        expect(CoreLocalization.text("fr-fr", "RESULT_SPECTATOR_TITLE"))
+            .toBe("MANCHE TERMINÉE")
 
         local eliminated = ResultPresentation.fallbackFeedback(state, 204, true)
         expect(eliminated.survived).toBe(false)
