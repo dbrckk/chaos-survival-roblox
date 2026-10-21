@@ -73,6 +73,9 @@ function RoundChallenge.forRound(roundNumber)
     return RoundChallenge.Definitions[index]
 end
 
+-- Keep the entire protected three-round learning window focused on the
+-- central survival objective. A new player joining a veteran server must not
+-- inherit a shard/momentum challenge before learning the basic controls.
 function RoundChallenge.forContext(roundNumber, firstRound)
     if firstRound == true then
         return RoundChallenge.FirstRoundDefinition

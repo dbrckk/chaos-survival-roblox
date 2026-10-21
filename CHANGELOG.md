@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-21 — Rookie round challenge consistency (candidate)
+
+- Align the shared round challenge with the **existing first-three-round protection**: whenever any active contestant has played three or fewer rounds, everyone receives the achievable **FIRST SURVIVAL** goal rather than advanced shard, near-miss or momentum tasks.
+- This closes a mismatch where dynamic arena hazards were already disabled for beginners but the global rotating challenge could still demand advanced play in rounds two or three.
+- No extra coins, XP, new reward types, analytics events, remotes or client-side loops. Veterans keep the normal six-challenge rotation once the entire group has cleared onboarding.
+- Extended the existing engine round-challenge suite for the three-round window; physical Android and public Roblox deployment remain separate release gates.
+
 ## 2026-10-21 — Observable four-arena difficulty and AI fairness (candidate, not published)
 
 - Added two **server-authoritative, end-of-round Roblox AnalyticsService samples per connected human**: `ArenaSurvived` (0/1) and `ArenaTimeAliveSeconds` (first actual death vs live round duration). Grouped by one of four arena IDs, Solo/Multiplayer, primary disaster, Double Chaos and whether the dynamic arena mechanic truly started.
