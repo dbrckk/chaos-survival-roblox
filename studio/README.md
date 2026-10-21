@@ -17,7 +17,8 @@ It verifies in a real Studio client/server simulation:
 - real disaster voting;
 - real virtual keyboard movement;
 - at least one accelerated gameplay round;
-- an actual per-player `RoundFeedback` reward receipt for each active player at RESULT (not just a fallback or decorative victory card), with matching round number and non-placeholder Coins/XP;
+- a frozen server-owned `participantUserIds` and `survivorUserIds` roster at RESULT, so an actual winner never disappears if another player's reward/achievement processing fails;
+- an actual per-player `RoundFeedback` reward receipt for each active player at RESULT (not just a fallback or decorative victory card), with matching round number, non-placeholder Coins/XP and no `rewardsUnavailable` failure marker;
 - the server continuing through RESULT and a **new, higher-numbered READY round**, with the returning human participant spawned at full health (matching all living AI), instead of an apparently successful result followed by a stopped game loop;
 - one simulated client leaving and server cleanup.
 
