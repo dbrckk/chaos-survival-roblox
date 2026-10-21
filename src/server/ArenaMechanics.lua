@@ -33,7 +33,7 @@ ArenaMechanics.Definitions = {
     },
     Towers = {
         Name = "UPDRAFT PADS",
-        Hint = "Cyan updraft pads lift you; run across elevated Skyrails for a controlled slipstream boost",
+        Hint = "Cyan updrafts lift you; Skyrails boost speed; amber bridges vanish briefly",
         Color = Color3.fromRGB(65, 220, 255),
         Pads = {
             {offset = Vector3.new(-28, 1.7, -28), impulse = Vector3.new(8, 55, 8)},
