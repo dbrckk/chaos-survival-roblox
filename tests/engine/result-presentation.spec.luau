@@ -31,6 +31,7 @@ describe("Result presentation", function()
         expect(snapshot.contestantCount).toBe(5)
         expect(snapshot.seconds).toBe(6)
         expect(snapshot.doubleChaos).toBe(true)
+        expect(snapshot.soleSurvivorUserId).toBe(nil)
         local won = ResultPresentation.fallbackFeedback(snapshot, 101, false)
         expect(won.survived).toBe(true)
         expect(won.pendingRewards).toBe(true)
@@ -72,6 +73,35 @@ describe("Result presentation", function()
         expect(ResultPresentation.fallbackFeedback(bots, 101, false).survived)
             .toBe(false)
         expect(RoundResultState.atSecond(bots, -2).seconds).toBe(0)
+        expect(bots.soleSurvivorUserId).toBe(nil)
+
+        -- The champion label requires genuine competition and exactly
+        -- one surviving human, with no surviving AI opponents.
+        local last = RoundResultState.snapshot({
+            roundNumber = 19,
+            participantUserIds = {101, 202},
+            survivorUserIds = {101},
+            aiSurvivorsAlive = 0,
+            contestantCount = 4,
+        })
+        expect(last.soleSurvivorUserId).toBe(101)
+        local champion = ResultPresentation.fallbackFeedback(last, 101, false)
+        expect(champion.soleSurvivor).toBe(true)
+        expect(ResultPresentation.title(champion, "fr-fr")).toBe("DERNIER SURVIVANT !")
+        expect(ResultPresentation.title(champion, "en-us")).toBe("LAST SURVIVOR!")
+        expect(ResultPresentation.worldLabel(champion, true)).toBe("LAST SURVIVOR")
+        expect(ResultPresentation.fallbackFeedback(last, 202, true).soleSurvivor)
+            .toBe(false)
+
+        local unopposed = RoundResultState.snapshot({
+            participantUserIds = {101},
+            survivorUserIds = {101},
+            aiSurvivorsAlive = 0,
+            contestantCount = 1,
+        })
+        expect(unopposed.soleSurvivorUserId).toBe(nil)
+        expect(ResultPresentation.fallbackFeedback(unopposed, 101, true).soleSurvivor)
+            .toBe(false)
     end)
 
     it("requires a new authoritative READY after a finished win to certify replay", function()

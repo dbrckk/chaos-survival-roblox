@@ -17,6 +17,16 @@ function RoundResultState.snapshot(context)
     assert(type(context.survivorUserIds) == "table", "survivor roster required")
     local survivors = #context.survivorUserIds
         + nonnegativeInt(context.aiSurvivorsAlive)
+    -- Champion requires exactly one living contestant across humans and
+    -- bots, and a competitive roster of at least two entrants.
+    -- Never label a lone unopposed player or a survivor with living bots.
+    local contestantCount = nonnegativeInt(context.contestantCount)
+    local soleSurvivorUserId = nil
+    if survivors == 1 and #context.survivorUserIds == 1
+        and contestantCount >= 2
+    then
+        soleSurvivorUserId = context.survivorUserIds[1]
+    end
     local title = survivors == 0 and "TOTAL WIPEOUT"
         or (tostring(survivors) .. " SURVIVED")
 
@@ -35,7 +45,8 @@ function RoundResultState.snapshot(context)
         arenaId = context.arenaId,
         disasterIds = context.disasterIds,
         survivorsAlive = survivors,
-        contestantCount = nonnegativeInt(context.contestantCount),
+        contestantCount = contestantCount,
+        soleSurvivorUserId = soleSurvivorUserId,
         -- Frozen identity lists, not the eventual success/failure of payouts.
         survivorUserIds = context.survivorUserIds,
         participantUserIds = context.participantUserIds,

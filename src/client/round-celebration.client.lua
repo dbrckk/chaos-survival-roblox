@@ -115,6 +115,7 @@ local function celebrate(feedback)
     local intensity = ResultPresentation.intensity(feedback)
     local masterRound = resultKind == "master"
     local clutch = resultKind == "clutch"
+    local soleSurvivor = survived and feedback.soleSurvivor == true
 
     local firstChaos = false
     if type(feedback.medals) == "table" then
@@ -129,29 +130,30 @@ local function celebrate(feedback)
     if survived then
         local color = masterRound
             and UITheme.Colors.Gold
-            or (clutch and UITheme.Colors.Cyan or UITheme.Colors.Green)
+            or (clutch and UITheme.Colors.Cyan
+                or (soleSurvivor and UITheme.Colors.Gold or UITheme.Colors.Green))
         local ringRadius = reduced
             and 12
-            or (masterRound and 22 or (clutch and 19 or 16))
+            or (masterRound and 22 or (clutch and 19 or (soleSurvivor and 20 or 16)))
         makeRing(
             root,
             color,
             ringRadius,
-            reduced and 0.30 or (masterRound and 0.62 or (clutch and 0.54 or 0.48)),
+            reduced and 0.30 or (masterRound and 0.62 or (clutch and 0.54 or (soleSurvivor and 0.57 or 0.48))),
             -2.3
         )
 
         if tier.Name ~= "Low" and not reduced then
             local count = VfxQuality.particleCount(
                 tier.Name,
-                math.floor((masterRound and 28 or (clutch and 22 or 18)) * intensity),
+                math.floor((masterRound and 28 or (clutch and 22 or (soleSurvivor and 24 or 18))) * intensity),
                 masterRound and 10 or 7
             )
             makeBurst(
                 root,
                 color,
                 count,
-                (masterRound and 8.5 or (clutch and 7.2 or 6.3)) * intensity
+                (masterRound and 8.5 or (clutch and 7.2 or (soleSurvivor and 7.8 or 6.3))) * intensity
             )
         end
 
