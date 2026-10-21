@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-21 — Orbital Ring pulse-route skill (candidate, not published)
+
+- Added **Orbital Pulse** for experienced single-disaster Orbital Ring rounds. Two opposite ramps are highlighted in gold; the charged pair rotates every eight seconds. All eight original ramps, collisions, and traversal options remain permanently available.
+- A correctly timed, server-verified inward Helix Flow crossing earns a small, capped forward impulse (+7, 42 horizontal cap). Each rig can collect the pulse **once per lane per round**; both real players and genuine in-round AI are eligible under the same server checks, with no client-provided reward or new remote.
+- The existing metal/grain/neon strip decoration changes gold on the two active routes, remaining visible even on Low graphics and Reduced Motion. Medium/High reuse their existing 8/24 moving glyphs and flow burst; no extra Part allocation, light, collision or client update loop.
+- In-round AI modestly prefers active Helix ramps where elevation is reachable, without overriding hazard avoidance. New mechanics do not activate during any entrant's first three rounds or in Double Chaos.
+- Extended existing Roblox engine integration coverage for the pulse pair cycle, physical map gates, human/bot eligibility rules, real velocity bounds, once-per-lane behavior and full phase/color restoration on cleanup.
+- **Not published:** exact-commit CI plus Studio/Android validation remain mandatory. Check gold-route clarity, fluidity, predictable speed and multi-round reset before public deploy.
+
 ## 2026-10-21 — Tower Run dynamic Skybridge pressure (candidate, not published)
 
 - Follow-up safety fix: round bots now treat Tower Skybridge warning phases as urgent, choose a supported end-of-bridge tower deck on either span orientation, and never sidestep from a narrow warning bridge into the void. All changes use existing bot Humanoid movement without teleport, boosted speed or unfair survivability.
