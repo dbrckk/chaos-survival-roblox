@@ -36,7 +36,14 @@ describe("Result presentation", function()
         expect(eliminated.survived).toBe(false)
         expect(eliminated.pendingRewards).toBe(true)
 
-        local spectator = ResultPresentation.fallbackFeedback(state, 203, false)
+        -- The survivor roster is more authoritative than a late replica
+        -- of RoundParticipant. The player still won the round.
+        local delayedAttribute = ResultPresentation.fallbackFeedback(state, 203, false)
+        expect(delayedAttribute.survived).toBe(true)
+        expect(delayedAttribute.spectating).toBe(false)
+        expect(delayedAttribute.pendingRewards).toBe(true)
+
+        local spectator = ResultPresentation.fallbackFeedback(state, 204, false)
         expect(spectator.survived).toBe(false)
         expect(spectator.spectating).toBe(true)
         expect(spectator.pendingRewards).toBe(false)
