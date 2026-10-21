@@ -2472,9 +2472,20 @@ local function showVotes(options)
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     local voteClass = UIResponsive.classify(viewport, touchDevice)
     local compactVote = touchDevice and voteClass.tinyHeight
+    -- Keep the first three ballots focused on a single decision: tap a
+    -- disaster, or wait. Ranks and raw vote totals add noise for beginners.
+    local gamesPlayed = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    local beginnerVote = FirstTimeExperience.isRookie(gamesPlayed)
     local nextKey = FirstTimeExperience.voteRenderKey(
         options, selectedVote, compactVote
     )
+    if nextKey then
+        -- Beginner mode is part of the invalidation key, so existing vote
+        -- cards update when a player's session-round count changes.
+        nextKey ..= beginnerVote and "|beginner" or "|standard"
+    end
     local actionable = nextKey ~= nil
 
     -- The countdown changes every second, but recreating every Frame,
@@ -2549,6 +2560,7 @@ local function showVotes(options)
         indexBadge.TextColor3 = UITheme.Colors.Text
         indexBadge.TextScaled = true
         indexBadge.Parent = button
+        indexBadge.Visible = not beginnerVote
         UITheme.addTextConstraint(indexBadge, 12, 20)
         UITheme.addCorner(indexBadge, UITheme.Corners.Pill)
 
@@ -2583,6 +2595,7 @@ local function showVotes(options)
         statusBadge.TextColor3 = selected and UITheme.Colors.Panel or UITheme.Colors.Text
         statusBadge.TextScaled = true
         statusBadge.Parent = button
+        statusBadge.Visible = not beginnerVote or selected
         UITheme.addTextConstraint(statusBadge, compactVote and 10 or 11, 18)
         UITheme.addCorner(statusBadge, UITheme.Corners.Pill)
 
@@ -2628,7 +2641,8 @@ local function showVotes(options)
         local action = CoreLocalization.hazardAction(localeId, option.id)
         local localizedHint = CoreLocalization.hazardHint(localeId, option.id)
             or tostring(option.hint or "")
-        if compactVote and action then
+        if (compactVote or beginnerVote) and action then
+            -- One verb is easier to act on than a full strategy paragraph.
             hintLabel.Text = action
         else
             hintLabel.Text = action and (action .. "  •  " .. localizedHint) or localizedHint
@@ -2653,6 +2667,7 @@ local function showVotes(options)
         votePill.Font = Enum.Font.GothamBold
         votePill.Text = selected
             and CoreLocalization.text(localeId, "VOTE_SAVED")
+            or (beginnerVote and CoreLocalization.text(localeId, "FIRST_TAP_TO_VOTE"))
             or CoreLocalization.text(
                 localeId,
                 optionVotes == 1 and "VOTE_ONE" or "VOTE_MANY",
