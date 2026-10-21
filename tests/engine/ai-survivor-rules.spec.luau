@@ -679,6 +679,28 @@ describe("AI survivor rules", function()
         meteor:Destroy()
     end)
 
+    it("holds a live hazard target through overlapping warning proximity ties", function()
+        local keep = AISurvivorRules.keepThreatFocus
+        -- Two warnings cross in perceived distance while a survivor dodges.
+        -- The old target must remain within the next closest detection
+        -- envelope; a clearly nearer threat can still interrupt it.
+        expect(keep(11, 9, 4)).toBe(true)
+        expect(keep(13, 9, 4)).toBe(true)
+        expect(keep(13.1, 9, 4)).toBe(false)
+        expect(keep(4, 9, 4)).toBe(true)
+        expect(keep(19, 9, 4)).toBe(false)
+        -- Do not retain a destroyed/out-of-range warning represented by
+        -- an infinite/missing distance when scanning the live warning set.
+        expect(keep(math.huge, 9, 4)).toBe(false)
+        expect(keep(9, math.huge, 4)).toBe(false)
+        expect(keep(nil, 9, 4)).toBe(false)
+        expect(keep(0 / 0, 9, 4)).toBe(false)
+        expect(keep(5, -1, 4)).toBe(false)
+        -- Bound hysteresis so a stale target cannot win forever.
+        expect(keep(16, 9, 999)).toBe(false)
+        expect(keep(15, 9, 999)).toBe(true)
+    end)
+
     it("delays reactions instead of granting perfect reflexes", function()
         expect(AISurvivorRules.reactionReady(10, 10.19, 0.20)).toBe(false)
         expect(AISurvivorRules.reactionReady(10, 10.20, 0.20)).toBe(true)
