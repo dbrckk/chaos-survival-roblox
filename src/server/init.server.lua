@@ -1053,6 +1053,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and #selected == 1 and allowDynamicArenas,
         EnableOrbitalPulse = currentArenaVariant == "Orbital"
             and #selected == 1 and allowDynamicArenas,
+        EnableJunctionSwitchyard = currentArenaVariant == "Crossroads"
+            and #selected == 1 and allowDynamicArenas
+            and not activeHazards.RisingLava
+            and not activeHazards.ShrinkingArena,
         Cleanup = cleanup,
         OnCleanup = onCleanup,
         Active = function() return roundActive end,
