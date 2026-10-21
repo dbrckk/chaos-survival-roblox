@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-21 — Authoritative round outcomes despite reward errors (candidate)
+
+- **Frozen game results:** establish the human participant roster and winner roster immediately after the hazard finishes, *before* calling any per-player Coins, XP, quest, achievement or analytics handler. Previously the winner count and survivor list were updated inside the individually protected reward handler: if that handler failed, the actual survivor vanished from RESULT despite having won. The new round-owned outcome snapshot remains stable even when player data or late character updates change during payouts.
+- RESULT broadcasts now include both server-owned `participantUserIds` and `survivorUserIds`. On Android and other clients, missing/delayed `RoundFeedback` reconstructs the correct victory, elimination or spectator status from those lists, not a potentially stale replicated `RoundParticipant` attribute. No victory or reward values are inferred for spectators.
+- **Transparent payout failures:** a per-player settlement exception still does not stop other rewards or the next round, and the server **never retries** a potentially partial payout. It now sends that player's truthful win/loss result with a localized “rewards could not be verified” message instead of leaving an indefinite spinner or fabricating a +0 payout.
+- Extend existing Roblox engine settlement and result-presentation specs for corrupted reward handlers, duplicate/left participants and authoritative loss/spectator recovery. Extend existing authenticated Studio E2E assertions to validate these rosters and require a real, non-failure reward receipt for successful acceptance.
+- No new remote, leaderboard mutation, paid power, XP/coin rate change, client polling loop or public Roblox publishing. Build and real-engine tests still gate merging.
+
 ## 2026-10-21 — Fair replay health and explicit next-round E2E proof (candidate)
 
 - **Correct fairness asymmetry:** eliminated players and AI rigs already respawn/reset to full health before each round, but human winners carried damage forward. Restore living contestants to their own `Humanoid.MaxHealth` only **after an accepted arena READY teleport**; do not heal during the active disaster, resurrect a dead rig, or reset a critical-health victory before the reward/medal logic reads it.
