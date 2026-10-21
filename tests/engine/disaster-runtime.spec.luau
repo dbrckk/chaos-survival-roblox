@@ -10,6 +10,9 @@ local MovementSafety = require("../../src/server/MovementSafety")
 local RisingLava = require("../../src/server/Disasters/RisingLava")
 local Tornado = require("../../src/server/Disasters/Tornado")
 
+local Meteors = require("../../src/server/Disasters/Meteors")
+local Bombs = require("../../src/server/Disasters/Bombs")
+
 local disasters = {
     {id = "RisingLava", module = require("../../src/server/Disasters/RisingLava")},
     {id = "Meteors", module = require("../../src/server/Disasters/Meteors")},
@@ -35,6 +38,18 @@ local function runCleanup(cleanup, onCleanup)
         end
     end
 end
+
+describe("Round-end lethal warning safety", function()
+    it("only starts meteors and bombs with enough time for visible warning and damage", function()
+        local deadline = {RoundEndsAt = 30}
+        expect(Meteors.canComplete(deadline, 27, 1.05, 0.5)).toBe(true)
+        expect(Meteors.canComplete(deadline, 28.3, 1.05, 0.5)).toBe(false)
+        expect(Bombs.canComplete(deadline, 27.5, 1.45, 0)).toBe(true)
+        expect(Bombs.canComplete(deadline, 28.4, 1.45, 0)).toBe(false)
+        expect(Meteors.canComplete({}, 999, 1.05, 0.5)).toBe(true)
+        expect(Bombs.canComplete({}, 999, 1.45, 0)).toBe(true)
+    end)
+end)
 
 describe("Collapsing platform visual truth", function()
     it("hides real server trims and supports along with the collision deck", function()
