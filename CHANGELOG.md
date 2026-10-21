@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-21 — Crossroads Switchyard (candidate, not published)
+
+- Added **Crossroads Switchyard**, a skill-based lateral route cut at four central junctions. Two opposite junctions light up gold at a time; the active pair rotates every nine seconds. The existing inward Flux Relays, outer launch pads, arena floor and all four original routes remain unchanged.
+- A real survivor (human or in-round AI) must already be moving *sideways* through a charged junction: strong straight-through Flux return motion never triggers a surprise side launch. Valid directional turns receive a bounded +20 tangent impulse (48 horizontal cap). Each character can claim each junction only once per round, with a four-second global cooldown.
+- Each junction uses a noncolliding server-authored trigger, two small painted floor strips and a near-field directional sign. Active/inactive status is visible at Low VFX quality without requiring new HUD updates, particle loops or paid assets.
+- Enabled only for experienced, single-disaster Crossroads rounds; suppressed when any contestant is in their first three rounds, during Double Chaos, Rising Lava or Shrinking Arena. Uses round-owned cleanup to reset pads, signs and signals.
+- Expanded the **existing** Roblox engine arena-mechanics integration suite for physical pads, two alternating lane pairs, intentional steering, direction, speed caps, antispam and cleanup. No new test suite.
+- **Not deployed:** exact-head CI and real Roblox Studio/Android visual, collision, AI and multi-round smoke checks remain necessary.
+
 ## 2026-10-21 — Orbital Ring pulse-route skill (candidate, not published)
 
 - Added **Orbital Pulse** for experienced single-disaster Orbital Ring rounds. Two opposite ramps are highlighted in gold; the charged pair rotates every eight seconds. All eight original ramps, collisions, and traversal options remain permanently available.
