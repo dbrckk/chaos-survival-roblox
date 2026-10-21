@@ -589,7 +589,7 @@ describe("Arena mechanics", function()
         expect(rules.tangentVelocity(
             Vector3.new(0, 0, -13), xAxis)).toBe(-Vector3.zAxis)
         expect(rules.tangentVelocity(
-            Vector3.new(13, 0, 0), Vector3.zAxis)).toBe(-Vector3.xAxis)
+            Vector3.new(13, 0, 0), Vector3.zAxis)).toBe(Vector3.xAxis)
         local launched = rules.velocity(
             Vector3.new(-9, 4, 13), forward
         )
