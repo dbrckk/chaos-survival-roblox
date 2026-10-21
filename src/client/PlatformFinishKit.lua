@@ -344,8 +344,8 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
     local deck = snapshot.platform
     local original = snapshot.originalSize
     if original.X <= 0 or original.Z <= 0 then return 0 end
-    local ratioX = math.clamp(deck.Size.X / original.X, 0.05, 1)
-    local ratioZ = math.clamp(deck.Size.Z / original.Z, 0.05, 1)
+    local ratioX = math.clamp(deck.Size.X / original.X, 0.05, 4)
+    local ratioZ = math.clamp(deck.Size.Z / original.Z, 0.05, 4)
     local changed = 0
     for _, data in ipairs(snapshot.entries) do
         local part = data.part
