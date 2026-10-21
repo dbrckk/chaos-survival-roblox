@@ -539,10 +539,13 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
         }
         for routeIndex, direction in ipairs(routeDirections) do
-            local position = center + direction * 4.8
+            -- Outside the raised tiers, adjacent to each cardinal entry
+            -- spawn. The arrow points IN toward the first reachable deck;
+            -- avoid marking low headroom directly below the transfers.
+            local position = center + direction * 32
                 + Vector3.new(0, 1.28, 0)
             local facing = CFrame.lookAt(position,
-                position + direction, Vector3.yAxis)
+                position - direction, Vector3.yAxis)
             for side = -1, 1, 2 do
                 local marker = decorPart(
                     decor,
