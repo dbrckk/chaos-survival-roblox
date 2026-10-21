@@ -16,37 +16,36 @@ ArenaVariants.Definitions = {
             Vector3.new(0,3,-35), Vector3.new(0,3,35),
             Vector3.new(-35,3,0), Vector3.new(35,3,0),
         },
-        -- Authored, symmetrical skill routes rather than pseudorandom
-        -- floating boxes. Each quadrant is reachable from the base floor:
-        -- entry (+4y) -> transfer (+7y) -> high (+9/+11y).
-        -- The four sectors reconnect through the low cardinal decks.
-        -- Leave every spawn marker's full R15 footprint unobstructed.
-        -- Keep Platform1 high enough to retain the existing engineered
-        -- underside supports and the collapsing-platform art contract.
+        -- Four authored ascending zigzag routes, each with genuine jump
+        -- gaps and no vertical stacking: entry (+4) -> transfer (+7)
+        -- -> elevated turn (+9) -> exposed lookout (+11).
+        -- A stacked deck with only 1-3 studs of headroom would TRAP R15
+        -- avatars on the lower tier even if a 2D "reachable" check passed.
+        -- All routes also preserve every native spawn and Grid Circuit
+        -- sensor at (+/-16, +/-16), plus a six-stud outer floor margin.
+        -- Platform1 stays high enough for engineered support cosmetics.
         Platforms = {
-            -- High perimeter escapes (tier 3): linked to the transfer ring.
-            {offset=Vector3.new(-24,9,0),size=Vector3.new(12,2,12),RouteTier=3},
-            {offset=Vector3.new(24,9,0),size=Vector3.new(12,2,12),RouteTier=3},
-            {offset=Vector3.new(0,9,-24),size=Vector3.new(12,2,12),RouteTier=3},
-            {offset=Vector3.new(0,9,24),size=Vector3.new(12,2,12),RouteTier=3},
-            -- Accessible starter terraces, just four studs above the floor.
-            {offset=Vector3.new(-12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
+            -- Tier 3: exposed turn from the cardinal transfer.
+            {offset=Vector3.new(26,9,13),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(-13,9,26),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(-26,9,-13),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(13,9,-26),size=Vector3.new(10,2,10),RouteTier=3},
+            -- Tier 1: floor-accessible takeoff terraces.
             {offset=Vector3.new(12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
-            {offset=Vector3.new(0,4,-12),size=Vector3.new(12,2,12),RouteTier=1},
             {offset=Vector3.new(0,4,12),size=Vector3.new(12,2,12),RouteTier=1},
-            -- Offset transfers, a three-stud rise; none covers the
-            -- four authoritative Grid Circuit sensors at (+/-16, +/-16).
-            {offset=Vector3.new(-9,7,-5),size=Vector3.new(11,2,11),RouteTier=2},
-            {offset=Vector3.new(5,7,-9),size=Vector3.new(11,2,11),RouteTier=2},
-            {offset=Vector3.new(-5,7,9),size=Vector3.new(11,2,11),RouteTier=2},
-            {offset=Vector3.new(9,7,5),size=Vector3.new(11,2,11),RouteTier=2},
-            -- Risk/reward overlooks are lateral extensions of the high
-            -- cardinal decks. Crucially they avoid both diagonal spawn
-            -- pads and the four optional Grid Circuit sensor volumes.
-            {offset=Vector3.new(-26,11,-11),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(11,11,-26),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(-11,11,26),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(26,11,11),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
+            {offset=Vector3.new(0,4,-12),size=Vector3.new(12,2,12),RouteTier=1},
+            -- Tier 2: horizontal, unstacked three-stud jumps.
+            {offset=Vector3.new(26,7,0),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(0,7,26),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(-26,7,0),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(0,7,-26),size=Vector3.new(10,2,10),RouteTier=2},
+            -- Tier 4: rewarding but exposed final lookout; no spawn pads
+            -- or sensor volumes underneath, no inaccessible islands.
+            {offset=Vector3.new(39,11,13),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-13,11,39),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-39,11,-13),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(13,11,-39),size=Vector3.new(10,2,10),RouteTier=4},
         },
     },
 
