@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-21 — Tower Run dynamic Skybridge pressure (candidate, not published)
+
+- One Tower Run skybridge now signals a **2.6-second amber warning**, drops its real collision for **1.8 seconds**, and then fully returns; the other three routes remain available. Bridge selection rotates across rounds. This is a tactical route change rather than extra lethal damage.
+- Disabled for the first three entered rounds of **any** human contestant, Double Chaos, and floor-conflicting disasters (Disappearing Platforms, Shrinking Arena, Rising Lava, Freeze). Only active for experienced, single-disaster Tower Run rounds.
+- Client warning graphics use two transverse deck-contained stripes instead of square-platform diagonals, with one nearby positional audio cue. Low VFX and Reduce Motion continue to work; no new client render loop or paid asset.
+- Original server deck paint, underside ribs, rails, glow and client trims all fade with the actual physical bridge. Skyrail slipstream cannot trigger or award progress while its deck is absent.
+- The round cleanup immediately restores collision, decor and all phase attributes, including when a match ends mid-warning/outage. Existing arena mechanics engine integration coverage verifies warning, outage and recovery.
+- **Not a Roblox public update.** Build/Open Cloud checks and real Android/Studio movement, visual warning, solo AI and frame-rate validation remain required.
+
 ## 2026-10-19 — 1.0 release packaging hardening (unreleased)
 
 - Build Validation now archives the compiled Roblox `.rbxlx`, its SHA-256 checksum and a provenance manifest identifying its exact source SHA and explicitly marking the package **NOT_PUBLISHED / NOT_CERTIFIED**.
