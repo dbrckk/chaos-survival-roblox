@@ -2028,6 +2028,8 @@ while true do
 
             roundFeedbackEvent:FireClient(p, {
                 survived = survived,
+                soleSurvivor = survived
+                    and resultSnapshot.soleSurvivorUserId == p.UserId,
                 roundNumber = roundNumber,
                 coins = survived and (winCoins + streakBonusCoins + fusionBonusCoins) or Config.ParticipationCoins,
                 xp = survived and winXP or Config.ParticipationXP,
@@ -2090,6 +2092,7 @@ while true do
                 roundFeedbackEvent:FireClient(p, {
                     roundNumber = roundNumber,
                     survived = survivedById[p.UserId] == true,
+                    soleSurvivor = resultSnapshot.soleSurvivorUserId == p.UserId,
                     rewardsUnavailable = true,
                     arenaId = currentArenaVariant,
                     arenaName = roundSettings.ArenaName,
