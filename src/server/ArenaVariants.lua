@@ -26,26 +26,28 @@ ArenaVariants.Definitions = {
         -- Platform1 stays high enough for engineered support cosmetics.
         Platforms = {
             -- Tier 3: exposed turn from the cardinal transfer.
-            {offset=Vector3.new(26,9,13),size=Vector3.new(10,2,10),RouteTier=3},
-            {offset=Vector3.new(-13,9,26),size=Vector3.new(10,2,10),RouteTier=3},
-            {offset=Vector3.new(-26,9,-13),size=Vector3.new(10,2,10),RouteTier=3},
-            {offset=Vector3.new(13,9,-26),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(39,9,12),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(-12,9,39),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(-39,9,-12),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(12,9,-39),size=Vector3.new(10,2,10),RouteTier=3},
             -- Tier 1: floor-accessible takeoff terraces.
             {offset=Vector3.new(12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
             {offset=Vector3.new(0,4,12),size=Vector3.new(12,2,12),RouteTier=1},
             {offset=Vector3.new(-12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
             {offset=Vector3.new(0,4,-12),size=Vector3.new(12,2,12),RouteTier=1},
-            -- Tier 2: horizontal, unstacked three-stud jumps.
-            {offset=Vector3.new(26,7,0),size=Vector3.new(10,2,10),RouteTier=2},
-            {offset=Vector3.new(0,7,26),size=Vector3.new(10,2,10),RouteTier=2},
-            {offset=Vector3.new(-26,7,0),size=Vector3.new(10,2,10),RouteTier=2},
-            {offset=Vector3.new(0,7,-26),size=Vector3.new(10,2,10),RouteTier=2},
-            -- Tier 4: rewarding but exposed final lookout; no spawn pads
+            -- Tier 2: lateral takeoffs clear the straight floor-to-entry
+            -- corridor. Diagonal jumps are short and well within range.
+            {offset=Vector3.new(26,7,12),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(-12,7,26),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(-26,7,-12),size=Vector3.new(10,2,10),RouteTier=2},
+            {offset=Vector3.new(12,7,-26),size=Vector3.new(10,2,10),RouteTier=2},
+            -- Tier 4: turn outward once more for the final exposed lookout.
+            -- No spawn pads
             -- or sensor volumes underneath, no inaccessible islands.
-            {offset=Vector3.new(39,11,13),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(-13,11,39),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(-39,11,-13),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(13,11,-39),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(39,11,25),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-25,11,39),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-39,11,-25),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(25,11,-39),size=Vector3.new(10,2,10),RouteTier=4},
         },
     },
 
