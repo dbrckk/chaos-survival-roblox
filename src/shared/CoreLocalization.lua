@@ -484,9 +484,9 @@ local ARENA_COPY = {
         },
         Towers = {
             name = "TOWER RUN",
-            strategy = "Four ascending routes • reach the bridges from the central hub"
+            strategy = "Four ascending routes • reach the bridges from the central hub",
             mechanicName = "UPDRAFT PADS",
-            mechanicHint = "Climb the marked tiers; cyan pads boost jumps near the outer towers"
+            mechanicHint = "Climb the marked tiers; cyan pads boost jumps near the outer towers",
         },
         Crossroads = {
             name = "CROSSROADS",
@@ -510,9 +510,9 @@ local ARENA_COPY = {
         },
         Towers = {
             name = "TOURS",
-            strategy = "Quatre voies montantes • rejoins les ponts depuis le centre"
+            strategy = "Quatre voies montantes • rejoins les ponts depuis le centre",
             mechanicName = "PADS ASCENDANTS",
-            mechanicHint = "Monte les paliers indiqués ; les pads cyan aident à prendre de la hauteur"
+            mechanicHint = "Monte les paliers indiqués ; les pads cyan aident à prendre de la hauteur",
         },
         Crossroads = {
             name = "CARREFOUR",
