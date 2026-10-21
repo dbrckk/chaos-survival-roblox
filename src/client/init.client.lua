@@ -1995,6 +1995,7 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindResponsiveCamera
 
 local resultToken = 0
 local lastResolvedResultRoundNumber = nil
+local lastObservedRoundNumber = nil
 local lastRoundHint = ""
 
 local function dismissResultCard()
@@ -2421,14 +2422,8 @@ local function showRoundFeedback(feedback)
         TweenService:Create(resultFlash, UITheme.Motion.StandardFade, {BackgroundTransparency = 1}):Play()
     end)
 
-    -- Phase transitions own the normal dismissal so the result never
-    -- disappears early on longer multiplayer post-round screens. Keep only a
-    -- generous fallback in case a state update is lost.
-    task.delay(10, function()
-        if token == resultToken then
-            dismissResultCard()
-        end
-    end)
+    -- Only the server's phase transition dismisses this card. A fixed
+    -- timeout used to hide results before multiplayer countdown ended.
 end
 
 local function refreshStats()
@@ -2935,7 +2930,10 @@ local function showOnePendingMetaNotification()
 end
 
 roundFeedbackEvent.OnClientEvent:Connect(function(feedback)
-    if type(feedback) ~= "table" then return end
+    if not ResultPresentation.acceptReceipt(
+        feedback, currentHudPhase, lastObservedRoundNumber,
+        lastResolvedResultRoundNumber
+    ) then return end
     lastResolvedResultRoundNumber = tonumber(feedback.roundNumber)
     showRoundFeedback(feedback)
 end)
@@ -3098,6 +3096,12 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     local previousHudPhase = currentHudPhase
     currentHudPhase = tostring(state.phase or "waiting")
+    local observedRound = tonumber(state.roundNumber)
+    if observedRound and observedRound > 0 and observedRound < math.huge
+        and (not lastObservedRoundNumber or observedRound > lastObservedRoundNumber)
+    then
+        lastObservedRoundNumber = observedRound
+    end
     currentHudVoteOptions = state.voteOptions
     local gamesPlayed = FirstTimeExperience.effectiveGames(
         player:GetAttribute("Games"),
