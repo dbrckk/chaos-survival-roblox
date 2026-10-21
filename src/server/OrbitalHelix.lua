@@ -61,8 +61,8 @@ end
 
 -- Physical access links make the eight outer decks and central reactor
 -- playable without paid mobility or an unusually powerful avatar jump.
--- Entry starts ON the floor; core links start at the OUTER edge of each
--- inner deck. Endpoints meet the exact exposed edge of the solid target.
+-- Entry starts ON the floor; core links start at the actual landing
+-- height of the inner deck. Endpoints meet the exposed solid podium edge.
 function OrbitalHelix.accessRoute(variant, center, index, kind)
     if not variant or variant.Id ~= "Orbital"
         or type(index) ~= "number"
@@ -98,8 +98,12 @@ function OrbitalHelix.accessRoute(variant, center, index, kind)
         -- Begin exactly at the existing Helix landing. Starting above
         -- the outer lip creates a low sloping roof over that landing and
         -- prevents an R15 character from leaving the original bridge.
-        start = hub + inner.offset
-            + Vector3.new(0, inner.offset.Y + inner.size.Y * 0.5 - 0.35, 0)
+        -- inner.offset already contains its elevation: do not add Y twice.
+        start = hub + Vector3.new(
+            inner.offset.X,
+            inner.offset.Y + inner.size.Y * 0.5 - 0.35,
+            inner.offset.Z
+        )
         finish = hub + axis * (coreReach - 0.35)
             + Vector3.new(0, crown.offset.Y + crown.size.Y * 0.5 - 0.35, 0)
     end
