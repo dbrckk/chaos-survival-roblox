@@ -58,6 +58,45 @@ describe("Arena variants", function()
         end
         for tier = 1, 4 do expect(#tiers[tier]).toBe(4) end
 
+        -- Four floor-to-entry corridors must stay open to full-height R15
+        -- characters; raised transfer decks must not form a low ceiling
+        -- between the native spawn and the accessible first terrace.
+        local corridors = {
+            {x=29,z=0,sx=10,sz=7}, {x=-29,z=0,sx=10,sz=7},
+            {x=0,z=29,sx=7,sz=10}, {x=0,z=-29,sx=7,sz=10},
+        }
+        for i, first in ipairs(classic.Platforms) do
+            if first.RouteTier > 1 then
+                for _, corridor in ipairs(corridors) do
+                    local freeX = math.abs(first.offset.X - corridor.x)
+                        >= (first.size.X + corridor.sx) * 0.5
+                    local freeZ = math.abs(first.offset.Z - corridor.z)
+                        >= (first.size.Z + corridor.sz) * 0.5
+                    expect(freeX or freeZ).toBe(true)
+                end
+            end
+
+            -- A deck directly above another with 1-3 studs of headroom
+            -- would trap the player and make an apparent jump unusable.
+            for j = i + 1, #classic.Platforms do
+                local other = classic.Platforms[j]
+                if other.RouteTier ~= first.RouteTier then
+                    local separateX = math.abs(first.offset.X - other.offset.X)
+                        >= (first.size.X + other.size.X) * 0.5
+                    local separateZ = math.abs(first.offset.Z - other.offset.Z)
+                        >= (first.size.Z + other.size.Z) * 0.5
+                    expect(separateX or separateZ).toBe(true)
+                end
+            end
+
+            -- Even the final lookouts remain comfortably inside the
+            -- walkable floor, never hanging beyond the map boundary.
+            expect(math.abs(first.offset.X) + first.size.X * 0.5
+                <= classic.BaseSize.X * 0.5 - 5).toBe(true)
+            expect(math.abs(first.offset.Z) + first.size.Z * 0.5
+                <= classic.BaseSize.Z * 0.5 - 5).toBe(true)
+        end
+
         local baseTop = classic.BaseSize.Y * 0.5
         for _, entry in ipairs(tiers[1]) do
             -- The floor -> starter leap is shorter than a standard jump.
@@ -81,11 +120,9 @@ describe("Arena variants", function()
         for tier = 2, 4 do
             for _, target in ipairs(tiers[tier]) do
                 local reachable = false
-                for previousTier = 1, tier - 1 do
-                    for _, source in ipairs(tiers[previousTier]) do
-                        if canJump(source, target) then
-                            reachable = true
-                        end
+                for _, source in ipairs(tiers[tier - 1]) do
+                    if canJump(source, target) then
+                        reachable = true
                     end
                 end
                 expect(reachable).toBe(true)
