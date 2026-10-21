@@ -13,6 +13,7 @@ local function canComplete(ctx, now, warning, travel)
 end
 
 local D = {Name = "METEOR SHOWER", Hint = "WATCH THE WARNING CIRCLES!"}
+D.canComplete = canComplete
 
 function D.start(ctx)
     local profile = ctx.BalanceProfile or {}
