@@ -90,6 +90,7 @@ function D.start(ctx)
                     or name == "DeckLineNorth" or name == "DeckLineSouth"
                     or name == "DeckLineEast" or name == "DeckLineWest"
                     or name:match("^ClassicGrid[XZ]%-?%d+$")
+                    or name:match("^ClassicEntryChevron%d+_%-?%d+$")
                     or name:match("^TowerGroundPlate%d+$")
                     or name:match("^TowerGroundCore%d+$")
                     or name:match("^CrossroadLaneFill%d+$")
@@ -118,6 +119,11 @@ function D.start(ctx)
                     cframe = platform.CFrame,
                     localCFrame = originalCFrame:ToObjectSpace(platform.CFrame),
                     localPosition = originalCFrame:PointToObjectSpace(platform.Position),
+                    size = platform.Size,
+                    -- Classic's authored routes cannot preserve safe jump
+                    -- gaps during a 55% inward shrink if their 10-stud
+                    -- footprints remain unscaled; they must contract too.
+                    compactRoute = tonumber(platform:GetAttribute("RouteTier")) ~= nil,
                 }
                 movableParts[#movableParts+1] = state
                 local index = tonumber(platform.Name:match("^Platform(%d+)$"))
@@ -175,6 +181,7 @@ function D.start(ctx)
                     table.insert(platformDetails, {
                         part = item,
                         deck = deck,
+                        size = item.Size,
                         cframe = item.CFrame,
                         localCFrame = deck.part.CFrame:ToObjectSpace(item.CFrame),
                     })
@@ -272,6 +279,14 @@ function D.start(ctx)
                     local rotationOnly = state.localCFrame - state.localCFrame.Position
                     part.CFrame = (originalCFrame * CFrame.new(localPosition)) * rotationOnly
 
+                    if state.compactRoute then
+                        part.Size = Vector3.new(
+                            math.max(0.05, state.size.X * scale),
+                            state.size.Y,
+                            math.max(0.05, state.size.Z * scale)
+                        )
+                    end
+
                     if state.bridgeSpan then
                         local span = D.skybridgeSpan(state.bridgeSpan, scale)
                         part.Size = state.alongX
@@ -292,7 +307,20 @@ function D.start(ctx)
             -- CFrame: no ghost panels/frames/bevels outside the shrinking deck.
             for _, detail in ipairs(platformDetails) do
                 if detail.part.Parent and detail.deck.part.Parent then
-                    detail.part.CFrame = detail.deck.part.CFrame * detail.localCFrame
+                    if detail.deck.compactRoute then
+                        local p = detail.localCFrame.Position
+                        local rotationOnly = detail.localCFrame - p
+                        detail.part.CFrame = detail.deck.part.CFrame
+                            * CFrame.new(p.X * scale, p.Y, p.Z * scale)
+                            * rotationOnly
+                        detail.part.Size = Vector3.new(
+                            math.max(0.05, detail.size.X * scale),
+                            detail.size.Y,
+                            math.max(0.05, detail.size.Z * scale)
+                        )
+                    else
+                        detail.part.CFrame = detail.deck.part.CFrame * detail.localCFrame
+                    end
                 end
             end
 
@@ -354,6 +382,9 @@ function D.start(ctx)
             local part = state.part
             if part and part.Parent then
                 part.CFrame = state.cframe
+                if state.compactRoute then
+                    part.Size = state.size
+                end
                 if state.bridgeSpan then
                     part.Size = state.alongX
                         and Vector3.new(state.bridgeSpan, part.Size.Y, part.Size.Z)
@@ -370,6 +401,9 @@ function D.start(ctx)
         for _, detail in ipairs(platformDetails) do
             if detail.part and detail.part.Parent then
                 detail.part.CFrame = detail.cframe
+                if detail.deck.compactRoute then
+                    detail.part.Size = detail.size
+                end
             end
         end
 
