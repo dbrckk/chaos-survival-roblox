@@ -24,6 +24,14 @@ local CONFLICTS = {
     SpeedSurge = true,
 }
 
+-- An event must finish both its warning and physical effect with a safe
+-- two-second transition buffer, including in 30-second Solo Rush rounds.
+function SkybridgePressure.canComplete(ctx, now)
+    local deadline = tonumber(ctx and ctx.RoundEndsAt)
+    if not deadline then return true end
+    return (tonumber(now) or 0) + SkybridgePressure.WarningSeconds + SkybridgePressure.OutageSeconds + 2 <= deadline
+end
+
 function SkybridgePressure.allowed(ctx)
     if type(ctx) ~= "table" or ctx.EnableSkybridgePressure ~= true
         or type(ctx.Active) ~= "function"
@@ -156,9 +164,7 @@ function SkybridgePressure.start(ctx, arena)
             -- taking two simultaneous shortcuts away from a player.
             -- Never start an unavoidable late-round event which cannot
             -- finish and restore before the end-of-round transition.
-            local deadline = tonumber(ctx.RoundEndsAt)
-            if deadline and os.clock() + SkybridgePressure.WarningSeconds + SkybridgePressure.OutageSeconds + 2 > deadline
-            then break end
+            if not SkybridgePressure.canComplete(ctx, os.clock()) then break end
             local index = ((seed + sequence) % #bridges) + 1
             sequence += 1
             local bridge = bridges[index]
