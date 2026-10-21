@@ -49,6 +49,7 @@ local RoundVariety = require(script.RoundVariety)
 local RoundIntensity = require(script.RoundIntensity)
 local RoundCleanup = require(script.RoundCleanup)
 local RoundSettlement = require(script.RoundSettlement)
+local RoundResultState = require(script.RoundResultState)
 local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
 local RoundChallenge = require(script.RoundChallenge)
@@ -1835,6 +1836,24 @@ while true do
         feedbackDisasterName = selectedSet[1].Name .. " + " .. selectedSet[2].Name
     end
 
+    -- Announce the frozen result before any slow/failing reward processing.
+    -- Only the authoritative server roster determines survival.
+    local resultSnapshot = RoundResultState.snapshot({
+        roundNumber = roundNumber,
+        seconds = roundSettings.PostRoundSeconds,
+        participantUserIds = participantUserIds,
+        survivorUserIds = survivorUserIds,
+        aiSurvivorsAlive = aiSurvivorsAtFinish,
+        contestantCount = #contestants + AISurvivorService.roundRosterCount(),
+        doubleChaos = #selectedSet > 1,
+        fusionName = fusionName,
+        soloMode = roundSettings.Solo,
+        arenaName = roundSettings.ArenaName,
+        arenaId = currentArenaVariant,
+        disasterIds = readyDisasterIds,
+    })
+    broadcast(resultSnapshot)
+
     local winCoins = SoloRules.reward(Config.WinCoins, roundSettings.WinCoinMultiplier)
     local winXP = SoloRules.reward(Config.WinXP, roundSettings.WinXPMultiplier)
     -- One player's malformed save/progression/achievement state must not
@@ -2101,47 +2120,10 @@ while true do
         end
     end
 
-    local displayedSurvivors = survivors + aiSurvivorsAtFinish
-    local resultTitle = endedEarly
-        and (aiSurvivorsAtFinish > 0 and "YOU WERE ELIMINATED" or "TOTAL WIPEOUT")
-        or (displayedSurvivors .. " SURVIVED")
-
-    broadcast({
-        phase = "result",
-        roundNumber = roundNumber,
-        title = resultTitle,
-        hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
-        seconds = roundSettings.PostRoundSeconds,
-        doubleChaos = #selectedSet > 1,
-        fusionName = fusionName,
-        soloMode = roundSettings.Solo,
-        arenaName = roundSettings.ArenaName,
-        arenaId = currentArenaVariant,
-        disasterIds = readyDisasterIds,
-        survivorsAlive = displayedSurvivors,
-        contestantCount = #contestants + AISurvivorService.roundRosterCount(),
-        survivorUserIds = survivorUserIds,
-        participantUserIds = participantUserIds,
-    })
-
+    -- Keep the full results window after receipts have been processed.
+    -- The provisional winner announcement has already been visible.
     for t = roundSettings.PostRoundSeconds, 1, -1 do
-        broadcast({
-            phase = "result",
-            roundNumber = roundNumber,
-            title = resultTitle,
-            hint = fusionName and (tostring(fusionName) .. " complete • Next round soon") or "Next round soon",
-            seconds = t,
-            doubleChaos = #selectedSet > 1,
-            fusionName = fusionName,
-            soloMode = roundSettings.Solo,
-            arenaName = roundSettings.ArenaName,
-            arenaId = currentArenaVariant,
-            disasterIds = readyDisasterIds,
-            survivorsAlive = displayedSurvivors,
-            contestantCount = #contestants + AISurvivorService.roundRosterCount(),
-            survivorUserIds = survivorUserIds,
-            participantUserIds = participantUserIds,
-        })
+        broadcast(RoundResultState.atSecond(resultSnapshot, t))
         task.wait(1)
     end
 
