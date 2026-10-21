@@ -8,6 +8,7 @@ local Debris = game:GetService("Debris")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local OrbitalRouteSignKit = require(script.Parent.OrbitalRouteSignKit)
+local OrbitalRampRegistry = require(script.Parent.OrbitalRampRegistry)
 local LocalizationService = game:GetService("LocalizationService")
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -20,8 +21,6 @@ local currentCircuit = nil
 local currentTier = nil
 local currentReduced = nil
 local runners = {}
-local orderedRamps = {}
-local orderedAccessRamps = {}
 local routeSigns = {}
 local flowFolder = nil
 local flowConnections = {}
@@ -32,28 +31,9 @@ local function resolveCircuit()
     return arena and arena:FindFirstChild("HelixCircuit")
 end
 
-local function readRamps(circuit)
-    if not circuit then return {}, {} end
-    local ramps = {}
-    local access = {}
-    for _, part in ipairs(circuit:GetChildren()) do
-        if part:IsA("BasePart") then
-            if part:GetAttribute("OrbitalHelixRamp") == true then
-                table.insert(ramps, part)
-            elseif OrbitalRouteSignKit.kind(part) ~= nil then
-                table.insert(access, part)
-            end
-        end
-    end
-    table.sort(ramps, function(a, b)
-        return (a:GetAttribute("HelixLane") or 0)
-            < (b:GetAttribute("HelixLane") or 0)
-    end)
-    -- Order is deterministic even when Roblox streams the connector parts
-    -- after the containing folder. HelixRamp9 is the preserved core link.
-    table.sort(access, function(a, b) return a.Name < b.Name end)
-    return ramps, access
-end
+-- Structural updates are event-driven: drawing animated glyphs must
+-- not enumerate + sort the entire circuit every 75ms on a mobile phone.
+local rampRegistry = OrbitalRampRegistry.new(OrbitalRouteSignKit)
 
 local function flowBurst(sensor)
     if not sensor or not sensor.Parent or player:GetAttribute("ReduceMotion") == true then
@@ -181,8 +161,6 @@ local function reset()
     table.clear(routeSigns)
     folder:ClearAllChildren()
     table.clear(runners)
-    table.clear(orderedRamps)
-    table.clear(orderedAccessRamps)
 end
 
 local function createRunner(ramp, index, lane, tier)
@@ -213,8 +191,6 @@ local function rebuild(circuit, tier, reduced, ramps, access)
     currentCircuit = circuit
     currentTier = tier
     currentReduced = reduced
-    orderedRamps = ramps
-    orderedAccessRamps = access
     -- Motion-free wayfinding belongs on real traversable ramps and stays
     -- legible on Low/ReduceMotion. A SurfaceGui follows shrinking/rotation
     -- automatically: unlike a Neon 3D part it costs no per-frame transform.
@@ -265,45 +241,37 @@ local function draw(time)
 end
 
 task.spawn(function()
+    local nextFlowCheck = 0
     while folder.Parent do
         local circuit = resolveCircuit()
         local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
         local reduced = player:GetAttribute("ReduceMotion") == true
-        local ramps, access = readRamps(circuit)
-        local stale = circuit ~= currentCircuit or tier ~= currentTier
-            or reduced ~= currentReduced or #ramps ~= #orderedRamps
-            or #access ~= #orderedAccessRamps
-        if not stale then
-            for index, ramp in ipairs(ramps) do
-                if ramp ~= orderedRamps[index] then
-                    -- StreamingEnabled can replace a ramp while the folder
-                    -- instance remains unchanged.
-                    stale = true
-                    break
-                end
-            end
-        end
-        if not stale then
-            for index, ramp in ipairs(access) do
-                if ramp ~= orderedAccessRamps[index] then
-                    stale = true
-                    break
-                end
-            end
-        end
-        if stale then
+        local ramps, access, geometryChanged = rampRegistry:snapshot(circuit)
+        local circuitChanged = circuit ~= currentCircuit
+        if geometryChanged or circuitChanged
+            or tier ~= currentTier or reduced ~= currentReduced
+        then
             rebuild(circuit, tier, reduced, ramps, access)
         end
-        bindFlowCircuit()
+
+        local now = os.clock()
+        -- The flow-sensor network can replicate after the circuit. Binding
+        -- every ~0.5 seconds is sufficient; individual sensor rewards still
+        -- create immediate event-driven bursts via HelixFlowAt signals.
+        if circuitChanged or now >= nextFlowCheck then
+            bindFlowCircuit()
+            nextFlowCheck = now + 0.55
+        end
 
         if #runners > 0 then
-            draw(os.clock())
-            -- At most 24 client-only glowing glyphs; 8 on Medium.
+            draw(now)
+            -- 24 glyphs remain smooth at High; structural discovery is
+            -- no longer coupled to this refresh rate.
             task.wait(tier == "High" and 0.075 or 0.14)
         else
-            -- Zero GPU parts and minimal CPU usage outside Orbital,
-            -- on Low tier, or with reduced motion enabled.
             task.wait(0.60)
         end
     end
+    rampRegistry:destroy()
+    for _, connection in ipairs(flowConnections) do connection:Disconnect() end
 end)
