@@ -4,6 +4,14 @@ local DisasterImpact = if script then require(script.Parent.Parent.DisasterImpac
 local ArenaTargeting = if script then require(script.Parent.Parent.ArenaTargeting) else require("../ArenaTargeting")
 local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 
+-- Never telegraph a lethal strike which cannot resolve before the
+-- authoritative round ends. Use the same monotonic clock as the server.
+local function canComplete(ctx, now, warning, travel)
+    local deadline = ctx and tonumber(ctx.RoundEndsAt)
+    if not deadline then return true end
+    return (tonumber(now) or 0) + warning + travel + 0.25 <= deadline
+end
+
 local D = {Name = "METEOR SHOWER", Hint = "WATCH THE WARNING CIRCLES!"}
 
 function D.start(ctx)
@@ -16,6 +24,9 @@ function D.start(ctx)
 
     task.spawn(function()
         while ctx.Active() do
+            if not canComplete(ctx, os.clock(), warningSeconds, travelSeconds) then
+                break
+            end
             local offset = ArenaTargeting.randomOffset(6, 42)
             local impactPosition = ctx.Config.ArenaCenter + offset + Vector3.new(0, 1.2, 0)
 
