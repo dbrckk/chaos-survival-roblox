@@ -39,6 +39,15 @@ local visualMetrics = {
 local auditedFolders = 0
 local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local roundStateEvent = remotes and remotes:FindFirstChild("RoundState")
+local lastAuthoritativeRoundFeedback = nil
+local roundFeedbackEvent = remotes and remotes:FindFirstChild("RoundFeedback")
+if roundFeedbackEvent and roundFeedbackEvent:IsA("RemoteEvent") then
+    roundFeedbackEvent.OnClientEvent:Connect(function(receipt)
+        if type(receipt) == "table" and type(receipt.roundNumber) == "number" then
+            lastAuthoritativeRoundFeedback = receipt
+        end
+    end)
+end
 local visualPhaseProbed = {}
 local arenaProbed = {}
 local showtimeProbed = {}
@@ -665,7 +674,15 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                     and tip and tip:IsA("TextLabel") and tip.Text ~= ""
                     and nextRound and nextRound:IsA("TextLabel") and nextRound.Text ~= ""
 
-                if complete then
+                -- The card can be populated by the RoundState fallback.
+                -- A participant must ALSO receive their server-calculated
+                -- per-player reward receipt. Catch the original nil-challenge
+                -- settlement crash rather than accepting decorative UX.
+                local needsReceipt = player:GetAttribute("RoundParticipant") == true
+                local receipt = lastAuthoritativeRoundFeedback
+                local receiptMatches = receipt ~= nil
+                    and tonumber(receipt.roundNumber) == tonumber(state.roundNumber)
+                if complete and (not needsReceipt or receiptMatches) then
                     break
                 end
                 task.wait(0.10)
@@ -678,6 +695,19 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                 end
             end
 
+            if player:GetAttribute("RoundParticipant") == true then
+                local receipt = lastAuthoritativeRoundFeedback
+                uxCheck(receipt ~= nil
+                    and tonumber(receipt.roundNumber) == tonumber(state.roundNumber),
+                    "RESULT missing matched server reward receipt for participant")
+                if receipt and tonumber(receipt.roundNumber) == tonumber(state.roundNumber)
+                    and reward and reward:IsA("TextLabel")
+                then
+                    uxCheck(not string.find(reward.Text, "SYNCING", 1, true)
+                        and not string.find(reward.Text, "EN COURS", 1, true),
+                        "RESULT still showing provisional rewards despite receipt")
+                end
+            end
             uxCheck(resultCard ~= nil, "RESULT card missing")
             if resultCard and resultCard:IsA("GuiObject") then
                 uxCheck(resultCard.Visible == true, "RESULT card not visible")
