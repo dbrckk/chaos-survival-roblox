@@ -57,6 +57,9 @@ function OrbitalRouteSignKit.create(ramp, parent, tierName, locale)
     gui.PixelsPerStud = tier == "Low" and 16 or 22
     gui.MaxDistance = tier == "High" and 115 or 90
     gui.AlwaysOnTop = false
+    -- World wayfinding is never a touch target: it must not eat taps
+    -- intended for mobile camera steering, abilities or navigation.
+    gui.Active = false
     gui.LightInfluence = 0.12
     gui.ZOffset = 0.03
     gui:SetAttribute("OrbitRouteKind", kind)
