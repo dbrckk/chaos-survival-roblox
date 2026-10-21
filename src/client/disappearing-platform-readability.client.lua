@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local Debris = game:GetService("Debris")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PlatformVisualRules = require(ReplicatedStorage.Shared.DisappearingPlatformVisualRules)
@@ -104,11 +106,34 @@ local function layout(part, state, phase, now)
         edge.Transparency = alpha
     end
 
-    local diagonal = math.sqrt(part.Size.X * part.Size.X + part.Size.Z * part.Size.Z) * 0.86
-    state.crossA.Size = Vector3.new(diagonal, 0.055, low and 0.11 or 0.14)
-    state.crossB.Size = state.crossA.Size
-    state.crossA.CFrame = topFrame * CFrame.Angles(0, math.rad(45), 0)
-    state.crossB.CFrame = topFrame * CFrame.Angles(0, math.rad(-45), 0)
+    if part:GetAttribute("ChaosSkybridge") == true then
+        -- A 49x4.5 Skybridge cannot use the square-platform diagonal X:
+        -- that would draw floating warning bars far beyond the walkable deck.
+        -- Two transverse warning stripes remain entirely on the actual span.
+        local alongX = part.Size.X >= part.Size.Z
+        local length = math.max(part.Size.X, part.Size.Z)
+        local width = math.min(part.Size.X, part.Size.Z)
+        local stripeOffset = math.min(5, length * 0.18)
+        local stripe = alongX
+            and Vector3.new(0.22, 0.055, width * 0.85)
+            or Vector3.new(width * 0.85, 0.055, 0.22)
+        state.crossA.Size = stripe
+        state.crossB.Size = stripe
+        state.crossA.CFrame = topFrame * CFrame.new(
+            alongX and -stripeOffset or 0, 0,
+            alongX and 0 or -stripeOffset
+        )
+        state.crossB.CFrame = topFrame * CFrame.new(
+            alongX and stripeOffset or 0, 0,
+            alongX and 0 or stripeOffset
+        )
+    else
+        local diagonal = math.sqrt(part.Size.X * part.Size.X + part.Size.Z * part.Size.Z) * 0.86
+        state.crossA.Size = Vector3.new(diagonal, 0.055, low and 0.11 or 0.14)
+        state.crossB.Size = state.crossA.Size
+        state.crossA.CFrame = topFrame * CFrame.Angles(0, math.rad(45), 0)
+        state.crossB.CFrame = topFrame * CFrame.Angles(0, math.rad(-45), 0)
+    end
 
     if phase == "Warning" then
         local crossAlpha = math.clamp((low and 0.56 or 0.34) + pulse * 0.20, 0, 0.88)
@@ -135,7 +160,28 @@ local function refreshPart(part)
         clearState(part)
         return
     end
+    local firstVisibleWarning = tracked[part] == nil
+        and part:GetAttribute("CollapsePhase") == "Warning"
+        and part:GetAttribute("ChaosSkybridge") == true
     ensureState(part)
+    if firstVisibleWarning and player:GetAttribute("AudioMuted") ~= true then
+        local camera = workspace.CurrentCamera
+        if camera and (camera.CFrame.Position - part.Position).Magnitude <= 90 then
+            -- One local, spatial warning only on the bridge that will fall.
+            -- Never broadcast four identical sirens or allocate audio per frame.
+            local cue = Instance.new("Sound")
+            cue.Name = "SkybridgeOutageWarning"
+            cue.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+            cue.Volume = 0.23
+            cue.PlaybackSpeed = 0.78
+            cue.RollOffMaxDistance = 90
+            cue.RollOffMinDistance = 8
+            cue.SoundGroup = SoundService:FindFirstChild("ChaosSFX")
+            cue.Parent = part
+            cue:Play()
+            Debris:AddItem(cue, 2)
+        end
+    end
     if ensureRenderLoop then
         ensureRenderLoop()
     end

@@ -905,10 +905,16 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local overdriveDuration = math.clamp(math.floor(roundSettings.RoundSeconds * 0.16), 5, 7)
     local overdriveEndRemaining = math.max(0, overdriveStartRemaining - overdriveDuration)
     local firstRoundContestant = false
+    local allowSkybridgePressure = true
     for _, player in ipairs(contestants) do
-        if FirstTimeExperience.isFirstRound(roundExperience(player)) then
+        local enteredRounds = roundExperience(player)
+        if FirstTimeExperience.isFirstRound(enteredRounds) then
             firstRoundContestant = true
-            break
+        end
+        -- No new map hazards while ANY contestant is in their first three
+        -- rounds. All players see identical server-owned bridge collisions.
+        if enteredRounds <= 3 then
+            allowSkybridgePressure = false
         end
     end
 
@@ -1041,6 +1047,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local ctx = {
         Config = Config,
         RoundSeconds = roundSettings.RoundSeconds,
+        RoundNumber = roundNumber,
+        ActiveDisasters = activeHazards,
+        EnableSkybridgePressure = currentArenaVariant == "Towers"
+            and #selected == 1 and allowSkybridgePressure,
         Cleanup = cleanup,
         OnCleanup = onCleanup,
         Active = function() return roundActive end,

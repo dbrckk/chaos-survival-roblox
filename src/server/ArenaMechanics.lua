@@ -13,6 +13,10 @@ local skyrailModule = script and script.Parent:FindFirstChild("SkyrailSlipstream
 local SkyrailSlipstream = if skyrailModule
     then require(skyrailModule)
     else require("./SkyrailSlipstream")
+local pressureModule = script and script.Parent:FindFirstChild("SkybridgePressure")
+local SkybridgePressure = if pressureModule
+    then require(pressureModule)
+    else require("./SkybridgePressure")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
@@ -29,7 +33,7 @@ ArenaMechanics.Definitions = {
     },
     Towers = {
         Name = "UPDRAFT PADS",
-        Hint = "Cyan updraft pads lift you; run across elevated Skyrails for a controlled slipstream boost",
+        Hint = "Cyan updrafts lift you; Skyrails boost speed; amber bridges vanish briefly",
         Color = Color3.fromRGB(65, 220, 255),
         Pads = {
             {offset = Vector3.new(-28, 1.7, -28), impulse = Vector3.new(8, 55, 8)},
@@ -225,6 +229,9 @@ function ArenaMechanics.start(ctx, variantId)
     elseif variantId == "Towers" then
         -- Active elevated movement route that does not alter bridge physics.
         SkyrailSlipstream.start(ctx, folder, arena)
+        -- Mature rounds gain one highly telegraphed, temporary bridge
+        -- outage. New-player and conflicting-hazard rounds stay unchanged.
+        SkybridgePressure.start(ctx, arena)
     elseif variantId == "Crossroads" then
         -- Secondary timed traversal loop, sharing the mechanics lifecycle and
         -- round cleanup. Unlike pads, only the charged alternating lane pair
