@@ -83,13 +83,14 @@ Roblox reference:
 ## Exact-SHA build and publication
 
 The workflow [Roblox Visual Staging (isolated)](../.github/workflows/roblox-visual-staging.yml)
-only automatically triggers when relevant source or this workflow changes
-on `main`. After initial setup, merge an **approved source change** to
-`main` or explicitly dispatch the workflow from `main` in GitHub Actions.
-The workflow must not automatically deploy unmerged feature branches. A
-configuration-only change outside the declared paths does not trigger a
-staging publication. The release commit shown in the in-game staging stamp
-must match the current deployed `main` candidate before collecting evidence.
+is **manual-only** (`workflow_dispatch`). The owner currently updates only the
+existing public Chaos Survival experience and does not want a separate
+staging environment. A push to `main` must not trigger staging or any
+staging publication. The guarded public-update workflow remains separate.
+If isolated staging is explicitly authorized later, dispatch the staging
+workflow from `main` only after verifying genuinely separate place/universe
+IDs and dedicated credentials. The release commit shown in the staging stamp
+must match the deployed `main` candidate before collecting evidence.
 
 Preflight: verifies all five inputs: staging Universe, staging Place,
 staging API key, production Universe, production Place. Missing stage
