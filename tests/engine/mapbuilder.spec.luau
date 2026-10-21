@@ -103,7 +103,27 @@ describe("Chaos Survival engine", function()
                 expect(firstSpawn.CFrame.LookVector:Dot(inward.Unit) > 0.15).toBe(true)
             end
         end
-        expect(#(platforms :: Folder):GetChildren() >= 14).toBe(true)
+        expect(#(platforms :: Folder):GetChildren()).toBe(16)
+        -- Route-tier identity is replicated with the physical decks and
+        -- reflects intentional jumpable paths, not client-only cosmetics.
+        expect((platforms :: Folder):FindFirstChild("Platform1")
+            :GetAttribute("RouteTier")).toBe(3)
+        expect((platforms :: Folder):FindFirstChild("Platform5")
+            :GetAttribute("RouteTier")).toBe(1)
+        expect((platforms :: Folder):FindFirstChild("Platform9")
+            :GetAttribute("RouteTier")).toBe(2)
+        expect((platforms :: Folder):FindFirstChild("Platform13")
+            :GetAttribute("RouteTier")).toBe(4)
+        local flatGuides = 0
+        for _, piece in ipairs((decor :: Folder):GetChildren()) do
+            if piece.Name:match("^ClassicEntryChevron") then
+                flatGuides += 1
+                expect(piece.CanCollide).toBe(false)
+                expect(piece.CanTouch).toBe(false)
+                expect(piece.CanQuery).toBe(false)
+            end
+        end
+        expect(flatGuides).toBe(8)
         expect((decor :: Folder):FindFirstChild("CenterBeacon") ~= nil).toBe(true)
         expect((decor :: Folder):FindFirstChild("PlatformPanel1") ~= nil).toBe(true)
         expect((decor :: Folder):FindFirstChild("PlatformUnderFrame1") ~= nil).toBe(true)
