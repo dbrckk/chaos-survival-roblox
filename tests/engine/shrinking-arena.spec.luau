@@ -480,13 +480,17 @@ describe("Shrinking Arena mobility integration", function()
 
         local originals = {}
         local source = OrbitalHelix.capture(helix)
-        expect(#source).toBe(8)
+        expect(#source).toBe(24)
+        local states = {}
         for _, state in ipairs(source) do
+            states[state.ramp] = state
             originals[state.ramp] = {
                 cf = state.ramp.CFrame,
                 size = state.ramp.Size,
             }
-            expect(#state.decorations).toBe(8)
+            expect(#state.decorations).toBe(
+                state.ramp:GetAttribute("OrbitalHelixRamp") == true and 8 or 4
+            )
             for _, d in ipairs(state.decorations) do
                 originals[d.part] = {cf = d.part.CFrame, size = d.part.Size}
             end
@@ -504,6 +508,8 @@ describe("Shrinking Arena mobility integration", function()
         })
         task.wait(0.22)
 
+        local factor = arena:FindFirstChild("Base").Size.X
+            / ArenaVariants.get("Orbital").BaseSize.X
         local advanced = 0
         for index = 1, 8 do
             local outer = platforms:FindFirstChild("Platform" .. index)
@@ -528,6 +534,34 @@ describe("Shrinking Arena mobility integration", function()
             expect(rail ~= nil).toBe(true)
             expect(rail.CanCollide).toBe(false)
             expect((rail.CFrame.Position - originals[rail].cf.Position).Magnitude > 0.3).toBe(true)
+
+            for _, kind in ipairs({"Entry", "Core"}) do
+                local access = helix:FindFirstChild(kind .. "Ramp" .. index)
+                expect(access ~= nil).toBe(true)
+                local route = states[access]
+                expect(route ~= nil).toBe(true)
+                local function moved(point)
+                    local relative = point - Config.ArenaCenter
+                    return Config.ArenaCenter + Vector3.new(
+                        relative.X * factor, relative.Y, relative.Z * factor
+                    )
+                end
+                local expectedFrom, expectedTo =
+                    moved(route.from), moved(route.to)
+                expect((access.Position
+                    - (expectedFrom + expectedTo) * 0.5).Magnitude < 0.1)
+                    .toBe(true)
+                expect(math.abs(access.Size.Z
+                    - ((expectedTo - expectedFrom).Magnitude + route.padding))
+                    < 0.1).toBe(true)
+                expect(access.Size.X < originals[access].size.X).toBe(true)
+                expect(access.CanCollide).toBe(true)
+                local trim = helix:FindFirstChild(kind .. "Signal" .. index .. "_1")
+                expect(trim ~= nil).toBe(true)
+                expect(trim.CanCollide).toBe(false)
+                expect((trim.Position - originals[trim].cf.Position).Magnitude > 0.3)
+                    .toBe(true)
+            end
         end
         expect(advanced).toBe(8)
 
