@@ -2,6 +2,10 @@
 
 ## 2026-10-21 — Tower Run dynamic Skybridge pressure (candidate, not published)
 
+- Follow-up safety fix: round bots now treat Tower Skybridge warning phases as urgent, choose a supported end-of-bridge tower deck on either span orientation, and never sidestep from a narrow warning bridge into the void. All changes use existing bot Humanoid movement without teleport, boosted speed or unfair survivability.
+- Skyrail client canopy structures and animated couriers dim during the warning and become fully invisible while the physical bridge is absent, restoring their exact original appearance afterward. Phase and collision changes trigger immediate visual synchronization, including on Low-end Android profiles; no new polling loop.
+- Extended the existing AI engine spec to cover east/west, north/south, middle-span momentum, invalid heights and off-bridge positions. Complete engine checks and real-device playtesting remain mandatory.
+
 - One Tower Run skybridge now signals a **2.6-second amber warning**, drops its real collision for **1.8 seconds**, and then fully returns; the other three routes remain available. Bridge selection rotates across rounds. This is a tactical route change rather than extra lethal damage.
 - Disabled for the first three entered rounds of **any** human contestant, Double Chaos, and floor-conflicting disasters (Disappearing Platforms, Shrinking Arena, Rising Lava, Freeze). Only active for experienced, single-disaster Tower Run rounds.
 - Client warning graphics use two transverse deck-contained stripes instead of square-platform diagonals, with one nearby positional audio cue. Low VFX and Reduce Motion continue to work; no new client render loop or paid asset.
