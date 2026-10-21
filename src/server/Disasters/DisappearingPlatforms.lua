@@ -1,5 +1,23 @@
 local D = {Name = "DISAPPEARING PLATFORMS", Hint = "YELLOW MEANS MOVE!"}
 
+-- A 0.75s warning was too short for a mobile player or a normal-speed AI
+-- to notice a distant platform signal and walk off its edge. This delay
+-- is deliberately shared across player and bot physics; there is no
+-- dedicated bot grace period or teleport.
+D.WarningSeconds = 1.35
+D.GoneSeconds = 2.0
+D.RoundEndBufferSeconds = 2.0
+
+-- Do not start a new collapse so late in a short Solo Rush round that
+-- its full warning and outage cannot finish before results begin.
+function D.canBegin(ctx, now)
+    local deadline = ctx and tonumber(ctx.RoundEndsAt)
+    if not deadline then return true end
+    return (tonumber(now) or 0)
+        + D.WarningSeconds + D.GoneSeconds + D.RoundEndBufferSeconds
+        <= deadline
+end
+
 function D.eligiblePlatforms(folder, activeStates)
     local result = {}
     if not folder then
@@ -114,6 +132,7 @@ function D.start(ctx)
 
     task.spawn(function()
         while ctx.Active() and folder.Parent do
+            if not D.canBegin(ctx, os.clock()) then break end
             local parts = D.eligiblePlatforms(folder, activeStates)
             if #parts > 0 then
                 local p = parts[math.random(1, #parts)]
@@ -139,7 +158,7 @@ function D.start(ctx)
                 -- avoiding repeated server property replication for cosmetic motion.
                 p.Transparency = math.min(p.Transparency, 0.24)
                 p.Color = Color3.fromRGB(255, 205, 70)
-                task.wait(0.75)
+                task.wait(D.WarningSeconds)
                 local state = activeStates[p]
                 if ctx.Active() and state and state.generation == token and p.Parent then
                     p:SetAttribute("CollapsePhase", "Gone")
@@ -147,7 +166,7 @@ function D.start(ctx)
                     p.CanCollide = false
                     D.setCosmeticsPhase(state.cosmetics, "Gone")
 
-                    task.delay(2.0, function()
+                    task.delay(D.GoneSeconds, function()
                         local delayedState = activeStates[p]
                         if delayedState and delayedState.generation == token then
                             restore(p)

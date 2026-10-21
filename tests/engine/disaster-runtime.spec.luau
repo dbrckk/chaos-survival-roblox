@@ -39,6 +39,13 @@ end
 describe("Collapsing platform visual truth", function()
     it("hides real server trims and supports along with the collision deck", function()
         local D = require("../../src/server/Disasters/DisappearingPlatforms")
+        -- The mobile warning needs enough time for normal reactions
+        -- and a real movement response, not just a cosmetic flash.
+        expect(D.WarningSeconds >= 1.25 and D.WarningSeconds <= 1.65).toBe(true)
+        expect(D.GoneSeconds).toBe(2)
+        expect(D.canBegin({}, 100)).toBe(true)
+        expect(D.canBegin({RoundEndsAt = 100}, 94)).toBe(true)
+        expect(D.canBegin({RoundEndsAt = 100}, 95)).toBe(false)
         local existing = workspace:FindFirstChild("GeneratedMap")
         if existing then existing:Destroy() end
 
@@ -98,6 +105,21 @@ describe("Collapsing platform visual truth", function()
             Cleanup = {},
             OnCleanup = cleanup,
         })
+
+        -- Verify that the entire client-visible warning is physically
+        -- solid. Normal and AI humanoids can walk away throughout this
+        -- extended interval; the skybridge stays unaffected.
+        local warningDeadline = os.clock() + 0.4
+        while deck:GetAttribute("CollapsePhase") ~= "Warning"
+            and os.clock() < warningDeadline do
+            task.wait(0.01)
+        end
+        expect(deck:GetAttribute("CollapsePhase")).toBe("Warning")
+        expect(deck.CanCollide).toBe(true)
+        expect(deck:GetAttribute("CollapseWarningStartedAt") ~= nil).toBe(true)
+        task.wait(0.65)
+        expect(deck:GetAttribute("CollapsePhase")).toBe("Warning")
+        expect(deck.CanCollide).toBe(true)
 
         local deadline = os.clock() + 2.0
         while deck:GetAttribute("CollapsePhase") ~= "Gone"

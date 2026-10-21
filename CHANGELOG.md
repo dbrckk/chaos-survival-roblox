@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-21 — Disappearing Platforms mobile escape fairness (candidate)
+
+- Increased **real server-authoritative collapse warning** from 0.75 to 1.35 seconds. The warning retains solid collision throughout, giving touch users and ordinary-speed AI an actionable chance to leave a 12-stud deck before it disappears. The hazard still removes the same physical deck for two seconds, with all visual skins/rails hidden and restored together.
+- Added a short, spatialized single-shot warning sound for a disappearing **ordinary** deck only when the player's character is within 26 studs. Existing long-bridge audio is preserved; both respect mute and share a one-second anti-spam budget, with no new perpetual loop or extra VFX.
+- The server refuses to announce a late collapse if its warning + full outage + two-second restoration margin cannot finish within the remaining round time. Fully compatible with brief Solo Rush rounds and cleanup.
+- Extended the pre-existing real Roblox engine disaster integration spec to check that warning collision stays solid for over 0.65 seconds, audio-independent server state, safe deadline gating and original restoration.
+- **No public Roblox deployment yet.** Headless engine validation and Build Validation must be green; physical Android playtesting remains necessary.
+
 ## 2026-10-21 — Rookie round challenge consistency (candidate)
 
 - Align the shared round challenge with the **existing first-three-round protection**: whenever any active contestant has played three or fewer rounds, everyone receives the achievable **FIRST SURVIVAL** goal rather than advanced shard, near-miss or momentum tasks.
