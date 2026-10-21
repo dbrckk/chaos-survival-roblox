@@ -1202,9 +1202,14 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
 end
 
 local function disappearingPlatformEscape(record, root, now)
-    -- Inspect the actual replicated bridge/deck state. Skybridge Pressure
-    -- can warn even when DisappearingPlatforms is NOT the active disaster.
-    -- Keep both hazards on the same existing immediate-escape lane.
+    -- Inspect live platform warnings on Towers as well as the dedicated
+    -- collapse disaster. Other arenas avoid a new per-bot raycast each tick.
+    if not hasDisaster("DisappearingPlatforms")
+        and arenaVariantId() ~= "Towers" then
+        record.platformThreat = nil
+        record.platformThreatSeenAt = nil
+        return nil
+    end
 
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
