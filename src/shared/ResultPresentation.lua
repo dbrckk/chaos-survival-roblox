@@ -172,6 +172,34 @@ function ResultPresentation.fallbackFeedback(state, userId, participating)
     }
 end
 
+-- The receipt may legitimately arrive during the final ROUND tick, before
+-- the RESULT state. It must not reopen an old victory card once a new
+-- numbered round has begun, or overwrite a newer result with stale data.
+function ResultPresentation.acceptReceipt(feedback, phase, observedRound, resolvedRound)
+    if type(feedback) ~= "table" then return false end
+    local receiptRound = tonumber(feedback.roundNumber)
+    if receiptRound == nil or receiptRound ~= receiptRound
+        or receiptRound < 1 or receiptRound >= math.huge
+        or receiptRound ~= math.floor(receiptRound)
+    then
+        return false
+    end
+    local seen = tonumber(observedRound)
+    if seen and seen == seen and seen < math.huge and receiptRound < seen then
+        return false
+    end
+    local resolved = tonumber(resolvedRound)
+    if resolved and resolved == resolved and receiptRound < resolved then
+        return false
+    end
+    -- READY always belongs to the *next* round; an old result must not
+    -- replace the player's live instructions or controls.
+    if phase == "ready" or phase == "intermission" or phase == "waiting" then
+        return false
+    end
+    return true
+end
+
 function ResultPresentation.kind(feedback)
     feedback = type(feedback) == "table" and feedback or {}
 
