@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-21 — Meteor and bomb round-end readability (candidate)
+
+- Meteor Shower and Bomb Rain now stop **creating new lethal telegraphs** when their complete warning and impact cannot resolve before the server's authoritative round deadline. This closes the same late-round surprise window already addressed for collapsing platforms and dynamic arena challenges.
+- Both hazards keep their current spawn cadence, damage, radius, client warning contours and server-side hit checks while the round is active. Existing in-flight strikes can still resolve before the deadline; there is no new grace period or reward change.
+- Extend the existing Roblox engine disaster runtime suite with boundary tests for solo-length meteor and bomb warnings; no new tests, remotes, client loops or persistent state.
+- GitHub source change only; controlled Roblox publication and Android gameplay review remain separate.
+
 ## 2026-10-21 — Disappearing Platforms mobile escape fairness (candidate)
 
 - Increased **real server-authoritative collapse warning** from 0.75 to 1.35 seconds. The warning retains solid collision throughout, giving touch users and ordinary-speed AI an actionable chance to leave a 12-stud deck before it disappears. The hazard still removes the same physical deck for two seconds, with all visual skins/rails hidden and restored together.
