@@ -7,6 +7,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 
 local player = Players.LocalPlayer
 local touchDevice = UserInputService.TouchEnabled
@@ -366,7 +367,12 @@ local function refresh()
         and CoreLocalization.text(localeId, "SHARD_ONE")
         or CoreLocalization.text(localeId, "SHARDS_COUNT", count)
 
-    local rookieRound = math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0)) <= 1
+    -- Keep the survival-only HUD throughout the same three guided rounds,
+    -- including when DataStore has not yet loaded or is temporarily offline.
+    local played = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
+    )
+    local rookieRound = FirstTimeExperience.isRookie(played)
     setRookieCompactMode(rookieRound and count <= 0)
     local challengeId = state.challengeId
     local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
