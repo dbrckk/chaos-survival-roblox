@@ -18,6 +18,18 @@ function FirstTimeExperience.isRookie(games)
     return math.max(0, math.floor(tonumber(games) or 0)) <= 2
 end
 
+-- Games/SessionRoundsPlayed are incremented on round entry, not only when
+-- a round finishes. Keep the third active round and its result in the guided
+-- presentation, but return advanced lobby choices once it is over.
+function FirstTimeExperience.isGuidedPhase(games, phase)
+    local played = math.max(0, math.floor(tonumber(games) or 0))
+    if played <= 2 then
+        return true
+    end
+    return played == 3
+        and (phase == "ready" or phase == "round" or phase == "result")
+end
+
 -- All visual voting surfaces must agree on an actionable ballot.
 -- The authoritative server sends one to three distinct {id=...} entries.
 -- Reject malformed payloads instead of constructing dead buttons.
