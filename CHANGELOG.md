@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-21 — Result card continuity and stale reward protection (candidate)
+
+- Keep victory/defeat cards visible for the **entire authoritative RESULT phase**. Remove the client-side 10-second timeout that could dismiss and recreate the card every countdown tick, interrupting winner animations and reward readability.
+- Reject delayed `RoundFeedback` receipts from previous rounds, or receipts arriving during READY, intermission or waiting. Preserve valid current-round receipts that arrive during the final active-round tick before RESULT broadcasts.
+- Track the most recent server-numbered READY/ROUND/RESULT state so old results cannot cover the next round's live hazard instructions. Extend the existing Roblox engine result-presentation spec for out-of-order receipts and invalid round identifiers.
+- No reward, DataStore, disaster, asset, remotes, network polling, or public-place deployment changes.
+
 ## 2026-10-21 — Fair replay health and explicit next-round E2E proof (candidate)
 
 - **Correct fairness asymmetry:** eliminated players and AI rigs already respawn/reset to full health before each round, but human winners carried damage forward. Restore living contestants to their own `Humanoid.MaxHealth` only **after an accepted arena READY teleport**; do not heal during the active disaster, resurrect a dead rig, or reset a critical-health victory before the reward/medal logic reads it.
