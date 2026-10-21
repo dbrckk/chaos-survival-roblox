@@ -620,6 +620,24 @@ describe("Arena mechanics", function()
         local r = OrbitalHelix
         expect(r.ChainCap).toBe(3)
         expect(r.ChainWindow > 2 * r.FlowCooldown).toBe(true)
+        expect(r.pulsePair(1, 0)).toBe(1)
+        expect(r.pulsePair(1, 1)).toBe(2)
+        expect(r.pulsePair(5, 0)).toBe(1)
+        expect(r.pulsePair(3, 3)).toBe(2)
+        expect(r.pulseActive(1, 1)).toBe(true)
+        expect(r.pulseActive(5, 1)).toBe(true)
+        expect(r.pulseActive(2, 1)).toBe(false)
+        expect(r.pulseActive(0, 1)).toBe(false)
+        local boosted = r.pulseVelocity(
+            Vector3.new(18, 4, 0), Vector3.xAxis
+        )
+        expect(boosted.X > 24 and boosted.X < 26).toBe(true)
+        expect(boosted.Y).toBe(4)
+        local bounded = r.pulseVelocity(
+            Vector3.new(80, 76, 0), Vector3.xAxis
+        )
+        expect(bounded.X <= r.PulseSpeedCap).toBe(true)
+        expect(bounded.Y).toBe(58)
 
         local one = r.advanceChain(nil, 1, 10)
         expect(one.tier).toBe(1)
@@ -710,8 +728,74 @@ describe("Arena mechanics", function()
         bot:SetAttribute("AISurvivorInRound", false)
         expect(OrbitalHelix.tryFlow(ctx, first, body, cooldown, 20)).toBe(false)
 
-        bot:Destroy()
+        -- Rebuild a real Orbital map with the optional live pulse enabled;
+        -- its ordinary Flow sensors should still have exactly eight lanes.
         root:Destroy()
+        bot:SetAttribute("AISurvivorInRound", true)
+        local pulseMap = MapBuilder.build(Config, "Orbital", ArenaVariants)
+        local pulseArena = pulseMap:FindFirstChild("Arena")
+        local live = true
+        local pulseCtx = {
+            Active = function() return live end,
+            IsContestantActive = function() return false end,
+            EnableOrbitalPulse = true,
+            RoundNumber = 5,
+            Cleanup = {},
+            OnCleanup = {},
+            OnArenaMechanicUsed = function()
+                mechanicUses += 1
+            end,
+        }
+        ArenaMechanics.start(pulseCtx, "Orbital")
+        local pulseRamps = pulseArena:FindFirstChild("HelixCircuit")
+        local pulseFlow = pulseArena:FindFirstChild("Mechanics")
+            :FindFirstChild("HelixFlow")
+        expect(#(pulseFlow :: Folder):GetChildren()).toBe(8)
+        for lane = 1, 8 do
+            local charged = lane == 1 or lane == 5
+            expect(pulseRamps:FindFirstChild("HelixRamp" .. lane)
+                :GetAttribute("HelixPulseActive")).toBe(charged)
+            expect(pulseFlow:FindFirstChild("HelixFlowTrigger" .. lane)
+                :GetAttribute("HelixPulseActive")).toBe(charged)
+        end
+        local trigger = pulseFlow:FindFirstChild("HelixFlowTrigger1")
+        local activeRamp = pulseRamps:FindFirstChild("HelixRamp1")
+        body.CFrame = trigger.CFrame
+        body.AssemblyLinearVelocity = activeRamp.CFrame.LookVector * 17
+        local pulseReady = {}
+        expect(OrbitalHelix.tryFlow(
+            pulseCtx, trigger, body, pulseReady, 30
+        )).toBe(true)
+        expect(trigger:GetAttribute("HelixPulseAward")).toBe(true)
+        expect(body.AssemblyLinearVelocity.Magnitude > 22).toBe(true)
+        expect(pulseCtx.HelixPulseClaims[bot][1]).toBe(true)
+        body.AssemblyLinearVelocity = activeRamp.CFrame.LookVector * 17
+        expect(OrbitalHelix.tryFlow(
+            pulseCtx, trigger, body, pulseReady, 35
+        )).toBe(true)
+        expect(trigger:GetAttribute("HelixPulseAward")).toBe(false)
+        expect(body.AssemblyLinearVelocity.Magnitude < 19).toBe(true)
+
+        local idleTrigger = pulseFlow:FindFirstChild("HelixFlowTrigger2")
+        local idleRamp = pulseRamps:FindFirstChild("HelixRamp2")
+        body.CFrame = idleTrigger.CFrame
+        body.AssemblyLinearVelocity = idleRamp.CFrame.LookVector * 17
+        expect(OrbitalHelix.tryFlow(
+            pulseCtx, idleTrigger, body, pulseReady, 41
+        )).toBe(true)
+        expect(idleTrigger:GetAttribute("HelixPulseAward")).toBe(false)
+
+        live = false
+        for _, cleanup in ipairs(pulseCtx.OnCleanup) do cleanup() end
+        for lane = 1, 8 do
+            expect(pulseRamps:FindFirstChild("HelixRamp" .. lane)
+                :GetAttribute("HelixPulseActive") == nil).toBe(true)
+            expect(pulseFlow:FindFirstChild("HelixFlowTrigger" .. lane)
+                :GetAttribute("HelixPulseActive") == nil).toBe(true)
+        end
+        expect(activeRamp.CanCollide).toBe(true)
+        bot:Destroy()
+        pulseMap:Destroy()
     end)
 
     it("keeps ambient pad particles client-side", function()
