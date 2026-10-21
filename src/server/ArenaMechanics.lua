@@ -17,6 +17,10 @@ local pressureModule = script and script.Parent:FindFirstChild("SkybridgePressur
 local SkybridgePressure = if pressureModule
     then require(pressureModule)
     else require("./SkybridgePressure")
+local switchyardModule = script and script.Parent:FindFirstChild("CrossroadsSwitchyard")
+local CrossroadsSwitchyard = if switchyardModule
+    then require(switchyardModule)
+    else require("./CrossroadsSwitchyard")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
@@ -44,7 +48,7 @@ ArenaMechanics.Definitions = {
     },
     Crossroads = {
         Name = "LANE BOOSTERS",
-        Hint = "Pink launch pads rush outward; timed cyan Flux Relays send you back toward the hub",
+        Hint = "Pink pads launch; cyan Flux returns; gold junctions boost deliberate sideways turns",
         Color = Color3.fromRGB(235, 105, 220),
         Pads = {
             {offset = Vector3.new(18, 1.7, 0), impulse = Vector3.new(46, 8, 0)},
@@ -237,6 +241,7 @@ function ArenaMechanics.start(ctx, variantId)
         -- round cleanup. Unlike pads, only the charged alternating lane pair
         -- relays the runner inward.
         CrossroadsFluxRelay.start(ctx, folder, base.Position)
+        CrossroadsSwitchyard.start(ctx, folder, base.Position)
     elseif variantId == "Orbital" then
         -- Reward intentional skill-route traversal as a style mechanic.
         -- Invisible checkpoints travel with their ramp during shrink.
