@@ -500,6 +500,10 @@ local function teleportToArena(player, index)
     if root.Anchored then root.Anchored = false end
     if humanoid.Sit then humanoid.Sit = false end
     if humanoid.PlatformStand then humanoid.PlatformStand = false end
+    -- AI and respawned players already start at full health; surviving
+    -- humans must not be punished for winning the previous match.
+    -- Only restore after accepted landing at the READY boundary.
+    SurvivalFeedback.restoreForNextRound(humanoid)
     player:SetAttribute("ArenaSpawnClear", true)
     player:SetAttribute("ArenaSpawnCandidate", selected)
 
@@ -1738,6 +1742,7 @@ while true do
         local aiRoundRoster = AISurvivorService.roundRosterCount()
         broadcast({
             phase = "ready",
+            roundNumber = upcomingRoundNumber,
             title = "READY: " .. displayTitle,
             hint = firstRoundBriefing
                 and ("SURVIVE UNTIL 0 • " .. readyHint .. " • SHARDS = BONUS")
