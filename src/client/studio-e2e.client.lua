@@ -738,6 +738,7 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                 local receipt = lastAuthoritativeRoundFeedback
                 local receiptMatches = receipt ~= nil
                     and tonumber(receipt.roundNumber) == tonumber(state.roundNumber)
+                    and receipt.rewardsUnavailable ~= true
                 if complete and (not needsReceipt or receiptMatches) then
                     break
                 end
@@ -751,11 +752,30 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                 end
             end
 
+            local participantRoster = state.participantUserIds
+            local survivorRoster = state.survivorUserIds
+            uxCheck(type(participantRoster) == "table",
+                "RESULT missing server-owned participant roster")
+            uxCheck(type(survivorRoster) == "table",
+                "RESULT missing server-owned survivor roster")
+            if type(participantRoster) == "table"
+                and type(survivorRoster) == "table"
+            then
+                local participantSet = {}
+                for _, id in ipairs(participantRoster) do
+                    participantSet[tonumber(id)] = true
+                end
+                for _, id in ipairs(survivorRoster) do
+                    uxCheck(participantSet[tonumber(id)] == true,
+                        "RESULT lists a survivor who was never a participant")
+                end
+            end
             if player:GetAttribute("RoundParticipant") == true then
                 local receipt = lastAuthoritativeRoundFeedback
                 uxCheck(receipt ~= nil
-                    and tonumber(receipt.roundNumber) == tonumber(state.roundNumber),
-                    "RESULT missing matched server reward receipt for participant")
+                    and tonumber(receipt.roundNumber) == tonumber(state.roundNumber)
+                    and receipt.rewardsUnavailable ~= true,
+                    "RESULT missing verified server reward receipt for participant")
                 if receipt and tonumber(receipt.roundNumber) == tonumber(state.roundNumber)
                     and reward and reward:IsA("TextLabel")
                 then
