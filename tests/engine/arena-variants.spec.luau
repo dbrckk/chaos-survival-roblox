@@ -70,6 +70,46 @@ describe("Arena variants", function()
         expect(fallbackZ).toBe(42)
     end)
 
+    it("keeps overlapping bomb and meteor warnings apart when safe routes exist", function()
+        local choose = ArenaTargeting.chooseSeparatedOffset
+        local center = Vector3.new(12, 3, -8)
+        local occupied = {Vector3.new(12, 50, -8)}
+        local near = Vector3.new(3, 0, 0)
+        local safe = Vector3.new(24, 0, 0)
+        local far = Vector3.new(35, 0, 0)
+
+        -- The vertical separation is intentionally ignored: the danger
+        -- rings overlap on the player's X/Z map regardless of deck height.
+        expect(choose({near, safe, far}, center, occupied, 22)).toBe(safe)
+        expect(choose({near, safe, far}, center, occupied, 30)).toBe(far)
+        expect(choose({near, safe}, center, occupied, 40)).toBe(safe)
+        expect(choose({near}, center, {}, 22)).toBe(near)
+        expect(choose({}, center, occupied, 22)).toBe(Vector3.zero)
+
+        -- With two active hazards a new warning must consider BOTH zones,
+        -- not just the most recently spawned marker.
+        local paired = {
+            Vector3.new(12, 0, -8),
+            Vector3.new(52, 0, -8),
+        }
+        expect(choose({
+            Vector3.new(3, 0, 0),
+            Vector3.new(40, 0, 0),
+            Vector3.new(21, 0, 25),
+        }, center, paired, 22)).toBe(Vector3.new(21, 0, 25))
+
+        -- The shared per-round marker set cannot retain destroyed instances;
+        -- choosing a new random candidate automatically removes stale keys.
+        local dead = Instance.new("Part")
+        local pending = {[dead] = true}
+        dead:Destroy()
+        local offset = ArenaTargeting.randomSeparatedOffset(
+            6, 42, center, pending, 22
+        )
+        expect(typeof(offset)).toBe("Vector3")
+        expect(pending[dead] == nil).toBe(true)
+    end)
+
     it("never publishes metadata for a removed or not-yet-ready arena", function()
         local map = Instance.new("Folder")
         map.Name = "GeneratedMap"
