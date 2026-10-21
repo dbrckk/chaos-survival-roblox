@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-21 — Fair replay health and explicit next-round E2E proof (candidate)
+
+- **Correct fairness asymmetry:** eliminated players and AI rigs already respawn/reset to full health before each round, but human winners carried damage forward. Restore living contestants to their own `Humanoid.MaxHealth` only **after an accepted arena READY teleport**; do not heal during the active disaster, resurrect a dead rig, or reset a critical-health victory before the reward/medal logic reads it.
+- Stamp the next authoritative `roundNumber` in the READY state; RESULT was already numbered after the win crash fix.
+- Extend the **existing** authenticated four-client Studio E2E with a proof that a completed numbered RESULT is followed by the exact next numbered READY and a full-health survivor with a valid spawn. A pretty win card alone is no longer enough for the test to pass.
+- Extend existing Roblox engine survival-feedback and result-presentation specs for dead-rig guard, custom maximum health, and replay transition ordering; no new test files, remotes or extra loops.
+- No real public Roblox publication or authenticated Studio E2E result is claimed from CI alone.
+
+
 ## 2026-10-21 — Isolated per-player end-of-round settlement (candidate)
 
 - After fixing the shared `roundChallenge` scope crash (#112), protect each participant's end-of-round progression/reward/achievement receipt processing from **other players' unexpected exceptions**. The original whole-server loop ran all player settlements without an error boundary: one bad achievement or quest handler could strand an entire lobby before the RESULTS countdown and next READY phase.

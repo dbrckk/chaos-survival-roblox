@@ -140,6 +140,37 @@ jobs:
             exit 1
           fi
 
+      - name: Guard post-win settlement and replay contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          server = Path("src/server/init.server.lua").read_text()
+          journey = Path("src/shared/RoundJourneyRules.lua").read_text()
+          required = {
+              "return the played round challenge from the disaster runner":
+                  "}, roundChallenge\nend\n\nwhile true do" in server,
+              "receive the challenge in round settlement":
+                  "balanceMetrics, roundChallenge =\n        runDisasterSet(" in server,
+              "validate challenge before paying rewards":
+                  'assert(type(roundChallenge) == "table"' in server,
+              "stamp the winner receipt with the round number":
+                  "roundNumber = roundNumber,\n                coins =" in server,
+              "stamp the READY countdown with the upcoming round number":
+                  'phase = "ready",\n            roundNumber = upcomingRoundNumber,' in server,
+              "restore human health at accepted READY spawn":
+                  "SurvivalFeedback.restoreForNextRound(humanoid)" in server,
+              "verify actual RESULT to next READY rather than decorative result":
+                  "function RoundJourneyRules.replayStarted(" in journey,
+          }
+
+          missing = [name for name, present in required.items() if not present]
+          if missing:
+              raise SystemExit("Post-win protocol regression: " + ", ".join(missing))
+          print("Server settlement, reward receipt and replay continuity contracts intact.")
+          PY
+
       - name: Enforce Lighting property ownership
         shell: bash
         run: |

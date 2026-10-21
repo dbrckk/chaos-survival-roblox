@@ -30,6 +30,9 @@ local failures = {}
 local roundStateReceived = false
 local roundJourneyStage = 0
 local observedJourneys = {}
+local lastCompletedRound = nil
+local replayReportedFor = nil
+local replayPendingFor = nil
 local lastRoundPhase = nil
 local visualMetrics = {
     Parts = 0,
@@ -456,6 +459,59 @@ if roundStateEvent and roundStateEvent:IsA("RemoteEvent") then
                 roundJourneyStage, state.phase
             )
             roundJourneyStage = stage
+            if tostring(state.phase or "") == "result" then
+                local finished = tonumber(state.roundNumber)
+                if finished and finished > 0 then
+                    lastCompletedRound = finished
+                end
+            elseif RoundJourneyRules.replayStarted(lastCompletedRound, state)
+                and replayReportedFor ~= tonumber(state.roundNumber)
+                and replayPendingFor ~= tonumber(state.roundNumber)
+            then
+                -- Some E2E clients may be spectators or fail READY admission.
+                -- Probe only an avatar physically inside the NEW arena; if
+                -- no contestant arrives, the server's mandatory replay
+                -- coverage fails instead of reporting a false client failure.
+                local nextId = tonumber(state.roundNumber)
+                local prior = lastCompletedRound
+                local arenaId = tostring(state.arenaId or "")
+                replayPendingFor = nextId
+                task.spawn(function()
+                    local deadline = os.clock() + 1.25
+                    while player.Parent and os.clock() < deadline do
+                        local generated = workspace:FindFirstChild("GeneratedMap")
+                        local arena = generated and generated:FindFirstChild("Arena")
+                        local base = arena and arena:FindFirstChild("Base")
+                        local character = player.Character
+                        local root = character and character:FindFirstChild("HumanoidRootPart")
+                        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                        local inside = false
+                        if arena and tostring(arena:GetAttribute("VariantId") or "") == arenaId
+                            and base and base:IsA("BasePart")
+                            and root and root:IsA("BasePart")
+                        then
+                            local localPoint = base.CFrame:PointToObjectSpace(root.Position)
+                            inside = math.abs(localPoint.X) <= base.Size.X * 0.5 + 6
+                                and math.abs(localPoint.Z) <= base.Size.Z * 0.5 + 6
+                        end
+                        if inside then
+                            replayReportedFor = nextId
+                            reportEvent:FireServer({
+                                kind = "round_replay_probe",
+                                finishedRound = prior,
+                                nextRound = nextId,
+                                fullHealth = humanoid ~= nil
+                                    and humanoid.Health > 0
+                                    and math.abs(humanoid.Health - humanoid.MaxHealth) < 0.1,
+                                validSpawn = player:GetAttribute("ArenaSpawnClear") == true,
+                            })
+                            break
+                        end
+                        task.wait(0.10)
+                    end
+                    if replayPendingFor == nextId then replayPendingFor = nil end
+                end)
+            end
             if completed then
                 local arenaId = tostring(state.arenaId or "")
                 if arenaId ~= "" and not observedJourneys[arenaId] then

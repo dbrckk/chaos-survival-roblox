@@ -40,6 +40,7 @@ local arenaEntryProbeReports = {
     Crossroads = false,
     Orbital = false,
 }
+local replayContinuityVerified = false
 local roundJourneyReports = {
     Classic = false,
     Towers = false,
@@ -119,6 +120,23 @@ end
 reportEvent.OnServerEvent:Connect(function(player, report)
     if type(report) ~= "table" then
         fail("invalid report from " .. player.Name)
+        return
+    end
+
+    if report.kind == "round_replay_probe" then
+        local finished = tonumber(report.finishedRound)
+        local nextId = tonumber(report.nextRound)
+        if not finished or not nextId
+            or finished < 1 or nextId ~= finished + 1
+            or report.fullHealth ~= true
+            or report.validSpawn ~= true
+        then
+            fail(player.Name .. ": win-to-next-round replay or full-health spawn failed")
+        else
+            replayContinuityVerified = true
+            print("CHAOS_E2E_ROUND_REPLAY", player.Name,
+                tostring(finished), "->", tostring(nextId), "health=full")
+        end
         return
     end
 
@@ -534,6 +552,7 @@ task.spawn(function()
             and arenaEntryCoverageReady()
             and roundArenaVisualCoverageReady()
             and roundJourneyObserved()
+            and replayContinuityVerified
             and showtimePhaseProbeReports.round
             and showtimePhaseProbeReports.result
         then
@@ -550,6 +569,9 @@ task.spawn(function()
     end
     if not roundJourneyObserved() then
         fail("no client completed intermission > ready > round > result in order")
+    end
+    if not replayContinuityVerified then
+        fail("no verified RESULT > next numbered READY with full-health contestant spawn")
     end
     for _, phase in ipairs({"round", "result"}) do
         if showtimePhaseProbeReports[phase] ~= true then
@@ -637,7 +659,7 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, 4 arena entries + per-arena ROUND visuals + complete round journey + Showtime phase visibility + UI/input/vote/movement/spectator/join-leave verified",
+            "PASS: %d clients, 4 arena entries + RESULT-to-next-READY full-health replay + per-arena ROUND visuals + full journey + Showtime + UI/input/vote/movement/spectator/join-leave verified",
             expectedTotal
         ))
     end

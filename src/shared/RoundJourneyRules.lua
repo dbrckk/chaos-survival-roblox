@@ -17,4 +17,24 @@ function RoundJourneyRules.advance(progress, phase)
     end
     return stage, false
 end
+-- RESULT must lead to a later, server-numbered READY. This additional
+-- contract is intentionally separate from the four-stage intro journey:
+-- a pretty victory card is not proof the server actually starts a new game.
+function RoundJourneyRules.replayStarted(lastFinishedRound, nextState)
+    if type(nextState) ~= "table" or nextState.phase ~= "ready" then
+        return false
+    end
+    local finished = tonumber(lastFinishedRound)
+    local nextId = tonumber(nextState.roundNumber)
+    -- Infinity + 1 is still infinity in IEEE-754. It must never count as
+    -- proof that the server launched a new match after RESULTS.
+    return finished ~= nil and nextId ~= nil
+        and finished == finished and nextId == nextId
+        and finished > 0 and finished < math.huge
+        and nextId < math.huge
+        and finished == math.floor(finished)
+        and nextId == math.floor(nextId)
+        and nextId == finished + 1
+end
+
 return RoundJourneyRules
