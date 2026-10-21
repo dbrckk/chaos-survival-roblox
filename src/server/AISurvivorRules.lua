@@ -726,6 +726,25 @@ function AISurvivorRules.routeWarningPenalty(origin, destination, warningCenter,
     return math.clamp(1 - closest / buffer, 0, 1) * 90
 end
 
+-- A bot that is already dodging one live warning should not switch
+-- its attention on every brain tick when two equal-size blast footprints
+-- overlap. Switch only when the competing warning is meaningfully closer.
+-- The caller first verifies the existing warning is still active AND
+-- actually within its detection radius; this only prevents oscillation.
+function AISurvivorRules.keepThreatFocus(currentDistance, closestDistance, margin)
+    local old = tonumber(currentDistance)
+    local nearest = tonumber(closestDistance)
+    if not old or not nearest
+        or old ~= old or nearest ~= nearest
+        or old < 0 or nearest < 0
+        or old == math.huge or nearest == math.huge
+    then
+        return false
+    end
+    local tolerance = math.clamp(tonumber(margin) or 0, 0, 6)
+    return old <= nearest + tolerance
+end
+
 -- Always return a NUMBER: a Lua `or` chain with a bare equality can
 -- produce boolean true for FreezeWarning and crash distance comparisons.
 -- Meteor and Bomb damage uses the final server WarningEndSize, not the
