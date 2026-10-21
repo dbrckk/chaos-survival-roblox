@@ -918,9 +918,13 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end
     end
 
+    -- Challenge instructions are shared by every participant. If even one
+    -- human is still learning in their first three rounds, offer the same
+    -- achievable survival goal to everyone, instead of an advanced
+    -- momentum/near-miss task during a protected onboarding round.
     local roundChallenge = RoundChallenge.forContext(
         roundNumber,
-        firstRoundContestant
+        not allowDynamicArenas
     )
     local hazardContestants = AISurvivorService.hazardContestants(contestants)
     local cleanup = {}
