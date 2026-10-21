@@ -320,10 +320,11 @@ local function ensureRenderLoop()
             -- In the lobby and between rounds the previous loop woke
             -- 15-30 times per second despite having no visual instances.
             -- RoundState and map events still rebuild immediately.
-            local cadence = active
-                and (tier.DecorUpdateInterval
-                    or math.max(1 / 30, tier.UpdateInterval))
-                or 0.50
+            local cadence = Layout.updateCadence(
+                active,
+                tier.DecorUpdateInterval
+                    or math.max(1 / 30, tier.UpdateInterval)
+            )
             local dt = task.wait(cadence)
 
             if #beaconParts == 0 and #beamStates == 0 then
