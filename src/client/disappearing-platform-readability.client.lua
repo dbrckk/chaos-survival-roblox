@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local Debris = game:GetService("Debris")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PlatformVisualRules = require(ReplicatedStorage.Shared.DisappearingPlatformVisualRules)
@@ -158,7 +160,28 @@ local function refreshPart(part)
         clearState(part)
         return
     end
+    local firstVisibleWarning = tracked[part] == nil
+        and part:GetAttribute("CollapsePhase") == "Warning"
+        and part:GetAttribute("ChaosSkybridge") == true
     ensureState(part)
+    if firstVisibleWarning and player:GetAttribute("AudioMuted") ~= true then
+        local camera = workspace.CurrentCamera
+        if camera and (camera.CFrame.Position - part.Position).Magnitude <= 90 then
+            -- One local, spatial warning only on the bridge that will fall.
+            -- Never broadcast four identical sirens or allocate audio per frame.
+            local cue = Instance.new("Sound")
+            cue.Name = "SkybridgeOutageWarning"
+            cue.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+            cue.Volume = 0.23
+            cue.PlaybackSpeed = 0.78
+            cue.RollOffMaxDistance = 90
+            cue.RollOffMinDistance = 8
+            cue.SoundGroup = SoundService:FindFirstChild("ChaosSFX")
+            cue.Parent = part
+            cue:Play()
+            Debris:AddItem(cue, 2)
+        end
+    end
     if ensureRenderLoop then
         ensureRenderLoop()
     end
