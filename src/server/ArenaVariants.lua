@@ -175,7 +175,7 @@ ArenaVariants.Definitions = {
     Crossroads = {
         Id = "Crossroads",
         Name = "CROSSROADS",
-        StrategyHint = "Four escape lanes • avoid committing to a dead end too early",
+        StrategyHint = "Four connected switchbacks • climb a side lane to reach the upper interchange",
         BaseSize = Vector3.new(104, 2, 104),
         BaseColor = Color3.fromRGB(86, 96, 110),
         PlatformColor = Color3.fromRGB(155, 125, 185),
@@ -186,23 +186,34 @@ ArenaVariants.Definitions = {
             Vector3.new(-18,3,36), Vector3.new(18,3,36),
         },
         Platforms = {
-            {offset=Vector3.new(0,5,0),size=Vector3.new(18,2,18)},
-            {offset=Vector3.new(-18,7,0),size=Vector3.new(14,2,12)},
-            {offset=Vector3.new(-34,10,0),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(18,7,0),size=Vector3.new(14,2,12)},
-            {offset=Vector3.new(34,10,0),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(0,7,-18),size=Vector3.new(12,2,14)},
-            {offset=Vector3.new(0,10,-34),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(0,7,18),size=Vector3.new(12,2,14)},
-            {offset=Vector3.new(0,10,34),size=Vector3.new(12,2,12)},
-            {offset=Vector3.new(-25,13,-25),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(25,13,-25),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(-25,13,25),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(25,13,25),size=Vector3.new(10,2,10)},
-            {offset=Vector3.new(-12,18,-12),size=Vector3.new(8,2,8)},
-            {offset=Vector3.new(12,18,-12),size=Vector3.new(8,2,8)},
-            {offset=Vector3.new(-12,18,12),size=Vector3.new(8,2,8)},
-            {offset=Vector3.new(12,18,12),size=Vector3.new(8,2,8)},
+            -- The central junction is reachable from the floor without
+            -- a dash or mobility purchase, even on standard R15 jump.
+            {offset=Vector3.new(0,4,0),size=Vector3.new(18,2,18),RouteTier=1},
+            -- Four independent routes from hub to inner and outer stations.
+            {offset=Vector3.new(-18,7,0),size=Vector3.new(14,2,12),RouteTier=1},
+            {offset=Vector3.new(-34,10,0),size=Vector3.new(12,2,12),RouteTier=2},
+            {offset=Vector3.new(18,7,0),size=Vector3.new(14,2,12),RouteTier=1},
+            {offset=Vector3.new(34,10,0),size=Vector3.new(12,2,12),RouteTier=2},
+            {offset=Vector3.new(0,7,-18),size=Vector3.new(12,2,14),RouteTier=1},
+            {offset=Vector3.new(0,10,-34),size=Vector3.new(12,2,12),RouteTier=2},
+            {offset=Vector3.new(0,7,18),size=Vector3.new(12,2,14),RouteTier=1},
+            {offset=Vector3.new(0,10,34),size=Vector3.new(12,2,12),RouteTier=2},
+
+            -- Each outer arm now branches to ONE assigned high sector:
+            -- west -> NW, north -> NE, east -> SE, south -> SW.
+            -- Older diagonal decks at (+/-25,+/-25) were 14 studs
+            -- horizontally beyond the nearest approach and unreachable.
+            {offset=Vector3.new(-25,13,-12),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(12,13,-25),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(25,13,12),size=Vector3.new(10,2,10),RouteTier=3},
+            {offset=Vector3.new(-12,13,25),size=Vector3.new(10,2,10),RouteTier=3},
+
+            -- Finish each branch with a true three-stud horizontal jump
+            -- and four-stud vertical rise, not an unlandable roof.
+            {offset=Vector3.new(-12,17,-12),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(12,17,-12),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(12,17,12),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-12,17,12),size=Vector3.new(10,2,10),RouteTier=4},
         },
     },
 }
