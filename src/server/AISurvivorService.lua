@@ -1330,6 +1330,8 @@ end
 local function immediateThreat(record, root, now)
     local nearest = nil
     local nearestDistance = math.huge
+    local currentThreat = record.threat
+    local currentThreatDistance = math.huge
     local velocity = root.AssemblyLinearVelocity
     local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
     local anticipation = 0.18 + (1 - record.profile.Risk) * 0.20
@@ -1344,10 +1346,25 @@ local function immediateThreat(record, root, now)
             warning.Name, warningRadius, warning:GetAttribute("WarningEndSize")
         )
 
+        if distance <= threshold and warning == currentThreat then
+            currentThreatDistance = distance
+        end
         if distance <= threshold and distance < nearestDistance then
             nearest = warning
             nearestDistance = distance
         end
+    end
+
+    -- Nearby simultaneous danger rings may trade "nearest" every 0.18s
+    -- as the NPC moves. Preserve focus while the previous *live* warning
+    -- remains within four studs of the closest alternative. This retains
+    -- realistic reaction timing and avoids a twitchy, cancelled escape.
+    if currentThreat ~= nearest
+        and AISurvivorRules.keepThreatFocus(
+            currentThreatDistance, nearestDistance, 4
+        )
+    then
+        nearest = currentThreat
     end
 
     if nearest ~= record.threat then
@@ -2607,7 +2624,16 @@ local function stepRecord(record, now)
             local floorSweepEscape = record.gridSweepThreat
                 and record.gridSweepThreat.Parent
                 and record.gridSweepThreat:GetAttribute("GridSweepPhase") ~= nil
-            record.target = (skybridgeEscape or floorSweepEscape)
+            -- saferThreatEscape already validated this exact destination
+            -- against *every* live bomb and meteor corridor and real floor
+            -- support. Adding a random social separation offset afterward
+            -- can put a bot straight back into an impact circle or a gap.
+            -- Keep its deliberate escape vector; regular roaming still
+            -- uses realistic bot-to-bot spacing.
+            local warnedEscape = record.escapeWarning
+                and record.escapeWarning.Parent
+                and record.escapeTarget == urgentTarget
+            record.target = (skybridgeEscape or floorSweepEscape or warnedEscape)
                 and urgentTarget or separateTarget(record, urgentTarget)
             record.nextThink = now + 0.55
         end
