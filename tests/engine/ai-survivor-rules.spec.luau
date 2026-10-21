@@ -633,6 +633,33 @@ describe("AI survivor rules", function()
             CFrame.new(-20, 12.5, 0), Vector3.new(4.5, 1, 22), zSign)
         expect(moved.Z < -5).toBe(true)
         expect(r.skyrailExitTarget(west, span, 0) == nil).toBe(true)
+
+        -- A temporary Skybridge outage must redirect bots to a supported
+        -- tower endpoint instead of an unsafe sideways dodge toward hub.
+        local northEast = r.skybridgeEscapeTarget(
+            Vector3.new(12, 15.4, -28), north, span,
+            Vector3.new(-17, 0, 0))
+        expect(northEast ~= nil).toBe(true)
+        expect(northEast.X > 26 and northEast.X < 28).toBe(true)
+        expect(math.abs(northEast.Z + 28) < 0.01).toBe(true)
+        local northWest = r.skybridgeEscapeTarget(
+            Vector3.new(-13, 15.4, -28), north, span, Vector3.zero)
+        expect(northWest.X < -26).toBe(true)
+        local midForward = r.skybridgeEscapeTarget(
+            Vector3.new(0, 15.4, -28), north, span, Vector3.new(-15, 0, 0))
+        expect(midForward.X < -26).toBe(true)
+        local westExit = r.skybridgeEscapeTarget(
+            Vector3.new(-28, 15.4, 8), west,
+            Vector3.new(4.5, 1, 49), Vector3.zero)
+        expect(westExit.Z > 26).toBe(true)
+        expect(math.abs(westExit.X + 28) < 0.01).toBe(true)
+        expect(r.skybridgeEscapeTarget(
+            Vector3.new(0, 3, -28), north, span) == nil).toBe(true)
+        expect(r.skybridgeEscapeTarget(
+            Vector3.new(0, 15.4, -38), north, span) == nil).toBe(true)
+        expect(r.skybridgeEscapeTarget(
+            Vector3.new(0, 15.4, -28), north, Vector3.new(49, 1, 2)
+        ) == nil).toBe(true)
     end)
 
     it("allows one pre-jump per Shock warning and ignores unrelated markers", function()
