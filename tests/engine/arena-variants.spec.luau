@@ -428,6 +428,25 @@ describe("Arena variants", function()
                 .toBe(true)
             expect(math.abs(core.Finish.Y - (reactorTop - 0.35)) < 0.001)
                 .toBe(true)
+            -- The exit from each Helix and the next reactor climb must
+            -- join at the same landing, never form a 3-stud-low roof.
+            expect((core.Start - helix.Finish).Magnitude <= 0.21).toBe(true)
+            -- At the central rescue-hub edge the upper incline leaves
+            -- enough space for an R15 avatar standing on the lower deck.
+            local innerRadius = Vector3.new(
+                inner.offset.X, 0, inner.offset.Z
+            ).Magnitude
+            local exitRadius = Vector3.new(
+                core.Finish.X, 0, core.Finish.Z
+            ).Magnitude
+            local radialPoint = 8.5
+            local at = (innerRadius - radialPoint)
+                / (innerRadius - exitRadius)
+            local bridgeHeight = core.Start.Y
+                + at * (core.Finish.Y - core.Start.Y)
+            expect(bridgeHeight - 0.46
+                - (lowHub.offset.Y + lowHub.size.Y * 0.5) >= 8.4)
+                .toBe(true)
         end
         expect(OrbitalHelix.accessRoute(orbital, Vector3.zero, 9, "Entry"))
             .toBe(nil)
