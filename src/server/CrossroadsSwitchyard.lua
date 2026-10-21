@@ -192,6 +192,32 @@ function CrossroadsSwitchyard.start(ctx, mechanics, center)
                     alongX and 0 or 0.65
                 ), idle),
         }
+        -- A compact in-world label is visible without a new HUD or any
+        -- quality-tier dependent particles. Only charged stations show it.
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "JunctionRouteSign" .. index
+        billboard.Adornee = pad
+        billboard.Size = UDim2.fromOffset(140, 30)
+        billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
+        billboard.MaxDistance = 55
+        billboard.AlwaysOnTop = false
+        billboard.Enabled = false
+        billboard.Parent = folder
+        local signText = Instance.new("TextLabel")
+        signText.Name = "JunctionRouteText"
+        signText.BackgroundColor3 = Color3.fromRGB(31, 28, 50)
+        signText.BackgroundTransparency = 0.20
+        signText.BorderSizePixel = 0
+        signText.Size = UDim2.fromScale(1, 1)
+        signText.Font = Enum.Font.GothamBold
+        signText.TextColor3 = charged
+        signText.TextScaled = true
+        signText.Text = "↔ TURN TO BOOST"
+        signText.Parent = billboard
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 6)
+        corner.Parent = signText
+        signalSets[index].billboard = billboard
         pad.Touched:Connect(function(hit)
             CrossroadsSwitchyard.tryTrigger(
                 ctx, pad, hit, ready, claimed, os.clock()
@@ -210,6 +236,7 @@ function CrossroadsSwitchyard.start(ctx, mechanics, center)
                 piece.Color = on and charged or idle
                 piece.Transparency = on and 0.12 or 0.68
             end
+            signalSets[index].billboard.Enabled = on
         end
     end
     paint()
@@ -225,6 +252,7 @@ function CrossroadsSwitchyard.start(ctx, mechanics, center)
                     piece.Transparency = 0.68
                 end
             end
+            signalSets[index].billboard.Enabled = false
         end
     end
 
