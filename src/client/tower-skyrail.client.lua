@@ -21,6 +21,7 @@ local bridges = {}
 local canopy = {}
 local signalConnections = {}
 local activeSurges = {}
+local draw
 
 local colors = {
     Armor = Color3.fromRGB(28, 42, 63),
@@ -264,6 +265,18 @@ local function rebuild(platforms, tier, reduced, ordered)
     bridges = ordered
     for _, bridge in ipairs(bridges) do
         table.insert(canopy, buildCanopy(bridge, tier, reduced))
+        -- Sync disappearance immediately, even at Low (0.65s draw cadence).
+        -- Reuse the existing draw path, with no extra render loop.
+        table.insert(signalConnections, bridge:GetAttributeChangedSignal(
+            "CollapsePhase"
+        ):Connect(function()
+            if draw then draw(os.clock()) end
+        end))
+        table.insert(signalConnections, bridge:GetPropertyChangedSignal(
+            "CanCollide"
+        ):Connect(function()
+            if draw then draw(os.clock()) end
+        end))
         table.insert(signalConnections, bridge:GetAttributeChangedSignal(
             "SkyrailUsedAt"
         ):Connect(function()
@@ -276,7 +289,7 @@ local function rebuild(platforms, tier, reduced, ordered)
     end
 end
 
-local function draw(timestamp)
+draw = function(timestamp)
     for _, structure in ipairs(canopy) do
         local bridge = structure.Bridge
         if bridge.Parent then
