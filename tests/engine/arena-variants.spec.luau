@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaTargeting = require("../../src/server/ArenaTargeting")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
+local OrbitalHelix = require("../../src/server/OrbitalHelix")
 
 describe("Arena variants", function()
     it("defines four distinct playable layouts", function()
@@ -341,6 +342,97 @@ describe("Arena variants", function()
                 end
             end
         end
+    end)
+
+
+    it("connects Orbital spawns, Helix decks and reactor through walkable ramps", function()
+        local orbital = ArenaVariants.get("Orbital")
+        expect(#orbital.SpawnOffsets).toBe(8)
+        expect(#orbital.Platforms).toBe(18)
+        local floorTop = orbital.BaseSize.Y * 0.5
+        local lowHub = orbital.Platforms[17]
+        local reactor = orbital.Platforms[18]
+        expect(lowHub.RouteTier).toBe(1)
+        expect(reactor.RouteTier).toBe(4)
+        local headroom = reactor.offset.Y - reactor.size.Y * 0.5
+            - (lowHub.offset.Y + lowHub.size.Y * 0.5)
+        expect(headroom >= 8.4).toBe(true)
+
+        local function planarDistanceToRamp(point, ramp)
+            local p = Vector3.new(point.X, 0, point.Z)
+            local from = Vector3.new(ramp.Start.X, 0, ramp.Start.Z)
+            local to = Vector3.new(ramp.Finish.X, 0, ramp.Finish.Z)
+            local delta = to - from
+            local progress = math.clamp((p - from):Dot(delta) / delta:Dot(delta), 0, 1)
+            return (p - from - delta * progress).Magnitude
+        end
+
+        for index = 1, OrbitalHelix.Count do
+            local outer = orbital.Platforms[index]
+            local inner = orbital.Platforms[index + OrbitalHelix.Count]
+            local spawn = orbital.SpawnOffsets[index]
+            expect(outer.RouteTier).toBe(1)
+            expect(inner.RouteTier).toBe(2)
+            expect(math.abs(spawn.X) < 44.5 and math.abs(spawn.Z) < 44.5)
+                .toBe(true)
+
+            -- No player at any of the eight spawn pads may materialize
+            -- under an elevated platform or directly inside an access ramp.
+            for _, deck in ipairs(orbital.Platforms) do
+                local overlapsX = math.abs(spawn.X - deck.offset.X)
+                    < deck.size.X * 0.5 + 2.8
+                local overlapsZ = math.abs(spawn.Z - deck.offset.Z)
+                    < deck.size.Z * 0.5 + 2.8
+                expect(overlapsX and overlapsZ).toBe(false)
+            end
+            for routeIndex = 1, OrbitalHelix.Count do
+                local access = OrbitalHelix.accessRoute(
+                    orbital, Vector3.zero, routeIndex, "Entry"
+                )
+                expect(planarDistanceToRamp(spawn, access)
+                    > access.Size.X * 0.5 + 2.8).toBe(true)
+            end
+
+            local entry = OrbitalHelix.accessRoute(
+                orbital, Vector3.zero, index, "Entry"
+            )
+            local core = OrbitalHelix.accessRoute(
+                orbital, Vector3.zero, index, "Core"
+            )
+            local helix = OrbitalHelix.route(orbital, Vector3.zero, index)
+            expect(entry ~= nil and helix ~= nil and core ~= nil).toBe(true)
+            local entryFloor = entry.Start.Y - floorTop
+            expect(math.abs(entryFloor + 0.35) < 0.001).toBe(true)
+
+            local function slope(route)
+                local horizontal = Vector3.new(
+                    route.Finish.X - route.Start.X, 0,
+                    route.Finish.Z - route.Start.Z
+                ).Magnitude
+                return (route.Finish.Y - route.Start.Y) / horizontal
+            end
+            expect(slope(entry) > 0 and slope(entry) <= 0.76).toBe(true)
+            expect(slope(helix) > 0 and slope(helix) <= 0.60).toBe(true)
+            expect(slope(core) > 0 and slope(core) <= 0.76).toBe(true)
+
+            local outerTop = outer.offset.Y + outer.size.Y * 0.5
+            local innerTop = inner.offset.Y + inner.size.Y * 0.5
+            local reactorTop = reactor.offset.Y + reactor.size.Y * 0.5
+            expect(math.abs(entry.Finish.Y - (outerTop - 0.35)) < 0.001)
+                .toBe(true)
+            expect(math.abs(helix.Start.Y - (outerTop - 0.15)) < 0.001)
+                .toBe(true)
+            expect(math.abs(helix.Finish.Y - (innerTop - 0.15)) < 0.001)
+                .toBe(true)
+            expect(math.abs(core.Start.Y - (innerTop - 0.35)) < 0.001)
+                .toBe(true)
+            expect(math.abs(core.Finish.Y - (reactorTop - 0.35)) < 0.001)
+                .toBe(true)
+        end
+        expect(OrbitalHelix.accessRoute(orbital, Vector3.zero, 9, "Entry"))
+            .toBe(nil)
+        expect(OrbitalHelix.accessRoute(orbital, Vector3.zero, 1, "Unknown"))
+            .toBe(nil)
     end)
 
     it("derives hazard targeting bounds from arena footprints", function()
