@@ -44,11 +44,13 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     -- Use an adjustable Weld only for skybridges; ordinary moving decks
     -- keep their existing lightweight WeldConstraint behavior.
     local skybridge = platform:GetAttribute("ChaosSkybridge") == true
-    local joint = Instance.new(skybridge and "Weld" or "WeldConstraint")
+    local adjustable = skybridge
+        or tonumber(platform:GetAttribute("RouteTier")) ~= nil
+    local joint = Instance.new(adjustable and "Weld" or "WeldConstraint")
     joint.Name = "ChaosPlatformTrimWeld"
     joint.Part0 = part
     joint.Part1 = platform
-    if skybridge then
+    if adjustable then
         joint.C0 = CFrame.identity
         joint.C1 = localFrame
     end
@@ -307,6 +309,87 @@ function PlatformFinishKit.bindSkybridgeFootprint(platform, pieces)
     return function()
         connected = false
         connection:Disconnect()
+    end
+end
+
+-- Classic's authored zigzag decks shrink along BOTH horizontal axes.
+-- Keep every welded client-only stripe, armor/brace and axis cue strictly
+-- inside its real collision deck instead of showing a phantom 10-stud top.
+function PlatformFinishKit.captureRouteFootprint(platform, pieces)
+    if not platform or not platform:IsA("BasePart")
+        or tonumber(platform:GetAttribute("RouteTier")) == nil then
+        return nil
+    end
+    local snapshot = {
+        platform = platform,
+        originalSize = platform.Size,
+        entries = {},
+    }
+    for _, piece in ipairs(pieces or {}) do
+        if piece and piece:IsA("BasePart") and piece.Parent then
+            snapshot.entries[#snapshot.entries + 1] = {
+                part = piece,
+                size = piece.Size,
+                localCFrame = platform.CFrame:ToObjectSpace(piece.CFrame),
+            }
+        end
+    end
+    return snapshot
+end
+
+function PlatformFinishKit.applyRouteFootprint(snapshot)
+    if not snapshot or not snapshot.platform or not snapshot.platform.Parent then
+        return 0
+    end
+    local deck = snapshot.platform
+    local original = snapshot.originalSize
+    if original.X <= 0 or original.Z <= 0 then return 0 end
+    local ratioX = math.clamp(deck.Size.X / original.X, 0.05, 1)
+    local ratioZ = math.clamp(deck.Size.Z / original.Z, 0.05, 1)
+    local changed = 0
+    for _, data in ipairs(snapshot.entries) do
+        local part = data.part
+        if part and part.Parent then
+            local p = data.localCFrame.Position
+            local rotation = data.localCFrame - p
+            local localFrame = CFrame.new(p.X * ratioX, p.Y, p.Z * ratioZ)
+                * rotation
+            part.Size = Vector3.new(
+                math.max(0.05, data.size.X * ratioX),
+                data.size.Y,
+                math.max(0.05, data.size.Z * ratioZ)
+            )
+            local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
+                or part:FindFirstChild("PlatformIdentityWeld")
+            if joint and joint:IsA("Weld") then
+                joint.C1 = localFrame
+            else
+                part.CFrame = deck.CFrame * localFrame
+            end
+            changed += 1
+        end
+    end
+    return changed
+end
+
+function PlatformFinishKit.bindRouteFootprint(platform, pieces)
+    local snapshot = PlatformFinishKit.captureRouteFootprint(platform, pieces)
+    if not snapshot then return function() end end
+    local connected = true
+    local queued = false
+    local listener = platform:GetPropertyChangedSignal("Size"):Connect(function()
+        if not connected or queued then return end
+        queued = true
+        task.defer(function()
+            queued = false
+            if connected then PlatformFinishKit.applyRouteFootprint(snapshot) end
+        end)
+    end)
+    -- A streaming player can first encounter an already-shrinking deck.
+    PlatformFinishKit.applyRouteFootprint(snapshot)
+    return function()
+        connected = false
+        listener:Disconnect()
     end
 end
 
