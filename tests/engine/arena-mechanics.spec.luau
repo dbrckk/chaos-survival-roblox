@@ -7,6 +7,7 @@ local ArenaMechanics = require("../../src/server/ArenaMechanics")
 local FluxRelayRules = require("../../src/shared/FluxRelayRules")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
+local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local GridCircuitService = require("../../src/server/GridCircuitService")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local CrossroadsFluxRelay = require("../../src/server/CrossroadsFluxRelay")
@@ -104,6 +105,41 @@ describe("Arena mechanics", function()
             expect((sensor.Position - (weld.Part0.CFrame
                 * CFrame.new(0, weld.Part0.Size.Y * 0.5 + 2.1, 0)).Position
             ).Magnitude < 0.01).toBe(true)
+        end
+        -- Real engine integration: the authoritative bridge disappears
+        -- together with server-authored trims, then fully restores.
+        local bridge = arena:FindFirstChild("Platforms"):FindFirstChild("Skybridge18")
+        local pressure = SkybridgePressure
+        local snapshot = pressure.snapshot(bridge, arena:FindFirstChild("Decor"))
+        expect(#snapshot.details >= 4).toBe(true)
+        expect(pressure.allowed({
+            Active = function() return true end,
+            OnCleanup = {},
+            EnableSkybridgePressure = true,
+            ActiveDisasters = {ShrinkingArena = true},
+        })).toBe(false)
+        expect(pressure.allowed({
+            Active = function() return true end,
+            OnCleanup = {},
+            EnableSkybridgePressure = false,
+        })).toBe(false)
+        pressure.setPhase(snapshot, "Warning", workspace:GetServerTimeNow())
+        expect(bridge:GetAttribute("CollapsePhase")).toBe("Warning")
+        expect(bridge.CanCollide).toBe(true)
+        expect(bridge.Material).toBe(Enum.Material.Neon)
+        pressure.setPhase(snapshot, "Gone")
+        expect(bridge.CanCollide).toBe(false)
+        expect(bridge.Transparency).toBe(1)
+        for _, entry in ipairs(snapshot.details) do
+            expect(entry.part.Transparency).toBe(1)
+        end
+        pressure.setPhase(snapshot, nil)
+        expect(bridge:GetAttribute("CollapsePhase") == nil).toBe(true)
+        expect(bridge.CanCollide).toBe(snapshot.canCollide)
+        expect(bridge.Material).toBe(snapshot.material)
+        expect(bridge.Color).toBe(snapshot.color)
+        for _, entry in ipairs(snapshot.details) do
+            expect(entry.part.Transparency).toBe(entry.transparency)
         end
         root:Destroy()
     end)
