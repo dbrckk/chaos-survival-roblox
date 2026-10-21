@@ -98,7 +98,10 @@ function OrbitalHelix.accessRoute(variant, center, index, kind)
         local innerDistance = flat.Magnitude
         local coreReach = math.min(crown.size.X, crown.size.Z) * 0.5
             / math.max(math.abs(axis.X), math.abs(axis.Z))
-        start = hub + axis * (innerDistance + extent - 0.35)
+        -- Begin exactly at the existing Helix landing. Starting above
+        -- the outer lip creates a low sloping roof over that landing and
+        -- prevents an R15 character from leaving the original bridge.
+        start = hub + inner.offset
             + Vector3.new(0, inner.offset.Y + inner.size.Y * 0.5 - 0.35, 0)
         finish = hub + axis * (coreReach - 0.35)
             + Vector3.new(0, crown.offset.Y + crown.size.Y * 0.5 - 0.35, 0)
