@@ -60,10 +60,15 @@ local function makePart(name, size, cframe, color, material, transparency, ancho
     if anchorPart and anchorPart:IsA("BasePart") then
         registerVisual(anchorPart, part)
         part.Massless = true
-        local weld = Instance.new("WeldConstraint")
+        local compactRoute = tonumber(anchorPart:GetAttribute("RouteTier")) ~= nil
+        local weld = Instance.new(compactRoute and "Weld" or "WeldConstraint")
         weld.Name = "PlatformIdentityWeld"
         weld.Part0 = part
         weld.Part1 = anchorPart
+        if compactRoute then
+            weld.C0 = CFrame.identity
+            weld.C1 = anchorPart.CFrame:ToObjectSpace(part.CFrame)
+        end
         weld.Parent = part
     end
 
@@ -287,6 +292,13 @@ local function rebuild()
             if platform:GetAttribute("ChaosSkybridge") == true then
                 footprintDisconnects[platform] =
                     PlatformFinishKit.bindSkybridgeFootprint(
+                        platform, visualsByPlatform[platform]
+                    )
+            elseif tonumber(platform:GetAttribute("RouteTier")) ~= nil then
+                -- All visible Classic trims track the physical footprint as
+                -- Shrinking Arena contracts both axes. No ghost ledges.
+                footprintDisconnects[platform] =
+                    PlatformFinishKit.bindRouteFootprint(
                         platform, visualsByPlatform[platform]
                     )
             end
