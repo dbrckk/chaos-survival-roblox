@@ -166,6 +166,7 @@ function ResultPresentation.fallbackFeedback(state, userId, participating)
         or (not hasParticipants and participating == true)
     return {
         survived = won,
+        soleSurvivor = won and tonumber(state.soleSurvivorUserId) == id,
         spectating = not played,
         pendingRewards = played,
         roundNumber = state.roundNumber,
@@ -233,7 +234,7 @@ function ResultPresentation.title(feedback, localeId)
         elseif kind == "clutch" then
             return "SURVIE EXTRÊME !"
         elseif kind == "survived" then
-            return "SURVÉCU !"
+            return feedback.soleSurvivor == true and "DERNIER SURVIVANT !" or "SURVÉCU !"
         end
     else
         if kind == "master" then
@@ -241,7 +242,7 @@ function ResultPresentation.title(feedback, localeId)
         elseif kind == "clutch" then
             return "CLUTCH SURVIVAL!"
         elseif kind == "survived" then
-            return "SURVIVED!"
+            return feedback.soleSurvivor == true and "LAST SURVIVOR!" or "SURVIVED!"
         end
     end
 
@@ -257,6 +258,7 @@ function ResultPresentation.worldLabel(feedback, isLocal)
     elseif kind == "clutch" then
         return isLocal and "CLUTCH SURVIVAL" or "SURVIVOR"
     elseif kind == "survived" then
+        if feedback.soleSurvivor == true then return "LAST SURVIVOR" end
         return isLocal and "YOU SURVIVED" or "SURVIVOR"
     end
 
