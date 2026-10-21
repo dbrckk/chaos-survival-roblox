@@ -34,17 +34,19 @@ ArenaVariants.Definitions = {
             {offset=Vector3.new(12,4,0),size=Vector3.new(12,2,12),RouteTier=1},
             {offset=Vector3.new(0,4,-12),size=Vector3.new(12,2,12),RouteTier=1},
             {offset=Vector3.new(0,4,12),size=Vector3.new(12,2,12),RouteTier=1},
-            -- Interlinked diagonal transfers, a three-stud rise.
-            {offset=Vector3.new(-12,7,-12),size=Vector3.new(11,2,11),RouteTier=2},
-            {offset=Vector3.new(12,7,-12),size=Vector3.new(11,2,11),RouteTier=2},
-            {offset=Vector3.new(-12,7,12),size=Vector3.new(11,2,11),RouteTier=2},
-            {offset=Vector3.new(12,7,12),size=Vector3.new(11,2,11),RouteTier=2},
-            -- Risk/reward overlooks, reached through diagonal transfers.
-            -- Their footprints finish before the four diagonal spawn pads.
-            {offset=Vector3.new(-20,11,-20),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(20,11,-20),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(-20,11,20),size=Vector3.new(10,2,10),RouteTier=4},
-            {offset=Vector3.new(20,11,20),size=Vector3.new(10,2,10),RouteTier=4},
+            -- Offset transfers, a three-stud rise; none covers the
+            -- four authoritative Grid Circuit sensors at (+/-16, +/-16).
+            {offset=Vector3.new(-9,7,-5),size=Vector3.new(11,2,11),RouteTier=2},
+            {offset=Vector3.new(5,7,-9),size=Vector3.new(11,2,11),RouteTier=2},
+            {offset=Vector3.new(-5,7,9),size=Vector3.new(11,2,11),RouteTier=2},
+            {offset=Vector3.new(9,7,5),size=Vector3.new(11,2,11),RouteTier=2},
+            -- Risk/reward overlooks are lateral extensions of the high
+            -- cardinal decks. Crucially they avoid both diagonal spawn
+            -- pads and the four optional Grid Circuit sensor volumes.
+            {offset=Vector3.new(-26,11,-11),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(11,11,-26),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(-11,11,26),size=Vector3.new(10,2,10),RouteTier=4},
+            {offset=Vector3.new(26,11,11),size=Vector3.new(10,2,10),RouteTier=4},
         },
     },
 
