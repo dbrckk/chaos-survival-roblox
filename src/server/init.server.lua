@@ -1955,8 +1955,8 @@ while true do
             -- Two end-of-round samples, no new Heartbeat/polling or remote.
             -- Lifetime is recorded on Humanoid.Died, rather than treating
             -- the entire round as survived by someone eliminated at 4s.
-            local lifeSeconds = survived and roundElapsed or (
-                balanceMetrics.deathSeconds[p.UserId] or roundElapsed
+            local lifeSeconds = GameAnalytics.roundAliveSeconds(
+                roundElapsed, balanceMetrics.deathSeconds[p.UserId], survived
             )
             GameAnalytics.arenaRoundMetrics(p, {
                 arenaId = currentArenaVariant,
