@@ -30,7 +30,8 @@ function OrbitalRampRegistry.collect(circuit, signKit)
     table.sort(scored, function(a, b)
         local first = tonumber(a:GetAttribute("HelixLane")) or 0
         local second = tonumber(b:GetAttribute("HelixLane")) or 0
-        return first ~= second and first < second or a.Name < b.Name
+        if first ~= second then return first < second end
+        return a.Name < b.Name
     end)
     table.sort(access, function(a, b) return a.Name < b.Name end)
     return scored, access
