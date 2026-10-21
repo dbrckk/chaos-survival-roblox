@@ -343,8 +343,7 @@ local function ensureRenderLoop()
         end
 
         for i, beacon in ipairs(beaconParts) do
-            if beacon and beacon.Parent
-                and beacon:GetAttribute("SceneryLodHidden") ~= true then
+            if Layout.shouldAnimate(beacon) then
                 -- The dedicated LOD controller has already hidden the
                 -- entire faraway cinematic layer on Medium/Low. Don't
                 -- animate invisible beacon shaders as well.
@@ -361,8 +360,7 @@ local function ensureRenderLoop()
         for _, state in ipairs(beamStates) do
             local part = state.part
             local base = state.base
-            if part and part.Parent and base and base.Parent
-                and part:GetAttribute("SceneryLodHidden") ~= true then
+            if Layout.shouldAnimate(part) and base and base.Parent then
                 local sweep = math.sin(clock * 0.38 * motion + state.index * 0.9) * 0.12
                 local angle = state.angle + sweep
                 local deckFrame = Layout.beamFrame(
