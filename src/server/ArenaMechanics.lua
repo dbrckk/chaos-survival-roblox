@@ -21,12 +21,16 @@ local switchyardModule = script and script.Parent:FindFirstChild("CrossroadsSwit
 local CrossroadsSwitchyard = if switchyardModule
     then require(switchyardModule)
     else require("./CrossroadsSwitchyard")
+local gridSweepModule = script and script.Parent:FindFirstChild("ClassicGridSweep")
+local ClassicGridSweep = if gridSweepModule
+    then require(gridSweepModule)
+    else require("./ClassicGridSweep")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
     Classic = {
         Name = "ESCAPE PADS",
-        Hint = "Blue escape pads launch outward; touch four Grid Circuit nodes clockwise for a skill clear",
+        Hint = "Grid Circuit: four clockwise nodes; amber floor bands pulse red, jump or dodge",
         Color = Color3.fromRGB(90, 180, 255),
         Pads = {
             {offset = Vector3.new(18, 1.7, 0), impulse = Vector3.new(38, 10, 0)},
@@ -230,6 +234,7 @@ function ArenaMechanics.start(ctx, variantId)
     if variantId == "Classic" then
         -- Optional non-pay-to-win navigation skill inside the stable base.
         GridCircuitService.start(ctx, folder, base.Position)
+        ClassicGridSweep.start(ctx, arena)
     elseif variantId == "Towers" then
         -- Active elevated movement route that does not alter bridge physics.
         SkyrailSlipstream.start(ctx, folder, arena)
