@@ -5,8 +5,75 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ResultPresentation = require("../../src/shared/ResultPresentation")
 local CoreLocalization = require("../../src/shared/CoreLocalization")
 local RoundJourneyRules = require("../../src/shared/RoundJourneyRules")
+local RoundResultState = require("../../src/server/RoundResultState")
 
 describe("Result presentation", function()
+    it("announces surviving humans and bots before rewards are settled", function()
+        local participants = {101, 202}
+        local survivors = {101}
+        local snapshot = RoundResultState.snapshot({
+            roundNumber = 17,
+            seconds = 6,
+            participantUserIds = participants,
+            survivorUserIds = survivors,
+            aiSurvivorsAlive = 2,
+            contestantCount = 5,
+            doubleChaos = true,
+            fusionName = "STORMFIRE",
+            soloMode = false,
+            arenaId = "Orbital",
+            arenaName = "ORBITAL RING",
+            disasterIds = {"Meteors", "RisingLava"},
+        })
+        expect(snapshot.phase).toBe("result")
+        expect(snapshot.title).toBe("3 SURVIVED")
+        expect(snapshot.survivorsAlive).toBe(3)
+        expect(snapshot.contestantCount).toBe(5)
+        expect(snapshot.seconds).toBe(6)
+        expect(snapshot.doubleChaos).toBe(true)
+        local won = ResultPresentation.fallbackFeedback(snapshot, 101, false)
+        expect(won.survived).toBe(true)
+        expect(won.pendingRewards).toBe(true)
+        expect(won.coins == nil).toBe(true)
+        local lost = ResultPresentation.fallbackFeedback(snapshot, 202, false)
+        expect(lost.survived).toBe(false)
+        expect(lost.spectating).toBe(false)
+        local audience = ResultPresentation.fallbackFeedback(snapshot, 303, true)
+        expect(audience.spectating).toBe(true)
+
+        local tick = RoundResultState.atSecond(snapshot, 2)
+        expect(tick.seconds).toBe(2)
+        expect(snapshot.seconds).toBe(6)
+        expect(tick.survivorUserIds).toBe(survivors)
+        expect(tick.participantUserIds).toBe(participants)
+        expect(tick.title).toBe(snapshot.title)
+    end)
+
+    it("never tells players a wipeout is a win or overcounts bots", function()
+        local empty = RoundResultState.snapshot({
+            roundNumber = 18,
+            participantUserIds = {101, 202},
+            survivorUserIds = {},
+            aiSurvivorsAlive = 0,
+            contestantCount = 2,
+            seconds = 8,
+        })
+        expect(empty.title).toBe("TOTAL WIPEOUT")
+        expect(empty.survivorsAlive).toBe(0)
+        expect(ResultPresentation.fallbackFeedback(empty, 101, true).survived)
+            .toBe(false)
+        local bots = RoundResultState.snapshot({
+            participantUserIds = {101},
+            survivorUserIds = {},
+            aiSurvivorsAlive = 1,
+            contestantCount = 3,
+        })
+        expect(bots.title).toBe("1 SURVIVED")
+        expect(ResultPresentation.fallbackFeedback(bots, 101, false).survived)
+            .toBe(false)
+        expect(RoundResultState.atSecond(bots, -2).seconds).toBe(0)
+    end)
+
     it("requires a new authoritative READY after a finished win to certify replay", function()
         local replay = RoundJourneyRules.replayStarted
         expect(replay(7, {phase = "ready", roundNumber = 8})).toBe(true)

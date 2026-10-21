@@ -9,8 +9,11 @@ local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundFeedback")
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local lastCelebrationAt = 0
+local lastCelebratedRound = nil
+local lastCelebratedAsPreview = false
 local folder = Instance.new("Folder")
 folder.Name = "RoundCelebrationPulsesLocal"
 folder.Parent = workspace
@@ -68,16 +71,41 @@ local function makeBurst(root, color, count, speed)
 end
 
 local function celebrate(feedback)
-    local now = os.clock()
-    if now - lastCelebrationAt < 0.7 then
+    if type(feedback) ~= "table" then return end
+    local round = tonumber(feedback.roundNumber)
+    if not round or round < 1 or round ~= math.floor(round)
+        or round == math.huge or round ~= round
+    then
         return
     end
-    lastCelebrationAt = now
+    -- Preview gives immediate green victory feedback. If the later verified
+    -- receipt upgrades the win to MASTER/CLUTCH or FIRST CHAOS, preserve
+    -- the existing premium celebration rather than losing it to dedup.
+    local firstChaosReceipt = false
+    if type(feedback.medals) == "table" then
+        for _, medal in ipairs(feedback.medals) do
+            if medal == "FIRST CHAOS" then
+                firstChaosReceipt = true
+                break
+            end
+        end
+    end
+    local specialReceipt = feedback.pendingRewards ~= true
+        and (ResultPresentation.kind(feedback) == "master"
+            or ResultPresentation.kind(feedback) == "clutch"
+            or firstChaosReceipt)
+    local upgrading = round == lastCelebratedRound
+        and lastCelebratedAsPreview and specialReceipt
+    if round == lastCelebratedRound and not upgrading then return end
 
     local root = rootPart()
-    if not root then
-        return
-    end
+    if not root then return end
+    local now = os.clock()
+    if not upgrading and now - lastCelebrationAt < 0.7 then return end
+
+    lastCelebratedRound = round
+    lastCelebratedAsPreview = feedback.pendingRewards == true
+    lastCelebrationAt = now
 
     local tier = profile()
     local reduced = player:GetAttribute("ReduceMotion") == true
@@ -190,5 +218,18 @@ local function celebrate(feedback)
         end)
     end
 end
+
+-- A slow or lost personalized receipt must not delay a real survivor's
+-- celebration. Only celebrate when the server's frozen winner list proves
+-- that this specific player won; spectators never receive a false victory.
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" or state.phase ~= "result" then return end
+    local preview = ResultPresentation.fallbackFeedback(
+        state, player.UserId, player:GetAttribute("RoundParticipant") == true
+    )
+    if preview and preview.survived then
+        celebrate(preview)
+    end
+end)
 
 feedbackEvent.OnClientEvent:Connect(celebrate)
