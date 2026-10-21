@@ -22,6 +22,7 @@ local currentReduced = nil
 local runners = {}
 local orderedRamps = {}
 local orderedAccessRamps = {}
+local routeSigns = {}
 local flowFolder = nil
 local flowConnections = {}
 
@@ -174,6 +175,10 @@ local function bindFlowCircuit()
 end
 
 local function reset()
+    for _, sign in ipairs(routeSigns) do
+        sign:Destroy()
+    end
+    table.clear(routeSigns)
     folder:ClearAllChildren()
     table.clear(runners)
     table.clear(orderedRamps)
@@ -214,7 +219,11 @@ local function rebuild(circuit, tier, reduced, ramps, access)
     -- legible on Low/ReduceMotion. A SurfaceGui follows shrinking/rotation
     -- automatically: unlike a Neon 3D part it costs no per-frame transform.
     for _, ramp in ipairs(access) do
-        OrbitalRouteSignKit.create(ramp, folder, tier, localeId)
+        -- Roblox renders SurfaceGui reliably when it is parented to the
+        -- adorned BasePart. Maintain explicit ownership to destroy local
+        -- signs on quality changes and streamed arena replacement.
+        local sign = OrbitalRouteSignKit.create(ramp, ramp, tier, localeId)
+        if sign then table.insert(routeSigns, sign) end
     end
     -- Still track the actual eight ramp identities on Low/reduced motion.
     -- Otherwise the controller rebuilds empty visual arrays every poll.
