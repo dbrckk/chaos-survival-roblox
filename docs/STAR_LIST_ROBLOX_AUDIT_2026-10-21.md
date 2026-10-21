@@ -65,6 +65,12 @@ Définir une charte globale *sci-fi survival-show haut de gamme*, puis une ident
 4. Tester ensuite sur une vraie session Studio et au moins un Android cible. Les captures générées hors du jeu ne prouvent pas le rendu réel ; les tests moteur ne certifient pas les FPS et le toucher.
 5. La revue art, animation, sons et UX doit viser un ensemble harmonisé, pas simplement le nombre d'assets.
 
+## Blocages de mise en ligne à traiter avant toute publication automatique
+
+Le [suivi de release #79](https://github.com/dbrckk/chaos-survival-roblox/issues/79) signale des **variables GitHub Actions potentiellement incorrectes ou dangereuses** : les IDs de production avaient encore les valeurs d'une ancienne expérience et les IDs de staging pointaient vers la production. La correction avait échoué à cause d'une confirmation de compte. Vérifier à nouveau les quatre variables directement dans GitHub et établir un staging **strictement distinct** avant d'exécuter un workflow de publication. Ne jamais lancer un déploiement automatique avec ces IDs non confirmés ; ne pas changer les autorisations d'une clé Roblox pour contourner le blocage.
+
+La fiche Roblox, ses médias et la version réellement publiée doivent être contrôlés dans le Creator Dashboard et dans l'expérience publique après QA réelle. Une icône promotionnelle ou une miniature enregistrée localement ne constitue pas une preuve d'upload.
+
 ## État précis à la rédaction
 
 La PR [#117](https://github.com/dbrckk/chaos-survival-roblox/pull/117) a été fusionnée dans `main` (commit `36e94cb43d61c8e6fbcb0ceb8111aa67a78bf6f8`) pour préserver la carte de victoire pendant RESULT et rejeter des récompenses/overlays périmés. La Build Validation a réussi sur le commit `main`; les tests moteur de la branche PR ont réussi, mais ceux du commit fusionné étaient encore en file d'attente lors de la vérification. Aucune publication de cette version dans Roblox ni certification Android n'est revendiquée.
