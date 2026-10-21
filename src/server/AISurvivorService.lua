@@ -1270,6 +1270,63 @@ local function disappearingPlatformEscape(record, root, now)
     return clampToArena(root.Position + dodge)
 end
 
+-- Classic's wave is an authored floor hazard, not an ordinary disaster
+-- warning in Workspace. Bots have humanlike reaction delay and must actually
+-- move across the row boundary. Avoid bonuses to speed, jump or survivability.
+local function gridSweepEscape(record, root, now)
+    if arenaVariantId() ~= "Classic" then
+        record.gridSweepThreat = nil
+        record.gridSweepThreatSeenAt = nil
+        return nil
+    end
+    local _, arena = arenaParts()
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    local folder = mechanics and mechanics:FindFirstChild("GridSweep")
+    local threat, localRoot
+    if folder then
+        for _, band in ipairs(folder:GetChildren()) do
+            if band:IsA("BasePart") and (
+                band:GetAttribute("GridSweepPhase") == "Warning"
+                or band:GetAttribute("GridSweepPhase") == "Pulse"
+            ) then
+                local point = band.CFrame:PointToObjectSpace(root.Position)
+                if math.abs(point.X) <= band.Size.X * 0.5 + 1.2
+                    and math.abs(point.Z) <= band.Size.Z * 0.5 + 1.2
+                    and point.Y >= 1 and point.Y <= 5.1
+                then
+                    threat, localRoot = band, point
+                    break
+                end
+            end
+        end
+    end
+    if not threat then
+        record.gridSweepThreat = nil
+        record.gridSweepThreatSeenAt = nil
+        return nil
+    end
+    if record.gridSweepThreat ~= threat then
+        record.gridSweepThreat = threat
+        record.gridSweepThreatSeenAt = now
+    end
+    if not AISurvivorRules.reactionReady(
+        record.gridSweepThreatSeenAt, now, record.profile.ReactionSeconds
+    ) then return nil end
+
+    -- Use the shorter ground-level exit, on the X or Z axis depending
+    -- on which direction the band runs. Staying at the original Y avoids
+    -- making a bot chase an elevated platform it cannot reach.
+    local crossX = threat.Size.X < threat.Size.Z
+    local cross = crossX and localRoot.X or localRoot.Z
+    local sign = cross < 0 and -1 or 1
+    local safe = sign * (
+        (crossX and threat.Size.X or threat.Size.Z) * 0.5 + 5.5
+    )
+    local localGoal = crossX and Vector3.new(safe, localRoot.Y, localRoot.Z)
+        or Vector3.new(localRoot.X, localRoot.Y, safe)
+    return clampToArena(threat.CFrame:PointToWorldSpace(localGoal))
+end
+
 local function immediateThreat(record, root, now)
     local nearest = nil
     local nearestDistance = math.huge
@@ -2492,6 +2549,9 @@ local function stepRecord(record, now)
         if not urgentTarget then
             urgentTarget = immediateThreat(record, root, now)
         end
+        if not urgentTarget then
+            urgentTarget = gridSweepEscape(record, root, now)
+        end
     end
 
     if not urgentTarget then
@@ -2544,7 +2604,10 @@ local function stepRecord(record, now)
             local skybridgeEscape = record.platformThreat
                 and record.platformThreat.Parent
                 and record.platformThreat:GetAttribute("ChaosSkybridge") == true
-            record.target = skybridgeEscape
+            local floorSweepEscape = record.gridSweepThreat
+                and record.gridSweepThreat.Parent
+                and record.gridSweepThreat:GetAttribute("GridSweepPhase") ~= nil
+            record.target = (skybridgeEscape or floorSweepEscape)
                 and urgentTarget or separateTarget(record, urgentTarget)
             record.nextThink = now + 0.55
         end
