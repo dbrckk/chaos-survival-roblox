@@ -13,6 +13,7 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 
 local lastCelebrationAt = 0
 local lastCelebratedRound = nil
+local lastCelebratedAsPreview = false
 local folder = Instance.new("Folder")
 folder.Name = "RoundCelebrationPulsesLocal"
 folder.Parent = workspace
@@ -74,19 +75,36 @@ local function celebrate(feedback)
     local round = tonumber(feedback.roundNumber)
     if not round or round < 1 or round ~= math.floor(round)
         or round == math.huge or round ~= round
-        or round == lastCelebratedRound
     then
         return
     end
+    -- Preview gives immediate green victory feedback. If the later verified
+    -- receipt upgrades the win to MASTER/CLUTCH or FIRST CHAOS, preserve
+    -- the existing premium celebration rather than losing it to dedup.
+    local firstChaosReceipt = false
+    if type(feedback.medals) == "table" then
+        for _, medal in ipairs(feedback.medals) do
+            if medal == "FIRST CHAOS" then
+                firstChaosReceipt = true
+                break
+            end
+        end
+    end
+    local specialReceipt = feedback.pendingRewards ~= true
+        and (ResultPresentation.kind(feedback) == "master"
+            or ResultPresentation.kind(feedback) == "clutch"
+            or firstChaosReceipt)
+    local upgrading = round == lastCelebratedRound
+        and lastCelebratedAsPreview and specialReceipt
+    if round == lastCelebratedRound and not upgrading then return end
 
     local root = rootPart()
     if not root then return end
     local now = os.clock()
-    if now - lastCelebrationAt < 0.7 then return end
+    if not upgrading and now - lastCelebrationAt < 0.7 then return end
 
-    -- A server result preview and its later reward receipt refer to the
-    -- same event. Never spawn the expensive celebration twice.
     lastCelebratedRound = round
+    lastCelebratedAsPreview = feedback.pendingRewards == true
     lastCelebrationAt = now
 
     local tier = profile()
