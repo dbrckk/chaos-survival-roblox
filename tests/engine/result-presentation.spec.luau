@@ -73,6 +73,44 @@ describe("Result presentation", function()
             .toBe(false)
     end)
 
+    it("recovers a failed winner's result from frozen rosters, not reward success", function()
+        local state = {
+            phase = "result",
+            roundNumber = 15,
+            survivorUserIds = {101, 303},
+            participantUserIds = {101, 202, 303},
+            disasterIds = {"Bombs"},
+        }
+        -- The entire roster comes from the actual round, not from how
+        -- many players completed their Coins/XP writes.
+        local winner = ResultPresentation.fallbackFeedback(state, 101, false)
+        expect(winner.survived).toBe(true)
+        expect(winner.spectating).toBe(false)
+        expect(winner.pendingRewards).toBe(true)
+        expect(winner.coins == nil).toBe(true)
+        local loser = ResultPresentation.fallbackFeedback(state, 202, false)
+        expect(loser.survived).toBe(false)
+        expect(loser.spectating).toBe(false)
+        expect(loser.pendingRewards).toBe(true)
+        local spectator = ResultPresentation.fallbackFeedback(state, 999, true)
+        expect(spectator.survived).toBe(false)
+        expect(spectator.spectating).toBe(true)
+        expect(spectator.pendingRewards).toBe(false)
+
+        -- An explicit empty roster must override stale RoundParticipant.
+        local noParticipants = ResultPresentation.fallbackFeedback({
+            phase = "result", survivorUserIds = {}, participantUserIds = {},
+        }, 202, true)
+        expect(noParticipants.spectating).toBe(true)
+
+        -- On failed settlement, the player should be informed that the
+        -- amount is unknown rather than being shown a fabricated +0 award.
+        expect(CoreLocalization.text("en-us", "RESULT_REWARDS_UNAVAILABLE"))
+            .toBe("REWARDS COULD NOT BE VERIFIED")
+        expect(CoreLocalization.text("fr-fr", "RESULT_REWARDS_UNAVAILABLE"))
+            .toBe("GAINS NON VÉRIFIÉS")
+    end)
+
     it("prioritizes master over clutch", function()
         expect(ResultPresentation.kind({
             survived = true,

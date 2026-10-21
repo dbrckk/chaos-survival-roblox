@@ -2179,11 +2179,14 @@ local function showRoundFeedback(feedback)
 
     resultReward.Text = feedback.spectating == true
         and CoreLocalization.text(localeId, "RESULT_SPECTATOR_REWARD")
-        or (feedback.pendingRewards == true
-            and CoreLocalization.text(localeId, "RESULT_REWARDS_PENDING")
-            or CoreLocalization.text(localeId, "COINS_XP", shownCoins, shownXP))
+        or (feedback.rewardsUnavailable == true
+            and CoreLocalization.text(localeId, "RESULT_REWARDS_UNAVAILABLE")
+            or (feedback.pendingRewards == true
+                and CoreLocalization.text(localeId, "RESULT_REWARDS_PENDING")
+                or CoreLocalization.text(localeId, "COINS_XP", shownCoins, shownXP)))
     resultNext.Text = CoreLocalization.text(localeId, "NEXT_CHAOS_SOON")
-    if feedback.pendingRewards ~= true and #extras > 0 and not touchDevice then
+    if feedback.pendingRewards ~= true and feedback.rewardsUnavailable ~= true
+        and #extras > 0 and not touchDevice then
         resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")
     end
 
@@ -2332,6 +2335,8 @@ local function showRoundFeedback(feedback)
 
     if feedback.spectating == true then
         resultTip.Text = CoreLocalization.text(localeId, "RESULT_SPECTATOR_TIP")
+    elseif feedback.rewardsUnavailable == true then
+        resultTip.Text = CoreLocalization.text(localeId, "RESULT_REWARDS_UNAVAILABLE_TIP")
     elseif feedback.pendingRewards == true then
         resultTip.Text = CoreLocalization.text(localeId, "RESULT_REWARDS_TIP")
     elseif not survived then

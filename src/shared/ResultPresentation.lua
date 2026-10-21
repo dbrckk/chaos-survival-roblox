@@ -143,21 +143,27 @@ end
 -- leaving an empty screen. Never infer victory for a spectator.
 function ResultPresentation.fallbackFeedback(state, userId, participating)
     if type(state) ~= "table" or state.phase ~= "result" then return nil end
-    local survivors = type(state.survivorUserIds) == "table"
-        and state.survivorUserIds or {}
-    local won = false
     local id = tonumber(userId)
-    -- The server-owned survivor roster is authoritative even if the
-    -- player's RoundParticipant attribute reaches the client one frame late.
-    if id and id > 0 then
-        for _, survivorId in ipairs(survivors) do
-            if tonumber(survivorId) == id then
-                won = true
-                break
+    local function inRoster(roster)
+        if type(roster) ~= "table" or not id or id <= 0 then
+            return false
+        end
+        for _, entryId in ipairs(roster) do
+            if tonumber(entryId) == id then
+                return true
             end
         end
+        return false
     end
-    local played = participating == true or won
+
+    -- Both rosters are frozen by the round server BEFORE reward processing:
+    -- a failed achievement or late participant attribute cannot silently
+    -- turn a real winner into a spectator or invent a spectator win.
+    local won = inRoster(state.survivorUserIds)
+    local hasParticipants = type(state.participantUserIds) == "table"
+    local played = won
+        or (hasParticipants and inRoster(state.participantUserIds))
+        or (not hasParticipants and participating == true)
     return {
         survived = won,
         spectating = not played,

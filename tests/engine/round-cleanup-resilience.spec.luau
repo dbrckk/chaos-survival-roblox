@@ -6,6 +6,48 @@ local RoundCleanup = require("../../src/server/RoundCleanup")
 local RoundSettlement = require("../../src/server/RoundSettlement")
 
 describe("Round settlement resilience", function()
+    it("freezes the real winner roster before any failing payout or achievement", function()
+        local alice = {UserId = 101, connected = true, health = 42}
+        local bob = {UserId = 202, connected = true, health = 0}
+        local claire = {UserId = 303, connected = true, health = 16}
+        local left = {UserId = 404, connected = false, health = 50}
+        local participants, survivors, winning = RoundSettlement.snapshot(
+            {alice, bob, claire, left, alice},
+            {[202] = true},
+            function(p) return p.connected end,
+            function(p) return p.health > 0 end
+        )
+        expect(#participants).toBe(3)
+        expect(participants[1]).toBe(101)
+        expect(participants[2]).toBe(202)
+        expect(participants[3]).toBe(303)
+        expect(#survivors).toBe(2)
+        expect(survivors[1]).toBe(101)
+        expect(survivors[2]).toBe(303)
+        expect(winning[101]).toBe(true)
+        expect(winning[303]).toBe(true)
+        expect(winning[202] == nil).toBe(true)
+        expect(winning[404] == nil).toBe(true)
+
+        local succeeded, failed = RoundSettlement.eachPlayer(
+            {alice, bob, claire},
+            function(player)
+                if player == alice then
+                    error("data grant threw before feedback")
+                end
+            end
+        )
+        expect(succeeded).toBe(2)
+        expect(failed).toBe(1)
+        -- Even a disconnected/failing reward transaction cannot rewrite
+        -- the authoritative RESULT roster after the disaster is over.
+        alice.connected = false
+        claire.health = 0
+        expect(#survivors).toBe(2)
+        expect(winning[101]).toBe(true)
+        expect(winning[303]).toBe(true)
+    end)
+
     it("processes the remaining players when an earlier player fails", function()
         local seen = {}
         local errors = {}
