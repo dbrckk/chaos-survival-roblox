@@ -255,12 +255,16 @@ function OrbitalHelix.capture(circuit)
     local snapshot = {}
     if not circuit then return snapshot end
     for _, ramp in ipairs(circuit:GetChildren()) do
-        if ramp:IsA("BasePart") and ramp:GetAttribute("OrbitalHelixRamp") == true then
+        if ramp:IsA("BasePart") and (
+            ramp:GetAttribute("OrbitalHelixRamp") == true
+            or ramp:GetAttribute("OrbitalAccessRamp") == true
+            or ramp:GetAttribute("OrbitalCoreRamp") == true
+        ) then
             local from = ramp:GetAttribute("HelixStart")
             local to = ramp:GetAttribute("HelixFinish")
-            local lane = ramp:GetAttribute("HelixLane")
+            local group = ramp:GetAttribute("OrbitRouteGroup")
             if typeof(from) == "Vector3" and typeof(to) == "Vector3"
-                and type(lane) == "number"
+                and type(group) == "string" and group ~= ""
             then
                 local entry = {
                     ramp = ramp,
@@ -268,11 +272,13 @@ function OrbitalHelix.capture(circuit)
                     to = to,
                     originalCFrame = ramp.CFrame,
                     originalSize = ramp.Size,
+                    padding = ramp.Size.Z - (to - from).Magnitude,
+                    compact = ramp:GetAttribute("OrbitalHelixRamp") ~= true,
                     decorations = {},
                 }
                 for _, piece in ipairs(circuit:GetChildren()) do
                     if piece:IsA("BasePart") and piece ~= ramp
-                        and piece:GetAttribute("HelixLane") == lane
+                        and piece:GetAttribute("OrbitRouteGroup") == group
                     then
                         table.insert(entry.decorations, {
                             part = piece,
@@ -303,10 +309,14 @@ function OrbitalHelix.scale(snapshot, center, amount)
             local from = move(entry.from)
             local to = move(entry.to)
             local cf = CFrame.lookAt((from + to) * 0.5, to, Vector3.yAxis)
-            local length = (to - from).Magnitude + 4.4
+            local length = (to - from).Magnitude + entry.padding
             local prior = entry.originalSize.Z
+            local width = entry.compact
+                and math.max(2.4, entry.originalSize.X * factor)
+                or entry.originalSize.X
+            local lateralScale = width / entry.originalSize.X
             ramp.CFrame = cf
-            ramp.Size = Vector3.new(entry.originalSize.X, entry.originalSize.Y, length)
+            ramp.Size = Vector3.new(width, entry.originalSize.Y, length)
 
             for _, d in ipairs(entry.decorations) do
                 if d.part and d.part.Parent then
@@ -314,7 +324,7 @@ function OrbitalHelix.scale(snapshot, center, amount)
                     local p = localCf.Position
                     local rotationOnly = localCf - p
                     d.part.CFrame = cf
-                        * CFrame.new(p.X, p.Y, p.Z * (length / prior))
+                        * CFrame.new(p.X * lateralScale, p.Y, p.Z * (length / prior))
                         * rotationOnly
                     local dz = d.originalSize.Z
                     -- Rails and spines extend with the ramp; short transverse
@@ -323,7 +333,9 @@ function OrbitalHelix.scale(snapshot, center, amount)
                         dz = math.max(0.25, dz + length - prior)
                     end
                     d.part.Size = Vector3.new(
-                        d.originalSize.X, d.originalSize.Y, dz
+                        d.originalSize.X > 1
+                            and d.originalSize.X * lateralScale or d.originalSize.X,
+                        d.originalSize.Y, dz
                     )
                 end
             end
