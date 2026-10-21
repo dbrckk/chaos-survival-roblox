@@ -480,7 +480,9 @@ describe("Shrinking Arena mobility integration", function()
 
         local originals = {}
         local source = OrbitalHelix.capture(helix)
-        expect(#source).toBe(8)
+        -- Shrink both the eight competitive lanes and the ninth physical
+        -- observation-deck connector, without inventing a scoring lane.
+        expect(#source).toBe(9)
         for _, state in ipairs(source) do
             originals[state.ramp] = {
                 cf = state.ramp.CFrame,
@@ -530,6 +532,23 @@ describe("Shrinking Arena mobility integration", function()
             expect((rail.CFrame.Position - originals[rail].cf.Position).Magnitude > 0.3).toBe(true)
         end
         expect(advanced).toBe(8)
+
+        local core = helix:FindFirstChild("HelixRamp9")
+        local entrance = platforms:FindFirstChild("Platform10")
+        local observation = platforms:FindFirstChild("Platform18")
+        expect(core ~= nil and entrance ~= nil and observation ~= nil).toBe(true)
+        expect(core:GetAttribute("OrbitalCoreRamp")).toBe(true)
+        local coreFrom = entrance.Position
+            + Vector3.new(0, entrance.Size.Y * 0.5 - 0.15, 0)
+        local coreTo = observation.Position
+            + Vector3.new(0, observation.Size.Y * 0.5 - 0.15, 0)
+        expect((core.Position - (coreFrom + coreTo) * 0.5).Magnitude < 0.1)
+            .toBe(true)
+        expect((core.CFrame.LookVector - (coreTo - coreFrom).Unit).Magnitude < 0.02)
+            .toBe(true)
+        expect((core.Position - originals[core].cf.Position).Magnitude > 0.3)
+            .toBe(true)
+        expect(core.CanCollide).toBe(true)
 
         active = false
         cleanup(callbacks, objects)

@@ -445,7 +445,9 @@ describe("Chaos Survival engine", function()
         for _, obj in ipairs((circuit :: Folder):GetChildren()) do
             expect(obj:IsA("BasePart")).toBe(true)
             expect(obj.Anchored).toBe(true)
-            if obj:GetAttribute("OrbitalHelixRamp") == true then
+            if obj:GetAttribute("OrbitalHelixRamp") == true
+                or obj:GetAttribute("OrbitalCoreRamp") == true
+            then
                 physical += 1
                 local index = obj:GetAttribute("HelixLane")
                 local route = OrbitalHelix.route(variant, center, index)
@@ -466,8 +468,24 @@ describe("Chaos Survival engine", function()
                 expect(obj.CastShadow).toBe(false)
             end
         end
-        expect(physical).toBe(8)
-        expect(noncolliding).toBe(64)
+        -- Eight original Helix scoring ramps plus a true ninth bridge
+        -- for the high central podium. The extra walkway has no score
+        -- sensor and therefore cannot change combo or coin economics.
+        expect(physical).toBe(9)
+        expect(noncolliding).toBe(72)
+        local upper = arena:FindFirstChild("Platforms"):FindFirstChild("Platform18")
+        local lower = arena:FindFirstChild("Platforms"):FindFirstChild("Platform17")
+        expect(upper ~= nil and lower ~= nil).toBe(true)
+        expect(upper.CanCollide).toBe(true)
+        expect(upper:GetAttribute("RouteTier")).toBe(4)
+        local core = circuit:FindFirstChild("HelixRamp9")
+        expect(core ~= nil).toBe(true)
+        expect(core:GetAttribute("OrbitalCoreRamp")).toBe(true)
+        expect(core:GetAttribute("OrbitalHelixRamp") == nil).toBe(true)
+        expect(core.CanCollide).toBe(true)
+        local headroom = upper.Position.Y - upper.Size.Y * 0.5
+            - (lower.Position.Y + lower.Size.Y * 0.5)
+        expect(headroom >= 8.4).toBe(true)
 
         local swapped = MapBuilder.buildArena(Config, "Classic", ArenaVariants)
         expect(swapped:FindFirstChild("HelixCircuit") == nil).toBe(true)

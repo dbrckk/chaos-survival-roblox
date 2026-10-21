@@ -167,7 +167,16 @@ ArenaVariants.Definitions = {
                 })
             end
             table.insert(result, {offset = Vector3.new(0, 7, 0), size = Vector3.new(18, 2, 18)})
-            table.insert(result, {offset = Vector3.new(0, 15, 0), size = Vector3.new(11, 2, 11)})
+            -- Leave 10 studs of clear R15 headroom above the lower hub
+            -- (top Y=8 versus upper bottom Y=18). Previously the upper
+            -- podium bottomed at Y=14 and trapped characters below it.
+            -- An authored ninth physical connector reaches this deck from
+            -- inner platform 10; there are still only eight Helix skills.
+            table.insert(result, {
+                offset = Vector3.new(0, 19, 0),
+                size = Vector3.new(11, 2, 11),
+                RouteTier = 4,
+            })
             return result
         end)(),
     },
