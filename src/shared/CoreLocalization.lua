@@ -44,6 +44,8 @@ local TEXT = {
         RESULT_SPECTATOR_REWARD = "SPECTATING",
         RESULT_SPECTATOR_TIP = "Join the next round automatically",
         TOUCH_CONTROLS = "LEFT STICK = MOVE  •  RIGHT BUTTON = JUMP  •  SURVIVE UNTIL 0",
+        JUMP_SHOCK_READY = "GET READY",
+        JUMP_SHOCK_NOW = "JUMP!",
         FIRST_WAIT = "AUTOMATIC START  •  SURVIVE UNTIL 0",
         FIRST_VOTE = "1/3  PICK A DISASTER (OPTIONAL)  •  NEXT: SURVIVE",
         FIRST_READY = "2/3  MOVE + JUMP  •  AVOID DANGER ZONES",
@@ -469,7 +471,7 @@ local HAZARDS = {
         SpeedSurge = {name = "SPEED SURGE", action = "CONTROL", hint = "CONTROL YOUR SPEED NEAR THE EDGES"},
         Darkness = {name = "BLACKOUT", action = "FOLLOW LIGHT", hint = "FOLLOW THE BRIGHT SAFE ROUTES"},
         ShrinkingArena = {name = "SHRINKING ARENA", action = "CENTER", hint = "MOVE TOWARD THE CENTER AS THE ARENA SHRINKS"},
-        JumpShock = {name = "SHOCKWAVE", action = "BACK OFF", hint = "GIVE THE BLUE SHOCKWAVE EXTRA SPACE"},
+        JumpShock = {name = "SHOCKWAVE", action = "TIME YOUR JUMP", hint = "JUMP JUST BEFORE THE BLUE SHOCKWAVE HITS"},
     },
     fr = {
         Meteors = {name = "PLUIE DE MÉTÉORES", action = "ESQUIVE", hint = "ÉVITE LES CERCLES D'ALERTE ORANGE"},
@@ -482,7 +484,7 @@ local HAZARDS = {
         SpeedSurge = {name = "ACCÉLÉRATION", action = "CONTRÔLE", hint = "CONTRÔLE TA VITESSE PRÈS DES BORDS"},
         Darkness = {name = "BLACKOUT", action = "SUIS LA LUMIÈRE", hint = "SUIS LES ROUTES LUMINEUSES"},
         ShrinkingArena = {name = "ARÈNE QUI RÉTRÉCIT", action = "CENTRE", hint = "REJOINS LE CENTRE PENDANT QUE L'ARÈNE RÉTRÉCIT"},
-        JumpShock = {name = "ONDE DE CHOC", action = "ÉCARTE-TOI", hint = "GARDE TES DISTANCES AVEC L'ONDE BLEUE"},
+        JumpShock = {name = "ONDE DE CHOC", action = "SAUTE AU BON MOMENT", hint = "SAUTE JUSTE AVANT QUE L'ONDE BLEUE FRAPPE"},
     },
 }
 
