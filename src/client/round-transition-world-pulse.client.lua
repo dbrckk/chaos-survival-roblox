@@ -16,6 +16,8 @@ folder.Parent = workspace
 local previousPhase = "waiting"
 local lastFinalRush = false
 local lastOverdrive = false
+local lastRoundNumber = nil
+local transitionEpoch = 0
 
 local function arenaBase()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -31,7 +33,7 @@ local function emitRing(name, frame, color, startDiameter, endDiameter, duration
     )
 end
 
-local function pulseArena(state, finalRush)
+local function pulseArena(state, finalRush, epoch)
     local base = arenaBase()
     if not base then return end
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -55,7 +57,10 @@ local function pulseArena(state, finalRush)
     local secondRing = finalRush or (state.doubleChaos == true and ids[2] ~= nil)
     if secondRing and tier.Name ~= "Low" and not reduced then
         task.delay(0.09, function()
-            if base.Parent then
+            if previousPhase == "round"
+                and RoundEventPresentation.pulseStillCurrent(
+                    epoch, transitionEpoch, base, arenaBase()
+                ) then
                 emitRing(
                     finalRush and "FinalRushArenaPulseRed" or "RoundStartArenaPulseSecondary",
                     frame * CFrame.new(0, 0.08, 0), secondColor,
@@ -74,7 +79,7 @@ local function rootPart()
     return root and root:IsA("BasePart") and root or nil
 end
 
-local function pulse(color, strength, doubleRing)
+local function pulse(color, strength, doubleRing, epoch, sourcePhase)
     local root = rootPart()
     if not root then return end
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -86,7 +91,12 @@ local function pulse(color, strength, doubleRing)
     local function makeRing(extraDiameter, delaySeconds, alpha)
         task.delay(delaySeconds, function()
             local currentRoot = rootPart()
-            if not currentRoot then return end
+            if previousPhase ~= sourcePhase
+                or not RoundEventPresentation.pulseStillCurrent(
+                    epoch, transitionEpoch, root, currentRoot
+                ) then
+                return
+            end
             emitRing(
                 "RoundTransitionPulseLocal",
                 CFrame.new(currentRoot.Position + Vector3.new(0, -2.35, 0)),
@@ -103,10 +113,26 @@ local function pulse(color, strength, doubleRing)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
     local finalRush = phase == "round" and state.finalRush == true
     local overdrive = phase == "round" and state.overdrive == true
     local roundStarted = phase == "round" and previousPhase ~= "round"
+
+    local candidate = tonumber(state.roundNumber)
+    local currentRound = candidate and candidate >= 1
+        and candidate < math.huge and candidate == math.floor(candidate)
+        and candidate or nil
+    local roundChanged = currentRound ~= nil
+        and currentRound ~= lastRoundNumber
+    -- Repeated second-by-second RoundState packets must not cancel a
+    -- legitimate 90ms Double Chaos flourish; genuine transitions must.
+    if phase ~= previousPhase or finalRush ~= lastFinalRush
+        or overdrive ~= lastOverdrive or roundChanged then
+        transitionEpoch += 1
+    end
+    if currentRound then lastRoundNumber = currentRound end
+    local issuedEpoch = transitionEpoch
 
     local kick = RoundEventPresentation.cameraKick(
         previousPhase,
@@ -116,9 +142,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     )
 
     if roundStarted then
-        pulseArena(state, false)
+        pulseArena(state, false, issuedEpoch)
     elseif finalRush and not lastFinalRush then
-        pulseArena(state, true)
+        pulseArena(state, true, issuedEpoch)
     elseif kick > 0 then
         local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
         local color = overdrive and not lastOverdrive
@@ -133,7 +159,8 @@ stateEvent.OnClientEvent:Connect(function(state)
         pulse(
             color,
             kick,
-            state.doubleChaos == true or overdrive
+            state.doubleChaos == true or overdrive,
+            issuedEpoch, phase
         )
     end
 
