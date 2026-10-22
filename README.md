@@ -48,6 +48,7 @@ For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-
 - Server-side reward handling
 - Per-disaster visual identities with Double Chaos color blending
 - Progressive round-intensity director with solo/Double Chaos safety caps
+- Veteran-only evolving Meteor/Bomb storm routes: scattered impacts → advancing sweep → alternating crossfire, with existing fair warning radii, mobile-stage labels and shrink-aware fallback
 - Hazard cadence, arena VFX and audio mix react to escalating round intensity
 - Dynamic neon arena beacon reacting to active chaos
 - Procedural premium lobby hub with neon gate and title signage
