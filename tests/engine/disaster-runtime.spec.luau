@@ -447,9 +447,10 @@ describe("Headless disaster playtest", function()
         character.Parent = workspace
         local subject = {Character = character}
         local cleanup = {}
+        local onCleanup = {}
         local active = true
 
-        gravity.start({
+        local ctx = {
             Config = Config,
             EnableGravityTides = true,
             RoundStartedAt = os.clock() - 9,
@@ -457,8 +458,12 @@ describe("Headless disaster playtest", function()
             IsContestantActive = function(p) return p == subject end,
             HazardContestants = {subject},
             Cleanup = cleanup,
-        })
+            OnCleanup = onCleanup,
+        }
+        gravity.start(ctx)
+        expect(ctx.GravityTideStage).toBe("Pull")
         task.wait(0.12)
+        expect(ctx.GravityTideStage).toBe("Pull")
         local beacon = workspace:FindFirstChild("MoonGravityBeacon")
         expect(beacon ~= nil).toBe(true)
         local label = beacon and beacon:FindFirstChild("GravityTideSignal")
@@ -477,7 +482,8 @@ describe("Headless disaster playtest", function()
         end
 
         active = false
-        runCleanup(cleanup, {})
+        runCleanup(cleanup, onCleanup)
+        expect(ctx.GravityTideStage == nil).toBe(true)
         expect(beacon == nil or beacon.Parent == nil).toBe(true)
         expect(force == nil or force.Parent == nil).toBe(true)
         expect(workspace.Gravity).toBe(originalGravity)
