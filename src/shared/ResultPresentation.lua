@@ -225,6 +225,15 @@ function ResultPresentation.animateCardArrival(visible, displayedRound, incoming
     return old ~= incoming
 end
 
+-- An earned result stays readable on every device. Android never needs
+-- a screen-wide flash over touch controls, and Reduce Motion avoids both
+-- the flash and the card scale entrance. A late receipt never reanimates.
+function ResultPresentation.entryMotion(animateArrival, reducedMotion, touchDevice)
+    local animateCard = animateArrival == true and reducedMotion ~= true
+    local flashScreen = animateCard and touchDevice ~= true
+    return animateCard, flashScreen
+end
+
 function ResultPresentation.kind(feedback)
     feedback = type(feedback) == "table" and feedback or {}
 
