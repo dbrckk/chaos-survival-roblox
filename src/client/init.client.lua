@@ -2008,6 +2008,11 @@ local function cancelResultArrivalTweens()
 end
 
 local function dismissResultCard()
+    -- Result may be dismissed before the delayed flash-fade starts.
+    -- Cancel the active entrance and clear the full-screen overlay even
+    -- when the result card has already been hidden.
+    cancelResultArrivalTweens()
+    resultFlash.BackgroundTransparency = 1
     if not resultCard.Visible then
         return
     end
@@ -2111,6 +2116,9 @@ local function showRoundFeedback(feedback)
     -- without replaying the entire entrance and full-screen flash.
     local animateArrival = ResultPresentation.animateCardArrival(
         resultCard.Visible, lastDisplayedResultRoundNumber, feedback.roundNumber
+    )
+    local animateCard, flashScreen = ResultPresentation.entryMotion(
+        animateArrival, player:GetAttribute("ReduceMotion") == true, touchDevice
     )
     lastDisplayedResultRoundNumber = tonumber(feedback.roundNumber)
     cancelResultArrivalTweens()
@@ -2435,17 +2443,12 @@ local function showRoundFeedback(feedback)
                 or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95))))
 
     resultCard.Visible = true
-    if animateArrival then
+    if animateCard then
         resultCard.BackgroundTransparency = 1
         resultScale.Scale = 0.82
         resultFlash.BackgroundTransparency = 1
 
         resultArrivalTweens = {
-            TweenService:Create(
-                resultFlash,
-                UITheme.Motion.FastFade,
-                {BackgroundTransparency = survived and 0.78 or 0.82}
-            ),
             TweenService:Create(
                 resultCard, UITheme.Motion.EmphasisIn,
                 {BackgroundTransparency = 0.04}
@@ -2454,20 +2457,29 @@ local function showRoundFeedback(feedback)
                 resultScale, UITheme.Motion.EmphasisIn, {Scale = 1}
             ),
         }
+        if flashScreen then
+            resultArrivalTweens[#resultArrivalTweens + 1] = TweenService:Create(
+                resultFlash,
+                UITheme.Motion.FastFade,
+                {BackgroundTransparency = survived and 0.78 or 0.82}
+            )
+        end
         for _, tween in ipairs(resultArrivalTweens) do
             tween:Play()
         end
 
-        task.delay(0.14, function()
-            -- An updated receipt or a new round may have superseded this
-            -- introduction before the deferred flash cleanup runs.
-            if token == resultToken then
-                TweenService:Create(
-                    resultFlash, UITheme.Motion.StandardFade,
-                    {BackgroundTransparency = 1}
-                ):Play()
-            end
-        end)
+        if flashScreen then
+            task.delay(0.14, function()
+                -- A later receipt or phase transition must never resurrect
+                -- a flash after the active result has gone away.
+                if token == resultToken and resultCard.Visible then
+                    TweenService:Create(
+                        resultFlash, UITheme.Motion.StandardFade,
+                        {BackgroundTransparency = 1}
+                    ):Play()
+                end
+            end)
+        end
     else
         -- A receipt may arrive during the entry tween. Keep the card in
         -- place, suppress any second flash, and show verified Coins/XP now.
