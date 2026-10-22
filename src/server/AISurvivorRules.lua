@@ -771,6 +771,26 @@ function AISurvivorRules.warningDetectionRadius(warningName, visualRadius, endDi
     return math.min(120, radius) + 9
 end
 
+-- A bot must not jump as soon as it sees a shock ring. The server awards
+-- a real dodge only while the avatar is rising above the floor at impact.
+-- Wait until the final part of the *authoritative* telegraph, leaving time
+-- for the usual NPC decision cadence without fabricating immunity.
+function AISurvivorRules.shockJumpWindow(startedAt, durationSeconds, now)
+    local started = tonumber(startedAt)
+    local duration = tonumber(durationSeconds)
+    local current = tonumber(now)
+    if not started or not duration or not current
+        or started ~= started or duration ~= duration or current ~= current
+        or math.abs(started) == math.huge
+        or math.abs(duration) == math.huge
+        or math.abs(current) == math.huge
+        or duration <= 0 then
+        return false
+    end
+    local remaining = started + duration - current
+    return remaining >= 0.10 and remaining <= 0.34
+end
+
 -- A single pulse should generate at most one deliberate jump per survivor.
 -- The caller marks a warning instance as handled even when a cautious bot
 -- declines the Freeze jump. A newly spawned warning is a new opportunity.
