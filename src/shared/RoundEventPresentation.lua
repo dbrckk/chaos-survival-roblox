@@ -95,6 +95,7 @@ function RoundEventPresentation.priority(kind)
         overdrive = 30,
         impactWave = 25,
         collapseWave = 25,
+        speedTempo = 25,
         readyCountdown = 20,
     }
     return priorities[kind] or 0

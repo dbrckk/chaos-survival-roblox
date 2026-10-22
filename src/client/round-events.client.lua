@@ -121,6 +121,7 @@ local lastOverdrive = false
 local lastFinalRush = false
 local lastImpactWaveMode = nil
 local lastDoubleCollapseUnlocked = false
+local lastSpeedTempoPhase = nil
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
@@ -252,6 +253,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     local phase = tostring(state.phase or "waiting")
     local overdrive = phase == "round" and state.overdrive == true
     local finalRush = phase == "round" and state.finalRush == true
+    local speedTempoPhase = phase == "round"
+        and (state.speedTempoPhase == "Surge" or state.speedTempoPhase == "Recover")
+        and state.speedTempoPhase or nil
     local fusionName = type(state.fusionName) == "string" and state.fusionName or nil
     local fusionKey = state.doubleChaos and fusionName or nil
     local eventColor = RoundEventPresentation.accent(
@@ -314,8 +318,26 @@ stateEvent.OnClientEvent:Connect(function(state)
             UITheme.Colors.Orange,
             0.95
         )
+    elseif phase == "round" and speedTempoPhase ~= nil
+        and lastSpeedTempoPhase ~= nil
+        and speedTempoPhase ~= lastSpeedTempoPhase
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+    then
+        -- No round-start spam. Only announce a real change in the
+        -- server-authoritative stage, using the existing mobile-safe toast.
+        local recovering = speedTempoPhase == "Recover"
+        local key = recovering and "SPEED_TEMPO_RECOVER" or "SPEED_TEMPO_SURGE"
+        show(
+            "speedTempo",
+            CoreLocalization.text(localeId, key),
+            CoreLocalization.text(localeId, key .. "_SUB"),
+            recovering and UITheme.Colors.Cyan or UITheme.Colors.Gold,
+            0.95
+        )
     end
 
+    lastSpeedTempoPhase = speedTempoPhase
     lastImpactWaveMode = phase == "round" and state.impactWaveMode or nil
     lastDoubleCollapseUnlocked = phase == "round"
         and state.doubleCollapseUnlocked == true

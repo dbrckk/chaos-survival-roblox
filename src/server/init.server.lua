@@ -1089,6 +1089,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and #selected == 1
             and activeHazards.LowGravity == true
             and roundSettings.RoundSeconds >= 28,
+        -- Only experienced single-disaster rounds get alternating speed
+        -- windows; keep the first games and fusions steady.
+        EnableSpeedTempo = allowDynamicArenas
+            and #selected == 1
+            and activeHazards.SpeedSurge == true
+            and roundSettings.RoundSeconds >= 28,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
         EnableClassicGridSweep = currentArenaVariant == "Classic"
@@ -1425,6 +1431,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
             -- Only announce the second-collapse danger after real, spaced
             -- authoritative deck warnings were successfully staged.
             doubleCollapseUnlocked = ctx.DoubleCollapseUnlocked == true,
+            -- Mirrors the active server rhythm. Clients use transitions to
+            -- show an actionable cue without extra polling or remotes.
+            speedTempoPhase = ctx.SpeedTempoPhase,
             title = title,
             hint = roundHint,
             seconds = t,

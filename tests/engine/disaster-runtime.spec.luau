@@ -705,6 +705,22 @@ describe("Headless disaster playtest", function()
         end
     end)
 
+    it("gives veteran Speed Surge a repeatable seven/five-second rhythm", function()
+        local speed = require("../../src/server/Disasters/SpeedSurge")
+        local phase, remaining = speed.tempoAt(0, true)
+        expect(phase).toBe("Surge")
+        expect(remaining).toBe(7)
+        phase, remaining = speed.tempoAt(7, true)
+        expect(phase).toBe("Recover")
+        expect(remaining).toBe(5)
+        phase, remaining = speed.tempoAt(12, true)
+        expect(phase).toBe("Surge")
+        expect(remaining).toBe(7)
+        phase, remaining = speed.tempoAt(9, false)
+        expect(phase).toBe("Surge")
+        expect(remaining).toBe(math.huge)
+    end)
+
     it("allows a real timed jump to dodge Jump Shock, not a fall", function()
         local jumpShock = require("../../src/server/Disasters/JumpShock")
         local dodged = jumpShock.dodgedByJump
