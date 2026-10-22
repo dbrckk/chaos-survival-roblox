@@ -170,6 +170,16 @@ local function ensureRenderLoop()
                     -- for every simultaneous hazard.
                     local text = state.warningText
                     if text and text.Parent then
+                        if state.kind == "JumpShock" then
+                            local remaining = state.duration * (1 - alpha)
+                            local nowPhase = remaining <= HazardWarningSignatureRules.JumpNowWindow
+                            if nowPhase ~= state.promptNow then
+                                text.Text = HazardWarningSignatureRules.jumpPrompt(
+                                    remaining, player.LocaleId, CoreLocalization
+                                ) or text.Text
+                                state.promptNow = nowPhase
+                            end
+                        end
                         text.TextTransparency = reduced and 0.02
                             or math.clamp(0.02 + alpha * 0.22, 0, 1)
                         text.TextStrokeTransparency = reduced and 0.42
@@ -289,7 +299,11 @@ local function register(part, snapshot)
     warningText.BackgroundTransparency = 0.18
     warningText.BorderSizePixel = 0
     warningText.Font = Enum.Font.GothamBlack
-    warningText.Text = HazardWarningSignatureRules.label(
+    local remainingWarning = snapshot.Duration * (1 - snapshot.Progress)
+    warningText.Text = (kind == "JumpShock"
+        and HazardWarningSignatureRules.jumpPrompt(
+            remainingWarning, player.LocaleId, CoreLocalization
+        )) or HazardWarningSignatureRules.label(
         kind, player.LocaleId, CoreLocalization
     ) or string.upper(kind)
     warningText.TextColor3 = kind == "Bomb"
@@ -331,6 +345,9 @@ local function register(part, snapshot)
         deck = signatureDeck,
         label = label,
         warningText = warningText,
+        promptNow = kind == "JumpShock"
+            and remainingWarning <= HazardWarningSignatureRules.JumpNowWindow
+            or nil,
     }
 
     -- Initial client appearance must also use the authoritative elapsed

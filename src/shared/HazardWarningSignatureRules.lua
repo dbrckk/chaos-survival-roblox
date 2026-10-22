@@ -148,9 +148,27 @@ function HazardWarningSignatureRules.snapshot(part, now)
     }
 end
 
--- The world-space warning should describe the danger accurately, not
--- suggest that jumping evades JumpShock (the server applies its impulse
--- regardless of the player's jump state). Localized from the shared HUD copy.
+-- Jump Shock now has a server-verified airborne dodge. Its prompt
+-- switches from anticipation to action shortly before the actual impact,
+-- not on warning creation, or an early jump would be mistimed.
+HazardWarningSignatureRules.JumpNowWindow = 0.42
+
+function HazardWarningSignatureRules.jumpPrompt(secondsRemaining, localeId, localization)
+    local remaining = tonumber(secondsRemaining)
+    if not remaining or remaining ~= remaining
+        or math.abs(remaining) == math.huge or remaining <= 0 then
+        return nil
+    end
+    local key = remaining <= HazardWarningSignatureRules.JumpNowWindow
+        and "JUMP_SHOCK_NOW" or "JUMP_SHOCK_READY"
+    if localization and type(localization.text) == "function" then
+        return localization.text(localeId, key)
+    end
+    return key == "JUMP_SHOCK_NOW" and "JUMP!" or "GET READY"
+end
+
+-- The world-space warning and the top-of-screen mobile cue share this
+-- localized timeline and the server's replicated impact countdown.
 local WARNING_IDS = {
     Meteor = "Meteors",
     Bomb = "Bombs",
@@ -164,6 +182,8 @@ function HazardWarningSignatureRules.label(kind, localeId, localization)
     local label
     if kind == "Meteor" or kind == "Bomb" then
         label = localization.hazardAction(localeId, id)
+    elseif kind == "JumpShock" then
+        label = HazardWarningSignatureRules.jumpPrompt(1, localeId, localization)
     else
         label = localization.hazardName(localeId, id)
     end
