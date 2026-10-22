@@ -248,9 +248,39 @@ local function show(kind, mainText, subText, color, duration)
     return true
 end
 
+-- Any pending notification and its delayed hide callback are invalid
+-- as soon as a round finishes or the local survivor is eliminated.
+local function clearRoundToast()
+    token += 1
+    activePriority = 0
+    activeUntil = 0
+    card.Visible = false
+    card.BackgroundTransparency = 1
+    stroke.Transparency = 1
+    title.TextTransparency = 1
+    subtitle.TextTransparency = 1
+    scale.Scale = 1
+    flash.Visible = false
+    flash.BackgroundTransparency = 1
+    edgeTop.BackgroundTransparency = 1
+    edgeBottom.BackgroundTransparency = 1
+end
+
+player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
+    if player:GetAttribute("RoundEliminated") == true
+        and previousPhase == "round" then
+        clearRoundToast()
+    end
+end)
+
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
+    if RoundEventPresentation.shouldClearRoundToast(
+        previousPhase, phase, player:GetAttribute("RoundEliminated") == true
+    ) then
+        clearRoundToast()
+    end
     local overdrive = phase == "round" and state.overdrive == true
     local finalRush = phase == "round" and state.finalRush == true
     local speedTempoPhase = phase == "round"
