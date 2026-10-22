@@ -364,6 +364,101 @@ local function finishSignature(bundle, cf, theme, variant)
     end
 end
 
+-- A deliberate final layer of *functional-looking* articulation:
+-- radar baffles sweep together, Tower hydraulics telescope under the lift,
+-- Crossroads semaphores actuate, and Orbital containment irises breathe.
+-- No new renderer, lights, network messages, physics or decorative loop.
+-- Everything shares the existing hero clock, tier cap and ReduceMotion pose.
+local function precisionMechanisms(bundle, cf, theme, variant)
+    if bundle.tier == "Low" then return end
+    local high = bundle.tier == "High"
+    local count = high and 4 or 2
+
+    if variant == "Classic" then
+        local hub = cf * CFrame.new(0, 7.9, 0)
+        for i = 1, count do
+            local side = i % 2 == 1 and -1 or 1
+            local near = i <= 2
+            local localFrame = CFrame.new(
+                side * (near and 1.75 or 2.62),
+                near and 0.16 or -0.46,
+                -0.42
+            ) * CFrame.Angles(
+                0, math.rad(side * 14),
+                math.rad(side * (near and 8 or 18))
+            )
+            local baffle = add(bundle, "ClassicTrackingVane" .. i,
+                Vector3.new(0.34, near and 1.95 or 1.15, 0.74),
+                hub * localFrame, near and theme.Structure or theme.Detail,
+                Enum.Material.Metal, 0.07, nil, "WedgePart")
+            moving(bundle, baffle, "radarAssembly", hub, i)
+            bundle.animated[#bundle.animated].localFrame = localFrame
+        end
+
+    elseif variant == "Towers" then
+        -- Two rods stay physically connected to the animated carriage.
+        -- The rod's lower endpoint is fixed, the top follows cabin travel.
+        for side = -1, 1, 2 do
+            local rod = add(bundle, "TowerHydraulicPiston" .. side,
+                Vector3.new(0.23, 2.6, 0.23),
+                cf * CFrame.new(side * 1.08, 3.0, -0.7),
+                theme.Detail, Enum.Material.Metal, 0.04)
+            moving(bundle, rod, "piston", cf, side)
+            if high then
+                add(bundle, "TowerHydraulicSleeve" .. side,
+                    Vector3.new(0.56, 1.5, 0.56),
+                    cf * CFrame.new(side * 1.08, 2.0, -0.7),
+                    theme.Structure, Enum.Material.DiamondPlate, 0.06)
+            end
+        end
+
+    elseif variant == "Crossroads" then
+        for i = 1, count do
+            local side = i % 2 == 1 and -1 or 1
+            local near = i <= 2
+            local pivot = cf * CFrame.new(
+                side * (near and 3.0 or 2.1),
+                near and 6.1 or 4.8,
+                -0.86
+            )
+            local arm = add(bundle, "CrossroadSemaphoreArm" .. i,
+                Vector3.new(near and 2.15 or 1.55, 0.28, 0.50),
+                pivot, theme.Structure, Enum.Material.DiamondPlate,
+                0.06, nil, "WedgePart")
+            moving(bundle, arm, "semaphore", pivot, i)
+            if near then
+                add(bundle, "CrossroadSemaphorePivot" .. i,
+                    Vector3.new(0.48, 0.48, 0.54),
+                    pivot * CFrame.new(0, 0, -0.33),
+                    theme.Detail, Enum.Material.Metal, 0.04,
+                    Enum.PartType.Cylinder)
+            end
+        end
+
+    elseif variant == "Orbital" then
+        -- Opposed ceramic shutters constrain the light core rather than
+        -- spawning more neon geometry. A three-blade Medium iris and
+        -- four-blade High iris stay inside the existing sculpture cap.
+        local irisCount = high and 4 or 3
+        local hub = cf * CFrame.new(0, 6.3, 0)
+        for i = 1, irisCount do
+            local angle = (i - 1) * 2 * math.pi / irisCount
+            local ray = Vector3.new(math.cos(angle), 0, math.sin(angle))
+            local localFrame = CFrame.new(ray * 1.93)
+                * CFrame.Angles(0, -angle, math.rad(18))
+            local shutter = add(bundle, "OrbitalIrisShutter" .. i,
+                Vector3.new(0.55, 1.15, 1.32),
+                hub * localFrame,
+                i % 2 == 0 and theme.Detail or theme.Structure,
+                Enum.Material.Metal, 0.11, nil, "WedgePart")
+            moving(bundle, shutter, "iris", hub, i)
+            local animated = bundle.animated[#bundle.animated]
+            animated.localFrame = localFrame
+            animated.ray = ray
+        end
+    end
+end
+
 function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOverride)
     VisualTheme = themeOverride or VisualTheme
         or require(ReplicatedStorage.Shared.VisualTheme)
@@ -413,6 +508,7 @@ function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOver
 
     craftSignature(bundle, cf, theme, profile, variant)
     finishSignature(bundle, cf, theme, variant)
+    precisionMechanisms(bundle, cf, theme, variant)
     assert(#bundle.parts <= profile.MaxParts,
         "Arena signature exceeded the visual part budget for " .. tostring(variant))
 
@@ -488,6 +584,32 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion, rushIntensity)
                     or (math.sin(now * 2.5 + entry.index * 1.45) + 1) * 0.5
                 p.Transparency = 0.48 - pulse * (0.30 + rush * 0.08)
                 p.Color = entry.color:Lerp(Color3.new(1, 1, 1), pulse * 0.18)
+            elseif entry.role == "radarAssembly" then
+                p.CFrame = entry.frame
+                    * CFrame.Angles(0, now * 0.47, 0)
+                    * entry.localFrame
+            elseif entry.role == "piston" then
+                local height = math.max(0.40, 2.6 + math.sin(now * 0.64) * 2.0)
+                p.Size = Vector3.new(0.23, height, 0.23)
+                p.CFrame = entry.frame * CFrame.new(
+                    entry.index * 1.08, 1.7 + height * 0.5, -0.7
+                )
+            elseif entry.role == "semaphore" then
+                -- Each arm moves around its hub, never flashes or pretends
+                -- to signal a safe route on the playable floor.
+                local angle = (
+                    math.sin(now * 0.62 + entry.index * 0.75)
+                    - math.sin(entry.index * 0.75)
+                ) * math.rad(14 + rush * 3)
+                p.CFrame = entry.frame * CFrame.Angles(0, 0, angle)
+            elseif entry.role == "iris" then
+                local opening = (
+                    math.sin(now * 0.90 + entry.index * 0.60)
+                    - math.sin(entry.index * 0.60)
+                ) * (0.16 + rush * 0.04)
+                p.CFrame = entry.frame
+                    * CFrame.new(entry.ray * opening)
+                    * entry.localFrame
             elseif entry.role == "heart" then
                 local sizeScale = 1 + math.sin(now * 1.5)
                     * (0.045 + rush * 0.018)
