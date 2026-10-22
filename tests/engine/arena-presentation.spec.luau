@@ -345,9 +345,27 @@ describe("Kinetic arena signatures", function()
                 expect(signal.Transparency <= normalTransparency).toBe(true)
             end
 
+            -- Verify every animated landmark actually returns to its
+            -- authored transform, color, opacity and size, even after
+            -- the machine has already moved during a live round.
+            ArenaSignatureKit.update(built, 5.6, false, 0.75)
             -- Reduced-motion always returns to the same authored rest pose,
             -- regardless of Final Rush and without added flashes.
             ArenaSignatureKit.update(built, 9, true, 1)
+            for _, entry in ipairs(built.animated) do
+                expect((entry.part.Position - entry.frame.Position).Magnitude < 0.0001)
+                    .toBe(true)
+                expect(entry.part.CFrame.RightVector:Dot(entry.frame.RightVector) > 0.99999)
+                    .toBe(true)
+                if entry.role == "signal" or entry.role == "foundation" then
+                    expect(entry.part.Transparency).toBe(entry.transparency)
+                end
+                if entry.role == "signal" then
+                    expect(entry.part.Color).toBe(entry.color)
+                elseif entry.role == "heart" then
+                    expect(entry.part.Size).toBe(Vector3.new(2.25, 2.25, 2.25))
+                end
+            end
             local stillColor = foundation.Color
             local stillTransparency = foundation.Transparency
             ArenaSignatureKit.update(built, 22, true, 0)
