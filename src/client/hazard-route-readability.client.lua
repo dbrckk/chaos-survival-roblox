@@ -128,16 +128,19 @@ local ensureRenderLoop
 local SUPPORTED = {
     Meteor = true,
     Bomb = true,
+    JumpShock = true,
 }
 
 local WARNING_NAMES = {
     MeteorWarning = true,
     BombWarning = true,
+    JumpShockWarning = true,
 }
 
 local KIND_COLORS = {
     Meteor = Color3.fromRGB(255, 175, 70),
     Bomb = Color3.fromRGB(255, 75, 75),
+    JumpShock = Color3.fromRGB(100, 185, 255),
 }
 
 local KIND_DISASTER_IDS = {
@@ -157,6 +160,7 @@ end
 local KIND_BADGES = {
     Meteor = "M",
     Bomb = "B",
+    JumpShock = "↑",
 }
 
 local function quality()
@@ -217,15 +221,22 @@ local function createState(warning, snapshot)
     end
     local kind = snapshot.Kind
     local color = KIND_COLORS[kind] or warning.Color
-    local left = makeArrowPart("HazardEscapeL_" .. kind, color)
-    local right = makeArrowPart("HazardEscapeR_" .. kind, color)
+    -- A global Jump Shock needs a timed jump, not a misleading floor
+    -- arrow suggesting that the player can outrun its arena-wide wave.
+    local left, right = nil, nil
+    local instances = {}
+    if kind ~= "JumpShock" then
+        left = makeArrowPart("HazardEscapeL_" .. kind, color)
+        right = makeArrowPart("HazardEscapeR_" .. kind, color)
+        instances = {left, right}
+    end
 
     warningStates[warning] = {
         kind = kind,
         startedAt = snapshot.StartedAt,
         duration = snapshot.Duration,
         endSize = snapshot.EndSize,
-        instances = {left, right},
+        instances = instances,
         left = left,
         right = right,
     }
@@ -292,6 +303,10 @@ local function updateState(warning, state, root, tier, now, serverNow)
 
     if serverNow >= state.startedAt + state.duration then
         hideState(state)
+        return math.huge
+    end
+
+    if state.kind == "JumpShock" then
         return math.huge
     end
 
@@ -428,9 +443,18 @@ ensureRenderLoop = function()
             local nearestWarning = nil
             local nearestState = nil
             local nearestClearance = math.huge
+            local shockRemaining = math.huge
 
             for warning, state in pairs(warningStates) do
                 if warning.Parent then
+                    if state.kind == "JumpShock" then
+                        local remaining = WarningRules.window(
+                            state.startedAt, state.duration, serverNow
+                        )
+                        if remaining and remaining > 0.02 then
+                            shockRemaining = math.min(shockRemaining, remaining)
+                        end
+                    end
                     local clearance = updateState(
                         warning, state, root, tier, now, serverNow
                     )
@@ -453,7 +477,10 @@ ensureRenderLoop = function()
             end
 
             local showCue = nearestState ~= nil and nearestClearance <= 5
-            cue.Visible = showCue
+            -- Reuse the existing narrow-screen cue. A direct Meteor/Bomb
+            -- escape takes precedence over the shock countdown if both hit.
+            local showShock = not showCue and shockRemaining < math.huge
+            cue.Visible = showCue or showShock
             if showCue then
                 local kind = nearestState.kind
                 local color = KIND_COLORS[kind] or UITheme.Colors.Red
@@ -461,6 +488,15 @@ ensureRenderLoop = function()
                 cueBadge.BackgroundColor3 = color
                 cueBadge.Text = KIND_BADGES[kind] or "!"
                 cueText.Text = localizedHazardCue(kind)
+            elseif showShock then
+                local color = KIND_COLORS.JumpShock
+                cueStroke.Color = color
+                cueBadge.BackgroundColor3 = color
+                cueBadge.Text = KIND_BADGES.JumpShock
+                local prompt = WarningRules.jumpPrompt(
+                    shockRemaining, localeId, CoreLocalization
+                )
+                cueText.Text = (prompt or "") .. string.format("  %.1fs", shockRemaining)
             end
 
             offscreenArrow.Visible = false
