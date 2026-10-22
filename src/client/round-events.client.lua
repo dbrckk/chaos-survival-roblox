@@ -120,6 +120,7 @@ local activeUntil = 0
 local lastOverdrive = false
 local lastFinalRush = false
 local lastImpactWaveMode = nil
+local lastPlatformWaveMode = nil
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
@@ -299,9 +300,30 @@ stateEvent.OnClientEvent:Connect(function(state)
                 0.95
             )
         end
+    elseif phase == "round" and state.platformWaveMode
+        and state.platformWaveMode ~= lastPlatformWaveMode
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+    then
+        -- Share the existing toast with storm acts. Final Rush and
+        -- Overdrive always override it; never cover mobile movement.
+        local sweep = state.platformWaveMode == "Sweep"
+        local flanks = state.platformWaveMode == "Flanks"
+        if sweep or flanks then
+            local key = sweep and "PLATFORM_WAVE_SWEEP"
+                or "PLATFORM_WAVE_FLANKS"
+            show(
+                "platformWave",
+                CoreLocalization.text(localeId, key),
+                CoreLocalization.text(localeId, key .. "_SUB"),
+                sweep and UITheme.Colors.Orange or UITheme.Colors.Red,
+                0.95
+            )
+        end
     end
 
     lastImpactWaveMode = phase == "round" and state.impactWaveMode or nil
+    lastPlatformWaveMode = phase == "round" and state.platformWaveMode or nil
     lastOverdrive = overdrive
     lastFinalRush = finalRush
     lastFusionKey = fusionKey
