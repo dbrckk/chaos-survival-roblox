@@ -446,6 +446,15 @@ local function refresh()
             math.max(1, math.floor(tonumber(state.overdriveSeconds) or 1))
         )
         color = UITheme.Colors.Gold
+    elseif not rookieRound and state.impactWaveMode == "Sweep" then
+        -- During a moving front, the tactical cue is more useful than
+        -- repeating INTENSE/FASTER. Keep the actual hazard and timer in
+        -- the permanent top HUD, and avoid creating another overlay.
+        text = CoreLocalization.text(localeId, "IMPACT_WAVE_SWEEP")
+        color = UITheme.Colors.Orange
+    elseif not rookieRound and state.impactWaveMode == "Flanks" then
+        text = CoreLocalization.text(localeId, "IMPACT_WAVE_FLANKS")
+        color = UITheme.Colors.Red
     elseif state.doubleChaos then
         text = tostring(state.fusionName or CoreLocalization.text(localeId, "CHAOS_FUSION"))
         color = UITheme.Colors.Violet
