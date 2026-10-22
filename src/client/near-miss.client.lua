@@ -237,6 +237,7 @@ local function readableKind(kind)
     local hazardId = ({
         Meteor = "Meteors",
         Bomb = "Bombs",
+        JumpShock = "JumpShock",
     })[value]
 
     if hazardId then
@@ -280,9 +281,11 @@ local function show(payload)
         accent = UITheme.DisasterAccents.Bombs
     end
 
-    title.Text = combo >= 2
-        and CoreLocalization.text(localeId, "NEAR_MISS_COMBO", combo)
-        or CoreLocalization.text(localeId, "NEAR_MISS_TITLE")
+    title.Text = payload.kind == "JumpShock"
+        and CoreLocalization.text(localeId, "JUMP_SHOCK_DODGED")
+        or (combo >= 2
+            and CoreLocalization.text(localeId, "NEAR_MISS_COMBO", combo)
+            or CoreLocalization.text(localeId, "NEAR_MISS_TITLE"))
     title.TextColor3 = accent:Lerp(UITheme.Colors.Text, 0.18)
     stroke.Color = accent
     accentLine.BackgroundColor3 = accent
