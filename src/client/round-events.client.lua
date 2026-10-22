@@ -120,6 +120,7 @@ local activeUntil = 0
 local lastOverdrive = false
 local lastFinalRush = false
 local lastImpactWaveMode = nil
+local lastDoubleCollapseUnlocked = false
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
@@ -299,9 +300,25 @@ stateEvent.OnClientEvent:Connect(function(state)
                 0.95
             )
         end
+    elseif phase == "round" and state.doubleCollapseUnlocked == true
+        and not lastDoubleCollapseUnlocked
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+    then
+        -- Announce a real server-staged double-deck warning once. The
+        -- original yellow contours remain the essential, local cue.
+        show(
+            "collapseWave",
+            CoreLocalization.text(localeId, "DOUBLE_COLLAPSE"),
+            CoreLocalization.text(localeId, "DOUBLE_COLLAPSE_SUB"),
+            UITheme.Colors.Orange,
+            0.95
+        )
     end
 
     lastImpactWaveMode = phase == "round" and state.impactWaveMode or nil
+    lastDoubleCollapseUnlocked = phase == "round"
+        and state.doubleCollapseUnlocked == true
     lastOverdrive = overdrive
     lastFinalRush = finalRush
     lastFusionKey = fusionKey

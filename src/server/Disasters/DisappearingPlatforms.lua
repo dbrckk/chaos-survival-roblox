@@ -178,6 +178,7 @@ function D.start(ctx)
 
     ctx.OnCleanup[#ctx.OnCleanup+1] = function()
         generation += 1
+        ctx.DoubleCollapseUnlocked = nil
         local parts = {}
         for part in pairs(activeStates) do
             table.insert(parts, part)
@@ -221,6 +222,13 @@ function D.start(ctx)
                     -- Local animated warning edges use the same contract as
                     -- single-platform waves; only physical decks disappear.
                     p.Transparency = math.min(p.Transparency, 0.24)
+                end
+                -- Mark the mechanic unlocked only AFTER both real warning
+                -- decks were staged. Some beats can later use a single deck
+                -- while earlier ones finish restoring; keep the hint truthful
+                -- as a warning about a possible paired collapse.
+                if #staged >= 2 then
+                    ctx.DoubleCollapseUnlocked = true
                 end
 
                 task.wait(D.WarningSeconds)
