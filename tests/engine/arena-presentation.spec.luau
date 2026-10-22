@@ -467,6 +467,54 @@ describe("Kinetic arena signatures", function()
         parent:Destroy()
     end)
 
+    it("eases four mechanical signatures into their original result poses", function()
+        local settle = ArenaSignatureKit.settleAmount
+        expect(settle(0, 0.72)).toBe(1)
+        expect(math.abs(settle(0.36, 0.72) - 0.5) < 0.0001).toBe(true)
+        expect(settle(0.72, 0.72)).toBe(0)
+        expect(settle(10, 0.72)).toBe(0)
+        for _, invalid in ipairs({math.huge, -math.huge, 0 / 0, "oops"}) do
+            expect(settle(invalid, 0.72)).toBe(0)
+        end
+        expect(settle(0.36, 0)).toBe(0)
+        expect(settle(0.36, math.huge)).toBe(0)
+
+        local parent = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        local variantParts = {
+            Classic = "ClassicTrackingVane1",
+            Towers = "TowerHydraulicPiston-1",
+            Crossroads = "CrossroadSemaphoreArm1",
+            Orbital = "OrbitalIrisShutter1",
+        }
+        for variant, name in pairs(variantParts) do
+            local built = ArenaSignatureKit.build(parent, base, variant, "High", VisualTheme)
+            local part = built.folder:FindFirstChild(name)
+            local rest, restSize = part.CFrame, part.Size
+            local count = #built.parts
+            ArenaSignatureKit.update(built, 2.5, false, 1, 1)
+            local animatedPose = part.CFrame
+            expect(animatedPose ~= rest).toBe(true)
+
+            ArenaSignatureKit.update(built, 2.5, false, 1, 0.5)
+            expect(part.CFrame ~= animatedPose).toBe(true)
+            expect(part.CFrame ~= rest).toBe(true)
+            ArenaSignatureKit.update(built, 2.5, false, 1, 0)
+            expect(part.CFrame).toBe(rest)
+            expect(part.Size).toBe(restSize)
+            expect(#built.parts).toBe(count)
+            -- Reduced-motion must take effect immediately, not run a
+            -- cosmetic settle which the player deliberately disabled.
+            ArenaSignatureKit.update(built, 9, true, 1)
+            expect(part.CFrame).toBe(rest)
+            expect(part.Size).toBe(restSize)
+            built.folder:Destroy()
+        end
+        base:Destroy()
+        parent:Destroy()
+    end)
+
     it("keeps the hydraulic piston physically under the animated lift", function()
         local parent = Instance.new("Folder")
         local base = Instance.new("Part")
