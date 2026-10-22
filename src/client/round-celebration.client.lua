@@ -14,6 +14,9 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local lastCelebrationAt = 0
 local lastCelebratedRound = nil
 local lastCelebratedAsPreview = false
+local currentPhase = "waiting"
+local observedRound = nil
+local resolvedRound = nil
 local folder = Instance.new("Folder")
 folder.Name = "RoundCelebrationPulsesLocal"
 folder.Parent = workspace
@@ -225,7 +228,26 @@ end
 -- celebration. Only celebrate when the server's frozen winner list proves
 -- that this specific player won; spectators never receive a false victory.
 stateEvent.OnClientEvent:Connect(function(state)
-    if type(state) ~= "table" or state.phase ~= "result" then return end
+    if type(state) ~= "table" then return end
+    local phase = tostring(state.phase or "waiting")
+    local number = tonumber(state.roundNumber)
+    -- Numbered server snapshots define the lifetime of a celebration.
+    -- In particular, a delayed reward receipt must not fire after READY
+    -- for the next match and appear over its movement/onboarding cues.
+    if number and number >= 1 and number < math.huge
+        and number == math.floor(number) then
+        observedRound = math.max(observedRound or 0, number)
+    end
+    currentPhase = phase
+
+    if phase ~= "result" then return end
+    if number and observedRound and number < observedRound then
+        return
+    end
+    if number and number >= 1 and number < math.huge
+        and number == math.floor(number) then
+        resolvedRound = math.max(resolvedRound or 0, number)
+    end
     local preview = ResultPresentation.fallbackFeedback(
         state, player.UserId, player:GetAttribute("RoundParticipant") == true
     )
@@ -234,4 +256,14 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 end)
 
-feedbackEvent.OnClientEvent:Connect(celebrate)
+feedbackEvent.OnClientEvent:Connect(function(feedback)
+    -- The same shared acceptance rule is already used by the result HUD.
+    -- Without it a late RoundFeedback can play an old victory/defeat burst
+    -- during the next game despite the results card being dismissed.
+    if not ResultPresentation.acceptReceipt(
+        feedback, currentPhase, observedRound, resolvedRound
+    ) then
+        return
+    end
+    celebrate(feedback)
+end)
