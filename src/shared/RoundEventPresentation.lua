@@ -118,6 +118,30 @@ function RoundEventPresentation.shouldClearRoundToast(previousPhase, nextPhase, 
         or (nextPhase == "round" and eliminated == true)
 end
 
+-- Server stages are mirrored in RoundState. Announce a change only once
+-- after the client has already observed a valid stage this round. Never
+-- synthesize a warning for a joining spectator or an invalid payload.
+function RoundEventPresentation.gravityTideCue(previous, current)
+    local stages = {
+        Float = true,
+        PullRising = true,
+        Pull = true,
+        FloatReturning = true,
+    }
+    if not stages[previous] or not stages[current] or previous == current then
+        return nil
+    end
+    if current == "PullRising" or
+        (previous == "Float" and current == "Pull") then
+        return "GRAVITY_PULL_RISING"
+    end
+    if current == "FloatReturning" or
+        (previous == "Pull" and current == "Float") then
+        return "GRAVITY_FLOAT_RETURNING"
+    end
+    return nil
+end
+
 function RoundEventPresentation.priority(kind)
     local priorities = {
         finalRush = 50,
@@ -127,6 +151,7 @@ function RoundEventPresentation.priority(kind)
         impactWave = 25,
         collapseWave = 25,
         speedTempo = 25,
+        gravityTide = 25,
         readyCountdown = 20,
     }
     return priorities[kind] or 0
