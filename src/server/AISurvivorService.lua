@@ -1389,6 +1389,18 @@ local function immediateThreat(record, root, now)
     end
 
     if nearest.Name == "FreezeWarning" or nearest.Name == "JumpShockWarning" then
+        -- Jump Shock requires a *late* jump; jumping on first sight would
+        -- leave a bot descending when the new physical dodge check runs.
+        -- Warning timestamps are workspace server-time, unlike the
+        -- os.clock() used for routine AI reaction delays.
+        if nearest.Name == "JumpShockWarning"
+            and not AISurvivorRules.shockJumpWindow(
+                nearest:GetAttribute("WarningStartedAt"),
+                nearest:GetAttribute("WarningDuration"),
+                workspace:GetServerTimeNow()
+            ) then
+            return nil
+        end
         -- Keep one reaction per actual pulse instance, even if it remains in
         -- range for many 0.18-second AI brain steps. Weak keys prevent stale
         -- destroyed warning parts from being retained across long sessions.

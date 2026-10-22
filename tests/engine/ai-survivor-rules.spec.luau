@@ -588,6 +588,21 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.platformAvailable(true, 0.95, nil)).toBe(false)
     end)
 
+    it("times bot Jump Shock reactions to the late rising-dodge window", function()
+        local ready = AISurvivorRules.shockJumpWindow
+        -- 1.05 second ring: early jumping should never count as a dodge.
+        expect(ready(100, 1.05, 100.20)).toBe(false)
+        expect(ready(100, 1.05, 100.72)).toBe(true)
+        expect(ready(100, 1.05, 100.90)).toBe(true)
+        expect(ready(100, 1.05, 101.01)).toBe(false)
+        expect(ready(100, 1.05, 101.06)).toBe(false)
+        expect(ready(nil, 1.05, 100.90)).toBe(false)
+        expect(ready(100, 0, 100.90)).toBe(false)
+        expect(ready(100, math.huge, 100.90)).toBe(false)
+        expect(ready(100, 1.05, math.huge)).toBe(false)
+        expect(ready(100, 1.05, 0 / 0)).toBe(false)
+    end)
+
     it("keeps Freeze and JumpShock warning detection distances numeric", function()
         for _, kind in ipairs({"FreezeWarning", "JumpShockWarning"}) do
             local radius = AISurvivorRules.warningDetectionRadius(kind, 75)
