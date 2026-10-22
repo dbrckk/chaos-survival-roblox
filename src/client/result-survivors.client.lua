@@ -165,11 +165,10 @@ local function spotlightPlayer(target, championUserId)
     spotlightModel(
         "player:" .. tostring(target.UserId),
         target.Character,
-        champion
-            and CoreLocalization.text(localeId, "RESULT_SOLE_SURVIVOR")
-            or (isLocal
-                and CoreLocalization.text(localeId, "YOU_SURVIVED")
-                or CoreLocalization.text(localeId, "SURVIVOR_LABEL")),
+        CoreLocalization.text(
+            localeId,
+            ResultPresentation.spotlightLabelKey(champion, isLocal)
+        ),
         isLocal,
         champion
     )
