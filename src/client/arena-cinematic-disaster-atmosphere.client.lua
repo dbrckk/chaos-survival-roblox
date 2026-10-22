@@ -22,12 +22,20 @@ local loopStarted = false
 local beaconParts = {}
 local beamStates = {}
 local emitters = {}
+local liveBase = nil
+local lastBaseFrame = nil
+local lastBaseSize = nil
+local orbitalCoreAura = nil
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
 local function clear()
+    liveBase = nil
+    lastBaseFrame = nil
+    lastBaseSize = nil
+    orbitalCoreAura = nil
     table.clear(beaconParts)
     table.clear(beamStates)
     table.clear(emitters)
@@ -208,7 +216,6 @@ local function addVolumetricBeam(index, base, angle, radius, color, tier)
     table.insert(beamStates, {
         part = shaft,
         angle = angle,
-        radius = radius,
         base = base,
         height = height,
         index = index,
@@ -229,23 +236,25 @@ local function rebuild()
         return
     end
 
+    -- The authoritative base can contract during this very disaster.
+    -- Remember its identity and update cosmetic anchors only on changes.
+    liveBase = base
+    lastBaseFrame = base.CFrame
+    lastBaseSize = base.Size
+
     local tier = quality()
     local profile = DisasterVisuals.combine(disasterIds)
     local secondaryProfile = disasterIds[2] and DisasterVisuals.get(disasterIds[2]) or nil
     local accent = profile and profile.Accent or theme.Accent
     local secondary = secondaryProfile and secondaryProfile.Accent or theme.Secondary
 
-    local radius = math.max(base.Size.X, base.Size.Z) * 0.52
+    local radius = Layout.perimeterRadius(base.Size)
     local beaconCount = Layout.beaconCount(tier.Name, true)
 
     for i = 1, beaconCount do
         local angle = ((i - 1) / beaconCount) * math.pi * 2
-        local pos = Layout.point(
-            base.CFrame, base.Size, angle, radius, 0.8
-        )
-        local beaconFrame = CFrame.fromMatrix(
-            pos, base.CFrame.RightVector, base.CFrame.UpVector,
-            -base.CFrame.LookVector
+        local beaconFrame = Layout.beaconFrame(
+            base.CFrame, base.Size, angle
         )
 
         local beacon = makePart(
@@ -277,12 +286,40 @@ local function rebuild()
         local core = makePart(
             "DisasterOrbitalCoreAura",
             Vector3.new(8, 8, 8),
-            CFrame.new(base.Position + Vector3.new(0, 13, 0)),
+            Layout.orbitalCoreFrame(base.CFrame),
             accent,
             Enum.Material.Neon,
             phase == "round" and 0.72 or 0.86
         )
         core.Shape = Enum.PartType.Ball
+        orbitalCoreAura = core
+    end
+end
+
+-- Keep GPU-only environmental accents anchored to the shrinking/tilting
+-- collision floor. The only geometry writes occur when Base.Size/CFrame
+-- actually changes, not on every cinematic pulse frame.
+local function syncArenaAnchors()
+    local base = liveBase
+    if not base or not base.Parent then return end
+    local frame, size = base.CFrame, base.Size
+    if frame == lastBaseFrame and size == lastBaseSize then
+        return
+    end
+    lastBaseFrame = frame
+    lastBaseSize = size
+
+    local count = #beaconParts
+    if count > 0 then
+        for index, beacon in ipairs(beaconParts) do
+            if beacon.Parent then
+                local angle = ((index - 1) / count) * math.pi * 2
+                beacon.CFrame = Layout.beaconFrame(frame, size, angle)
+            end
+        end
+    end
+    if orbitalCoreAura and orbitalCoreAura.Parent then
+        orbitalCoreAura.CFrame = Layout.orbitalCoreFrame(frame)
     end
 end
 
@@ -334,6 +371,7 @@ local function ensureRenderLoop()
             -- A backgrounded Android app can resume after seconds;
             -- bound the cosmetic phase jump without slowing live pulses.
             clock += math.clamp(tonumber(dt) or 0, 0, 0.22)
+            syncArenaAnchors()
 
         local reduced = player:GetAttribute("ReduceMotion") == true
         local motion = reduced and 0.16 or 1
@@ -365,7 +403,8 @@ local function ensureRenderLoop()
                 local angle = state.angle + sweep
                 local deckFrame = Layout.beamFrame(
                     base.CFrame, base.Size, angle,
-                    state.radius, state.height
+                    Layout.perimeterRadius(base.Size, 0.52 * 1.08),
+                    state.height
                 )
                 part.CFrame = deckFrame * CFrame.Angles(
                     math.rad(4 * math.sin(clock * 0.5 + state.index)),
