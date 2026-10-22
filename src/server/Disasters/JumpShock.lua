@@ -15,7 +15,7 @@ function D.dodgedByJump(humanoidState, velocityY, heightAboveGround)
     end
     return (humanoidState == Enum.HumanoidStateType.Jumping
         or humanoidState == Enum.HumanoidStateType.Freefall)
-        and rising > 3 and clearance >= 2.5
+        and rising > 3 and clearance >= 4.5
 end
 
 local function makeWarning(ctx)
@@ -61,6 +61,7 @@ function D.applyShock(ctx, subject, horizontalForce)
     -- character itself. If no ground is found, do not grant a free dodge.
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.RespectCanCollide = true
     rayParams.FilterDescendantsInstances = {subject.Character}
     local ground = workspace:Raycast(
         root.Position, Vector3.new(0, -14, 0), rayParams
