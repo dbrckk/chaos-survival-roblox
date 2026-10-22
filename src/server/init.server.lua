@@ -1710,10 +1710,6 @@ while true do
     local fusionName = #selectedSet > 1
         and ChaosFusion.name(selectedSet[1].Id, selectedSet[2].Id)
         or nil
-    if #selectedSet > 1 then
-        local pairKey = RoundVariety.fusionKey(selectedSet[1].Id, selectedSet[2].Id)
-        recentFusionPairs = RoundVariety.pushRecent(recentFusionPairs, pairKey, 4)
-    end
     local readyTitle = selectedSet[1].Name
     local readyHint = selectedSet[1].Hint
     if #selectedSet > 1 then
@@ -1828,6 +1824,14 @@ while true do
     roundNumber = upcomingRoundNumber
     recentArenaVariantIds = ArenaVariants.pushRecent(recentArenaVariantIds, currentArenaVariant, 2)
     recentPrimaryDisasterIds = RoundVariety.pushRecent(recentPrimaryDisasterIds, selected.Id, 2)
+
+    -- Do not count a candidate fusion that never reached ROUND: players may
+    -- leave during READY and cancel it. Recent pairs describe *played*
+    -- combinations, not attempted intermissions.
+    if #selectedSet > 1 then
+        local pairKey = RoundVariety.fusionKey(selectedSet[1].Id, selectedSet[2].Id)
+        recentFusionPairs = RoundVariety.pushRecent(recentFusionPairs, pairKey, 4)
+    end
 
     for _, p in ipairs(contestants) do
         GameAnalytics.roundStarted(p, roundNumber, roundSettings.Solo, selected.Id, #selectedSet > 1)
