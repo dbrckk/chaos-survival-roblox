@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
+local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 
 local player = Players.LocalPlayer
@@ -15,6 +16,7 @@ local lastCelebrationAt = 0
 local lastCelebratedRound = nil
 local lastCelebratedAsPreview = false
 local currentPhase = "waiting"
+local celebrationEpoch = 0
 local observedRound = nil
 local resolvedRound = nil
 local folder = Instance.new("Folder")
@@ -41,6 +43,25 @@ local function makeRing(root, color, diameter, duration, height)
         reduced and diameter or 1, diameter, duration,
         quality.Name, reduced, reduced and 0.70 or 0.42
     )
+end
+
+-- Optional double rings and FIRST CHAOS flourishes run one scheduler tick
+-- later. They must never paint a new round, a replaced character, or a
+-- freshly lowered graphics tier using an older victory receipt.
+local function scheduleAccent(root, round, tierName, seconds, callback)
+    local issuedEpoch = celebrationEpoch
+    task.delay(seconds, function()
+        local currentRoot = rootPart()
+        if player:GetAttribute("ReduceMotion") == true
+            or profile().Name ~= tierName
+            or not RoundEventPresentation.celebrationStillCurrent(
+                issuedEpoch, celebrationEpoch, root, currentRoot,
+                currentPhase, round, observedRound
+            ) then
+            return
+        end
+        callback(currentRoot)
+    end)
 end
 
 local function makeBurst(root, color, count, speed)
@@ -161,20 +182,14 @@ local function celebrate(feedback)
         end
 
         if clutch and tier.Name == "High" and not reduced then
-            task.delay(0.08, function()
-                local currentRoot = rootPart()
-                if currentRoot then
-                    makeRing(currentRoot, UITheme.Colors.Blue, 23, 0.60, -2.12)
-                end
+            scheduleAccent(root, round, tier.Name, 0.08, function(currentRoot)
+                makeRing(currentRoot, UITheme.Colors.Blue, 23, 0.60, -2.12)
             end)
         end
 
         if masterRound and tier.Name == "High" and not reduced then
-            task.delay(0.10, function()
-                local currentRoot = rootPart()
-                if currentRoot then
-                    makeRing(currentRoot, UITheme.Colors.Cyan, 29, 0.72, -2.15)
-                end
+            scheduleAccent(root, round, tier.Name, 0.10, function(currentRoot)
+                makeRing(currentRoot, UITheme.Colors.Cyan, 29, 0.72, -2.15)
             end)
         end
     else
@@ -198,12 +213,7 @@ local function celebrate(feedback)
     end
 
     if firstChaos and not reduced then
-        task.delay(0.08, function()
-            local currentRoot = rootPart()
-            if not currentRoot then
-                return
-            end
-
+        scheduleAccent(root, round, tier.Name, 0.08, function(currentRoot)
             makeRing(
                 currentRoot,
                 UITheme.Colors.Cyan,
@@ -230,6 +240,8 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
+    local previousPhase = currentPhase
+    local previousRound = observedRound
     local number = tonumber(state.roundNumber)
     -- Numbered server snapshots define the lifetime of a celebration.
     -- In particular, a delayed reward receipt must not fire after READY
@@ -238,9 +250,18 @@ stateEvent.OnClientEvent:Connect(function(state)
         and number == math.floor(number) then
         observedRound = math.max(observedRound or 0, number)
     end
+    if phase ~= previousPhase or observedRound ~= previousRound then
+        celebrationEpoch += 1
+    end
     currentPhase = phase
 
-    if phase ~= "result" then return end
+    if phase ~= "result" then
+        if previousPhase == "result" then
+            -- Do not carry an old victory decoration into vote/READY.
+            folder:ClearAllChildren()
+        end
+        return
+    end
     if number and observedRound and number < observedRound then
         return
     end

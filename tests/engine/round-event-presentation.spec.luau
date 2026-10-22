@@ -161,6 +161,42 @@ describe("Round event presentation", function()
         current:Destroy()
     end)
 
+    it("rejects delayed win flourishes from another round or avatar", function()
+        local rootHolder = Instance.new("Folder")
+        rootHolder.Parent = workspace
+        local originalRoot = Instance.new("Part")
+        originalRoot.Parent = rootHolder
+        local nextAvatarRoot = Instance.new("Part")
+        nextAvatarRoot.Parent = rootHolder
+
+        local valid = RoundEventPresentation.celebrationStillCurrent
+        expect(valid(10, 10, originalRoot, originalRoot,
+            "result", 17, 17)).toBe(true)
+        expect(valid(10, 10, originalRoot, originalRoot,
+            "round", 17, 17)).toBe(true)
+        -- New READY / new round / respawn / missing source / bad epochs
+        -- can never resurrect a past celebration over new gameplay.
+        expect(valid(10, 10, originalRoot, originalRoot,
+            "ready", 17, 17)).toBe(false)
+        expect(valid(10, 10, originalRoot, originalRoot,
+            "intermission", 17, 17)).toBe(false)
+        expect(valid(10, 11, originalRoot, originalRoot,
+            "result", 17, 17)).toBe(false)
+        expect(valid(10, 10, originalRoot, nextAvatarRoot,
+            "result", 17, 17)).toBe(false)
+        expect(valid(10, 10, originalRoot, originalRoot,
+            "result", 17, 18)).toBe(false)
+        expect(valid(10, 10, originalRoot, originalRoot,
+            "result", math.huge, 17)).toBe(false)
+        expect(valid(10, 10, originalRoot, originalRoot,
+            "result", 17, 0 / 0)).toBe(false)
+        originalRoot.Parent = nil
+        expect(valid(10, 10, originalRoot, originalRoot,
+            "result", 17, 17)).toBe(false)
+        rootHolder:Destroy()
+        originalRoot:Destroy()
+    end)
+
     it("keeps final rush above all other transition priorities", function()
         expect(
             RoundEventPresentation.priority("finalRush")
