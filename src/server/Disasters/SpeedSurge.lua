@@ -38,6 +38,17 @@ function D.speedAt(originalSpeed, boostedSpeed, elapsed, enabled)
     return boosted + (original - boosted) * alpha
 end
 
+-- Roblox can quantize WalkSpeed property assignments. Compare within
+-- sub-hundredth precision while respecting meaningful changes by other
+-- movement systems, including future disasters or power-ups.
+function D.ownsSpeed(actual, assigned)
+    local a = tonumber(actual)
+    local b = tonumber(assigned)
+    return a ~= nil and b ~= nil and a == a and b == b
+        and math.abs(a) < math.huge and math.abs(b) < math.huge
+        and math.abs(a - b) <= 0.01
+end
+
 function D.tempoAt(elapsed, enabled)
     if enabled ~= true then return "Surge", math.huge end
     local value = tonumber(elapsed) or 0
@@ -109,7 +120,7 @@ function D.start(ctx)
     ctx.OnCleanup[#ctx.OnCleanup+1] = function()
         ctx.SpeedTempoPhase = nil
         for hum, state in pairs(previous) do
-            if hum and hum.Parent and hum.WalkSpeed == state.current then
+            if hum and hum.Parent and D.ownsSpeed(hum.WalkSpeed, state.current) then
                 hum.WalkSpeed = state.original
             end
         end
