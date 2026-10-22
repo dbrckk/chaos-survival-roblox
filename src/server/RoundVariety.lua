@@ -109,17 +109,23 @@ function RoundVariety.freshFusionCandidates(primaryId, compatible, recentPairs)
             if type(key) == "string" then recent[key] = true end
         end
     end
+    local eligible = {}
     local fresh = {}
     for _, candidate in ipairs(compatible) do
         if type(candidate) == "table" then
             local key = RoundVariety.fusionKey(primaryId, candidate.Id)
-            if key and not recent[key] then
-                table.insert(fresh, candidate)
+            if key then
+                table.insert(eligible, candidate)
+                if not recent[key] then
+                    table.insert(fresh, candidate)
+                end
             end
         end
     end
     if #fresh > 0 then return fresh end
-    return table.clone(compatible)
+    -- Preserve a playable round when every pair is already familiar, but
+    -- never admit the same hazard twice even if the caller's pool is bad.
+    return eligible
 end
 
 return RoundVariety
