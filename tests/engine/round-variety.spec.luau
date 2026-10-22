@@ -69,22 +69,28 @@ describe("Round variety", function()
         local candidates = RoundVariety.freshFusionCandidates(
             "Bombs", pool, recent
         )
-        expect(#candidates).toBe(1)
-        expect(candidates[1].Id).toBe("Bombs")
-        -- The production caller supplies only *compatible* distinct IDs;
-        -- this helper must never choose a disallowed candidate itself.
-        local compatible = {d("Meteors"), d("Tornado")}
-        candidates = RoundVariety.freshFusionCandidates("Bombs", compatible, recent)
+        -- Even a malformed caller-supplied pool cannot force a Bombs+Bombs
+        -- pairing, including when recent-history filtering must relax.
         expect(#candidates).toBe(2)
         expect(candidates[1].Id).toBe("Meteors")
         expect(candidates[2].Id).toBe("Tornado")
-        expect(#compatible).toBe(2)
+        local compatible = {d("Meteors"), d("Tornado")}
         local newPool = RoundVariety.freshFusionCandidates(
             "Bombs", compatible, {"Bombs+Meteors"}
         )
         expect(#newPool).toBe(1)
         expect(newPool[1].Id).toBe("Tornado")
+        local fallback = RoundVariety.freshFusionCandidates(
+            "Bombs", compatible, recent
+        )
+        expect(#fallback).toBe(2)
+        expect(fallback[1].Id).toBe("Meteors")
+        expect(fallback[2].Id).toBe("Tornado")
+        expect(#compatible).toBe(2)
+        expect(#pool).toBe(3)
         expect(#RoundVariety.freshFusionCandidates("Bombs", {}, recent))
+            .toBe(0)
+        expect(#RoundVariety.freshFusionCandidates("Bombs", {d("Bombs")}, {}))
             .toBe(0)
     end)
 
