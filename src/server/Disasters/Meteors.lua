@@ -31,6 +31,7 @@ function D.start(ctx)
     local fallHeight = 52
 
     local sequence = 0
+    local lastWaveMode = nil
     task.spawn(function()
         while ctx.Active() do
             if not canComplete(ctx, os.clock(), warningSeconds, travelSeconds) then
@@ -40,6 +41,18 @@ function D.start(ctx)
             local offset, waveMode = ArenaTargeting.evolvingImpactOffset(
                 ctx, "Meteors", sequence, pending, 6, 42, 22
             )
+            if waveMode ~= lastWaveMode then
+                -- Start each newly announced storm act at its actual first
+                -- lane rather than inheriting an arbitrary Scatter index.
+                -- Independent per-hazard counters preserve Double Chaos.
+                if sequence > 1 then
+                    sequence = 1
+                    offset, waveMode = ArenaTargeting.evolvingImpactOffset(
+                        ctx, "Meteors", sequence, pending, 6, 42, 22
+                    )
+                end
+                lastWaveMode = waveMode
+            end
             local impactPosition = ctx.Config.ArenaCenter + offset + Vector3.new(0, 1.2, 0)
 
             local marker = Instance.new("Part")
