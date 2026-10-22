@@ -21,7 +21,6 @@ jobs:
           REPO: ${{ github.repository }}
           DISPATCH_SHA: ${{ github.sha }}
           DISPATCH_REF: ${{ github.ref }}
-          REPORT_FILE: ${{ github.step_summary }}
         run: |
           python3 - <<'PY'
           import json
