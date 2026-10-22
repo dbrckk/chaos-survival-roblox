@@ -75,6 +75,18 @@ function RoundEventPresentation.cameraTargetChanged(previous, requested)
     return not last or math.abs(target - last) >= 0.05
 end
 
+-- A delayed client-only pulse belongs to one precise transition and
+-- one physical source. Reject callbacks after phase change, map replacement
+-- or avatar respawn rather than drawing stale rings over results/next round.
+function RoundEventPresentation.pulseStillCurrent(expectedEpoch, actualEpoch,
+        source, currentSource)
+    return type(expectedEpoch) == "number"
+        and expectedEpoch == actualEpoch
+        and typeof(source) == "Instance"
+        and source.Parent ~= nil
+        and source == currentSource
+end
+
 function RoundEventPresentation.priority(kind)
     local priorities = {
         finalRush = 50,
