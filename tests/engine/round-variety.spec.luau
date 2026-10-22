@@ -58,6 +58,42 @@ describe("Round variety", function()
         expect(ids.B == true).toBe(false)
     end)
 
+    it("prefers new unordered Double Chaos pairs without preventing fusion", function()
+        local pool = {d("Meteors"), d("Bombs"), d("Tornado")}
+        expect(RoundVariety.fusionKey("Bombs", "Meteors"))
+            .toBe(RoundVariety.fusionKey("Meteors", "Bombs"))
+        expect(RoundVariety.fusionKey("Bombs", "Bombs") == nil).toBe(true)
+        expect(RoundVariety.fusionKey(nil, "Meteors") == nil).toBe(true)
+
+        local recent = {"Bombs+Meteors", "Bombs+Tornado"}
+        local candidates = RoundVariety.freshFusionCandidates(
+            "Bombs", pool, recent
+        )
+        -- Even a malformed caller-supplied pool cannot force a Bombs+Bombs
+        -- pairing, including when recent-history filtering must relax.
+        expect(#candidates).toBe(2)
+        expect(candidates[1].Id).toBe("Meteors")
+        expect(candidates[2].Id).toBe("Tornado")
+        local compatible = {d("Meteors"), d("Tornado")}
+        local newPool = RoundVariety.freshFusionCandidates(
+            "Bombs", compatible, {"Bombs+Meteors"}
+        )
+        expect(#newPool).toBe(1)
+        expect(newPool[1].Id).toBe("Tornado")
+        local fallback = RoundVariety.freshFusionCandidates(
+            "Bombs", compatible, recent
+        )
+        expect(#fallback).toBe(2)
+        expect(fallback[1].Id).toBe("Meteors")
+        expect(fallback[2].Id).toBe("Tornado")
+        expect(#compatible).toBe(2)
+        expect(#pool).toBe(3)
+        expect(#RoundVariety.freshFusionCandidates("Bombs", {}, recent))
+            .toBe(0)
+        expect(#RoundVariety.freshFusionCandidates("Bombs", {d("Bombs")}, {}))
+            .toBe(0)
+    end)
+
     it("maintains a bounded unique recent history", function()
         local recent = RoundVariety.pushRecent({"A", "B"}, "C", 2)
         expect(#recent).toBe(2)

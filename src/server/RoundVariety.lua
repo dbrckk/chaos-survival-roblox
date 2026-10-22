@@ -85,4 +85,47 @@ function RoundVariety.pushRecent(recentIds, id, maximumHistory)
     return result
 end
 
+-- Double Chaos used to choose its second catastrophe uniformly, which could
+-- recreate the same fusion in successive matches despite 11 available kits.
+-- Prefer an unseen *unordered pair*; retain the full compatible pool if all
+-- choices are recent so this can never prevent a scheduled Double Chaos.
+function RoundVariety.fusionKey(firstId, secondId)
+    if type(firstId) ~= "string" or firstId == ""
+        or type(secondId) ~= "string" or secondId == ""
+        or firstId == secondId then
+        return nil
+    end
+    if firstId < secondId then
+        return firstId .. "+" .. secondId
+    end
+    return secondId .. "+" .. firstId
+end
+
+function RoundVariety.freshFusionCandidates(primaryId, compatible, recentPairs)
+    if type(compatible) ~= "table" then return {} end
+    local recent = {}
+    if type(recentPairs) == "table" then
+        for _, key in ipairs(recentPairs) do
+            if type(key) == "string" then recent[key] = true end
+        end
+    end
+    local eligible = {}
+    local fresh = {}
+    for _, candidate in ipairs(compatible) do
+        if type(candidate) == "table" then
+            local key = RoundVariety.fusionKey(primaryId, candidate.Id)
+            if key then
+                table.insert(eligible, candidate)
+                if not recent[key] then
+                    table.insert(fresh, candidate)
+                end
+            end
+        end
+    end
+    if #fresh > 0 then return fresh end
+    -- Preserve a playable round when every pair is already familiar, but
+    -- never admit the same hazard twice even if the caller's pool is bad.
+    return eligible
+end
+
 return RoundVariety
