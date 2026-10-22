@@ -18,6 +18,63 @@ function D.canBegin(ctx, now)
         <= deadline
 end
 
+-- Advanced rounds become a two-point positioning puzzle after their
+-- midpoint. Keep rookie / Double Chaos rounds single-point, and preserve
+-- at least six currently traversable platforms on complex arenas.
+-- Only actual round time authorizes escalation: intensity alone can be
+-- high on short, beginner-friendly Solo Rush rounds.
+function D.waveSize(ctx, eligibleCount, now)
+    if type(ctx) ~= "table" or ctx.EnableCollapseWaves ~= true
+        or (tonumber(eligibleCount) or 0) < 8 then
+        return 1
+    end
+    local started = tonumber(ctx.RoundStartedAt)
+    local duration = tonumber(ctx.RoundSeconds)
+    local clock = tonumber(now)
+    if not started or not duration or not clock
+        or started ~= started or duration ~= duration or clock ~= clock
+        or math.abs(started) == math.huge or math.abs(clock) == math.huge
+        or duration < 24 or duration == math.huge then
+        return 1
+    end
+    return clock - started >= duration * 0.55 and 2 or 1
+end
+
+-- Never take two adjacent platforms at once. Start with a random platform,
+-- then use the most distant available deck only if it is at least 18 studs
+-- away. This preserves a navigable safe corridor rather than making an
+-- unavoidable single choke point disappear wholesale.
+function D.chooseWavePlatforms(eligible, requested, startingIndex)
+    local selected = {}
+    if type(eligible) ~= "table" or #eligible == 0 then
+        return selected
+    end
+    local start = tonumber(startingIndex)
+    if not start or start < 1 or start > #eligible
+        or start ~= math.floor(start) then
+        start = math.random(1, #eligible)
+    end
+    local first = eligible[start]
+    if not first or not first:IsA("BasePart") then return selected end
+    selected[1] = first
+
+    if tonumber(requested) ~= 2 or #eligible < 8 then
+        return selected
+    end
+    local farthest, distance = nil, 18
+    for _, part in ipairs(eligible) do
+        if part ~= first and part:IsA("BasePart") then
+            local delta = part.Position - first.Position
+            local separation = Vector3.new(delta.X, 0, delta.Z).Magnitude
+            if separation > distance then
+                farthest, distance = part, separation
+            end
+        end
+    end
+    if farthest then selected[2] = farthest end
+    return selected
+end
+
 function D.eligiblePlatforms(folder, activeStates)
     local result = {}
     if not folder then
@@ -134,46 +191,57 @@ function D.start(ctx)
         while ctx.Active() and folder.Parent do
             if not D.canBegin(ctx, os.clock()) then break end
             local parts = D.eligiblePlatforms(folder, activeStates)
-            if #parts > 0 then
-                local p = parts[math.random(1, #parts)]
-                generation += 1
-                local token = generation
-                activeStates[p] = {
-                    transparency = p.Transparency,
-                    canCollide = p.CanCollide,
-                    color = p.Color,
-                    material = p.Material,
-                    generation = token,
-                    cosmetics = D.cosmeticsForPlatform(decor, p),
-                }
+            local chosen = D.chooseWavePlatforms(
+                parts, D.waveSize(ctx, #parts, os.clock())
+            )
+            if #chosen > 0 then
+                local staged = {}
+                local serverStart = workspace:GetServerTimeNow()
+                for _, p in ipairs(chosen) do
+                    generation += 1
+                    local token = generation
+                    activeStates[p] = {
+                        transparency = p.Transparency,
+                        canCollide = p.CanCollide,
+                        color = p.Color,
+                        material = p.Material,
+                        generation = token,
+                        cosmetics = D.cosmeticsForPlatform(decor, p),
+                    }
+                    staged[#staged + 1] = {part = p, token = token}
 
-                D.setCosmeticsPhase(activeStates[p].cosmetics, "Warning")
-                p:SetAttribute("CollapseWarningStartedAt", workspace:GetServerTimeNow())
-                p:SetAttribute("CollapsePhase", "Warning")
-                p.Color = Color3.fromRGB(255, 205, 70)
-                p.Material = Enum.Material.Neon
+                    D.setCosmeticsPhase(activeStates[p].cosmetics, "Warning")
+                    -- A single timestamp synchronizes both clear warning
+                    -- contours on spectators, humans and mobile clients.
+                    p:SetAttribute("CollapseWarningStartedAt", serverStart)
+                    p:SetAttribute("CollapsePhase", "Warning")
+                    p.Color = Color3.fromRGB(255, 205, 70)
+                    p.Material = Enum.Material.Neon
 
-                -- Keep one authoritative replicated fallback cue. The animated
-                -- edge/cross pulse is client-owned by disappearing-platform-readability,
-                -- avoiding repeated server property replication for cosmetic motion.
-                p.Transparency = math.min(p.Transparency, 0.24)
-                p.Color = Color3.fromRGB(255, 205, 70)
+                    -- Local animated warning edges use the same contract as
+                    -- single-platform waves; only physical decks disappear.
+                    p.Transparency = math.min(p.Transparency, 0.24)
+                end
+
                 task.wait(D.WarningSeconds)
-                local state = activeStates[p]
-                if ctx.Active() and state and state.generation == token and p.Parent then
-                    p:SetAttribute("CollapsePhase", "Gone")
-                    p.Transparency = 1
-                    p.CanCollide = false
-                    D.setCosmeticsPhase(state.cosmetics, "Gone")
-
-                    task.delay(D.GoneSeconds, function()
-                        local delayedState = activeStates[p]
-                        if delayedState and delayedState.generation == token then
-                            restore(p)
-                        end
-                    end)
-                else
-                    restore(p)
+                for _, entry in ipairs(staged) do
+                    local p, token = entry.part, entry.token
+                    local state = activeStates[p]
+                    if ctx.Active() and state
+                        and state.generation == token and p.Parent then
+                        p:SetAttribute("CollapsePhase", "Gone")
+                        p.Transparency = 1
+                        p.CanCollide = false
+                        D.setCosmeticsPhase(state.cosmetics, "Gone")
+                        task.delay(D.GoneSeconds, function()
+                            local delayedState = activeStates[p]
+                            if delayedState and delayedState.generation == token then
+                                restore(p)
+                            end
+                        end)
+                    else
+                        restore(p)
+                    end
                 end
             end
 
