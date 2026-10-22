@@ -53,9 +53,10 @@ function ImpactWaveDirector.forContext(ctx, now, halfX, halfZ)
 end
 
 -- Predictable ordered patterns, varied by match and hazard type.
--- The sweep travels horizontally along one side, then returns on the other.
--- Flank strikes alternate diagonally; the central crossing is deliberately
--- not a forced lethal trap. Individual ground circles remain authoritative.
+-- A sweep travels horizontally across the center lane then returns on
+-- an outer flank. Crossfire alternates the corners with a periodically
+-- telegraphed center strike, so no single camping spot is permanently safe.
+-- Individual ground circles remain authoritative and fully avoidable.
 function ImpactWaveDirector.anchor(mode, sequence, roundNumber, hazardId, halfX, halfZ)
     if mode ~= ImpactWaveDirector.SWEEP and mode ~= ImpactWaveDirector.FLANKS then
         return nil
@@ -73,25 +74,30 @@ function ImpactWaveDirector.anchor(mode, sequence, roundNumber, hazardId, halfX,
 
     if mode == ImpactWaveDirector.SWEEP then
         -- Three wide lanes deliberately exceed the 22-stud shared
-        -- warning separation budget on a full-size arena. Five narrow
-        -- lanes looked cinematic but would force Bomb Rain (which keeps
-        -- two active warnings) to abandon the authored route repeatedly.
+        -- warning separation budget. The central pass prevents effortless
+        -- safe camping; the return uses the offset flank for variety.
         local pass = math.floor(step / 3)
         local lane = step % 3
         local direction = pass % 2 == 0 and 1 or -1
         local x = ((lane - 1) * 0.72) * direction * sign
-        local z = (pass % 2 == 0 and 0.56 or -0.56) * sign
+        local z = (pass % 2 == 0 and 0 or -0.56) * sign
         return Vector3.new(x * hx, 0, z * hz)
     end
 
+    -- Four diagonal flank strikes, then a transparent center telegraph.
+    -- That fifth beat prevents a zero-risk "always camp mid" strategy,
+    -- without new hitboxes or any shortened warning reaction time.
+    local index = (step % 5) + 1
+    if index == 5 then
+        return Vector3.zero
+    end
     local corners = {
         Vector2.new(-0.54, -0.52),
         Vector2.new(0.54, 0.52),
         Vector2.new(-0.54, 0.52),
         Vector2.new(0.54, -0.52),
     }
-    local index = ((step + round - 1) % 4) + 1
-    local point = corners[index]
+    local point = corners[((index + round - 2) % 4) + 1]
     return Vector3.new(point.X * hx * sign, 0, point.Y * hz)
 end
 
