@@ -1416,6 +1416,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
             phase = "round",
             impactWaveMode = (impactWaveMode ~= ImpactWaveDirector.SCATTER)
                 and impactWaveMode or nil,
+            -- Only announce the second-collapse danger after real, spaced
+            -- authoritative deck warnings were successfully staged.
+            doubleCollapseUnlocked = ctx.DoubleCollapseUnlocked == true,
             title = title,
             hint = roundHint,
             seconds = t,
