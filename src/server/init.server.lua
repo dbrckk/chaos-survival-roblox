@@ -47,6 +47,8 @@ local EliminationCauseRules = require(script.EliminationCauseRules)
 local SessionStreak = require(script.SessionStreak)
 local RoundVariety = require(script.RoundVariety)
 local RoundIntensity = require(script.RoundIntensity)
+local ImpactWaveDirector = require(script.ImpactWaveDirector)
+local ArenaTargeting = require(script.ArenaTargeting)
 local RoundCleanup = require(script.RoundCleanup)
 local RoundSettlement = require(script.RoundSettlement)
 local RoundResultState = require(script.RoundResultState)
@@ -1064,7 +1066,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
         -- Explicit monotonic deadline; late hazard telegraphs must have
         -- enough time to complete and restore before the round ends.
         RoundEndsAt = roundStartedAt + roundSettings.RoundSeconds,
+        RoundStartedAt = roundStartedAt,
         RoundNumber = roundNumber,
+        -- Advanced strike patterns only after all human contestants have
+        -- finished their first three learning rounds; the actual damage,
+        -- telegraph durations and launch cadence remain unchanged.
+        EnableImpactWaves = allowDynamicArenas
+            and roundSettings.RoundSeconds >= ImpactWaveDirector.MinRoundSeconds
+            and (activeHazards.Meteors or activeHazards.Bombs),
         ActiveDisasters = activeHazards,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
@@ -1391,8 +1400,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
             roundHint = "OVERDRIVE • Boost pads + Shard surge • " .. roundHint
         end
 
+        local halfX, halfZ = ArenaTargeting.activeHalfExtents(6, 42)
+        local impactWaveMode = ImpactWaveDirector.forContext(
+            ctx, os.clock(), halfX, halfZ
+        )
         broadcast({
             phase = "round",
+            impactWaveMode = (impactWaveMode ~= ImpactWaveDirector.SCATTER)
+                and impactWaveMode or nil,
             title = title,
             hint = roundHint,
             seconds = t,
