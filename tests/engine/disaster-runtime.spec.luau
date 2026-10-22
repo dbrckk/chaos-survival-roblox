@@ -406,6 +406,84 @@ describe("Collapsing platform visual truth", function()
 end)
 
 describe("Headless disaster playtest", function()
+    it("runs smooth Moon Gravity tides with an authoritative world warning", function()
+        local gravity = require("../../src/server/Disasters/LowGravity")
+        local target, stage, remaining = gravity.tideAt(0, false)
+        expect(target).toBe(55)
+        expect(stage).toBe("Float")
+        target, stage, remaining = gravity.tideAt(5, true)
+        expect(target).toBe(55)
+        expect(stage).toBe("Float")
+        expect(remaining).toBe(1.5)
+        expect(gravity.tideCue(stage, remaining)).toBe("PULL IN 2s")
+
+        target, stage = gravity.tideAt(7.25, true)
+        expect(stage).toBe("PullRising")
+        expect(math.abs(target - 87.5) < 0.01).toBe(true)
+        target, stage = gravity.tideAt(8, true)
+        expect(target).toBe(120)
+        expect(stage).toBe("Pull")
+        target, stage = gravity.tideAt(13.25, true)
+        expect(stage).toBe("FloatReturning")
+        expect(math.abs(target - 87.5) < 0.01).toBe(true)
+        target, stage = gravity.tideAt(14, true)
+        expect(target).toBe(55)
+        expect(stage).toBe("Float")
+        target = gravity.tideAt(21, false)
+        expect(target).toBe(55)
+        expect(gravity.tideAt(21, true) > 55).toBe(true)
+
+        local originalGravity = workspace.Gravity
+        local character = Instance.new("Model")
+        character.Name = "MoonTideEngineSubject"
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.CanCollide = false
+        root.Position = Vector3.new(0, 30, 0)
+        root.Parent = character
+        local hum = Instance.new("Humanoid")
+        hum.Parent = character
+        character.Parent = workspace
+        local subject = {Character = character}
+        local cleanup = {}
+        local active = true
+
+        gravity.start({
+            Config = Config,
+            EnableGravityTides = true,
+            RoundStartedAt = os.clock() - 9,
+            Active = function() return active end,
+            IsContestantActive = function(p) return p == subject end,
+            HazardContestants = {subject},
+            Cleanup = cleanup,
+        })
+        task.wait(0.12)
+        local beacon = workspace:FindFirstChild("MoonGravityBeacon")
+        expect(beacon ~= nil).toBe(true)
+        local label = beacon and beacon:FindFirstChild("GravityTideSignal")
+        local text = label and label:FindFirstChild("GravityTideText")
+        expect(text ~= nil).toBe(true)
+        if text then
+            expect(string.find(text.Text, "PULL", 1, true) ~= nil).toBe(true)
+        end
+        local force = root:FindFirstChild("MoonGravityForce")
+        expect(force ~= nil).toBe(true)
+        if force then
+            local expected = gravity.compensationForce(
+                root.AssemblyMass, originalGravity, 120
+            )
+            expect(math.abs(force.Force.Y - expected) < 0.5).toBe(true)
+        end
+
+        active = false
+        runCleanup(cleanup, {})
+        expect(beacon == nil or beacon.Parent == nil).toBe(true)
+        expect(force == nil or force.Parent == nil).toBe(true)
+        expect(workspace.Gravity).toBe(originalGravity)
+        character:Destroy()
+    end)
+
     it("makes elevated routes a real tornado escape without weakening ground hazards", function()
         local center = Vector3.zero
         local ground, groundStrength = Tornado.impulseAt(
