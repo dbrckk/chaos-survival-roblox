@@ -154,6 +154,130 @@ describe("Round-end lethal warning safety", function()
 end)
 
 describe("Collapsing platform visual truth", function()
+    it("orders veteran floor sweeps without removing beginner reaction time", function()
+        local D = require("../../src/server/Disasters/DisappearingPlatforms")
+        local ctx = {
+            EnablePlatformWaves = true,
+            RoundStartedAt = 100,
+            RoundSeconds = 40,
+            RoundNumber = 7,
+        }
+        expect(D.waveMode(ctx, 110, 6)).toBe("Scatter")
+        expect(D.waveMode(ctx, 114, 6)).toBe("Sweep")
+        expect(D.waveMode(ctx, 127, 6)).toBe("Sweep")
+        expect(D.waveMode(ctx, 128, 6)).toBe("Flanks")
+        expect(D.waveMode(ctx, 128, 3)).toBe("Scatter")
+        expect(D.waveMode({
+            EnablePlatformWaves = false,
+            RoundStartedAt = 100, RoundSeconds = 40,
+        }, 128, 6)).toBe("Scatter")
+        expect(D.waveMode({
+            EnablePlatformWaves = true,
+            RoundStartedAt = 100, RoundSeconds = 20,
+        }, 116, 6)).toBe("Scatter")
+        expect(D.waveMode(nil, 128, 6)).toBe("Scatter")
+
+        local root = Instance.new("Folder")
+        root.Name = "PlatformPatternFixtures"
+        root.Parent = workspace
+        local parts = {}
+        for i = 1, 6 do
+            local deck = Instance.new("Part")
+            deck.Name = "Deck" .. tostring(i)
+            deck.Anchored = true
+            deck.CanCollide = true
+            deck.Position = Vector3.new(-42 + i * 12, 20, i * 2)
+            deck.Parent = root
+            parts[#parts + 1] = deck
+        end
+        local step1 = D.choosePlatform(parts, "Sweep", 1, nil, 7)
+        local step2 = D.choosePlatform(parts, "Sweep", 2, step1, 7)
+        local step3 = D.choosePlatform(parts, "Sweep", 3, step2, 7)
+        expect(step1.Position.X < step2.Position.X).toBe(true)
+        expect(step2.Position.X < step3.Position.X).toBe(true)
+        local reversed = D.choosePlatform(parts, "Sweep", 1, nil, 8)
+        expect(reversed.Position.X > step1.Position.X).toBe(true)
+        local left = D.choosePlatform(parts, "Flanks", 1, nil, 7)
+        local right = D.choosePlatform(parts, "Flanks", 2, left, 7)
+        expect(left.Position.X < right.Position.X).toBe(true)
+        expect(D.choosePlatform(parts, "Scatter", 2, left, 7) ~= left)
+            .toBe(true)
+        parts[1]:SetAttribute("ChaosSkybridge", true)
+        expect(D.choosePlatform({parts[1]}, "Sweep", 1, nil, 7) == nil)
+            .toBe(true)
+        expect(D.choosePlatform({}, "Sweep", 1, nil, 7) == nil)
+            .toBe(true)
+        root:Destroy()
+    end)
+
+    it("runs one real staged floor warning with full collision and cleanup", function()
+        local D = require("../../src/server/Disasters/DisappearingPlatforms")
+        local old = workspace:FindFirstChild("GeneratedMap")
+        if old then old:Destroy() end
+        local map = Instance.new("Folder")
+        map.Name = "GeneratedMap"
+        map.Parent = workspace
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = map
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = arena
+        for i = 1, 6 do
+            local deck = Instance.new("Part")
+            deck.Name = "Platform" .. i
+            deck.Position = Vector3.new(i * 12, 30, i * 2)
+            deck.Anchored = true
+            deck.CanCollide = true
+            deck.Parent = platforms
+        end
+
+        local active = true
+        local onCleanup = {}
+        local ctx = {
+            Active = function() return active end,
+            Cleanup = {},
+            OnCleanup = onCleanup,
+            EnablePlatformWaves = true,
+            RoundStartedAt = os.clock() - 18,
+            RoundSeconds = 40,
+            RoundEndsAt = os.clock() + 7,
+            RoundNumber = 7,
+        }
+        D.start(ctx)
+        local warning = nil
+        local deadline = os.clock() + 0.6
+        repeat
+            for _, part in ipairs(platforms:GetChildren()) do
+                if part:GetAttribute("CollapsePhase") == "Warning" then
+                    warning = part
+                    break
+                end
+            end
+            if warning then break end
+            task.wait(0.02)
+        until os.clock() >= deadline
+
+        expect(warning ~= nil).toBe(true)
+        expect(ctx.PlatformWaveMode).toBe("Sweep")
+        if warning then
+            expect(warning:GetAttribute("CollapseWaveMode")).toBe("Sweep")
+            expect(warning:GetAttribute("CollapseWarningStartedAt") ~= nil)
+                .toBe(true)
+            expect(warning.CanCollide).toBe(true)
+            expect(warning.Transparency < 1).toBe(true)
+        end
+        active = false
+        runCleanup({}, onCleanup)
+        expect(ctx.PlatformWaveMode == nil).toBe(true)
+        if warning then
+            expect(warning:GetAttribute("CollapsePhase") == nil).toBe(true)
+            expect(warning:GetAttribute("CollapseWaveMode") == nil).toBe(true)
+            expect(warning.CanCollide).toBe(true)
+        end
+        map:Destroy()
+    end)
+
     it("hides real server trims and supports along with the collision deck", function()
         local D = require("../../src/server/Disasters/DisappearingPlatforms")
         -- The mobile warning needs enough time for normal reactions
