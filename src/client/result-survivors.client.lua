@@ -5,6 +5,7 @@ local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
