@@ -22,6 +22,9 @@ local watchedMap = nil
 local motionTime = 0
 local finalRush = false
 local rushBlend = 0
+local settling = false
+local settleElapsed = 0
+local SETTLE_SECONDS = 0.72
 
 local function rebuild()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -31,6 +34,8 @@ local function rebuild()
         -- A streamed-out arena must release its local cosmetic instances.
         motionTime = 0
         rushBlend = 0
+        settling = false
+        settleElapsed = 0
         folder:ClearAllChildren()
         bundle = nil
         return
@@ -47,6 +52,8 @@ local function rebuild()
 
     motionTime = 0
     rushBlend = 0
+    settling = false
+    settleElapsed = 0
     folder:ClearAllChildren()
     bundle = nil
     bundle = SignatureKit.build(folder, base, variant, tier.Name)
@@ -97,6 +104,7 @@ end)
 workspace.ChildRemoved:Connect(function(child)
     if child == watchedMap then
         bind(workspace:FindFirstChild("GeneratedMap"))
+        settling = false
         folder:ClearAllChildren()
         bundle = nil
         scheduleRebuild()
@@ -110,6 +118,8 @@ end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     motionTime = 0
     rushBlend = 0
+    settling = false
+    settleElapsed = 0
     if bundle then
         SignatureKit.update(bundle, 0, true)
     end
@@ -121,14 +131,28 @@ state.OnClientEvent:Connect(function(snapshot)
         and tostring(snapshot.phase or "waiting") or "waiting"
     local wasActive = phase == "round" or phase == "ready"
     local isActive = nextPhase == "round" or nextPhase == "ready"
-    if wasActive ~= isActive then
+    if isActive then
+        if not wasActive then
+            motionTime = 0
+            rushBlend = 0
+        end
+        settling = false
+    elseif nextPhase == "result" and wasActive and bundle
+        and player:GetAttribute("ReduceMotion") ~= true then
+        -- Hold the actual final animation pose and decelerate gracefully.
+        -- Repeated result snapshots do not restart this envelope.
+        settling = true
+        settleElapsed = 0
+    elseif nextPhase ~= "result" then
+        settling = false
+        settleElapsed = 0
         motionTime = 0
         rushBlend = 0
     end
     phase = nextPhase
     finalRush = nextPhase == "round" and type(snapshot) == "table"
         and snapshot.finalRush == true
-    if bundle and not isActive then
+    if bundle and not isActive and not settling then
         SignatureKit.update(bundle, 0, true)
     end
 end)
@@ -141,22 +165,35 @@ task.spawn(function()
         local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
         local active = phase == "round" or phase == "ready"
         local reduced = player:GetAttribute("ReduceMotion") == true
-        if active and not reduced and bundle and bundle.folder.Parent then
+        if (active or settling) and not reduced
+            and bundle and bundle.folder.Parent then
             -- A suspended mobile app can resume after a long scheduler gap.
             -- Clamp catch-up so animated equipment never jumps metres in
             -- one frame; the entire signature shares this single timebase.
             local dt = task.wait(tier.Name == "Low" and 0.22
                 or (tier.Name == "Medium" and 0.13 or 0.09))
-            if (phase == "round" or phase == "ready")
-                and player:GetAttribute("ReduceMotion") ~= true
-                and bundle and bundle.folder.Parent
-            then
+            if player:GetAttribute("ReduceMotion") ~= true
+                and bundle and bundle.folder.Parent then
                 local step = math.clamp(tonumber(dt) or 0, 0, 0.25)
-                local targetRush = phase == "round" and finalRush and 1 or 0
-                -- Ease in/out: no sudden angular jump when Final Rush begins.
-                rushBlend += (targetRush - rushBlend) * math.min(1, step * 2.4)
-                motionTime += step * SignatureKit.motionRate(rushBlend)
-                SignatureKit.update(bundle, motionTime, false, rushBlend)
+                if phase == "round" or phase == "ready" then
+                    local targetRush = phase == "round" and finalRush and 1 or 0
+                    -- Ease in/out: no sudden angular jump at Final Rush.
+                    rushBlend += (targetRush - rushBlend) * math.min(1, step * 2.4)
+                    motionTime += step * SignatureKit.motionRate(rushBlend)
+                    SignatureKit.update(bundle, motionTime, false, rushBlend)
+                elseif settling and phase == "result" then
+                    settleElapsed += step
+                    local blend = SignatureKit.settleAmount(
+                        settleElapsed, SETTLE_SECONDS
+                    )
+                    SignatureKit.update(bundle, motionTime, false, rushBlend, blend)
+                    if blend <= 0 then
+                        settling = false
+                        motionTime = 0
+                        rushBlend = 0
+                        SignatureKit.update(bundle, 0, true)
+                    end
+                end
             end
         else
             task.wait(0.60)
