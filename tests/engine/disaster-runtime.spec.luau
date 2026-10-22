@@ -72,7 +72,12 @@ describe("Real-engine evolving impact storms", function()
             local deadline = os.clock() + 0.85
             repeat
                 marker = workspace:FindFirstChild(case.marker)
-                if marker then break end
+                -- Bomb Rain configures its authoritative warning in a
+                -- separate spawned task. Wait for the full metadata bundle,
+                -- not merely the existence of the initial 3D marker.
+                if marker and marker:GetAttribute("WarningEndSize") ~= nil then
+                    break
+                end
                 task.wait(0.02)
             until os.clock() >= deadline
 
