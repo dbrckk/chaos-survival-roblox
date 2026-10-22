@@ -167,6 +167,7 @@ local currentArenaVariant = "Classic"
 local recentArenaVariantIds = {currentArenaVariant}
 local studioE2EArenaIndex = 0
 local recentPrimaryDisasterIds = {}
+local recentFusionPairs = {}
 local currentVotes = {}
 local currentOptions = {}
 local voteOpen = false
@@ -1697,7 +1698,10 @@ while true do
     if allowDoubleChaos
         and (forceDouble or math.random() < roundSettings.DoubleChaosChance)
     then
-        local candidates = DisasterBalance.filterCompatible(selected.Id, disasters)
+        local compatible = DisasterBalance.filterCompatible(selected.Id, disasters)
+        local candidates = RoundVariety.freshFusionCandidates(
+            selected.Id, compatible, recentFusionPairs
+        )
         if #candidates > 0 then
             table.insert(selectedSet, candidates[math.random(1, #candidates)])
         end
@@ -1706,6 +1710,10 @@ while true do
     local fusionName = #selectedSet > 1
         and ChaosFusion.name(selectedSet[1].Id, selectedSet[2].Id)
         or nil
+    if #selectedSet > 1 then
+        local pairKey = RoundVariety.fusionKey(selectedSet[1].Id, selectedSet[2].Id)
+        recentFusionPairs = RoundVariety.pushRecent(recentFusionPairs, pairKey, 4)
+    end
     local readyTitle = selectedSet[1].Name
     local readyHint = selectedSet[1].Hint
     if #selectedSet > 1 then
