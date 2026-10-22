@@ -421,6 +421,77 @@ describe("Kinetic arena signatures", function()
         parent:Destroy()
     end)
 
+    it("articulates identifiable four-map machine details without extra effects or collisions", function()
+        local parent = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        local details = {
+            Classic = "ClassicTrackingVane1",
+            Towers = "TowerHydraulicPiston-1",
+            Crossroads = "CrossroadSemaphoreArm1",
+            Orbital = "OrbitalIrisShutter1",
+        }
+        for variant, name in pairs(details) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local built = ArenaSignatureKit.build(parent, base, variant, tier, VisualTheme)
+                local component = built.folder:FindFirstChild(name)
+                if tier == "Low" then
+                    expect(component == nil).toBe(true)
+                else
+                    expect(component ~= nil).toBe(true)
+                    expect(component:IsA("BasePart")).toBe(true)
+                    local rest = component.CFrame
+                    local sizeAtRest = component.Size
+                    local originalPartCount = #built.parts
+                    ArenaSignatureKit.update(built, 2.5, false, 1)
+                    expect(component.CFrame ~= rest).toBe(true)
+                    -- The low-work animation loop never allocates anything.
+                    expect(#built.parts).toBe(originalPartCount)
+                    ArenaSignatureKit.update(built, 14, true, 1)
+                    expect(component.CFrame).toBe(rest)
+                    expect(component.Size).toBe(sizeAtRest)
+                    ArenaSignatureKit.update(built, 4, true, 0)
+                    expect(component.CFrame).toBe(rest)
+                end
+                expect(#built.parts <= built.profile.MaxParts).toBe(true)
+                for _, part in ipairs(built.parts) do
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                end
+                built.folder:Destroy()
+            end
+        end
+        base:Destroy()
+        parent:Destroy()
+    end)
+
+    it("keeps the hydraulic piston physically under the animated lift", function()
+        local parent = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        for _, tier in ipairs({"Medium", "High"}) do
+            local built = ArenaSignatureKit.build(parent, base, "Towers", tier, VisualTheme)
+            local cabin = built.folder:FindFirstChild("TowerAnimatedLift")
+            for _, t in ipairs({0, 1.6, 4, 6.7, 9.5}) do
+                ArenaSignatureKit.update(built, t, false, 0.5)
+                for _, name in ipairs({"TowerHydraulicPiston-1", "TowerHydraulicPiston1"}) do
+                    local piston = built.folder:FindFirstChild(name)
+                    expect(piston ~= nil).toBe(true)
+                    local lower = piston.Position.Y - piston.Size.Y * 0.5
+                    local upper = piston.Position.Y + piston.Size.Y * 0.5
+                    expect(math.abs(upper - (cabin.Position.Y - cabin.Size.Y * 0.5)) < 0.005).toBe(true)
+                    expect(math.abs(lower - (base.Position.Y + base.Size.Y * 0.5 + 0.7 + 1.7)) < 0.005).toBe(true)
+                    expect(piston.Size.Y >= 0.40 and piston.Size.Y <= 4.61).toBe(true)
+                end
+            end
+            built.folder:Destroy()
+        end
+        base:Destroy()
+        parent:Destroy()
+    end)
+
     it("animates original tower counterweights opposite the lift and restores accessibility pose", function()
         local root = Instance.new("Folder")
         local base = Instance.new("Part")
