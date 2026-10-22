@@ -601,6 +601,24 @@ describe("Headless disaster playtest", function()
         end
     end)
 
+    it("allows a real timed jump to dodge Jump Shock, not a fall", function()
+        local jumpShock = require("../../src/server/Disasters/JumpShock")
+        local dodged = jumpShock.dodgedByJump
+        local jumping = Enum.HumanoidStateType.Jumping
+        local falling = Enum.HumanoidStateType.Freefall
+        local running = Enum.HumanoidStateType.Running
+
+        expect(jumpShock.WarningSeconds >= 1).toBe(true)
+        expect(dodged(jumping, 18, 7)).toBe(true)
+        expect(dodged(falling, 9, 5)).toBe(true)
+        expect(dodged(falling, -10, 7)).toBe(false)
+        expect(dodged(jumping, 12, 2)).toBe(false)
+        expect(dodged(running, 20, 8)).toBe(false)
+        expect(dodged(jumping, 15, 0)).toBe(false)
+        expect(dodged(jumping, nil, 7)).toBe(false)
+        expect(dodged(jumping, 15, nil)).toBe(false)
+    end)
+
     it("reports real jump shock knockback contacts without timer delay", function()
         local character = Instance.new("Model")
         character.Name = "JumpShockContactSubject"
