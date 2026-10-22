@@ -19,7 +19,7 @@ local ELIMINATION_COPY = {
     },
     JumpShock = {
         title = "KNOCKED OFF BY SHOCKWAVE",
-        tip = "Give the blue shockwave extra space",
+        tip = "Time your jump to clear the blue shockwave",
     },
     LowGravity = {
         title = "DRIFTED OFF THE ARENA",
@@ -58,7 +58,7 @@ local ELIMINATION_COPY_FR = {
     },
     JumpShock = {
         title = "ÉJECTÉ PAR L'ONDE DE CHOC",
-        tip = "Laisse plus d'espace autour de l'onde bleue",
+        tip = "Saute au bon moment pour esquiver l'onde bleue",
     },
     LowGravity = {
         title = "SORTI DE L'ARÈNE",
