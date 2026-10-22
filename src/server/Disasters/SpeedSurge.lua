@@ -54,6 +54,7 @@ end
 -- be left untouched until the other owner releases it.
 function D.shouldAssignSpeed(actual, assigned, target)
     return D.ownsSpeed(actual, assigned)
+        and D.ownsSpeed(target, target)
         and not D.ownsSpeed(actual, target)
 end
 
