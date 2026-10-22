@@ -39,6 +39,7 @@ describe("Round intensity director", function()
         expect(wave.mode(42, 40, true, 40, 40)).toBe("Flanks")
         expect(wave.mode(28, 40, false, 40, 40)).toBe("Scatter")
         expect(wave.mode(28, 20, true, 40, 40)).toBe("Scatter")
+        expect(wave.mode(28, 40, true, 31, 40)).toBe("Scatter")
         expect(wave.mode(28, 40, true, 12, 40)).toBe("Scatter")
         expect(wave.mode(28, 40, true, 40, 12)).toBe("Scatter")
         expect(wave.mode(math.huge, 40, true, 40, 40)).toBe("Scatter")
@@ -56,7 +57,7 @@ describe("Round intensity director", function()
     it("sweeps predictably before alternating flank strikes within arena bounds", function()
         local wave = ImpactWaveDirector
         local xPositions = {}
-        for step = 1, 5 do
+        for step = 1, 3 do
             local offset = wave.anchor("Sweep", step, 5, "Meteors", 42, 42)
             expect(typeof(offset)).toBe("Vector3")
             expect(math.abs(offset.Y)).toBe(0)
@@ -66,8 +67,11 @@ describe("Round intensity director", function()
         end
         for i = 2, #xPositions do
             expect(xPositions[i] > xPositions[i - 1]).toBe(true)
+            -- Every consecutive Bomb warning must be able to remain
+            -- on the choreographed lane while another warning is live.
+            expect(xPositions[i] - xPositions[i - 1] >= 22).toBe(true)
         end
-        local returnSweep = wave.anchor("Sweep", 6, 5, "Meteors", 42, 42)
+        local returnSweep = wave.anchor("Sweep", 4, 5, "Meteors", 42, 42)
         expect(returnSweep.Z * wave.anchor(
             "Sweep", 1, 5, "Meteors", 42, 42
         ).Z < 0).toBe(true)
