@@ -18,6 +18,18 @@ function D.dodgedByJump(humanoidState, velocityY, heightAboveGround)
         and rising > 3 and clearance >= 4.5
 end
 
+-- A successful timed dodge is a legitimate skilled near miss.
+-- Use the existing server-authoritative reward/event pipeline, which
+-- rate-limits human progress, ignores bots and drives near-miss SFX/VFX.
+-- No new client remote, currency or gameplay advantage is introduced.
+function D.rewardDodge(ctx, subject)
+    if type(ctx) ~= "table" or type(ctx.OnHazardNearMiss) ~= "function"
+        or (type(ctx.Active) == "function" and not ctx.Active()) then
+        return false
+    end
+    return pcall(ctx.OnHazardNearMiss, subject, "JumpShock", nil, nil)
+end
+
 local function makeWarning(ctx)
     local ring = Instance.new("Part")
     ring.Name = "JumpShockWarning"
@@ -70,6 +82,7 @@ function D.applyShock(ctx, subject, horizontalForce)
     if D.dodgedByJump(
         hum:GetState(), root.AssemblyLinearVelocity.Y, clearance
     ) then
+        D.rewardDodge(ctx, subject)
         return false
     end
 
