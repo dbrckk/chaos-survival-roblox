@@ -151,8 +151,12 @@ function D.start(ctx)
                         local target = D.speedAt(
                             state.original, state.applied, elapsed, true
                         )
-                        hum.WalkSpeed = target
-                        state.current = target
+                        -- Avoid redundant Humanoid replication for the
+                        -- steady portions of each rhythm window.
+                        if math.abs(target - state.current) >= 0.005 then
+                            hum.WalkSpeed = target
+                            state.current = target
+                        end
                     end
                 end
                 task.wait(0.12)
