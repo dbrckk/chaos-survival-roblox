@@ -304,6 +304,51 @@ describe("Kinetic arena signatures", function()
         root:Destroy()
     end)
 
+    it("returns every kinetic part to its distinct authored pose in Reduce Motion", function()
+        local root = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(100, 2, 100)
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local bundle = ArenaSignatureKit.build(root, base, variant, tier, VisualTheme)
+                local partCount = #bundle.parts
+                -- Exercise moving and partially settled poses before
+                -- switching accessibility mode while a round is active.
+                ArenaSignatureKit.update(bundle, 3.7, false, 1, 1)
+                ArenaSignatureKit.update(bundle, 3.7, false, 1, 0.36)
+                ArenaSignatureKit.update(bundle, 21.6, true, 1)
+                local ringCount = 0
+                for _, entry in ipairs(bundle.animated) do
+                    local part = entry.part
+                    expect(part.CFrame).toBe(entry.restCFrame)
+                    expect(part.Size).toBe(entry.restSize)
+                    expect(part.Color).toBe(entry.color)
+                    expect(part.Transparency).toBe(entry.transparency)
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    if entry.role == "ring" then
+                        ringCount += 1
+                        -- A ring segment's rest pose is offset from its
+                        -- shared rotation pivot. Never collapse its geometry.
+                        expect((part.Position - entry.frame.Position).Magnitude > 2)
+                            .toBe(true)
+                    end
+                end
+                if variant == "Orbital" then
+                    expect(ringCount >= 6).toBe(true)
+                end
+                ArenaSignatureKit.update(bundle, 8.9, true, 0)
+                for _, entry in ipairs(bundle.animated) do
+                    expect(entry.part.CFrame).toBe(entry.restCFrame)
+                end
+                expect(#bundle.parts).toBe(partCount)
+                bundle.folder:Destroy()
+            end
+        end
+        base:Destroy()
+        root:Destroy()
+    end)
+
     it("eases Final Rush kinetic signatures without new pieces or flashing", function()
         local motionRate = ArenaSignatureKit.motionRate
         expect(motionRate(0)).toBe(1)
