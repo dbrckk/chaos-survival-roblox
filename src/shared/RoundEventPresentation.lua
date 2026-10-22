@@ -87,6 +87,29 @@ function RoundEventPresentation.pulseStillCurrent(expectedEpoch, actualEpoch,
         and source == currentSource
 end
 
+-- A delayed victory accent may only paint over its original avatar
+-- during the same active/result round. A new READY or respawn invalidates
+-- it even if the old avatar still exists in Workspace for a short time.
+function RoundEventPresentation.celebrationStillCurrent(
+        expectedEpoch, actualEpoch, source, currentSource,
+        phase, expectedRound, observedRound)
+    if phase ~= "result" and phase ~= "round" then
+        return false
+    end
+    local expected = tonumber(expectedRound)
+    local observed = tonumber(observedRound)
+    if not expected or not observed or expected < 1 or observed < 1
+        or expected ~= expected or observed ~= observed
+        or math.abs(expected) == math.huge or math.abs(observed) == math.huge
+        or expected ~= math.floor(expected) or observed ~= math.floor(observed)
+        or expected ~= observed then
+        return false
+    end
+    return RoundEventPresentation.pulseStillCurrent(
+        expectedEpoch, actualEpoch, source, currentSource
+    )
+end
+
 function RoundEventPresentation.priority(kind)
     local priorities = {
         finalRush = 50,
