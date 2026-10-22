@@ -747,6 +747,14 @@ describe("Headless disaster playtest", function()
         expect(speed.ownsSpeed(20.2, 20)).toBe(false)
         expect(speed.ownsSpeed(0 / 0, 20)).toBe(false)
         expect(speed.ownsSpeed(20, math.huge)).toBe(false)
+
+        -- The actual Humanoid speed may round away from the originally
+        -- assigned Luau double. Continue the tide only while still owned.
+        expect(speed.shouldAssignSpeed(20, 20.000001, 24)).toBe(true)
+        expect(speed.shouldAssignSpeed(20, 20, 20.000001)).toBe(false)
+        expect(speed.shouldAssignSpeed(19.75, 20, 24)).toBe(false)
+        expect(speed.shouldAssignSpeed(0 / 0, 20, 24)).toBe(false)
+        expect(speed.shouldAssignSpeed(20, 20, math.huge)).toBe(true)
     end)
 
     it("allows a real timed jump to dodge Jump Shock, not a fall", function()
