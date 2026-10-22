@@ -1074,6 +1074,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
         EnableImpactWaves = allowDynamicArenas
             and roundSettings.RoundSeconds >= ImpactWaveDirector.MinRoundSeconds
             and (activeHazards.Meteors or activeHazards.Bombs),
+        -- Guided first rounds, short sprints and multi-hazard combinations
+        -- keep the original one-at-a-time random collapse behavior.
+        EnablePlatformWaves = allowDynamicArenas
+            and #selected == 1 and activeHazards.DisappearingPlatforms == true
+            and roundSettings.RoundSeconds >= 24,
         ActiveDisasters = activeHazards,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
@@ -1408,6 +1413,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             phase = "round",
             impactWaveMode = (impactWaveMode ~= ImpactWaveDirector.SCATTER)
                 and impactWaveMode or nil,
+            platformWaveMode = ctx.PlatformWaveMode,
             title = title,
             hint = roundHint,
             seconds = t,
