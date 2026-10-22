@@ -105,6 +105,7 @@ end
 function D.start(ctx)
     local tidesEnabled = ctx.EnableGravityTides == true
     local targetGravity = D.FloatGravity
+    local worldGravity = workspace.Gravity
     local startedAt = tonumber(ctx.RoundStartedAt) or os.clock()
     local beacon, beaconText, beaconLight
     if tidesEnabled then
