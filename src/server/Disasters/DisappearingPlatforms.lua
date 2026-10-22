@@ -178,6 +178,7 @@ function D.start(ctx)
 
     ctx.OnCleanup[#ctx.OnCleanup+1] = function()
         generation += 1
+        ctx.DoubleCollapseUnlocked = nil
         local parts = {}
         for part in pairs(activeStates) do
             table.insert(parts, part)
@@ -195,6 +196,13 @@ function D.start(ctx)
                 parts, D.waveSize(ctx, #parts, os.clock())
             )
             if #chosen > 0 then
+                -- Announce only a wave that really found two distant safe
+                -- candidates. Retain the unlock throughout this round:
+                -- a temporarily short platform pool can legitimately
+                -- produce a one-deck beat between two double-deck beats.
+                if #chosen >= 2 then
+                    ctx.DoubleCollapseUnlocked = true
+                end
                 local staged = {}
                 local serverStart = workspace:GetServerTimeNow()
                 for _, p in ipairs(chosen) do
