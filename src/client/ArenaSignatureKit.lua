@@ -588,6 +588,18 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion, rushIntensity, 
     for _, entry in ipairs(bundle.animated) do
         local p = entry.part
         if p.Parent then
+            if reduceMotion == true then
+                -- The neutral pose is captured *per part*, not shared by
+                -- the segments of the same mechanism. Orbital rings, for
+                -- example, share a rotating pivot but have distinct authored
+                -- offsets. Restoring entry.frame would collapse the ring.
+                -- Keep this path free of time-dependent animation writes.
+                p.CFrame = entry.restCFrame
+                p.Size = entry.restSize
+                p.Transparency = entry.transparency
+                p.Color = entry.color
+                continue
+            end
             if entry.role == "foundation" then
                 -- Subtle slow luminaire breathing, not a hazard-like flash.
                 -- Reduced motion restores exactly the authored rest opacity.
