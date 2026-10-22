@@ -94,6 +94,7 @@ function RoundEventPresentation.priority(kind)
         fusion = 35,
         overdrive = 30,
         impactWave = 25,
+        platformWave = 25,
         readyCountdown = 20,
     }
     return priorities[kind] or 0
