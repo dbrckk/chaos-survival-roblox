@@ -72,6 +72,7 @@ function D.start(ctx)
     end
 
     ctx.OnCleanup[#ctx.OnCleanup+1] = function()
+        ctx.SpeedTempoPhase = nil
         for hum, state in pairs(previous) do
             if hum and hum.Parent and hum.WalkSpeed == state.current then
                 hum.WalkSpeed = state.original
@@ -81,10 +82,12 @@ function D.start(ctx)
     end
 
     if tempoEnabled then
+        ctx.SpeedTempoPhase = "Surge"
         task.spawn(function()
             local lastText
             while ctx.Active() and beacon.Parent do
                 local phase, remaining = D.tempoAt(os.clock() - startedAt, true)
+                ctx.SpeedTempoPhase = phase
                 local text = phase == "Surge"
                     and ("FAST • CONTROL IN " .. math.ceil(remaining) .. "s")
                     or ("CONTROL • BOOST IN " .. math.ceil(remaining) .. "s")
