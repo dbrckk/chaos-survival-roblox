@@ -5,6 +5,7 @@ local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -27,7 +28,7 @@ local function clear()
     table.clear(active)
 end
 
-local function spotlightModel(key, model, labelText, localFocus)
+local function spotlightModel(key, model, labelText, localFocus, champion)
     if active[key] then
         return
     end
@@ -48,12 +49,15 @@ local function spotlightModel(key, model, labelText, localFocus)
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local bundle = {}
-    local accent = localFocus
-        and Color3.fromRGB(95, 215, 255)
-        or Color3.fromRGB(85, 235, 165)
-    local textColor = localFocus
-        and Color3.fromRGB(215, 248, 255)
-        or Color3.fromRGB(175, 255, 205)
+    -- The frozen server champion is a distinct accomplishment, not the
+    -- same green/blue survivor badge. High and Low tiers share the
+    -- identical readable golden identity without extra draw calls.
+    local accent = champion and Color3.fromRGB(255, 204, 95)
+        or (localFocus and Color3.fromRGB(95, 215, 255)
+            or Color3.fromRGB(85, 235, 165))
+    local textColor = champion and Color3.fromRGB(255, 241, 200)
+        or (localFocus and Color3.fromRGB(215, 248, 255)
+            or Color3.fromRGB(175, 255, 205))
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "ResultSurvivorHighlight"
@@ -71,7 +75,8 @@ local function spotlightModel(key, model, labelText, localFocus)
     gui.Adornee = head
     gui.AlwaysOnTop = true
     gui.LightInfluence = 0
-    gui.Size = UDim2.fromOffset(localFocus and 178 or 150, 38)
+    gui.Size = UDim2.fromOffset(champion and 192
+        or (localFocus and 178 or 150), 38)
     gui.StudsOffsetWorldSpace = Vector3.new(0, localFocus and 3.6 or 3.3, 0)
     gui.MaxDistance = 160
     gui.Parent = folder
@@ -79,9 +84,9 @@ local function spotlightModel(key, model, labelText, localFocus)
 
     local label = Instance.new("TextLabel")
     label.Size = UDim2.fromScale(1, 1)
-    label.BackgroundColor3 = localFocus
-        and Color3.fromRGB(15, 38, 52)
-        or Color3.fromRGB(14, 40, 30)
+    label.BackgroundColor3 = champion and Color3.fromRGB(48, 35, 13)
+        or (localFocus and Color3.fromRGB(15, 38, 52)
+            or Color3.fromRGB(14, 40, 30))
     label.BackgroundTransparency = 0.12
     label.BorderSizePixel = 0
     label.Font = Enum.Font.GothamBlack
@@ -154,15 +159,18 @@ local function spotlightModel(key, model, labelText, localFocus)
     active[key] = bundle
 end
 
-local function spotlightPlayer(target)
+local function spotlightPlayer(target, championUserId)
     local isLocal = target == player
+    local champion = tonumber(championUserId) == target.UserId
     spotlightModel(
         "player:" .. tostring(target.UserId),
         target.Character,
-        isLocal
-            and CoreLocalization.text(localeId, "YOU_SURVIVED")
-            or CoreLocalization.text(localeId, "SURVIVOR_LABEL"),
-        isLocal
+        CoreLocalization.text(
+            localeId,
+            ResultPresentation.spotlightLabelKey(champion, isLocal)
+        ),
+        isLocal,
+        champion
     )
 end
 
@@ -205,7 +213,7 @@ stateEvent.OnClientEvent:Connect(function(state)
             desired[key] = true
             local target = Players:GetPlayerByUserId(numericId)
             if target then
-                spotlightPlayer(target)
+                spotlightPlayer(target, state.soleSurvivorUserId)
             end
         end
     end

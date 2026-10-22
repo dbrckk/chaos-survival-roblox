@@ -250,6 +250,14 @@ function ResultPresentation.title(feedback, localeId)
     return title
 end
 
+-- One authoritative, testable choice of player-facing survivor identity.
+-- Real last survivor requires the server's soleSurvivorUserId; surviving
+-- alone in a one-contestant game must never grant the champion title.
+function ResultPresentation.spotlightLabelKey(champion, isLocal)
+    if champion == true then return "RESULT_SOLE_SURVIVOR" end
+    return isLocal == true and "YOU_SURVIVED" or "SURVIVOR_LABEL"
+end
+
 function ResultPresentation.worldLabel(feedback, isLocal)
     local kind = ResultPresentation.kind(feedback)
 
