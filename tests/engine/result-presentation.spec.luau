@@ -136,6 +136,23 @@ describe("Result presentation", function()
             .toBe(false)
     end)
 
+    it("upgrades a verified receipt quietly in the existing result card", function()
+        local animate = ResultPresentation.animateCardArrival
+        -- Frozen result preview is introduced once, then real rewards
+        -- update the same visible card without a second full-screen flash.
+        expect(animate(false, nil, 12)).toBe(true)
+        expect(animate(true, 12, 12)).toBe(false)
+        expect(animate(true, "12", 12)).toBe(false)
+        expect(animate(true, 12, 13)).toBe(true)
+        expect(animate(false, 12, 12)).toBe(true)
+        -- Fail safe rather than suppress the only result introduction
+        -- when an unnumbered/invalid message slipped through.
+        expect(animate(true, nil, 12)).toBe(true)
+        expect(animate(true, 12, nil)).toBe(true)
+        expect(animate(true, math.huge, 12)).toBe(true)
+        expect(animate(true, 12, 0 / 0)).toBe(true)
+    end)
+
     it("accepts the current result receipt but rejects stale or next-round overlays", function()
         local accepts = ResultPresentation.acceptReceipt
         expect(accepts({roundNumber = 8}, "round", 8, 7)).toBe(true)
@@ -283,6 +300,21 @@ describe("Result presentation", function()
         expect(ResultPresentation.feedbackEliminationCause(false, "Meteor")).toBe("Meteor")
         expect(ResultPresentation.feedbackEliminationCause(false, nil)).toBe("Unknown")
         expect(ResultPresentation.feedbackEliminationCause(false, "")).toBe("Unknown")
+    end)
+
+    it("teaches the new timed Jump Shock dodge after elimination", function()
+        local enTitle, enTip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "JumpShock",
+        }, "en-us")
+        local frTitle, frTip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "JumpShock",
+        }, "fr-fr")
+        expect(enTitle).toBe("KNOCKED OFF BY SHOCKWAVE")
+        expect(string.find(enTip, "jump", 1, true) ~= nil).toBe(true)
+        expect(string.find(frTip, "Saute", 1, true) ~= nil).toBe(true)
+        expect(frTitle).toBe("ÉJECTÉ PAR L'ONDE DE CHOC")
     end)
 
     it("explains known elimination causes", function()

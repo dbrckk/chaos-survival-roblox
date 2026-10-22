@@ -19,7 +19,7 @@ local ELIMINATION_COPY = {
     },
     JumpShock = {
         title = "KNOCKED OFF BY SHOCKWAVE",
-        tip = "Give the blue shockwave extra space",
+        tip = "Time your jump to clear the blue shockwave",
     },
     LowGravity = {
         title = "DRIFTED OFF THE ARENA",
@@ -58,7 +58,7 @@ local ELIMINATION_COPY_FR = {
     },
     JumpShock = {
         title = "ÉJECTÉ PAR L'ONDE DE CHOC",
-        tip = "Laisse plus d'espace autour de l'onde bleue",
+        tip = "Saute au bon moment pour esquiver l'onde bleue",
     },
     LowGravity = {
         title = "SORTI DE L'ARÈNE",
@@ -205,6 +205,24 @@ function ResultPresentation.acceptReceipt(feedback, phase, observedRound, resolv
         return false
     end
     return true
+end
+
+-- Only the first card for a numbered round should introduce the result.
+-- The later personalized reward receipt upgrades the same card in place:
+-- flashing it a second time is distracting, especially on mobile.
+-- A different round is a new presentation even if the prior card is
+-- still fading out.
+function ResultPresentation.animateCardArrival(visible, displayedRound, incomingRound)
+    if visible ~= true then return true end
+    local old = tonumber(displayedRound)
+    local incoming = tonumber(incomingRound)
+    if not old or not incoming
+        or old ~= old or incoming ~= incoming
+        or old == math.huge or old == -math.huge
+        or incoming == math.huge or incoming == -math.huge then
+        return true
+    end
+    return old ~= incoming
 end
 
 function ResultPresentation.kind(feedback)

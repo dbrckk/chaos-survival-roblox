@@ -1996,7 +1996,16 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindResponsiveCamera
 local resultToken = 0
 local lastResolvedResultRoundNumber = nil
 local lastObservedRoundNumber = nil
+local lastDisplayedResultRoundNumber = nil
+local resultArrivalTweens = {}
 local lastRoundHint = ""
+
+local function cancelResultArrivalTweens()
+    for _, tween in ipairs(resultArrivalTweens) do
+        tween:Cancel()
+    end
+    table.clear(resultArrivalTweens)
+end
 
 local function dismissResultCard()
     if not resultCard.Visible then
@@ -2097,6 +2106,14 @@ local function nextLevelGoalText()
 end
 
 local function showRoundFeedback(feedback)
+    -- The frozen server result appears immediately; when the personalized
+    -- receipt arrives for that *same* round, update its text and accents
+    -- without replaying the entire entrance and full-screen flash.
+    local animateArrival = ResultPresentation.animateCardArrival(
+        resultCard.Visible, lastDisplayedResultRoundNumber, feedback.roundNumber
+    )
+    lastDisplayedResultRoundNumber = tonumber(feedback.roundNumber)
+    cancelResultArrivalTweens()
     resultToken += 1
     local token = resultToken
 
@@ -2418,21 +2435,46 @@ local function showRoundFeedback(feedback)
                 or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95))))
 
     resultCard.Visible = true
-    resultCard.BackgroundTransparency = 1
-    resultScale.Scale = 0.82
-    resultFlash.BackgroundTransparency = 1
+    if animateArrival then
+        resultCard.BackgroundTransparency = 1
+        resultScale.Scale = 0.82
+        resultFlash.BackgroundTransparency = 1
 
-    TweenService:Create(
-        resultFlash,
-        UITheme.Motion.FastFade,
-        {BackgroundTransparency = survived and 0.78 or 0.82}
-    ):Play()
-    TweenService:Create(resultCard, UITheme.Motion.EmphasisIn, {BackgroundTransparency = 0.04}):Play()
-    TweenService:Create(resultScale, UITheme.Motion.EmphasisIn, {Scale = 1}):Play()
+        resultArrivalTweens = {
+            TweenService:Create(
+                resultFlash,
+                UITheme.Motion.FastFade,
+                {BackgroundTransparency = survived and 0.78 or 0.82}
+            ),
+            TweenService:Create(
+                resultCard, UITheme.Motion.EmphasisIn,
+                {BackgroundTransparency = 0.04}
+            ),
+            TweenService:Create(
+                resultScale, UITheme.Motion.EmphasisIn, {Scale = 1}
+            ),
+        }
+        for _, tween in ipairs(resultArrivalTweens) do
+            tween:Play()
+        end
 
-    task.delay(0.14, function()
-        TweenService:Create(resultFlash, UITheme.Motion.StandardFade, {BackgroundTransparency = 1}):Play()
-    end)
+        task.delay(0.14, function()
+            -- An updated receipt or a new round may have superseded this
+            -- introduction before the deferred flash cleanup runs.
+            if token == resultToken then
+                TweenService:Create(
+                    resultFlash, UITheme.Motion.StandardFade,
+                    {BackgroundTransparency = 1}
+                ):Play()
+            end
+        end)
+    else
+        -- A receipt may arrive during the entry tween. Keep the card in
+        -- place, suppress any second flash, and show verified Coins/XP now.
+        resultCard.BackgroundTransparency = 0.04
+        resultScale.Scale = 1
+        resultFlash.BackgroundTransparency = 1
+    end
 
     -- Only the server's phase transition dismisses this card. A fixed
     -- timeout used to hide results before multiplayer countdown ended.
