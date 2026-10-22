@@ -30,13 +30,15 @@ function D.start(ctx)
     local travelSeconds = 0.5
     local fallHeight = 52
 
+    local sequence = 0
     task.spawn(function()
         while ctx.Active() do
             if not canComplete(ctx, os.clock(), warningSeconds, travelSeconds) then
                 break
             end
-            local offset = ArenaTargeting.randomSeparatedOffset(
-                6, 42, ctx.Config.ArenaCenter, pending, 22
+            sequence += 1
+            local offset, waveMode = ArenaTargeting.evolvingImpactOffset(
+                ctx, "Meteors", sequence, pending, 6, 42, 22
             )
             local impactPosition = ctx.Config.ArenaCenter + offset + Vector3.new(0, 1.2, 0)
 
@@ -54,6 +56,7 @@ function D.start(ctx)
             -- hides the safe path before client warning contours load.
             marker.Transparency = 0.65
             marker.Position = impactPosition
+            marker:SetAttribute("ImpactWaveMode", waveMode)
             marker.Parent = workspace
             pending[marker] = true
             ctx.Cleanup[#ctx.Cleanup+1] = marker
