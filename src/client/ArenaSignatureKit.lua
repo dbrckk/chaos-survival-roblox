@@ -468,6 +468,21 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion, rushIntensity)
     for _, entry in ipairs(bundle.animated) do
         local p = entry.part
         if p.Parent then
+            -- Every animated machine must return to its authored neutral
+            -- pose, not merely reset the animation clock. This includes
+            -- rings, the lift, radar, reactor core and signal surfaces.
+            if reduceMotion == true then
+                p.CFrame = entry.frame
+                if entry.role == "foundation" or entry.role == "signal" then
+                    p.Transparency = entry.transparency
+                end
+                if entry.role == "signal" then
+                    p.Color = entry.color
+                elseif entry.role == "heart" then
+                    p.Size = Vector3.new(2.25, 2.25, 2.25)
+                end
+                continue
+            end
             if entry.role == "foundation" then
                 -- Subtle slow luminaire breathing, not a hazard-like flash.
                 -- Reduced motion restores exactly the authored rest opacity.
