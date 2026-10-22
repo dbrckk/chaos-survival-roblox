@@ -1,5 +1,15 @@
 local MovementSafety = if script then require(script.Parent.Parent.MovementSafety) else require("../MovementSafety")
-local D = {Name = "TORNADO", Hint = "KEEP YOUR DISTANCE!"}
+local D = {Name = "TORNADO", Hint = "ESCAPE THE FUNNEL — HIGH GROUND HELPS!"}
+
+-- The physical funnel is 12 studs high. Above its influence band,
+-- Tower/Orbital upper routes offer a real positioning counterplay.
+-- Keep full force near ground and fade smoothly across the upper decks.
+function D.verticalExposure(height)
+    local altitude = tonumber(height)
+    if not altitude or altitude ~= altitude then return 0 end
+    if altitude <= 12 then return 1 end
+    return math.clamp((28 - altitude) / 16, 0, 1)
+end
 
 local function tornadoPart(parent, name, size, position, color, transparency)
     local part = Instance.new("Part")
@@ -29,14 +39,15 @@ function D.impulseAt(rootPosition, center, force, intensity)
     local delta = rootPosition - center
     local horizontal = Vector3.new(delta.X, 0, delta.Z)
     local dist = horizontal.Magnitude
-    if dist ~= dist or dist >= 42 then
+    local exposure = D.verticalExposure(rootPosition.Y - center.Y)
+    if dist ~= dist or dist >= 42 or exposure <= 0 then
         return nil, 0
     end
 
     local tangent = if dist > 0.001
         then Vector3.new(-horizontal.Z, 0, horizontal.X) / dist
         else Vector3.xAxis
-    local strength = math.clamp((42 - dist) / 42, 0, 1)
+    local strength = math.clamp((42 - dist) / 42, 0, 1) * exposure
     return tangent * force * intensity * strength
         + Vector3.new(0, 10 * intensity * strength, 0), strength
 end
