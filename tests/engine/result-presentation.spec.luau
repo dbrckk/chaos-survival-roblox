@@ -90,6 +90,17 @@ describe("Result presentation", function()
         expect(ResultPresentation.title(champion, "fr-fr")).toBe("DERNIER SURVIVANT !")
         expect(ResultPresentation.title(champion, "en-us")).toBe("LAST SURVIVOR!")
         expect(ResultPresentation.worldLabel(champion, true)).toBe("LAST SURVIVOR")
+        local championKey = ResultPresentation.spotlightLabelKey(true, true)
+        expect(championKey).toBe("RESULT_SOLE_SURVIVOR")
+        expect(ResultPresentation.spotlightLabelKey(true, false)).toBe(championKey)
+        expect(CoreLocalization.text("fr-fr", championKey))
+            .toBe("DERNIER SURVIVANT")
+        expect(CoreLocalization.text("en-us", championKey))
+            .toBe("LAST SURVIVOR")
+        expect(ResultPresentation.spotlightLabelKey(false, true))
+            .toBe("YOU_SURVIVED")
+        expect(ResultPresentation.spotlightLabelKey(false, false))
+            .toBe("SURVIVOR_LABEL")
         expect(ResultPresentation.fallbackFeedback(last, 202, true).soleSurvivor)
             .toBe(false)
 
@@ -100,8 +111,13 @@ describe("Result presentation", function()
             contestantCount = 1,
         })
         expect(unopposed.soleSurvivorUserId).toBe(nil)
-        expect(ResultPresentation.fallbackFeedback(unopposed, 101, true).soleSurvivor)
-            .toBe(false)
+        local unopposedFeedback = ResultPresentation.fallbackFeedback(
+            unopposed, 101, true
+        )
+        expect(unopposedFeedback.soleSurvivor).toBe(false)
+        expect(ResultPresentation.spotlightLabelKey(
+            unopposedFeedback.soleSurvivor, true
+        )).toBe("YOU_SURVIVED")
     end)
 
     it("requires a new authoritative READY after a finished win to certify replay", function()
@@ -134,6 +150,16 @@ describe("Result presentation", function()
         expect(accepts({roundNumber = math.huge}, "round", nil, nil)).toBe(false)
         expect(accepts({roundNumber = "bad"}, "round", nil, nil)).toBe(false)
         expect(accepts(nil, "round", nil, nil)).toBe(false)
+        -- The celebration renderer and HUD must apply the same acceptance
+        -- policy: no late red/green pulses after READY or a later result.
+        expect(accepts({roundNumber = 23, survived = true},
+            "result", 24, 23)).toBe(false)
+        expect(accepts({roundNumber = 23, survived = false},
+            "intermission", 24, 23)).toBe(false)
+        expect(accepts({roundNumber = 24, survived = true},
+            "round", 24, 23)).toBe(true)
+        expect(accepts({roundNumber = 24, survived = true},
+            "result", 24, 24)).toBe(true)
     end)
 
     it("rebuilds a truthful victory card when the personalized result event is delayed", function()
