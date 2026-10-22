@@ -134,6 +134,33 @@ describe("Round event presentation", function()
         expect(RoundEventPresentation.cameraTargetChanged(76, nil)).toBe(false)
     end)
 
+    it("cancels late Double Chaos visual pulses after phase or arena changes", function()
+        local current = Instance.new("Folder")
+        current.Name = "CurrentArena"
+        current.Parent = workspace
+        local oldBase = Instance.new("Part")
+        oldBase.Name = "OldArenaBase"
+        oldBase.Parent = current
+        local newBase = Instance.new("Part")
+        newBase.Name = "NewArenaBase"
+        newBase.Parent = current
+
+        local valid = RoundEventPresentation.pulseStillCurrent
+        expect(valid(12, 12, oldBase, oldBase)).toBe(true)
+        -- Repeated same-phase RoundState packets keep a pending flourish
+        -- valid, but any new round/final rush/phase gets a new epoch.
+        expect(valid(12, 13, oldBase, oldBase)).toBe(false)
+        expect(valid(12, 12, oldBase, newBase)).toBe(false)
+        expect(valid(12, 12, nil, oldBase)).toBe(false)
+        expect(valid(nil, 12, oldBase, oldBase)).toBe(false)
+
+        oldBase.Parent = nil
+        expect(valid(12, 12, oldBase, oldBase)).toBe(false)
+        oldBase:Destroy()
+        newBase:Destroy()
+        current:Destroy()
+    end)
+
     it("keeps final rush above all other transition priorities", function()
         expect(
             RoundEventPresentation.priority("finalRush")
