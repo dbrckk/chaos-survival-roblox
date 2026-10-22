@@ -284,13 +284,13 @@ local function hideAllStates()
     end
 end
 
-local function updateState(warning, state, root, tier, now)
+local function updateState(warning, state, root, tier, now, serverNow)
     if not warning.Parent or not root then
         hideState(state)
         return math.huge
     end
 
-    if workspace:GetServerTimeNow() >= state.startedAt + state.duration then
+    if serverNow >= state.startedAt + state.duration then
         hideState(state)
         return math.huge
     end
@@ -396,6 +396,16 @@ ensureRenderLoop = function()
             local cadence = tier.Name == "Low" and 0.12 or 0.075
             task.wait(cadence)
 
+            -- A round may finish, the map may change or warnings may be
+            -- removed during the wait. Never revive stale escape arrows
+            -- over the result screen or the next arena's onboarding.
+            if currentPhase ~= "round" or next(warningStates) == nil then
+                cue.Visible = false
+                offscreenArrow.Visible = false
+                hideAllStates()
+                continue
+            end
+
             if player:GetAttribute("RoundParticipant") ~= true
                 or player:GetAttribute("RoundEliminated") == true
             then
@@ -414,13 +424,16 @@ ensureRenderLoop = function()
             end
 
             local now = os.clock()
+            local serverNow = workspace:GetServerTimeNow()
             local nearestWarning = nil
             local nearestState = nil
             local nearestClearance = math.huge
 
             for warning, state in pairs(warningStates) do
                 if warning.Parent then
-                    local clearance = updateState(warning, state, root, tier, now)
+                    local clearance = updateState(
+                        warning, state, root, tier, now, serverNow
+                    )
                     if clearance < nearestClearance then
                         nearestClearance = clearance
                         nearestWarning = warning
