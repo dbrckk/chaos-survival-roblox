@@ -617,6 +617,14 @@ describe("Headless disaster playtest", function()
         expect(dodged(jumping, 15, 0)).toBe(false)
         expect(dodged(jumping, nil, 7)).toBe(false)
         expect(dodged(jumping, 15, nil)).toBe(false)
+
+        -- The physical airborne/velocity/ground checks rescue a valid
+        -- remote-owned player jump when server Humanoid state is stale.
+        expect(dodged(running, 18, 7, true)).toBe(true)
+        expect(dodged(running, 18, 7, false)).toBe(false)
+        expect(dodged(running, 0, 7, true)).toBe(false)
+        expect(dodged(running, 18, 2, true)).toBe(false)
+        expect(dodged(nil, 18, 7, true)).toBe(true)
     end)
 
     it("credits an earned shock dodge only while the round is active", function()
