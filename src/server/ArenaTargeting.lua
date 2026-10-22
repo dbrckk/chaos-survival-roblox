@@ -1,3 +1,7 @@
+local directorModule = script and script.Parent:FindFirstChild("ImpactWaveDirector")
+local ImpactWaveDirector = if directorModule
+    then require(directorModule)
+    else require("./ImpactWaveDirector")
 local ArenaTargeting = {}
 
 function ArenaTargeting.halfExtents(baseSize, padding, fallbackHalfExtent)
@@ -93,6 +97,55 @@ function ArenaTargeting.randomSeparatedOffset(padding, fallback, center, pending
     return ArenaTargeting.chooseSeparatedOffset(
         candidates, center, occupied, gap
     )
+end
+
+-- Applies a legible authored wave to the *existing* single impact spawn.
+-- Both hazard types share the exact same pending-warning set so Double
+-- Chaos cannot silently stack two warning circles on one escape route.
+-- The existing random/separated fallback is preserved under crowding and
+-- Shrinking Arena; every offset stays within the current arena base.
+function ArenaTargeting.evolvingImpactOffset(ctx, hazardId, sequence, pending,
+        padding, fallbackHalfExtent, gap)
+    local halfX, halfZ = ArenaTargeting.activeHalfExtents(
+        padding, fallbackHalfExtent
+    )
+    local mode = ImpactWaveDirector.forContext(ctx, os.clock(), halfX, halfZ)
+    local center = ctx and ctx.Config and ctx.Config.ArenaCenter
+        or Vector3.zero
+    local margin = math.max(0, tonumber(gap) or 22)
+    if mode == ImpactWaveDirector.SCATTER then
+        return ArenaTargeting.randomSeparatedOffset(
+            padding, fallbackHalfExtent, center, pending, margin
+        ), mode
+    end
+
+    local candidates = ImpactWaveDirector.candidates(
+        mode, sequence, ctx.RoundNumber, hazardId, halfX, halfZ
+    )
+    local occupied = {}
+    for marker in pairs(pending or {}) do
+        if typeof(marker) == "Instance" and marker:IsA("BasePart")
+            and marker.Parent then
+            occupied[#occupied + 1] = marker.Position
+        else
+            pending[marker] = nil
+        end
+    end
+    local chosen = ArenaTargeting.chooseSeparatedOffset(
+        candidates, center, occupied, margin
+    )
+    -- An authored lane is never allowed to force two overlapping telegraphs.
+    -- Return to the existing bounded randomized placement under crowding.
+    for _, position in ipairs(occupied) do
+        local dx = (center + chosen).X - position.X
+        local dz = (center + chosen).Z - position.Z
+        if dx * dx + dz * dz < margin * margin then
+            return ArenaTargeting.randomSeparatedOffset(
+                padding, fallbackHalfExtent, center, pending, margin
+            ), mode
+        end
+    end
+    return chosen, mode
 end
 
 return ArenaTargeting

@@ -93,6 +93,7 @@ function RoundEventPresentation.priority(kind)
         roundStart = 40,
         fusion = 35,
         overdrive = 30,
+        impactWave = 25,
         readyCountdown = 20,
     }
     return priorities[kind] or 0

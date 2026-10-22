@@ -7,6 +7,8 @@ local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local DisasterBalance = require("../../src/server/DisasterBalance")
 local MovementSafety = require("../../src/server/MovementSafety")
+local ArenaTargeting = require("../../src/server/ArenaTargeting")
+local ImpactWaveDirector = require("../../src/server/ImpactWaveDirector")
 local RisingLava = require("../../src/server/Disasters/RisingLava")
 local Tornado = require("../../src/server/Disasters/Tornado")
 
@@ -38,6 +40,106 @@ local function runCleanup(cleanup, onCleanup)
         end
     end
 end
+
+describe("Real-engine evolving impact storms", function()
+    it("spawns physical meteor/bomb telegraphs on forecast sweep and flank routes", function()
+        for _, case in ipairs({
+            {id = "Meteors", source = Meteors, marker = "MeteorWarning",
+                profile = {MeteorWarningSeconds = 0.25, MeteorRadius = 8}},
+            {id = "Bombs", source = Bombs, marker = "BombWarning",
+                profile = {BombWarningSeconds = 0.25, BombRadius = 8}},
+        }) do
+            local map = MapBuilder.build(Config, "Classic", ArenaVariants)
+            local active = true
+            local cleanup = {}
+            local startedAt = os.clock() - 20
+            local ctx = {
+                Config = Config,
+                Cleanup = cleanup,
+                Active = function() return active end,
+                RoundStartedAt = startedAt,
+                RoundSeconds = 40,
+                RoundEndsAt = os.clock() + 2.5,
+                RoundNumber = 5,
+                EnableImpactWaves = true,
+                BalanceProfile = case.profile,
+                Contestants = {},
+                HazardContestants = {},
+            }
+            local ok, err = pcall(case.source.start, ctx)
+            expect(ok).toBe(true)
+            local marker = nil
+            local deadline = os.clock() + 0.85
+            repeat
+                marker = workspace:FindFirstChild(case.marker)
+                -- Bomb Rain configures its authoritative warning in a
+                -- separate spawned task. Wait for the full metadata bundle,
+                -- not merely the existence of the initial 3D marker.
+                if marker and marker:GetAttribute("WarningEndSize") ~= nil then
+                    break
+                end
+                task.wait(0.02)
+            until os.clock() >= deadline
+
+            expect(marker ~= nil).toBe(true)
+            if marker then
+                expect(marker:GetAttribute("ImpactWaveMode")).toBe("Sweep")
+                expect(marker:GetAttribute("WarningKind")).toBe(
+                    case.id == "Meteors" and "Meteor" or "Bomb"
+                )
+                local hx, hz = ArenaTargeting.activeHalfExtents(6, 42)
+                local planned = ImpactWaveDirector.anchor(
+                    "Sweep", 1, 5, case.id, hx, hz
+                )
+                local actual = marker.Position - Config.ArenaCenter
+                    - Vector3.new(0, 1.2, 0)
+                expect((actual - planned).Magnitude < 0.1).toBe(true)
+                -- The authored route changes only the X/Z target, not
+                -- the warning lifetime, radius or server-owned damage.
+                expect(marker:GetAttribute("WarningEndSize")).toBe(16)
+            end
+
+            active = false
+            runCleanup(cleanup, {})
+            if map and map.Parent then map:Destroy() end
+            local generated = workspace:FindFirstChild("GeneratedMap")
+            if generated then generated:Destroy() end
+            if not ok then error(tostring(err)) end
+        end
+    end)
+
+    it("retains separated warning placement under cross-disaster overlap", function()
+        MapBuilder.build(Config, "Classic", ArenaVariants)
+        local hx, hz = ArenaTargeting.activeHalfExtents(6, 42)
+        local ctx = {
+            Config = Config,
+            RoundStartedAt = os.clock() - 30,
+            RoundSeconds = 40,
+            RoundNumber = 5,
+            EnableImpactWaves = true,
+        }
+        local pending = {}
+        local first, mode = ArenaTargeting.evolvingImpactOffset(
+            ctx, "Meteors", 1, pending, 6, 42, 22
+        )
+        expect(mode).toBe("Flanks")
+        expect(math.abs(first.X) <= hx and math.abs(first.Z) <= hz)
+            .toBe(true)
+        local marker = Instance.new("Part")
+        marker.Position = Config.ArenaCenter + first
+        marker.Parent = workspace
+        pending[marker] = true
+        local second, pairedMode = ArenaTargeting.evolvingImpactOffset(
+            ctx, "Bombs", 1, pending, 6, 42, 22
+        )
+        expect(pairedMode).toBe("Flanks")
+        expect(Vector3.new(second.X - first.X, 0, second.Z - first.Z)
+            .Magnitude >= 21.99).toBe(true)
+        marker:Destroy()
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        if generated then generated:Destroy() end
+    end)
+end)
 
 describe("Round-end lethal warning safety", function()
     it("only starts meteors and bombs with enough time for visible warning and damage", function()

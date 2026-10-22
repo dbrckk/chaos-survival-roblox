@@ -119,6 +119,7 @@ local activePriority = 0
 local activeUntil = 0
 local lastOverdrive = false
 local lastFinalRush = false
+local lastImpactWaveMode = nil
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
@@ -246,6 +247,7 @@ local function show(kind, mainText, subText, color, duration)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
     local overdrive = phase == "round" and state.overdrive == true
     local finalRush = phase == "round" and state.finalRush == true
@@ -278,8 +280,28 @@ stateEvent.OnClientEvent:Connect(function(state)
             UITheme.Colors.Gold,
             1.20
         )
+    elseif phase == "round" and state.impactWaveMode
+        and state.impactWaveMode ~= lastImpactWaveMode
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+    then
+        -- Use the existing brief mobile-safe toast, never a second HUD
+        -- or additional world flash. Final Rush/Overdrive retain priority.
+        local sweep = state.impactWaveMode == "Sweep"
+        local flanks = state.impactWaveMode == "Flanks"
+        if sweep or flanks then
+            local key = sweep and "IMPACT_WAVE_SWEEP" or "IMPACT_WAVE_FLANKS"
+            show(
+                "impactWave",
+                CoreLocalization.text(localeId, key),
+                CoreLocalization.text(localeId, key .. "_SUB"),
+                sweep and UITheme.Colors.Orange or UITheme.Colors.Red,
+                0.95
+            )
+        end
     end
 
+    lastImpactWaveMode = phase == "round" and state.impactWaveMode or nil
     lastOverdrive = overdrive
     lastFinalRush = finalRush
     lastFusionKey = fusionKey
