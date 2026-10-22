@@ -23,6 +23,14 @@ Le workflow dédié [Publish Existing Chaos Survival (Public Playtest Update)](.
 
 Aucune simulation d'un résultat Android/Studio `PASS`, aucun contournement de l'ancienne certification, aucune modification des prix, de la classe d'âge ni des pages Creator Dashboard. L'API officielle publie le **fichier Place issu de Rojo sur la place déjà existante**. Le workflow exige le numéro réel de version retourné par Roblox et archive l'empreinte SHA-256 du fichier publié et les métadonnées de publication.
 
+## Diagnostic sans aucun risque de publication
+
+Avant de toucher à la version publique, lancer [Public Release Readiness (Read Only)](https://github.com/dbrckk/chaos-survival-roblox/actions/workflows/public-release-readiness.yml) dans **Actions → Run workflow → main**. Consulter ensuite son **Step Summary**.
+
+Cette vérification **ne télécharge ni n'utilise de clé Roblox**, ne publie rien et ne modifie aucun réglage. Elle compare la branche et le commit exact, les deux identifiants publics `10771083668` / `95351659174730`, puis les deux suites de tests du *push main* sur ce SHA. Elle signale séparément l'absence de staging privé ou une collision avec la production.
+
+Si le rapport indique **BLOCKED**, ne pas lancer le workflow de publication. Un résultat **PASS** n'est qu'une préparation technique : il ne certifie ni les permissions secrètes, ni les tests Studio/Android, ni la version effectivement jouée sur Roblox.
+
 ## Sur smartphone Android
 
 Une fois la PR de préparation fusionnée à `main` et les contrôles `Build Validation` / `Roblox Open Cloud Engine Tests` du **nouveau commit de fusion** tous deux verts :
