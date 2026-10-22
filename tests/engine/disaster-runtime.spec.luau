@@ -619,6 +619,30 @@ describe("Headless disaster playtest", function()
         expect(dodged(jumping, 15, nil)).toBe(false)
     end)
 
+    it("credits an earned shock dodge only while the round is active", function()
+        local jumpShock = require("../../src/server/Disasters/JumpShock")
+        local credited = {}
+        local active = true
+        local subject = {name = "survivor"}
+        local ctx = {
+            Active = function() return active end,
+            OnHazardNearMiss = function(target, kind, distance, radius)
+                table.insert(credited, {target, kind, distance, radius})
+            end,
+        }
+
+        expect(jumpShock.rewardDodge(ctx, subject)).toBe(true)
+        expect(#credited).toBe(1)
+        expect(credited[1][1]).toBe(subject)
+        expect(credited[1][2]).toBe("JumpShock")
+
+        active = false
+        expect(jumpShock.rewardDodge(ctx, subject)).toBe(false)
+        expect(#credited).toBe(1)
+        expect(jumpShock.rewardDodge({}, subject)).toBe(false)
+        expect(jumpShock.rewardDodge(nil, subject)).toBe(false)
+    end)
+
     it("reports real jump shock knockback contacts without timer delay", function()
         local character = Instance.new("Model")
         character.Name = "JumpShockContactSubject"
