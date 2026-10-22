@@ -1997,7 +1997,15 @@ local resultToken = 0
 local lastResolvedResultRoundNumber = nil
 local lastObservedRoundNumber = nil
 local lastDisplayedResultRoundNumber = nil
+local resultArrivalTweens = {}
 local lastRoundHint = ""
+
+local function cancelResultArrivalTweens()
+    for _, tween in ipairs(resultArrivalTweens) do
+        tween:Cancel()
+    end
+    table.clear(resultArrivalTweens)
+end
 
 local function dismissResultCard()
     if not resultCard.Visible then
@@ -2105,6 +2113,7 @@ local function showRoundFeedback(feedback)
         resultCard.Visible, lastDisplayedResultRoundNumber, feedback.roundNumber
     )
     lastDisplayedResultRoundNumber = tonumber(feedback.roundNumber)
+    cancelResultArrivalTweens()
     resultToken += 1
     local token = resultToken
 
@@ -2431,13 +2440,23 @@ local function showRoundFeedback(feedback)
         resultScale.Scale = 0.82
         resultFlash.BackgroundTransparency = 1
 
-        TweenService:Create(
-            resultFlash,
-            UITheme.Motion.FastFade,
-            {BackgroundTransparency = survived and 0.78 or 0.82}
-        ):Play()
-        TweenService:Create(resultCard, UITheme.Motion.EmphasisIn, {BackgroundTransparency = 0.04}):Play()
-        TweenService:Create(resultScale, UITheme.Motion.EmphasisIn, {Scale = 1}):Play()
+        resultArrivalTweens = {
+            TweenService:Create(
+                resultFlash,
+                UITheme.Motion.FastFade,
+                {BackgroundTransparency = survived and 0.78 or 0.82}
+            ),
+            TweenService:Create(
+                resultCard, UITheme.Motion.EmphasisIn,
+                {BackgroundTransparency = 0.04}
+            ),
+            TweenService:Create(
+                resultScale, UITheme.Motion.EmphasisIn, {Scale = 1}
+            ),
+        }
+        for _, tween in ipairs(resultArrivalTweens) do
+            tween:Play()
+        end
 
         task.delay(0.14, function()
             -- An updated receipt or a new round may have superseded this
