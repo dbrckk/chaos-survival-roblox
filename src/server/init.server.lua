@@ -1075,6 +1075,13 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and roundSettings.RoundSeconds >= ImpactWaveDirector.MinRoundSeconds
             and (activeHazards.Meteors or activeHazards.Bombs),
         ActiveDisasters = activeHazards,
+        -- The first half remains a single collapse; veteran single-hazard
+        -- rounds can later split into two distant simultaneous warnings.
+        -- Do not stack multi-collapse on Double Chaos or rookie sessions.
+        EnableCollapseWaves = allowDynamicArenas
+            and #selected == 1
+            and activeHazards.DisappearingPlatforms == true
+            and roundSettings.RoundSeconds >= 24,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
         EnableClassicGridSweep = currentArenaVariant == "Classic"
