@@ -184,6 +184,8 @@ describe("Round event presentation", function()
         ).toBe(true)
         expect(RoundEventPresentation.priority("collapseWave"))
             .toBe(RoundEventPresentation.priority("impactWave"))
+        expect(RoundEventPresentation.priority("speedTempo"))
+            .toBe(RoundEventPresentation.priority("impactWave"))
         expect(
             RoundEventPresentation.priority("overdrive")
                 > RoundEventPresentation.priority("readyCountdown")
