@@ -455,6 +455,12 @@ local function refresh()
     elseif not rookieRound and state.impactWaveMode == "Flanks" then
         text = CoreLocalization.text(localeId, "IMPACT_WAVE_FLANKS")
         color = UITheme.Colors.Red
+    elseif not rookieRound and state.platformWaveMode == "Sweep" then
+        text = CoreLocalization.text(localeId, "PLATFORM_WAVE_SWEEP")
+        color = UITheme.Colors.Orange
+    elseif not rookieRound and state.platformWaveMode == "Flanks" then
+        text = CoreLocalization.text(localeId, "PLATFORM_WAVE_FLANKS")
+        color = UITheme.Colors.Red
     elseif state.doubleChaos then
         text = tostring(state.fusionName or CoreLocalization.text(localeId, "CHAOS_FUSION"))
         color = UITheme.Colors.Violet
