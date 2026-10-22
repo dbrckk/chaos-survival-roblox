@@ -1083,6 +1083,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and #selected == 1
             and activeHazards.DisappearingPlatforms == true
             and roundSettings.RoundSeconds >= 24,
+        -- New gravity windows belong to veteran, single-catastrophe rounds.
+        -- Keep first-time play and Double Chaos steady and predictable.
+        EnableGravityTides = allowDynamicArenas
+            and #selected == 1
+            and activeHazards.LowGravity == true
+            and roundSettings.RoundSeconds >= 28,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
         EnableClassicGridSweep = currentArenaVariant == "Classic"
