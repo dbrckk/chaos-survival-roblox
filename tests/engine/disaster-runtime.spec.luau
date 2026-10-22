@@ -154,6 +154,140 @@ describe("Round-end lethal warning safety", function()
 end)
 
 describe("Collapsing platform visual truth", function()
+    it("unlocks fair synchronized two-deck waves only after the advanced-round midpoint", function()
+        local D = require("../../src/server/Disasters/DisappearingPlatforms")
+        local ctx = {
+            EnableCollapseWaves = true,
+            RoundStartedAt = 100,
+            RoundSeconds = 40,
+        }
+        expect(D.waveSize(ctx, 8, 119)).toBe(1)
+        expect(D.waveSize(ctx, 8, 121)).toBe(1)
+        expect(D.waveSize(ctx, 8, 123)).toBe(2)
+        expect(D.waveSize(ctx, 7, 123)).toBe(1)
+        expect(D.waveSize({
+            EnableCollapseWaves = false,
+            RoundStartedAt = 100, RoundSeconds = 40,
+        }, 8, 123)).toBe(1)
+        expect(D.waveSize({
+            EnableCollapseWaves = true,
+            RoundStartedAt = 100, RoundSeconds = 15,
+        }, 8, 113)).toBe(1)
+        expect(D.waveSize({}, 12, 999)).toBe(1)
+
+        local candidates = {}
+        for i = 1, 8 do
+            local p = Instance.new("Part")
+            p.Name = "Candidate" .. i
+            p.Position = Vector3.new(i * 8, 0, (i % 2) * 30)
+            candidates[i] = p
+        end
+        local selected = D.chooseWavePlatforms(candidates, 2, 1)
+        expect(#selected).toBe(2)
+        expect(selected[1]).toBe(candidates[1])
+        expect(selected[2] ~= selected[1]).toBe(true)
+        local delta = selected[2].Position - selected[1].Position
+        expect(Vector3.new(delta.X, 0, delta.Z).Magnitude >= 18)
+            .toBe(true)
+        expect(#D.chooseWavePlatforms(candidates, 1, 1)).toBe(1)
+        expect(#D.chooseWavePlatforms(candidates, 2, 1)).toBe(2)
+        expect(#D.chooseWavePlatforms({}, 2, 1)).toBe(0)
+        for _, p in ipairs(candidates) do p:Destroy() end
+    end)
+
+    it("physically collapses two far-apart decks together and restores both on cleanup", function()
+        local D = require("../../src/server/Disasters/DisappearingPlatforms")
+        local existing = workspace:FindFirstChild("GeneratedMap")
+        if existing then existing:Destroy() end
+
+        local root = Instance.new("Folder")
+        root.Name = "GeneratedMap"
+        root.Parent = workspace
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = root
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = arena
+
+        local decks = {}
+        for i = 1, 8 do
+            local deck = Instance.new("Part")
+            deck.Name = "Platform" .. i
+            deck.Anchored = true
+            deck.Size = Vector3.new(7, 1, 7)
+            deck.Position = Vector3.new(i * 14, 8, (i % 2) * 32)
+            deck.CanCollide = true
+            deck.Parent = platforms
+            decks[i] = deck
+        end
+
+        local cleanup = {}
+        local active = true
+        D.start({
+            Active = function() return active end,
+            Cleanup = {},
+            OnCleanup = cleanup,
+            EnableCollapseWaves = true,
+            RoundStartedAt = os.clock() - 28,
+            RoundSeconds = 40,
+            RoundEndsAt = os.clock() + 6,
+        })
+
+        local function countPhase(phase)
+            local n = 0
+            for _, deck in ipairs(decks) do
+                if deck:GetAttribute("CollapsePhase") == phase then
+                    n += 1
+                end
+            end
+            return n
+        end
+
+        local deadline = os.clock() + 0.75
+        while countPhase("Warning") < 2 and os.clock() < deadline do
+            task.wait(0.02)
+        end
+        expect(countPhase("Warning")).toBe(2)
+        local signaled = {}
+        local startedAt = nil
+        for _, deck in ipairs(decks) do
+            if deck:GetAttribute("CollapsePhase") == "Warning" then
+                expect(deck.CanCollide).toBe(true)
+                signaled[#signaled + 1] = deck
+                if not startedAt then
+                    startedAt = deck:GetAttribute("CollapseWarningStartedAt")
+                else
+                    expect(deck:GetAttribute("CollapseWarningStartedAt"))
+                        .toBe(startedAt)
+                end
+            end
+        end
+        expect(#signaled).toBe(2)
+        local delta = signaled[1].Position - signaled[2].Position
+        expect(Vector3.new(delta.X, 0, delta.Z).Magnitude >= 18)
+            .toBe(true)
+
+        deadline = os.clock() + 2.0
+        while countPhase("Gone") < 2 and os.clock() < deadline do
+            task.wait(0.03)
+        end
+        expect(countPhase("Gone")).toBe(2)
+        local safe = 0
+        for _, deck in ipairs(decks) do
+            if deck.CanCollide then safe += 1 end
+        end
+        expect(safe).toBe(6)
+
+        active = false
+        runCleanup({}, cleanup)
+        for _, deck in ipairs(decks) do
+            expect(deck.CanCollide).toBe(true)
+            expect(deck:GetAttribute("CollapsePhase") == nil).toBe(true)
+        end
+        root:Destroy()
+    end)
+
     it("hides real server trims and supports along with the collision deck", function()
         local D = require("../../src/server/Disasters/DisappearingPlatforms")
         -- The mobile warning needs enough time for normal reactions
