@@ -72,18 +72,25 @@ describe("Round intensity director", function()
             expect(xPositions[i] - xPositions[i - 1] >= 22).toBe(true)
         end
         local returnSweep = wave.anchor("Sweep", 4, 5, "Meteors", 42, 42)
-        expect(returnSweep.Z * wave.anchor(
-            "Sweep", 1, 5, "Meteors", 42, 42
-        ).Z < 0).toBe(true)
+        local centralSweep = wave.anchor("Sweep", 2, 5, "Meteors", 42, 42)
+        expect(centralSweep.Magnitude < 0.001).toBe(true)
+        expect(returnSweep.Z ~= 0).toBe(true)
         local meteor = wave.anchor("Sweep", 1, 5, "Meteors", 42, 42)
         local bomb = wave.anchor("Sweep", 1, 5, "Bombs", 42, 42)
         expect(meteor.X * bomb.X < 0).toBe(true)
-        expect(meteor.Z * bomb.Z < 0).toBe(true)
+        expect(meteor.Z).toBe(0)
+        expect(bomb.Z).toBe(0)
 
         local first = wave.anchor("Flanks", 1, 7, "Meteors", 42, 38)
         local second = wave.anchor("Flanks", 2, 7, "Meteors", 42, 38)
         expect(first.X * second.X < 0).toBe(true)
         expect(first.Z * second.Z < 0).toBe(true)
+        -- Every fifth fully warned Crossfire strike challenges safe-center
+        -- camping without enlarging radius or speeding up damage.
+        expect(wave.anchor("Flanks", 5, 7, "Meteors", 42, 38))
+            .toBe(Vector3.zero)
+        expect(wave.anchor("Flanks", 10, 7, "Bombs", 42, 38))
+            .toBe(Vector3.zero)
         for _, mode in ipairs({"Sweep", "Flanks"}) do
             for index = 1, 17 do
                 local points = wave.candidates(mode, index, 7,
