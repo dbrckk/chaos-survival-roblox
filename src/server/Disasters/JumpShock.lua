@@ -6,15 +6,19 @@ D.WarningSeconds = 1.05
 -- A timed jump now avoids the shock. The server checks the actual rising
 -- avatar, not a client-sent dodge event, and keeps identical rules for AI.
 -- Falling off a ledge or merely walking in the air is not a free dodge.
-function D.dodgedByJump(humanoidState, velocityY, heightAboveGround)
+function D.dodgedByJump(humanoidState, velocityY, heightAboveGround, floorAirborne)
     local rising = tonumber(velocityY)
     local clearance = tonumber(heightAboveGround)
     if not rising or not clearance or rising ~= rising
         or clearance ~= clearance then
         return false
     end
-    return (humanoidState == Enum.HumanoidStateType.Jumping
-        or humanoidState == Enum.HumanoidStateType.Freefall)
+    -- Client-owned humanoid state can lag on the server. FloorMaterial is
+    -- an additional *server-observed* airborne signal, never a remote claim.
+    -- Rising velocity and real ground clearance remain mandatory either way.
+    local jumpingState = humanoidState == Enum.HumanoidStateType.Jumping
+        or humanoidState == Enum.HumanoidStateType.Freefall
+    return (jumpingState or floorAirborne == true)
         and rising > 3 and clearance >= 4.5
 end
 
@@ -75,12 +79,15 @@ function D.applyShock(ctx, subject, horizontalForce)
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
     rayParams.RespectCanCollide = true
     rayParams.FilterDescendantsInstances = {subject.Character}
+    -- A high jump on Towers/Orbital may be over fourteen studs above its
+    -- landing deck; missing that deck must not cancel an earned dodge.
     local ground = workspace:Raycast(
-        root.Position, Vector3.new(0, -14, 0), rayParams
+        root.Position, Vector3.new(0, -24, 0), rayParams
     )
     local clearance = ground and (root.Position.Y - ground.Position.Y) or 0
     if D.dodgedByJump(
-        hum:GetState(), root.AssemblyLinearVelocity.Y, clearance
+        hum:GetState(), root.AssemblyLinearVelocity.Y, clearance,
+        hum.FloorMaterial == Enum.Material.Air
     ) then
         D.rewardDodge(ctx, subject)
         return false
