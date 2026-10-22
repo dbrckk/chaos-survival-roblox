@@ -87,6 +87,14 @@ function RoundEventPresentation.pulseStillCurrent(expectedEpoch, actualEpoch,
         and source == currentSource
 end
 
+-- Escalation notifications belong only to living players mid-round.
+-- Cancel them immediately at result/READY/lobby boundaries so they never
+-- overlap the victory card or the next action prompt.
+function RoundEventPresentation.shouldClearRoundToast(previousPhase, nextPhase, eliminated)
+    return (previousPhase == "round" and nextPhase ~= "round")
+        or (nextPhase == "round" and eliminated == true)
+end
+
 function RoundEventPresentation.priority(kind)
     local priorities = {
         finalRush = 50,
