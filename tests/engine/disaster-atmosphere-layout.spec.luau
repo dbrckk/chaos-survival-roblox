@@ -34,6 +34,64 @@ describe("Slope-correct live disaster atmosphere", function()
         expect(Layout.beamFrame(nil, size, 0, 10, 20) == nil).toBe(true)
     end)
 
+    it("keeps all cinematic perimeter markers on a shrinking and tilted floor", function()
+        local frame = CFrame.new(-19, 22, 41)
+            * CFrame.Angles(math.rad(13), math.rad(32), math.rad(-11))
+        local size = Vector3.new(96, 4, 80)
+        local originalRadius = Layout.perimeterRadius(size)
+        expect(math.abs(originalRadius - 96 * 0.52) < 0.001).toBe(true)
+        expect(Layout.perimeterRadius(nil) == nil).toBe(true)
+        expect(Layout.perimeterRadius(size, -1) == nil).toBe(true)
+        expect(Layout.beaconFrame(nil, size, 0) == nil).toBe(true)
+        expect(Layout.orbitalCoreFrame(nil) == nil).toBe(true)
+
+        for _, scale in ipairs({1, 0.78, 0.55, 0.35}) do
+            -- Server ShrinkingArena keeps Base.CFrame but scales X and Z.
+            -- Correct ornaments must travel toward the same true new edge.
+            local shrunk = Vector3.new(size.X * scale, size.Y, size.Z * scale)
+            local radius = Layout.perimeterRadius(shrunk)
+            expect(math.abs(radius - originalRadius * scale) < 0.001)
+                .toBe(true)
+            for index = 1, 8 do
+                local angle = ((index - 1) / 8) * math.pi * 2
+                local beaconFrame = Layout.beaconFrame(frame, shrunk, angle)
+                expect(typeof(beaconFrame)).toBe("CFrame")
+                local localPosition = frame:PointToObjectSpace(beaconFrame.Position)
+                expect(math.abs(localPosition.X - math.cos(angle) * radius)
+                    < 0.001).toBe(true)
+                expect(math.abs(localPosition.Z - math.sin(angle) * radius)
+                    < 0.001).toBe(true)
+                expect(math.abs(localPosition.Y - (shrunk.Y * 0.5 + 0.8))
+                    < 0.001).toBe(true)
+                expect(beaconFrame.UpVector:Dot(frame.UpVector) > 0.999)
+                    .toBe(true)
+
+                local shaftRadius = Layout.perimeterRadius(shrunk, 0.52 * 1.08)
+                local shaft = Layout.beamFrame(
+                    frame, shrunk, angle, shaftRadius, 42
+                )
+                local shaftLocal = frame:PointToObjectSpace(shaft.Position)
+                expect(math.abs(shaftLocal.X - math.cos(angle) * shaftRadius)
+                    < 0.001).toBe(true)
+                expect(math.abs(shaftLocal.Z - math.sin(angle) * shaftRadius)
+                    < 0.001).toBe(true)
+            end
+            -- High-tier Orbital core aura follows tilt, but not horizontal
+            -- floor shrink: it remains centered on the reactor.
+            local core = Layout.orbitalCoreFrame(frame)
+            expect((frame:PointToObjectSpace(core.Position)
+                - Vector3.new(0, 13, 0)).Magnitude < 0.001).toBe(true)
+        end
+
+        local rotated = frame * CFrame.Angles(0, math.rad(18), 0)
+        expect((Layout.beaconFrame(rotated, size, 0).Position
+            - Layout.beaconFrame(frame, size, 0).Position).Magnitude > 8)
+            .toBe(true)
+        expect((Layout.orbitalCoreFrame(rotated).Position
+            - Layout.orbitalCoreFrame(frame).Position).Magnitude < 0.001)
+            .toBe(true)
+    end)
+
     it("creates no ambient hazard props in a lobby with no active disaster", function()
         expect(Layout.beaconCount("Low", true)).toBe(4)
         expect(Layout.beaconCount("Medium", true)).toBe(6)
