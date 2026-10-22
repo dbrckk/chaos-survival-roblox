@@ -302,6 +302,21 @@ describe("Result presentation", function()
         expect(ResultPresentation.feedbackEliminationCause(false, "")).toBe("Unknown")
     end)
 
+    it("teaches the new timed Jump Shock dodge after elimination", function()
+        local enTitle, enTip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "JumpShock",
+        }, "en-us")
+        local frTitle, frTip = ResultPresentation.eliminationCopy({
+            survived = false,
+            eliminationCause = "JumpShock",
+        }, "fr-fr")
+        expect(enTitle).toBe("KNOCKED OFF BY SHOCKWAVE")
+        expect(string.find(enTip, "jump", 1, true) ~= nil).toBe(true)
+        expect(string.find(frTip, "Saute", 1, true) ~= nil).toBe(true)
+        expect(frTitle).toBe("ÉJECTÉ PAR L'ONDE DE CHOC")
+    end)
+
     it("explains known elimination causes", function()
         local meteorTitle, meteorTip = ResultPresentation.eliminationCopy({
             survived = false,
