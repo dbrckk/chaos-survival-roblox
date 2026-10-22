@@ -110,6 +110,15 @@ function D.start(ctx)
     local beacon, beaconText, beaconLight
     if tidesEnabled then
         beacon, beaconText, beaconLight = makeTideBeacon(ctx)
+        -- Use the existing once-per-second authoritative RoundState feed.
+        -- No new remote or polling loop on mobile devices.
+        local _, initialStage = D.tideAt(os.clock() - startedAt, true)
+        ctx.GravityTideStage = initialStage
+        if type(ctx.OnCleanup) == "table" then
+            ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
+                ctx.GravityTideStage = nil
+            end
+        end
     end
     local activeForces = {}
 
@@ -158,6 +167,7 @@ function D.start(ctx)
                 targetGravity, stage, remaining = D.tideAt(
                     os.clock() - startedAt, true
                 )
+                ctx.GravityTideStage = stage
                 if beacon and beacon.Parent then
                     local cue = D.tideCue(stage, remaining)
                     if cue ~= lastCue then
