@@ -48,14 +48,19 @@ function D.choosePlatform(parts, mode, sequence, previous, roundNumber)
     for _, part in ipairs(parts) do
         if typeof(part) == "Instance" and part:IsA("BasePart")
             and part.Parent and part.CanCollide
-            and part:GetAttribute("ChaosSkybridge") ~= true
-            and (part ~= previous or #parts == 1) then
+            and part:GetAttribute("ChaosSkybridge") ~= true then
             eligible[#eligible + 1] = part
         end
     end
     if #eligible == 0 then return nil end
     if mode ~= "Sweep" and mode ~= "Flanks" then
-        return eligible[math.random(1, #eligible)]
+        local choices = {}
+        for _, part in ipairs(eligible) do
+            if part ~= previous or #eligible == 1 then
+                choices[#choices + 1] = part
+            end
+        end
+        return choices[math.random(1, #choices)]
     end
 
     -- A left-to-right or right-to-left sweep is determined by true
@@ -77,9 +82,21 @@ function D.choosePlatform(parts, mode, sequence, previous, roundNumber)
     if mode == "Flanks" then
         -- Alternate opposite walkable flanks, with the SAME 1.35s warning
         -- and only one physical outage. No surprise simultaneous collapse.
-        return eligible[beat % 2 == 1 and 1 or #eligible]
+        local target = eligible[beat % 2 == 1 and 1 or #eligible]
+        if target == previous and #eligible > 1 then
+            return eligible[beat % 2 == 1 and #eligible or 1]
+        end
+        return target
     end
-    return eligible[((beat - 1) % #eligible) + 1]
+    -- Keep the geometric sweep index stable even when the previous deck
+    -- is eligible again. Only step forward when a repeated deck would
+    -- otherwise be selected; do not silently skip a lane each cycle.
+    local index = ((beat - 1) % #eligible) + 1
+    local chosen = eligible[index]
+    if chosen == previous and #eligible > 1 then
+        chosen = eligible[(index % #eligible) + 1]
+    end
+    return chosen
 end
 
 function D.eligiblePlatforms(folder, activeStates)
