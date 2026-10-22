@@ -1,6 +1,22 @@
 local MovementSafety = if script then require(script.Parent.Parent.MovementSafety) else require("../MovementSafety")
 local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
-local D = {Name = "JUMP SHOCK", Hint = "WATCH THE BLUE SHOCKWAVE!"}
+local D = {Name = "JUMP SHOCK", Hint = "JUMP OVER THE BLUE SHOCKWAVE!"}
+D.WarningSeconds = 1.05
+
+-- A timed jump now avoids the shock. The server checks the actual rising
+-- avatar, not a client-sent dodge event, and keeps identical rules for AI.
+-- Falling off a ledge or merely walking in the air is not a free dodge.
+function D.dodgedByJump(humanoidState, velocityY, heightAboveGround)
+    local rising = tonumber(velocityY)
+    local clearance = tonumber(heightAboveGround)
+    if not rising or not clearance or rising ~= rising
+        or clearance ~= clearance then
+        return false
+    end
+    return (humanoidState == Enum.HumanoidStateType.Jumping
+        or humanoidState == Enum.HumanoidStateType.Freefall)
+        and rising > 3 and clearance >= 2.5
+end
 
 local function makeWarning(ctx)
     local ring = Instance.new("Part")
@@ -40,6 +56,22 @@ function D.applyShock(ctx, subject, horizontalForce)
         return false
     end
 
+    -- Raycast below the current character to verify meaningful clearance.
+    -- Only world collision can supply a ground reference; ignore the
+    -- character itself. If no ground is found, do not grant a free dodge.
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.FilterDescendantsInstances = {subject.Character}
+    local ground = workspace:Raycast(
+        root.Position, Vector3.new(0, -14, 0), rayParams
+    )
+    local clearance = ground and (root.Position.Y - ground.Position.Y) or 0
+    if D.dodgedByJump(
+        hum:GetState(), root.AssemblyLinearVelocity.Y, clearance
+    ) then
+        return false
+    end
+
     local horizontal = math.max(0, tonumber(horizontalForce) or 0)
     root.AssemblyLinearVelocity = MovementSafety.addImpulse(
         root.AssemblyLinearVelocity,
@@ -71,7 +103,7 @@ function D.start(ctx)
             if not ctx.Active() then break end
 
             local warning = makeWarning(ctx)
-            local warningSeconds = 0.65
+            local warningSeconds = D.WarningSeconds
             local warningDiameter = HazardWarning.arenaCoverageDiameter(150)
             HazardWarning.configure(warning, "JumpShock", warningSeconds, 8, warningDiameter)
             task.wait(warningSeconds)
