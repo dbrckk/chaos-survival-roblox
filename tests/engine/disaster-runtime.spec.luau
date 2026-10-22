@@ -224,7 +224,7 @@ describe("Collapsing platform visual truth", function()
 
         local cleanup = {}
         local active = true
-        D.start({
+        local ctx = {
             Active = function() return active end,
             Cleanup = {},
             OnCleanup = cleanup,
@@ -232,7 +232,8 @@ describe("Collapsing platform visual truth", function()
             RoundStartedAt = os.clock() - 28,
             RoundSeconds = 40,
             RoundEndsAt = os.clock() + 6,
-        })
+        }
+        D.start(ctx)
 
         local function countPhase(phase)
             local n = 0
@@ -249,6 +250,9 @@ describe("Collapsing platform visual truth", function()
             task.wait(0.02)
         end
         expect(countPhase("Warning")).toBe(2)
+        -- The round HUD must never announce a dual failure unless the
+        -- authoritative hazard has staged two actual walkable decks.
+        expect(ctx.DoubleCollapseUnlocked).toBe(true)
         local signaled = {}
         local startedAt = nil
         for _, deck in ipairs(decks) do
@@ -281,6 +285,7 @@ describe("Collapsing platform visual truth", function()
 
         active = false
         runCleanup({}, cleanup)
+        expect(ctx.DoubleCollapseUnlocked == nil).toBe(true)
         for _, deck in ipairs(decks) do
             expect(deck.CanCollide).toBe(true)
             expect(deck:GetAttribute("CollapsePhase") == nil).toBe(true)
