@@ -1089,6 +1089,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and #selected == 1
             and activeHazards.LowGravity == true
             and roundSettings.RoundSeconds >= 28,
+        -- Only experienced single-disaster rounds get alternating speed
+        -- windows; keep the first games and fusions steady.
+        EnableSpeedTempo = allowDynamicArenas
+            and #selected == 1
+            and activeHazards.SpeedSurge == true
+            and roundSettings.RoundSeconds >= 28,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
         EnableClassicGridSweep = currentArenaVariant == "Classic"
