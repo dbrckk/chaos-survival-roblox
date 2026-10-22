@@ -2018,6 +2018,13 @@ local function dismissResultCard()
     end
 
     resultToken += 1
+    if player:GetAttribute("ReduceMotion") == true then
+        -- Accessible exit is immediate and does not scale or fade the card.
+        resultCard.Visible = false
+        resultCard.BackgroundTransparency = 1
+        resultScale.Scale = 1
+        return
+    end
     local token = resultToken
     TweenService:Create(
         resultCard,
