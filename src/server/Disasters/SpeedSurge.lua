@@ -3,6 +3,52 @@ local D = {Name = "SPEED SURGE", Hint = "FOLLOW THE SPEED RHYTHM!"}
 -- Veteran solo-disaster rounds alternate a readable fast/controlled tempo.
 -- Beginner and Double Chaos rounds keep the original steady movement.
 D.CycleSeconds = 12
+D.TransitionSeconds = 0.70
+
+-- Eased physical speed changes give players time to recover their aim,
+-- especially near narrow platforms on touch controls. These are ordinary
+-- server-owned Humanoid speeds, not impulses or client-side predictions.
+-- The opening burst retains its immediate speed; later changes use a
+-- short smoothstep curve on both sides of the phase boundary.
+function D.speedAt(originalSpeed, boostedSpeed, elapsed, enabled)
+    local original = tonumber(originalSpeed) or 16
+    local boosted = tonumber(boostedSpeed) or 22
+    if original ~= original or math.abs(original) == math.huge then original = 16 end
+    if boosted ~= boosted or math.abs(boosted) == math.huge then boosted = 22 end
+    original = math.max(0, original)
+    boosted = math.max(0, boosted)
+    if enabled ~= true then return boosted end
+
+    local time = tonumber(elapsed) or 0
+    if time ~= time or math.abs(time) == math.huge then time = 0 end
+    time = math.max(0, time)
+    local tick = time % D.CycleSeconds
+    local function eased(alpha)
+        local x = math.clamp(alpha, 0, 1)
+        return x * x * (3 - 2 * x)
+    end
+
+    if tick < 7 then
+        if time < D.CycleSeconds then return boosted end
+        local alpha = eased(tick / D.TransitionSeconds)
+        return original + (boosted - original) * alpha
+    end
+
+    local alpha = eased((tick - 7) / D.TransitionSeconds)
+    return boosted + (original - boosted) * alpha
+end
+
+-- Roblox can quantize WalkSpeed property assignments. Compare within
+-- sub-hundredth precision while respecting meaningful changes by other
+-- movement systems, including future disasters or power-ups.
+function D.ownsSpeed(actual, assigned)
+    local a = tonumber(actual)
+    local b = tonumber(assigned)
+    return a ~= nil and b ~= nil and a == a and b == b
+        and math.abs(a) < math.huge and math.abs(b) < math.huge
+        and math.abs(a - b) <= 0.01
+end
+
 function D.tempoAt(elapsed, enabled)
     if enabled ~= true then return "Surge", math.huge end
     local value = tonumber(elapsed) or 0
@@ -74,7 +120,7 @@ function D.start(ctx)
     ctx.OnCleanup[#ctx.OnCleanup+1] = function()
         ctx.SpeedTempoPhase = nil
         for hum, state in pairs(previous) do
-            if hum and hum.Parent and hum.WalkSpeed == state.current then
+            if hum and hum.Parent and D.ownsSpeed(hum.WalkSpeed, state.current) then
                 hum.WalkSpeed = state.original
             end
         end
@@ -86,7 +132,8 @@ function D.start(ctx)
         task.spawn(function()
             local lastText
             while ctx.Active() and beacon.Parent do
-                local phase, remaining = D.tempoAt(os.clock() - startedAt, true)
+                local elapsed = os.clock() - startedAt
+                local phase, remaining = D.tempoAt(elapsed, true)
                 ctx.SpeedTempoPhase = phase
                 local text = phase == "Surge"
                     and ("FAST • CONTROL IN " .. math.ceil(remaining) .. "s")
@@ -101,13 +148,18 @@ function D.start(ctx)
                 for hum, state in pairs(previous) do
                     if hum.Parent and hum.Health > 0
                         and hum.WalkSpeed == state.current then
-                        local target = phase == "Surge"
-                            and state.applied or state.original
-                        hum.WalkSpeed = target
-                        state.current = target
+                        local target = D.speedAt(
+                            state.original, state.applied, elapsed, true
+                        )
+                        -- Avoid redundant Humanoid replication for the
+                        -- steady portions of each rhythm window.
+                        if math.abs(target - state.current) >= 0.005 then
+                            hum.WalkSpeed = target
+                            state.current = target
+                        end
                     end
                 end
-                task.wait(0.25)
+                task.wait(0.12)
             end
         end)
     end

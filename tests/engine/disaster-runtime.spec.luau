@@ -721,6 +721,34 @@ describe("Headless disaster playtest", function()
         expect(remaining).toBe(math.huge)
     end)
 
+    it("eases Speed Surge speed changes without a movement snap", function()
+        local speed = require("../../src/server/Disasters/SpeedSurge")
+        local at = speed.speedAt
+        local midpoint = speed.TransitionSeconds * 0.5
+        expect(at(16, 24, 0, true)).toBe(24)
+        expect(at(16, 24, 6.99, true)).toBe(24)
+        expect(at(16, 24, 7, true)).toBe(24)
+        expect(math.abs(at(16, 24, 7 + midpoint, true) - 20) < 0.001)
+            .toBe(true)
+        expect(at(16, 24, 7 + speed.TransitionSeconds, true)).toBe(16)
+        expect(at(16, 24, 11.9, true)).toBe(16)
+        expect(at(16, 24, 12, true)).toBe(16)
+        expect(math.abs(at(16, 24, 12 + midpoint, true) - 20) < 0.001)
+            .toBe(true)
+        expect(at(16, 24, 12 + speed.TransitionSeconds, true)).toBe(24)
+        expect(at(16, 24, 19 + speed.TransitionSeconds, true)).toBe(16)
+        expect(at(16, 24, 27, false)).toBe(24)
+        expect(at(16, 24, 0 / 0, true)).toBe(24)
+        expect(at(16, 24, math.huge, true)).toBe(24)
+
+        -- Small precision differences are ours; an external speed
+        -- modifier must not be overwritten on the next update or cleanup.
+        expect(speed.ownsSpeed(20, 20.00001)).toBe(true)
+        expect(speed.ownsSpeed(20.2, 20)).toBe(false)
+        expect(speed.ownsSpeed(0 / 0, 20)).toBe(false)
+        expect(speed.ownsSpeed(20, math.huge)).toBe(false)
+    end)
+
     it("allows a real timed jump to dodge Jump Shock, not a fall", function()
         local jumpShock = require("../../src/server/Disasters/JumpShock")
         local dodged = jumpShock.dodgedByJump
