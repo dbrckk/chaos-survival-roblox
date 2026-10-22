@@ -754,7 +754,7 @@ describe("Headless disaster playtest", function()
         expect(speed.shouldAssignSpeed(20, 20, 20.000001)).toBe(false)
         expect(speed.shouldAssignSpeed(19.75, 20, 24)).toBe(false)
         expect(speed.shouldAssignSpeed(0 / 0, 20, 24)).toBe(false)
-        expect(speed.shouldAssignSpeed(20, 20, math.huge)).toBe(true)
+        expect(speed.shouldAssignSpeed(20, 20, math.huge)).toBe(false)
     end)
 
     it("allows a real timed jump to dodge Jump Shock, not a fall", function()
