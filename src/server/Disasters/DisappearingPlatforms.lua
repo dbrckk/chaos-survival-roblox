@@ -18,6 +18,70 @@ function D.canBegin(ctx, now)
         <= deadline
 end
 
+-- In experienced solo-hazard rounds the physical deck failures form
+-- readable, repeatable acts instead of choosing an arbitrary tile every time.
+-- This changes which real platform is at risk, not warning time, collision,
+-- damage, cadence or the number of simultaneous collapses.
+function D.waveMode(ctx, now, platformCount)
+    if type(ctx) ~= "table" or ctx.EnablePlatformWaves ~= true
+        or (tonumber(platformCount) or 0) < 4 then
+        return "Scatter"
+    end
+    local start = tonumber(ctx.RoundStartedAt)
+    local duration = tonumber(ctx.RoundSeconds)
+    local clock = tonumber(now)
+    if not start or not duration or not clock
+        or start ~= start or duration ~= duration or clock ~= clock
+        or duration < 24 or duration == math.huge
+        or math.abs(start) == math.huge or math.abs(clock) == math.huge then
+        return "Scatter"
+    end
+    local progress = math.clamp((clock - start) / duration, 0, 1)
+    if progress < 0.34 then return "Scatter" end
+    if progress < 0.69 then return "Sweep" end
+    return "Flanks"
+end
+
+function D.choosePlatform(parts, mode, sequence, previous, roundNumber)
+    if type(parts) ~= "table" or #parts == 0 then return nil end
+    local eligible = {}
+    for _, part in ipairs(parts) do
+        if typeof(part) == "Instance" and part:IsA("BasePart")
+            and part.Parent and part.CanCollide
+            and part:GetAttribute("ChaosSkybridge") ~= true
+            and (part ~= previous or #parts == 1) then
+            eligible[#eligible + 1] = part
+        end
+    end
+    if #eligible == 0 then return nil end
+    if mode ~= "Sweep" and mode ~= "Flanks" then
+        return eligible[math.random(1, #eligible)]
+    end
+
+    -- A left-to-right or right-to-left sweep is determined by true
+    -- world coordinates, not random names (maps all use different layouts).
+    -- Reverse the direction between rounds for an extra skill challenge.
+    local reverse = math.floor(tonumber(roundNumber) or 1) % 2 == 0
+    table.sort(eligible, function(a, b)
+        local difference = a.Position.X - b.Position.X
+        if math.abs(difference) < 0.01 then
+            difference = a.Position.Z - b.Position.Z
+        end
+        if math.abs(difference) < 0.01 then
+            return a.Name < b.Name
+        end
+        return reverse and difference > 0 or difference < 0
+    end)
+
+    local beat = math.max(1, math.floor(tonumber(sequence) or 1))
+    if mode == "Flanks" then
+        -- Alternate opposite walkable flanks, with the SAME 1.35s warning
+        -- and only one physical outage. No surprise simultaneous collapse.
+        return eligible[beat % 2 == 1 and 1 or #eligible]
+    end
+    return eligible[((beat - 1) % #eligible) + 1]
+end
+
 function D.eligiblePlatforms(folder, activeStates)
     local result = {}
     if not folder then
@@ -100,6 +164,9 @@ function D.start(ctx)
     local decor = arena and arena:FindFirstChild("Decor")
     local activeStates = {}
     local generation = 0
+    local lastSelected = nil
+    local waveBeat = 0
+    local lastWaveMode = nil
 
     local function restore(part)
         local state = activeStates[part]
@@ -116,6 +183,7 @@ function D.start(ctx)
             D.setCosmeticsPhase(state.cosmetics, nil)
             part:SetAttribute("CollapsePhase", nil)
             part:SetAttribute("CollapseWarningStartedAt", nil)
+            part:SetAttribute("CollapseWaveMode", nil)
         end
     end
 
@@ -135,7 +203,17 @@ function D.start(ctx)
             if not D.canBegin(ctx, os.clock()) then break end
             local parts = D.eligiblePlatforms(folder, activeStates)
             if #parts > 0 then
-                local p = parts[math.random(1, #parts)]
+                local mode = D.waveMode(ctx, os.clock(), #parts)
+                if mode ~= lastWaveMode then
+                    waveBeat = 0
+                    lastWaveMode = mode
+                end
+                waveBeat += 1
+                local p = D.choosePlatform(
+                    parts, mode, waveBeat, lastSelected, ctx.RoundNumber
+                )
+                if not p then break end
+                lastSelected = p
                 generation += 1
                 local token = generation
                 activeStates[p] = {
@@ -148,6 +226,7 @@ function D.start(ctx)
                 }
 
                 D.setCosmeticsPhase(activeStates[p].cosmetics, "Warning")
+                p:SetAttribute("CollapseWaveMode", mode ~= "Scatter" and mode or nil)
                 p:SetAttribute("CollapseWarningStartedAt", workspace:GetServerTimeNow())
                 p:SetAttribute("CollapsePhase", "Warning")
                 p.Color = Color3.fromRGB(255, 205, 70)
