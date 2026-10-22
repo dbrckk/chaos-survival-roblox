@@ -406,6 +406,32 @@ describe("Collapsing platform visual truth", function()
 end)
 
 describe("Headless disaster playtest", function()
+    it("makes elevated routes a real tornado escape without weakening ground hazards", function()
+        local center = Vector3.zero
+        local ground, groundStrength = Tornado.impulseAt(
+            Vector3.new(10, 4, 0), center, 17, 1
+        )
+        local elevated, elevatedStrength = Tornado.impulseAt(
+            Vector3.new(10, 20, 0), center, 17, 1
+        )
+        local above, aboveStrength = Tornado.impulseAt(
+            Vector3.new(10, 28, 0), center, 17, 1
+        )
+        expect(ground ~= nil).toBe(true)
+        expect(elevated ~= nil).toBe(true)
+        expect(groundStrength > elevatedStrength).toBe(true)
+        expect(elevatedStrength > 0).toBe(true)
+        expect(elevated.Magnitude < ground.Magnitude).toBe(true)
+        expect(above == nil).toBe(true)
+        expect(aboveStrength).toBe(0)
+        expect(Tornado.verticalExposure(12)).toBe(1)
+        expect(Tornado.verticalExposure(20)).toBe(0.5)
+        expect(Tornado.verticalExposure(28)).toBe(0)
+        expect(Tornado.verticalExposure(nil)).toBe(0)
+        -- Descending below the funnel does not make a safe pocket.
+        expect(Tornado.verticalExposure(-8)).toBe(1)
+    end)
+
     it("never offers a safe tornado eye or launches outside its 42-stud radius", function()
         local center = Vector3.new(0, 0, 0)
         local eye, eyeStrength = Tornado.impulseAt(
