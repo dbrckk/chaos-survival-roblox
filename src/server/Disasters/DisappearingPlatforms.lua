@@ -163,6 +163,7 @@ function D.start(ctx)
 
     local decor = arena and arena:FindFirstChild("Decor")
     local activeStates = {}
+    local totalPlatforms = #D.eligiblePlatforms(folder, {})
     local generation = 0
     local lastSelected = nil
     local waveBeat = 0
@@ -189,6 +190,7 @@ function D.start(ctx)
 
     ctx.OnCleanup[#ctx.OnCleanup+1] = function()
         generation += 1
+        ctx.PlatformWaveMode = nil
         local parts = {}
         for part in pairs(activeStates) do
             table.insert(parts, part)
@@ -203,7 +205,8 @@ function D.start(ctx)
             if not D.canBegin(ctx, os.clock()) then break end
             local parts = D.eligiblePlatforms(folder, activeStates)
             if #parts > 0 then
-                local mode = D.waveMode(ctx, os.clock(), #parts)
+                local mode = D.waveMode(ctx, os.clock(), totalPlatforms)
+                ctx.PlatformWaveMode = mode ~= "Scatter" and mode or nil
                 if mode ~= lastWaveMode then
                     waveBeat = 0
                     lastWaveMode = mode
