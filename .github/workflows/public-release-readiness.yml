@@ -1,0 +1,166 @@
+name: Public Release Readiness (Read Only)
+
+on:
+  workflow_dispatch:
+
+# This workflow CANNOT publish or mutate Roblox, GitHub settings or branches.
+# No Roblox key/secrets, checkout, artifacts or write permission are used.
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  audit:
+    name: Audit source, checks and release targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect public release readiness without publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DISPATCH_SHA: ${{ github.sha }}
+          DISPATCH_REF: ${{ github.ref }}
+          REPORT_FILE: ${{ github.step_summary }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          api_root = "https://api.github.com/repos/" + os.environ["REPO"]
+          headers = {
+              "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "chaos-read-only-release-preflight",
+          }
+
+          def api(path):
+              req = urllib.request.Request(api_root + path, headers=headers, method="GET")
+              with urllib.request.urlopen(req, timeout=20) as response:
+                  return json.load(response)
+
+          def row(name, status, explanation):
+              mark = "PASS" if status == "PASS" else ("CHECK" if status == "CHECK" else "BLOCKED")
+              rows.append(f"| {name} | **{mark}** | {explanation} |")
+              if mark == "BLOCKED":
+                  blocking.append(name)
+
+          rows = []
+          blocking = []
+          notes = []
+          sha = os.environ["DISPATCH_SHA"]
+          current_branch = os.environ["DISPATCH_REF"] == "refs/heads/main"
+
+          if not current_branch:
+              row("Source branch", "BLOCKED", "Run this read-only audit from main")
+          else:
+              row("Source branch", "PASS", "main")
+
+          try:
+              main = api("/branches/main")
+              main_sha = main["commit"]["sha"]
+              row("Exact current SHA", "PASS" if sha == main_sha else "BLOCKED",
+                  f"dispatch `{sha[:12]}` / main `{main_sha[:12]}`")
+          except (urllib.error.URLError, ValueError, KeyError) as exc:
+              row("Exact current SHA", "BLOCKED", "Could not verify main via GitHub API")
+              notes.append(f"Main inspection unavailable: {type(exc).__name__}")
+
+          expected = {
+              "ROBLOX_UNIVERSE_ID": "10771083668",
+              "ROBLOX_PLACE_ID": "95351659174730",
+          }
+          try:
+              variables = {}
+              page = 1
+              while True:
+                  payload = api(f"/actions/variables?per_page=100&page={page}")
+                  batch = payload.get("variables", [])
+                  for item in batch:
+                      variables[item["name"]] = item.get("value", "")
+                  if len(batch) < 100 or page >= 5:
+                      break
+                  page += 1
+
+              for key, value in expected.items():
+                  observed = variables.get(key, "")
+                  row(key, "PASS" if observed == value else "BLOCKED",
+                      f"Expected `{value}`; configured `{observed or '(missing)'}`")
+
+              staging_universe = variables.get("ROBLOX_STAGING_UNIVERSE_ID", "")
+              staging_place = variables.get("ROBLOX_STAGING_PLACE_ID", "")
+              staging_safe = bool(staging_universe and staging_place
+                                  and staging_universe != expected["ROBLOX_UNIVERSE_ID"]
+                                  and staging_place != expected["ROBLOX_PLACE_ID"])
+              row("Isolated private staging", "PASS" if staging_safe else "CHECK",
+                  "Separate target IDs configured" if staging_safe else
+                  "Missing or colliding staging IDs: full Studio/Android certification still blocked")
+          except (urllib.error.URLError, ValueError, KeyError) as exc:
+              row("Repository variables", "BLOCKED",
+                  "Read access unavailable: verify repository Actions variables manually")
+              notes.append(f"Variables inspection unavailable: {type(exc).__name__}")
+
+          try:
+              query = urllib.parse.urlencode({
+                  "head_sha": sha,
+                  "event": "push",
+                  "per_page": 100,
+              })
+              data = api("/actions/runs?" + query)
+              matching = [
+                  run for run in data.get("workflow_runs", [])
+                  if run.get("head_sha") == sha
+                  and run.get("event") == "push"
+                  and run.get("head_branch") == "main"
+              ]
+              for required in ("Build Validation", "Roblox Open Cloud Engine Tests"):
+                  named = sorted(
+                      (run for run in matching if run.get("name") == required),
+                      key=lambda run: (run.get("created_at", ""), run.get("id", 0)),
+                      reverse=True,
+                  )
+                  latest = named[0] if named else None
+                  good = bool(latest and latest.get("status") == "completed"
+                              and latest.get("conclusion") == "success")
+                  row(required, "PASS" if good else "BLOCKED",
+                      ("Successful exact-main push run" if good else
+                       f"Missing, pending or failing exact-main push check: "
+                       f"{(latest or {}).get('status', 'missing')}/"
+                       f"{(latest or {}).get('conclusion', 'none')}"))
+          except (urllib.error.URLError, ValueError, KeyError) as exc:
+              row("GitHub automated checks", "BLOCKED",
+                  "Could not verify exact main SHA workflow conclusions")
+              notes.append(f"Actions inspection unavailable: {type(exc).__name__}")
+
+          report = [
+              "# Chaos Survival — READ-ONLY public release preflight",
+              "",
+              f"Candidate: `{sha}`",
+              "",
+              "| Gate | Status | Evidence |",
+              "| --- | --- | --- |",
+              *rows,
+              "",
+              ("**Automated source/target preflight: BLOCKED.**" if blocking
+               else "**Automated source/target preflight: PASS.**"),
+              "",
+              "This report does **not** publish the place, prove Roblox API-key permissions,",
+              "verify the live place version, or certify real device/Studio results.",
+              "Do not declare 1.0 certified until authenticated Studio, Android,",
+              "persistence/rejoin and real-player acceptance are documented.",
+              "",
+              "For any public playtest update, use the separate manual workflow only",
+              "after correcting variables and explicitly accepting the risks.",
+          ]
+          if notes:
+              report.extend(["", "Inspection notes:", *["- " + note for note in notes]])
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("\n".join(report) + "\n")
+          print("\n".join(report))
+          if blocking:
+              sys.exit(1)
+          PY
