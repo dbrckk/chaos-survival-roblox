@@ -21,6 +21,10 @@ jobs:
           REPO: ${{ github.repository }}
           DISPATCH_SHA: ${{ github.sha }}
           DISPATCH_REF: ${{ github.ref }}
+          PROD_UNIVERSE: ${{ vars.ROBLOX_UNIVERSE_ID }}
+          PROD_PLACE: ${{ vars.ROBLOX_PLACE_ID }}
+          STAGING_UNIVERSE: ${{ vars.ROBLOX_STAGING_UNIVERSE_ID }}
+          STAGING_PLACE: ${{ vars.ROBLOX_STAGING_PLACE_ID }}
         run: |
           python3 - <<'PY'
           import json
@@ -73,35 +77,27 @@ jobs:
               "ROBLOX_UNIVERSE_ID": "10771083668",
               "ROBLOX_PLACE_ID": "95351659174730",
           }
-          try:
-              variables = {}
-              page = 1
-              while True:
-                  payload = api(f"/actions/variables?per_page=100&page={page}")
-                  batch = payload.get("variables", [])
-                  for item in batch:
-                      variables[item["name"]] = item.get("value", "")
-                  if len(batch) < 100 or page >= 5:
-                      break
-                  page += 1
+          # GitHub's supported vars context can read Actions variables without
+          # granting an API token a forbidden Variables permission.
+          variables = {
+              "ROBLOX_UNIVERSE_ID": os.environ.get("PROD_UNIVERSE", ""),
+              "ROBLOX_PLACE_ID": os.environ.get("PROD_PLACE", ""),
+              "ROBLOX_STAGING_UNIVERSE_ID": os.environ.get("STAGING_UNIVERSE", ""),
+              "ROBLOX_STAGING_PLACE_ID": os.environ.get("STAGING_PLACE", ""),
+          }
+          for key, value in expected.items():
+              observed = variables.get(key, "")
+              row(key, "PASS" if observed == value else "BLOCKED",
+                  f"Expected `{value}`; configured `{observed or '(missing)'}`")
 
-              for key, value in expected.items():
-                  observed = variables.get(key, "")
-                  row(key, "PASS" if observed == value else "BLOCKED",
-                      f"Expected `{value}`; configured `{observed or '(missing)'}`")
-
-              staging_universe = variables.get("ROBLOX_STAGING_UNIVERSE_ID", "")
-              staging_place = variables.get("ROBLOX_STAGING_PLACE_ID", "")
-              staging_safe = bool(staging_universe and staging_place
-                                  and staging_universe != expected["ROBLOX_UNIVERSE_ID"]
-                                  and staging_place != expected["ROBLOX_PLACE_ID"])
-              row("Isolated private staging", "PASS" if staging_safe else "CHECK",
-                  "Separate target IDs configured" if staging_safe else
-                  "Missing or colliding staging IDs: full Studio/Android certification still blocked")
-          except (urllib.error.URLError, ValueError, KeyError) as exc:
-              row("Repository variables", "BLOCKED",
-                  "Read access unavailable: verify repository Actions variables manually")
-              notes.append(f"Variables inspection unavailable: {type(exc).__name__}")
+          staging_universe = variables["ROBLOX_STAGING_UNIVERSE_ID"]
+          staging_place = variables["ROBLOX_STAGING_PLACE_ID"]
+          staging_safe = bool(staging_universe and staging_place
+                              and staging_universe != expected["ROBLOX_UNIVERSE_ID"]
+                              and staging_place != expected["ROBLOX_PLACE_ID"])
+          row("Isolated private staging", "PASS" if staging_safe else "CHECK",
+              "Separate target IDs configured" if staging_safe else
+              "Missing or colliding staging IDs: full Studio/Android certification still blocked")
 
           try:
               query = urllib.parse.urlencode({
