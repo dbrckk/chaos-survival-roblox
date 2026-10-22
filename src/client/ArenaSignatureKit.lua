@@ -46,6 +46,8 @@ local function moving(bundle, part, role, cf, index)
         index = index or 1,
         color = part.Color,
         transparency = part.Transparency,
+        restCFrame = part.CFrame,
+        restSize = part.Size,
     })
     return part
 end
@@ -551,7 +553,22 @@ function ArenaSignatureKit.motionRate(intensity)
     return 1 + normalizedRush(intensity) * 0.32
 end
 
-function ArenaSignatureKit.update(bundle, elapsed, reduceMotion, rushIntensity)
+-- The final mechanical pose settles over a short eased result transition,
+-- instead of popping each rotating hero back to its authored rest pose.
+-- Finite, bounded and independent of device frame rate.
+function ArenaSignatureKit.settleAmount(elapsed, duration)
+    local time = tonumber(elapsed)
+    local length = tonumber(duration)
+    if not time or time ~= time or math.abs(time) == math.huge
+        or not length or length ~= length or math.abs(length) == math.huge
+        or length <= 0 then
+        return 0
+    end
+    local alpha = math.clamp(time / length, 0, 1)
+    return 1 - alpha * alpha * (3 - 2 * alpha)
+end
+
+function ArenaSignatureKit.update(bundle, elapsed, reduceMotion, rushIntensity, motionBlend)
     if not bundle or not bundle.folder.Parent then
         return
     end
@@ -561,6 +578,13 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion, rushIntensity)
         or parsed ~= parsed or math.abs(parsed) == math.huge
         or parsed < 0 or parsed > 1e7 then 0 else parsed
     local rush = reduceMotion == true and 0 or normalizedRush(rushIntensity)
+    local blend = 1
+    if reduceMotion == true then
+        blend = 0
+    elseif type(motionBlend) == "number" and motionBlend == motionBlend
+        and math.abs(motionBlend) < math.huge then
+        blend = math.clamp(motionBlend, 0, 1)
+    end
     for _, entry in ipairs(bundle.animated) do
         local p = entry.part
         if p.Parent then
@@ -620,6 +644,16 @@ function ArenaSignatureKit.update(bundle, elapsed, reduceMotion, rushIntensity)
                 p.CFrame = entry.frame
                     * CFrame.Angles(now * 0.10, spin, now * 0.14)
                     * entry.localFrame
+            end
+            if blend < 1 then
+                -- One blended snapshot for every animated property, with
+                -- quaternion-shortest rotation instead of rewinding a radar
+                -- through many accumulated revolutions.
+                p.CFrame = entry.restCFrame:Lerp(p.CFrame, blend)
+                p.Size = entry.restSize:Lerp(p.Size, blend)
+                p.Transparency = entry.transparency
+                    + (p.Transparency - entry.transparency) * blend
+                p.Color = entry.color:Lerp(p.Color, blend)
             end
         end
     end
