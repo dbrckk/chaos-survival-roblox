@@ -196,13 +196,6 @@ function D.start(ctx)
                 parts, D.waveSize(ctx, #parts, os.clock())
             )
             if #chosen > 0 then
-                -- Announce only a wave that really found two distant safe
-                -- candidates. Retain the unlock throughout this round:
-                -- a temporarily short platform pool can legitimately
-                -- produce a one-deck beat between two double-deck beats.
-                if #chosen >= 2 then
-                    ctx.DoubleCollapseUnlocked = true
-                end
                 local staged = {}
                 local serverStart = workspace:GetServerTimeNow()
                 for _, p in ipairs(chosen) do
@@ -229,6 +222,13 @@ function D.start(ctx)
                     -- Local animated warning edges use the same contract as
                     -- single-platform waves; only physical decks disappear.
                     p.Transparency = math.min(p.Transparency, 0.24)
+                end
+                -- Mark the mechanic unlocked only AFTER both real warning
+                -- decks were staged. Some beats can later use a single deck
+                -- while earlier ones finish restoring; keep the hint truthful
+                -- as a warning about a possible paired collapse.
+                if #staged >= 2 then
+                    ctx.DoubleCollapseUnlocked = true
                 end
 
                 task.wait(D.WarningSeconds)
