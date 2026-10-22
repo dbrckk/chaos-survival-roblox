@@ -14,6 +14,39 @@ function DisasterAtmosphereLayout.point(baseFrame, baseSize, angle, radius, heig
     ))
 end
 
+-- These authored perimeter accents must follow the *current* collision
+-- footprint. ShrinkingArena changes Base.Size continuously during a round.
+-- A static radius causes visible beacons and shafts to float outside the
+-- playable floor once Double Chaos contracts the arena.
+function DisasterAtmosphereLayout.perimeterRadius(baseSize, multiple)
+    if typeof(baseSize) ~= "Vector3" then return nil end
+    local factor = multiple == nil and 0.52 or multiple
+    if type(factor) ~= "number" or factor <= 0
+        or factor ~= factor or factor == math.huge then
+        return nil
+    end
+    return math.max(baseSize.X, baseSize.Z) * factor
+end
+
+function DisasterAtmosphereLayout.beaconFrame(baseFrame, baseSize, angle)
+    local radius = DisasterAtmosphereLayout.perimeterRadius(baseSize)
+    if not radius then return nil end
+    local position = DisasterAtmosphereLayout.point(
+        baseFrame, baseSize, angle, radius, 0.8
+    )
+    if not position then return nil end
+    return CFrame.fromMatrix(
+        position, baseFrame.RightVector, baseFrame.UpVector,
+        -baseFrame.LookVector
+    )
+end
+
+function DisasterAtmosphereLayout.orbitalCoreFrame(baseFrame)
+    if typeof(baseFrame) ~= "CFrame" then return nil end
+    -- Keep the reactor aura aligned to the deck normal when tilted.
+    return baseFrame * CFrame.new(0, 13, 0)
+end
+
 function DisasterAtmosphereLayout.beamFrame(baseFrame, baseSize, angle, radius, height)
     local position = DisasterAtmosphereLayout.point(
         baseFrame, baseSize, angle, radius, height * 0.5 + 4
