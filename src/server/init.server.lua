@@ -1434,6 +1434,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
             -- Mirrors the active server rhythm. Clients use transitions to
             -- show an actionable cue without extra polling or remotes.
             speedTempoPhase = ctx.SpeedTempoPhase,
+            -- The same server simulation that drives the gravity forces
+            -- also drives the player's tactical mobile transition cue.
+            gravityTideStage = ctx.GravityTideStage,
             title = title,
             hint = roundHint,
             seconds = t,
