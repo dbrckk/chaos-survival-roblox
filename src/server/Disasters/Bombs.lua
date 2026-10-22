@@ -26,13 +26,15 @@ function D.start(ctx)
     local damage = profile.BombDamage or 48
     local radius = profile.BombRadius or 8
 
+    local sequence = 0
     task.spawn(function()
         while ctx.Active() do
             if not canComplete(ctx, os.clock(), warningSeconds, 0) then
                 break
             end
-            local offset = ArenaTargeting.randomSeparatedOffset(
-                6, 42, ctx.Config.ArenaCenter, pending, 22
+            sequence += 1
+            local offset, waveMode = ArenaTargeting.evolvingImpactOffset(
+                ctx, "Bombs", sequence, pending, 6, 42, 22
             )
             local impactPosition = ctx.Config.ArenaCenter + offset + Vector3.new(0, 1.2, 0)
 
@@ -47,6 +49,7 @@ function D.start(ctx)
             marker.Material = Enum.Material.Neon
             marker.Color = Color3.fromRGB(255,50,50)
             marker.Position = impactPosition
+            marker:SetAttribute("ImpactWaveMode", waveMode)
             marker.Parent = workspace
             pending[marker] = true
             ctx.Cleanup[#ctx.Cleanup+1] = marker
