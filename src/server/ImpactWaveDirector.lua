@@ -9,7 +9,7 @@ ImpactWaveDirector.SCATTER = "Scatter"
 ImpactWaveDirector.SWEEP = "Sweep"
 ImpactWaveDirector.FLANKS = "Flanks"
 ImpactWaveDirector.MinRoundSeconds = 24
-ImpactWaveDirector.MinHalfExtent = 18
+ImpactWaveDirector.MinHalfExtent = 32
 
 local function finiteNumber(value, fallback)
     local n = tonumber(value)
@@ -72,10 +72,14 @@ function ImpactWaveDirector.anchor(mode, sequence, roundNumber, hazardId, halfX,
     local sign = invert and -1 or 1
 
     if mode == ImpactWaveDirector.SWEEP then
-        local pass = math.floor(step / 5)
-        local lane = step % 5
+        -- Three wide lanes deliberately exceed the 22-stud shared
+        -- warning separation budget on a full-size arena. Five narrow
+        -- lanes looked cinematic but would force Bomb Rain (which keeps
+        -- two active warnings) to abandon the authored route repeatedly.
+        local pass = math.floor(step / 3)
+        local lane = step % 3
         local direction = pass % 2 == 0 and 1 or -1
-        local x = ((lane * 0.34) - 0.68) * direction * sign
+        local x = ((lane - 1) * 0.72) * direction * sign
         local z = (pass % 2 == 0 and 0.56 or -0.56) * sign
         return Vector3.new(x * hx, 0, z * hz)
     end
