@@ -20,6 +20,7 @@ local character = nil
 local humanoid = nil
 local root = nil
 local characterConnections = {}
+local bindVersion = 0
 
 local landingKick = 0
 local impactKick = 0
@@ -43,6 +44,7 @@ local lastFinalRush = false
 local lastOverdrive = false
 
 local function disconnectCharacter()
+    bindVersion += 1
     landingPreview.hide()
     for _, connection in ipairs(characterConnections) do
         connection:Disconnect()
@@ -118,10 +120,27 @@ local function emitLandingBurst(strength)
 end
 
 local function bindCharacter(nextCharacter)
+    -- A task.spawn for the initial avatar can race a newer CharacterAdded.
+    if player.Character ~= nextCharacter then return end
     disconnectCharacter()
+    local version = bindVersion
     character = nextCharacter
-    humanoid = character:WaitForChild("Humanoid", 5)
-    root = character:WaitForChild("HumanoidRootPart", 5)
+    humanoid = nil
+    root = nil
+    local nextHumanoid = nextCharacter:WaitForChild("Humanoid", 5)
+    if bindVersion ~= version or player.Character ~= nextCharacter
+        or character ~= nextCharacter then return end
+    local nextRoot = nextCharacter:WaitForChild("HumanoidRootPart", 5)
+    if bindVersion ~= version or player.Character ~= nextCharacter
+        or character ~= nextCharacter then return end
+    if not nextHumanoid or not nextHumanoid:IsA("Humanoid")
+        or nextHumanoid.Parent ~= nextCharacter
+        or not nextRoot or not nextRoot:IsA("BasePart")
+        or nextRoot.Parent ~= nextCharacter then
+        return
+    end
+    humanoid = nextHumanoid
+    root = nextRoot
 
     landingKick = 0
     impactKick = 0
@@ -141,7 +160,12 @@ local function bindCharacter(nextCharacter)
         return
     end
 
-    table.insert(characterConnections, humanoid.StateChanged:Connect(function(_, newState)
+    table.insert(characterConnections, nextHumanoid.StateChanged:Connect(function(_, newState)
+        if bindVersion ~= version or character ~= nextCharacter
+            or player.Character ~= nextCharacter
+            or humanoid ~= nextHumanoid or root ~= nextRoot then
+            return
+        end
         if newState == Enum.HumanoidStateType.Freefall then
             wasAirborne = true
         elseif wasAirborne
@@ -166,6 +190,19 @@ if player.Character then
     task.spawn(bindCharacter, player.Character)
 end
 player.CharacterAdded:Connect(bindCharacter)
+player.CharacterRemoving:Connect(function(removingCharacter)
+    if character ~= removingCharacter then return end
+    disconnectCharacter()
+    character = nil
+    humanoid = nil
+    root = nil
+    wasAirborne = false
+    landingKick = 0
+    lastVerticalVelocity = 0
+    accelerationKick = 0
+    speedFovOffset = 0
+    CameraFeelBus.reset()
+end)
 
 local function bindTornado(model)
     if model and model.Name == "RoundTornado" then
@@ -274,7 +311,10 @@ RunService:BindToRenderStep(
             landingPreview.hide()
             return
         end
-        if not camera or not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
+        if not camera or player.Character ~= character
+            or not root or root.Parent ~= character
+            or not humanoid or humanoid.Parent ~= character
+            or humanoid.Health <= 0 then
             CameraFeelBus.reset()
             landingPreview.hide()
             return
