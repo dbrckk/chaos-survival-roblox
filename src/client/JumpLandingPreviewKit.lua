@@ -125,18 +125,12 @@ function JumpLandingPreviewKit.new(player)
                 )
                 if Rules.probeMatches(probeTime, contactTime) then
                     local errorSeconds = math.abs(probeTime - contactTime)
-                    -- Prefer the earliest real surface contact,
-                    -- not simply the lowest timing error: a valid high
-                    -- deck must win over lower ground the avatar would
-                    -- only reach after passing through that deck.
-                    local earlierContact = bestTime == nil
-                        or contactTime < bestTime - 0.025
-                    local comparableTime = bestTime ~= nil
-                        and math.abs(contactTime - bestTime) <= 0.025
-                        and errorSeconds < bestError
-                    if (earlierContact or comparableTime)
-                        and (horizontalVelocity * contactTime).Magnitude
-                            <= Rules.MaxHorizontalTravel then
+                    -- Prefer first physical impact (the elevated
+                    -- target), then the better-timed probe for ties.
+                    if Rules.preferContact(
+                        probeTime, contactTime, bestTime, bestError
+                    ) and (horizontalVelocity * contactTime).Magnitude
+                        <= Rules.MaxHorizontalTravel then
                         bestCandidate = candidate
                         bestTime = contactTime
                         bestError = errorSeconds
