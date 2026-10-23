@@ -167,6 +167,9 @@ function D.start(ctx)
                     or item.Name:match("^PlatformCoreGlow(%d+)$")
                     or item.Name:match("^PlatformSupport(%d+)_%d+$")
                     or item.Name:match("^PlatformBevel(%d+)_%d+$")
+                    -- Original outer-route facades are linked by an
+                    -- explicit owning deck, not guessed from an art name.
+                    or item:GetAttribute("PerimeterPlatformIndex")
                 )
                 local bridge = bridgeStates[bridgeIndex or platformIndex]
                 local deck = platformIndex and platformStates[platformIndex]
