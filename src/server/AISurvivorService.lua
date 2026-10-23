@@ -556,13 +556,15 @@ local function addNameplate(record, model)
     billboard.Adornee = head
     billboard.AlwaysOnTop = false
     billboard.MaxDistance = 90
-    billboard.Size = UDim2.fromOffset(160, 44)
+    -- Ordinary Roblox player names are compact; reserve the second row
+    -- only for a brief, contextual in-world bot reaction.
+    billboard.Size = UDim2.fromOffset(136, 27)
     billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.2, 0)
     billboard.Parent = head
 
     local label = Instance.new("TextLabel")
     label.Name = "DisplayName"
-    label.Size = UDim2.new(1, 0, 0, 24)
+    label.Size = UDim2.new(1, 0, 0, 26)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamSemibold
     label.Text = record.identity.DisplayName
@@ -579,11 +581,12 @@ local function addNameplate(record, model)
 
     local role = Instance.new("TextLabel")
     role.Name = "Personality"
-    role.Position = UDim2.fromOffset(0, 23)
+    role.Position = UDim2.fromOffset(0, 25)
     role.Size = UDim2.new(1, 0, 0, 18)
     role.BackgroundTransparency = 1
     role.Font = Enum.Font.GothamBold
     role.Text = ""
+    role.Visible = false
     role.TextColor3 = record.identity.Accent
     role.TextStrokeColor3 = Color3.fromRGB(10, 14, 20)
     role.TextStrokeTransparency = 0.35
@@ -604,6 +607,11 @@ local function showBotSignal(record, message, now)
     local label = record.roleLabel
     if label and label.Parent then
         label.Text = message
+        label.Visible = true
+        local billboard = label.Parent
+        if billboard and billboard:IsA("BillboardGui") then
+            billboard.Size = UDim2.fromOffset(148, 46)
+        end
         record.signalExpire = now + 1.5
     end
 end
@@ -2509,6 +2517,11 @@ local function stepRecord(record, now)
         local label = record.roleLabel
         if label and label.Parent then
             label.Text = ""
+            label.Visible = false
+            local billboard = label.Parent
+            if billboard and billboard:IsA("BillboardGui") then
+                billboard.Size = UDim2.fromOffset(136, 27)
+            end
         end
         record.signalExpire = 0
     end
