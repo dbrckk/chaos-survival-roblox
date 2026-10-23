@@ -243,7 +243,9 @@ end
 
 function AISurvivorRules.appearanceStyle(identityIndex)
     local index = math.max(1, math.floor(tonumber(identityIndex) or 1))
-    return ((index - 1) % 5) + 1
+    -- Eight grounded streetwear silhouettes for twenty rotating fictional
+    -- identities; no external assets, animated cosmetics or paid avatars.
+    return ((index - 1) % 8) + 1
 end
 
 function AISurvivorRules.bodyScales(identityIndex)
