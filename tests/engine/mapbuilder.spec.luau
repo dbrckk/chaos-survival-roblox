@@ -357,6 +357,53 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("sculpts noninteractive distant skyline outside every enlarged arena", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local base = arena:FindFirstChild("Base")
+            local decor = arena:FindFirstChild("Decor")
+            local count = 0
+            local distinctGeometry = 0
+            for _, direction in ipairs({"North", "East", "South", "West"}) do
+                local skyline = decor:FindFirstChild("SkylineStructure" .. direction)
+                expect(skyline ~= nil and skyline:IsA("Model")).toBe(true)
+                expect(skyline:GetAttribute("ChaosDistantScenery")).toBe(true)
+                count += 1
+                local parts = 0
+                for _, piece in ipairs(skyline:GetDescendants()) do
+                    if piece:IsA("BasePart") then
+                        parts += 1
+                        if piece:IsA("WedgePart") then
+                            distinctGeometry += 1
+                        end
+                        expect(piece.Anchored).toBe(true)
+                        expect(piece.CanCollide).toBe(false)
+                        expect(piece.CanTouch).toBe(false)
+                        expect(piece.CanQuery).toBe(false)
+                        expect(piece.CastShadow).toBe(false)
+                        expect(piece.Material ~= Enum.Material.Neon).toBe(true)
+                        local relative = piece.Position - base.Position
+                        local beyondX = math.abs(relative.X)
+                            - piece.Size.Magnitude * 0.5
+                            > base.Size.X * 0.5 + 5
+                        local beyondZ = math.abs(relative.Z)
+                            - piece.Size.Magnitude * 0.5
+                            > base.Size.Z * 0.5 + 5
+                        -- No decorative skyline shape can intrude on any
+                        -- playable edge, even with its most conservative
+                        -- bound sphere on rotated geometry.
+                        expect(beyondX or beyondZ).toBe(true)
+                    end
+                end
+                expect(parts >= 7 and parts <= 9).toBe(true)
+            end
+            expect(count).toBe(4)
+            expect(distinctGeometry >= 12).toBe(true)
+            root:Destroy()
+        end
+    end)
+
     it("physically builds accessible outer parkour while retaining original core IDs", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
