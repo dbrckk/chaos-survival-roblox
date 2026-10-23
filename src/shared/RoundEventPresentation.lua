@@ -142,6 +142,24 @@ function RoundEventPresentation.gravityTideCue(previous, current)
     return nil
 end
 
+-- The UI observes authoritative stage transitions, not its own lava timer.
+-- Joining halfway through a round must never fabricate a warning.
+function RoundEventPresentation.lavaSurgeCue(previous, current)
+    local valid = {
+        Climb = true,
+        SurgeSoon = true,
+        Surge = true,
+        FinalRise = true,
+    }
+    if not valid[previous] or not valid[current] or previous == current then
+        return nil
+    end
+    if current == "SurgeSoon" then return "LAVA_SURGE_SOON" end
+    if current == "Surge" then return "LAVA_SURGE_ACTIVE" end
+    if current == "FinalRise" then return "LAVA_FINAL_RISE" end
+    return nil
+end
+
 function RoundEventPresentation.priority(kind)
     local priorities = {
         finalRush = 50,
@@ -152,6 +170,7 @@ function RoundEventPresentation.priority(kind)
         collapseWave = 25,
         speedTempo = 25,
         gravityTide = 25,
+        lavaSurge = 25,
         readyCountdown = 20,
     }
     return priorities[kind] or 0
