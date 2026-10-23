@@ -32,6 +32,7 @@ local airborne = false
 local airborneStartedAt = -math.huge
 local lastAirSampleAt = -math.huge
 local peakFallSpeed = 0
+local previouslyGrounded = false
 local speedSurgeActive = false
 local lowGravityActive = false
 local roundPhase = "waiting"
@@ -112,6 +113,7 @@ local function attachRig(nextCharacter, serial)
             humanoidStateConnection = nil
         end
         humanoid = nextHumanoid
+        previouslyGrounded = humanoid.FloorMaterial ~= Enum.Material.Air
         humanoidStateConnection = humanoid.StateChanged:Connect(function(_, state)
             if serial ~= bindSerial then return end
             if state == Enum.HumanoidStateType.Jumping then
@@ -214,6 +216,7 @@ local function bind(nextCharacter)
     airborneStartedAt = -math.huge
     lastAirSampleAt = -math.huge
     peakFallSpeed = 0
+    previouslyGrounded = false
     launchWeight = 0
     impactWeight = 0
     impactSide = 0
@@ -462,6 +465,8 @@ RunService:BindToRenderStep(
         local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
         local moving = humanoid.MoveDirection.Magnitude > 0.05 and speed > 2.5
         local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
+        local settledGroundContact = grounded and previouslyGrounded
+        previouslyGrounded = grounded
         local reduced = player:GetAttribute("ReduceMotion") == true
         -- Native Showtime Action tracks take priority while dancing.
         -- Blend C0 corrections to neutral without stopping the track.
@@ -472,8 +477,13 @@ RunService:BindToRenderStep(
         local scale = BodyMotionRules.motionScale(reduced)
 
         local acceleration = (speed - lastSpeed) / math.max(dt, 1 / 240)
+        -- A fresh touchdown or resumed frame is not a genuine sprint
+        -- launch, hard brake or pivot. Keep the landing's separate pose.
+        if not settledGroundContact or interrupted then
+            acceleration = 0
+        end
         local launchTarget, skidTarget = LocomotionDynamics.acceleration(
-            speed, lastSpeed, dt, grounded
+            speed, lastSpeed, dt, settledGroundContact and not interrupted
         )
         -- Never turn a background/resume speed delta into a fake sprint,
         -- skid or ground VFX. Sample the new physical speed as baseline.
@@ -503,7 +513,8 @@ RunService:BindToRenderStep(
         local brakeTarget = BodyMotionRules.brakeWeight(acceleration, moving)
         brakePose += (brakeTarget - brakePose) * expAlpha(10, dt)
         local cutTarget = LocomotionDynamics.cut(
-            previousMoveDirection, moveDirection, speed, grounded
+            previousMoveDirection, moveDirection, speed,
+            settledGroundContact and not interrupted
         )
         if interrupted then cutTarget = 0 end
         cutPose += (cutTarget - cutPose) * expAlpha(11, dt)
