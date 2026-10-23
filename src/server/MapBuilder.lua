@@ -1504,7 +1504,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     local killPlane = part(
         arena,
         "KillPlane",
-        Vector3.new(160, 2, 160),
+        Vector3.new(
+            math.max(160, variant.BaseSize.X + 32), 2,
+            math.max(160, variant.BaseSize.Z + 32)
+        ),
         config.ArenaCenter + Vector3.new(0, -18, 0),
         Color3.fromRGB(255, 0, 0),
         Enum.Material.SmoothPlastic
