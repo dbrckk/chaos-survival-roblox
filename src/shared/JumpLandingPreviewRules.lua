@@ -55,6 +55,22 @@ function JumpLandingPreviewRules.timeToSurface(verticalSpeed, gravity, drop)
     return t
 end
 
+-- Select the first imminent collision surface, not the later base
+-- floor which happens to line up more closely with a sampling timestamp.
+-- Keep a 25ms tie band so nearly identical surfaces remain deterministic.
+function JumpLandingPreviewRules.preferContact(
+    probeSeconds, contactSeconds, bestSeconds, bestError
+)
+    if not JumpLandingPreviewRules.probeMatches(probeSeconds, contactSeconds) then
+        return false
+    end
+    if bestSeconds == nil then return true end
+    if not finite(bestSeconds) or not finite(bestError) then return false end
+    if contactSeconds < bestSeconds - 0.025 then return true end
+    return math.abs(contactSeconds - bestSeconds) <= 0.025
+        and math.abs(probeSeconds - contactSeconds) < bestError
+end
+
 function JumpLandingPreviewRules.edgeMargin(platform, hitPosition)
     if typeof(platform) ~= "Instance" or not platform:IsA("BasePart")
         or typeof(hitPosition) ~= "Vector3" then
