@@ -1918,6 +1918,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
                     Enum.Material.Metal
                 )
                 rib.Transparency = 0.06
+                rib:SetAttribute("PerimeterPlatformIndex", i)
             end
             local cap = Instance.new("WedgePart")
             cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
@@ -1936,6 +1937,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             cap.CastShadow = false
             cap.Transparency = 0.08
             cap.Parent = decor
+            cap:SetAttribute("PerimeterPlatformIndex", i)
             local lens = decorPart(
                 decor,
                 "PerimeterExitLens" .. definition.PerimeterRoute,
@@ -1946,6 +1948,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
                 Enum.Material.Glass
             )
             lens.Transparency = 0.34
+            lens:SetAttribute("PerimeterPlatformIndex", i)
         end
     end
 
