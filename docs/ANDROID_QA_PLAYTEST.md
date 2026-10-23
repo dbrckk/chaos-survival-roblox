@@ -85,6 +85,25 @@ and after each test, average/worst-frame FPS from the staging overlay or
 Roblox performance stats, original screen recording, and player/server
 logs. A green GitHub CI run is **not** a pass for this physical test.
 
+## Android combat flash and win/loss camera — exact-SHA E2E
+
+On a private staging build matching the GitHub source, repeat 10 rapid
+R6 and 10 R15 elimination/respawn cycles under simulated poor network.
+While each avatar is taking damage, remove/recreate its Humanoid and
+stream the model's children late. Confirm old HealthChanged events never
+produce red flashes, Bloom boosts, health-vignette overlays or FOV
+shifts on the new avatar. Verify exactly one flash on a valid nonfatal
+active-round hit, and **zero** hit overlays in lobby, spectating or after
+elimination. Switch Low/Medium/High and ReduceMotion in this sequence.
+
+During a victory and defeat FOV pulse, end the result and begin the next
+READY / ROUND within 0.15 seconds; the previous delayed 72-degree reset
+must not override the new active disaster FOV. Check first-person /
+third-person Android camera and keep the total camera FOV bounded at
+60–90 degrees without tug-of-war. Capture original Roblox video with
+native HUD, logs, device / OS, FPS, exact staged SHA and time. Not passed
+until an authenticated real-client session produces evidence.
+
 ## True touchdown / movement transition acceptance
 
 On a private staging experience whose published build is proven to match
