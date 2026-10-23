@@ -49,6 +49,15 @@ function D.ownsSpeed(actual, assigned)
         and math.abs(a - b) <= 0.01
 end
 
+-- A Roblox Humanoid can store a rounded WalkSpeed. If the observed speed
+-- remains ours, the tide may advance; a meaningful external modifier must
+-- be left untouched until the other owner releases it.
+function D.shouldAssignSpeed(actual, assigned, target)
+    return D.ownsSpeed(actual, assigned)
+        and D.ownsSpeed(target, target)
+        and not D.ownsSpeed(actual, target)
+end
+
 function D.tempoAt(elapsed, enabled)
     if enabled ~= true then return "Surge", math.huge end
     local value = tonumber(elapsed) or 0
@@ -80,6 +89,9 @@ function D.start(ctx)
                 current = applied,
             }
             hum.WalkSpeed = applied
+            -- Capture the Humanoid's real stored value, not the pre-assignment
+            -- double precision number which may differ after quantization.
+            previous[hum].current = hum.WalkSpeed
         end
     end
 
@@ -146,16 +158,19 @@ function D.start(ctx)
                     and Color3.fromRGB(255, 95, 190)
                     or Color3.fromRGB(90, 205, 235)
                 for hum, state in pairs(previous) do
-                    if hum.Parent and hum.Health > 0
-                        and hum.WalkSpeed == state.current then
-                        local target = D.speedAt(
-                            state.original, state.applied, elapsed, true
-                        )
-                        -- Avoid redundant Humanoid replication for the
-                        -- steady portions of each rhythm window.
-                        if math.abs(target - state.current) >= 0.005 then
-                            hum.WalkSpeed = target
-                            state.current = target
+                    if hum.Parent and hum.Health > 0 then
+                        local actual = hum.WalkSpeed
+                        if D.ownsSpeed(actual, state.current) then
+                            local target = D.speedAt(
+                                state.original, state.applied, elapsed, true
+                            )
+                            -- Only write when the rounded Humanoid property
+                            -- truly needs changing. Do not steal movement
+                            -- control from another system.
+                            if D.shouldAssignSpeed(actual, state.current, target) then
+                                hum.WalkSpeed = target
+                            end
+                            state.current = hum.WalkSpeed
                         end
                     end
                 end
