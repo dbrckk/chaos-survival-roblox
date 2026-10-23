@@ -148,6 +148,7 @@ local function bindCharacter(nextCharacter)
     lastHorizontalSpeed = 0
     accelerationKick = 0
     speedFovOffset = 0
+    lastLandingBurstAt = -math.huge
     presentationKick = 0
     presentationKickTarget = 0
     CameraFeelBus.reset()
@@ -175,6 +176,13 @@ local function bindCharacter(nextCharacter)
         end
         humanoid = nextHumanoid
         root = nextRoot
+        -- A newly replicated rig might already be sprinting; its first
+        -- velocity sample is a baseline, not an acceleration impulse.
+        local initialVelocity = nextRoot.AssemblyLinearVelocity
+        lastHorizontalSpeed = Vector3.new(
+            initialVelocity.X, 0, initialVelocity.Z
+        ).Magnitude
+        accelerationKick = 0
         wasAirborne = nextHumanoid:GetState() == Enum.HumanoidStateType.Freefall
         airborneStartedAt = wasAirborne and os.clock() or -math.huge
         lastAirSampleAt = airborneStartedAt
