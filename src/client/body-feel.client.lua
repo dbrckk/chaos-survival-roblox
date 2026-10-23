@@ -133,10 +133,17 @@ local function attachRig(nextCharacter, serial)
                     airborneStartedAt = os.clock()
                     peakFallSpeed = 0
                 end
-                peakFallSpeed = math.max(
-                    peakFallSpeed, math.max(0, -nextRoot.AssemblyLinearVelocity.Y)
-                )
-                lastAirSampleAt = os.clock()
+                -- RootPart may stream out and be replaced without a new
+                -- Humanoid. Always sample the live rig, not a captured old
+                -- RootPart from the original StateChanged subscription.
+                local currentRoot = root
+                if currentRoot and currentRoot.Parent == nextCharacter then
+                    peakFallSpeed = math.max(
+                        peakFallSpeed,
+                        math.max(0, -currentRoot.AssemblyLinearVelocity.Y)
+                    )
+                    lastAirSampleAt = os.clock()
+                end
                 landingRecoveryStrength = 0
                 landingRecoveryClock = 0
             elseif airborne and (
