@@ -98,41 +98,49 @@ function JumpLandingPreviewKit.new(player)
         rayParams.RespectCanCollide = true
 
         local origin = root.Position + Vector3.new(0, 0.25, 0)
-        local first = workspace:Raycast(origin, Vector3.new(0, -24, 0), rayParams)
-        if not validSurface(first) then
-            hide()
-            return
-        end
-
         local velocity = root.AssemblyLinearVelocity
+        local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
         local footOffset = root.Size.Y * 0.5 + humanoid.HipHeight
         local footY = root.Position.Y - footOffset
-        local firstTime = Rules.timeToSurface(
-            velocity.Y, workspace.Gravity, footY - first.Position.Y
-        )
-        if not firstTime then
-            hide()
-            return
-        end
 
-        -- Sample actual collision at the short, locally projected contact
-        -- point. A missed platform edge means no reticle, not fake safety.
-        local offset = Vector3.new(velocity.X, 0, velocity.Z) * firstTime
-        if offset.Magnitude > 8 then
-            hide()
-            return
+        -- A straight-down ray often hits the LOW base floor while the
+        -- player is mid-jump over a gap between two higher decks. Probe the
+        -- actual horizontal trajectory instead. This remains only a
+        -- short-range visual estimate, with a confirmed physical landing
+        -- target; no route prediction or gameplay authority.
+        local hit = nil
+        for _, probeTime in ipairs(Rules.ProbeSeconds) do
+            local offset = horizontalVelocity * probeTime
+            if offset.Magnitude > Rules.MaxHorizontalTravel then
+                continue
+            end
+            local candidate = workspace:Raycast(
+                origin + offset, Vector3.new(0, -24, 0), rayParams
+            )
+            if validSurface(candidate) then
+                local contactTime = Rules.timeToSurface(
+                    velocity.Y, workspace.Gravity, footY - candidate.Position.Y
+                )
+                if Rules.probeMatches(probeTime, contactTime) then
+                    local exactOffset = horizontalVelocity * contactTime
+                    if exactOffset.Magnitude <= Rules.MaxHorizontalTravel then
+                        local confirmed = workspace:Raycast(
+                            origin + exactOffset, Vector3.new(0, -24, 0),
+                            rayParams
+                        )
+                        -- The exact time-corrected endpoint must still hit
+                        -- the SAME physical deck. Never suggest the empty
+                        -- gap or a lower surface behind the target.
+                        if validSurface(confirmed)
+                            and confirmed.Instance == candidate.Instance then
+                            hit = confirmed
+                            break
+                        end
+                    end
+                end
+            end
         end
-        local projected = origin + offset
-        local hit = workspace:Raycast(projected, Vector3.new(0, -24, 0), rayParams)
-        if not validSurface(hit) then
-            hide()
-            return
-        end
-
-        local correctedTime = Rules.timeToSurface(
-            velocity.Y, workspace.Gravity, footY - hit.Position.Y
-        )
-        if not correctedTime or math.abs(correctedTime - firstTime) > 0.10 then
+        if not hit then
             hide()
             return
         end
