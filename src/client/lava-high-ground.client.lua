@@ -200,7 +200,13 @@ end
 local function bindPlatforms()
     local arena = activeMap and activeMap:FindFirstChild("Arena")
     local platforms = arena and arena:FindFirstChild("Platforms")
-    if platforms == activePlatforms then return end
+    if platforms == activePlatforms then
+        -- The Arena VariantId can replicate after Platforms. The shared
+        -- watcher fires on that attribute too: restyle any existing labels
+        -- and recheck the READY arena gate without waiting for a new round.
+        scheduleRebuild()
+        return
+    end
     if disconnectPlatforms then
         disconnectPlatforms()
         disconnectPlatforms = nil
