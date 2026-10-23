@@ -38,6 +38,9 @@ VisualBudgetRules.LocalFolders = {
     -- Up to four static high-ground Highlight outlines; BillboardGui
     -- labels live in PlayerGui and don't count as world Parts.
     "LavaHighGroundOutlinesLocal",
+    -- Four reusable non-colliding landing-position brackets; no new
+    -- render owner, light or runtime allocation on each jump.
+    "JumpLandingPreviewLocal",
     "HazardWarningSignaturesLocal",
     "LobbyPersonalProgressLocal",
     "LobbyPresentationLocal",
