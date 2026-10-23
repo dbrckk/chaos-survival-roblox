@@ -29,7 +29,9 @@ local celebrationKind = nil
 local celebrationWeight = 0
 local celebrationUntil = 0
 local airborne = false
-local lastY = 0
+local airborneStartedAt = -math.huge
+local lastAirSampleAt = -math.huge
+local peakFallSpeed = 0
 local speedSurgeActive = false
 local lowGravityActive = false
 local roundPhase = "waiting"
@@ -113,11 +115,24 @@ local function attachRig(nextCharacter, serial)
         humanoidStateConnection = humanoid.StateChanged:Connect(function(_, state)
             if serial ~= bindSerial then return end
             if state == Enum.HumanoidStateType.Jumping then
+                -- A new takeoff cannot inherit the preceding landing.
+                airborne = false
+                peakFallSpeed = 0
+                airborneStartedAt = -math.huge
+                lastAirSampleAt = -math.huge
                 jumpWeight = math.max(jumpWeight, 1)
                 landingRecoveryStrength = 0
                 landingRecoveryClock = 0
             elseif state == Enum.HumanoidStateType.Freefall then
-                airborne = true
+                if not airborne then
+                    airborne = true
+                    airborneStartedAt = os.clock()
+                    peakFallSpeed = 0
+                end
+                peakFallSpeed = math.max(
+                    peakFallSpeed, math.max(0, -nextRoot.AssemblyLinearVelocity.Y)
+                )
+                lastAirSampleAt = os.clock()
                 landingRecoveryStrength = 0
                 landingRecoveryClock = 0
             elseif airborne and (
@@ -125,8 +140,14 @@ local function attachRig(nextCharacter, serial)
                 or state == Enum.HumanoidStateType.Running
                 or state == Enum.HumanoidStateType.RunningNoPhysics
             ) then
+                local now = os.clock()
+                local fallSpeed = LocomotionDynamics.verifiedLandingSpeed(
+                    peakFallSpeed, now - airborneStartedAt, now - lastAirSampleAt
+                )
                 airborne = false
-                local fallSpeed = math.max(0, -lastY)
+                peakFallSpeed = 0
+                airborneStartedAt = -math.huge
+                lastAirSampleAt = -math.huge
                 if fallSpeed > 20 then
                     landing = math.max(landing,
                         math.clamp((fallSpeed - 20) / 60, 0.08, 0.65))
@@ -190,7 +211,9 @@ local function bind(nextCharacter)
     celebrationWeight = 0
     celebrationUntil = 0
     airborne = false
-    lastY = 0
+    airborneStartedAt = -math.huge
+    lastAirSampleAt = -math.huge
+    peakFallSpeed = 0
     launchWeight = 0
     impactWeight = 0
     impactSide = 0
@@ -415,8 +438,26 @@ RunService:BindToRenderStep(
             return
         end
 
-        lastY = root.AssemblyLinearVelocity.Y
         local velocity = root.AssemblyLinearVelocity
+        local nowSample = os.clock()
+        local isFreefall = humanoid:GetState() == Enum.HumanoidStateType.Freefall
+            and humanoid.FloorMaterial == Enum.Material.Air
+        if interrupted then
+            -- A suspended Android app must not replay an old impact.
+            airborne = false
+            peakFallSpeed = 0
+            airborneStartedAt = -math.huge
+            lastAirSampleAt = -math.huge
+        end
+        if isFreefall then
+            if not airborne then
+                airborne = true
+                airborneStartedAt = nowSample
+                peakFallSpeed = 0
+            end
+            peakFallSpeed = math.max(peakFallSpeed, math.max(0, -velocity.Y))
+            lastAirSampleAt = nowSample
+        end
         local localVelocity = root.CFrame:VectorToObjectSpace(Vector3.new(velocity.X, 0, velocity.Z))
         local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
         local moving = humanoid.MoveDirection.Magnitude > 0.05 and speed > 2.5
