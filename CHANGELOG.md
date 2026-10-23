@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — Contextual lava high-ground guidance (candidate)
+
+- During READY and RISING LAVA rounds, mark only the real, server-authored tier-four elevated platforms with a restrained bilingual floating direction label and a client-side occluded outline. Other disaster rounds and the lobby remain unchanged.
+- Every marker follows its actual moving deck through Shrinking Arena and shuts off when that deck has no collision or enters a collapse phase. No simulated escape routes, invulnerability, teleports, extra game assets or player advantage are introduced.
+- Up to four billboards per arena (one for Orbital), up to four Highlights, no additional polling/render loop and no server remotes. The outlines are included in the existing visual-budget audit; Low quality uses labels without Highlights.
+- Android/desktop visual readability and public release still require authenticated real-device review after successful GitHub build/engine checks.
+
 ## 2026-10-21 — Result card continuity and late reward ordering (candidate)
 
 - Keep the result card visible until the server actually leaves RESULT; remove the ten-second local timeout that could repeatedly restart winner animations during longer multiplayer countdowns.
