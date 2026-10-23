@@ -1896,6 +1896,57 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             trim.Transparency = 0.64
         end
         addPlatformFinish(decor, platform, i, theme)
+
+        if definition.PerimeterStep == 2 then
+            -- Original native three-dimensional exit facade: four simple
+            -- nonblocking components per route, no extra emitters/lights.
+            -- Mounted on the OUTWARD face of the solid exit pedestal,
+            -- away from the player's approach and central hazard lanes.
+            local frontSign = platformPosition.Z >= config.ArenaCenter.Z
+                and 1 or -1
+            local outerZ = platformPosition.Z
+                + frontSign * (platform.Size.Z * 0.5 + 0.18)
+            for side = -1, 1, 2 do
+                local rib = decorPart(
+                    decor,
+                    "PerimeterExitRib" .. definition.PerimeterRoute
+                        .. "_" .. tostring(side),
+                    Vector3.new(0.88, platform.Size.Y - 1.05, 0.34),
+                    Vector3.new(platformPosition.X + side * 3.35,
+                        platformPosition.Y - 0.20, outerZ),
+                    theme.Structure:Lerp(theme.Detail, 0.18),
+                    Enum.Material.Metal
+                )
+                rib.Transparency = 0.06
+            end
+            local cap = Instance.new("WedgePart")
+            cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
+            cap.Size = Vector3.new(8.0, 1.15, 1.0)
+            cap.CFrame = CFrame.new(
+                platformPosition.X,
+                platformPosition.Y + platform.Size.Y * 0.5 - 0.45,
+                outerZ + frontSign * 0.34
+            ) * CFrame.Angles(0, frontSign < 0 and math.pi or 0, 0)
+            cap.Color = theme.Detail:Lerp(theme.Structure, 0.30)
+            cap.Material = Enum.Material.Metal
+            cap.Anchored = true
+            cap.CanCollide = false
+            cap.CanTouch = false
+            cap.CanQuery = false
+            cap.CastShadow = false
+            cap.Transparency = 0.08
+            cap.Parent = decor
+            local lens = decorPart(
+                decor,
+                "PerimeterExitLens" .. definition.PerimeterRoute,
+                Vector3.new(2.1, 2.1, 0.35),
+                Vector3.new(platformPosition.X, platformPosition.Y,
+                    outerZ + frontSign * 0.22),
+                theme.Accent:Lerp(theme.Structure, 0.56),
+                Enum.Material.Glass
+            )
+            lens.Transparency = 0.34
+        end
     end
 
     if variant.Id == "Orbital" then
