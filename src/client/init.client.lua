@@ -2127,6 +2127,10 @@ local function showRoundFeedback(feedback)
     local animateCard, flashScreen = ResultPresentation.entryMotion(
         animateArrival, player:GetAttribute("ReduceMotion") == true, touchDevice
     )
+    -- A late joiner who watched the match should never see a red loss
+    -- flash, even though spectators cannot earn a survival victory.
+    local isSpectator = feedback.spectating == true
+    flashScreen = flashScreen and not isSpectator
     lastDisplayedResultRoundNumber = tonumber(feedback.roundNumber)
     cancelResultArrivalTweens()
     resultToken += 1
@@ -2138,22 +2142,28 @@ local function showRoundFeedback(feedback)
     local masterRound = survived and feedback.challengeCompleted == true and momentumBest >= 4
 
     local resultKind = ResultPresentation.kind(feedback)
-    resultTitle.Text = feedback.spectating == true
+    resultTitle.Text = isSpectator
         and CoreLocalization.text(localeId, "RESULT_SPECTATOR_TITLE")
         or ResultPresentation.title(feedback, localeId)
-    resultStroke.Color = resultKind == "master"
+    resultStroke.Color = isSpectator
+        and UITheme.Colors.Cyan
+        or (resultKind == "master"
         and UITheme.Colors.Gold
         or (resultKind == "clutch"
             and UITheme.Colors.Cyan
             or (soleSurvivor and UITheme.Colors.Gold
-                or (survived and UITheme.Colors.Green or UITheme.Colors.Red)))
-    resultAccent.BackgroundColor3 = resultKind == "master"
+                or (survived and UITheme.Colors.Green or UITheme.Colors.Red))))
+    resultAccent.BackgroundColor3 = isSpectator
+        and UITheme.Colors.Blue
+        or (resultKind == "master"
         and UITheme.Colors.Cyan
         or (resultKind == "clutch"
             and UITheme.Colors.Blue
             or (soleSurvivor and UITheme.Colors.Gold
-                or (survived and UITheme.Colors.Green or UITheme.Colors.Red)))
-    resultGradient.Color = resultKind == "master"
+                or (survived and UITheme.Colors.Green or UITheme.Colors.Red))))
+    resultGradient.Color = isSpectator
+        and ColorSequence.new(UITheme.Colors.PanelRaised, UITheme.Colors.Panel)
+        or (resultKind == "master"
         and ColorSequence.new(Color3.fromRGB(35, 73, 82), Color3.fromRGB(45, 34, 18))
         or (resultKind == "clutch"
             and ColorSequence.new(Color3.fromRGB(24, 60, 78), Color3.fromRGB(18, 38, 48))
@@ -2161,7 +2171,7 @@ local function showRoundFeedback(feedback)
                 and ColorSequence.new(Color3.fromRGB(77, 57, 28), UITheme.Colors.Panel)
                 or (survived
                     and ColorSequence.new(Color3.fromRGB(24, 67, 50), UITheme.Colors.Panel)
-                    or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel))))
+                    or ColorSequence.new(Color3.fromRGB(76, 31, 36), UITheme.Colors.Panel)))))
 
     local resultPrimaryId, resultSecondaryId =
         ResultPresentation.visualHazardOrder(feedback)
@@ -2436,18 +2446,22 @@ local function showRoundFeedback(feedback)
         resultTip.Text = CoreLocalization.text(localeId, "RESULT_DEFAULT_TIP")
     end
 
-    resultCard.BackgroundColor3 = resultKind == "master"
-        and Color3.fromRGB(30, 64, 69)
+    resultCard.BackgroundColor3 = isSpectator
+        and UITheme.Colors.PanelRaised
+        or (resultKind == "master"
+            and Color3.fromRGB(30, 64, 69)
         or (resultKind == "clutch"
             and Color3.fromRGB(24, 58, 76)
             or (soleSurvivor and Color3.fromRGB(70, 54, 29)
-                or (survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40))))
-    resultFlash.BackgroundColor3 = resultKind == "master"
+                or (survived and Color3.fromRGB(28, 74, 53) or Color3.fromRGB(88, 35, 40)))))
+    resultFlash.BackgroundColor3 = isSpectator
+        and UITheme.Colors.Cyan
+        or (resultKind == "master"
         and Color3.fromRGB(255, 220, 95)
         or (resultKind == "clutch"
             and Color3.fromRGB(85, 205, 255)
             or (soleSurvivor and Color3.fromRGB(255, 224, 112)
-                or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95))))
+                or (survived and Color3.fromRGB(120, 255, 175) or Color3.fromRGB(255, 95, 95)))))
 
     resultCard.Visible = true
     if animateCard then
