@@ -99,6 +99,40 @@ function D.riseAt(elapsedSeconds, durationSeconds, enabled)
     return 0.70 + (time - 0.62) * (0.30 / 0.38), "FinalRise"
 end
 
+-- A fixed 25-stud flood could bury every reachable deck on low maps
+-- (Classic's highest platforms top out at 12 studs above the arena center).
+-- Cap the lava surface two studs below the FOURTH-highest physical deck:
+-- several distinct players can still reach a winning position at 0 seconds.
+-- This reads the actual generated collision platforms, not decorative art.
+function D.safeRiseDistance(startTopY, platformTops, maximumRise)
+    local start = tonumber(startTopY)
+    if not start or start ~= start or math.abs(start) == math.huge then
+        start = -6
+    end
+    local cap = tonumber(maximumRise)
+    if not cap or cap ~= cap or math.abs(cap) == math.huge then
+        cap = 25
+    end
+    cap = math.max(0, cap)
+    local heights = {}
+    if type(platformTops) == "table" then
+        for _, value in ipairs(platformTops) do
+            local height = tonumber(value)
+            if height and height == height and math.abs(height) < math.huge then
+                heights[#heights + 1] = height
+            end
+        end
+    end
+    if #heights == 0 then
+        -- In a partially streamed/generated arena, avoid racing upward
+        -- without any verified high-ground survival route.
+        return math.min(cap, 15)
+    end
+    table.sort(heights, function(a, b) return a > b end)
+    local refuge = heights[math.min(4, #heights)]
+    return math.clamp(refuge - 2 - start, 0, cap)
+end
+
 function D.start(ctx)
     local generatedMap = workspace:FindFirstChild("GeneratedMap")
     local arena = generatedMap and generatedMap:FindFirstChild("Arena")
@@ -152,6 +186,18 @@ function D.start(ctx)
     end)
 
     local startY = lava.Position.Y
+    local platformTops = {}
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    if platforms then
+        for _, part in ipairs(platforms:GetChildren()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                platformTops[#platformTops+1] = part.Position.Y + part.Size.Y * 0.5
+            end
+        end
+    end
+    local riseDistance = D.safeRiseDistance(
+        startY + lava.Size.Y * 0.5, platformTops, 25
+    )
     local duration = math.max(
         0.1,
         tonumber(ctx.RoundSeconds or ctx.Config.RoundSeconds) or 1
@@ -173,7 +219,7 @@ function D.start(ctx)
             local alpha, stage = D.riseAt(
                 os.clock() - started, duration, surgeEnabled
             )
-            lava.Position = Vector3.new(lava.Position.X, startY + alpha * 25, lava.Position.Z)
+            lava.Position = Vector3.new(lava.Position.X, startY + alpha * riseDistance, lava.Position.Z)
             if stage ~= lastStage then
                 ctx.LavaStage = stage
                 lastStage = stage
