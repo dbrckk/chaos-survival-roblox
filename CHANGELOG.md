@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — Responsive character animation/camera ownership (candidate)
+
+- Prevent delayed initial avatar binding from taking ownership of an already replaced human R6/R15 rig. Ignore stale CharacterRemoving signals in the local body-motion controller; do not reset another avatar's Motor6D offsets or apply pose changes when the live player character differs.
+- Rebuild the camera/landing-feedback motion controller around a single current-character token and event-driven Humanoid/Root attachment (no five-second yielding on Android). The same listener repairs a late-streamed or replaced root without restarting the RenderStep controller. Ensure only one Humanoid StateChanged listener is active, with stale callbacks rejected.
+- Immediately clear camera spring/FOV contributions, airborne landing effects and local landing-preview signs when the current avatar is removed. This does not change game speed, jump height, physics, remote networking, server authority or collision.
+- Release gates: both exact-SHA GitHub build and all five Roblox engine suites must pass. Authenticated Studio R6/R15 rejoin stress, Android low-network respawn/video and gameplay release certification remain **NOT RUN** until collected on the matching staged SHA.
+
 ## 2026-10-23 — Cross-platform descent reticle correction (candidate)
 
 - The landing preview no longer depends on a straight-down floor hit before projecting horizontal motion. When jumping across a gap, that floor can be far below the actual elevated destination and incorrectly suppress the reticle.

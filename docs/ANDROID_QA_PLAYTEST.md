@@ -48,6 +48,26 @@ Record the graphics tier, Reduce Motion, device model and whether any
 capture failed. Do not mark this checklist visually accepted from CI
 syntax/build or Open Cloud engine-test success alone.
 
+## Motion controller respawn race — authenticated device acceptance
+
+On an isolated **staged build of the exact SHA** (not the older public
+Roblox place), repeat at least ten R15 and ten R6 character replacements:
+(1) ordinary death during an active round; (2) late join / return to lobby;
+(3) elimination while a jump/fall camera effect is visible; and
+(4) a slow or intentionally delayed HumanoidRootPart replication. For every
+case, confirm the current character alone owns additive body poses and
+camera movement. The old body should have no moving joints, stale dust,
+landing crosshair, camera shake or speed-FOV contribution after removal.
+The replacement must animate normally as soon as its Humanoid and Root
+replicate, even if their arrival exceeds five seconds. Restore normal
+movement with no abrupt pose snapping, permanent leaning or duplicate
+landing dust. Repeat with Low/High graphics tiers and ReduceMotion enabled.
+
+Record a screen capture and authenticated client Output showing any errors,
+the actual Android device/build, the matching staging SHA and FPS. Passing
+GitHub Build Validation and Open Cloud suites **does not** certify client
+rendering or these network timing cases.
+
 ## Jump/respawn regression — client control ownership
 
 On the exact staging SHA, try rapid elimination/respawn cycles (including

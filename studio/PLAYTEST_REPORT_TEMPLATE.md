@@ -89,6 +89,17 @@ Copy this file for each release-candidate certification run.
 - Physical Studio version / device:
 - Notes:
 
+## Character animation / camera ownership — rapid respawn E2E
+
+- Stage SHA matched to this report: yes / no
+- 10 R15 + 10 R6 rapid respawns during moving/jumping/landing: PASS / FAIL / NOT RUN
+- HumanoidRootPart arrives late (including >5 seconds): PASS / FAIL / NOT RUN
+- Old character never takes back Motor6D/camera ownership: PASS / FAIL / NOT RUN
+- Removing previous character after CharacterAdded does not erase the live rig: PASS / FAIL / NOT RUN
+- Exactly one landing response, no old-root dust or landing preview: PASS / FAIL / NOT RUN
+- No persistent camera pitch/roll/FOV offset on return to lobby: PASS / FAIL / NOT RUN
+- Android low-network video, Studio logs and exact place-version evidence:
+
 ## Mobile UX
 
 - Touch-only navigation: PASS / FAIL

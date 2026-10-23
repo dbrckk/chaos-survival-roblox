@@ -159,6 +159,9 @@ local function attachRig(nextCharacter, serial)
 end
 
 local function bind(nextCharacter)
+    -- Initial task.spawn and CharacterAdded may arrive out of order. An
+    -- obsolete character must never claim the current Motor6D owner.
+    if player.Character ~= nextCharacter then return end
     bindSerial += 1
     local serial = bindSerial
     if humanoidStateConnection then
@@ -233,7 +236,10 @@ if player.Character then
     task.spawn(bind, player.Character)
 end
 player.CharacterAdded:Connect(bind)
-player.CharacterRemoving:Connect(function()
+player.CharacterRemoving:Connect(function(removingCharacter)
+    -- CharacterRemoving from an earlier rig can arrive AFTER the new
+    -- CharacterAdded. Releasing its motors must not erase the new owner.
+    if character ~= removingCharacter then return end
     bindSerial += 1
     if humanoidStateConnection then
         humanoidStateConnection:Disconnect()
@@ -399,7 +405,10 @@ RunService:BindToRenderStep(
         if rawDt ~= rawDt or rawDt < 0 then return end
         local interrupted = rawDt > 0.30
         dt = math.min(rawDt, 1 / 15)
-        if not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
+        if player.Character ~= character
+            or not root or root.Parent ~= character
+            or not humanoid or humanoid.Parent ~= character
+            or humanoid.Health <= 0 then
             return
         end
         if rigPoseScale == 0 or (not waist and not rootJoint) then
