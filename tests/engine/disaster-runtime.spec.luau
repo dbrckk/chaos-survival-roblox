@@ -431,6 +431,18 @@ describe("Collapsing platform visual truth", function()
             piece.Parent = decor
             table.insert(cosmetics, {part = piece, alpha = piece.Transparency})
         end
+        -- A sculpted outer facade without a legacy Platform* prefix
+        -- must also disappear along with its owning physical deck.
+        local outerFacade = Instance.new("WedgePart")
+        outerFacade.Name = "PerimeterExitCrown1"
+        outerFacade:SetAttribute("PerimeterPlatformIndex", 1)
+        outerFacade.CanCollide = false
+        outerFacade.Transparency = 0.18
+        outerFacade.Parent = decor
+        table.insert(cosmetics, {
+            part = outerFacade, alpha = outerFacade.Transparency,
+        })
+
         local unrelated = Instance.new("Part")
         unrelated.Name = "PlatformPanel11"
         unrelated.Transparency = 0.27
