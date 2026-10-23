@@ -41,6 +41,43 @@ local function runCleanup(cleanup, onCleanup)
     end
 end
 
+describe("Veteran lava surge fairness", function()
+    it("keeps novice lava linear and advanced lava continuous at the same final height", function()
+        local rise = RisingLava.riseAt
+        for _, t in ipairs({0, 0.3, 3.8, 9.7, 15, 19, 25, 35, 40}) do
+            local fraction, stage = rise(t, 40, false)
+            expect(math.abs(fraction - math.clamp(t / 40, 0, 1)) < 0.0001)
+                .toBe(true)
+            expect(stage == nil).toBe(true)
+        end
+        local early, climb = rise(0, 40, true)
+        expect(early).toBe(0)
+        expect(climb).toBe("Climb")
+        local announce, soon = rise(12, 40, true)
+        expect(soon).toBe("SurgeSoon")
+        expect(math.abs(announce - (0.30 * 0.28 / 0.38)) < 0.0001)
+            .toBe(true)
+        local startSurge, surge = rise(40 * 0.38, 40, true)
+        expect(math.abs(startSurge - 0.28) < 0.0001).toBe(true)
+        expect(surge).toBe("Surge")
+        local endSurge, last = rise(40 * 0.62, 40, true)
+        expect(math.abs(endSurge - 0.70) < 0.0001).toBe(true)
+        expect(last).toBe("FinalRise")
+        local done = rise(40, 40, true)
+        expect(done).toBe(1)
+        local previous = -1
+        for i = 0, 100 do
+            local fraction = rise(i * 0.4, 40, true)
+            expect(fraction >= previous and fraction <= 1).toBe(true)
+            previous = fraction
+        end
+        expect(rise(-40, 40, true)).toBe(0)
+        expect(rise(400, 40, true)).toBe(1)
+        expect(rise(math.huge, 40, true)).toBe(0)
+        expect(rise(0 / 0, 40, true)).toBe(0)
+    end)
+end)
+
 describe("Freeze Pulse ownership and cleanup", function()
     it("restores previous frozen marker without erasing later state changes", function()
         local freeze = require("../../src/server/Disasters/Freeze")
