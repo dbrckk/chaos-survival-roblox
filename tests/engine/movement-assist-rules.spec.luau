@@ -101,6 +101,33 @@ describe("Movement assist rules", function()
         expect(Rules.timeToSurface(-20, 196.2, -1)).toBe(nil)
         expect(Rules.timeToSurface(0 / 0, 196.2, 3)).toBe(nil)
 
+        -- The old straight-down-only ray could not preview a valid higher
+        -- destination whenever the avatar passed over empty lower ground.
+        -- Near/mid/late projections accept a physically timed target but
+        -- reject a distant floor or an inconsistent contact instant.
+        expect(#Rules.ProbeSeconds).toBe(3)
+        expect(Rules.probeMatches(0.08, 0.07)).toBe(true)
+        expect(Rules.probeMatches(0.23, 0.20)).toBe(true)
+        expect(Rules.probeMatches(0.36, 0.40)).toBe(true)
+        expect(Rules.probeMatches(0.08, 0.35)).toBe(false)
+        expect(Rules.probeMatches(0.23, 0.42)).toBe(false)
+        expect(Rules.probeMatches(0.08, nil)).toBe(false)
+        expect(Rules.probeMatches(0 / 0, 0.10)).toBe(false)
+        expect(Rules.probeMatches(-0.1, 0.08)).toBe(false)
+        expect(Rules.probeMatches(0.36, 0.50)).toBe(false)
+
+        -- A 20 studs/s forward jump: beneath the avatar lies base ground
+        -- too low to be the imminent landing, but at t=0.23 the horizontal
+        -- projection reaches an elevated, valid 7-stud deck. No physics
+        -- buff is necessary; the visual can now select the real target.
+        local surfaceTime = Rules.timeToSurface(-10, 196.2, 6)
+        expect(surfaceTime ~= nil).toBe(true)
+        expect(Rules.probeMatches(0.23, surfaceTime)).toBe(true)
+        expect(math.abs(20 * surfaceTime - 4.0) < 0.5).toBe(true)
+        expect(Rules.probeMatches(
+            0.08, Rules.timeToSurface(-10, 196.2, 13)
+        )).toBe(false)
+
         local deck = Instance.new("Part")
         deck.Size = Vector3.new(10, 2, 10)
         deck.CFrame = CFrame.new(9, 4, -7) * CFrame.Angles(0, math.rad(35), 0)
