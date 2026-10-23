@@ -565,7 +565,7 @@ local function addNameplate(record, model)
     label.Size = UDim2.new(1, 0, 0, 24)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamSemibold
-    label.Text = record.identity.DisplayName .. "  ·  AI"
+    label.Text = record.identity.DisplayName
     label.TextColor3 = Color3.fromRGB(245, 248, 255)
     label.TextStrokeColor3 = Color3.fromRGB(10, 14, 20)
     label.TextStrokeTransparency = 0.38
@@ -583,7 +583,7 @@ local function addNameplate(record, model)
     role.Size = UDim2.new(1, 0, 0, 18)
     role.BackgroundTransparency = 1
     role.Font = Enum.Font.GothamBold
-    role.Text = record.profile.Role or "SURVIVOR"
+    role.Text = ""
     role.TextColor3 = record.identity.Accent
     role.TextStrokeColor3 = Color3.fromRGB(10, 14, 20)
     role.TextStrokeTransparency = 0.35
@@ -2508,7 +2508,7 @@ local function stepRecord(record, now)
     if (record.signalExpire or 0) > 0 and now >= record.signalExpire then
         local label = record.roleLabel
         if label and label.Parent then
-            label.Text = record.profile.Role or "SURVIVOR"
+            label.Text = ""
         end
         record.signalExpire = 0
     end
