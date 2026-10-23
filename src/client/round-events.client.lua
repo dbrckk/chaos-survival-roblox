@@ -123,6 +123,7 @@ local lastImpactWaveMode = nil
 local lastDoubleCollapseUnlocked = false
 local lastSpeedTempoPhase = nil
 local lastGravityTideStage = nil
+local lastLavaStage = nil
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
@@ -293,6 +294,12 @@ stateEvent.OnClientEvent:Connect(function(state)
             or state.gravityTideStage == "Pull"
             or state.gravityTideStage == "FloatReturning")
         and state.gravityTideStage or nil
+    local lavaStage = phase == "round"
+        and (state.lavaStage == "Climb"
+            or state.lavaStage == "SurgeSoon"
+            or state.lavaStage == "Surge"
+            or state.lavaStage == "FinalRise")
+        and state.lavaStage or nil
     local fusionName = type(state.fusionName) == "string" and state.fusionName or nil
     local fusionKey = state.doubleChaos and fusionName or nil
     local eventColor = RoundEventPresentation.accent(
@@ -372,6 +379,27 @@ stateEvent.OnClientEvent:Connect(function(state)
             recovering and UITheme.Colors.Cyan or UITheme.Colors.Gold,
             0.95
         )
+    elseif phase == "round" and lavaStage ~= nil
+        and lastLavaStage ~= nil
+        and lavaStage ~= lastLavaStage
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+    then
+        -- A single short tactical cue only when the server changes the
+        -- rising lava rate; no extra HUD and no untrusted local timer.
+        local key = RoundEventPresentation.lavaSurgeCue(
+            lastLavaStage, lavaStage
+        )
+        if key then
+            show(
+                "lavaSurge",
+                CoreLocalization.text(localeId, key),
+                CoreLocalization.text(localeId, key .. "_SUB"),
+                key == "LAVA_SURGE_ACTIVE" and UITheme.Colors.Red
+                    or UITheme.Colors.Orange,
+                0.95
+            )
+        end
     elseif phase == "round"
         and player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
@@ -393,6 +421,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
     end
 
+    lastLavaStage = lavaStage
     lastGravityTideStage = gravityTideStage
     lastSpeedTempoPhase = speedTempoPhase
     lastImpactWaveMode = phase == "round" and state.impactWaveMode or nil
