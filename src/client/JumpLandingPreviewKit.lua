@@ -108,7 +108,9 @@ function JumpLandingPreviewKit.new(player)
         -- actual horizontal trajectory instead. This remains only a
         -- short-range visual estimate, with a confirmed physical landing
         -- target; no route prediction or gameplay authority.
-        local hit = nil
+        local bestCandidate = nil
+        local bestTime = nil
+        local bestError = math.huge
         for _, probeTime in ipairs(Rules.ProbeSeconds) do
             local offset = horizontalVelocity * probeTime
             if offset.Magnitude > Rules.MaxHorizontalTravel then
@@ -122,25 +124,32 @@ function JumpLandingPreviewKit.new(player)
                     velocity.Y, workspace.Gravity, footY - candidate.Position.Y
                 )
                 if Rules.probeMatches(probeTime, contactTime) then
-                    local exactOffset = horizontalVelocity * contactTime
-                    if exactOffset.Magnitude <= Rules.MaxHorizontalTravel then
-                        local confirmed = workspace:Raycast(
-                            origin + exactOffset, Vector3.new(0, -24, 0),
-                            rayParams
-                        )
-                        -- The exact time-corrected endpoint must still hit
-                        -- the SAME physical deck. Never suggest the empty
-                        -- gap or a lower surface behind the target.
-                        if validSurface(confirmed)
-                            and confirmed.Instance == candidate.Instance then
-                            hit = confirmed
-                            break
-                        end
+                    local errorSeconds = math.abs(probeTime - contactTime)
+                    if errorSeconds < bestError
+                        and (horizontalVelocity * contactTime).Magnitude
+                            <= Rules.MaxHorizontalTravel then
+                        bestCandidate = candidate
+                        bestTime = contactTime
+                        bestError = errorSeconds
                     end
                 end
             end
         end
-        if not hit then
+
+        -- All three candidates are evaluated before we commit to a surface.
+        -- One final physical ray confirms the closest timed contact. This
+        -- caps the whole airborne sample at FOUR raycasts, including when
+        -- an earlier probe saw the lower base while crossing a gap.
+        if not bestCandidate then
+            hide()
+            return
+        end
+        local hit = workspace:Raycast(
+            origin + horizontalVelocity * bestTime,
+            Vector3.new(0, -24, 0),
+            rayParams
+        )
+        if not validSurface(hit) or hit.Instance ~= bestCandidate.Instance then
             hide()
             return
         end
