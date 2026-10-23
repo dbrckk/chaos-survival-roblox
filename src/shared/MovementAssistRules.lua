@@ -18,10 +18,12 @@ function MovementAssistRules.canCoyoteJump(
     grounded,
     secondsSinceGrounded,
     state,
-    jumpEnabled
+    jumpEnabled,
+    jumpAlreadyUsed
 )
     if grounded == true
         or jumpEnabled ~= true
+        or jumpAlreadyUsed == true
         or state ~= Enum.HumanoidStateType.Freefall
         or not MovementAssistRules.stateAllowsJump(state)
     then
