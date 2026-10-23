@@ -35,9 +35,12 @@ local function applyModel(model)
     billboard.AlwaysOnTop = style.AlwaysOnTop
     billboard.MaxDistance = style.MaxDistance
 
-    local label = billboard:FindFirstChild("DisplayName")
-    if label and label:IsA("TextLabel") then
-        label.TextStrokeTransparency = style.StrokeTransparency
+    -- Survivor names are now rendered by the SAME Roblox Humanoid
+    -- overhead name layer that normal player avatars use. On mobile,
+    -- apply the shared distance budget directly to that native layer.
+    local humanoid = model:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.NameDisplayDistance = style.MaxDistance
     end
 end
 
