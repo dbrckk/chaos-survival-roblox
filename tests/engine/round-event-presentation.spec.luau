@@ -126,6 +126,42 @@ describe("Round event presentation", function()
         }, false, false)).toBe(0)
     end)
 
+    it("keeps Android damage feedback owned by the current live Humanoid", function()
+        local valid = RoundEventPresentation.damageOwnerValid
+        local current = Instance.new("Model")
+        current.Name = "CurrentAvatar"
+        current.Parent = workspace
+        local humanoid = Instance.new("Humanoid")
+        humanoid.Parent = current
+        local later = Instance.new("Model")
+        later.Name = "NewAvatar"
+        later.Parent = workspace
+        local another = Instance.new("Humanoid")
+        another.Parent = later
+
+        expect(valid(7, 7, current, current, humanoid, humanoid)).toBe(true)
+        expect(valid(7, 8, current, current, humanoid, humanoid)).toBe(false)
+        expect(valid(nil, nil, current, current, humanoid, humanoid)).toBe(false)
+        expect(valid(7, 7, current, later, humanoid, humanoid)).toBe(false)
+        expect(valid(7, 7, current, current, humanoid, another)).toBe(false)
+        expect(valid(7, 7, current, current, another, another)).toBe(false)
+        expect(valid(7, 7, current, current, nil, nil)).toBe(false)
+
+        -- Humanoid replacement/stream-out invalidates old callbacks even
+        -- before the model receives CharacterRemoving on Android.
+        humanoid.Parent = nil
+        expect(valid(7, 7, current, current, humanoid, humanoid)).toBe(false)
+        humanoid.Parent = current
+        expect(valid(7, 7, current, current, humanoid, humanoid)).toBe(true)
+        current.Parent = nil
+        expect(valid(7, 7, current, current, humanoid, humanoid)).toBe(false)
+
+        humanoid:Destroy()
+        another:Destroy()
+        current:Destroy()
+        later:Destroy()
+    end)
+
     it("dismisses hazard escalation cards before results and on elimination", function()
         local shouldClear = RoundEventPresentation.shouldClearRoundToast
         expect(shouldClear("round", "result", false)).toBe(true)

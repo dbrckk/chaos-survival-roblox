@@ -110,6 +110,24 @@ function RoundEventPresentation.celebrationStillCurrent(
     )
 end
 
+-- A delayed/streamed Humanoid must never send hit flashes to a new
+-- avatar. Keep this rule deterministic for Open Cloud engine regression.
+-- Health eligibility and server-side damage authority stay independent.
+function RoundEventPresentation.damageOwnerValid(
+    boundSerial, currentSerial, boundCharacter, currentCharacter,
+    boundHumanoid, currentHumanoid
+)
+    return type(boundSerial) == "number" and boundSerial == currentSerial
+        and typeof(boundCharacter) == "Instance"
+        and boundCharacter:IsA("Model")
+        and boundCharacter.Parent ~= nil
+        and boundCharacter == currentCharacter
+        and typeof(boundHumanoid) == "Instance"
+        and boundHumanoid:IsA("Humanoid")
+        and boundHumanoid.Parent == boundCharacter
+        and boundHumanoid == currentHumanoid
+end
+
 -- Escalation notifications belong only to living players mid-round.
 -- Cancel them immediately at result/READY/lobby boundaries so they never
 -- overlap the victory card or the next action prompt.

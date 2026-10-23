@@ -89,6 +89,16 @@ Copy this file for each release-candidate certification run.
 - Physical Studio version / device:
 - Notes:
 
+## Mobile combat feedback and result FOV lifecycle
+
+- Tested exact staged SHA and Roblox place version:
+- 10 R6 + 10 R15 quick elimination / respawn with delayed Humanoid: PASS / FAIL / NOT RUN
+- Old avatar damage cannot flash or tug camera after replacement: PASS / FAIL / NOT RUN
+- Single nonfatal survivor hit shows one bounded red cue; lobby/spectator excluded: PASS / FAIL / NOT RUN
+- Fast victory/result/next round never inherits a delayed 72-degree FOV reset: PASS / FAIL / NOT RUN
+- ReduceMotion, graphics tier, 60–90 degree FOV, 30-minute endurance: PASS / FAIL / NOT RUN
+- Original Android video, client logs, FPS/memory measurements:
+
 ## Landing & run-transition realism (real Roblox client)
 
 - Physical stage build matches exact SHA: yes / no
