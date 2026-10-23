@@ -13,6 +13,7 @@ local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local CloudLayer = require(script.Parent.CloudLayer)
 local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
@@ -163,6 +164,49 @@ bannerSub.TextScaled = true
 bannerSub.ZIndex = 6
 bannerSub.Text = ""
 bannerSub.Parent = banner
+
+local bannerTitleLimit = Instance.new("UITextSizeConstraint")
+bannerTitleLimit.MinTextSize = 11
+bannerTitleLimit.MaxTextSize = 48
+bannerTitleLimit.Parent = bannerTitle
+local bannerSubLimit = Instance.new("UITextSizeConstraint")
+bannerSubLimit.MinTextSize = 10
+bannerSubLimit.MaxTextSize = 28
+bannerSubLimit.Parent = bannerSub
+
+-- One viewport listener (never another RenderStepped owner) keeps the
+-- disaster introduction clear of Android's central avatar/parkour lane.
+local bannerViewportConnection = nil
+local function updateBannerViewport()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    if UserInputService.TouchEnabled then
+        local layout = UIResponsive.mobileRoundBanner(viewport)
+        banner.Position = UDim2.fromScale(0.5, layout.centerYScale)
+        banner.Size = UDim2.new(layout.widthScale, 0, 0, layout.height)
+        bannerTitleLimit.MaxTextSize = layout.titleMaxTextSize
+        bannerSubLimit.MaxTextSize = layout.subtitleMaxTextSize
+    else
+        banner.Position = UDim2.fromScale(0.5, 0.42)
+        banner.Size = UDim2.fromScale(0.86, 0.18)
+        bannerTitleLimit.MaxTextSize = 48
+        bannerSubLimit.MaxTextSize = 28
+    end
+end
+local function bindBannerCamera()
+    if bannerViewportConnection then
+        bannerViewportConnection:Disconnect()
+        bannerViewportConnection = nil
+    end
+    local camera = workspace.CurrentCamera
+    if camera then
+        bannerViewportConnection = camera:GetPropertyChangedSignal("ViewportSize")
+            :Connect(updateBannerViewport)
+    end
+    updateBannerViewport()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindBannerCamera)
+bindBannerCamera()
 
 local streak = Instance.new("TextLabel")
 streak.AnchorPoint = Vector2.new(1, 0)
