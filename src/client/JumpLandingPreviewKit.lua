@@ -32,8 +32,14 @@ function JumpLandingPreviewKit.new(player)
 
     local nextSampleAt = 0
     local targetPart = nil
+    local showing = false
 
     local function hide()
+        -- No redundant property writes every RenderStep in the lobby or
+        -- during a grounded run: Android needs the visual state, not 60Hz
+        -- writes to the same four already-transparent Parts.
+        if not showing and not targetPart then return end
+        showing = false
         targetPart = nil
         for _, part in ipairs(pieces) do
             part.Transparency = 1
@@ -138,6 +144,7 @@ function JumpLandingPreviewKit.new(player)
         end
 
         targetPart = hit.Instance
+        showing = true
         local caution = margin < 1.75
         local color = caution and Color3.fromRGB(246, 159, 195)
             or Color3.fromRGB(135, 222, 252)
