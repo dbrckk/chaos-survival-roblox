@@ -33,6 +33,9 @@ baseFovValue.Value = camera and camera.FieldOfView or 70
 local baseFovTween = nil
 local lastCameraFovTarget = nil
 local damageFovKick = 0
+local damageFadeTween = nil
+local damageHitSerial = 0
+local resultPulseSerial = 0
 
 local clouds = CloudLayer.getOrCreate()
 local post = ArenaPostProcessLayer.get()
@@ -560,7 +563,24 @@ player:GetAttributeChangedSignal("RoundEliminated"):Connect(refreshParticipantMo
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
+    if not currentState or currentState.phase ~= state.phase
+        or (currentState.roundNumber ~= nil
+            and state.roundNumber ~= nil
+            and currentState.roundNumber ~= state.roundNumber) then
+        resultPulseSerial += 1
+    end
     currentState = state
+    if state.phase ~= "round" then
+        -- A late health event/tween may not repaint the READY, victory
+        -- or lobby screen with combat-red after the authoritative phase.
+        damageHitSerial += 1
+        if damageFadeTween then
+            damageFadeTween:Cancel()
+            damageFadeTween = nil
+        end
+        damageFlash.BackgroundTransparency = 1
+        damageFovKick = 0
+    end
     currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     setMood(state)
 
@@ -615,6 +635,10 @@ local function celebrateCharacter(masterRound)
 end
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
+    if type(feedback) ~= "table" then return end
+    resultPulseSerial += 1
+    local pulseSerial = resultPulseSerial
+    local pulseCharacter = player.Character
     local survivalStreak = tonumber(feedback.streak) or 0
 
     if survivalStreak >= 2 then
@@ -672,8 +696,14 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
         if player:GetAttribute("ReduceMotion") ~= true then
             tweenCamera(67, 0.12)
             task.delay(0.13, function()
-                -- Always settle after a result pulse. Reduced motion snaps
-                -- instead of leaving the camera at a temporary zoom level.
+                -- A fresh round or respawn owns its own FOV. Never replay
+                -- a delayed old victory zoom over the next disaster.
+                if pulseSerial ~= resultPulseSerial
+                    or player.Character ~= pulseCharacter
+                    or not currentState or currentState.phase ~= "result"
+                    or player:GetAttribute("ReduceMotion") == true then
+                    return
+                end
                 tweenCamera(72, 0.28)
             end)
         end
@@ -681,6 +711,12 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
         if player:GetAttribute("ReduceMotion") ~= true then
             tweenCamera(76, 0.10)
             task.delay(0.12, function()
+                if pulseSerial ~= resultPulseSerial
+                    or player.Character ~= pulseCharacter
+                    or not currentState or currentState.phase ~= "result"
+                    or player:GetAttribute("ReduceMotion") == true then
+                    return
+                end
                 tweenCamera(72, 0.30)
             end)
         end
@@ -902,68 +938,166 @@ task.spawn(function()
 end)
 
 
+-- Health feedback belongs to one LIVE local Humanoid only. Streaming may
+-- add a Humanoid well after CharacterAdded, or replace it without respawn.
+-- An event-driven binding avoids WaitForChild(5), stale callbacks and
+-- duplicate red flashes on Android network stalls.
 local healthConnection = nil
+local healthChildAddedConnection = nil
+local healthChildRemovedConnection = nil
+local healthBoundCharacter = nil
+local healthBoundHumanoid = nil
+local healthBindSerial = 0
 
-local function bindDamageFeedback(character)
+local function resetDamagePresentation()
+    damageHitSerial += 1
+    if damageFadeTween then
+        damageFadeTween:Cancel()
+        damageFadeTween = nil
+    end
+    damageFlash.BackgroundTransparency = 1
+    damageFovKick = 0
+    healthRatio = 1
+end
+
+local function detachDamageFeedback()
+    healthBindSerial += 1
     if healthConnection then
         healthConnection:Disconnect()
         healthConnection = nil
     end
-
-    local humanoid = character:WaitForChild("Humanoid", 5)
-    if not humanoid then
-        return
+    if healthChildAddedConnection then
+        healthChildAddedConnection:Disconnect()
+        healthChildAddedConnection = nil
     end
+    if healthChildRemovedConnection then
+        healthChildRemovedConnection:Disconnect()
+        healthChildRemovedConnection = nil
+    end
+    healthBoundCharacter = nil
+    healthBoundHumanoid = nil
+    resetDamagePresentation()
+end
 
-    local previousHealth = humanoid.Health
-    healthRatio = humanoid.MaxHealth > 0 and (humanoid.Health / humanoid.MaxHealth) or 1
-    healthConnection = humanoid.HealthChanged:Connect(function(health)
-        healthRatio = humanoid.MaxHealth > 0 and math.clamp(health / humanoid.MaxHealth, 0, 1) or 1
-        if health < previousHealth and health > 0 then
+local function bindDamageFeedback(character)
+    -- The initial task.defer may run after a newer CharacterAdded.
+    if player.Character ~= character then return end
+    detachDamageFeedback()
+    local serial = healthBindSerial
+    healthBoundCharacter = character
+
+    local function bindLiveHumanoid()
+        if serial ~= healthBindSerial
+            or player.Character ~= character
+            or healthBoundCharacter ~= character then
+            return
+        end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Parent ~= character
+            or healthBoundHumanoid == humanoid then
+            return
+        end
+        if healthConnection then
+            healthConnection:Disconnect()
+            healthConnection = nil
+        end
+        healthBoundHumanoid = humanoid
+        resetDamagePresentation()
+        local previousHealth = humanoid.Health
+        healthRatio = humanoid.MaxHealth > 0
+            and math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1) or 1
+        healthConnection = humanoid.HealthChanged:Connect(function(health)
+            if not RoundEventPresentation.damageOwnerValid(
+                serial, healthBindSerial, character, player.Character,
+                humanoid, healthBoundHumanoid
+            ) then
+                return
+            end
+            healthRatio = humanoid.MaxHealth > 0
+                and math.clamp(health / humanoid.MaxHealth, 0, 1) or 1
             local lost = previousHealth - health
+            previousHealth = health
+            -- Spectators, eliminated avatars and the lobby must not
+            -- display combat damage after a server round transition.
+            if lost <= 0 or health <= 0
+                or not currentState or currentState.phase ~= "round"
+                or player:GetAttribute("RoundParticipant") ~= true
+                or player:GetAttribute("RoundEliminated") == true then
+                return
+            end
             local damageRatio = humanoid.MaxHealth > 0
-                and math.clamp(lost / humanoid.MaxHealth, 0, 1)
-                or 0
+                and math.clamp(lost / humanoid.MaxHealth, 0, 1) or 0
             local criticalHit = damageRatio >= 0.22
             damageFlash.BackgroundColor3 = criticalHit
                 and Color3.fromRGB(255, 74, 54)
                 or Color3.fromRGB(210, 35, 35)
             damageGradient.Rotation = (damageGradient.Rotation + 37) % 360
+            if damageFadeTween then
+                damageFadeTween:Cancel()
+            end
             damageFlash.BackgroundTransparency = math.clamp(
-                0.90 - damageRatio * 0.82,
-                0.58,
-                0.88
+                0.90 - damageRatio * 0.82, 0.58, 0.88
             )
-            TweenService:Create(
+            damageFadeTween = TweenService:Create(
                 damageFlash,
                 TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {BackgroundTransparency = 1}
-            ):Play()
+            )
+            damageFadeTween:Play()
 
             local fovKick = 1.4 + damageRatio * 4.6
             if player:GetAttribute("ReduceMotion") == true then
                 fovKick *= 0.16
             end
             damageFovKick = math.max(
-                damageFovKick,
-                math.min(6.0, fovKick)
+                damageFovKick, math.min(6.0, fovKick)
             )
 
+            damageHitSerial += 1
+            local hitSerial = damageHitSerial
             if criticalHit and vfxTier.Name ~= "Low" then
-                bloom.Intensity = math.min(1.15, bloom.Intensity + 0.22 * vfxTier.Scale)
+                bloom.Intensity = math.min(
+                    1.15, bloom.Intensity + 0.22 * vfxTier.Scale
+                )
                 task.delay(0.10, function()
+                    if hitSerial ~= damageHitSerial
+                        or not RoundEventPresentation.damageOwnerValid(
+                            serial, healthBindSerial, character, player.Character,
+                            humanoid, healthBoundHumanoid
+                        ) then
+                        return
+                    end
                     if currentState then
                         setMood(currentState)
                     end
                 end)
             end
-        end
-        previousHealth = health
+        end)
+    end
+
+    healthChildAddedConnection = character.ChildAdded:Connect(function(child)
+        if child:IsA("Humanoid") then task.defer(bindLiveHumanoid) end
     end)
+    healthChildRemovedConnection = character.ChildRemoved:Connect(function(child)
+        if child ~= healthBoundHumanoid then return end
+        if healthConnection then
+            healthConnection:Disconnect()
+            healthConnection = nil
+        end
+        healthBoundHumanoid = nil
+        resetDamagePresentation()
+        task.defer(bindLiveHumanoid)
+    end)
+    bindLiveHumanoid()
 end
 
 if player.Character then
-    task.spawn(bindDamageFeedback, player.Character)
+    task.defer(bindDamageFeedback, player.Character)
 end
 
 player.CharacterAdded:Connect(bindDamageFeedback)
+player.CharacterRemoving:Connect(function(removingCharacter)
+    if healthBoundCharacter == removingCharacter then
+        detachDamageFeedback()
+    end
+end)
