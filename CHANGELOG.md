@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — Authentic NPC streetwear silhouettes (candidate)
+
+- Expand NPC appearance styles from 5 to 8, distributed deterministically across 20 existing fictional identities. Add original low-cost Roblox-native **knit beanie, split-front jacket and athletic wrist-wrap** cosmetics, each with at most two anchored-to-body welded noncolliding Parts. Existing visor, headphones, backpack, headband and shoulder strap remain. No externally imported or unverified asset IDs.
+- Reduce the giveaway bot-only neon afterimage: only the backpack variant may retain a shortened, low-light, high-transparency trail. Other bots resemble ordinary players without constant emission. Keep movement speed, hazard awareness, server ownership, nameplate behavior, NPC attributes and user rewards unchanged.
+- Extend existing Open Cloud AI engine suite to require all eight stable silhouettes, correct wraparound and invalid-index fallback. No new tests added.
+- **Android acceptance NOT RUN**: verify all eight R15 styles, animation/weld continuity, no clipping on R6/R15 real characters, fair bot recognition in player menus, readability, GPU frame time and memory on live v68+ candidate.
+
 ## 2026-10-23 — Four genuine outer playable circuits per map + natural Roblox NPC names (candidate)
 
 - Added four **physically playable** perimeter circuits to each of Classic, Towers, Crossroads and Orbital (8 solid grounded/two-stage platforms per map). Routes are at ±46–64 studs, on the new 150–156-stud map foundations, with a short ordinary-jump gap and a 3.6-stud rise. Large blocks touch the actual floor: no dangling low platforms forming R15 headroom traps.

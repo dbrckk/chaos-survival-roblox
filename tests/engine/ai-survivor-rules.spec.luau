@@ -277,11 +277,12 @@ describe("AI survivor rules", function()
         expect((a - nextA).Magnitude > 8).toBe(true)
     end)
 
-    it("cycles five avatar styles across survivor identities", function()
+    it("cycles eight distinct grounded streetwear silhouettes without random rerolls", function()
         local seen = {}
-        for index = 1, 8 do
+        for index = 1, 20 do
             local style = AISurvivorRules.appearanceStyle(index)
-            expect(style >= 1 and style <= 5).toBe(true)
+            expect(style >= 1 and style <= 8).toBe(true)
+            expect(AISurvivorRules.appearanceStyle(index)).toBe(style)
             seen[style] = true
         end
 
@@ -289,9 +290,12 @@ describe("AI survivor rules", function()
         for _ in pairs(seen) do
             count += 1
         end
-        expect(count).toBe(5)
+        expect(count).toBe(8)
         expect(AISurvivorRules.appearanceStyle(1)).toBe(1)
-        expect(AISurvivorRules.appearanceStyle(6)).toBe(1)
+        expect(AISurvivorRules.appearanceStyle(6)).toBe(6)
+        expect(AISurvivorRules.appearanceStyle(8)).toBe(8)
+        expect(AISurvivorRules.appearanceStyle(9)).toBe(1)
+        expect(AISurvivorRules.appearanceStyle(nil)).toBe(1)
     end)
 
     it("keeps identity-based body scales bounded and varied", function()

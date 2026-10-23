@@ -504,6 +504,63 @@ local function addPrimitiveAccessory(record, model)
         badge.Material = Enum.Material.Neon
         badge.CFrame = head.CFrame * CFrame.new(0.56, 0.42, -0.56)
         weldTo(badge, head)
+    elseif style == 6 then
+        -- Low-profile knit beanie: a dark textured silhouette rather than
+        -- another glowing cyber helmet. Two pieces, no render-time work.
+        local capColor = record.identity.Legs:Lerp(accent, 0.19)
+        local beanie = cosmeticPart(
+            model, "PlayerKnitBeanie",
+            Vector3.new(0.55, 1.88, 1.72), capColor
+        )
+        beanie.Shape = Enum.PartType.Cylinder
+        beanie.CFrame = head.CFrame
+            * CFrame.new(0, 0.69, 0)
+            * CFrame.Angles(0, 0, math.rad(90))
+        weldTo(beanie, head)
+
+        local cuff = cosmeticPart(
+            model, "BeanieFold",
+            Vector3.new(1.93, 0.16, 1.77),
+            capColor:Lerp(Color3.new(1, 1, 1), 0.10)
+        )
+        cuff.CFrame = head.CFrame * CFrame.new(0, 0.49, 0)
+        weldTo(cuff, head)
+    elseif style == 7 and torso and torso:IsA("BasePart") then
+        -- Short utilitarian jacket front panels: slight asymmetry and
+        -- subdued fabric colors, with no hard-edged aura or light source.
+        local jacketColor = record.identity.Torso:Lerp(
+            record.identity.Legs, 0.36
+        )
+        for side = -1, 1, 2 do
+            local panel = cosmeticPart(
+                model,
+                side < 0 and "JacketPanelL" or "JacketPanelR",
+                Vector3.new(0.68, 1.26, 0.14),
+                jacketColor:Lerp(accent, side < 0 and 0.10 or 0.04)
+            )
+            panel.CFrame = torso.CFrame * CFrame.new(
+                side * 0.43, -0.18, -0.57
+            )
+            weldTo(panel, torso)
+        end
+    elseif style == 8 then
+        -- Wrist wraps are common player cosmetics and are legible from
+        -- behind without excessive neon. Missing streamed limbs fail safe.
+        for _, spec in ipairs({
+            {"LeftLowerArm", "PlayerWrapLeft"},
+            {"RightLowerArm", "PlayerWrapRight"},
+        }) do
+            local arm = model:FindFirstChild(spec[1])
+            if arm and arm:IsA("BasePart") then
+                local wrap = cosmeticPart(
+                    model, spec[2],
+                    Vector3.new(0.64, 0.21, 0.66),
+                    record.identity.Legs:Lerp(accent, 0.40)
+                )
+                wrap.CFrame = arm.CFrame * CFrame.new(0, -0.32, 0)
+                weldTo(wrap, arm)
+            end
+        end
     elseif torso and torso:IsA("BasePart") then
         local shoulder = cosmeticPart(
             model,
@@ -528,7 +585,10 @@ end
 
 local function addCosmeticTrail(record, root)
     local style = AISurvivorRules.appearanceStyle(record.identityIndex or record.slot)
-    if style == 1 or style == 4 then
+    -- An always-on neon streak behind most NPCs immediately exposes
+    -- bots on Android. Only the backpack runner variant carries a subtle
+    -- optional cosmetic trail, closer to a real user-equipped skin.
+    if style ~= 3 then
         return
     end
 
@@ -546,20 +606,20 @@ local function addCosmeticTrail(record, root)
     trail.Name = "AISurvivorCosmeticTrail"
     trail.Attachment0 = left
     trail.Attachment1 = right
-    trail.Lifetime = 0.11 + (((record.identityIndex or record.slot) % 3) * 0.035)
+    trail.Lifetime = 0.095
     trail.MinLength = 0.05
     trail.FaceCamera = true
-    trail.LightEmission = 0.72
+    trail.LightEmission = 0.24
     trail.Color = ColorSequence.new(
         record.identity.Accent,
         record.identity.Accent:Lerp(Color3.new(1, 1, 1), 0.34)
     )
     trail.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.42),
+        NumberSequenceKeypoint.new(0, 0.76),
         NumberSequenceKeypoint.new(1, 1),
     })
     trail.WidthScale = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.36),
+        NumberSequenceKeypoint.new(0, 0.20),
         NumberSequenceKeypoint.new(1, 0),
     })
     trail.Parent = root
