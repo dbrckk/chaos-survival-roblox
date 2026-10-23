@@ -110,6 +110,20 @@ Copy this file for each release-candidate certification run.
 - No persistent camera pitch/roll/FOV offset on return to lobby: PASS / FAIL / NOT RUN
 - Android low-network video, Studio logs and exact place-version evidence:
 
+## Android Dash / adaptive-quality acceptance
+
+- Exact published SHA and place version (not repository-only):
+- Device, Android version, resolution, orientation, network:
+- DASH visible/clickable on short landscape, normal landscape and portrait: PASS / FAIL / NOT RUN
+- First-use hint beside button, clear of hazard timer, no clipping: PASS / FAIL / NOT RUN
+- Native jump never fires through cooling/disabled Dash touch target: PASS / FAIL / NOT RUN
+- Grounded ready Dash succeeds; cooldown/airborne/eliminated requests fail: PASS / FAIL / NOT RUN
+- Controls stable after rotation, reconnect and rapid respawn: PASS / FAIL / NOT RUN
+- Sustained low-FPS quality downgrade remains functional: PASS / FAIL / NOT RUN
+- ≥2s app suspend/resume does not falsely downgrade visual tier: PASS / FAIL / NOT RUN
+- 30-min Medium→Low soak (FPS typical/worst, GPU/CPU, memory):
+- Videos, real logs and published build identity:
+
 ## Mobile UX
 
 - Touch-only navigation: PASS / FAIL

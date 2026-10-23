@@ -72,6 +72,30 @@ function UIResponsive.mobileProfile(viewport)
     }
 end
 
+-- One safe, testable layout for the client-owned Dash action button.
+-- The native Roblox jump control uses the bottom-right thumb zone.
+-- Keep DASH above it, fully inside the visible viewport even when rotated
+-- to a short Android landscape orientation. Sizes are physical pixels.
+function UIResponsive.phaseDashLayout(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    local width = c.veryNarrow and 74 or (c.compactHeight and 82 or 94)
+    local height = c.tinyHeight and 48 or 54
+    local rightInset = c.veryNarrow and 12 or 20
+    local bottomInset = math.clamp(c.height * 0.32, 160, 208)
+    -- In extremely shallow viewports, keep the whole control visible
+    -- below the hazard header; never shrink its touch target to fit.
+    bottomInset = math.min(bottomInset, math.max(0, c.height - height - 66))
+    return {
+        width = width,
+        height = height,
+        rightInset = rightInset,
+        bottomInset = bottomInset,
+        -- Room to the LEFT of the button, outside the top hazard HUD.
+        hintWidth = math.min(168, width + 80,
+            math.max(72, c.width - rightInset - width - 16)),
+    }
+end
+
 function UIResponsive.criticalTextMin(viewport)
     local c = UIResponsive.classify(viewport, true)
     if c.tinyHeight then

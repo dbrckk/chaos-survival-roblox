@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — Android touch and adaptive performance release candidate
+
+- **Touch Dash:** responsive, comfortably sized 48–54px action target, recalculated only on camera/viewport rotation or replacement; the position stays clear of the native bottom-right Roblox jump button on short-landscape, ultrawide and portrait viewports. First-use teaching tip is rendered **to the left** of the thumb target rather than on top of the hazard HUD. Cooldown taps are swallowed by the owned GUI and cannot leak into an underlying touch control; server-side cooldown/grounded validation is unchanged.
+- **Adaptive VFX:** only real active render frames are eligible for the 2.5s automatic graphics-tier sampler. Ignore and reset samples after >0.60s suspend/resume frame stalls; preserve genuine poor 2–5 FPS frames so slow devices still downgrade. FPS telemetry uses active time instead of counting app suspension; decorative clocks are bounded. No extra render owners or assets.
+- **Performance and safety:** reduces repeated GUI property writes by computing responsive layout on viewport events rather than each 0.12s cooldown update. Reuses the landing-preview RaycastParams and filter list across 10Hz descent samples, refreshing them only on arena/section streaming replacement. Existing server authority, hazard telegraphs, accessibility, gamepad/keyboard shortcuts and VFX tier limits remain intact.
+- Build Validation and Roblox Open Cloud Engine Tests must succeed on the exact PR SHA. The native Android/Studio orientation, control and 30-minute performance tests in `docs/ANDROID_QA_PLAYTEST.md` remain separate and unverified. Publishing to the existing public Roblox experience remains an explicitly guarded user action.
+
 ## 2026-10-23 — Physically sampled touchdown and transition polish (candidate)
 
 - Fix unreliable landing reactions when native Roblox physics zeroes the avatar's vertical speed before Humanoid Landed/Running fires. Both body-pose and camera-feedback owners now retain the highest **actual observed downward speed during the current Freefall** instead of the velocity of a potentially already-grounded final frame. A shared deterministic gate requires at least 0.10 seconds of flight and a fresh (<0.30 second) physics sample; it bounds speed at 180 studs/s.

@@ -48,6 +48,43 @@ Record the graphics tier, Reduce Motion, device model and whether any
 capture failed. Do not mark this checklist visually accepted from CI
 syntax/build or Open Cloud engine-test success alone.
 
+## Android interaction / performance final playtest (23 October candidate)
+
+**Use only a Roblox experience that has been published from the exact
+green GitHub commit** (public playtest or an isolated staged place).
+GitHub `main` and the Open Cloud engine sandbox are not themselves
+a playable Android version.
+
+On the physical Android Roblox app, test 540×320 (short landscape
+where supported), normal landscape, extra-wide aspect, portrait if
+supported, and a rotation during a round. Confirm:
+
+1. **Dash:** button stays fully visible with a usable ≥48px touch target,
+   clear of the native Roblox Jump control, timer, vote cards and hazard
+   warnings. The first-use tip is to the *left* and never clips offscreen.
+2. Tap DASH in four states: ready, on cooldown, airborne, and eliminated.
+   Only a grounded live participant with a ready cooldown moves; no touch
+   intended for the disabled Dash causes an accidental native Jump.
+   Repeat while jumping rapidly in a Double Chaos round.
+3. Do not interpret the client cooldown UI as authority. Capture
+   server-authoritative Dash cooldown behavior and confirm keyboard Q
+   still works in desktop Studio.
+4. Start Medium graphics, play 15 minutes with Meteor + Bomb,
+   Disappearing Platforms and Rising Lava, and observe FPS tier changes.
+   Active sustained slowdown should downgrade quality; hazard warning
+   silhouettes and touch labels must remain readable in Low.
+5. Suspend Roblox for at least 2 seconds, resume, and check that the
+   graphics tier does not **immediately** drop due solely to the pause.
+   Real sustained low FPS must still trigger normal quality downgrades.
+6. Complete a ≥30-minute soak including respawns, arena swaps, lobby
+   transitions and first-use hint. No drift in Dash placement, duplicate
+   effects or progressively worsening FPS.
+
+Record the exact SHA, device resolution/orientation, quality tier before
+and after each test, average/worst-frame FPS from the staging overlay or
+Roblox performance stats, original screen recording, and player/server
+logs. A green GitHub CI run is **not** a pass for this physical test.
+
 ## True touchdown / movement transition acceptance
 
 On a private staging experience whose published build is proven to match

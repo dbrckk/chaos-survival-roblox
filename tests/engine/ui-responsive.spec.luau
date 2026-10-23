@@ -59,6 +59,36 @@ describe("UI responsive profiles", function()
         expect(tiny.dockButtonHeight).toBe(44)
     end)
 
+    it("keeps Dash above the native jump/thumb lane on Android orientations", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1280, 720),
+            Vector2.new(1536, 688),
+            Vector2.new(400, 720),
+        }) do
+            local layout = UIResponsive.phaseDashLayout(viewport)
+            local right = viewport.X - layout.rightInset
+            local top = viewport.Y - layout.bottomInset - layout.height
+            expect(UIResponsive.touchTargetSatisfied(layout.height)).toBe(true)
+            expect(layout.width >= 72).toBe(true)
+            expect(layout.rightInset >= 12).toBe(true)
+            expect(layout.bottomInset >= 160).toBe(true)
+            expect(right <= viewport.X and right - layout.width >= 0).toBe(true)
+            expect(top >= 66).toBe(true)
+            expect(layout.hintWidth <= right).toBe(true)
+            -- The hint is LEFT of the button; it never clips past the
+            -- phone's edge or overlays the top-center hazard clock.
+            expect(right - layout.width - 8 - layout.hintWidth >= 0).toBe(true)
+        end
+        local short = UIResponsive.phaseDashLayout(Vector2.new(540, 320))
+        local tall = UIResponsive.phaseDashLayout(Vector2.new(1280, 720))
+        expect(short.width < tall.width).toBe(true)
+        expect(short.height < tall.height).toBe(true)
+        expect(tall.bottomInset > short.bottomInset).toBe(true)
+    end)
+
     it("uses wider round focus on narrow screens and narrower focus on ultrawide", function()
         local narrow = UIResponsive.mobileProfile(Vector2.new(540, 360))
         local normal = UIResponsive.mobileProfile(Vector2.new(800, 450))

@@ -34,6 +34,18 @@ function JumpLandingPreviewKit.new(player)
     local targetPart = nil
     local showing = false
 
+    -- Reuse one collision query rather than allocating RaycastParams and
+    -- filter arrays ten times per second while the player is descending.
+    -- Rebind only if streamed map sections are replaced or arrive late.
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Include
+    rayParams.IgnoreWater = true
+    rayParams.RespectCanCollide = true
+    local observedArena = nil
+    local observedBase = nil
+    local observedPlatforms = nil
+    local observedHelix = nil
+
     local function hide()
         -- No redundant property writes every RenderStep in the lobby or
         -- during a grounded run: Android needs the visual state, not 60Hz
@@ -90,12 +102,15 @@ function JumpLandingPreviewKit.new(player)
             return
         end
 
-        local rayParams = RaycastParams.new()
-        rayParams.FilterType = Enum.RaycastFilterType.Include
-        rayParams.FilterDescendantsInstances = helix
-            and {base, platforms, helix} or {base, platforms}
-        rayParams.IgnoreWater = true
-        rayParams.RespectCanCollide = true
+        if arena ~= observedArena or base ~= observedBase
+            or platforms ~= observedPlatforms or helix ~= observedHelix then
+            observedArena = arena
+            observedBase = base
+            observedPlatforms = platforms
+            observedHelix = helix
+            rayParams.FilterDescendantsInstances = helix
+                and {base, platforms, helix} or {base, platforms}
+        end
 
         local origin = root.Position + Vector3.new(0, 0.25, 0)
         local velocity = root.AssemblyLinearVelocity

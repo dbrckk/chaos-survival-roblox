@@ -9,6 +9,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local SoundService = game:GetService("SoundService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PhaseDashRules = require(ReplicatedStorage.Shared.PhaseDashRules)
 local ObserverRegistry = require(script.Parent.PhaseDashObserverRegistry)
@@ -72,6 +73,46 @@ intro.Visible = false
 intro.Parent = button
 UITheme.addCorner(intro, UITheme.Corners.Medium)
 UITheme.addTextConstraint(intro, 11, 16)
+
+-- Unlike a one-time TouchEnabled check in the cooldown loop, this responds
+-- to screen rotation, camera replacement, aspect changes and HUD safe lanes
+-- without rewriting identical UDim2 properties every 120 milliseconds.
+local viewportConnection = nil
+local function layoutDash()
+    if not UserInputService.TouchEnabled then
+        button.Size = UDim2.fromOffset(106, 57)
+        button.Position = UDim2.new(1, -18, 1, -165)
+        intro.AnchorPoint = Vector2.new(0.5, 1)
+        intro.Position = UDim2.new(0.5, 0, 0, -7)
+        intro.Size = UDim2.fromOffset(158, 34)
+        return
+    end
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local layout = UIResponsive.phaseDashLayout(viewport)
+    button.Size = UDim2.fromOffset(layout.width, layout.height)
+    button.Position = UDim2.new(1, -layout.rightInset, 1, -layout.bottomInset)
+    -- Put the one-time tip beside DASH instead of above it: on short
+    -- phones the old bubble could overlap the hazard title and timer.
+    intro.AnchorPoint = Vector2.new(1, 0.5)
+    intro.Position = UDim2.new(0, -8, 0.5, 0)
+    intro.Size = UDim2.fromOffset(layout.hintWidth, 42)
+end
+
+local function bindDashViewport()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize")
+            :Connect(layoutDash)
+    end
+    layoutDash()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindDashViewport)
+bindDashViewport()
 
 local timerRail = Instance.new("Frame")
 timerRail.Name = "ChargeRail"
@@ -307,14 +348,13 @@ task.spawn(function()
             introUntil = os.clock() + 3.5
         end
         button.Visible = active
-        button.Active = ready
+        -- The disabled cooldown state must still swallow a touch inside its
+        -- rectangle, otherwise Roblox's underlying jump button can fire.
+        -- Activated remains harmless: requestDash verifies all conditions.
+        button.Active = active
+        button.Selectable = ready
         intro.Visible = ready and os.clock() < introUntil
         if active then
-            button.Size = UserInputService.TouchEnabled
-                and UDim2.fromOffset(76, 48) or UDim2.fromOffset(106, 57)
-            button.Position = UserInputService.TouchEnabled
-                and UDim2.new(1, -18, 1, -175)
-                or UDim2.new(1, -18, 1, -165)
             if remainingSeconds > 0 then
                 button.Text = string.format("%.1fs", remainingSeconds)
                 button.TextColor3 = Color3.fromRGB(155, 177, 194)
