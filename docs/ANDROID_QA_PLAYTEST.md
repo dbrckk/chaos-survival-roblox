@@ -85,6 +85,42 @@ and after each test, average/worst-frame FPS from the staging overlay or
 Roblox performance stats, original screen recording, and player/server
 logs. A green GitHub CI run is **not** a pass for this physical test.
 
+## Outer route and native NPC nametag QA — post-expansion candidate
+
+Publish the **exact tested SHA** to a private isolated Roblox experience
+before certification; the current public version remains older unless a
+separate explicit publish workflow reports otherwise.
+
+For Classic, Towers, Crossroads and Orbital on Android, verify four
+quadrants of the enlarged floor have *real* two-stage elevated jump routes.
+Walk from the central hub to all four new grounded entry pedestals, jump
+from each 3-stud step to its 3.6-stud-higher exit, return safely, then
+repeat while Bomb Rain, Moon Gravity and Shrinking Arena are active.
+An outer platform must be visible on collision and physics rays, and
+it must participate honestly in shrinking/danger situations rather
+than float as an invisible safe zone. Measure FPS and memory for
+30 minutes, first Low/ReduceMotion then Medium, with up to 3 bots.
+
+Verify the original Tower bridges 18–21, Orbital Helix, Platform 1–17
+and central 4-branch routes remain reachable with standard R15, no
+spawn embedded inside a block or low-ceiling trap. Observe original
+wedge/metal/glass trim on each outer exit, no collision/overdraw
+or flashing glare over hazard alerts.
+
+The 20-name fictional bot pool must display like **ordinary Roblox
+Humanoid names** (no permanent AI suffix, special role subtitle or custom
+font), with varied appearance and native movement. Native Humanoid
+names and all brief reactions must remain legible on a narrow
+landscape screen. Verify genuine Players remain authoritative in
+Roblox player lists/chat, and gameplay counts never imply that NPCs
+are actually connected accounts. Player inspection / internal metadata
+must still identify the bots for moderation, fairness and debugging.
+
+Document exact SHA + published Roblox version, Android screen recording
+of 4 maps, screenshots of at least 2 bots beside a real player,
+server/client logs, and FPS/memory. Passing CI **does not** fill these
+physical observations.
+
 ## Expanded arena + AI identity + HUD release gate (physical Android)
 
 Play all four enlarged arenas (Classic 152, Towers 150, Orbital 152,
