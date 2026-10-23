@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — Android combat hit / result-camera ownership (candidate)
+
+- Fixed local combat damage overlays: the old `WaitForChild("Humanoid", 5)` could resume after another avatar spawned and steal the active HealthChanged observer. Replace it with one current-character owner, tokenized callbacks and a streaming-aware ChildAdded/ChildRemoved repair path. Respawn/removal immediately cancels prior flashes/FOV kicks and disconnects old Humanoid events. Spectators, eliminated users and lobby characters no longer receive old-round red hit flashes.
+- Cancel/reuse the active `DamageFlash` tween rather than leaving overlapping fades to fight on repeated hits. A delayed critical Bloom restoration only runs for its originating living avatar and latest hit.
+- Victory/defeat FOV pulses no longer submit a late 72° camera tween over a newer round or different avatar; phase changes and new results cancel obsolete delayed callbacks. No network, server health, physics, rewards or mobile render owner added.
+- Existing Roblox engine round-event spec now exercises valid and stale Humanoid ownership, replaced rig, missing owners, and removed character. Authentic R6/R15 Android/staging QA remains required.
+
 ## 2026-10-23 — Android touch and adaptive performance release candidate
 
 - **Touch Dash:** responsive, comfortably sized 48–54px action target, recalculated only on camera/viewport rotation or replacement; the position stays clear of the native bottom-right Roblox jump button on short-landscape, ultrawide and portrait viewports. First-use teaching tip is rendered **to the left** of the thumb target rather than on top of the hazard HUD. Cooldown taps are swallowed by the owned GUI and cannot leak into an underlying touch control; server-side cooldown/grounded validation is unchanged.
