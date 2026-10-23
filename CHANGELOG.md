@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — Reachable jump takeoff cues (candidate)
+
+- Add two compact floor-mounted parkour chevrons on each visually verified ascent takeoff in Classic Grid, Tower Run and Crossroads, including their central first-hop hubs. Select a target only from real spawned `PlatformN` geometry with a bounded horizontal gap (3.85 studs), a maximum 4.05-stud rise and no vertical overlap. Orbital keeps its authored physical Helix ramps, with no misleading leap arrows.
+- Place every cue **inside** the physical platform and weld it to the deck. Reuse the current platform-identity visual owner: no extra RenderStep, force, raycast, remote, animation, light or asset download. Low-quality Android gets the same functional wayfinding, even where ornamental halves are omitted.
+- The existing shrink-footprint listener resizes and repositions the arrows with real collision decks. A source/target collapse event disables cues during Warning and Gone; they return after the target is physically traversable again. Watch RouteTier for all maps under late Android streaming.
+- Extend the existing arena-layout engine spec to validate route geometry, cue bounds and no false Orbital jump routes on all four arenas. As always, authenticated Android/Studio visual and performance certification and Roblox production deployment remain separate gates.
+
 ## 2026-10-23 — Android landing precision and fair coyote window (candidate)
 
 - **Approach clarity:** add a local 2- to 4-stroke, non-colliding landing marker while an active player descends toward an actual sampled solid arena surface. A short ballistic horizontal projection is checked by a second collision raycast; previews beyond 0.42 seconds, unsupported gaps, collapsing decks and steep/non-walkable surfaces are omitted rather than inventing a safe landing.
