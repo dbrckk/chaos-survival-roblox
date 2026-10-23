@@ -688,6 +688,7 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
 end)
 
 RunService.RenderStepped:Connect(function(dt)
+    if type(dt) ~= "number" or dt ~= dt or dt < 0 then return end
     camera = workspace.CurrentCamera or camera
     damageFovKick *= math.exp(-math.max(0, dt) * 11.5)
 
@@ -703,14 +704,30 @@ RunService.RenderStepped:Connect(function(dt)
         )
     end
 
-    pulseClock += dt
-    frameTimeAccumulator += dt
-    sampleWorstFrameDt = math.max(sampleWorstFrameDt, dt)
-    frameSampleCount += 1
-    qualitySampleClock += dt
+    -- A multi-second frame after switching Android apps is not an FPS
+    -- sample; discard the interrupted window rather than punishing the
+    -- phone with a false transition to Low graphics. Real 2-5 FPS frames
+    -- are still counted and drive appropriate performance reductions.
+    local activeDt = VfxQuality.activeFrameSeconds(dt)
+    pulseClock += math.min(dt, 1 / 10)
+    if activeDt > 0 then
+        frameTimeAccumulator += activeDt
+        sampleWorstFrameDt = math.max(sampleWorstFrameDt, activeDt)
+        frameSampleCount += 1
+        qualitySampleClock += activeDt
+    elseif dt > 0.60 then
+        frameTimeAccumulator = 0
+        sampleWorstFrameDt = 0
+        frameSampleCount = 0
+        qualitySampleClock = 0
+        qualityCandidate = nil
+        qualityCandidateSamples = 0
+        performancePulseClock = 0
+        performanceFrameCount = 0
+    end
 
-    if dt > 0 then
-        performancePulseClock += dt
+    if activeDt > 0 then
+        performancePulseClock += activeDt
         performanceFrameCount += 1
 
         if performancePulseClock >= 45 and performanceFrameCount > 0 then
@@ -801,7 +818,7 @@ RunService.RenderStepped:Connect(function(dt)
         qualitySampleClock = 0
     end
 
-    visualUpdateClock += dt
+    visualUpdateClock += math.min(dt, 1 / 15)
     if visualUpdateClock < vfxTier.UpdateInterval then
         return
     end
