@@ -312,6 +312,48 @@ describe("Chaos Survival engine", function()
         root:Destroy()
     end)
 
+    it("builds four safe sculpted perimeter stations on each enlarged map", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local decor = arena:FindFirstChild("Decor")
+            local base = arena:FindFirstChild("Base")
+            expect(base.Size.X >= 150).toBe(true)
+            expect(base.Size.Z >= 150).toBe(true)
+
+            local count = 0
+            local wedges = 0
+            for _, direction in ipairs({"North", "East", "South", "West"}) do
+                local station = decor:FindFirstChild("PerimeterStation" .. direction)
+                expect(station ~= nil and station:IsA("Model")).toBe(true)
+                expect(station:GetAttribute("ChaosPerimeterStation")).toBe(true)
+                local stationPieces = 0
+                for _, piece in ipairs(station:GetDescendants()) do
+                    if piece:IsA("BasePart") then
+                        stationPieces += 1
+                        if piece:IsA("WedgePart") then wedges += 1 end
+                        expect(piece.Anchored).toBe(true)
+                        expect(piece.CanCollide).toBe(false)
+                        expect(piece.CanTouch).toBe(false)
+                        expect(piece.CanQuery).toBe(false)
+                        expect(piece.CastShadow).toBe(false)
+                        expect(math.abs(piece.Position.X - base.Position.X)
+                            + piece.Size.X * 0.5 <= base.Size.X * 0.5 - 5
+                        ).toBe(true)
+                        expect(math.abs(piece.Position.Z - base.Position.Z)
+                            + piece.Size.Z * 0.5 <= base.Size.Z * 0.5 - 5
+                        ).toBe(true)
+                    end
+                end
+                expect(stationPieces >= 11).toBe(true)
+                count += 1
+            end
+            expect(count).toBe(4)
+            expect(wedges >= 8).toBe(true)
+            root:Destroy()
+        end
+    end)
+
     it("builds physical Tower Run bridges with purely cosmetic edge rails", function()
         local root = MapBuilder.build(Config, "Towers", ArenaVariants)
         local arena = root:FindFirstChild("Arena")

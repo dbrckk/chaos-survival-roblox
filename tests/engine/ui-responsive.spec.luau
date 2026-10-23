@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local UIResponsive = require("../../src/shared/UIResponsive")
 local NearMissVisualRules = require("../../src/shared/NearMissVisualRules")
+local BotNameplateRules = require("../../src/shared/BotNameplateRules")
 
 describe("UI responsive profiles", function()
     it("classifies short landscape phones as tiny height", function()
@@ -12,6 +13,43 @@ describe("UI responsive profiles", function()
         expect(c.tinyHeight).toBe(true)
         expect(c.compactHeight).toBe(true)
         expect(c.aspect > 1.7).toBe(true)
+    end)
+
+    it("keeps main round reveals out of the center gameplay lane on Android", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1536, 688),
+            Vector2.new(400, 720),
+        }) do
+            local l = UIResponsive.mobileRoundBanner(viewport)
+            expect(l.widthScale >= 0.70 and l.widthScale <= 0.95).toBe(true)
+            expect(l.height >= 54 and l.height <= 64).toBe(true)
+            expect(l.titleMaxTextSize <= 24).toBe(true)
+            expect(l.subtitleMaxTextSize <= 17).toBe(true)
+            expect(l.centerYScale < 0.43).toBe(true)
+            -- The first mobile banner is a 54–64px strip, never a
+            -- screen-height-scaled rectangle hiding a central avatar.
+            expect(l.height < viewport.Y * 0.20).toBe(true)
+        end
+        local wide = UIResponsive.mobileRoundBanner(Vector2.new(1536, 688))
+        local narrow = UIResponsive.mobileRoundBanner(Vector2.new(540, 320))
+        expect(wide.widthScale < narrow.widthScale).toBe(true)
+    end)
+
+    it("only shows nearby depth-tested AI display names on touch", function()
+        local style = BotNameplateRules.presentation
+        local normal = style("round", "High", true)
+        local low = style("round", "Low", true)
+        local ready = style("ready", "Medium", true)
+        local desktop = style("round", "High", false)
+        expect(normal.AlwaysOnTop).toBe(false)
+        expect(ready.AlwaysOnTop).toBe(false)
+        expect(low.MaxDistance < normal.MaxDistance).toBe(true)
+        expect(normal.MaxDistance < desktop.MaxDistance).toBe(true)
+        expect(ready.MaxDistance > normal.MaxDistance).toBe(true)
+        expect(desktop.MaxDistance).toBe(72)
     end)
 
     it("keeps critical mobile text above a readable floor", function()

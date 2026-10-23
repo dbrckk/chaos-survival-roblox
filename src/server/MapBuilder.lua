@@ -57,6 +57,124 @@ local function decorPart(parent, name, size, position, color, material)
     return p
 end
 
+-- Four authored 3D perimeter landmarks make an expanded arena read as a
+-- destination rather than a bare enlarged slab. These are original
+-- Roblox-native model assemblies (not externally licensed/imported meshes).
+-- Keep every piece decorative so the danger floor, humanoid collision,
+-- base-shrinking, AI navigation and platform jump tests stay authoritative.
+-- Exactly four stations, no lights, loops, remote calls or live motion.
+local function addPerimeterStations(decor, config, variant, theme)
+    local halfX = variant.BaseSize.X * 0.5
+    local halfZ = variant.BaseSize.Z * 0.5
+    local anchors = {
+        {name = "North", position = Vector3.new(0, 0, -halfZ + 17), yaw = 0},
+        {name = "East", position = Vector3.new(halfX - 17, 0, 0), yaw = math.pi * 0.5},
+        {name = "South", position = Vector3.new(0, 0, halfZ - 17), yaw = math.pi},
+        {name = "West", position = Vector3.new(-halfX + 17, 0, 0), yaw = -math.pi * 0.5},
+    }
+    local baseTop = variant.BaseSize.Y * 0.5
+    local accent = theme.Accent:Lerp(theme.Structure, 0.52)
+    local secondary = theme.Secondary:Lerp(theme.Structure, 0.55)
+
+    for index, anchor in ipairs(anchors) do
+        local model = Instance.new("Model")
+        model.Name = "PerimeterStation" .. anchor.name
+        model:SetAttribute("ChaosPerimeterStation", true)
+        model:SetAttribute("StationIndex", index)
+        model.Parent = decor
+        local origin = CFrame.new(
+            config.ArenaCenter + anchor.position + Vector3.new(0, baseTop, 0)
+        ) * CFrame.Angles(0, anchor.yaw, 0)
+
+        local function piece(name, className, size, offset, material, color, opacity)
+            local item = Instance.new(className or "Part")
+            item.Name = name
+            item.Size = size
+            item.CFrame = origin * offset
+            item.Anchored = true
+            item.CanCollide = false
+            item.CanTouch = false
+            item.CanQuery = false
+            item.CastShadow = false
+            item.Material = material
+            item.Color = color
+            item.Transparency = opacity or 0
+            item.Parent = model
+            return item
+        end
+
+        -- Recessed platform marker. The real floor underneath stays the
+        -- sole walkable surface; the mark never catches feet or incoming
+        -- projectiles and does not leave islands after Shrinking Arena.
+        piece("InlaidStationBase", "Part", Vector3.new(12, 0.07, 11),
+            CFrame.new(0, 0.035, 0), theme.PanelMaterial or Enum.Material.Metal,
+            theme.Structure:Lerp(theme.Surface, 0.18), 0.14)
+        for _, side in ipairs({-1, 1}) do
+            piece(side < 0 and "LeftButtress" or "RightButtress",
+                "Part", Vector3.new(1.5, 9, 2),
+                CFrame.new(side * 5.3, 4.5, 0), Enum.Material.Metal,
+                theme.Structure, 0.06)
+            piece(side < 0 and "LeftAngledCap" or "RightAngledCap",
+                "WedgePart", Vector3.new(2.9, 2.2, 2.4),
+                CFrame.new(side * 5.0, 9.1, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, theme.Detail, 0.08)
+            piece(side < 0 and "LeftLightNotch" or "RightLightNotch",
+                "Part", Vector3.new(0.14, 1.8, 1.1),
+                CFrame.new(side * 5.3, 5.0, -1.06), Enum.Material.Neon,
+                side < 0 and accent or secondary, 0.38)
+        end
+        piece("CrossBrace", "Part", Vector3.new(9.1, 0.65, 1.25),
+            CFrame.new(0, 9.0, -0.2), Enum.Material.Metal,
+            theme.Structure:Lerp(theme.Detail, 0.22), 0.04)
+        piece("CoreHousing", "Part", Vector3.new(3.2, 3.7, 2.8),
+            CFrame.new(0, 4.9, 0.1), Enum.Material.Metal,
+            theme.Detail:Lerp(theme.Structure, 0.35), 0.06)
+        local core = piece("CoreLens", "Part", Vector3.new(2.7, 2.7, 2.7),
+            CFrame.new(0, 5.1, -1.65), Enum.Material.Glass,
+            accent:Lerp(secondary, 0.25), 0.33)
+        core.Shape = Enum.PartType.Ball
+        piece("WayfindingInset", "Part", Vector3.new(3.1, 0.16, 1.6),
+            CFrame.new(0, 0.11, -4.25), Enum.Material.Neon,
+            accent, 0.57)
+
+        if variant.Id == "Towers" then
+            -- Twin crane masts convey vertical scale without placing an
+            -- overhead platform where an R15 could become trapped.
+            piece("ServiceMast", "Part", Vector3.new(0.75, 6.8, 0.75),
+                CFrame.new(0, 12.6, 0.3), Enum.Material.Metal,
+                theme.Structure, 0.04)
+            piece("SignalCrown", "WedgePart", Vector3.new(2.2, 1.4, 1.8),
+                CFrame.new(0, 16.6, 0.3), Enum.Material.Metal,
+                secondary, 0.10)
+        elseif variant.Id == "Orbital" then
+            -- Cylindrical receiver and two radial braces distinguish the
+            -- reactor site from both tower cranes and grid substations.
+            local dish = piece("ReceiverDish", "Part", Vector3.new(3.4, 0.65, 3.4),
+                CFrame.new(0, 10.4, 0), Enum.Material.Metal,
+                theme.Detail, 0.12)
+            dish.Shape = Enum.PartType.Cylinder
+            piece("ReceiverAntenna", "Part", Vector3.new(0.38, 3.4, 0.38),
+                CFrame.new(0, 12.35, 0), Enum.Material.Metal,
+                accent, 0.22)
+        elseif variant.Id == "Crossroads" then
+            piece("ExchangeBeam", "Part", Vector3.new(2.5, 0.75, 8.5),
+                CFrame.new(0, 8.2, 0), Enum.Material.Metal,
+                theme.Detail, 0.10)
+            piece("SwitchyardMarker", "WedgePart", Vector3.new(1.5, 2, 2),
+                CFrame.new(0, 10.0, 0), Enum.Material.Metal,
+                secondary, 0.12)
+        else
+            piece("RelaySpire", "Part", Vector3.new(0.7, 4.4, 0.7),
+                CFrame.new(0, 11.5, 0), Enum.Material.Metal,
+                theme.Detail, 0.10)
+            piece("RelayCrown", "WedgePart", Vector3.new(2.4, 1.6, 2),
+                CFrame.new(0, 14.6, 0), Enum.Material.Metal,
+                accent, 0.12)
+        end
+    end
+end
+
 local function addArenaFoundation(decor, config, variant, theme)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
@@ -1504,7 +1622,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     local killPlane = part(
         arena,
         "KillPlane",
-        Vector3.new(160, 2, 160),
+        Vector3.new(
+            math.max(160, variant.BaseSize.X + 32), 2,
+            math.max(160, variant.BaseSize.Z + 32)
+        ),
         config.ArenaCenter + Vector3.new(0, -18, 0),
         Color3.fromRGB(255, 0, 0),
         Enum.Material.SmoothPlastic
@@ -1595,6 +1716,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     decor.Parent = arena
 
     addArenaFoundation(decor, config, variant, theme)
+    addPerimeterStations(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantLandmarks(decor, config, variant, theme)
     addVariantFloorLanguage(decor, config, variant, theme)

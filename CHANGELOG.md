@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-23 — Larger arenas and more natural survivor nameplates (candidate)
+
+- Expanded all four playable arena foundations to 150–156 studs in X/Z (previously 94–104 studs). Existing core routes, physical platform heights, jump accessibility, spawn coordinates and sensors are intentionally retained; this is a first-stage expansion, not a complete replacement of the level architecture.
+- Expanded the fall elimination plane to follow the new playable footprint, with a safety margin. Existing hazard targeting rules already derive bounds from the active arena base.
+- Removed the permanent `· AI` suffix and persistent `TACTICIAN / TEAMMATE / DAREDEVIL` banners from the in-world AI survivor nameplates; keep natural display names, temporary contextual reactions and explicit server `AISurvivor` / `IsAISurvivor` flags for truthful identity, moderation and reward authority. Bots do **not** spoof Roblox Player instances, player lists or chat.
+- Added four nonblocking sculpted perimeter station models per expanded arena: individually framed pylons, wedge caps, metallic housings, faceted core lenses, subtle guide notches and map-specific crane/dish/exchange/relay crowns, without new lights or per-frame work. Existing gameplay collision parts remain unchanged. Import-ready **original** sci-fi gate OBJ+MTL source (308 vertices, 560 triangles) added under `assets/source/` for a future authenticated Roblox Studio upload; this source is **not** a live MeshPart yet.
+- Reduced Android bot-nameplate visual noise: compact display-name labels, local distance/depth-testing, temporary short social status only. Introduced a responsive 54–64px round-banner strip instead of a large central HUD block; reacts to camera/viewport changes without new render owners.
+- Extended existing Roblox engine arena, mapbuilder and mobile-UI tests for enlarged playable floor, perimeter prop collision and clearance, compact bot names and round-title readability. Physical Android testing must verify that the larger arena feels alive, danger and AI movement remain viable, and visual budgets/FPS meet release expectations.
+
 ## 2026-10-23 — Android combat hit / result-camera ownership (candidate)
 
 - Fixed local combat damage overlays: the old `WaitForChild("Humanoid", 5)` could resume after another avatar spawned and steal the active HealthChanged observer. Replace it with one current-character owner, tokenized callbacks and a streaming-aware ChildAdded/ChildRemoved repair path. Respawn/removal immediately cancels prior flashes/FOV kicks and disconnects old Humanoid events. Spectators, eliminated users and lobby characters no longer receive old-round red hit flashes.

@@ -21,8 +21,14 @@ describe("Arena variants", function()
 
             expect(#variant.SpawnOffsets >= 8).toBe(true)
             expect(#variant.Platforms >= 14).toBe(true)
-            expect(variant.BaseSize.X >= 90).toBe(true)
-            expect(variant.BaseSize.Z >= 90).toBe(true)
+            expect(variant.BaseSize.X >= 150).toBe(true)
+            expect(variant.BaseSize.Z >= 150).toBe(true)
+            -- Preserve the old physical routes and hazard sensors at the
+            -- center while providing a much wider safe exploration ring.
+            for _, offset in ipairs(variant.SpawnOffsets) do
+                expect(math.abs(offset.X) <= variant.BaseSize.X * 0.5 - 5).toBe(true)
+                expect(math.abs(offset.Z) <= variant.BaseSize.Z * 0.5 - 5).toBe(true)
+            end
 
             -- The visual jump arrows are generated only for physically
             -- reachable successors, and never for Orbital's real Helix
