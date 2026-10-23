@@ -41,6 +41,44 @@ local function runCleanup(cleanup, onCleanup)
     end
 end
 
+describe("Rising Lava walkable high-ground fairness", function()
+    it("preserves four real high refuges in all four shipped arenas", function()
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local definition = ArenaVariants.get(variantId)
+            local topHeights = {}
+            for _, deck in ipairs(definition.Platforms) do
+                topHeights[#topHeights + 1] = deck.offset.Y + deck.size.Y * 0.5
+            end
+            local distance = RisingLava.safeRiseDistance(-6, topHeights, 25)
+            expect(distance > 0 and distance <= 25).toBe(true)
+            local finalSurface = -6 + distance
+            local safeDecks = 0
+            local submergedLower = 0
+            for _, top in ipairs(topHeights) do
+                if top - finalSurface >= 2 - 0.001 then
+                    safeDecks += 1
+                elseif top < finalSurface then
+                    submergedLower += 1
+                end
+            end
+            expect(safeDecks >= 4).toBe(true)
+            expect(submergedLower >= 1).toBe(true)
+        end
+    end)
+
+    it("clamps the final lava height and rejects invalid deck measurements", function()
+        local rise = RisingLava.safeRiseDistance
+        expect(rise(-6, {12, 12, 12, 12}, 25)).toBe(16)
+        expect(rise(-6, {30, 30, 30, 30}, 25)).toBe(25)
+        expect(rise(-6, {5, 5, 5, 5}, 25)).toBe(9)
+        expect(rise(-6, nil, 25)).toBe(15)
+        expect(rise(-6, {math.huge, 12, 12, 12, 12}, 25)).toBe(16)
+        expect(rise(-6, {0 / 0, 12, 12, 12, 12}, 25)).toBe(16)
+        expect(rise(-6, {-10, -10, -10, -10}, 25)).toBe(0)
+        expect(rise(-6, {12, 12, 12, 12}, -10)).toBe(0)
+    end)
+end)
+
 describe("Veteran lava surge fairness", function()
     it("keeps novice lava linear and advanced lava continuous at the same final height", function()
         local rise = RisingLava.riseAt
