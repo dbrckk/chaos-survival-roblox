@@ -33,6 +33,7 @@ local airborneStartedAt = -math.huge
 local lastAirSampleAt = -math.huge
 local peakFallSpeed = 0
 local previouslyGrounded = false
+local hasMotionBaseline = false
 local speedSurgeActive = false
 local lowGravityActive = false
 local roundPhase = "waiting"
@@ -114,6 +115,7 @@ local function attachRig(nextCharacter, serial)
         end
         humanoid = nextHumanoid
         previouslyGrounded = humanoid.FloorMaterial ~= Enum.Material.Air
+        hasMotionBaseline = false
         humanoidStateConnection = humanoid.StateChanged:Connect(function(_, state)
             if serial ~= bindSerial then return end
             if state == Enum.HumanoidStateType.Jumping then
@@ -217,6 +219,7 @@ local function bind(nextCharacter)
     lastAirSampleAt = -math.huge
     peakFallSpeed = 0
     previouslyGrounded = false
+    hasMotionBaseline = false
     launchWeight = 0
     impactWeight = 0
     impactSide = 0
@@ -465,8 +468,12 @@ RunService:BindToRenderStep(
         local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
         local moving = humanoid.MoveDirection.Magnitude > 0.05 and speed > 2.5
         local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
+        -- A streamed-in avatar already moving at full speed must not
+        -- create a fictitious acceleration or brake on its first sample.
         local settledGroundContact = grounded and previouslyGrounded
+            and hasMotionBaseline
         previouslyGrounded = grounded
+        hasMotionBaseline = not interrupted
         local reduced = player:GetAttribute("ReduceMotion") == true
         -- Native Showtime Action tracks take priority while dancing.
         -- Blend C0 corrections to neutral without stopping the track.
