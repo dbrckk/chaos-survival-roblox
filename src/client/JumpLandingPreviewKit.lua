@@ -98,41 +98,61 @@ function JumpLandingPreviewKit.new(player)
         rayParams.RespectCanCollide = true
 
         local origin = root.Position + Vector3.new(0, 0.25, 0)
-        local first = workspace:Raycast(origin, Vector3.new(0, -24, 0), rayParams)
-        if not validSurface(first) then
-            hide()
-            return
-        end
-
         local velocity = root.AssemblyLinearVelocity
+        local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
         local footOffset = root.Size.Y * 0.5 + humanoid.HipHeight
         local footY = root.Position.Y - footOffset
-        local firstTime = Rules.timeToSurface(
-            velocity.Y, workspace.Gravity, footY - first.Position.Y
-        )
-        if not firstTime then
-            hide()
-            return
+
+        -- A straight-down ray often hits the LOW base floor while the
+        -- player is mid-jump over a gap between two higher decks. Probe the
+        -- actual horizontal trajectory instead. This remains only a
+        -- short-range visual estimate, with a confirmed physical landing
+        -- target; no route prediction or gameplay authority.
+        local bestCandidate = nil
+        local bestTime = nil
+        local bestError = math.huge
+        for _, probeTime in ipairs(Rules.ProbeSeconds) do
+            local offset = horizontalVelocity * probeTime
+            if offset.Magnitude > Rules.MaxHorizontalTravel then
+                continue
+            end
+            local candidate = workspace:Raycast(
+                origin + offset, Vector3.new(0, -24, 0), rayParams
+            )
+            if validSurface(candidate) then
+                local contactTime = Rules.timeToSurface(
+                    velocity.Y, workspace.Gravity, footY - candidate.Position.Y
+                )
+                if Rules.probeMatches(probeTime, contactTime) then
+                    local errorSeconds = math.abs(probeTime - contactTime)
+                    -- Prefer first physical impact (the elevated
+                    -- target), then the better-timed probe for ties.
+                    if Rules.preferContact(
+                        probeTime, contactTime, bestTime, bestError
+                    ) and (horizontalVelocity * contactTime).Magnitude
+                        <= Rules.MaxHorizontalTravel then
+                        bestCandidate = candidate
+                        bestTime = contactTime
+                        bestError = errorSeconds
+                    end
+                end
+            end
         end
 
-        -- Sample actual collision at the short, locally projected contact
-        -- point. A missed platform edge means no reticle, not fake safety.
-        local offset = Vector3.new(velocity.X, 0, velocity.Z) * firstTime
-        if offset.Magnitude > 8 then
+        -- All three candidates are evaluated before we commit to a surface.
+        -- One final physical ray confirms the closest timed contact. This
+        -- caps the whole airborne sample at FOUR raycasts, including when
+        -- an earlier probe saw the lower base while crossing a gap.
+        if not bestCandidate then
             hide()
             return
         end
-        local projected = origin + offset
-        local hit = workspace:Raycast(projected, Vector3.new(0, -24, 0), rayParams)
-        if not validSurface(hit) then
-            hide()
-            return
-        end
-
-        local correctedTime = Rules.timeToSurface(
-            velocity.Y, workspace.Gravity, footY - hit.Position.Y
+        local hit = workspace:Raycast(
+            origin + horizontalVelocity * bestTime,
+            Vector3.new(0, -24, 0),
+            rayParams
         )
-        if not correctedTime or math.abs(correctedTime - firstTime) > 0.10 then
+        if not validSurface(hit) or hit.Instance ~= bestCandidate.Instance then
             hide()
             return
         end

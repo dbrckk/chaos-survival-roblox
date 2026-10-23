@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-23 — Cross-platform descent reticle correction (candidate)
+
+- The landing preview no longer depends on a straight-down floor hit before projecting horizontal motion. When jumping across a gap, that floor can be far below the actual elevated destination and incorrectly suppress the reticle.
+- Use three short bounded future samples (0.08, 0.23, 0.36 seconds) based on real local velocity/gravity, within the existing 0.42-second forecast limit. Only display a marker if the ballistic contact time matches a sample, and the corrected landing ray **confirms the same solid platform** with no collapse warning. Otherwise hide it. Maximum four raycasts per 0.10-second airborne sampling interval, never a new frame loop or gameplay physics change.
+- Extend the existing engine movement-assist regression suite for forward platform-gap jumps, false low-ground predictions, malformed time values and delayed contact. Maintain Android/Studio release gates and no public deployment.
+
 ## 2026-10-23 — Reachable jump takeoff cues (candidate)
 
 - Add two compact floor-mounted parkour chevrons on each visually verified ascent takeoff in Classic Grid, Tower Run and Crossroads, including their central first-hop hubs. Select a target only from real spawned `PlatformN` geometry with a bounded horizontal gap (3.85 studs), a maximum 4.05-stud rise and no vertical overlap. Orbital keeps its authored physical Helix ramps, with no misleading leap arrows.

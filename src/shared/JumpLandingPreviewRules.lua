@@ -10,6 +10,20 @@ end
 JumpLandingPreviewRules.SampleSeconds = 0.10
 JumpLandingPreviewRules.MaxPredictionSeconds = 0.42
 JumpLandingPreviewRules.MaxDrop = 13
+JumpLandingPreviewRules.MaxHorizontalTravel = 8
+-- One near, one mid-flight and one late lookahead. At most three candidate
+-- rays plus one confirmation per 10Hz sample, never a ray per rendered frame.
+JumpLandingPreviewRules.ProbeSeconds = {0.08, 0.23, 0.36}
+JumpLandingPreviewRules.ProbeToleranceSeconds = 0.14
+
+function JumpLandingPreviewRules.probeMatches(probeSeconds, contactSeconds)
+    return finite(probeSeconds) and finite(contactSeconds)
+        and probeSeconds >= 0
+        and contactSeconds >= 0
+        and contactSeconds <= JumpLandingPreviewRules.MaxPredictionSeconds
+        and math.abs(probeSeconds - contactSeconds)
+            <= JumpLandingPreviewRules.ProbeToleranceSeconds
+end
 
 function JumpLandingPreviewRules.eligible(
     phase, participant, eliminated, health, humanoidState, grounded, verticalSpeed
@@ -39,6 +53,22 @@ function JumpLandingPreviewRules.timeToSurface(verticalSpeed, gravity, drop)
         return nil
     end
     return t
+end
+
+-- Select the first imminent collision surface, not the later base
+-- floor which happens to line up more closely with a sampling timestamp.
+-- Keep a 25ms tie band so nearly identical surfaces remain deterministic.
+function JumpLandingPreviewRules.preferContact(
+    probeSeconds, contactSeconds, bestSeconds, bestError
+)
+    if not JumpLandingPreviewRules.probeMatches(probeSeconds, contactSeconds) then
+        return false
+    end
+    if bestSeconds == nil then return true end
+    if not finite(bestSeconds) or not finite(bestError) then return false end
+    if contactSeconds < bestSeconds - 0.025 then return true end
+    return math.abs(contactSeconds - bestSeconds) <= 0.025
+        and math.abs(probeSeconds - contactSeconds) < bestError
 end
 
 function JumpLandingPreviewRules.edgeMargin(platform, hitPosition)
