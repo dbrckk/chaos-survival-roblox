@@ -8,14 +8,19 @@ function BotNameplateRules.presentation(phase, tier, touch)
         or phase == "result"
     local distance = emphasize and 96 or 72
 
-    -- On low-end touch screens, labels far across the arena form visual
-    -- clutter and overdraw. Keep nearby players recognizable.
-    if touch == true and tier == "Low" then
-        distance = emphasize and 78 or 58
+    -- Android has a shorter visual lane than desktop. Show only nearby
+    -- opponents during survival; do not paint ghost names through walls
+    -- over the hazards and real-player thumb controls.
+    if touch == true then
+        if tier == "Low" then
+            distance = emphasize and 58 or 42
+        else
+            distance = emphasize and 72 or 54
+        end
     end
 
     return {
-        AlwaysOnTop = emphasize,
+        AlwaysOnTop = emphasize and touch ~= true,
         MaxDistance = distance,
         StrokeTransparency = emphasize and 0.24 or 0.38,
     }
