@@ -96,10 +96,19 @@ local function bindFolder(nextFolder)
             and descendant.Name ~= "DisplayName" then
             return
         end
-        local model = descendant:FindFirstAncestorOfClass("Model")
-        if model and model.Parent == folder then
-            applyModel(model)
-        end
+        -- DescendantAdded can fire before a streamed TextLabel has been
+        -- parented to its final Head/BillboardGui on a slow Android client.
+        -- Defer once, then check that the same folder still owns the rig.
+        local owningFolder = folder
+        task.defer(function()
+            if folder ~= owningFolder or not descendant:IsDescendantOf(owningFolder) then
+                return
+            end
+            local model = descendant:FindFirstAncestorOfClass("Model")
+            if model and model.Parent == owningFolder then
+                applyModel(model)
+            end
+        end)
     end)
 
     for _, model in ipairs(folder:GetChildren()) do
