@@ -72,6 +72,21 @@ function UIResponsive.mobileProfile(viewport)
     }
 end
 
+-- Primary round introductions should not cover the avatar and other
+-- survivors on Android. The warning timer already occupies the top edge:
+-- place the short reveal directly below it, never across screen center.
+function UIResponsive.mobileRoundBanner(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    return {
+        widthScale = c.veryNarrow and 0.90
+            or (c.narrowWidth and 0.86 or (c.wide and 0.73 or 0.80)),
+        height = c.tinyHeight and 54 or (c.compactHeight and 58 or 64),
+        centerYScale = 0.39,
+        titleMaxTextSize = c.tinyHeight and 19 or 24,
+        subtitleMaxTextSize = c.tinyHeight and 13 or 17,
+    }
+end
+
 -- One safe, testable layout for the client-owned Dash action button.
 -- The native Roblox jump control uses the bottom-right thumb zone.
 -- Keep DASH above it, fully inside the visible viewport even when rotated
