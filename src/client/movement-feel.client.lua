@@ -20,6 +20,7 @@ local character = nil
 local humanoid = nil
 local root = nil
 local characterConnections = {}
+local humanoidStateConnection = nil
 local bindVersion = 0
 
 local landingKick = 0
@@ -46,6 +47,10 @@ local lastOverdrive = false
 local function disconnectCharacter()
     bindVersion += 1
     landingPreview.hide()
+    if humanoidStateConnection then
+        humanoidStateConnection:Disconnect()
+        humanoidStateConnection = nil
+    end
     for _, connection in ipairs(characterConnections) do
         connection:Disconnect()
     end
@@ -159,12 +164,16 @@ local function bindCharacter(nextCharacter)
         end
         if humanoid == nextHumanoid and root == nextRoot then return end
 
+        if humanoidStateConnection then
+            humanoidStateConnection:Disconnect()
+            humanoidStateConnection = nil
+        end
         humanoid = nextHumanoid
         root = nextRoot
         wasAirborne = nextHumanoid:GetState() == Enum.HumanoidStateType.Freefall
-        -- If a native rig part was replaced after streaming, old callbacks
-        -- remain harmless: the bound Humanoid/Root identity is rechecked.
-        table.insert(characterConnections, nextHumanoid.StateChanged:Connect(function(_, newState)
+        -- A streamed/replaced Root cannot leave duplicated state listeners.
+        -- The sole bound Humanoid/Root identity is rechecked on each event.
+        humanoidStateConnection = nextHumanoid.StateChanged:Connect(function(_, newState)
             if bindVersion ~= version or character ~= nextCharacter
                 or player.Character ~= nextCharacter
                 or humanoid ~= nextHumanoid or root ~= nextRoot then
@@ -187,7 +196,7 @@ local function bindCharacter(nextCharacter)
                     emitLandingBurst(strength)
                 end
             end
-        end))
+        end)
     end
 
     table.insert(characterConnections, nextCharacter.ChildAdded:Connect(function(child)
