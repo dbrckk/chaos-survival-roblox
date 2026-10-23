@@ -7,8 +7,10 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local SpectatorTargetRules = require(ReplicatedStorage.Shared.SpectatorTargetRules)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
+local JumpLandingPreviewKit = require(script.Parent.JumpLandingPreviewKit)
 
 local player = Players.LocalPlayer
+local landingPreview = JumpLandingPreviewKit.new(player)
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local hazardImpactEvent = remotes:WaitForChild("HazardImpactFeedback")
 local mechanicFeedbackEvent = remotes:WaitForChild("ArenaMechanicFeedback")
@@ -41,6 +43,7 @@ local lastFinalRush = false
 local lastOverdrive = false
 
 local function disconnectCharacter()
+    landingPreview.hide()
     for _, connection in ipairs(characterConnections) do
         connection:Disconnect()
     end
@@ -268,18 +271,24 @@ RunService:BindToRenderStep(
             accelerationKick = 0
             speedFovOffset = 0
             CameraFeelBus.reset()
+            landingPreview.hide()
             return
         end
         if not camera or not root or not root.Parent or not humanoid or humanoid.Health <= 0 then
             CameraFeelBus.reset()
+            landingPreview.hide()
             return
         end
 
+        -- One existing render owner performs a bounded 10Hz collision
+        -- sample while descending. All other frames only check state.
+        landingPreview.update(previousPhase, root, humanoid)
         lastVerticalVelocity = root.AssemblyLinearVelocity.Y
 
         local scale = qualityScale()
         if scale <= 0 then
             CameraFeelBus.reset()
+            landingPreview.hide()
             return
         end
 
