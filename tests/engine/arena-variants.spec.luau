@@ -6,6 +6,7 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaTargeting = require("../../src/server/ArenaTargeting")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
+local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 
 describe("Arena variants", function()
     it("defines four distinct playable layouts", function()
@@ -22,6 +23,51 @@ describe("Arena variants", function()
             expect(#variant.Platforms >= 14).toBe(true)
             expect(variant.BaseSize.X >= 90).toBe(true)
             expect(variant.BaseSize.Z >= 90).toBe(true)
+
+            -- The visual jump arrows are generated only for physically
+            -- reachable successors, and never for Orbital's real Helix
+            -- ramps. Exercise the full live collision-sized authored set.
+            local live = Instance.new("Folder")
+            live.Name = "ParkourRouteProof"
+            local decks = {}
+            for index, definition in ipairs(variant.Platforms) do
+                local part = Instance.new("Part")
+                part.Name = (definition.Skybridge and "Skybridge" or "Platform")
+                    .. tostring(index)
+                part.Size = definition.size
+                part.Position = definition.offset
+                part.Anchored = true
+                if definition.RouteTier then
+                    part:SetAttribute("RouteTier", definition.RouteTier)
+                end
+                part.Parent = live
+                decks[#decks + 1] = part
+            end
+            local checked = 0
+            for _, from in ipairs(decks) do
+                local to = JumpRouteCueRules.select(
+                    from, decks, Vector3.zero, id
+                )
+                if to then
+                    checked += 1
+                    local gap = JumpRouteCueRules.gap(from, to)
+                    local rise = to.Position.Y + to.Size.Y * 0.5
+                        - from.Position.Y - from.Size.Y * 0.5
+                    expect(gap > 0.15 and gap <= JumpRouteCueRules.MaxGap).toBe(true)
+                    expect(rise >= -0.05
+                        and rise <= JumpRouteCueRules.MaxRise).toBe(true)
+                    local frame = JumpRouteCueRules.takeoffFrame(from, to, nil)
+                    expect(frame ~= nil).toBe(true)
+                    local localPoint = from.CFrame:PointToObjectSpace(frame.Position)
+                    expect(math.abs(localPoint.X) <= from.Size.X * 0.5 - 0.7).toBe(true)
+                    expect(math.abs(localPoint.Z) <= from.Size.Z * 0.5 - 0.7).toBe(true)
+                end
+            end
+            expect(checked >= (id == "Orbital" and 0 or 8)).toBe(true)
+            if id == "Orbital" then
+                expect(checked).toBe(0)
+            end
+            live:Destroy()
         end
     end)
 
