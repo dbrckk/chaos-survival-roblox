@@ -150,7 +150,9 @@ function JumpLandingPreviewKit.new(player)
         if forward.Magnitude < 0.1 then
             forward = Vector3.xAxis
         end
-        local center = hit.Position + up * 0.09
+        -- Server-authored inset panels can sit 0.18 studs above the
+        -- collision surface; lift only the thin outline to avoid z-fighting.
+        local center = hit.Position + up * 0.22
         local basis = CFrame.lookAt(center, center + forward.Unit, up)
         for index, part in ipairs(pieces) do
             if index <= count then
