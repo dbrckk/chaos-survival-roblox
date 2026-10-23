@@ -15,10 +15,6 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
-local guiFolder = Instance.new("Folder")
-guiFolder.Name = "LavaHighGroundSignsLocal"
-guiFolder.Parent = playerGui
-
 local worldFolder = Instance.new("Folder")
 worldFolder.Name = "LavaHighGroundOutlinesLocal"
 worldFolder.Parent = workspace
@@ -28,6 +24,7 @@ local activePlatforms = nil
 local disconnectMap = nil
 local disconnectPlatforms = nil
 local signs = {}
+local collapseConnections = {}
 local currentState = nil
 local rebuildQueued = false
 
@@ -41,8 +38,14 @@ local function lavaIsActive(state)
 end
 
 local function clear()
+    for _, connection in ipairs(collapseConnections) do
+        connection:Disconnect()
+    end
+    table.clear(collapseConnections)
+    for _, sign in ipairs(signs) do
+        sign.billboard:Destroy()
+    end
     table.clear(signs)
-    guiFolder:ClearAllChildren()
     worldFolder:ClearAllChildren()
 end
 
@@ -90,7 +93,10 @@ local function createSign(platform, accent)
     )
     gui.Enabled = false
     gui.ResetOnSpawn = false
-    gui.Parent = guiFolder
+    -- A direct PlayerGui LayerCollector with ResetOnSpawn=false survives
+    -- a character death; a GUI nested under a Folder does not have that
+    -- lifetime guarantee.
+    gui.Parent = playerGui
 
     local panel = Instance.new("Frame")
     panel.Name = "RouteLabel"
@@ -155,6 +161,10 @@ local function createSign(platform, accent)
         billboard = gui,
         outline = outline,
     }
+    -- Collapse changes need only toggle existing objects, not rebuild
+    -- every label during a fast Disappearing Platforms hazard.
+    collapseConnections[#collapseConnections + 1] =
+        platform:GetAttributeChangedSignal("CollapsePhase"):Connect(refresh)
 end
 
 local function rebuild()
@@ -198,7 +208,7 @@ local function bindPlatforms()
     activePlatforms = platforms
     if platforms then
         disconnectPlatforms = MapVisualReadiness.watchChildrenAttributes(
-            platforms, {"RouteTier", "CollapsePhase"},
+            platforms, {"RouteTier"},
             scheduleRebuild
         )
     end
