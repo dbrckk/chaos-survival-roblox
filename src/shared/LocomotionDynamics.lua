@@ -81,6 +81,29 @@ function LocomotionDynamics.flight(verticalVelocity, grounded, lowGravity)
         math.clamp((-velocity - 7) / 35, 0, 1) * scale
 end
 
+-- Only a sampled, recent, nontrivial airborne descent may trigger
+-- landing poses and camera reactions. StateChanged(Landed) can arrive after
+-- native physics has already zeroed the velocity; the caller supplies the
+-- greatest downward speed observed during the current fall instead.
+-- Never replay an old impact after Android app suspension / frame stalls.
+function LocomotionDynamics.verifiedLandingSpeed(
+    peakDownwardSpeed, airborneSeconds, secondsSinceAirSample
+)
+    local speed = tonumber(peakDownwardSpeed)
+    local airborne = tonumber(airborneSeconds)
+    local sampleGap = tonumber(secondsSinceAirSample)
+    local function finite(n)
+        return type(n) == "number" and n == n
+            and n > -math.huge and n < math.huge
+    end
+    if not finite(speed) or not finite(airborne) or not finite(sampleGap)
+        or speed <= 20 or airborne < 0.10 or airborne > 15
+        or sampleGap < 0 or sampleGap > 0.30 then
+        return 0
+    end
+    return math.clamp(speed, 0, 180)
+end
+
 -- A very short, damped landing-response silhouette. This is an
 -- additive joint pose only: no camera offset, Humanoid force or Animator
 -- track. The second value counterbalances the first, avoiding a hard snap
