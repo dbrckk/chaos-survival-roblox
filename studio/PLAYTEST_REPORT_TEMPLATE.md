@@ -51,6 +51,19 @@ Copy this file for each release-candidate certification run.
 | Late join receives current round state |  |  |
 | Leave/rejoin does not corrupt the round |  |  |
 
+## Perimeter gameplay routes and believable simulated survivors
+
+- Exact private test-place SHA and version:
+- Classic / Towers / Crossroads / Orbital: 4 physically jumpable outer paths each: PASS / FAIL / NOT RUN
+- All 4 floors remain walkable, no new low-ceiling or spawn collision traps: PASS / FAIL / NOT RUN
+- Original Skybridges 18–21 / Helix / sensor routes remain functional: PASS / FAIL / NOT RUN
+- Shrinking Arena, meteors, bombs also affect the new outer zones fairly: PASS / FAIL / NOT RUN
+- Outer metal/wedge/glass models visible without collision or loss of 30 FPS: PASS / FAIL / NOT RUN
+- 20-name fictional bot roster shows native Humanoid labels, without AI tag or duplicated names: PASS / FAIL / NOT RUN
+- Bots demonstrably use the new paths and avoid hazards (not only roam center): PASS / FAIL / NOT RUN
+- Real players remain clearly distinguished in roster/moderation and chat authority: PASS / FAIL / NOT RUN
+- Native Android capture / FPS / memory / AI movement log:
+
 ## Arena pass
 
 | Arena | Visual quality | Navigation | Hazard readability | Performance | Notes |
