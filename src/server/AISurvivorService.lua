@@ -3165,4 +3165,17 @@ function AISurvivorService.names()
     return result
 end
 
+-- Read-only snapshot for server-side roster validation and engine QA.
+-- These are authored fictional NPC personas, not account identities.
+function AISurvivorService.identityCatalog()
+    local result = {}
+    for _, identity in ipairs(IDENTITIES) do
+        table.insert(result, {
+            Username = identity.Username,
+            DisplayName = identity.DisplayName,
+        })
+    end
+    return result
+end
+
 return AISurvivorService
