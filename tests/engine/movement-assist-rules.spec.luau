@@ -97,7 +97,7 @@ describe("Movement assist rules", function()
         expect(Rules.timeToSurface(8, 196.2, 3)).toBe(nil)
         expect(Rules.timeToSurface(-10, 0, 3)).toBe(nil)
         expect(Rules.timeToSurface(-10, 196.2, 20)).toBe(nil)
-        expect(Rules.timeToSurface(-4, 196.2, 13)).toBe(nil)
+        expect(Rules.timeToSurface(-4, 20, 13)).toBe(nil)
         expect(Rules.timeToSurface(-20, 196.2, -1)).toBe(nil)
         expect(Rules.timeToSurface(0 / 0, 196.2, 3)).toBe(nil)
 
