@@ -354,6 +354,46 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("physically builds accessible outer parkour while retaining original core IDs", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local platforms = arena:FindFirstChild("Platforms")
+            local base = arena:FindFirstChild("Base")
+            local original = #variant.Platforms
+            expect(#platforms:GetChildren()).toBe(original + 8)
+            for route = 1, 4 do
+                local previous = nil
+                for step = 1, 2 do
+                    local number = original + (route - 1) * 2 + step
+                    local platform = platforms:FindFirstChild("Platform" .. number)
+                    expect(platform ~= nil).toBe(true)
+                    expect(platform.CanCollide).toBe(true)
+                    expect(platform.Anchored).toBe(true)
+                    expect(platform:GetAttribute("PerimeterRoute")).toBe(route)
+                    expect(platform:GetAttribute("PerimeterStep")).toBe(step)
+                    expect(platform:GetAttribute("RouteTier")).toBe(step)
+                    expect(math.abs(platform.Position.X - Config.ArenaCenter.X)
+                        >= 45).toBe(true)
+                    expect(math.abs(platform.Position.Y - platform.Size.Y * 0.5
+                        - (base.Position.Y + base.Size.Y * 0.5)) < 0.001).toBe(true)
+                    if previous then
+                        local horizontal = JumpRouteCueRules.gap(previous, platform)
+                        local rise = platform.Position.Y + platform.Size.Y * 0.5
+                            - (previous.Position.Y + previous.Size.Y * 0.5)
+                        expect(horizontal > 0.15 and horizontal < 3.85).toBe(true)
+                        expect(rise >= 2.5 and rise <= 4.05).toBe(true)
+                    end
+                    previous = platform
+                end
+            end
+            -- The same authoritative folder is inspected by AI, shrinking,
+            -- platform collapse, collectibles and native raycasts.
+            root:Destroy()
+        end
+    end)
+
     it("builds physical Tower Run bridges with purely cosmetic edge rails", function()
         local root = MapBuilder.build(Config, "Towers", ArenaVariants)
         local arena = root:FindFirstChild("Arena")
@@ -408,9 +448,11 @@ describe("Chaos Survival engine", function()
                 tierCount[tier] += 1
             end
         end
-        expect(#(platforms :: Folder):GetChildren()).toBe(21)
-        expect(tierCount[1]).toBe(5)
-        expect(tierCount[2]).toBe(4)
+        expect(#(platforms :: Folder):GetChildren()).toBe(29)
+        -- Original 21 decks and Skybridges 18–21 are unchanged.
+        -- Eight outer-rim stages add four floor entries and four exits.
+        expect(tierCount[1]).toBe(9)
+        expect(tierCount[2]).toBe(8)
         expect(tierCount[3]).toBe(4)
         expect(tierCount[4]).toBe(4)
 
