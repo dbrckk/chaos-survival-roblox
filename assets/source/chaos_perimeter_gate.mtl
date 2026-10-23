@@ -1,0 +1,15 @@
+# Original Chaos Survival industrial material palette, no external textures
+newmtl FRAME
+Kd 0.055 0.090 0.155
+Ks 0.19 0.24 0.32
+Ns 70
+newmtl BRUSHED
+Kd 0.25 0.32 0.42
+Ks 0.35 0.37 0.38
+Ns 110
+newmtl CYAN
+Kd 0.08 0.80 0.92
+Ke 0.03 0.34 0.45
+newmtl INDIGO
+Kd 0.42 0.26 0.90
+Ke 0.10 0.03 0.26
