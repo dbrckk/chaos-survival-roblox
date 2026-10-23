@@ -11,17 +11,20 @@ local roundState = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local activePhase = "waiting"
 local faded = nil
 local previousModifier = 0
+local fadeValue = 0.72
+local lastCamera = nil
 
 local function restore()
     if faded and faded.Parent then
         -- Yield to native Roblox camera/streaming writers if they adjusted
         -- this modifier while our temporary fade was in effect.
-        if math.abs(faded.LocalTransparencyModifier - 0.72) < 0.001 then
+        if math.abs(faded.LocalTransparencyModifier - fadeValue) < 0.001 then
             faded.LocalTransparencyModifier = previousModifier
         end
     end
     faded = nil
     previousModifier = 0
+    lastCamera = nil
 end
 
 local function supportedTarget(part, arena, base)
@@ -63,6 +66,10 @@ local function update()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
+    if camera ~= lastCamera then
+        restore()
+        lastCamera = camera
+    end
     if not camera or not root or not root:IsA("BasePart")
         or not arena or not base or not base:IsA("BasePart") then
         restore()
@@ -91,13 +98,14 @@ local function update()
 
     if nextPart ~= faded then
         restore()
+        lastCamera = camera
         if nextPart and nextPart.Parent then
             faded = nextPart
             previousModifier = faded.LocalTransparencyModifier
             -- Don't overwrite parts intentionally hidden by another
             -- client-side visibility owner.
             if previousModifier < 0.55 then
-                faded.LocalTransparencyModifier = 0.72
+                faded.LocalTransparencyModifier = fadeValue
             else
                 faded = nil
             end
