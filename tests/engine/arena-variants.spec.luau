@@ -77,6 +77,61 @@ describe("Arena variants", function()
         end
     end)
 
+    it("adds four physically walkable exterior routes without moving core systems", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local perimeter = variant.PerimeterPlatforms
+            expect(type(perimeter)).toBe("table")
+            expect(#perimeter).toBe(8)
+            local baseTop = variant.BaseSize.Y * 0.5
+            for route = 1, 4 do
+                local entry = perimeter[(route - 1) * 2 + 1]
+                local outer = perimeter[(route - 1) * 2 + 2]
+                expect(entry.PerimeterRoute).toBe(route)
+                expect(outer.PerimeterRoute).toBe(route)
+                expect(entry.PerimeterStep).toBe(1)
+                expect(outer.PerimeterStep).toBe(2)
+                expect(entry.RouteTier).toBe(1)
+                expect(outer.RouteTier).toBe(2)
+
+                local topEntry = entry.offset.Y + entry.size.Y * 0.5
+                local topOuter = outer.offset.Y + outer.size.Y * 0.5
+                local belowEntry = entry.offset.Y - entry.size.Y * 0.5
+                local belowOuter = outer.offset.Y - outer.size.Y * 0.5
+                -- Platforms are solid from the floor up: no R15 could be
+                -- trapped underneath the new larger outskirts.
+                expect(math.abs(belowEntry - baseTop) < 0.001).toBe(true)
+                expect(math.abs(belowOuter - baseTop) < 0.001).toBe(true)
+                expect(topEntry - baseTop <= 4).toBe(true)
+                expect(topOuter - topEntry > 2).toBe(true)
+                expect(topOuter - topEntry <= JumpRouteCueRules.MaxRise).toBe(true)
+
+                local dx = math.max(0, math.abs(outer.offset.X - entry.offset.X)
+                    - (outer.size.X + entry.size.X) * 0.5)
+                local dz = math.max(0, math.abs(outer.offset.Z - entry.offset.Z)
+                    - (outer.size.Z + entry.size.Z) * 0.5)
+                local gap = math.sqrt(dx * dx + dz * dz)
+                expect(gap > 0.15 and gap <= JumpRouteCueRules.MaxGap).toBe(true)
+
+                local radius = math.max(math.abs(entry.offset.X), math.abs(entry.offset.Z))
+                expect(radius >= 45).toBe(true)
+                for _, deck in ipairs({entry, outer}) do
+                    expect(math.abs(deck.offset.X) + deck.size.X * 0.5
+                        <= variant.BaseSize.X * 0.5 - 5).toBe(true)
+                    expect(math.abs(deck.offset.Z) + deck.size.Z * 0.5
+                        <= variant.BaseSize.Z * 0.5 - 5).toBe(true)
+                    for _, spawn in ipairs(variant.SpawnOffsets) do
+                        local clearX = math.abs(spawn.X - deck.offset.X)
+                            >= deck.size.X * 0.5 + 3.8
+                        local clearZ = math.abs(spawn.Z - deck.offset.Z)
+                            >= deck.size.Z * 0.5 + 3.8
+                        expect(clearX or clearZ).toBe(true)
+                    end
+                end
+            end
+        end
+    end)
+
     it("gives Classic four authored, spawn-safe, continuously reachable tiers", function()
         local classic = ArenaVariants.get("Classic")
         local tiers = {{}, {}, {}, {}}
