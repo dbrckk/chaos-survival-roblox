@@ -74,7 +74,8 @@ local function requestAssistedJump()
             false,
             now - lastGroundedAt,
             state,
-            jumpEnabled(active)
+            jumpEnabled(active),
+            coyoteConsumed
         )
     then
         coyoteConsumed = true
@@ -151,6 +152,13 @@ local function bindCharacter(nextCharacter)
     stateConnection = nextHumanoid.StateChanged:Connect(function(_, state)
         if not isCurrent(version, nextCharacter, nextHumanoid) then
             return
+        end
+        -- Roblox can transition from Jumping to Freefall within the
+        -- 100ms coyote window. Consume the window for a normal jump so
+        -- a second tap cannot create an unintended mid-air double jump.
+        if state == Enum.HumanoidStateType.Jumping then
+            coyoteConsumed = true
+            bufferedUntil = -math.huge
         end
         if state == Enum.HumanoidStateType.Dead
             or state == Enum.HumanoidStateType.Seated
