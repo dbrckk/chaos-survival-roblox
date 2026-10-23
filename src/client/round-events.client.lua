@@ -124,6 +124,7 @@ local lastDoubleCollapseUnlocked = false
 local lastSpeedTempoPhase = nil
 local lastGravityTideStage = nil
 local lastLavaStage = nil
+local lastBlackoutStage = nil
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
@@ -300,6 +301,10 @@ stateEvent.OnClientEvent:Connect(function(state)
             or state.lavaStage == "Surge"
             or state.lavaStage == "FinalRise")
         and state.lavaStage or nil
+    local blackoutStage = phase == "round"
+        and (state.blackoutStage == "Dark"
+            or state.blackoutStage == "PowerReturn")
+        and state.blackoutStage or nil
     local fusionName = type(state.fusionName) == "string" and state.fusionName or nil
     local fusionKey = state.doubleChaos and fusionName or nil
     local eventColor = RoundEventPresentation.accent(
@@ -401,6 +406,26 @@ stateEvent.OnClientEvent:Connect(function(state)
             )
         end
     elseif phase == "round"
+        and blackoutStage ~= nil
+        and lastBlackoutStage ~= nil
+        and blackoutStage ~= lastBlackoutStage
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+    then
+        local key = RoundEventPresentation.blackoutCue(
+            lastBlackoutStage, blackoutStage
+        )
+        if key then
+            show(
+                "blackoutWindow",
+                CoreLocalization.text(localeId, key),
+                CoreLocalization.text(localeId, key .. "_SUB"),
+                blackoutStage == "PowerReturn"
+                    and UITheme.Colors.Cyan or UITheme.Colors.Violet,
+                0.95
+            )
+        end
+    elseif phase == "round"
         and player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
     then
@@ -421,6 +446,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
     end
 
+    lastBlackoutStage = blackoutStage
     lastLavaStage = lavaStage
     lastGravityTideStage = gravityTideStage
     lastSpeedTempoPhase = speedTempoPhase
