@@ -35,7 +35,12 @@ function D.start(ctx)
 
         frozen[humanoid] = nil
         if humanoid and humanoid.Parent then
-            humanoid:SetAttribute("ChaosFrozen", false)
+            -- A different mechanic may have taken ownership of the frozen
+            -- marker. Restore the previous state only if our marker is
+            -- still present, instead of clearing somebody else's status.
+            if humanoid:GetAttribute("ChaosFrozen") == true then
+                humanoid:SetAttribute("ChaosFrozen", state.originalFrozen)
+            end
             if humanoid.WalkSpeed == state.appliedWalkSpeed then
                 humanoid.WalkSpeed = state.walkSpeed
             end
@@ -90,6 +95,7 @@ function D.start(ctx)
                     local appliedJumpPower = 0
                     local appliedJumpHeight = 0
                     frozen[hum] = {
+                        originalFrozen = hum:GetAttribute("ChaosFrozen"),
                         walkSpeed = hum.WalkSpeed,
                         jumpPower = hum.JumpPower,
                         jumpHeight = hum.JumpHeight,
