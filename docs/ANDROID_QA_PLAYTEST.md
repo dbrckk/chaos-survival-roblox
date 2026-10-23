@@ -48,6 +48,26 @@ Record the graphics tier, Reduce Motion, device model and whether any
 capture failed. Do not mark this checklist visually accepted from CI
 syntax/build or Open Cloud engine-test success alone.
 
+## True touchdown / movement transition acceptance
+
+On a private staging experience whose published build is proven to match
+the candidate GitHub SHA, record R6 and R15 **real** Android gameplay of
+(1) a normal small stair step (no heavy landing);
+(2) one full jump between two distinct raised decks (one matching crouch /
+camera reaction on contact, not none or several);
+(3) a fast-moving jump followed by a landing (no false sprint/skid/pivot
+cue on the same touchdown frame);
+(4) Jump Shock / Moon Gravity / Speed Surge transitions and a final
+round-to-lobby reset; and
+(5) app suspend/resume while airborne or before touchdown (no delayed
+landing burst or camera kick after resuming).
+
+Check reduced-motion / Low-tier effects are restrained, impact HUD and
+hazard telegraphs remain unobscured, and no performance degradation
+appears in a 15-minute repeated-jumps session. Supply video, real
+client output, device + network, VFX tier, and exact staged SHA.
+Build/Open Cloud success alone is **NOT** a physical animation pass.
+
 ## Motion controller respawn race — authenticated device acceptance
 
 On an isolated **staged build of the exact SHA** (not the older public

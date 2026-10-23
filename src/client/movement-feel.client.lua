@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local SpectatorTargetRules = require(ReplicatedStorage.Shared.SpectatorTargetRules)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
+local LocomotionDynamics = require(ReplicatedStorage.Shared.LocomotionDynamics)
 local JumpLandingPreviewKit = require(script.Parent.JumpLandingPreviewKit)
 
 local player = Players.LocalPlayer
@@ -29,8 +30,10 @@ local mechanicKick = 0
 local lean = 0
 local bob = 0
 local shakeClock = 0
-local lastVerticalVelocity = 0
 local wasAirborne = false
+local airborneStartedAt = -math.huge
+local lastAirSampleAt = -math.huge
+local peakFallSpeed = 0
 local lastLandingBurstAt = 0
 local lastHorizontalSpeed = 0
 local accelerationKick = 0
@@ -138,11 +141,14 @@ local function bindCharacter(nextCharacter)
     mechanicKick = 0
     lean = 0
     bob = 0
-    lastVerticalVelocity = 0
     wasAirborne = false
+    airborneStartedAt = -math.huge
+    lastAirSampleAt = -math.huge
+    peakFallSpeed = 0
     lastHorizontalSpeed = 0
     accelerationKick = 0
     speedFovOffset = 0
+    lastLandingBurstAt = -math.huge
     presentationKick = 0
     presentationKickTarget = 0
     CameraFeelBus.reset()
@@ -170,7 +176,18 @@ local function bindCharacter(nextCharacter)
         end
         humanoid = nextHumanoid
         root = nextRoot
+        -- A newly replicated rig might already be sprinting; its first
+        -- velocity sample is a baseline, not an acceleration impulse.
+        local initialVelocity = nextRoot.AssemblyLinearVelocity
+        lastHorizontalSpeed = Vector3.new(
+            initialVelocity.X, 0, initialVelocity.Z
+        ).Magnitude
+        accelerationKick = 0
         wasAirborne = nextHumanoid:GetState() == Enum.HumanoidStateType.Freefall
+        airborneStartedAt = wasAirborne and os.clock() or -math.huge
+        lastAirSampleAt = airborneStartedAt
+        peakFallSpeed = wasAirborne
+            and math.max(0, -nextRoot.AssemblyLinearVelocity.Y) or 0
         -- A streamed/replaced Root cannot leave duplicated state listeners.
         -- The sole bound Humanoid/Root identity is rechecked on each event.
         humanoidStateConnection = nextHumanoid.StateChanged:Connect(function(_, newState)
@@ -179,8 +196,21 @@ local function bindCharacter(nextCharacter)
                 or humanoid ~= nextHumanoid or root ~= nextRoot then
                 return
             end
-            if newState == Enum.HumanoidStateType.Freefall then
-                wasAirborne = true
+            if newState == Enum.HumanoidStateType.Jumping then
+                wasAirborne = false
+                airborneStartedAt = -math.huge
+                lastAirSampleAt = -math.huge
+                peakFallSpeed = 0
+            elseif newState == Enum.HumanoidStateType.Freefall then
+                if not wasAirborne then
+                    wasAirborne = true
+                    airborneStartedAt = os.clock()
+                    peakFallSpeed = 0
+                end
+                peakFallSpeed = math.max(
+                    peakFallSpeed, math.max(0, -nextRoot.AssemblyLinearVelocity.Y)
+                )
+                lastAirSampleAt = os.clock()
             elseif wasAirborne
                 and (
                     newState == Enum.HumanoidStateType.Landed
@@ -188,8 +218,14 @@ local function bindCharacter(nextCharacter)
                     or newState == Enum.HumanoidStateType.RunningNoPhysics
                 )
             then
+                local now = os.clock()
+                local fallSpeed = LocomotionDynamics.verifiedLandingSpeed(
+                    peakFallSpeed, now - airborneStartedAt, now - lastAirSampleAt
+                )
                 wasAirborne = false
-                local fallSpeed = math.max(0, -lastVerticalVelocity)
+                peakFallSpeed = 0
+                airborneStartedAt = -math.huge
+                lastAirSampleAt = -math.huge
                 if fallSpeed > 22 then
                     local strength = math.clamp((fallSpeed - 22) / 58, 0.08, 0.72)
                     landingKick = math.max(landingKick, strength)
@@ -217,8 +253,10 @@ player.CharacterRemoving:Connect(function(removingCharacter)
     humanoid = nil
     root = nil
     wasAirborne = false
+    airborneStartedAt = -math.huge
+    lastAirSampleAt = -math.huge
+    peakFallSpeed = 0
     landingKick = 0
-    lastVerticalVelocity = 0
     accelerationKick = 0
     speedFovOffset = 0
     CameraFeelBus.reset()
@@ -343,7 +381,30 @@ RunService:BindToRenderStep(
         -- One existing render owner performs a bounded 10Hz collision
         -- sample while descending. All other frames only check state.
         landingPreview.update(previousPhase, root, humanoid)
-        lastVerticalVelocity = root.AssemblyLinearVelocity.Y
+        local nowSample = os.clock()
+        local verticalSpeed = root.AssemblyLinearVelocity.Y
+        local inFreefall = humanoid:GetState() == Enum.HumanoidStateType.Freefall
+            and humanoid.FloorMaterial == Enum.Material.Air
+        if type(dt) ~= "number" or dt ~= dt or dt > 0.30 then
+            -- Ignore stale velocities after Android app suspension.
+            wasAirborne = false
+            airborneStartedAt = -math.huge
+            lastAirSampleAt = -math.huge
+            peakFallSpeed = 0
+            accelerationKick = 0
+            lastHorizontalSpeed = Vector3.new(
+                root.AssemblyLinearVelocity.X, 0, root.AssemblyLinearVelocity.Z
+            ).Magnitude
+        end
+        if inFreefall then
+            if not wasAirborne then
+                wasAirborne = true
+                airborneStartedAt = nowSample
+                peakFallSpeed = 0
+            end
+            peakFallSpeed = math.max(peakFallSpeed, math.max(0, -verticalSpeed))
+            lastAirSampleAt = nowSample
+        end
 
         local scale = qualityScale()
         if scale <= 0 then

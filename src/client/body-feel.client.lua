@@ -29,7 +29,11 @@ local celebrationKind = nil
 local celebrationWeight = 0
 local celebrationUntil = 0
 local airborne = false
-local lastY = 0
+local airborneStartedAt = -math.huge
+local lastAirSampleAt = -math.huge
+local peakFallSpeed = 0
+local previouslyGrounded = false
+local hasMotionBaseline = false
 local speedSurgeActive = false
 local lowGravityActive = false
 local roundPhase = "waiting"
@@ -110,14 +114,36 @@ local function attachRig(nextCharacter, serial)
             humanoidStateConnection = nil
         end
         humanoid = nextHumanoid
+        previouslyGrounded = humanoid.FloorMaterial ~= Enum.Material.Air
+        hasMotionBaseline = false
         humanoidStateConnection = humanoid.StateChanged:Connect(function(_, state)
             if serial ~= bindSerial then return end
             if state == Enum.HumanoidStateType.Jumping then
+                -- A new takeoff cannot inherit the preceding landing.
+                airborne = false
+                peakFallSpeed = 0
+                airborneStartedAt = -math.huge
+                lastAirSampleAt = -math.huge
                 jumpWeight = math.max(jumpWeight, 1)
                 landingRecoveryStrength = 0
                 landingRecoveryClock = 0
             elseif state == Enum.HumanoidStateType.Freefall then
-                airborne = true
+                if not airborne then
+                    airborne = true
+                    airborneStartedAt = os.clock()
+                    peakFallSpeed = 0
+                end
+                -- RootPart may stream out and be replaced without a new
+                -- Humanoid. Always sample the live rig, not a captured old
+                -- RootPart from the original StateChanged subscription.
+                local currentRoot = root
+                if currentRoot and currentRoot.Parent == nextCharacter then
+                    peakFallSpeed = math.max(
+                        peakFallSpeed,
+                        math.max(0, -currentRoot.AssemblyLinearVelocity.Y)
+                    )
+                    lastAirSampleAt = os.clock()
+                end
                 landingRecoveryStrength = 0
                 landingRecoveryClock = 0
             elseif airborne and (
@@ -125,8 +151,14 @@ local function attachRig(nextCharacter, serial)
                 or state == Enum.HumanoidStateType.Running
                 or state == Enum.HumanoidStateType.RunningNoPhysics
             ) then
+                local now = os.clock()
+                local fallSpeed = LocomotionDynamics.verifiedLandingSpeed(
+                    peakFallSpeed, now - airborneStartedAt, now - lastAirSampleAt
+                )
                 airborne = false
-                local fallSpeed = math.max(0, -lastY)
+                peakFallSpeed = 0
+                airborneStartedAt = -math.huge
+                lastAirSampleAt = -math.huge
                 if fallSpeed > 20 then
                     landing = math.max(landing,
                         math.clamp((fallSpeed - 20) / 60, 0.08, 0.65))
@@ -190,7 +222,11 @@ local function bind(nextCharacter)
     celebrationWeight = 0
     celebrationUntil = 0
     airborne = false
-    lastY = 0
+    airborneStartedAt = -math.huge
+    lastAirSampleAt = -math.huge
+    peakFallSpeed = 0
+    previouslyGrounded = false
+    hasMotionBaseline = false
     launchWeight = 0
     impactWeight = 0
     impactSide = 0
@@ -415,12 +451,36 @@ RunService:BindToRenderStep(
             return
         end
 
-        lastY = root.AssemblyLinearVelocity.Y
         local velocity = root.AssemblyLinearVelocity
+        local nowSample = os.clock()
+        local isFreefall = humanoid:GetState() == Enum.HumanoidStateType.Freefall
+            and humanoid.FloorMaterial == Enum.Material.Air
+        if interrupted then
+            -- A suspended Android app must not replay an old impact.
+            airborne = false
+            peakFallSpeed = 0
+            airborneStartedAt = -math.huge
+            lastAirSampleAt = -math.huge
+        end
+        if isFreefall then
+            if not airborne then
+                airborne = true
+                airborneStartedAt = nowSample
+                peakFallSpeed = 0
+            end
+            peakFallSpeed = math.max(peakFallSpeed, math.max(0, -velocity.Y))
+            lastAirSampleAt = nowSample
+        end
         local localVelocity = root.CFrame:VectorToObjectSpace(Vector3.new(velocity.X, 0, velocity.Z))
         local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
         local moving = humanoid.MoveDirection.Magnitude > 0.05 and speed > 2.5
         local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
+        -- A streamed-in avatar already moving at full speed must not
+        -- create a fictitious acceleration or brake on its first sample.
+        local settledGroundContact = grounded and previouslyGrounded
+            and hasMotionBaseline
+        previouslyGrounded = grounded
+        hasMotionBaseline = not interrupted
         local reduced = player:GetAttribute("ReduceMotion") == true
         -- Native Showtime Action tracks take priority while dancing.
         -- Blend C0 corrections to neutral without stopping the track.
@@ -431,8 +491,13 @@ RunService:BindToRenderStep(
         local scale = BodyMotionRules.motionScale(reduced)
 
         local acceleration = (speed - lastSpeed) / math.max(dt, 1 / 240)
+        -- A fresh touchdown or resumed frame is not a genuine sprint
+        -- launch, hard brake or pivot. Keep the landing's separate pose.
+        if not settledGroundContact or interrupted then
+            acceleration = 0
+        end
         local launchTarget, skidTarget = LocomotionDynamics.acceleration(
-            speed, lastSpeed, dt, grounded
+            speed, lastSpeed, dt, settledGroundContact and not interrupted
         )
         -- Never turn a background/resume speed delta into a fake sprint,
         -- skid or ground VFX. Sample the new physical speed as baseline.
@@ -462,7 +527,8 @@ RunService:BindToRenderStep(
         local brakeTarget = BodyMotionRules.brakeWeight(acceleration, moving)
         brakePose += (brakeTarget - brakePose) * expAlpha(10, dt)
         local cutTarget = LocomotionDynamics.cut(
-            previousMoveDirection, moveDirection, speed, grounded
+            previousMoveDirection, moveDirection, speed,
+            settledGroundContact and not interrupted
         )
         if interrupted then cutTarget = 0 end
         cutPose += (cutTarget - cutPose) * expAlpha(11, dt)

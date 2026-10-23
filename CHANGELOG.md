@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — Physically sampled touchdown and transition polish (candidate)
+
+- Fix unreliable landing reactions when native Roblox physics zeroes the avatar's vertical speed before Humanoid Landed/Running fires. Both body-pose and camera-feedback owners now retain the highest **actual observed downward speed during the current Freefall** instead of the velocity of a potentially already-grounded final frame. A shared deterministic gate requires at least 0.10 seconds of flight and a fresh (<0.30 second) physics sample; it bounds speed at 180 studs/s.
+- Reset captured fall data at takeoff, avatar replacement and on Android app/background stalls. Do not replay landing VFX, camera pitch or a squat after a suspended render callback or a tiny stair step.
+- Separate a new touchdown from running's steady-ground acceleration/pivot logic; the first grounded frame can animate the impact without generating a false sprint-launch or hard-stop skid. No server physics, jump timing, damage, remote or monetization change. Reuse existing render owners and visual budgets.
+- Extend **existing** Roblox engine locomotion coverage for valid real fall captures, stale sample gaps, malformed numeric values and false landing skids. Studio/Android visual + audio acceptance and public-game publication remain unverified until an exact-SHA staged device session.
+
 ## 2026-10-23 — Responsive character animation/camera ownership (candidate)
 
 - Prevent delayed initial avatar binding from taking ownership of an already replaced human R6/R15 rig. Ignore stale CharacterRemoving signals in the local body-motion controller; do not reset another avatar's Motor6D offsets or apply pose changes when the live player character differs.
