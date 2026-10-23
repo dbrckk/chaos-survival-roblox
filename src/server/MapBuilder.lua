@@ -1787,7 +1787,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     light.Shadows = false
     light.Parent = beacon
 
-    for i, definition in ipairs(variant.Platforms) do
+    -- PerimeterRoutes are appended AFTER every original platform ID.
+    -- Keeping the combined parts under Platforms lets all server-owned
+    -- disaster and AI systems treat outer routes as real gameplay geometry.
+    local platformDefinitions = table.clone(variant.Platforms)
+    for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
+
+    for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
         local platform = part(
             platforms,
@@ -1801,6 +1809,18 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         local routeTier = tonumber(definition.RouteTier)
         if routeTier and routeTier >= 1 and routeTier <= 4 then
             platform:SetAttribute("RouteTier", routeTier)
+        end
+        if definition.PerimeterRoute then
+            -- Explicit route metadata is visible to wayfinding and QA.
+            -- It is not a fake waypoint: this is a collidable real Part.
+            platform:SetAttribute("PerimeterRoute", definition.PerimeterRoute)
+            platform:SetAttribute("PerimeterStep", definition.PerimeterStep)
+            platform.Color = theme.Surface:Lerp(
+                definition.PerimeterStep == 1 and theme.Detail or theme.Secondary,
+                0.30
+            )
+            platform.Material = theme.StructureMaterial
+                or VisualTheme.Materials.Structure
         end
 
         if definition.Skybridge == true then
