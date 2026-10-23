@@ -350,6 +350,29 @@ describe("Chaos Survival engine", function()
             end
             expect(count).toBe(4)
             expect(wedges >= 8).toBe(true)
+            local cornerCount = 0
+            for _, corner in ipairs({"NW", "NE", "SE", "SW"}) do
+                local monument = decor:FindFirstChild("OuterCornerMonument" .. corner)
+                expect(monument ~= nil and monument:IsA("Model")).toBe(true)
+                expect(monument:GetAttribute("ChaosCornerMonument")).toBe(true)
+                local parts = 0
+                for _, piece in ipairs(monument:GetChildren()) do
+                    if piece:IsA("BasePart") then
+                        parts += 1
+                        expect(piece.Anchored).toBe(true)
+                        expect(piece.CanCollide).toBe(false)
+                        expect(piece.CanTouch).toBe(false)
+                        expect(piece.CanQuery).toBe(false)
+                        expect(math.abs(piece.Position.X - base.Position.X)
+                            + piece.Size.X * 0.5 <= base.Size.X * 0.5 - 5).toBe(true)
+                        expect(math.abs(piece.Position.Z - base.Position.Z)
+                            + piece.Size.Z * 0.5 <= base.Size.Z * 0.5 - 5).toBe(true)
+                    end
+                end
+                expect(parts).toBe(5)
+                cornerCount += 1
+            end
+            expect(cornerCount).toBe(4)
             root:Destroy()
         end
     end)
