@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — Exterior 3D skyline with mobile readability (candidate)
+
+- Add four **original, Roblox-native 3D industrial skyline structures** OUTSIDE each of the four expanded arena bounds. Every assembly has a grounded metal foundation, recessed mast, wedge cap, two angled braces and restrained edge insets; extra identity geometry per map (Towers service mast, Crossroads cross-antenna, Orbital cylinder receiver, Classic aerial).
+- 4 × 7–9 decorative Parts per map, all anchored, noncolliding, non-queryable, non-touchable and shadow-free. No Neon material, PointLights, beams, particle emitters, scripts, per-frame operations, physics obstacles or outside-imported models. Buildings are environmental silhouettes, NOT playable platforms. No changes to AI pathing, shrink logic, server hazards or center parkour indices.
+- Extend the **existing** real Roblox MapBuilder engine suite with exact four-direction exterior placement, 5-stud clearance beyond playfield, wedge silhouettes and a strict low Part budget.
+- **Not yet visually certified:** verify actual rendered skyline, four camera angles, visual occlusion, mobile FPS/overdraw, and consistency with the original Blender OBJ import candidate on an exact-SHA Android staged build. The public place is unchanged until a separate explicit workflow publication.
+
 ## 2026-10-23 — Four genuine outer playable circuits per map + natural Roblox NPC names (candidate)
 
 - Added four **physically playable** perimeter circuits to each of Classic, Towers, Crossroads and Orbital (8 solid grounded/two-stage platforms per map). Routes are at ±46–64 studs, on the new 150–156-stud map foundations, with a short ordinary-jump gap and a 3.6-stud rise. Large blocks touch the actual floor: no dangling low platforms forming R15 headroom traps.
