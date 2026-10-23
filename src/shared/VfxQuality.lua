@@ -27,6 +27,19 @@ VfxQuality.Tiers = {
     },
 }
 
+-- Count only active rendered frames in the adaptive-quality sampler.
+-- Resuming a suspended Android app can deliver a multi-second RenderStepped
+-- dt; interpreting that as sustained low FPS can incorrectly degrade the
+-- entire arena immediately after returning. Genuine 2-5 FPS frames remain
+-- measurable, so persistently weak hardware still downgrades.
+function VfxQuality.activeFrameSeconds(dt)
+    if type(dt) ~= "number" or dt ~= dt or dt == math.huge
+        or dt == -math.huge or dt <= 0 or dt > 0.60 then
+        return 0
+    end
+    return dt
+end
+
 function VfxQuality.initialTier(isTouchDevice)
     return isTouchDevice == true and "Medium" or "High"
 end
