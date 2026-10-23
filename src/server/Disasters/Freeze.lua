@@ -1,6 +1,15 @@
 local HazardWarning = if script then require(script.Parent.Parent.HazardWarning) else require("../HazardWarning")
 local D = {Name = "FREEZE PULSE", Hint = "BLUE FLASH = FREEZE INCOMING!"}
 
+-- A missing or replaced marker must not be overwritten by a delayed
+-- restoration callback. The prior marker can be nil, true or false.
+function D.restoredFrozenMarker(currentMarker, originalMarker)
+    if currentMarker ~= true then
+        return currentMarker
+    end
+    return originalMarker
+end
+
 local function createWarning(ctx, diameter)
     local warning = Instance.new("Part")
     warning.Name = "FreezeWarning"
@@ -35,7 +44,16 @@ function D.start(ctx)
 
         frozen[humanoid] = nil
         if humanoid and humanoid.Parent then
-            humanoid:SetAttribute("ChaosFrozen", false)
+            -- A different mechanic may have taken ownership of the frozen
+            -- marker. Restore the previous state only if our marker is
+            -- still present, instead of clearing somebody else's status.
+            local currentMarker = humanoid:GetAttribute("ChaosFrozen")
+            if currentMarker == true then
+                humanoid:SetAttribute(
+                    "ChaosFrozen",
+                    D.restoredFrozenMarker(currentMarker, state.originalFrozen)
+                )
+            end
             if humanoid.WalkSpeed == state.appliedWalkSpeed then
                 humanoid.WalkSpeed = state.walkSpeed
             end
@@ -90,6 +108,7 @@ function D.start(ctx)
                     local appliedJumpPower = 0
                     local appliedJumpHeight = 0
                     frozen[hum] = {
+                        originalFrozen = hum:GetAttribute("ChaosFrozen"),
                         walkSpeed = hum.WalkSpeed,
                         jumpPower = hum.JumpPower,
                         jumpHeight = hum.JumpHeight,

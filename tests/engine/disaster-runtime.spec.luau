@@ -41,6 +41,17 @@ local function runCleanup(cleanup, onCleanup)
     end
 end
 
+describe("Freeze Pulse ownership and cleanup", function()
+    it("restores previous frozen marker without erasing later state changes", function()
+        local freeze = require("../../src/server/Disasters/Freeze")
+        expect(freeze.restoredFrozenMarker(true, nil)).toBe(nil)
+        expect(freeze.restoredFrozenMarker(true, false)).toBe(false)
+        expect(freeze.restoredFrozenMarker(true, true)).toBe(true)
+        expect(freeze.restoredFrozenMarker(false, true)).toBe(false)
+        expect(freeze.restoredFrozenMarker(nil, true)).toBe(nil)
+    end)
+end)
+
 describe("Real-engine evolving impact storms", function()
     it("spawns physical meteor/bomb telegraphs on forecast sweep and flank routes", function()
         for _, case in ipairs({
