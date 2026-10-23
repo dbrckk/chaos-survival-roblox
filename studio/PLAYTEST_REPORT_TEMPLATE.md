@@ -89,6 +89,16 @@ Copy this file for each release-candidate certification run.
 - Physical Studio version / device:
 - Notes:
 
+## Landing & run-transition realism (real Roblox client)
+
+- Physical stage build matches exact SHA: yes / no
+- R6/R15 ordinary raised-deck jumping lands with precisely one visible impact: PASS / FAIL / NOT RUN
+- Small stair contacts do not trigger heavy landing reactions: PASS / FAIL / NOT RUN
+- SpeedSurge / JumpShock / MoonGravity landing does not add fake launch, skid, or pivot: PASS / FAIL / NOT RUN
+- Android app suspension/resume produces no stale landing VFX/camera displacement: PASS / FAIL / NOT RUN
+- Low VFX, ReduceMotion, 15-minute repeated-jump soak: PASS / FAIL / NOT RUN
+- Matching device video, logs, target FPS, staging place ID:
+
 ## Character animation / camera ownership — rapid respawn E2E
 
 - Stage SHA matched to this report: yes / no
