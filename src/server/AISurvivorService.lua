@@ -510,7 +510,7 @@ local function addPrimitiveAccessory(record, model)
         local capColor = record.identity.Legs:Lerp(accent, 0.19)
         local beanie = cosmeticPart(
             model, "PlayerKnitBeanie",
-            Vector3.new(1.88, 0.55, 1.72), capColor
+            Vector3.new(0.55, 1.88, 1.72), capColor
         )
         beanie.Shape = Enum.PartType.Cylinder
         beanie.CFrame = head.CFrame
