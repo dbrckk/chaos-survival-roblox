@@ -10,6 +10,20 @@ end
 JumpLandingPreviewRules.SampleSeconds = 0.10
 JumpLandingPreviewRules.MaxPredictionSeconds = 0.42
 JumpLandingPreviewRules.MaxDrop = 13
+JumpLandingPreviewRules.MaxHorizontalTravel = 8
+-- One near, one mid-flight and one late lookahead. At most three candidate
+-- rays plus one confirmation per 10Hz sample, never a ray per rendered frame.
+JumpLandingPreviewRules.ProbeSeconds = {0.08, 0.23, 0.36}
+JumpLandingPreviewRules.ProbeToleranceSeconds = 0.14
+
+function JumpLandingPreviewRules.probeMatches(probeSeconds, contactSeconds)
+    return finite(probeSeconds) and finite(contactSeconds)
+        and probeSeconds >= 0
+        and contactSeconds >= 0
+        and contactSeconds <= JumpLandingPreviewRules.MaxPredictionSeconds
+        and math.abs(probeSeconds - contactSeconds)
+            <= JumpLandingPreviewRules.ProbeToleranceSeconds
+end
 
 function JumpLandingPreviewRules.eligible(
     phase, participant, eliminated, health, humanoidState, grounded, verticalSpeed
