@@ -72,6 +72,67 @@ function D.contactIsLethal(ctx, player, character, humanoid, lava)
         and D.rootInsideLava(root.Position, lava.Position, lava.Size, 2.5)
 end
 
+-- Advanced solo-disaster rounds use a telegraphed lava surge.
+-- Total final rise stays exactly 25 studs. Beginner and fusion rounds
+-- retain their original constant-rate floor for learnable first sessions.
+-- Segments are continuous and strictly rising: slow climb, fast surge,
+-- then a final controlled rise. A preview gives players time to climb.
+function D.riseAt(elapsedSeconds, durationSeconds, enabled)
+    local elapsed = tonumber(elapsedSeconds) or 0
+    local duration = tonumber(durationSeconds) or 1
+    if elapsed ~= elapsed or math.abs(elapsed) == math.huge then elapsed = 0 end
+    if duration ~= duration or math.abs(duration) == math.huge or duration <= 0 then
+        duration = 1
+    end
+    local time = math.clamp(elapsed / duration, 0, 1)
+    if enabled ~= true then
+        return time, nil
+    end
+
+    if time < 0.30 then
+        return time * (0.28 / 0.38), "Climb"
+    elseif time < 0.38 then
+        return time * (0.28 / 0.38), "SurgeSoon"
+    elseif time < 0.62 then
+        return 0.28 + (time - 0.38) * (0.42 / 0.24), "Surge"
+    end
+    return 0.70 + (time - 0.62) * (0.30 / 0.38), "FinalRise"
+end
+
+-- A fixed 25-stud flood could bury every reachable deck on low maps
+-- (Classic's highest platforms top out at 12 studs above the arena center).
+-- Cap the lava surface two studs below the FOURTH-highest physical deck:
+-- several distinct players can still reach a winning position at 0 seconds.
+-- This reads the actual generated collision platforms, not decorative art.
+function D.safeRiseDistance(startTopY, platformTops, maximumRise)
+    local start = tonumber(startTopY)
+    if not start or start ~= start or math.abs(start) == math.huge then
+        start = -6
+    end
+    local cap = tonumber(maximumRise)
+    if not cap or cap ~= cap or math.abs(cap) == math.huge then
+        cap = 25
+    end
+    cap = math.max(0, cap)
+    local heights = {}
+    if type(platformTops) == "table" then
+        for _, value in ipairs(platformTops) do
+            local height = tonumber(value)
+            if height and height == height and math.abs(height) < math.huge then
+                heights[#heights + 1] = height
+            end
+        end
+    end
+    if #heights == 0 then
+        -- In a partially streamed/generated arena, avoid racing upward
+        -- without any verified high-ground survival route.
+        return math.min(cap, 15)
+    end
+    table.sort(heights, function(a, b) return a > b end)
+    local refuge = heights[math.min(4, #heights)]
+    return math.clamp(refuge - 2 - start, 0, cap)
+end
+
 function D.start(ctx)
     local generatedMap = workspace:FindFirstChild("GeneratedMap")
     local arena = generatedMap and generatedMap:FindFirstChild("Arena")
@@ -125,18 +186,49 @@ function D.start(ctx)
     end)
 
     local startY = lava.Position.Y
+    local platformTops = {}
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    if platforms then
+        for _, part in ipairs(platforms:GetChildren()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                platformTops[#platformTops+1] = part.Position.Y + part.Size.Y * 0.5
+            end
+        end
+    end
+    local riseDistance = D.safeRiseDistance(
+        startY + lava.Size.Y * 0.5, platformTops, 25
+    )
     local duration = math.max(
         0.1,
         tonumber(ctx.RoundSeconds or ctx.Config.RoundSeconds) or 1
     )
+    local surgeEnabled = ctx.EnableLavaSurge == true
+    local started = tonumber(ctx.RoundStartedAt) or os.clock()
+    ctx.LavaStage = surgeEnabled and "Climb" or nil
 
     ctx.Cleanup[#ctx.Cleanup+1] = lava
+    if type(ctx.OnCleanup) == "table" then
+        ctx.OnCleanup[#ctx.OnCleanup+1] = function()
+            ctx.LavaStage = nil
+        end
+    end
 
     task.spawn(function()
-        local started = os.clock()
+        local lastStage = ctx.LavaStage
         while ctx.Active() and lava.Parent do
-            local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
-            lava.Position = Vector3.new(lava.Position.X, startY + alpha * 25, lava.Position.Z)
+            local alpha, stage = D.riseAt(
+                os.clock() - started, duration, surgeEnabled
+            )
+            lava.Position = Vector3.new(lava.Position.X, startY + alpha * riseDistance, lava.Position.Z)
+            if stage ~= lastStage then
+                ctx.LavaStage = stage
+                lastStage = stage
+                -- Distinct but restrained color language for a real hazard
+                -- rate change; all warnings and the floor remain visible.
+                lava.Color = stage == "Surge"
+                    and Color3.fromRGB(255, 60, 18)
+                    or Color3.fromRGB(255, 85, 0)
+            end
 
             for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
                 -- Use the same round/character/health checks for the

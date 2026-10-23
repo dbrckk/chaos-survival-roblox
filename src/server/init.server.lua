@@ -1095,6 +1095,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and #selected == 1
             and activeHazards.SpeedSurge == true
             and roundSettings.RoundSeconds >= 28,
+        -- Rookie and Double Chaos lava keeps its predictable linear rise.
+        -- Veteran single-hazard sessions receive one telegraphed surge.
+        EnableLavaSurge = allowDynamicArenas
+            and #selected == 1
+            and activeHazards.RisingLava == true
+            and roundSettings.RoundSeconds >= 28,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
         EnableClassicGridSweep = currentArenaVariant == "Classic"
@@ -1437,6 +1443,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
             -- The same server simulation that drives the gravity forces
             -- also drives the player's tactical mobile transition cue.
             gravityTideStage = ctx.GravityTideStage,
+            -- Replicated from the actual server-driven lava animation.
+            lavaStage = ctx.LavaStage,
             title = title,
             hint = roundHint,
             seconds = t,

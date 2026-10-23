@@ -41,6 +41,81 @@ local function runCleanup(cleanup, onCleanup)
     end
 end
 
+describe("Rising Lava walkable high-ground fairness", function()
+    it("preserves four real high refuges in all four shipped arenas", function()
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local definition = ArenaVariants.get(variantId)
+            local topHeights = {}
+            for _, deck in ipairs(definition.Platforms) do
+                topHeights[#topHeights + 1] = deck.offset.Y + deck.size.Y * 0.5
+            end
+            local distance = RisingLava.safeRiseDistance(-6, topHeights, 25)
+            expect(distance > 0 and distance <= 25).toBe(true)
+            local finalSurface = -6 + distance
+            local safeDecks = 0
+            local submergedLower = 0
+            for _, top in ipairs(topHeights) do
+                if top - finalSurface >= 2 - 0.001 then
+                    safeDecks += 1
+                elseif top < finalSurface then
+                    submergedLower += 1
+                end
+            end
+            expect(safeDecks >= 4).toBe(true)
+            expect(submergedLower >= 1).toBe(true)
+        end
+    end)
+
+    it("clamps the final lava height and rejects invalid deck measurements", function()
+        local rise = RisingLava.safeRiseDistance
+        expect(rise(-6, {12, 12, 12, 12}, 25)).toBe(16)
+        expect(rise(-6, {30, 30, 30, 30}, 25)).toBe(25)
+        expect(rise(-6, {5, 5, 5, 5}, 25)).toBe(9)
+        expect(rise(-6, nil, 25)).toBe(15)
+        expect(rise(-6, {math.huge, 12, 12, 12, 12}, 25)).toBe(16)
+        expect(rise(-6, {0 / 0, 12, 12, 12, 12}, 25)).toBe(16)
+        expect(rise(-6, {-10, -10, -10, -10}, 25)).toBe(0)
+        expect(rise(-6, {12, 12, 12, 12}, -10)).toBe(0)
+    end)
+end)
+
+describe("Veteran lava surge fairness", function()
+    it("keeps novice lava linear and advanced lava continuous at the same final height", function()
+        local rise = RisingLava.riseAt
+        for _, t in ipairs({0, 0.3, 3.8, 9.7, 15, 19, 25, 35, 40}) do
+            local fraction, stage = rise(t, 40, false)
+            expect(math.abs(fraction - math.clamp(t / 40, 0, 1)) < 0.0001)
+                .toBe(true)
+            expect(stage == nil).toBe(true)
+        end
+        local early, climb = rise(0, 40, true)
+        expect(early).toBe(0)
+        expect(climb).toBe("Climb")
+        local announce, soon = rise(12, 40, true)
+        expect(soon).toBe("SurgeSoon")
+        expect(math.abs(announce - (0.30 * 0.28 / 0.38)) < 0.0001)
+            .toBe(true)
+        local startSurge, surge = rise(40 * 0.38, 40, true)
+        expect(math.abs(startSurge - 0.28) < 0.0001).toBe(true)
+        expect(surge).toBe("Surge")
+        local endSurge, last = rise(40 * 0.62, 40, true)
+        expect(math.abs(endSurge - 0.70) < 0.0001).toBe(true)
+        expect(last).toBe("FinalRise")
+        local done = rise(40, 40, true)
+        expect(done).toBe(1)
+        local previous = -1
+        for i = 0, 100 do
+            local fraction = rise(i * 0.4, 40, true)
+            expect(fraction >= previous and fraction <= 1).toBe(true)
+            previous = fraction
+        end
+        expect(rise(-40, 40, true)).toBe(0)
+        expect(rise(400, 40, true)).toBe(1)
+        expect(rise(math.huge, 40, true)).toBe(0)
+        expect(rise(0 / 0, 40, true)).toBe(0)
+    end)
+end)
+
 describe("Freeze Pulse ownership and cleanup", function()
     it("restores previous frozen marker without erasing later state changes", function()
         local freeze = require("../../src/server/Disasters/Freeze")

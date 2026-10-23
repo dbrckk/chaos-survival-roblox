@@ -226,6 +226,20 @@ describe("Round event presentation", function()
         expect(cue("untrusted", "PullRising") == nil).toBe(true)
     end)
 
+    it("only surfaces real lava transitions and not late-join snapshots", function()
+        local cue = RoundEventPresentation.lavaSurgeCue
+        expect(cue(nil, "Surge")).toBe(nil)
+        expect(cue("Climb", "Climb")).toBe(nil)
+        expect(cue("Climb", "SurgeSoon")).toBe("LAVA_SURGE_SOON")
+        expect(cue("SurgeSoon", "Surge")).toBe("LAVA_SURGE_ACTIVE")
+        expect(cue("Climb", "Surge")).toBe("LAVA_SURGE_ACTIVE")
+        expect(cue("Surge", "FinalRise")).toBe("LAVA_FINAL_RISE")
+        expect(cue("Surge", "Fake")).toBe(nil)
+        expect(cue("Fake", "Surge")).toBe(nil)
+        expect(RoundEventPresentation.priority("lavaSurge"))
+            .toBe(RoundEventPresentation.priority("impactWave"))
+    end)
+
     it("keeps final rush above all other transition priorities", function()
         expect(
             RoundEventPresentation.priority("finalRush")
