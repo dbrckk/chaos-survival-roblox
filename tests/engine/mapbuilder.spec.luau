@@ -105,7 +105,9 @@ describe("Chaos Survival engine", function()
                 expect(firstSpawn.CFrame.LookVector:Dot(inward.Unit) > 0.15).toBe(true)
             end
         end
-        expect(#(platforms :: Folder):GetChildren()).toBe(16)
+        expect(#(platforms :: Folder):GetChildren()).toBe(
+            #ArenaVariants.get("Classic").Platforms + 8
+        )
         -- Route-tier identity is replicated with the physical decks and
         -- reflects intentional jumpable paths, not client-only cosmetics.
         expect((platforms :: Folder):FindFirstChild("Platform1")
@@ -518,7 +520,9 @@ describe("Chaos Survival engine", function()
         -- visible tier code that contracts alongside its collision.
         local platforms = arena:FindFirstChild("Platforms")
         expect(platforms ~= nil).toBe(true)
-        expect(#(platforms :: Folder):GetChildren()).toBe(17)
+        expect(#(platforms :: Folder):GetChildren()).toBe(
+            #ArenaVariants.get("Crossroads").Platforms + 8
+        )
         local tiers = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
         for index = 1, 17 do
             local deck = platforms:FindFirstChild("Platform" .. index)
