@@ -118,6 +118,26 @@ local IDENTITIES = {
     },
 }
 
+-- Additional authored fictional usernames widen the server-to-server
+-- variety without impersonating connected Roblox accounts. Every rig
+-- remains a marked AISurvivor proxy, NEVER a Player or chat speaker.
+-- Reusing vetted body palettes keeps the extra identities cheap on Android.
+local extraNames = {
+    {"mika_orbit", "mika"}, {"nova_fern", "fern"},
+    {"cloudy_ari", "ari"}, {"zenrover", "zen"},
+    {"lune_arcade", "lune"}, {"pax_horizon", "pax"},
+    {"nori_pixel", "nori"}, {"melo_drifts", "melo"},
+    {"ivyglow24", "ivy"}, {"aster_rush", "aster"},
+    {"rio_circuit", "rio"}, {"kai_mistral", "mistral"},
+}
+local originalIdentityCount = #IDENTITIES
+for index, names in ipairs(extraNames) do
+    local base = table.clone(IDENTITIES[((index - 1) % originalIdentityCount) + 1])
+    base.Username = names[1]
+    base.DisplayName = names[2]
+    table.insert(IDENTITIES, base)
+end
+
 local config = nil
 local botsFolder = nil
 local records = {}
@@ -558,31 +578,19 @@ local function addNameplate(record, model)
     billboard.MaxDistance = 90
     -- Ordinary Roblox player names are compact; reserve the second row
     -- only for a brief, contextual in-world bot reaction.
-    billboard.Size = UDim2.fromOffset(136, 27)
-    billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.2, 0)
+    billboard.Size = UDim2.fromOffset(148, 25)
+    billboard.StudsOffsetWorldSpace = Vector3.new(0, 3.35, 0)
     billboard.Parent = head
 
-    local label = Instance.new("TextLabel")
-    label.Name = "DisplayName"
-    label.Size = UDim2.new(1, 0, 0, 26)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamSemibold
-    label.Text = record.identity.DisplayName
-    label.TextColor3 = Color3.fromRGB(245, 248, 255)
-    label.TextStrokeColor3 = Color3.fromRGB(10, 14, 20)
-    label.TextStrokeTransparency = 0.38
-    label.TextScaled = true
-    label.Parent = billboard
-
-    local constraint = Instance.new("UITextSizeConstraint")
-    constraint.MinTextSize = 11
-    constraint.MaxTextSize = 16
-    constraint.Parent = label
+    -- Use Roblox's native Humanoid display name for EXACTLY the same
+    -- overhead name rendering used by real avatars. The custom billboard
+    -- exists only for a rare non-chat contextual reaction.
+    billboard.Enabled = false
 
     local role = Instance.new("TextLabel")
     role.Name = "Personality"
-    role.Position = UDim2.fromOffset(0, 25)
-    role.Size = UDim2.new(1, 0, 0, 18)
+    role.Position = UDim2.fromOffset(0, 0)
+    role.Size = UDim2.new(1, 0, 1, 0)
     role.BackgroundTransparency = 1
     role.Font = Enum.Font.GothamBold
     role.Text = ""
@@ -610,7 +618,7 @@ local function showBotSignal(record, message, now)
         label.Visible = true
         local billboard = label.Parent
         if billboard and billboard:IsA("BillboardGui") then
-            billboard.Size = UDim2.fromOffset(148, 46)
+            billboard.Enabled = true
         end
         record.signalExpire = now + 1.5
     end
@@ -688,7 +696,7 @@ local function createRig(record)
     humanoid.DisplayName = record.identity.DisplayName
     humanoid.WalkSpeed = record.profile.WalkSpeed
     humanoid.AutoRotate = true
-    humanoid.NameDisplayDistance = 0
+    humanoid.NameDisplayDistance = 72
     humanoid.HealthDisplayDistance = 42
     humanoid.MaxHealth = 100
     humanoid.Health = 100
@@ -2520,7 +2528,7 @@ local function stepRecord(record, now)
             label.Visible = false
             local billboard = label.Parent
             if billboard and billboard:IsA("BillboardGui") then
-                billboard.Size = UDim2.fromOffset(136, 27)
+                billboard.Enabled = false
             end
         end
         record.signalExpire = 0
@@ -3153,6 +3161,19 @@ function AISurvivorService.names()
     local result = {}
     for _, record in ipairs(records) do
         table.insert(result, record.identity.DisplayName)
+    end
+    return result
+end
+
+-- Read-only snapshot for server-side roster validation and engine QA.
+-- These are authored fictional NPC personas, not account identities.
+function AISurvivorService.identityCatalog()
+    local result = {}
+    for _, identity in ipairs(IDENTITIES) do
+        table.insert(result, {
+            Username = identity.Username,
+            DisplayName = identity.DisplayName,
+        })
     end
     return result
 end

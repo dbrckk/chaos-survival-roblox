@@ -19,6 +19,31 @@ describe("AI survivor rules", function()
         expect(type(AISurvivorService.names)).toBe("function")
     end)
 
+    it("uses a varied fictional identity pool without AI-labelled public names", function()
+        local identities = AISurvivorService.identityCatalog()
+        expect(#identities >= 20).toBe(true)
+        local usernames = {}
+        local displays = {}
+        for _, identity in ipairs(identities) do
+            local username, display = identity.Username, identity.DisplayName
+            expect(type(username)).toBe("string")
+            expect(type(display)).toBe("string")
+            expect(#username >= 3 and #username <= 20).toBe(true)
+            expect(#display >= 2 and #display <= 20).toBe(true)
+            expect(username:match("^[%w_]+$") ~= nil).toBe(true)
+            expect(username:lower():find("bot", 1, true) == nil).toBe(true)
+            expect(display:lower() ~= "ai").toBe(true)
+            expect(usernames[username:lower()] == nil).toBe(true)
+            expect(displays[display:lower()] == nil).toBe(true)
+            usernames[username:lower()] = true
+            displays[display:lower()] = true
+        end
+        -- Callers must not be able to mutate the private live roster.
+        local first = identities[1].Username
+        identities[1].Username = "tampered"
+        expect(AISurvivorService.identityCatalog()[1].Username).toBe(first)
+    end)
+
     it("clears a recycled bot's Classic Grid Circuit completion at each round", function()
         local model = Instance.new("Model")
         model:SetAttribute("GridCircuitStep", 4)

@@ -1787,7 +1787,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     light.Shadows = false
     light.Parent = beacon
 
-    for i, definition in ipairs(variant.Platforms) do
+    -- PerimeterRoutes are appended AFTER every original platform ID.
+    -- Keeping the combined parts under Platforms lets all server-owned
+    -- disaster and AI systems treat outer routes as real gameplay geometry.
+    local platformDefinitions = table.clone(variant.Platforms)
+    for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
+
+    for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
         local platform = part(
             platforms,
@@ -1801,6 +1809,18 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         local routeTier = tonumber(definition.RouteTier)
         if routeTier and routeTier >= 1 and routeTier <= 4 then
             platform:SetAttribute("RouteTier", routeTier)
+        end
+        if definition.PerimeterRoute then
+            -- Explicit route metadata is visible to wayfinding and QA.
+            -- It is not a fake waypoint: this is a collidable real Part.
+            platform:SetAttribute("PerimeterRoute", definition.PerimeterRoute)
+            platform:SetAttribute("PerimeterStep", definition.PerimeterStep)
+            platform.Color = theme.Surface:Lerp(
+                definition.PerimeterStep == 1 and theme.Detail or theme.Secondary,
+                0.30
+            )
+            platform.Material = theme.StructureMaterial
+                or VisualTheme.Materials.Structure
         end
 
         if definition.Skybridge == true then
@@ -1876,6 +1896,60 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             trim.Transparency = 0.64
         end
         addPlatformFinish(decor, platform, i, theme)
+
+        if definition.PerimeterStep == 2 then
+            -- Original native three-dimensional exit facade: four simple
+            -- nonblocking components per route, no extra emitters/lights.
+            -- Mounted on the OUTWARD face of the solid exit pedestal,
+            -- away from the player's approach and central hazard lanes.
+            local frontSign = platformPosition.Z >= config.ArenaCenter.Z
+                and 1 or -1
+            local outerZ = platformPosition.Z
+                + frontSign * (platform.Size.Z * 0.5 + 0.18)
+            for side = -1, 1, 2 do
+                local rib = decorPart(
+                    decor,
+                    "PerimeterExitRib" .. definition.PerimeterRoute
+                        .. "_" .. tostring(side),
+                    Vector3.new(0.88, platform.Size.Y - 1.05, 0.34),
+                    Vector3.new(platformPosition.X + side * 3.35,
+                        platformPosition.Y - 0.20, outerZ),
+                    theme.Structure:Lerp(theme.Detail, 0.18),
+                    Enum.Material.Metal
+                )
+                rib.Transparency = 0.06
+                rib:SetAttribute("PerimeterPlatformIndex", i)
+            end
+            local cap = Instance.new("WedgePart")
+            cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
+            cap.Size = Vector3.new(8.0, 1.15, 1.0)
+            cap.CFrame = CFrame.new(
+                platformPosition.X,
+                platformPosition.Y + platform.Size.Y * 0.5 - 0.45,
+                outerZ + frontSign * 0.34
+            ) * CFrame.Angles(0, frontSign < 0 and math.pi or 0, 0)
+            cap.Color = theme.Detail:Lerp(theme.Structure, 0.30)
+            cap.Material = Enum.Material.Metal
+            cap.Anchored = true
+            cap.CanCollide = false
+            cap.CanTouch = false
+            cap.CanQuery = false
+            cap.CastShadow = false
+            cap.Transparency = 0.08
+            cap.Parent = decor
+            cap:SetAttribute("PerimeterPlatformIndex", i)
+            local lens = decorPart(
+                decor,
+                "PerimeterExitLens" .. definition.PerimeterRoute,
+                Vector3.new(2.1, 2.1, 0.35),
+                Vector3.new(platformPosition.X, platformPosition.Y,
+                    outerZ + frontSign * 0.22),
+                theme.Accent:Lerp(theme.Structure, 0.56),
+                Enum.Material.Glass
+            )
+            lens.Transparency = 0.34
+            lens:SetAttribute("PerimeterPlatformIndex", i)
+        end
     end
 
     if variant.Id == "Orbital" then

@@ -236,6 +236,53 @@ ArenaVariants.Definitions = {
     },
 }
 
+
+-- Large maps must provide genuine optional paths beyond the original
+-- central circuits. Store the outer routes SEPARATELY so all existing
+-- authored platform indices (notably Tower Skybridges 18-21 and Orbital
+-- Helix 1-18) remain stable. MapBuilder appends these to the SAME
+-- server-owned Platforms folder, which automatically includes them in
+-- AI route selection, collapsing/shrinking hazards and physics queries.
+local perimeterLocations = {
+    Classic = {entryX = 49, entryZ = 49, outerX = 62, outerZ = 49},
+    Towers = {entryX = 50, entryZ = 46, outerX = 63, outerZ = 46},
+    Crossroads = {entryX = 51, entryZ = 48, outerX = 64, outerZ = 48},
+    Orbital = {entryX = 46, entryZ = 46, outerX = 60, outerZ = 54},
+}
+
+for _, variantId in ipairs(ArenaVariants.Order) do
+    local variant = ArenaVariants.Definitions[variantId]
+    local positions = perimeterLocations[variantId]
+    local routes = {}
+    local quadrants = {{-1,-1}, {1,-1}, {-1,1}, {1,1}}
+    for route, signs in ipairs(quadrants) do
+        local sx, sz = signs[1], signs[2]
+        -- The bases TOUCH the arena floor. No new 2–4 stud "crawling
+        -- underneath the platform" trap, and no physics changes are
+        -- needed to ascend the first 3-stud floor step.
+        table.insert(routes, {
+            offset = Vector3.new(sx * positions.entryX, 2.5,
+                sz * positions.entryZ),
+            size = Vector3.new(12, 3, 12),
+            RouteTier = 1,
+            PerimeterRoute = route,
+            PerimeterStep = 1,
+        })
+        -- The second route block is 3.6 studs higher with a genuine
+        -- horizontal jump gap (1–2 studs). Both full-height blocks
+        -- meet the floor so there are no overhead R15 collision traps.
+        table.insert(routes, {
+            offset = Vector3.new(sx * positions.outerX, 4.3,
+                sz * positions.outerZ),
+            size = Vector3.new(12, 6.6, 12),
+            RouteTier = 2,
+            PerimeterRoute = route,
+            PerimeterStep = 2,
+        })
+    end
+    variant.PerimeterPlatforms = routes
+end
+
 local legacyRecent = {}
 
 function ArenaVariants.get(id)

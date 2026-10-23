@@ -108,6 +108,67 @@ describe("Shrinking Arena mobility integration", function()
         root:Destroy()
     end)
 
+    it("moves outer exit sculptures together with shrinking physical routes", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local decor = arena:FindFirstChild("Decor")
+            local platforms = arena:FindFirstChild("Platforms")
+            local base = arena:FindFirstChild("Base")
+            local number = #ArenaVariants.get(id).Platforms + 2
+            local deck = platforms:FindFirstChild("Platform" .. number)
+            expect(deck ~= nil).toBe(true)
+            local startDeck = deck.CFrame
+            local floorWidth = base.Size.X
+            local pieces = {}
+            for _, name in ipairs({
+                "PerimeterExitRib1_-1", "PerimeterExitRib1_1",
+                "PerimeterExitCrown1", "PerimeterExitLens1",
+            }) do
+                local piece = decor:FindFirstChild(name)
+                expect(piece ~= nil).toBe(true)
+                expect(piece:GetAttribute("PerimeterPlatformIndex")).toBe(number)
+                pieces[piece] = {
+                    size = piece.Size,
+                    cframe = piece.CFrame,
+                    relative = deck.CFrame:ToObjectSpace(piece.CFrame),
+                }
+            end
+
+            local active = true
+            local callbacks = {}
+            ShrinkingArena.start({
+                Config = Config, RoundSeconds = 0.32,
+                Cleanup = {}, OnCleanup = callbacks,
+                Active = function() return active end,
+            })
+            task.wait(0.19)
+            local scale = base.Size.X / floorWidth
+            expect(scale < 0.98).toBe(true)
+            expect((deck.Position - startDeck.Position).Magnitude > 0.1).toBe(true)
+            for piece, state in pairs(pieces) do
+                local offset = state.relative.Position
+                local expected = deck.CFrame
+                    * CFrame.new(offset.X * scale, offset.Y, offset.Z * scale)
+                    * (state.relative - offset)
+                expect((piece.Position - expected.Position).Magnitude < 0.03).toBe(true)
+                expect(math.abs(piece.Size.X - state.size.X * scale) < 0.03
+                    and math.abs(piece.Size.Z - state.size.Z * scale) < 0.03)
+                    .toBe(true)
+                expect(piece.CanCollide).toBe(false)
+            end
+            active = false
+            cleanup(callbacks, {})
+            expect((deck.Position - startDeck.Position).Magnitude < 0.001).toBe(true)
+            for piece, state in pairs(pieces) do
+                expect((piece.Position - state.cframe.Position).Magnitude < 0.001)
+                    .toBe(true)
+                expect((piece.Size - state.size).Magnitude < 0.001).toBe(true)
+            end
+            root:Destroy()
+        end
+    end)
+
     it("shrinks arena inlays with the solid floor in every variant", function()
         local cases = {
             {
