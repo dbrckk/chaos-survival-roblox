@@ -2,7 +2,7 @@
 
 The files `chaos_perimeter_gate.obj` and `chaos_perimeter_gate.mtl` are **original source artwork generated for Chaos Survival**, not scraped from another Roblox experience and not dependent on an external creator license.
 
-- **Geometry:** 308 OBJ vertices, 560 triangles, 24 named source mesh groups; four grouped palette materials. Approximately 13 studs high, 13 studs wide and 3 studs deep. Decorative mesh only.
+- **Geometry:** 308 OBJ vertices, 560 triangles, 17 named source mesh groups; four grouped palette materials. Approximately 13 studs high, 13 studs wide and 3 studs deep. Decorative mesh only.
 - **Intended use:** distinctive reactor/relay landmark, reusable at the enlarged outer edges of Classic, Towers, Crossroads and Orbital. `src/server/MapBuilder.lua` already places native low-cost procedural **perimeter stations** at those coordinates, so there is real in-game decor without any external upload.
 - **Current state:** the OBJ/MTL source **is committed but is not a loaded Roblox MeshPart**. Rojo does not publish arbitrary local OBJ files automatically, and the Roblox public experience cannot show this new mesh until imported and given a real Roblox asset ID.
 
