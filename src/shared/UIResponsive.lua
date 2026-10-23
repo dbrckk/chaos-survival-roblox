@@ -90,7 +90,9 @@ function UIResponsive.phaseDashLayout(viewport)
         height = height,
         rightInset = rightInset,
         bottomInset = bottomInset,
-        hintWidth = math.min(168, math.max(width + 54, width)),
+        -- Room to the LEFT of the button, outside the top hazard HUD.
+        hintWidth = math.min(168, width + 80,
+            math.max(72, c.width - rightInset - width - 16)),
     }
 end
 
