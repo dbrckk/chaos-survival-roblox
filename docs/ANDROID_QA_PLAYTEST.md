@@ -85,6 +85,37 @@ and after each test, average/worst-frame FPS from the staging overlay or
 Roblox performance stats, original screen recording, and player/server
 logs. A green GitHub CI run is **not** a pass for this physical test.
 
+## Expanded arena + AI identity + HUD release gate (physical Android)
+
+Play all four enlarged arenas (Classic 152, Towers 150, Orbital 152,
+Crossroads 156 studs) in **the exact privately staged SHA**, on native
+Android Medium and Low, then with ReduceMotion. Record 10 minutes of
+real gameplay per arena. Confirm the extra outer floor is walkable
+without clipping, fall elimination plane fully covers it, no unexpected
+safe zones or out-of-bounds beacons, no alien platforms left after
+Shrinking Arena, and bomb/meteor impacts can still threaten the far
+quadrants. The original center parkour jumps, Skybridges 18–21, Helix
+and lane sensors must remain reachable.
+
+For every arena, verify four scaffold/reactor-inspired **native 3D
+perimeter stations** are clearly visible but never block camera,
+collisions, movement or warning circles, with no flickering light spam
+and no loss of 30 FPS sustained. This is not a claim of imported
+premium MeshPart assets: source OBJ is staged for a future Studio
+import and has no official Roblox asset ID yet.
+
+During Solo Rush, bots must carry natural-looking display names
+without a permanent "AI", "TEAMMATE", "TACTICIAN" or "DAREDEVIL"
+overhead banner. Verify that contextual reaction bubbles last briefly,
+native player roster/chat are **not impersonated**, and server-side
+AISurvivor identity remains correct. At 1536x688 and 640x360, the
+round intro must be a short strip below the top hazard HUD, not a
+giant rectangle that covers the center avatar or escape landing.
+
+Log SHA, public/private place version, 30/60 FPS traces, memory,
+video, collisions, AI availability, social bubbles, name overlap,
+and whether 4+ players can still find one another on the larger map.
+
 ## Android combat flash and win/loss camera — exact-SHA E2E
 
 On a private staging build matching the GitHub source, repeat 10 rapid
