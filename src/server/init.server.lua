@@ -1101,6 +1101,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and #selected == 1
             and activeHazards.RisingLava == true
             and roundSettings.RoundSeconds >= 28,
+        -- Optional visibility windows appear only in experienced Blackout
+        -- rounds. Never modulate the darkness of a Double Chaos fusion.
+        EnableBlackoutWindows = allowDynamicArenas
+            and #selected == 1
+            and activeHazards.Darkness == true
+            and roundSettings.RoundSeconds >= 28,
         EnableSkybridgePressure = currentArenaVariant == "Towers"
             and #selected == 1 and allowDynamicArenas,
         EnableClassicGridSweep = currentArenaVariant == "Classic"
@@ -1445,6 +1451,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
             gravityTideStage = ctx.GravityTideStage,
             -- Replicated from the actual server-driven lava animation.
             lavaStage = ctx.LavaStage,
+            -- Server-confirmed, not guessed from a client's local timer.
+            blackoutStage = ctx.BlackoutStage,
             title = title,
             hint = roundHint,
             seconds = t,

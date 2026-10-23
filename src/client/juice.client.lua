@@ -41,6 +41,33 @@ local color = post.Color
 local rays = post.SunRays
 local atmosphere = post.Atmosphere
 
+-- One owner for the hazard's exposure curve. Blackout transitions are
+-- deliberately slow enough for mobile players to read the route, with no
+-- screen flash and no additional post-processing instances. Reset at
+-- result/lobby so an old blackout never darkens a victory or next round.
+local brightnessTween = nil
+local brightnessTarget = nil
+local function setHazardBrightness(target, fade)
+    if brightnessTarget ~= nil and math.abs(brightnessTarget - target) < 0.001 then
+        return
+    end
+    brightnessTarget = target
+    if brightnessTween then
+        brightnessTween:Cancel()
+        brightnessTween = nil
+    end
+    if fade then
+        brightnessTween = TweenService:Create(
+            color,
+            TweenInfo.new(0.75, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {Brightness = target}
+        )
+        brightnessTween:Play()
+    else
+        color.Brightness = target
+    end
+end
+
 -- Arena identity owns baseline post-processing. This controller only overrides
 -- the shared layer while a disaster is preparing or active.
 
@@ -413,9 +440,20 @@ local function setMood(state)
             bloom.Intensity = profile.Bloom * vfxTier.Scale
             local roundParticipant = player:GetAttribute("RoundParticipant") == true
             local roundEliminated = player:GetAttribute("RoundEliminated") == true
-            color.Brightness = (roundParticipant and not roundEliminated)
-                and (profile.Brightness or 0)
-                or 0
+            local targetBrightness = (roundParticipant and not roundEliminated)
+                and (profile.Brightness or 0) or 0
+            local blackoutWindow = phase == "round"
+                and primaryId == "Darkness" and not doubleChaos
+                and (state.blackoutStage == "PowerReturn"
+                    or state.blackoutStage == "Dark")
+            if blackoutWindow and roundParticipant and not roundEliminated
+                and state.blackoutStage == "PowerReturn" then
+                -- Still darker than the arena's normal ambient state:
+                -- just enough light to scan a safe route for three seconds.
+                targetBrightness = player:GetAttribute("ReduceMotion") == true
+                    and -0.14 or -0.08
+            end
+            setHazardBrightness(targetBrightness, blackoutWindow)
             color.Contrast = profile.Contrast
             color.Saturation = profile.Saturation
             color.TintColor = profile.Tint
@@ -431,7 +469,7 @@ local function setMood(state)
             atmosphere.Density = 0.23
             atmosphere.Haze = 1.15
             bloom.Intensity = 0.75 * vfxTier.Scale
-            color.Brightness = 0
+            setHazardBrightness(0, false)
             color.Contrast = 0.16
             color.Saturation = 0.22
             color.TintColor = Color3.fromRGB(245, 225, 255)
@@ -441,7 +479,7 @@ local function setMood(state)
             atmosphere.Density = 0.18
             atmosphere.Haze = 0.82
             bloom.Intensity = 0.48 * vfxTier.Scale
-            color.Brightness = 0
+            setHazardBrightness(0, false)
             color.Contrast = 0.10
             color.Saturation = 0.14
             color.TintColor = Color3.new(1, 1, 1)
@@ -492,12 +530,14 @@ local function setMood(state)
             lastRoundTitle = state.title
         end
     elseif phase == "result" then
+        setHazardBrightness(0, false)
         resetActiveBeacon()
         roundDanger = false
         activeDoubleChaos = false
         secondaryAccent = nil
         tweenCamera(72, 0.35)
     else
+        setHazardBrightness(0, false)
         resetActiveBeacon()
         roundDanger = false
         activeDoubleChaos = false

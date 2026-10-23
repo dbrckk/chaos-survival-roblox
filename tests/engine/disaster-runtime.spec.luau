@@ -1135,13 +1135,32 @@ describe("Headless disaster playtest", function()
                 Contestants = {},
                 BalanceProfile = DisasterBalance.mobileProfile(1),
             }
+            if entry.id == "Darkness" then
+                ctx.EnableBlackoutWindows = true
+                ctx.RoundStartedAt = os.clock() - 7.2
+                local stageAt = entry.module.stageAt
+                expect(stageAt(0, true)).toBe("Dark")
+                expect(stageAt(6.99, true)).toBe("Dark")
+                expect(stageAt(7, true)).toBe("PowerReturn")
+                expect(stageAt(9.99, true)).toBe("PowerReturn")
+                expect(stageAt(10, true)).toBe("Dark")
+                expect(stageAt(20, true)).toBe("PowerReturn")
+                expect(stageAt(7, false)).toBe(nil)
+                expect(stageAt(math.huge, true)).toBe("Dark")
+            end
 
             local ok, err = pcall(entry.module.start, ctx)
             expect(ok).toBe(true)
 
             task.wait(0.08)
+            if entry.id == "Darkness" then
+                expect(ctx.BlackoutStage).toBe("PowerReturn")
+            end
             active = false
             runCleanup(cleanup, onCleanup)
+            if entry.id == "Darkness" then
+                expect(ctx.BlackoutStage).toBe(nil)
+            end
             task.wait(0.02)
 
             expect(workspace.Gravity).toBe(originalGravity)
