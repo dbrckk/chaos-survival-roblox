@@ -561,8 +561,11 @@ local function returnSurvivorToLobby(player, returnPosition)
 
     local floorTop = floor.Position.Y + floor.Size.Y * 0.5
     local clearance = math.max(3.5, humanoid.HipHeight + root.Size.Y * 0.5 + 1.0)
-    local target = typeof(returnPosition) == "Vector3"
-        and returnPosition or spawn.Position
+    -- Never stack several survivors on the native spawn if the formation
+    -- cannot supply a collision-checked slot. The caller will respawn the
+    -- affected player instead of leaving them inside another avatar.
+    if typeof(returnPosition) ~= "Vector3" then return false end
+    local target = returnPosition
     character:PivotTo(CFrame.new(
         target.X,
         floorTop + clearance,
@@ -2206,22 +2209,44 @@ while true do
     -- same 8x8 native SpawnLocation and avatars could overlap on return.
     local lobby = workspace:FindFirstChild("GeneratedMap")
     lobby = lobby and lobby:FindFirstChild("Lobby")
-    local returnPositions = LobbyReturnFormation.positions(
+    local formationOk, formation = pcall(
+        LobbyReturnFormation.positions,
         lobby and lobby:FindFirstChild("LobbySpawn"),
         lobby and lobby:FindFirstChild("Floor"),
         lobby and lobby:FindFirstChild("Decor"),
         #contestants
     )
+    if not formationOk then
+        warn("Lobby return formation failed:", formation)
+    end
+    local returnPositions = formationOk and formation or {}
+
     for index, p in ipairs(contestants) do
         if p.Parent == Players then
             local wasEliminated = p:GetAttribute("RoundEliminated") == true
             p:SetAttribute("RoundParticipant", false)
             p:SetAttribute("RoundEliminated", false)
-            -- Only surviving contestants are teleported; an eliminated
-            -- player who respawned during RESULTS stays at their native
-            -- lobby spawn instead of being moved twice.
+            -- Eliminated players who already respawned remain in the lobby.
+            -- Handle every survivor independently: one missing character,
+            -- collision-checked slot or failed PivotTo must never terminate
+            -- the global round loop and strand all remaining players.
             if not wasEliminated then
-                returnSurvivorToLobby(p, returnPositions[index])
+                local returnedOk, returned = pcall(
+                    returnSurvivorToLobby, p, returnPositions[index]
+                )
+                if not returnedOk or not returned then
+                    warn(
+                        "Survivor lobby return failed; respawning:",
+                        p.UserId,
+                        returnedOk and "no safe character/slot" or tostring(returned)
+                    )
+                    if p.Parent == Players then
+                        local respawnOk, respawnError = pcall(p.LoadCharacter, p)
+                        if not respawnOk then
+                            warn("Survivor lobby respawn failed:", p.UserId, respawnError)
+                        end
+                    end
+                end
             end
         end
     end
