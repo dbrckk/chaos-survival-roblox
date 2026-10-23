@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 
 local player = Players.LocalPlayer
@@ -18,6 +19,8 @@ folder.Parent = workspace
 local visualsByPlatform = {}
 local collapseConnections = {}
 local routeAttributeConnections = {}
+local routeTargetConnections = {}
+local routeCueStates = {}
 local footprintDisconnects = {}
 
 local function clear()
@@ -33,6 +36,13 @@ local function clear()
         connection:Disconnect()
         routeAttributeConnections[platform] = nil
     end
+    for platform, connections in pairs(routeTargetConnections) do
+        for _, connection in ipairs(connections) do
+            connection:Disconnect()
+        end
+        routeTargetConnections[platform] = nil
+    end
+    table.clear(routeCueStates)
     table.clear(visualsByPlatform)
     folder:ClearAllChildren()
 end
@@ -235,6 +245,48 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
     end
 end
 
+-- Mark only geometry-verified ascending routes. The two short chevron
+-- strokes are fully inside the takeoff deck, welded to its real footprint.
+-- Existing collapse and shrink listeners own all visibility/resize work.
+local function decorateTakeoff(platform, target, index, theme, quality)
+    local frame = JumpRouteCueRules.takeoffFrame(
+        platform, target, PlatformFinishKit.surfacePaintOffset(platform, 0.05) + 0.025
+    )
+    if not frame then return end
+    local strokes = {}
+    local opacity = quality.Name == "Low" and 0.42 or 0.51
+    local color = theme.Accent:Lerp(theme.Secondary, 0.26)
+    for side = -1, 1, 2 do
+        local piece = makePart(
+            "ParkourTakeoffChevron" .. index .. "_" .. tostring(side),
+            Vector3.new(0.12, 0.045, 0.82),
+            frame * CFrame.new(side * 0.28, 0, 0.14)
+                * CFrame.Angles(0, math.rad(side * 38), 0),
+            color,
+            Enum.Material.Neon,
+            opacity,
+            platform
+        )
+        strokes[#strokes + 1] = piece
+    end
+    routeCueStates[platform] = {target = target, strokes = strokes}
+end
+
+local function syncTakeoff(platform)
+    local cue = routeCueStates[platform]
+    if not cue then return end
+    local target = cue.target
+    local valid = platform.Parent ~= nil
+        and target.Parent == platform.Parent
+        and platform.CanCollide and target.CanCollide
+        and platform:GetAttribute("CollapsePhase") == nil
+        and target:GetAttribute("CollapsePhase") == nil
+    for _, stroke in ipairs(cue.strokes) do
+        stroke.Transparency = valid
+            and stroke:GetAttribute("ChaosBaseTransparency") or 1
+    end
+end
+
 local function rebuild()
     clear()
 
@@ -250,8 +302,9 @@ local function rebuild()
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local index = 0
+    local ordered = PlatformFinishKit.orderedPlatforms(platforms)
 
-    for _, platform in ipairs(PlatformFinishKit.orderedPlatforms(platforms)) do
+    for _, platform in ipairs(ordered) do
         if platform:IsA("BasePart") then
             index += 1
             local visualIndex = PlatformFinishKit.visualIndex(platform, index)
@@ -260,17 +313,16 @@ local function rebuild()
             -- Rebuild once the replicated metadata arrives so the first
             -- streamed-in ornaments use resizable Welds, not rigid
             -- WeldConstraints that could imply ghost ledges while shrinking.
-            if variant == "Classic"
+            if platform.Name:match("^Platform%d+$")
                 and tonumber(platform:GetAttribute("RouteTier")) == nil then
                 routeAttributeConnections[platform] =
                     platform:GetAttributeChangedSignal("RouteTier"):Connect(function()
                         task.defer(rebuild)
                     end)
             end
-            if tier.Name == "Low" and visualIndex % 2 == 0 then
-                continue
-            end
-
+            -- Low tier keeps its existing half-density surface ornaments,
+            -- but EVERY verified takeoff gets a small gameplay route cue.
+            if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
             for _, piece in ipairs(PlatformFinishKit.build(
                 folder, platform, variant, tier.Name, theme
             )) do
@@ -302,6 +354,16 @@ local function rebuild()
             else
                 decorateClassic(platform, visualIndex, theme, tier)
             end
+            end
+
+            -- Orbital uses continuous physical Helix ramps instead of
+            -- jumping between these deck tiers; no false route arrows.
+            local target = JumpRouteCueRules.select(
+                platform, ordered, base.Position, variant
+            )
+            if target then
+                decorateTakeoff(platform, target, visualIndex, theme, tier)
+            end
 
             -- Permanent Tower skybridges shorten during Shrinking Arena.
             -- Their welded client trims must track the authoritative span
@@ -327,9 +389,16 @@ local function rebuild()
                     visualsByPlatform[platform],
                     platform:GetAttribute("CollapsePhase")
                 )
+                syncTakeoff(platform)
             end
             collapseConnections[platform] =
                 platform:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse)
+            if target then
+                routeTargetConnections[platform] = {
+                    target:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse),
+                    target:GetPropertyChangedSignal("CanCollide"):Connect(syncCollapse),
+                }
+            end
             syncCollapse()
         end
     end
