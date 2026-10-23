@@ -160,6 +160,17 @@ function RoundEventPresentation.lavaSurgeCue(previous, current)
     return nil
 end
 
+-- Avoid fabricated stage announcements on first packet, late join or
+-- phase rollover. Only react to real consecutive server-confirmed stages.
+function RoundEventPresentation.blackoutCue(previous, current)
+    if previous == "Dark" and current == "PowerReturn" then
+        return "BLACKOUT_POWER_RETURN"
+    elseif previous == "PowerReturn" and current == "Dark" then
+        return "BLACKOUT_LIGHTS_DIM"
+    end
+    return nil
+end
+
 function RoundEventPresentation.priority(kind)
     local priorities = {
         finalRush = 50,
@@ -171,6 +182,7 @@ function RoundEventPresentation.priority(kind)
         speedTempo = 25,
         gravityTide = 25,
         lavaSurge = 25,
+        blackoutWindow = 25,
         readyCountdown = 20,
     }
     return priorities[kind] or 0
