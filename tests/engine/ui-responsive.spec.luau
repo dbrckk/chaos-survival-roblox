@@ -78,6 +78,9 @@ describe("UI responsive profiles", function()
             expect(right <= viewport.X and right - layout.width >= 0).toBe(true)
             expect(top >= 66).toBe(true)
             expect(layout.hintWidth <= right).toBe(true)
+            -- The hint is LEFT of the button; it never clips past the
+            -- phone's edge or overlays the top-center hazard clock.
+            expect(right - layout.width - 8 - layout.hintWidth >= 0).toBe(true)
         end
         local short = UIResponsive.phaseDashLayout(Vector2.new(540, 320))
         local tall = UIResponsive.phaseDashLayout(Vector2.new(1280, 720))
