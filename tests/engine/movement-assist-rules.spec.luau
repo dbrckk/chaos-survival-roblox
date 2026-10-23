@@ -124,9 +124,20 @@ describe("Movement assist rules", function()
         expect(surfaceTime ~= nil).toBe(true)
         expect(Rules.probeMatches(0.23, surfaceTime)).toBe(true)
         expect(math.abs(20 * surfaceTime - 4.0) < 0.5).toBe(true)
-        expect(Rules.probeMatches(
-            0.08, Rules.timeToSurface(-10, 196.2, 13)
+        local baseTime = Rules.timeToSurface(-10, 196.2, 13)
+        expect(Rules.probeMatches(0.08, baseTime)).toBe(false)
+        -- Even when the lower base has the smaller timestamp error,
+        -- the closer elevated platform is the first physical contact.
+        local lowerError = math.abs(0.36 - baseTime)
+        expect(Rules.preferContact(0.36, baseTime, nil, math.huge)).toBe(true)
+        expect(Rules.preferContact(
+            0.08, surfaceTime, baseTime, lowerError
+        )).toBe(true)
+        expect(Rules.preferContact(
+            0.36, baseTime, surfaceTime, 0.12
         )).toBe(false)
+        expect(Rules.preferContact(0.08, nil, nil, 0)).toBe(false)
+        expect(Rules.preferContact(-1, 0.08, nil, 0)).toBe(false)
 
         local deck = Instance.new("Part")
         deck.Size = Vector3.new(10, 2, 10)
