@@ -175,6 +175,106 @@ local function addPerimeterStations(decor, config, variant, theme)
     end
 end
 
+-- The enlarged 150+ stud maps need a believable horizon, not just
+-- extra empty floor. Four purpose-built exterior silhouettes provide depth
+-- from the player's ground-height camera while remaining OUTSIDE the
+-- hazard arena. These are original, lightweight Roblox-native 3D objects:
+-- no remote models, texture IDs, scripts, draw loops, physics or lights.
+-- Taller roofs remain outside every safe player/AI route and kill plane.
+local function addDistantSkyline(decor, config, variant, theme)
+    local halfX = variant.BaseSize.X * 0.5
+    local halfZ = variant.BaseSize.Z * 0.5
+    local directions = {
+        {id = "North", x = -22, z = -halfZ - 23, yaw = 0},
+        {id = "East", x = halfX + 23, z = -22, yaw = math.pi * 0.5},
+        {id = "South", x = 22, z = halfZ + 23, yaw = math.pi},
+        {id = "West", x = -halfX - 23, z = 22, yaw = -math.pi * 0.5},
+    }
+    local floorTop = variant.BaseSize.Y * 0.5
+    for index, direction in ipairs(directions) do
+        local model = Instance.new("Model")
+        model.Name = "SkylineStructure" .. direction.id
+        model:SetAttribute("ChaosDistantScenery", true)
+        model.Parent = decor
+
+        local height = (variant.Id == "Towers" and 25
+            or (variant.Id == "Crossroads" and 20
+                or (variant.Id == "Orbital" and 22 or 17)))
+            + (index % 2) * 3
+        local base = CFrame.new(
+            config.ArenaCenter
+                + Vector3.new(direction.x, floorTop, direction.z)
+        ) * CFrame.Angles(0, direction.yaw, 0)
+        local hullColor = theme.Structure:Lerp(theme.Surface, 0.14)
+        local metalColor = theme.Detail:Lerp(theme.Structure, 0.65)
+        local signalColor = theme.Secondary:Lerp(theme.Structure, 0.54)
+
+        local function detail(name, kind, size, offset, material, color,
+                transparency)
+            local p = Instance.new(kind)
+            p.Name = name
+            p.Size = size
+            p.CFrame = base * offset
+            p.Anchored = true
+            p.CanCollide = false
+            p.CanTouch = false
+            p.CanQuery = false
+            p.CastShadow = false
+            p.Material = material
+            p.Color = color
+            p.Transparency = transparency or 0
+            p.Parent = model
+            return p
+        end
+
+        -- Deep metal masses and recessed details are the main read, not
+        -- fluorescent slabs. No visual object is a fake walkable platform.
+        detail("Foundation", "Part", Vector3.new(14, 2.3, 10),
+            CFrame.new(0, -1.1, 0), Enum.Material.Concrete,
+            hullColor, 0.04)
+        detail("StructuralCore", "Part", Vector3.new(8.5, height, 7.4),
+            CFrame.new(0, height * 0.5, 0),
+            Enum.Material.Metal, hullColor, 0.03)
+        detail("TopCap", "WedgePart", Vector3.new(11.4, 3, 8.8),
+            CFrame.new(0, height + 1.3, 0),
+            Enum.Material.Metal, metalColor, 0.06)
+        for side = -1, 1, 2 do
+            detail(side < 0 and "OuterRibL" or "OuterRibR",
+                "WedgePart", Vector3.new(2.2, 5.4, 8),
+                CFrame.new(side * 4.6, 2.8, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, metalColor, 0.06)
+            detail(side < 0 and "InsetL" or "InsetR",
+                "Part", Vector3.new(0.24, height * 0.54, 0.85),
+                CFrame.new(side * 4.30, height * 0.52, -3.6),
+                Enum.Material.Metal, signalColor, 0.28)
+        end
+
+        if variant.Id == "Orbital" then
+            local dish = detail("ReceiverHead", "Part",
+                Vector3.new(5.5, 0.75, 5.5),
+                CFrame.new(0, height + 3.4, 0),
+                Enum.Material.Metal, metalColor, 0.06)
+            dish.Shape = Enum.PartType.Cylinder
+        elseif variant.Id == "Crossroads" then
+            detail("ExchangeMast", "Part", Vector3.new(0.7, 5.5, 0.7),
+                CFrame.new(0, height + 4.0, 0),
+                Enum.Material.Metal, metalColor, 0.04)
+            detail("CrossAntenna", "Part", Vector3.new(7.5, 0.4, 0.4),
+                CFrame.new(0, height + 6.1, 0),
+                Enum.Material.Metal, metalColor, 0.05)
+        elseif variant.Id == "Towers" then
+            detail("ServiceMast", "Part", Vector3.new(0.85, 7, 0.85),
+                CFrame.new(0, height + 4.6, 0),
+                Enum.Material.Metal, metalColor, 0.06)
+        else
+            detail("RelayAerial", "WedgePart", Vector3.new(3.4, 3.2, 2),
+                CFrame.new(0, height + 3.2, 0),
+                Enum.Material.Metal, metalColor, 0.06)
+        end
+    end
+end
+
 local function addArenaFoundation(decor, config, variant, theme)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
@@ -1717,6 +1817,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
 
     addArenaFoundation(decor, config, variant, theme)
     addPerimeterStations(decor, config, variant, theme)
+    addDistantSkyline(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantLandmarks(decor, config, variant, theme)
     addVariantFloorLanguage(decor, config, variant, theme)
