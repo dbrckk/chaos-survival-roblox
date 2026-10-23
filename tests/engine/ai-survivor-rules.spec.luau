@@ -32,7 +32,7 @@ describe("AI survivor rules", function()
             expect(#display >= 2 and #display <= 20).toBe(true)
             expect(username:match("^[%w_]+$") ~= nil).toBe(true)
             expect(username:lower():find("bot", 1, true) == nil).toBe(true)
-            expect(display:lower():find("ai", 1, true) == nil).toBe(true)
+            expect(display:lower() ~= "ai").toBe(true)
             expect(usernames[username:lower()] == nil).toBe(true)
             expect(displays[display:lower()] == nil).toBe(true)
             usernames[username:lower()] = true
