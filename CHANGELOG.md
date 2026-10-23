@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-23 — Four genuine outer playable circuits per map + natural Roblox NPC names (candidate)
+
+- Added four **physically playable** perimeter circuits to each of Classic, Towers, Crossroads and Orbital (8 solid grounded/two-stage platforms per map). Routes are at ±46–64 studs, on the new 150–156-stud map foundations, with a short ordinary-jump gap and a 3.6-stud rise. Large blocks touch the actual floor: no dangling low platforms forming R15 headroom traps.
+- Existing 16/21/17/18 core platform indices stay exactly unchanged, including Towers Skybridges 18–21, Orbital Helix and existing spawn points. Outer decks are appended inside the *same* authoritative `Platforms` folder, so server-controlled AI path candidates, collectibles, shrinking/hazard and visibility routines see genuine collidable route parts. There are no fake noncolliding shortcuts or special physics buffs.
+- Four map-specific outer exit sculptures per arena: original muted metal buttress ribs, tapered noncolliding wedge cap, glass inset; **no lights, particle emitters or new frame loops**. Complements the prior four nonblocking perimeter stations. Authored OBJ in `assets/source` still requires actual Roblox Studio MeshPart import; no fictitious 3D upload is claimed.
+- AI overhead names now use Roblox's own native Humanoid name rendering instead of a visibly different custom text panel. Expanded fictional identity pool from 8 to 20 case-distinct usernames/display names; short social reactions are optional, ephemeral, and not chat messages. `AISurvivor` metadata / bot proxy remains explicit for server scoring, roster, moderation and honest player-count reporting. No real Roblox account impersonation.
+- Extended existing real-engine arena, MapBuilder and bot tests with floor-to-route accessibility, 4-stud jump gap, spawn/boundary clearance, four per-arena decorative facades, preservation of base IDs, and natural unique usernames. **Physical device UX and actual FPS remain unverified** until Android staging/inspection.
+
 ## 2026-10-23 — Larger arenas and more natural survivor nameplates (candidate)
 
 - Expanded all four playable arena foundations to 150–156 studs in X/Z (previously 94–104 studs). Existing core routes, physical platform heights, jump accessibility, spawn coordinates and sensors are intentionally retained; this is a first-stage expansion, not a complete replacement of the level architecture.
