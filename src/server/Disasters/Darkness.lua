@@ -1,4 +1,4 @@
-local D = {Name = "BLACKOUT", Hint = "WATCH FOR THE POWER WINDOWS!"}
+local D = {Name = "BLACKOUT", Hint = "VISIBILITY IS LOW — REMEMBER YOUR ROUTE!"}
 
 -- Advanced, single-disaster Blackout alternates sustained low visibility
 -- with short, gently lit windows for planning a safe route. The lighting
