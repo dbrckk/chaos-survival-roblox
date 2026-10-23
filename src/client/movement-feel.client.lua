@@ -120,27 +120,13 @@ local function emitLandingBurst(strength)
 end
 
 local function bindCharacter(nextCharacter)
-    -- A task.spawn for the initial avatar can race a newer CharacterAdded.
+    -- Initial task.spawn and CharacterAdded may arrive out of order.
     if player.Character ~= nextCharacter then return end
     disconnectCharacter()
     local version = bindVersion
     character = nextCharacter
     humanoid = nil
     root = nil
-    local nextHumanoid = nextCharacter:WaitForChild("Humanoid", 5)
-    if bindVersion ~= version or player.Character ~= nextCharacter
-        or character ~= nextCharacter then return end
-    local nextRoot = nextCharacter:WaitForChild("HumanoidRootPart", 5)
-    if bindVersion ~= version or player.Character ~= nextCharacter
-        or character ~= nextCharacter then return end
-    if not nextHumanoid or not nextHumanoid:IsA("Humanoid")
-        or nextHumanoid.Parent ~= nextCharacter
-        or not nextRoot or not nextRoot:IsA("BasePart")
-        or nextRoot.Parent ~= nextCharacter then
-        return
-    end
-    humanoid = nextHumanoid
-    root = nextRoot
 
     landingKick = 0
     impactKick = 0
@@ -156,36 +142,61 @@ local function bindCharacter(nextCharacter)
     presentationKickTarget = 0
     CameraFeelBus.reset()
 
-    if not humanoid or not root then
-        return
-    end
-
-    table.insert(characterConnections, nextHumanoid.StateChanged:Connect(function(_, newState)
-        if bindVersion ~= version or character ~= nextCharacter
-            or player.Character ~= nextCharacter
-            or humanoid ~= nextHumanoid or root ~= nextRoot then
+    -- On slower Android connections a root may replicate well after the
+    -- CharacterAdded signal. Avoid yielding for five seconds or permanently
+    -- losing that avatar; one ChildAdded listener repairs incomplete rigs.
+    local function attachIfReady()
+        if bindVersion ~= version or player.Character ~= nextCharacter
+            or character ~= nextCharacter then
             return
         end
-        if newState == Enum.HumanoidStateType.Freefall then
-            wasAirborne = true
-        elseif wasAirborne
-            and (
-                newState == Enum.HumanoidStateType.Landed
-                or newState == Enum.HumanoidStateType.Running
-                or newState == Enum.HumanoidStateType.RunningNoPhysics
-            )
-        then
-            wasAirborne = false
-            local fallSpeed = math.max(0, -lastVerticalVelocity)
-            if fallSpeed > 22 then
-                local strength = math.clamp((fallSpeed - 22) / 58, 0.08, 0.72)
-                landingKick = math.max(landingKick, strength)
-                emitLandingBurst(strength)
+        local nextHumanoid = nextCharacter:FindFirstChildOfClass("Humanoid")
+        local nextRoot = nextCharacter:FindFirstChild("HumanoidRootPart")
+        if not nextHumanoid or not nextRoot or not nextRoot:IsA("BasePart")
+            or nextHumanoid.Parent ~= nextCharacter
+            or nextRoot.Parent ~= nextCharacter then
+            return
+        end
+        if humanoid == nextHumanoid and root == nextRoot then return end
+
+        humanoid = nextHumanoid
+        root = nextRoot
+        wasAirborne = nextHumanoid:GetState() == Enum.HumanoidStateType.Freefall
+        -- If a native rig part was replaced after streaming, old callbacks
+        -- remain harmless: the bound Humanoid/Root identity is rechecked.
+        table.insert(characterConnections, nextHumanoid.StateChanged:Connect(function(_, newState)
+            if bindVersion ~= version or character ~= nextCharacter
+                or player.Character ~= nextCharacter
+                or humanoid ~= nextHumanoid or root ~= nextRoot then
+                return
             end
+            if newState == Enum.HumanoidStateType.Freefall then
+                wasAirborne = true
+            elseif wasAirborne
+                and (
+                    newState == Enum.HumanoidStateType.Landed
+                    or newState == Enum.HumanoidStateType.Running
+                    or newState == Enum.HumanoidStateType.RunningNoPhysics
+                )
+            then
+                wasAirborne = false
+                local fallSpeed = math.max(0, -lastVerticalVelocity)
+                if fallSpeed > 22 then
+                    local strength = math.clamp((fallSpeed - 22) / 58, 0.08, 0.72)
+                    landingKick = math.max(landingKick, strength)
+                    emitLandingBurst(strength)
+                end
+            end
+        end))
+    end
+
+    table.insert(characterConnections, nextCharacter.ChildAdded:Connect(function(child)
+        if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
+            task.defer(attachIfReady)
         end
     end))
+    attachIfReady()
 end
-
 if player.Character then
     task.spawn(bindCharacter, player.Character)
 end
