@@ -179,6 +179,33 @@ describe("Body motion rules", function()
         local invalidLaunch, invalidBrake = LocomotionDynamics.acceleration(10, 0, 0, true)
         expect(invalidLaunch).toBe(0)
         expect(invalidBrake).toBe(0)
+
+        -- Actual touchdown can reset Humanoid velocity before StateChanged
+        -- runs. Preserve the speed observed during the *current* fall, but
+        -- reject footstep-size hops and stale Android background samples.
+        local impact = LocomotionDynamics.verifiedLandingSpeed
+        expect(impact(45, 0.38, 0.018)).toBe(45)
+        expect(impact(25, 0.11, 0.06)).toBe(25)
+        expect(impact(1500, 0.60, 0.02)).toBe(180)
+        expect(impact(45, 0.05, 0.02)).toBe(0)
+        expect(impact(45, 0.38, 0.35)).toBe(0)
+        expect(impact(20, 0.38, 0.02)).toBe(0)
+        expect(impact(45, -1, 0.02)).toBe(0)
+        expect(impact(45, 0.50, -0.02)).toBe(0)
+        expect(impact(45, 16, 0.02)).toBe(0)
+        expect(impact(math.huge, 0.50, 0.02)).toBe(0)
+        expect(impact(0 / 0, 0.50, 0.02)).toBe(0)
+        expect(impact(45, 0 / 0, 0.02)).toBe(0)
+        expect(impact(45, 0.50, math.huge)).toBe(0)
+        expect(impact(nil, nil, nil)).toBe(0)
+
+        -- An airborne -> grounded speed discontinuity belongs to landing,
+        -- never the sprint-launch or stop-skid cosmetic transition.
+        local falseLaunch, falseSkid = LocomotionDynamics.acceleration(
+            17, 0, 1 / 60, false
+        )
+        expect(falseLaunch).toBe(0)
+        expect(falseSkid).toBe(0)
     end)
 
     it("restores human momentum trails after late or replaced avatar rigs", function()
