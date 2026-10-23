@@ -152,6 +152,22 @@ Log SHA, public/private place version, 30/60 FPS traces, memory,
 video, collisions, AI availability, social bubbles, name overlap,
 and whether 4+ players can still find one another on the larger map.
 
+## Natural-looking AI cosmetics and performance acceptance
+
+Run a private staged build of the exact SHA in R15 on Android, with
+three AI competitors and four real humans in separate sessions. Ensure
+the eight possible equipment silhouettes can be seen by cycling the
+fictional identity catalog: visor, headphones, backpack, headband,
+shoulder strap, knit beanie, jacket panels, wrist wraps. Confirm welded
+cosmetics never detach, block movement, cover danger rings, or collide
+with the arena. Check all three mobile VFX tiers and ReduceMotion.
+Only backpack variants may carry a very subtle cosmetic trail; all
+other bots must show no distinctive continuous glow streak. Verify the
+normal Roblox character names stay compact and that players can still
+identify NPC status where the game explains solo AI or in transparency
+controls. Record real video, FPS and GPU/CPU frame time; static source
+inspection alone is not a device QA pass.
+
 ## Android combat flash and win/loss camera — exact-SHA E2E
 
 On a private staging build matching the GitHub source, repeat 10 rapid
