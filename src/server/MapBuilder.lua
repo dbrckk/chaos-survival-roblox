@@ -173,6 +173,50 @@ local function addPerimeterStations(decor, config, variant, theme)
                 accent, 0.12)
         end
     end
+
+    -- Four lightweight corner silhouettes give the newly playable outer
+    -- ring depth and orientation. They deliberately have no collision,
+    -- lights, scripts, or render-step listeners on low-end Android.
+    for _, corner in ipairs({
+        {name = "NW", x = -1, z = -1},
+        {name = "NE", x = 1, z = -1},
+        {name = "SE", x = 1, z = 1},
+        {name = "SW", x = -1, z = 1},
+    }) do
+        local model = Instance.new("Model")
+        model.Name = "OuterCornerMonument" .. corner.name
+        model:SetAttribute("ChaosCornerMonument", true)
+        model.Parent = decor
+        local origin = CFrame.new(config.ArenaCenter + Vector3.new(
+            corner.x * (halfX - 13), baseTop, corner.z * (halfZ - 13)
+        )) * CFrame.Angles(0, math.atan2(-corner.x, -corner.z), 0)
+        local function block(name, size, offset, material, color, shape)
+            local item = Instance.new("Part")
+            item.Name = name
+            item.Size = size
+            item.CFrame = origin * CFrame.new(offset)
+            item.Anchored = true
+            item.CanCollide = false
+            item.CanTouch = false
+            item.CanQuery = false
+            item.CastShadow = false
+            item.Material = material
+            item.Color = color
+            if shape then item.Shape = shape end
+            item.Parent = model
+        end
+        block("GroundSocket", Vector3.new(7, 0.12, 7),
+            Vector3.new(0, 0.06, 0), Enum.Material.Metal, theme.Structure)
+        block("MonumentStem", Vector3.new(1.8, 10, 1.8),
+            Vector3.new(0, 5, 0), Enum.Material.Metal, theme.Detail)
+        block("OuterShell", Vector3.new(4.6, 1.2, 4.6),
+            Vector3.new(0, 10, 0), Enum.Material.Metal, theme.Structure)
+        block("BeaconCore", Vector3.new(2.2, 2.2, 2.2),
+            Vector3.new(0, 11.8, 0), Enum.Material.Glass,
+            accent, Enum.PartType.Ball)
+        block("Crown", Vector3.new(3.5, 0.55, 3.5),
+            Vector3.new(0, 13.3, 0), Enum.Material.Metal, secondary)
+    end
 end
 
 local function addArenaFoundation(decor, config, variant, theme)
