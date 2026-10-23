@@ -62,7 +62,7 @@ function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId
             -- The one exception is a level hub-to-entry move, with no
             -- overhead clearance problem, only when its deck is outward.
             local sameTierHub = hub and targetTier == tier
-                and rise >= -0.05 and rise <= 0.5
+                and rise >= -0.05 and rise <= JumpRouteCueRules.MaxRise
                 and Vector3.new(target.Position.X - arenaCenter.X, 0,
                     target.Position.Z - arenaCenter.Z).Magnitude > centerRadius + 4
             local ascent = targetTier == tier + 1
