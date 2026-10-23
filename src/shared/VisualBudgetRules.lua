@@ -35,6 +35,9 @@ VisualBudgetRules.LocalFolders = {
     "CharacterContactLocal",
     "LocomotionContactLocal",
     "HazardRouteReadabilityLocal",
+    -- Up to four static high-ground Highlight outlines; BillboardGui
+    -- labels live in PlayerGui and don't count as world Parts.
+    "LavaHighGroundOutlinesLocal",
     "HazardWarningSignaturesLocal",
     "LobbyPersonalProgressLocal",
     "LobbyPresentationLocal",
