@@ -122,6 +122,7 @@ local lastFinalRush = false
 local lastImpactWaveMode = nil
 local lastDoubleCollapseUnlocked = false
 local lastSpeedTempoPhase = nil
+local lastGravityTideStage = nil
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
@@ -286,6 +287,12 @@ stateEvent.OnClientEvent:Connect(function(state)
     local speedTempoPhase = phase == "round"
         and (state.speedTempoPhase == "Surge" or state.speedTempoPhase == "Recover")
         and state.speedTempoPhase or nil
+    local gravityTideStage = phase == "round"
+        and (state.gravityTideStage == "Float"
+            or state.gravityTideStage == "PullRising"
+            or state.gravityTideStage == "Pull"
+            or state.gravityTideStage == "FloatReturning")
+        and state.gravityTideStage or nil
     local fusionName = type(state.fusionName) == "string" and state.fusionName or nil
     local fusionKey = state.doubleChaos and fusionName or nil
     local eventColor = RoundEventPresentation.accent(
@@ -365,8 +372,28 @@ stateEvent.OnClientEvent:Connect(function(state)
             recovering and UITheme.Colors.Cyan or UITheme.Colors.Gold,
             0.95
         )
+    elseif phase == "round"
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+    then
+        -- One small, actionable toast at a server-confirmed gravity
+        -- transition, never a second HUD or an untrusted local timer.
+        local key = RoundEventPresentation.gravityTideCue(
+            lastGravityTideStage, gravityTideStage
+        )
+        if key then
+            local pulling = key == "GRAVITY_PULL_RISING"
+            show(
+                "gravityTide",
+                CoreLocalization.text(localeId, key),
+                CoreLocalization.text(localeId, key .. "_SUB"),
+                pulling and UITheme.Colors.Violet or UITheme.Colors.Cyan,
+                0.95
+            )
+        end
     end
 
+    lastGravityTideStage = gravityTideStage
     lastSpeedTempoPhase = speedTempoPhase
     lastImpactWaveMode = phase == "round" and state.impactWaveMode or nil
     lastDoubleCollapseUnlocked = phase == "round"

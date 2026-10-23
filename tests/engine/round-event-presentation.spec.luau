@@ -211,6 +211,21 @@ describe("Round event presentation", function()
         originalRoot:Destroy()
     end)
 
+    it("announces gravity tide transitions only after a known server stage", function()
+        local cue = RoundEventPresentation.gravityTideCue
+        expect(cue(nil, "PullRising") == nil).toBe(true)
+        expect(cue("Float", "Float") == nil).toBe(true)
+        expect(cue("Float", "PullRising")).toBe("GRAVITY_PULL_RISING")
+        expect(cue("PullRising", "Pull") == nil).toBe(true)
+        expect(cue("Pull", "FloatReturning")).toBe("GRAVITY_FLOAT_RETURNING")
+        expect(cue("FloatReturning", "Float") == nil).toBe(true)
+        -- Sparse mobile snapshots can skip the 1.5-second ramp.
+        expect(cue("Float", "Pull")).toBe("GRAVITY_PULL_RISING")
+        expect(cue("Pull", "Float")).toBe("GRAVITY_FLOAT_RETURNING")
+        expect(cue("Pull", "untrusted") == nil).toBe(true)
+        expect(cue("untrusted", "PullRising") == nil).toBe(true)
+    end)
+
     it("keeps final rush above all other transition priorities", function()
         expect(
             RoundEventPresentation.priority("finalRush")
@@ -235,6 +250,8 @@ describe("Round event presentation", function()
         expect(RoundEventPresentation.priority("collapseWave"))
             .toBe(RoundEventPresentation.priority("impactWave"))
         expect(RoundEventPresentation.priority("speedTempo"))
+            .toBe(RoundEventPresentation.priority("impactWave"))
+        expect(RoundEventPresentation.priority("gravityTide"))
             .toBe(RoundEventPresentation.priority("impactWave"))
         expect(
             RoundEventPresentation.priority("overdrive")
