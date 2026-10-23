@@ -85,6 +85,20 @@ and after each test, average/worst-frame FPS from the staging overlay or
 Roblox performance stats, original screen recording, and player/server
 logs. A green GitHub CI run is **not** a pass for this physical test.
 
+## Distant skyline and extended map visual acceptance
+
+On an actual Android playtest build matching this SHA, walk each of the
+four 150–156-stud arenas and the four outer parkour routes. Verify four
+off-playfield architectural silhouettes (N/E/S/W) appear beyond the
+boundary and NOT as fake traversable platforms or glowing hazard shapes.
+They should break up the dark horizon without hiding red warning rings,
+AI/human names, outer exit structures, thumb controls or the shrinking
+arena boundary. Each structure must be harmless to projectiles, raycasts,
+touch damage and collisions; check Low / Medium / High graphics and
+ReduceMotion. Compare 30-minute GPU frame time, FPS, thermal load and
+memory against the previously published version. Supply genuine Roblox
+client screenshots and signed-off exact SHA / place version.
+
 ## Outer route and native NPC nametag QA — post-expansion candidate
 
 Publish the **exact tested SHA** to a private isolated Roblox experience
