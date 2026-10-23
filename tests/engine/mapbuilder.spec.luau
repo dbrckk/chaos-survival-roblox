@@ -389,6 +389,27 @@ describe("Chaos Survival engine", function()
                     previous = platform
                 end
             end
+            -- Real, sculpted exit facades are cosmetic: no collision,
+            -- no physics queries and no excess shadow/light cost.
+            local decor = arena:FindFirstChild("Decor")
+            for route = 1, 4 do
+                for _, name in ipairs({
+                    "PerimeterExitRib" .. route .. "_-1",
+                    "PerimeterExitRib" .. route .. "_1",
+                    "PerimeterExitCrown" .. route,
+                    "PerimeterExitLens" .. route,
+                }) do
+                    local piece = decor:FindFirstChild(name)
+                    expect(piece ~= nil and piece:IsA("BasePart")).toBe(true)
+                    expect(piece.Anchored).toBe(true)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.CastShadow).toBe(false)
+                end
+                expect(decor:FindFirstChild("PerimeterExitCrown" .. route)
+                    :IsA("WedgePart")).toBe(true)
+            end
             -- The same authoritative folder is inspected by AI, shrinking,
             -- platform collapse, collectibles and native raycasts.
             root:Destroy()
