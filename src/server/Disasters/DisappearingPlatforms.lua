@@ -117,6 +117,10 @@ function D.cosmeticsForPlatform(decor, platform)
                 or item.Name:match("^PlatformCoreGlow(%d+)$")
                 or item.Name:match("^PlatformSupport(%d+)_%d+$")
                 or item.Name:match("^PlatformBevel(%d+)_%d+$")
+                -- Outer exit facades belong to a specific physical deck.
+                -- Collapse them with collision, never leave a fake bridge.
+                or (item:GetAttribute("PerimeterPlatformIndex")
+                    and tostring(item:GetAttribute("PerimeterPlatformIndex")))
             if attachedIndex == index then
                 table.insert(result, {
                     part = item,
