@@ -92,11 +92,11 @@ local function layoutDash()
     local layout = UIResponsive.phaseDashLayout(viewport)
     button.Size = UDim2.fromOffset(layout.width, layout.height)
     button.Position = UDim2.new(1, -layout.rightInset, 1, -layout.bottomInset)
-    -- Right-align the first-use bubble. A centered 158-pixel label above
-    -- a 74-pixel touch button previously clipped off the phone's right edge.
-    intro.AnchorPoint = Vector2.new(1, 1)
-    intro.Position = UDim2.new(1, 0, 0, -8)
-    intro.Size = UDim2.fromOffset(layout.hintWidth, 34)
+    -- Put the one-time tip beside DASH instead of above it: on short
+    -- phones the old bubble could overlap the hazard title and timer.
+    intro.AnchorPoint = Vector2.new(1, 0.5)
+    intro.Position = UDim2.new(0, -8, 0.5, 0)
+    intro.Size = UDim2.fromOffset(layout.hintWidth, 42)
 end
 
 local function bindDashViewport()
