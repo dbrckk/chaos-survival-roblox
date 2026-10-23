@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-23 — Android landing precision and fair coyote window (candidate)
+
+- **Approach clarity:** add a local 2- to 4-stroke, non-colliding landing marker while an active player descends toward an actual sampled solid arena surface. A short ballistic horizontal projection is checked by a second collision raycast; previews beyond 0.42 seconds, unsupported gaps, collapsing decks and steep/non-walkable surfaces are omitted rather than inventing a safe landing.
+- **Edge awareness:** the preview shifts from cyan to soft magenta when its projected contact is within 1.75 studs of a real deck edge. It does not assert disaster safety or grant a traversal advantage.
+- **Mobile budget:** reuse the single movement-feel RenderStep owner; sample only while descending and at most once per 0.10 seconds, and retain four local parts (two visible on Low). No new looping thread, network traffic, lights, reward, physics or paid mechanic. Motion-reduction users receive static, muted marks.
+- **Jump fairness:** a normal Humanoid Jumping transition now consumes the 0.10-second coyote allowance, preventing a repeated tap during the subsequent Freefall state from becoming an unintended double jump. Buffered landing and legitimate edge jumps retain their existing support.
+- Extend the existing Roblox engine movement-assist suite with consumed-jump safety, airborne eligibility, bounded prediction, malformed values, and rotated-platform edge clearance. Authenticated Android gameplay and public-place publication remain separate release gates.
+
 ## 2026-10-23 — Contextual lava high-ground guidance (candidate)
 
 - During READY and RISING LAVA rounds, mark only the real, server-authored tier-four elevated platforms with a restrained bilingual floating direction label and a client-side occluded outline. Other disaster rounds and the lobby remain unchanged.
