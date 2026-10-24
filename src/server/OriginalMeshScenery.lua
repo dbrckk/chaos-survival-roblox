@@ -166,6 +166,12 @@ function OriginalMeshScenery.mount(arena, templates)
             end
         end
     end
+    -- Counters are replicated for inspection without any Studio-only
+    -- debugging tools. "Complete" means four decorative placements, not
+    -- proof of texture visibility or Android performance.
+    local total = #folder:GetChildren()
+    arena:SetAttribute("Original3DSceneryCount", total)
+    arena:SetAttribute("Original3DSceneryComplete", total == 4)
     return mounted
 end
 
@@ -187,10 +193,7 @@ function OriginalMeshScenery.start()
     local function refreshArena()
         local arena = generated:FindFirstChild("Arena")
         if arena then
-            local added = OriginalMeshScenery.mount(arena, templates)
-            if added > 0 then
-                arena:SetAttribute("Original3DSceneryReady", true)
-            end
+            OriginalMeshScenery.mount(arena, templates)
         end
     end
 
