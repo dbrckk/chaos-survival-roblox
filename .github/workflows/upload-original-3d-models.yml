@@ -65,8 +65,12 @@ on:
 permissions:
   contents: read
 
+# GitHub concurrency permits only ONE running and ONE pending job per group.
+# Reusing one global group silently CANCELS queued parallel models, even with
+# cancel-in-progress=false. Partition by creator and model to preserve all
+# independent, nonduplicating original uploads.
 concurrency:
-  group: chaos-original-model-uploads
+  group: chaos-original-model-uploads-${{ inputs.creator_kind }}-${{ inputs.creator_id }}-${{ inputs.model }}
   cancel-in-progress: false
 
 jobs:
