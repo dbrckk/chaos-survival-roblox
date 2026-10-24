@@ -1,5 +1,22 @@
 local ResultPresentation = {}
 
+-- A server-confirmed result is sufficient to show the previous-round
+-- recap in the lobby. Profile attributes (Games/DataLoaded) can lag a
+-- round transition, especially on mobile; neither is a result receipt.
+function ResultPresentation.showLobbyRecap(phase, recap)
+    if phase ~= "intermission" and phase ~= "waiting" then
+        return false
+    end
+    if type(recap) ~= "table"
+        or type(recap.disasterIds) ~= "table"
+        or #recap.disasterIds == 0 then
+        return false
+    end
+    local number = tonumber(recap.roundNumber)
+    return number ~= nil and number == number and number > 0
+        and number < math.huge and number == math.floor(number)
+end
+
 local ELIMINATION_COPY = {
     Meteor = {
         title = "HIT BY METEOR",

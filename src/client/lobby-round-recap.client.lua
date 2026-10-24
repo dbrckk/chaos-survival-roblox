@@ -7,6 +7,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -205,13 +206,7 @@ local function build()
 end
 
 local function shouldShow()
-    if not latestRecap or player:GetAttribute("DataLoaded") ~= true then
-        return false
-    end
-    if math.max(0, math.floor(tonumber(player:GetAttribute("Games")) or 0)) < 1 then
-        return false
-    end
-    return currentPhase == "intermission" or currentPhase == "waiting"
+    return ResultPresentation.showLobbyRecap(currentPhase, latestRecap)
 end
 
 local function refresh()
@@ -297,6 +292,7 @@ stateEvent.OnClientEvent:Connect(function(state)
             arenaName = state.arenaName,
             survivorsAlive = state.survivorsAlive,
             contestantCount = state.contestantCount,
+            roundNumber = state.roundNumber,
         }
     end
 
