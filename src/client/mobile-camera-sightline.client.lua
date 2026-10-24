@@ -15,41 +15,61 @@ local previousModifier = 0
 local fadeValue = 0.72
 local lastCamera = nil
 
--- A screenshot from Android showed a survivor's shoulder obscuring most
--- of the view while the owner's avatar remained behind it. Only soften
--- ONE nearby interfering humanoid locally; other survivors must remain
--- readable and never become invisible or lose collisions.
-local fadedAvatar = nil
-local originalAvatarModifiers = {}
+-- The Android screenshots showed players overlapping directly in front
+-- of the lens. Soften at most TWO actual sightline blockers, rather than
+-- arbitrarily picking only one (which leaves the next one covering the
+-- whole screen). A locally faded player remains recognisable and collidable.
+local fadedAvatars = {} -- Model -> { BasePart -> original modifier }
 local avatarFade = CameraOcclusionRules.localModifier()
 
-local function restoreAvatar()
-    for part, original in pairs(originalAvatarModifiers) do
+local function restoreAvatar(model)
+    local originalParts = fadedAvatars[model]
+    if not originalParts then return end
+    for part, original in pairs(originalParts) do
         if part and part.Parent
             and math.abs(part.LocalTransparencyModifier - avatarFade) < 0.001 then
-            -- Do not override another controller (native camera, LOD, etc.)
-            -- if it modified the value after this feature touched it.
+            -- Yield to native Roblox camera fade or other local cosmetics
+            -- if they changed the value while we owned it.
             part.LocalTransparencyModifier = original
         end
-        originalAvatarModifiers[part] = nil
     end
-    fadedAvatar = nil
+    fadedAvatars[model] = nil
 end
 
-local function applyAvatarFade(model)
-    if fadedAvatar == model then
-        return
+local function restoreAvatars()
+    for model in pairs(fadedAvatars) do
+        restoreAvatar(model)
     end
-    restoreAvatar()
-    if not model or not model.Parent then
-        return
+end
+
+local function applyAvatarFades(selected)
+    local wanted = {}
+    for _, model in ipairs(selected) do
+        wanted[model] = true
     end
-    fadedAvatar = model
-    for _, part in ipairs(model:GetDescendants()) do
-        if part:IsA("BasePart")
-            and part.LocalTransparencyModifier < 0.55 then
-            originalAvatarModifiers[part] = part.LocalTransparencyModifier
-            part.LocalTransparencyModifier = avatarFade
+    for model in pairs(fadedAvatars) do
+        if not wanted[model] or not model.Parent then
+            restoreAvatar(model)
+        end
+    end
+    for _, model in ipairs(selected) do
+        if model.Parent then
+            local originals = fadedAvatars[model]
+            if not originals then
+                originals = {}
+                fadedAvatars[model] = originals
+            end
+            -- StreamingEnabled and avatar accessories can replicate AFTER
+            -- the first fade. Rescan only these two candidates to include
+            -- newly arrived body parts without repeatedly rewriting others.
+            for _, part in ipairs(model:GetDescendants()) do
+                if part:IsA("BasePart")
+                    and originals[part] == nil
+                    and part.LocalTransparencyModifier < 0.55 then
+                    originals[part] = part.LocalTransparencyModifier
+                    part.LocalTransparencyModifier = avatarFade
+                end
+            end
         end
     end
 end
@@ -57,7 +77,7 @@ end
 local function refreshAvatarOccluder(camera, localRoot, localCharacter)
     local focus = localRoot.Position + Vector3.new(0, 1.25, 0)
     local cameraPosition = camera.CFrame.Position
-    local closest, bestScore = nil, math.huge
+    local candidates = {}
     local function consider(model)
         if not model or not model.Parent or model == localCharacter then
             return
@@ -71,16 +91,24 @@ local function refreshAvatarOccluder(camera, localRoot, localCharacter)
         local score = CameraOcclusionRules.avatarOcclusion(
             cameraPosition, focus, root.Position + Vector3.new(0, 1.0, 0)
         )
+        local head = model:FindFirstChild("Head")
+        if head and head:IsA("BasePart") then
+            local headScore = CameraOcclusionRules.avatarOcclusion(
+                cameraPosition, focus, head.Position
+            )
+            -- Raised avatars on ramps can obscure the camera with their
+            -- upper body even when their HumanoidRootPart is out of line.
+            if headScore and (not score or headScore < score) then
+                score = headScore
+            end
+        end
         if score then
-            -- Small hysteresis avoids alternating transparency between
-            -- two teammates moving across the same sightline.
-            if model == fadedAvatar then
+            -- Prefer incumbents slightly to prevent alternating between
+            -- similarly close teammates in a dense round.
+            if fadedAvatars[model] then
                 score -= 0.4
             end
-            if score < bestScore then
-                bestScore = score
-                closest = model
-            end
+            candidates[#candidates + 1] = { model = model, score = score }
         end
     end
 
@@ -100,11 +128,11 @@ local function refreshAvatarOccluder(camera, localRoot, localCharacter)
             end
         end
     end
-    applyAvatarFade(closest)
+    applyAvatarFades(CameraOcclusionRules.chooseOccluders(candidates, 2))
 end
 
 local function restore()
-    restoreAvatar()
+    restoreAvatars()
     if faded and faded.Parent then
         -- Yield to native Roblox camera/streaming writers if they adjusted
         -- this modifier while our temporary fade was in effect.
