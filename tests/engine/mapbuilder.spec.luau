@@ -398,6 +398,25 @@ describe("Chaos Survival engine", function()
                 end
                 expect(parts >= 7 and parts <= 9).toBe(true)
             end
+            for _, direction in ipairs({"North", "East", "South", "West"}) do
+                for layer = 1, 2 do
+                    local depth = decor:FindFirstChild(
+                        "SkylineDepth" .. direction .. layer
+                    )
+                    expect(depth ~= nil and depth:IsA("Model")).toBe(true)
+                    expect(depth:GetAttribute("ChaosDistantScenery")).toBe(true)
+                    expect(#depth:GetChildren()).toBe(2)
+                    for _, piece in ipairs(depth:GetChildren()) do
+                        expect(piece:IsA("BasePart")).toBe(true)
+                        expect(piece.Anchored).toBe(true)
+                        expect(piece.CanCollide).toBe(false)
+                        expect(piece.CanTouch).toBe(false)
+                        expect(piece.CanQuery).toBe(false)
+                        expect(piece.CastShadow).toBe(false)
+                        expect(piece.Material ~= Enum.Material.Neon).toBe(true)
+                    end
+                end
+            end
             expect(count).toBe(4)
             expect(distinctGeometry >= 12).toBe(true)
             root:Destroy()
