@@ -76,7 +76,7 @@ jobs:
               })
               print(name, "glTF source generated and validated:", len(raw), "bytes")
           Path("build/mesh-previews/manifest.json").write_text(
-              json.dumps(manifest, indent=2) + "\\n", encoding="utf-8"
+              json.dumps(manifest, indent=2) + chr(10), encoding="utf-8"
           )
           PY
 
