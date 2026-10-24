@@ -201,6 +201,23 @@ third-person Android camera and keep the total camera FOV bounded at
 native HUD, logs, device / OS, FPS, exact staged SHA and time. Not passed
 until an authenticated real-client session produces evidence.
 
+## Exterior hero architecture — four-variant Android visual QA
+
+For each Classic, Towers, Crossroads and Orbital round on the exact staged
+commit, stand on the central floor and on an outer circuit. Face north and
+verify an original, large **non-playable** industrial signature beyond the
+arena edge: radar dishes (Classic), raised lift bridge (Towers), freight
+interchange (Crossroads), or suspended reactor ring (Orbital). Confirm that
+the skyline does not create a falsely safe escape route, obscure any
+meteor/bomb warning, cast an intrusive shadow or add a physical obstacle.
+
+Repeat on Low, Medium and High graphics with StreamingEnabled and the
+Android camera at near/far zoom. Capture original screenshots, frame time,
+FPS, memory, thermal behavior and render-stream-in/out behavior over a
+30-minute session. Compare against the previous baseline; reject or reduce
+the setpiece if visibility, stuttering or performance regress. A successful
+Open Cloud engine spec verifies construction, **not** real-device visuals.
+
 ## True touchdown / movement transition acceptance
 
 On a private staging experience whose published build is proven to match

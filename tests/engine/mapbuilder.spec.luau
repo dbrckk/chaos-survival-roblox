@@ -423,6 +423,50 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("authors four distinct off-map megastructures without gameplay collisions", function()
+        local variantIdentity = {
+            Classic = "PrimaryRelayMast",
+            Towers = "OverheadServiceBridge",
+            Crossroads = "UpperExchange",
+            Orbital = "ReactorArc1",
+        }
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local base = arena:FindFirstChild("Base")
+            local decor = arena:FindFirstChild("Decor")
+            local hero = decor:FindFirstChild("ArenaSignatureMegastructure")
+            expect(hero ~= nil and hero:IsA("Model")).toBe(true)
+            expect(hero:GetAttribute("ChaosDistantScenery")).toBe(true)
+            expect(hero:GetAttribute("SignatureVariant")).toBe(id)
+            expect(hero:FindFirstChild(variantIdentity[id]) ~= nil).toBe(true)
+            local count = 0
+            local highest = -math.huge
+            for _, piece in ipairs(hero:GetDescendants()) do
+                if piece:IsA("BasePart") then
+                    count += 1
+                    expect(piece.Anchored).toBe(true)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.CastShadow).toBe(false)
+                    expect(piece.Material ~= Enum.Material.Neon).toBe(true)
+                    -- Conservative sphere radius handles rotated braces and
+                    -- wedges; art cannot intrude into the shrinking floor.
+                    local distanceBeyondNorth = (base.Position.Z
+                        - base.Size.Z * 0.5) - piece.Position.Z
+                        - piece.Size.Magnitude * 0.5
+                    expect(distanceBeyondNorth > 12).toBe(true)
+                    highest = math.max(highest,
+                        piece.Position.Y + piece.Size.Y * 0.5)
+                end
+            end
+            expect(count >= 12 and count <= 28).toBe(true)
+            expect(highest - base.Position.Y > 40).toBe(true)
+            root:Destroy()
+        end
+    end)
+
     it("physically builds accessible outer parkour while retaining original core IDs", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)

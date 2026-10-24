@@ -329,6 +329,182 @@ local function addDistantSkyline(decor, config, variant, theme)
     end
 end
 
+-- One large, scene-specific architectural silhouette per arena.
+-- Deliberately positioned beyond the kill/physics floor, behind the playable
+-- skyline. These are ORIGINAL runtime Roblox models and require no asset ID.
+-- Their large-scale shapes are legible from a mobile third-person camera,
+-- with dark industrial mass first and restrained colored accents second.
+-- Never give the hero structure collision, touch, queries, shadows, lights,
+-- animations, untrusted assets, or gameplay significance.
+local function addArenaSignatureMegastructure(decor, config, variant, theme)
+    local model = Instance.new("Model")
+    model.Name = "ArenaSignatureMegastructure"
+    model:SetAttribute("ChaosDistantScenery", true)
+    model:SetAttribute("SignatureVariant", variant.Id)
+    model.Parent = decor
+
+    local origin = CFrame.new(
+        config.ArenaCenter + Vector3.new(
+            variant.BaseSize.X * 0.24,
+            variant.BaseSize.Y * 0.5,
+            -(variant.BaseSize.Z * 0.5 + 66)
+        )
+    )
+    local hull = theme.Structure:Lerp(Color3.fromRGB(21, 28, 38), 0.37)
+    local metal = theme.Detail:Lerp(theme.Structure, 0.55)
+    local rim = theme.Accent:Lerp(theme.Structure, 0.68)
+    local glint = theme.Secondary:Lerp(theme.Structure, 0.50)
+
+    local function piece(name, kind, size, localFrame, material, color, transparency)
+        local object = Instance.new(kind or "Part")
+        object.Name = name
+        object.Size = size
+        object.CFrame = origin * localFrame
+        object.Anchored = true
+        object.CanCollide = false
+        object.CanTouch = false
+        object.CanQuery = false
+        object.CastShadow = false
+        object.Material = material or Enum.Material.Metal
+        object.Color = color or hull
+        object.Transparency = transparency or 0
+        object.Parent = model
+        return object
+    end
+
+    piece("Foundation", "Part", Vector3.new(35, 1.8, 18),
+        CFrame.new(0, -0.9, 0), Enum.Material.Concrete, hull, 0.04)
+    piece("InsetBase", "Part", Vector3.new(31, 0.25, 13),
+        CFrame.new(0, 0.16, 0), Enum.Material.Metal, metal, 0.10)
+
+    if variant.Id == "Orbital" then
+        -- A vertical accelerator torus, instead of one more stack of
+        -- rectangular decks. The segmented metal ring is a real 3D
+        -- architectural silhouette, not a bright opaque VFX plane.
+        local radius = 20
+        local segments = 16
+        local chord = 2 * radius * math.sin(math.pi / segments) + 0.10
+        for index = 0, segments - 1 do
+            local angle = index * math.pi * 2 / segments
+            piece("ReactorArc" .. (index + 1), "Part",
+                Vector3.new(chord, 1.35, 2.1),
+                CFrame.new(radius * math.sin(angle),
+                    29 + radius * math.cos(angle), 0)
+                    * CFrame.Angles(0, 0, -angle),
+                Enum.Material.Metal,
+                index % 4 == 0 and rim or metal, 0.05)
+        end
+        for side = -1, 1, 2 do
+            piece(side < 0 and "RingSupportLeft" or "RingSupportRight",
+                "Part", Vector3.new(3.3, 24, 3.5),
+                CFrame.new(side * 17, 12, 0), Enum.Material.Metal, hull)
+            piece(side < 0 and "RingFootLeft" or "RingFootRight",
+                "WedgePart", Vector3.new(7, 6, 8),
+                CFrame.new(side * 17, 3, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, metal, 0.05)
+        end
+        local core = piece("SuspendedReactorCore", "Part",
+            Vector3.new(10, 10, 10), CFrame.new(0, 29, 0),
+            Enum.Material.Glass, glint, 0.32)
+        core.Shape = Enum.PartType.Ball
+        piece("CoreRetainer", "Part", Vector3.new(13, 1.4, 3),
+            CFrame.new(0, 29, 0), Enum.Material.Metal, hull, 0.06)
+    elseif variant.Id == "Towers" then
+        -- A distant suspended service bridge with two asymmetrical
+        -- elevator towers and cable trusses; no player can reach it.
+        for side = -1, 1, 2 do
+            piece(side < 0 and "LiftTowerWest" or "LiftTowerEast",
+                "Part", Vector3.new(7, 41, 8),
+                CFrame.new(side * 16, 20.5, 0),
+                Enum.Material.Concrete, hull, 0.03)
+            piece(side < 0 and "TowerCrownWest" or "TowerCrownEast",
+                "WedgePart", Vector3.new(10, 6, 10),
+                CFrame.new(side * 16, 44, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, metal)
+            piece(side < 0 and "TowerInlayWest" or "TowerInlayEast",
+                "Part", Vector3.new(0.22, 29, 1.0),
+                CFrame.new(side * 16 + (side < 0 and 3.6 or -3.6),
+                    21, -3.4), Enum.Material.Metal, rim, 0.21)
+            piece(side < 0 and "TowerDiagonalWest" or "TowerDiagonalEast",
+                "Part", Vector3.new(1.0, 32, 1.5),
+                CFrame.new(side * 8, 27, 0)
+                    * CFrame.Angles(0, 0, side * math.rad(27)),
+                Enum.Material.Metal, metal)
+        end
+        piece("OverheadServiceBridge", "Part", Vector3.new(41, 2.4, 6.5),
+            CFrame.new(0, 39, 0), Enum.Material.Metal, metal)
+        piece("LowerTruss", "Part", Vector3.new(35, 0.8, 1.2),
+            CFrame.new(0, 35.6, -3.2), Enum.Material.Metal, hull)
+        piece("HangingSignal", "WedgePart", Vector3.new(4.8, 3, 2),
+            CFrame.new(0, 33.7, -3), Enum.Material.Metal, glint, 0.18)
+    elseif variant.Id == "Crossroads" then
+        -- A double-decker freight-switching gantry with a sharply
+        -- branched outline, distinct from tower cranes and reactor arcs.
+        for side = -1, 1, 2 do
+            piece(side < 0 and "ExchangeLegWest" or "ExchangeLegEast",
+                "Part", Vector3.new(5.2, 34, 6),
+                CFrame.new(side * 16, 17, 0),
+                Enum.Material.Concrete, hull)
+            piece(side < 0 and "CantileverWest" or "CantileverEast",
+                "WedgePart", Vector3.new(11, 4, 7),
+                CFrame.new(side * 18.3, 38, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, metal)
+            piece(side < 0 and "SwitchBraceWest" or "SwitchBraceEast",
+                "Part", Vector3.new(1.1, 22, 1.4),
+                CFrame.new(side * 8, 25, -2)
+                    * CFrame.Angles(0, 0, side * math.rad(32)),
+                Enum.Material.Metal, metal)
+        end
+        piece("LowerExchange", "Part", Vector3.new(42, 2, 6),
+            CFrame.new(0, 29, 0), Enum.Material.Metal, metal)
+        piece("UpperExchange", "Part", Vector3.new(48, 1.3, 5.4),
+            CFrame.new(0, 36.5, 0), Enum.Material.Metal, hull)
+        piece("Switchboard", "Part", Vector3.new(7.5, 4.4, 0.55),
+            CFrame.new(0, 33, -3.2), Enum.Material.Metal, glint, 0.15)
+        piece("SignalPylon", "Part", Vector3.new(1.4, 16, 1.5),
+            CFrame.new(0, 45, 0), Enum.Material.Metal, hull)
+        piece("SignalCrown", "WedgePart", Vector3.new(5.6, 3.4, 2.8),
+            CFrame.new(0, 54, 0), Enum.Material.Metal, rim, 0.12)
+    else
+        -- Classic Grid: a long-range relay observatory and dish array.
+        -- Cylindrical receivers/diagonal legs interrupt the default
+        -- box-on-box profile while staying fully static.
+        for side = -1, 1, 2 do
+            piece(side < 0 and "RelayButtressWest" or "RelayButtressEast",
+                "Part", Vector3.new(3.5, 33, 4.5),
+                CFrame.new(side * 11.8, 16.5, 0),
+                Enum.Material.Concrete, hull)
+            piece(side < 0 and "RelaySparWest" or "RelaySparEast",
+                "Part", Vector3.new(1.1, 31, 1.4),
+                CFrame.new(side * 7.5, 24, -0.8)
+                    * CFrame.Angles(0, 0, side * math.rad(21)),
+                Enum.Material.Metal, metal)
+            local receiver = piece(
+                side < 0 and "ReceiverDishWest" or "ReceiverDishEast",
+                "Part", Vector3.new(0.8, 10.5, 10.5),
+                CFrame.new(side * 13, 44 + side * 3, 0)
+                    * CFrame.Angles(0, math.pi * 0.5, 0),
+                Enum.Material.Metal, metal, 0.10)
+            receiver.Shape = Enum.PartType.Cylinder
+            piece(side < 0 and "ReceiverHubWest" or "ReceiverHubEast",
+                "Part", Vector3.new(2.1, 2.1, 2.1),
+                CFrame.new(side * 13, 44 + side * 3, -0.8),
+                Enum.Material.Metal, rim)
+        end
+        piece("PrimaryRelayMast", "Part", Vector3.new(3, 55, 3),
+            CFrame.new(0, 27.5, 0), Enum.Material.Metal, hull)
+        piece("RelayHead", "WedgePart", Vector3.new(7, 4.7, 4.2),
+            CFrame.new(0, 58, 0), Enum.Material.Metal, metal)
+        piece("DishBridge", "Part", Vector3.new(30, 1.2, 2),
+            CFrame.new(0, 37, 0), Enum.Material.Metal, hull)
+        piece("ServicePanel", "Part", Vector3.new(5, 3.2, 0.55),
+            CFrame.new(0, 35, -2.25), Enum.Material.Metal, glint, 0.17)
+    end
+end
+
 local function addArenaFoundation(decor, config, variant, theme)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
@@ -1872,6 +2048,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     addArenaFoundation(decor, config, variant, theme)
     addPerimeterStations(decor, config, variant, theme)
     addDistantSkyline(decor, config, variant, theme)
+    addArenaSignatureMegastructure(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantLandmarks(decor, config, variant, theme)
     addVariantFloorLanguage(decor, config, variant, theme)
