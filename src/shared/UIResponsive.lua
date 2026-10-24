@@ -51,7 +51,11 @@ function UIResponsive.mobileProfile(viewport)
         wide = c.wide,
         -- On wide touch screens, reserve distinct lanes for PHOTO (left)
         -- and DASH (right) instead of extending the top header underneath.
-        topWidthScale = c.veryNarrow and 0.94 or (c.narrowWidth and 0.90 or (c.wide and 0.68 or 0.82)),
+        -- On wide landscape phones the Roblox native menu/chat rail owns
+        -- the upper left ~28% of the screen (visible in Android captures).
+        -- Offset the phase header right so the first words remain legible.
+        topCenterXScale = c.wide and 0.59 or 0.50,
+        topWidthScale = c.veryNarrow and 0.94 or (c.narrowWidth and 0.90 or (c.wide and 0.60 or 0.82)),
         topHeight = topHeight,
         timerSize = timerSize,
         dockWidthScale = c.veryNarrow and 0.98 or 0.94,
