@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24 — AI survivors actually traverse expanded parkour circuits (candidate)
+
+- Correct a navigation realism regression introduced by 150–156-stud maps: AI runners previously retargeted every ~0.8–1.8 seconds, preventing completion of distant outer approaches. When a physically spawned `PerimeterStep` target is selected, retain that intent for a bounded travel time estimated from **normal unboosted humanoid walking speed** (maximum 6.2s). Short destinations retain original responsiveness; urgent threats always override.
+- Reserve second-stage platforms for bots already close enough horizontally and vertically to attempt the real jump; never aim at remote high walls from the main floor. Reject outer routes altogether during Shrinking Arena. Give playable perimeter routes a modest scoring preference in ordinary rounds, keeping dynamic meteor/bomb risk penalties in force.
+- Expand the existing real Roblox engine AI suite for long approaches, upper-deck access, shrinking floor, corrupted inputs and normal-route baseline. No teleportation, navigation shortcuts, speed buffs, extra brain loops, avatar masquerading, client VFX or server remotes.
+- **Physical release gate:** capture bot movement from center to corner routes on all four arenas, verify real stair/jump success, credible decisions and disaster evasion plus Android FPS. This commit is not published by a GitHub merge.
+
 ## 2026-10-23 — Exterior 3D skyline with mobile readability (candidate)
 
 - Add four **original, Roblox-native 3D industrial skyline structures** OUTSIDE each of the four expanded arena bounds. Every assembly has a grounded metal foundation, recessed mast, wedge cap, two angled braces and restrained edge insets; extra identity geometry per map (Towers service mast, Crossroads cross-antenna, Orbital cylinder receiver, Classic aerial).
