@@ -124,6 +124,16 @@ jobs:
             echo "Dry run only. No Roblox asset created." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Archive validated glTF preview for phone or desktop
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-original-mesh-preview-${{ inputs.model }}
+          path: |
+            ${{ runner.temp }}/chaos_original.gltf
+            ${{ runner.temp }}/mesh-validation.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload to Roblox Open Cloud as owned Model asset
         if: inputs.dry_run == false
         shell: bash
