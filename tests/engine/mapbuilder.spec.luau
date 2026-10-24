@@ -511,6 +511,35 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("frames four map corners with nonblocking sculpted exterior ridges", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local base = arena:FindFirstChild("Base")
+            local decor = arena:FindFirstChild("Decor")
+            for _, corner in ipairs({"NW", "NE", "SW", "SE"}) do
+                local ridge = decor:FindFirstChild("ExteriorRidge" .. corner)
+                expect(ridge ~= nil and ridge:IsA("Model")).toBe(true)
+                expect(ridge:GetAttribute("ChaosDistantScenery")).toBe(true)
+                expect(#ridge:GetChildren()).toBe(3)
+                for _, part in ipairs(ridge:GetChildren()) do
+                    expect(part:IsA("WedgePart")).toBe(true)
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    local delta = part.Position - base.Position
+                    expect(math.abs(delta.X) - part.Size.Magnitude * 0.5
+                        > base.Size.X * 0.5 + 3).toBe(true)
+                    expect(math.abs(delta.Z) - part.Size.Magnitude * 0.5
+                        > base.Size.Z * 0.5 + 3).toBe(true)
+                end
+            end
+            root:Destroy()
+        end
+    end)
+
     it("physically builds accessible outer parkour while retaining original core IDs", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
