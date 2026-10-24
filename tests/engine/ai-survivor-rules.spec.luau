@@ -99,6 +99,33 @@ describe("AI survivor rules", function()
         expect(choose({}, 1, {}, {})).toBe(nil)
     end)
 
+    it("checks Roblox Instance names, not only Lua-table player doubles", function()
+        local identities = {
+            {Username = "NovaByte", DisplayName = "Nova"},
+            {Username = "MiloRush", DisplayName = "Milo"},
+            {Username = "KaiPixel", DisplayName = "Kai"},
+        }
+        -- Real Players:GetPlayers() entries have typeof == "Instance".
+        -- Humanoid supplies both name fields without requiring a live player
+        -- connection in the headless Roblox Open Cloud engine test.
+        local playerLike = Instance.new("Humanoid")
+        playerLike.Name = "RealPlayer"
+        playerLike.DisplayName = "nOvA"
+        local choose = AISurvivorRules.availableIdentityIndex
+        expect(choose(identities, 1, {playerLike}, {})).toBe(2)
+
+        playerLike.Name = "MILORUSH"
+        playerLike.DisplayName = "Other"
+        expect(choose(identities, 2, {playerLike}, {})).toBe(3)
+
+        -- Generic Roblox instances lack DisplayName but must not crash.
+        local nonPlayer = Instance.new("Folder")
+        nonPlayer.Name = "NovaByte"
+        expect(choose(identities, 1, {nonPlayer}, {})).toBe(2)
+        nonPlayer:Destroy()
+        playerLike:Destroy()
+    end)
+
     it("clears a recycled bot's Classic Grid Circuit completion at each round", function()
         local model = Instance.new("Model")
         model:SetAttribute("GridCircuitStep", 4)
