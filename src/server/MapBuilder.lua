@@ -505,6 +505,55 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
     end
 end
 
+-- Four original sculpted exterior corner ridges close the empty diagonal
+-- horizon. They sit beyond both axes of the arena floor, so no collision,
+-- hazards, NPC navigation or playable jumps depend on their presence.
+-- Twelve anchored wedge shapes per map; no runtime updates or textures.
+local function addExteriorCornerRidges(decor, config, variant, theme)
+    local x = variant.BaseSize.X * 0.5 + 28
+    local z = variant.BaseSize.Z * 0.5 + 28
+    local stone = theme.Structure:Lerp(Color3.fromRGB(25, 31, 39), 0.45)
+    local metal = theme.Detail:Lerp(stone, 0.72)
+    for _, corner in ipairs({
+        {id = "NW", sx = -1, sz = -1},
+        {id = "NE", sx = 1, sz = -1},
+        {id = "SW", sx = -1, sz = 1},
+        {id = "SE", sx = 1, sz = 1},
+    }) do
+        local model = Instance.new("Model")
+        model.Name = "ExteriorRidge" .. corner.id
+        model:SetAttribute("ChaosDistantScenery", true)
+        model.Parent = decor
+        local center = config.ArenaCenter + Vector3.new(
+            corner.sx * x, variant.BaseSize.Y * 0.5,
+            corner.sz * z
+        )
+        local yaw = math.atan2(corner.sx, corner.sz)
+        for index = 1, 3 do
+            local height = 9 + ((index * 7 + corner.sx * 3
+                + corner.sz * 5 + 20) % 11)
+            local ridge = Instance.new("WedgePart")
+            ridge.Name = "Ridge" .. index
+            ridge.Size = Vector3.new(11 + index * 3, height,
+                13 + index * 2)
+            ridge.CFrame = CFrame.new(center + Vector3.new(
+                (index - 2) * corner.sx * 8, height * 0.5 - 1.5,
+                (index - 2) * corner.sz * 6
+            )) * CFrame.Angles(0, yaw + (index - 2) * 0.32, 0)
+            ridge.Anchored = true
+            ridge.CanCollide = false
+            ridge.CanTouch = false
+            ridge.CanQuery = false
+            ridge.CastShadow = false
+            ridge.Material = index == 2 and Enum.Material.Concrete
+                or Enum.Material.Metal
+            ridge.Color = index == 2 and stone or metal
+            ridge.Transparency = 0.07 + index * 0.04
+            ridge.Parent = model
+        end
+    end
+end
+
 local function addArenaFoundation(decor, config, variant, theme)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
@@ -2053,6 +2102,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     addPerimeterStations(decor, config, variant, theme)
     addDistantSkyline(decor, config, variant, theme)
     addArenaSignatureMegastructure(decor, config, variant, theme)
+    addExteriorCornerRidges(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantLandmarks(decor, config, variant, theme)
     addVariantFloorLanguage(decor, config, variant, theme)
