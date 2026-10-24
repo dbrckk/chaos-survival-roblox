@@ -3,12 +3,16 @@
 local Kit = {}
 
 function Kit.profile(tier)
+    -- Android camera captures showed cyan/magenta ornament strips
+    -- overwhelming the actual 3D structure. Fade ONLY noninteractive
+    -- Neon decor; hazard outlines, route edges and spawn guidance keep
+    -- their separate high-contrast treatment in isGameplayEdge().
     if tier == "Low" then
-        return 0.18, 0.62
+        return 0.28, 0.58
     elseif tier == "Medium" then
-        return 0.12, 0.72
+        return 0.21, 0.66
     end
-    return 0.08, 0.80
+    return 0.13, 0.74
 end
 
 function Kit.isGameplayEdge(part)
