@@ -332,6 +332,45 @@ function AISurvivorRules.turnPauseSeconds(previousDirection, desiredDirection, u
     return math.clamp(0.12 + (-dot) * 0.10 - p * 0.08, 0.08, 0.22)
 end
 
+-- A runner heading for an authored outer parkour route needs time to
+-- physically reach it. The usual 0.8–1.8 second target holds make bots
+-- reverse before crossing the enlarged arenas, which reads as fake AI.
+-- Commit only to real PerimeterStep waypoints. Urgent disaster evasion
+-- still overrides this timer in AISurvivorService.
+function AISurvivorRules.outerRouteHold(baseHold, distance, walkSpeed, perimeterStep)
+    local hold = tonumber(baseHold) or 1
+    if hold ~= hold or math.abs(hold) == math.huge then hold = 1 end
+    hold = math.clamp(hold, 0.2, 6.2)
+    local step = tonumber(perimeterStep)
+    if step ~= 1 and step ~= 2 then return hold end
+
+    local gap = tonumber(distance)
+    local speed = tonumber(walkSpeed)
+    if not gap or gap ~= gap or gap < 0 or gap == math.huge
+        or not speed or speed ~= speed or speed <= 0 or speed == math.huge then
+        return hold
+    end
+    if gap <= 12 then return hold end
+    local travel = gap / math.max(8, speed)
+    return math.clamp(math.max(hold, travel + 0.7), hold, 6.2)
+end
+
+-- Stage 2 is a high step across a real jump gap. Bots must approach the
+-- physical first step instead of walking into the outside wall of Stage 2
+-- from anywhere on the floor. No navigation exploits or phantom shortcuts.
+function AISurvivorRules.outerStepReachable(step, fromPosition, targetPosition,
+        shrinking)
+    local n = tonumber(step)
+    if n ~= 1 and n ~= 2 then return true end
+    if shrinking == true then return false end
+    if n == 1 then return true end
+    if typeof(fromPosition) ~= "Vector3"
+        or typeof(targetPosition) ~= "Vector3" then return false end
+    local diff = targetPosition - fromPosition
+    local horizontal = Vector3.new(diff.X, 0, diff.Z).Magnitude
+    return horizontal <= 24 and diff.Y <= 5.8 and diff.Y >= -8
+end
+
 function AISurvivorRules.routeChoiceWidth(risk, candidateCount)
     local count = math.max(1, math.floor(tonumber(candidateCount) or 1))
     local value = math.clamp(tonumber(risk) or 0.5, 0, 1)
