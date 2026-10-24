@@ -38,6 +38,46 @@ function CameraOcclusionRules.avatarOcclusion(cameraPosition, focusPosition, blo
     return perpendicular + math.sqrt(blockerDistanceSquared) * 0.06
 end
 
+-- Select a bounded number of different visual blockers, nearest to the
+-- local player's actual sight line. Stable input-order ties prevent a pair
+-- of overlapping avatars from flickering between updates. This operates
+-- only on prequalified on-screen candidates, never all workspace parts.
+function CameraOcclusionRules.chooseOccluders(candidates, maximum)
+    if type(candidates) ~= "table" then
+        return {}
+    end
+    local limit = math.clamp(math.floor(tonumber(maximum) or 2), 0, 2)
+    if limit == 0 then return {} end
+    local ranked = {}
+    for index, entry in ipairs(candidates) do
+        if type(entry) == "table" and entry.model ~= nil then
+            local score = tonumber(entry.score)
+            if score and score == score and math.abs(score) < math.huge then
+                ranked[#ranked + 1] = {
+                    model = entry.model,
+                    score = score,
+                    order = index,
+                }
+            end
+        end
+    end
+    table.sort(ranked, function(a, b)
+        if a.score == b.score then
+            return a.order < b.order
+        end
+        return a.score < b.score
+    end)
+    local selected, known = {}, {}
+    for _, entry in ipairs(ranked) do
+        if not known[entry.model] then
+            known[entry.model] = true
+            selected[#selected + 1] = entry.model
+            if #selected >= limit then break end
+        end
+    end
+    return selected
+end
+
 function CameraOcclusionRules.localModifier()
     -- Other survivors remain visible and recognizable even when their
     -- character briefly blocks most of the third-person camera.
