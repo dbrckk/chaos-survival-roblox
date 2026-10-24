@@ -12,6 +12,10 @@ The experience is **public to eligible 16+ Roblox players**, with a completed co
 
 For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-19.md), [launch runbook](docs/MISE_EN_LIGNE_1_0.md), and [release gate issue #79](https://github.com/dbrckk/chaos-survival-roblox/issues/79).
 
+## Original 3D assets — no-PC Android upload option
+
+The original Reactor Spire and Service Crane OBJ/MTL sources live under `assets/source/`. The opt-in [Android 3D Open Cloud guide](docs/ANDROID_3D_CLOUD_IMPORT.md) describes a dedicated, narrowly scoped GitHub Actions workflow that converts those OBJ sources into embedded glTF 2.0 and can create creator-owned Roblox `Model` assets. It defaults to a **dry-run** and requires a separate `ROBLOX_ASSET_API_KEY`, verified creator ID and exact confirmation before any upload. **Generating or uploading a Model asset does not install it in the playable world;** integration needs a real approved Roblox asset ID and Android visual QA.
+
 ## Implemented
 
 - Runtime-generated lobby and arena
