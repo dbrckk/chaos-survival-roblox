@@ -199,7 +199,7 @@ jobs:
           moderation = (response.get("moderationResult") or {}).get("moderationState", "UNKNOWN")
           print("Verified created Model asset ID:", asset_id)
           print("Moderation:", moderation)
-          with open(pathlib.Path.home() / "asset-upload-metadata.txt", "w") as stream:
+          with open(pathlib.Path(__import__("os").environ["GITHUB_WORKSPACE"]) / "asset-upload-metadata.txt", "w") as stream:
               stream.write("model_asset_id=" + asset_id + "\n")
               stream.write("moderation_state=" + moderation + "\n")
           with open(__import__("os").environ["GITHUB_STEP_SUMMARY"], "a") as stream:
@@ -214,5 +214,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: chaos-original-model-${{ inputs.model }}-metadata
-          path: ~/asset-upload-metadata.txt
+          path: ${{ github.workspace }}/asset-upload-metadata.txt
           retention-days: 30
