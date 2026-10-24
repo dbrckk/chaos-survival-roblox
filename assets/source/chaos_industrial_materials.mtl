@@ -1,0 +1,26 @@
+# Original Chaos Survival authored palette, copyright project authors
+# No image texture dependency. Stylized values preview in Blender; Roblox
+# import should map palette to MeshPart materials or MaterialVariants.
+newmtl GRAPHITE
+Kd 0.085 0.118 0.163
+Ks 0.24 0.27 0.29
+Ns 110
+newmtl TITANIUM
+Kd 0.28 0.355 0.42
+Ks 0.43 0.46 0.48
+Ns 120
+newmtl CARBON
+Kd 0.034 0.048 0.069
+Ks 0.08 0.10 0.13
+Ns 45
+newmtl TEAL
+Kd 0.105 0.65 0.73
+Ke 0.015 0.13 0.17
+newmtl AMBER
+Kd 0.91 0.45 0.15
+Ke 0.14 0.055 0.004
+newmtl GLASS
+Kd 0.16 0.22 0.29
+Ks 0.52 0.57 0.60
+d 0.84
+Ns 145
