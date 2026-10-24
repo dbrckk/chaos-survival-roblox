@@ -46,7 +46,12 @@ function CameraOcclusionRules.chooseOccluders(candidates, maximum)
     if type(candidates) ~= "table" then
         return {}
     end
-    local limit = math.clamp(math.floor(tonumber(maximum) or 2), 0, 2)
+    local rawLimit = tonumber(maximum) or 2
+    if rawLimit ~= rawLimit or rawLimit == math.huge
+        or rawLimit == -math.huge then
+        rawLimit = 2
+    end
+    local limit = math.clamp(math.floor(rawLimit), 0, 2)
     if limit == 0 then return {} end
     local ranked = {}
     for index, entry in ipairs(candidates) do
