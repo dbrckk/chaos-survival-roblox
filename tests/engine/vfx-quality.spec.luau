@@ -7,6 +7,33 @@ local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 
 describe("Adaptive VFX quality", function()
+    it("protects essential mobile route outlines while dimming ornamental neon", function()
+        local kit = MobileReadabilityKit
+        local ornament = Instance.new("Part")
+        ornament.Name = "NeonDecoration"
+        ornament.Material = Enum.Material.Neon
+        local edge = Instance.new("Part")
+        edge.Name = "PlatformGlow12"
+        edge.Material = Enum.Material.Neon
+        local baseline = setmetatable({}, {__mode = "k"})
+
+        for _, tier in ipairs({"High", "Medium", "Low"}) do
+            kit.applyInstance(ornament, tier, baseline)
+            kit.applyInstance(edge, tier, baseline)
+            local ornamentOpacity = ornament.LocalTransparencyModifier
+            local edgeOpacity = edge.LocalTransparencyModifier
+            expect(ornamentOpacity > edgeOpacity).toBe(true)
+            expect(edgeOpacity <= 0.07).toBe(true)
+        end
+        local low, lowLight = kit.profile("Low")
+        local med, medLight = kit.profile("Medium")
+        local high, highLight = kit.profile("High")
+        expect(low > med and med > high).toBe(true)
+        expect(lowLight < medLight and medLight < highLight).toBe(true)
+        ornament:Destroy()
+        edge:Destroy()
+    end)
+
     it("starts touch devices conservatively without capping capable hardware", function()
         expect(VfxQuality.initialTier(true)).toBe("Medium")
         expect(VfxQuality.initialTier(false)).toBe("High")
