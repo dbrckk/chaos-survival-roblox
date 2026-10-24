@@ -12,17 +12,19 @@ on:
         options:
           - reactor_spire
           - service_crane
+          - perimeter_gate
       creator_kind:
-        description: Asset ownership (must match your authorized Roblox creator)
+        description: Asset ownership (used only when upload is enabled)
         type: choice
         required: true
+        default: user
         options:
           - user
           - group
       creator_id:
-        description: Numeric Roblox user ID or group ID that will own this asset
+        description: Numeric Roblox creator ID (required for real upload, optional for dry-run)
         type: string
-        required: true
+        required: false
       dry_run:
         description: Convert/validate only, do not upload to Roblox
         type: boolean
@@ -61,18 +63,20 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane) ;;
+            reactor_spire|service_crane|perimeter_gate) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
             user|group) ;;
             *) echo "::error::Invalid creator kind"; exit 1 ;;
           esac
-          if [[ ! "$CREATOR_ID" =~ ^[1-9][0-9]{0,15}$ ]]; then
-            echo "::error::Creator ID must be a positive numeric Roblox user or group ID."
-            exit 1
-          fi
+          # A pure conversion / validation must run without credentials or
+          # creator lookup; only an actual upload needs an owner ID.
           if [ "$DRY_RUN" != "true" ]; then
+            if [[ ! "$CREATOR_ID" =~ ^[1-9][0-9]{0,15}$ ]]; then
+              echo "::error::Real upload requires a positive numeric Roblox user or group ID."
+              exit 1
+            fi
             if [ "$CONFIRM" != "UPLOAD_CHAOS_ORIGINAL_3D" ]; then
               echo "::error::Explicit upload confirmation mismatch. No asset created."
               exit 1
@@ -82,8 +86,14 @@ jobs:
               exit 1
             fi
           fi
+          # Perimeter Gate is authored with a separate four-color MTL.
+          # Exporting it against the industrial palette fails material checks.
+          if [ "$CHOICE" = "perimeter_gate" ]; then
+            echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
+          else
+            echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
+          fi
           test -f "assets/source/chaos_${CHOICE}.obj"
-          test -f assets/source/chaos_industrial_materials.mtl
 
       - name: Export self-contained PBR glTF with geometry validation
         shell: bash
@@ -91,7 +101,7 @@ jobs:
           set -euo pipefail
           python tools/obj_to_gltf.py \
             --source "assets/source/chaos_${CHOICE}.obj" \
-            --materials assets/source/chaos_industrial_materials.mtl \
+            --materials "$CHAOS_MTL" \
             --output "$RUNNER_TEMP/chaos_original.gltf" > "$RUNNER_TEMP/mesh-validation.json"
           cat "$RUNNER_TEMP/mesh-validation.json"
           python - "$RUNNER_TEMP/chaos_original.gltf" <<'PY'
@@ -114,6 +124,16 @@ jobs:
             echo "Dry run only. No Roblox asset created." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Archive validated glTF preview for phone or desktop
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-original-mesh-preview-${{ inputs.model }}
+          path: |
+            ${{ runner.temp }}/chaos_original.gltf
+            ${{ runner.temp }}/mesh-validation.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload to Roblox Open Cloud as owned Model asset
         if: inputs.dry_run == false
         shell: bash
@@ -125,7 +145,8 @@ jobs:
           creator_kind = os.environ["CREATOR_KIND"]
           creator = {("userId" if creator_kind == "user" else "groupId"): creator_id}
           names = {"reactor_spire": "Chaos Reactor Spire",
-                   "service_crane": "Chaos Service Crane"}
+                   "service_crane": "Chaos Service Crane",
+                   "perimeter_gate": "Chaos Perimeter Gate"}
           request = {
               "assetType": "Model",
               "displayName": names[os.environ["CHOICE"]],

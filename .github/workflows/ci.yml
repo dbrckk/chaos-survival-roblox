@@ -24,10 +24,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for model in reactor_spire service_crane; do
+          for model in reactor_spire service_crane perimeter_gate; do
+            palette="assets/source/chaos_industrial_materials.mtl"
+            if [ "$model" = "perimeter_gate" ]; then
+              palette="assets/source/chaos_perimeter_gate.mtl"
+            fi
             python tools/obj_to_gltf.py \
               --source "assets/source/chaos_${model}.obj" \
-              --materials assets/source/chaos_industrial_materials.mtl \
+              --materials "$palette" \
               --output "/tmp/chaos_${model}.gltf"
           done
           python - <<'PY'
@@ -35,7 +39,7 @@ jobs:
           import json
           from pathlib import Path
 
-          for name in ("reactor_spire", "service_crane"):
+          for name in ("reactor_spire", "service_crane", "perimeter_gate"):
               gltf = json.loads(Path("/tmp/chaos_" + name + ".gltf").read_text())
               assert gltf["asset"]["version"] == "2.0"
               buffer = gltf["buffers"][0]
@@ -43,7 +47,17 @@ jobs:
               assert len(raw) == buffer["byteLength"]
               assert all(x["byteOffset"] + x["byteLength"] <= len(raw)
                          for x in gltf["bufferViews"])
-              assert len(gltf["meshes"][0]["primitives"]) >= 3
+              primitives = gltf["meshes"][0]["primitives"]
+              assert len(primitives) >= 3
+              assert gltf["scenes"][0]["nodes"] == [0]
+              assert all(primitive["mode"] == 4 for primitive in primitives)
+              assert all("POSITION" in p["attributes"] and "NORMAL" in p["attributes"]
+                         for p in primitives)
+              assert all(gltf["accessors"][p["attributes"]["POSITION"]]["count"] % 3 == 0
+                         for p in primitives)
+              expected = {"FRAME", "BRUSHED", "CYAN", "INDIGO"} if name == "perimeter_gate" else None
+              if expected:
+                  assert {m["name"] for m in gltf["materials"]} == expected
               print(name, "glTF source generated and validated:", len(raw), "bytes")
           PY
 
