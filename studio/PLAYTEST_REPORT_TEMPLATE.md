@@ -33,6 +33,16 @@ Copy this file for each release-candidate certification run.
 - READY arenaId matches observed world arena for all four: yes / no
 - Notes:
 
+## AI outer-route navigation — expanded 150+ stud arenas
+
+- Public/staged Roblox place version and exact commit SHA:
+- Each arena: 3 bots attempt at least one actual outer route and reach first step without twitch-retargeting: Classic / Towers / Crossroads / Orbital — PASS / FAIL / NOT RUN
+- R15 bots on the first perimeter step can reach the second with genuine jump/collision, no teleport: PASS / FAIL / NOT RUN
+- Bots abandon outer route immediately on Shrinking Arena or urgent Bomb / Meteor warning: PASS / FAIL / NOT RUN
+- No bot stuck at outer walls or below raised second step for >5 seconds: PASS / FAIL / NOT RUN
+- Android 30-min session, 1 human + 3 AI, native video, logs and FPS:
+- NPC names are natural in-world but bot status remains available to game administration and game rules: PASS / FAIL / NOT RUN
+
 ## Core flow
 
 | Check | PASS / FAIL | Notes |
