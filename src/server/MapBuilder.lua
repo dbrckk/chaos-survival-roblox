@@ -273,6 +273,60 @@ local function addDistantSkyline(decor, config, variant, theme)
                 Enum.Material.Metal, metalColor, 0.06)
         end
     end
+
+    -- Two additional depth layers behind each primary skyline silhouette.
+    -- These structures are far beyond the playable floor and cannot be
+    -- mistaken for traversable decks. No lights, particles, or updates.
+    -- Dark layered silhouettes break up the boxy horizon in Android view.
+    local farColor = theme.Structure:Lerp(Color3.fromRGB(11, 15, 24), 0.46)
+    for index, direction in ipairs(directions) do
+        local side = Vector3.new(math.cos(direction.yaw), 0,
+            -math.sin(direction.yaw))
+        local outward = Vector3.new(
+            math.sin(direction.yaw), 0, -math.cos(direction.yaw)
+        )
+        for layer = 1, 2 do
+            local model = Instance.new("Model")
+            model.Name = "SkylineDepth" .. direction.id .. layer
+            model:SetAttribute("ChaosDistantScenery", true)
+            model.Parent = decor
+            local height = (variant.Id == "Towers" and 31 or 22)
+                + layer * 5 + ((index + layer) % 3) * 3
+            local origin = config.ArenaCenter
+                + Vector3.new(direction.x, variant.BaseSize.Y * 0.5,
+                    direction.z)
+                + outward * (16 + layer * 10)
+                + side * (layer == 1 and -17 or 19)
+            local body = Instance.new("WedgePart")
+            body.Name = "DistantRoofMass"
+            body.Size = Vector3.new(10 + layer * 3, height, 8)
+            body.CFrame = CFrame.new(origin + Vector3.new(0, height * 0.5, 0))
+                * CFrame.Angles(0, direction.yaw, 0)
+            body.Material = Enum.Material.Metal
+            body.Color = farColor
+            body.Transparency = 0.14 + layer * 0.12
+            body.Anchored = true
+            body.CanCollide = false
+            body.CanTouch = false
+            body.CanQuery = false
+            body.CastShadow = false
+            body.Parent = model
+            local spire = Instance.new("Part")
+            spire.Name = "DistantAerial"
+            spire.Size = Vector3.new(0.38, 4 + layer * 2, 0.38)
+            spire.CFrame = CFrame.new(origin
+                + Vector3.new(0, height + 2 + layer, 0))
+            spire.Material = Enum.Material.Metal
+            spire.Color = farColor
+            spire.Transparency = 0.20 + layer * 0.10
+            spire.Anchored = true
+            spire.CanCollide = false
+            spire.CanTouch = false
+            spire.CanQuery = false
+            spire.CastShadow = false
+            spire.Parent = model
+        end
+    end
 end
 
 local function addArenaFoundation(decor, config, variant, theme)
