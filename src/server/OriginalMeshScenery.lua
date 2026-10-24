@@ -19,42 +19,52 @@ local MAX_DIMENSION = 65
 -- Four off-floor destinations are intentionally outside player-accessible
 -- geometry, kill volumes and hazard telegraphs. Only purely visual meshes
 -- are inserted; the existing procedural structures always remain as fallback.
-function OriginalMeshScenery.placements(base)
+local VARIANT_ART = {
+    Classic = {"perimeter_gate", "perimeter_gate", "reactor_spire", "service_crane"},
+    Towers = {"service_crane", "perimeter_gate", "service_crane", "reactor_spire"},
+    Crossroads = {"perimeter_gate", "perimeter_gate", "service_crane", "service_crane"},
+    Orbital = {"reactor_spire", "perimeter_gate", "reactor_spire", "perimeter_gate"},
+}
+
+-- Four authored skyline compositions rather than the same repeated props in
+-- every arena. Standoffs are wider for a crane's 22-stud arm than a gate.
+-- This keeps all geometry beyond playable platforms on every 150+ stud map.
+function OriginalMeshScenery.placements(base, variantId)
     if not base or not base:IsA("BasePart") then
         return {}
     end
+    local chosen = VARIANT_ART[variantId] or VARIANT_ART.Classic
+    local names = {
+        perimeter_gate = "Gate",
+        reactor_spire = "ReactorSpire",
+        service_crane = "ServiceCrane",
+    }
     local halfX, halfZ = base.Size.X * 0.5, base.Size.Z * 0.5
     local surfaceY = base.Position.Y + base.Size.Y * 0.5
-    return {
-        {
-            name = "OriginalGateNorth",
-            asset = "perimeter_gate",
-            assetId = ASSETS.perimeter_gate,
-            position = base.Position + Vector3.new(0, surfaceY - base.Position.Y, -halfZ - 11),
-            yaw = 0,
-        },
-        {
-            name = "OriginalGateSouth",
-            asset = "perimeter_gate",
-            assetId = ASSETS.perimeter_gate,
-            position = base.Position + Vector3.new(0, surfaceY - base.Position.Y, halfZ + 11),
-            yaw = math.pi,
-        },
-        {
-            name = "OriginalReactorSpireEast",
-            asset = "reactor_spire",
-            assetId = ASSETS.reactor_spire,
-            position = base.Position + Vector3.new(halfX + 24, surfaceY - base.Position.Y, 12),
-            yaw = -math.pi * 0.5,
-        },
-        {
-            name = "OriginalServiceCraneWest",
-            asset = "service_crane",
-            assetId = ASSETS.service_crane,
-            position = base.Position + Vector3.new(-halfX - 26, surfaceY - base.Position.Y, -12),
-            yaw = math.pi * 0.5,
-        },
+    local slots = {
+        {direction = "North", axis = "Z", sign = -1, yaw = 0},
+        {direction = "South", axis = "Z", sign = 1, yaw = math.pi},
+        {direction = "East", axis = "X", sign = 1, yaw = -math.pi * 0.5},
+        {direction = "West", axis = "X", sign = -1, yaw = math.pi * 0.5},
     }
+    local placements = {}
+    for index, slot in ipairs(slots) do
+        local assetName = chosen[index]
+        local setback = assetName == "service_crane" and 26
+            or (assetName == "reactor_spire" and 23 or 13)
+        local x = slot.axis == "X" and slot.sign * (halfX + setback)
+            or (index % 2 == 0 and 12 or -12)
+        local z = slot.axis == "Z" and slot.sign * (halfZ + setback)
+            or (index % 2 == 0 and 12 or -12)
+        placements[index] = {
+            name = "Original" .. names[assetName] .. slot.direction,
+            asset = assetName,
+            assetId = ASSETS[assetName],
+            position = Vector3.new(base.Position.X + x, surfaceY, base.Position.Z + z),
+            yaw = slot.yaw,
+        }
+    end
+    return placements
 end
 
 -- No instances from a remote model become live until fully sanitized.
@@ -139,7 +149,9 @@ function OriginalMeshScenery.mount(arena, templates)
     end
 
     local mounted = 0
-    for _, placement in ipairs(OriginalMeshScenery.placements(base)) do
+    for _, placement in ipairs(OriginalMeshScenery.placements(
+        base, arena:GetAttribute("VariantId")
+    )) do
         if not folder:FindFirstChild(placement.name) then
             local template = templates[placement.asset]
             if template then
@@ -209,26 +221,40 @@ function OriginalMeshScenery.start()
         end
     end)
 
-    -- Load only three moderator-approved packages, once per server,
-    -- asynchronously. No player, round, spawn or UI code waits for them.
+    -- Cache each moderator-approved package once per server. A temporary
+    -- Roblox CDN failure can happen during startup: retry at most twice
+    -- after short pauses. Invalid geometry is never retried. Nothing
+    -- in the join/round path waits for this cosmetic-only work.
     for _, assetName in ipairs(ORDER) do
         task.spawn(function()
             local assetId = ASSETS[assetName]
-            local ok, imported = pcall(
-                AssetService.LoadAssetAsync, AssetService, assetId
-            )
-            if not ok or not imported then
-                warn("Original 3D scenery unavailable:", assetName, imported)
-                return
+            for attempt = 1, 3 do
+                local ok, imported = pcall(
+                    AssetService.LoadAssetAsync, AssetService, assetId
+                )
+                if ok and imported and imported:IsA("Model") then
+                    local clean = OriginalMeshScenery.sanitize(imported)
+                    imported:Destroy()
+                    if not clean then
+                        warn("Original 3D scenery rejected: invalid geometry", assetName)
+                        return
+                    end
+                    templates[assetName] = clean
+                    refreshArena()
+                    return
+                end
+
+                -- Do not retain unexpected or partly loaded Instances.
+                if ok and typeof(imported) == "Instance" then
+                    imported:Destroy()
+                end
+                if attempt == 3 then
+                    warn("Original 3D scenery failed after 3 attempts:",
+                        assetName, imported)
+                    return
+                end
+                task.wait(attempt * 3)
             end
-            local clean = OriginalMeshScenery.sanitize(imported)
-            imported:Destroy()
-            if not clean then
-                warn("Original 3D scenery rejected: invalid geometry", assetName)
-                return
-            end
-            templates[assetName] = clean
-            refreshArena()
         end)
     end
 end

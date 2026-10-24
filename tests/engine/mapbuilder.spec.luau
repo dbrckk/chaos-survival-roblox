@@ -947,8 +947,25 @@ describe("Chaos Survival engine", function()
             local decor = arena and arena:FindFirstChild("Decor")
             local base = arena and arena:FindFirstChild("Base")
             expect(base ~= nil and decor ~= nil).toBe(true)
-            local placements = OriginalMeshScenery.placements(base)
+            local placements = OriginalMeshScenery.placements(base, variantId)
             expect(#placements).toBe(4)
+            local art = {}
+            for _, slot in ipairs(placements) do
+                art[slot.asset] = (art[slot.asset] or 0) + 1
+            end
+            if variantId == "Orbital" then
+                expect(art.reactor_spire).toBe(2)
+                expect(art.perimeter_gate).toBe(2)
+            elseif variantId == "Towers" then
+                expect(art.service_crane).toBe(2)
+            elseif variantId == "Crossroads" then
+                expect(art.service_crane).toBe(2)
+                expect(art.perimeter_gate).toBe(2)
+            else
+                expect(art.perimeter_gate).toBe(2)
+                expect(art.reactor_spire).toBe(1)
+                expect(art.service_crane).toBe(1)
+            end
             local count = OriginalMeshScenery.mount(arena, {
                 perimeter_gate = sanitized,
                 reactor_spire = sanitized,
@@ -960,6 +977,8 @@ describe("Chaos Survival engine", function()
                 reactor_spire = sanitized,
                 service_crane = sanitized,
             })).toBe(0)
+            expect(arena:GetAttribute("Original3DSceneryCount")).toBe(4)
+            expect(arena:GetAttribute("Original3DSceneryComplete")).toBe(true)
             local bucket = decor and decor:FindFirstChild("Original3DScenery")
             expect(bucket ~= nil).toBe(true)
             expect(#(bucket :: Folder):GetChildren()).toBe(4)
