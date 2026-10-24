@@ -108,7 +108,22 @@ jobs:
               for attr in ("source", "source_materials"):
                   path = Path(model[attr])
                   assert path.is_file() and path.is_relative_to("assets/source")
-          print("Verified original source provenance and unique Roblox Model IDs.")
+          # The runtime must use real approved MODEL package IDs from
+          # the registry, never fabricated MeshPart IDs or unrelated assets.
+          import re
+          source = Path("src/server/OriginalMeshScenery.lua").read_text()
+          block = re.search(r"local ASSETS = \{(.*?)\n\}", source, re.S)
+          assert block, "Owned scenery asset table missing"
+          deployed_ids = dict(re.findall(
+              r"(reactor_spire|service_crane|perimeter_gate)\s*=\s*(\d+)",
+              block.group(1),
+          ))
+          assert deployed_ids == {m["name"]: m["asset_id"] for m in models}, (
+              "Runtime owned 3D asset IDs diverged from the approved registry"
+          )
+          assert "AssetService.LoadAssetAsync" in source
+          assert "OriginalMeshScenery.sanitize(imported)" in source
+          print("Verified original source provenance, runtime IDs, and sanitizer.")
           PY
 
       - name: Install Rojo 7.7.0

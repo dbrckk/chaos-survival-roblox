@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
+local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
@@ -904,6 +905,105 @@ describe("Chaos Survival engine", function()
         end
 
         root:Destroy()
+    end)
+
+    it("renders only safe, owned 3D cosmetics beyond playable arena edges", function()
+        local asset = Instance.new("Model")
+        asset.Name = "UntrustedAssetPackage"
+        local mesh = Instance.new("Part")
+        mesh.Name = "OriginalMesh"
+        mesh.Size = Vector3.new(13, 12, 3)
+        mesh.Position = Vector3.new(0, 6, 0)
+        mesh.Parent = asset
+        local scriptInside = Instance.new("Script")
+        scriptInside.Name = "UntrustedScriptMustNotRun"
+        scriptInside.Parent = mesh
+        local particles = Instance.new("ParticleEmitter")
+        particles.Name = "UntrustedParticles"
+        particles.Parent = mesh
+        local sourceScript = Instance.new("ModuleScript")
+        sourceScript.Parent = asset
+
+        local sanitized = OriginalMeshScenery.sanitize(asset)
+        expect(sanitized ~= nil).toBe(true)
+        expect(#(sanitized :: Model):GetDescendants()).toBe(1)
+        local cleanPart = (sanitized :: Model):FindFirstChild("OriginalMesh")
+        expect(cleanPart ~= nil and cleanPart:IsA("BasePart")).toBe(true)
+        if cleanPart and cleanPart:IsA("BasePart") then
+            expect(cleanPart.Anchored).toBe(true)
+            expect(cleanPart.CanCollide).toBe(false)
+            expect(cleanPart.CanTouch).toBe(false)
+            expect(cleanPart.CanQuery).toBe(false)
+            expect(cleanPart.CastShadow).toBe(false)
+            expect(cleanPart:FindFirstChild("UntrustedScriptMustNotRun") == nil)
+                .toBe(true)
+            expect(cleanPart:FindFirstChild("UntrustedParticles") == nil)
+                .toBe(true)
+        end
+
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, variantId, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local decor = arena and arena:FindFirstChild("Decor")
+            local base = arena and arena:FindFirstChild("Base")
+            expect(base ~= nil and decor ~= nil).toBe(true)
+            local placements = OriginalMeshScenery.placements(base)
+            expect(#placements).toBe(4)
+            local count = OriginalMeshScenery.mount(arena, {
+                perimeter_gate = sanitized,
+                reactor_spire = sanitized,
+                service_crane = sanitized,
+            })
+            expect(count).toBe(4)
+            expect(OriginalMeshScenery.mount(arena, {
+                perimeter_gate = sanitized,
+                reactor_spire = sanitized,
+                service_crane = sanitized,
+            })).toBe(0)
+            local bucket = decor and decor:FindFirstChild("Original3DScenery")
+            expect(bucket ~= nil).toBe(true)
+            expect(#(bucket :: Folder):GetChildren()).toBe(4)
+
+            for _, entry in ipairs(placements) do
+                local placed = bucket and bucket:FindFirstChild(entry.name)
+                expect(placed ~= nil and placed:IsA("Model")).toBe(true)
+                if placed and placed:IsA("Model") then
+                    expect(placed:GetAttribute("Original3DAssetId"))
+                        .toBe(entry.assetId)
+                    expect(placed:GetAttribute("CosmeticOnly")).toBe(true)
+                    local _, dimensions = placed:GetBoundingBox()
+                    expect(dimensions.Y > 0).toBe(true)
+                    for _, p in ipairs(placed:GetDescendants()) do
+                        expect(p:IsA("BasePart")).toBe(true)
+                        if p:IsA("BasePart") then
+                            expect(p.Anchored).toBe(true)
+                            expect(p.CanCollide).toBe(false)
+                            expect(p.CanTouch).toBe(false)
+                            expect(p.CanQuery).toBe(false)
+                            expect(p.CastShadow).toBe(false)
+                        end
+                    end
+                    local x, z = entry.position.X, entry.position.Z
+                    expect(math.abs(x - base.Position.X) > base.Size.X * 0.5
+                        or math.abs(z - base.Position.Z) > base.Size.Z * 0.5)
+                        .toBe(true)
+                end
+            end
+            root:Destroy()
+        end
+
+        local empty = Instance.new("Model")
+        expect(OriginalMeshScenery.sanitize(empty)).toBe(nil)
+        empty:Destroy()
+        local huge = Instance.new("Model")
+        local part = Instance.new("Part")
+        part.Size = Vector3.new(70, 70, 70)
+        part.Parent = huge
+        expect(OriginalMeshScenery.sanitize(huge)).toBe(nil)
+        huge:Destroy()
+        asset:Destroy()
+        local cleanModel = sanitized :: Model
+        cleanModel:Destroy()
     end)
 
     it("has valid round timing and rewards", function()

@@ -7,6 +7,15 @@ local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 
 local player = Players.LocalPlayer
 
+-- Server-owned original meshes are purely decorative and have reliable
+-- Roblox-native horizon fallback. Low-end Android never renders them;
+-- Medium renders them near the arena, High renders them everywhere.
+-- Reuse the one existing scenery LOD loop (no extra RenderStepped).
+local ORIGINAL_MESH_LOD = {
+    LowDistance = 0,
+    MediumDistance = 140,
+}
+
 local FOLDERS = {
     ChaosEnvironmentDepthLocal = {
         LowDistance = 150,
@@ -304,6 +313,18 @@ task.spawn(function()
                     applyFolder(folder, limits, profile, origin, cameraPoint)
                 end
             end
+        end
+
+        -- Original imported 3D is replicated by the server inside
+        -- GeneratedMap/Arena/Decor, not a workspace-root *Local folder.
+        -- Hide it without touching native platforms, collision or hazards.
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        local decor = arena and arena:FindFirstChild("Decor")
+        local original = decor and decor:FindFirstChild("Original3DScenery")
+        if original then
+            applyFolder(original, ORIGINAL_MESH_LOD,
+                profile, arenaOrigin, cameraPoint)
         end
 
         -- A pad's Highlight and particle emitter have separate parents.

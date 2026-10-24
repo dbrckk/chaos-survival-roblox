@@ -26,6 +26,7 @@ if RunService:IsStudio() then
     end
 end
 local MapBuilder = require(script.MapBuilder)
+local OriginalMeshScenery = require(script.OriginalMeshScenery)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -119,6 +120,12 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
 end)
 
 MapBuilder.build(Config, "Classic", ArenaVariants)
+-- Mesh loading may yield or fail: it must never block player arrival,
+-- round lifecycle or the original collision-tested native scenery.
+-- Engine E2E suites exercise the generated native map deterministically.
+if not isStudioE2E then
+    task.defer(OriginalMeshScenery.start)
+end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
 if not lobbyActivitiesOk then
