@@ -14,7 +14,7 @@ For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-
 
 ## Original 3D assets — no-PC Android upload option
 
-The original Reactor Spire and Service Crane OBJ/MTL sources live under `assets/source/`. The opt-in [Android 3D Open Cloud guide](docs/ANDROID_3D_CLOUD_IMPORT.md) describes a dedicated, narrowly scoped GitHub Actions workflow that converts those OBJ sources into embedded glTF 2.0 and can create creator-owned Roblox `Model` assets. It defaults to a **dry-run** and requires a separate `ROBLOX_ASSET_API_KEY`, verified creator ID and exact confirmation before any upload. **Generating or uploading a Model asset does not install it in the playable world;** integration needs a real approved Roblox asset ID and Android visual QA.
+The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources live under `assets/source/`. The opt-in [Android 3D Open Cloud guide](docs/ANDROID_3D_CLOUD_IMPORT.md) describes a dedicated GitHub Actions workflow that validates and exports all three as embedded glTF 2.0. A **dry-run needs no Roblox key or creator ID**. Actual creation of a creator-owned Roblox `Model` requires a separate `ROBLOX_ASSET_API_KEY`, the correct creator ID and exact confirmation. **Generating or uploading a Model asset does not install it in the playable world;** integration needs a real approved Roblox asset ID, a separate staging review and Android visual QA.
 
 ## Implemented
 
