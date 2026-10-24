@@ -12,6 +12,7 @@ on:
         options:
           - reactor_spire
           - service_crane
+          - perimeter_gate
       creator_kind:
         description: Asset ownership (must match your authorized Roblox creator)
         type: choice
@@ -61,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane) ;;
+            reactor_spire|service_crane|perimeter_gate) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -83,7 +84,14 @@ jobs:
             fi
           fi
           test -f "assets/source/chaos_${CHOICE}.obj"
-          test -f assets/source/chaos_industrial_materials.mtl
+          # Perimeter Gate is authored with a separate four-color MTL.
+          # Exporting it against the industrial palette fails material checks.
+          if [ "$CHOICE" = "perimeter_gate" ]; then
+            echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
+          else
+            echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
+          fi
+          test -f "assets/source/chaos_${CHOICE}.obj"
 
       - name: Export self-contained PBR glTF with geometry validation
         shell: bash
@@ -91,7 +99,7 @@ jobs:
           set -euo pipefail
           python tools/obj_to_gltf.py \
             --source "assets/source/chaos_${CHOICE}.obj" \
-            --materials assets/source/chaos_industrial_materials.mtl \
+            --materials "$CHAOS_MTL" \
             --output "$RUNNER_TEMP/chaos_original.gltf" > "$RUNNER_TEMP/mesh-validation.json"
           cat "$RUNNER_TEMP/mesh-validation.json"
           python - "$RUNNER_TEMP/chaos_original.gltf" <<'PY'
@@ -125,7 +133,8 @@ jobs:
           creator_kind = os.environ["CREATOR_KIND"]
           creator = {("userId" if creator_kind == "user" else "groupId"): creator_id}
           names = {"reactor_spire": "Chaos Reactor Spire",
-                   "service_crane": "Chaos Service Crane"}
+                   "service_crane": "Chaos Service Crane",
+                   "perimeter_gate": "Chaos Perimeter Gate"}
           request = {
               "assetType": "Model",
               "displayName": names[os.environ["CHOICE"]],
