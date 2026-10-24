@@ -14,6 +14,9 @@ describe("UI responsive profiles", function()
         local rules = CameraOcclusionRules
         local headOn = rules.avatarOcclusion(camera, focus, Vector3.new(0, 3, 13))
         expect(headOn ~= nil).toBe(true)
+        -- A character nearly touching the lens must still be softened.
+        expect(rules.avatarOcclusion(camera, focus, Vector3.new(0, 3, 17.6))
+            ~= nil).toBe(true)
         expect(rules.avatarOcclusion(camera, focus, Vector3.new(10, 3, 13)))
             .toBe(nil)
         expect(rules.avatarOcclusion(camera, focus, Vector3.new(0, 3, 21)))
