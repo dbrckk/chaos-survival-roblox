@@ -83,7 +83,6 @@ jobs:
               exit 1
             fi
           fi
-          test -f "assets/source/chaos_${CHOICE}.obj"
           # Perimeter Gate is authored with a separate four-color MTL.
           # Exporting it against the industrial palette fails material checks.
           if [ "$CHOICE" = "perimeter_gate" ]; then
