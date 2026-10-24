@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-24 — Large original architectural silhouettes, four distinct arenas (candidate)
+
+- One fully generated, **large (>40-stud tall)** noninteractive 3D signature setpiece is now built beyond the northern exterior skyline for every variant: Classic communications observatory and radar receivers, Towers twin lift shafts and suspended high service bridge, Crossroads double-decker interchange gantry, Orbital segmented vertical accelerator ring and suspended reactor core.
+- The new Roblox-native setpieces are **actually instantiated into the arena** without an external 3D upload, with 12–28 static Parts/Wedges/Cylinders per currently active map. These are *not* licensed/imported MeshParts; the separate original OBJ art sources still require creator-owned asset upload and visual approval.
+- All decorative pieces are anchored, non-collidable, non-touchable, non-queryable and shadow-free; no new lights, particles, animation loops, remotes, server hazards, walking geometry or changes to existing parkour platform IDs.
+- The existing MapBuilder Roblox engine spec now asserts variant-specific signatures, height, bounded part count and conservative out-of-bounds clearance on **all four arena types**.
+- Not yet certified on a physical Android handset: rendered shape readability in Low/Medium/High, streaming distances, actual FPS / memory and impact on disaster warning legibility. These remain release gates.
+
 ## 2026-10-24 — Two original Roblox-ready industrial model sources (candidate)
 
 - Authored the 27-stud `ChaosReactorSpire` (680 vertices, 1,220 triangles) and 17.8-stud `ChaosServiceCrane` (316 vertices, 504 triangles) as fully independent, original OBJ geometry under `assets/source/` with the shared six-color industrial MTL palette. 74 watertight, consistently wound mesh groups; no remote dependencies or third-party license restrictions.
