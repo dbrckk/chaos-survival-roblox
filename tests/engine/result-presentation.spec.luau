@@ -8,6 +8,27 @@ local RoundJourneyRules = require("../../src/shared/RoundJourneyRules")
 local RoundResultState = require("../../src/server/RoundResultState")
 
 describe("Result presentation", function()
+    it("shows a verified prior round in the lobby despite delayed player data", function()
+        local show = ResultPresentation.showLobbyRecap
+        local recap = {roundNumber = 12, disasterIds = {"Meteors"}}
+        expect(show("intermission", recap)).toBe(true)
+        expect(show("waiting", recap)).toBe(true)
+        expect(show("result", recap)).toBe(false)
+        expect(show("ready", recap)).toBe(false)
+        expect(show("round", recap)).toBe(false)
+        expect(show("intermission", nil)).toBe(false)
+        expect(show("intermission", {})).toBe(false)
+        expect(show("intermission", {
+            roundNumber = 12, disasterIds = {},
+        })).toBe(false)
+        expect(show("waiting", {
+            roundNumber = math.huge, disasterIds = {"Meteors"},
+        })).toBe(false)
+        expect(show("waiting", {
+            roundNumber = 0 / 0, disasterIds = {"Meteors"},
+        })).toBe(false)
+    end)
+
     it("announces surviving humans and bots before rewards are settled", function()
         local participants = {101, 202}
         local survivors = {101}
