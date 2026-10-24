@@ -201,6 +201,24 @@ third-person Android camera and keep the total camera FOV bounded at
 native HUD, logs, device / OS, FPS, exact staged SHA and time. Not passed
 until an authenticated real-client session produces evidence.
 
+## Saturation and safe-route contrast — Android visual QA
+
+With the exact new candidate running at night/Double Chaos, reproduce the
+original high-neon screenshot angles. Inspect Towers' four broad lift
+plates, Crossroads' entire freight intersection, Orbital's central
+14-stud circle and the 150-stud cross-map guide seams. Large fills should
+read as dark structural panels instead of flat neon wash. Confirm that
+small original wayfinding chevrons, perimeter fall edges, danger decals
+and meteor/bomb telegraphs remain visually distinct at both walking and
+third-person overview distance.
+
+Capture matched original Android before/after images with the same
+round, camera field of view and graphics tier, then record FPS,
+render/GPU frame time and user-observed hazard visibility. Fail the gate
+if the player loses a route cue or if any wide floor panel becomes an
+illusory safe path; adjusting decorative luminance must never alter
+server hazard damage geometry.
+
 ## Exterior hero architecture — four-variant Android visual QA
 
 For each Classic, Towers, Crossroads and Orbital round on the exact staged
