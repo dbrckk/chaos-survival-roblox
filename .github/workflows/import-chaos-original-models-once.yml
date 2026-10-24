@@ -1,0 +1,35 @@
+name: One-time import of original Chaos 3D models (Drackk_08)
+
+# Explicit, limited action: this workflow runs once when this file is
+# introduced on main. Ordinary gameplay commits do NOT trigger new imports.
+# A failed run (e.g. the Roblox Assets secret is missing) can be retried
+# using GitHub Actions "Re-run failed jobs" after the secret is configured.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/import-chaos-original-models-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  import-model:
+    name: Import ${{ matrix.model }} into Drackk_08 inventory
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - reactor_spire
+          - service_crane
+          - perimeter_gate
+    # Reuse the existing audited upload step: exact confirmation, validated
+    # file types, one nonretriable POST, Roblox moderation polling, metadata.
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: ${{ matrix.model }}
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
