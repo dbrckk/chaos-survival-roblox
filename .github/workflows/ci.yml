@@ -112,10 +112,10 @@ jobs:
           # the registry, never fabricated MeshPart IDs or unrelated assets.
           import re
           source = Path("src/server/OriginalMeshScenery.lua").read_text()
-          block = re.search(r"local ASSETS = \\{(.*?)\\n\\}", source, re.S)
+          block = re.search(r"local ASSETS = \{(.*?)\n\}", source, re.S)
           assert block, "Owned scenery asset table missing"
           deployed_ids = dict(re.findall(
-              r"(reactor_spire|service_crane|perimeter_gate)\\s*=\\s*(\\d+)",
+              r"(reactor_spire|service_crane|perimeter_gate)\s*=\s*(\d+)",
               block.group(1),
           ))
           assert deployed_ids == {m["name"]: m["asset_id"] for m in models}, (
