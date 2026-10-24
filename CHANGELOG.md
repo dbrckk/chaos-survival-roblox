@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-24 — Two original Roblox-ready industrial model sources (candidate)
+
+- Authored the 27-stud `ChaosReactorSpire` (680 vertices, 1,220 triangles) and 17.8-stud `ChaosServiceCrane` (316 vertices, 504 triangles) as fully independent, original OBJ geometry under `assets/source/` with the shared six-color industrial MTL palette. 74 watertight, consistently wound mesh groups; no remote dependencies or third-party license restrictions.
+- These are **editable art sources**, not live MeshParts. Asset import, real creator-owned Roblox IDs, Roblox Studio visual verification and Android 3D device QA remain separate requirements. The native in-game skyline remains the functioning fallback; no runtime/script changes here.
+- Updated `assets/source/README.md` with dimensions, model budget, Studio import and validation instructions. No new tests, rendering overhead, server physics, remotes, monetization or deploys.
+
 ## 2026-10-24 — AI survivors actually traverse expanded parkour circuits (candidate)
 
 - Correct a navigation realism regression introduced by 150–156-stud maps: AI runners previously retargeted every ~0.8–1.8 seconds, preventing completion of distant outer approaches. When a physically spawned `PerimeterStep` target is selected, retain that intent for a bounded travel time estimated from **normal unboosted humanoid walking speed** (maximum 6.2s). Short destinations retain original responsiveness; urgent threats always override.
