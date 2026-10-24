@@ -221,26 +221,40 @@ function OriginalMeshScenery.start()
         end
     end)
 
-    -- Load only three moderator-approved packages, once per server,
-    -- asynchronously. No player, round, spawn or UI code waits for them.
+    -- Cache each moderator-approved package once per server. A temporary
+    -- Roblox CDN failure can happen during startup: retry at most twice
+    -- after short pauses. Invalid geometry is never retried. Nothing
+    -- in the join/round path waits for this cosmetic-only work.
     for _, assetName in ipairs(ORDER) do
         task.spawn(function()
             local assetId = ASSETS[assetName]
-            local ok, imported = pcall(
-                AssetService.LoadAssetAsync, AssetService, assetId
-            )
-            if not ok or not imported then
-                warn("Original 3D scenery unavailable:", assetName, imported)
-                return
+            for attempt = 1, 3 do
+                local ok, imported = pcall(
+                    AssetService.LoadAssetAsync, AssetService, assetId
+                )
+                if ok and imported and imported:IsA("Model") then
+                    local clean = OriginalMeshScenery.sanitize(imported)
+                    imported:Destroy()
+                    if not clean then
+                        warn("Original 3D scenery rejected: invalid geometry", assetName)
+                        return
+                    end
+                    templates[assetName] = clean
+                    refreshArena()
+                    return
+                end
+
+                -- Do not retain unexpected or partly loaded Instances.
+                if ok and typeof(imported) == "Instance" then
+                    imported:Destroy()
+                end
+                if attempt == 3 then
+                    warn("Original 3D scenery failed after 3 attempts:",
+                        assetName, imported)
+                    return
+                end
+                task.wait(attempt * 3)
             end
-            local clean = OriginalMeshScenery.sanitize(imported)
-            imported:Destroy()
-            if not clean then
-                warn("Original 3D scenery rejected: invalid geometry", assetName)
-                return
-            end
-            templates[assetName] = clean
-            refreshArena()
         end)
     end
 end
