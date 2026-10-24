@@ -140,10 +140,32 @@ describe("UI responsive profiles", function()
         local profile = UIResponsive.mobileProfile(Vector2.new(1536, 688))
 
         expect(profile.wide).toBe(true)
-        expect(profile.topWidthScale <= 0.82).toBe(true)
+        expect(profile.topWidthScale <= 0.60).toBe(true)
+        -- Native Roblox menu/chat overlays the left of a landscape phone.
+        -- The phase title starts beyond the first 29% of the viewport,
+        -- leaving the upper-left touch controls unobstructed.
+        expect(profile.topCenterXScale - profile.topWidthScale * 0.5 >= 0.29)
+            .toBe(true)
+        expect(profile.topCenterXScale + profile.topWidthScale * 0.5 <= 0.92)
+            .toBe(true)
         expect(profile.roundFocusWidthScale <= 0.52).toBe(true)
         expect(profile.roundFocusBottomOffset >= 96).toBe(true)
         expect(profile.topHeight <= 68).toBe(true)
+    end)
+
+    it("centers ordinary portrait HUDs without shifting the title off-screen", function()
+        for _, viewport in ipairs({
+            Vector2.new(400, 720),
+            Vector2.new(540, 320),
+            Vector2.new(720, 480),
+        }) do
+            local profile = UIResponsive.mobileProfile(viewport)
+            expect(profile.topCenterXScale).toBe(0.5)
+            expect(profile.topCenterXScale - profile.topWidthScale * 0.5 >= 0)
+                .toBe(true)
+            expect(profile.topCenterXScale + profile.topWidthScale * 0.5 <= 1)
+                .toBe(true)
+        end
     end)
 
     it("preserves a static near-miss card without moving flashes in ReduceMotion", function()
