@@ -1002,7 +1002,8 @@ describe("Chaos Survival engine", function()
         expect(OriginalMeshScenery.sanitize(huge)).toBe(nil)
         huge:Destroy()
         asset:Destroy()
-        (sanitized :: Model):Destroy()
+        local cleanModel = sanitized :: Model
+        cleanModel:Destroy()
     end)
 
     it("has valid round timing and rewards", function()
