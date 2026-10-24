@@ -17,6 +17,17 @@ function AISurvivorRules.availableIdentityIndex(identities, preferredIndex, huma
         if type(human) == "table" then
             mark(human.Name)
             mark(human.DisplayName)
+        elseif typeof(human) == "Instance" then
+            -- Players:GetPlayers() returns Player Instances, not Lua tables.
+            -- Read DisplayName defensively so non-Player instances supplied
+            -- by callers cannot break identity selection.
+            mark(human.Name)
+            local ok, displayName = pcall(function()
+                return human.DisplayName
+            end)
+            if ok then
+                mark(displayName)
+            end
         end
     end
     for _, identity in ipairs(type(reserved) == "table" and reserved or {}) do
