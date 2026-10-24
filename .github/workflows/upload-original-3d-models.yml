@@ -1,0 +1,218 @@
+name: Upload Original Chaos 3D Assets (Manual)
+
+# Does NOT change the playable place or public experience. Creates a separate
+# owned Roblox Model asset, only with explicit user confirmation.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Original 3D model to validate and upload
+        type: choice
+        required: true
+        options:
+          - reactor_spire
+          - service_crane
+      creator_kind:
+        description: Asset ownership (must match your authorized Roblox creator)
+        type: choice
+        required: true
+        options:
+          - user
+          - group
+      creator_id:
+        description: Numeric Roblox user ID or group ID that will own this asset
+        type: string
+        required: true
+      dry_run:
+        description: Convert/validate only, do not upload to Roblox
+        type: boolean
+        default: true
+        required: true
+      confirmation:
+        description: For a real upload enter UPLOAD_CHAOS_ORIGINAL_3D
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-original-model-uploads
+  cancel-in-progress: false
+
+jobs:
+  import-model:
+    name: Convert and optionally upload original glTF
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CHOICE: ${{ inputs.model }}
+      CREATOR_KIND: ${{ inputs.creator_kind }}
+      CREATOR_ID: ${{ inputs.creator_id }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      CONFIRM: ${{ inputs.confirmation }}
+      ASSET_API_KEY: ${{ secrets.ROBLOX_ASSET_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate exact manual input and source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CHOICE" in
+            reactor_spire|service_crane) ;;
+            *) echo "::error::Unknown model"; exit 1 ;;
+          esac
+          case "$CREATOR_KIND" in
+            user|group) ;;
+            *) echo "::error::Invalid creator kind"; exit 1 ;;
+          esac
+          if [[ ! "$CREATOR_ID" =~ ^[1-9][0-9]{0,15}$ ]]; then
+            echo "::error::Creator ID must be a positive numeric Roblox user or group ID."
+            exit 1
+          fi
+          if [ "$DRY_RUN" != "true" ]; then
+            if [ "$CONFIRM" != "UPLOAD_CHAOS_ORIGINAL_3D" ]; then
+              echo "::error::Explicit upload confirmation mismatch. No asset created."
+              exit 1
+            fi
+            if [ -z "$ASSET_API_KEY" ]; then
+              echo "::error::Missing secrets.ROBLOX_ASSET_API_KEY. Create a dedicated key scoped to Assets Read/Write for this Roblox creator; do not re-use a broader game-publishing key."
+              exit 1
+            fi
+          fi
+          test -f "assets/source/chaos_${CHOICE}.obj"
+          test -f assets/source/chaos_industrial_materials.mtl
+
+      - name: Export self-contained PBR glTF with geometry validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/obj_to_gltf.py \
+            --source "assets/source/chaos_${CHOICE}.obj" \
+            --materials assets/source/chaos_industrial_materials.mtl \
+            --output "$RUNNER_TEMP/chaos_original.gltf" > "$RUNNER_TEMP/mesh-validation.json"
+          cat "$RUNNER_TEMP/mesh-validation.json"
+          python - "$RUNNER_TEMP/chaos_original.gltf" <<'PY'
+          import base64, json, pathlib, sys
+          gltf = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert gltf["asset"]["version"] == "2.0"
+          buf = gltf["buffers"][0]
+          payload = base64.b64decode(buf["uri"].split(",", 1)[1], validate=True)
+          assert len(payload) == buf["byteLength"]
+          assert len(payload) > 1000
+          assert all(v["byteOffset"] + v["byteLength"] <= len(payload)
+                     for v in gltf["bufferViews"])
+          assert len(gltf["meshes"][0]["primitives"]) >= 3
+          print(f"Validated embedded glTF: {len(payload)} bytes, "
+                f"{len(gltf['meshes'][0]['primitives'])} material primitives.")
+          PY
+          echo "### Original 3D geometry prepared" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/mesh-validation.json" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run only. No Roblox asset created." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload to Roblox Open Cloud as owned Model asset
+        if: inputs.dry_run == false
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/asset-request.json" <<'PY'
+          import json, os, sys
+          creator_id = os.environ["CREATOR_ID"]
+          creator_kind = os.environ["CREATOR_KIND"]
+          creator = {("userId" if creator_kind == "user" else "groupId"): creator_id}
+          names = {"reactor_spire": "Chaos Reactor Spire",
+                   "service_crane": "Chaos Service Crane"}
+          request = {
+              "assetType": "Model",
+              "displayName": names[os.environ["CHOICE"]],
+              "description": "Original 3D scenery for the creator-owned Chaos Survival experience.",
+              "creationContext": {"creator": creator},
+          }
+          with open(sys.argv[1], "w", encoding="utf-8") as stream:
+              json.dump(request, stream, separators=(",", ":"))
+          PY
+          request_json="$(cat "$RUNNER_TEMP/asset-request.json")"
+          # One intentional POST, no blind retries: uploads are not idempotent.
+          curl --silent --show-error --fail-with-body \
+            -H "x-api-key: ${ASSET_API_KEY}" \
+            --form-string "request=${request_json}" \
+            --form "fileContent=@$RUNNER_TEMP/chaos_original.gltf;type=model/gltf+json" \
+            https://apis.roblox.com/assets/v1/assets \
+            > "$RUNNER_TEMP/upload-operation.json"
+          python - "$RUNNER_TEMP/upload-operation.json" <<'PY'
+          import json, pathlib, sys
+          result = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          path = result.get("path", "")
+          if not path.startswith("operations/"):
+              raise SystemExit("Roblox did not return a valid asset-operation path")
+          print("Asset operation created; moderation / import result pending.")
+          PY
+
+      - name: Check resulting Roblox asset ID and moderation outcome
+        if: inputs.dry_run == false
+        shell: bash
+        run: |
+          set -euo pipefail
+          path="$(python - "$RUNNER_TEMP/upload-operation.json" <<'PY'
+          import json,sys
+          print(json.load(open(sys.argv[1]))["path"])
+          PY
+          )"
+          for count in $(seq 1 24); do
+            curl --silent --show-error --fail-with-body \
+              -H "x-api-key: ${ASSET_API_KEY}" \
+              "https://apis.roblox.com/assets/v1/${path}" \
+              > "$RUNNER_TEMP/asset-status.json"
+            state="$(python - "$RUNNER_TEMP/asset-status.json" <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1]))
+          if data.get("error"):
+              print("error")
+          elif data.get("done") and data.get("response",{}).get("assetId"):
+              print("complete")
+          else:
+              print("pending")
+          PY
+            )"
+            if [ "$state" = "error" ]; then
+              echo "::error::Roblox rejected the asset import operation."
+              python - "$RUNNER_TEMP/asset-status.json" <<'PY'
+          import json,sys
+          print(json.load(open(sys.argv[1])).get("error"))
+          PY
+              exit 1
+            fi
+            if [ "$state" = "complete" ]; then break; fi
+            sleep 5
+          done
+          python - "$RUNNER_TEMP/asset-status.json" <<'PY'
+          import json, pathlib, sys
+          data = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          response = data.get("response") or {}
+          asset_id = str(response.get("assetId") or "")
+          if not data.get("done") or not asset_id.isdecimal():
+              raise SystemExit("Asset processing incomplete: no verified Roblox asset ID.")
+          moderation = (response.get("moderationResult") or {}).get("moderationState", "UNKNOWN")
+          print("Verified created Model asset ID:", asset_id)
+          print("Moderation:", moderation)
+          with open(pathlib.Path.home() / "asset-upload-metadata.txt", "w") as stream:
+              stream.write("model_asset_id=" + asset_id + "\n")
+              stream.write("moderation_state=" + moderation + "\n")
+          with open(__import__("os").environ["GITHUB_STEP_SUMMARY"], "a") as stream:
+              stream.write("### Roblox asset upload operation complete\n")
+              stream.write("Model asset ID: `" + asset_id + "`\n\n")
+              stream.write("Moderation state: `" + moderation + "`\n\n")
+              stream.write("Do not add this to the public game until Studio/staging visual and performance QA passes.\n")
+          PY
+
+      - name: Archive nonsecret upload provenance
+        if: inputs.dry_run == false
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-original-model-${{ inputs.model }}-metadata
+          path: ~/asset-upload-metadata.txt
+          retention-days: 30
