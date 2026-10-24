@@ -1849,7 +1849,7 @@ local function applyResponsiveLayout()
         )
     )
 
-    top.Position = UDim2.new(0.5, 0, 0, 7)
+    top.Position = UDim2.new(profile.topCenterXScale, 0, 0, 7)
     top.Size = UDim2.new(profile.topWidthScale, 0, 0, profile.topHeight)
     timer.Size = UDim2.fromOffset(profile.timerSize, profile.timerSize)
     timer.Position = UDim2.new(1, -8, 0.5, 0)
@@ -3340,7 +3340,13 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
     end
 
+    -- Touch players already have a large actionable vote panel, plus the
+    -- disaster title and bottom objective during active rounds. A second
+    -- big beginner banner in those lanes obscured the playfield.
+    -- Keep guidance in quiet lobby/ready phases; never stack it on votes
+    -- or in front of the avatar during hazard movement.
     rookieCoach.Visible = coachKey ~= nil
+        and (not touchDevice or (not votingOpen and currentHudPhase ~= "round"))
     if coachKey then
         if coachKey == "FIRST_READY" and not touchDevice then
             local controlsKey = UserInputService.GamepadEnabled

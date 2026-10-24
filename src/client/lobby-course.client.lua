@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -206,8 +207,15 @@ local function setActive(active)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
-    local shouldBeActive = phase == "waiting" or phase == "intermission"
+    -- Voting is the primary action in the lobby. The optional practice
+    -- course used to stay fully visible during voting and covered the
+    -- top hazard card plus the beginner's voting instruction on phones.
+    -- Disable its checkpoint HUD/world billboards whenever a ballot opens.
+    local shouldBeActive = phase == "waiting"
+        or (phase == "intermission"
+            and not FirstTimeExperience.hasVoteOptions(state))
     if shouldBeActive ~= activePhase then
         setActive(shouldBeActive)
     end

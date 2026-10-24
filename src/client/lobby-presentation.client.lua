@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local LocalizationService = game:GetService("LocalizationService")
+local UserInputService = game:GetService("UserInputService")
 
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
@@ -614,7 +615,11 @@ local function applyState()
     end
 
     if statusGui and statusGui.Parent then
+        -- The ballot is already a full-width interactive HUD on phones.
+        -- This extra lobby status billboard duplicates its headline and
+        -- draws through the cards from the player's camera perspective.
         statusGui.Enabled = mode ~= "inactive"
+            and not (UserInputService.TouchEnabled and mode == "vote")
     end
 
     for _, name in ipairs({"ArenaRunwayRailLeft", "ArenaRunwayRailRight"}) do
