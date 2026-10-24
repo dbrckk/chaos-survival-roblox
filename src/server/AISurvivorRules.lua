@@ -1,5 +1,45 @@
 local AISurvivorRules = {}
 
+-- Do not give an NPC the same visible identity as a real participant.
+-- Stable cyclic fallback keeps the server's shuffled identities natural,
+-- without querying or impersonating real Roblox accounts.
+function AISurvivorRules.availableIdentityIndex(identities, preferredIndex, humans, reserved)
+    if type(identities) ~= "table" or #identities == 0 then
+        return nil
+    end
+    local occupied = {}
+    local function mark(value)
+        if type(value) == "string" and value ~= "" then
+            occupied[value:lower()] = true
+        end
+    end
+    for _, human in ipairs(type(humans) == "table" and humans or {}) do
+        if type(human) == "table" then
+            mark(human.Name)
+            mark(human.DisplayName)
+        end
+    end
+    for _, identity in ipairs(type(reserved) == "table" and reserved or {}) do
+        if type(identity) == "table" then
+            mark(identity.Username)
+            mark(identity.DisplayName)
+        end
+    end
+    local start = math.max(1, math.floor(tonumber(preferredIndex) or 1))
+    for offset = 0, #identities - 1 do
+        local index = ((start - 1 + offset) % #identities) + 1
+        local identity = identities[index]
+        if type(identity) == "table"
+            and type(identity.Username) == "string"
+            and type(identity.DisplayName) == "string"
+            and not occupied[identity.Username:lower()]
+            and not occupied[identity.DisplayName:lower()] then
+            return index
+        end
+    end
+    return nil
+end
+
 AISurvivorRules.TargetVisibleParticipants = 4
 AISurvivorRules.MaxBots = 3
 
