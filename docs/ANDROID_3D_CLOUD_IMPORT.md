@@ -4,6 +4,14 @@
 
 Roblox Open Cloud accepte les fichiers **glTF** pour la création d'assets de type **Model**, avec un ou plusieurs MeshParts importés ; l'import direct de fichiers OBJ comme type Mesh n'est pas disponible via cette API. Source officielle : https://create.roblox.com/docs/cloud/guides/usage-assets
 
+## Import automatique prévu pour Drackk_08
+
+Le propriétaire du profil communiqué est `Drackk_08` (Roblox user ID **9774173158**). Le workflow GitHub `.github/workflows/import-chaos-original-models-once.yml` appelle **une seule fois, lors de son introduction sur `main`**, le même importeur vérifié pour les trois modèles, chacun dans un job GitHub indépendant. Il **ne publie pas le jeu**.
+
+**Ce qui manque pour importer réellement :** le secret GitHub `ROBLOX_ASSET_API_KEY` autorisé sur les Assets de `9774173158`. Si absent, les trois jobs échouent sans toucher à Roblox. Une fois la clé configurée, les jobs en erreur peuvent être relancés via **Re-run failed jobs** sans créer d'autre commit. L'outil GitHub connecté à ChatGPT peut tenter cette relance si les permissions GitHub Actions Write lui sont octroyées.
+
+**Important :** un ID de profil n'atteste pas que ce compte possède l'expérience Roblox. Si le jeu est propriétaire d'un groupe, les imports vers ce profil peuvent être inaccessibles au groupe ; vérifier le créateur dans Creator Dashboard avant de réutiliser les modèles. Les IDs obtenus sont des **packages Model**, non des MeshIds individuels ni des éléments déjà présents dans une arène.
+
 ## Configuration initiale dans GitHub (une fois, pour les imports réels uniquement)
 
 Le premier essai **dry-run** ne demande ni clé Roblox ni ID de créateur ; tu peux le lancer directement depuis Android.
