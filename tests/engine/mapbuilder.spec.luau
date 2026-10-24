@@ -467,6 +467,50 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("preserves route neon but keeps giant floor fills non-emissive", function()
+        local wideByArena = {
+            Classic = {},
+            Towers = {"TowerGroundPlate1", "TowerGroundPlate2"},
+            Crossroads = {"CrossroadLaneFill1", "CrossroadLaneFill2",
+                "CrossroadLaneFill3", "CrossroadLaneFill4",
+                "CrossroadHubMark"},
+            Orbital = {"OrbitalCoreMark"},
+        }
+        local smallCues = {
+            Classic = "ClassicEntryChevron1_-1",
+            Towers = "TowerAscentChevron1_-1",
+            Crossroads = "FluxRouteChevron1_1_-1",
+            Orbital = "OrbitalSpoke1",
+        }
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local decor = root:FindFirstChild("Arena"):FindFirstChild("Decor")
+            for _, name in ipairs(wideByArena[id]) do
+                local surface = decor:FindFirstChild(name)
+                expect(surface ~= nil and surface:IsA("BasePart")).toBe(true)
+                expect(surface.Material ~= Enum.Material.Neon).toBe(true)
+                expect(surface.CanCollide).toBe(false)
+                expect(surface.CanTouch).toBe(false)
+                expect(surface.CanQuery).toBe(false)
+            end
+            local navigation = decor:FindFirstChild(smallCues[id])
+            expect(navigation ~= nil and navigation:IsA("BasePart")).toBe(true)
+            expect(navigation.Material).toBe(Enum.Material.Neon)
+            for _, seam in ipairs({"DeckLineNorth", "DeckLineEast"}) do
+                local line = decor:FindFirstChild(seam)
+                expect(line ~= nil and line:IsA("BasePart")).toBe(true)
+                expect(line.Material).toBe(Enum.Material.Neon)
+                expect(line.Transparency >= 0.55).toBe(true)
+            end
+            if id == "Towers" then
+                local core = decor:FindFirstChild("TowerGroundCore1")
+                expect(core.Material).toBe(Enum.Material.Neon)
+                expect(core.Transparency >= 0.7).toBe(true)
+            end
+            root:Destroy()
+        end
+    end)
+
     it("physically builds accessible outer parkour while retaining original core IDs", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)

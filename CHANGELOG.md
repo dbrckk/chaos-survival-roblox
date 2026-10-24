@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24 — Readable industrial arena floors instead of oversized neon fills (candidate)
+
+- Responds to four real Android screenshots showing pink/cyan bloom hiding route edges and player avatars. Change **only the broad decorative surfaces** of Towers, Crossroads and Orbital from emissive Neon to subdued platform metal with arena-toned colors; the towers' small center inlays remain Neon but at higher transparency. De-emphasize the four very long cross-map neon seams.
+- Keep small original neon route chevrons, Orbital spokes, gameplay boundary edges, disaster warning discs, server hazard parts, all collision/physics/platform geometry and UI semantics **unchanged**.
+- Extend the existing real Roblox MapBuilder engine spec: four arenas retain distinctive Neon wayfinding while broad floor panels are non-emissive/non-collidable and long seams are safely dimmed.
+- Physical Android visual acceptance still needed: close/long sightlines, large pink + cyan lighting contrasts, hazard/route readability, FPS/overdraw and color accessibility. No claim of already-visible public updates.
+
 ## 2026-10-24 — Large original architectural silhouettes, four distinct arenas (candidate)
 
 - One fully generated, **large (>40-stud tall)** noninteractive 3D signature setpiece is now built beyond the northern exterior skyline for every variant: Classic communications observatory and radar receivers, Towers twin lift shafts and suspended high service bridge, Crossroads double-decker interchange gantry, Orbital segmented vertical accelerator ring and suspended reactor core.

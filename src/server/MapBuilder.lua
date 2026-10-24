@@ -547,7 +547,9 @@ local function addArenaFoundation(decor, config, variant, theme)
             def.color,
             VisualTheme.Materials.Glow
         )
-        line.Transparency = 0.30
+        -- These 130+ stud navigation seams should not bloom brighter
+        -- than actual hazard telegraphs on short Android sightlines.
+        line.Transparency = 0.58
     end
 
     local radiusX = (baseSize.X * 0.5) + 4.5
@@ -1022,10 +1024,12 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
                 "TowerGroundPlate" .. i,
                 Vector3.new(17, 0.08, 17),
                 center + offset,
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                VisualTheme.Materials.Glow
+                theme.Surface:Lerp(
+                    i % 2 == 0 and theme.Secondary or theme.Accent, 0.24
+                ),
+                theme.PanelMaterial or Enum.Material.Metal
             )
-            plate.Transparency = 0.72
+            plate.Transparency = 0.34
 
             local core = decorPart(
                 decor,
@@ -1035,7 +1039,7 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
                 theme.Accent,
                 VisualTheme.Materials.Glow
             )
-            core.Transparency = 0.42
+            core.Transparency = 0.74
         end
 
         -- Eight small floor-inlaid chevrons at four genuine tower ascent
@@ -1078,10 +1082,10 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
                 "CrossroadLaneFill" .. i,
                 def.size,
                 center + def.offset,
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                VisualTheme.Materials.Glow
+                theme.Surface:Lerp(theme.Detail, 0.36),
+                theme.PanelMaterial or Enum.Material.Metal
             )
-            lane.Transparency = 0.84
+            lane.Transparency = 0.38
         end
 
         -- Flux Relay navigation is physically readable from the floor.
@@ -1121,10 +1125,10 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             "CrossroadHubMark",
             Vector3.new(22, 0.10, 22),
             center + Vector3.new(0, 1.22, 0),
-            theme.Secondary,
-            VisualTheme.Materials.Glow
+            theme.Detail:Lerp(theme.Secondary, 0.24),
+            theme.PanelMaterial or Enum.Material.Metal
         )
-        hub.Transparency = 0.70
+        hub.Transparency = 0.32
     elseif variant.Id == "Orbital" then
         for i = 0, 7 do
             local angle = math.rad(i * 45)
@@ -1151,12 +1155,12 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             "OrbitalCoreMark",
             Vector3.new(14, 0.10, 14),
             center + Vector3.new(0, 1.21, 0),
-            theme.Accent,
-            VisualTheme.Materials.Glow
+            theme.Detail:Lerp(theme.Accent, 0.28),
+            theme.PanelMaterial or Enum.Material.Metal
         )
         coreMark.Shape = Enum.PartType.Cylinder
         coreMark.CFrame = CFrame.new(coreMark.Position) * CFrame.Angles(0, 0, math.rad(90))
-        coreMark.Transparency = 0.58
+        coreMark.Transparency = 0.34
     end
 
     local panelOffsetX = math.max(18, (variant.BaseSize.X * 0.5) - 17)
