@@ -1,0 +1,26 @@
+name: Recover missing Service Crane upload (Drackk_08)
+
+# The first three-model matrix created and approved Perimeter Gate and
+# Reactor Spire, but GitHub cancelled Service Crane because the called
+# workflow had a shared concurrency group. This recovery uploads ONLY the
+# never-created Service Crane asset, avoiding duplicates of approved models.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/recover-chaos-service-crane-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  import-missing-service-crane:
+    name: Import missing Service Crane only
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: service_crane
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
