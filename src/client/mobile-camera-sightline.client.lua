@@ -1,6 +1,6 @@
--- Keep the local avatar readable when the third-person Android camera
--- slips behind a nearby solid arena support. This is cosmetic and local:
--- no physics, replication, survivor visibility, or server gameplay changes.
+-- Keep the local avatar readable on Android when a nearby arena
+-- support or another survivor blocks the third-person camera. Cosmetic
+-- local fading only; no physics, replication or server gameplay changes.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -160,7 +160,8 @@ local function update()
         restore()
         lastCamera = camera
     end
-    if not camera or not root or not root:IsA("BasePart")
+    if not camera or camera.CameraType == Enum.CameraType.Scriptable
+        or not root or not root:IsA("BasePart")
         or not arena or not base or not base:IsA("BasePart") then
         restore()
         return
