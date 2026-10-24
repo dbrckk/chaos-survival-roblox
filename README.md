@@ -16,6 +16,8 @@ For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-
 
 The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources live under `assets/source/`. The opt-in [Android 3D Open Cloud guide](docs/ANDROID_3D_CLOUD_IMPORT.md) describes a dedicated GitHub Actions workflow that validates and exports all three as embedded glTF 2.0. A **dry-run needs no Roblox key or creator ID**. Actual creation of a creator-owned Roblox `Model` requires a separate `ROBLOX_ASSET_API_KEY`, the correct creator ID and exact confirmation. **Generating or uploading a Model asset does not install it in the playable world;** integration needs a real approved Roblox asset ID, a separate staging review and Android visual QA.
 
+**Automatic preview without any Roblox credentials:** every successful `main` **Build Validation** now archives `chaos-survival-3d-previews` alongside the playable place candidate. This artifact contains the three original glTF models and a `manifest.json` with source commit, byte sizes, triangle counts and SHA-256 checksums. Download it from the successful GitHub Actions run's **Artifacts** section on Android. This is **not** a Roblox upload or in-game integration.
+
 ## Implemented
 
 - Runtime-generated lobby and arena
