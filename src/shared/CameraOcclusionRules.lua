@@ -23,7 +23,9 @@ function CameraOcclusionRules.avatarOcclusion(cameraPosition, focusPosition, blo
     local along = toBlocker:Dot(axis) / lengthSquared
     -- A player next to the local avatar, behind the camera, or behind
     -- the subject is not a camera occluder. This only acts on the segment.
-    if along < 0.10 or along > 0.88 then
+    -- A body almost touching the lens can already cover the screen;
+    -- do not require it to be 10% along the full camera-to-player line.
+    if along < 0 or along > 0.88 then
         return nil
     end
     local perpendicular = (blockerPosition - (cameraPosition + axis * along)).Magnitude
