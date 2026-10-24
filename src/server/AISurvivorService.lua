@@ -1549,6 +1549,10 @@ local function arenaCandidates(root)
             root and root.Position.Y or position.Y,
             position.Y,
             variantId
+        ) and AISurvivorRules.outerStepReachable(
+            part:GetAttribute("PerimeterStep"),
+            root and root.Position, position,
+            hasDisaster("ShrinkingArena")
         ) then
             table.insert(result, {
                 part = part,
@@ -1619,6 +1623,16 @@ local function scoreCandidate(record, root, candidate, traits)
         center,
         (record.roundTraits and record.roundTraits.DirectionBias) or record.strafeBias
     )
+    if candidate.part
+        and candidate.part:GetAttribute("PerimeterStep") ~= nil
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("ShrinkingArena")
+    then
+        -- The new perimeter routes are optional, but should be chosen
+        -- often enough to actually see opponents occupying those sectors.
+        -- Hazards below still win on danger scoring; no speed advantage.
+        score += 4.5 + risk * 2.0
+    end
     if candidate.part
         and (candidate.part:GetAttribute("OrbitalHelixRamp") == true
             or candidate.part:GetAttribute("OrbitalAccessRamp") == true
@@ -2109,6 +2123,15 @@ local function chooseArenaTarget(record, root, now)
 
     local hold = record.profile.TargetHoldMin
         + math.random() * (record.profile.TargetHoldMax - record.profile.TargetHoldMin)
+    local outerStep = selected.part
+        and selected.part:GetAttribute("PerimeterStep") or nil
+    if outerStep then
+        local flat = target - root.Position
+        local horizontalDistance = Vector3.new(flat.X, 0, flat.Z).Magnitude
+        hold = AISurvivorRules.outerRouteHold(
+            hold, horizontalDistance, record.profile.WalkSpeed, outerStep
+        )
+    end
     return target, hold
 end
 
