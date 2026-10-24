@@ -24,6 +24,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build/mesh-previews
           for model in reactor_spire service_crane perimeter_gate; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
@@ -32,15 +33,20 @@ jobs:
             python tools/obj_to_gltf.py \
               --source "assets/source/chaos_${model}.obj" \
               --materials "$palette" \
-              --output "/tmp/chaos_${model}.gltf"
+              --output "build/mesh-previews/chaos_${model}.gltf"
           done
           python - <<'PY'
           import base64
+          import hashlib
           import json
+          import os
           from pathlib import Path
 
+          manifest = {"source_commit": os.environ["GITHUB_SHA"],
+                      "import_status": "NOT_UPLOADED_TO_ROBLOX",
+                      "models": []}
           for name in ("reactor_spire", "service_crane", "perimeter_gate"):
-              gltf = json.loads(Path("/tmp/chaos_" + name + ".gltf").read_text())
+              gltf = json.loads(Path("build/mesh-previews/chaos_" + name + ".gltf").read_text())
               assert gltf["asset"]["version"] == "2.0"
               buffer = gltf["buffers"][0]
               raw = base64.b64decode(buffer["uri"].split(",", 1)[1], validate=True)
@@ -58,7 +64,20 @@ jobs:
               expected = {"FRAME", "BRUSHED", "CYAN", "INDIGO"} if name == "perimeter_gate" else None
               if expected:
                   assert {m["name"] for m in gltf["materials"]} == expected
+              file = Path("build/mesh-previews/chaos_" + name + ".gltf")
+              manifest["models"].append({
+                  "name": name,
+                  "filename": file.name,
+                  "bytes": file.stat().st_size,
+                  "sha256": hashlib.sha256(file.read_bytes()).hexdigest(),
+                  "triangle_count": sum(gltf["accessors"][p["attributes"]["POSITION"]]["count"] // 3
+                                        for p in primitives),
+                  "materials": [m["name"] for m in gltf["materials"]],
+              })
               print(name, "glTF source generated and validated:", len(raw), "bytes")
+          Path("build/mesh-previews/manifest.json").write_text(
+              json.dumps(manifest, indent=2) + chr(10), encoding="utf-8"
+          )
           PY
 
       - name: Install Rojo 7.7.0
@@ -998,3 +1017,18 @@ jobs:
             build/ChaosSurvival.rbxlx.sha256
             build/candidate-provenance.txt
           if-no-files-found: error
+
+      # Source-art preview only. Generates free downloadable files on main,
+      # never calls Roblox, and never depends on asset API credentials.
+      - name: Archive original glTF previews for Android
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-3d-previews
+          path: |
+            build/mesh-previews/chaos_reactor_spire.gltf
+            build/mesh-previews/chaos_service_crane.gltf
+            build/mesh-previews/chaos_perimeter_gate.gltf
+            build/mesh-previews/manifest.json
+          if-no-files-found: error
+          retention-days: 30
