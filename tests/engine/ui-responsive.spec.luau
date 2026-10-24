@@ -20,7 +20,7 @@ describe("UI responsive profiles", function()
             .toBe(nil)
         expect(rules.avatarOcclusion(camera, focus, Vector3.new(0, 3, -2)))
             .toBe(nil)
-        expect(rules.avatarOcclusion(camera, focus, Vector3.new(0, 3, 3)))
+        expect(rules.avatarOcclusion(camera, focus, Vector3.new(0, 3, 0.5)))
             .toBe(nil)
         expect(rules.avatarOcclusion(Vector3.new(0, 3, 60), focus,
             Vector3.new(0, 3, 54))).toBe(nil)
