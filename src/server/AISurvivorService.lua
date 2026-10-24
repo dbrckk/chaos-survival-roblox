@@ -947,7 +947,17 @@ local function destroyRecord(record)
 end
 
 local function newRecord(slot)
-    local identityIndex = identityOrder[slot] or (((slot - 1) % #IDENTITIES) + 1)
+    local preferredIndex = identityOrder[slot]
+        or (((slot - 1) % #IDENTITIES) + 1)
+    local reserved = {}
+    for _, existing in pairs(records) do
+        if existing.identity then
+            table.insert(reserved, existing.identity)
+        end
+    end
+    local identityIndex = AISurvivorRules.availableIdentityIndex(
+        IDENTITIES, preferredIndex, Players:GetPlayers(), reserved
+    ) or preferredIndex
     local identity = IDENTITIES[identityIndex]
     local baseProfile = AISurvivorRules.profileForSlot(slot)
     local profile = table.clone(baseProfile)

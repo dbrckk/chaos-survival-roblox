@@ -74,6 +74,31 @@ describe("AI survivor rules", function()
         expect(AISurvivorService.identityCatalog()[1].Username).toBe(first)
     end)
 
+    it("avoids confusing real players with identical AI names", function()
+        local identities = {
+            {Username = "NovaByte", DisplayName = "Nova"},
+            {Username = "MiloRush", DisplayName = "Milo"},
+            {Username = "KaiPixel", DisplayName = "Kai"},
+        }
+        local choose = AISurvivorRules.availableIdentityIndex
+        expect(choose(identities, 1, {}, {})).toBe(1)
+        expect(choose(identities, 1, {
+            {Name = "realplayer", DisplayName = "nOvA"},
+        }, {})).toBe(2)
+        expect(choose(identities, 2, {
+            {Name = "MILORUSH", DisplayName = "Other"},
+        }, {})).toBe(3)
+        expect(choose(identities, 3, {}, {
+            {Username = "KaiPixel", DisplayName = "Kai"},
+        })).toBe(1)
+        expect(choose(identities, 1, {
+            {Name = "NovaByte", DisplayName = "Nova"},
+            {Name = "MiloRush", DisplayName = "Milo"},
+            {Name = "KaiPixel", DisplayName = "Kai"},
+        }, {})).toBe(nil)
+        expect(choose({}, 1, {}, {})).toBe(nil)
+    end)
+
     it("clears a recycled bot's Classic Grid Circuit completion at each round", function()
         local model = Instance.new("Model")
         model:SetAttribute("GridCircuitStep", 4)
