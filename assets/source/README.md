@@ -21,3 +21,24 @@ The files `chaos_perimeter_gate.obj` and `chaos_perimeter_gate.mtl` are **origin
 - [Roblox Creator Store](https://create.roblox.com/store/models): free/paid Roblox-native meshes and materials. Inspect scripts in imported models, licensing/creator ownership and effects budgets. Never blindly enable untrusted model scripts.
 
 **Art direction:** intentionally toned-down structural metal, bevelled/angular silhouette, a single inset reactor lens, distinct identity per arena, subdued neon only as route/signature accents. Avoid opaque glow planes, excessive saturated floor fill and center-screen UI clutter. Native stations render today; true high-end 3D meshes remain an import/review task.
+
+## Additional original 3D architecture — 24 October 2026
+
+Two authored low-poly environment models are now present as **editable OBJ source**, accompanied by a shared `chaos_industrial_materials.mtl`. All geometry and palette definitions were created for Chaos Survival, not copied from a third-party pack.
+
+| Original model | OBJ file | Vertex count | Triangle count | Dimensions (studs, approximately) | Intended arena use |
+|---|---|---:|---:|---|---|
+| **Chaos Reactor Spire** | `chaos_reactor_spire.obj` | 680 | 1,220 | 13.5 wide × 27 high × 13.5 deep | Orbital / Classic skyline, industrial reactor tower |
+| **Chaos Service Crane** | `chaos_service_crane.obj` | 316 | 504 | 22 wide × 17.8 high × 10 deep | Towers / Crossroads industrial outskirts |
+
+Technical authoring check: all 74 closed mesh groups across both models have consistently paired triangle edges, positive signed volume/outward face winding, zero unpaired edges, and no external texture dependencies. Six compatible palette materials are defined in `chaos_industrial_materials.mtl`. These are source-geometry checks, **not proof of native Roblox import success, visual polish, or Android frame rate**.
+
+### Studio integration — asset ownership is required
+
+1. Open `chaos_reactor_spire.obj` or `chaos_service_crane.obj` in **Blender** for visual review, or in **Roblox Studio → 3D Importer**, with `chaos_industrial_materials.mtl` in the same folder. Confirm face winding, scale, group origin, UV/material assignment and that the Y axis is upright. OBJ materials are a preview palette; Roblox's imported appearance requires actual review.
+2. Import as one or more `MeshPart` instances (or convert to FBX/GLB if the Roblox importer needs it). Use `Anchored=true`, `CanCollide=false`, `CanTouch=false`, `CanQuery=false`, `CastShadow=false`. Do not allow any imported model to replace the authoritative `Base`, `KillPlane`, jump decks or server hazard hitboxes.
+3. Publish under the **correct experience creator's Roblox inventory**, record the **real** moderated asset ID/ownership and test on an authenticated staging place. Never invent an ID or import third-party executable scripts.
+4. Add a curated `MeshPart` cosmetic variant of the existing external skyline/scenery system only after the owned ID has been verified. Keep the Roblox-native fallback geometry for delayed streaming or failed asset loads.
+5. Capture actual Android landscape Low/Medium/High frames at all four arenas and measure FPS, overdraw, memory and thermal stability; retain the source models only if the improvement is visible and sustainable.
+
+**Current release status:** the original OBJ and MTL files are now in source control, but they are **not rendered by the published Roblox game**. GitHub commits do not upload asset binaries to Roblox or publish a place automatically.
