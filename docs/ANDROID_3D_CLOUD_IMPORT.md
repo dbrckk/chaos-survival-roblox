@@ -4,7 +4,9 @@
 
 Roblox Open Cloud accepte les fichiers **glTF** pour la création d'assets de type **Model**, avec un ou plusieurs MeshParts importés ; l'import direct de fichiers OBJ comme type Mesh n'est pas disponible via cette API. Source officielle : https://create.roblox.com/docs/cloud/guides/usage-assets
 
-## Configuration initiale dans GitHub (une fois)
+## Configuration initiale dans GitHub (une fois, pour les imports réels uniquement)
+
+Le premier essai **dry-run** ne demande ni clé Roblox ni ID de créateur ; tu peux le lancer directement depuis Android.
 
 1. Sur https://create.roblox.com/dashboard/credentials, crée une **clé API distincte** autorisée à gérer les Assets du bon créateur Roblox, avec les droits **Read/Write** nécessaires. Une clé de publication Universe/Place ne donne pas automatiquement les autorisations Assets. Ne poste jamais la clé dans une issue, un message ou un fichier.
 2. Dans le dépôt GitHub, ouvre **Settings → Secrets and variables → Actions → New repository secret**, nom exact `ROBLOX_ASSET_API_KEY`, colle la valeur. Ne remplace pas `ROBLOX_API_KEY` qui sert déjà à publier/tester le jeu.
@@ -14,10 +16,9 @@ Roblox Open Cloud accepte les fichiers **glTF** pour la création d'assets de ty
 
 1. Ouvre https://github.com/dbrckk/chaos-survival-roblox/actions/workflows/upload-original-3d-models.yml et touche **Run workflow**.
 2. Sélectionne la branche `main`. Dans `model`, choisis `reactor_spire`, `service_crane` ou `perimeter_gate`. Le modèle `perimeter_gate` utilise automatiquement son fichier palette `chaos_perimeter_gate.mtl` (différent de celui des deux autres modèles).
-3. `creator_kind` = `user` pour un compte ou `group` pour un groupe ; renseigne son ID numérique exact.
-4. **Premier passage prudent :** laisse `dry_run=true`, lance et vérifie que la validation des triangles, des matériaux et du glTF est réussie. Aucun appel d'upload Roblox n'est fait.
-5. Pour créer réellement l'asset, repasse sur `dry_run=false` et écris exactement `UPLOAD_CHAOS_ORIGINAL_3D` dans `confirmation`. L'action essaiera **un seul envoi** et attendra la réponse Open Cloud. Elle archive uniquement le nouvel asset ID et l'état de modération, jamais la clé.
-6. Si Roblox répond **401/403**, vérifie les droits du nouveau secret sur Assets et le propriétaire. Si Roblox refuse un modèle pour des raisons d'import/modération, conserve le modèle d'origine. Il ne faut pas forcer les permissions ni utiliser des IDs inventés.
+3. **Premier passage sans clé ni ID :** laisse `creator_kind=user`, `creator_id` vide et `dry_run=true` (valeur par défaut). Lance et vérifie la validation des triangles, des matériaux et du glTF. Aucun appel d'upload Roblox n'est fait.
+4. Pour créer réellement l'asset, renseigne alors `creator_kind` = `user` ou `group` et son `creator_id` numérique autorisé. Repasse `dry_run=false` et écris exactement `UPLOAD_CHAOS_ORIGINAL_3D` dans `confirmation`. L'action essaiera **un seul envoi** et attendra la réponse Open Cloud. Elle archive uniquement le nouvel asset ID et l'état de modération, jamais la clé.
+5. Si Roblox répond **401/403**, vérifie les droits du nouveau secret sur Assets et le propriétaire. Si Roblox refuse un modèle pour des raisons d'import/modération, conserve le modèle d'origine. Il ne faut pas forcer les permissions ni utiliser des IDs inventés.
 
 ## Intégration visuelle après l'import
 
