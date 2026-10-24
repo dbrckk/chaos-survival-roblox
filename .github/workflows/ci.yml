@@ -20,6 +20,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate original MeshPart source exports (no Roblox uploads)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for model in reactor_spire service_crane; do
+            python tools/obj_to_gltf.py \
+              --source "assets/source/chaos_${model}.obj" \
+              --materials assets/source/chaos_industrial_materials.mtl \
+              --output "/tmp/chaos_${model}.gltf"
+          done
+          python - <<'PY'
+          import base64
+          import json
+          from pathlib import Path
+
+          for name in ("reactor_spire", "service_crane"):
+              gltf = json.loads(Path("/tmp/chaos_" + name + ".gltf").read_text())
+              assert gltf["asset"]["version"] == "2.0"
+              buffer = gltf["buffers"][0]
+              raw = base64.b64decode(buffer["uri"].split(",", 1)[1], validate=True)
+              assert len(raw) == buffer["byteLength"]
+              assert all(x["byteOffset"] + x["byteLength"] <= len(raw)
+                         for x in gltf["bufferViews"])
+              assert len(gltf["meshes"][0]["primitives"]) >= 3
+              print(name, "glTF source generated and validated:", len(raw), "bytes")
+          PY
+
       - name: Install Rojo 7.7.0
         shell: bash
         run: |
