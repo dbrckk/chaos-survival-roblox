@@ -3,6 +3,33 @@ name: Upload Original Chaos 3D Assets (Manual)
 # Does NOT change the playable place or public experience. Creates a separate
 # owned Roblox Model asset, only with explicit user confirmation.
 on:
+  # Reuse the same guarded uploader from an explicitly scoped one-shot
+  # owner-import workflow. Manual Android flow stays unchanged.
+  workflow_call:
+    inputs:
+      model:
+        description: Source model name
+        required: true
+        type: string
+      creator_kind:
+        description: Roblox user or group ownership
+        required: true
+        type: string
+      creator_id:
+        description: Verified public creator ID
+        required: true
+        type: string
+      dry_run:
+        description: True to validate without importing
+        required: true
+        type: boolean
+      confirmation:
+        description: Exact upload acknowledgement
+        required: false
+        type: string
+    secrets:
+      ROBLOX_ASSET_API_KEY:
+        required: false
   workflow_dispatch:
     inputs:
       model:
