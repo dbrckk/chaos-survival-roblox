@@ -80,6 +80,37 @@ jobs:
           )
           PY
 
+      - name: Validate Roblox-approved original asset registry
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          registry = json.loads(Path("assets/source/roblox-asset-registry.json").read_text())
+          assert registry["schema_version"] == 1
+          assert registry["creator"]["type"] in ("user", "group")
+          assert registry["creator"]["id"].isdecimal()
+          assert registry["asset_type"] == "Roblox Model package"
+          assert registry["publication"]["models_inserted_in_game"] is False
+          assert registry["publication"]["android_visual_qa_completed"] is False
+          models = registry["models"]
+          assert {m["name"] for m in models} == {
+              "reactor_spire", "service_crane", "perimeter_gate"
+          }
+          ids = [m["asset_id"] for m in models]
+          assert len(set(ids)) == len(ids)
+          for model in models:
+              assert model["asset_id"].isdecimal() and int(model["asset_id"]) > 0
+              assert model["moderation"] == "Approved"
+              assert isinstance(model["workflow_run_id"], int)
+              assert model["workflow_run_id"] > 0
+              for attr in ("source", "source_materials"):
+                  path = Path(model[attr])
+                  assert path.is_file() and path.is_relative_to("assets/source")
+          print("Verified original source provenance and unique Roblox Model IDs.")
+          PY
+
       - name: Install Rojo 7.7.0
         shell: bash
         run: |

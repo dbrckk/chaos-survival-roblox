@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "creator": {
+    "type": "user",
+    "id": "9774173158",
+    "username": "Drackk_08"
+  },
+  "asset_type": "Roblox Model package",
+  "publication": {
+    "game_place_id": "95351659174730",
+    "models_inserted_in_game": false,
+    "android_visual_qa_completed": false
+  },
+  "models": [
+    {
+      "name": "reactor_spire",
+      "asset_id": "102992487644269",
+      "moderation": "Approved",
+      "source": "assets/source/chaos_reactor_spire.obj",
+      "source_materials": "assets/source/chaos_industrial_materials.mtl",
+      "workflow_run_id": 40102717102
+    },
+    {
+      "name": "service_crane",
+      "asset_id": "119468460691888",
+      "moderation": "Approved",
+      "source": "assets/source/chaos_service_crane.obj",
+      "source_materials": "assets/source/chaos_industrial_materials.mtl",
+      "workflow_run_id": 40103325460
+    },
+    {
+      "name": "perimeter_gate",
+      "asset_id": "137284215564363",
+      "moderation": "Approved",
+      "source": "assets/source/chaos_perimeter_gate.obj",
+      "source_materials": "assets/source/chaos_perimeter_gate.mtl",
+      "workflow_run_id": 40102717102
+    }
+  ]
+}
