@@ -38,6 +38,45 @@ describe("UI responsive profiles", function()
         expect(rules.localModifier() < 0.8).toBe(true)
     end)
 
+    it("softens at most two distinct camera blockers without losing stable order", function()
+        local rules = CameraOcclusionRules
+        local candidates = {
+            {model = "Kai", score = 3.4},
+            {model = "Milo", score = 1.2},
+            {model = "Nova", score = 2.1},
+            {model = "Milo", score = 0.9},
+            {model = "Broken", score = math.huge},
+            {model = "NaN", score = 0 / 0},
+        }
+        local two = rules.chooseOccluders(candidates, 2)
+        expect(#two).toBe(2)
+        expect(two[1]).toBe("Milo")
+        expect(two[2]).toBe("Nova")
+        local one = rules.chooseOccluders(candidates, 1)
+        expect(#one).toBe(1)
+        expect(one[1]).toBe("Milo")
+        expect(#rules.chooseOccluders(candidates, 0)).toBe(0)
+        expect(#rules.chooseOccluders(candidates, 20)).toBe(2)
+        expect(#rules.chooseOccluders(nil, 2)).toBe(0)
+
+        local ties = rules.chooseOccluders({
+            {model = "Rae", score = 2},
+            {model = "Lea", score = 2},
+            {model = "Zoe", score = 2},
+        }, 2)
+        expect(ties[1]).toBe("Rae")
+        expect(ties[2]).toBe("Lea")
+
+        -- The head can occlude a view even if its HumanoidRootPart is
+        -- out of the center line (sloped platforms / climbing R15s).
+        local camera = Vector3.new(0, 3, 18)
+        local focus = Vector3.new(0, 3, 0)
+        expect(rules.avatarOcclusion(camera, focus, Vector3.new(5, 3, 11)))
+            .toBe(nil)
+        expect(rules.avatarOcclusion(camera, focus, Vector3.new(0, 4, 11))
+            ~= nil).toBe(true)
+    end)
+
     it("classifies short landscape phones as tiny height", function()
         local c = UIResponsive.classify(Vector2.new(640, 360), true)
         expect(c.touch).toBe(true)
