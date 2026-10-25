@@ -252,18 +252,21 @@ local function applyResultSpotlights(state)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    resultGeneration += 1
-    local generation = resultGeneration
     if state.phase ~= "result" then
+        resultGeneration += 1
         lastResultRound = nil
         clear()
         return
     end
 
     -- The result can be rebroadcast with a shorter countdown. Do not
-    -- stack independent retry loops for the same server round.
+    -- cancel the active retry or stack another loop for the same round.
     local round = tonumber(state.roundNumber)
     local newRound = round ~= lastResultRound
+    if newRound then
+        resultGeneration += 1
+    end
+    local generation = resultGeneration
     lastResultRound = round
     local missing = applyResultSpotlights(state)
     if not missing or not newRound then
