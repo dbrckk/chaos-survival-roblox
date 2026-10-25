@@ -141,6 +141,79 @@ describe("Result presentation", function()
         )).toBe("YOU_SURVIVED")
     end)
 
+    it("crowns only the actual last surviving AI in a competitive round", function()
+        local context = {
+            roundNumber = 27,
+            participantUserIds = {101},
+            survivorUserIds = {},
+            aiSurvivorsAlive = 1,
+            soleAliveAISlot = 2,
+            contestantCount = 4,
+        }
+        local aiChampion = RoundResultState.snapshot(context)
+        expect(aiChampion.survivorsAlive).toBe(1)
+        expect(aiChampion.soleSurvivorAISlot).toBe(2)
+        expect(aiChampion.soleSurvivorUserId).toBe(nil)
+        local tick = RoundResultState.atSecond(aiChampion, 3)
+        expect(tick.soleSurvivorAISlot).toBe(2)
+        expect(ResultPresentation.spotlightLabelKey(
+            tick.soleSurvivorAISlot == 2, false
+        )).toBe("RESULT_SOLE_SURVIVOR")
+        expect(ResultPresentation.fallbackFeedback(aiChampion, 101, false).survived)
+            .toBe(false)
+
+        -- One human plus one living AI is not a champion result.
+        local tied = RoundResultState.snapshot({
+            participantUserIds = {101},
+            survivorUserIds = {101},
+            aiSurvivorsAlive = 1,
+            soleAliveAISlot = 2,
+            contestantCount = 2,
+        })
+        expect(tied.soleSurvivorAISlot).toBe(nil)
+        expect(tied.soleSurvivorUserId).toBe(nil)
+        local unopposed = RoundResultState.snapshot({
+            participantUserIds = {},
+            survivorUserIds = {},
+            aiSurvivorsAlive = 1,
+            soleAliveAISlot = 2,
+            contestantCount = 1,
+        })
+        expect(unopposed.soleSurvivorAISlot).toBe(nil)
+        local lostMetadata = RoundResultState.snapshot({
+            participantUserIds = {101},
+            survivorUserIds = {},
+            aiSurvivorsAlive = 1,
+            contestantCount = 4,
+        })
+        expect(lostMetadata.soleSurvivorAISlot).toBe(nil)
+        local malformed = RoundResultState.snapshot({
+            participantUserIds = {101},
+            survivorUserIds = {},
+            aiSurvivorsAlive = 1,
+            soleAliveAISlot = math.huge,
+            contestantCount = 4,
+        })
+        expect(malformed.soleSurvivorAISlot).toBe(nil)
+        local impossibleSlot = RoundResultState.snapshot({
+            participantUserIds = {101},
+            survivorUserIds = {},
+            aiSurvivorsAlive = 1,
+            soleAliveAISlot = 9,
+            contestantCount = 4,
+        })
+        expect(impossibleSlot.soleSurvivorAISlot).toBe(nil)
+        local humanChampion = RoundResultState.snapshot({
+            participantUserIds = {101, 202},
+            survivorUserIds = {202},
+            aiSurvivorsAlive = 0,
+            soleAliveAISlot = 2,
+            contestantCount = 3,
+        })
+        expect(humanChampion.soleSurvivorUserId).toBe(202)
+        expect(humanChampion.soleSurvivorAISlot).toBe(nil)
+    end)
+
     it("requires a new authoritative READY after a finished win to certify replay", function()
         local replay = RoundJourneyRules.replayStarted
         expect(replay(7, {phase = "ready", roundNumber = 8})).toBe(true)
