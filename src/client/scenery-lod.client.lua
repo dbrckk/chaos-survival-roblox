@@ -16,6 +16,15 @@ local ORIGINAL_MESH_LOD = {
     MediumDistance = 140,
 }
 
+-- The new off-map hero architectures are static Roblox-native 3D. On
+-- low-tier Android hide these optional skyline parts; medium shows them
+-- near the arena and high keeps the authored silhouette fully visible.
+-- Uses the EXISTING LOD loop, not another per-frame task.
+local HERO_ARCHITECTURE_LOD = {
+    LowDistance = 0,
+    MediumDistance = 185,
+}
+
 local FOLDERS = {
     ChaosEnvironmentDepthLocal = {
         LowDistance = 150,
@@ -324,6 +333,11 @@ task.spawn(function()
         local original = decor and decor:FindFirstChild("Original3DScenery")
         if original then
             applyFolder(original, ORIGINAL_MESH_LOD,
+                profile, arenaOrigin, cameraPoint)
+        end
+        local hero = SceneryLodRules.heroArchitectureOwner(workspace)
+        if hero then
+            applyFolder(hero, HERO_ARCHITECTURE_LOD,
                 profile, arenaOrigin, cameraPoint)
         end
 
