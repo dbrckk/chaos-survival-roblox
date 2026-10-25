@@ -13,6 +13,21 @@ $errorFile = Join-Path $output "capture-error.txt"
 $passedFile = Join-Path $output "capture-status.txt"
 $startedAt = Get-Date
 
+# Both Task Scheduler and Run-key startup are installed for RDP reliability.
+# Only one may own the live Roblox Studio session and screenshot files.
+$mutex = [System.Threading.Mutex]::new($false, "Local\\ChaosSurvivalAIVisualCapture")
+$ownsMutex = $false
+try {
+    $ownsMutex = $mutex.WaitOne(0)
+}
+catch [System.Threading.AbandonedMutexException] {
+    $ownsMutex = $true
+}
+if (-not $ownsMutex) {
+    $mutex.Dispose()
+    return
+}
+
 function Write-Stage([string]$state) {
     $date = [DateTime]::UtcNow.ToString("o")
     @("stage=$state", "utc=$date") | Set-Content -LiteralPath $statusFile -Encoding utf8
@@ -107,4 +122,8 @@ catch {
         else { "LOCAL_CAPTURE_FAILURE" }
     Write-Stage $reason
     $reason | Set-Content -LiteralPath $errorFile -Encoding ascii
+}
+finally {
+    if ($ownsMutex) { $mutex.ReleaseMutex() }
+    $mutex.Dispose()
 }
