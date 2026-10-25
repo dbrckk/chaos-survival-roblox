@@ -463,6 +463,18 @@ jobs:
               "src/client/movement-feel.client.lua",
           }
 
+          # A Studio-only AI visual QA camera must use RenderStep to
+          # follow real NPC movement. Verify BOTH production and test-suite
+          # early exits before granting this explicit narrow exception.
+          studio_only = {"src/client/visual-ai-review.client.lua"}
+          for studio_path in studio_only:
+              source = Path(studio_path).read_text()
+              if ('if not RunService:IsStudio() then return end' not in source
+                      or 'args.suite ~= "ChaosVisualAI"' not in source):
+                  raise SystemExit(
+                      "Studio visual camera must be guarded against public execution."
+                  )
+
           found = {}
           for path in Path("src/client").rglob("*.lua"):
               source = path.read_text()
@@ -470,8 +482,14 @@ jobs:
               if kinds:
                   found[str(path)] = kinds
 
-          offenders = sorted(set(found) - allowed)
+          offenders = sorted(set(found) - allowed - studio_only)
           stale = sorted(allowed - set(found))
+          stale_studio = sorted(studio_only - set(found))
+          if stale_studio:
+              raise SystemExit(
+                  "Studio-only render loop exemption went stale: "
+                  + ", ".join(stale_studio)
+              )
 
           if offenders:
               print("Unapproved high-frequency client loops:")

@@ -1,0 +1,126 @@
+name: Roblox AI Visual Review (15 Real Studio Frames)
+
+# Opt-in. Only a signed-in, interactively rendered WINDOWS DESKTOP can
+# supply true Roblox scene PNGs. A github-hosted ephemeral runner cannot.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "studio/VISUAL_AI_TRIGGER"
+
+concurrency:
+  group: chaos-ai-visual-review-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  visual-review:
+    name: Collect and audit fifteen AI-camera gameplay frames
+    runs-on: [self-hosted, windows]
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Check authenticated and interactive Roblox Studio
+        shell: pwsh
+        run: |
+          if (-not [Environment]::UserInteractive) {
+            throw "A signed-in interactive desktop is required. Do not run this workflow as a Windows service."
+          }
+          powershell -ExecutionPolicy Bypass -File studio/self-hosted-runner-preflight.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Studio authentication preflight failed. Screenshots not attempted."
+          }
+
+      - name: Build exact SHA Roblox place with pinned Rojo
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $zip = Join-Path $env:RUNNER_TEMP "rojo-ai-visual.zip"
+          $dir = Join-Path $env:RUNNER_TEMP "rojo-ai-visual"
+          Invoke-WebRequest -Uri "https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-windows-x86_64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+          $exe = Get-ChildItem $dir -Filter "rojo.exe" -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "Pinned Rojo 7.7.0 not found." }
+          New-Item -ItemType Directory -Force build | Out-Null
+          & $exe.FullName build default.project.json -o build/ChaosSurvival.rbxlx
+          if ($LASTEXITCODE -ne 0 -or !(Test-Path build/ChaosSurvival.rbxlx)) {
+            throw "Exact commit could not be built into a real Studio place."
+          }
+          if ((git rev-parse HEAD) -ne $env:GITHUB_SHA) {
+            throw "Git ref mismatch: refusing screenshots from an unknown build."
+          }
+
+      - name: Find official signed Studio installation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $studio = $null
+          foreach ($root in @("$env:LOCALAPPDATA\Roblox", "$env:USERPROFILE\AppData\Local\Roblox", "C:\Program Files\Roblox")) {
+            if (-not (Test-Path $root)) { continue }
+            $candidate = Get-ChildItem $root -Recurse -Filter RobloxStudioBeta.exe -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($candidate) { $studio = $candidate.FullName; break }
+          }
+          if (-not $studio) { throw "Roblox Studio not installed for runner user." }
+          $sig = Get-AuthenticodeSignature $studio
+          if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "Roblox") {
+            throw "Unsigned or unofficial Studio binary: refused."
+          }
+          "STUDIO_EXE=$studio" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+
+      - name: Record provenance
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/visual-ai-captures | Out-Null
+          @(
+            "capture_kind=REAL_STUDIO_WINDOW_PNG"
+            "not_public_playthrough=true"
+            "not_android_certified=true"
+            "source_sha=$env:GITHUB_SHA"
+            "run_id=$env:GITHUB_RUN_ID"
+            "runner=$env:RUNNER_NAME"
+            "utc=$([DateTime]::UtcNow.ToString('o'))"
+          ) | Set-Content build/visual-ai-captures/provenance.txt -Encoding utf8
+
+      - name: Play solo round from AI bot view and capture real PNGs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $place = (Resolve-Path build/ChaosSurvival.rbxlx).Path
+          $script = (Resolve-Path studio/visual-ai-runner.luau).Path
+          & ./studio/capture-ai-visual-review.ps1 -StudioExe "$env:STUDIO_EXE" -PlaceFile "$place" -RunScriptFile "$script" -OutputDirectory "build/visual-ai-captures" -Count 15 -IntervalSeconds 3
+          if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "Screenshot collector failed." }
+
+      - name: Install Python for reproducible image audit
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Audit real PNGs and create review contact sheet
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python -m pip install --disable-pip-version-check "Pillow==11.2.1"
+          if ($LASTEXITCODE -ne 0) { throw "Pillow install failed." }
+          python studio/analyze-visual-ai.py build/visual-ai-captures
+          if ($LASTEXITCODE -ne 0) { throw "Real-frame audit failed." }
+          $report = "build/visual-ai-captures/visual-ai-audit.md"
+          Get-Content $report | Out-File -Append -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8
+
+      - name: Upload actual visual evidence, even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-15-real-ai-camera-frames
+          path: |
+            build/visual-ai-captures/*
+          if-no-files-found: warn
+          retention-days: 14

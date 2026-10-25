@@ -43,6 +43,24 @@ The AI roster also stays fixed from **ready** through **round** and **result** w
 The test returns `PASS:` or `FAIL:` through official `StudioTestService:EndTest`. It does **not** prove client rendering quality, real-device FPS, or all disaster decisions. This test is not silently counted as passed by ordinary Build Validation or Open Cloud engine tests; it requires an actual Studio session. Use it before Android solo acceptance and record its candidate commit and exact result.
 
 
+### Fifteen real Studio camera frames from AI survivors
+
+The **Chaos Visual AI 15** Studio toolbar button runs a single local Studio
+client/server round, puts the client camera behind/alongside/in the eyes of
+existing server-controlled AI survivors, and verifies 15 spaced rendered
+checkpoints over roughly 45 seconds. It never changes the AI's locomotion,
+replaces a real player's identity, or runs in the public place.
+
+Actual images can be written to disk **only** when the matching
+`.github/workflows/roblox-ai-visual-review.yml` runs on an authenticated,
+interactive Windows desktop. That workflow takes 15 on-screen PNGs with
+UTC timestamps and hashes, rejects frozen/unrendered captures and produces
+a contact sheet plus image-quality telemetry. The local toolbar button
+alone does not export Roblox CaptureService screenshots.
+
+See [AI visual QA guide](../docs/AI_VISUAL_QA_15_FRAMES.md) for runner
+requirements, artifacts and the limitations of genuine device captures.
+
 ## GitHub Actions
 
 `.github/workflows/roblox-studio-smoke.yml` is manual-only and intentionally targets a Windows **self-hosted runner**.
