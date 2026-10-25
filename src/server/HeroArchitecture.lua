@@ -113,6 +113,8 @@ function HeroArchitecture.build(decor, base, variantId, theme)
         -- gantry and makes the skyline unmistakable even on a phone.
         piece("SkyTransitSignalCrown", Vector3.new(1.0, 8, 1.0),
             Vector3.new(0, 31.0, 0), trim)
+        piece("SkyTransitWeatherVane", Vector3.new(0.65, 0.35, 5.4),
+            Vector3.new(0, 35.4, 0), metal)
         for i = -2, 2 do
             beam("CanopyTruss" .. tostring(i),
                 Vector3.new(i * 5.3, 25.8, -2),
