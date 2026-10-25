@@ -13,6 +13,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local sampleCount = math.clamp(math.floor(tonumber(args.sampleCount) or 15), 1, 15)
 local timeout = math.clamp(tonumber(args.timeoutSeconds) or 110, 65, 145)
+-- StudioTestService:GetTestArgs() has a known issue when invoked in
+-- LocalScripts. The server is authoritative, so forward only the safe
+-- suite activation/configuration through replicated attributes.
+ReplicatedStorage:SetAttribute("ChaosVisualAISuite", true)
+ReplicatedStorage:SetAttribute("ChaosVisualAISamples", sampleCount)
+ReplicatedStorage:SetAttribute(
+    "ChaosVisualAIInterval", math.clamp(tonumber(args.intervalSeconds) or 3, 2, 8)
+)
 local report = Instance.new("RemoteEvent")
 report.Name = "ChaosVisualAIReport"
 report.Parent = ReplicatedStorage
