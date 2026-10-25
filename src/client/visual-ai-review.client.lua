@@ -225,6 +225,10 @@ task.spawn(function()
         local camera = workspace.CurrentCamera
         local root = currentBot and currentBot:FindFirstChild("HumanoidRootPart")
         local viewport = camera and camera.ViewportSize or Vector2.zero
+        local guiRoot = player:FindFirstChildOfClass("PlayerGui")
+        local vote = guiRoot and guiRoot:FindFirstChild("VotePanel", true)
+        local practiceGui = guiRoot and guiRoot:FindFirstChild("LobbyTimeTrialUI")
+        local practice = practiceGui and practiceGui:FindFirstChildOfClass("Frame")
         report:FireServer({
             kind = "frame",
             index = index,
@@ -237,6 +241,8 @@ task.spawn(function()
             renderedFrames = renderFrames,
             fps = totalDt > 0 and renderFrames / totalDt or 0,
             inRound = currentBot and currentBot:GetAttribute("AISurvivorInRound") == true,
+            voteVisible = vote and vote:IsA("GuiObject") and vote.Visible or false,
+            practiceVisible = practice and practice.Visible or false,
         })
         print(string.format(
             "CHAOS_VISUAL_AI_FRAME %02d/%02d bot=%s mode=%s phase=%s viewport=%dx%d",
