@@ -16,6 +16,8 @@ folder.Name = "ResultSurvivorSpotlightsLocal"
 folder.Parent = workspace
 
 local active = {}
+local resultGeneration = 0
+local lastResultRound = nil
 
 local function clear()
     for _, bundle in pairs(active) do
@@ -203,13 +205,13 @@ local function spotlightBots(desired, championAISlot)
     end
 end
 
-stateEvent.OnClientEvent:Connect(function(state)
-    if state.phase ~= "result" then
-        clear()
-        return
-    end
-
+-- On Android, StreamingEnabled may deliver a result packet before the
+-- survivor avatar, head or AI folder reaches this client. The server
+-- result is authoritative; retry only the local cosmetic attachments.
+-- Never request rewards, change a result, or create a champion identity.
+local function applyResultSpotlights(state)
     local desired = {}
+    local missing = false
     local ids = type(state.survivorUserIds) == "table" and state.survivorUserIds or {}
     for _, userId in ipairs(ids) do
         local numericId = tonumber(userId)
@@ -220,10 +222,21 @@ stateEvent.OnClientEvent:Connect(function(state)
             if target then
                 spotlightPlayer(target, state.soleSurvivorUserId)
             end
+            if not active[key] then
+                missing = true
+            end
         end
     end
 
     spotlightBots(desired, state.soleSurvivorAISlot)
+    local championSlot = tonumber(state.soleSurvivorAISlot)
+    if championSlot and championSlot >= 1 then
+        local key = "ai:" .. tostring(championSlot)
+        desired[key] = true
+        if not active[key] then
+            missing = true
+        end
+    end
 
     for key, bundle in pairs(active) do
         if not desired[key] then
@@ -235,6 +248,43 @@ stateEvent.OnClientEvent:Connect(function(state)
             active[key] = nil
         end
     end
+    return missing
+end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    if state.phase ~= "result" then
+        resultGeneration += 1
+        lastResultRound = nil
+        clear()
+        return
+    end
+
+    -- The result can be rebroadcast with a shorter countdown. Do not
+    -- cancel the active retry or stack another loop for the same round.
+    local round = tonumber(state.roundNumber)
+    local newRound = round ~= lastResultRound
+    if newRound then
+        resultGeneration += 1
+    end
+    local generation = resultGeneration
+    lastResultRound = round
+    local missing = applyResultSpotlights(state)
+    if not missing or not newRound then
+        return
+    end
+
+    task.spawn(function()
+        -- Bounded 4.8s cosmetic retry; no per-frame work on low-end phones.
+        for _ = 1, 12 do
+            task.wait(0.4)
+            if generation ~= resultGeneration then
+                return
+            end
+            if not applyResultSpotlights(state) then
+                return
+            end
+        end
+    end)
 end)
 
 Players.PlayerRemoving:Connect(function(target)
