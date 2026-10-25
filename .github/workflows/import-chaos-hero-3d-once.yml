@@ -1,0 +1,29 @@
+name: One-time import of Chaos hero 3D models (Drackk_08)
+# Owner-directed original MeshPart asset creation only. Never publishes a game,
+# changes the playable place, or inserts any imported asset into production.
+# Runs only once when this workflow is first merged to main; regular pushes
+# cannot upload duplicates. Reuse the protected existing Open Cloud key.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/import-chaos-hero-3d-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  import-original-meshes:
+    name: Import original ${{ matrix.model }} into creator inventory
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [plasma_foundry, sky_transit_exchange, orbital_halo_array]
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: ${{ matrix.model }}
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
