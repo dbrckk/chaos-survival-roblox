@@ -468,6 +468,55 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("gives every arena its own southern 3D skyline without unsafe collision", function()
+        local signatures = {
+            Classic = "ObservatoryBridge",
+            Towers = "SkyTransfer",
+            Crossroads = "CentralSwitchCab",
+            Orbital = "ObservationArc1",
+        }
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local base = arena:FindFirstChild("Base")
+            local decor = arena:FindFirstChild("Decor")
+            local monument = decor:FindFirstChild("SouthHorizonMonument")
+            expect(monument ~= nil and monument:IsA("Model")).toBe(true)
+            expect(monument:GetAttribute("ChaosDistantScenery")).toBe(true)
+            expect(monument:GetAttribute("SignatureVariant")).toBe(id)
+            expect(monument:FindFirstChild(signatures[id]) ~= nil).toBe(true)
+
+            local parts = 0
+            local neonParts = 0
+            local highest = -math.huge
+            for _, piece in ipairs(monument:GetDescendants()) do
+                if piece:IsA("BasePart") then
+                    parts += 1
+                    if piece.Material == Enum.Material.Neon then
+                        neonParts += 1
+                    end
+                    expect(piece.Anchored).toBe(true)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.CastShadow).toBe(false)
+                    -- Conservative bound keeps every silhouette WELL beyond
+                    -- the kill plane, shrinking floor and bot routes.
+                    local beyondSouth = piece.Position.Z
+                        - piece.Size.Magnitude * 0.5
+                        - (base.Position.Z + base.Size.Z * 0.5)
+                    expect(beyondSouth > 12).toBe(true)
+                    highest = math.max(highest,
+                        piece.Position.Y + piece.Size.Y * 0.5)
+                end
+            end
+            expect(parts >= 12 and parts <= 24).toBe(true)
+            expect(neonParts <= 2).toBe(true)
+            expect(highest - base.Position.Y > 37).toBe(true)
+            root:Destroy()
+        end
+    end)
+
     it("preserves route neon but keeps giant floor fills non-emissive", function()
         local wideByArena = {
             Classic = {},
