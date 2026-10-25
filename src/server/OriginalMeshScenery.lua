@@ -10,9 +10,15 @@ local ASSETS = {
     reactor_spire = 102992487644269,
     service_crane = 119468460691888,
     perimeter_gate = 137284215564363,
+    plasma_foundry = 95926792159328,
+    sky_transit_exchange = 95878714550124,
+    orbital_halo_array = 135985134195364,
 }
 
-local ORDER = {"reactor_spire", "service_crane", "perimeter_gate"}
+local ORDER = {
+    "reactor_spire", "service_crane", "perimeter_gate",
+    "plasma_foundry", "sky_transit_exchange", "orbital_halo_array",
+}
 local MAX_PARTS = 24
 local MAX_DIMENSION = 65
 
@@ -20,10 +26,10 @@ local MAX_DIMENSION = 65
 -- geometry, kill volumes and hazard telegraphs. Only purely visual meshes
 -- are inserted; the existing procedural structures always remain as fallback.
 local VARIANT_ART = {
-    Classic = {"perimeter_gate", "perimeter_gate", "reactor_spire", "service_crane"},
-    Towers = {"service_crane", "perimeter_gate", "service_crane", "reactor_spire"},
-    Crossroads = {"perimeter_gate", "perimeter_gate", "service_crane", "service_crane"},
-    Orbital = {"reactor_spire", "perimeter_gate", "reactor_spire", "perimeter_gate"},
+    Classic = {"perimeter_gate", "plasma_foundry", "reactor_spire", "service_crane"},
+    Towers = {"service_crane", "sky_transit_exchange", "service_crane", "reactor_spire"},
+    Crossroads = {"perimeter_gate", "sky_transit_exchange", "plasma_foundry", "service_crane"},
+    Orbital = {"orbital_halo_array", "perimeter_gate", "reactor_spire", "orbital_halo_array"},
 }
 
 -- Four authored skyline compositions rather than the same repeated props in
@@ -38,6 +44,9 @@ function OriginalMeshScenery.placements(base, variantId)
         perimeter_gate = "Gate",
         reactor_spire = "ReactorSpire",
         service_crane = "ServiceCrane",
+        plasma_foundry = "PlasmaFoundry",
+        sky_transit_exchange = "SkyTransitExchange",
+        orbital_halo_array = "OrbitalHaloArray",
     }
     local halfX, halfZ = base.Size.X * 0.5, base.Size.Z * 0.5
     local surfaceY = base.Position.Y + base.Size.Y * 0.5
@@ -51,7 +60,9 @@ function OriginalMeshScenery.placements(base, variantId)
     for index, slot in ipairs(slots) do
         local assetName = chosen[index]
         local setback = assetName == "service_crane" and 26
-            or (assetName == "reactor_spire" and 23 or 13)
+            or (assetName == "reactor_spire" and 23 or 24)
+        -- safeExteriorPosition additionally accounts for actual imported
+        -- bounds and rotation, so all six approved packages stay off-floor.
         local x = slot.axis == "X" and slot.sign * (halfX + setback)
             or (index % 2 == 0 and 12 or -12)
         local z = slot.axis == "Z" and slot.sign * (halfZ + setback)
