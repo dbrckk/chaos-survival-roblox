@@ -1,5 +1,5 @@
-Chaos Survival | Studio AI Visual QA retry | 2026-10-25
-Fix PR #203 merged at e0ed859a6c6e4bca903ddbf2be11231e05e97526
-Retry private temporary Windows: auto-login-session detection, encoded PowerShell start, reconnect RDP watchdog, 15 real PNGs, early auth failure.
-Original attempt 40178138861 failed to start automatic screenshots.
-Public Roblox game not republished.
+Chaos Survival | 15-frame Studio AI visual QA diagnostic rerun | 2026-10-25
+Fix PR #204 merged commit 4c10b3ae84ac808a4d2b98cf3b94c9635c17195e
+Capture real gameplay 15 PNGs if official Roblox Studio auth exists.
+On error: preserve sanitized failure type, line and step chronology for debugging, not passwords/cookies.
+No change to public Roblox experience.
