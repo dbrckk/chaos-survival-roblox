@@ -1,0 +1,7 @@
+request=ChaosVisualAI-15-real-studio-frames
+approved_scope=isolated_local_studio_test_only
+source_merge_sha=d96f2b648222981db7eb587f22d023cf3246f563
+requested_date=2026-10-25
+expected_frames=15
+frame_spacing_seconds=3
+never_publish_production=true
