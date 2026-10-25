@@ -1,0 +1,285 @@
+name: Chaos AI Visual Capture (Temporary Windows)
+# Secure temporary Windows desktop accessible from Android, with a genuine
+# Studio AI camera test. No user account tokens or cookies are stored.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "studio/REMOTE_AI_QA_TRIGGER"
+
+concurrency:
+  group: chaos-studio-ai-visual-hosted
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  remote-ai-visual:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 95
+    steps:
+      - name: Validate opt-in secrets
+        shell: pwsh
+        env:
+          TS_KEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+          RDP_PASS: ${{ secrets.CHAOS_REMOTE_RDP_PASSWORD }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:TS_KEY)) {
+            throw "Missing TAILSCALE_AUTHKEY GitHub secret. Remote Windows NOT started."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:RDP_PASS) -or $env:RDP_PASS.Length -lt 16) {
+            throw "Missing or short CHAOS_REMOTE_RDP_PASSWORD GitHub secret (16+ characters)."
+          }
+          Write-Host "Secrets configured; no Roblox password, 2FA code or account cookie is needed by this workflow."
+
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Build visual QA place file for remote Studio
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force build | Out-Null
+          $zip = Join-Path $env:RUNNER_TEMP "chaos-rojo.zip"
+          $dir = Join-Path $env:RUNNER_TEMP "chaos-rojo"
+          Invoke-WebRequest -Uri "https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-windows-x86_64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+          $rojo = Get-ChildItem $dir -Filter "rojo.exe" -Recurse | Select-Object -First 1
+          if (-not $rojo) { throw "Rojo missing" }
+          if (Test-Path "src/shared/VisualStagingStamp.lua") {
+            throw "Staging-only marker must not be committed to source."
+          }
+          $stamp = "return { Environment = 'STAGING', Commit = '" + $env:GITHUB_SHA + "', RunId = '" + $env:GITHUB_RUN_ID + "' }"
+          Set-Content "src/shared/VisualStagingStamp.lua" -Value $stamp -Encoding utf8
+          & $rojo.FullName build default.project.json -o build/ChaosSurvival.rbxlx
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path "build/ChaosSurvival.rbxlx")) {
+            throw "Rojo build failed"
+          }
+          $contents = Get-Content "build/ChaosSurvival.rbxlx" -Raw
+          if (!$contents.Contains($env:GITHUB_SHA) -or !$contents.Contains("VisualStagingStamp")) {
+            throw "Exact commit identity missing from built place"
+          }
+          $desktop = [Environment]::GetFolderPath("Desktop")
+          if (!$desktop) { $desktop = Join-Path $env:USERPROFILE "Desktop" }
+          New-Item -ItemType Directory -Path $desktop -Force | Out-Null
+          Copy-Item "build/ChaosSurvival.rbxlx" (Join-Path $desktop "ChaosSurvival_VisualQA.rbxlx") -Force
+          $shortcut = "[InternetShortcut]" + [Environment]::NewLine + "URL=https://create.roblox.com/docs/studio/setup"
+          Set-Content (Join-Path $desktop "Official_Roblox_Studio.url") -Value $shortcut
+          $instructions = @(
+            "CHAOS SURVIVAL - VISUAL QA - STAGING CREATION",
+            "",
+            "1. Open Official_Roblox_Studio.url. Install the official Roblox Studio.",
+            "2. Sign into Studio inside this private remote Windows session.",
+            "3. Open ChaosSurvival_VisualQA.rbxlx from the Desktop.",
+            "4. File > Publish to Roblox As > Create NEW experience.",
+            "5. Name it Chaos Survival - Visual QA, keep it PRIVATE.",
+            "6. DO NOT OVERWRITE your existing public Chaos Survival.",
+            "7. Copy the new Universe ID and Place ID from Creator Dashboard.",
+            "8. Log out of Studio before leaving this temporary computer.",
+            "Never share Roblox passwords, .ROBLOSECURITY cookies or 2FA codes."
+          )
+          Set-Content (Join-Path $desktop "READ_ME_VisualQA.txt") -Value $instructions
+          Write-Host "Exact-SHA staging build created on temporary Windows desktop."
+
+      - name: Preinstall official signed Roblox Studio on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $installer = Join-Path $env:RUNNER_TEMP "RobloxStudioInstaller.exe"
+          Invoke-WebRequest -Uri "https://setup.rbxcdn.com/RobloxStudioInstaller.exe" -OutFile $installer
+          $sig = Get-AuthenticodeSignature $installer
+          if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "Roblox") {
+            throw "Roblox Studio installer signature invalid; aborting."
+          }
+          $process = Start-Process -FilePath $installer -PassThru
+          $deadline = (Get-Date).AddMinutes(6)
+          $studio = $null
+          while ((Get-Date) -lt $deadline) {
+            $running = Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            if ($running -and $running.Path) {
+              $studio = $running.Path
+            }
+            if (!$studio) {
+              $roots = @(
+                "$env:LOCALAPPDATA\Roblox",
+                "$env:USERPROFILE\AppData\Local\Roblox",
+                "C:\Program Files\Roblox",
+                "C:\Program Files (x86)\Roblox"
+              ) | Where-Object { Test-Path $_ }
+              foreach ($root in $roots) {
+                $candidate = Get-ChildItem $root -Filter "RobloxStudioBeta.exe" -Recurse -ErrorAction SilentlyContinue |
+                  Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                if ($candidate) { $studio = $candidate.FullName; break }
+              }
+            }
+            if ($studio) { break }
+            if ($process.HasExited -and $process.ExitCode -ne 0) {
+              throw "Roblox Studio installer failed with exit code $($process.ExitCode)."
+            }
+            Start-Sleep -Seconds 3
+          }
+          if (!$studio) { throw "Roblox Studio installer did not complete within six minutes." }
+          $exeSig = Get-AuthenticodeSignature $studio
+          if ($exeSig.Status -ne "Valid" -or $exeSig.SignerCertificate.Subject -notmatch "Roblox") {
+            throw "Installed Roblox Studio executable signature invalid."
+          }
+          Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+          "STUDIO_EXE=$studio" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Official Roblox Studio preinstalled and signature verified."
+          # Studio opens on the first interactive RDP sign-in, without storing
+          # Roblox credentials or trying to bypass account authentication.
+          $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+          New-Item -Path $runKey -Force | Out-Null
+          Set-ItemProperty -Path $runKey -Name "ChaosVisualQAStudio" -Value ('"' + $studio + '"')
+          Write-Host "Studio automatic launch configured for interactive Windows sign-in."
+          Write-Host "No Roblox account authentication is attempted by the workflow."
+
+      - name: Enable secure Windows RDP only from Tailscale
+        shell: pwsh
+        env:
+          RDP_PASS: ${{ secrets.CHAOS_REMOTE_RDP_PASSWORD }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $account = Get-LocalUser -Name "runneradmin" -ErrorAction SilentlyContinue
+          if (-not $account) { throw "runneradmin not found; refusing insecure RDP fallback." }
+          $secure = ConvertTo-SecureString $env:RDP_PASS -AsPlainText -Force
+          Set-LocalUser -Name "runneradmin" -Password $secure
+          $base = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server"
+          Set-ItemProperty -Path $base -Name "fDenyTSConnections" -Value 0
+          Set-ItemProperty -Path "$base\WinStations\RDP-Tcp" -Name "UserAuthentication" -Value 1
+          Set-ItemProperty -Path "$base\WinStations\RDP-Tcp" -Name "SecurityLayer" -Value 2
+          Get-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue | Disable-NetFirewallRule
+          New-NetFirewallRule -DisplayName "ChaosVisualQA-TailscaleOnly" -Direction Inbound -Protocol TCP -LocalPort 3389 -RemoteAddress "100.64.0.0/10" -Profile Any -Action Allow | Out-Null
+          # Registry switches alone are insufficient if the listener is stopped.
+          $rdpService = Get-Service -Name "TermService" -ErrorAction Stop
+          if ($rdpService.Status -ne "Running") {
+            Start-Service -Name "TermService" -ErrorAction Stop
+          }
+          Start-Sleep -Seconds 3
+          $rdpListener = Get-NetTCPConnection -LocalPort 3389 -State Listen -ErrorAction SilentlyContinue
+          if (-not $rdpListener) {
+            throw "RDP not listening on TCP/3389 despite enabled registry settings."
+          }
+          if (-not (Test-NetConnection -ComputerName 127.0.0.1 -Port 3389 -InformationLevel Quiet -WarningAction SilentlyContinue)) {
+            throw "RDP local loopback TCP/3389 check failed."
+          }
+          Write-Host "RDP local TCP/3389 listener verified with Windows TermService running."
+          Write-Host "RDP has NLA/TLS enabled and only permits connections from private Tailscale addresses."
+
+      - name: Join owner's private Tailscale network
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: latest
+
+      - name: Prepare autonomous AI screenshot run after Roblox login
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bootstrap = (Resolve-Path studio/remote-windows-ai-bootstrap.ps1).Path
+          & $bootstrap -StudioExe "$env:STUDIO_EXE" -Workspace "$env:GITHUB_WORKSPACE"
+          if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "AI screenshot bootstrap failed." }
+
+      - name: Show private IP and temporary instructions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ip = ((& tailscale ip -4 | Select-Object -First 1) | Out-String).Trim()
+          if ($ip -notmatch "^100\.[0-9]+\.[0-9]+\.[0-9]+$") {
+            throw "Tailscale private IP unavailable; cannot connect securely."
+          }
+          $tsState = (& tailscale status --json | ConvertFrom-Json).BackendState
+          if ($tsState -ne "Running") {
+            throw "Tailscale backend not running; refusing to advertise RDP as ready."
+          }
+          if (-not (Get-NetTCPConnection -LocalPort 3389 -State Listen -ErrorAction SilentlyContinue)) {
+            throw "RDP port stopped listening after Tailscale startup."
+          }
+          @(
+            "### Android AI Visual QA: Windows desktop ready",
+            "",
+            "- Connect the Android Tailscale app to this same personal network.",
+            "- Open the official Microsoft Remote Desktop Android application.",
+            "- RDP address: " + $ip,
+            "- Windows username: runneradmin",
+            "- RDP password: the private value of CHAOS_REMOTE_RDP_PASSWORD (NOT your Roblox password).",
+            "- Sign in once in Roblox Studio; watch the AI test start automatically, or open START_CHAOS_AI_CAPTURE.cmd on the desktop.",
+            "- The build ChaosSurvival_VisualQA.rbxlx is prepared from commit " + $env:GITHUB_SHA,
+            "- The Windows session is temporary and ends after 15 authenticated gameplay PNGs or a timeout.",
+            "- The public Roblox game remains unchanged; only the local test build runs."
+          ) | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          Write-Host "Private Tailscale IP: $ip"
+          Write-Host "RDP user: runneradmin (password never printed)."
+
+      - name: Wait for authenticated AI round and exact fifteen screenshots
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $captureDir = Join-Path $env:GITHUB_WORKSPACE "build/visual-ai-captures"
+          $deadline = (Get-Date).AddMinutes(72)
+          $complete = $false
+          while ((Get-Date) -lt $deadline) {
+            $successFile = Join-Path $captureDir "capture-status.txt"
+            $errorFile = Join-Path $captureDir "capture-error.txt"
+            if (Test-Path $errorFile) {
+              Write-Host "Interactive Roblox Studio capture failed; review the sanitized error artifact."
+              throw "AI camera capture failed; no false screenshot certification."
+            }
+            if (Test-Path $successFile) {
+              $status = (Get-Content -LiteralPath $successFile -Raw).Trim()
+              $files = @(Get-ChildItem -Path $captureDir -Filter "ai-frame-*.png" -ErrorAction SilentlyContinue)
+              if ($status -ne "PASS" -or $files.Count -ne 15) {
+                throw "Studio screenshot workflow did not produce 15 verified real PNG files."
+              }
+              $complete = $true
+              Write-Host "PASS: 15 real Roblox Studio AI viewpoint screenshots collected."
+              break
+            }
+            $listener = @(Get-NetTCPConnection -LocalPort 3389 -State Listen -ErrorAction SilentlyContinue)
+            if ($listener.Count -eq 0) { throw "Private Windows Remote Desktop listener stopped." }
+            $state = (& tailscale status --json | ConvertFrom-Json).BackendState
+            if ($state -ne "Running") { throw "Private Tailscale network disconnected." }
+            Start-Sleep -Seconds 20
+            Write-Host ("AI CAPTURE WAIT {0:u}: session online; awaiting Roblox sign-in or local test completion." -f (Get-Date).ToUniversalTime())
+          }
+          if (-not $complete) {
+            throw "TIMEOUT: no authenticated 15-frame Studio session was completed; do not count screenshots."
+          }
+
+      - name: Install image QA dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Analyze actual camera PNGs and make 5-by-3 contact sheet
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python -m pip install --disable-pip-version-check "Pillow==11.2.1"
+          if ($LASTEXITCODE -ne 0) { throw "Pillow installation failed." }
+          python studio/analyze-visual-ai.py build/visual-ai-captures
+          if ($LASTEXITCODE -ne 0) { throw "AI visual evidence audit failed." }
+          Get-Content build/visual-ai-captures/visual-ai-audit.md |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload original source PNGs, montage and analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-15-authentic-ai-studio-pngs-hosted-windows
+          path: |
+            build/visual-ai-captures/*
+          if-no-files-found: warn
+          retention-days: 14

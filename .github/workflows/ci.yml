@@ -470,7 +470,7 @@ jobs:
           for studio_path in studio_only:
               source = Path(studio_path).read_text()
               if ('if not RunService:IsStudio() then return end' not in source
-                      or 'args.suite ~= "ChaosVisualAI"' not in source):
+                      or 'ReplicatedStorage:GetAttribute("ChaosVisualAISuite")' not in source):
                   raise SystemExit(
                       "Studio visual camera must be guarded against public execution."
                   )
