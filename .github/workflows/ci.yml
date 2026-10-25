@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/mesh-previews
-          for model in reactor_spire service_crane perimeter_gate; do
+          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
               palette="assets/source/chaos_perimeter_gate.mtl"
@@ -45,7 +45,8 @@ jobs:
           manifest = {"source_commit": os.environ["GITHUB_SHA"],
                       "import_status": "NOT_UPLOADED_TO_ROBLOX",
                       "models": []}
-          for name in ("reactor_spire", "service_crane", "perimeter_gate"):
+          for name in ("reactor_spire", "service_crane", "perimeter_gate",
+                       "plasma_foundry", "sky_transit_exchange", "orbital_halo_array"):
               gltf = json.loads(Path("build/mesh-previews/chaos_" + name + ".gltf").read_text())
               assert gltf["asset"]["version"] == "2.0"
               buffer = gltf["buffers"][0]

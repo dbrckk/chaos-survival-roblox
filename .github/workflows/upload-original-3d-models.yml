@@ -40,6 +40,9 @@ on:
           - reactor_spire
           - service_crane
           - perimeter_gate
+          - plasma_foundry
+          - sky_transit_exchange
+          - orbital_halo_array
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
         type: choice
@@ -94,7 +97,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -177,7 +180,10 @@ jobs:
           creator = {("userId" if creator_kind == "user" else "groupId"): creator_id}
           names = {"reactor_spire": "Chaos Reactor Spire",
                    "service_crane": "Chaos Service Crane",
-                   "perimeter_gate": "Chaos Perimeter Gate"}
+                   "perimeter_gate": "Chaos Perimeter Gate",
+                   "plasma_foundry": "Chaos Plasma Foundry",
+                   "sky_transit_exchange": "Chaos Sky Transit Exchange",
+                   "orbital_halo_array": "Chaos Orbital Halo Array"}
           request = {
               "assetType": "Model",
               "displayName": names[os.environ["CHOICE"]],

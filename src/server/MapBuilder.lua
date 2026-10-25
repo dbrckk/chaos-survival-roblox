@@ -16,6 +16,8 @@ local OrbitalHelix = if helixModule
     then require(helixModule)
     else require("./OrbitalHelix")
 
+local HeroArchitecture = require("./HeroArchitecture")
+
 local MapBuilder = {}
 
 function MapBuilder.humanoidFromHit(hit)
@@ -2327,6 +2329,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     addPerimeterStations(decor, config, variant, theme)
     addDistantSkyline(decor, config, variant, theme)
     addArenaSignatureMegastructure(decor, config, variant, theme)
+    -- One distinctive real 3D skyline per arena. No external asset ID is
+    -- required; this is the always-available mobile-friendly model layer.
+    HeroArchitecture.build(decor, arena:FindFirstChild("Base"), variant.Id, theme)
     addSouthHorizonMonument(decor, config, variant, theme)
     addExteriorCornerRidges(decor, config, variant, theme)
     addExteriorSilhouettePairs(decor, config, variant, theme)
