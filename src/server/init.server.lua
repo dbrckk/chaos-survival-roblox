@@ -1925,6 +1925,8 @@ while true do
         participantUserIds = participantUserIds,
         survivorUserIds = survivorUserIds,
         aiSurvivorsAlive = aiSurvivorsAtFinish,
+        soleAliveAISlot = aiSurvivorsAtFinish == 1
+            and AISurvivorService.soleAliveRoundSlot() or nil,
         contestantCount = #contestants + AISurvivorService.roundRosterCount(),
         doubleChaos = #selectedSet > 1,
         fusionName = fusionName,
