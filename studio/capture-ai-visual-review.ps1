@@ -22,6 +22,7 @@ $stdout = Join-Path $OutputDirectory "studio-stdout.log"
 $stderr = Join-Path $OutputDirectory "studio-stderr.log"
 $engineLog = Join-Path $OutputDirectory "studio-run-script.log"
 $manifest = Join-Path $OutputDirectory "frames.tsv"
+$probeStartedAt = Get-Date
 (@("index", "utc", "window_title", "width", "height", "sha256") -join [char]9) |
     Set-Content -Path $manifest -Encoding utf8
 
@@ -46,6 +47,26 @@ function Read-Output {
         if (Test-Path $path) {
             try {
                 [void]$builder.AppendLine((Get-Content -LiteralPath $path -Raw -ErrorAction Stop))
+            }
+            catch {}
+        }
+    }
+    # Child Studio client/server DataModels sometimes log only to their
+    # separate Roblox log files, not the outer RunScript output stream.
+    # Inspect only new local Studio logs and never upload account secrets.
+    $robloxLogs = Join-Path $env:LOCALAPPDATA "Roblox\\logs"
+    if (Test-Path $robloxLogs) {
+        $latest = Get-ChildItem -LiteralPath $robloxLogs -File -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.LastWriteTime -ge $probeStartedAt.AddSeconds(-5) -and
+                $_.Name -match "(Studio|Client|Player)"
+            } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 3
+        foreach ($item in $latest) {
+            try {
+                $tail = Get-Content -LiteralPath $item.FullName -Tail 150 -ErrorAction Stop
+                [void]$builder.AppendLine(($tail -join [Environment]::NewLine))
             }
             catch {}
         }
