@@ -3,6 +3,7 @@
 param(
     [Parameter(Mandatory=$true)][string]$StudioExe,
     [Parameter(Mandatory=$true)][string]$Workspace,
+    [Parameter(Mandatory=$true)][string]$ExpectedStudioSha256,
     [ValidateRange(2, 40)][int]$LoginWindowMinutes = 10
 )
 $ErrorActionPreference = "Stop"
@@ -67,10 +68,34 @@ try {
     if (-not (Test-Path -LiteralPath $StudioExe)) {
         throw "STUDIO_MISSING: official Studio binary no longer exists"
     }
-    $studioSig = Get-AuthenticodeSignature -LiteralPath $StudioExe
-    if ($studioSig.Status -ne "Valid" -or
-        $studioSig.SignerCertificate.Subject -notmatch "Roblox") {
-        throw "UNTRUSTED_STUDIO: executable must be signed by Roblox"
+    # WindowsPowerShell's Microsoft.PowerShell.Security module failed to
+    # auto-load on the GitHub hosted interactive desktop (verified runner
+    # 40181575727). The workflow already verified Roblox Corporation's
+    # Authenticode signature with pwsh at install time. Reconfirm the same
+    # binary has not changed using pure .NET SHA-256 here, without PowerShell
+    # module auto-loading, cookies, passwords or network calls.
+    if ($ExpectedStudioSha256 -notmatch "^[A-Fa-f0-9]{64}$") {
+        throw "STUDIO_FILE_CHANGED: missing trusted signed-binary digest"
+    }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $stream = $null
+    try {
+        $stream = [System.IO.File]::Open(
+            $StudioExe,
+            [System.IO.FileMode]::Open,
+            [System.IO.FileAccess]::Read,
+            [System.IO.FileShare]::ReadWrite
+        )
+        $digest = [BitConverter]::ToString(
+            $sha.ComputeHash($stream)
+        ).Replace("-", "")
+    }
+    finally {
+        if ($stream) { $stream.Dispose() }
+        $sha.Dispose()
+    }
+    if ($digest -ne $ExpectedStudioSha256) {
+        throw "STUDIO_FILE_CHANGED: Roblox binary changed since verified installation"
     }
 
     $studio = Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
@@ -132,7 +157,7 @@ catch {
     # Only upload a coded explanation; never raw local Studio auth logs.
     $reason = if ($message -match "AUTH_REQUIRED") { "AUTH_REQUIRED" }
         elseif ($message -match "GUI_SESSION_MISSING") { "GUI_SESSION_MISSING" }
-        elseif ($message -match "STUDIO_MISSING|UNTRUSTED_STUDIO") { "STUDIO_UNAVAILABLE" }
+        elseif ($message -match "STUDIO_MISSING|STUDIO_FILE_CHANGED") { "STUDIO_UNAVAILABLE" }
         elseif ($message -match "NO_RENDER_MARKER") { "NO_RENDER_MARKER" }
         elseif ($message -match "NO_RENDERED_WINDOW|WINDOW_NOT_FOREGROUND") { "GUI_CAPTURE_UNAVAILABLE" }
         elseif ($message -match "STUDIO_TEST_FAILED") { "STUDIO_TEST_FAILED" }
