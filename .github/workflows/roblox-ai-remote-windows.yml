@@ -11,7 +11,7 @@ on:
 
 concurrency:
   group: chaos-studio-ai-visual-hosted
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -76,17 +76,14 @@ jobs:
           $shortcut = "[InternetShortcut]" + [Environment]::NewLine + "URL=https://create.roblox.com/docs/studio/setup"
           Set-Content (Join-Path $desktop "Official_Roblox_Studio.url") -Value $shortcut
           $instructions = @(
-            "CHAOS SURVIVAL - VISUAL QA - STAGING CREATION",
+            "CHAOS SURVIVAL - AUTOMATIC STUDIO AI SCREENSHOTS",
             "",
-            "1. Open Official_Roblox_Studio.url. Install the official Roblox Studio.",
-            "2. Sign into Studio inside this private remote Windows session.",
-            "3. Open ChaosSurvival_VisualQA.rbxlx from the Desktop.",
-            "4. File > Publish to Roblox As > Create NEW experience.",
-            "5. Name it Chaos Survival - Visual QA, keep it PRIVATE.",
-            "6. DO NOT OVERWRITE your existing public Chaos Survival.",
-            "7. Copy the new Universe ID and Place ID from Creator Dashboard.",
-            "8. Log out of Studio before leaving this temporary computer.",
-            "Never share Roblox passwords, .ROBLOSECURITY cookies or 2FA codes."
+            "The automatic launcher is installed later in this workflow.",
+            "No manual Roblox publication or Studio file opening is needed.",
+            "A local test runs 15 true screenshots of autonomous AI bots.",
+            "If Studio is not already authenticated for this Windows user,",
+            "a one-time login inside Roblox's official Studio UI is required.",
+            "Never share account cookies, Roblox passwords or 2FA codes."
           )
           Set-Content (Join-Path $desktop "READ_ME_VisualQA.txt") -Value $instructions
           Write-Host "Exact-SHA staging build created on temporary Windows desktop."
@@ -138,13 +135,10 @@ jobs:
             Stop-Process -Force -ErrorAction SilentlyContinue
           "STUDIO_EXE=$studio" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Official Roblox Studio preinstalled and signature verified."
-          # Studio opens on the first interactive RDP sign-in, without storing
-          # Roblox credentials or trying to bypass account authentication.
-          $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-          New-Item -Path $runKey -Force | Out-Null
-          Set-ItemProperty -Path $runKey -Name "ChaosVisualQAStudio" -Value ('"' + $studio + '"')
-          Write-Host "Studio automatic launch configured for interactive Windows sign-in."
-          Write-Host "No Roblox account authentication is attempted by the workflow."
+          # The tested automatic launcher is installed in the later
+          # Prepare AI capture step. It starts Studio itself at Windows login,
+          # without a competing Run-key entry or Roblox credential access.
+          Write-Host "Roblox Studio official signed binary ready; automatic launcher follows."
 
       - name: Enable secure Windows RDP only from Tailscale
         shell: pwsh
@@ -228,11 +222,21 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $captureDir = Join-Path $env:GITHUB_WORKSPACE "build/visual-ai-captures"
-          $deadline = (Get-Date).AddMinutes(72)
+          # Do not reserve GitHub-hosted Windows for over an hour when
+          # no Roblox Studio account is authenticated on this fresh VM.
+          $deadline = (Get-Date).AddMinutes(14)
           $complete = $false
           while ((Get-Date) -lt $deadline) {
             $successFile = Join-Path $captureDir "capture-status.txt"
             $errorFile = Join-Path $captureDir "capture-error.txt"
+            $watchdogStatus = Join-Path $captureDir "watchdog-status.txt"
+            if (Test-Path $watchdogStatus) {
+              $statusLines = Get-Content -LiteralPath $watchdogStatus -ErrorAction SilentlyContinue
+              $stage = @($statusLines | Where-Object { $_ -match "^stage=" } | Select-Object -Last 1)
+              if ($stage.Count -gt 0) {
+                Write-Host ("STUDIO_WATCHDOG " + $stage[0])
+              }
+            }
             if (Test-Path $errorFile) {
               Write-Host "Interactive Roblox Studio capture failed; review the sanitized error artifact."
               throw "AI camera capture failed; no false screenshot certification."
@@ -255,7 +259,7 @@ jobs:
             Write-Host ("AI CAPTURE WAIT {0:u}: session online; awaiting Roblox sign-in or local test completion." -f (Get-Date).ToUniversalTime())
           }
           if (-not $complete) {
-            throw "TIMEOUT: no authenticated 15-frame Studio session was completed; do not count screenshots."
+            throw "AUTH_REQUIRED_OR_STARTUP_FAILURE: no real authenticated Studio capture in this temporary Windows session. Do not count screenshots."
           }
 
       - name: Install image QA dependencies
@@ -279,7 +283,18 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: chaos-15-authentic-ai-studio-pngs-hosted-windows
+          # Never upload raw Studio logs; they can contain local
+          # authentication state or other unrelated user data. Only image
+          # evidence and safe status/manifests are retained.
           path: |
-            build/visual-ai-captures/*
+            build/visual-ai-captures/ai-frame-*.png
+            build/visual-ai-captures/frames.tsv
+            build/visual-ai-captures/bootstrap-status.txt
+            build/visual-ai-captures/watchdog-status.txt
+            build/visual-ai-captures/capture-status.txt
+            build/visual-ai-captures/capture-error.txt
+            build/visual-ai-captures/visual-ai-contact-sheet.jpg
+            build/visual-ai-captures/visual-ai-audit.json
+            build/visual-ai-captures/visual-ai-audit.md
           if-no-files-found: warn
           retention-days: 14
