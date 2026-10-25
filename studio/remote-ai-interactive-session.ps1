@@ -9,6 +9,8 @@ $ErrorActionPreference = "Stop"
 $output = Join-Path $Workspace "build\visual-ai-captures"
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $statusFile = Join-Path $output "watchdog-status.txt"
+$historyFile = Join-Path $output "watchdog-history.txt"
+$diagnosticFile = Join-Path $output "capture-error-metadata.txt"
 $errorFile = Join-Path $output "capture-error.txt"
 $passedFile = Join-Path $output "capture-status.txt"
 $startedAt = Get-Date
@@ -31,6 +33,7 @@ if (-not $ownsMutex) {
 function Write-Stage([string]$state) {
     $date = [DateTime]::UtcNow.ToString("o")
     @("stage=$state", "utc=$date") | Set-Content -LiteralPath $statusFile -Encoding utf8
+    ("$date | $state") | Add-Content -LiteralPath $historyFile -Encoding utf8
 }
 
 function Find-StudioAuthentication {
@@ -137,6 +140,27 @@ catch {
         else { "LOCAL_CAPTURE_FAILURE" }
     Write-Stage $reason
     $reason | Set-Content -LiteralPath $errorFile -Encoding ascii
+    # Store only an exception TYPE, source LINE and sanitized message.
+    # These are safe to attach to GitHub; Roblox logs, user credentials,
+    # URLs, cookie values and unredacted local paths are never attached.
+    $safeMessage = [regex]::Replace($message, "[\r\n\t]", " ")
+    $safeMessage = [regex]::Replace($safeMessage, "https?://\S+", "[URL]")
+    $safeMessage = [regex]::Replace($safeMessage, "[A-Za-z]:\\[^\s]+", "[PATH]")
+    $safeMessage = [regex]::Replace(
+        $safeMessage,
+        "(?i)(token|password|secret|cookie|apikey|api_key|authorization)\s*[:=]\s*\S+",
+        "[REDACTED]"
+    )
+    if ($safeMessage.Length -gt 260) {
+        $safeMessage = $safeMessage.Substring(0, 260)
+    }
+    @(
+        "reason=$reason",
+        "exception_type=$($_.Exception.GetType().FullName)",
+        "line=$($_.InvocationInfo.ScriptLineNumber)",
+        "error_id=$($_.FullyQualifiedErrorId)",
+        "message=$safeMessage"
+    ) | Set-Content -LiteralPath $diagnosticFile -Encoding utf8
 }
 finally {
     if ($ownsMutex) { $mutex.ReleaseMutex() }
