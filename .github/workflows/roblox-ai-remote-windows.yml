@@ -45,6 +45,36 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
 
+      - name: Validate Windows launcher syntax and fail-closed configuration
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          foreach ($path in @(
+            "studio/remote-windows-ai-bootstrap.ps1",
+            "studio/remote-ai-interactive-session.ps1",
+            "studio/capture-ai-visual-review.ps1"
+          )) {
+            $tokens = $null
+            $parseErrors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path).Path,
+              [ref]$tokens,
+              [ref]$parseErrors
+            )
+            if ($parseErrors.Count -gt 0) {
+              foreach ($errorItem in $parseErrors) {
+                Write-Host ("PowerShell parse failure in " + $path + ": " + $errorItem.Message)
+              }
+              throw "Refusing invalid PowerShell launcher"
+            }
+          }
+          $source = Get-Content studio/remote-windows-ai-bootstrap.ps1 -Raw
+          if (-not $source.Contains("-EncodedCommand") -or
+              -not $source.Contains("New-ScheduledTaskTrigger -AtLogOn")) {
+            throw "Verified automatic interactive launcher not found"
+          }
+          Write-Host "All Windows AI capture scripts parse; interactive EncodedCommand startup contract verified."
+
       - name: Build visual QA place file for remote Studio
         shell: pwsh
         run: |
