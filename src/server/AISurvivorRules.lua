@@ -410,7 +410,7 @@ end
 
 -- Long world routes must survive the ordinary roaming rethink clock.
 -- Arrival, urgent hazard overrides, invalid targets and stuck recovery
--- still clear the goal in the server brain; no permanent route lock.
+-- still clear the goal; a bounded grace period prevents permanent locks.
 function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targetIsSkyrail, targetPart)
     if typeof(target) ~= "Vector3" then
         return true
@@ -418,8 +418,14 @@ function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targe
     if (tonumber(now) or 0) < (tonumber(nextThink) or 0) then
         return false
     end
-    return phase ~= "round"
-        or not AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart)
+    if phase == "round"
+        and AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart)
+    then
+        -- Limit long crossings to a five-second grace period beyond the
+        -- normal rethink deadline, even if the rig keeps moving in circles.
+        return (tonumber(now) or 0) >= (tonumber(nextThink) or 0) + 5
+    end
+    return true
 end
 
 -- Free-form side-to-side motion looks natural on the main floor but can
