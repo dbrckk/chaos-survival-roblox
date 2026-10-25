@@ -3222,6 +3222,26 @@ function AISurvivorService.aliveRoundCount()
     return count
 end
 
+-- Return the unique LAST living AI contestant's slot. Never use
+-- lobby mannequins, disconnected proxies or an AI that died during the
+-- countdown. A unique human winner is decided separately by the
+-- authoritative frozen result roster; this function makes no claims
+-- about human competitors or awards.
+function AISurvivorService.soleAliveRoundSlot()
+    local lastSlot = nil
+    for _, record in ipairs(records) do
+        if record.inRound then
+            local humanoid = record.model
+                and record.model:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                if lastSlot ~= nil then return nil end
+                lastSlot = record.slot
+            end
+        end
+    end
+    return lastSlot
+end
+
 -- A living lobby rig is not an arena contestant. Keep the roster
 -- denominator stable after deaths/removal until the next intermission:
 -- record.inRound remains true for bots admitted at READY.

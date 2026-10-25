@@ -174,7 +174,7 @@ local function spotlightPlayer(target, championUserId)
     )
 end
 
-local function spotlightBots(desired)
+local function spotlightBots(desired, championAISlot)
     local bots = workspace:FindFirstChild("AISurvivors")
     if not bots then
         return
@@ -187,11 +187,16 @@ local function spotlightBots(desired)
                 local slot = tonumber(model:GetAttribute("AISurvivorSlot")) or 0
                 local key = "ai:" .. tostring(slot)
                 desired[key] = true
+                local champion = slot >= 1 and slot == tonumber(championAISlot)
                 spotlightModel(
                     key,
                     model,
-                    CoreLocalization.text(localeId, "SURVIVOR_LABEL"),
-                    false
+                    CoreLocalization.text(
+                        localeId,
+                        ResultPresentation.spotlightLabelKey(champion, false)
+                    ),
+                    false,
+                    champion
                 )
             end
         end
@@ -218,7 +223,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
     end
 
-    spotlightBots(desired)
+    spotlightBots(desired, state.soleSurvivorAISlot)
 
     for key, bundle in pairs(active) do
         if not desired[key] then
