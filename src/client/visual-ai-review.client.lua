@@ -74,7 +74,6 @@ local totalDt = 0
 local previousCamera = nil
 local previousCameraType = nil
 local previousCameraSubject = nil
-local previousFieldOfView = nil
 local bindName = "ChaosVisualAIStudioCamera"
 
 local function restore()
@@ -82,7 +81,6 @@ local function restore()
     local camera = workspace.CurrentCamera
     if camera and camera == previousCamera then
         camera.CameraType = previousCameraType or Enum.CameraType.Custom
-        camera.FieldOfView = previousFieldOfView or 70
         local character = player.Character
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         if humanoid or previousCameraSubject then
@@ -109,11 +107,9 @@ RunService:BindToRenderStep(bindName, Enum.RenderPriority.Camera.Value + 3, func
         previousCamera = camera
         previousCameraType = camera.CameraType
         previousCameraSubject = camera.CameraSubject
-        previousFieldOfView = camera.FieldOfView
     end
 
     camera.CameraType = Enum.CameraType.Scriptable
-    camera.FieldOfView = 72
     local dir = lookDirection(root)
     local head = bot:FindFirstChild("Head")
     local eye = head and head:IsA("BasePart")
