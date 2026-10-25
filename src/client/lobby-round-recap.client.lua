@@ -286,14 +286,25 @@ stateEvent.OnClientEvent:Connect(function(state)
         and type(state.disasterIds) == "table"
         and #state.disasterIds > 0
     then
-        latestRecap = {
-            disasterIds = table.clone(state.disasterIds),
-            arenaId = state.arenaId,
-            arenaName = state.arenaName,
-            survivorsAlive = state.survivorsAlive,
-            contestantCount = state.contestantCount,
-            roundNumber = state.roundNumber,
-        }
+        local incomingRound = tonumber(state.roundNumber)
+        local previousRound = latestRecap and tonumber(latestRecap.roundNumber)
+        -- Reconnected mobile clients can receive delayed or duplicated
+        -- result snapshots. Never replace a newer lobby recap with an
+        -- older completed round, even if the network packets reorder.
+        if incomingRound and incomingRound == incomingRound
+            and incomingRound > 0 and incomingRound < math.huge
+            and incomingRound == math.floor(incomingRound)
+            and (not previousRound or incomingRound >= previousRound)
+        then
+            latestRecap = {
+                disasterIds = table.clone(state.disasterIds),
+                arenaId = state.arenaId,
+                arenaName = state.arenaName,
+                survivorsAlive = state.survivorsAlive,
+                contestantCount = state.contestantCount,
+                roundNumber = incomingRound,
+            }
+        end
     end
 
     refresh()
