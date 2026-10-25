@@ -1726,6 +1726,59 @@ describe("Touch decor streamed-subtree readability", function()
 end)
 
 
+describe("Android arena streaming decor watcher", function()
+    it("keeps the canonical arena during overlapping streamed replacements", function()
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = workspace
+        local original = Instance.new("Folder")
+        original.Name = "Arena"
+        original.Parent = generated
+        local originalDecor = Instance.new("Folder")
+        originalDecor.Name = "Decor"
+        originalDecor.Parent = original
+        local shown = nil
+        local delivered = 0
+        local disconnect = MobileReadabilityKit.watch(generated, function(decor)
+            shown = decor
+            delivered += 1
+        end)
+        expect(shown).toBe(originalDecor)
+
+        -- A new arena is built while the live one is still canonical.
+        -- Never swap to an unfinished incoming Decor or hide the old one.
+        local replacement = Instance.new("Folder")
+        replacement.Name = "Arena"
+        replacement.Parent = generated
+        local replacementDecor = Instance.new("Folder")
+        replacementDecor.Name = "Decor"
+        replacementDecor.Parent = replacement
+        task.wait(0.06)
+        expect(shown).toBe(originalDecor)
+
+        -- Removing the canonical arena selects its already-constructed
+        -- successor, without treating old Decor mutations as live.
+        original.Parent = nil
+        task.wait(0.06)
+        expect(shown).toBe(replacementDecor)
+        originalDecor.Parent = nil
+        task.wait(0.06)
+        expect(shown).toBe(replacementDecor)
+
+        -- The disposer must stop both container and current-arena watches.
+        local before = delivered
+        disconnect()
+        replacementDecor.Parent = nil
+        replacement.Parent = nil
+        task.wait(0.06)
+        expect(delivered).toBe(before)
+        expect(shown).toBe(replacementDecor)
+        original:Destroy()
+        replacement:Destroy()
+        generated:Destroy()
+    end)
+end)
+
 describe("Android arena identity ornament motion", function()
     it("eases in mechanical ornaments without stealing hazard cue priority", function()
         local rules = IdentityMotionRules
