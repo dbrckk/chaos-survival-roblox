@@ -176,7 +176,7 @@ local function spotlightPlayer(target, championUserId)
     )
 end
 
-local function spotlightBots(desired, championAISlot, survivorSlots)
+local function spotlightBots(desired, championAISlot)
     local bots = workspace:FindFirstChild("AISurvivors")
     if not bots then
         return
@@ -187,13 +187,10 @@ local function spotlightBots(desired, championAISlot, survivorSlots)
             local humanoid = model:FindFirstChildOfClass("Humanoid")
             if humanoid and humanoid.Health > 0 then
                 local slot = tonumber(model:GetAttribute("AISurvivorSlot")) or 0
-                -- The frozen roster is authoritative; never celebrate an
-                -- eliminated or newly spawned bot as a round survivor.
-                if survivorSlots[slot] then
-                    local key = "ai:" .. tostring(slot)
-                    desired[key] = true
-                    local champion = slot == tonumber(championAISlot)
-                    spotlightModel(
+                local key = "ai:" .. tostring(slot)
+                desired[key] = true
+                local champion = slot >= 1 and slot == tonumber(championAISlot)
+                spotlightModel(
                     key,
                     model,
                     CoreLocalization.text(
@@ -202,8 +199,7 @@ local function spotlightBots(desired, championAISlot, survivorSlots)
                     ),
                     false,
                     champion
-                    )
-                end
+                )
             end
         end
     end
@@ -232,20 +228,8 @@ local function applyResultSpotlights(state)
         end
     end
 
-    local survivorSlots = {}
-    if type(state.aiSurvivorSlots) == "table" then
-        for _, slot in ipairs(state.aiSurvivorSlots) do
-            local n = tonumber(slot)
-            if n and n >= 1 and n <= 3 then
-                survivorSlots[n] = true
-            end
-        end
-    end
+    spotlightBots(desired, state.soleSurvivorAISlot)
     local championSlot = tonumber(state.soleSurvivorAISlot)
-    if championSlot and championSlot >= 1 and championSlot <= 3 then
-        survivorSlots[championSlot] = true
-    end
-    spotlightBots(desired, state.soleSurvivorAISlot, survivorSlots)
     if championSlot and championSlot >= 1 then
         local key = "ai:" .. tostring(championSlot)
         desired[key] = true
