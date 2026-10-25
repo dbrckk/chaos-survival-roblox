@@ -163,8 +163,34 @@ jobs:
           }
           Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
+          # Attest exact official executable after Windows Authenticode
+          # verification, BEFORE launching interactive RDP PowerShell.
+          $signedStudio = (Resolve-Path -LiteralPath $studio).Path
+          $signedStream = [System.IO.File]::OpenRead($signedStudio)
+          try {
+            $sha256 = [System.Security.Cryptography.SHA256]::Create()
+            try {
+              $signedDigest = [BitConverter]::ToString(
+                $sha256.ComputeHash($signedStream)
+              ).Replace("-", "")
+            }
+            finally { $sha256.Dispose() }
+          }
+          finally { $signedStream.Dispose() }
+          if ($signedDigest.Length -ne 64 -or
+              $signedDigest -notmatch "^[0-9A-F]{64}$") {
+            throw "Invalid Authenticode attestation digest."
+          }
+          $attestationDir = "build/visual-ai-captures"
+          New-Item -ItemType Directory -Force $attestationDir | Out-Null
+          @(
+            "signer=Roblox",
+            "signature=Valid",
+            "studio_path_b64=$([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($signedStudio)))",
+            "sha256=$signedDigest"
+          ) | Set-Content -Path (Join-Path $attestationDir "verified-studio-attestation.txt") -Encoding ascii
           "STUDIO_EXE=$studio" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          Write-Host "Official Roblox Studio preinstalled and signature verified."
+          Write-Host "Official Roblox Studio signed binary and SHA-256 digest attested."
           # The tested automatic launcher is installed in the later
           # Prepare AI capture step. It starts Studio itself at Windows login,
           # without a competing Run-key entry or Roblox credential access.

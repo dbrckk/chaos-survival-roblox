@@ -67,20 +67,60 @@ try {
     if (-not (Test-Path -LiteralPath $StudioExe)) {
         throw "STUDIO_MISSING: official Studio binary no longer exists"
     }
-    # Interactive RDP user profiles can have PowerShell module autoload
-    # disabled. Use .NET WinVerifyTrust via a fully qualified module import
-    # rather than silently bypassing publisher verification.
+    # A trusted GitHub runner step verified the official Roblox Studio
+    # Authenticode publisher AND recorded the exact verified binary's
+    # digest. In RDP PowerShell, the Microsoft.PowerShell.Security module
+    # may fail to load; do NOT weaken security or demand module auto-load.
+    # Check the exact signed executable using only built-in .NET classes.
+    $attestation = Join-Path $output "verified-studio-attestation.txt"
+    if (-not [System.IO.File]::Exists($attestation)) {
+        throw "STUDIO_ATTESTATION_MISSING: signed binary digest absent"
+    }
+    $entries = @{}
+    foreach ($line in [System.IO.File]::ReadAllLines($attestation)) {
+        $pair = $line.Split(@('='), 2)
+        if ($pair.Length -eq 2) { $entries[$pair[0]] = $pair[1] }
+    }
+    if ($entries["signer"] -ne "Roblox" -or
+        $entries["signature"] -ne "Valid" -or
+        $entries["sha256"] -notmatch '^[0-9A-Fa-f]{64}$') {
+        throw "STUDIO_ATTESTATION_INVALID: unsigned or malformed verification record"
+    }
     try {
-        Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
-        $studioSig = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $StudioExe -ErrorAction Stop
+        $attestedPath = [Text.Encoding]::UTF8.GetString(
+            [Convert]::FromBase64String($entries["studio_path_b64"])
+        )
+        $actualPath = [System.IO.Path]::GetFullPath($StudioExe)
+        $expectedPath = [System.IO.Path]::GetFullPath($attestedPath)
     }
     catch {
-        throw "STUDIO_SIGNATURE_CHECK_UNAVAILABLE: Windows PowerShell Security module failed to load"
+        throw "STUDIO_ATTESTATION_INVALID: binary path could not be verified"
     }
-    if ($studioSig.Status -ne "Valid" -or
-        $studioSig.SignerCertificate.Subject -notmatch "Roblox") {
-        throw "UNTRUSTED_STUDIO: executable must be signed by Roblox"
+    if (-not [string]::Equals($actualPath, $expectedPath,
+        [StringComparison]::OrdinalIgnoreCase)) {
+        throw "STUDIO_ATTESTATION_PATH_MISMATCH: executable was not verified"
     }
+    try {
+        $stream = [System.IO.File]::OpenRead($actualPath)
+        try {
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            try {
+                $currentDigest = [BitConverter]::ToString(
+                    $sha.ComputeHash($stream)
+                ).Replace("-", "")
+            }
+            finally { $sha.Dispose() }
+        }
+        finally { $stream.Dispose() }
+    }
+    catch {
+        throw "STUDIO_ATTESTATION_UNREADABLE: signed binary inaccessible"
+    }
+    if (-not [string]::Equals($currentDigest, $entries["sha256"],
+        [StringComparison]::OrdinalIgnoreCase)) {
+        throw "STUDIO_ATTESTATION_HASH_MISMATCH: signed binary was modified"
+    }
+    Write-Stage "SIGNED_STUDIO_VERIFIED"
 
     $studio = Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
         Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } |
@@ -141,7 +181,7 @@ catch {
     # Only upload a coded explanation; never raw local Studio auth logs.
     $reason = if ($message -match "AUTH_REQUIRED") { "AUTH_REQUIRED" }
         elseif ($message -match "GUI_SESSION_MISSING") { "GUI_SESSION_MISSING" }
-        elseif ($message -match "STUDIO_MISSING|UNTRUSTED_STUDIO|STUDIO_SIGNATURE_CHECK_UNAVAILABLE") { "STUDIO_UNAVAILABLE" }
+        elseif ($message -match "STUDIO_MISSING|UNTRUSTED_STUDIO|STUDIO_ATTESTATION_") { "STUDIO_UNAVAILABLE" }
         elseif ($message -match "NO_RENDER_MARKER") { "NO_RENDER_MARKER" }
         elseif ($message -match "NO_RENDERED_WINDOW|WINDOW_NOT_FOREGROUND") { "GUI_CAPTURE_UNAVAILABLE" }
         elseif ($message -match "STUDIO_TEST_FAILED") { "STUDIO_TEST_FAILED" }
