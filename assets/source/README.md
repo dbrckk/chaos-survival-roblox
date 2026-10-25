@@ -42,3 +42,40 @@ Technical authoring check: all 74 closed mesh groups across both models have con
 5. Capture actual Android landscape Low/Medium/High frames at all four arenas and measure FPS, overdraw, memory and thermal stability; retain the source models only if the improvement is visible and sustainable.
 
 **Current release status:** the original OBJ and MTL files are now in source control, but they are **not rendered by the published Roblox game**. GitHub commits do not upload asset binaries to Roblox or publish a place automatically.
+
+## New original 3D hero objects — 26 October 2026
+
+Three additional **game-authored triangulated OBJ** sources are tracked in this
+repository. They are not borrowed from any marketplace; all 3D coordinates and
+geometry were generated specifically for Chaos Survival.
+
+| Model | Triangles | Vertices | Approximate 3D bounds | Scene purpose |
+|---|---:|---:|---|---|
+| Plasma Foundry | 992 | 560 | 30 × 27.6 × 14 studs | Classic reactor-industry skyline |
+| Sky Transit Exchange | 620 | 376 | 32 × 27.8 × 15 studs | Towers elevated cranes/transit scene |
+| Orbital Halo Array | 1,616 | 920 | 22.8 × 30.2 × 12 studs | Orbital large ring silhouette |
+
+Editable geometry: `chaos_plasma_foundry.obj`,
+`chaos_sky_transit_exchange.obj`, and `chaos_orbital_halo_array.obj`.
+Each uses the **existing** `chaos_industrial_materials.mtl`. All triangles are
+checked by the existing OBJ → self-contained glTF conversion in
+`Build Validation`; no Roblox asset IDs are invented or added to the approved
+asset registry. Asset import, ownership and moderation must be confirmed from a
+real Roblox Open Cloud response before optional MeshPart runtime integration.
+
+### Immediately renderable 3D composition
+
+`src/server/HeroArchitecture.lua` also implements four uniquely authored,
+**always-available Roblox-native** exterior hero models:
+Classic observatory; Towers suspended transit gantry; Crossroads switchyard
+interchange; Orbital nested halo reactor. `MapBuilder` creates one per arena
+without network calls, textures, remotes, or an asset upload. Each contains
+14–32 static Parts, no lights/emissions, and all parts are anchored and fully
+non-colliding/non-queryable/non-touchable and lack shadows. The generated 3D art
+cannot block players, AI, gameplay warnings, safe pads or hazard hitboxes.
+
+**Important:** Roblox source changes do not affect the public place until a
+separate guarded publishing action. Validate first in the Roblox engine and,
+before claiming visual/AAA quality, in an authenticated device session on
+Android. Three new OBJ sources are not yet considered moderator-approved
+Roblox packages.
