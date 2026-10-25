@@ -97,6 +97,13 @@ report.OnServerEvent:Connect(function(player, payload)
     previousTime = now
     if not firstTime then firstTime = now end
 
+    -- Regression observed in the user's actual Android screenshots:
+    -- voting choices must never compete with the optional practice HUD.
+    if payload.voteVisible == true and payload.practiceVisible == true then
+        reject("voting panel and optional practice banner overlap")
+        return
+    end
+
     local mode = tostring(payload.mode or "")
     if mode ~= "CHASE" and mode ~= "SIDE" and mode ~= "POV" then
         reject("unknown bot camera mode")
@@ -113,6 +120,8 @@ report.OnServerEvent:Connect(function(player, payload)
         phase = tostring(payload.phase or ""),
         fps = math.floor(tonumber(payload.fps) or 0),
         viewport = string.format("%dx%d", vp.X, vp.Y),
+        voteVisible = payload.voteVisible == true,
+        practiceVisible = payload.practiceVisible == true,
     }
     print(string.format(
         "CHAOS_VISUAL_AI_CAPTURE_MARKER %02d/%02d bot=%s mode=%s phase=%s fps=%d",
