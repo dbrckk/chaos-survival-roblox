@@ -13,6 +13,39 @@ local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit"
 local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 
 describe("visual budget rules", function()
+    it("hides only original off-map hero geometry on low-end Android", function()
+        local root = Instance.new("Folder")
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = root
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena.Parent = generated
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local hero = Instance.new("Model")
+        hero.Name = "ArenaHeroArchitecture3D"
+        hero:SetAttribute("ChaosDistantScenery", true)
+        hero:SetAttribute("SourceIsOriginal", true)
+        hero.Parent = decor
+        local part = Instance.new("Part")
+        part.Parent = hero
+        expect(SceneryLodRules.heroArchitectureOwner(root)).toBe(hero)
+        expect(SceneryLodRules.visible("Low", 5, 0, 185, nil)).toBe(false)
+        expect(SceneryLodRules.visible("Medium", 110, 0, 185, nil)).toBe(true)
+        expect(SceneryLodRules.visible("Medium", 204, 0, 185, false)).toBe(false)
+        expect(SceneryLodRules.visible("High", 600, 0, 185, nil)).toBe(true)
+        -- A replica with the same name is never trusted as cosmetic if its
+        -- provenance flags are absent: no risk of hiding gameplay shells.
+        hero:SetAttribute("SourceIsOriginal", nil)
+        expect(SceneryLodRules.heroArchitectureOwner(root)).toBe(nil)
+        hero:SetAttribute("SourceIsOriginal", true)
+        hero:SetAttribute("ChaosDistantScenery", false)
+        expect(SceneryLodRules.heroArchitectureOwner(root)).toBe(nil)
+        root:Destroy()
+    end)
+
     it("uses progressively smaller budgets for lower tiers", function()
         local high = VisualBudgetRules.forTier("High")
         local medium = VisualBudgetRules.forTier("Medium")
