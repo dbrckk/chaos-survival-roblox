@@ -505,6 +505,169 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
     end
 end
 
+-- Give the southern horizon a second, independently authored silhouette.
+-- The northern hero is intentionally asymmetrical; without an opposite
+-- landmark, half the camera directions still show mostly empty distance.
+-- Keep every piece outside the playable deck AND outside the kill plane.
+-- All parts are static, shadowless and noninteractive for Android budgets.
+local function addSouthHorizonMonument(decor, config, variant, theme)
+    local model = Instance.new("Model")
+    model.Name = "SouthHorizonMonument"
+    model:SetAttribute("ChaosDistantScenery", true)
+    model:SetAttribute("SignatureVariant", variant.Id)
+    model.Parent = decor
+
+    local origin = CFrame.new(config.ArenaCenter + Vector3.new(
+        -variant.BaseSize.X * 0.20,
+        variant.BaseSize.Y * 0.5,
+        variant.BaseSize.Z * 0.5 + 54
+    ))
+    local hull = theme.Structure:Lerp(Color3.fromRGB(18, 26, 36), 0.30)
+    local alloy = theme.Detail:Lerp(theme.Structure, 0.57)
+    local signal = theme.Secondary:Lerp(theme.Structure, 0.36)
+
+    local function piece(name, kind, size, offset, material, color, opacity)
+        local item = Instance.new(kind or "Part")
+        item.Name = name
+        item.Size = size
+        item.CFrame = origin * offset
+        item.Anchored = true
+        item.CanCollide = false
+        item.CanTouch = false
+        item.CanQuery = false
+        item.CastShadow = false
+        item.Material = material or Enum.Material.Metal
+        item.Color = color or hull
+        item.Transparency = opacity or 0
+        item.Parent = model
+        return item
+    end
+
+    piece("Foundation", "Part", Vector3.new(47, 2, 13),
+        CFrame.new(0, -1, 0), Enum.Material.Concrete, hull)
+    piece("FloorInset", "Part", Vector3.new(39, 0.3, 10),
+        CFrame.new(0, 0.16, 0), Enum.Material.Metal, alloy, 0.12)
+
+    if variant.Id == "Orbital" then
+        -- A vertical segmented observation ring with genuinely open
+        -- center space: never a flat neon disc or a phantom floor.
+        local radius, segments = 17, 14
+        local chord = 2 * radius * math.sin(math.pi / segments) + 0.08
+        for index = 0, segments - 1 do
+            local angle = index * math.pi * 2 / segments
+            piece("ObservationArc" .. (index + 1), "Part",
+                Vector3.new(chord, 1.6, 1.85),
+                CFrame.new(radius * math.sin(angle),
+                    23 + radius * math.cos(angle), 0)
+                    * CFrame.Angles(0, 0, -angle),
+                Enum.Material.Metal,
+                index % 3 == 0 and signal or alloy, 0.06)
+        end
+        for side = -1, 1, 2 do
+            piece(side < 0 and "LeftRingSupport" or "RightRingSupport",
+                "Part", Vector3.new(2.6, 23, 3),
+                CFrame.new(side * 15.5, 11.5, 0),
+                Enum.Material.Metal, hull)
+        end
+        local orb = piece("SuspendedOrb", "Part",
+            Vector3.new(6.4, 6.4, 6.4), CFrame.new(0, 23, 0),
+            Enum.Material.Glass, signal, 0.38)
+        orb.Shape = Enum.PartType.Ball
+        piece("OrbClamp", "Part", Vector3.new(9.5, 0.8, 2.4),
+            CFrame.new(0, 23, -0.2), Enum.Material.Metal, alloy)
+    elseif variant.Id == "Towers" then
+        -- Heavy industry with two offset lift shafts and a suspended
+        -- bridge. Unequal heights make the far skyline recognizable.
+        for side = -1, 1, 2 do
+            local height = side < 0 and 37 or 46
+            piece(side < 0 and "WestLift" or "EastLift",
+                "Part", Vector3.new(6.5, height, 7),
+                CFrame.new(side * 17.5, height * 0.5, 0),
+                Enum.Material.Concrete, hull)
+            piece(side < 0 and "WestCrown" or "EastCrown",
+                "WedgePart", Vector3.new(9.5, 4.5, 8.5),
+                CFrame.new(side * 17.5, height + 2, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, alloy)
+            piece(side < 0 and "WestLiftRail" or "EastLiftRail",
+                "Part", Vector3.new(0.42, height - 7, 0.6),
+                CFrame.new(side * 17.5, height * 0.5, -3.7),
+                Enum.Material.Neon, signal, 0.48)
+            piece(side < 0 and "WestSuspension" or "EastSuspension",
+                "Part", Vector3.new(0.9, 16, 1),
+                CFrame.new(side * 10, 31, 0)
+                    * CFrame.Angles(0, 0, side * math.rad(26)),
+                Enum.Material.Metal, alloy)
+        end
+        piece("SkyTransfer", "Part", Vector3.new(40, 2.1, 6),
+            CFrame.new(0, 36, 0), Enum.Material.Metal, alloy)
+        piece("UnderslungLift", "Part", Vector3.new(7, 7, 6),
+            CFrame.new(3.5, 31.5, 0), Enum.Material.Metal, hull)
+        piece("TransferSignal", "WedgePart", Vector3.new(7, 2, 2),
+            CFrame.new(3.5, 26.5, -3.0), Enum.Material.Metal, signal, 0.17)
+    elseif variant.Id == "Crossroads" then
+        -- A freight exchange with branched cantilevers; the diagonal
+        -- overhangs are real sculpted wedges, not floating HUD shapes.
+        piece("ExchangeCore", "Part", Vector3.new(8, 39, 8),
+            CFrame.new(0, 19.5, 0), Enum.Material.Concrete, hull)
+        for side = -1, 1, 2 do
+            piece(side < 0 and "WestFork" or "EastFork",
+                "Part", Vector3.new(21, 2.4, 5.5),
+                CFrame.new(side * 12, 34, 0)
+                    * CFrame.Angles(0, 0, side * math.rad(14)),
+                Enum.Material.Metal, alloy)
+            piece(side < 0 and "WestFreightArm" or "EastFreightArm",
+                "WedgePart", Vector3.new(9, 4.8, 6.4),
+                CFrame.new(side * 21, 39, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, hull)
+            piece(side < 0 and "WestCounterweight" or "EastCounterweight",
+                "Part", Vector3.new(5, 8, 5.5),
+                CFrame.new(side * 18, 23, 0), Enum.Material.Metal, hull)
+            piece(side < 0 and "WestSignal" or "EastSignal",
+                "Part", Vector3.new(7, 0.32, 0.4),
+                CFrame.new(side * 15, 36, -2.9),
+                Enum.Material.Neon, signal, 0.42)
+        end
+        piece("CentralSwitchCab", "Part", Vector3.new(10, 5, 7),
+            CFrame.new(0, 43, 0), Enum.Material.Metal, alloy)
+        piece("CabWindow", "Part", Vector3.new(7, 2.2, 0.28),
+            CFrame.new(0, 43, -3.6), Enum.Material.Glass, signal, 0.24)
+    else
+        -- Classic Grid's multi-dish radar observatory contrasts with
+        -- the taller single northern relay tower.
+        for side = -1, 1, 2 do
+            piece(side < 0 and "WestRadarPylon" or "EastRadarPylon",
+                "Part", Vector3.new(3.5, 28, 4.5),
+                CFrame.new(side * 16, 14, 0),
+                Enum.Material.Concrete, hull)
+            local dish = piece(
+                side < 0 and "WestRadarDish" or "EastRadarDish",
+                "Part", Vector3.new(0.9, 12, 12),
+                CFrame.new(side * 16, 34, 0)
+                    * CFrame.Angles(0, math.pi * 0.5, 0),
+                Enum.Material.Metal, alloy, 0.08)
+            dish.Shape = Enum.PartType.Cylinder
+            piece(side < 0 and "WestReceiver" or "EastReceiver",
+                "Part", Vector3.new(2.1, 2.1, 2.1),
+                CFrame.new(side * 16, 34, -2.2),
+                Enum.Material.Glass, signal, 0.18)
+            piece(side < 0 and "WestServiceBrace" or "EastServiceBrace",
+                "Part", Vector3.new(0.8, 24, 1.3),
+                CFrame.new(side * 8, 17, 0)
+                    * CFrame.Angles(0, 0, side * math.rad(28)),
+                Enum.Material.Metal, alloy)
+        end
+        piece("ObservatoryBridge", "Part", Vector3.new(35, 1.8, 5.5),
+            CFrame.new(0, 24, 0), Enum.Material.Metal, hull)
+        piece("ObservatoryCabin", "Part", Vector3.new(8, 8, 7),
+            CFrame.new(0, 27, 0), Enum.Material.Metal, alloy)
+        piece("ObservatoryGlass", "Part", Vector3.new(6.2, 3.1, 0.3),
+            CFrame.new(0, 29, -3.6),
+            Enum.Material.Glass, signal, 0.25)
+    end
+end
+
 -- Four original sculpted exterior corner ridges close the empty diagonal
 -- horizon. They sit beyond both axes of the arena floor, so no collision,
 -- hazards, NPC navigation or playable jumps depend on their presence.
@@ -2102,6 +2265,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     addPerimeterStations(decor, config, variant, theme)
     addDistantSkyline(decor, config, variant, theme)
     addArenaSignatureMegastructure(decor, config, variant, theme)
+    addSouthHorizonMonument(decor, config, variant, theme)
     addExteriorCornerRidges(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantLandmarks(decor, config, variant, theme)
