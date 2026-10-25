@@ -513,6 +513,41 @@ describe("Chaos Survival engine", function()
             expect(parts >= 12 and parts <= 24).toBe(true)
             expect(neonParts <= 2).toBe(true)
             expect(highest - base.Position.Y > 37).toBe(true)
+
+            -- The complementary industrial background must stay outside
+            -- the combat floor, never become fake platforms, and remain
+            -- bounded enough for Android graphics budgets.
+            local silhouettes = {"North", "East", "South", "West"}
+            local totalPieces = 0
+            for _, side in ipairs(silhouettes) do
+                local model = decor:FindFirstChild("ExteriorSilhouette" .. side)
+                expect(model ~= nil and model:IsA("Model")).toBe(true)
+                expect(model:GetAttribute("ChaosDistantScenery")).toBe(true)
+                expect(model:FindFirstChild("ReactorShell") ~= nil).toBe(true)
+                expect(model:FindFirstChild("RoofCanopy") ~= nil).toBe(true)
+                expect(model:FindFirstChild("SignalBand") ~= nil).toBe(true)
+                local sidePieces = 0
+                for _, piece in ipairs(model:GetDescendants()) do
+                    if piece:IsA("BasePart") then
+                        sidePieces += 1
+                        totalPieces += 1
+                        expect(piece.Anchored).toBe(true)
+                        expect(piece.CanCollide).toBe(false)
+                        expect(piece.CanTouch).toBe(false)
+                        expect(piece.CanQuery).toBe(false)
+                        expect(piece.CastShadow).toBe(false)
+                        local centerDelta = piece.Position - base.Position
+                        local conservativeRadius = piece.Size.Magnitude * 0.5
+                        local outsideX = math.abs(centerDelta.X)
+                            - conservativeRadius - base.Size.X * 0.5
+                        local outsideZ = math.abs(centerDelta.Z)
+                            - conservativeRadius - base.Size.Z * 0.5
+                        expect(outsideX > 12 or outsideZ > 12).toBe(true)
+                    end
+                end
+                expect(sidePieces).toBe(6)
+            end
+            expect(totalPieces).toBe(24)
             root:Destroy()
         end
     end)
