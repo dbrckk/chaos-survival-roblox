@@ -131,6 +131,37 @@ describe("AI survivor rules", function()
         folder:Destroy()
     end)
 
+    it("never interrupts a live hazard escape to choose a random route", function()
+        local shouldReplan = AISurvivorRules.shouldReplanTarget
+        local regularTarget = Vector3.new(36, 4, 18)
+        local retreatTarget = Vector3.new(-18, 4, -22)
+        local floor = Instance.new("Part")
+        floor.Name = "SafePathGoal"
+        floor.Parent = workspace
+
+        -- A long-lived meteor or collapsing-platform evacuation overrides
+        -- *any* roam/route timer, even during the last seconds of the round.
+        for _, now in ipairs({1, 5, 40, 900}) do
+            expect(shouldReplan("round", now, 0, retreatTarget,
+                false, floor, true)).toBe(false)
+            expect(shouldReplan("round", now, 0, retreatTarget,
+                true, nil, true)).toBe(false)
+        end
+        -- When the hazard clears, ordinary roaming and deliberate world
+        -- objectives regain their standard timing (including expiry).
+        expect(shouldReplan("round", 10, 0, regularTarget,
+            false, floor, false)).toBe(true)
+        floor:SetAttribute("PerimeterStep", 1)
+        expect(shouldReplan("round", 3, 0, regularTarget,
+            false, floor, false)).toBe(false)
+        expect(shouldReplan("round", 5, 0, regularTarget,
+            false, floor, false)).toBe(true)
+        -- An unusable escape target is not allowed to freeze the brain.
+        expect(shouldReplan("round", 10, 0, nil,
+            false, floor, true)).toBe(true)
+        floor:Destroy()
+    end)
+
     it("uses a varied fictional identity pool without AI-labelled public names", function()
         local identities = AISurvivorService.identityCatalog()
         expect(#identities >= 20).toBe(true)
