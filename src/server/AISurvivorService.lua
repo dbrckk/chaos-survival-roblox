@@ -2829,6 +2829,9 @@ local function stepRecord(record, now)
             and not urgentTarget
             and record.target
             and not record.targetIsPad
+            and not AISurvivorRules.committedWorldRoute(
+                record.targetIsSkyrail, record.targetPart
+            )
             and now >= (record.nextReconsiderAt or 0)
         then
             record.nextReconsiderAt = now + 1.4 + math.random() * 2.4

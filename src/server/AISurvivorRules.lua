@@ -387,6 +387,27 @@ function AISurvivorRules.turnPauseSeconds(previousDirection, desiredDirection, u
     return math.clamp(0.12 + (-dot) * 0.10 - p * 0.08, 0.08, 0.22)
 end
 
+-- Once an NPC chooses a deliberate world objective, avoid cancelling it
+-- purely because a low-frequency random reconsideration roll succeeds.
+-- This is NOT a hazard lock: immediateThreat, collapsing decks, stuck
+-- recovery and a missing destination still override or clear the target.
+-- Ordinary roaming remains spontaneous and may change its mind.
+function AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart)
+    if targetIsSkyrail == true then
+        return true
+    end
+    if typeof(targetPart) ~= "Instance"
+        or not targetPart:IsA("BasePart")
+        or not targetPart.Parent
+    then
+        return false
+    end
+    local step = tonumber(targetPart:GetAttribute("PerimeterStep"))
+    return step == 1 or step == 2
+        or targetPart:GetAttribute("GridCircuitIndex") ~= nil
+        or targetPart:GetAttribute("FluxRelayIndex") ~= nil
+end
+
 -- A runner heading for an authored outer parkour route needs time to
 -- physically reach it. The usual 0.8–1.8 second target holds make bots
 -- reverse before crossing the enlarged arenas, which reads as fake AI.

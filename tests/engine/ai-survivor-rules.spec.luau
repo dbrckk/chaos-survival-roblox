@@ -49,6 +49,46 @@ describe("AI survivor rules", function()
         expect(approach(nil, ground, distantUpper, false)).toBe(true)
     end)
 
+    it("finishes deliberate world routes without suppressing emergency replans", function()
+        local committed = AISurvivorRules.committedWorldRoute
+        local folder = Instance.new("Folder")
+        folder.Name = "RouteTestWorld"
+        folder.Parent = workspace
+        local target = Instance.new("Part")
+        target.Parent = folder
+
+        -- Ordinary waypoints can be reconsidered so bots still feel human.
+        expect(committed(false, nil)).toBe(false)
+        expect(committed(false, target)).toBe(false)
+        -- A skyrail is a physical crossing that should not be abandoned
+        -- halfway along merely because a reconsideration roll succeeded.
+        expect(committed(true, target)).toBe(true)
+        expect(committed(true, nil)).toBe(true)
+
+        target:SetAttribute("PerimeterStep", 1)
+        expect(committed(false, target)).toBe(true)
+        target:SetAttribute("PerimeterStep", 2)
+        expect(committed(false, target)).toBe(true)
+        target:SetAttribute("PerimeterStep", 3)
+        expect(committed(false, target)).toBe(false)
+        target:SetAttribute("PerimeterStep", nil)
+
+        target:SetAttribute("GridCircuitIndex", 3)
+        expect(committed(false, target)).toBe(true)
+        target:SetAttribute("GridCircuitIndex", nil)
+        target:SetAttribute("FluxRelayIndex", 1)
+        expect(committed(false, target)).toBe(true)
+        target:SetAttribute("FluxRelayIndex", nil)
+        expect(committed(false, target)).toBe(false)
+
+        -- Removed targets must not keep a bot committed to a stale model.
+        target.Parent = nil
+        target:SetAttribute("PerimeterStep", 1)
+        expect(committed(false, target)).toBe(false)
+        target:Destroy()
+        folder:Destroy()
+    end)
+
     it("uses a varied fictional identity pool without AI-labelled public names", function()
         local identities = AISurvivorService.identityCatalog()
         expect(#identities >= 20).toBe(true)
