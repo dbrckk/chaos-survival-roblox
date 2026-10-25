@@ -89,6 +89,47 @@ describe("AI survivor rules", function()
         folder:Destroy()
     end)
 
+    it("keeps world objectives until reached while ordinary bots can reconsider", function()
+        local chooseAgain = AISurvivorRules.shouldReplanTarget
+        local strafe = AISurvivorRules.allowRouteStrafe
+        local folder = Instance.new("Folder")
+        folder.Parent = workspace
+        local waypoint = Instance.new("Part")
+        waypoint.Parent = folder
+        local destination = Vector3.new(62, 8, 34)
+
+        expect(chooseAgain("round", 5, 8, destination, false, waypoint)).toBe(false)
+        expect(chooseAgain("round", 9, 8, destination, false, waypoint)).toBe(true)
+        expect(strafe(false, false, waypoint)).toBe(true)
+
+        waypoint:SetAttribute("PerimeterStep", 1)
+        expect(chooseAgain("round", 40, 8, destination, false, waypoint)).toBe(false)
+        expect(strafe(false, false, waypoint)).toBe(false)
+        waypoint:SetAttribute("PerimeterStep", 2)
+        expect(chooseAgain("round", 40, 8, destination, false, waypoint)).toBe(false)
+
+        waypoint:SetAttribute("PerimeterStep", nil)
+        waypoint:SetAttribute("GridCircuitIndex", 2)
+        expect(chooseAgain("round", 40, 8, destination, false, waypoint)).toBe(false)
+        expect(strafe(false, false, waypoint)).toBe(false)
+        waypoint:SetAttribute("GridCircuitIndex", nil)
+        waypoint:SetAttribute("FluxRelayIndex", 1)
+        expect(chooseAgain("round", 40, 8, destination, false, waypoint)).toBe(false)
+        expect(strafe(false, false, waypoint)).toBe(false)
+        waypoint:SetAttribute("FluxRelayIndex", nil)
+
+        expect(chooseAgain("round", 40, 8, destination, true, waypoint)).toBe(false)
+        expect(strafe(false, true, waypoint)).toBe(false)
+        expect(strafe(true, false, waypoint)).toBe(false)
+        expect(chooseAgain("intermission", 40, 8, destination, true, waypoint)).toBe(true)
+        expect(chooseAgain("round", 40, 8, nil, true, waypoint)).toBe(true)
+        waypoint.Parent = nil
+        expect(chooseAgain("round", 40, 8, destination, false, waypoint)).toBe(true)
+        expect(strafe(false, false, waypoint)).toBe(true)
+        waypoint:Destroy()
+        folder:Destroy()
+    end)
+
     it("uses a varied fictional identity pool without AI-labelled public names", function()
         local identities = AISurvivorService.identityCatalog()
         expect(#identities >= 20).toBe(true)
