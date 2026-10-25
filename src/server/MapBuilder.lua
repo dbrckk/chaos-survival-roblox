@@ -554,6 +554,68 @@ local function addExteriorCornerRidges(decor, config, variant, theme)
     end
 end
 
+-- Low-cost original skyline silhouettes beyond the playable boundary.
+-- Two offset industrial structures per side add perspective and scale.
+-- All geometry is noninteractive and cannot trap players or NPCs.
+local function addExteriorSilhouettePairs(decor, config, variant, theme)
+    local halfX = variant.BaseSize.X * 0.5
+    local halfZ = variant.BaseSize.Z * 0.5
+    local positions = {
+        {name = "North", x = -38, z = -halfZ - 42, yaw = 0},
+        {name = "East", x = halfX + 42, z = -38, yaw = math.pi * 0.5},
+        {name = "South", x = 38, z = halfZ + 42, yaw = math.pi},
+        {name = "West", x = -halfX - 42, z = 38, yaw = -math.pi * 0.5},
+    }
+    local floorTop = variant.BaseSize.Y * 0.5
+    local shell = theme.Structure:Lerp(theme.Surface, 0.18)
+    local trim = theme.Detail:Lerp(theme.Structure, 0.45)
+    local signal = theme.Accent:Lerp(theme.Structure, 0.58)
+
+    for index, position in ipairs(positions) do
+        local model = Instance.new("Model")
+        model.Name = "ExteriorSilhouette" .. position.name
+        model:SetAttribute("ChaosDistantScenery", true)
+        model.Parent = decor
+        local height = 18 + index * 3
+        local frame = CFrame.new(config.ArenaCenter
+            + Vector3.new(position.x, floorTop, position.z))
+            * CFrame.Angles(0, position.yaw, 0)
+
+        local function segment(name, size, offset, material, color)
+            local p = Instance.new("Part")
+            p.Name = name
+            p.Size = size
+            p.CFrame = frame * CFrame.new(offset)
+            p.Anchored = true
+            p.CanCollide = false
+            p.CanTouch = false
+            p.CanQuery = false
+            p.CastShadow = false
+            p.Material = material
+            p.Color = color
+            p.Parent = model
+            return p
+        end
+
+        segment("ReactorShell", Vector3.new(9, height, 8),
+            Vector3.new(0, height * 0.5, 0), Enum.Material.Metal, shell)
+        segment("RoofCanopy", Vector3.new(12, 1.2, 10),
+            Vector3.new(0, height + 0.6, 0), Enum.Material.Metal, trim)
+        for side = -1, 1, 2 do
+            segment(side < 0 and "LeftRib" or "RightRib",
+                Vector3.new(1.2, height * 0.75, 1.4),
+                Vector3.new(side * 5, height * 0.42, -2.8),
+                Enum.Material.Metal, trim)
+        end
+        segment("SignalBand", Vector3.new(6, 0.35, 0.18),
+            Vector3.new(0, height * 0.68, -4.08),
+            Enum.Material.Neon, signal)
+        segment("Antenna", Vector3.new(0.55, 6, 0.55),
+            Vector3.new(0, height + 3.5, 0),
+            Enum.Material.Metal, trim)
+    end
+end
+
 local function addArenaFoundation(decor, config, variant, theme)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
@@ -2103,6 +2165,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     addDistantSkyline(decor, config, variant, theme)
     addArenaSignatureMegastructure(decor, config, variant, theme)
     addExteriorCornerRidges(decor, config, variant, theme)
+    addExteriorSilhouettePairs(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantLandmarks(decor, config, variant, theme)
     addVariantFloorLanguage(decor, config, variant, theme)
