@@ -85,7 +85,9 @@ local function restore()
         camera.FieldOfView = previousFieldOfView or 70
         local character = player.Character
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        camera.CameraSubject = humanoid or previousCameraSubject
+        if humanoid or previousCameraSubject then
+            camera.CameraSubject = humanoid or previousCameraSubject
+        end
     end
     currentBot = nil
 end
