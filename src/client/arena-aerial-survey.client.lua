@@ -82,7 +82,9 @@ task.spawn(function()
             rebuild(base, variant, tier)
         end
         local camera = workspace.CurrentCamera
-        local distance = fleet and camera
+        -- The arena can stream out between rebuild and this frame on
+        -- mobile. Never dereference a missing base while updating VFX.
+        local distance = fleet and camera and base
             and (camera.CFrame.Position - base.Position).Magnitude or nil
         local close = fleet and AerialSurveyRules.inRange(
             distance, tier, fleet.inRange)
