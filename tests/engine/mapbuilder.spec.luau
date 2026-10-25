@@ -468,6 +468,56 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("builds an original hero 3D landmark unique to every arena", function()
+        local signatures = {
+            Classic = "StormDishArc1",
+            Towers = "SuspendedTransitCabin-1",
+            Crossroads = "ExchangeCoupler1",
+            Orbital = "OrbitalOuterArc1",
+        }
+        local counts = {}
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local base = arena:FindFirstChild("Base")
+            local decor = arena:FindFirstChild("Decor")
+            local hero = decor:FindFirstChild("ArenaHeroArchitecture3D")
+            expect(hero ~= nil and hero:IsA("Model")).toBe(true)
+            expect(hero:GetAttribute("ChaosDistantScenery")).toBe(true)
+            expect(hero:GetAttribute("SourceIsOriginal")).toBe(true)
+            expect(hero:GetAttribute("SignatureVariant")).toBe(id)
+            expect(hero:FindFirstChild(signatures[id]) ~= nil).toBe(true)
+            local count = 0
+            local peak = -math.huge
+            for _, part in ipairs(hero:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    count += 1
+                    expect(part.Anchored).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    expect(part.Material ~= Enum.Material.Neon).toBe(true)
+                    -- Conservative 3D radius even for diagonal beams.
+                    local beyondEast = (part.Position.X
+                        - part.Size.Magnitude * 0.5)
+                        - (base.Position.X + base.Size.X * 0.5)
+                    expect(beyondEast > 15).toBe(true)
+                    peak = math.max(peak,
+                        part.Position.Y + part.Size.Y * 0.5)
+                end
+            end
+            expect(count >= 14 and count <= 32).toBe(true)
+            expect(hero:GetAttribute("HeroArchitectureParts")).toBe(count)
+            expect(peak - base.Position.Y > 30).toBe(true)
+            counts[id] = count
+            root:Destroy()
+        end
+        -- Different scene silhouettes: not 4 differently tinted copies.
+        expect(counts.Classic ~= counts.Towers).toBe(true)
+        expect(counts.Crossroads ~= counts.Orbital).toBe(true)
+    end)
+
     it("gives every arena its own southern 3D skyline without unsafe collision", function()
         local signatures = {
             Classic = "ObservatoryBridge",
