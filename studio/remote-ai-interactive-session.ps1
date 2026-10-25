@@ -94,8 +94,23 @@ try {
     }
 
     Write-Stage "AUTHENTICATED_STARTING_AI_TEST"
-    Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
-        Stop-Process -Force -ErrorAction SilentlyContinue
+    # Close official Studio normally first so its freshly authenticated
+    # session can be committed to its own user profile before RunScript
+    # launches a new editor process. Force is an exceptional last resort.
+    foreach ($process in @(Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue)) {
+        try {
+            if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
+                [void]$process.CloseMainWindow()
+                if (-not $process.WaitForExit(9000)) {
+                    Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+                }
+            }
+            else {
+                Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            }
+        }
+        catch {}
+    }
     Start-Sleep -Seconds 3
     $collector = Join-Path $Workspace "studio\capture-ai-visual-review.ps1"
     $place = Join-Path $Workspace "build\ChaosSurvival.rbxlx"
