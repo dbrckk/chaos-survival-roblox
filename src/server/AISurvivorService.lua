@@ -2867,7 +2867,14 @@ local function stepRecord(record, now)
             end
         end
 
-        if now >= record.nextThink or not record.target then
+        if AISurvivorRules.shouldReplanTarget(
+            currentState.phase,
+            now,
+            record.nextThink,
+            record.target,
+            record.targetIsSkyrail,
+            record.targetPart
+        ) then
             local traits = decisionTraits(record)
             if currentState.phase == "round"
                 and not urgentTarget
@@ -2895,8 +2902,11 @@ local function stepRecord(record, now)
 
             local destination = record.target
             if not urgentTarget
-                and not record.targetIsPad
-                and not record.targetIsSkyrail
+                and AISurvivorRules.allowRouteStrafe(
+                    record.targetIsPad,
+                    record.targetIsSkyrail,
+                    record.targetPart
+                )
                 and horizontal.Magnitude > 8
                 and math.abs(record.strafeBias or 0) > 0.03
             then
