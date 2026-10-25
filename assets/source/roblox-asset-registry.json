@@ -35,6 +35,30 @@
       "source": "assets/source/chaos_perimeter_gate.obj",
       "source_materials": "assets/source/chaos_perimeter_gate.mtl",
       "workflow_run_id": 40102717102
+    },
+    {
+      "name": "plasma_foundry",
+      "asset_id": "95926792159328",
+      "moderation": "Approved",
+      "source": "assets/source/chaos_plasma_foundry.obj",
+      "source_materials": "assets/source/chaos_industrial_materials.mtl",
+      "workflow_run_id": 40245986454
+    },
+    {
+      "name": "sky_transit_exchange",
+      "asset_id": "95878714550124",
+      "moderation": "Approved",
+      "source": "assets/source/chaos_sky_transit_exchange.obj",
+      "source_materials": "assets/source/chaos_industrial_materials.mtl",
+      "workflow_run_id": 40245986454
+    },
+    {
+      "name": "orbital_halo_array",
+      "asset_id": "135985134195364",
+      "moderation": "Approved",
+      "source": "assets/source/chaos_orbital_halo_array.obj",
+      "source_materials": "assets/source/chaos_industrial_materials.mtl",
+      "workflow_run_id": 40245986454
     }
   ]
 }
