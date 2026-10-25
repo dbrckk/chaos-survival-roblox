@@ -351,7 +351,11 @@ function AISurvivorRules.steeredDirection(previousDirection, desiredDirection, u
     previous = previous.Unit
 
     local dot = math.clamp(previous:Dot(desired), -1, 1)
-    local blend = dot < -0.35 and 0.34
+    -- For a sharp turn, a minority blend (0.34) can keep movement pointed
+    -- BACKWARDS forever: exactly opposing vectors normalize to the old
+    -- direction at each brain step. After the brief humanlike turn pause,
+    -- the new route must own the majority of the steering direction.
+    local blend = dot < -0.35 and 0.68
         or (dot < 0.35 and 0.46 or 0.62)
     local mixed = previous:Lerp(desired, blend)
     if mixed.Magnitude <= 0.001 then
