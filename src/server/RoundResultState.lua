@@ -11,11 +11,26 @@ local function nonnegativeInt(value)
     return math.max(0, math.floor(n))
 end
 
+-- Do not keep references to live settlement arrays. The broadcast state,
+-- per-second result packets, and lobby recap must remain a consistent,
+-- server-confirmed record even when later systems reuse/mutate their lists.
+local function copyList(values)
+    if type(values) ~= "table" then return values end
+    local copy = {}
+    for index, entry in ipairs(values) do
+        copy[index] = entry
+    end
+    return copy
+end
+
 function RoundResultState.snapshot(context)
     assert(type(context) == "table", "result context required")
     assert(type(context.participantUserIds) == "table", "participant roster required")
     assert(type(context.survivorUserIds) == "table", "survivor roster required")
-    local survivors = #context.survivorUserIds
+    local participantUserIds = copyList(context.participantUserIds)
+    local survivorUserIds = copyList(context.survivorUserIds)
+    local disasterIds = copyList(context.disasterIds)
+    local survivors = #survivorUserIds
         + nonnegativeInt(context.aiSurvivorsAlive)
     -- Champion requires exactly one living contestant across humans and
     -- bots, and a competitive roster of at least two entrants.
@@ -24,8 +39,8 @@ function RoundResultState.snapshot(context)
     local soleSurvivorUserId = nil
     local soleSurvivorAISlot = nil
     if survivors == 1 and contestantCount >= 2 then
-        if #context.survivorUserIds == 1 then
-            soleSurvivorUserId = context.survivorUserIds[1]
+        if #survivorUserIds == 1 then
+            soleSurvivorUserId = survivorUserIds[1]
         elseif nonnegativeInt(context.aiSurvivorsAlive) == 1 then
             local aiSlot = nonnegativeInt(context.soleAliveAISlot)
             -- AI slots are currently 1-3. A failed/missing bot snapshot
@@ -51,14 +66,14 @@ function RoundResultState.snapshot(context)
         soloMode = context.soloMode == true,
         arenaName = context.arenaName,
         arenaId = context.arenaId,
-        disasterIds = context.disasterIds,
+        disasterIds = disasterIds,
         survivorsAlive = survivors,
         contestantCount = contestantCount,
         soleSurvivorUserId = soleSurvivorUserId,
         soleSurvivorAISlot = soleSurvivorAISlot,
         -- Frozen identity lists, not the eventual success/failure of payouts.
-        survivorUserIds = context.survivorUserIds,
-        participantUserIds = context.participantUserIds,
+        survivorUserIds = survivorUserIds,
+        participantUserIds = participantUserIds,
     }
 end
 
@@ -67,6 +82,11 @@ function RoundResultState.atSecond(snapshot, seconds)
     for key, value in pairs(snapshot) do
         packet[key] = value
     end
+    -- Preserve the authoritative recap while keeping every outgoing
+    -- countdown packet isolated from accidental consumer mutations.
+    packet.participantUserIds = copyList(snapshot.participantUserIds)
+    packet.survivorUserIds = copyList(snapshot.survivorUserIds)
+    packet.disasterIds = copyList(snapshot.disasterIds)
     packet.seconds = nonnegativeInt(seconds)
     return packet
 end
