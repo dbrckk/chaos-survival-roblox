@@ -67,7 +67,16 @@ try {
     if (-not (Test-Path -LiteralPath $StudioExe)) {
         throw "STUDIO_MISSING: official Studio binary no longer exists"
     }
-    $studioSig = Get-AuthenticodeSignature -LiteralPath $StudioExe
+    # Interactive RDP user profiles can have PowerShell module autoload
+    # disabled. Use .NET WinVerifyTrust via a fully qualified module import
+    # rather than silently bypassing publisher verification.
+    try {
+        Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
+        $studioSig = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $StudioExe -ErrorAction Stop
+    }
+    catch {
+        throw "STUDIO_SIGNATURE_CHECK_UNAVAILABLE: Windows PowerShell Security module failed to load"
+    }
     if ($studioSig.Status -ne "Valid" -or
         $studioSig.SignerCertificate.Subject -notmatch "Roblox") {
         throw "UNTRUSTED_STUDIO: executable must be signed by Roblox"
@@ -132,7 +141,7 @@ catch {
     # Only upload a coded explanation; never raw local Studio auth logs.
     $reason = if ($message -match "AUTH_REQUIRED") { "AUTH_REQUIRED" }
         elseif ($message -match "GUI_SESSION_MISSING") { "GUI_SESSION_MISSING" }
-        elseif ($message -match "STUDIO_MISSING|UNTRUSTED_STUDIO") { "STUDIO_UNAVAILABLE" }
+        elseif ($message -match "STUDIO_MISSING|UNTRUSTED_STUDIO|STUDIO_SIGNATURE_CHECK_UNAVAILABLE") { "STUDIO_UNAVAILABLE" }
         elseif ($message -match "NO_RENDER_MARKER") { "NO_RENDER_MARKER" }
         elseif ($message -match "NO_RENDERED_WINDOW|WINDOW_NOT_FOREGROUND") { "GUI_CAPTURE_UNAVAILABLE" }
         elseif ($message -match "STUDIO_TEST_FAILED") { "STUDIO_TEST_FAILED" }
