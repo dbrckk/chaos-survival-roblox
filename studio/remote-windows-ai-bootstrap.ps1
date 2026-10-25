@@ -26,12 +26,31 @@ New-Item -ItemType Directory -Path $desktop -Force | Out-Null
 $artifactDir = Join-Path $Workspace "build\visual-ai-captures"
 New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
 
+# The official Studio signature was verified by the CI install step.
+# Pin the *same* verified executable with a SHA-256 calculated entirely in
+# .NET, avoiding the Security module that failed to load in PowerShell 5.1.
+$sha = [System.Security.Cryptography.SHA256]::Create()
+$stream = $null
+try {
+    $stream = [System.IO.File]::OpenRead($StudioExe)
+    $expectedStudioSha256 = [BitConverter]::ToString(
+        $sha.ComputeHash($stream)
+    ).Replace("-", "")
+}
+finally {
+    if ($stream) { $stream.Dispose() }
+    $sha.Dispose()
+}
+if ($expectedStudioSha256 -notmatch "^[0-9A-F]{64}$") {
+    throw "AI_BOOTSTRAP_INVALID_SIGNED_STUDIO_HASH"
+}
+
 $target = Join-Path $Workspace "studio\remote-ai-interactive-session.ps1"
 $wrapper = Join-Path $desktop "CHAOS_AI_AUTO_START.ps1"
 $escTarget = $target.Replace("'", "''")
 $escExe = $StudioExe.Replace("'", "''")
 $escRoot = $Workspace.Replace("'", "''")
-$script = "& '$escTarget' -StudioExe '$escExe' -Workspace '$escRoot' -LoginWindowMinutes 10"
+$script = "& '$escTarget' -StudioExe '$escExe' -Workspace '$escRoot' -ExpectedStudioSha256 '$expectedStudioSha256' -LoginWindowMinutes 10"
 Set-Content -LiteralPath $wrapper -Value $script -Encoding utf8
 if (-not (Test-Path -LiteralPath $wrapper)) {
     throw "AI_WATCHER_MISSING: wrapper was not saved to the logged-on desktop"
@@ -48,7 +67,13 @@ if ($decoded -ne $entryScript -or $decoded -notmatch "CHAOS_AI_AUTO_START.ps1" -
 }
 
 $arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $encoded"
-$psExe = Join-Path $PSHOME "powershell.exe"
+# The workflow's installed PowerShell 7 runs CI checks successfully.
+# Prefer the same pwsh binary in the RDP session: Windows PowerShell 5.1
+# in the user's screenshot failed to autoload Microsoft.PowerShell.Security.
+$psExe = Join-Path $PSHOME "pwsh.exe"
+if (-not (Test-Path -LiteralPath $psExe)) {
+    $psExe = Join-Path $PSHOME "powershell.exe"
+}
 if (-not (Test-Path -LiteralPath $psExe)) {
     $psExe = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 }
