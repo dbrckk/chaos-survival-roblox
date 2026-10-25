@@ -516,6 +516,24 @@ describe("AI survivor rules", function()
         expect((urgent - desired.Unit).Magnitude < 0.001).toBe(true)
     end)
 
+    it("actually changes direction on sharp turns instead of running backward", function()
+        local forward = Vector3.new(1, 0, 0)
+        local backward = Vector3.new(-1, 0, 0)
+        local reversal = AISurvivorRules.steeredDirection(forward, backward, false)
+        expect(reversal:Dot(backward) > 0.99).toBe(true)
+        expect(math.abs(reversal.Magnitude - 1) < 0.001).toBe(true)
+
+        -- Off-axis 130-degree turns must also make forward progress toward
+        -- the new target, while regular right-angle turns stay smooth.
+        local angled = Vector3.new(-0.65, 0, 0.76).Unit
+        local pivot = AISurvivorRules.steeredDirection(forward, angled, false)
+        expect(pivot:Dot(angled) > 0.50).toBe(true)
+        expect(pivot.Y).toBe(0)
+
+        local zeroHistory = AISurvivorRules.steeredDirection(Vector3.zero, backward, false)
+        expect((zeroHistory - backward).Magnitude < 0.001).toBe(true)
+    end)
+
     it("only inserts a turn pause for sharp non-urgent reversals", function()
         local forward = Vector3.new(0, 0, -1)
         local reverse = Vector3.new(0, 0, 1)
