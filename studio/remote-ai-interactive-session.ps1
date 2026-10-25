@@ -15,7 +15,7 @@ $startedAt = Get-Date
 
 # Both Task Scheduler and Run-key startup are installed for RDP reliability.
 # Only one may own the live Roblox Studio session and screenshot files.
-$mutex = [System.Threading.Mutex]::new($false, "Local\\ChaosSurvivalAIVisualCapture")
+$mutex = [System.Threading.Mutex]::new($false, "Local\ChaosSurvivalAIVisualCapture")
 $ownsMutex = $false
 try {
     $ownsMutex = $mutex.WaitOne(0)
