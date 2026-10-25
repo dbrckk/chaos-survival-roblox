@@ -32,6 +32,23 @@ function SceneryLodRules.practicePadVisualOwners(root)
     return owners
 end
 
+-- Only cosmetic, author-owned hero skyline models may be hidden by this
+-- distance controller. Native Base/Platforms and enemy warnings are excluded.
+function SceneryLodRules.heroArchitectureOwner(root)
+    if typeof(root) ~= "Instance" then return nil end
+    local generated = root:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local decor = arena and arena:FindFirstChild("Decor")
+    local hero = decor and decor:FindFirstChild("ArenaHeroArchitecture3D")
+    if hero and hero:IsA("Model")
+        and hero:GetAttribute("SourceIsOriginal") == true
+        and hero:GetAttribute("ChaosDistantScenery") == true
+    then
+        return hero
+    end
+    return nil
+end
+
 function SceneryLodRules.visible(tier, distance, lowDistance, mediumDistance,
         previouslyVisible)
     if tier ~= "Low" and tier ~= "Medium" then
