@@ -411,7 +411,12 @@ end
 -- Long world routes must survive the ordinary roaming rethink clock.
 -- Arrival, urgent hazard overrides, invalid targets and stuck recovery
 -- still clear the goal; a bounded grace period prevents permanent locks.
-function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targetIsSkyrail, targetPart)
+function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targetIsSkyrail, targetPart, urgent)
+    -- Replanning a casual goal must never overwrite a live disaster escape
+    -- after the ordinary timer expires. Survival always takes precedence.
+    if urgent == true and typeof(target) == "Vector3" then
+        return false
+    end
     if typeof(target) ~= "Vector3" then
         return true
     end
