@@ -2741,7 +2741,11 @@ local function stepRecord(record, now)
     end
 
     if record.inRound and (currentState.phase == "ready" or currentState.phase == "round") then
-        tryPadImpulse(record, root, now)
+        -- The pad may launch a bot into an impact footprint while an active
+        -- warning requires the opposite movement. Save mobility for safety.
+        if not urgentTarget then
+            tryPadImpulse(record, root, now)
+        end
 
         if urgentTarget then
             -- An imminent hazard cancels cosmetic indecision immediately.
@@ -2873,7 +2877,8 @@ local function stepRecord(record, now)
             record.nextThink,
             record.target,
             record.targetIsSkyrail,
-            record.targetPart
+            record.targetPart,
+            urgentTarget ~= nil
         ) then
             local traits = decisionTraits(record)
             if currentState.phase == "round"
