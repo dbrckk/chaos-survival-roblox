@@ -256,7 +256,27 @@ jobs:
           # no Roblox Studio account is authenticated on this fresh VM.
           $deadline = (Get-Date).AddMinutes(14)
           $complete = $false
+          $taskStartRequested = $false
           while ((Get-Date) -lt $deadline) {
+            # RDP frequently reconnects an existing desktop rather than
+            # creating a new Windows logon. Neither Run-key nor OnLogon
+            # triggers are guaranteed on reconnect. As soon as the real
+            # interactive Explorer desktop exists, invoke our registered
+            # task in THAT authenticated Windows user's session.
+            if (-not $taskStartRequested) {
+              $interactiveShells = @(Get-Process -Name explorer -ErrorAction SilentlyContinue |
+                Where-Object { $_.SessionId -gt 0 })
+              if ($interactiveShells.Count -gt 0) {
+                try {
+                  Start-ScheduledTask -TaskName "ChaosAIVisualReview" -ErrorAction Stop
+                  $taskStartRequested = $true
+                  Write-Host "STUDIO_WATCHDOG_RECONNECTED: interactive Windows task launched without manual PowerShell."
+                }
+                catch {
+                  Write-Host "STUDIO_WATCHDOG_TASK_DEFERRED: still waiting for available interactive token."
+                }
+              }
+            }
             $successFile = Join-Path $captureDir "capture-status.txt"
             $errorFile = Join-Path $captureDir "capture-error.txt"
             $watchdogStatus = Join-Path $captureDir "watchdog-status.txt"
