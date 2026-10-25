@@ -37,6 +37,7 @@ public static class ChaosScreenNative {
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hwnd, int command);
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
 }
 "@
@@ -103,6 +104,7 @@ function Find-RenderedStudioWindow {
                     Width = $width
                     Height = $height
                     Title = $title
+                    ProcessId = $proc.Id
                     Score = $score
                 }
             }
@@ -157,8 +159,20 @@ try {
         if ($null -eq $window) {
             throw "NO_RENDERED_WINDOW: no visible Roblox Studio/client window for frame $i."
         }
+        # The authenticated watcher starts from a hidden background shell.
+        # Windows may deny a single SetForegroundWindow call to that shell.
+        # Restore the real Studio window, then ask the shell's own desktop
+        # COM focus broker to activate the exact target process.
+        [void][ChaosScreenNative]::ShowWindow($window.Handle, 9)
         [void][ChaosScreenNative]::SetForegroundWindow($window.Handle)
-        Start-Sleep -Milliseconds 90
+        if ([ChaosScreenNative]::GetForegroundWindow() -ne $window.Handle) {
+            try {
+                $focusShell = New-Object -ComObject "WScript.Shell"
+                [void]$focusShell.AppActivate([int]$window.ProcessId)
+                Start-Sleep -Milliseconds 250
+            }
+            catch {}
+        }
         if ([ChaosScreenNative]::GetForegroundWindow() -ne $window.Handle) {
             throw "WINDOW_NOT_FOREGROUND: refusing to capture another app."
         }

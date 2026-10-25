@@ -1,112 +1,142 @@
-# Bootstrap a REAL authenticated Windows desktop for an AI-controlled
-# Roblox Studio playtest. This script never receives Roblox credentials.
+# Installs an AUTO-START task for the same interactive Windows account that
+# signs in through private Tailscale RDP. This fixes the previous empty
+# powershell.exe -File '' launcher observed in the user's screenshot.
+# Only Roblox's official login UI may authenticate a Roblox account.
+[CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string]$StudioExe,
-    [Parameter(Mandatory = $true)][string]$Workspace
+    [Parameter(Mandatory=$true)][string]$StudioExe,
+    [Parameter(Mandatory=$true)][string]$Workspace
 )
 $ErrorActionPreference = "Stop"
-if (!(Test-Path -LiteralPath $StudioExe)) { throw "Roblox Studio binary not installed" }
+foreach ($required in @(
+    $StudioExe,
+    (Join-Path $Workspace "studio\remote-ai-interactive-session.ps1"),
+    (Join-Path $Workspace "studio\capture-ai-visual-review.ps1"),
+    (Join-Path $Workspace "studio\visual-ai-runner.luau"),
+    (Join-Path $Workspace "build\ChaosSurvival.rbxlx")
+)) {
+    if ([string]::IsNullOrWhiteSpace($required) -or -not (Test-Path -LiteralPath $required)) {
+        throw "AI_BOOTSTRAP_INPUT_NOT_FOUND: required local file unavailable"
+    }
+}
+
 $desktop = [Environment]::GetFolderPath("Desktop")
 if (-not $desktop) { $desktop = Join-Path $env:USERPROFILE "Desktop" }
 New-Item -ItemType Directory -Path $desktop -Force | Out-Null
-$out = Join-Path $Workspace "build\visual-ai-captures"
-New-Item -ItemType Directory -Path $out -Force | Out-Null
-$helper = Join-Path $desktop "CHAOS_AI_CAPTURE.ps1"
-$watcher = Join-Path $desktop "CHAOS_AI_AUTO_START.ps1"
-$rootEscaped = $Workspace.Replace("'", "''")
-$studioEscaped = $StudioExe.Replace("'", "''")
-$helperEscaped = $helper.Replace("'", "''")
+$artifactDir = Join-Path $Workspace "build\visual-ai-captures"
+New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
 
-$helperText = @'
-$ErrorActionPreference = "Stop"
-$root = '__ROOT__'
-$studio = '__STUDIO__'
-$output = Join-Path $root "build\visual-ai-captures"
-$collector = Join-Path $root "studio\capture-ai-visual-review.ps1"
-$place = Join-Path $root "build\ChaosSurvival.rbxlx"
-$runner = Join-Path $root "studio\visual-ai-runner.luau"
-try {
-    & $collector -StudioExe $studio -PlaceFile $place -RunScriptFile $runner -OutputDirectory $output -Count 15 -IntervalSeconds 3
-    "PASS" | Set-Content -LiteralPath (Join-Path $output "capture-status.txt") -Encoding utf8
+$target = Join-Path $Workspace "studio\remote-ai-interactive-session.ps1"
+$wrapper = Join-Path $desktop "CHAOS_AI_AUTO_START.ps1"
+$escTarget = $target.Replace("'", "''")
+$escExe = $StudioExe.Replace("'", "''")
+$escRoot = $Workspace.Replace("'", "''")
+$script = "& '$escTarget' -StudioExe '$escExe' -Workspace '$escRoot' -LoginWindowMinutes 10"
+Set-Content -LiteralPath $wrapper -Value $script -Encoding utf8
+if (-not (Test-Path -LiteralPath $wrapper)) {
+    throw "AI_WATCHER_MISSING: wrapper was not saved to the logged-on desktop"
 }
-catch {
-    ("CAPTURE_FAILED: " + $_.Exception.Message) |
-        Set-Content -LiteralPath (Join-Path $output "capture-error.txt") -Encoding utf8
-    exit 1
-}
-'@
-$helperText = $helperText.Replace("__ROOT__", $rootEscaped).Replace("__STUDIO__", $studioEscaped)
-Set-Content -LiteralPath $helper -Value $helperText -Encoding utf8
 
-$watcherText = @'
-# Launch automatically once official Studio reports the user is signed in.
-# If the GH runner reconnects rather than logs on, use desktop shortcut.
-$root = '__ROOT__'
-$helper = '__HELPER__'
-$started = Get-Date
-$logDir = Join-Path $env:LOCALAPPDATA "Roblox\logs"
-$output = Join-Path $root "build\visual-ai-captures"
-$status = Join-Path $output "capture-status.txt"
-$errorFile = Join-Path $output "capture-error.txt"
-while ((Get-Date) -lt $started.AddMinutes(68)) {
-    if ((Test-Path $status) -or (Test-Path $errorFile)) { break }
-    $authenticated = $false
-    if (Test-Path $logDir) {
-        $logs = Get-ChildItem -LiteralPath $logDir -File -ErrorAction SilentlyContinue |
-            Where-Object {
-                $_.LastWriteTime -ge $started.AddMinutes(-2) -and
-                $_.Name -match "Studio"
-            } | Sort-Object LastWriteTime -Descending | Select-Object -First 3
-        foreach ($log in $logs) {
-            try {
-                $tail = (Get-Content -LiteralPath $log.FullName -Tail 480 -ErrorAction Stop) -join [Environment]::NewLine
-                if ($tail -match "Authenticated\s*:\s*YES") {
-                    $authenticated = $true
-                    break
-                }
-            } catch {}
-        }
-    }
-    if ($authenticated) {
-        Get-Process -Name RobloxStudioBeta -ErrorAction SilentlyContinue |
-            Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 3
-        & $helper
-        break
-    }
-    Start-Sleep -Seconds 4
+# Use EncodedCommand, not -File, so quoting/spaces cannot produce the
+# invalid empty path that appeared in the remote PowerShell window.
+$entryScript = "& '" + $wrapper.Replace("'", "''") + "'"
+$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($entryScript))
+$decoded = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($encoded))
+if ($decoded -ne $entryScript -or $decoded -notmatch "CHAOS_AI_AUTO_START.ps1" -or
+    [string]::IsNullOrWhiteSpace($encoded)) {
+    throw "AI_LAUNCH_ENCODING_FAILED: watcher path failed strict round trip"
 }
-'@
-$watcherText = $watcherText.Replace("__ROOT__", $rootEscaped).Replace("__HELPER__", $helperEscaped)
-Set-Content -LiteralPath $watcher -Value $watcherText -Encoding utf8
+
+$arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $encoded"
+$psExe = Join-Path $PSHOME "powershell.exe"
+if (-not (Test-Path -LiteralPath $psExe)) {
+    $psExe = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+}
+if (-not (Test-Path -LiteralPath $psExe)) {
+    throw "AI_POWERSHELL_MISSING"
+}
 
 $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
 New-Item -Path $runKey -Force | Out-Null
-$command = 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $watcher + '"'
-Set-ItemProperty -Path $runKey -Name "ChaosAIAutoVisualReview" -Value $command
+# Remove the older starter that launched Studio separately and could race
+# with the new authenticated visual director on RDP login.
+Remove-ItemProperty -Path $runKey -Name "ChaosVisualQAStudio" -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path $runKey -Name "ChaosAIAutoVisualReview" -ErrorAction SilentlyContinue
+$command = '"' + $psExe + '" ' + $arguments
+Set-ItemProperty -Path $runKey -Name "ChaosAIVisualReviewV2" -Value $command
 
-$shortcut = Join-Path $desktop "START_CHAOS_AI_CAPTURE.cmd"
-$shortcutLines = @(
+# Also register a Task Scheduler OnLogon trigger. Windows remote desktop
+# sessions can sometimes reconnect without processing Run keys. Both
+# launchers are safe: the task itself avoids duplicate sessions via mutex.
+$taskName = "ChaosAIVisualReview"
+try {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+    $taskAction = New-ScheduledTaskAction -Execute $psExe -Argument $arguments
+    $taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $identity
+    $taskPrincipal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
+    $taskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 17) -MultipleInstances IgnoreNew
+    Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Force | Out-Null
+    Write-Host "AI_VISUAL_WATCHER_SCHEDULED: interactive Windows logon"
+}
+catch {
+    # HKCU Run fallback is already registered, so a Group Policy block
+    # on scheduled tasks must not prevent the ordinary login launcher.
+    Write-Host "AI_VISUAL_WATCHER_TASK_UNAVAILABLE: registry fallback registered"
+}
+
+# GitHub-hosted Windows may ALREADY have an unlocked interactive desktop
+# under the same runneradmin identity. If so, launch the watcher right now,
+# without waiting for RDP logon or any phone interaction. Never attempt
+# capture in a non-graphical/session-zero runner.
+try {
+    $currentSession = (Get-Process -Id $PID).SessionId
+    $explorer = @(Get-Process -Name explorer -ErrorAction SilentlyContinue |
+        Where-Object { $_.SessionId -eq $currentSession })
+    if ($currentSession -gt 0 -and $explorer.Count -gt 0) {
+        Start-Process -FilePath $psExe -ArgumentList $arguments -WindowStyle Hidden | Out-Null
+        Write-Host "AI_VISUAL_WATCHER_STARTED_IMMEDIATELY: interactive Explorer session detected"
+    }
+    else {
+        Write-Host "AI_VISUAL_WATCHER_DEFERRED: waiting for an interactive Windows logon"
+    }
+}
+catch {
+    Write-Host "AI_VISUAL_WATCHER_DEFERRED: guarded Windows OnLogon task will start it"
+}
+
+$fallback = Join-Path $desktop "START_CHAOS_AI_CAPTURE.cmd"
+$lines = @(
     "@echo off",
-    'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + $helper + '"',
+    '"' + $psExe + '" ' + $arguments,
     "pause"
 )
-Set-Content -LiteralPath $shortcut -Value ($shortcutLines -join [Environment]::NewLine) -Encoding ascii
+Set-Content -LiteralPath $fallback -Value ($lines -join [Environment]::NewLine) -Encoding ascii
 
-$info = @(
-    "CHAOS SURVIVAL — AI VISUAL QA (15 authentic frames)",
+$instructions = @(
+    "CHAOS SURVIVAL - AUTOMATED REAL AI VISUAL QA",
     "",
-    "1. Open official Roblox Studio on this Windows desktop.",
-    "2. Sign in to Roblox yourself in Studio's official UI.",
-    "3. The automated watchdog starts the test when Studio auth succeeds.",
-    "4. If not, double-click START_CHAOS_AI_CAPTURE.cmd on the desktop.",
-    "5. The local Roblox client follows 3 independently controlled AI bots.",
-    "6. Fifteen real rendered gameplay PNG frames and contact sheet are",
-    "   automatically uploaded as a GitHub Actions artifact.",
+    "This computer now launches official Roblox Studio automatically.",
+    "If Studio is ALREADY signed in, the test will start by itself.",
+    "Otherwise Roblox must be authenticated in Studio's official interface.",
+    "The account can be authorized from the Android Roblox app if Roblox",
+    "offers Quick Login, but no script can bypass account authentication.",
     "",
-    "No Roblox credentials, cookies or tokens should be pasted into ChatGPT.",
-    "The public game is not modified; only the checked-out local build runs.",
-    "Keep the remote Windows RDP session active until capture completes."
+    "After authentication, 15 real screenshots of AI-driven gameplay will",
+    "be captured every 3 seconds and uploaded to GitHub Actions.",
+    "No public game is modified. No Roblox cookies or passwords are used.",
+    "",
+    "Rare startup fallback: START_CHAOS_AI_CAPTURE.cmd.",
+    "A missing auth session exits early rather than consuming an hour."
 )
-Set-Content -LiteralPath (Join-Path $desktop "READ_ME_AI_15_CAPTURES.txt") -Value $info -Encoding utf8
-Write-Host "Ready: signed-in Studio auto-trigger, secure local capture, fallback desktop shortcut."
+Set-Content -LiteralPath (Join-Path $desktop "READ_ME_AI_15_CAPTURES.txt") -Value $instructions -Encoding utf8
+
+# Safe and auditable, no Roblox authentication data in these records.
+@(
+    "launcher=EncodedCommand",
+    "task_name=$taskName",
+    "registry_fallback=true",
+    "watcher_present=true",
+    "utc=$([DateTime]::UtcNow.ToString('o'))"
+) | Set-Content -LiteralPath (Join-Path $artifactDir "bootstrap-status.txt") -Encoding utf8
+
+Write-Host "AI_VISUAL_BOOTSTRAP_VERIFIED: no -File argument; wrapper exists; scheduled task and Run fallback attempted."
