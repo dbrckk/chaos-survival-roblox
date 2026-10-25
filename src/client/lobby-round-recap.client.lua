@@ -296,14 +296,14 @@ stateEvent.OnClientEvent:Connect(function(state)
             and incomingRound == math.floor(incomingRound)
             and (not previousRound or incomingRound >= previousRound)
         then
-        latestRecap = {
-            disasterIds = table.clone(state.disasterIds),
-            arenaId = state.arenaId,
-            arenaName = state.arenaName,
-            survivorsAlive = state.survivorsAlive,
-            contestantCount = state.contestantCount,
-            roundNumber = incomingRound,
-        }
+            latestRecap = {
+                disasterIds = table.clone(state.disasterIds),
+                arenaId = state.arenaId,
+                arenaName = state.arenaName,
+                survivorsAlive = state.survivorsAlive,
+                contestantCount = state.contestantCount,
+                roundNumber = incomingRound,
+            }
         end
     end
 
