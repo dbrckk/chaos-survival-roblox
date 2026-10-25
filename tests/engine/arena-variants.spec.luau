@@ -71,6 +71,86 @@ describe("Arena variants", function()
         base:Destroy()
     end)
 
+    it("mounts sanitized original 3D art with no overlap or physical hazard", function()
+        local footprints = {
+            service_crane = Vector3.new(60, 48, 20),
+            perimeter_gate = Vector3.new(58, 25, 38),
+            reactor_spire = Vector3.new(30, 62, 30),
+        }
+        local templates = {}
+        for name, size in pairs(footprints) do
+            local asset = Instance.new("Model")
+            asset.Name = name
+            local mesh = Instance.new("Part")
+            mesh.Name = "ImportedGeometry"
+            mesh.Size = size
+            mesh.Anchored = false
+            mesh.Parent = asset
+            local ignoredLight = Instance.new("PointLight")
+            ignoredLight.Parent = mesh
+            local clean = OriginalMeshScenery.sanitize(asset)
+            asset:Destroy()
+            expect(clean ~= nil).toBe(true)
+            expect(clean:FindFirstChild("PointLight", true)).toBe(nil)
+            templates[name] = clean
+        end
+
+        for _, id in ipairs(ArenaVariants.Order) do
+            local arena = Instance.new("Model")
+            arena.Name = "Original3DTestArena"
+            arena:SetAttribute("VariantId", id)
+            arena.Parent = workspace
+            local base = Instance.new("Part")
+            base.Name = "Base"
+            base.Anchored = true
+            base.Size = ArenaVariants.get(id).BaseSize
+            base.Position = Vector3.new(41, 5, -26)
+            base.Parent = arena
+            local decor = Instance.new("Folder")
+            decor.Name = "Decor"
+            decor.Parent = arena
+
+            expect(OriginalMeshScenery.mount(arena, templates)).toBe(4)
+            expect(OriginalMeshScenery.mount(arena, templates)).toBe(0)
+            expect(arena:GetAttribute("Original3DSceneryComplete")).toBe(true)
+            local folder = decor:FindFirstChild("Original3DScenery")
+            expect(#folder:GetChildren()).toBe(4)
+            for _, placement in ipairs(OriginalMeshScenery.placements(base, id)) do
+                local model = folder:FindFirstChild(placement.name)
+                expect(model ~= nil).toBe(true)
+                for _, piece in ipairs(model:GetDescendants()) do
+                    if piece:IsA("BasePart") then
+                        expect(piece.Anchored).toBe(true)
+                        expect(piece.CanCollide).toBe(false)
+                        expect(piece.CanTouch).toBe(false)
+                        expect(piece.CanQuery).toBe(false)
+                        expect(piece.CastShadow).toBe(false)
+                        local worldRadiusX = (
+                            math.abs(piece.CFrame.RightVector.X) * piece.Size.X
+                            + math.abs(piece.CFrame.UpVector.X) * piece.Size.Y
+                            + math.abs(piece.CFrame.LookVector.X) * piece.Size.Z
+                        ) * 0.5
+                        local worldRadiusZ = (
+                            math.abs(piece.CFrame.RightVector.Z) * piece.Size.X
+                            + math.abs(piece.CFrame.UpVector.Z) * piece.Size.Y
+                            + math.abs(piece.CFrame.LookVector.Z) * piece.Size.Z
+                        ) * 0.5
+                        local clearance = if placement.axis == "X"
+                            then (piece.Position.X - base.Position.X) * placement.sign
+                                - worldRadiusX - base.Size.X * 0.5
+                            else (piece.Position.Z - base.Position.Z) * placement.sign
+                                - worldRadiusZ - base.Size.Z * 0.5
+                        expect(clearance >= 12.49).toBe(true)
+                    end
+                end
+            end
+            arena:Destroy()
+        end
+        for _, model in pairs(templates) do
+            model:Destroy()
+        end
+    end)
+
     it("defines four distinct playable layouts", function()
         expect(#ArenaVariants.Order).toBe(4)
 
