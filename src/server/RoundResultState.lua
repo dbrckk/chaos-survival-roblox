@@ -22,10 +22,18 @@ function RoundResultState.snapshot(context)
     -- Never label a lone unopposed player or a survivor with living bots.
     local contestantCount = nonnegativeInt(context.contestantCount)
     local soleSurvivorUserId = nil
-    if survivors == 1 and #context.survivorUserIds == 1
-        and contestantCount >= 2
-    then
-        soleSurvivorUserId = context.survivorUserIds[1]
+    local soleSurvivorAISlot = nil
+    if survivors == 1 and contestantCount >= 2 then
+        if #context.survivorUserIds == 1 then
+            soleSurvivorUserId = context.survivorUserIds[1]
+        elseif nonnegativeInt(context.aiSurvivorsAlive) == 1 then
+            local aiSlot = nonnegativeInt(context.soleAliveAISlot)
+            -- AI slots are currently 1-3. A failed/missing bot snapshot
+            -- never fabricates a champion identity.
+            if aiSlot >= 1 and aiSlot <= 3 then
+                soleSurvivorAISlot = aiSlot
+            end
+        end
     end
     local title = survivors == 0 and "TOTAL WIPEOUT"
         or (tostring(survivors) .. " SURVIVED")
@@ -47,6 +55,7 @@ function RoundResultState.snapshot(context)
         survivorsAlive = survivors,
         contestantCount = contestantCount,
         soleSurvivorUserId = soleSurvivorUserId,
+        soleSurvivorAISlot = soleSurvivorAISlot,
         -- Frozen identity lists, not the eventual success/failure of payouts.
         survivorUserIds = context.survivorUserIds,
         participantUserIds = context.participantUserIds,
