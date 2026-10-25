@@ -62,9 +62,58 @@ function OriginalMeshScenery.placements(base, variantId)
             assetId = ASSETS[assetName],
             position = Vector3.new(base.Position.X + x, surfaceY, base.Position.Z + z),
             yaw = slot.yaw,
+            axis = slot.axis,
+            sign = slot.sign,
         }
     end
     return placements
+end
+
+-- A static prefab's bounding volume can be wider than its authored
+-- standoff (for example a rotated 65-stud crane). Push its CENTER farther
+-- from the playable floor rather than allowing decorative geometry to
+-- project inside the map and obscure real platforms or hazard warnings.
+-- `GetBoundingBox` returns the model's oriented bounding dimensions;
+-- target yaw rotates that box into the intended exterior composition.
+function OriginalMeshScenery.safeExteriorPosition(base, placement, size, gap)
+    if not base or not base:IsA("BasePart")
+        or type(placement) ~= "table"
+        or typeof(placement.position) ~= "Vector3"
+        or typeof(size) ~= "Vector3"
+        or (placement.axis ~= "X" and placement.axis ~= "Z")
+        or (placement.sign ~= 1 and placement.sign ~= -1)
+    then
+        return nil
+    end
+    local yaw = tonumber(placement.yaw)
+    if not yaw or yaw ~= yaw or math.abs(yaw) == math.huge then
+        return nil
+    end
+    if size.X <= 0 or size.Y <= 0 or size.Z <= 0
+        or size.X > MAX_DIMENSION or size.Y > MAX_DIMENSION
+        or size.Z > MAX_DIMENSION
+    then
+        return nil
+    end
+
+    local cosine, sine = math.abs(math.cos(yaw)), math.abs(math.sin(yaw))
+    local radiusX = (size.X * cosine + size.Z * sine) * 0.5
+    local radiusZ = (size.Z * cosine + size.X * sine) * 0.5
+    local clearance = math.max(12.5, tonumber(gap) or 12.5)
+    local position = placement.position
+
+    if placement.axis == "X" then
+        local minimum = base.Size.X * 0.5 + radiusX + clearance
+        local offset = (position.X - base.Position.X) * placement.sign
+        local outward = math.max(minimum, offset)
+        return Vector3.new(base.Position.X + placement.sign * outward,
+            position.Y, position.Z)
+    end
+    local minimum = base.Size.Z * 0.5 + radiusZ + clearance
+    local offset = (position.Z - base.Position.Z) * placement.sign
+    local outward = math.max(minimum, offset)
+    return Vector3.new(position.X, position.Y,
+        base.Position.Z + placement.sign * outward)
 end
 
 -- No instances from a remote model become live until fully sanitized.
@@ -162,8 +211,15 @@ function OriginalMeshScenery.mount(arena, templates)
                     clone:SetAttribute("Original3DAssetId", placement.assetId)
                     clone:SetAttribute("CosmeticOnly", true)
                     local bbox, size = clone:GetBoundingBox()
+                    local safePosition = OriginalMeshScenery.safeExteriorPosition(
+                        base, placement, size
+                    )
+                    if not safePosition then
+                        clone:Destroy()
+                        continue
+                    end
                     local target = CFrame.new(
-                        placement.position + Vector3.new(0, size.Y * 0.5, 0)
+                        safePosition + Vector3.new(0, size.Y * 0.5, 0)
                     ) * CFrame.Angles(0, placement.yaw, 0)
                     -- Recenter to bounding volume, not an untrusted
                     -- imported pivot, so every model stands on its base.
