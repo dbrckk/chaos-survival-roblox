@@ -66,6 +66,33 @@ local function lookDirection(root)
     return flat.Magnitude > 0.05 and flat.Unit or Vector3.new(0, 0, -1)
 end
 
+-- A tiny provenance tag INSIDE the real Roblox render confirms whose
+-- autonomous viewpoint the external Windows PNG is observing. Only present
+-- in the opt-in Studio suite; production never creates this GUI.
+local proofGui = Instance.new("ScreenGui")
+proofGui.Name = "ChaosVisualAIProof"
+proofGui.ResetOnSpawn = false
+proofGui.IgnoreGuiInset = true
+proofGui.DisplayOrder = 96
+proofGui.Parent = player:WaitForChild("PlayerGui")
+
+local proofLabel = Instance.new("TextLabel")
+proofLabel.Name = "AICameraIdentity"
+proofLabel.AnchorPoint = Vector2.new(0, 1)
+proofLabel.Position = UDim2.new(0, 14, 1, -14)
+proofLabel.Size = UDim2.fromOffset(460, 34)
+proofLabel.BackgroundColor3 = Color3.fromRGB(11, 18, 32)
+proofLabel.BackgroundTransparency = 0.16
+proofLabel.TextColor3 = Color3.fromRGB(235, 246, 255)
+proofLabel.Font = Enum.Font.GothamBold
+proofLabel.TextSize = 14
+proofLabel.TextXAlignment = Enum.TextXAlignment.Center
+proofLabel.Text = "STUDIO AI VISUAL QA  |  WAITING FOR BOT"
+proofLabel.Parent = proofGui
+local proofCorner = Instance.new("UICorner")
+proofCorner.CornerRadius = UDim.new(0, 9)
+proofCorner.Parent = proofLabel
+
 local currentBot = nil
 local currentMode = "CHASE"
 local sampleIndex = 0
@@ -88,6 +115,7 @@ local function restore()
         end
     end
     currentBot = nil
+    if proofGui.Parent then proofGui:Destroy() end
 end
 
 RunService:BindToRenderStep(bindName, Enum.RenderPriority.Camera.Value + 3, function(dt)
@@ -186,6 +214,11 @@ task.spawn(function()
         currentMode = ((index - 1) % 5 == 4) and "POV"
             or (((index - 1) % 5 == 2) and "SIDE" or "CHASE")
         sampleIndex = index
+        proofLabel.Text = string.format(
+            "STUDIO AI VIEW  %02d/%02d   |   %s   |   %s / %s",
+            index, count, tostring(currentBot and currentBot.Name),
+            string.upper(phase), currentMode
+        )
 
         -- Let the camera settle before the Windows runner captures pixels.
         task.wait(index == 1 and 1 or 0.18)
