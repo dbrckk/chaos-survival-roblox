@@ -84,6 +84,26 @@ catch {
     Write-Host "AI_VISUAL_WATCHER_TASK_UNAVAILABLE: registry fallback registered"
 }
 
+# GitHub-hosted Windows may ALREADY have an unlocked interactive desktop
+# under the same runneradmin identity. If so, launch the watcher right now,
+# without waiting for RDP logon or any phone interaction. Never attempt
+# capture in a non-graphical/session-zero runner.
+try {
+    $currentSession = (Get-Process -Id $PID).SessionId
+    $explorer = @(Get-Process -Name explorer -ErrorAction SilentlyContinue |
+        Where-Object { $_.SessionId -eq $currentSession })
+    if ($currentSession -gt 0 -and $explorer.Count -gt 0) {
+        Start-Process -FilePath $psExe -ArgumentList $arguments -WindowStyle Hidden | Out-Null
+        Write-Host "AI_VISUAL_WATCHER_STARTED_IMMEDIATELY: interactive Explorer session detected"
+    }
+    else {
+        Write-Host "AI_VISUAL_WATCHER_DEFERRED: waiting for an interactive Windows logon"
+    }
+}
+catch {
+    Write-Host "AI_VISUAL_WATCHER_DEFERRED: guarded Windows OnLogon task will start it"
+}
+
 $fallback = Join-Path $desktop "START_CHAOS_AI_CAPTURE.cmd"
 $lines = @(
     "@echo off",
