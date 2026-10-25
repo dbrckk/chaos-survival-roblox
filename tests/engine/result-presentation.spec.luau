@@ -66,9 +66,58 @@ describe("Result presentation", function()
         local tick = RoundResultState.atSecond(snapshot, 2)
         expect(tick.seconds).toBe(2)
         expect(snapshot.seconds).toBe(6)
-        expect(tick.survivorUserIds).toBe(survivors)
-        expect(tick.participantUserIds).toBe(participants)
+        expect(tick.survivorUserIds[1]).toBe(survivors[1])
+        expect(tick.participantUserIds[1]).toBe(participants[1])
+        expect(tick.survivorUserIds == survivors).toBe(false)
+        expect(tick.participantUserIds == participants).toBe(false)
         expect(tick.title).toBe(snapshot.title)
+    end)
+
+    it("keeps frozen victory, disaster and roster evidence across countdown packets", function()
+        local participants = {101, 202}
+        local survivors = {101}
+        local disasters = {"Meteors", "Bombs"}
+        local state = RoundResultState.snapshot({
+            roundNumber = 21,
+            seconds = 5,
+            participantUserIds = participants,
+            survivorUserIds = survivors,
+            disasterIds = disasters,
+            aiSurvivorsAlive = 0,
+            contestantCount = 2,
+        })
+        expect(state.soleSurvivorUserId).toBe(101)
+        expect(state.title).toBe("1 SURVIVED")
+
+        -- Progression, analytics and later round setup may change their
+        -- scratch arrays after the result has already been announced.
+        participants[1] = 303
+        table.insert(participants, 404)
+        survivors[1] = 202
+        table.clear(disasters)
+        expect(#state.participantUserIds).toBe(2)
+        expect(state.participantUserIds[1]).toBe(101)
+        expect(state.survivorUserIds[1]).toBe(101)
+        expect(state.disasterIds[1]).toBe("Meteors")
+        expect(state.disasterIds[2]).toBe("Bombs")
+
+        local firstTick = RoundResultState.atSecond(state, 3)
+        firstTick.participantUserIds[1] = 999
+        table.clear(firstTick.survivorUserIds)
+        firstTick.disasterIds[1] = "RisingLava"
+        local secondTick = RoundResultState.atSecond(state, 2)
+        expect(secondTick.participantUserIds[1]).toBe(101)
+        expect(secondTick.survivorUserIds[1]).toBe(101)
+        expect(secondTick.disasterIds[1]).toBe("Meteors")
+        expect(state.participantUserIds[1]).toBe(101)
+        expect(state.survivorUserIds[1]).toBe(101)
+        expect(state.disasterIds[1]).toBe("Meteors")
+        expect(firstTick.seconds).toBe(3)
+        expect(secondTick.seconds).toBe(2)
+        expect(ResultPresentation.fallbackFeedback(secondTick, 101, false).survived)
+            .toBe(true)
+        expect(ResultPresentation.fallbackFeedback(secondTick, 202, false).survived)
+            .toBe(false)
     end)
 
     it("never tells players a wipeout is a win or overcounts bots", function()
