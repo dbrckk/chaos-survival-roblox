@@ -28,6 +28,7 @@ local accent = nil
 local scale = nil
 local glyphCanvas = nil
 local survivorFill = nil
+local nextStep = nil
 local wasVisible = false
 
 local function clear()
@@ -41,6 +42,7 @@ local function clear()
     scale = nil
     glyphCanvas = nil
     survivorFill = nil
+    nextStep = nil
     wasVisible = false
 end
 
@@ -186,6 +188,21 @@ local function build()
     glyphCanvas.BackgroundTransparency = 1
     glyphCanvas.Parent = glyphFrame
 
+    -- Keep the next action visible at a glance, even on small mobile
+    -- screens where the central round HUD may be outside the camera.
+    nextStep = Instance.new("TextLabel")
+    nextStep.Name = "NextVoteCue"
+    nextStep.Position = UDim2.fromScale(0.05, 0.82)
+    nextStep.Size = UDim2.fromScale(0.90, 0.085)
+    nextStep.BackgroundTransparency = 1
+    nextStep.Font = Enum.Font.GothamBold
+    nextStep.TextColor3 = UITheme.Colors.Muted
+    nextStep.TextScaled = true
+    nextStep.TextXAlignment = Enum.TextXAlignment.Left
+    nextStep.Text = ""
+    nextStep.Parent = panel
+    UITheme.addTextConstraint(nextStep, 9, 12)
+
     local survivorTrack = Instance.new("Frame")
     survivorTrack.Name = "SurvivorRatioTrack"
     survivorTrack.Position = UDim2.fromScale(0.05, 0.91)
@@ -253,6 +270,14 @@ local function refresh()
             UITheme.Colors.Cyan
         )
         meta.TextColor3 = accent.BackgroundColor3
+        if nextStep then
+            local french = string.sub(string.lower(tostring(localeId)), 1, 2) == "fr"
+            nextStep.Text = currentPhase == "intermission"
+                and (french and "PROCHAINE ÉTAPE : VOTE POUR L'ARÈNE"
+                    or "NEXT: VOTE FOR THE ARENA")
+                or (french and "PROCHAINE MANCHE : BIENTÔT"
+                    or "NEXT ROUND: COMING SOON")
+        end
 
         renderGlyph(glyphCanvas, ids[1], accent.BackgroundColor3)
         local ratio = contestants > 0 and math.clamp(survivors / contestants, 0, 1) or 0
