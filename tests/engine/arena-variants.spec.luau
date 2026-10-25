@@ -4,11 +4,73 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaTargeting = require("../../src/server/ArenaTargeting")
+local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 
 describe("Arena variants", function()
+    it("positions all original 3D models entirely beyond the live arena floor", function()
+        local sizes = {
+            Vector3.new(65, 40, 65),
+            Vector3.new(48, 60, 16),
+            Vector3.new(16, 60, 48),
+        }
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(variantId)
+            local base = Instance.new("Part")
+            base.Anchored = true
+            base.Size = variant.BaseSize
+            base.Position = Vector3.new(18, 4, -34)
+            local positions = OriginalMeshScenery.placements(base, variantId)
+            expect(#positions).toBe(4)
+            for _, placement in ipairs(positions) do
+                for _, size in ipairs(sizes) do
+                    local safe = OriginalMeshScenery.safeExteriorPosition(
+                        base, placement, size
+                    )
+                    expect(safe ~= nil).toBe(true)
+                    local yaw = placement.yaw
+                    local radiusX = (
+                        math.abs(math.cos(yaw)) * size.X
+                        + math.abs(math.sin(yaw)) * size.Z
+                    ) * 0.5
+                    local radiusZ = (
+                        math.abs(math.cos(yaw)) * size.Z
+                        + math.abs(math.sin(yaw)) * size.X
+                    ) * 0.5
+                    if placement.axis == "X" then
+                        local distance = (safe.X - base.Position.X) * placement.sign
+                            - radiusX - base.Size.X * 0.5
+                        expect(distance >= 12.49).toBe(true)
+                        expect(safe.Z).toBe(placement.position.Z)
+                    else
+                        local distance = (safe.Z - base.Position.Z) * placement.sign
+                            - radiusZ - base.Size.Z * 0.5
+                        expect(distance >= 12.49).toBe(true)
+                        expect(safe.X).toBe(placement.position.X)
+                    end
+                    expect(safe.Y).toBe(placement.position.Y)
+                end
+            end
+            base:Destroy()
+        end
+
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(150, 2, 150)
+        local valid = OriginalMeshScenery.placements(base, "Classic")[1]
+        expect(OriginalMeshScenery.safeExteriorPosition(
+            base, valid, Vector3.new(66, 8, 8)
+        )).toBe(nil)
+        expect(OriginalMeshScenery.safeExteriorPosition(
+            base, valid, Vector3.new(8, 8, 8)) ~= nil).toBe(true)
+        expect(OriginalMeshScenery.safeExteriorPosition(
+            base, {position = valid.position, axis = "Y", sign = 1, yaw = 0},
+            Vector3.new(8, 8, 8)
+        )).toBe(nil)
+        base:Destroy()
+    end)
+
     it("defines four distinct playable layouts", function()
         expect(#ArenaVariants.Order).toBe(4)
 
