@@ -4,11 +4,153 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaTargeting = require("../../src/server/ArenaTargeting")
+local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 
 describe("Arena variants", function()
+    it("positions all original 3D models entirely beyond the live arena floor", function()
+        local sizes = {
+            Vector3.new(65, 40, 65),
+            Vector3.new(48, 60, 16),
+            Vector3.new(16, 60, 48),
+        }
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(variantId)
+            local base = Instance.new("Part")
+            base.Anchored = true
+            base.Size = variant.BaseSize
+            base.Position = Vector3.new(18, 4, -34)
+            local positions = OriginalMeshScenery.placements(base, variantId)
+            expect(#positions).toBe(4)
+            for _, placement in ipairs(positions) do
+                for _, size in ipairs(sizes) do
+                    local safe = OriginalMeshScenery.safeExteriorPosition(
+                        base, placement, size
+                    )
+                    expect(safe ~= nil).toBe(true)
+                    local yaw = placement.yaw
+                    local radiusX = (
+                        math.abs(math.cos(yaw)) * size.X
+                        + math.abs(math.sin(yaw)) * size.Z
+                    ) * 0.5
+                    local radiusZ = (
+                        math.abs(math.cos(yaw)) * size.Z
+                        + math.abs(math.sin(yaw)) * size.X
+                    ) * 0.5
+                    if placement.axis == "X" then
+                        local distance = (safe.X - base.Position.X) * placement.sign
+                            - radiusX - base.Size.X * 0.5
+                        expect(distance >= 12.49).toBe(true)
+                        expect(safe.Z).toBe(placement.position.Z)
+                    else
+                        local distance = (safe.Z - base.Position.Z) * placement.sign
+                            - radiusZ - base.Size.Z * 0.5
+                        expect(distance >= 12.49).toBe(true)
+                        expect(safe.X).toBe(placement.position.X)
+                    end
+                    expect(safe.Y).toBe(placement.position.Y)
+                end
+            end
+            base:Destroy()
+        end
+
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(150, 2, 150)
+        local valid = OriginalMeshScenery.placements(base, "Classic")[1]
+        expect(OriginalMeshScenery.safeExteriorPosition(
+            base, valid, Vector3.new(66, 8, 8)
+        )).toBe(nil)
+        expect(OriginalMeshScenery.safeExteriorPosition(
+            base, valid, Vector3.new(8, 8, 8)) ~= nil).toBe(true)
+        expect(OriginalMeshScenery.safeExteriorPosition(
+            base, {position = valid.position, axis = "Y", sign = 1, yaw = 0},
+            Vector3.new(8, 8, 8)
+        )).toBe(nil)
+        base:Destroy()
+    end)
+
+    it("mounts sanitized original 3D art with no overlap or physical hazard", function()
+        local footprints = {
+            service_crane = Vector3.new(60, 48, 20),
+            perimeter_gate = Vector3.new(58, 25, 38),
+            reactor_spire = Vector3.new(30, 62, 30),
+        }
+        local templates = {}
+        for name, size in pairs(footprints) do
+            local asset = Instance.new("Model")
+            asset.Name = name
+            local mesh = Instance.new("Part")
+            mesh.Name = "ImportedGeometry"
+            mesh.Size = size
+            mesh.Anchored = false
+            mesh.Parent = asset
+            local ignoredLight = Instance.new("PointLight")
+            ignoredLight.Parent = mesh
+            local clean = OriginalMeshScenery.sanitize(asset)
+            asset:Destroy()
+            expect(clean ~= nil).toBe(true)
+            expect(clean:FindFirstChild("PointLight", true)).toBe(nil)
+            templates[name] = clean
+        end
+
+        for _, id in ipairs(ArenaVariants.Order) do
+            local arena = Instance.new("Model")
+            arena.Name = "Original3DTestArena"
+            arena:SetAttribute("VariantId", id)
+            arena.Parent = workspace
+            local base = Instance.new("Part")
+            base.Name = "Base"
+            base.Anchored = true
+            base.Size = ArenaVariants.get(id).BaseSize
+            base.Position = Vector3.new(41, 5, -26)
+            base.Parent = arena
+            local decor = Instance.new("Folder")
+            decor.Name = "Decor"
+            decor.Parent = arena
+
+            expect(OriginalMeshScenery.mount(arena, templates)).toBe(4)
+            expect(OriginalMeshScenery.mount(arena, templates)).toBe(0)
+            expect(arena:GetAttribute("Original3DSceneryComplete")).toBe(true)
+            local folder = decor:FindFirstChild("Original3DScenery")
+            expect(#folder:GetChildren()).toBe(4)
+            for _, placement in ipairs(OriginalMeshScenery.placements(base, id)) do
+                local model = folder:FindFirstChild(placement.name)
+                expect(model ~= nil).toBe(true)
+                for _, piece in ipairs(model:GetDescendants()) do
+                    if piece:IsA("BasePart") then
+                        expect(piece.Anchored).toBe(true)
+                        expect(piece.CanCollide).toBe(false)
+                        expect(piece.CanTouch).toBe(false)
+                        expect(piece.CanQuery).toBe(false)
+                        expect(piece.CastShadow).toBe(false)
+                        local worldRadiusX = (
+                            math.abs(piece.CFrame.RightVector.X) * piece.Size.X
+                            + math.abs(piece.CFrame.UpVector.X) * piece.Size.Y
+                            + math.abs(piece.CFrame.LookVector.X) * piece.Size.Z
+                        ) * 0.5
+                        local worldRadiusZ = (
+                            math.abs(piece.CFrame.RightVector.Z) * piece.Size.X
+                            + math.abs(piece.CFrame.UpVector.Z) * piece.Size.Y
+                            + math.abs(piece.CFrame.LookVector.Z) * piece.Size.Z
+                        ) * 0.5
+                        local clearance = if placement.axis == "X"
+                            then (piece.Position.X - base.Position.X) * placement.sign
+                                - worldRadiusX - base.Size.X * 0.5
+                            else (piece.Position.Z - base.Position.Z) * placement.sign
+                                - worldRadiusZ - base.Size.Z * 0.5
+                        expect(clearance >= 12.49).toBe(true)
+                    end
+                end
+            end
+            arena:Destroy()
+        end
+        for _, model in pairs(templates) do
+            model:Destroy()
+        end
+    end)
+
     it("defines four distinct playable layouts", function()
         expect(#ArenaVariants.Order).toBe(4)
 
