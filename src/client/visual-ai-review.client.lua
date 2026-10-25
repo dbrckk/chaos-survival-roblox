@@ -5,14 +5,19 @@
 local RunService = game:GetService("RunService")
 if not RunService:IsStudio() then return end
 
-local StudioTestService = game:GetService("StudioTestService")
-local okArgs, args = pcall(StudioTestService.GetTestArgs, StudioTestService)
-if not okArgs or type(args) ~= "table" or args.suite ~= "ChaosVisualAI" then
-    return
-end
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Roblox documents that StudioTestService:GetTestArgs() can fail inside
+-- client LocalScripts. Use the test server's replicated opt-in flag
+-- instead; published servers never set it.
+local activateBy = os.clock() + 12
+while ReplicatedStorage:GetAttribute("ChaosVisualAISuite") ~= true
+    and os.clock() < activateBy do
+    task.wait(0.15)
+end
+if ReplicatedStorage:GetAttribute("ChaosVisualAISuite") ~= true then
+    return
+end
 local player = Players.LocalPlayer
 if not player then return end
 
@@ -22,8 +27,12 @@ if not report or not report:IsA("RemoteEvent") then
     return
 end
 
-local count = math.clamp(math.floor(tonumber(args.sampleCount) or 15), 1, 15)
-local interval = math.clamp(tonumber(args.intervalSeconds) or 3, 2, 8)
+local count = math.clamp(
+    math.floor(tonumber(ReplicatedStorage:GetAttribute("ChaosVisualAISamples")) or 15), 1, 15
+)
+local interval = math.clamp(
+    tonumber(ReplicatedStorage:GetAttribute("ChaosVisualAIInterval")) or 3, 2, 8
+)
 local phase = "waiting"
 local roundState = ReplicatedStorage:WaitForChild("Remotes", 15)
 local stateEvent = roundState and roundState:FindFirstChild("RoundState")
