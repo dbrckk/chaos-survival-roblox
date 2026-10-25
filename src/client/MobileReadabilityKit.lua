@@ -119,7 +119,14 @@ function Kit.watch(generated, onDecor)
 
     table.insert(sourceConnections, generated.ChildAdded:Connect(function(child)
         if child.Name == "Arena" then
-            bindArena(child)
+            -- Arena swaps can briefly replicate two same-named folders.
+            -- Do not show the incoming Decor until Roblox selects that
+            -- arena as the canonical GeneratedMap child. This prevents
+            -- a full-screen ornament flash midway through a mobile round.
+            local selected = generated:FindFirstChild("Arena")
+            if selected ~= currentArena then
+                bindArena(selected)
+            end
         end
     end))
     table.insert(sourceConnections, generated.ChildRemoved:Connect(function(child)
