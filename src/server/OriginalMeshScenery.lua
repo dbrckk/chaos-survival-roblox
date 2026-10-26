@@ -511,6 +511,18 @@ function OriginalMeshScenery.observeWorld(world, onReady)
     end
 end
 
+-- Bound concurrent AssetService.LoadAssetAsync operations. Issuing all six
+-- package requests on the same frame can spike join-time streaming and
+-- trigger owner-wide throttling; two independent lanes continue if one
+-- individual package fails. Fresh arrays prevent callers mutating ORDER.
+function OriginalMeshScenery.loadLanes()
+    local lanes = {{}, {}}
+    for index, name in ipairs(ORDER) do
+        lanes[(index - 1) % 2 + 1][#lanes[(index - 1) % 2 + 1] + 1] = name
+    end
+    return lanes
+end
+
 local started = false
 local templates = {}
 
@@ -537,38 +549,46 @@ function OriginalMeshScenery.start()
     end
 
     -- Cache each moderator-approved package once per server. A temporary
-    -- Roblox CDN failure can happen during startup: retry at most twice
-    -- after short pauses. Invalid geometry is never retried. Nothing
-    -- in the join/round path waits for this cosmetic-only work.
-    for _, assetName in ipairs(ORDER) do
-        task.spawn(function()
-            local assetId = ASSETS[assetName]
-            for attempt = 1, 3 do
-                local ok, imported = pcall(
-                    AssetService.LoadAssetAsync, AssetService, assetId
-                )
-                if ok and imported and imported:IsA("Model") then
-                    local clean = OriginalMeshScenery.sanitize(imported)
-                    imported:Destroy()
-                    if not clean then
-                        warn("Original 3D scenery rejected: invalid geometry", assetName)
-                        return
-                    end
-                    templates[assetName] = clean
-                    refreshArena()
+    -- Roblox CDN failure may still occur: retry twice with backoff.
+    -- One package's permanent failure cannot prevent its lane from
+    -- reaching the other approved packages.
+    local function loadOne(assetName)
+        local assetId = ASSETS[assetName]
+        for attempt = 1, 3 do
+            local ok, imported = pcall(
+                AssetService.LoadAssetAsync, AssetService, assetId
+            )
+            if ok and imported and imported:IsA("Model") then
+                local clean = OriginalMeshScenery.sanitize(imported)
+                imported:Destroy()
+                if not clean then
+                    warn("Original 3D scenery rejected: invalid geometry", assetName)
                     return
                 end
+                templates[assetName] = clean
+                refreshArena()
+                return
+            end
 
-                -- Do not retain unexpected or partly loaded Instances.
-                if ok and typeof(imported) == "Instance" then
-                    imported:Destroy()
-                end
-                if attempt == 3 then
-                    warn("Original 3D scenery failed after 3 attempts:",
-                        assetName, imported)
-                    return
-                end
-                task.wait(attempt * 3)
+            if ok and typeof(imported) == "Instance" then
+                imported:Destroy()
+            end
+            if attempt == 3 then
+                warn("Original 3D scenery failed after 3 attempts:",
+                    assetName, imported)
+                return
+            end
+            task.wait(attempt * 3)
+        end
+    end
+
+    -- Cosmetic loading must never delay joining or the round lifecycle.
+    -- Exactly two worker coroutines means no more than two concurrent
+    -- original-asset network operations per running server.
+    for _, lane in ipairs(OriginalMeshScenery.loadLanes()) do
+        task.spawn(function()
+            for _, assetName in ipairs(lane) do
+                loadOne(assetName)
             end
         end)
     end

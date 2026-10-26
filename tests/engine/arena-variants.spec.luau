@@ -10,6 +10,39 @@ local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 
 describe("Arena variants", function()
+    it("loads all six approved 3D packages through two bounded independent lanes", function()
+        local lanes = OriginalMeshScenery.loadLanes()
+        expect(#lanes).toBe(2)
+        expect(#lanes[1]).toBe(3)
+        expect(#lanes[2]).toBe(3)
+        local expected = {
+            reactor_spire = true,
+            service_crane = true,
+            perimeter_gate = true,
+            plasma_foundry = true,
+            sky_transit_exchange = true,
+            orbital_halo_array = true,
+        }
+        local count = 0
+        for _, lane in ipairs(lanes) do
+            local previous = {}
+            for _, name in ipairs(lane) do
+                expect(expected[name]).toBe(true)
+                expect(previous[name] == nil).toBe(true)
+                previous[name] = true
+                expected[name] = nil
+                count += 1
+            end
+        end
+        expect(count).toBe(6)
+        expect(next(expected)).toBe(nil)
+        -- The request list is never shared with caller-mutated arrays.
+        lanes[1][1] = "unapproved_package"
+        local fresh = OriginalMeshScenery.loadLanes()
+        expect(fresh[1][1]).toBe("reactor_spire")
+        expect(fresh[2][1]).toBe("service_crane")
+    end)
+
     it("recovers safe imported 3D after late maps, arena swaps and full map rebuilds", function()
         local world = Instance.new("Folder")
         world.Name = "TransientWorldTest"
