@@ -57,4 +57,18 @@ function ImpactPulseRules.richDetailAllowed(tier, reduced, distance,
     return concurrent <= limit and distance <= range
 end
 
+
+-- Peripheral impacts remain perceptible through the existing compact
+-- pressure wave, warning glyph and audio. On touch GPUs, reserve the
+-- expensive smoke, PointLight and extra fragment sculpture for explosions
+-- actually near the camera or visibly inside its viewport. A near blast
+-- keeps full impact feedback even if the player briefly looks away.
+function ImpactPulseRules.richDetailVisible(touchDevice, distance, inViewport)
+    if touchDevice ~= true or inViewport ~= false then
+        return true
+    end
+    return type(distance) == "number" and distance == distance
+        and distance >= 0 and distance <= 28
+end
+
 return ImpactPulseRules
