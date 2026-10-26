@@ -497,6 +497,18 @@ describe("Bomb Rain visible 3D charge anticipation", function()
         local reducedLate = BombChargeRules.recipe(1, 1, 0.95, true)
         expect(reducedEarly.Transform).toBe(reducedLate.Transform)
         expect(reducedEarly.Size).toBe(reducedLate.Size)
+        expect(reducedEarly.Color).toBe(reducedLate.Color)
+
+        -- The actual countdown drives one sculpted bomb's heat rather than
+        -- spawning a competing second bomb model in the warning renderer.
+        expect(early.Color ~= late.Color).toBe(true)
+        local darkFissure = BombChargeRules.recipe(4, 5, 0, false)
+        local chargedFissure = BombChargeRules.recipe(4, 5, 1, false)
+        expect(chargedFissure.Transparency < darkFissure.Transparency)
+            .toBe(true)
+        local earlyFuse = BombChargeRules.recipe(5, 5, 0, false)
+        local lateFuse = BombChargeRules.recipe(5, 5, 1, false)
+        expect(earlyFuse.Color ~= lateFuse.Color).toBe(true)
     end)
 
     it("creates no-collision client parts and reuses them during a warning", function()
