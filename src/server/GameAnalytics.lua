@@ -37,6 +37,25 @@ function GameAnalytics.modeLabel(solo)
     return solo and "Solo" or "Multiplayer"
 end
 
+local ARRIVAL_PHASES = {
+    waiting = true, intermission = true, ready = true,
+    round = true, result = true,
+}
+-- Low-cardinality cohorts compare early exits by the server phase at join.
+function GameAnalytics.arrivalPhase(phase)
+    return ARRIVAL_PHASES[phase] and phase or "unknown"
+end
+function GameAnalytics.phaseRemainingBand(seconds)
+    local n = tonumber(seconds)
+    if not n or n ~= n or n < 0 or n == math.huge or n == -math.huge then
+        return "Unknown"
+    elseif n <= 10 then return "0-10s"
+    elseif n <= 30 then return "11-30s"
+    elseif n <= 60 then return "31-60s"
+    end
+    return "61s+"
+end
+
 function GameAnalytics.custom(player, eventName, value, a, b, c)
     if not player then return false end
 
@@ -116,15 +135,20 @@ end
 -- Measure the first-session funnel from the authoritative server clock. Each
 -- checkpoint fires once per visit, even if the same remote/action is retried.
 -- This lets us distinguish joining, seeing the HUD, voting and truly playing.
-function GameAnalytics.sessionStarted(player, playerCount)
+function GameAnalytics.sessionStarted(player, playerCount, currentPhase, phaseSeconds)
     local solo = (tonumber(playerCount) or 1) <= 1
+    local arrival = GameAnalytics.arrivalPhase(currentPhase)
     sessions[player.UserId] = {
         startedAt = os.clock(),
         rounds = 0,
         joinedSolo = solo,
+        arrivalPhase = arrival,
     }
 
-    GameAnalytics.custom(player, "SessionStarted", 1, "Mode:" .. GameAnalytics.modeLabel(solo))
+    GameAnalytics.custom(player, "SessionStarted", 1,
+        "Mode:" .. GameAnalytics.modeLabel(solo),
+        "Arrival:" .. arrival,
+        "PhaseRemaining:" .. GameAnalytics.phaseRemainingBand(phaseSeconds))
     GameAnalytics.onboarding(player, 1, "Joined", solo)
 end
 
@@ -139,7 +163,8 @@ local function markFirstSessionMilestone(player, key, eventName, solo)
         eventName,
         math.max(0, reachedAt - session.startedAt),
         "Mode:" .. GameAnalytics.modeLabel(solo),
-        "Device:" .. tostring(player:GetAttribute("ClientDeviceClass") or "Unknown")
+        "Device:" .. tostring(player:GetAttribute("ClientDeviceClass") or "Unknown"),
+        "Arrival:" .. tostring(session.arrivalPhase or "unknown")
     )
 end
 
@@ -160,7 +185,9 @@ function GameAnalytics.sessionEnded(player)
         player,
         "SessionDurationSeconds",
         duration,
-        "Rounds:" .. tostring(session.rounds)
+        "Rounds:" .. tostring(session.rounds),
+        "Arrival:" .. tostring(session.arrivalPhase or "unknown"),
+        "FirstRound:" .. tostring(session.firstRoundAt ~= nil)
     )
 
     -- Attribute drop-off without guessing why the player left. Roblox
