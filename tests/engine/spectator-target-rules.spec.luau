@@ -17,6 +17,19 @@ describe("Spectator target stability", function()
         expect(Rules.isSpectating(false, false, false)).toBe(false)
     end)
 
+    it("only allows a genuine late-join spectator to practice in the lobby", function()
+        expect(Rules.canPractice(true, false, false)).toBe(true)
+        expect(Rules.canPractice(true, nil, false)).toBe(true)
+        expect(Rules.canPractice(true, true, false)).toBe(false)
+        expect(Rules.canPractice(true, true, true)).toBe(false)
+        expect(Rules.canPractice(true, false, true)).toBe(false)
+        expect(Rules.canPractice(false, false, false)).toBe(false)
+        expect(Rules.canPractice(nil, false, false)).toBe(false)
+        -- Unknown/partially replicated eliminated state is not a
+        -- trustworthy invitation to exit the spectator camera.
+        expect(Rules.canPractice(true, false, nil)).toBe(false)
+    end)
+
     it("retains the spectator camera across malformed RoundState packets", function()
         expect(Rules.roundActive({phase = "round", seconds = 15})).toBe(true)
         expect(Rules.roundActive({phase = "ready"})).toBe(false)
