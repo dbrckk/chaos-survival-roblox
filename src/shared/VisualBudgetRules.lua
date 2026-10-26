@@ -127,6 +127,14 @@ local function collectCharacterPolish(model, metrics)
     for _, part in ipairs(model:GetChildren()) do
         if part:IsA("BasePart") then
             for _, effect in ipairs(part:GetChildren()) do
+                -- FrozenArmorKit belongs to the character torso rather than
+                -- a root Workspace VFX folder. Count every local crystal so
+                -- auto-quality telemetry cannot silently underreport parts.
+                if (part.Name == "UpperTorso" or part.Name == "Torso")
+                    and effect:IsA("WedgePart")
+                    and string.match(effect.Name, "^LocalFreezeArmorFacet%d+$") then
+                    metrics.Parts += 1
+                end
                 if effect.Name == "ChaosCharacterPolishLight"
                     and effect:IsA("PointLight") then
                     metrics.Lights += 1
