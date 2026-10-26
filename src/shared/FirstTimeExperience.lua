@@ -10,6 +10,22 @@ function FirstTimeExperience.effectiveGames(savedGames, sessionRoundsPlayed)
     return math.max(saved, played)
 end
 
+-- Present the optional, once-per-session starter guide even if Roblox
+-- DataStore is temporarily unavailable. Read-only guidance is safe during
+-- a degraded session: never treat this fallback as purchase, XP, reward or
+-- entitlement authority, and never obscure a live round or voting card.
+function FirstTimeExperience.shouldOfferIntro(dataLoaded, dataLoadFailed,
+        savedGames, sessionRoundsPlayed, state)
+    if dataLoaded ~= true and dataLoadFailed ~= true then return false end
+    if FirstTimeExperience.effectiveGames(savedGames, sessionRoundsPlayed) > 0 then
+        return false
+    end
+    if type(state) ~= "table" then return false end
+    local phase = state.phase
+    return (phase == "waiting" or phase == "intermission")
+        and not FirstTimeExperience.hasVoteOptions(state)
+end
+
 function FirstTimeExperience.isFirstRound(games)
     return math.max(0, math.floor(tonumber(games) or 0)) <= 1
 end
