@@ -1,6 +1,9 @@
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local FrozenArmorKit = require(script.Parent.FrozenArmorKit)
 
 local player = Players.LocalPlayer
 
@@ -24,6 +27,12 @@ local activeHighlight = nil
 local humanoidConnection = nil
 local characterToken = 0
 local tintTween = nil
+local activeArmor = {}
+
+local function clearArmor()
+    FrozenArmorKit.clear(activeArmor)
+    activeArmor = {}
+end
 
 local function clearHighlight()
     if activeHighlight and activeHighlight.Parent then
@@ -34,6 +43,7 @@ end
 
 local function applyFrozenVisual(character, frozen)
     clearHighlight()
+    clearArmor()
 
     if frozen and character and character.Parent then
         local highlight = Instance.new("Highlight")
@@ -46,6 +56,12 @@ local function applyFrozenVisual(character, frozen)
         highlight.OutlineTransparency = 0.22
         highlight.Parent = character
         activeHighlight = highlight
+        -- Never allocate crystal pieces outside a frozen local avatar.
+        -- R6 and R15 use the same torso-relative non-colliding recipe.
+        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        activeArmor = FrozenArmorKit.build(
+            character, tier.Name, player:GetAttribute("ReduceMotion") == true
+        )
     end
 
     if tintTween then
@@ -99,6 +115,23 @@ local function bindCharacter(character)
     humanoidConnection = humanoid:GetAttributeChangedSignal("ChaosFrozen"):Connect(refresh)
     refresh()
 end
+
+local function refreshArmorQuality()
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if character and humanoid and humanoid:GetAttribute("ChaosFrozen") == true then
+        -- Retain the current tint/highlight and rebuild only the tiered
+        -- crystal geometry, rather than restarting the freeze feedback tween.
+        clearArmor()
+        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        activeArmor = FrozenArmorKit.build(
+            character, tier.Name, player:GetAttribute("ReduceMotion") == true
+        )
+    end
+end
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshArmorQuality)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshArmorQuality)
 
 player.CharacterAdded:Connect(bindCharacter)
 player.CharacterRemoving:Connect(function(character)
