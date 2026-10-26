@@ -13,6 +13,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local ViewportRules = require(ReplicatedStorage.Shared.VisualViewportRules)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 
 local player = Players.LocalPlayer
@@ -119,9 +120,20 @@ local function renderRuntimeTelemetry()
         entry = "RESCUED"
     end
 
+    -- Count server-mounted originals separately from those actually
+    -- replicated to this Android client. On Low graphics the same models
+    -- can be present but intentionally hidden by scenery LOD.
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local server3D, client3D, complete3D = SceneryLodRules.original3DAudit(arena)
+    local source = server3D and tostring(server3D) or "-"
+    local received = client3D and tostring(client3D) or "-"
+    local inconsistent = server3D ~= nil
+        and (server3D ~= 4 or not complete3D or client3D ~= 4)
     telemetry.Text = performanceSummary
-        .. string.format("\nENTRY %s   SAVE %s", entry, save)
-    telemetry.TextColor3 = (performanceWarning or entry == "BLOCKED"
+        .. string.format("\nENTRY %s   SAVE %s   3D S%s/C%s",
+            entry, save, source, received)
+    telemetry.TextColor3 = (inconsistent or performanceWarning or entry == "BLOCKED"
         or save == "CONFLICT" or save == "TEMP" or save == "RETRY")
         and UITheme.Colors.Orange or UITheme.Colors.Text
 end
