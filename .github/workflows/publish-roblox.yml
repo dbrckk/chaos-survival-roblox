@@ -126,9 +126,12 @@ jobs:
       - name: Build place
         shell: bash
         run: |
+          set -euo pipefail
+          python3 tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel PRODUCTION
           mkdir -p build
           rojo build default.project.json -o build/ChaosSurvival.rbxlx
           test -s build/ChaosSurvival.rbxlx
+          grep -Fq "$GITHUB_SHA" build/ChaosSurvival.rbxlx
 
       - name: Publish place to Roblox
         shell: bash
