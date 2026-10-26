@@ -114,6 +114,58 @@ describe("Hazard warning metadata", function()
     end)
 end)
 
+describe("Android Double Chaos floating warning label priorities", function()
+    it("keeps global jump/freeze cues and the nearest strikes within tier budgets", function()
+        local tracked = {}
+        local function warning(name, kind, distance)
+            local part = Instance.new("Part")
+            part.Name = name
+            part.Anchored = true
+            part.Position = Vector3.new(distance, 2, 0)
+            part.Parent = workspace
+            tracked[part] = {kind = kind}
+            return part
+        end
+        -- The distant global actions must remain readable even when a
+        -- Double Chaos burst generates many closer local impact warnings.
+        local farBomb = warning("BombWarning", "Bomb", 100)
+        local bomb30 = warning("BombWarning", "Bomb", 30)
+        local bomb10 = warning("BombWarning", "Bomb", 10)
+        local bomb20 = warning("BombWarning", "Bomb", 20)
+        local meteor = warning("MeteorWarning", "Meteor", 40)
+        local freeze = warning("FreezeWarning", "Freeze", 120)
+        local shock = warning("JumpShockWarning", "JumpShock", 145)
+        local viewer = Vector3.new(0, 2, 0)
+        expect(WarningSignatures.labelBudget("Low")).toBe(3)
+        expect(WarningSignatures.labelBudget("Medium")).toBe(4)
+        expect(WarningSignatures.labelBudget("High")).toBe(5)
+
+        local low = WarningSignatures.selectLabelWarnings(tracked, viewer, "Low")
+        expect(low[shock]).toBe(true)
+        expect(low[freeze]).toBe(true)
+        expect(low[bomb10]).toBe(true)
+        expect(low[bomb20]).toBe(nil)
+        local medium = WarningSignatures.selectLabelWarnings(tracked, viewer, "Medium")
+        expect(medium[bomb20]).toBe(true)
+        expect(medium[bomb30]).toBe(nil)
+        local high = WarningSignatures.selectLabelWarnings(tracked, viewer, "High")
+        expect(high[bomb30]).toBe(true)
+        expect(high[meteor]).toBe(nil)
+        expect(high[farBomb]).toBe(nil)
+
+        shock:Destroy()
+        local afterShock = WarningSignatures.selectLabelWarnings(tracked, viewer, "Low")
+        expect(afterShock[shock]).toBe(nil)
+        expect(afterShock[bomb20]).toBe(true)
+        local invalid = WarningSignatures.selectLabelWarnings(tracked, nil, "High")
+        expect(next(invalid)).toBe(nil)
+
+        for part in pairs(tracked) do
+            part:Destroy()
+        end
+    end)
+end)
+
 describe("Premium frost and electric warning silhouettes", function()
     it("restyles one platform highlight when automatic mobile quality changes", function()
         local style = WarningSignatures.platformHighlightStyle
