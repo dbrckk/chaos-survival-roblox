@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local TornadoBoundaryRules = require(ReplicatedStorage.Shared.TornadoBoundaryRules)
+local TornadoVisualBindRules = require(ReplicatedStorage.Shared.TornadoVisualBindRules)
 
 local player = Players.LocalPlayer
 local activeModel = nil
@@ -26,6 +27,14 @@ local loopStarted = false
 local ensureRenderLoop
 
 local bindToken = 0
+local modelConnections = {}
+
+local function clearModelWatchers()
+    for _, connection in ipairs(modelConnections) do
+        connection:Disconnect()
+    end
+    table.clear(modelConnections)
+end
 
 local function clearDebris()
     for _, state in ipairs(debris) do
@@ -193,13 +202,17 @@ local function buildDebris()
 end
 
 local function bind(model)
-    if not model or model.Name ~= "RoundTornado" then
+    if not model or not model:IsA("Model")
+        or model.Name ~= "RoundTornado" or model.Parent ~= workspace then
         return
     end
+    if model == activeModel then return end
 
     bindToken += 1
     local token = bindToken
+    clearModelWatchers()
     activeModel = model
+    dangerZone, lower, middle, upper, light = nil, nil, nil, nil, nil
     pulseClock = 0
     clearDebris()
     clearBoundary()
@@ -208,24 +221,50 @@ local function bind(model)
         ensureRenderLoop()
     end
 
-    task.spawn(function()
-        local nextDangerZone = model:WaitForChild("DangerZone", 2)
-        local nextLower = model:WaitForChild("LowerFunnel", 2)
-        local nextMiddle = model:WaitForChild("MiddleFunnel", 2)
-        local nextUpper = model:WaitForChild("UpperFunnel", 2)
-
+    -- Event-driven rather than WaitForChild(..., 2): network streaming can
+    -- deliver the final funnel part after the old timeout. Never permanently
+    -- lose its hazard warning or leave stale geometry during a partial load.
+    local function reconcile()
         if token ~= bindToken or activeModel ~= model or not model.Parent then
             return
         end
+        local parts = TornadoVisualBindRules.read(model)
+        if not parts then
+            if dangerZone or lower or middle or upper then
+                dangerZone, lower, middle, upper, light = nil, nil, nil, nil, nil
+                clearDebris()
+                clearBoundary()
+            end
+            return
+        end
 
-        dangerZone = nextDangerZone
-        lower = nextLower
-        middle = nextMiddle
-        upper = nextUpper
-        light = nextMiddle and nextMiddle:FindFirstChild("TornadoGlow") or nil
+        if dangerZone == parts.DangerZone and lower == parts.LowerFunnel
+            and middle == parts.MiddleFunnel and upper == parts.UpperFunnel then
+            -- The PointLight can be replicated AFTER the visual Parts.
+            if not light or not light.Parent then
+                light = parts.MiddleFunnel:FindFirstChild("TornadoGlow")
+            end
+            return
+        end
+
+        clearDebris()
+        clearBoundary()
+        dangerZone = parts.DangerZone
+        lower = parts.LowerFunnel
+        middle = parts.MiddleFunnel
+        upper = parts.UpperFunnel
+        light = middle:FindFirstChild("TornadoGlow")
         buildDebris()
         buildBoundary()
-    end)
+    end
+
+    table.insert(modelConnections, model.DescendantAdded:Connect(reconcile))
+    table.insert(modelConnections, model.DescendantRemoving:Connect(function()
+        -- DescendantRemoving fires before Parent is cleared. Reconcile on the
+        -- next scheduler turn, checking the still-current bind generation.
+        task.defer(reconcile)
+    end))
+    reconcile()
 end
 
 local function findExisting()
@@ -244,6 +283,7 @@ end)
 workspace.ChildRemoved:Connect(function(child)
     if child == activeModel then
         bindToken += 1
+        clearModelWatchers()
         activeModel = nil
         dangerZone = nil
         lower = nil
