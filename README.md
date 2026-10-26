@@ -22,6 +22,8 @@ The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources liv
 
 **Automatic preview without any Roblox credentials:** every successful `main` **Build Validation** now archives `chaos-survival-3d-previews` alongside the playable place candidate. This artifact contains the three original glTF models and a `manifest.json` with source commit, byte sizes, triangle counts and SHA-256 checksums. Download it from the successful GitHub Actions run's **Artifacts** section on Android. This is **not** a Roblox upload or in-game integration.
 
+**Android-only private staging:** use the manual-only [Remote Roblox Studio workflow](.github/workflows/roblox-remote-studio.yml) on `main` to prepare a signed official Windows Studio session and create a **new private test experience**, not another Place in the public universe. See the [Android private-staging guide](docs/ANDROID_PRIVATE_STAGING_REMOTE.md) for the minimum Android actions and the target-isolation rules. This does not publish the game automatically or certify gameplay.
+
 ## Implemented
 
 - Runtime-generated lobby and arena
