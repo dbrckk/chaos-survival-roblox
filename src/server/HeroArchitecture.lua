@@ -53,6 +53,16 @@ function HeroArchitecture.build(decor, base, variantId, theme)
     local function beam(name, a, b, thickness, color)
         return bar(model, origin, name, a, b, thickness, color or metal)
     end
+    -- Single restrained glazing on WEST-facing camera-visible facades.
+    -- The skyline sits east of the arena: -X faces point toward players.
+    -- No oversized transparent planes, new lights, or physics ownership.
+    local function glazing(name, size, position)
+        local window = piece(name, size, position, trim)
+        window.Material = Enum.Material.Glass
+        window.Transparency = 0.22
+        window.Reflectance = 0.03
+        return window
+    end
     local function halo(prefix, y, radius, sides, depth)
         for i = 0, sides - 1 do
             local first = TWO_PI * i / sides
@@ -73,8 +83,10 @@ function HeroArchitecture.build(decor, base, variantId, theme)
             Vector3.new(0, 0.9, 0))
         piece("CentralPylon", Vector3.new(5.8, 25, 5.8),
             Vector3.new(0, 13, 0), metal)
-        piece("RecessedControl", Vector3.new(5, 5, 5),
-            Vector3.new(0, 19.5, -3.3), shadow)
+        piece("RecessedControl", Vector3.new(1.1, 5, 5),
+            Vector3.new(-3.15, 19.5, 0), shadow)
+        glazing("StormReadout", Vector3.new(0.15, 2.6, 3.2),
+            Vector3.new(-3.75, 19.7, 0))
         beam("TripodEast", Vector3.new(7, 1.9, 4),
             Vector3.new(0, 16, 0), 1.05)
         beam("TripodWest", Vector3.new(-7, 1.9, 4),
@@ -82,12 +94,14 @@ function HeroArchitecture.build(decor, base, variantId, theme)
         beam("TripodRear", Vector3.new(0, 1.9, -6.4),
             Vector3.new(0, 16, 0), 1.05)
         halo("StormDishArc", 26, 6.5, 12, -0.7)
-        piece("DishHub", Vector3.new(4.3, 4.3, 4.3),
+        local dishHub = piece("DishHub", Vector3.new(4.3, 4.3, 4.3),
             Vector3.new(0, 26, 0), trim)
+        dishHub.Shape = Enum.PartType.Ball
         piece("LightningRod", Vector3.new(0.55, 7.2, 0.55),
             Vector3.new(0, 35.1, 0), metal)
-        piece("SensorTip", Vector3.new(1.1, 1.1, 1.1),
+        local tip = piece("SensorTip", Vector3.new(1.1, 1.1, 1.1),
             Vector3.new(0, 39.1, 0), trim)
+        tip.Shape = Enum.PartType.Ball
     elseif variantId == "Towers" then
         -- Suspension gantry with a long canopy and TWO genuine hanging
         -- transit cabins; no playable collision or mobile per-frame work.
@@ -128,9 +142,12 @@ function HeroArchitecture.build(decor, base, variantId, theme)
             piece("SuspendedTransitCabin" .. tostring(side),
                 Vector3.new(6.4, 3.7, 4),
                 Vector3.new(x, 13, 0))
-            piece("CabinWindow" .. tostring(side),
+            glazing("CabinWindow" .. tostring(side),
                 Vector3.new(5.3, 1.25, 0.13),
-                Vector3.new(x, 13.4, -2.08), trim)
+                Vector3.new(x, 13.4, -2.08))
+            glazing("CabinWestObservation" .. tostring(side),
+                Vector3.new(0.13, 1.55, 3.05),
+                Vector3.new(x - 3.27, 13.4, 0))
         end
     elseif variantId == "Crossroads" then
         -- Four-way exchange with a raised routing hub, shoring and a
@@ -139,6 +156,8 @@ function HeroArchitecture.build(decor, base, variantId, theme)
             Vector3.new(0, 0.9, 0))
         piece("ExchangeCore", Vector3.new(9, 19, 9),
             Vector3.new(0, 10.5, 0), shadow)
+        glazing("ExchangeDataPane", Vector3.new(0.13, 4.2, 5.1),
+            Vector3.new(-4.6, 14, 0))
         piece("NorthConduit", Vector3.new(4.5, 2, 24),
             Vector3.new(0, 19.2, 0), metal)
         piece("EastConduit", Vector3.new(28, 2, 4.5),
@@ -170,12 +189,15 @@ function HeroArchitecture.build(decor, base, variantId, theme)
             Vector3.new(0, 1, 0))
         piece("ReactorFoot", Vector3.new(9.5, 10, 8),
             Vector3.new(0, 7, 0), shadow)
+        glazing("ReactorServicePane", Vector3.new(0.13, 3.1, 2.8),
+            Vector3.new(-4.85, 7.5, 0))
         piece("ReactorUpperMantle", Vector3.new(5.8, 8, 6.2),
             Vector3.new(0, 16, 0), metal)
         halo("OrbitalOuterArc", 24, 12, 12, 0)
         halo("OrbitalInnerArc", 24, 8.6, 10, -1.8)
-        piece("HaloLens", Vector3.new(4.9, 4.9, 4.9),
+        local lens = piece("HaloLens", Vector3.new(4.9, 4.9, 4.9),
             Vector3.new(0, 24, -2.2), trim)
+        lens.Shape = Enum.PartType.Ball
         for side = -1, 1, 2 do
             beam("RadialStabilizer" .. tostring(side),
                 Vector3.new(0, 2, side * 6),

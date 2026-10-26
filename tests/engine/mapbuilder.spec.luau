@@ -518,6 +518,50 @@ describe("Chaos Survival engine", function()
         expect(counts.Crossroads ~= counts.Orbital).toBe(true)
     end)
 
+    it("adds camera-facing 3D facade glazing without unsafe neon or mobile bloat", function()
+        local windows = {
+            Classic = "StormReadout",
+            Towers = "CabinWestObservation-1",
+            Crossroads = "ExchangeDataPane",
+            Orbital = "ReactorServicePane",
+        }
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local decor = root:FindFirstChild("Arena"):FindFirstChild("Decor")
+            local hero = decor:FindFirstChild("ArenaHeroArchitecture3D")
+            local facade = hero and hero:FindFirstChild(windows[id])
+            expect(facade ~= nil and facade:IsA("BasePart")).toBe(true)
+            if facade and facade:IsA("BasePart") then
+                expect(facade.Material).toBe(Enum.Material.Glass)
+                expect(facade.Size.X < 0.2).toBe(true)
+                expect(facade.Transparency > 0.15).toBe(true)
+                expect(facade.Transparency < 0.35).toBe(true)
+                expect(facade.Anchored).toBe(true)
+                expect(facade.CanCollide).toBe(false)
+                expect(facade.CanTouch).toBe(false)
+                expect(facade.CanQuery).toBe(false)
+                expect(facade.CastShadow).toBe(false)
+                -- These 3D landmarks are east of the arena; front lenses
+                -- must face west (-X), not disappear around the far side.
+                local originX = root:FindFirstChild("Arena"):FindFirstChild("Base")
+                    .Position.X + ArenaVariants.get(id).BaseSize.X * 0.5 + 68
+                expect(facade.Position.X < originX - 2).toBe(true)
+            end
+            if id == "Classic" then
+                expect(hero:FindFirstChild("DishHub").Shape)
+                    .toBe(Enum.PartType.Ball)
+            elseif id == "Orbital" then
+                expect(hero:FindFirstChild("HaloLens").Shape)
+                    .toBe(Enum.PartType.Ball)
+            elseif id == "Towers" then
+                expect(hero:FindFirstChild("CabinWestObservation1") ~= nil)
+                    .toBe(true)
+            end
+            expect(#hero:GetChildren() <= 32).toBe(true)
+            root:Destroy()
+        end
+    end)
+
     it("gives every arena its own southern 3D skyline without unsafe collision", function()
         local signatures = {
             Classic = "ObservatoryBridge",
