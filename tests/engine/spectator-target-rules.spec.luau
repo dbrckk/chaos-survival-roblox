@@ -19,7 +19,7 @@ describe("Spectator target stability", function()
 
     it("only allows a genuine late-join spectator to practice in the lobby", function()
         expect(Rules.canPractice(true, false, false)).toBe(true)
-        expect(Rules.canPractice(true, nil, false)).toBe(true)
+        expect(Rules.canPractice(true, nil, false)).toBe(false)
         expect(Rules.canPractice(true, true, false)).toBe(false)
         expect(Rules.canPractice(true, true, true)).toBe(false)
         expect(Rules.canPractice(true, false, true)).toBe(false)
