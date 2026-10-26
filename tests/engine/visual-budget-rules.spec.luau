@@ -13,6 +13,31 @@ local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit"
 local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 
 describe("visual budget rules", function()
+    it("accounts for locally welded frost facets on player torsos", function()
+        local root = Instance.new("Folder")
+        local character = Instance.new("Model")
+        character.Name = "VisualBudgetFreezeTest"
+        character.Parent = root
+        local torso = Instance.new("Part")
+        torso.Name = "UpperTorso"
+        torso.Parent = character
+
+        local localFacet = Instance.new("WedgePart")
+        localFacet.Name = "LocalFreezeArmorFacet1"
+        localFacet.Parent = torso
+        local unrelated = Instance.new("WedgePart")
+        unrelated.Name = "AvatarCosmetic"
+        unrelated.Parent = torso
+
+        local metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(1)
+        expect(metrics.Effects).toBe(0)
+        localFacet:Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(0)
+        root:Destroy()
+    end)
+
     it("hides only original off-map hero geometry on low-end Android", function()
         local root = Instance.new("Folder")
         local generated = Instance.new("Folder")
