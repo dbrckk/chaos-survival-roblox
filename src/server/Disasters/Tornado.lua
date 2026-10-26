@@ -11,6 +11,37 @@ function D.verticalExposure(height)
     return math.clamp((28 - altitude) / 16, 0, 1)
 end
 
+-- Veteran-only movement creates route decisions without surprising first-time
+-- players, introducing a second cyclone or expanding the 42-stud force zone.
+-- Use absolute round time so latency never changes the storm's trajectory.
+function D.driftOffset(ctx, now)
+    if type(ctx) ~= "table" or ctx.EnableTornadoDrift ~= true then
+        return Vector3.zero
+    end
+
+    local started = tonumber(ctx.RoundStartedAt)
+    local duration = tonumber(ctx.RoundSeconds)
+    local instant = tonumber(now)
+    if not started or not duration or not instant
+        or started ~= started or duration ~= duration or instant ~= instant
+        or math.abs(started) == math.huge
+        or math.abs(duration) == math.huge
+        or math.abs(instant) == math.huge
+        or duration < 28 then
+        return Vector3.zero
+    end
+
+    local elapsed = math.clamp(instant - started, 0, duration)
+    -- Give players a stable first eight seconds to find high ground.
+    local moving = math.max(0, elapsed - 8)
+    local arrival = math.clamp(moving / 3.5, 0, 1)
+    return Vector3.new(
+        11 * math.sin(moving * 0.19) * arrival,
+        0,
+        9 * math.sin(moving * 0.13) * arrival
+    )
+end
+
 local function tornadoPart(parent, name, size, position, color, transparency)
     local part = Instance.new("Part")
     part.Name = name
@@ -106,8 +137,18 @@ function D.start(ctx)
     light.Shadows = false
     light.Parent = middle
 
+    local visualCenter = center
     task.spawn(function()
         while ctx.Active() do
+            local offset = D.driftOffset(ctx, os.clock())
+            local currentCenter = center + offset
+            if currentCenter ~= visualCenter then
+                visualCenter = currentCenter
+                dangerZone.Position = currentCenter + Vector3.new(0, 1.12, 0)
+                lower.Position = currentCenter + Vector3.new(0, 3, 0)
+                middle.Position = currentCenter + Vector3.new(0, 7, 0)
+                upper.Position = currentCenter + Vector3.new(0, 12, 0)
+            end
             local intensity = ctx.Intensity and ctx.Intensity() or 1
             for _, player in ipairs(ctx.HazardContestants or ctx.Contestants or {}) do
                 -- A round can end while an expensive contact callback runs.
@@ -120,7 +161,7 @@ function D.start(ctx)
                 local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                 if root and hum and hum.Health > 0 then
                     local impulse, strength = D.impulseAt(
-                        root.Position, center, force, intensity
+                        root.Position, currentCenter, force, intensity
                     )
                     if impulse then
                         root.AssemblyLinearVelocity = MovementSafety.addImpulse(
