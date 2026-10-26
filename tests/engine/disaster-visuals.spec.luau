@@ -1247,4 +1247,32 @@ describe("Double Chaos touch-device impact detail limits", function()
 end)
 
 
+
+describe("Camera-aware mobile impact overdraw budget", function()
+    it("retains nearby danger feedback and onscreen detail, culls distant offscreen GPU layers", function()
+        local visible = ImpactPulseRules.richDetailVisible
+        expect(visible(true, 28, false)).toBe(true)
+        expect(visible(true, 28.1, false)).toBe(false)
+        expect(visible(true, 90, false)).toBe(false)
+        expect(visible(true, 90, true)).toBe(true)
+        -- Camera missing during client replication: do not invent an
+        -- invisible impact or suppress the existing warning cues.
+        expect(visible(true, 90, nil)).toBe(true)
+        expect(visible(false, 90, false)).toBe(true)
+        expect(visible(false, math.huge, false)).toBe(true)
+        expect(visible(true, math.huge, false)).toBe(false)
+        expect(visible(true, 0 / 0, false)).toBe(false)
+        expect(visible(true, -1, false)).toBe(false)
+
+        -- Preserve existing concurrency and distance budgeting in view.
+        local rich = ImpactPulseRules.richDetailAllowed
+        expect(rich("High", false, 90, 1, true)
+            and visible(true, 90, true)).toBe(true)
+        expect(rich("High", false, 90, 1, true)
+            and visible(true, 90, false)).toBe(false)
+        expect(rich("High", false, 12, 1, true)
+            and visible(true, 12, false)).toBe(true)
+    end)
+end)
+
 return nil
