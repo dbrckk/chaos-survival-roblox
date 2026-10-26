@@ -106,6 +106,38 @@ describe("Adaptive VFX quality", function()
         ornament.Position = Vector3.new(4567, 500, 6429)
         ornament.Parent = decor
 
+        -- Walkable routes are intentionally not faded; their colliders
+        -- must not prevent a real structural support from being found.
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = arena
+        local route = Instance.new("Part")
+        route.Name = "RegularJumpRoute"
+        route.Anchored = true
+        route.Size = Vector3.new(4, 5, 1)
+        route.Position = Vector3.new(4567, 500, 6427)
+        route.Parent = platforms
+        local bridge = Instance.new("Part")
+        bridge.Name = "Skybridge"
+        bridge:SetAttribute("ChaosSkybridge", true)
+        bridge.Anchored = true
+        bridge.Size = Vector3.new(4, 5, 1)
+        bridge.Position = Vector3.new(4567, 500, 6418)
+        bridge.Parent = platforms
+
+        -- Moving hazard mechanics also must not steal the first hit.
+        for _, folderName in ipairs({"Mechanics", "Spawns", "EntryGuides"}) do
+            local folder = Instance.new("Folder")
+            folder.Name = folderName
+            folder.Parent = arena
+            local blocker = Instance.new("Part")
+            blocker.Name = "Foreground" .. folderName
+            blocker.Anchored = true
+            blocker.Size = Vector3.new(4, 5, 1)
+            blocker.Position = Vector3.new(4567, 500, 6428)
+            blocker.Parent = folder
+        end
+
         local otherAvatar = Instance.new("Part")
         otherAvatar.Name = "RemoteAvatarOccluder"
         otherAvatar.Anchored = true
@@ -116,11 +148,13 @@ describe("Adaptive VFX quality", function()
         local params = CameraOcclusionRules.arenaRaycastParams(arena, base)
         expect(params.FilterType).toBe(Enum.RaycastFilterType.Include)
         expect(params.IgnoreWater).toBe(true)
-        expect(#params.FilterDescendantsInstances).toBe(1)
+        expect(#params.FilterDescendantsInstances).toBe(2)
         expect(params.FilterDescendantsInstances[1]).toBe(support)
-        -- A bright foreground ornament must never steal the hit from
-        -- the opaque arena support behind it.
+        expect(params.FilterDescendantsInstances[2]).toBe(bridge)
+        -- Scenery and actual jumping routes must never steal the hit
+        -- from the opaque arena support behind them.
         expect(params.FilterDescendantsInstances[1] ~= decor).toBe(true)
+        expect(params.FilterDescendantsInstances[1] ~= route).toBe(true)
         local hit = workspace:Raycast(
             Vector3.new(4567, 500, 6432), Vector3.new(0, 0, -12), params
         )
