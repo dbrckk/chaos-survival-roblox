@@ -10,6 +10,27 @@ describe("Game analytics helpers", function()
         expect(GameAnalytics.modeLabel(false)).toBe("Multiplayer")
     end)
 
+    it("uses bounded server-observed entry phases and time bands for retention", function()
+        local a = GameAnalytics
+        for _, phase in ipairs({"waiting", "intermission", "ready", "round", "result"}) do
+            expect(a.arrivalPhase(phase)).toBe(phase)
+        end
+        for _, bad in ipairs({"ROUND", "unknown phase", 7, {}, true}) do
+            expect(a.arrivalPhase(bad)).toBe("unknown")
+        end
+        expect(a.arrivalPhase(nil)).toBe("unknown")
+        expect(a.phaseRemainingBand(0)).toBe("0-10s")
+        expect(a.phaseRemainingBand(10)).toBe("0-10s")
+        expect(a.phaseRemainingBand(11)).toBe("11-30s")
+        expect(a.phaseRemainingBand(30)).toBe("11-30s")
+        expect(a.phaseRemainingBand(31)).toBe("31-60s")
+        expect(a.phaseRemainingBand(60)).toBe("31-60s")
+        expect(a.phaseRemainingBand(61)).toBe("61s+")
+        expect(a.phaseRemainingBand(-1)).toBe("Unknown")
+        expect(a.phaseRemainingBand(math.huge)).toBe("Unknown")
+        expect(a.phaseRemainingBand(nil)).toBe("Unknown")
+    end)
+
     it("creates at most three valid custom analytics fields", function()
         local values = GameAnalytics.fields("Mode:Solo", "Result:Survived", "Disaster:Meteors")
         local count = 0
