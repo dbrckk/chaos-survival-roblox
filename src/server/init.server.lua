@@ -818,7 +818,10 @@ Players.PlayerAdded:Connect(function(player)
     player:SetAttribute("RoundParticipant", false)
     player:SetAttribute("RoundEliminated", false)
     player:SetAttribute("SessionCrewRounds", 0)
-    GameAnalytics.sessionStarted(player, #Players:GetPlayers())
+    GameAnalytics.sessionStarted(
+        player, #Players:GetPlayers(),
+        lastRoundState.phase, lastRoundState.seconds
+    )
     processInviteJoinData(player)
 end)
 
@@ -833,7 +836,10 @@ for _, player in ipairs(Players:GetPlayers()) do
     if player:GetAttribute("SessionCrewRounds") == nil then
         player:SetAttribute("SessionCrewRounds", 0)
     end
-    GameAnalytics.sessionStarted(player, #Players:GetPlayers())
+    GameAnalytics.sessionStarted(
+        player, #Players:GetPlayers(),
+        lastRoundState.phase, lastRoundState.seconds
+    )
     processInviteJoinData(player)
 end
 
