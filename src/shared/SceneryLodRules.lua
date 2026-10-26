@@ -81,4 +81,41 @@ function SceneryLodRules.visible(tier, distance, lowDistance, mediumDistance,
     return distance <= cutoff
 end
 
+-- Staging diagnostics distinguish successful server mounts from what has
+-- actually replicated to one Roblox client. Neither number proves that
+-- textures rendered or the device met its frame-time budget.
+-- No mesh inspection, descendants traversal, network calls or frame loop.
+function SceneryLodRules.original3DAudit(arena)
+    if typeof(arena) ~= "Instance" then
+        return nil, nil, false
+    end
+    local serverCount = arena:GetAttribute("Original3DSceneryCount")
+    if type(serverCount) ~= "number" or serverCount ~= serverCount
+        or serverCount < 0 or serverCount > 100
+        or serverCount == math.huge then
+        serverCount = nil
+    else
+        serverCount = math.floor(serverCount)
+    end
+
+    local replicated = 0
+    local decor = arena:FindFirstChild("Decor")
+    local folder = decor and decor:FindFirstChild("Original3DScenery")
+    if folder and folder:IsA("Folder") then
+        for _, model in ipairs(folder:GetChildren()) do
+            -- Ignore unrelated cosmetics and empty streamed model shells.
+            -- Only approved, already-sanitized source packages qualify.
+            if model:IsA("Model")
+                and model:GetAttribute("CosmeticOnly") == true
+                and type(model:GetAttribute("Original3DAssetId")) == "number"
+                and model:FindFirstChildWhichIsA("BasePart") then
+                replicated += 1
+            end
+        end
+    end
+
+    return serverCount, replicated,
+        arena:GetAttribute("Original3DSceneryComplete") == true
+end
+
 return SceneryLodRules
