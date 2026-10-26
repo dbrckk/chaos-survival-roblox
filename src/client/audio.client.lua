@@ -439,7 +439,9 @@ end
 
 setMix(lastPhase or "waiting", lastOverdrive, lastFinalRush)
 
-local lastSpatialImpactAt = 0
+-- A separate gate per blast family prevents simultaneous Double Chaos
+-- meteor/bomb impacts from erasing each other's sound signatures.
+local lastSpatialImpactByKind = {}
 local function playSpatialImpact(payload)
     if type(payload) ~= "table" then return end
     local position = payload.position
@@ -464,8 +466,11 @@ local function playSpatialImpact(payload)
     if not plan then return end
 
     local now = os.clock()
-    if now - lastSpatialImpactAt < 0.10 then return end
-    lastSpatialImpactAt = now
+    local permitted, overlapScale = ImpactAudioRules.gate(
+        kind, now, lastSpatialImpactByKind, tierName
+    )
+    if not permitted then return end
+    lastSpatialImpactByKind[kind] = now
 
     local holder = Instance.new("Part")
     holder.Name = "LocalSpatialImpactAudio"
@@ -488,7 +493,8 @@ local function playSpatialImpact(payload)
         sound.SoundId = layerDefinition.SoundId
         sound.Volume = math.clamp(
             (layerDefinition.Volume or 0.3)
-                * math.max(0, volumeScale or 1) * plan.VolumeScale,
+                * math.max(0, volumeScale or 1)
+                * plan.VolumeScale * overlapScale,
             0, 0.7
         )
         sound.PlaybackSpeed = math.clamp(
