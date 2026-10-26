@@ -110,9 +110,9 @@ jobs:
           staging_safe = bool(staging_universe and staging_place
                               and staging_universe != expected["ROBLOX_UNIVERSE_ID"]
                               and staging_place != expected["ROBLOX_PLACE_ID"])
-          row("Isolated private staging", "PASS" if staging_safe else "CHECK",
+          row("Isolated private staging", "PASS" if staging_safe else "BLOCKED",
               "Separate target IDs configured" if staging_safe else
-              "Missing or colliding staging IDs: full Studio/Android certification still blocked")
+              "Missing or colliding staging IDs: full Studio/Android certification is blocked")
 
           try:
               query = urllib.parse.urlencode({
