@@ -988,4 +988,33 @@ function AISurvivorRules.reactionReady(firstSeenAt, now, reactionSeconds)
     return elapsed + 1e-6 >= required
 end
 
+
+-- The storm's outer glass/ribbon pieces are cosmetic; bots read the
+-- authoritative replicated LowerFunnel, which follows veteran drift.
+-- Missing or pre-spawn visuals fall back to the arena center.
+function AISurvivorRules.tornadoCenter(model, fallback)
+    if typeof(fallback) ~= "Vector3" then return nil end
+    if typeof(model) ~= "Instance" or not model:IsA("Model") then
+        return fallback
+    end
+    local lower = model:FindFirstChild("LowerFunnel")
+    if not lower or not lower:IsA("BasePart") then return fallback end
+    return lower.Position - Vector3.new(0, 3, 0)
+end
+
+-- Respect the tornado's 42-stud horizontal force radius and its upper
+-- counterplay band. The personality risk factor keeps daring survivors
+-- somewhat closer to the funnel than cautious ones.
+function AISurvivorRules.tornadoRouteScore(position, center, risk)
+    if typeof(position) ~= "Vector3" or typeof(center) ~= "Vector3" then
+        return 0
+    end
+    local r = math.clamp(tonumber(risk) or 0.5, 0, 1)
+    local dx, dz = position.X - center.X, position.Z - center.Z
+    local distance = math.sqrt(dx * dx + dz * dz)
+    local highGround = math.clamp((position.Y - center.Y - 12) / 16, 0, 1)
+    return math.min(distance, 44) * (0.72 - r * 0.16)
+        + highGround * (8 - r * 4)
+end
+
 return AISurvivorRules
