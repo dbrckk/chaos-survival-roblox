@@ -5,6 +5,8 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local HazardWarning = require("../../src/server/HazardWarning")
 local Localization = require("../../src/shared/CoreLocalization")
 local WarningSignatures = require("../../src/shared/HazardWarningSignatureRules")
+local BombChargeRules = require("../../src/shared/BombChargeRules")
+local BombChargeKit = require("../../src/client/BombChargeKit")
 
 describe("Hazard warning metadata", function()
     it("publishes bounded animation metadata on warning parts", function()
@@ -454,5 +456,119 @@ describe("Premium frost and electric warning silhouettes", function()
         expect(before.Transparency < after.Transparency).toBe(true)
     end)
 end)
+
+describe("Bomb Rain visible 3D charge anticipation", function()
+    it("budgets a legible charge silhouette for all Android tiers", function()
+        for _, case in ipairs({
+            {tier = "Low", count = 1, distance = 65, maxActive = 2},
+            {tier = "Medium", count = 3, distance = 100, maxActive = 3},
+            {tier = "High", count = 5, distance = 125, maxActive = 4},
+        }) do
+            local profile = BombChargeRules.profile(case.tier, false)
+            expect(profile.Count).toBe(case.count)
+            expect(profile.MaxDistance).toBe(case.distance)
+            expect(profile.MaxActive).toBe(case.maxActive)
+            expect(BombChargeRules.profile(case.tier, true).Count).toBe(1)
+            expect(BombChargeRules.visible(case.tier, case.distance, 1)).toBe(true)
+            expect(BombChargeRules.visible(case.tier, case.distance + 1, 1)).toBe(false)
+            expect(BombChargeRules.visible(case.tier, 2, case.maxActive)).toBe(true)
+            expect(BombChargeRules.visible(case.tier, 2, case.maxActive + 1)).toBe(false)
+        end
+        expect(BombChargeRules.visible("High", 0 / 0, 1)).toBe(false)
+        expect(BombChargeRules.visible("High", math.huge, 1)).toBe(false)
+        expect(BombChargeRules.visible("High", -1, 1)).toBe(false)
+        expect(BombChargeRules.visible("High", 4, 0)).toBe(false)
+        expect(BombChargeRules.visible("High", 4, 1.5)).toBe(false)
+        expect(BombChargeRules.recipe(1, 5, 0 / 0, false)).toBe(nil)
+        expect(BombChargeRules.recipe(1, 6, 0.5, false)).toBe(nil)
+        expect(BombChargeRules.recipe(6, 5, 0.5, false)).toBe(nil)
+        expect(BombChargeRules.recipe(1, 5, 0.5, false).Shape).toBe("Ball")
+        expect(BombChargeRules.recipe(2, 5, 0.5, false).Shape).toBe("Wedge")
+        expect(BombChargeRules.recipe(4, 5, 0.5, false).Material)
+            .toBe(Enum.Material.Neon)
+    end)
+
+    it("moves toward the actual detonation time but stays static for reduced motion", function()
+        local early = BombChargeRules.recipe(1, 5, 0, false)
+        local late = BombChargeRules.recipe(1, 5, 0.95, false)
+        expect(early.Transform.Position.Y > late.Transform.Position.Y + 4)
+            .toBe(true)
+        local reducedEarly = BombChargeRules.recipe(1, 1, 0, true)
+        local reducedLate = BombChargeRules.recipe(1, 1, 0.95, true)
+        expect(reducedEarly.Transform).toBe(reducedLate.Transform)
+        expect(reducedEarly.Size).toBe(reducedLate.Size)
+    end)
+
+    it("creates no-collision client parts and reuses them during a warning", function()
+        local marker = Instance.new("Part")
+        marker.Name = "BombWarning"
+        marker.Anchored = true
+        marker.Position = Vector3.new(16, 2, -9)
+        marker.Parent = workspace
+
+        local folder = Instance.new("Folder")
+        folder.Parent = workspace
+        local viewer = Vector3.new(16, 6, -9)
+        local state = {parts = {}}
+        BombChargeKit.sync(
+            state, marker, folder, "High", false, 0, viewer, 1, BombChargeRules
+        )
+        expect(#state.parts).toBe(5)
+        expect(#folder:GetChildren()).toBe(5)
+        local core = state.parts[1]
+        local originalHeight = core.Position.Y
+        expect(core.Shape).toBe(Enum.PartType.Ball)
+        for _, piece in ipairs(state.parts) do
+            expect(piece.Anchored).toBe(true)
+            expect(piece.CanCollide).toBe(false)
+            expect(piece.CanTouch).toBe(false)
+            expect(piece.CanQuery).toBe(false)
+            expect(piece.CastShadow).toBe(false)
+            expect(piece.Parent).toBe(folder)
+        end
+        BombChargeKit.sync(
+            state, marker, folder, "High", false, 0.85, viewer, 1, BombChargeRules
+        )
+        expect(state.parts[1]).toBe(core)
+        expect(core.Position.Y < originalHeight - 3).toBe(true)
+        expect(#folder:GetChildren()).toBe(5)
+
+        BombChargeKit.sync(
+            state, marker, folder, "Low", false, 0.86, viewer, 1, BombChargeRules
+        )
+        expect(#state.parts).toBe(1)
+        expect(state.parts[1]).toBe(core)
+        expect(#folder:GetChildren()).toBe(1)
+        BombChargeKit.sync(
+            state, marker, folder, "High", true, 0.1, viewer, 1, BombChargeRules
+        )
+        local reducedPose = core.CFrame
+        BombChargeKit.sync(
+            state, marker, folder, "High", true, 0.9, viewer, 1, BombChargeRules
+        )
+        expect(core.CFrame).toBe(reducedPose)
+
+        BombChargeKit.sync(
+            state, marker, folder, "High", false, 0.9,
+            Vector3.new(1000, 0, 0), 1, BombChargeRules
+        )
+        expect(#state.parts).toBe(0)
+        expect(#folder:GetChildren()).toBe(0)
+        BombChargeKit.sync(
+            state, marker, folder, "Medium", false, 0.4, viewer, 1, BombChargeRules
+        )
+        expect(#state.parts).toBe(3)
+        marker:Destroy()
+        BombChargeKit.sync(
+            state, marker, folder, "Medium", false, 0.4, viewer, 1, BombChargeRules
+        )
+        expect(#state.parts).toBe(0)
+        expect(#folder:GetChildren()).toBe(0)
+        BombChargeKit.clear(state)
+        BombChargeKit.clear(nil)
+        folder:Destroy()
+    end)
+end)
+
 
 return nil
