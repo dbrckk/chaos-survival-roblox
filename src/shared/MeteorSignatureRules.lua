@@ -64,6 +64,53 @@ local STYLES = {
     },
 }
 
+-- Faceted meteor cladding uses only 1/3/5 short-lived local wedges.
+-- A dark basalt shell with sparse ember fissures is visually distinct from
+-- Bomb Rain without increasing server replication or client particle count.
+local CORE_COUNTS = {Low = 1, Medium = 3, High = 5}
+
+function MeteorSignatureRules.corePlateCount(tier)
+    return CORE_COUNTS[tostring(tier or "")] or 0
+end
+
+function MeteorSignatureRules.corePlate(index, count, diameter)
+    if type(index) ~= "number" or index % 1 ~= 0 or index < 1
+        or type(count) ~= "number" or count % 1 ~= 0
+        or count < 1 or count > 5 or index > count
+        or type(diameter) ~= "number" or diameter ~= diameter
+        or math.abs(diameter) == math.huge or diameter <= 0 then
+        return nil
+    end
+
+    local scale = math.clamp(diameter, 2, 12)
+    local angle = (index - 1) * math.pi * 2 / count + 0.31
+    local isEmber = count >= 3 and index == 3
+    local radius = scale * (isEmber and 0.28 or 0.29)
+    local transform = CFrame.new(
+        math.cos(angle) * radius,
+        scale * (index % 2 == 0 and -0.055 or 0.045),
+        math.sin(angle) * radius
+    ) * CFrame.Angles(
+        math.rad(index % 2 == 0 and -26 or 22),
+        -angle,
+        math.rad((index * 37) % 55 - 27)
+    )
+
+    return {
+        Transform = transform,
+        Size = Vector3.new(
+            scale * (isEmber and 0.17 or 0.38),
+            scale * (isEmber and 0.07 or 0.26),
+            scale * (isEmber and 0.23 or 0.30)
+        ),
+        Material = isEmber and Enum.Material.Neon or Enum.Material.Basalt,
+        Color = isEmber and Color3.fromRGB(255, 124, 62)
+            or (index % 2 == 0 and Color3.fromRGB(96, 64, 62)
+                or Color3.fromRGB(124, 83, 70)),
+        Transparency = isEmber and 0.16 or 0,
+    }
+end
+
 function MeteorSignatureRules.trailStyle(tier, reducedMotion)
     if reducedMotion == true then return nil end
     return STYLES[tostring(tier or "")]
