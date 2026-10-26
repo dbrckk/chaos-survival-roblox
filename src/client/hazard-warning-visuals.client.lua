@@ -46,16 +46,11 @@ local function bombViewerPosition()
 end
 
 local function syncBombCharge(part, state, progress, reduced, slot, viewerPosition)
-    if state.kind ~= "Bomb" or not state.bombCharge then return false end
-    local distance = viewerPosition and (viewerPosition - part.Position).Magnitude
-    local withinDistance = distance and BombChargeRules.visible(
-        currentTier.Name, distance, 1
-    )
+    if state.kind ~= "Bomb" or not state.bombCharge then return end
     BombChargeKit.sync(
         state.bombCharge, part, localDecor, currentTier.Name,
         reduced, progress, viewerPosition, slot, BombChargeRules
     )
-    return withinDistance == true
 end
 
 local function destroySignature(state)
@@ -127,7 +122,9 @@ local function ensureRenderLoop()
             local serverNow = workspace:GetServerTimeNow()
             local reduced = player:GetAttribute("ReduceMotion") == true
             local bombViewer = bombViewerPosition()
-            local chargeSlot = 0
+            local chargeSlots = BombChargeRules.nearestSlots(
+                tracked, bombViewer, currentTier.Name
+            )
             for part, state in pairs(tracked) do
                 if not part.Parent then
                     if state.ring then
@@ -192,10 +189,12 @@ local function ensureRenderLoop()
                 end
 
                 if state.kind == "Bomb" then
-                    local candidateSlot = chargeSlot + 1
-                    if syncBombCharge(part, state, alpha, reduced, candidateSlot, bombViewer) then
-                        chargeSlot = candidateSlot
-                    end
+                    -- Zero clears a distant or displaced charge immediately.
+                    -- The server warning/ring persists on every bomb.
+                    syncBombCharge(
+                        part, state, alpha, reduced,
+                        chargeSlots[part] or 0, bombViewer
+                    )
                 end
 
                 if state.label and state.label.Parent then

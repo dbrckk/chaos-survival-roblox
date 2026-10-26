@@ -489,6 +489,47 @@ describe("Bomb Rain visible 3D charge anticipation", function()
             .toBe(Enum.Material.Neon)
     end)
 
+    it("prioritizes nearby bombs over insertion order on limited Android slots", function()
+        local observed = Vector3.new(0, 6, 0)
+        local sources = {}
+        local tracked = {}
+        for _, distance in ipairs({95, 48, 12, 77, 25}) do
+            local marker = Instance.new("Part")
+            marker.Name = "BombWarning"
+            marker.Position = Vector3.new(distance, 6, 0)
+            marker.Parent = workspace
+            tracked[marker] = {kind = "Bomb"}
+            sources[distance] = marker
+        end
+        local high = BombChargeRules.nearestSlots(tracked, observed, "High")
+        expect(high[sources[12]]).toBe(1)
+        expect(high[sources[25]]).toBe(2)
+        expect(high[sources[48]]).toBe(3)
+        expect(high[sources[77]]).toBe(4)
+        expect(high[sources[95]]).toBe(nil)
+
+        local low = BombChargeRules.nearestSlots(tracked, observed, "Low")
+        expect(low[sources[12]]).toBe(1)
+        expect(low[sources[25]]).toBe(2)
+        expect(low[sources[48]]).toBe(nil)
+        expect(low[sources[77]]).toBe(nil)
+        local invalidViewer = BombChargeRules.nearestSlots(tracked, nil, "High")
+        expect(invalidViewer[sources[12]]).toBe(nil)
+
+        -- A meteor marker may be closer, but must never steal a bomb slot.
+        local meteor = Instance.new("Part")
+        meteor.Name = "MeteorWarning"
+        meteor.Position = observed
+        meteor.Parent = workspace
+        tracked[meteor] = {kind = "Meteor"}
+        local withMeteor = BombChargeRules.nearestSlots(tracked, observed, "High")
+        expect(withMeteor[sources[12]]).toBe(1)
+        expect(withMeteor[meteor]).toBe(nil)
+
+        for _, marker in pairs(sources) do marker:Destroy() end
+        meteor:Destroy()
+    end)
+
     it("moves toward the actual detonation time but stays static for reduced motion", function()
         local early = BombChargeRules.recipe(1, 5, 0, false)
         local late = BombChargeRules.recipe(1, 5, 0.95, false)
