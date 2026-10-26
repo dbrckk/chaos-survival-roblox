@@ -7,6 +7,7 @@ local Localization = require("../../src/shared/CoreLocalization")
 local WarningSignatures = require("../../src/shared/HazardWarningSignatureRules")
 local BombChargeRules = require("../../src/shared/BombChargeRules")
 local BombChargeKit = require("../../src/client/BombChargeKit")
+local FrozenArmorKit = require("../../src/client/FrozenArmorKit")
 
 describe("Hazard warning metadata", function()
     it("publishes bounded animation metadata on warning parts", function()
@@ -570,5 +571,62 @@ describe("Bomb Rain visible 3D charge anticipation", function()
     end)
 end)
 
+
+describe("Tiered frost armor for frozen R6 and R15 avatars", function()
+    it("clamps local ice facets to phone budgets and accessibility mode", function()
+        expect(FrozenArmorKit.count("Low", false)).toBe(1)
+        expect(FrozenArmorKit.count("Medium", false)).toBe(3)
+        expect(FrozenArmorKit.count("High", false)).toBe(5)
+        expect(FrozenArmorKit.count("High", true)).toBe(1)
+        expect(FrozenArmorKit.count("Unknown", false)).toBe(0)
+        expect(#FrozenArmorKit.build(nil, "High", false)).toBe(0)
+        FrozenArmorKit.clear(nil)
+    end)
+
+    it("uses non-physical torso welds on both avatar rigs and cleans up", function()
+        for _, torsoName in ipairs({"UpperTorso", "Torso"}) do
+            local character = Instance.new("Model")
+            character.Name = "FrozenAvatarTest"
+            character.Parent = workspace
+            local torso = Instance.new("Part")
+            torso.Name = torsoName
+            torso.Anchored = true
+            torso.Size = Vector3.new(2, 2.3, 1)
+            torso.CFrame = CFrame.new(13, 20, -8)
+            torso.Parent = character
+
+            local high = FrozenArmorKit.build(character, "High", false)
+            expect(#high).toBe(5)
+            expect(#torso:GetChildren()).toBe(5)
+            for _, facet in ipairs(high) do
+                expect(facet:IsA("WedgePart")).toBe(true)
+                expect(facet.Parent).toBe(torso)
+                expect(facet.Anchored).toBe(false)
+                expect(facet.Massless).toBe(true)
+                expect(facet.CanCollide).toBe(false)
+                expect(facet.CanTouch).toBe(false)
+                expect(facet.CanQuery).toBe(false)
+                expect(facet.CastShadow).toBe(false)
+                local weld = facet:FindFirstChildOfClass("WeldConstraint")
+                expect(weld ~= nil).toBe(true)
+                if weld then
+                    expect(weld.Part0).toBe(torso)
+                    expect(weld.Part1).toBe(facet)
+                end
+            end
+
+            FrozenArmorKit.clear(high)
+            expect(#torso:GetChildren()).toBe(0)
+            local mobile = FrozenArmorKit.build(character, "Medium", false)
+            expect(#mobile).toBe(3)
+            FrozenArmorKit.clear(mobile)
+            local reduced = FrozenArmorKit.build(character, "High", true)
+            expect(#reduced).toBe(1)
+            FrozenArmorKit.clear(reduced)
+            expect(#torso:GetChildren()).toBe(0)
+            character:Destroy()
+        end
+    end)
+end)
 
 return nil
