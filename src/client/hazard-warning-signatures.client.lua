@@ -130,6 +130,10 @@ local function meteorSignature(warning, group, tierName, reduced, remaining, pro
     end
 end
 
+-- BombChargeKit (hazard-warning-visuals) is the sole 3D bomb renderer.
+-- This system owns ONLY the readable ground target cross. Previously both
+-- scripts spawned falling spherical bombs, producing double silhouettes and
+-- up to five unnecessary duplicate Parts per concurrent warning on Android.
 local function bombSignature(warning, group, tierName, reduced, remaining, progress)
     local center = warning.Position
     local length = tierName == "Low" and 6.5 or 8.5
@@ -156,61 +160,6 @@ local function bombSignature(warning, group, tierName, reduced, remaining, progr
                     Transparency = 0.76,
                 }
             ):Play()
-        end
-    end
-
-    -- A static bomb silhouette is safer for ReduceMotion. Otherwise the
-    -- visual body starts at the correct position for the remaining warning.
-    local startHeight = reduced and 4.2
-        or (tierName == "Low" and 18 or 26)
-            + (1.7 - (tierName == "Low" and 18 or 26)) * progress
-    local body = localPart(
-        group, "Part", "BombIncomingBody",
-        Vector3.new(2.2, 2.2, 2.2),
-        CFrame.new(center + Vector3.new(0, startHeight, 0)),
-        Color3.fromRGB(62, 66, 76), reduced and 0.12 or 0.06
-    )
-    body.Shape = Enum.PartType.Ball
-    body.Material = Enum.Material.Metal
-
-    if not reduced then
-        TweenService:Create(body,
-            TweenInfo.new(remaining, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            {Position = center + Vector3.new(0, 1.7, 0), Transparency = 0.02}
-        ):Play()
-    end
-
-    if tierName ~= "Low" and not reduced then
-        local band = localPart(
-            group, "Part", "BombIncomingBand",
-            Vector3.new(2.55, 0.28, 2.55), body.CFrame,
-            Color3.fromRGB(255, 72, 58), 0.30 + progress * 0.38
-        )
-        band.Shape = Enum.PartType.Cylinder
-        band.CFrame = band.CFrame * CFrame.Angles(0, 0, math.rad(90))
-        TweenService:Create(band,
-            TweenInfo.new(remaining, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            {Position = center + Vector3.new(0, 1.7, 0), Transparency = 0.68}
-        ):Play()
-
-        if tierName == "High" then
-            for side = -1, 1, 2 do
-                local offset = Vector3.new(side * 1.25, 0.25, 0)
-                local fin = localPart(
-                    group, "WedgePart", "BombPressureFin",
-                    Vector3.new(0.16, 1.0, 1.1),
-                    CFrame.new(center + offset + Vector3.new(0, startHeight, 0))
-                        * CFrame.Angles(0, 0, math.rad(side * 30)),
-                    Color3.fromRGB(255, 116, 78), 0.34
-                )
-                TweenService:Create(fin,
-                    TweenInfo.new(remaining, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-                    {
-                        Position = center + offset + Vector3.new(0, 1.7, 0),
-                        Transparency = 0.76,
-                    }
-                ):Play()
-            end
         end
     end
 end
