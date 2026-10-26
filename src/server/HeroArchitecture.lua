@@ -207,7 +207,46 @@ function HeroArchitecture.build(decor, base, variantId, theme)
     local pieces = #model:GetChildren()
     assert(pieces >= 14 and pieces <= 32,
         "Hero 3D art exceeds guarded Android part budget")
+
+    -- Genuine low-poly skyline composition for slow Android devices:
+    -- retain only the identifying mass and selected ring segments. The
+    -- main models remain server-replicated static art; the existing client
+    -- LOD owner chooses which rendered pieces to show locally.
+    local essentials = {
+        Classic = {
+            "ObservatoryFoundation", "CentralPylon", "DishHub",
+            "LightningRod", "StormDishArc1", "StormDishArc3",
+            "StormDishArc5", "StormDishArc7", "StormDishArc9",
+            "StormDishArc11",
+        },
+        Towers = {
+            "TransitFoundation", "GantryLegA-1", "GantryLegA1",
+            "SkyTransitMainBeam", "SkyTransitOverhang",
+            "SuspendedTransitCabin-1", "SuspendedTransitCabin1",
+            "SkyTransitSignalCrown",
+        },
+        Crossroads = {
+            "SwitchyardFoundation", "ExchangeCore", "NorthConduit",
+            "EastConduit", "DataTower", "ExchangeDataPane",
+        },
+        Orbital = {
+            "MagneticPlatform", "ReactorFoot", "ReactorUpperMantle",
+            "HaloLens", "OrbitalOuterArc1", "OrbitalOuterArc3",
+            "OrbitalOuterArc5", "OrbitalOuterArc7", "OrbitalOuterArc9",
+            "OrbitalOuterArc11",
+        },
+    }
+    local kept = essentials[variantId] or essentials.Classic
+    assert(#kept >= 5 and #kept < pieces,
+        "Hero low-tier silhouette budget must be smaller than full model")
+    for _, name in ipairs(kept) do
+        local item = model:FindFirstChild(name)
+        assert(item and item:IsA("BasePart"),
+            "Hero low-tier silhouette missing authored geometry: " .. name)
+        item:SetAttribute("HeroSilhouetteEssential", true)
+    end
     model:SetAttribute("HeroArchitectureParts", pieces)
+    model:SetAttribute("HeroEssentialParts", #kept)
     model.Parent = decor
     return model
 end
