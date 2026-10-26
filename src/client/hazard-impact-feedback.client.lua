@@ -131,6 +131,21 @@ local function renderBurst(payload)
         return
     end
     activeBursts += 1
+    -- One projection at impact time, never a camera/render loop. Allow
+    -- a 10% viewport margin so partly visible blast clouds keep detail.
+    -- Missing cameras do not suppress critical nearby feedback.
+    local inViewport = nil
+    if camera and UserInputService.TouchEnabled then
+        local point = camera:WorldToViewportPoint(position)
+        local viewport = camera.ViewportSize
+        local margin = math.max(40, math.min(viewport.X, viewport.Y) * 0.10)
+        inViewport = point.Z > 0
+            and point.X >= -margin and point.X <= viewport.X + margin
+            and point.Y >= -margin and point.Y <= viewport.Y + margin
+    end
+    local foregroundDetail = ImpactPulseRules.richDetailVisible(
+        UserInputService.TouchEnabled, viewerDistance, inViewport
+    )
     -- Preserve rich impact sculpture for nearby play. Distant bursts still
     -- retain their authoritative warnings and a compact visual pulse, but
     -- skip high-overdraw smoke, bloom light and additional shrapnel. This
@@ -138,16 +153,17 @@ local function renderBurst(payload)
     -- First 2/3 concurrent bursts receive full authored lights/smoke on
     -- touch devices. Every further overlapping impact still gets its
     -- compact flash, radial pressure cue and material-aware aftermath.
-    local richDetail = ImpactPulseRules.richDetailAllowed(
+    local richDetail = foregroundDetail and ImpactPulseRules.richDetailAllowed(
         profile.Name, reduced, viewerDistance, activeBursts,
         UserInputService.TouchEnabled
     )
     local materialStyle, groundFrame = sampleGround(
         position, color, kind, profile, reduced
     )
-    materialStyle.Count = ImpactMaterialRules.chipCount(
-        profile.Name, reduced, viewerDistance, activeBursts
-    )
+    materialStyle.Count = foregroundDetail
+        and ImpactMaterialRules.chipCount(
+            profile.Name, reduced, viewerDistance, activeBursts
+        ) or 0
     local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
     local targetDiameter = radius * 2
         * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
