@@ -56,7 +56,12 @@ function BombChargeRules.recipe(index, count, progress, reduced)
     if index == 1 then
         part.Shape = "Ball"
         part.Size = Vector3.new(2.15, 2.15, 2.15)
-        part.Color = Color3.fromRGB(93, 48, 57)
+        -- A single armored core now owns the complete falling silhouette.
+        -- Heat rises visibly as the server countdown approaches detonation;
+        -- no extra Part, particle emitter, flash or render loop is allocated.
+        part.Color = Color3.fromRGB(85, 48, 59):Lerp(
+            Color3.fromRGB(205, 67, 55), reduced == true and 0.35 or alpha * 0.67
+        )
         part.Transform = frame
     elseif index <= 3 then
         local side = index == 2 and -1 or 1
@@ -69,13 +74,16 @@ function BombChargeRules.recipe(index, count, progress, reduced)
     elseif index == 4 then
         part.Material = Enum.Material.Neon
         part.Color = Color3.fromRGB(255, 71, 53)
-        part.Transparency = reduced == true and 0.17
-            or (0.13 + 0.24 * (1 - alpha))
+        -- The fissure grows brighter (lower transparency) as impact nears.
+        part.Transparency = reduced == true and 0.28
+            or (0.41 - 0.30 * alpha)
         part.Size = Vector3.new(0.19, 1.43, 0.22)
         part.Transform = frame * CFrame.new(0, 0, -1.09)
     else
         part.Material = Enum.Material.Neon
-        part.Color = Color3.fromRGB(255, 172, 99)
+        part.Color = Color3.fromRGB(255, 172, 99):Lerp(
+            Color3.fromRGB(255, 242, 183), reduced == true and 0.35 or alpha
+        )
         part.Size = Vector3.new(0.34, 0.34, 0.34)
         part.Transform = frame * CFrame.new(0, 1.13, 0)
     end
