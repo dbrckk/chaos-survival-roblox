@@ -80,8 +80,15 @@ local function applyAvatarFades(selected)
             -- arrive. Disconnect when the avatar stops blocking the lens
             -- or is removed, avoiding a permanent per-avatar subscription.
             avatarConnections[model] = model.DescendantAdded:Connect(function(descendant)
-                if fadedAvatars[model] == originals then
-                    fadeDescendant(originals, descendant)
+                if fadedAvatars[model] ~= originals then return end
+                fadeDescendant(originals, descendant)
+                -- Some streamed accessories arrive already populated.
+                -- Scan only that NEW accessory (once), never the entire
+                -- avatar on every camera tick.
+                if descendant:IsA("Accessory") or descendant:IsA("Model") then
+                    for _, piece in ipairs(descendant:GetDescendants()) do
+                        fadeDescendant(originals, piece)
+                    end
                 end
             end)
         end
