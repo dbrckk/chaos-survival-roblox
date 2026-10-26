@@ -127,6 +127,89 @@ function OriginalMeshScenery.safeExteriorPosition(base, placement, size, gap)
         base.Position.Z + placement.sign * outward)
 end
 
+-- Imported skyline packages should not visibly intersect the many authored
+-- native buildings already present outside the map. Compare oriented boxes
+-- conservatively in X/Z, then search nearby lateral skyline slots before
+-- pushing an import much farther from the player's camera. Zero physics.
+local function planarRadii(cf, size)
+    return (
+        math.abs(cf.RightVector.X) * size.X
+        + math.abs(cf.UpVector.X) * size.Y
+        + math.abs(cf.LookVector.X) * size.Z
+    ) * 0.5, (
+        math.abs(cf.RightVector.Z) * size.X
+        + math.abs(cf.UpVector.Z) * size.Y
+        + math.abs(cf.LookVector.Z) * size.Z
+    ) * 0.5
+end
+
+function OriginalMeshScenery.unobstructedExteriorPosition(base, placement,
+        size, decor)
+    local starting = OriginalMeshScenery.safeExteriorPosition(
+        base, placement, size
+    )
+    if not starting or not decor or not decor:IsA("Instance") then
+        return starting
+    end
+    local obstructions = {}
+    for _, child in ipairs(decor:GetChildren()) do
+        -- Only judge genuine, server-authored exterior Models; skip
+        -- physical platforms, floor markings, imported asset buckets and
+        -- near-floor signals which must not influence skyline composition.
+        if child:IsA("Model")
+            and child:GetAttribute("ChaosDistantScenery") == true then
+            local ok, cf, bounds = pcall(function()
+                return child:GetBoundingBox()
+            end)
+            if ok and cf and bounds then
+                local rx, rz = planarRadii(cf, bounds)
+                obstructions[#obstructions + 1] = {
+                    x = cf.Position.X, z = cf.Position.Z,
+                    rx = rx, rz = rz,
+                }
+            end
+        end
+    end
+    if #obstructions == 0 then return starting end
+
+    local yaw = tonumber(placement.yaw) or 0
+    local radiusX = (math.abs(math.cos(yaw)) * size.X
+        + math.abs(math.sin(yaw)) * size.Z) * 0.5
+    local radiusZ = (math.abs(math.cos(yaw)) * size.Z
+        + math.abs(math.sin(yaw)) * size.X) * 0.5
+    local isEastWest = placement.axis == "X"
+    -- Lateral alternatives first: maintain strong apparent scale and
+    -- prevent obscured details behind native skyline architecture.
+    for _, farther in ipairs({0, 12, 24, 42, 64, 96, 132}) do
+        for _, lateral in ipairs({0, -24, 24, -42, 42, -58, 58,
+                -76, 76, -98, 98}) do
+            local candidate = if isEastWest then Vector3.new(
+                starting.X + placement.sign * farther,
+                starting.Y, starting.Z + lateral
+            ) else Vector3.new(
+                starting.X + lateral, starting.Y,
+                starting.Z + placement.sign * farther
+            )
+            local clear = true
+            for _, bound in ipairs(obstructions) do
+                if math.abs(candidate.X - bound.x)
+                    < radiusX + bound.rx + 4
+                    and math.abs(candidate.Z - bound.z)
+                    < radiusZ + bound.rz + 4 then
+                    clear = false
+                    break
+                end
+            end
+            if clear then
+                return candidate
+            end
+        end
+    end
+    -- Never introduce a visually interpenetrating import merely to reach
+    -- a target count. Existing collision-free native skyline is retained.
+    return nil
+end
+
 -- No instances from a remote model become live until fully sanitized.
 -- Keep only the geometry and its inert surface appearance. Never retain a
 -- loaded Script, ModuleScript, LocalScript, constraints, sounds or effects.
@@ -282,8 +365,8 @@ function OriginalMeshScenery.mount(arena, templates)
                     clone:SetAttribute("Original3DAssetId", placement.assetId)
                     clone:SetAttribute("CosmeticOnly", true)
                     local bbox, size = clone:GetBoundingBox()
-                    local safePosition = OriginalMeshScenery.safeExteriorPosition(
-                        base, placement, size
+                    local safePosition = OriginalMeshScenery.unobstructedExteriorPosition(
+                        base, placement, size, decor
                     )
                     if not safePosition then
                         clone:Destroy()
