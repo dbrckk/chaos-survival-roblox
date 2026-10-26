@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local TornadoBoundaryRules = require(ReplicatedStorage.Shared.TornadoBoundaryRules)
 
 local player = Players.LocalPlayer
 local activeModel = nil
@@ -14,6 +15,12 @@ local debrisFolder = nil
 local debris = {}
 local boundaryFolder = nil
 local boundarySegments = {}
+local boundaryFrames = {}
+local boundaryOrigin = nil
+local boundaryCenter = nil
+local boundaryAlpha = nil
+local lastDebrisCenter = nil
+local lastDebrisClock = nil
 local pulseClock = 0
 local loopStarted = false
 local ensureRenderLoop
@@ -28,6 +35,8 @@ local function clearDebris()
         end
     end
     table.clear(debris)
+    lastDebrisCenter = nil
+    lastDebrisClock = nil
     if debrisFolder and debrisFolder.Parent then
         debrisFolder:Destroy()
     end
@@ -43,6 +52,10 @@ local function clearBoundary()
     end
     boundaryFolder = nil
     table.clear(boundarySegments)
+    table.clear(boundaryFrames)
+    boundaryOrigin = nil
+    boundaryCenter = nil
+    boundaryAlpha = nil
 end
 
 local function buildBoundary()
@@ -50,37 +63,58 @@ local function buildBoundary()
     if not dangerZone or not dangerZone.Parent then return end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-    local count = tier.Name == "Low" and 8 or (tier.Name == "Medium" and 12 or 16)
-    local radius = math.max(6, math.min(dangerZone.Size.Y, dangerZone.Size.Z) * 0.5 - 0.6)
-    local length = 2 * math.pi * radius / count * 0.66
+    local profile = TornadoBoundaryRules.profile(dangerZone.Size, tier.Name)
+    if not profile then return end
     local center = dangerZone.Position + Vector3.new(0, 0.07, 0)
 
     boundaryFolder = Instance.new("Folder")
     boundaryFolder.Name = "TornadoWindBoundaryLocal"
     boundaryFolder.Parent = workspace
+    boundaryOrigin, boundaryCenter = center, center
 
-    for i = 1, count do
-        local angle = ((i - 0.5) / count) * math.pi * 2
-        local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
-        local tangent = Vector3.new(-radial.Z, 0, radial.X)
-        local segment = Instance.new("Part")
-        segment.Name = "WindBoundary" .. i
-        segment.Size = Vector3.new(length, 0.07, tier.Name == "Low" and 0.22 or 0.18)
-        segment.CFrame = CFrame.fromMatrix(center + radial * radius, tangent, Vector3.yAxis)
-        segment.Anchored = true
-        segment.CanCollide = false
-        segment.CanTouch = false
-        segment.CanQuery = false
-        segment.CastShadow = false
-        segment.Material = Enum.Material.Neon
-        -- Amber is a warning cue, not another cyan scenery light.
-        segment.Color = i % 4 == 0
-            and Color3.fromRGB(255, 205, 115)
-            or Color3.fromRGB(255, 151, 67)
-        segment.Transparency = tier.Name == "Low" and 0.30 or 0.43
-        segment.Parent = boundaryFolder
-        table.insert(boundarySegments, segment)
+    for i = 1, profile.Count do
+        local frame = TornadoBoundaryRules.frame(center, i, profile)
+        if frame then
+            local segment = Instance.new("Part")
+            segment.Name = "WindBoundary" .. i
+            segment.Size = Vector3.new(profile.Length, 0.07, profile.Width)
+            segment.CFrame = frame
+            segment.Anchored = true
+            segment.CanCollide = false
+            segment.CanTouch = false
+            segment.CanQuery = false
+            segment.CastShadow = false
+            segment.Material = Enum.Material.Neon
+            segment.Color = i % 4 == 0
+                and Color3.fromRGB(255, 205, 115)
+                or Color3.fromRGB(255, 151, 67)
+            segment.Transparency = profile.Transparency
+            segment.Parent = boundaryFolder
+            boundarySegments[i] = segment
+            boundaryFrames[i] = frame
+        end
     end
+end
+
+-- The core can drift by >10 studs during veteran rounds. Keep the
+-- displayed warning perimeter attached to the *replicated* danger zone,
+-- never to the location where the storm first spawned. Translate cached
+-- frames only when the server center actually changes (typically 4Hz).
+local function followBoundary()
+    if not dangerZone or not dangerZone.Parent or not boundaryOrigin
+        or #boundarySegments == 0 then
+        return
+    end
+    local center = dangerZone.Position + Vector3.new(0, 0.07, 0)
+    if center == boundaryCenter then return end
+
+    local delta = center - boundaryOrigin
+    for index, segment in ipairs(boundarySegments) do
+        if segment.Parent and boundaryFrames[index] then
+            segment.CFrame = boundaryFrames[index] + delta
+        end
+    end
+    boundaryCenter = center
 end
 
 -- One authored helical pose per debris shard. Reuse the same 5/8/12
@@ -167,6 +201,8 @@ local function bind(model)
     local token = bindToken
     activeModel = model
     pulseClock = 0
+    clearDebris()
+    clearBoundary()
 
     if ensureRenderLoop then
         ensureRenderLoop()
@@ -256,14 +292,19 @@ ensureRenderLoop = function()
             if dangerZone and dangerZone.Parent then
                 dangerZone.Transparency = 0.965 + pulse * 0.018 * pulseScale
             end
-            -- Stable on reduced-motion; a very slight warning heartbeat
-            -- otherwise, with no new particles or per-frame allocations.
+            -- The warning follows the actual wind footprint during drift,
+            -- including on Low and ReduceMotion. The amber perimeter stays
+            -- readable without needlessly rewriting transparency every tick.
+            followBoundary()
             if #boundarySegments > 0 then
                 local opacity = tier.Name == "Low" and 0.30
                     or (reduceMotion and 0.42 or (0.38 + pulse * 0.11))
-                for _, segment in ipairs(boundarySegments) do
-                    if segment.Parent then
-                        segment.Transparency = opacity
+                if opacity ~= boundaryAlpha then
+                    boundaryAlpha = opacity
+                    for _, segment in ipairs(boundarySegments) do
+                        if segment.Parent then
+                            segment.Transparency = opacity
+                        end
                     end
                 end
             end
@@ -283,9 +324,14 @@ ensureRenderLoop = function()
 
             if middle and middle.Parent then
                 local center = middle.Position
-                for _, state in ipairs(debris) do
-                    if state.part.Parent then
-                        poseShard(state, center, pulseClock)
+                if not reduceMotion or center ~= lastDebrisCenter
+                    or pulseClock ~= lastDebrisClock then
+                    lastDebrisCenter = center
+                    lastDebrisClock = pulseClock
+                    for _, state in ipairs(debris) do
+                        if state.part.Parent then
+                            poseShard(state, center, pulseClock)
+                        end
                     end
                 end
             end
