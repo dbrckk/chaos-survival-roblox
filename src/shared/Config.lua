@@ -4,7 +4,7 @@ local Config = {
     VoteSeconds = 6,
     ReadySeconds = 4,
     RoundSeconds = 45,
-    PostRoundSeconds = 5,
+    PostRoundSeconds = 6,
 
     WinCoins = 25,
     WinXP = 30,
@@ -19,7 +19,7 @@ local Config = {
         VoteSeconds = 3,
         ReadySeconds = 4,
         RoundSeconds = 30,
-        PostRoundSeconds = 6,
+        PostRoundSeconds = 5,
         WinCoinMultiplier = 1.4,
         WinXPMultiplier = 1.25,
         DoubleChaosEvery = 4,
