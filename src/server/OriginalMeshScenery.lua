@@ -187,6 +187,66 @@ function OriginalMeshScenery.sanitize(source)
     return clean
 end
 
+-- The imported meshes stand beyond the arena's physical floor. Give them
+-- grounded structural mass instead of leaving their bottom silhouette
+-- apparently floating in space. All original art remains immutable; these
+-- four simple, low-cost Roblox Parts are authored AFTER sanitization,
+-- inside the cosmetic model and inside the imported model's X/Z footprint.
+-- They are automatically hidden together with the MeshPart on Android Low.
+local FOUNDATION_COLORS = {
+    reactor_spire = Color3.fromRGB(69, 89, 112),
+    service_crane = Color3.fromRGB(124, 102, 79),
+    perimeter_gate = Color3.fromRGB(77, 104, 114),
+    plasma_foundry = Color3.fromRGB(115, 91, 84),
+    sky_transit_exchange = Color3.fromRGB(83, 114, 126),
+    orbital_halo_array = Color3.fromRGB(85, 100, 139),
+}
+
+function OriginalMeshScenery.addFoundation(model, assetName, target, size)
+    if not model or not model:IsA("Model")
+        or typeof(target) ~= "CFrame" or typeof(size) ~= "Vector3"
+        or size.X <= 0 or size.Y <= 0 or size.Z <= 0
+    then return 0 end
+    if model:GetAttribute("OriginalFoundationBuilt") == true then return 0 end
+    local accent = FOUNDATION_COLORS[assetName]
+    if not accent then return 0 end
+    -- All elevations are relative to the imported *bounding-box center*.
+    -- Every support's top begins at or beneath the mesh bottom; nothing
+    -- artificial rises into the character/hazard plane.
+    local halfY = size.Y * 0.5
+    local specs = {
+        {"FoundationShoulder", Vector3.new(size.X * 0.92, 0.62, size.Z * 0.92),
+            Vector3.new(0, -halfY - 0.31, 0), Enum.Material.Metal,
+            Color3.fromRGB(32, 41, 54)},
+        {"FoundationInset", Vector3.new(size.X * 0.80, 0.78, size.Z * 0.80),
+            Vector3.new(0, -halfY - 1.01, 0), Enum.Material.Metal, accent},
+        {"FoundationBallast", Vector3.new(size.X * 0.88, 3.8, size.Z * 0.88),
+            Vector3.new(0, -halfY - 3.24, 0), Enum.Material.Concrete,
+            Color3.fromRGB(29, 35, 45)},
+        {"FoundationGroundPad", Vector3.new(size.X * 0.96, 0.75, size.Z * 0.96),
+            Vector3.new(0, -halfY - 5.45, 0), Enum.Material.Metal,
+            Color3.fromRGB(47, 54, 64)},
+    }
+    for _, spec in ipairs(specs) do
+        local p = Instance.new("Part")
+        p.Name = spec[1]
+        p.Size = spec[2]
+        p.CFrame = target * CFrame.new(spec[3])
+        p.Material = spec[4]
+        p.Color = spec[5]
+        p.Anchored = true
+        p.CanCollide = false
+        p.CanTouch = false
+        p.CanQuery = false
+        p.CastShadow = false
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
+        p.Parent = model
+    end
+    model:SetAttribute("OriginalFoundationBuilt", true)
+    return #specs
+end
+
 -- Idempotent on the same live arena. The original native horizon and
 -- perimeter decor is never destroyed: if an asset cannot load, the game
 -- remains visually complete with all tested collision surfaces intact.
@@ -239,6 +299,9 @@ function OriginalMeshScenery.mount(arena, templates)
                             item.CFrame = target * bbox:ToObjectSpace(item.CFrame)
                         end
                     end
+                    OriginalMeshScenery.addFoundation(
+                        clone, placement.asset, target, size
+                    )
                     clone.Parent = folder
                     mounted += 1
                 end

@@ -201,6 +201,24 @@ describe("Arena variants", function()
             for _, placement in ipairs(OriginalMeshScenery.placements(base, id)) do
                 local model = folder:FindFirstChild(placement.name)
                 expect(model ~= nil).toBe(true)
+                expect(model:GetAttribute("OriginalFoundationBuilt")).toBe(true)
+                for _, name in ipairs({"FoundationShoulder", "FoundationInset",
+                    "FoundationBallast", "FoundationGroundPad"}) do
+                    local support = model:FindFirstChild(name)
+                    expect(support ~= nil and support:IsA("BasePart")).toBe(true)
+                    if support and support:IsA("BasePart") then
+                        expect(support.CanCollide).toBe(false)
+                        expect(support.CanTouch).toBe(false)
+                        expect(support.CanQuery).toBe(false)
+                        expect(support.CastShadow).toBe(false)
+                        -- Supports are no wider than the actual imported
+                        -- mesh and therefore cannot cross its safe gap.
+                        expect(support.Size.X <= footprints[placement.asset].X).toBe(true)
+                        expect(support.Size.Z <= footprints[placement.asset].Z).toBe(true)
+                        local ground = base.Position.Y + base.Size.Y * 0.5
+                        expect(support.Position.Y < ground).toBe(true)
+                    end
+                end
                 for _, piece in ipairs(model:GetDescendants()) do
                     if piece:IsA("BasePart") then
                         expect(piece.Anchored).toBe(true)
@@ -232,6 +250,34 @@ describe("Arena variants", function()
         for _, model in pairs(templates) do
             model:Destroy()
         end
+    end)
+
+    it("adds bounded, idempotent industrial footing only to approved original art", function()
+        local instance = Instance.new("Model")
+        local center = CFrame.new(14, 30, -12) * CFrame.Angles(0, 0.65, 0)
+        local size = Vector3.new(32, 28, 15)
+        expect(OriginalMeshScenery.addFoundation(
+            instance, "sky_transit_exchange", center, size)).toBe(4)
+        expect(OriginalMeshScenery.addFoundation(
+            instance, "sky_transit_exchange", center, size)).toBe(0)
+        expect(#instance:GetChildren()).toBe(4)
+        for _, p in ipairs(instance:GetChildren()) do
+            expect(p:IsA("BasePart")).toBe(true)
+            expect(p.Size.X <= size.X).toBe(true)
+            expect(p.Size.Z <= size.Z).toBe(true)
+            expect(p.CanCollide).toBe(false)
+            expect(p.CanTouch).toBe(false)
+            expect(p.CanQuery).toBe(false)
+            expect(p.CastShadow).toBe(false)
+            local localPosition = center:PointToObjectSpace(p.Position)
+            expect(localPosition.Y < -size.Y * 0.5).toBe(true)
+        end
+        instance:Destroy()
+        local invalid = Instance.new("Model")
+        expect(OriginalMeshScenery.addFoundation(
+            invalid, "unapproved_model", center, size)).toBe(0)
+        expect(#invalid:GetChildren()).toBe(0)
+        invalid:Destroy()
     end)
 
     it("defines four distinct playable layouts", function()
