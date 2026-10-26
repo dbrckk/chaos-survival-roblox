@@ -2,6 +2,11 @@ name: Public Release Readiness (Read Only)
 
 on:
   workflow_dispatch:
+  # Run the same read-only preflight automatically after the exact-SHA
+  # real-engine test job finishes. Never fire after publishing workflows.
+  workflow_run:
+    workflows: ["Roblox Open Cloud Engine Tests"]
+    types: [completed]
 
 # This workflow CANNOT publish or mutate Roblox, GitHub settings or branches.
 # No Roblox key/secrets, checkout, artifacts or write permission are used.
@@ -12,6 +17,13 @@ permissions:
 jobs:
   audit:
     name: Audit source, checks and release targets
+    # workflow_run loads its YAML from the trusted default branch. Ignore
+    # feature-branch and fork runs, even if they finish successfully.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -19,8 +31,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          DISPATCH_SHA: ${{ github.sha }}
-          DISPATCH_REF: ${{ github.ref }}
+          # workflow_run's github.sha is the default-branch HEAD, NOT the
+          # completed engine run SHA. Use the triggering SHA explicitly;
+          # the Python gate rejects it if main has already moved on.
+          DISPATCH_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          DISPATCH_REF: ${{ github.event_name == 'workflow_run' && format('refs/heads/{0}', github.event.workflow_run.head_branch) || github.ref }}
           PROD_UNIVERSE: ${{ vars.ROBLOX_UNIVERSE_ID }}
           PROD_PLACE: ${{ vars.ROBLOX_PLACE_ID }}
           STAGING_UNIVERSE: ${{ vars.ROBLOX_STAGING_UNIVERSE_ID }}
