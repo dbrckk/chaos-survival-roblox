@@ -13,6 +13,7 @@ local DisasterIntroGlyphKit = require("../../src/client/DisasterIntroGlyphKit")
 local MeteorSignatureRules = require("../../src/shared/MeteorSignatureRules")
 local TornadoSpiralRules = require("../../src/shared/TornadoSpiralRules")
 local TornadoBoundaryRules = require("../../src/shared/TornadoBoundaryRules")
+local TornadoVisualBindRules = require("../../src/shared/TornadoVisualBindRules")
 local TornadoSpiralKit = require("../../src/client/TornadoSpiralKit")
 local ImpactMaterialRules = require("../../src/shared/ImpactMaterialRules")
 local ImpactPulseRules = require("../../src/shared/ImpactPulseRules")
@@ -985,6 +986,61 @@ describe("Android crisis perimeter identity and streaming", function()
             expect(r.beaconPulse(0.5, invalid, "High", false)).toBe(0.5)
         end
         expect(r.beaconPulse(0.5, 5, "High", false)).toBe(0.5)
+    end)
+end)
+
+describe("Streaming-safe tornado visual activation", function()
+    it("waits for all four physical funnel parts and recovers late replication", function()
+        local rules = TornadoVisualBindRules
+        expect(rules.read(nil)).toBe(nil)
+        expect(rules.read(Instance.new("Part"))).toBe(nil)
+
+        local model = Instance.new("Model")
+        model.Name = "RoundTornado"
+        model.Parent = workspace
+        expect(rules.read(model)).toBe(nil)
+
+        local zone = Instance.new("Part")
+        zone.Name = "DangerZone"
+        zone.Parent = model
+        local lower = Instance.new("Part")
+        lower.Name = "LowerFunnel"
+        lower.Parent = model
+        local middle = Instance.new("Part")
+        middle.Name = "MiddleFunnel"
+        middle.Parent = model
+        expect(rules.read(model)).toBe(nil)
+
+        local upper = Instance.new("Part")
+        upper.Name = "UpperFunnel"
+        upper.Parent = model
+        local ready = rules.read(model)
+        expect(ready ~= nil).toBe(true)
+        expect(ready.DangerZone).toBe(zone)
+        expect(ready.LowerFunnel).toBe(lower)
+        expect(ready.MiddleFunnel).toBe(middle)
+        expect(ready.UpperFunnel).toBe(upper)
+
+        middle.Parent = nil
+        expect(rules.read(model)).toBe(nil)
+        middle.Parent = model
+        expect(rules.read(model).MiddleFunnel).toBe(middle)
+
+        -- A replaced model may temporarily contain a same-named folder.
+        upper:Destroy()
+        local placeholder = Instance.new("Folder")
+        placeholder.Name = "UpperFunnel"
+        placeholder.Parent = model
+        expect(rules.read(model)).toBe(nil)
+        placeholder:Destroy()
+        local replacement = Instance.new("Part")
+        replacement.Name = "UpperFunnel"
+        replacement.Parent = model
+        expect(rules.read(model).UpperFunnel).toBe(replacement)
+
+        model.Name = "WrongStorm"
+        expect(rules.read(model)).toBe(nil)
+        model:Destroy()
     end)
 end)
 
