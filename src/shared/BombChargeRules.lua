@@ -30,6 +30,38 @@ function BombChargeRules.visible(tier, distance, slot)
         and slot >= 1 and slot <= config.MaxActive
 end
 
+-- When Bomb Rain overlaps with Double Chaos, rendering depends on camera
+-- proximity rather than Lua table iteration order. This keeps the nearest
+-- bomb silhouettes available to players with low-end Android GPUs, while
+-- distant warnings retain the authoritative ground ring and escape cue.
+function BombChargeRules.nearestSlots(tracked, viewerPosition, tier)
+    local slots = {}
+    if type(tracked) ~= "table" or typeof(viewerPosition) ~= "Vector3" then
+        return slots
+    end
+
+    local config = BUDGETS[tostring(tier or "Low")] or BUDGETS.Low
+    local eligible = {}
+    for warning, state in pairs(tracked) do
+        if typeof(warning) == "Instance" and warning:IsA("BasePart")
+            and warning.Name == "BombWarning" and warning.Parent == workspace
+            and type(state) == "table" and state.kind == "Bomb" then
+            local distance = (viewerPosition - warning.Position).Magnitude
+            if finite(distance) and distance <= config.MaxDistance then
+                eligible[#eligible + 1] = {warning = warning, distance = distance}
+            end
+        end
+    end
+
+    table.sort(eligible, function(a, b)
+        return a.distance < b.distance
+    end)
+    for slot = 1, math.min(config.MaxActive, #eligible) do
+        slots[eligible[slot].warning] = slot
+    end
+    return slots
+end
+
 -- Pieces share a rotating local body frame, but the motion stops entirely
 -- under ReduceMotion. Low-tier keeps one dark, recognizable spherical charge.
 function BombChargeRules.recipe(index, count, progress, reduced)
