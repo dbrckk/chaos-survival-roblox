@@ -15,10 +15,15 @@ function ImpactPulseRules.profile(tier, reducedMotion)
     return base
 end
 
+-- Concurrent is the number of bursts including this one. A pulse is
+-- permitted exactly up to the tier budget, never one beyond it.
 function ImpactPulseRules.pulse(tier, reducedMotion, distance, concurrent, kind)
     local cfg = ImpactPulseRules.profile(tier, reducedMotion)
-    if type(distance) ~= "number" or distance < 0
-        or distance > cfg.Near or (tonumber(concurrent) or 0) > cfg.Concurrent then
+    if type(distance) ~= "number" or distance ~= distance
+        or distance < 0 or distance == math.huge
+        or distance > cfg.Near or type(concurrent) ~= "number"
+        or concurrent ~= concurrent or concurrent % 1 ~= 0
+        or concurrent < 1 or concurrent > cfg.Concurrent then
         return nil
     end
     local meteor = kind == "Meteor"
