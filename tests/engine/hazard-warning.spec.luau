@@ -10,6 +10,13 @@ local BombChargeKit = require("../../src/client/BombChargeKit")
 local FrozenArmorKit = require("../../src/client/FrozenArmorKit")
 
 describe("Hazard warning metadata", function()
+    it("reduces live label overdraw progressively across mobile quality tiers", function()
+        expect(WarningSignatures.labelDistance("Low")).toBe(68)
+        expect(WarningSignatures.labelDistance("Medium")).toBe(88)
+        expect(WarningSignatures.labelDistance("High")).toBe(105)
+        expect(WarningSignatures.labelDistance("Unknown")).toBe(105)
+    end)
+
     it("publishes bounded animation metadata on warning parts", function()
         local part = Instance.new("Part")
         HazardWarning.configure(part, "Meteor", 0.9, 5.5, 16)
