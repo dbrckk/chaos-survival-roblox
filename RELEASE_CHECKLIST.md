@@ -25,9 +25,11 @@ exact source SHA. As of 26 October 2026 the repository contains **75** engine
 spec files assigned to five Open Cloud suites; previous counts are historical.
 The merged feature set still requires Studio and native Android verification.
 
-Latest verified pre-release automated baseline: commit `43237198b610c0514ba5ae6c3cf09cea46b57f82` on 2026-10-19 ([Build Validation run 39240966371](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/39240966371) + [all-five Roblox engine run 39240966382](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/39240966382)). Both completed successfully on that exact SHA. This is **historical CI evidence only**; any new source or documentation commit requires its own exact-SHA checks and it is **not** Studio/device/publication certification.
+Latest verified automated baseline before this release-preflight change: commit `ff888ac8a505bc828639c9d0684111f79c73a8df` on 2026-10-26 ([Build Validation run 40414240787](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/40414240787) + [five-suite Roblox engine run 40414240704](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/40414240704)). Both completed successfully on that exact SHA; engine logs show 903 passed tests across all five suites. This is **historical CI evidence only**; every newer source or documentation commit requires its own exact-SHA checks. It is **not** Studio/device/publication certification.
 
 > Every candidate SHA must re-run both automated workflows. A later code/doc commit invalidates the automated certification until the new exact SHA is green.
+
+The [Public Release Readiness (Read Only)](.github/workflows/public-release-readiness.yml) preflight runs automatically after a main-branch Open Cloud Engine Tests completion and remains available by manual dispatch. It reads GitHub workflow evidence plus production/staging IDs, with read-only permissions; it does **not** publish, test actual Android performance, check Roblox API-key permissions or certify the release. The preflight must inspect the trigger run's exact SHA rather than the default branch's implicit workflow_run SHA. A missing, mismatched or changed HEAD is reported as BLOCKED, not silently accepted.
 
 Use the manual **Release Candidate Gate** workflow only after Build Validation, Open Cloud **and the authenticated Studio E2E workflow** are green on the exact candidate SHA, and all remaining manual gates have actually passed. The workflow verifies the exact-SHA Studio run automatically **and downloads its `roblox-studio-e2e` artifact to validate the PASS manifest against the same commit/run** before certification. It requires `CERTIFY` plus explicit `PASS` attestations for Android, desktop, persistence, gameplay/fairness, accessibility, public alpha and final store/page assets. It checks release metadata consistency and uploads a `release-evidence.md` artifact. This gate never publishes the Roblox place.
 
@@ -130,7 +132,7 @@ Record:
 
 ## Unified visual candidate acceptance (#12–#16)
 
-- [ ] Build Validation and Roblox Open Cloud Engine Tests both pass on the exact candidate SHA (73 uniquely assigned engine specs).
+- [ ] Build Validation and Roblox Open Cloud Engine Tests both pass on the exact candidate SHA (75 uniquely assigned engine specs).
 - [ ] Studio confirms a full ordered intermission > ready > round > result journey on a single client, without double-counting repeated states.
 - [ ] Authenticated Studio E2E checks Showtime 3D stage identity, static part safety and hidden ROUND / visible RESULT transitions.
 - [ ] Studio confirms six R6/R15 emotes and no conflict with Settings or locomotion.
