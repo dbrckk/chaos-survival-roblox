@@ -2128,3 +2128,34 @@ staging configuration points to the public universe and must stay blocked.
 
 Do not mark this candidate device-approved without matching Roblox client
 captures, the exact Git commit, and measured framerate.
+
+
+## Real Android staging HUD: original 3D streaming receipt (26 October)
+
+The **isolated STAGING build only** displays a diagnostic HUD during native
+`PHOTO + HUD` captures. Its final line includes `3D S4/C4` when the
+server has mounted four creator-owned packages **and** this Android client has
+received visible geometry for all four packages:
+
+- `S` = server `Original3DSceneryCount` attribute; `-` means no receipt yet.
+- `C` = client-local original model packages containing replicated BaseParts.
+- `S4/C0` = server reports four mounted, but zero model geometries are
+  present locally (streaming range, missing replication, or late arrival).
+- Orange telemetry indicates a non-four/incomplete server receipt or a
+  local discrepancy, **not** a proven render failure. Low tier deliberately
+  hides all imported models even if `C4` reports their geometry present.
+
+For all four arenas, let the scene settle for more than one four-second
+telemetry cycle. Record a real `PHOTO + HUD` with exact source SHA and
+the `3D S/C` values on Medium and High, then take a separate `PHOTO 3D`
+image to confirm actual shape, orientation, materials and non-overlap.
+Use Low to check original imported assets disappear while the native
+noncolliding fallback silhouette and **all walkable routes** remain clear.
+Repeat near and far from the map boundary with streaming enabled.
+
+These counts **do not certify textures, actual visual quality, Android FPS,
+moderation, or accessible gameplay**. Never mark the physical QA gate PASS
+based solely on `S4/C4`, CI, or the registry's approved model IDs.
+A new test universe must remain distinct from public Universe
+`10771083668` / Place `95351659174730`; do not use the public
+experience as a substitute for isolated staging.
