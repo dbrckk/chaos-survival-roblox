@@ -1221,4 +1221,30 @@ describe("Bomb pressure-wave render budgets", function()
     end)
 end)
 
+describe("Double Chaos touch-device impact detail limits", function()
+    it("preserves initial rich meteor and bomb impacts while capping overdraw", function()
+        local rich = ImpactPulseRules.richDetailAllowed
+        expect(rich("Medium", false, 50, 1, true)).toBe(true)
+        expect(rich("Medium", false, 72, 2, true)).toBe(true)
+        expect(rich("Medium", false, 50, 3, true)).toBe(false)
+        expect(rich("High", false, 90, 3, true)).toBe(true)
+        expect(rich("High", false, 90, 4, true)).toBe(false)
+        expect(rich("High", false, 101, 1, true)).toBe(false)
+        expect(rich("High", true, 5, 1, true)).toBe(false)
+        expect(rich("Low", false, 5, 1, true)).toBe(false)
+        -- The existing desktop high-detail quota is unchanged.
+        expect(rich("Medium", false, 50, 8, false)).toBe(true)
+        expect(rich("Medium", false, 50, 9, false)).toBe(false)
+        expect(rich("High", false, 90, 10, false)).toBe(true)
+        expect(rich("High", false, 90, 11, false)).toBe(false)
+        -- Malformed camera/concurrency values never allocate GPU effects.
+        expect(rich("High", false, math.huge, 1, true)).toBe(false)
+        expect(rich("High", false, 0/0, 1, true)).toBe(false)
+        expect(rich("High", false, -1, 1, true)).toBe(false)
+        expect(rich("High", false, 10, 0, true)).toBe(false)
+        expect(rich("High", false, 10, 1.5, true)).toBe(false)
+    end)
+end)
+
+
 return nil
