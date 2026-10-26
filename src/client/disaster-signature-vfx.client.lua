@@ -190,7 +190,16 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     dirty = true
-    if player:GetAttribute("ReduceMotion") == true then clearAll() end
+    if player:GetAttribute("ReduceMotion") == true then
+        clearAll()
+    elseif phase == "round" and meteorsActive and not syncQueued then
+        -- Restoring effects must not wait for the next periodic scan.
+        syncQueued = true
+        task.defer(function()
+            syncQueued = false
+            if sync then sync() end
+        end)
+    end
 end)
 
 -- Subscribe before the initial sweep to avoid missing meteors arriving
