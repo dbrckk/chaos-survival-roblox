@@ -213,6 +213,53 @@ function HazardWarningSignatureRules.activeLimit(tier, reduced)
     return ({Low = 6, Medium = 10, High = 14})[tier] or 6
 end
 
+-- Limit floating world-space warning labels on narrow Android screens.
+-- The authoritative world warning, ring, escape arrows and global top HUD
+-- are ALWAYS retained. Global timed actions outrank local strike labels;
+-- local strikes then use distance from the actual contestant, not unordered
+-- Workspace arrival order. Rendering is refreshed by an existing client loop.
+local LABEL_BUDGETS = {Low = 3, Medium = 4, High = 5}
+
+function HazardWarningSignatureRules.labelBudget(tier)
+    return LABEL_BUDGETS[tier] or LABEL_BUDGETS.Low
+end
+
+function HazardWarningSignatureRules.selectLabelWarnings(tracked, viewer, tier)
+    local selected = {}
+    if type(tracked) ~= "table" or typeof(viewer) ~= "Vector3" then
+        return selected
+    end
+    local candidates = {}
+    for part, state in pairs(tracked) do
+        if typeof(part) == "Instance" and part:IsA("BasePart")
+            and part.Parent == workspace and type(state) == "table" then
+            local kind = state.kind
+            if kind == "JumpShock" or kind == "Freeze"
+                or kind == "Meteor" or kind == "Bomb" then
+                local distance = (viewer - part.Position).Magnitude
+                if distance == distance and distance < math.huge then
+                    local priority = kind == "JumpShock" and 0
+                        or (kind == "Freeze" and 1 or 2)
+                    candidates[#candidates + 1] = {
+                        part = part, priority = priority, distance = distance,
+                    }
+                end
+            end
+        end
+    end
+    table.sort(candidates, function(a, b)
+        if a.priority ~= b.priority then
+            return a.priority < b.priority
+        end
+        return a.distance < b.distance
+    end)
+    for index = 1, math.min(#candidates,
+        HazardWarningSignatureRules.labelBudget(tier)) do
+        selected[candidates[index].part] = true
+    end
+    return selected
+end
+
 -- The shown ring is a countdown animation. Escape guidance must use
 -- the FINAL damage radius, never the ring's interim size. Match the
 -- authoritative DisasterImpact.applyRadialDamage 3D distance: elevated

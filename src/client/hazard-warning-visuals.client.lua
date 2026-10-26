@@ -16,6 +16,8 @@ localDecor.Name = "ChaosHazardWarningDecorLocal"
 localDecor.Parent = workspace
 local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 local loopStarted = false
+local labelRefreshAt = 0
+local selectedLabels = {}
 local warningNames = {
     BombWarning = true,
     MeteorWarning = true,
@@ -125,6 +127,23 @@ local function ensureRenderLoop()
             local chargeSlots = BombChargeRules.nearestSlots(
                 tracked, bombViewer, currentTier.Name
             )
+            -- Readable foreground labels are a *separate* small UI budget;
+            -- selecting them cannot suppress any ground collision warning.
+            -- Update once every 0.18s rather than sorting labels at 30Hz.
+            local now = os.clock()
+            if now >= labelRefreshAt then
+                labelRefreshAt = now + 0.18
+                local viewer = bombViewer
+                if player:GetAttribute("RoundParticipant") == true
+                    and player:GetAttribute("RoundEliminated") ~= true then
+                    local character = player.Character
+                    local root = character and character:FindFirstChild("HumanoidRootPart")
+                    if root and root:IsA("BasePart") then viewer = root.Position end
+                end
+                selectedLabels = HazardWarningSignatureRules.selectLabelWarnings(
+                    tracked, viewer, currentTier.Name
+                )
+            end
             for part, state in pairs(tracked) do
                 if not part.Parent then
                     if state.ring then
@@ -198,6 +217,17 @@ local function ensureRenderLoop()
                 end
 
                 if state.label and state.label.Parent then
+                    local labelVisible = selectedLabels[part] == true
+                    if state.label.Enabled ~= labelVisible then
+                        state.label.Enabled = labelVisible
+                    end
+                    local maxDistance = (state.kind == "Freeze"
+                        or state.kind == "JumpShock") and 180
+                        or (currentTier.Name == "Low" and 68 or 105)
+                    if state.label.MaxDistance ~= maxDistance then
+                        state.label.MaxDistance = maxDistance
+                    end
+                    if labelVisible then
                     state.label.StudsOffsetWorldSpace = Vector3.new(
                         0,
                         reduced and 2.66 or (2.6 + pulse * 0.18),
@@ -222,6 +252,7 @@ local function ensureRenderLoop()
                             or math.clamp(0.02 + alpha * 0.22, 0, 1)
                         text.TextStrokeTransparency = reduced and 0.42
                             or math.clamp(0.42 + alpha * 0.30, 0, 1)
+                    end
                     end
                 end
 
@@ -327,8 +358,12 @@ local function register(part, snapshot)
     -- A dozen always-on-top world labels obscure the player's avatar on
     -- narrow Android cameras. Depth test labels, keep the ground ring.
     label.AlwaysOnTop = false
+    -- First update selects the most useful limited labels; a newly
+    -- replicated warning must not briefly flash an overlapping UI banner.
+    label.Enabled = false
     label.LightInfluence = 0
-    label.MaxDistance = currentTier.Name == "Low" and 68 or 105
+    label.MaxDistance = (kind == "Freeze" or kind == "JumpShock")
+        and 180 or (currentTier.Name == "Low" and 68 or 105)
     label.Parent = localDecor
 
     local warningText = Instance.new("TextLabel")
