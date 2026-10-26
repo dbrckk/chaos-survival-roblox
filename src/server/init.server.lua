@@ -65,6 +65,7 @@ local Mastery = require(script.Mastery)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local SocialExperienceRules = require(ReplicatedStorage.Shared.SocialExperienceRules)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local PerformancePulseRules = require(ReplicatedStorage.Shared.PerformancePulseRules)
 local HazardImpactAudience = require(ReplicatedStorage.Shared.HazardImpactAudience)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 
@@ -212,62 +213,22 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         return
     end
 
-    local fps = math.clamp(tonumber(payload.averageFps) or 0, 0, 240)
-    local tier = tostring(payload.vfxTier or "Unknown")
-    if tier ~= "High" and tier ~= "Medium" and tier ~= "Low" then
-        tier = "Unknown"
-    end
-
-    local deviceClass = tostring(payload.deviceClass or "Unknown")
-    if #deviceClass > 24 then
-        deviceClass = string.sub(deviceClass, 1, 24)
-    end
-
-    local tierTransitions = math.clamp(
-        math.floor(tonumber(payload.tierTransitions) or 0),
-        0,
-        99
-    )
-    local visualParts = math.clamp(
-        math.floor(tonumber(payload.visualParts) or 0),
-        0,
-        5000
-    )
-    local visualLights = math.clamp(
-        math.floor(tonumber(payload.visualLights) or 0),
-        0,
-        1000
-    )
-    local visualEffects = math.clamp(
-        math.floor(tonumber(payload.visualEffects) or 0),
-        0,
-        2000
-    )
-    local totalMemoryMb = math.clamp(
-        tonumber(payload.totalMemoryMb) or 0,
-        0,
-        65536
-    )
-    local instanceCount = math.clamp(
-        math.floor(tonumber(payload.instanceCount) or 0),
-        0,
-        250000
-    )
-    local frameTimeMs = math.clamp(
-        tonumber(payload.frameTimeMs) or 0,
-        0,
-        1000
-    )
-    local renderCpuMs = math.clamp(
-        tonumber(payload.renderCpuMs) or 0,
-        0,
-        1000
-    )
-    local renderGpuMs = math.clamp(
-        tonumber(payload.renderGpuMs) or 0,
-        0,
-        1000
-    )
+    -- A single fail-closed conversion prevents NaN/Infinity from leaking into
+    -- math.floor, string.format, visual budget checks or AnalyticsService.
+    -- Normal gameplay clients send exactly the same finite numeric values.
+    local sample = PerformancePulseRules.sanitize(payload)
+    local fps = sample.averageFps
+    local tier = sample.vfxTier
+    local deviceClass = sample.deviceClass
+    local tierTransitions = sample.tierTransitions
+    local visualParts = sample.visualParts
+    local visualLights = sample.visualLights
+    local visualEffects = sample.visualEffects
+    local totalMemoryMb = sample.totalMemoryMb
+    local instanceCount = sample.instanceCount
+    local frameTimeMs = sample.frameTimeMs
+    local renderCpuMs = sample.renderCpuMs
+    local renderGpuMs = sample.renderGpuMs
 
     local budgetStatus = VisualBudgetRules.status(tier, {
         Parts = visualParts,
