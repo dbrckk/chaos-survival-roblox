@@ -28,6 +28,41 @@ describe("Client-only spatial impact sound policy", function()
         end
     end)
 
+    it("keeps both Double Chaos blast families audible without stacked peaks", function()
+        local gate = ImpactAudioRules.gate
+        local stamps = {}
+        local first, firstScale = gate("Meteor", 100, stamps, "High")
+        expect(first).toBe(true)
+        expect(firstScale).toBe(1)
+        stamps.Meteor = 100
+
+        -- Two *different* blast signatures may occur on the same server step.
+        local other, overlap = gate("Bomb", 100.02, stamps, "High")
+        expect(other).toBe(true)
+        expect(overlap).toBe(0.68)
+        stamps.Bomb = 100.02
+
+        local spam, volume = gate("Meteor", 100.05, stamps, "High")
+        expect(spam).toBe(false)
+        expect(volume).toBe(0)
+        expect(gate("Bomb", 100.10, stamps, "High")).toBe(false)
+        local later, full = gate("Meteor", 100.3, stamps, "High")
+        expect(later).toBe(true)
+        expect(full).toBe(1)
+
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local last = {Bomb = 14.0}
+            expect(gate("Bomb", 14.08, last, tier)).toBe(false)
+            expect(gate("Meteor", 14.08, last, tier)).toBe(true)
+            expect(gate("Meteor", 14.08, last, tier) == true).toBe(true)
+        end
+        expect(gate("Unknown", 10, stamps, "High")).toBe(false)
+        expect(gate("Meteor", 0 / 0, stamps, "High")).toBe(false)
+        expect(gate("Meteor", math.huge, stamps, "High")).toBe(false)
+        expect(gate("Meteor", -1, stamps, "High")).toBe(false)
+        expect(gate("Meteor", 10, nil, "High")).toBe(false)
+    end)
+
     it("rejects unknown impact types and invalid listener distances", function()
         expect(ImpactAudioRules.plan("Unknown", 5, "High", false) == nil).toBe(true)
         expect(ImpactAudioRules.plan("Meteor", -1, "High", false) == nil).toBe(true)
