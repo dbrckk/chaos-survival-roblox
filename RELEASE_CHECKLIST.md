@@ -8,7 +8,7 @@ All items below must be green on the **exact release commit**. The checkboxes de
 
 - [ ] Build Validation succeeds on release SHA.
 - [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
-- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 73 specs).
+- [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 75 specs).
 - [ ] Rojo produces a non-empty place file.
 - [ ] Luau syntax validation succeeds.
 - [ ] Fair-play monetization guard succeeds.
@@ -19,6 +19,11 @@ All items below must be green on the **exact release commit**. The checkboxes de
 - [ ] Scenery LOD registry/weak-cache guard succeeds.
 - [ ] Single client Clouds owner guard succeeds.
 - [ ] Production source contains no TODO/FIXME/HACK markers or obvious placeholder IDs.
+
+The release-candidate check must count `tests/engine/*.spec.luau` at the
+exact source SHA. As of 26 October 2026 the repository contains **75** engine
+spec files assigned to five Open Cloud suites; previous counts are historical.
+The merged feature set still requires Studio and native Android verification.
 
 Latest verified pre-release automated baseline: commit `43237198b610c0514ba5ae6c3cf09cea46b57f82` on 2026-10-19 ([Build Validation run 39240966371](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/39240966371) + [all-five Roblox engine run 39240966382](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/39240966382)). Both completed successfully on that exact SHA. This is **historical CI evidence only**; any new source or documentation commit requires its own exact-SHA checks and it is **not** Studio/device/publication certification.
 
