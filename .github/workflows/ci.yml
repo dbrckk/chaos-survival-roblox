@@ -1035,9 +1035,15 @@ jobs:
 
       - name: Build Roblox place
         run: |
+          set -euo pipefail
+          python3 tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel CANDIDATE
           mkdir -p build
           rojo build default.project.json -o build/ChaosSurvival.rbxlx
           test -s build/ChaosSurvival.rbxlx
+          grep -Fq "$GITHUB_SHA" build/ChaosSurvival.rbxlx || {
+            echo "::error::Exact Git source identity missing from candidate place."
+            exit 1
+          }
 
       - name: Verify packaged place integrity and provenance
         shell: bash
