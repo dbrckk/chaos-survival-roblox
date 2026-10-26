@@ -512,8 +512,8 @@ describe("Bomb Rain visible 3D charge anticipation", function()
         expect(low[sources[25]]).toBe(2)
         expect(low[sources[48]]).toBe(nil)
         expect(low[sources[77]]).toBe(nil)
-        expect(BombChargeRules.nearestSlots(tracked, nil, "High")
-            [sources[12]]).toBe(nil)
+        local invalidViewer = BombChargeRules.nearestSlots(tracked, nil, "High")
+        expect(invalidViewer[sources[12]]).toBe(nil)
 
         -- A meteor marker may be closer, but must never steal a bomb slot.
         local meteor = Instance.new("Part")
@@ -521,10 +521,9 @@ describe("Bomb Rain visible 3D charge anticipation", function()
         meteor.Position = observed
         meteor.Parent = workspace
         tracked[meteor] = {kind = "Meteor"}
-        expect(BombChargeRules.nearestSlots(tracked, observed, "High")
-            [sources[12]]).toBe(1)
-        expect(BombChargeRules.nearestSlots(tracked, observed, "High")
-            [meteor]).toBe(nil)
+        local withMeteor = BombChargeRules.nearestSlots(tracked, observed, "High")
+        expect(withMeteor[sources[12]]).toBe(1)
+        expect(withMeteor[meteor]).toBe(nil)
 
         for _, marker in pairs(sources) do marker:Destroy() end
         meteor:Destroy()
