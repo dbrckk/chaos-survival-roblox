@@ -1039,4 +1039,51 @@ describe("AI survivor nameplate readability", function()
     end)
 end)
 
+
+describe("Bot escape intelligence for moving veteran tornado", function()
+    it("reads the live visible cyclone center and uses safe fallback", function()
+        local rules = AISurvivorRules
+        local fallback = Vector3.new(0, 4, 0)
+        expect(rules.tornadoCenter(nil, fallback)).toBe(fallback)
+        expect(rules.tornadoCenter("broken", fallback)).toBe(fallback)
+        expect(rules.tornadoCenter(nil, nil)).toBe(nil)
+        local cyclone = Instance.new("Model")
+        cyclone.Name = "RoundTornado"
+        cyclone.Parent = workspace
+        expect(rules.tornadoCenter(cyclone, fallback)).toBe(fallback)
+
+        local lower = Instance.new("Part")
+        lower.Name = "LowerFunnel"
+        lower.Position = Vector3.new(12, 7, -9)
+        lower.Parent = cyclone
+        local live = rules.tornadoCenter(cyclone, fallback)
+        expect(live).toBe(Vector3.new(12, 4, -9))
+        lower.Position = Vector3.new(-10, 7, 8)
+        expect(rules.tornadoCenter(cyclone, fallback))
+            .toBe(Vector3.new(-10, 4, 8))
+        cyclone:Destroy()
+    end)
+
+    it("rewards avoiding the current vortex and using upper platforms", function()
+        local score = AISurvivorRules.tornadoRouteScore
+        local center = Vector3.zero
+        local close = Vector3.new(5, 4, 0)
+        local far = Vector3.new(32, 4, 0)
+        expect(score(far, center, 0.2) > score(close, center, 0.2))
+            .toBe(true)
+        local higher = Vector3.new(12, 28, 0)
+        local ground = Vector3.new(12, 4, 0)
+        expect(score(higher, center, 0.2) > score(ground, center, 0.2))
+            .toBe(true)
+        expect(score(ground, center, 0.2) > score(ground, center, 1.0))
+            .toBe(true)
+        expect(score(nil, center, 0.2)).toBe(0)
+        expect(score(ground, nil, 0.2)).toBe(0)
+        -- Identical absolute positions are no longer equally safe after
+        -- the tornado moves away from the map's original center.
+        expect(score(ground, Vector3.new(-10, 0, 0), 0.2)
+            > score(ground, Vector3.new(12, 0, 0), 0.2)).toBe(true)
+    end)
+end)
+
 return nil
