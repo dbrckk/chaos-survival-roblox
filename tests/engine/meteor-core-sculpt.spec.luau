@@ -27,6 +27,30 @@ describe("Premium meteor rock silhouettes on Android", function()
             ~= Rules.corePlate(1, 5, 7).Transform).toBe(true)
     end)
 
+    it("keeps storm effects bounded and fully disabled in reduced motion", function()
+        local viewer = Vector3.new(0, 5, 0)
+        local near = Vector3.new(0, 5, 20)
+        local far = Vector3.new(0, 5, 300)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local profile = Rules.profile(tier, false)
+            expect(profile.MaxTrails > 0).toBe(true)
+            expect(Rules.shouldTrail("round", true, viewer, near,
+                tier, false, 0)).toBe(true)
+            expect(Rules.shouldTrail("round", true, viewer, near,
+                tier, false, profile.MaxTrails)).toBe(false)
+            expect(Rules.shouldTrail("round", true, viewer, far,
+                tier, false, 0)).toBe(false)
+            expect(Rules.shouldTrail("round", true, viewer, near,
+                tier, true, 0)).toBe(false)
+            expect(Rules.trailStyle(tier, true)).toBe(nil)
+            expect(Rules.profile(tier, true).MaxTrails).toBe(0)
+        end
+        expect(Rules.shouldTrail("waiting", true, viewer, near,
+            "High", false, 0)).toBe(false)
+        expect(Rules.shouldTrail("round", false, viewer, near,
+            "High", false, 0)).toBe(false)
+    end)
+
     it("welds collisionless facets to the server-owned moving core", function()
         local meteor = Instance.new("Part")
         meteor.Name = "RoundMeteor"

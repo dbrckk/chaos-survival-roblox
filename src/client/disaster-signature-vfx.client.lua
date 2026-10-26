@@ -171,7 +171,18 @@ stateEvent.OnClientEvent:Connect(function(state)
     phase = nextPhase
     meteorsActive = nextActive
     dirty = true
-    if not nextActive then clearAll() end
+    if not nextActive then
+        clearAll()
+    elseif not syncQueued then
+        -- The background scanner sleeps up to 800ms between rounds, longer
+        -- than a falling meteor's entire flight. Wake immediately when the
+        -- disaster becomes active, including for late-joining spectators.
+        syncQueued = true
+        task.defer(function()
+            syncQueued = false
+            if sync then sync() end
+        end)
+    end
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
@@ -179,7 +190,16 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     dirty = true
-    if player:GetAttribute("ReduceMotion") == true then clearAll() end
+    if player:GetAttribute("ReduceMotion") == true then
+        clearAll()
+    elseif phase == "round" and meteorsActive and not syncQueued then
+        -- Restoring effects must not wait for the next periodic scan.
+        syncQueued = true
+        task.defer(function()
+            syncQueued = false
+            if sync then sync() end
+        end)
+    end
 end)
 
 -- Subscribe before the initial sweep to avoid missing meteors arriving
