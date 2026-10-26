@@ -190,22 +190,18 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 bindCamera()
 
 local function tryInitialGuide()
-    if introduced or not currentState
-        or player:GetAttribute("DataLoaded") ~= true
-    then
-        return
-    end
-    local games = FirstTimeExperience.effectiveGames(
-        player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
-    )
-    if games > 0 then
+    if introduced or not currentState then return end
+    local saved = player:GetAttribute("Games")
+    local inSession = player:GetAttribute("SessionRoundsPlayed")
+    if FirstTimeExperience.effectiveGames(saved, inSession) > 0 then
         introduced = true
         return
     end
-    local phase = tostring(currentState.phase or "")
-    local quiet = (phase == "waiting" or phase == "intermission")
-        and not FirstTimeExperience.hasVoteOptions(currentState)
-    if quiet then
+    if FirstTimeExperience.shouldOfferIntro(
+        player:GetAttribute("DataLoaded"),
+        player:GetAttribute("DataLoadFailed"),
+        saved, inSession, currentState
+    ) then
         introduced = true
         showGuide(false)
     end
@@ -231,4 +227,6 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 player:GetAttributeChangedSignal("DataLoaded"):Connect(tryInitialGuide)
+player:GetAttributeChangedSignal("DataLoadFailed"):Connect(tryInitialGuide)
 player:GetAttributeChangedSignal("Games"):Connect(tryInitialGuide)
+player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(tryInitialGuide)
