@@ -37,4 +37,24 @@ function ImpactPulseRules.pulse(tier, reducedMotion, distance, concurrent, kind)
     }
 end
 
+-- Preserve every nearby explosion's compact signature while limiting
+-- expensive secondary lights, smoke and spark emitters in overlapping
+-- Bomb + Meteor rounds on touch devices. Desktop keeps its prior budgets.
+-- This governs cosmetics ONLY; blast radius and damage stay server-owned.
+function ImpactPulseRules.richDetailAllowed(tier, reduced, distance,
+        concurrent, touchDevice)
+    if reduced == true or (tier ~= "High" and tier ~= "Medium")
+        or type(distance) ~= "number" or distance ~= distance
+        or distance < 0 or distance == math.huge
+        or type(concurrent) ~= "number" or concurrent ~= concurrent
+        or concurrent % 1 ~= 0 or concurrent < 1 then
+        return false
+    end
+    local high = tier == "High"
+    local limit = if touchDevice == true
+        then (high and 3 or 2) else (high and 10 or 8)
+    local range = high and 100 or 72
+    return concurrent <= limit and distance <= range
+end
+
 return ImpactPulseRules
