@@ -474,6 +474,18 @@ restoreCamera = function()
     end
 end
 
+-- Keep the first late-join explanation inside the existing spectator card.
+-- No new overlay, no per-second UI allocations, and no change to the server roster.
+local function lateJoinHint()
+    if player:GetAttribute("RoundParticipant") == true then
+        return ""
+    end
+    if practiceButton.Visible then
+        return "NEXT ROUND  •  PRACTICE OR WATCH WHILE YOU WAIT"
+    end
+    return "NEXT ROUND  •  WATCH SURVIVORS WHILE YOU WAIT"
+end
+
 local function roundSummary()
     local state = latestState
     if not state then
@@ -498,7 +510,12 @@ local function roundSummary()
         table.insert(pieces, tostring(math.max(0, math.floor(seconds))) .. "s")
     end
 
-    return table.concat(pieces, "  •  ")
+    local summary = table.concat(pieces, "  •  ")
+    local hint = lateJoinHint()
+    if hint ~= "" then
+        return summary ~= "" and (summary .. "\n" .. hint) or hint
+    end
+    return summary
 end
 
 spectateIndex = function(advance)
