@@ -12,6 +12,7 @@ local ImpactSetpiece = require("../../src/client/ImpactSetpiece")
 local DisasterIntroGlyphKit = require("../../src/client/DisasterIntroGlyphKit")
 local MeteorSignatureRules = require("../../src/shared/MeteorSignatureRules")
 local TornadoSpiralRules = require("../../src/shared/TornadoSpiralRules")
+local TornadoBoundaryRules = require("../../src/shared/TornadoBoundaryRules")
 local TornadoSpiralKit = require("../../src/client/TornadoSpiralKit")
 local ImpactMaterialRules = require("../../src/shared/ImpactMaterialRules")
 local ImpactPulseRules = require("../../src/shared/ImpactPulseRules")
@@ -984,6 +985,56 @@ describe("Android crisis perimeter identity and streaming", function()
             expect(r.beaconPulse(0.5, invalid, "High", false)).toBe(0.5)
         end
         expect(r.beaconPulse(0.5, 5, "High", false)).toBe(0.5)
+    end)
+end)
+
+describe("Authoritative moving tornado warning perimeter", function()
+    it("stays within the server's 42-stud wind radius at all quality tiers", function()
+        local rules = TornadoBoundaryRules
+        local footprint = Vector3.new(0.18, 84, 84)
+        local expectedCounts = {Low = 8, Medium = 12, High = 16}
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local profile = rules.profile(footprint, tier)
+            expect(profile ~= nil).toBe(true)
+            expect(profile.Count).toBe(expectedCounts[tier])
+            expect(math.abs(profile.Radius - 41.4) < 0.001).toBe(true)
+            expect(profile.Length > 0).toBe(true)
+            expect(profile.Width > 0 and profile.Width < 0.3).toBe(true)
+            expect(profile.Transparency >= 0.3).toBe(true)
+
+            local center = Vector3.new(19, 4.5, -21)
+            local movedCenter = center + Vector3.new(11, 0, -9)
+            local drift = movedCenter - center
+            for i = 1, profile.Count do
+                local before = rules.frame(center, i, profile)
+                local after = rules.frame(movedCenter, i, profile)
+                expect(before ~= nil and after ~= nil).toBe(true)
+                expect(math.abs((before.Position - center).Magnitude
+                    - profile.Radius) < 0.001).toBe(true)
+                -- Same cached starting pose + authoritative server drift
+                -- must land on the freshly computed warning geometry.
+                local shifted = before + drift
+                expect((after.Position - shifted.Position).Magnitude < 0.001)
+                    .toBe(true)
+                expect((after.LookVector - shifted.LookVector).Magnitude
+                    < 0.001).toBe(true)
+            end
+            expect(rules.frame(center, profile.Count + 1, profile)).toBe(nil)
+        end
+    end)
+
+    it("rejects broken warning geometry before allocating client parts", function()
+        local rules = TornadoBoundaryRules
+        expect(rules.profile(nil, "High")).toBe(nil)
+        expect(rules.profile(Vector3.new(1, 84, 84), "Unknown")).toBe(nil)
+        expect(rules.profile(Vector3.new(1, -3, 84), "High")).toBe(nil)
+        expect(rules.profile(Vector3.new(1, math.huge, 84), "High")).toBe(nil)
+        local profile = rules.profile(Vector3.new(0.18, 84, 84), "Low")
+        expect(rules.frame(nil, 1, profile)).toBe(nil)
+        expect(rules.frame(Vector3.new(0/0, 0, 0), 1, profile)).toBe(nil)
+        expect(rules.frame(Vector3.zero, -1, profile)).toBe(nil)
+        expect(rules.frame(Vector3.zero, 0.5, profile)).toBe(nil)
+        expect(rules.frame(Vector3.zero, 9, profile)).toBe(nil)
     end)
 end)
 
