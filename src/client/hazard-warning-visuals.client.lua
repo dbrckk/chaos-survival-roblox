@@ -433,6 +433,8 @@ local function register(part, snapshot)
     stroke.Transparency = 0.35
     stroke.Parent = warningText
 
+    -- A new authoritative marker invalidates the throttled slot cache.
+    chargeRefreshAt = 0
     tracked[part] = {
         startedAt = snapshot.StartedAt,
         kind = kind,
@@ -483,7 +485,14 @@ local function register(part, snapshot)
     elseif kind == "Bomb" then
         -- Show the falling charge immediately, even on late-joining clients;
         -- the renderer might have been dormant for the last 180ms.
-        syncBombCharge(part, tracked[part], snapshot.Progress, reduced, 1, bombViewerPosition())
+        local viewer = bombViewerPosition()
+        local initialSlots = BombChargeRules.nearestSlots(
+            tracked, viewer, currentTier.Name
+        )
+        syncBombCharge(
+            part, tracked[part], snapshot.Progress, reduced,
+            initialSlots[part] or 0, viewer
+        )
     end
     ensureRenderLoop()
 end
@@ -555,4 +564,5 @@ workspace.ChildRemoved:Connect(function(child)
     destroySignature(state)
     destroyCharge(state)
     tracked[child] = nil
+    chargeRefreshAt = 0
 end)
