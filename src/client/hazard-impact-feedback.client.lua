@@ -2,6 +2,7 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ImpactSetpiece = require(script.Parent.ImpactSetpiece)
@@ -134,9 +135,13 @@ local function renderBurst(payload)
     -- retain their authoritative warnings and a compact visual pulse, but
     -- skip high-overdraw smoke, bloom light and additional shrapnel. This
     -- matters most on Android during overlapping Meteor/Bomb hazards.
-    local detailRange = profile.Name == "High" and 100 or 72
-    local richDetail = not reduced and profile.Name ~= "Low"
-        and viewerDistance <= detailRange
+    -- First 2/3 concurrent bursts receive full authored lights/smoke on
+    -- touch devices. Every further overlapping impact still gets its
+    -- compact flash, radial pressure cue and material-aware aftermath.
+    local richDetail = ImpactPulseRules.richDetailAllowed(
+        profile.Name, reduced, viewerDistance, activeBursts,
+        UserInputService.TouchEnabled
+    )
     local materialStyle, groundFrame = sampleGround(
         position, color, kind, profile, reduced
     )
