@@ -15,6 +15,29 @@ describe("First time experience", function()
         expect(FirstTimeExperience.isRookie(3)).toBe(false)
     end)
 
+    it("shows a beginner guide even when DataStore is temporarily offline", function()
+        local state = {phase = "waiting", voteOptions = nil}
+        local show = FirstTimeExperience.shouldOfferIntro
+        expect(show(true, false, 0, 0, state)).toBe(true)
+        expect(show(false, true, 0, 0, state)).toBe(true)
+        expect(show(false, false, 0, 0, state)).toBe(false)
+        expect(show(nil, nil, 0, 0, state)).toBe(false)
+        expect(show(false, true, 0, 1, state)).toBe(false)
+        expect(show(false, true, 4, 0, state)).toBe(false)
+        state.phase = "intermission"
+        expect(show(false, true, 0, 0, state)).toBe(true)
+        state.voteOptions = {{id = "Meteors"}}
+        expect(show(false, true, 0, 0, state)).toBe(false)
+        state.phase = "ready"
+        state.voteOptions = nil
+        expect(show(false, true, 0, 0, state)).toBe(false)
+        state.phase = "round"
+        expect(show(false, true, 0, 0, state)).toBe(false)
+        state.phase = "result"
+        expect(show(false, true, 0, 0, state)).toBe(false)
+        expect(show(false, true, 0, 0, false)).toBe(false)
+    end)
+
     it("blocks double chaos while any contestant is on their first round", function()
         expect(FirstTimeExperience.allowDoubleChaos({1})).toBe(false)
         expect(FirstTimeExperience.allowDoubleChaos({20, 1, 8})).toBe(false)
