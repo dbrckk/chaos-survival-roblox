@@ -562,6 +562,47 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("keeps a recognizable original 3D skyline under the Android Low budget", function()
+        local expectedEssential = {
+            Classic = 10, Towers = 8, Crossroads = 6, Orbital = 10,
+        }
+        for _, id in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local decor = root:FindFirstChild("Arena"):FindFirstChild("Decor")
+            local hero = decor:FindFirstChild("ArenaHeroArchitecture3D")
+            local total, essential = 0, 0
+            local names = {}
+            for _, piece in ipairs(hero:GetChildren()) do
+                if piece:IsA("BasePart") then
+                    total += 1
+                    if piece:GetAttribute("HeroSilhouetteEssential") == true then
+                        essential += 1
+                        names[piece.Name] = true
+                        expect(piece.Anchored).toBe(true)
+                        expect(piece.CanCollide).toBe(false)
+                        expect(piece.CanTouch).toBe(false)
+                        expect(piece.CanQuery).toBe(false)
+                        expect(piece.CastShadow).toBe(false)
+                    end
+                end
+            end
+            expect(essential).toBe(expectedEssential[id])
+            expect(hero:GetAttribute("HeroEssentialParts")).toBe(essential)
+            expect(total).toBe(hero:GetAttribute("HeroArchitectureParts"))
+            expect(essential < total).toBe(true)
+            if id == "Classic" then
+                expect(names.DishHub).toBe(true)
+            elseif id == "Towers" then
+                expect(names.SkyTransitMainBeam).toBe(true)
+            elseif id == "Crossroads" then
+                expect(names.EastConduit).toBe(true)
+            else
+                expect(names.HaloLens).toBe(true)
+            end
+            root:Destroy()
+        end
+    end)
+
     it("gives every arena its own southern 3D skyline without unsafe collision", function()
         local signatures = {
             Classic = "ObservatoryBridge",

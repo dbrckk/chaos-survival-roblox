@@ -23,6 +23,7 @@ local ORIGINAL_MESH_LOD = {
 local HERO_ARCHITECTURE_LOD = {
     LowDistance = 0,
     MediumDistance = 185,
+    KeepHeroLow = true,
 }
 
 local FOLDERS = {
@@ -250,9 +251,13 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
         end
 
         local lodHidden = descendant:GetAttribute("SceneryLodHidden") == true
+        local partVisible = SceneryLodRules.entryVisible(
+            profile.Name, visible, limits.KeepHeroLow,
+            descendant:GetAttribute("HeroSilhouetteEssential")
+        )
 
         if descendant:IsA("BasePart") then
-            if visible then
+            if partVisible then
                 if lodHidden then
                     local baseTransparency = descendant:GetAttribute("SceneryLodBaseTransparency")
                     descendant.LocalTransparencyModifier = tonumber(baseTransparency) or 0
@@ -273,7 +278,7 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
         elseif VisualBudgetRules.isEffect(descendant)
             or VisualBudgetRules.isLight(descendant)
         then
-            if visible then
+            if partVisible then
                 if lodHidden then
                     local baseEnabled = descendant:GetAttribute("SceneryLodBaseEnabled")
                     descendant.Enabled = baseEnabled ~= false
