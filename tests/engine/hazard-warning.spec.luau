@@ -257,6 +257,66 @@ describe("Premium frost and electric warning silhouettes", function()
         decor:Destroy()
     end)
 
+    it("culls distant cosmetic contours with hysteresis, not server warning Parts", function()
+        local outline = require("../../src/client/HazardGroundOutlineKit")
+        local root = Instance.new("Folder")
+        root.Parent = workspace
+        local danger = Instance.new("Part")
+        danger.Name = "BombWarning"
+        danger.Size = Vector3.new(5.5, 0.2, 5.5)
+        danger.Anchored = true
+        danger.CanCollide = false
+        danger.Parent = workspace
+        local visual = outline.create(root, "Bomb")
+        expect(visual.canvas.Enabled).toBe(true)
+        expect(outline.syncVisibility(visual, "Low", 150)).toBe(false)
+        expect(visual.canvas.Enabled).toBe(false)
+        expect(danger.Parent).toBe(workspace)
+        expect(danger.Size.X).toBe(5.5)
+
+        expect(outline.syncVisibility(visual, "Low", 93)).toBe(false)
+        expect(outline.syncVisibility(visual, "Low", 91)).toBe(true)
+        expect(outline.syncVisibility(visual, "Low", 103)).toBe(true)
+        expect(outline.syncVisibility(visual, "Low", 105)).toBe(false)
+        expect(outline.syncVisibility(visual, "Medium", 120)).toBe(true)
+        expect(outline.syncVisibility(visual, "High", 178)).toBe(true)
+        expect(outline.syncVisibility(visual, "High", 193)).toBe(false)
+        -- If the camera has not replicated, preserve vital visual cues.
+        expect(outline.syncVisibility(visual, "Low", nil)).toBe(true)
+        expect(outline.inRange("Low", 0 / 0, false)).toBe(false)
+        expect(outline.inRange("Low", math.huge, false)).toBe(false)
+        expect(outline.inRange("Low", -1, false)).toBe(false)
+        outline.destroy(visual)
+        danger:Destroy()
+        root:Destroy()
+    end)
+
+    it("reuses static reduced-motion contour recipes but follows real marker movement", function()
+        local outline = require("../../src/client/HazardGroundOutlineKit")
+        local decor = Instance.new("Folder")
+        decor.Parent = workspace
+        local visual = outline.create(decor, "Meteor")
+        local point = Vector3.new(14, 3, -7)
+        outline.update(visual, point, 16, 0.15, true, 0.2, "Low")
+        local originalSize = visual.part.Size
+        local originalFrame = visual.part.CFrame
+        local recipe = visual.lastRecipe
+        outline.update(visual, point, 16, 0.85, true, 0.9, "Low")
+        expect(visual.part.Size).toBe(originalSize)
+        expect(visual.part.CFrame).toBe(originalFrame)
+        expect(visual.lastRecipe.Thickness).toBe(recipe.Thickness)
+        expect(visual.lastRecipe.TicksVisible).toBe(false)
+
+        local moved = point + Vector3.new(5, 0, 4)
+        outline.update(visual, moved, 16, 0.85, true, 0.9, "Low")
+        expect(visual.part.CFrame.Position ~= originalFrame.Position).toBe(true)
+        outline.update(visual, moved, 16, 0.85, true, 0.9, "High")
+        expect(visual.outer.Thickness).toBe(6)
+        expect(visual.inner.Enabled).toBe(true)
+        outline.destroy(visual)
+        decor:Destroy()
+    end)
+
     it("keeps reduced-motion outlines static and rejects malformed sizing", function()
         local GroundOutline = require("../../src/client/HazardGroundOutlineKit")
         expect(GroundOutline.recipe("Other", 16, 0, false, 0.5, "High")).toBe(nil)
