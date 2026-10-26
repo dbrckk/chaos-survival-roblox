@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local Cosmetics = require("../../src/server/CosmeticsCatalog")
+local EffectStyles = require("../../src/server/CosmeticEffectStyles")
 
 describe("Cosmetic inventory", function()
     it("exposes the expanded ordered catalog", function()
@@ -174,5 +175,71 @@ describe("Cosmetic inventory", function()
         expect(raw).toBe("trail_blue,trail_gold,trail_void,trail_plasma,aura_cosmic")
     end)
 end)
+
+
+describe("Premium earned cosmetic visual signatures", function()
+    it("uses distinct trail shapes without extra particles or pay-to-win upgrades", function()
+        local expected = {
+            trail_meteorflare = "Meteorflare",
+            trail_shardstep = "Shardstep",
+            trail_thunderline = "Thunderline",
+            trail_stargazer = "Stargazer",
+        }
+        local uniqueWidths = {}
+        for id, signature in pairs(expected) do
+            local item = Cosmetics.get(id)
+            expect(item.Signature).toBe(signature)
+            expect(item.Kind).toBe("trail")
+            expect(item.CoinPrice == nil).toBe(true)
+            expect(item.PremiumKey == nil).toBe(true)
+            expect(item.ArenaMasteryPoints >= 96).toBe(true)
+            local recipe = EffectStyles.trail(item)
+            expect(recipe ~= nil).toBe(true)
+            expect(recipe.Lifetime >= 0.3 and recipe.Lifetime <= 0.65).toBe(true)
+            expect(recipe.LightEmission >= 0.75 and recipe.LightEmission <= 1).toBe(true)
+            expect(#recipe.WidthScale.Keypoints >= 5).toBe(true)
+            expect(#recipe.Color.Keypoints >= 4).toBe(true)
+            expect(uniqueWidths[recipe.WidthScale] == nil).toBe(true)
+            uniqueWidths[recipe.WidthScale] = true
+        end
+        local basic = EffectStyles.trail(Cosmetics.get("trail_blue"))
+        expect(basic.Lifetime).toBe(0.48)
+        expect(#basic.Color.Keypoints).toBe(2)
+        expect(#basic.WidthScale.Keypoints).toBe(3)
+        expect(EffectStyles.trail(nil)).toBe(nil)
+    end)
+
+    it("assigns original bounded aura timing with a single emitter per item", function()
+        local expected = {
+            aura_stormglass = "Stormglass",
+            aura_voidwake = "Voidwake",
+            aura_coremonarch = "CoreMonarch",
+            aura_parallax = "Parallax",
+        }
+        local sizes = {}
+        for id, signature in pairs(expected) do
+            local item = Cosmetics.get(id)
+            expect(item.Signature).toBe(signature)
+            expect(item.Kind).toBe("aura")
+            expect(item.CoinPrice == nil).toBe(true)
+            expect(item.PremiumKey == nil).toBe(true)
+            local recipe = EffectStyles.aura(item)
+            expect(recipe.Rate >= 10 and recipe.Rate <= 20).toBe(true)
+            expect(recipe.Lifetime.Min > 0).toBe(true)
+            expect(recipe.Lifetime.Max < 2).toBe(true)
+            expect(recipe.Speed.Max <= 3).toBe(true)
+            expect(recipe.Brightness <= 1.1).toBe(true)
+            expect(#recipe.Color.Keypoints).toBe(3)
+            expect(sizes[recipe.Size] == nil).toBe(true)
+            sizes[recipe.Size] = true
+        end
+        local basic = EffectStyles.aura(Cosmetics.get("aura_emerald"))
+        expect(basic.Rate).toBe(18)
+        expect(basic.Brightness).toBe(0.85)
+        expect(#basic.Color.Keypoints).toBe(2)
+        expect(EffectStyles.aura(nil)).toBe(nil)
+    end)
+end)
+
 
 return nil
