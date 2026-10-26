@@ -139,6 +139,7 @@ jobs:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
           ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           # Production variables were demonstrably inconsistent with the
@@ -166,8 +167,37 @@ jobs:
             exit 1
           }
 
+          # Recheck the authoritative GitHub main ref immediately before
+          # the irreversible Roblox POST. A queued/manual run could otherwise
+          # overwrite a newer build after the earlier certification gate.
+          # GitHub API failure is also a hard stop (never assume HEAD).
+          head_sha="$(python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/git/ref/heads/main",
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              print(json.load(response)["object"]["sha"])
+          PY
+          )"
+          if [ "$head_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::Main has moved since this run started. Refusing to replace the public Roblox place with a stale candidate."
+            exit 1
+          fi
+
           # No redirects with an API key and never print an untrusted response.
           response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
           status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
             --connect-timeout 15 --max-time 120 \
             --output "$response_file" --write-out "%{http_code}" \
