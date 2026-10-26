@@ -5,8 +5,52 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local VfxQuality = require("../../src/shared/VfxQuality")
 local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
+local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
 
 describe("Adaptive VFX quality", function()
+    it("filters Android structural sightlines to arena geometry, not other avatars", function()
+        expect(CameraOcclusionRules.arenaRaycastParams(nil)).toBe(nil)
+
+        local arena = Instance.new("Folder")
+        arena.Name = "CameraSightlineArenaTest"
+        arena.Parent = workspace
+        local support = Instance.new("Part")
+        support.Name = "SupportColumn"
+        support.Anchored = true
+        support.Size = Vector3.new(4, 5, 1)
+        support.Position = Vector3.new(4567, 500, 6424)
+        support.Parent = arena
+
+        -- A large structural floor in front of a pillar should not swallow
+        -- the raycast either; the old controller excluded Arena.Base.
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Anchored = true
+        base.Size = Vector3.new(4, 5, 1)
+        base.Position = Vector3.new(4567, 500, 6430)
+        base.Parent = arena
+
+        local otherAvatar = Instance.new("Part")
+        otherAvatar.Name = "RemoteAvatarOccluder"
+        otherAvatar.Anchored = true
+        otherAvatar.Size = Vector3.new(4, 5, 1)
+        otherAvatar.Position = Vector3.new(4567, 500, 6428)
+        otherAvatar.Parent = workspace
+
+        local params = CameraOcclusionRules.arenaRaycastParams(arena, base)
+        expect(params.FilterType).toBe(Enum.RaycastFilterType.Include)
+        expect(params.IgnoreWater).toBe(true)
+        expect(#params.FilterDescendantsInstances).toBe(1)
+        expect(params.FilterDescendantsInstances[1]).toBe(support)
+        local hit = workspace:Raycast(
+            Vector3.new(4567, 500, 6432), Vector3.new(0, 0, -12), params
+        )
+        expect(hit ~= nil and hit.Instance == support).toBe(true)
+
+        otherAvatar:Destroy()
+        arena:Destroy()
+    end)
+
     it("protects essential mobile route outlines while dimming ornamental neon", function()
         local kit = MobileReadabilityKit
         local ornament = Instance.new("Part")

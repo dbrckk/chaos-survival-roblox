@@ -264,6 +264,45 @@ describe("Premium frost and electric warning silhouettes", function()
         expect(still.OuterTransparency).toBe(other.OuterTransparency)
     end)
 
+    it("makes real blast borders MORE visible as the countdown ends", function()
+        local outline = require("../../src/client/HazardGroundOutlineKit")
+        for _, kind in ipairs({"Bomb", "Meteor"}) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local early = outline.recipe(kind, 16, 0, false, 0.5, tier)
+                local late = outline.recipe(kind, 16, 1, false, 0.5, tier)
+                expect(late.OuterTransparency < early.OuterTransparency).toBe(true)
+                expect(late.InnerTransparency < early.InnerTransparency).toBe(true)
+                expect(late.Thickness).toBe(early.Thickness)
+                -- Accessibility mode must avoid any brightness pulsing.
+                local reducedEarly = outline.recipe(kind, 16, 0, true, 0.2, tier)
+                local reducedLate = outline.recipe(kind, 16, 1, true, 0.9, tier)
+                expect(reducedEarly.OuterTransparency).toBe(reducedLate.OuterTransparency)
+                expect(reducedEarly.InnerTransparency).toBe(reducedLate.InnerTransparency)
+            end
+        end
+    end)
+
+    it("prioritizes imminent overlapping lethal impacts over remote countdowns", function()
+        local prefer = WarningSignatures.preferThreat
+        -- An exposed player must see the sooner impact, even if a second,
+        -- deeper blast remains active for much longer.
+        expect(prefer(-1, 0.16, -6, 1.20)).toBe(true)
+        expect(prefer(-6, 1.20, -1, 0.16)).toBe(false)
+        -- Almost-simultaneous strikes use depth of danger as a tiebreaker.
+        expect(prefer(-6, 0.22, -1, 0.17)).toBe(true)
+        expect(prefer(-1, 0.22, -6, 0.17)).toBe(false)
+        -- Being inside a radius always takes precedence over near misses.
+        expect(prefer(-0.2, 2.0, 0.4, 0.10)).toBe(true)
+        expect(prefer(0.4, 0.10, -0.2, 2.0)).toBe(false)
+        -- Outside both radii choose nearest clearance, not earliest offscreen cue.
+        expect(prefer(0.8, 2.0, 4.0, 0.1)).toBe(true)
+        expect(prefer(4.0, 0.1, 0.8, 2.0)).toBe(false)
+        expect(prefer(1, 0.3, math.huge, math.huge)).toBe(true)
+        expect(prefer(nil, 0.3, math.huge, math.huge)).toBe(false)
+        expect(prefer(1, 0 / 0, math.huge, math.huge)).toBe(false)
+        expect(prefer(1, -1, math.huge, math.huge)).toBe(false)
+    end)
+
     it("shows a static full impact footprint with ReduceMotion enabled", function()
         local diameter = WarningSignatures.visualDiameter
         expect(diameter(5.5, 16, 0, false)).toBe(5.5)
@@ -285,7 +324,7 @@ describe("Premium frost and electric warning silhouettes", function()
         expect(first.InnerTransparency).toBe(last.InnerTransparency)
         expect(first.TicksVisible).toBe(false)
         local animated = outline.recipe("Meteor", 16, 1, false, 0.7, "High")
-        expect(animated.OuterTransparency > first.OuterTransparency).toBe(true)
+        expect(animated.OuterTransparency < first.OuterTransparency).toBe(true)
     end)
 
     it("uses the correct initial diameter for late-joining warning viewers", function()

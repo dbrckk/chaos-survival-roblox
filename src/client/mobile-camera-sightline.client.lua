@@ -205,11 +205,12 @@ local function update()
         return
     end
 
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {character, base}
-    params.IgnoreWater = true
-    local hit = workspace:Raycast(start, toAvatar, params)
+    -- Include only the replicated arena for structural occlusion. A
+    -- different survivor, bot, local particle shell or hazard marker may
+    -- stand closer to the lens than an opaque column; none should prevent
+    -- the column from being tested. Avatars are handled independently.
+    local params = CameraOcclusionRules.arenaRaycastParams(arena, base)
+    local hit = params and workspace:Raycast(start, toAvatar, params)
     local nextPart = nil
     if hit and supportedTarget(hit.Instance, arena, base) then
         nextPart = hit.Instance
