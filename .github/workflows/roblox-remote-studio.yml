@@ -1,12 +1,8 @@
 name: Chaos Studio Remote Bootstrap (Android)
-# Manual-only Windows cloud workstation for creating a separate Roblox test universe.
+# Manual-only Windows cloud workstation for creating a separate PRIVATE
+# Roblox test universe from the current main candidate. Never publish a place.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feat/visual-identity-hero-landmarks-20261008
-    paths:
-      - "studio/REMOTE_STUDIO_TRIGGER"
 
 concurrency:
   group: chaos-studio-remote-bootstrap
@@ -19,7 +15,8 @@ jobs:
   remote-studio:
     if: >-
       github.repository == 'dbrckk/chaos-survival-roblox' &&
-      github.ref == 'refs/heads/feat/visual-identity-hero-landmarks-20261008'
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main'
     runs-on: windows-latest
     timeout-minutes: 100
     steps:
@@ -77,14 +74,13 @@ jobs:
           $instructions = @(
             "CHAOS SURVIVAL - VISUAL QA - STAGING CREATION",
             "",
-            "1. Open Official_Roblox_Studio.url. Install the official Roblox Studio.",
-            "2. Sign into Studio inside this private remote Windows session.",
-            "3. Open ChaosSurvival_VisualQA.rbxlx from the Desktop.",
-            "4. File > Publish to Roblox As > Create NEW experience.",
-            "5. Name it Chaos Survival - Visual QA, keep it PRIVATE.",
-            "6. DO NOT OVERWRITE your existing public Chaos Survival.",
-            "7. Copy the new Universe ID and Place ID from Creator Dashboard.",
-            "8. Log out of Studio before leaving this temporary computer.",
+            "1. Open the already-installed official Roblox Studio and sign in.",
+            "2. Open ChaosSurvival_VisualQA.rbxlx from this Desktop.",
+            "3. File > Publish to Roblox As > Create NEW experience.",
+            "4. Name it Chaos Survival - Visual QA. KEEP IT PRIVATE.",
+            "5. DO NOT select or overwrite the existing public Chaos Survival.",
+            "6. Copy the NEW Universe ID and Place ID from Creator Dashboard.",
+            "7. Log out of Roblox Studio before leaving this temporary computer.",
             "Never share Roblox passwords, .ROBLOSECURITY cookies or 2FA codes."
           )
           Set-Content (Join-Path $desktop "READ_ME_VisualQA.txt") -Value $instructions
