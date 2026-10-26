@@ -303,4 +303,32 @@ function HazardWarningSignatureRules.escapeClearance(playerPosition, impactPosit
         - math.max(1, endDiameter * 0.5)
 end
 
+
+-- Pick the most actionable overlapping Meteor/Bomb escape cue.
+-- A player currently inside a blast's final 3D radius must see the
+-- earliest imminent strike first; when impact times are nearly equal,
+-- prioritize the deeper exposure. Outside both radii, preserve nearest
+-- clearance so a distant impending blast does not eclipse local guidance.
+function HazardWarningSignatureRules.preferThreat(
+    clearance, remaining, previousClearance, previousRemaining
+)
+    local function finite(v)
+        return type(v) == "number" and v == v and math.abs(v) < math.huge
+    end
+    if not finite(clearance) or not finite(remaining) or remaining < 0 then
+        return false
+    end
+    if not finite(previousClearance) or not finite(previousRemaining) then
+        return true
+    end
+    local inside = clearance <= 0
+    local previousInside = previousClearance <= 0
+    if inside ~= previousInside then return inside end
+    if inside and math.abs(remaining - previousRemaining) > 0.12 then
+        return remaining < previousRemaining
+    end
+    if clearance ~= previousClearance then return clearance < previousClearance end
+    return remaining < previousRemaining
+end
+
 return HazardWarningSignatureRules
