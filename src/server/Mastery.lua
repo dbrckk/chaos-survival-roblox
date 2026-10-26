@@ -6,6 +6,12 @@ Mastery.Thresholds = {
     {Name = "SILVER", Points = 9},
     {Name = "GOLD", Points = 18},
     {Name = "ELITE", Points = 36},
+    -- Preserve all earned points and existing Bronze-Gold-Elite thresholds.
+    -- These longer arcs give returning players meaningful goals well beyond
+    -- a dozen successful rounds per arena or disaster.
+    {Name = "MYTHIC", Points = 96},
+    {Name = "ASCENDANT", Points = 192},
+    {Name = "LEGEND", Points = 384},
 }
 
 function Mastery.deserialize(raw)
