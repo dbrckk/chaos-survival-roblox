@@ -209,7 +209,7 @@ local function update()
     -- different survivor, bot, local particle shell or hazard marker may
     -- stand closer to the lens than an opaque column; none should prevent
     -- the column from being tested. Avatars are handled independently.
-    local params = CameraOcclusionRules.arenaRaycastParams(arena)
+    local params = CameraOcclusionRules.arenaRaycastParams(arena, base)
     local hit = params and workspace:Raycast(start, toAvatar, params)
     local nextPart = nil
     if hit and supportedTarget(hit.Instance, arena, base) then
