@@ -14,12 +14,29 @@ function CameraOcclusionRules.arenaRaycastParams(arena, base)
     -- supports/decks instead of the whole arena, so a large floor cannot
     -- swallow the ray before an actual vertical sightline blocker is seen.
     local candidates = {}
+    local platforms = arena:FindFirstChild("Platforms")
     for _, child in ipairs(arena:GetChildren()) do
-        -- Noninteractive scenery is handled by the independent scenery LOD.
-        -- Exclude it from camera geometry casts so a foreground ornament
-        -- cannot conceal an opaque pillar immediately behind it.
-        if child ~= base and child.Name ~= "Decor" then
+        -- Cosmetic scenery, spawn markers and moving mechanics cannot be
+        -- valid structural fade targets. They must not swallow a raycast
+        -- aimed at an opaque support behind them.
+        if child ~= base and child ~= platforms
+            and child.Name ~= "Decor"
+            and child.Name ~= "Spawns"
+            and child.Name ~= "EntryGuides"
+            and child.Name ~= "Mechanics" then
             candidates[#candidates + 1] = child
+        end
+    end
+    -- Ordinary playable platforms must stay fully visible, including
+    -- temporary disappearing floors and perimeter jump routes. Only
+    -- explicitly designated skybridges are eligible for camera softening.
+    -- At most one immediate-child scan per camera sample; no extra rays.
+    if platforms then
+        for _, child in ipairs(platforms:GetChildren()) do
+            if child:IsA("BasePart")
+                and child:GetAttribute("ChaosSkybridge") == true then
+                candidates[#candidates + 1] = child
+            end
         end
     end
     local params = RaycastParams.new()
