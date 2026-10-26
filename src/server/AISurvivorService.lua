@@ -1664,7 +1664,13 @@ local function scoreCandidate(record, root, candidate, traits)
     end
 
     if hasDisaster("Tornado") then
-        score += math.min(distanceFromCenter, 44) * (0.72 - risk * 0.16)
+        -- Follow the storm's replicated position, not the old map center.
+        -- Cautious bots can also recognize reachable high-ground routes.
+        local cyclone = workspace:FindFirstChild("RoundTornado")
+        local currentCenter = AISurvivorRules.tornadoCenter(cyclone, center)
+        score += AISurvivorRules.tornadoRouteScore(
+            position, currentCenter or center, risk
+        )
     end
 
     if hasDisaster("ShrinkingArena") then
