@@ -18,6 +18,10 @@ local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 local loopStarted = false
 local labelRefreshAt = 0
 local selectedLabels = {}
+local chargeSlots = {}
+local chargeRefreshAt = 0
+local chargeViewerLast = nil
+local chargeTierLast = nil
 local warningNames = {
     BombWarning = true,
     MeteorWarning = true,
@@ -129,9 +133,18 @@ local function ensureRenderLoop()
             local activeCamera = workspace.CurrentCamera
             local contourViewer = activeCamera and activeCamera.CFrame.Position
             local bombViewer = bombViewerPosition()
-            local chargeSlots = BombChargeRules.nearestSlots(
-                tracked, bombViewer, currentTier.Name
-            )
+            local chargeNow = os.clock()
+            local movedFar = bombViewer and chargeViewerLast
+                and (bombViewer - chargeViewerLast).Magnitude >= 6
+            if chargeNow >= chargeRefreshAt
+                or chargeTierLast ~= currentTier.Name or movedFar then
+                chargeSlots = BombChargeRules.nearestSlots(
+                    tracked, bombViewer, currentTier.Name
+                )
+                chargeRefreshAt = chargeNow + 0.12
+                chargeViewerLast = bombViewer
+                chargeTierLast = currentTier.Name
+            end
             -- Readable foreground labels are a *separate* small UI budget;
             -- selecting them cannot suppress any ground collision warning.
             -- Update once every 0.18s rather than sorting labels at 30Hz.
@@ -420,6 +433,8 @@ local function register(part, snapshot)
     stroke.Transparency = 0.35
     stroke.Parent = warningText
 
+    -- A new authoritative marker invalidates the throttled slot cache.
+    chargeRefreshAt = 0
     tracked[part] = {
         startedAt = snapshot.StartedAt,
         kind = kind,
@@ -470,7 +485,14 @@ local function register(part, snapshot)
     elseif kind == "Bomb" then
         -- Show the falling charge immediately, even on late-joining clients;
         -- the renderer might have been dormant for the last 180ms.
-        syncBombCharge(part, tracked[part], snapshot.Progress, reduced, 1, bombViewerPosition())
+        local viewer = bombViewerPosition()
+        local initialSlots = BombChargeRules.nearestSlots(
+            tracked, viewer, currentTier.Name
+        )
+        syncBombCharge(
+            part, tracked[part], snapshot.Progress, reduced,
+            initialSlots[part] or 0, viewer
+        )
     end
     ensureRenderLoop()
 end
@@ -542,4 +564,5 @@ workspace.ChildRemoved:Connect(function(child)
     destroySignature(state)
     destroyCharge(state)
     tracked[child] = nil
+    chargeRefreshAt = 0
 end)

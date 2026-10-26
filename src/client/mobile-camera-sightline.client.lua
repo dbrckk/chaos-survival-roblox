@@ -20,9 +20,15 @@ local lastCamera = nil
 -- arbitrarily picking only one (which leaves the next one covering the
 -- whole screen). A locally faded player remains recognisable and collidable.
 local fadedAvatars = {} -- Model -> { BasePart -> original modifier }
+local avatarConnections = {} -- Model -> RBXScriptConnection
 local avatarFade = CameraOcclusionRules.localModifier()
 
 local function restoreAvatar(model)
+    local connection = avatarConnections[model]
+    if connection then
+        connection:Disconnect()
+        avatarConnections[model] = nil
+    end
     local originalParts = fadedAvatars[model]
     if not originalParts then return end
     for part, original in pairs(originalParts) do
@@ -42,6 +48,15 @@ local function restoreAvatars()
     end
 end
 
+local function fadeDescendant(originals, instance)
+    if not instance:IsA("BasePart") or originals[instance] ~= nil
+        or instance.LocalTransparencyModifier >= 0.55 then
+        return
+    end
+    originals[instance] = instance.LocalTransparencyModifier
+    instance.LocalTransparencyModifier = avatarFade
+end
+
 local function applyAvatarFades(selected)
     local wanted = {}
     for _, model in ipairs(selected) do
@@ -53,23 +68,29 @@ local function applyAvatarFades(selected)
         end
     end
     for _, model in ipairs(selected) do
-        if model.Parent then
-            local originals = fadedAvatars[model]
-            if not originals then
-                originals = {}
-                fadedAvatars[model] = originals
-            end
-            -- StreamingEnabled and avatar accessories can replicate AFTER
-            -- the first fade. Rescan only these two candidates to include
-            -- newly arrived body parts without repeatedly rewriting others.
+        if model.Parent and not fadedAvatars[model] then
+            local originals = {}
+            fadedAvatars[model] = originals
+            -- One initial scan per selected avatar, NOT a full
+            -- GetDescendants traversal every 180 ms on Android.
             for _, part in ipairs(model:GetDescendants()) do
-                if part:IsA("BasePart")
-                    and originals[part] == nil
-                    and part.LocalTransparencyModifier < 0.55 then
-                    originals[part] = part.LocalTransparencyModifier
-                    part.LocalTransparencyModifier = avatarFade
-                end
+                fadeDescendant(originals, part)
             end
+            -- Accessories and streamed body parts are faded as they
+            -- arrive. Disconnect when the avatar stops blocking the lens
+            -- or is removed, avoiding a permanent per-avatar subscription.
+            avatarConnections[model] = model.DescendantAdded:Connect(function(descendant)
+                if fadedAvatars[model] ~= originals then return end
+                fadeDescendant(originals, descendant)
+                -- Some streamed accessories arrive already populated.
+                -- Scan only that NEW accessory (once), never the entire
+                -- avatar on every camera tick.
+                if descendant:IsA("Accessory") or descendant:IsA("Model") then
+                    for _, piece in ipairs(descendant:GetDescendants()) do
+                        fadeDescendant(originals, piece)
+                    end
+                end
+            end)
         end
     end
 end
