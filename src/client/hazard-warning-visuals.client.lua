@@ -223,7 +223,7 @@ local function ensureRenderLoop()
                     end
                     local maxDistance = (state.kind == "Freeze"
                         or state.kind == "JumpShock") and 180
-                        or (currentTier.Name == "Low" and 68 or 105)
+                        or HazardWarningSignatureRules.labelDistance(currentTier.Name)
                     if state.label.MaxDistance ~= maxDistance then
                         state.label.MaxDistance = maxDistance
                     end
@@ -363,7 +363,7 @@ local function register(part, snapshot)
     label.Enabled = false
     label.LightInfluence = 0
     label.MaxDistance = (kind == "Freeze" or kind == "JumpShock")
-        and 180 or (currentTier.Name == "Low" and 68 or 105)
+        and 180 or HazardWarningSignatureRules.labelDistance(currentTier.Name)
     label.Parent = localDecor
 
     local warningText = Instance.new("TextLabel")

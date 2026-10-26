@@ -19,6 +19,14 @@ function HazardWarningSignatureRules.platformHighlightStyle(tier)
     return tier == "Low" and PLATFORM_STYLES.Low or PLATFORM_STYLES.Standard
 end
 
+-- Keep label draw distance in step with the adaptive Android VFX tier.
+-- Otherwise warnings spawned on High remain expensive after a drop to Low.
+function HazardWarningSignatureRules.labelDistance(tier)
+    if tier == "Low" then return 68 end
+    if tier == "Medium" then return 88 end
+    return 105
+end
+
 function HazardWarningSignatureRules.count(kind, tier, reduced)
     local limits = COUNTS[kind]
     if not limits then return 0 end
