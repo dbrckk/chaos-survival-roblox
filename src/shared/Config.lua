@@ -1,10 +1,10 @@
 local Config = {
     MinimumPlayers = 1,
-    IntermissionSeconds = 12,
-    VoteSeconds = 8,
+    IntermissionSeconds = 8,
+    VoteSeconds = 6,
     ReadySeconds = 4,
     RoundSeconds = 45,
-    PostRoundSeconds = 8,
+    PostRoundSeconds = 6,
 
     WinCoins = 25,
     WinXP = 30,
@@ -15,11 +15,11 @@ local Config = {
     DoubleChaosChance = 0.12,
 
     Solo = {
-        IntermissionSeconds = 6,
-        VoteSeconds = 4,
+        IntermissionSeconds = 4,
+        VoteSeconds = 3,
         ReadySeconds = 4,
         RoundSeconds = 30,
-        PostRoundSeconds = 6,
+        PostRoundSeconds = 5,
         WinCoinMultiplier = 1.4,
         WinXPMultiplier = 1.25,
         DoubleChaosEvery = 4,
