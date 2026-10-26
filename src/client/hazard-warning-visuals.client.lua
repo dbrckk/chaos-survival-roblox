@@ -18,6 +18,10 @@ local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 local loopStarted = false
 local labelRefreshAt = 0
 local selectedLabels = {}
+local chargeSlots = {}
+local chargeRefreshAt = 0
+local chargeViewerLast = nil
+local chargeTierLast = nil
 local warningNames = {
     BombWarning = true,
     MeteorWarning = true,
@@ -129,9 +133,18 @@ local function ensureRenderLoop()
             local activeCamera = workspace.CurrentCamera
             local contourViewer = activeCamera and activeCamera.CFrame.Position
             local bombViewer = bombViewerPosition()
-            local chargeSlots = BombChargeRules.nearestSlots(
-                tracked, bombViewer, currentTier.Name
-            )
+            local chargeNow = os.clock()
+            local movedFar = bombViewer and chargeViewerLast
+                and (bombViewer - chargeViewerLast).Magnitude >= 6
+            if chargeNow >= chargeRefreshAt
+                or chargeTierLast ~= currentTier.Name or movedFar then
+                chargeSlots = BombChargeRules.nearestSlots(
+                    tracked, bombViewer, currentTier.Name
+                )
+                chargeRefreshAt = chargeNow + 0.12
+                chargeViewerLast = bombViewer
+                chargeTierLast = currentTier.Name
+            end
             -- Readable foreground labels are a *separate* small UI budget;
             -- selecting them cannot suppress any ground collision warning.
             -- Update once every 0.18s rather than sorting labels at 30Hz.
