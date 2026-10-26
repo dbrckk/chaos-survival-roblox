@@ -23,6 +23,7 @@ local roundEvent = remotes:WaitForChild("RoundState")
 local impactEvent = remotes:WaitForChild("HazardImpactFeedback")
 
 local phase = "waiting"
+local activeDisasterIds = {}
 local armed = false
 local busy = false
 local captureSerial = 0
@@ -52,7 +53,7 @@ stampLabel.Name = "StagingCommit"
 stampLabel.AnchorPoint = Vector2.new(0, 1)
 -- Keep commit provenance above the bottom-centred runtime panel. On
 -- portrait Android both occupied the same bottom strip and overlapped.
-stampLabel.Position = UDim2.new(0, 10, 1, -80)
+stampLabel.Position = UDim2.new(0, 10, 1, -98)
 stampLabel.Size = UDim2.fromOffset(190, 24)
 stampLabel.BackgroundColor3 = UITheme.Colors.Panel
 stampLabel.BackgroundTransparency = 0.35
@@ -70,12 +71,12 @@ local telemetry = Instance.new("TextLabel")
 telemetry.Name = "StagingRuntimeBudget"
 telemetry.AnchorPoint = Vector2.new(0.5, 1)
 telemetry.Position = UDim2.new(0.5, 0, 1, -10)
-telemetry.Size = UDim2.fromOffset(300, 60)
+telemetry.Size = UDim2.fromOffset(300, 78)
 telemetry.BackgroundColor3 = UITheme.Colors.Panel
 telemetry.BackgroundTransparency = 0.22
 telemetry.BorderSizePixel = 0
 telemetry.Font = Enum.Font.GothamBold
-telemetry.TextSize = 11
+telemetry.TextSize = 10
 telemetry.TextWrapped = true
 telemetry.TextColor3 = UITheme.Colors.Text
 telemetry.Text = "STAGING / profiling graphics..."
@@ -85,7 +86,7 @@ UITheme.addCorner(telemetry, UITheme.Corners.Medium)
 -- Health/provenance labels must refresh immediately: READY is only a
 -- few seconds long, and a four-second graphics sample could miss it.
 -- Expensive visual folder traversal remains on its existing 4-second timer.
-local performanceSummary = "FPS -- | WORST --ms | -- | --\nPARTS --   LIGHTS --   FX --"
+local performanceSummary = "FPS -- | WORST --ms | -- | --\nPARTS --   LIGHTS --   FX --\nCHAOS --   WARN --   METEORS --"
 local performanceWarning = false
 local telemetryRunning = false
 
@@ -141,15 +142,23 @@ local function startPerformanceTelemetry()
             local budget = VisualBudgetRules.forTier(tier)
             local counts = VisualBudgetRules.collect(workspace)
             local status = VisualBudgetRules.status(tier, counts)
+            -- Count only genuine replicated hazard pieces and RoundState
+            -- disaster IDs. The 4-second cadence is deliberately shared
+            -- with visual budget collection so double-catastrophe sessions
+            -- do not add a second frame-rate or Workspace scan loop.
+            local hazard = VisualBudgetRules.hazardSnapshot(
+                workspace, phase == "round" and activeDisasterIds or nil
+            )
 
             performanceSummary = string.format(
-                "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d",
+                "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d\nCHAOS %d   WARN %d   METEORS %d",
                 fps and tostring(fps) or "--",
                 worst and tostring(worst) or "--",
                 tier, status,
                 counts.Parts, budget.Parts,
                 counts.Lights, budget.Lights,
-                counts.Effects, budget.Effects
+                counts.Effects, budget.Effects,
+                hazard.ActiveDisasters, hazard.Warnings, hazard.LiveMeteors
             )
             performanceWarning = ((fps and fps < 30) or status ~= "OK") == true
             renderRuntimeTelemetry()
@@ -270,7 +279,7 @@ local function layoutForCamera()
     toast.Size = UDim2.fromOffset(width, 34)
     telemetry.Size = UDim2.fromOffset(
         math.min(300, math.max(120, viewport.X - 20)),
-        60
+        78
     )
 end
 
@@ -499,6 +508,16 @@ end)
 
 roundEvent.OnClientEvent:Connect(function(state)
     phase = tostring(type(state) == "table" and state.phase or "waiting")
+    activeDisasterIds = {}
+    if phase == "round" and type(state.disasterIds) == "table" then
+        -- Record the server-declared hazards, never infer Double Chaos
+        -- from the temporary presence of decorative effects.
+        for _, id in ipairs(state.disasterIds) do
+            if type(id) == "string" then
+                activeDisasterIds[#activeDisasterIds + 1] = id
+            end
+        end
+    end
     if phase ~= "round" and armed then
         armed = false
         refresh()

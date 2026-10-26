@@ -13,6 +13,71 @@ local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit"
 local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 
 describe("visual budget rules", function()
+    it("counts local meteor facets welded under authoritative impact Parts", function()
+        local root = Instance.new("Folder")
+        local meteor = Instance.new("Part")
+        meteor.Name = "RoundMeteor"
+        meteor.Parent = root
+        for index = 1, 5 do
+            local localFacet = Instance.new("WedgePart")
+            localFacet.Name = "LocalMeteorFacet" .. index
+            localFacet.Parent = meteor
+        end
+        local serverFacet = Instance.new("WedgePart")
+        serverFacet.Name = "AuthoritativeProjectileShell"
+        serverFacet.Parent = meteor
+        local wrongType = Instance.new("Part")
+        wrongType.Name = "LocalMeteorFacet6"
+        wrongType.Parent = meteor
+        local trail = Instance.new("Trail")
+        trail.Name = "SignatureMeteorTrail"
+        trail.Parent = meteor
+
+        local metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(5)
+        expect(metrics.Effects).toBe(1)
+        meteor:FindFirstChild("LocalMeteorFacet1"):Destroy()
+        metrics = VisualBudgetRules.collect(root)
+        expect(metrics.Parts).toBe(4)
+        root:Destroy()
+    end)
+
+    it("observes concurrent hazards without inventing Android FPS or scanning decor", function()
+        local root = Instance.new("Folder")
+        local types = {
+            "BombWarning", "BombWarning", "MeteorWarning",
+            "FreezeWarning", "JumpShockWarning",
+            "RoundMeteor", "RoundLava", "OtherPart",
+        }
+        for _, name in ipairs(types) do
+            local part = Instance.new("Part")
+            part.Name = name
+            part.Parent = root
+        end
+        local storm = Instance.new("Model")
+        storm.Name = "RoundTornado"
+        storm.Parent = root
+        local irrelevant = Instance.new("Folder")
+        irrelevant.Name = "BombWarning"
+        irrelevant.Parent = root
+        local reading = VisualBudgetRules.hazardSnapshot(
+            root, {"Bombs", "Meteors", "Bombs"}
+        )
+        expect(reading.ActiveDisasters).toBe(2)
+        expect(reading.Warnings).toBe(5)
+        expect(reading.BombWarnings).toBe(2)
+        expect(reading.MeteorWarnings).toBe(1)
+        expect(reading.FreezeWarnings).toBe(1)
+        expect(reading.JumpWarnings).toBe(1)
+        expect(reading.LiveMeteors).toBe(1)
+        expect(reading.LiveLava).toBe(1)
+        expect(reading.LiveTornadoes).toBe(1)
+        local empty = VisualBudgetRules.hazardSnapshot(nil, nil)
+        expect(empty.Warnings).toBe(0)
+        expect(empty.ActiveDisasters).toBe(0)
+        root:Destroy()
+    end)
+
     it("accounts for locally welded frost facets on player torsos", function()
         local root = Instance.new("Folder")
         local character = Instance.new("Model")
