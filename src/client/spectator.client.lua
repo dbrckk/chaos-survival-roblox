@@ -33,7 +33,7 @@ card.Parent = gui
 
 local cardConstraint = Instance.new("UISizeConstraint")
 cardConstraint.MinSize = Vector2.new(280, 62)
-cardConstraint.MaxSize = Vector2.new(620, 86)
+cardConstraint.MaxSize = Vector2.new(620, 108)
 cardConstraint.Parent = card
 
 UITheme.addCorner(card, UITheme.Corners.Large)
@@ -106,6 +106,28 @@ UITheme.addStroke(nextButton, UITheme.Colors.Cyan, 1.1, 0.35)
 UITheme.addGradient(nextButton, UITheme.Colors.Blue, UITheme.Colors.Violet, 25)
 UITheme.addPressFeedback(nextButton, 0.94)
 
+-- A late joiner can actively try the lobby's existing boost pads while
+-- the round plays out. This toggles only their camera; it never changes
+-- the authoritative ready roster or grants an in-round respawn.
+local practiceButton = Instance.new("TextButton")
+practiceButton.Name = "LobbyPracticeSwitch"
+practiceButton.AnchorPoint = Vector2.new(1, 0.5)
+practiceButton.Position = UDim2.new(1, -8, 0.28, 0)
+practiceButton.Size = UDim2.new(0.28, 0, 0.38, 0)
+practiceButton.BackgroundColor3 = UITheme.Colors.PanelRaised
+practiceButton.Font = Enum.Font.GothamBlack
+practiceButton.TextColor3 = UITheme.Colors.Cyan
+practiceButton.TextScaled = true
+practiceButton.Text = CoreLocalization.text(localeId, "SPECTATOR_PRACTICE")
+practiceButton.Visible = false
+practiceButton.AutoButtonColor = true
+practiceButton.ZIndex = 2
+practiceButton.Parent = card
+UITheme.addCorner(practiceButton, UITheme.Corners.Medium)
+UITheme.addStroke(practiceButton, UITheme.Colors.Cyan, 1.1, 0.25)
+UITheme.addPressFeedback(practiceButton, 0.94)
+UITheme.addTextConstraint(practiceButton, 10, 14)
+
 local healthTrack = Instance.new("Frame")
 healthTrack.Name = "TargetHealthTrack"
 healthTrack.Position = UDim2.fromScale(0.04, 0.79)
@@ -127,6 +149,8 @@ healthFill.Parent = healthTrack
 UITheme.addCorner(healthFill, UITheme.Corners.Pill)
 
 local roundActive = false
+local practiceMode = false
+local restoreCamera
 local latestState = nil
 local targets = {}
 local targetIndex = 0
@@ -213,12 +237,17 @@ applyResponsive = function()
 
     if UserInputService.TouchEnabled then
         local profile = UIResponsive.mobileProfile(viewport)
-        local cardHeight = profile.tinyHeight and 64 or 72
+        local twoActions = practiceButton.Visible
+        local cardHeight = twoActions and (profile.tinyHeight and 90 or 100)
+            or (profile.tinyHeight and 64 or 72)
         card.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.76 or 0.82)
         card.Size = UDim2.new(profile.veryNarrow and 0.92 or 0.78, 0, 0, cardHeight)
 
-        nextButton.Size = UDim2.fromOffset(profile.tinyHeight and 88 or 98, 44)
-        nextButton.Position = UDim2.new(1, -8, 0.5, 0)
+        local actionWidth = profile.tinyHeight and 88 or 98
+        nextButton.Size = UDim2.fromOffset(actionWidth, twoActions and 36 or 44)
+        nextButton.Position = UDim2.new(1, -8, twoActions and 0.75 or 0.5, 0)
+        practiceButton.Size = UDim2.fromOffset(actionWidth, 36)
+        practiceButton.Position = UDim2.new(1, -8, 0.30, 0)
 
         local glyphSize = profile.tinyHeight and 30 or 36
         hazardGlyph.Size = UDim2.fromOffset(glyphSize, glyphSize)
@@ -254,10 +283,13 @@ applyResponsive = function()
     else
         hazardGlyphSecondary.Visible = shownSecondaryId ~= nil
             and HazardGlyphs.get(shownSecondaryId) ~= nil
+        local twoActions = practiceButton.Visible
         card.Position = UDim2.fromScale(0.5, 0.88)
-        card.Size = UDim2.fromScale(0.58, 0.105)
-        nextButton.Size = UDim2.new(0.28, 0, 0.72, 0)
-        nextButton.Position = UDim2.new(1, -8, 0.5, 0)
+        card.Size = UDim2.fromScale(0.58, twoActions and 0.14 or 0.105)
+        nextButton.Size = UDim2.new(0.28, 0, twoActions and 0.36 or 0.72, 0)
+        nextButton.Position = UDim2.new(1, -8, twoActions and 0.74 or 0.5, 0)
+        practiceButton.Size = UDim2.new(0.28, 0, 0.36, 0)
+        practiceButton.Position = UDim2.new(1, -8, 0.29, 0)
 
         hazardGlyph.Size = UDim2.fromScale(0.15, 0.58)
         hazardGlyph.Position = UDim2.fromScale(
@@ -297,11 +329,15 @@ local function bindCamera()
     -- Roblox may replace CurrentCamera during streaming or a respawn.
     -- Restore the selected spectator target immediately instead of waiting
     -- for the next one-second RoundState update.
-    if roundActive and card.Visible and spectateIndex then
+    if roundActive and card.Visible then
         task.defer(function()
             if workspace.CurrentCamera == camera
                 and roundActive and card.Visible then
-                spectateIndex(false)
+                if practiceMode then
+                    if restoreCamera then restoreCamera() end
+                elseif spectateIndex then
+                    spectateIndex(false)
+                end
             end
         end)
     end
@@ -429,7 +465,7 @@ local function rebuildTargets()
     end)
 end
 
-local function restoreCamera()
+restoreCamera = function()
     local camera = workspace.CurrentCamera
     local hum = localHumanoid()
     if camera and hum then
@@ -529,6 +565,20 @@ local function refresh()
     local shouldSpectate = SpectatorTargetRules.isSpectating(
         roundActive, participant, eliminated
     )
+    local hum = localHumanoid()
+    local canPractice = SpectatorTargetRules.canPractice(
+        roundActive,
+        player:GetAttribute("RoundParticipant"),
+        player:GetAttribute("RoundEliminated")
+    ) and hum ~= nil and hum.Health > 0
+
+    if not canPractice then
+        practiceMode = false
+    end
+    local changedPracticeVisibility = practiceButton.Visible ~= canPractice
+    practiceButton.Visible = canPractice
+    practiceButton.Text = CoreLocalization.text(localeId,
+        practiceMode and "SPECTATOR_WATCH" or "SPECTATOR_PRACTICE")
 
     if shouldSpectate then
         if not card.Visible then
@@ -540,17 +590,49 @@ local function refresh()
                 {Scale = 1}
             ):Play()
         end
-        spectateIndex(false)
+        if practiceMode then
+            nextButton.Visible = false
+            healthTrack.Visible = false
+            clearTargetHealth()
+            restoreCamera()
+            label.Text = CoreLocalization.text(localeId, "SPECTATOR_TRAINING")
+            local summary = roundSummary()
+            if summary ~= "" then
+                label.Text ..= "\n" .. summary
+            end
+        else
+            healthTrack.Visible = true
+            spectateIndex(false)
+        end
     else
+        practiceMode = false
+        practiceButton.Visible = false
         card.Visible = false
         targetIndex = 0
         selectedCharacter = nil
         clearTargetHealth()
         restoreCamera()
     end
+
+    if changedPracticeVisibility then
+        applyResponsive()
+    end
 end
 
+practiceButton.Activated:Connect(function()
+    if not SpectatorTargetRules.canPractice(
+        roundActive,
+        player:GetAttribute("RoundParticipant"),
+        player:GetAttribute("RoundEliminated")
+    ) then return end
+    local hum = localHumanoid()
+    if not hum or hum.Health <= 0 then return end
+    practiceMode = not practiceMode
+    refresh()
+end)
+
 nextButton.Activated:Connect(function()
+    if practiceMode then return end
     spectateIndex(true)
 end)
 
@@ -570,13 +652,18 @@ player.CharacterAdded:Connect(function(spawnedCharacter)
 
     local eliminated = player:GetAttribute("RoundEliminated") == true
     local participant = player:GetAttribute("RoundParticipant") == true
-    if SpectatorTargetRules.isSpectating(
+    if practiceMode and SpectatorTargetRules.canPractice(
+        roundActive, participant, eliminated
+    ) then
+        restoreCamera()
+    elseif SpectatorTargetRules.isSpectating(
         roundActive, participant, eliminated
     ) then
         spectateIndex(false)
     else
         restoreCamera()
     end
+    refresh()
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
