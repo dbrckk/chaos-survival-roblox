@@ -105,8 +105,16 @@ buildIdentity.Font = Enum.Font.GothamMedium
 buildIdentity.TextSize = 10
 buildIdentity.TextColor3 = UITheme.Colors.Muted
 buildIdentity.TextXAlignment = Enum.TextXAlignment.Center
+local buildChannels = {
+    CANDIDATE = "RC",
+    STAGING = "STAGE",
+    PUBLIC_PLAYTEST = "TEST",
+    PRODUCTION = "LIVE",
+    SOURCE = "DEV",
+}
+local buildChannel = tostring(BuildIdentity.Channel or "SOURCE")
 buildIdentity.Text = "BUILD " .. tostring(BuildIdentity.SourceSha or "UNSTAMPED"):sub(1, 12)
-    .. " / " .. tostring(BuildIdentity.Channel or "SOURCE")
+    .. " / " .. (buildChannels[buildChannel] or "DEV")
 buildIdentity.Parent = panel
 
 
