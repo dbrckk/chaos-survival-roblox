@@ -43,10 +43,13 @@ function Kit.recipe(kind, diameter, progress, reduced, pulse, tier)
         -- The dangerous footprint must become MORE legible as impact
         -- approaches. The old contour faded at the worst possible moment.
         -- Reduced-motion stays fixed and never pulses.
+        -- Reduce opacity as the blast approaches: the old recipe added
+        -- transparency near detonation, hiding the most urgent border on
+        -- small screens. No extra flashes, parts or render updates.
         OuterTransparency = reduced and 0.25
-            or math.clamp(0.24 + alpha * 0.075 + wave * 0.018, 0.18, 0.40),
+            or math.clamp(0.34 - alpha * 0.16 + wave * 0.018, 0.16, 0.36),
         InnerTransparency = reduced and 0.56
-            or math.clamp(0.53 + alpha * 0.07, 0.53, 0.64),
+            or math.clamp(0.62 - alpha * 0.13, 0.47, 0.64),
         Thickness = tier == "Low" and 3 or (tier == "High" and 6 or 5),
         InnerVisible = tier ~= "Low",
         -- Medium phones get directional ticks only near impact; High
