@@ -49,6 +49,16 @@ function SceneryLodRules.heroArchitectureOwner(root)
     return nil
 end
 
+-- Preserve a sparse skyline rather than an empty horizon on Android Low.
+-- Only an explicitly marked original hero instance may use this exception;
+-- gameplay parts and other scenery folders remain under their normal LOD.
+function SceneryLodRules.entryVisible(tier, folderVisible, keepHeroLow, essential)
+    if folderVisible == true then
+        return true
+    end
+    return tier == "Low" and keepHeroLow == true and essential == true
+end
+
 function SceneryLodRules.visible(tier, distance, lowDistance, mediumDistance,
         previouslyVisible)
     if tier ~= "Low" and tier ~= "Medium" then
