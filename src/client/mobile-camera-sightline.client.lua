@@ -170,6 +170,7 @@ local function supportedTarget(part, arena, base)
     local platforms = arena:FindFirstChild("Platforms")
     local mechanics = arena:FindFirstChild("Mechanics")
     local spawns = arena:FindFirstChild("Spawns")
+    local decor = arena:FindFirstChild("Decor")
     -- Never fade disappearing floors, mobility pads or ordinary platforms:
     -- players need to see their actual traversable routes. A designated
     -- skybridge may soften slightly when it occludes the local avatar.
@@ -188,6 +189,7 @@ local function supportedTarget(part, arena, base)
         -- never faded: they carry essential gameplay information.
         and (not mechanics or not part:IsDescendantOf(mechanics))
         and (not spawns or not part:IsDescendantOf(spawns))
+        and (not decor or not part:IsDescendantOf(decor))
 end
 
 local function update()
