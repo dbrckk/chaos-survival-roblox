@@ -443,36 +443,49 @@ ensureRenderLoop = function()
             local nearestWarning = nil
             local nearestState = nil
             local nearestClearance = math.huge
+            local nearestRemaining = math.huge
             local shockRemaining = math.huge
 
+            -- Select threats before drawing ANY escape arrows. The
+            -- previous order drew every overlapping warning, then hid
+            -- nearly all of them on Low Android/final rush, wasting
+            -- geometry writes and prioritizing deepest exposure even
+            -- when another already-dangerous bomb was about to land.
             for warning, state in pairs(warningStates) do
-                if warning.Parent then
-                    if state.kind == "JumpShock" then
-                        local remaining = WarningRules.window(
-                            state.startedAt, state.duration, serverNow
-                        )
-                        if remaining and remaining > 0.02 then
+                if not warning.Parent then
+                    destroyState(warning)
+                else
+                    local remaining = WarningRules.window(
+                        state.startedAt, state.duration, serverNow
+                    )
+                    if remaining and remaining > 0.02 then
+                        if state.kind == "JumpShock" then
                             shockRemaining = math.min(shockRemaining, remaining)
+                        else
+                            local clearance = WarningRules.escapeClearance(
+                                root.Position, warning.Position + Vector3.new(0, 1, 0),
+                                state.endSize
+                            )
+                            if WarningRules.preferThreat(
+                                clearance, remaining,
+                                nearestClearance, nearestRemaining
+                            ) then
+                                nearestClearance = clearance
+                                nearestRemaining = remaining
+                                nearestWarning = warning
+                                nearestState = state
+                            end
                         end
                     end
-                    local clearance = updateState(
-                        warning, state, root, tier, now, serverNow
-                    )
-                    if clearance < nearestClearance then
-                        nearestClearance = clearance
-                        nearestWarning = warning
-                        nearestState = state
-                    end
-                else
-                    destroyState(warning)
                 end
             end
 
-            if finalRush or tier.Name == "Low" then
-                for warning, state in pairs(warningStates) do
-                    if warning ~= nearestWarning then
-                        hideState(state)
-                    end
+            local onlyNearest = finalRush or tier.Name == "Low"
+            for warning, state in pairs(warningStates) do
+                if onlyNearest and warning ~= nearestWarning then
+                    hideState(state)
+                else
+                    updateState(warning, state, root, tier, now, serverNow)
                 end
             end
 
