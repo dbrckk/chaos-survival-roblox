@@ -1297,9 +1297,14 @@ describe("Chaos Survival engine", function()
             expect(OriginalMeshScenery.mount(arena, templates)).toBe(4)
             local originals = decor:FindFirstChild("Original3DScenery")
             expect(#originals:GetChildren()).toBe(4)
+            local occupied = {}
             for _, model in ipairs(originals:GetChildren()) do
                 local cf, size = model:GetBoundingBox()
                 local rx, rz = worldRadii(cf, size)
+                occupied[#occupied + 1] = {
+                    name = model.Name, x = cf.Position.X, z = cf.Position.Z,
+                    rx = rx, rz = rz,
+                }
                 for _, bound in ipairs(native) do
                     local apartX = math.abs(cf.Position.X - bound.x)
                         >= rx + bound.rx + 3.9
@@ -1308,6 +1313,18 @@ describe("Chaos Survival engine", function()
                     expect(apartX or apartZ).toBe(true)
                 end
                 expect(model:GetAttribute("OriginalFoundationBuilt")).toBe(true)
+            end
+            -- Decorative packages must not interpenetrate each other:
+            -- native skyline clearance alone is not enough.
+            for i = 1, #occupied do
+                for j = i + 1, #occupied do
+                    local first, second = occupied[i], occupied[j]
+                    local apartX = math.abs(first.x - second.x)
+                        >= first.rx + second.rx + 3.9
+                    local apartZ = math.abs(first.z - second.z)
+                        >= first.rz + second.rz + 3.9
+                    expect(apartX or apartZ).toBe(true)
+                end
             end
             root:Destroy()
         end

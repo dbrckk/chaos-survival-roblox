@@ -152,21 +152,38 @@ function OriginalMeshScenery.unobstructedExteriorPosition(base, placement,
         return starting
     end
     local obstructions = {}
+    local function collectBounds(model)
+        local ok, cf, bounds = pcall(function()
+            return model:GetBoundingBox()
+        end)
+        if ok and cf and bounds then
+            local rx, rz = planarRadii(cf, bounds)
+            obstructions[#obstructions + 1] = {
+                x = cf.Position.X, z = cf.Position.Z,
+                rx = rx, rz = rz,
+            }
+        end
+    end
     for _, child in ipairs(decor:GetChildren()) do
-        -- Only judge genuine, server-authored exterior Models; skip
-        -- physical platforms, floor markings, imported asset buckets and
-        -- near-floor signals which must not influence skyline composition.
+        -- Gameplay platforms and hazard telegraphs are not decorative
+        -- blockers; keep native exterior art intact.
         if child:IsA("Model")
             and child:GetAttribute("ChaosDistantScenery") == true then
-            local ok, cf, bounds = pcall(function()
-                return child:GetBoundingBox()
-            end)
-            if ok and cf and bounds then
-                local rx, rz = planarRadii(cf, bounds)
-                obstructions[#obstructions + 1] = {
-                    x = cf.Position.X, z = cf.Position.Z,
-                    rx = rx, rz = rz,
-                }
+            collectBounds(child)
+        end
+    end
+    -- Imported packages live in a nested Folder, not as direct children
+    -- of Decor. Their dimensions MUST also count. Otherwise the second
+    -- through fourth packages (and asynchronous late-loading packages)
+    -- can occupy an already-mounted MeshPart's space.
+    local imported = decor:FindFirstChild("Original3DScenery")
+    if imported and imported:IsA("Folder") then
+        for _, child in ipairs(imported:GetChildren()) do
+            if child:IsA("Model")
+                and child:GetAttribute("CosmeticOnly") == true
+                and type(child:GetAttribute("Original3DAssetId")) == "number"
+            then
+                collectBounds(child)
             end
         end
     end

@@ -74,6 +74,53 @@ describe("Arena variants", function()
         world:Destroy()
     end)
 
+    it("moves optional imported assets away from a previously placed mesh", function()
+        local variant = ArenaVariants.get("Classic")
+        local base = Instance.new("Part")
+        base.Anchored = true
+        base.Size = variant.BaseSize
+        base.Position = Vector3.new(24, 4, 37)
+
+        local placement = OriginalMeshScenery.placements(base, "Classic")[1]
+        local size = Vector3.new(58, 25, 38)
+        local starting = OriginalMeshScenery.safeExteriorPosition(base, placement, size)
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        local bucket = Instance.new("Folder")
+        bucket.Name = "Original3DScenery"
+        bucket.Parent = decor
+
+        local mounted = Instance.new("Model")
+        mounted.Name = "EarlierApprovedMesh"
+        mounted:SetAttribute("CosmeticOnly", true)
+        mounted:SetAttribute("Original3DAssetId", 135985134195364)
+        mounted.Parent = bucket
+        local occupied = Instance.new("Part")
+        occupied.Size = Vector3.new(60, 25, 44)
+        occupied.CFrame = CFrame.new(starting)
+        occupied.Anchored = true
+        occupied.Parent = mounted
+
+        local selected = OriginalMeshScenery.unobstructedExteriorPosition(
+            base, placement, size, decor
+        )
+        expect(selected ~= nil).toBe(true)
+        expect((selected - starting).Magnitude > 1).toBe(true)
+        local dx = math.abs(selected.X - starting.X)
+        local dz = math.abs(selected.Z - starting.Z)
+        expect(dx >= (size.X + occupied.Size.X) * 0.5 + 3.9
+            or dz >= (size.Z + occupied.Size.Z) * 0.5 + 3.9).toBe(true)
+
+        -- Changing the load order or preloading the owner must not make
+        -- the same occupied slot suddenly appear free.
+        expect(OriginalMeshScenery.unobstructedExteriorPosition(
+            base, placement, size, decor
+        )).toBe(selected)
+
+        decor:Destroy()
+        base:Destroy()
+    end)
+
     it("positions all original 3D models entirely beyond the live arena floor", function()
         local sizes = {
             Vector3.new(65, 40, 65),
