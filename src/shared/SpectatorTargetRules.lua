@@ -6,6 +6,14 @@ function SpectatorTargetRules.isSpectating(roundActive, participant, eliminated)
         and (eliminated == true or participant ~= true)
 end
 
+-- A late entrant is not on the committed round roster. They can learn
+-- movement on the lobby practice pads, then return to spectating, without
+-- granting participation, rewards or access to the active arena. Eliminated
+-- contestants must not get a second in-round attempt through this UI.
+function SpectatorTargetRules.canPractice(roundActive, participant, eliminated)
+    return roundActive == true and participant ~= true and eliminated ~= true
+end
+
 -- Invalid RoundState packets must not crash or reset a live spectator camera.
 -- A known non-round phase ends spectating; malformed payloads are ignored.
 function SpectatorTargetRules.roundActive(snapshot)
