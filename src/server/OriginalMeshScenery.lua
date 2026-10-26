@@ -402,6 +402,11 @@ function OriginalMeshScenery.mount(arena, templates)
                     OriginalMeshScenery.addFoundation(
                         clone, placement.asset, target, size
                     )
+                    -- Roblox StreamingEnabled: keep the imported MeshPart
+                    -- and its four structural supports visually coherent
+                    -- as one atomic unit. Unlike Persistent, this can still
+                    -- stream out normally when the camera moves away.
+                    clone.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
                     clone.Parent = folder
                     mounted += 1
                 end
