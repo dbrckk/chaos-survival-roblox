@@ -32,4 +32,33 @@ function ImpactAudioRules.plan(kind, distance, tierName, muted)
     }
 end
 
+
+-- Double Chaos may produce a Meteor and Bomb blast on the same scheduler
+-- step. The old shared 100ms gate silently dropped one of them. Separate
+-- per-kind cooldowns preserve both identities while still limiting spam.
+-- The second *different* impact is gently attenuated to protect phone audio.
+local COOLDOWNS = {Low = 0.18, Medium = 0.14, High = 0.12}
+
+local function finite(value)
+    return type(value) == "number" and value == value
+        and math.abs(value) < math.huge
+end
+
+function ImpactAudioRules.gate(kind, now, lastByKind, tierName)
+    if kind ~= "Meteor" and kind ~= "Bomb"
+        or not finite(now) or now < 0
+        or type(lastByKind) ~= "table" then
+        return false, 0
+    end
+    local recent = lastByKind[kind]
+    local gap = COOLDOWNS[tostring(tierName or "")] or COOLDOWNS.Low
+    if finite(recent) and now - recent < gap then
+        return false, 0
+    end
+    local otherKind = kind == "Meteor" and "Bomb" or "Meteor"
+    local other = lastByKind[otherKind]
+    local overlap = finite(other) and now >= other and now - other < 0.20
+    return true, overlap and 0.68 or 1
+end
+
 return ImpactAudioRules
