@@ -7,18 +7,20 @@ local BUDGETS = {
     Medium = {Count = 3, MaxDistance = 100, MaxActive = 3},
     High = {Count = 5, MaxDistance = 125, MaxActive = 4},
 }
+-- Cache profiles: the existing shared warning renderer runs at 30 Hz.
+local REDUCED = {
+    Low = {Count = 1, MaxDistance = 65, MaxActive = 2},
+    Medium = {Count = 1, MaxDistance = 100, MaxActive = 3},
+    High = {Count = 1, MaxDistance = 125, MaxActive = 4},
+}
 
 local function finite(v)
     return type(v) == "number" and v == v and math.abs(v) < math.huge
 end
 
 function BombChargeRules.profile(tier, reduced)
-    local base = BUDGETS[tostring(tier or "Low")] or BUDGETS.Low
-    return {
-        Count = reduced == true and 1 or base.Count,
-        MaxDistance = base.MaxDistance,
-        MaxActive = base.MaxActive,
-    }
+    local source = reduced == true and REDUCED or BUDGETS
+    return source[tostring(tier or "Low")] or source.Low
 end
 
 function BombChargeRules.visible(tier, distance, slot)
@@ -54,11 +56,13 @@ function BombChargeRules.recipe(index, count, progress, reduced)
     if index == 1 then
         part.Shape = "Ball"
         part.Size = Vector3.new(2.15, 2.15, 2.15)
-        part.Color = Color3.fromRGB(54, 62, 77)
+        part.Color = Color3.fromRGB(93, 48, 57)
         part.Transform = frame
     elseif index <= 3 then
         local side = index == 2 and -1 or 1
         part.Shape = "Wedge"
+        part.Color = index == 2 and Color3.fromRGB(170, 68, 68)
+            or Color3.fromRGB(68, 75, 89)
         part.Size = Vector3.new(0.34, 1.22, 1.12)
         part.Transform = frame * CFrame.new(side * 1.04, -0.16, 0)
             * CFrame.Angles(0, side * math.rad(24), side * math.rad(26))
