@@ -11,6 +11,8 @@ local ImpactSetpieceRules = require("../../src/shared/ImpactSetpieceRules")
 local ImpactSetpiece = require("../../src/client/ImpactSetpiece")
 local DisasterIntroGlyphKit = require("../../src/client/DisasterIntroGlyphKit")
 local MeteorSignatureRules = require("../../src/shared/MeteorSignatureRules")
+local TornadoSpiralRules = require("../../src/shared/TornadoSpiralRules")
+local TornadoSpiralKit = require("../../src/client/TornadoSpiralKit")
 local ImpactMaterialRules = require("../../src/shared/ImpactMaterialRules")
 local ImpactPulseRules = require("../../src/shared/ImpactPulseRules")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
@@ -984,5 +986,104 @@ describe("Android crisis perimeter identity and streaming", function()
         expect(r.beaconPulse(0.5, 5, "High", false)).toBe(0.5)
     end)
 end)
+
+describe("Budgeted original tornado spiral silhouettes", function()
+    it("preserves visible low-tier and reduced-motion 3D cues", function()
+        local rules = TornadoSpiralRules
+        expect(rules.count("Low", false)).toBe(4)
+        expect(rules.count("Medium", false)).toBe(8)
+        expect(rules.count("High", false)).toBe(12)
+        expect(rules.count("High", true)).toBe(4)
+        expect(rules.count("Low", true)).toBe(4)
+        expect(rules.count("Unknown", false)).toBe(0)
+        expect(rules.segment(nil, 1, 4, 0, false)).toBe(nil)
+        expect(rules.segment(Vector3.zero, 0, 4, 0, false)).toBe(nil)
+        expect(rules.segment(Vector3.zero, 1, 13, 0, false)).toBe(nil)
+        expect(rules.segment(Vector3.zero, 1, 4, 0/0, false) ~= nil).toBe(true)
+
+        local center = Vector3.new(12, 6, -8)
+        local still = rules.segment(center, 2, 8, 0, true)
+        local laterStill = rules.segment(center, 2, 8, 4, true)
+        local animated = rules.segment(center, 2, 8, 4, false)
+        expect(still.CFrame).toBe(laterStill.CFrame)
+        expect(still.CFrame ~= animated.CFrame).toBe(true)
+        expect(still.Size.X > 0 and still.Size.Z > 0).toBe(true)
+        expect(still.Transparency >= 0.4).toBe(true)
+        expect(still.Transparency <= 0.65).toBe(true)
+        expect(still.CFrame.Position.Y > center.Y).toBe(true)
+        expect(still.CFrame.Position.Y < center.Y + 17).toBe(true)
+    end)
+
+    it("creates physical collisionless ribbon pieces and cleans up after a storm", function()
+        local model = Instance.new("Model")
+        model.Name = "TornadoSpiralVisualTest"
+        model.Parent = workspace
+
+        local lower = Instance.new("Part")
+        lower.Name = "LowerFunnel"
+        lower.Position = Vector3.new(8, 23, -12)
+        lower.Anchored = true
+        lower.Parent = model
+
+        local visuals = Instance.new("Folder")
+        visuals.Name = "LocalTornadoVisualTest"
+        visuals.Parent = workspace
+        local state = {parts = {}}
+        TornadoSpiralKit.sync(
+            state, lower, visuals, "High", false, 0, TornadoSpiralRules
+        )
+        expect(#state.parts).toBe(12)
+        expect(#visuals:GetChildren()).toBe(12)
+
+        local oldFrame = state.parts[1].CFrame
+        for _, part in ipairs(state.parts) do
+            expect(part.Parent).toBe(visuals)
+            expect(part.Anchored).toBe(true)
+            expect(part.CanCollide).toBe(false)
+            expect(part.CanTouch).toBe(false)
+            expect(part.CanQuery).toBe(false)
+            expect(part.CastShadow).toBe(false)
+            expect(part.Material).toBe(Enum.Material.Glass)
+        end
+        TornadoSpiralKit.sync(
+            state, lower, visuals, "High", false, 0.6, TornadoSpiralRules
+        )
+        expect(state.parts[1].CFrame ~= oldFrame).toBe(true)
+        expect(#visuals:GetChildren()).toBe(12)
+
+        -- Device auto-quality and accessibility reconfigure in place,
+        -- never leave invisible high-tier ghosts under the next map.
+        TornadoSpiralKit.sync(
+            state, lower, visuals, "Low", false, 1, TornadoSpiralRules
+        )
+        expect(#state.parts).toBe(4)
+        expect(#visuals:GetChildren()).toBe(4)
+        local staticFrame = state.parts[1].CFrame
+        TornadoSpiralKit.sync(
+            state, lower, visuals, "Low", false, 2, TornadoSpiralRules
+        )
+        expect(state.parts[1].CFrame).toBe(staticFrame)
+        TornadoSpiralKit.sync(
+            state, lower, visuals, "High", true, 4, TornadoSpiralRules
+        )
+        expect(#state.parts).toBe(4)
+        local reducedFrame = state.parts[1].CFrame
+        TornadoSpiralKit.sync(
+            state, lower, visuals, "High", true, 9, TornadoSpiralRules
+        )
+        expect(state.parts[1].CFrame).toBe(reducedFrame)
+
+        model:Destroy()
+        TornadoSpiralKit.sync(
+            state, lower, visuals, "High", false, 12, TornadoSpiralRules
+        )
+        expect(#state.parts).toBe(0)
+        expect(#visuals:GetChildren()).toBe(0)
+
+        TornadoSpiralKit.clear(state)
+        visuals:Destroy()
+    end)
+end)
+
 
 return nil

@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local SceneRules = require(ReplicatedStorage.Shared.DisasterMotionSceneRules)
+local TornadoSpiralRules = require(ReplicatedStorage.Shared.TornadoSpiralRules)
+local TornadoSpiralKit = require(script.Parent.TornadoSpiralKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -24,6 +26,7 @@ local blackoutPoseFrame = nil
 local blackoutPoseSize = nil
 local blackoutLastTier = nil
 local blackoutLastReduced = nil
+local tornadoSpiral = {parts = {}}
 local clock = 0
 local currentPhase = "waiting"
 local activeSignature = ""
@@ -286,6 +289,19 @@ local function updateBlackout(tier)
     end
 end
 
+-- Reuse the existing adaptive decorative clock for the tornado's outer
+-- flow ribbons. The authoritative wind force and danger zone are untouched.
+local function refreshTornado(tier)
+    local active = currentPhase == "round" and has("Tornado")
+    local model = active and workspace:FindFirstChild("RoundTornado")
+    local lower = model and model:FindFirstChild("LowerFunnel")
+    TornadoSpiralKit.sync(
+        tornadoSpiral, lower, worldEffects, tier.Name,
+        player:GetAttribute("ReduceMotion") == true,
+        clock, TornadoSpiralRules
+    )
+end
+
 local function applyState(state)
     local snapshot = type(state) == "table" and state or {}
     local nextPhase = tostring(snapshot.phase or "waiting")
@@ -311,6 +327,11 @@ local function applyState(state)
 
     ensureShrinkVisuals()
     ensureBlackoutVisuals()
+    -- Tear down local cyclone pieces as soon as the hazard ends; do not
+    -- leave them visible during the result screen or next-round voting.
+    if currentPhase ~= "round" or not has("Tornado") then
+        TornadoSpiralKit.clear(tornadoSpiral)
+    end
 
     if ensureRenderLoop then
         ensureRenderLoop()
@@ -337,7 +358,8 @@ ensureRenderLoop = function()
         while true do
             local shrinkActive = currentPhase == "round" and has("ShrinkingArena")
             local blackoutActive = currentPhase == "round" and has("Darkness")
-            if not shrinkActive and not blackoutActive then
+            local tornadoActive = currentPhase == "round" and has("Tornado")
+            if not shrinkActive and not blackoutActive and not tornadoActive then
                 -- No reason to poll the client every frame in the lobby.
                 task.wait(0.16)
                 continue
@@ -349,6 +371,7 @@ ensureRenderLoop = function()
             -- Events may arrive while waiting: use the current hazard set.
             shrinkActive = has("ShrinkingArena")
             blackoutActive = has("Darkness")
+            tornadoActive = has("Tornado")
             clock += dt
 
     if shrinkActive then
@@ -363,6 +386,12 @@ ensureRenderLoop = function()
         updateBlackout(tier)
     elseif #blackoutParts > 0 then
         clearBlackout()
+    end
+
+    if tornadoActive then
+        refreshTornado(tier)
+    elseif #tornadoSpiral.parts > 0 then
+        TornadoSpiralKit.clear(tornadoSpiral)
     end
         end
     end)
