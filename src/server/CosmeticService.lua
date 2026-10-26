@@ -4,6 +4,7 @@ local RemoteRegistry = require(script.Parent.RemoteRegistry)
 local PlayerReadiness = require(script.Parent.PlayerReadiness)
 local PlayerData = require(script.Parent.PlayerData)
 local Cosmetics = require(script.Parent.CosmeticsCatalog)
+local CosmeticEffectStyles = require(script.Parent.CosmeticEffectStyles)
 local GameAnalytics = require(script.Parent.GameAnalytics)
 
 local CosmeticService = {}
@@ -39,6 +40,8 @@ local function clearEffects(character)
 end
 
 local function applyTrail(root, item)
+    local style = CosmeticEffectStyles.trail(item)
+    if not style then return end
     local a0 = Instance.new("Attachment")
     a0.Name = "ChaosTrailA0"
     a0.Position = Vector3.new(-0.68, -0.55, 0.46)
@@ -53,54 +56,44 @@ local function applyTrail(root, item)
     trail.Name = "ChaosTrail"
     trail.Attachment0 = a0
     trail.Attachment1 = a1
-    trail.Lifetime = 0.48
+    trail.Lifetime = style.Lifetime
     trail.MinLength = 0.08
     trail.FaceCamera = true
-    trail.LightEmission = 0.78
+    trail.LightEmission = style.LightEmission
     trail.LightInfluence = 0.18
-    trail.WidthScale = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.76),
-        NumberSequenceKeypoint.new(0.58, 0.46),
-        NumberSequenceKeypoint.new(1, 0),
-    })
-    trail.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.16),
-        NumberSequenceKeypoint.new(0.58, 0.36),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    trail.Color = ColorSequence.new(item.ColorA, item.ColorB)
+    trail.WidthScale = style.WidthScale
+    trail.Transparency = style.Transparency
+    trail.Color = style.Color
     trail.Parent = root
 end
 
 local function applyAura(character, root, item)
+    local style = CosmeticEffectStyles.aura(item)
+    if not style then return end
     local emitter = Instance.new("ParticleEmitter")
     emitter.Name = "ChaosAura"
-    emitter.Rate = 18
-    emitter.Lifetime = NumberRange.new(0.45, 0.9)
-    emitter.Speed = NumberRange.new(0.6, 1.8)
-    emitter.Drag = 2
+    emitter.Rate = style.Rate
+    emitter.Lifetime = style.Lifetime
+    emitter.Speed = style.Speed
+    emitter.Drag = style.Drag
     emitter.Rotation = NumberRange.new(0, 360)
     emitter.RotSpeed = NumberRange.new(-90, 90)
     emitter.SpreadAngle = Vector2.new(55, 55)
     emitter.LightEmission = 0.8
     emitter.LightInfluence = 0
-    emitter.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.28),
-        NumberSequenceKeypoint.new(0.45, 0.16),
-        NumberSequenceKeypoint.new(1, 0),
-    })
+    emitter.Size = style.Size
     emitter.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.18),
         NumberSequenceKeypoint.new(0.7, 0.4),
         NumberSequenceKeypoint.new(1, 1),
     })
-    emitter.Color = ColorSequence.new(item.ColorA, item.ColorB)
+    emitter.Color = style.Color
     emitter.Parent = root
 
     local light = Instance.new("PointLight")
     light.Name = "ChaosAuraLight"
     light.Color = item.ColorA
-    light.Brightness = 0.85
+    light.Brightness = style.Brightness
     light.Range = 9
     light.Shadows = false
     light.Parent = root
