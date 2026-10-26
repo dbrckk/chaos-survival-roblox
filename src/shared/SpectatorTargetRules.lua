@@ -11,7 +11,7 @@ end
 -- granting participation, rewards or access to the active arena. Eliminated
 -- contestants must not get a second in-round attempt through this UI.
 function SpectatorTargetRules.canPractice(roundActive, participant, eliminated)
-    return roundActive == true and participant ~= true and eliminated ~= true
+    return roundActive == true and participant == false and eliminated == false
 end
 
 -- Invalid RoundState packets must not crash or reset a live spectator camera.
