@@ -3,11 +3,77 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VfxQuality = require("../../src/shared/VfxQuality")
+local PerformancePulseRules = require("../../src/shared/PerformancePulseRules")
 local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
 
 describe("Adaptive VFX quality", function()
+    it("bounds Android FPS/memory telemetry before analytics or formatting", function()
+        local sanitize = PerformancePulseRules.sanitize
+        local source = {
+            averageFps = 56.75,
+            vfxTier = "Medium",
+            deviceClass = "Touch",
+            tierTransitions = 5.99,
+            visualParts = 312.99,
+            visualLights = 18,
+            visualEffects = 30,
+            totalMemoryMb = 888.25,
+            instanceCount = 2300.8,
+            frameTimeMs = 18.42,
+            renderCpuMs = 8.75,
+            renderGpuMs = 12.5,
+        }
+        local sample = sanitize(source)
+        expect(sample.averageFps).toBe(56.75)
+        expect(sample.deviceClass).toBe("Touch")
+        expect(sample.vfxTier).toBe("Medium")
+        expect(sample.tierTransitions).toBe(5)
+        expect(sample.visualParts).toBe(312)
+        expect(sample.instanceCount).toBe(2300)
+        expect(sample.totalMemoryMb).toBe(888.25)
+        expect(sample.renderGpuMs).toBe(12.5)
+
+        local invalid = sanitize({
+            averageFps = 0 / 0, tierTransitions = math.huge,
+            visualParts = -math.huge, visualLights = -9.7,
+            visualEffects = 1e8, totalMemoryMb = 0 / 0,
+            instanceCount = math.huge, frameTimeMs = -math.huge,
+            renderCpuMs = math.huge, renderGpuMs = 0 / 0,
+            vfxTier = "Ultra", deviceClass = "iPhone;arbitrary value",
+        })
+        expect(invalid.averageFps).toBe(0)
+        expect(invalid.tierTransitions).toBe(0)
+        expect(invalid.visualParts).toBe(0)
+        expect(invalid.visualLights).toBe(0)
+        expect(invalid.visualEffects).toBe(2000)
+        expect(invalid.totalMemoryMb).toBe(0)
+        expect(invalid.instanceCount).toBe(0)
+        expect(invalid.frameTimeMs).toBe(0)
+        expect(invalid.renderCpuMs).toBe(0)
+        expect(invalid.renderGpuMs).toBe(0)
+        expect(invalid.vfxTier).toBe("Unknown")
+        expect(invalid.deviceClass).toBe("Unknown")
+
+        local empty = sanitize(nil)
+        expect(empty.averageFps).toBe(0)
+        expect(empty.totalMemoryMb).toBe(0)
+        expect(empty.deviceClass).toBe("Unknown")
+
+        local capped = sanitize({
+            averageFps = 999, tierTransitions = 200,
+            instanceCount = 1e10, frameTimeMs = 1200,
+            renderGpuMs = 1800, vfxTier = "High", deviceClass = "Desktop",
+        })
+        expect(capped.averageFps).toBe(240)
+        expect(capped.tierTransitions).toBe(99)
+        expect(capped.instanceCount).toBe(250000)
+        expect(capped.frameTimeMs).toBe(1000)
+        expect(capped.renderGpuMs).toBe(1000)
+        expect(capped.deviceClass).toBe("Desktop")
+    end)
+
     it("filters Android structural sightlines to arena geometry, not other avatars", function()
         expect(CameraOcclusionRules.arenaRaycastParams(nil)).toBe(nil)
 
