@@ -214,6 +214,26 @@ describe("Adaptive VFX quality", function()
         expect(rules.freezeMistRate(nil, false)).toBe(0)
     end)
 
+    it("keeps tornado visuals idle outside the storm and budgeted on Android", function()
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            expect(VfxQuality.tornadoInterval(tier, false, false)).toBe(0.40)
+            expect(VfxQuality.tornadoInterval(tier, true, false)).toBe(0.40)
+            expect(VfxQuality.tornadoInterval(tier, false, nil)).toBe(0.40)
+            expect(VfxQuality.tornadoInterval(tier, false, true))
+                .toBe(VfxQuality.decorativeInterval(tier, false))
+            expect(VfxQuality.tornadoInterval(tier, true, true))
+                .toBe(VfxQuality.decorativeInterval(tier, true))
+            expect(VfxQuality.tornadoInterval(tier, true, true)
+                >= 1 / 12).toBe(true)
+        end
+        expect(math.abs(VfxQuality.tornadoInterval("High", false, true)
+            - 1 / 30) < 0.0001).toBe(true)
+        expect(math.abs(VfxQuality.tornadoInterval("Medium", false, true)
+            - 1 / 24) < 0.0001).toBe(true)
+        expect(math.abs(VfxQuality.tornadoInterval("Low", false, true)
+            - 1 / 15) < 0.0001).toBe(true)
+    end)
+
     it("exposes bounded quality scales", function()
         for _, tierName in ipairs({"High", "Medium", "Low"}) do
             local tier = VfxQuality.get(tierName)
