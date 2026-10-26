@@ -588,6 +588,7 @@ describe("Chaos Survival engine", function()
             end
             expect(essential).toBe(expectedEssential[id])
             expect(hero:GetAttribute("HeroEssentialParts")).toBe(essential)
+            expect(hero.ModelStreamingMode).toBe(Enum.ModelStreamingMode.Atomic)
             expect(total).toBe(hero:GetAttribute("HeroArchitectureParts"))
             expect(essential < total).toBe(true)
             if id == "Classic" then

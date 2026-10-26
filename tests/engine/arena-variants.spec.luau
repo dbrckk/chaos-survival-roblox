@@ -281,6 +281,7 @@ describe("Arena variants", function()
             for _, placement in ipairs(OriginalMeshScenery.placements(base, id)) do
                 local model = folder:FindFirstChild(placement.name)
                 expect(model ~= nil).toBe(true)
+                expect(model.ModelStreamingMode).toBe(Enum.ModelStreamingMode.Atomic)
                 expect(model:GetAttribute("OriginalFoundationBuilt")).toBe(true)
                 for _, name in ipairs({"FoundationShoulder", "FoundationInset",
                     "FoundationBallast", "FoundationGroundPad"}) do

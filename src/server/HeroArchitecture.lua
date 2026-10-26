@@ -247,6 +247,9 @@ function HeroArchitecture.build(decor, base, variantId, theme)
     end
     model:SetAttribute("HeroArchitectureParts", pieces)
     model:SetAttribute("HeroEssentialParts", #kept)
+    -- Stream all initial landmark parts as one coherent silhouette;
+    -- never force these optional 3D decorations to persist on Android.
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
     model.Parent = decor
     return model
 end
