@@ -1248,6 +1248,72 @@ describe("Chaos Survival engine", function()
         cleanModel:Destroy()
     end)
 
+    it("separates all six approved imported mesh shapes from native 3D skyline", function()
+        local sizes = {
+            perimeter_gate = Vector3.new(58, 25, 38),
+            reactor_spire = Vector3.new(30, 62, 30),
+            service_crane = Vector3.new(60, 48, 20),
+            plasma_foundry = Vector3.new(30, 28, 14),
+            sky_transit_exchange = Vector3.new(32, 28, 15),
+            orbital_halo_array = Vector3.new(23, 31, 12),
+        }
+        local templates = {}
+        for name, size in pairs(sizes) do
+            local model = Instance.new("Model")
+            model.Name = name
+            local part = Instance.new("Part")
+            part.Name = "MockImportedMesh"
+            part.Size = size
+            part.Parent = model
+            templates[name] = model
+        end
+        local function worldRadii(cf, size)
+            local x = (math.abs(cf.RightVector.X) * size.X
+                + math.abs(cf.UpVector.X) * size.Y
+                + math.abs(cf.LookVector.X) * size.Z) * 0.5
+            local z = (math.abs(cf.RightVector.Z) * size.X
+                + math.abs(cf.UpVector.Z) * size.Y
+                + math.abs(cf.LookVector.Z) * size.Z) * 0.5
+            return x, z
+        end
+
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local root = MapBuilder.build(Config, variantId, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local decor = arena:FindFirstChild("Decor")
+            local native = {}
+            for _, model in ipairs(decor:GetChildren()) do
+                if model:IsA("Model")
+                    and model:GetAttribute("ChaosDistantScenery") == true then
+                    local cf, size = model:GetBoundingBox()
+                    local rx, rz = worldRadii(cf, size)
+                    native[#native + 1] = {
+                        x = cf.Position.X, z = cf.Position.Z,
+                        rx = rx, rz = rz,
+                    }
+                end
+            end
+            expect(#native >= 12).toBe(true)
+            expect(OriginalMeshScenery.mount(arena, templates)).toBe(4)
+            local originals = decor:FindFirstChild("Original3DScenery")
+            expect(#originals:GetChildren()).toBe(4)
+            for _, model in ipairs(originals:GetChildren()) do
+                local cf, size = model:GetBoundingBox()
+                local rx, rz = worldRadii(cf, size)
+                for _, bound in ipairs(native) do
+                    local apartX = math.abs(cf.Position.X - bound.x)
+                        >= rx + bound.rx + 3.9
+                    local apartZ = math.abs(cf.Position.Z - bound.z)
+                        >= rz + bound.rz + 3.9
+                    expect(apartX or apartZ).toBe(true)
+                end
+                expect(model:GetAttribute("OriginalFoundationBuilt")).toBe(true)
+            end
+            root:Destroy()
+        end
+        for _, template in pairs(templates) do template:Destroy() end
+    end)
+
     it("has valid round timing and rewards", function()
         expect(Config.RoundSeconds > 0).toBe(true)
         expect(Config.IntermissionSeconds >= 0).toBe(true)
