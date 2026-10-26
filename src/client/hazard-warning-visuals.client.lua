@@ -6,6 +6,8 @@ local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 local GroundOutline = require(script.Parent.HazardGroundOutlineKit)
+local BombChargeRules = require(ReplicatedStorage.Shared.BombChargeRules)
+local BombChargeKit = require(script.Parent.BombChargeKit)
 
 local player = Players.LocalPlayer
 local tracked = {}
@@ -27,6 +29,33 @@ end)
 
 local function warningDeckFrame(part, deck)
     return HazardWarningSignatureRules.frame(part.Position, deck)
+end
+
+local function destroyCharge(state)
+    if state and state.bombCharge then
+        BombChargeKit.clear(state.bombCharge)
+    end
+end
+
+local function bombViewerPosition()
+    local camera = workspace.CurrentCamera
+    if camera then return camera.CFrame.Position end
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    return root and root.Position or nil
+end
+
+local function syncBombCharge(part, state, progress, reduced, slot, viewerPosition)
+    if state.kind ~= "Bomb" or not state.bombCharge then return false end
+    local distance = viewerPosition and (viewerPosition - part.Position).Magnitude
+    local withinDistance = distance and BombChargeRules.visible(
+        currentTier.Name, distance, 1
+    )
+    BombChargeKit.sync(
+        state.bombCharge, part, localDecor, currentTier.Name,
+        reduced, progress, viewerPosition, slot, BombChargeRules
+    )
+    return withinDistance == true
 end
 
 local function destroySignature(state)
@@ -97,6 +126,8 @@ local function ensureRenderLoop()
             -- countdown rings during Bomb Rain + Meteor Shower.
             local serverNow = workspace:GetServerTimeNow()
             local reduced = player:GetAttribute("ReduceMotion") == true
+            local bombViewer = bombViewerPosition()
+            local chargeSlot = 0
             for part, state in pairs(tracked) do
                 if not part.Parent then
                     if state.ring then
@@ -106,6 +137,7 @@ local function ensureRenderLoop()
                         state.label:Destroy()
                     end
                     destroySignature(state)
+                    destroyCharge(state)
                     tracked[part] = nil
                     continue
                 end
@@ -159,6 +191,13 @@ local function ensureRenderLoop()
                     end
                 end
 
+                if state.kind == "Bomb" then
+                    local candidateSlot = chargeSlot + 1
+                    if syncBombCharge(part, state, alpha, reduced, candidateSlot, bombViewer) then
+                        chargeSlot = candidateSlot
+                    end
+                end
+
                 if state.label and state.label.Parent then
                     state.label.StudsOffsetWorldSpace = Vector3.new(
                         0,
@@ -195,6 +234,7 @@ local function ensureRenderLoop()
                         state.label:Destroy()
                     end
                     destroySignature(state)
+                    destroyCharge(state)
                     tracked[part] = nil
                 end
             end
@@ -342,6 +382,7 @@ local function register(part, snapshot)
         endSize = snapshot.EndSize,
         ring = ring,
         signature = signature,
+        bombCharge = kind == "Bomb" and {parts = {}} or nil,
         deck = signatureDeck,
         label = label,
         warningText = warningText,
@@ -380,6 +421,10 @@ local function register(part, snapshot)
     end
     if kind == "JumpShock" then
         syncShockSignature(part, tracked[part], diameter, snapshot.Progress, reduced)
+    elseif kind == "Bomb" then
+        -- Show the falling charge immediately, even on late-joining clients;
+        -- the renderer might have been dormant for the last 180ms.
+        syncBombCharge(part, tracked[part], snapshot.Progress, reduced, 1, bombViewerPosition())
     end
     ensureRenderLoop()
 end
@@ -449,5 +494,6 @@ workspace.ChildRemoved:Connect(function(child)
         state.label:Destroy()
     end
     destroySignature(state)
+    destroyCharge(state)
     tracked[child] = nil
 end)
