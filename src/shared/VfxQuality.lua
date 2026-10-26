@@ -112,6 +112,17 @@ function VfxQuality.decorativeInterval(tier, reducedMotion)
     return math.max(interval, reducedMotion == true and (1 / 12) or 0)
 end
 
+-- The persistent tornado controller is loaded for EVERY player, even
+-- outside tornado rounds. It needs no 30-60Hz idle work; when active,
+-- reuse the existing decorative budget rather than the high-FPS
+-- gameplay cadence. Reduced-motion uses at most 12 visual refreshes/s.
+function VfxQuality.tornadoInterval(tier, reducedMotion, active)
+    if active ~= true then
+        return 0.40
+    end
+    return VfxQuality.decorativeInterval(tier, reducedMotion)
+end
+
 function VfxQuality.particleCount(tier, baseCount, minimum)
     local profile = VfxQuality.get(tier)
     local base = math.max(0, tonumber(baseCount) or 0)

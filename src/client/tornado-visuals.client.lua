@@ -273,13 +273,19 @@ ensureRenderLoop = function()
     task.spawn(function()
         while true do
             local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-            local dt = task.wait(tier.UpdateInterval)
+            local reduceMotion = player:GetAttribute("ReduceMotion") == true
+            local active = activeModel ~= nil and activeModel.Parent ~= nil
+            local dt = task.wait(VfxQuality.tornadoInterval(
+                tier.Name, reduceMotion, active
+            ))
 
             if not activeModel or not activeModel.Parent then
                 continue
             end
 
-            local reduceMotion = player:GetAttribute("ReduceMotion") == true
+            -- Re-read accessibility after the yield: toggles may arrive
+            -- while the client is asleep, without changing server forces.
+            reduceMotion = player:GetAttribute("ReduceMotion") == true
             -- Pausing the visual clock keeps reduced-motion debris completely
             -- still. Clamping lost frames avoids a giant jump when Android
             -- resumes from the background; server tornado timing is untouched.
