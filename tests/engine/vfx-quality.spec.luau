@@ -21,6 +21,15 @@ describe("Adaptive VFX quality", function()
         support.Position = Vector3.new(4567, 500, 6424)
         support.Parent = arena
 
+        -- A large structural floor in front of a pillar should not swallow
+        -- the raycast either; the old controller excluded Arena.Base.
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Anchored = true
+        base.Size = Vector3.new(4, 5, 1)
+        base.Position = Vector3.new(4567, 500, 6430)
+        base.Parent = arena
+
         local otherAvatar = Instance.new("Part")
         otherAvatar.Name = "RemoteAvatarOccluder"
         otherAvatar.Anchored = true
@@ -28,10 +37,11 @@ describe("Adaptive VFX quality", function()
         otherAvatar.Position = Vector3.new(4567, 500, 6428)
         otherAvatar.Parent = workspace
 
-        local params = CameraOcclusionRules.arenaRaycastParams(arena)
+        local params = CameraOcclusionRules.arenaRaycastParams(arena, base)
         expect(params.FilterType).toBe(Enum.RaycastFilterType.Include)
         expect(params.IgnoreWater).toBe(true)
-        expect(params.FilterDescendantsInstances[1]).toBe(arena)
+        expect(#params.FilterDescendantsInstances).toBe(1)
+        expect(params.FilterDescendantsInstances[1]).toBe(support)
         local hit = workspace:Raycast(
             Vector3.new(4567, 500, 6432), Vector3.new(0, 0, -12), params
         )
