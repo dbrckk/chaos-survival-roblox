@@ -2,6 +2,21 @@
 -- camera zoom, character physics or server-visible transparency.
 local CameraOcclusionRules = {}
 
+-- Scope the structural sightline cast to the authoritative arena only.
+-- A human or AI avatar in front of a pillar must not swallow the raycast
+-- before the pillar gets a chance to fade. Remote survivors have a separate
+-- bounded transparency owner in mobile-camera-sightline.client.lua.
+-- Unlike a blacklist of current characters, this survives late replication
+-- and new bot spawns without rebuilding filtering every 180 ms.
+function CameraOcclusionRules.arenaRaycastParams(arena)
+    if typeof(arena) ~= "Instance" then return nil end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Include
+    params.FilterDescendantsInstances = {arena}
+    params.IgnoreWater = true
+    return params
+end
+
 function CameraOcclusionRules.avatarOcclusion(cameraPosition, focusPosition, blockerPosition)
     if typeof(cameraPosition) ~= "Vector3"
         or typeof(focusPosition) ~= "Vector3"
