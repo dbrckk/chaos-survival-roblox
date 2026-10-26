@@ -1064,6 +1064,20 @@ describe("Android decorative scenery LOD stability", function()
         root:Destroy()
     end)
 
+    it("preserves only marked original 3D silhouette pieces on Android Low", function()
+        local partVisible = SceneryLodRules.entryVisible
+        expect(partVisible("Low", false, true, true)).toBe(true)
+        expect(partVisible("Low", false, true, false)).toBe(false)
+        expect(partVisible("Low", false, false, true)).toBe(false)
+        expect(partVisible("Medium", false, true, true)).toBe(false)
+        expect(partVisible("High", false, true, true)).toBe(false)
+        expect(partVisible("Medium", true, true, false)).toBe(true)
+        expect(partVisible("High", true, false, false)).toBe(true)
+        -- Unrelated gameplay/LOD groups cannot use the hero exception.
+        expect(partVisible("Low", false, nil, true)).toBe(false)
+        expect(partVisible("Low", nil, true, false)).toBe(false)
+    end)
+
     it("retains initial thresholds and never hides High quality scenery", function()
         local visible = SceneryLodRules.visible
         expect(visible("Low", 125, 125, 185, nil)).toBe(true)
