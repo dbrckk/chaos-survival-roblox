@@ -1041,26 +1041,33 @@ end)
 describe("Budgeted original tornado spiral silhouettes", function()
     it("preserves visible low-tier and reduced-motion 3D cues", function()
         local rules = TornadoSpiralRules
-        expect(rules.count("Low", false)).toBe(4)
-        expect(rules.count("Medium", false)).toBe(8)
-        expect(rules.count("High", false)).toBe(12)
-        expect(rules.count("High", true)).toBe(4)
-        expect(rules.count("Low", true)).toBe(4)
+        expect(rules.count("Low", false)).toBe(6)
+        expect(rules.count("Medium", false)).toBe(12)
+        expect(rules.count("High", false)).toBe(18)
+        expect(rules.count("High", true)).toBe(6)
+        expect(rules.count("Low", true)).toBe(6)
         expect(rules.count("Unknown", false)).toBe(0)
         expect(rules.segment(nil, 1, 4, 0, false)).toBe(nil)
         expect(rules.segment(Vector3.zero, 0, 4, 0, false)).toBe(nil)
-        expect(rules.segment(Vector3.zero, 1, 13, 0, false)).toBe(nil)
+        expect(rules.segment(Vector3.zero, 1, 19, 0, false)).toBe(nil)
         expect(rules.segment(Vector3.zero, 1, 4, 0/0, false) ~= nil).toBe(true)
 
         local center = Vector3.new(12, 6, -8)
         local still = rules.segment(center, 2, 8, 0, true)
         local laterStill = rules.segment(center, 2, 8, 4, true)
         local animated = rules.segment(center, 2, 8, 4, false)
+        local firstArm = rules.segment(center, 1, 12, 0, false)
+        local secondArm = rules.segment(center, 2, 12, 0, false)
+        local nextHeight = rules.segment(center, 3, 12, 0, false)
+        expect(firstArm.CFrame.Position.Y).toBe(secondArm.CFrame.Position.Y)
+        expect(firstArm.CFrame.Position ~= secondArm.CFrame.Position).toBe(true)
+        expect(nextHeight.CFrame.Position.Y > firstArm.CFrame.Position.Y).toBe(true)
+        expect(rules.segment(center, 1, 17, 0, false)).toBe(nil)
         expect(still.CFrame).toBe(laterStill.CFrame)
         expect(still.CFrame ~= animated.CFrame).toBe(true)
         expect(still.Size.X > 0 and still.Size.Z > 0).toBe(true)
         expect(still.Transparency >= 0.4).toBe(true)
-        expect(still.Transparency <= 0.65).toBe(true)
+        expect(still.Transparency <= 0.70).toBe(true)
         expect(still.CFrame.Position.Y > center.Y).toBe(true)
         expect(still.CFrame.Position.Y < center.Y + 17).toBe(true)
     end)
@@ -1083,8 +1090,8 @@ describe("Budgeted original tornado spiral silhouettes", function()
         TornadoSpiralKit.sync(
             state, lower, visuals, "High", false, 0, TornadoSpiralRules
         )
-        expect(#state.parts).toBe(12)
-        expect(#visuals:GetChildren()).toBe(12)
+        expect(#state.parts).toBe(18)
+        expect(#visuals:GetChildren()).toBe(18)
 
         local oldFrame = state.parts[1].CFrame
         for _, part in ipairs(state.parts) do
@@ -1100,15 +1107,15 @@ describe("Budgeted original tornado spiral silhouettes", function()
             state, lower, visuals, "High", false, 0.6, TornadoSpiralRules
         )
         expect(state.parts[1].CFrame ~= oldFrame).toBe(true)
-        expect(#visuals:GetChildren()).toBe(12)
+        expect(#visuals:GetChildren()).toBe(18)
 
         -- Device auto-quality and accessibility reconfigure in place,
         -- never leave invisible high-tier ghosts under the next map.
         TornadoSpiralKit.sync(
             state, lower, visuals, "Low", false, 1, TornadoSpiralRules
         )
-        expect(#state.parts).toBe(4)
-        expect(#visuals:GetChildren()).toBe(4)
+        expect(#state.parts).toBe(6)
+        expect(#visuals:GetChildren()).toBe(6)
         local staticFrame = state.parts[1].CFrame
         TornadoSpiralKit.sync(
             state, lower, visuals, "Low", false, 2, TornadoSpiralRules
@@ -1117,7 +1124,7 @@ describe("Budgeted original tornado spiral silhouettes", function()
         TornadoSpiralKit.sync(
             state, lower, visuals, "High", true, 4, TornadoSpiralRules
         )
-        expect(#state.parts).toBe(4)
+        expect(#state.parts).toBe(6)
         local reducedFrame = state.parts[1].CFrame
         TornadoSpiralKit.sync(
             state, lower, visuals, "High", true, 9, TornadoSpiralRules
