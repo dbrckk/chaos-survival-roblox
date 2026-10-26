@@ -88,3 +88,5 @@ describe("Premium meteor rock silhouettes on Android", function()
         folder:Destroy()
     end)
 end)
+
+return nil
