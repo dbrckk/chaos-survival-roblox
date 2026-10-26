@@ -477,13 +477,12 @@ end
 -- Keep the first late-join explanation inside the existing spectator card.
 -- No new overlay, no per-second UI allocations, and no change to the server roster.
 local function lateJoinHint()
-    if player:GetAttribute("RoundParticipant") == true then
-        return ""
-    end
-    if practiceButton.Visible then
-        return "NEXT ROUND  •  PRACTICE OR WATCH WHILE YOU WAIT"
-    end
-    return "NEXT ROUND  •  WATCH SURVIVORS WHILE YOU WAIT"
+    local key = SpectatorTargetRules.lateJoinHintKey(
+        player:GetAttribute("RoundParticipant"),
+        practiceButton.Visible,
+        practiceMode
+    )
+    return key and CoreLocalization.text(localeId, key) or ""
 end
 
 local function roundSummary()
@@ -513,7 +512,9 @@ local function roundSummary()
     local summary = table.concat(pieces, "  •  ")
     local hint = lateJoinHint()
     if hint ~= "" then
-        return summary ~= "" and (summary .. "\n" .. hint) or hint
+        -- The title already announces NEXT ROUND. A concise second line
+        -- keeps the alive counter, clock and action readable on narrow phones.
+        return summary ~= "" and (summary .. "  •  " .. hint) or hint
     end
     return summary
 end

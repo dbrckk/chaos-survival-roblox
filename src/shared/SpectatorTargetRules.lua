@@ -14,6 +14,17 @@ function SpectatorTargetRules.canPractice(roundActive, participant, eliminated)
     return roundActive == true and participant == false and eliminated == false
 end
 
+-- A spectator card has room for one context line on compact Android.
+-- Never offer training to an eliminated competitor or repeat an action
+-- invitation while the player is already practicing.
+function SpectatorTargetRules.lateJoinHintKey(participant, practiceAvailable, practiceMode)
+    if participant ~= false or practiceMode == true then
+        return nil
+    end
+    return practiceAvailable == true
+        and "SPECTATOR_LATE_ACTIONS" or "SPECTATOR_LATE_WATCH"
+end
+
 -- Invalid RoundState packets must not crash or reset a live spectator camera.
 -- A known non-round phase ends spectating; malformed payloads are ignored.
 function SpectatorTargetRules.roundActive(snapshot)
