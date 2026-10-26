@@ -30,3 +30,28 @@ L'attribut `Original3DSceneryCount` de l'arène donne le nombre de placements in
 5. **Publier uniquement après contrôle**, par le workflow de publication public explicitement autorisé et doté de ses vérifications habituelles.
 
 Roblox documente `AssetService:LoadAssetAsync` comme successeur de `InsertService:LoadAsset`, avec un modèle retourné sandboxé. Source officielle : https://create.roblox.com/docs/reference/engine/classes/AssetService.
+
+## Nouveaux modèles originaux approuvés le 26 octobre 2026
+
+Le workflow GitHub Actions `40245986454` a créé **trois Model packages dans
+l'inventaire du créateur Drackk_08**, avec un statut de modération
+`Approved` explicitement confirmé par les journaux de l'API Roblox :
+
+| Source originale | ID Roblox Model | Monde mis en valeur |
+|---|---|---|
+| `plasma_foundry` | `95926792159328` | Classic, Crossroads |
+| `sky_transit_exchange` | `95878714550124` | Towers, Crossroads |
+| `orbital_halo_array` | `135985134195364` | Orbital |
+
+Le runtime `OriginalMeshScenery.lua` utilise six **vrais IDs** correspondant au
+registre vérifié. Chaque manche choisit quatre modèles de fond parmi les six
+autorisés et les charge une fois par serveur via `AssetService.LoadAssetAsync`,
+avec contrôles de géométrie et suppression de tous scripts/contraintes/sons.
+Le placement dynamique tient compte des dimensions et rotations réelles ;
+aucune nouvelle collision n'est possible dans la zone jouable.
+
+L'intégration concerne les **sources** du jeu : la visibilité dans la version
+publique, les permissions effectives de l'expérience, les captures Studio
+authentifiées et la certification FPS Android nécessitent encore validation.
+`models_inserted_in_game=false` dans le registre signifie que la publication
+effective n'est **pas** confirmée ; ne pas le passer à `true` par anticipation.

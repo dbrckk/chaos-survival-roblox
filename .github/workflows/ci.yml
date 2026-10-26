@@ -97,7 +97,8 @@ jobs:
           assert registry["publication"]["android_visual_qa_completed"] is False
           models = registry["models"]
           assert {m["name"] for m in models} == {
-              "reactor_spire", "service_crane", "perimeter_gate"
+              "reactor_spire", "service_crane", "perimeter_gate",
+              "plasma_foundry", "sky_transit_exchange", "orbital_halo_array"
           }
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
@@ -116,7 +117,7 @@ jobs:
           block = re.search(r"local ASSETS = \{(.*?)\n\}", source, re.S)
           assert block, "Owned scenery asset table missing"
           deployed_ids = dict(re.findall(
-              r"(reactor_spire|service_crane|perimeter_gate)\s*=\s*(\d+)",
+              r"(reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array)\s*=\s*(\d+)",
               block.group(1),
           ))
           assert deployed_ids == {m["name"]: m["asset_id"] for m in models}, (

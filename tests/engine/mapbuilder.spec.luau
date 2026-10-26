@@ -1087,30 +1087,34 @@ describe("Chaos Survival engine", function()
             for _, slot in ipairs(placements) do
                 art[slot.asset] = (art[slot.asset] or 0) + 1
             end
-            if variantId == "Orbital" then
-                expect(art.reactor_spire).toBe(2)
-                expect(art.perimeter_gate).toBe(2)
-            elseif variantId == "Towers" then
-                expect(art.service_crane).toBe(2)
-            elseif variantId == "Crossroads" then
-                expect(art.service_crane).toBe(2)
-                expect(art.perimeter_gate).toBe(2)
-            else
-                expect(art.perimeter_gate).toBe(2)
-                expect(art.reactor_spire).toBe(1)
-                expect(art.service_crane).toBe(1)
+            local expected = if variantId == "Orbital"
+                then {orbital_halo_array = 2, perimeter_gate = 1,
+                    reactor_spire = 1}
+                elseif variantId == "Towers"
+                then {service_crane = 2, sky_transit_exchange = 1,
+                    reactor_spire = 1}
+                elseif variantId == "Crossroads"
+                then {perimeter_gate = 1, sky_transit_exchange = 1,
+                    plasma_foundry = 1, service_crane = 1}
+                else {perimeter_gate = 1, plasma_foundry = 1,
+                    reactor_spire = 1, service_crane = 1}
+            for key, n in pairs(expected) do
+                expect(art[key]).toBe(n)
             end
-            local count = OriginalMeshScenery.mount(arena, {
+            for key, n in pairs(art) do
+                expect(expected[key]).toBe(n)
+            end
+            local templates = {
                 perimeter_gate = sanitized,
                 reactor_spire = sanitized,
                 service_crane = sanitized,
-            })
+                plasma_foundry = sanitized,
+                sky_transit_exchange = sanitized,
+                orbital_halo_array = sanitized,
+            }
+            local count = OriginalMeshScenery.mount(arena, templates)
             expect(count).toBe(4)
-            expect(OriginalMeshScenery.mount(arena, {
-                perimeter_gate = sanitized,
-                reactor_spire = sanitized,
-                service_crane = sanitized,
-            })).toBe(0)
+            expect(OriginalMeshScenery.mount(arena, templates)).toBe(0)
             expect(arena:GetAttribute("Original3DSceneryCount")).toBe(4)
             expect(arena:GetAttribute("Original3DSceneryComplete")).toBe(true)
             local bucket = decor and decor:FindFirstChild("Original3DScenery")

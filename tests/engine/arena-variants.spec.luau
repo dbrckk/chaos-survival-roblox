@@ -24,6 +24,22 @@ describe("Arena variants", function()
             base.Position = Vector3.new(18, 4, -34)
             local positions = OriginalMeshScenery.placements(base, variantId)
             expect(#positions).toBe(4)
+            local palette = {}
+            for _, placement in ipairs(positions) do
+                expect(type(placement.assetId)).toBe("number")
+                expect(placement.assetId > 0).toBe(true)
+                palette[placement.asset] = true
+            end
+            if variantId == "Classic" then
+                expect(palette.plasma_foundry).toBe(true)
+            elseif variantId == "Towers" then
+                expect(palette.sky_transit_exchange).toBe(true)
+            elseif variantId == "Crossroads" then
+                expect(palette.plasma_foundry).toBe(true)
+                expect(palette.sky_transit_exchange).toBe(true)
+            else
+                expect(palette.orbital_halo_array).toBe(true)
+            end
             for _, placement in ipairs(positions) do
                 for _, size in ipairs(sizes) do
                     local safe = OriginalMeshScenery.safeExteriorPosition(
@@ -76,6 +92,9 @@ describe("Arena variants", function()
             service_crane = Vector3.new(60, 48, 20),
             perimeter_gate = Vector3.new(58, 25, 38),
             reactor_spire = Vector3.new(30, 62, 30),
+            plasma_foundry = Vector3.new(30, 28, 14),
+            sky_transit_exchange = Vector3.new(32, 28, 15),
+            orbital_halo_array = Vector3.new(23, 31, 12),
         }
         local templates = {}
         for name, size in pairs(footprints) do
