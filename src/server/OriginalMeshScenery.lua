@@ -148,7 +148,7 @@ function OriginalMeshScenery.unobstructedExteriorPosition(base, placement,
     local starting = OriginalMeshScenery.safeExteriorPosition(
         base, placement, size
     )
-    if not starting or not decor or not decor:IsA("Instance") then
+    if not starting or typeof(decor) ~= "Instance" then
         return starting
     end
     local obstructions = {}
