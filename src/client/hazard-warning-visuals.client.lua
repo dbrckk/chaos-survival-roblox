@@ -221,7 +221,9 @@ local function ensureRenderLoop()
                     if state.label.Enabled ~= labelVisible then
                         state.label.Enabled = labelVisible
                     end
-                    local maxDistance = currentTier.Name == "Low" and 68 or 105
+                    local maxDistance = (state.kind == "Freeze"
+                        or state.kind == "JumpShock") and 180
+                        or (currentTier.Name == "Low" and 68 or 105)
                     if state.label.MaxDistance ~= maxDistance then
                         state.label.MaxDistance = maxDistance
                     end
@@ -360,7 +362,8 @@ local function register(part, snapshot)
     -- replicated warning must not briefly flash an overlapping UI banner.
     label.Enabled = false
     label.LightInfluence = 0
-    label.MaxDistance = currentTier.Name == "Low" and 68 or 105
+    label.MaxDistance = (kind == "Freeze" or kind == "JumpShock")
+        and 180 or (currentTier.Name == "Low" and 68 or 105)
     label.Parent = localDecor
 
     local warningText = Instance.new("TextLabel")
