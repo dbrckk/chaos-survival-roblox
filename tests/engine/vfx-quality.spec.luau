@@ -96,6 +96,16 @@ describe("Adaptive VFX quality", function()
         base.Position = Vector3.new(4567, 500, 6430)
         base.Parent = arena
 
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local ornament = Instance.new("Part")
+        ornament.Name = "ForegroundOrnament"
+        ornament.Anchored = true
+        ornament.Size = Vector3.new(4, 5, 1)
+        ornament.Position = Vector3.new(4567, 500, 6429)
+        ornament.Parent = decor
+
         local otherAvatar = Instance.new("Part")
         otherAvatar.Name = "RemoteAvatarOccluder"
         otherAvatar.Anchored = true
@@ -108,6 +118,9 @@ describe("Adaptive VFX quality", function()
         expect(params.IgnoreWater).toBe(true)
         expect(#params.FilterDescendantsInstances).toBe(1)
         expect(params.FilterDescendantsInstances[1]).toBe(support)
+        -- A bright foreground ornament must never steal the hit from
+        -- the opaque arena support behind it.
+        expect(params.FilterDescendantsInstances[1] ~= decor).toBe(true)
         local hit = workspace:Raycast(
             Vector3.new(4567, 500, 6432), Vector3.new(0, 0, -12), params
         )
