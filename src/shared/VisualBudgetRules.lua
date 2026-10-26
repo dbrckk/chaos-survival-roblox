@@ -191,6 +191,15 @@ function VisualBudgetRules.collect(root)
                 if trail and trail:IsA("Trail") then
                     metrics.Effects += 1
                 end
+                -- MeteorCoreSculptKit's locally welded facets are children
+                -- of the SERVER-owned projectile, outside LocalFolders.
+                -- Never count the projectile itself or its server assets.
+                for _, child in ipairs(hazard:GetChildren()) do
+                    if child:IsA("WedgePart")
+                        and string.match(child.Name, "^LocalMeteorFacet%d+$") then
+                        metrics.Parts += 1
+                    end
+                end
             elseif hazard.Name == "RoundLava" or hazard.Name == "FreezeWarning" then
                 local isLava = hazard.Name == "RoundLava"
                 local lightName = "LavaGlowLocal"
@@ -342,6 +351,59 @@ function VisualBudgetRules.overages(tierName, metrics)
     end
 
     return result
+end
+
+-- Explicit staging-only stress observations. These are raw, factual
+-- counters, not an Android performance certification. The caller supplies
+-- the RoundState disaster IDs; physical warning instances remain authoritative.
+-- No descendant traversal, raycasting or polling is created by this function.
+function VisualBudgetRules.hazardSnapshot(root, disasterIds)
+    local snapshot = {
+        ActiveDisasters = 0,
+        Warnings = 0,
+        BombWarnings = 0,
+        MeteorWarnings = 0,
+        FreezeWarnings = 0,
+        JumpWarnings = 0,
+        LiveMeteors = 0,
+        LiveTornadoes = 0,
+        LiveLava = 0,
+    }
+    if type(disasterIds) == "table" then
+        local seen = {}
+        for _, id in ipairs(disasterIds) do
+            if type(id) == "string" and not seen[id] and id ~= "" then
+                seen[id] = true
+                snapshot.ActiveDisasters += 1
+            end
+        end
+    end
+    if typeof(root) ~= "Instance" then return snapshot end
+    for _, child in ipairs(root:GetChildren()) do
+        if child:IsA("BasePart") then
+            local name = child.Name
+            if name == "BombWarning" then
+                snapshot.BombWarnings += 1
+                snapshot.Warnings += 1
+            elseif name == "MeteorWarning" then
+                snapshot.MeteorWarnings += 1
+                snapshot.Warnings += 1
+            elseif name == "FreezeWarning" then
+                snapshot.FreezeWarnings += 1
+                snapshot.Warnings += 1
+            elseif name == "JumpShockWarning" then
+                snapshot.JumpWarnings += 1
+                snapshot.Warnings += 1
+            elseif name == "RoundMeteor" then
+                snapshot.LiveMeteors += 1
+            elseif name == "RoundLava" then
+                snapshot.LiveLava += 1
+            end
+        elseif child:IsA("Model") and child.Name == "RoundTornado" then
+            snapshot.LiveTornadoes += 1
+        end
+    end
+    return snapshot
 end
 
 return VisualBudgetRules
