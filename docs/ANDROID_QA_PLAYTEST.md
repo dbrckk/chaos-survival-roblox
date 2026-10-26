@@ -9,11 +9,11 @@ Before any mobile QA, open **Settings** in the Roblox Android lobby and
 record the **BUILD** footer on a native screenshot. Candidate builds packaged
 through GitHub now show a short 12-character commit SHA plus a channel:
 
-- `CANDIDATE`: non-published GitHub build artifact. **Not a live Roblox client.**
-- `STAGING`: build targeted exclusively to a verified private test universe.
-- `PUBLIC_PLAYTEST`: explicitly published public iteration, **not certified**.
-- `PRODUCTION`: explicitly published certified release workflow.
-- `SOURCE / UNSTAMPED`: unstamped Studio/local source, not a verified release.
+- `RC` (`CANDIDATE`): non-published GitHub build artifact. **Not a live Roblox client.**
+- `STAGE` (`STAGING`): build targeted exclusively to a verified private test universe.
+- `TEST` (`PUBLIC_PLAYTEST`): explicitly published public iteration, **not certified**.
+- `LIVE` (`PRODUCTION`): explicitly published certified release workflow.
+- `DEV` (`SOURCE / UNSTAMPED`): unstamped Studio/local source, not a verified release.
 
 Compare the full `src/shared/BuildIdentity.lua` source SHA embedded in the
 actual `.rbxlx` to the Build Validation `candidate-provenance.txt`, the
