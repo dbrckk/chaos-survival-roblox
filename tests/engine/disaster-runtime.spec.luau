@@ -1196,4 +1196,95 @@ describe("Headless disaster playtest", function()
     end)
 end)
 
+describe("Veteran tornado journey and novice fairness", function()
+    it("keeps novice and Double Chaos storms fixed with a stable eight-second opening", function()
+        local tornado = Tornado
+        local ctx = {
+            EnableTornadoDrift = true,
+            RoundStartedAt = 100,
+            RoundSeconds = 40,
+        }
+        expect(tornado.driftOffset({}, 120)).toBe(Vector3.zero)
+        expect(tornado.driftOffset({EnableTornadoDrift = false}, 120))
+            .toBe(Vector3.zero)
+        expect(tornado.driftOffset(ctx, 100)).toBe(Vector3.zero)
+        expect(tornado.driftOffset(ctx, 107.99)).toBe(Vector3.zero)
+        expect(tornado.driftOffset(ctx, 108)).toBe(Vector3.zero)
+        expect(tornado.driftOffset({
+            EnableTornadoDrift = true, RoundStartedAt = 100, RoundSeconds = 20,
+        }, 120)).toBe(Vector3.zero)
+        expect(tornado.driftOffset({
+            EnableTornadoDrift = true, RoundStartedAt = 100,
+        }, 120)).toBe(Vector3.zero)
+        expect(tornado.driftOffset(ctx, 0/0)).toBe(Vector3.zero)
+        expect(tornado.driftOffset(ctx, math.huge)).toBe(Vector3.zero)
+        expect(tornado.driftOffset(nil, 120)).toBe(Vector3.zero)
+
+        local emerging = tornado.driftOffset(ctx, 109)
+        local moving = tornado.driftOffset(ctx, 120)
+        expect(emerging.Magnitude > 0 and emerging.Magnitude < 4).toBe(true)
+        expect(moving.Magnitude > emerging.Magnitude).toBe(true)
+        expect(moving.Y).toBe(0)
+        expect(math.abs(moving.X) <= 11).toBe(true)
+        expect(math.abs(moving.Z) <= 9).toBe(true)
+        expect(tornado.driftOffset(ctx, 1000)).toBe(
+            tornado.driftOffset(ctx, 140)
+        )
+        for second = 0, 40 do
+            local now = 100 + second
+            local offset = tornado.driftOffset(ctx, now)
+            local nextOffset = tornado.driftOffset(ctx, now + 0.25)
+            expect((nextOffset - offset).Magnitude < 1).toBe(true)
+            expect(math.abs(offset.X) <= 11 and math.abs(offset.Z) <= 9)
+                .toBe(true)
+        end
+    end)
+
+    it("moves the replicated funnel and server-owned wind influence together", function()
+        local active = true
+        local ctx = {
+            Config = {ArenaCenter = Vector3.new(30, 9, -20)},
+            Cleanup = {},
+            Active = function() return active end,
+            Contestants = {},
+            HazardContestants = {},
+            RoundStartedAt = os.clock() - 19,
+            RoundSeconds = 40,
+            EnableTornadoDrift = true,
+            BalanceProfile = {TornadoForce = 17},
+        }
+        Tornado.start(ctx)
+        local model = workspace:FindFirstChild("RoundTornado")
+        expect(model ~= nil).toBe(true)
+        local lower = model and model:FindFirstChild("LowerFunnel")
+        local danger = model and model:FindFirstChild("DangerZone")
+        expect(lower ~= nil and danger ~= nil).toBe(true)
+
+        local deadline = os.clock() + 0.55
+        while lower and (lower.Position.X - ctx.Config.ArenaCenter.X) == 0
+            and os.clock() < deadline do
+            task.wait(0.03)
+        end
+        if lower and danger then
+            local actualCenter = lower.Position - Vector3.new(0, 3, 0)
+            expect((actualCenter - ctx.Config.ArenaCenter).Magnitude > 1)
+                .toBe(true)
+            expect((actualCenter - ctx.Config.ArenaCenter).Magnitude < 15)
+                .toBe(true)
+            local zoneCenter = danger.Position - Vector3.new(0, 1.12, 0)
+            expect((zoneCenter - actualCenter).Magnitude < 0.01)
+                .toBe(true)
+            local hit, strength = Tornado.impulseAt(
+                actualCenter, actualCenter, 17, 1
+            )
+            expect(hit ~= nil and strength == 1).toBe(true)
+        end
+
+        active = false
+        runCleanup(ctx.Cleanup, {})
+        expect(model == nil or model.Parent == nil).toBe(true)
+    end)
+end)
+
+
 return nil
