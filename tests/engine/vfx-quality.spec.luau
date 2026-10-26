@@ -7,6 +7,7 @@ local PerformancePulseRules = require("../../src/shared/PerformancePulseRules")
 local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
+local SceneryLodRules = require("../../src/shared/SceneryLodRules")
 
 describe("Adaptive VFX quality", function()
     it("bounds Android FPS/memory telemetry before analytics or formatting", function()
@@ -179,6 +180,59 @@ describe("Adaptive VFX quality", function()
         expect(hit ~= nil and hit.Instance == support).toBe(true)
 
         otherAvatar:Destroy()
+        arena:Destroy()
+    end)
+
+    it("distinguishes server-mounted original 3D from client streamed models", function()
+        local count, received, complete = SceneryLodRules.original3DAudit(nil)
+        expect(count).toBe(nil)
+        expect(received).toBe(nil)
+        expect(complete).toBe(false)
+
+        local arena = Instance.new("Folder")
+        arena.Name = "Original3DDiagnosticsTest"
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local folder = Instance.new("Folder")
+        folder.Name = "Original3DScenery"
+        folder.Parent = decor
+
+        count, received, complete = SceneryLodRules.original3DAudit(arena)
+        expect(count).toBe(nil) -- No server mount receipt yet.
+        expect(received).toBe(0)
+        expect(complete).toBe(false)
+
+        arena:SetAttribute("Original3DSceneryCount", 4)
+        arena:SetAttribute("Original3DSceneryComplete", true)
+        local good = Instance.new("Model")
+        good.Name = "ApprovedModel"
+        good:SetAttribute("CosmeticOnly", true)
+        good:SetAttribute("Original3DAssetId", 102992487644269)
+        good.Parent = folder
+        -- A streamed model shell must not be counted as received geometry.
+        count, received, complete = SceneryLodRules.original3DAudit(arena)
+        expect(count).toBe(4)
+        expect(received).toBe(0)
+        expect(complete).toBe(true)
+
+        local part = Instance.new("Part")
+        part.Name = "MeshGeometry"
+        part.Parent = good
+        local unapproved = Instance.new("Model")
+        unapproved.Name = "NonOriginalProp"
+        unapproved.Parent = folder
+        local fake = Instance.new("Part")
+        fake.Parent = unapproved
+        count, received, complete = SceneryLodRules.original3DAudit(arena)
+        expect(count).toBe(4)
+        expect(received).toBe(1) -- Only the authenticated cosmetic package.
+        expect(complete).toBe(true)
+
+        arena:SetAttribute("Original3DSceneryCount", math.huge)
+        count, received, complete = SceneryLodRules.original3DAudit(arena)
+        expect(count).toBe(nil) -- Reject untrusted/malformed telemetry.
+        expect(received).toBe(1)
         arena:Destroy()
     end)
 
