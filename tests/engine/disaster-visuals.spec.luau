@@ -1144,4 +1144,25 @@ describe("Budgeted original tornado spiral silhouettes", function()
 end)
 
 
+
+describe("Bomb pressure-wave render budgets", function()
+    it("rejects nonfinite positions and invalid overlapping blast counts", function()
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local budget = ImpactPulseRules.profile(tier, false)
+            expect(ImpactPulseRules.pulse(tier, false, 5, 1, "Bomb") ~= nil).toBe(true)
+            expect(ImpactPulseRules.pulse(tier, false, 5, budget.Concurrent, "Bomb") ~= nil).toBe(true)
+            expect(ImpactPulseRules.pulse(tier, false, 5, budget.Concurrent + 1, "Bomb")).toBe(nil)
+            expect(ImpactPulseRules.pulse(tier, false, 5, 0, "Bomb")).toBe(nil)
+            expect(ImpactPulseRules.pulse(tier, false, 5, 1.5, "Bomb")).toBe(nil)
+            expect(ImpactPulseRules.pulse(tier, false, 5, math.huge, "Bomb")).toBe(nil)
+            expect(ImpactPulseRules.pulse(tier, false, 0 / 0, 1, "Bomb")).toBe(nil)
+            expect(ImpactPulseRules.pulse(tier, false, math.huge, 1, "Bomb")).toBe(nil)
+            expect(ImpactPulseRules.pulse(tier, false, -1, 1, "Bomb")).toBe(nil)
+            expect(ImpactPulseRules.pulse(tier, false, 5, 1, "Unknown")).toBe(nil)
+        end
+        expect(ImpactPulseRules.pulse("High", true, 5, 1, "Bomb").Duration).toBe(0.12)
+        expect(ImpactPulseRules.pulse("High", true, 5, 2, "Bomb")).toBe(nil)
+    end)
+end)
+
 return nil
