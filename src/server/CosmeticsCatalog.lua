@@ -166,6 +166,7 @@ Cosmetics.Definitions = {
     },
     trail_meteorflare = {
         Id = "trail_meteorflare",
+        Signature = "Meteorflare",
         Name = "Meteorflare",
         Kind = "trail",
         ArenaMasteryId = "Classic",
@@ -177,6 +178,7 @@ Cosmetics.Definitions = {
     },
     aura_stormglass = {
         Id = "aura_stormglass",
+        Signature = "Stormglass",
         Name = "Stormglass",
         Kind = "aura",
         ArenaMasteryId = "Towers",
@@ -188,6 +190,7 @@ Cosmetics.Definitions = {
     },
     trail_shardstep = {
         Id = "trail_shardstep",
+        Signature = "Shardstep",
         Name = "Shardstep",
         Kind = "trail",
         ArenaMasteryId = "Crossroads",
@@ -199,6 +202,7 @@ Cosmetics.Definitions = {
     },
     aura_voidwake = {
         Id = "aura_voidwake",
+        Signature = "Voidwake",
         Name = "Voidwake",
         Kind = "aura",
         ArenaMasteryId = "Orbital",
@@ -210,6 +214,7 @@ Cosmetics.Definitions = {
     },
     aura_coremonarch = {
         Id = "aura_coremonarch",
+        Signature = "CoreMonarch",
         Name = "Core Monarch",
         Kind = "aura",
         ArenaMasteryId = "Classic",
@@ -221,6 +226,7 @@ Cosmetics.Definitions = {
     },
     trail_thunderline = {
         Id = "trail_thunderline",
+        Signature = "Thunderline",
         Name = "Thunderline",
         Kind = "trail",
         ArenaMasteryId = "Towers",
@@ -232,6 +238,7 @@ Cosmetics.Definitions = {
     },
     aura_parallax = {
         Id = "aura_parallax",
+        Signature = "Parallax",
         Name = "Parallax",
         Kind = "aura",
         ArenaMasteryId = "Crossroads",
@@ -243,6 +250,7 @@ Cosmetics.Definitions = {
     },
     trail_stargazer = {
         Id = "trail_stargazer",
+        Signature = "Stargazer",
         Name = "Stargazer",
         Kind = "trail",
         ArenaMasteryId = "Orbital",
