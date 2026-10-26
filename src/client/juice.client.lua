@@ -10,6 +10,7 @@ local Stats = game:GetService("Stats")
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
+local PerformancePulseRules = require(ReplicatedStorage.Shared.PerformancePulseRules)
 local CloudLayer = require(script.Parent.CloudLayer)
 local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
@@ -818,16 +819,19 @@ RunService.RenderStepped:Connect(function(dt)
             )
             local deviceClass = UserInputService.TouchEnabled and "Touch" or "Desktop"
 
-            local visualMetrics = VisualBudgetRules.collect(workspace)
-            local totalMemoryMb = 0
-            local okMemory, measuredMemory = pcall(function()
-                return Stats:GetTotalMemoryUsageMb()
-            end)
-            if okMemory then
-                totalMemoryMb = tonumber(measuredMemory) or 0
+            -- Stats availability varies across Android client builds and
+            -- permissions. This optional 45-second pulse must never crash
+            -- the primary RenderStepped owner that drives adaptive VFX,
+            -- lighting and feedback for the rest of the player's session.
+            local function optionalStat(read)
+                local ok, value = pcall(read)
+                return ok and value or 0
             end
-
-            performancePulseEvent:FireServer({
+            local okVisual, visualMetrics = pcall(VisualBudgetRules.collect, workspace)
+            if not okVisual or type(visualMetrics) ~= "table" then
+                visualMetrics = {Parts = 0, Lights = 0, Effects = 0}
+            end
+            local sample = PerformancePulseRules.sanitize({
                 averageFps = math.floor(averageFps + 0.5),
                 vfxTier = vfxTierName,
                 deviceClass = deviceClass,
@@ -835,12 +839,23 @@ RunService.RenderStepped:Connect(function(dt)
                 visualParts = visualMetrics.Parts,
                 visualLights = visualMetrics.Lights,
                 visualEffects = visualMetrics.Effects,
-                totalMemoryMb = totalMemoryMb,
-                instanceCount = Stats.InstanceCount,
-                frameTimeMs = Stats.FrameTime * 1000,
-                renderCpuMs = Stats.RenderCPUFrameTime * 1000,
-                renderGpuMs = Stats.RenderGPUFrameTime * 1000,
+                totalMemoryMb = optionalStat(function()
+                    return Stats:GetTotalMemoryUsageMb()
+                end),
+                instanceCount = optionalStat(function()
+                    return Stats.InstanceCount
+                end),
+                frameTimeMs = optionalStat(function()
+                    return Stats.FrameTime * 1000
+                end),
+                renderCpuMs = optionalStat(function()
+                    return Stats.RenderCPUFrameTime * 1000
+                end),
+                renderGpuMs = optionalStat(function()
+                    return Stats.RenderGPUFrameTime * 1000
+                end),
             })
+            performancePulseEvent:FireServer(sample)
 
             performancePulseClock = 0
             performanceFrameCount = 0
