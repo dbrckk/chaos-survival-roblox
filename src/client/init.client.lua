@@ -1078,11 +1078,12 @@ local function renderCosmetics(state)
             button.BackgroundColor3 = UITheme.Colors.PanelSoft
         elseif arenaMasteryId and arenaMasteryPoints then
             button.Text = string.format(
-                "%s   •   %s   •   %s   •   %s GOLD",
+                "%s   •   %s   •   %s   •   %s %d PTS",
                 item.name,
                 rarityLabel,
                 kindLabel,
-                string.upper(arenaMasteryId)
+                string.upper(arenaMasteryId),
+                arenaMasteryPoints
             )
             button.BackgroundColor3 = UITheme.Colors.Violet:Lerp(UITheme.Colors.Panel, 0.74)
         else
