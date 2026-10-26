@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local MeteorRules = require(ReplicatedStorage.Shared.MeteorSignatureRules)
+local MeteorCoreSculptKit = require(script.Parent.MeteorCoreSculptKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -18,6 +19,8 @@ local trails = setmetatable({}, {__mode = "k"})
 local meteors = {}
 local candidateBuffer = {}
 local dirty = true
+local sync
+local syncQueued = false
 
 local function registerMeteor(instance)
     if instance:IsA("BasePart")
@@ -26,6 +29,15 @@ local function registerMeteor(instance)
     then
         meteors[instance] = true
         dirty = true
+        -- A meteor falls for only half a second: the ordinary 250ms scan
+        -- can miss most of its descent. Sculpt it on the next scheduler turn.
+        if phase == "round" and meteorsActive and not syncQueued then
+            syncQueued = true
+            task.defer(function()
+                syncQueued = false
+                if sync then sync() end
+            end)
+        end
     end
 end
 
@@ -38,6 +50,7 @@ local function clear(meteor)
     -- recreates a meteor, leaving unrelated VFX broken.
     local state = trails[meteor]
     if not state then return end
+    MeteorCoreSculptKit.clear(state.facets)
     for _, instance in ipairs({state.trail, state.left, state.right}) do
         if instance then instance:Destroy() end
     end
@@ -61,6 +74,8 @@ local function updateStyle(meteor, state, tier, lifetime)
     state.trail.Transparency = style.Transparency
     state.trail.LightEmission = style.LightEmission
     state.trail.Lifetime = lifetime
+    MeteorCoreSculptKit.clear(state.facets)
+    state.facets = MeteorCoreSculptKit.build(meteor, tier, MeteorRules)
     state.tier = tier
 end
 
@@ -100,12 +115,12 @@ local function add(meteor, tier, lifetime)
         ColorSequenceKeypoint.new(1, accent:Lerp(Color3.fromRGB(66, 37, 42), 0.72)),
     })
     trail.Parent = meteor
-    local state = {trail = trail, left = left, right = right, tier = nil}
+    local state = {trail = trail, left = left, right = right, tier = nil, facets = {}}
     trails[meteor] = state
     updateStyle(meteor, state, tier, lifetime)
 end
 
-local function sync()
+sync = function()
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local profile = MeteorRules.profile(tier.Name,
         player:GetAttribute("ReduceMotion") == true)
