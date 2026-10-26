@@ -23,7 +23,10 @@ function CameraOcclusionRules.arenaRaycastParams(arena, base)
             and child.Name ~= "Decor"
             and child.Name ~= "Spawns"
             and child.Name ~= "EntryGuides"
-            and child.Name ~= "Mechanics" then
+            and child.Name ~= "Mechanics"
+            -- Orbital's physical Helix/Entry/Core ramps are critical
+            -- walkable escape routes, never optional camera blockers.
+            and child.Name ~= "HelixCircuit" then
             candidates[#candidates + 1] = child
         end
     end

@@ -138,6 +138,21 @@ describe("Adaptive VFX quality", function()
             blocker.Parent = folder
         end
 
+        -- Orbital ramps are traversable structural Parts but must never
+        -- become locally transparent or steal the support-column hit.
+        local helixCircuit = Instance.new("Folder")
+        helixCircuit.Name = "HelixCircuit"
+        helixCircuit.Parent = arena
+        for _, routeName in ipairs({"HelixRamp1", "EntryRamp1", "CoreRamp1"}) do
+            local ramp = Instance.new("Part")
+            ramp.Name = routeName
+            ramp.Anchored = true
+            ramp.CanCollide = true
+            ramp.Size = Vector3.new(4, 5, 1)
+            ramp.Position = Vector3.new(4567, 500, 6427)
+            ramp.Parent = helixCircuit
+        end
+
         local otherAvatar = Instance.new("Part")
         otherAvatar.Name = "RemoteAvatarOccluder"
         otherAvatar.Anchored = true
@@ -155,6 +170,9 @@ describe("Adaptive VFX quality", function()
         -- from the opaque arena support behind them.
         expect(params.FilterDescendantsInstances[1] ~= decor).toBe(true)
         expect(params.FilterDescendantsInstances[1] ~= route).toBe(true)
+        for _, candidate in ipairs(params.FilterDescendantsInstances) do
+            expect(candidate ~= helixCircuit).toBe(true)
+        end
         local hit = workspace:Raycast(
             Vector3.new(4567, 500, 6432), Vector3.new(0, 0, -12), params
         )

@@ -171,6 +171,7 @@ local function supportedTarget(part, arena, base)
     local mechanics = arena:FindFirstChild("Mechanics")
     local spawns = arena:FindFirstChild("Spawns")
     local decor = arena:FindFirstChild("Decor")
+    local helixCircuit = arena:FindFirstChild("HelixCircuit")
     -- Never fade disappearing floors, mobility pads or ordinary platforms:
     -- players need to see their actual traversable routes. A designated
     -- skybridge may soften slightly when it occludes the local avatar.
@@ -190,6 +191,9 @@ local function supportedTarget(part, arena, base)
         and (not mechanics or not part:IsDescendantOf(mechanics))
         and (not spawns or not part:IsDescendantOf(spawns))
         and (not decor or not part:IsDescendantOf(decor))
+        -- Helix, entry and core ramps carry real Orbital collision routes.
+        -- Keep them readable even if a future camera filter is broadened.
+        and (not helixCircuit or not part:IsDescendantOf(helixCircuit))
 end
 
 local function update()
