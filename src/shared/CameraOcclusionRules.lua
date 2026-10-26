@@ -15,7 +15,12 @@ function CameraOcclusionRules.arenaRaycastParams(arena, base)
     -- swallow the ray before an actual vertical sightline blocker is seen.
     local candidates = {}
     for _, child in ipairs(arena:GetChildren()) do
-        if child ~= base then candidates[#candidates + 1] = child end
+        -- Noninteractive scenery is handled by the independent scenery LOD.
+        -- Exclude it from camera geometry casts so a foreground ornament
+        -- cannot conceal an opaque pillar immediately behind it.
+        if child ~= base and child.Name ~= "Decor" then
+            candidates[#candidates + 1] = child
+        end
     end
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Include
