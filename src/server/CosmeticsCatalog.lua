@@ -164,6 +164,94 @@ Cosmetics.Definitions = {
         ColorA = Color3.fromRGB(255, 85, 205),
         ColorB = Color3.fromRGB(160, 95, 255),
     },
+    trail_meteorflare = {
+        Id = "trail_meteorflare",
+        Name = "Meteorflare",
+        Kind = "trail",
+        ArenaMasteryId = "Classic",
+        ArenaMasteryPoints = 96,
+        Rarity = "Mythic",
+        Collection = "Mythic Arenas",
+        ColorA = Color3.fromRGB(255, 86, 38),
+        ColorB = Color3.fromRGB(255, 231, 139),
+    },
+    aura_stormglass = {
+        Id = "aura_stormglass",
+        Name = "Stormglass",
+        Kind = "aura",
+        ArenaMasteryId = "Towers",
+        ArenaMasteryPoints = 96,
+        Rarity = "Mythic",
+        Collection = "Mythic Arenas",
+        ColorA = Color3.fromRGB(37, 207, 255),
+        ColorB = Color3.fromRGB(216, 248, 255),
+    },
+    trail_shardstep = {
+        Id = "trail_shardstep",
+        Name = "Shardstep",
+        Kind = "trail",
+        ArenaMasteryId = "Crossroads",
+        ArenaMasteryPoints = 96,
+        Rarity = "Mythic",
+        Collection = "Mythic Arenas",
+        ColorA = Color3.fromRGB(255, 71, 189),
+        ColorB = Color3.fromRGB(125, 105, 255),
+    },
+    aura_voidwake = {
+        Id = "aura_voidwake",
+        Name = "Voidwake",
+        Kind = "aura",
+        ArenaMasteryId = "Orbital",
+        ArenaMasteryPoints = 96,
+        Rarity = "Mythic",
+        Collection = "Mythic Arenas",
+        ColorA = Color3.fromRGB(84, 44, 201),
+        ColorB = Color3.fromRGB(122, 243, 241),
+    },
+    aura_coremonarch = {
+        Id = "aura_coremonarch",
+        Name = "Core Monarch",
+        Kind = "aura",
+        ArenaMasteryId = "Classic",
+        ArenaMasteryPoints = 192,
+        Rarity = "Legendary",
+        Collection = "Ascendant Arenas",
+        ColorA = Color3.fromRGB(255, 157, 51),
+        ColorB = Color3.fromRGB(255, 247, 197),
+    },
+    trail_thunderline = {
+        Id = "trail_thunderline",
+        Name = "Thunderline",
+        Kind = "trail",
+        ArenaMasteryId = "Towers",
+        ArenaMasteryPoints = 192,
+        Rarity = "Legendary",
+        Collection = "Ascendant Arenas",
+        ColorA = Color3.fromRGB(68, 226, 255),
+        ColorB = Color3.fromRGB(167, 131, 255),
+    },
+    aura_parallax = {
+        Id = "aura_parallax",
+        Name = "Parallax",
+        Kind = "aura",
+        ArenaMasteryId = "Crossroads",
+        ArenaMasteryPoints = 192,
+        Rarity = "Legendary",
+        Collection = "Ascendant Arenas",
+        ColorA = Color3.fromRGB(248, 95, 236),
+        ColorB = Color3.fromRGB(99, 232, 255),
+    },
+    trail_stargazer = {
+        Id = "trail_stargazer",
+        Name = "Stargazer",
+        Kind = "trail",
+        ArenaMasteryId = "Orbital",
+        ArenaMasteryPoints = 192,
+        Rarity = "Legendary",
+        Collection = "Ascendant Arenas",
+        ColorA = Color3.fromRGB(142, 96, 255),
+        ColorB = Color3.fromRGB(226, 246, 255),
+    },
     aura_orbital = {
         Id = "aura_orbital",
         Name = "Orbital Halo",
@@ -195,6 +283,14 @@ Cosmetics.Order = {
     "aura_towercore",
     "trail_nexus",
     "aura_orbital",
+    "trail_meteorflare",
+    "aura_stormglass",
+    "trail_shardstep",
+    "aura_voidwake",
+    "aura_coremonarch",
+    "trail_thunderline",
+    "aura_parallax",
+    "trail_stargazer",
 }
 
 function Cosmetics.get(id)
@@ -223,7 +319,7 @@ function Cosmetics.publicList()
     return result
 end
 
-Cosmetics.CollectorMilestones = {3, 6, 9, 12, 15, #Cosmetics.Order}
+Cosmetics.CollectorMilestones = {3, 6, 9, 12, 15, 18, 21, #Cosmetics.Order}
 
 function Cosmetics.collectionState(raw)
     local owned = Cosmetics.deserialize(raw)

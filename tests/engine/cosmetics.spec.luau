@@ -7,7 +7,7 @@ local Cosmetics = require("../../src/server/CosmeticsCatalog")
 describe("Cosmetic inventory", function()
     it("exposes the expanded ordered catalog", function()
         local list = Cosmetics.publicList()
-        expect(#list).toBe(17)
+        expect(#list).toBe(25)
         expect(list[1].id).toBe("trail_blue")
         expect(list[1].unlockLevel).toBe(1)
         expect(list[4].id).toBe("trail_plasma")
@@ -55,6 +55,43 @@ describe("Cosmetic inventory", function()
         expect(#secondUnlocked).toBe(2)
     end)
 
+    it("awards advanced arena cosmetics only after saved mastery thresholds", function()
+        local initial, early = Cosmetics.mergeMasteryUnlocks(
+            "", "Classic=95;Towers=95;Crossroads=95;Orbital=95"
+        )
+        expect(#early).toBe(4) -- Original four GOLD arena rewards.
+        expect(Cosmetics.canEquip(initial, "trail_meteorflare")).toBe(false)
+        expect(Cosmetics.canEquip(initial, "aura_stormglass")).toBe(false)
+        expect(Cosmetics.canEquip(initial, "aura_parallax")).toBe(false)
+
+        local mythic, unlocked = Cosmetics.mergeMasteryUnlocks(
+            initial, "Classic=96;Towers=96;Crossroads=96;Orbital=96"
+        )
+        expect(#unlocked).toBe(4)
+        expect(Cosmetics.canEquip(mythic, "trail_meteorflare")).toBe(true)
+        expect(Cosmetics.canEquip(mythic, "aura_stormglass")).toBe(true)
+        expect(Cosmetics.canEquip(mythic, "trail_shardstep")).toBe(true)
+        expect(Cosmetics.canEquip(mythic, "aura_voidwake")).toBe(true)
+        expect(Cosmetics.canEquip(mythic, "aura_coremonarch")).toBe(false)
+
+        local ascendant, late = Cosmetics.mergeMasteryUnlocks(
+            mythic, "Classic=192;Towers=192;Crossroads=192;Orbital=192"
+        )
+        expect(#late).toBe(4)
+        expect(Cosmetics.canEquip(ascendant, "aura_coremonarch")).toBe(true)
+        expect(Cosmetics.canEquip(ascendant, "trail_thunderline")).toBe(true)
+        expect(Cosmetics.canEquip(ascendant, "aura_parallax")).toBe(true)
+        expect(Cosmetics.canEquip(ascendant, "trail_stargazer")).toBe(true)
+        local unchanged, none = Cosmetics.mergeMasteryUnlocks(
+            ascendant, "Classic=192;Towers=192;Crossroads=192;Orbital=192"
+        )
+        expect(unchanged).toBe(ascendant)
+        expect(#none).toBe(0)
+        local canBuy, why = Cosmetics.canBuy("", "trail_meteorflare", 999999)
+        expect(canBuy).toBe(false)
+        expect(why).toBe("not_for_sale")
+    end)
+
     it("validates coin purchases server-side", function()
         local canBuy = Cosmetics.canBuy("trail_blue", "trail_plasma", 450)
         expect(canBuy).toBe(true)
@@ -88,7 +125,7 @@ describe("Cosmetic inventory", function()
         local state = Cosmetics.collectionState("trail_blue,trail_gold,trail_plasma,trail_prism")
 
         expect(state.owned).toBe(4)
-        expect(state.total).toBe(17)
+        expect(state.total).toBe(25)
         expect(state.completedCollections >= 1).toBe(true)
         expect(state.totalCollections >= 4).toBe(true)
         expect(state.nextMilestone).toBe(6)
@@ -112,8 +149,16 @@ describe("Cosmetic inventory", function()
             aura_towercore = true,
             trail_nexus = true,
             aura_orbital = true,
+            trail_meteorflare = true,
+            aura_stormglass = true,
+            trail_shardstep = true,
+            aura_voidwake = true,
+            aura_coremonarch = true,
+            trail_thunderline = true,
+            aura_parallax = true,
+            trail_stargazer = true,
         }))
-        expect(complete.owned).toBe(17)
+        expect(complete.owned).toBe(25)
         expect(complete.maxed).toBe(true)
         expect(complete.nextMilestone).toBe(nil)
     end)

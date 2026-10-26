@@ -37,7 +37,7 @@ The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources liv
 - Server-side vote rate limiting
 - Persistent cosmetic inventory with level unlocks
 - Coin-funded cosmetic shop with server-authoritative purchases
-- 17-item cosmetic catalogue with rarity tiers, four arena-mastery GOLD rewards, Founder cosmetics and Hyper Neon cosmetics
+- 25-item cosmetic catalogue with rarity tiers, four arena-mastery GOLD rewards, Founder cosmetics and Hyper Neon cosmetics
 - Independent persistent trail + aura loadout slots with automatic migration from legacy saves
 - Server-authoritative cosmetic equipment with combinable trails, auras, lighting and highlights
 - Persistent long-term achievements with server-side rewards

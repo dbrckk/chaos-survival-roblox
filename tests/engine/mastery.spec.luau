@@ -37,7 +37,28 @@ describe("Arena and disaster mastery", function()
 
         local elite = Mastery.state(50)
         expect(elite.tier).toBe("ELITE")
-        expect(elite.maxed).toBe(true)
+        expect(elite.maxed).toBe(false)
+        expect(elite.nextTier).toBe("MYTHIC")
+        expect(elite.nextPoints).toBe(96)
+        expect(elite.remaining).toBe(46)
+
+        local mythic = Mastery.state(96)
+        expect(mythic.tier).toBe("MYTHIC")
+        expect(mythic.nextTier).toBe("ASCENDANT")
+        expect(mythic.nextPoints).toBe(192)
+
+        local ascendant = Mastery.state(192)
+        expect(ascendant.tier).toBe("ASCENDANT")
+        expect(ascendant.nextTier).toBe("LEGEND")
+        expect(ascendant.remaining).toBe(192)
+
+        local legend = Mastery.state(384)
+        expect(legend.tier).toBe("LEGEND")
+        expect(legend.maxed).toBe(true)
+        expect(legend.nextTier).toBe(nil)
+
+        -- No rank regressions when a stored veteran already owns >384 points.
+        expect(Mastery.state(900).tier).toBe("LEGEND")
     end)
 end)
 
