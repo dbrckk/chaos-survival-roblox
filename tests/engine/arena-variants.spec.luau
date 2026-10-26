@@ -10,6 +10,70 @@ local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 
 describe("Arena variants", function()
+    it("recovers safe imported 3D after late maps, arena swaps and full map rebuilds", function()
+        local world = Instance.new("Folder")
+        world.Name = "TransientWorldTest"
+        local ready = {}
+        local stop = OriginalMeshScenery.observeWorld(world, function(arena)
+            ready[#ready + 1] = arena
+        end)
+        local function createArena(generated)
+            local arena = Instance.new("Folder")
+            arena.Name = "Arena"
+            arena.Parent = generated
+            return arena
+        end
+        local function finish(arena)
+            local base = Instance.new("Part")
+            base.Name = "Base"
+            base.Parent = arena
+            local decor = Instance.new("Folder")
+            decor.Name = "Decor"
+            decor.Parent = arena
+        end
+
+        local originalMap = Instance.new("Folder")
+        originalMap.Name = "GeneratedMap"
+        originalMap.Parent = world
+        local a = createArena(originalMap)
+        task.wait(0.03)
+        expect(#ready).toBe(0) -- no callback on half-built arena
+        finish(a)
+        task.wait(0.05)
+        expect(#ready).toBe(1)
+        expect(ready[1]).toBe(a)
+
+        local b = createArena(originalMap)
+        finish(b)
+        task.wait(0.03)
+        expect(#ready).toBe(1) -- old Arena remains canonical
+        a:Destroy()
+        task.wait(0.05)
+        expect(#ready).toBe(2)
+        expect(ready[2]).toBe(b)
+
+        local replacement = Instance.new("Folder")
+        replacement.Name = "GeneratedMap"
+        replacement.Parent = world
+        local c = createArena(replacement)
+        finish(c)
+        task.wait(0.03)
+        expect(#ready).toBe(2) -- original map remains canonical
+        originalMap:Destroy()
+        task.wait(0.05)
+        expect(#ready).toBe(3)
+        expect(ready[3]).toBe(c)
+
+        stop()
+        stop() -- idempotent teardown
+        local d = createArena(replacement)
+        finish(d)
+        c:Destroy()
+        task.wait(0.05)
+        expect(#ready).toBe(3)
+        world:Destroy()
+    end)
+
     it("positions all original 3D models entirely beyond the live arena floor", function()
         local sizes = {
             Vector3.new(65, 40, 65),
