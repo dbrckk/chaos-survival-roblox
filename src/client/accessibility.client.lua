@@ -7,6 +7,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local BuildIdentity = require(ReplicatedStorage.Shared.BuildIdentity)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -92,6 +93,31 @@ local motionButton, motionStroke = makeSettingButton("ReduceMotionToggle")
 local soundButton, soundStroke = makeSettingButton("AudioToggle")
 local hapticsButton, hapticsStroke = makeSettingButton("HapticsToggle")
 
+-- Visible only inside Settings, never over the playfield. An Android
+-- tester can read the actual packaged revision without the Studio console.
+-- SOURCE/UNSTAMPED explicitly means the place was not built by GitHub CI.
+local buildIdentity = Instance.new("TextLabel")
+buildIdentity.Name = "BuildIdentityLabel"
+buildIdentity.Size = UDim2.new(1, 0, 0, 20)
+buildIdentity.BackgroundTransparency = 1
+buildIdentity.BorderSizePixel = 0
+buildIdentity.Font = Enum.Font.GothamMedium
+buildIdentity.TextSize = 10
+buildIdentity.TextColor3 = UITheme.Colors.Muted
+buildIdentity.TextXAlignment = Enum.TextXAlignment.Center
+local buildChannels = {
+    CANDIDATE = "RC",
+    STAGING = "STAGE",
+    PUBLIC_PLAYTEST = "TEST",
+    PRODUCTION = "LIVE",
+    SOURCE = "DEV",
+}
+local buildChannel = tostring(BuildIdentity.Channel or "SOURCE")
+buildIdentity.Text = "BUILD " .. tostring(BuildIdentity.SourceSha or "UNSTAMPED"):sub(1, 12)
+    .. " / " .. (buildChannels[buildChannel] or "DEV")
+buildIdentity.Parent = panel
+
+
 local currentPhase = "waiting"
 local voteVisible = false
 local viewportConnection = nil
@@ -114,12 +140,12 @@ local function applyResponsive()
         local width = profile.veryNarrow and 156 or 168
         toggle.Size = UDim2.fromOffset(width, 44)
         toggle.Position = UDim2.new(1, -10, 0, profile.topHeight + 18)
-        panel.Size = UDim2.fromOffset(math.max(176, width + 18), 160)
+        panel.Size = UDim2.fromOffset(math.max(176, width + 18), 192)
         panel.Position = UDim2.new(1, -10, 0, profile.topHeight + 68)
     else
         toggle.Size = UDim2.fromOffset(150, 36)
         toggle.Position = UDim2.fromScale(0.985, 0.03)
-        panel.Size = UDim2.fromOffset(178, 136)
+        panel.Size = UDim2.fromOffset(178, 168)
         panel.Position = UDim2.fromScale(0.985, 0.085)
     end
 end

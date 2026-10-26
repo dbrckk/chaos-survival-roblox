@@ -152,6 +152,7 @@ jobs:
           # Generated only in the runner workspace, never committed.
           printf "return { Environment = 'STAGING', Commit = '%s', RunId = '%s' }\n" \
             "$GITHUB_SHA" "$GITHUB_RUN_ID" > src/shared/VisualStagingStamp.lua
+          python3 tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel STAGING
           mkdir -p build
           rojo build default.project.json -o build/ChaosSurvival.rbxlx
           test -s build/ChaosSurvival.rbxlx

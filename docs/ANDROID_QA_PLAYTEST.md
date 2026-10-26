@@ -1,6 +1,32 @@
-# Chaos Survival — Android physical acceptance (PR #19 stacked on PR #18)
+# Chaos Survival — Android physical acceptance (exact build revision required)
 
 This is a **hands-on test plan, not proof of completion**. Do not mark a check as passed unless it was observed on the actual tested PR #19 candidate based on PR #18. The existing public Roblox place may run an older published build: it cannot certify an unpublished pull request.
+
+
+## Identify the exact build before testing (next release candidate)
+
+Before any mobile QA, open **Settings** in the Roblox Android lobby and
+record the **BUILD** footer on a native screenshot. Candidate builds packaged
+through GitHub now show a short 12-character commit SHA plus a channel:
+
+- `RC` (`CANDIDATE`): non-published GitHub build artifact. **Not a live Roblox client.**
+- `STAGE` (`STAGING`): build targeted exclusively to a verified private test universe.
+- `TEST` (`PUBLIC_PLAYTEST`): explicitly published public iteration, **not certified**.
+- `LIVE` (`PRODUCTION`): explicitly published certified release workflow.
+- `DEV` (`SOURCE / UNSTAMPED`): unstamped Studio/local source, not a verified release.
+
+Compare the full `src/shared/BuildIdentity.lua` source SHA embedded in the
+actual `.rbxlx` to the Build Validation `candidate-provenance.txt`, the
+successful release workflow's `publish-metadata.txt` and Roblox Creator
+Dashboard **place version history**. Matching only the first twelve
+characters is a convenient on-screen check, not cryptographic proof.
+
+**Pass** only if full SHA, workflow channel, Roblox version and physical
+Android recording all identify the same candidate. An older published
+place with `SOURCE / UNSTAMPED` cannot certify a newer GitHub commit.
+The existing public/staging universe collision remains a hard blocker;
+never point staging at the known public place to bypass it.
+
 
 ## Genuine native Roblox evidence capture — 15 October 2026
 
