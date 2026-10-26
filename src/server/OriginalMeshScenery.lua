@@ -254,6 +254,100 @@ function OriginalMeshScenery.mount(arena, templates)
     return mounted
 end
 
+-- Observe world-map lifecycle without holding on to a destroyed
+-- GeneratedMap. A retrying server, a regenerated map or late Arena/Decor
+-- streaming must still receive its already-loaded decorative MeshParts.
+-- No polling or new per-frame work: connections are explicitly replaced.
+function OriginalMeshScenery.observeWorld(world, onReady)
+    assert(typeof(world) == "Instance" and type(onReady) == "function",
+        "OriginalMeshScenery.observeWorld requires a world and callback")
+    local alive = true
+    local generated, arena = nil, nil
+    local sentArena = nil
+    local mapAdded, mapRemoved, arenaAdded = nil, nil, nil
+
+    local function disconnect(connection)
+        if connection then connection:Disconnect() end
+    end
+    local function emit()
+        if not alive or not generated or not arena
+            or generated.Parent ~= world
+            or world:FindFirstChild("GeneratedMap") ~= generated
+            or generated:FindFirstChild("Arena") ~= arena
+            or not arena:FindFirstChild("Base")
+            or not arena:FindFirstChild("Decor")
+            or sentArena == arena
+        then
+            return
+        end
+        sentArena = arena
+        onReady(arena)
+    end
+    local function bindArena(nextArena)
+        if nextArena == arena then return end
+        disconnect(arenaAdded)
+        arenaAdded = nil
+        arena = nextArena
+        sentArena = nil
+        if arena then
+            arenaAdded = arena.ChildAdded:Connect(function(child)
+                if child.Name == "Base" or child.Name == "Decor" then
+                    task.defer(emit)
+                end
+            end)
+            -- Arena is parented before the builder's synchronous Base and
+            -- Decor creation, so never assume they already exist here.
+            task.defer(emit)
+        end
+    end
+    local function bindGenerated(nextMap)
+        if nextMap == generated then return end
+        disconnect(mapAdded)
+        disconnect(mapRemoved)
+        mapAdded, mapRemoved = nil, nil
+        bindArena(nil)
+        generated = nextMap
+        if generated then
+            local observed = generated
+            mapAdded = observed.ChildAdded:Connect(function(child)
+                if child.Name == "Arena" and generated == observed then
+                    bindArena(observed:FindFirstChild("Arena"))
+                end
+            end)
+            mapRemoved = observed.ChildRemoved:Connect(function(child)
+                if child == arena and generated == observed then
+                    bindArena(observed:FindFirstChild("Arena"))
+                end
+            end)
+            bindArena(observed:FindFirstChild("Arena"))
+        end
+    end
+    local worldAdded = world.ChildAdded:Connect(function(child)
+        if child.Name == "GeneratedMap" then
+            bindGenerated(world:FindFirstChild("GeneratedMap"))
+        end
+    end)
+    local worldRemoved = world.ChildRemoved:Connect(function(child)
+        if child == generated then
+            bindGenerated(world:FindFirstChild("GeneratedMap"))
+        end
+    end)
+    bindGenerated(world:FindFirstChild("GeneratedMap"))
+
+    return function()
+        if not alive then return end
+        alive = false
+        disconnect(worldAdded)
+        disconnect(worldRemoved)
+        disconnect(mapAdded)
+        disconnect(mapRemoved)
+        disconnect(arenaAdded)
+        worldAdded, worldRemoved = nil, nil
+        mapAdded, mapRemoved, arenaAdded = nil, nil, nil
+        generated, arena, sentArena = nil, nil, nil
+    end
+end
+
 local started = false
 local templates = {}
 
@@ -263,30 +357,21 @@ function OriginalMeshScenery.start()
     end
     started = true
 
-    local generated = workspace:FindFirstChild("GeneratedMap")
-    if not generated then
-        warn("Original 3D scenery: GeneratedMap missing; native assets retained.")
-        return
-    end
+    -- Remain subscribed if GeneratedMap is created late/rebuilt entirely.
+    -- The callback is used only for a complete, canonical arena, while
+    -- asynchronous template arrivals refresh the current arena directly.
+    OriginalMeshScenery.observeWorld(workspace, function(arena)
+        OriginalMeshScenery.mount(arena, templates)
+    end)
 
     local function refreshArena()
-        local arena = generated:FindFirstChild("Arena")
-        if arena then
+        local generated = workspace:FindFirstChild("GeneratedMap")
+        local arena = generated and generated:FindFirstChild("Arena")
+        if arena and arena:FindFirstChild("Base")
+            and arena:FindFirstChild("Decor") then
             OriginalMeshScenery.mount(arena, templates)
         end
     end
-
-    generated.ChildAdded:Connect(function(child)
-        if child.Name == "Arena" then
-            -- MapBuilder builds its Decor after parenting the arena. Run
-            -- only after that synchronous construction has completed.
-            task.defer(function()
-                if child.Parent == generated then
-                    refreshArena()
-                end
-            end)
-        end
-    end)
 
     -- Cache each moderator-approved package once per server. A temporary
     -- Roblox CDN failure can happen during startup: retry at most twice
