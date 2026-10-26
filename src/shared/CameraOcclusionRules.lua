@@ -8,11 +8,18 @@ local CameraOcclusionRules = {}
 -- bounded transparency owner in mobile-camera-sightline.client.lua.
 -- Unlike a blacklist of current characters, this survives late replication
 -- and new bot spawns without rebuilding filtering every 180 ms.
-function CameraOcclusionRules.arenaRaycastParams(arena)
+function CameraOcclusionRules.arenaRaycastParams(arena, base)
     if typeof(arena) ~= "Instance" then return nil end
+    -- Preserve the original walkable-base exclusion. Include its sibling
+    -- supports/decks instead of the whole arena, so a large floor cannot
+    -- swallow the ray before an actual vertical sightline blocker is seen.
+    local candidates = {}
+    for _, child in ipairs(arena:GetChildren()) do
+        if child ~= base then candidates[#candidates + 1] = child end
+    end
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Include
-    params.FilterDescendantsInstances = {arena}
+    params.FilterDescendantsInstances = candidates
     params.IgnoreWater = true
     return params
 end
