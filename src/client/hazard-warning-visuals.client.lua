@@ -123,6 +123,11 @@ local function ensureRenderLoop()
             -- countdown rings during Bomb Rain + Meteor Shower.
             local serverNow = workspace:GetServerTimeNow()
             local reduced = player:GetAttribute("ReduceMotion") == true
+            -- One camera lookup for all simultaneous Meteor/Bomb warnings.
+            -- Far-off hollow contours stop consuming SurfaceGui rendering
+            -- and 30 Hz property writes; their server markers remain visible.
+            local activeCamera = workspace.CurrentCamera
+            local contourViewer = activeCamera and activeCamera.CFrame.Position
             local bombViewer = bombViewerPosition()
             local chargeSlots = BombChargeRules.nearestSlots(
                 tracked, bombViewer, currentTier.Name
@@ -198,12 +203,19 @@ local function ensureRenderLoop()
                         or math.clamp(base - alpha * 0.10 - pulse * 0.05, 0.47, 0.78)
 
                     if state.ring then
-                        -- Hollow world-space surface contours preserve the
-                        -- arena floor and avoid a duplicate solid disc.
-                        GroundOutline.update(
-                            state.ring, part.Position, diameter,
-                            alpha, reduced, pulse, currentTier.Name
-                        )
+                        -- The actual warning Part, server damage and the
+                        -- close-range escape arrows are never distance-culled.
+                        -- Only the optional hollow SurfaceGui is throttled.
+                        local viewerDistance = contourViewer
+                            and (contourViewer - part.Position).Magnitude or nil
+                        if GroundOutline.syncVisibility(
+                            state.ring, currentTier.Name, viewerDistance
+                        ) then
+                            GroundOutline.update(
+                                state.ring, part.Position, diameter,
+                                alpha, reduced, pulse, currentTier.Name
+                            )
+                        end
                     end
                 end
 
