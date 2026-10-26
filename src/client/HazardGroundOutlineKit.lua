@@ -110,6 +110,37 @@ function Kit.create(parent, kind)
     return {part = carrier, canvas = canvas, outer = outer, inner = inner, ticks = ticks}
 end
 
+-- Hollow outlines are optional local cosmetics. The server warning marker,
+-- full blast diameter and the close-range escape HUD never get culled.
+-- A small hysteresis band keeps distant Android GUI layers from flashing
+-- on/off whenever the camera skims a distance boundary.
+local DISTANCE_BUDGET = {Low = 92, Medium = 132, High = 180}
+
+function Kit.inRange(tier, distance, wasVisible)
+    if distance == nil then return true end
+    if type(distance) ~= "number" or distance ~= distance
+        or distance < 0 or math.abs(distance) == math.huge then
+        return false
+    end
+    local maximum = DISTANCE_BUDGET[tier] or DISTANCE_BUDGET.Low
+    return distance <= maximum + (wasVisible == true and 12 or 0)
+end
+
+function Kit.syncVisibility(visual, tier, distance)
+    if not visual or not visual.canvas or not visual.canvas.Parent then
+        return false
+    end
+    local visible = Kit.inRange(tier, distance, visual.visible)
+    if visual.visible ~= visible or visual.canvas.Enabled ~= visible then
+        visual.canvas.Enabled = visible
+    end
+    visual.visible = visible
+    return visible
+end
+
+-- Keep the 3D footprint and four UI-bearing ticks in sync, but do not
+-- rewrite identical geometry/colors every 30 Hz in ReduceMotion or when
+-- an impact marker is stationary. Cache *recipes*, not server hitboxes.
 function Kit.update(visual, worldPosition, diameter, progress, reduced, pulse, tier)
     if not visual or not visual.part or not visual.part.Parent
         or typeof(worldPosition) ~= "Vector3" then
@@ -118,15 +149,36 @@ function Kit.update(visual, worldPosition, diameter, progress, reduced, pulse, t
     local kind = string.match(visual.part.Name, "^(%a+)WarningOutlineLocal$")
     local recipe = Kit.recipe(kind, diameter, progress, reduced, pulse, tier)
     if not recipe then return end
-    visual.part.Size = Vector3.new(recipe.Diameter, 0.08, recipe.Diameter)
-    visual.part.CFrame = CFrame.new(worldPosition + Vector3.new(0, 0.08, 0))
-    visual.outer.Thickness = recipe.Thickness
-    visual.outer.Transparency = recipe.OuterTransparency
-    visual.inner.Enabled = recipe.InnerVisible
-    visual.inner.Transparency = recipe.InnerTransparency
-    for _, tick in ipairs(visual.ticks) do
-        tick.Visible = recipe.TicksVisible
+
+    local newSize = Vector3.new(recipe.Diameter, 0.08, recipe.Diameter)
+    if visual.lastSize ~= newSize then
+        visual.part.Size = newSize
+        visual.lastSize = newSize
     end
+    local newFrame = CFrame.new(worldPosition + Vector3.new(0, 0.08, 0))
+    if visual.lastFrame ~= newFrame then
+        visual.part.CFrame = newFrame
+        visual.lastFrame = newFrame
+    end
+    local previous = visual.lastRecipe
+    if not previous or previous.Thickness ~= recipe.Thickness then
+        visual.outer.Thickness = recipe.Thickness
+    end
+    if not previous or math.abs(previous.OuterTransparency - recipe.OuterTransparency) > 0.0001 then
+        visual.outer.Transparency = recipe.OuterTransparency
+    end
+    if not previous or previous.InnerVisible ~= recipe.InnerVisible then
+        visual.inner.Enabled = recipe.InnerVisible
+    end
+    if not previous or math.abs(previous.InnerTransparency - recipe.InnerTransparency) > 0.0001 then
+        visual.inner.Transparency = recipe.InnerTransparency
+    end
+    if not previous or previous.TicksVisible ~= recipe.TicksVisible then
+        for _, tick in ipairs(visual.ticks) do
+            tick.Visible = recipe.TicksVisible
+        end
+    end
+    visual.lastRecipe = recipe
 end
 
 function Kit.destroy(visual)
