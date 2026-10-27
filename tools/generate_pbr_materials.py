@@ -131,9 +131,14 @@ def compose(size: int, name: str):
         tile = size // 16
         if tile < 16:
             raise ValueError("Ceramic requires at least 256 pixels")
+        # Keep tile-to-tile grout grooves half a cell AWAY from the
+        # UV border. Derivatives at the outer repeat seam then stay
+        # continuous instead of flipping across a sharp grout cusp.
+        px = (xx + tile * 0.5) % tile
+        py = (yy + tile * 0.5) % tile
         edges = np.minimum.reduce((
-            xx % tile, (tile - 1) - (xx % tile),
-            yy % tile, (tile - 1) - (yy % tile),
+            px, (tile - 1) - px,
+            py, (tile - 1) - py,
         ))
         grout = clamp((3.0 - edges) / 3.0)
         bevel = clamp((edges - 1.5) / 8.0)
