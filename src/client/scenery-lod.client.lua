@@ -85,10 +85,12 @@ local FOLDERS = {
         LowDistance = 145,
         MediumDistance = 215,
     },
-    -- Four scenes are WITHIN the 320-stud floor, so Medium distance
-    -- must cover its corners; Low builds no geometry in the first place.
+    -- Near-playable exterior models sit inside the 320-stud floor.
+    -- Low renders only four five-Part silhouettes and needs to see them
+    -- while approaching the outskirts; Medium shows detailed scenes.
+    -- Apply through the existing ONE scenery scheduler.
     DistrictSectorSetpiecesLocal = {
-        LowDistance = 0,
+        LowDistance = 245,
         MediumDistance = 255,
     },
     ArenaServicePropsLocal = {
