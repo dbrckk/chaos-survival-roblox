@@ -129,7 +129,7 @@ local function renderRuntimeTelemetry()
     local source = server3D and tostring(server3D) or "-"
     local received = client3D and tostring(client3D) or "-"
     local inconsistent = server3D ~= nil
-        and (server3D ~= 4 or not complete3D or client3D ~= 4)
+        and (server3D ~= 8 or not complete3D or client3D ~= 8)
     telemetry.Text = performanceSummary
         .. string.format("\nENTRY %s   SAVE %s   3D S%s/C%s",
             entry, save, source, received)

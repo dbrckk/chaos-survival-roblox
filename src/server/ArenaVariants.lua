@@ -6,8 +6,8 @@ ArenaVariants.Definitions = {
     Classic = {
         Id = "Classic",
         Name = "CLASSIC GRID",
-        StrategyHint = "Four rising escape routes • jump between low, mid and high decks",
-        BaseSize = Vector3.new(152, 2, 152),
+        StrategyHint = "FOLLOW FLOOR ARROWS • CLIMB FOUR ESCAPE ROUTES • SURVIVE TO 0",
+        BaseSize = Vector3.new(224, 2, 224),
         BaseColor = Color3.fromRGB(92, 103, 125),
         PlatformColor = Color3.fromRGB(120, 145, 190),
         SpawnOffsets = {
@@ -54,8 +54,8 @@ ArenaVariants.Definitions = {
     Towers = {
         Id = "Towers",
         Name = "TOWER RUN",
-        StrategyHint = "Four reachable tower ascents • climb from the central hub to skybridges",
-        BaseSize = Vector3.new(150, 2, 150),
+        StrategyHint = "FOLLOW FLOOR ARROWS • CLIMB TO BRIDGES • SURVIVE TO 0",
+        BaseSize = Vector3.new(224, 2, 224),
         BaseColor = Color3.fromRGB(78, 88, 112),
         PlatformColor = Color3.fromRGB(105, 155, 185),
         SpawnOffsets = {
@@ -138,8 +138,8 @@ ArenaVariants.Definitions = {
     Orbital = {
         Id = "Orbital",
         Name = "ORBITAL RING",
-        StrategyHint = "Enter by the outer ramps • cross a Helix lane • climb the reactor spokes",
-        BaseSize = Vector3.new(152, 2, 152),
+        StrategyHint = "FOLLOW ARROWS • USE RAMPS TO REACTOR • SURVIVE TO 0",
+        BaseSize = Vector3.new(224, 2, 224),
         BaseColor = Color3.fromRGB(72, 82, 102),
         PlatformColor = Color3.fromRGB(90, 185, 175),
         SpawnOffsets = (function()
@@ -193,8 +193,8 @@ ArenaVariants.Definitions = {
     Crossroads = {
         Id = "Crossroads",
         Name = "CROSSROADS",
-        StrategyHint = "Four connected switchbacks • climb a side lane to reach the upper interchange",
-        BaseSize = Vector3.new(156, 2, 156),
+        StrategyHint = "FOLLOW FLOOR ARROWS • CLIMB THE SWITCHBACKS • SURVIVE TO 0",
+        BaseSize = Vector3.new(224, 2, 224),
         BaseColor = Color3.fromRGB(86, 96, 110),
         PlatformColor = Color3.fromRGB(155, 125, 185),
         SpawnOffsets = {
@@ -237,12 +237,12 @@ ArenaVariants.Definitions = {
 }
 
 
--- Large maps must provide genuine optional paths beyond the original
--- central circuits. Store the outer routes SEPARATELY so all existing
--- authored platform indices (notably Tower Skybridges 18-21 and Orbital
--- Helix 1-18) remain stable. MapBuilder appends these to the SAME
--- server-owned Platforms folder, which automatically includes them in
--- AI route selection, collapsing/shrinking hazards and physics queries.
+-- Mega-arena design: 224 x 224 = 2.1x the original floor area.
+-- Keep every core authored platform and bridge ID intact. Extend each
+-- physically walkable perimeter ladder from two to FOUR ground-supported
+-- steps: an actual destination on the new outskirts, not empty dead space.
+-- These Parts remain under the authoritative Platforms folder for hazards,
+-- AI, collectibles, platform loss and death physics.
 local perimeterLocations = {
     Classic = {entryX = 49, entryZ = 49, outerX = 62, outerZ = 49},
     Towers = {entryX = 50, entryZ = 46, outerX = 63, outerZ = 46},
@@ -268,17 +268,25 @@ for _, variantId in ipairs(ArenaVariants.Order) do
             PerimeterRoute = route,
             PerimeterStep = 1,
         })
-        -- The second route block is 3.6 studs higher with a genuine
-        -- horizontal jump gap (1–2 studs). Both full-height blocks
-        -- meet the floor so there are no overhead R15 collision traps.
-        table.insert(routes, {
-            offset = Vector3.new(sx * positions.outerX, 4.3,
-                sz * positions.outerZ),
-            size = Vector3.new(12, 6.6, 12),
-            RouteTier = 2,
-            PerimeterRoute = route,
-            PerimeterStep = 2,
-        })
+        -- The next three destinations all grow UP FROM THE FLOOR,
+        -- avoiding low roofs under which an R15 rig could become stuck.
+        -- One cardinal coordinate stays fixed; the other advances in
+        -- 13-stud jumps (1-stud lip gap; 3.6-stud rise each time).
+        -- Final blocks end at <= 95 studs inside the 112-stud half-floor,
+        -- leaving a wide clear edge for Shrinking Arena mechanics.
+        for step = 2, 4 do
+            table.insert(routes, {
+                offset = Vector3.new(
+                    sx * (positions.outerX + (step - 2) * 13),
+                    4.3 + (step - 2) * 1.8,
+                    sz * positions.outerZ
+                ),
+                size = Vector3.new(12, 6.6 + (step - 2) * 3.6, 12),
+                RouteTier = step,
+                PerimeterRoute = route,
+                PerimeterStep = step,
+            })
+        end
     end
     variant.PerimeterPlatforms = routes
 end
