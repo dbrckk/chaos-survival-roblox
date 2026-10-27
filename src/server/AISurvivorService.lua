@@ -2712,7 +2712,26 @@ local function recoverIfStuck(record, humanoid, root, now)
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
-    humanoid.Jump = true
+    -- A physical route that cannot make progress must not be selected
+    -- again on the next think tick. Release the route reservation so
+    -- another NPC may try a different sector; keep normal speed/jump.
+    if record.districtTraverse then
+        record.districtTraverse = nil
+        record.nextDistrictTraverseAt = now + 10
+        if record.model then
+            record.model:SetAttribute("DistrictRouteStep", 0)
+        end
+    end
+    if record.signalInterestRoute then
+        record.signalInterestRoute = nil
+        record.signalInterestUntil = 0
+        record.nextSignalInterestAt = now + 6
+    end
+    if humanoid.FloorMaterial ~= Enum.Material.Air
+        and now >= (record.nextRouteJumpAt or 0) then
+        humanoid.Jump = true
+        record.nextRouteJumpAt = now + 0.8
+    end
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
@@ -3301,8 +3320,15 @@ local function stepRecord(record, now)
         if record.target then
             local delta = record.target - root.Position
             local horizontal = Vector3.new(delta.X, 0, delta.Z)
-            if delta.Y > 2.2 and horizontal.Magnitude < 10 then
+            -- The old generic height check fired on every brain tick,
+            -- even while airborne, overriding the bounded parkour jump
+            -- cooldown and creating unnatural pogo-stick movement.
+            if delta.Y > 2.2 and horizontal.Magnitude < 10
+                and humanoid.FloorMaterial ~= Enum.Material.Air
+                and now >= (record.nextRouteJumpAt or 0)
+            then
                 humanoid.Jump = true
+                record.nextRouteJumpAt = now + 0.75
             end
 
             local destination = record.target
