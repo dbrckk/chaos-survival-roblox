@@ -486,6 +486,60 @@ describe("Arena variants", function()
         end
     end)
 
+    it("adds four genuinely traversable corner spurs branching from real perimeter routes", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            expect(type(variant.BranchPlatforms)).toBe("table")
+            expect(#variant.BranchPlatforms).toBe(16)
+            local floorTop = variant.BaseSize.Y * 0.5
+            for route = 1, 4 do
+                local fork = variant.PerimeterPlatforms[
+                    (route - 1) * ArenaVariants.PerimeterSteps + 5
+                ]
+                local previous = fork
+                for step = 1, 4 do
+                    local deck = variant.BranchPlatforms[
+                        (route - 1) * 4 + step
+                    ]
+                    expect(deck.BranchRoute).toBe(route)
+                    expect(deck.BranchStep).toBe(step)
+                    expect(deck.BranchParentStep).toBe(5)
+                    expect(deck.RouteTier).toBe(math.min(4, step + 1))
+                    expect(math.abs(deck.offset.Y - deck.size.Y * 0.5 - floorTop)
+                        < 0.001).toBe(true)
+                    expect(math.abs(deck.offset.X) + deck.size.X * 0.5
+                        <= variant.BaseSize.X * 0.5 - 5).toBe(true)
+                    expect(math.abs(deck.offset.Z) + deck.size.Z * 0.5
+                        <= variant.BaseSize.Z * 0.5 - 5).toBe(true)
+                    for _, spawn in ipairs(variant.SpawnOffsets) do
+                        local dx = math.abs(spawn.X - deck.offset.X)
+                        local dz = math.abs(spawn.Z - deck.offset.Z)
+                        expect(dx >= deck.size.X * 0.5 + 3.8
+                            or dz >= deck.size.Z * 0.5 + 3.8).toBe(true)
+                    end
+                    local dx = math.max(0,
+                        math.abs(deck.offset.X - previous.offset.X)
+                        - (deck.size.X + previous.size.X) * 0.5)
+                    local dz = math.max(0,
+                        math.abs(deck.offset.Z - previous.offset.Z)
+                        - (deck.size.Z + previous.size.Z) * 0.5)
+                    local gap = math.sqrt(dx * dx + dz * dz)
+                    local rise = deck.offset.Y + deck.size.Y * 0.5
+                        - previous.offset.Y - previous.size.Y * 0.5
+                    expect(gap > 0.15 and gap <= JumpRouteCueRules.MaxGap)
+                        .toBe(true)
+                    expect(rise >= 2.5 and rise <= JumpRouteCueRules.MaxRise)
+                        .toBe(true)
+                    previous = deck
+                end
+                -- A real destination occupies previously mostly empty
+                -- side districts, not another duplicate central tower.
+                expect(math.abs(previous.offset.X) >= 95).toBe(true)
+                expect(math.abs(previous.offset.Z) >= 95).toBe(true)
+            end
+        end
+    end)
+
     it("gives Classic four authored, spawn-safe, continuously reachable tiers", function()
         local classic = ArenaVariants.get("Classic")
         local tiers = {{}, {}, {}, {}}
