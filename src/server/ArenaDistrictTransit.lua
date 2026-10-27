@@ -96,7 +96,7 @@ local function part(parent, name, size, cf, color, material)
     return p
 end
 
-local function station(folder, base, route, outer)
+local function station(folder, base, route, outer, variantId)
     local offset = ArenaDistrictTransit.stationOffset(
         route, outer, math.min(base.Size.X, base.Size.Z)
     )
@@ -138,6 +138,56 @@ local function station(folder, base, route, outer)
         Vector3.new(5.6, 0.5, 0.22),
         frame * CFrame.new(0, 8.25, -1.26),
         color, Enum.Material.Neon).Transparency = 0.2
+
+    -- Distinct silhouettes for the four arenas; these stay decorative.
+    -- Only 2-4 extra low-poly parts per station, no active lights/VFX.
+    if variantId == "Classic" then
+        local dish = part(model, "MeteorDish",
+            Vector3.new(0.65, 4.2, 4.2),
+            frame * CFrame.new(0, 10.2, 0)
+                * CFrame.Angles(0, 0, math.rad(30)),
+            Color3.fromRGB(87, 121, 146))
+        dish.Shape = Enum.PartType.Cylinder
+        local lens = part(model, "ScannerEye",
+            Vector3.new(1.35, 1.35, 1.35),
+            frame * CFrame.new(0, 10.3, -0.52),
+            color, Enum.Material.Glass)
+        lens.Shape = Enum.PartType.Ball
+    elseif variantId == "Towers" then
+        part(model, "TransitCanopy",
+            Vector3.new(10, 0.8, 3.7),
+            frame * CFrame.new(0, 10.3, 0),
+            Color3.fromRGB(88, 108, 123))
+        part(model, "SuspendedCabin",
+            Vector3.new(3.6, 2.4, 2.5),
+            frame * CFrame.new(0, 12, 0),
+            Color3.fromRGB(34, 58, 80))
+        part(model, "CabinGlazing",
+            Vector3.new(2.6, 0.76, 0.15),
+            frame * CFrame.new(0, 12.1, -1.35),
+            color, Enum.Material.Glass).Transparency = 0.24
+    elseif variantId == "Crossroads" then
+        for side = -1, 1, 2 do
+            local arrow = part(model, "SwitchyardSignal" .. side,
+                Vector3.new(3.7, 2.4, 1.4),
+                frame * CFrame.new(side * 2.3, 10.8, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                color, Enum.Material.Metal)
+            arrow.Shape = Enum.PartType.Block
+        end
+    elseif variantId == "Orbital" then
+        local hub = part(model, "OrbitReceiver",
+            Vector3.new(3.1, 3.1, 3.1),
+            frame * CFrame.new(0, 10.5, 0),
+            color, Enum.Material.Glass)
+        hub.Shape = Enum.PartType.Ball
+        local collar = part(model, "OrbitCollar",
+            Vector3.new(0.65, 5.2, 5.2),
+            frame * CFrame.new(0, 10.5, 0)
+                * CFrame.Angles(0, 0, math.pi * 0.5),
+            Color3.fromRGB(97, 127, 155))
+        collar.Shape = Enum.PartType.Cylinder
+    end
 
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "Travel" .. (outer and "ToHub" or "ToDistrict")
@@ -202,9 +252,10 @@ function ArenaDistrictTransit.start(ctx)
 
     local cooldowns = {}
     local built = 0
+    local variantId = tostring(arena:GetAttribute("VariantId") or "Classic")
     for route = 1, 4 do
-        local hub = station(folder, base, route, false)
-        local outer = station(folder, base, route, true)
+        local hub = station(folder, base, route, false, variantId)
+        local outer = station(folder, base, route, true, variantId)
         if hub and outer then
             built += 2
             for _, entry in ipairs({hub, outer}) do
