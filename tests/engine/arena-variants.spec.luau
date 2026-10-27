@@ -167,7 +167,7 @@ describe("Arena variants", function()
             base.Size = variant.BaseSize
             base.Position = Vector3.new(18, 4, -34)
             local positions = OriginalMeshScenery.placements(base, variantId)
-            expect(#positions).toBe(4)
+            expect(#positions).toBe(8)
             local palette = {}
             for _, placement in ipairs(positions) do
                 expect(type(placement.assetId)).toBe("number")
@@ -273,11 +273,11 @@ describe("Arena variants", function()
             decor.Name = "Decor"
             decor.Parent = arena
 
-            expect(OriginalMeshScenery.mount(arena, templates)).toBe(4)
+            expect(OriginalMeshScenery.mount(arena, templates)).toBe(8)
             expect(OriginalMeshScenery.mount(arena, templates)).toBe(0)
             expect(arena:GetAttribute("Original3DSceneryComplete")).toBe(true)
             local folder = decor:FindFirstChild("Original3DScenery")
-            expect(#folder:GetChildren()).toBe(4)
+            expect(#folder:GetChildren()).toBe(8)
             for _, placement in ipairs(OriginalMeshScenery.placements(base, id)) do
                 local model = folder:FindFirstChild(placement.name)
                 expect(model ~= nil).toBe(true)
@@ -373,8 +373,8 @@ describe("Arena variants", function()
 
             expect(#variant.SpawnOffsets >= 8).toBe(true)
             expect(#variant.Platforms >= 14).toBe(true)
-            expect(variant.BaseSize.X >= 150).toBe(true)
-            expect(variant.BaseSize.Z >= 150).toBe(true)
+            expect(variant.BaseSize.X >= 224).toBe(true)
+            expect(variant.BaseSize.Z >= 224).toBe(true)
             -- Preserve the old physical routes and hazard sensors at the
             -- center while providing a much wider safe exploration ring.
             for _, offset in ipairs(variant.SpawnOffsets) do
@@ -429,45 +429,26 @@ describe("Arena variants", function()
         end
     end)
 
-    it("adds four physically walkable exterior routes without moving core systems", function()
+    it("doubles the arena floor and provides four real R15-safe escape steps per district", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
             local perimeter = variant.PerimeterPlatforms
             expect(type(perimeter)).toBe("table")
-            expect(#perimeter).toBe(8)
+            expect(#perimeter).toBe(16)
+            expect(variant.BaseSize.X).toBe(224)
+            expect(variant.BaseSize.Z).toBe(224)
             local baseTop = variant.BaseSize.Y * 0.5
             for route = 1, 4 do
-                local entry = perimeter[(route - 1) * 2 + 1]
-                local outer = perimeter[(route - 1) * 2 + 2]
-                expect(entry.PerimeterRoute).toBe(route)
-                expect(outer.PerimeterRoute).toBe(route)
-                expect(entry.PerimeterStep).toBe(1)
-                expect(outer.PerimeterStep).toBe(2)
-                expect(entry.RouteTier).toBe(1)
-                expect(outer.RouteTier).toBe(2)
-
-                local topEntry = entry.offset.Y + entry.size.Y * 0.5
-                local topOuter = outer.offset.Y + outer.size.Y * 0.5
-                local belowEntry = entry.offset.Y - entry.size.Y * 0.5
-                local belowOuter = outer.offset.Y - outer.size.Y * 0.5
-                -- Platforms are solid from the floor up: no R15 could be
-                -- trapped underneath the new larger outskirts.
-                expect(math.abs(belowEntry - baseTop) < 0.001).toBe(true)
-                expect(math.abs(belowOuter - baseTop) < 0.001).toBe(true)
-                expect(topEntry - baseTop <= 4).toBe(true)
-                expect(topOuter - topEntry > 2).toBe(true)
-                expect(topOuter - topEntry <= JumpRouteCueRules.MaxRise).toBe(true)
-
-                local dx = math.max(0, math.abs(outer.offset.X - entry.offset.X)
-                    - (outer.size.X + entry.size.X) * 0.5)
-                local dz = math.max(0, math.abs(outer.offset.Z - entry.offset.Z)
-                    - (outer.size.Z + entry.size.Z) * 0.5)
-                local gap = math.sqrt(dx * dx + dz * dz)
-                expect(gap > 0.15 and gap <= JumpRouteCueRules.MaxGap).toBe(true)
-
-                local radius = math.max(math.abs(entry.offset.X), math.abs(entry.offset.Z))
-                expect(radius >= 45).toBe(true)
-                for _, deck in ipairs({entry, outer}) do
+                local previous = nil
+                for step = 1, 4 do
+                    local deck = perimeter[(route - 1) * 4 + step]
+                    expect(deck.PerimeterRoute).toBe(route)
+                    expect(deck.PerimeterStep).toBe(step)
+                    expect(deck.RouteTier).toBe(step)
+                    -- Solid terraces rise FROM the floor, without an R15
+                    -- crawling/ceiling trap below an otherwise solid deck.
+                    expect(math.abs(deck.offset.Y - deck.size.Y * 0.5 - baseTop)
+                        < 0.001).toBe(true)
                     expect(math.abs(deck.offset.X) + deck.size.X * 0.5
                         <= variant.BaseSize.X * 0.5 - 5).toBe(true)
                     expect(math.abs(deck.offset.Z) + deck.size.Z * 0.5
@@ -479,7 +460,28 @@ describe("Arena variants", function()
                             >= deck.size.Z * 0.5 + 3.8
                         expect(clearX or clearZ).toBe(true)
                     end
+                    if previous then
+                        local dx = math.max(0,
+                            math.abs(deck.offset.X - previous.offset.X)
+                                - (deck.size.X + previous.size.X) * 0.5)
+                        local dz = math.max(0,
+                            math.abs(deck.offset.Z - previous.offset.Z)
+                                - (deck.size.Z + previous.size.Z) * 0.5)
+                        local gap = math.sqrt(dx * dx + dz * dz)
+                        local top = deck.offset.Y + deck.size.Y * 0.5
+                        local previousTop =
+                            previous.offset.Y + previous.size.Y * 0.5
+                        expect(gap > 0.15 and gap <= JumpRouteCueRules.MaxGap).toBe(true)
+                        expect(top - previousTop >= 2.5
+                            and top - previousTop <= JumpRouteCueRules.MaxRise).toBe(true)
+                    end
+                    previous = deck
                 end
+                -- Final exits now reach the outer ring rather than stop
+                -- just beyond the original core circuit.
+                expect(math.max(
+                    math.abs(previous.offset.X), math.abs(previous.offset.Z)
+                ) >= 86).toBe(true)
             end
         end
     end)
