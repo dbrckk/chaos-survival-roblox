@@ -882,6 +882,8 @@ local function sendToLobby(record)
 
     record.inRound = false
     record.districtTraverse = nil
+    record.signalInterestRoute = nil
+    record.signalInterestUntil = 0
     record.model:SetAttribute("AISurvivorInRound", false)
     record.target = nil
     record.targetPart = nil
@@ -928,6 +930,10 @@ local function sendToArena(record)
     record.districtTraverse = nil
     record.nextDistrictTraverseAt = os.clock() + 3
     record.nextRouteJumpAt = 0
+    record.signalInterestRoute = nil
+    record.signalInterestUntil = 0
+    record.nextSignalInterestAt = os.clock() + 2
+    record.model:SetAttribute("DistrictSignalWitnessed", 0)
     record.model:SetAttribute("DistrictRouteCompleted", false)
     record.model:SetAttribute("DistrictRouteStep", 0)
     record.nextSkyrailAt = 0
@@ -997,6 +1003,9 @@ local function newRecord(slot)
         districtTraverse = nil,
         nextDistrictTraverseAt = 0,
         nextRouteJumpAt = 0,
+        signalInterestRoute = nil,
+        signalInterestUntil = 0,
+        nextSignalInterestAt = 0,
         strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
@@ -2140,6 +2149,110 @@ local function districtTraverseTarget(record, root, now)
     )
 end
 
+-- Live district missions should attract nearby NPC competitors, too.
+-- This is social world presence, NOT a server coin claim: bots never
+-- masquerade as Player instances and cannot trigger ProximityPrompt
+-- reward callbacks. Uses only real active stations and normal walking.
+local function liveDistrictSignalTarget(record, root, now, traits)
+    if not record.inRound or currentState.phase ~= "round"
+        or currentState.finalRush == true
+        or record.districtTraverse ~= nil
+        or hasDisaster("ShrinkingArena")
+        or hasDisaster("RisingLava")
+        or hasDisaster("Tornado")
+        or hasDisaster("DisappearingPlatforms")
+    then
+        record.signalInterestRoute = nil
+        return nil
+    end
+
+    local _, arena = arenaParts()
+    local folder = arena and arena:FindFirstChild("DistrictSignalRush")
+    local route = folder and tonumber(folder:GetAttribute("SignalRoute"))
+    if not route or route < 1 or route > 4
+        or route ~= math.floor(route) then
+        record.signalInterestRoute = nil
+        return nil
+    end
+    local station = folder:FindFirstChild("SignalStation" .. route)
+    local floor = station and station:FindFirstChild("Foundation")
+    if not station or station:GetAttribute("SignalActive") ~= true
+        or station:GetAttribute("SignalClaimed") == true
+        or not floor or not floor:IsA("BasePart")
+    then
+        record.signalInterestRoute = nil
+        return nil
+    end
+
+    local target = floor.Position + Vector3.new(0, 2.5, 0)
+    local diff = target - root.Position
+    local distance = Vector3.new(diff.X, 0, diff.Z).Magnitude
+    if math.abs(diff.Y) > 5.8 then
+        record.signalInterestRoute = nil
+        return nil
+    end
+
+    local endAt = tonumber(folder:GetAttribute("SignalEndsAt"))
+    local remaining = endAt and endAt > 0
+        and math.max(0, endAt - workspace:GetServerTimeNow()) or 8.0
+    local speed = math.max(10, tonumber(record.profile.WalkSpeed) or 16)
+    if remaining <= 2.2
+        or distance > math.min(83, speed * (remaining - 0.8))
+    then
+        record.signalInterestRoute = nil
+        return nil
+    end
+
+    if distance < 7.0 then
+        if record.signalInterestRoute == route then
+            record.model:SetAttribute("DistrictSignalWitnessed", route)
+            showBotSignal(record, "FOUND IT!", now)
+        end
+        record.signalInterestRoute = nil
+        record.nextSignalInterestAt = now + 12
+        return nil
+    end
+
+    local pursuing = record.signalInterestRoute == route
+        and (record.signalInterestUntil or 0) > now
+    if not pursuing then
+        if now < (record.nextSignalInterestAt or 0) then
+            return nil
+        end
+        record.nextSignalInterestAt = now + 2.5 + math.random() * 1.8
+
+        -- One active AI explorer at a time; the others remain near
+        -- the real players rather than all clustering at one beacon.
+        for _, other in ipairs(records) do
+            if other ~= record and other.inRound and other.alive
+                and other.signalInterestRoute == route
+                and (other.signalInterestUntil or 0) > now
+            then
+                return nil
+            end
+        end
+
+        local risk = traits.Risk or record.profile.Risk
+        local chance = record.profile.Id == "Bold" and 0.49
+            or (record.profile.Id == "Balanced" and 0.31 or 0.15)
+        if math.random() > chance * (0.8 + risk * 0.35) then
+            return nil
+        end
+        -- Existing impact-path danger scoring also protects this new
+        -- optional interest. A mission never takes priority over life.
+        if scoreCandidate(record, root, {position = target}, traits) < -25 then
+            return nil
+        end
+        record.signalInterestRoute = route
+    end
+
+    record.signalInterestUntil = now + math.min(6, remaining)
+    record.targetPart = nil
+    record.targetIsPad = false
+    return separateTarget(record, target), math.clamp(
+        distance / speed + 0.40, 1.1, 4.3)
+end
+
 local function chooseArenaTarget(record, root, now)
     local traits = decisionTraits(record)
     record.targetIsSkyrail = false
@@ -2147,6 +2260,11 @@ local function chooseArenaTarget(record, root, now)
     local physicalRoute, routeHold = districtTraverseTarget(record, root, now)
     if physicalRoute then
         return physicalRoute, routeHold
+    end
+    local signalTarget, signalHold = liveDistrictSignalTarget(
+        record, root, now, traits)
+    if signalTarget then
+        return signalTarget, signalHold
     end
     local socialTarget = socialArenaTarget(record, root, traits, now)
     if socialTarget then
@@ -2991,6 +3109,9 @@ local function stepRecord(record, now)
 
         if urgentTarget then
             record.districtTraverse = nil
+            record.signalInterestRoute = nil
+            record.signalInterestUntil = 0
+            record.nextSignalInterestAt = now + 4.5
             record.nextDistrictTraverseAt = now + 4.5
             -- An imminent hazard cancels cosmetic indecision immediately.
             -- No new speed/health advantage: locomotion remains Humanoid
