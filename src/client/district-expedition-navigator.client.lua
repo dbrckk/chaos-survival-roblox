@@ -66,6 +66,49 @@ arrow.TextScaled = true
 arrow.TextColor3 = Color3.fromRGB(111, 226, 247)
 arrow.Parent = panel
 
+-- Only one next-landing marker is ever rendered. It is a local
+-- BillboardGui on a REAL physical deck, not a replicated fake platform.
+-- This provides an intuitive world reference for mobile jumps without
+-- adding particle effects, 3D Parts or an extra animation loop.
+local stepMarker = Instance.new("BillboardGui")
+stepMarker.Name = "NextPhysicalDistrictStep"
+stepMarker.ResetOnSpawn = false
+stepMarker.Size = UDim2.fromOffset(104, 32)
+stepMarker.MaxDistance = 100
+-- Stay readable in dusk/dark maps but still occlude behind real walls.
+stepMarker.LightInfluence = 0
+stepMarker.AlwaysOnTop = false
+stepMarker.Enabled = false
+stepMarker.Parent = playerGui
+
+local markerFrame = Instance.new("Frame")
+markerFrame.Name = "WaypointPlate"
+markerFrame.Size = UDim2.fromScale(1, 1)
+markerFrame.BackgroundColor3 = Color3.fromRGB(12, 25, 40)
+markerFrame.BackgroundTransparency = 0.14
+markerFrame.BorderSizePixel = 0
+markerFrame.Parent = stepMarker
+
+local markerCorner = Instance.new("UICorner")
+markerCorner.CornerRadius = UDim.new(0, 9)
+markerCorner.Parent = markerFrame
+
+local markerStroke = Instance.new("UIStroke")
+markerStroke.Color = Color3.fromRGB(111, 226, 247)
+markerStroke.Thickness = 1.3
+markerStroke.Transparency = 0.14
+markerStroke.Parent = markerFrame
+
+local markerText = Instance.new("TextLabel")
+markerText.Name = "ActualLanding"
+markerText.BackgroundTransparency = 1
+markerText.Size = UDim2.fromScale(1, 1)
+markerText.Font = Enum.Font.GothamBold
+markerText.TextColor3 = Color3.fromRGB(236, 248, 255)
+markerText.TextSize = 12
+markerText.Text = "NEXT JUMP"
+markerText.Parent = markerFrame
+
 local text = Instance.new("TextLabel")
 text.Name = "ExpeditionHint"
 text.Position = UDim2.fromOffset(47, 5)
@@ -212,6 +255,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     then
         roundActive = false
         panel.Visible = false
+        stepMarker.Enabled = false
     end
 end)
 
@@ -294,13 +338,14 @@ local function chooseParkourWaypoint(arena, route, elite, root, destination)
     highestReached = math.max(previous, highestReached)
     climbedStage[key] = highestReached
     if highestReached >= #stages then
-        return destination, "OPEN SUPPLY CACHE", true
+        return destination, "OPEN SUPPLY CACHE", true, nil, nil, nil
     end
     local nextStep = highestReached + 1
     local deck = stages[nextStep]
     local surface = deck.Position.Y + deck.Size.Y * 0.5
     return Vector3.new(deck.Position.X, surface + 2.5, deck.Position.Z),
-        "CLIMB " .. nextStep .. "/" .. #stages, false
+        "CLIMB " .. nextStep .. "/" .. #stages, false,
+        deck, nextStep, #stages
 end
 
 -- Free transit is useful for ground-level timed signals. Only recommend
@@ -342,6 +387,7 @@ local function update()
     hideClaimedCues()
     if hazardCueVisible() then
         panel.Visible = false
+        stepMarker.Enabled = false
         return
     end
     local character = player.Character
@@ -355,12 +401,14 @@ local function update()
         or not humanoid or humanoid.Health <= 0 or not camera
     then
         panel.Visible = false
+        stepMarker.Enabled = false
         return
     end
 
     local arena = currentArena()
     if not arena then
         panel.Visible = false
+        stepMarker.Enabled = false
         return
     end
 
@@ -435,6 +483,7 @@ local function update()
     -- StreamingEnabled may omit far-off objects; no fictitious targets.
     if not targetPosition or targetDistance > (signalPosition and 230 or 170) then
         panel.Visible = false
+        stepMarker.Enabled = false
         return
     end
 
@@ -445,6 +494,7 @@ local function update()
         and tonumber(nearest:GetAttribute("CacheReward")))
         or (elite and 5 or 2)
     local waypoint, taskLabel = targetPosition, nil
+    local landingDeck, landingStep, landingTotal = nil, nil, nil
 
     if signalPosition then
         if route and route >= 1 and route <= 4 then
@@ -462,10 +512,13 @@ local function update()
     else
         if route and route >= 1 and route <= 4
             and route == math.floor(route) then
-            local stage, label = chooseParkourWaypoint(
-                arena, route, elite, root, targetPosition)
+            local stage, label, _, deck, stageIndex, stageCount =
+                chooseParkourWaypoint(
+                    arena, route, elite, root, targetPosition)
             if stage then
                 waypoint, taskLabel = stage, label
+                landingDeck, landingStep, landingTotal =
+                    deck, stageIndex, stageCount
             end
         end
         if not taskLabel then
@@ -502,6 +555,33 @@ local function update()
     arrow.TextColor3 = color
     border.Color = color
     panel.Visible = true
+
+    -- The server chest already owns the final platform's BillboardGui.
+    -- Show our one intermediate jump marker only while it is nearby,
+    -- visible, and the authoritative survival warning has no priority.
+    if landingDeck and landingDeck.Parent
+        and landingStep and landingTotal
+        and landingStep < landingTotal
+        and landingDeck.CanCollide
+        and landingDeck.Transparency < 0.95
+        and (landingDeck.Position - root.Position).Magnitude <= 100
+    then
+        if stepMarker.Adornee ~= landingDeck then
+            stepMarker.Adornee = landingDeck
+        end
+        stepMarker.StudsOffsetWorldSpace =
+            Vector3.new(0, landingDeck.Size.Y * 0.5 + 5.0, 0)
+        local caption = "JUMP " .. landingStep .. "/" .. landingTotal
+        if markerText.Text ~= caption then
+            markerText.Text = caption
+        end
+        if markerStroke.Color ~= color then
+            markerStroke.Color = color
+        end
+        stepMarker.Enabled = true
+    else
+        stepMarker.Enabled = false
+    end
 end
 
 task.spawn(function()
