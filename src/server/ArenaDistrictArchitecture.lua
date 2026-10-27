@@ -375,10 +375,17 @@ function ArenaDistrictArchitecture.build(decor, base, variantId, theme)
         end
     end
     folder:SetAttribute("District3DCount", count)
+    -- Keep the 16 original district models in their own audited collection.
+    -- Corner landmarks are a separate model group, with the SAME existing
+    -- per-model Android LOD applied by scenery-lod.client.lua.
+    local corners = Instance.new("Folder")
+    corners.Name = "ArenaCornerLandmarks3D"
+    corners:SetAttribute("CosmeticOnly", true)
+    corners.Parent = decor
     for cornerIndex = 1, 4 do
-        cornerFixture(folder, base, variantId, theme, cornerIndex)
+        cornerFixture(corners, base, variantId, theme, cornerIndex)
     end
-    folder:SetAttribute("CornerLandmarkCount", 4)
+    corners:SetAttribute("CornerLandmarkCount", 4)
     return folder
 end
 
