@@ -4,11 +4,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local caches = {}
 local roundActive = false
+local roundFinalRush = false
 local climbedStage = {}
 local claimedEasy, claimedElite, claimedSignal = false, false, false
 local shardEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
@@ -31,7 +33,8 @@ gui.Name = "DistrictExpeditionNavigator"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 12
-gui.Parent = player:WaitForChild("PlayerGui")
+local playerGui = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local panel = Instance.new("Frame")
 panel.Name = "NearestSupplyRoute"
@@ -77,6 +80,58 @@ text.TextColor3 = Color3.fromRGB(225, 247, 255)
 text.Text = ""
 text.Parent = panel
 
+-- Mobile survival HUD takes priority over optional rewards. The other
+-- owner is the authoritative hazard-route-readability client: do not
+-- re-parent or reposition its urgent warning. Hide this *secondary*
+-- compass while either high-priority warning surface is visible.
+local function hazardCueVisible()
+    local owner = playerGui:FindFirstChild("HazardReadabilityCue")
+    if not owner or not owner:IsA("ScreenGui") or not owner.Enabled then
+        return false
+    end
+    local near = owner:FindFirstChild("NearestHazardCue")
+    local offscreen = owner:FindFirstChild("OffscreenHazardArrow")
+    return (near and near:IsA("GuiObject") and near.Visible == true)
+        or (offscreen and offscreen:IsA("GuiObject")
+            and offscreen.Visible == true)
+        or false
+end
+
+local viewportConnection
+local function applyNavigatorLayout()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize
+        or Vector2.new(1280, 720)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local touch = UserInputService.TouchEnabled
+    local width = touch and (profile.veryNarrow and 190 or 208) or 250
+    local height = touch and (profile.tinyHeight and 46 or 51) or 51
+    local x = touch and profile.topCenterXScale or 0.50
+    -- The danger panel starts just below the top timer and spans
+    -- 34-42px. This panel owns the next lane, not the same pixels.
+    local y = profile.topHeight
+        + (profile.tinyHeight and 50 or 62)
+    panel.Position = UDim2.new(x, 0, 0, y)
+    panel.Size = UDim2.fromOffset(
+        math.min(width, math.max(168, viewport.X - 20)), height)
+end
+
+local function bindNavigatorCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal(
+            "ViewportSize"):Connect(applyNavigatorLayout)
+    end
+    applyNavigatorLayout()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindNavigatorCamera)
+bindNavigatorCamera()
+
 local function cacheEligible(model)
     return model:IsA("Model")
         and model:GetAttribute("DistrictSupplyCache") == true
@@ -99,6 +154,7 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
+    roundFinalRush = state.finalRush == true
     local phase = tostring(state.phase or state.Phase or ""):lower()
     if phase == "round" then
         if not roundActive then
@@ -227,7 +283,7 @@ local function chooseTransitWaypoint(arena, route, root, destination)
         or toHub > 160 then
         return nil
     end
-    return header.Position, "FAST TRAVEL • DISTRICT " .. route
+    return header.Position, "FAST TRAVEL D" .. route
 end
 
 local function currentArena()
@@ -236,11 +292,16 @@ local function currentArena()
 end
 
 local function update()
+    if hazardCueVisible() then
+        panel.Visible = false
+        return
+    end
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local camera = workspace.CurrentCamera
-    if not roundActive or player:GetAttribute("RoundParticipant") ~= true
+    if not roundActive or roundFinalRush
+        or player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true
         or not root or not root:IsA("BasePart")
         or not humanoid or humanoid.Health <= 0 or not camera
@@ -256,6 +317,7 @@ local function update()
     end
 
     local signalPosition, signalReward, signalRoute, upcoming = nil, nil, nil, false
+    local signalSeconds = nil
     if not claimedSignal
         and (tonumber(player:GetAttribute("RoundDistrictSignals")) or 0) == 0
     then
@@ -281,6 +343,15 @@ local function update()
                     signalReward = math.clamp(
                         tonumber(signals:GetAttribute("SignalReward")) or 2,
                         1, 2)
+                    -- Server-provided clock timestamps drive the countdown.
+                    -- Local client clocks cannot reliably estimate when
+                    -- a replicated objective was scheduled or activated.
+                    local timestamp = tonumber(signals:GetAttribute(
+                        preview and "SignalStartsAt" or "SignalEndsAt"))
+                    if timestamp and timestamp > 0 then
+                        signalSeconds = math.clamp(math.ceil(
+                            timestamp - workspace:GetServerTimeNow()), 0, 60)
+                    end
                 end
             end
         end
@@ -338,7 +409,7 @@ local function update()
         end
         if not taskLabel then
             taskLabel = upcoming
-                and ("NEXT SIGNAL • DISTRICT " .. tostring(route))
+                and ("NEXT SIGNAL D" .. tostring(route))
                 or "SECURE LIVE SIGNAL"
         end
     else
@@ -365,14 +436,19 @@ local function update()
         arrow.Rotation = math.deg(math.atan2(side, forward))
     end
     local waypointDistance = math.floor(delta.Magnitude + 0.5)
-    local cue = signalPosition
-        and (upcoming and "SIGNAL SOON • +" .. reward
-            or "LIVE NOW • +" .. reward)
-        or ("CACHE +" .. reward .. " COINS")
+    local cue
+    if signalPosition then
+        local remaining = signalSeconds and (tostring(signalSeconds) .. "s")
+            or (upcoming and "SOON" or "NOW")
+        cue = (upcoming and "OPENS " or "ENDS ")
+            .. remaining .. " • +" .. reward
+    else
+        cue = "CACHE +" .. reward .. " COINS"
+    end
     -- Distance is explicitly TO THE NEXT WAYPOINT, not falsely to the
     -- final chest when several physical jump gaps remain.
     text.Text = taskLabel .. "\n" .. cue
-        .. " • " .. tostring(waypointDistance) .. " STUDS"
+        .. " • " .. tostring(waypointDistance) .. "st"
     local color = signalPosition and Color3.fromRGB(255, 163, 83)
         or (elite and Color3.fromRGB(248, 199, 91)
             or Color3.fromRGB(111, 226, 247))
