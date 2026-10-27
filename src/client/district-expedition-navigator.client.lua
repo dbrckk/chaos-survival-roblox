@@ -283,7 +283,7 @@ local function chooseTransitWaypoint(arena, route, root, destination)
         or toHub > 160 then
         return nil
     end
-    return header.Position, "FAST TRAVEL • DISTRICT " .. route
+    return header.Position, "FAST TRAVEL D" .. route
 end
 
 local function currentArena()
@@ -317,6 +317,7 @@ local function update()
     end
 
     local signalPosition, signalReward, signalRoute, upcoming = nil, nil, nil, false
+    local signalSeconds = nil
     if not claimedSignal
         and (tonumber(player:GetAttribute("RoundDistrictSignals")) or 0) == 0
     then
@@ -342,6 +343,15 @@ local function update()
                     signalReward = math.clamp(
                         tonumber(signals:GetAttribute("SignalReward")) or 2,
                         1, 2)
+                    -- Server-provided clock timestamps drive the countdown.
+                    -- Local client clocks cannot reliably estimate when
+                    -- a replicated objective was scheduled or activated.
+                    local timestamp = tonumber(signals:GetAttribute(
+                        preview and "SignalStartsAt" or "SignalEndsAt"))
+                    if timestamp and timestamp > 0 then
+                        signalSeconds = math.clamp(math.ceil(
+                            timestamp - workspace:GetServerTimeNow()), 0, 60)
+                    end
                 end
             end
         end
@@ -399,7 +409,7 @@ local function update()
         end
         if not taskLabel then
             taskLabel = upcoming
-                and ("NEXT SIGNAL • DISTRICT " .. tostring(route))
+                and ("NEXT SIGNAL D" .. tostring(route))
                 or "SECURE LIVE SIGNAL"
         end
     else
@@ -426,14 +436,19 @@ local function update()
         arrow.Rotation = math.deg(math.atan2(side, forward))
     end
     local waypointDistance = math.floor(delta.Magnitude + 0.5)
-    local cue = signalPosition
-        and (upcoming and "SIGNAL SOON • +" .. reward
-            or "LIVE NOW • +" .. reward)
-        or ("CACHE +" .. reward .. " COINS")
+    local cue
+    if signalPosition then
+        local remaining = signalSeconds and (tostring(signalSeconds) .. "s")
+            or (upcoming and "SOON" or "NOW")
+        cue = (upcoming and "OPENS " or "ENDS ")
+            .. remaining .. " • +" .. reward
+    else
+        cue = "CACHE +" .. reward .. " COINS"
+    end
     -- Distance is explicitly TO THE NEXT WAYPOINT, not falsely to the
     -- final chest when several physical jump gaps remain.
     text.Text = taskLabel .. "\n" .. cue
-        .. " • " .. tostring(waypointDistance) .. " STUDS"
+        .. " • " .. tostring(waypointDistance) .. "st"
     local color = signalPosition and Color3.fromRGB(255, 163, 83)
         or (elite and Color3.fromRGB(248, 199, 91)
             or Color3.fromRGB(111, 226, 247))
