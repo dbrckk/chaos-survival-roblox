@@ -47,7 +47,7 @@ local function install(model)
     light.Brightness = 0.45
     light.Range = 12
     light.Shadows = false
-    light.Enabled = lens.Transparency < 0.95
+    light.Enabled = lens.LocalTransparencyModifier < 0.95
     light.Parent = lens
     local tween = TweenService:Create(light,
         TweenInfo.new(2.4 + index * 0.3,
@@ -95,7 +95,7 @@ task.spawn(function()
                 bundle.light:Destroy()
                 lights[part] = nil
             else
-                bundle.light.Enabled = part.Transparency < 0.95
+                bundle.light.Enabled = part.LocalTransparencyModifier < 0.95
             end
         end
         task.wait(1)
