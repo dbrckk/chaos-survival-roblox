@@ -881,6 +881,7 @@ local function sendToLobby(record)
     end
 
     record.inRound = false
+    record.districtTraverse = nil
     record.model:SetAttribute("AISurvivorInRound", false)
     record.target = nil
     record.targetPart = nil
@@ -924,6 +925,10 @@ local function sendToArena(record)
     record.targetIsPad = false
     record.targetIsSkyrail = false
     record.skyrailDirection = nil
+    record.districtTraverse = nil
+    record.nextDistrictTraverseAt = os.clock() + 3
+    record.model:SetAttribute("DistrictRouteCompleted", false)
+    record.model:SetAttribute("DistrictRouteStep", 0)
     record.nextSkyrailAt = 0
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
@@ -988,6 +993,8 @@ local function newRecord(slot)
         targetIsSkyrail = false,
         skyrailDirection = nil,
         nextSkyrailAt = 0,
+        districtTraverse = nil,
+        nextDistrictTraverseAt = 0,
         strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
@@ -1928,10 +1935,217 @@ local function chooseMobilityPad(record, root, pads, traits)
     return ranked[math.random(1, choiceRange)].pad
 end
 
+-- Real, sequential district exploration for NPCs. A bot can attempt
+-- the same jump-by-jump perimeter climb as a human: no teleports, phantom
+-- pathfinding nodes, privileged speed or artificial score rewards.
+-- A session is short, interruptible and confined to at most TWO NPCs.
+local function districtTraverseTarget(record, root, now)
+    local expedition = record.districtTraverse
+    local blocked = currentState.phase ~= "round"
+        or not record.inRound
+        or hasDisaster("ShrinkingArena")
+        or hasDisaster("DisappearingPlatforms")
+        or hasDisaster("RisingLava")
+        or hasDisaster("Tornado")
+        or currentState.finalRush == true
+    if blocked then
+        record.districtTraverse = nil
+        return nil
+    end
+
+    local _, arena = arenaParts()
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    if not platforms then
+        record.districtTraverse = nil
+        return nil
+    end
+
+    if expedition and now > expedition.deadline then
+        record.districtTraverse = nil
+        record.nextDistrictTraverseAt = now + 9
+        expedition = nil
+    end
+
+    -- Keep most AI on the central battleground, so lobbies remain lively.
+    -- Riskier personalities explore further; avatars remain capped at 16
+    -- studs/second and all jumps use the ordinary Humanoid controller.
+    if not expedition then
+        if now < (record.nextDistrictTraverseAt or 0) then
+            return nil
+        end
+        local chance = record.profile.Id == "Bold" and 0.25
+            or (record.profile.Id == "Balanced" and 0.17 or 0.105)
+        if math.random() >= chance then
+            return nil
+        end
+
+        local occupied, busyRoutes = 0, {}
+        for _, other in ipairs(records) do
+            if other ~= record and other.districtTraverse
+                and other.inRound and other.alive then
+                occupied += 1
+                busyRoutes[other.districtTraverse.route] = true
+            end
+        end
+        if occupied >= 2 then
+            return nil
+        end
+
+        local candidates = {}
+        for _, part in ipairs(platforms:GetChildren()) do
+            if part:IsA("BasePart")
+                and part:GetAttribute("PerimeterStep") == 1
+                and AISurvivorRules.platformAvailable(
+                    part.CanCollide, part.Transparency,
+                    part:GetAttribute("CollapsePhase")
+                )
+            then
+                local route = tonumber(part:GetAttribute("PerimeterRoute"))
+                if route and route >= 1 and route <= 4
+                    and not busyRoutes[route] then
+                    local gap = part.Position - root.Position
+                    local horizontal = Vector3.new(gap.X, 0, gap.Z).Magnitude
+                    if horizontal <= 115 then
+                        candidates[#candidates + 1] = {
+                            route = route, distance = horizontal,
+                            score = horizontal + math.random() * 18,
+                        }
+                    end
+                end
+            end
+        end
+        if #candidates == 0 then
+            return nil
+        end
+        table.sort(candidates, function(a, b)
+            return a.score < b.score
+        end)
+        local chosen = candidates[math.random(1, math.min(2, #candidates))]
+        expedition = {
+            route = chosen.route,
+            stage = 1,
+            deadline = now + 23,
+            -- Bold runners sometimes take the branch lookout rather
+            -- than continuing along the last three perimeter decks.
+            branch = record.profile.Id == "Bold"
+                or (record.profile.Id == "Balanced" and math.random() < 0.42),
+        }
+        record.districtTraverse = expedition
+    end
+
+    -- Resolve the live server-created decks each decision. Structural
+    -- catastrophes may remove them during the round; stale references
+    -- must never become an invisible AI teleport destination.
+    local perimeter, branch = {}, {}
+    for _, part in ipairs(platforms:GetChildren()) do
+        if part:IsA("BasePart") then
+            if part:GetAttribute("PerimeterRoute") == expedition.route then
+                local step = tonumber(part:GetAttribute("PerimeterStep"))
+                if step and step >= 1 and step <= 8 then
+                    perimeter[step] = part
+                end
+            elseif expedition.branch
+                and part:GetAttribute("BranchRoute") == expedition.route then
+                local step = tonumber(part:GetAttribute("BranchStep"))
+                if step and step >= 1 and step <= 4 then
+                    branch[step] = part
+                end
+            end
+        end
+    end
+
+    local stages = {}
+    for step = 1, expedition.branch and 5 or 8 do
+        if not perimeter[step] then
+            record.districtTraverse = nil
+            return nil
+        end
+        stages[#stages + 1] = perimeter[step]
+    end
+    if expedition.branch then
+        for step = 1, 4 do
+            if not branch[step] then
+                record.districtTraverse = nil
+                return nil
+            end
+            stages[#stages + 1] = branch[step]
+        end
+    end
+
+    local step = expedition.stage
+    local deck = stages[step]
+    if not deck or not AISurvivorRules.platformAvailable(
+        deck.CanCollide, deck.Transparency,
+        deck:GetAttribute("CollapsePhase")
+    ) then
+        record.districtTraverse = nil
+        return nil
+    end
+
+    local top = deck.Position.Y + deck.Size.Y * 0.5
+    local offset = root.Position - deck.Position
+    local horizontal = Vector3.new(offset.X, 0, offset.Z).Magnitude
+    local standing = horizontal <= math.max(5.1, deck.Size.X * 0.46)
+        and root.Position.Y >= top + 1.0
+        and root.Position.Y <= top + 5.5
+
+    if standing then
+        step += 1
+        expedition.stage = step
+        if step > #stages then
+            record.districtTraverse = nil
+            record.nextDistrictTraverseAt = now + 15
+            record.model:SetAttribute("DistrictRouteCompleted", true)
+            return nil
+        end
+        deck = stages[step]
+        top = deck.Position.Y + deck.Size.Y * 0.5
+    elseif step > 1 then
+        local previous = stages[step - 1]
+        local oldTop = previous.Position.Y + previous.Size.Y * 0.5
+        if root.Position.Y < oldTop - 1.6 then
+            -- Fell off the route: abandon the exhibition gracefully.
+            record.districtTraverse = nil
+            record.nextDistrictTraverseAt = now + 7
+            return nil
+        end
+    end
+
+    if not AISurvivorRules.platformAvailable(
+        deck.CanCollide, deck.Transparency,
+        deck:GetAttribute("CollapsePhase")
+    ) then
+        record.districtTraverse = nil
+        return nil
+    end
+
+    local destination = deck.Position
+        + Vector3.new(0, deck.Size.Y * 0.5 + 2.5, 0)
+    local diff = destination - root.Position
+    local flat = Vector3.new(diff.X, 0, diff.Z).Magnitude
+    if flat > 140 then
+        record.districtTraverse = nil
+        return nil
+    end
+    record.targetIsPad = false
+    record.targetPart = deck
+    record.model:SetAttribute("DistrictRouteStep", step)
+    -- The regular movement controller performs the actual jump. A real
+    -- incoming impact can still preempt and cancel this scenic outing.
+    return destination, math.clamp(
+        flat / math.max(9, record.profile.WalkSpeed) + 0.95,
+        1.25, 5.2
+    )
+end
+
 local function chooseArenaTarget(record, root, now)
     local traits = decisionTraits(record)
     record.targetIsSkyrail = false
     record.skyrailDirection = nil
+    local physicalRoute, routeHold = districtTraverseTarget(record, root, now)
+    if physicalRoute then
+        return physicalRoute, routeHold
+    end
     local socialTarget = socialArenaTarget(record, root, traits, now)
     if socialTarget then
         record.targetIsPad = false
@@ -2754,6 +2968,8 @@ local function stepRecord(record, now)
         end
 
         if urgentTarget then
+            record.districtTraverse = nil
+            record.nextDistrictTraverseAt = now + 4.5
             -- An imminent hazard cancels cosmetic indecision immediately.
             -- No new speed/health advantage: locomotion remains Humanoid
             -- movement with the existing server-owned target clamping.
