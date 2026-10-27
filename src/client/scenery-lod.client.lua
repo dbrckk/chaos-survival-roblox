@@ -26,13 +26,13 @@ local HERO_ARCHITECTURE_LOD = {
     KeepHeroLow = true,
 }
 
--- Server-authoritative district models are ALL cosmetic and are hidden
--- together through the existing 0.65/0.90s tier update. No new loops.
--- Keep visible on most Low Android camera positions while avoiding an
--- unnecessary full 3D skyline beyond the surrounding district.
+-- Per-model native 3D district LOD: cull FAR towers individually,
+-- never hide the whole arena's buildings because the camera left its
+-- center. One existing 0.65/0.90s scenery loop; no new per-frame loops.
+-- Low Android renders nearest authored 3D silhouettes, Medium more.
 local DISTRICT_ARCHITECTURE_LOD = {
-    LowDistance = 175,
-    MediumDistance = 265,
+    LowDistance = 150,
+    MediumDistance = 245,
 }
 
 local FOLDERS = {
@@ -351,8 +351,17 @@ task.spawn(function()
         end
         local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
         if district and district:IsA("Folder") then
-            applyFolder(district, DISTRICT_ARCHITECTURE_LOD,
-                profile, arenaOrigin, cameraPoint)
+            for _, structure in ipairs(district:GetChildren()) do
+                if structure:IsA("Model")
+                    and structure:GetAttribute("CosmeticOnly") == true
+                    and structure:GetAttribute("SourceIsOriginal") == true then
+                    -- A geometric pivot is stable for an anchored model.
+                    -- Individual culling preserves nearby landmarks even
+                    -- when the camera moves into a far corner of the map.
+                    applyFolder(structure, DISTRICT_ARCHITECTURE_LOD,
+                        profile, structure:GetPivot().Position, cameraPoint)
+                end
+            end
         end
         local hero = SceneryLodRules.heroArchitectureOwner(workspace)
         if hero then
