@@ -322,8 +322,15 @@ describe("Chaos Survival engine", function()
             local arena = root:FindFirstChild("Arena")
             local decor = arena:FindFirstChild("Decor")
             local base = arena:FindFirstChild("Base")
-            expect(base.Size.X >= 150).toBe(true)
-            expect(base.Size.Z >= 150).toBe(true)
+            local lobbyFloor = root:FindFirstChild("Lobby"):FindFirstChild("Floor")
+            expect(base.Size.X).toBe(224)
+            expect(base.Size.Z).toBe(224)
+            -- Enlarging the arena must NOT swallow the separate lobby.
+            -- Keep physical clearance for the external skyline and player
+            -- respawns, including its outermost collision/kill envelope.
+            local clearGap = (base.Position.Z - base.Size.Z * 0.5)
+                - (lobbyFloor.Position.Z + lobbyFloor.Size.Z * 0.5)
+            expect(clearGap >= 100).toBe(true)
 
             local count = 0
             local wedges = 0
