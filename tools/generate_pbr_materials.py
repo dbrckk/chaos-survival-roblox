@@ -113,7 +113,7 @@ def compose(size: int, name: str):
         def diamond(x, y):
             u = np.abs(((x % cell) - cell * 0.5) / (cell * 0.5))
             v = np.abs(((y % cell) - cell * 0.5) / (cell * 0.5))
-            return clamp((1.0 - (u + v) * 0.88) * 8.0) * 0.32
+            return clamp((0.75 - (u + v)) * 5.0) * 0.36
         rib = np.maximum(diamond(xx, yy),
                          diamond(xx + cell * 0.5, yy + cell * 0.5))
         height = 0.36 + rib + 0.16 * (micro - 0.5) + 0.09 * (
