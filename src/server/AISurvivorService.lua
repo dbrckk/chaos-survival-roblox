@@ -927,6 +927,7 @@ local function sendToArena(record)
     record.skyrailDirection = nil
     record.districtTraverse = nil
     record.nextDistrictTraverseAt = os.clock() + 3
+    record.nextRouteJumpAt = 0
     record.model:SetAttribute("DistrictRouteCompleted", false)
     record.model:SetAttribute("DistrictRouteStep", 0)
     record.nextSkyrailAt = 0
@@ -995,6 +996,7 @@ local function newRecord(slot)
         nextSkyrailAt = 0,
         districtTraverse = nil,
         nextDistrictTraverseAt = 0,
+        nextRouteJumpAt = 0,
         strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
@@ -2947,7 +2949,27 @@ local function stepRecord(record, now)
         end
     end
 
-    if not urgentTarget and now >= record.nextJump then
+    -- A raised terrace is not reachable by walking toward its centre:
+    -- make a normal Humanoid jump near its leading edge. This does not
+    -- increase jump power, speed or grant a physics advantage.
+    if not urgentTarget and record.districtTraverse
+        and record.targetPart and record.targetPart.Parent
+        and humanoid.FloorMaterial ~= Enum.Material.Air
+        and now >= (record.nextRouteJumpAt or 0)
+    then
+        local deck = record.targetPart
+        local top = deck.Position.Y + deck.Size.Y * 0.5
+        local delta = deck.Position - root.Position
+        local gap = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        local rise = top + 2.5 - root.Position.Y
+        if rise > 1.4 and rise < 7 and gap > 3.2 and gap < 13.0 then
+            humanoid.Jump = true
+            record.nextRouteJumpAt = now + 0.72
+        end
+    end
+
+    if not urgentTarget and not record.districtTraverse
+        and now >= record.nextJump then
         local _, pressure = decisionTraits(record)
         local jumpChance = AISurvivorRules.freeJumpChance(
             record.profile.JumpChance,
@@ -3053,6 +3075,7 @@ local function stepRecord(record, now)
 
         if currentState.phase == "round"
             and not urgentTarget
+            and not record.districtTraverse
             and record.target
             and not record.targetIsPad
             and not AISurvivorRules.committedWorldRoute(
@@ -3072,6 +3095,7 @@ local function stepRecord(record, now)
         end
 
         if not urgentTarget and record.target
+            and not record.districtTraverse
             and (root.Position - record.target).Magnitude < 4.2
         then
             record.target = nil
