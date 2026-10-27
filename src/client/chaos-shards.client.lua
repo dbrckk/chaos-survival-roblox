@@ -260,6 +260,56 @@ local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
+-- The server creates modest decorative emitters/lights for the REAL
+-- coin shards. The existing local facet LOD only scaled local cosmetics,
+-- so all Android tiers were still drawing identical replicated particles.
+-- Adjust only presentation properties on this client. Never touch the
+-- authoritative pickup body, touch handler, rewards or server state.
+local function adaptReplicatedShardEffects(shardPart)
+    if not shardPart:IsA("BasePart")
+        or shardPart:GetAttribute("ChaosShard") ~= true then
+        return
+    end
+    local tier = quality().Name
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local golden = shardPart:GetAttribute("ChaosShardGolden") == true
+    local glow = shardPart:FindFirstChild("ShardGlow")
+    if glow and glow:IsA("PointLight") then
+        local sourceBrightness = golden and 2.0 or 1.3
+        local brightness = sourceBrightness
+            * (tier == "High" and 1 or (tier == "Medium" and 0.72 or 0.38))
+        if glow.Brightness ~= brightness then
+            glow.Brightness = brightness
+        end
+        -- Keep a visible low-tier glow; only shrink its light footprint.
+        glow.Range = tier == "High" and (golden and 14 or 10)
+            or (tier == "Medium" and 9 or 6)
+        glow.Shadows = false
+    end
+
+    local attachment = shardPart:FindFirstChild("ShardVfx")
+    local motes = attachment and attachment:FindFirstChild("ShardMotes")
+    if motes and motes:IsA("ParticleEmitter") then
+        local rate = reduced and 0
+            or (tier == "High" and 8 or (tier == "Medium" and 3 or 0))
+        motes.Rate = rate
+        motes.Enabled = rate > 0
+    end
+
+    local sparkles = shardPart:FindFirstChild("GoldenShardSparkles")
+    if sparkles and sparkles:IsA("Sparkles") then
+        sparkles.Enabled = tier == "High" and not reduced
+    end
+end
+
+local function retuneVisibleShards()
+    for shardPart in pairs(shardVisuals) do
+        if shardPart.Parent then
+            adaptReplicatedShardEffects(shardPart)
+        end
+    end
+end
+
 local function removeVisual(shardPart)
     local visual = shardVisuals[shardPart]
     if visual then
@@ -326,6 +376,7 @@ local function attachVisual(shardPart)
 
     folder:SetAttribute("HasCrystalFacets", true)
     shardVisuals[shardPart] = folder
+    adaptReplicatedShardEffects(shardPart)
 end
 
 local function scanShards(root)
@@ -339,6 +390,17 @@ end
 workspace.DescendantAdded:Connect(function(descendant)
     if descendant:IsA("BasePart") and descendant:GetAttribute("ChaosShard") == true then
         attachVisual(descendant)
+    elseif descendant.Name == "ShardGlow"
+        or descendant.Name == "GoldenShardSparkles"
+        or descendant.Name == "ShardMotes" then
+        -- A newly streamed shard can arrive before its light/attachment,
+        -- so tune those later descendants as soon as they become visible.
+        local parent = descendant.Parent
+        local shardPart = parent and parent:IsA("Attachment") and parent.Parent
+            or parent
+        if shardPart and shardPart:IsA("BasePart") then
+            adaptReplicatedShardEffects(shardPart)
+        end
     end
 end)
 
@@ -349,6 +411,9 @@ workspace.DescendantRemoving:Connect(function(descendant)
 end)
 
 scanShards(workspace)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(retuneVisibleShards)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(retuneVisibleShards)
 
 task.spawn(function()
     while true do
