@@ -373,8 +373,8 @@ describe("Arena variants", function()
 
             expect(#variant.SpawnOffsets >= 8).toBe(true)
             expect(#variant.Platforms >= 14).toBe(true)
-            expect(variant.BaseSize.X >= 224).toBe(true)
-            expect(variant.BaseSize.Z >= 224).toBe(true)
+            expect(variant.BaseSize.X >= 320).toBe(true)
+            expect(variant.BaseSize.Z >= 320).toBe(true)
             -- Preserve the old physical routes and hazard sensors at the
             -- center while providing a much wider safe exploration ring.
             for _, offset in ipairs(variant.SpawnOffsets) do
@@ -429,22 +429,22 @@ describe("Arena variants", function()
         end
     end)
 
-    it("doubles the arena floor and provides four real R15-safe escape steps per district", function()
+    it("provides 320-stud mega districts and eight genuine R15-safe escape steps per district", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
             local perimeter = variant.PerimeterPlatforms
             expect(type(perimeter)).toBe("table")
-            expect(#perimeter).toBe(16)
-            expect(variant.BaseSize.X).toBe(224)
-            expect(variant.BaseSize.Z).toBe(224)
+            expect(#perimeter).toBe(32)
+            expect(variant.BaseSize.X).toBe(320)
+            expect(variant.BaseSize.Z).toBe(320)
             local baseTop = variant.BaseSize.Y * 0.5
             for route = 1, 4 do
                 local previous = nil
-                for step = 1, 4 do
-                    local deck = perimeter[(route - 1) * 4 + step]
+                for step = 1, ArenaVariants.PerimeterSteps do
+                    local deck = perimeter[(route - 1) * ArenaVariants.PerimeterSteps + step]
                     expect(deck.PerimeterRoute).toBe(route)
                     expect(deck.PerimeterStep).toBe(step)
-                    expect(deck.RouteTier).toBe(step)
+                    expect(deck.RouteTier).toBe(math.min(step, 4))
                     -- Solid terraces rise FROM the floor, without an R15
                     -- crawling/ceiling trap below an otherwise solid deck.
                     expect(math.abs(deck.offset.Y - deck.size.Y * 0.5 - baseTop)
@@ -481,7 +481,7 @@ describe("Arena variants", function()
                 -- just beyond the original core circuit.
                 expect(math.max(
                     math.abs(previous.offset.X), math.abs(previous.offset.Z)
-                ) >= 86).toBe(true)
+                ) >= 136).toBe(true)
             end
         end
     end)

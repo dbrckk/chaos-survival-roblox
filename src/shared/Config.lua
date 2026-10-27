@@ -27,9 +27,9 @@ local Config = {
     },
 
     ArenaCenter = Vector3.new(0, 0, 0),
-    -- Leave physical space between the 224-stud arena, its external
-    -- skyline and the separate 74-stud lobby. The previous -150 placed
-    -- the lobby floor just ONE stud from the enlarged arena edge.
-    LobbyCenter = Vector3.new(0, 0, -270),
+    -- A 320-stud mega-arena needs a separate, safe lobby beyond its
+    -- north edge. Preserve >100 studs of floor-to-floor clearance so
+    -- players/respawns cannot fall into public round hazards.
+    LobbyCenter = Vector3.new(0, 0, -350),
 }
 return Config

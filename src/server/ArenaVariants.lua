@@ -7,7 +7,7 @@ ArenaVariants.Definitions = {
         Id = "Classic",
         Name = "CLASSIC GRID",
         StrategyHint = "FOLLOW FLOOR ARROWS • CLIMB FOUR ESCAPE ROUTES • SURVIVE TO 0",
-        BaseSize = Vector3.new(224, 2, 224),
+        BaseSize = Vector3.new(320, 2, 320),
         BaseColor = Color3.fromRGB(92, 103, 125),
         PlatformColor = Color3.fromRGB(120, 145, 190),
         SpawnOffsets = {
@@ -55,7 +55,7 @@ ArenaVariants.Definitions = {
         Id = "Towers",
         Name = "TOWER RUN",
         StrategyHint = "FOLLOW FLOOR ARROWS • CLIMB TO BRIDGES • SURVIVE TO 0",
-        BaseSize = Vector3.new(224, 2, 224),
+        BaseSize = Vector3.new(320, 2, 320),
         BaseColor = Color3.fromRGB(78, 88, 112),
         PlatformColor = Color3.fromRGB(105, 155, 185),
         SpawnOffsets = {
@@ -139,7 +139,7 @@ ArenaVariants.Definitions = {
         Id = "Orbital",
         Name = "ORBITAL RING",
         StrategyHint = "FOLLOW ARROWS • USE RAMPS TO REACTOR • SURVIVE TO 0",
-        BaseSize = Vector3.new(224, 2, 224),
+        BaseSize = Vector3.new(320, 2, 320),
         BaseColor = Color3.fromRGB(72, 82, 102),
         PlatformColor = Color3.fromRGB(90, 185, 175),
         SpawnOffsets = (function()
@@ -194,7 +194,7 @@ ArenaVariants.Definitions = {
         Id = "Crossroads",
         Name = "CROSSROADS",
         StrategyHint = "FOLLOW FLOOR ARROWS • CLIMB THE SWITCHBACKS • SURVIVE TO 0",
-        BaseSize = Vector3.new(224, 2, 224),
+        BaseSize = Vector3.new(320, 2, 320),
         BaseColor = Color3.fromRGB(86, 96, 110),
         PlatformColor = Color3.fromRGB(155, 125, 185),
         SpawnOffsets = {
@@ -237,18 +237,20 @@ ArenaVariants.Definitions = {
 }
 
 
--- Mega-arena design: 224 x 224 = 2.1x the original floor area.
--- Keep every core authored platform and bridge ID intact. Extend each
--- physically walkable perimeter ladder from two to FOUR ground-supported
--- steps: an actual destination on the new outskirts, not empty dead space.
--- These Parts remain under the authoritative Platforms folder for hazards,
--- AI, collectibles, platform loss and death physics.
+-- Mega districts: 320 x 320 is 2.04x the preceding 224 x 224 map.
+-- Keep the authored central routes and bridge indices unchanged. Eight
+-- physical, ground-supported perimeter terraces now lead toward the outer
+-- 320-stud boundary rather than terminating in a mostly empty floor.
+-- Every route is traversable via standard R15 jumps (1-stud gaps and
+-- 3.6-stud elevation gains), with no low-ceiling crawl traps underneath.
 local perimeterLocations = {
     Classic = {entryX = 49, entryZ = 49, outerX = 62, outerZ = 49},
     Towers = {entryX = 50, entryZ = 46, outerX = 63, outerZ = 46},
     Crossroads = {entryX = 51, entryZ = 48, outerX = 64, outerZ = 48},
     Orbital = {entryX = 46, entryZ = 46, outerX = 60, outerZ = 54},
 }
+
+ArenaVariants.PerimeterSteps = 8
 
 for _, variantId in ipairs(ArenaVariants.Order) do
     local variant = ArenaVariants.Definitions[variantId]
@@ -257,9 +259,6 @@ for _, variantId in ipairs(ArenaVariants.Order) do
     local quadrants = {{-1,-1}, {1,-1}, {-1,1}, {1,1}}
     for route, signs in ipairs(quadrants) do
         local sx, sz = signs[1], signs[2]
-        -- The bases TOUCH the arena floor. No new 2–4 stud "crawling
-        -- underneath the platform" trap, and no physics changes are
-        -- needed to ascend the first 3-stud floor step.
         table.insert(routes, {
             offset = Vector3.new(sx * positions.entryX, 2.5,
                 sz * positions.entryZ),
@@ -268,13 +267,7 @@ for _, variantId in ipairs(ArenaVariants.Order) do
             PerimeterRoute = route,
             PerimeterStep = 1,
         })
-        -- The next three destinations all grow UP FROM THE FLOOR,
-        -- avoiding low roofs under which an R15 rig could become stuck.
-        -- One cardinal coordinate stays fixed; the other advances in
-        -- 13-stud jumps (1-stud lip gap; 3.6-stud rise each time).
-        -- Final blocks end at <= 95 studs inside the 112-stud half-floor,
-        -- leaving a wide clear edge for Shrinking Arena mechanics.
-        for step = 2, 4 do
+        for step = 2, ArenaVariants.PerimeterSteps do
             table.insert(routes, {
                 offset = Vector3.new(
                     sx * (positions.outerX + (step - 2) * 13),
@@ -282,7 +275,8 @@ for _, variantId in ipairs(ArenaVariants.Order) do
                     sz * positions.outerZ
                 ),
                 size = Vector3.new(12, 6.6 + (step - 2) * 3.6, 12),
-                RouteTier = step,
+                -- Guidance/visual tiers stay within the existing 1..4 API.
+                RouteTier = math.min(step, 4),
                 PerimeterRoute = route,
                 PerimeterStep = step,
             })

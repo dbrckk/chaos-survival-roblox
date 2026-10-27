@@ -107,7 +107,7 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Classic").Platforms + 16
+            #ArenaVariants.get("Classic").Platforms + 32
         )
         -- Route-tier identity is replicated with the physical decks and
         -- reflects intentional jumpable paths, not client-only cosmetics.
@@ -323,8 +323,8 @@ describe("Chaos Survival engine", function()
             local decor = arena:FindFirstChild("Decor")
             local base = arena:FindFirstChild("Base")
             local lobbyFloor = root:FindFirstChild("Lobby"):FindFirstChild("Floor")
-            expect(base.Size.X).toBe(224)
-            expect(base.Size.Z).toBe(224)
+            expect(base.Size.X).toBe(320)
+            expect(base.Size.Z).toBe(320)
             -- Enlarging the arena must NOT swallow the separate lobby.
             -- Keep physical clearance for the external skyline and player
             -- respawns, including its outermost collision/kill envelope.
@@ -776,18 +776,18 @@ describe("Chaos Survival engine", function()
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
             local original = #variant.Platforms
-            expect(#platforms:GetChildren()).toBe(original + 16)
+            expect(#platforms:GetChildren()).toBe(original + 32)
             for route = 1, 4 do
                 local previous = nil
-                for step = 1, 4 do
-                    local number = original + (route - 1) * 4 + step
+                for step = 1, ArenaVariants.PerimeterSteps do
+                    local number = original + (route - 1) * ArenaVariants.PerimeterSteps + step
                     local platform = platforms:FindFirstChild("Platform" .. number)
                     expect(platform ~= nil).toBe(true)
                     expect(platform.CanCollide).toBe(true)
                     expect(platform.Anchored).toBe(true)
                     expect(platform:GetAttribute("PerimeterRoute")).toBe(route)
                     expect(platform:GetAttribute("PerimeterStep")).toBe(step)
-                    expect(platform:GetAttribute("RouteTier")).toBe(step)
+                    expect(platform:GetAttribute("RouteTier")).toBe(math.min(step, 4))
                     expect(math.abs(platform.Position.X - Config.ArenaCenter.X)
                         >= 45).toBe(true)
                     expect(math.abs(platform.Position.Y - platform.Size.Y * 0.5
@@ -822,6 +822,62 @@ describe("Chaos Survival engine", function()
                 end
                 expect(decor:FindFirstChild("PerimeterExitCrown" .. route)
                     :IsA("WedgePart")).toBe(true)
+            end
+            -- On the larger map, extra scenery must be volumetric 3D
+            -- yet absolutely incapable of blocking R15 routes or stealing
+            -- raycasts/touches from the authoritative disaster floor.
+            local districts = decor:FindFirstChild("ArenaDistrictArchitecture3D")
+            expect(districts ~= nil and districts:IsA("Folder")).toBe(true)
+            expect(districts:GetAttribute("District3DCount")).toBe(12)
+            expect(#districts:GetChildren()).toBe(12)
+            for _, model in ipairs(districts:GetChildren()) do
+                expect(model:IsA("Model")).toBe(true)
+                expect(model:GetAttribute("SourceIsOriginal")).toBe(true)
+                expect(model:GetAttribute("CosmeticOnly")).toBe(true)
+                local pieces = 0
+                local complex = 0
+                for _, piece in ipairs(model:GetChildren()) do
+                    expect(piece:IsA("BasePart")).toBe(true)
+                    pieces += 1
+                    if piece:IsA("WedgePart")
+                        or piece.Shape == Enum.PartType.Cylinder
+                        or piece.Shape == Enum.PartType.Ball then
+                        complex += 1
+                    end
+                    expect(piece.Anchored).toBe(true)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.CastShadow).toBe(false)
+                    expect(math.abs(piece.Position.X - base.Position.X)
+                        < base.Size.X * 0.5).toBe(true)
+                    expect(math.abs(piece.Position.Z - base.Position.Z)
+                        < base.Size.Z * 0.5).toBe(true)
+                end
+                expect(pieces >= 11).toBe(true)
+                expect(complex >= 3).toBe(true)
+            end
+            local districtArrows = 0
+            for _, instance in ipairs(decor:GetChildren()) do
+                if instance.Name:match("^DistrictArrow") then
+                    districtArrows += 1
+                    expect(instance.CanCollide).toBe(false)
+                    expect(instance.CanTouch).toBe(false)
+                    expect(instance.CanQuery).toBe(false)
+                end
+            end
+            expect(districtArrows).toBe(24)
+            for route = 1, 4 do
+                for _, point in ipairs({"Entry", "Lookout"}) do
+                    local anchor = decor:FindFirstChild(
+                        "DistrictWayfinder" .. route .. point
+                    )
+                    expect(anchor ~= nil).toBe(true)
+                    expect(anchor.CanCollide).toBe(false)
+                    local label = anchor:FindFirstChild("ObjectiveLabel")
+                    expect(label and label:IsA("BillboardGui")).toBe(true)
+                    expect(label.MaxDistance <= 90).toBe(true)
+                end
             end
             -- The same authoritative folder is inspected by AI, shrinking,
             -- platform collapse, collectibles and native raycasts.
@@ -883,13 +939,13 @@ describe("Chaos Survival engine", function()
                 tierCount[tier] += 1
             end
         end
-        expect(#(platforms :: Folder):GetChildren()).toBe(37)
+        expect(#(platforms :: Folder):GetChildren()).toBe(53)
         -- Original 21 decks and Skybridges 18–21 are unchanged.
-        -- Sixteen outer-rim stages add four complete four-level escapes.
+        -- Thirty-two outer-rim stages add four complete eight-step escapes.
         expect(tierCount[1]).toBe(9)
         expect(tierCount[2]).toBe(8)
         expect(tierCount[3]).toBe(8)
-        expect(tierCount[4]).toBe(8)
+        expect(tierCount[4]).toBe(24)
 
         -- Floor guidance must be genuinely visible but never obstruct
         -- escape movement, hazard collision or updraft pads.
@@ -932,7 +988,7 @@ describe("Chaos Survival engine", function()
         local platforms = arena:FindFirstChild("Platforms")
         expect(platforms ~= nil).toBe(true)
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Crossroads").Platforms + 16
+            #ArenaVariants.get("Crossroads").Platforms + 32
         )
         local tiers = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
         for index = 1, 17 do

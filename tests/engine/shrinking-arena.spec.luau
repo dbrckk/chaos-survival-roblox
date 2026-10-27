@@ -115,9 +115,10 @@ describe("Shrinking Arena mobility integration", function()
             local decor = arena:FindFirstChild("Decor")
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
-            -- Exit facade now belongs to the fourth (outermost) real
-            -- terrace, not the middle step of the expanded route.
-            local number = #ArenaVariants.get(id).Platforms + 4
+            -- Exit facade follows the LAST physical terrace (step 8),
+            -- not the old fourth platform in the enlarged route.
+            local number = #ArenaVariants.get(id).Platforms
+                + ArenaVariants.PerimeterSteps
             local deck = platforms:FindFirstChild("Platform" .. number)
             expect(deck ~= nil).toBe(true)
             local startDeck = deck.CFrame

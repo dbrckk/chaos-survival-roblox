@@ -17,6 +17,7 @@ local OrbitalHelix = if helixModule
     else require("./OrbitalHelix")
 
 local HeroArchitecture = require("./HeroArchitecture")
+local ArenaDistrictArchitecture = require("./ArenaDistrictArchitecture")
 
 local MapBuilder = {}
 
@@ -2370,6 +2371,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     -- One distinctive real 3D skyline per arena. No external asset ID is
     -- required; this is the always-available mobile-friendly model layer.
     HeroArchitecture.build(decor, arena:FindFirstChild("Base"), variant.Id, theme)
+    -- Twelve 3D models occupy the now-playable outer districts. They are
+    -- cosmetic and LOD managed, not new physical/hazard blocking geometry.
+    ArenaDistrictArchitecture.build(decor, base, variant.Id, theme)
     addSouthHorizonMonument(decor, config, variant, theme)
     addExteriorCornerRidges(decor, config, variant, theme)
     addExteriorSilhouettePairs(decor, config, variant, theme)
@@ -2553,7 +2557,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         end
         addPlatformFinish(decor, platform, i, theme)
 
-        if definition.PerimeterStep == 4 then
+        if definition.PerimeterStep == #variant.PerimeterPlatforms / 4 then
             -- Original native three-dimensional exit facade at the FINAL terrace: four simple
             -- nonblocking components per route, no extra emitters/lights.
             -- Mounted on the OUTWARD face of the solid exit pedestal,
@@ -2605,6 +2609,82 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             )
             lens.Transparency = 0.34
             lens:SetAttribute("PerimeterPlatformIndex", i)
+        end
+    end
+
+    -- Wayfinding is physically anchored to the REAL first/last platforms,
+    -- not virtual markers that could point to an inaccessible decoration.
+    -- Only 8 small labels and 24 ground-inlaid arrows for all four routes.
+    for route = 1, 4 do
+        local path = variant.PerimeterPlatforms
+        local perRoute = #path / 4
+        local entry = path[(route - 1) * perRoute + 1]
+        local exit = path[route * perRoute]
+        for _, cue in ipairs({
+            {name = "Entry", definition = entry, title = "CLIMB / DODGE"},
+            {name = "Lookout", definition = exit, title = "HIGH GROUND"},
+        }) do
+            local top = config.ArenaCenter + cue.definition.offset
+                + Vector3.new(0, cue.definition.size.Y * 0.5 + 0.5, 0)
+            local pedestal = decorPart(
+                decor, "DistrictWayfinder" .. route .. cue.name,
+                Vector3.new(1.8, 0.20, 1.8), top, theme.Detail,
+                Enum.Material.Metal
+            )
+            pedestal.Transparency = 0.22
+            local platformIndex = #variant.Platforms
+                + (route - 1) * perRoute
+                + (cue.name == "Entry" and 1 or perRoute)
+            pedestal:SetAttribute("PerimeterPlatformIndex", platformIndex)
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "ObjectiveLabel"
+            billboard.Size = UDim2.fromOffset(158, 38)
+            billboard.StudsOffsetWorldSpace = Vector3.new(0, 4.4, 0)
+            billboard.MaxDistance = 85
+            billboard.AlwaysOnTop = false
+            billboard.Adornee = pedestal
+            billboard.Parent = pedestal
+            local text = Instance.new("TextLabel")
+            text.Name = "Objective"
+            text.Size = UDim2.fromScale(1, 1)
+            text.BackgroundColor3 = Color3.fromRGB(12, 19, 30)
+            text.BackgroundTransparency = 0.24
+            text.TextColor3 = Color3.fromRGB(236, 248, 255)
+            text.Font = Enum.Font.GothamBold
+            text.TextScaled = true
+            text.Text = cue.title
+            text.Parent = billboard
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 9)
+            corner.Parent = text
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = theme.Accent
+            stroke.Thickness = 1
+            stroke.Transparency = 0.35
+            stroke.Parent = text
+        end
+        local sx = entry.offset.X >= 0 and 1 or -1
+        for marker = 1, 3 do
+            local arrowPoint = config.ArenaCenter + Vector3.new(
+                sx * (math.abs(entry.offset.X) - 20 + marker * 3.2),
+                variant.BaseSize.Y * 0.5 + 0.22, entry.offset.Z
+            )
+            local forward = CFrame.lookAt(
+                arrowPoint, arrowPoint + Vector3.new(sx, 0, 0)
+            )
+            for side = -1, 1, 2 do
+                local chevron = decorPart(
+                    decor, "DistrictArrow" .. route .. "_" .. marker
+                        .. "_" .. tostring(side),
+                    Vector3.new(0.17, 0.055, 1.50), arrowPoint,
+                    marker == 3 and theme.Accent or theme.Secondary,
+                    VisualTheme.Materials.Glow
+                )
+                chevron.CFrame = forward
+                    * CFrame.new(side * 0.43, 0, 0)
+                    * CFrame.Angles(0, math.rad(side * 38), 0)
+                chevron.Transparency = 0.42
+            end
         end
     end
 
