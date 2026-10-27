@@ -36,36 +36,45 @@ local function playerFromHit(hit)
     return nil
 end
 
-local function candidateParts(arena)
-    local candidates = {}
+local function candidateParts(arena, ctx)
+    local spawns, outskirts = {}, {}
 
-    -- Prefer permanent spawn pads so a pickup never becomes stranded in mid-air
-    -- when a disaster removes or moves temporary arena platforms.
-    local spawns = arena and arena:FindFirstChild("Spawns")
-    if spawns then
-        for _, child in ipairs(spawns:GetChildren()) do
+    -- Keep the center safe for the first three guided rounds, and when
+    -- a structural disaster might move/hide a support under an anchored
+    -- shard. Later rounds can offer occasional real parkour rewards.
+    local hazards = ctx.ActiveDisasters or {}
+    local allowOutskirts = ctx.EnableDistrictCaches == true
+        and hazards.ShrinkingArena ~= true
+        and hazards.DisappearingPlatforms ~= true
+
+    local spawnFolder = arena and arena:FindFirstChild("Spawns")
+    if spawnFolder then
+        for _, child in ipairs(spawnFolder:GetChildren()) do
+            -- Spawn markers are intentionally NON-colliding; the broad
+            -- arena floor underneath provides the physical support.
             if child:IsA("BasePart") and child.Parent then
-                table.insert(candidates, child)
+                table.insert(spawns, child)
             end
         end
     end
-
-    if #candidates > 0 then
-        return candidates
-    end
-
-    -- Fallback keeps the system functional for future arena layouts that omit
-    -- dedicated spawn pads.
     local platforms = arena and arena:FindFirstChild("Platforms")
     if platforms then
         for _, child in ipairs(platforms:GetChildren()) do
-            if child:IsA("BasePart") and child.Parent then
-                table.insert(candidates, child)
+            if child:IsA("BasePart") and child.Parent
+                and child.CanCollide and child.Transparency < 0.95 then
+                if allowOutskirts
+                    and child:GetAttribute("PerimeterStep") == 1
+                    and tonumber(child:GetAttribute("PerimeterRoute")) then
+                    table.insert(outskirts, child)
+                elseif #spawns == 0 then
+                    -- A future map without spawn pads still supports the
+                    -- original shard mechanic on solid physical decks.
+                    table.insert(spawns, child)
+                end
             end
         end
     end
-
-    return candidates
+    return spawns, outskirts
 end
 
 local function makeShard(container, supportPart, index, reward, golden)
@@ -175,7 +184,7 @@ function RoundCollectibles.start(ctx)
         return nil
     end
 
-    local candidates = candidateParts(arena)
+    local candidates, outskirts = candidateParts(arena, ctx)
     if #candidates == 0 then
         return nil
     end
@@ -206,15 +215,31 @@ function RoundCollectibles.start(ctx)
     end
 
     local function chooseCandidate()
-        if #candidates == 1 then
-            return candidates[1]
+        -- First rewards remain easy to discover. Afterward, one in three
+        -- appears on a genuine floor-accessible perimeter deck rather
+        -- than endlessly recycling the original spawn positions.
+        local pool = (#outskirts > 0 and (spawnIndex + 1) % 3 == 0)
+            and outskirts or candidates
+        local available = {}
+        for _, candidate in ipairs(pool) do
+            if candidate.Parent and candidate.Transparency < 0.95
+                and (pool == candidates or candidate.CanCollide) then
+                available[#available + 1] = candidate
+            end
         end
+        if #available == 0 and pool ~= candidates then
+            for _, candidate in ipairs(candidates) do
+                if candidate.Parent then
+                    available[#available + 1] = candidate
+                end
+            end
+        end
+        if #available == 0 then return nil end
 
-        local candidate = candidates[math.random(1, #candidates)]
-        local attempts = 0
-        while candidate == lastCandidate and attempts < 4 do
-            candidate = candidates[math.random(1, #candidates)]
-            attempts += 1
+        local candidate = available[math.random(1, #available)]
+        for _ = 1, 4 do
+            if candidate ~= lastCandidate or #available == 1 then break end
+            candidate = available[math.random(1, #available)]
         end
         lastCandidate = candidate
         return candidate
@@ -240,6 +265,15 @@ function RoundCollectibles.start(ctx)
         local shard = makeShard(container, support, spawnIndex, reward, golden)
         local claimed = false
 
+        -- An uncollected shard must never occupy the final active slot
+        -- for the entire round. Rotate inaccessible/ignored pickups after
+        -- 12 seconds, preserving the existing four-shard hard ceiling.
+        task.delay(12, function()
+            if shard.Parent and not claimed then
+                shard:Destroy()
+            end
+        end)
+
         shard.Touched:Connect(function(hit)
             if claimed or not ctx.Active() or not shard.Parent then
                 return
@@ -256,12 +290,16 @@ function RoundCollectibles.start(ctx)
                 math.floor(tonumber(shard:GetAttribute("ChaosShardReward")) or RoundCollectibles.reward())
             )
             if ctx.OnCollected then
-                ctx.OnCollected(
+                local ok, err = pcall(
+                    ctx.OnCollected,
                     player,
                     collectedReward,
                     shard.Position,
                     shard:GetAttribute("ChaosShardGolden") == true
                 )
+                if not ok then
+                    warn("Chaos shard reward callback failed:", err)
+                end
             end
             shard:Destroy()
         end)
