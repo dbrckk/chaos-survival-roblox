@@ -68,6 +68,12 @@ local FOLDERS = {
         LowDistance = 145,
         MediumDistance = 220,
     },
+    -- Native client-only signal-ring structures appear only on Medium/
+    -- High and stay hidden after the sector streams far away.
+    DistrictSignalArchitectureLocal = {
+        LowDistance = 0,
+        MediumDistance = 220,
+    },
     ArenaSignatureLocal = {
         LowDistance = 145,
         MediumDistance = 220,

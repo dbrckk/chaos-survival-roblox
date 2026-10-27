@@ -8,6 +8,9 @@ VisualBudgetRules.LocalFolders = {
     "ArenaUnderstructureLocal",
     "ArenaHeroSceneryLocal",
     "ArenaArchitecturalDetailsLocal",
+    -- New 3D signal arches are client-only and must count toward the
+    -- mobile visual budget instead of silently bypassing telemetry.
+    "DistrictSignalArchitectureLocal",
     "ArenaSignatureLocal",
     "AerialSurveyLocal",
     "ArenaEdgeProfileLocal",
