@@ -212,6 +212,150 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
     return model
 end
 
+-- Four differently authored skyline silhouettes fill previously empty
+-- corners, away from every hazard platform, branch and player spawn.
+-- Unlike free-standing ServerScriptService Parts these models are housed
+-- in the existing district folder and inherit PER-MODEL mobile LOD.
+local function cornerFixture(folder, base, variantId, theme, index)
+    local signs = {{-1,-1}, {1,-1}, {-1,1}, {1,1}}
+    local sx, sz = signs[index][1], signs[index][2]
+    local floorY = base.Position.Y + base.Size.Y * 0.5
+    local reach = math.min(base.Size.X, base.Size.Z) * 0.5 - 17
+    local origin = CFrame.new(
+        base.Position.X + sx * reach,
+        floorY,
+        base.Position.Z + sz * reach
+    ) * CFrame.Angles(0, math.rad(45 * index), 0)
+
+    local model = Instance.new("Model")
+    model.Name = "CornerLandmark" .. index
+    model:SetAttribute("ArenaDistrictArchitecture", true)
+    model:SetAttribute("SourceIsOriginal", true)
+    model:SetAttribute("CosmeticOnly", true)
+    model:SetAttribute("CornerLandmarkIndex", index)
+    model:SetAttribute("SignatureVariant", variantId)
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+
+    local dark = theme.Structure:Lerp(Color3.fromRGB(12, 21, 31), 0.43)
+    local steel = theme.Detail:Lerp(theme.Structure, 0.25)
+    local light = theme.Accent:Lerp(theme.Secondary, (index - 1) / 3)
+    local function make(name, kind, size, frame, color, material)
+        return element(model, origin, name, kind, size, frame,
+            color or steel, material or Enum.Material.Metal)
+    end
+    local function sphere(name, radius, location, color)
+        local p = make(name, "Part",
+            Vector3.new(radius, radius, radius),
+            CFrame.new(location), color, Enum.Material.Glass)
+        p.Shape = Enum.PartType.Ball
+        p.Transparency = 0.20
+        return p
+    end
+    local function beam(name, a, b, thickness, color)
+        local delta = b - a
+        return make(name, "Part",
+            Vector3.new(thickness, delta.Magnitude, thickness),
+            CFrame.lookAt((a + b) * 0.5, b)
+                * CFrame.Angles(math.pi * 0.5, 0, 0),
+            color)
+    end
+    local function hoop(prefix, centerY, radius, segments, tone)
+        for section = 0, segments - 1 do
+            local first = math.pi * 2 * section / segments
+            local second = math.pi * 2 * (section + 1) / segments
+            beam(prefix .. tostring(section + 1),
+                Vector3.new(math.sin(first) * radius,
+                    centerY + math.cos(first) * radius, 0),
+                Vector3.new(math.sin(second) * radius,
+                    centerY + math.cos(second) * radius, 0),
+                0.68, tone)
+        end
+    end
+
+    -- Each footprint stays below 28 studs and clear of the real
+    -- perimeter route network. Everything is non-solid decorative art.
+    make("GroundPlinth", "Part", Vector3.new(20, 1.4, 20),
+        CFrame.new(0, 0.7, 0), dark, Enum.Material.Slate)
+    make("PlinthRim", "Part", Vector3.new(17.8, 0.4, 17.8),
+        CFrame.new(0, 1.6, 0), steel)
+    if index == 1 then
+        -- Weather observatory: a working-scale parabolic antenna skyline.
+        make("WeatherMast", "Part", Vector3.new(3.6, 23, 3.6),
+            CFrame.new(0, 13.0, 0), dark)
+        for side = -1, 1, 2 do
+            beam("StormTripod" .. tostring(side),
+                Vector3.new(side * 7, 1.6, -4),
+                Vector3.new(0, 22, 0), 1.0, steel)
+        end
+        hoop("ObservatoryDish", 29, 7.5, 10, steel)
+        sphere("ScannerLens", 4.4, Vector3.new(0, 29, 0), light)
+        make("LightningRod", "Part", Vector3.new(0.55, 7, 0.55),
+            CFrame.new(0, 38, 0), steel)
+    elseif index == 2 then
+        -- Cargo gantry: two distinct towers and hanging transit modules.
+        for side = -1, 1, 2 do
+            make("SuspensionPylon" .. tostring(side), "Part",
+                Vector3.new(3, 26, 4.5),
+                CFrame.new(side * 7, 14.7, 0), dark)
+            beam("DiagonalBrace" .. tostring(side),
+                Vector3.new(side * 8, 2, 5),
+                Vector3.new(side * 7, 27, 0), 0.75, steel)
+            make("TransitPod" .. tostring(side), "Part",
+                Vector3.new(5.2, 4.2, 4),
+                CFrame.new(side * 6, 18, -3.0), light)
+            make("PodGlazing" .. tostring(side), "Part",
+                Vector3.new(3.7, 1.4, 0.16),
+                CFrame.new(side * 6, 18.6, -5.10),
+                steel, Enum.Material.Glass)
+        end
+        make("SkyGantry", "Part", Vector3.new(24, 2.4, 5),
+            CFrame.new(0, 28, 0), steel)
+        make("ControlCabin", "Part", Vector3.new(7, 4.5, 4.3),
+            CFrame.new(0, 31, 0), dark)
+        make("SignalFin", "WedgePart", Vector3.new(6, 5.5, 3),
+            CFrame.new(0, 36, 0), light)
+    elseif index == 3 then
+        -- Contained energy core: concentric segmented halo, ceramic fins.
+        make("ArmouredReactor", "Part", Vector3.new(8.4, 28, 8.4),
+            CFrame.new(0, 16, 0), dark)
+        make("CrownCollar", "Part", Vector3.new(11, 2.0, 11),
+            CFrame.new(0, 30, 0), steel)
+        hoop("MagneticRing", 33, 8, 10, light)
+        sphere("ContainmentHeart", 5.2, Vector3.new(0, 33, 0), light)
+        for side = -1, 1, 2 do
+            make("CoreFin" .. tostring(side), "WedgePart",
+                Vector3.new(4.1, 16, 5),
+                CFrame.new(side * 6.8, 12, 0), steel)
+        end
+    else
+        -- Communications lighthouse: narrow mast and three separate
+        -- signal blades, so its contour remains recognizable on phones.
+        make("LighthouseShaft", "Part", Vector3.new(4.8, 32, 4.8),
+            CFrame.new(0, 17.7, 0), dark)
+        make("ObservationCab", "Part", Vector3.new(9.8, 4.2, 9.8),
+            CFrame.new(0, 31, 0), steel)
+        make("GlassBelt", "Part", Vector3.new(9.95, 1.9, 9.95),
+            CFrame.new(0, 31.3, 0), light, Enum.Material.Glass)
+            .Transparency = 0.28
+        make("Antenna", "Part", Vector3.new(0.8, 11, 0.8),
+            CFrame.new(0, 39, 0), light)
+        for blade = 0, 2 do
+            local angle = blade * 2 * math.pi / 3
+            make("SignalBlade" .. tostring(blade + 1), "WedgePart",
+                Vector3.new(3.6, 8.2, 0.75),
+                CFrame.new(math.sin(angle) * 5.3, 27,
+                    math.cos(angle) * 5.3)
+                    * CFrame.Angles(0, angle, 0), steel)
+        end
+        sphere("NavigationLens", 2.5, Vector3.new(0, 45, 0), light)
+    end
+
+    model:SetAttribute("Corner3DPartCount", #model:GetChildren())
+    assert(#model:GetChildren() >= 9 and #model:GetChildren() <= 25,
+        "Corner skyline landmark exceeds lightweight mobile part budget")
+    model.Parent = folder
+end
+
 function ArenaDistrictArchitecture.build(decor, base, variantId, theme)
     if not decor or not base or not base:IsA("BasePart")
         or type(variantId) ~= "string" or type(theme) ~= "table" then
@@ -230,6 +374,10 @@ function ArenaDistrictArchitecture.build(decor, base, variantId, theme)
         end
     end
     folder:SetAttribute("District3DCount", count)
+    for cornerIndex = 1, 4 do
+        cornerFixture(folder, base, variantId, theme, cornerIndex)
+    end
+    folder:SetAttribute("CornerLandmarkCount", 4)
     return folder
 end
 
