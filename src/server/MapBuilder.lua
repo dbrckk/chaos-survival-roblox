@@ -2496,6 +2496,29 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             platform.Color = theme.Surface:Lerp(theme.Secondary, 0.38)
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
+            -- Subtle V-shaped paint on real branch decks: orientation
+            -- follows the branch and shrinking disaster follows the deck.
+            local forwardZ = definition.offset.Z >= 0 and 1 or -1
+            local point = platform.Position
+                + Vector3.new(0, platform.Size.Y * 0.5 + 0.055, 0)
+            local look = CFrame.lookAt(
+                point, point + Vector3.new(0, 0, forwardZ)
+            )
+            for side = -1, 1, 2 do
+                local mark = decorPart(
+                    decor, "BranchStepArrow" .. definition.BranchRoute
+                        .. "_" .. definition.BranchStep .. "_"
+                        .. tostring(side),
+                    Vector3.new(0.25, 0.065, 2.0), point,
+                    theme.Secondary, VisualTheme.Materials.Glow
+                )
+                mark.CFrame = look
+                    * CFrame.new(side * 0.48, 0, 0)
+                    * CFrame.Angles(0, math.rad(side * 34), 0)
+                mark.Transparency = 0.44
+                mark:SetAttribute("PerimeterPlatformIndex", i)
+                mark:SetAttribute("ChaosWayfinding", true)
+            end
         end
 
         if definition.Skybridge == true then
@@ -2653,6 +2676,37 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             )
             lens.Transparency = 0.34
             lens:SetAttribute("PerimeterPlatformIndex", i)
+        end
+    end
+
+    -- The branching choice also needs to be readable AT THE FORK,
+    -- without guessing where sixteen peripheral platforms lead.
+    for route = 1, 4 do
+        local forkIndex = #variant.Platforms
+            + (route - 1) * #variant.PerimeterPlatforms / 4 + 5
+        local fork = platforms:FindFirstChild("Platform" .. forkIndex)
+        if fork and fork:IsA("BasePart") then
+            local forwardZ = fork.Position.Z >= config.ArenaCenter.Z
+                and 1 or -1
+            local point = fork.Position
+                + Vector3.new(0, fork.Size.Y * 0.5 + 0.055, 0)
+            local facing = CFrame.lookAt(
+                point, point + Vector3.new(0, 0, forwardZ)
+            )
+            for side = -1, 1, 2 do
+                local arrow = decorPart(
+                    decor, "BranchForkArrow" .. route .. "_"
+                        .. tostring(side),
+                    Vector3.new(0.33, 0.065, 2.4), point,
+                    theme.Secondary, VisualTheme.Materials.Glow
+                )
+                arrow.CFrame = facing
+                    * CFrame.new(side * 0.55, 0, 0)
+                    * CFrame.Angles(0, math.rad(side * 36), 0)
+                arrow.Transparency = 0.32
+                arrow:SetAttribute("PerimeterPlatformIndex", forkIndex)
+                arrow:SetAttribute("ChaosWayfinding", true)
+            end
         end
     end
 
