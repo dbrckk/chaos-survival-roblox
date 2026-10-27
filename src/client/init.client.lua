@@ -2219,7 +2219,7 @@ local function showRoundFeedback(feedback)
         table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_SHARDS", shardCoins))
     end
     if districtCoins > 0 then
-        table.insert(extras, "SUPPLIES +" .. tostring(districtCoins))
+        table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_SUPPLIES", districtCoins))
     end
     if feedback.challengeCompleted then
         table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_CHALLENGE", challengeCoins))
