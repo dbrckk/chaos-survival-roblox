@@ -334,9 +334,10 @@ local function cornerFixture(folder, base, variantId, theme, index)
             CFrame.new(0, 17.7, 0), dark)
         make("ObservationCab", "Part", Vector3.new(9.8, 4.2, 9.8),
             CFrame.new(0, 31, 0), steel)
-        make("GlassBelt", "Part", Vector3.new(9.95, 1.9, 9.95),
+        local glassBelt = make("GlassBelt", "Part",
+            Vector3.new(9.95, 1.9, 9.95),
             CFrame.new(0, 31.3, 0), light, Enum.Material.Glass)
-            .Transparency = 0.28
+        glassBelt.Transparency = 0.28
         make("Antenna", "Part", Vector3.new(0.8, 11, 0.8),
             CFrame.new(0, 39, 0), light)
         for blade = 0, 2 do
