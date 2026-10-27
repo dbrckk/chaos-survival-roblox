@@ -179,7 +179,9 @@ def write_pack(directory: Path, size: int, names: tuple[str, ...]):
             # are named with their actual pixel resolution.
             if size != 2048:
                 dest = directory / f"{name}_{channel}_{size}px.png"
-            image.save(dest, optimize=True)
+            # L3 compression keeps 2K noisy normals under the 20MB Roblox
+            # limit without spending minutes in PNG optimal-deflate.
+            image.save(dest, compress_level=3)
             encoded = dest.read_bytes()
             if len(encoded) >= 20 * 1024 * 1024:
                 raise ValueError(f"Exceeded Roblox 20 MB image limit: {dest}")
