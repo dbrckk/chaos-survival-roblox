@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
@@ -19,8 +20,11 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local label = Instance.new("TextLabel")
 label.Name = "Reward"
 label.AnchorPoint = Vector2.new(0.5, 0.5)
-label.Position = UDim2.fromScale(0.5, 0.66)
-label.Size = UDim2.fromOffset(300, 54)
+-- Centered above the Android control cluster; player survival actions
+-- remain unobstructed during an optional pickup.
+label.Position = UDim2.fromScale(0.5, UserInputService.TouchEnabled and 0.51 or 0.66)
+label.Size = UDim2.fromOffset(UserInputService.TouchEnabled and 260 or 300,
+    UserInputService.TouchEnabled and 49 or 54)
 label.BackgroundColor3 = UITheme.Colors.Panel
 label.BackgroundTransparency = 1
 label.BorderSizePixel = 0
@@ -49,15 +53,26 @@ scale.Parent = label
 
 local token = 0
 
-local function worldBurst(position, reward)
+local function worldBurst(position, reward, source)
     if typeof(position) ~= "Vector3" then
         return
     end
 
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local golden = (tonumber(reward) or 1) >= 3
-    local primary = golden and Color3.fromRGB(255, 215, 75) or UITheme.Colors.Cyan
-    local secondary = golden and Color3.fromRGB(255, 145, 45) or UITheme.Colors.Violet
+    local signal = source == "DistrictSignal"
+    local supply = source == "DistrictCache"
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    -- The server source already distinguishes pickups; match that source
+    -- with recognizably different shapes and color, not extra geometry.
+    local primary = signal and Color3.fromRGB(255, 178, 72)
+        or (supply and (golden and Color3.fromRGB(255, 222, 110)
+            or Color3.fromRGB(109, 244, 193)))
+        or (golden and Color3.fromRGB(255, 215, 75) or UITheme.Colors.Cyan)
+    local secondary = signal and Color3.fromRGB(255, 107, 76)
+        or (supply and (golden and Color3.fromRGB(240, 162, 75)
+            or Color3.fromRGB(75, 193, 229)))
+        or (golden and Color3.fromRGB(255, 145, 45) or UITheme.Colors.Violet)
 
     local core = Instance.new("Part")
     core.Name = "ShardPickupCoreLocal"
@@ -78,7 +93,11 @@ local function worldBurst(position, reward)
     ring.Name = "ShardPickupRingLocal"
     ring.Shape = Enum.PartType.Cylinder
     ring.Size = Vector3.new(0.10, 1.2, 1.2)
-    ring.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+    -- Live signals project a vertical radio-wave ring; supply crates and
+    -- collectible shards retain their familiar horizontal pickup rings.
+    ring.CFrame = CFrame.new(position) * (signal
+        and CFrame.Angles(0, math.rad(45), 0)
+        or CFrame.Angles(0, 0, math.rad(90)))
     ring.Anchored = true
     ring.CanCollide = false
     ring.CanTouch = false
@@ -93,7 +112,10 @@ local function worldBurst(position, reward)
         core,
         TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
-            Size = golden and Vector3.new(5.6, 5.6, 5.6) or Vector3.new(4.2, 4.2, 4.2),
+            Size = reduced and Vector3.new(2.4, 2.4, 2.4)
+                or ((signal or supply) and Vector3.new(5.2, 5.2, 5.2)
+                    or (golden and Vector3.new(5.6, 5.6, 5.6)
+                        or Vector3.new(4.2, 4.2, 4.2))),
             Transparency = 1,
         }
     ):Play()
@@ -102,12 +124,15 @@ local function worldBurst(position, reward)
         ring,
         TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
-            Size = golden and Vector3.new(0.10, 11.5, 11.5) or Vector3.new(0.10, 8.5, 8.5),
+            Size = reduced and Vector3.new(0.10, 4.0, 4.0)
+                or ((signal or supply) and Vector3.new(0.10, 12.0, 12.0)
+                    or (golden and Vector3.new(0.10, 11.5, 11.5)
+                        or Vector3.new(0.10, 8.5, 8.5))),
             Transparency = 1,
         }
     ):Play()
 
-    if tier.Name ~= "Low" then
+    if tier.Name ~= "Low" and not reduced then
         local attachment = Instance.new("Attachment")
         attachment.Parent = core
 
@@ -131,7 +156,7 @@ local function worldBurst(position, reward)
         emitter:Emit(VfxQuality.particleCount(tier.Name, golden and 28 or 18, golden and 10 or 7))
     end
 
-    if tier.Name == "High" then
+    if tier.Name == "High" and not reduced then
         local light = Instance.new("PointLight")
         light.Color = primary
         light.Brightness = golden and 2.6 or 1.8
@@ -157,7 +182,7 @@ local function show(reward, total, goldenFlag, flowBonus, source)
     if source == "DistrictSignal" then
         label.Text = "SIGNAL SECURED  •  +" .. tostring(reward) .. " COINS"
     elseif source == "DistrictCache" then
-        label.Text = "+" .. tostring(reward) .. " COINS  •  DISTRICT SUPPLY CLAIMED"
+        label.Text = "SUPPLY CACHE  •  +" .. tostring(reward) .. " COINS"
     elseif golden then
         label.Text = "+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD"
     elseif shardTotal == 1 then
@@ -168,8 +193,17 @@ local function show(reward, total, goldenFlag, flowBonus, source)
     if flow > 0 then
         label.Text ..= "  •  FLOW COMBO +" .. tostring(flow)
     end
-    label.TextColor3 = golden and Color3.fromRGB(255, 225, 105) or UITheme.Colors.Cyan
-    stroke.Color = golden and Color3.fromRGB(255, 165, 55) or UITheme.Colors.Violet
+    label.TextColor3 = source == "DistrictSignal"
+        and Color3.fromRGB(255, 199, 113)
+        or (source == "DistrictCache"
+            and (golden and Color3.fromRGB(255, 225, 105)
+                or Color3.fromRGB(135, 244, 199)))
+        or (golden and Color3.fromRGB(255, 225, 105) or UITheme.Colors.Cyan)
+    stroke.Color = source == "DistrictSignal"
+        and Color3.fromRGB(255, 135, 90)
+        or (source == "DistrictCache"
+            and Color3.fromRGB(119, 218, 181))
+        or (golden and Color3.fromRGB(255, 165, 55) or UITheme.Colors.Violet)
     label.Visible = true
     label.TextTransparency = 1
     label.BackgroundTransparency = 1
@@ -186,7 +220,8 @@ local function show(reward, total, goldenFlag, flowBonus, source)
         {Scale = 1}
     ):Play()
 
-    local holdSeconds = (not golden and shardTotal == 1) and 1.65 or 1.05
+    local holdSeconds = (source == "DistrictSignal" or source == "DistrictCache")
+        and 1.50 or ((not golden and shardTotal == 1) and 1.65 or 1.05)
     task.delay(holdSeconds, function()
         if current ~= token then
             return
@@ -211,9 +246,10 @@ local function show(reward, total, goldenFlag, flowBonus, source)
 end
 
 event.OnClientEvent:Connect(function(payload)
-    local reward = tonumber(payload.reward) or 1
+    if type(payload) ~= "table" then return end
+    local reward = math.clamp(math.floor(tonumber(payload.reward) or 1), 1, 100)
     show(reward, tonumber(payload.total) or 1, payload.golden == true, payload.flowBonus, payload.source)
-    worldBurst(payload.position, reward)
+    worldBurst(payload.position, reward, payload.source)
 end)
 
 
