@@ -50,7 +50,9 @@ local function candidateParts(arena, ctx)
     local spawnFolder = arena and arena:FindFirstChild("Spawns")
     if spawnFolder then
         for _, child in ipairs(spawnFolder:GetChildren()) do
-            if child:IsA("BasePart") and child.Parent and child.CanCollide then
+            -- Spawn markers are intentionally NON-colliding; the broad
+            -- arena floor underneath provides the physical support.
+            if child:IsA("BasePart") and child.Parent then
                 table.insert(spawns, child)
             end
         end
@@ -220,14 +222,14 @@ function RoundCollectibles.start(ctx)
             and outskirts or candidates
         local available = {}
         for _, candidate in ipairs(pool) do
-            if candidate.Parent and candidate.CanCollide
-                and candidate.Transparency < 0.95 then
+            if candidate.Parent and candidate.Transparency < 0.95
+                and (pool == candidates or candidate.CanCollide) then
                 available[#available + 1] = candidate
             end
         end
         if #available == 0 and pool ~= candidates then
             for _, candidate in ipairs(candidates) do
-                if candidate.Parent and candidate.CanCollide then
+                if candidate.Parent then
                     available[#available + 1] = candidate
                 end
             end
