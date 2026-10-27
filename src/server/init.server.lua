@@ -57,6 +57,7 @@ local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
 local ArenaDistrictCaches = require(script.ArenaDistrictCaches)
 local ArenaDistrictTransit = require(script.ArenaDistrictTransit)
+local DistrictSignalRush = require(script.DistrictSignalRush)
 local RoundChallenge = require(script.RoundChallenge)
 local RoundMedals = require(script.RoundMedals)
 local FlowCombo = require(script.FlowCombo)
@@ -943,6 +944,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundShardCoins", 0)
         player:SetAttribute("RoundDistrictCaches", 0)
         player:SetAttribute("RoundDistrictCoins", 0)
+        player:SetAttribute("RoundDistrictSignals", 0)
+        player:SetAttribute("RoundSignalCoins", 0)
         player:SetAttribute("RoundNearMisses", 0)
         player:SetAttribute("RoundMechanicUses", 0)
         player:SetAttribute("RoundHelixFlowChain", 0)
@@ -1249,6 +1252,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end,
         SoloMode = roundSettings.Solo,
         EnableDistrictCaches = allowDynamicArenas,
+        EnableDistrictSignals = allowDynamicArenas
+            and activeHazards.ShrinkingArena ~= true,
         -- Newcomers focus on survival first. Shrinking Arena contracts
         -- the floor, so its stationary fast-travel stations stay disabled.
         EnableDistrictTransit = allowDynamicArenas
@@ -1261,6 +1266,47 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 "Route:" .. tostring(route),
                 "Direction:" .. (outbound and "Outer" or "Hub")
             )
+        end,
+        OnDistrictSignalClaimed = function(player, reward, position, route, wave)
+            if not roundActive or not player or player.Parent ~= Players
+                or player:GetAttribute("DataLoaded") ~= true
+                or eliminated[player.UserId]
+                or tonumber(player:GetAttribute("RoundDistrictSignals")) ~= 0
+            then return false end
+
+            local humanoid = player.Character
+                and player.Character:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then return false end
+            -- The claim system already enforces active phase, physical
+            -- distance, and one claim per signal window. This final
+            -- independent server guard limits personal payouts to 2 coins
+            -- and one signal per round, even on duplicate callbacks.
+            local amount = math.clamp(
+                math.floor(tonumber(reward) or 0), 0, 2)
+            if amount <= 0 then return false end
+            player:SetAttribute("RoundDistrictSignals", 1)
+            player:SetAttribute("RoundSignalCoins", amount)
+            PlayerData.add(player, "Coins", amount)
+            chaosShardCollectedEvent:FireClient(player, {
+                reward = amount,
+                total = 1,
+                position = position,
+                golden = false,
+                flowBonus = 0,
+                source = "DistrictSignal",
+            })
+            progressQuest(player, "coins_earned", amount)
+            GameAnalytics.economySource(
+                player, amount, "DistrictSignal",
+                currentArenaVariant, roundSettings.Solo
+            )
+            GameAnalytics.custom(
+                player, "DistrictSignalClaimed", 1,
+                "Arena:" .. tostring(currentArenaVariant),
+                "Route:" .. tostring(route),
+                "Wave:" .. tostring(wave)
+            )
+            return true
         end,
         OnCollected = function(player, reward, position, golden, source)
             if player.Parent ~= Players
@@ -1391,6 +1437,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local districtOk, districtResult = pcall(ArenaDistrictCaches.start, ctx)
     if not districtOk then
         warn("Arena district caches failed to start:", districtResult)
+    end
+    local signalOk, signalResult = pcall(DistrictSignalRush.start, ctx)
+    if not signalOk then
+        warn("District signal rush failed to start:", signalResult)
     end
 
     for _, disaster in ipairs(selected) do
@@ -2146,6 +2196,8 @@ while true do
                 shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundShardCoins")) or 0)),
                 districtCacheCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundDistrictCaches")) or 0)),
                 districtCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundDistrictCoins")) or 0)),
+                districtSignalCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundDistrictSignals")) or 0)),
+                signalCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundSignalCoins")) or 0)),
                 flowCoins = roundFlowCoins,
                 nearMissCount = roundNearMissCount,
                 mechanicUses = roundMechanicUses,
