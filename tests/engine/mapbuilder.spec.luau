@@ -998,13 +998,13 @@ describe("Chaos Survival engine", function()
                 tierCount[tier] += 1
             end
         end
-        expect(#(platforms :: Folder):GetChildren()).toBe(53)
+        expect(#(platforms :: Folder):GetChildren()).toBe(69)
         -- Original 21 decks and Skybridges 18–21 are unchanged.
-        -- Thirty-two outer-rim stages add four complete eight-step escapes.
+        -- Thirty-two main outer-rim stages and sixteen corner spurs complete the arena.
         expect(tierCount[1]).toBe(9)
-        expect(tierCount[2]).toBe(8)
-        expect(tierCount[3]).toBe(8)
-        expect(tierCount[4]).toBe(24)
+        expect(tierCount[2]).toBe(12)
+        expect(tierCount[3]).toBe(12)
+        expect(tierCount[4]).toBe(32)
 
         -- Floor guidance must be genuinely visible but never obstruct
         -- escape movement, hazard collision or updraft pads.
