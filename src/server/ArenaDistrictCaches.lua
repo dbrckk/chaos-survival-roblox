@@ -1,12 +1,14 @@
--- District supply caches: one optional risk/reward objective at each physical
--- side lookout. Server-owned, one shared claim per cache per round.
+-- District supply expedition: four accessible first-tier caches and four
+-- harder lookout chests per arena. Server-owned, single use per cache.
+-- Each human can claim at most ONE chest of each tier in a round.
 -- Uses Roblox ProximityPrompt (keyboard, gamepad, touch) with no remotes,
 -- physics blockers, per-frame scripts or external assets.
 local Players = game:GetService("Players")
 
 local ArenaDistrictCaches = {}
 
-ArenaDistrictCaches.CacheReward = 3
+ArenaDistrictCaches.EasyReward = 2
+ArenaDistrictCaches.EliteReward = 5
 ArenaDistrictCaches.PromptReach = 8
 
 local function makeVisual(model, platform, name, size, offset, color, material)
@@ -35,19 +37,26 @@ local function makeVisual(model, platform, name, size, offset, color, material)
     return item
 end
 
-local function createCache(ctx, platform, index)
+local function createCache(ctx, platform, index, tier, personalClaims)
+    local elite = tier == "Elite"
+    local reward = elite and ArenaDistrictCaches.EliteReward
+        or ArenaDistrictCaches.EasyReward
     local model = Instance.new("Model")
-    model.Name = "DistrictCache" .. index
+    model.Name = "DistrictCache" .. index .. tier
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
     model:SetAttribute("CosmeticOnly", true)
     model:SetAttribute("DistrictSupplyCache", true)
-    model:SetAttribute("CacheReward", ArenaDistrictCaches.CacheReward)
-    model:SetAttribute("BranchRoute", index)
+    model:SetAttribute("CacheReward", reward)
+    model:SetAttribute("CacheTier", tier)
+    model:SetAttribute("DistrictRoute", index)
     model.Parent = platform
 
     local top = platform.Size.Y * 0.5
-    local alloy = Color3.fromRGB(81, 109, 128)
+    local alloy = elite and Color3.fromRGB(103, 113, 143)
+        or Color3.fromRGB(72, 115, 135)
     local shadow = Color3.fromRGB(26, 45, 60)
-    local gold = Color3.fromRGB(245, 184, 71)
+    local gold = elite and Color3.fromRGB(245, 184, 71)
+        or Color3.fromRGB(99, 220, 245)
     makeVisual(model, platform, "CacheFoot",
         Vector3.new(5.5, 0.45, 4.4),
         Vector3.new(0, top + 0.23, 0), shadow)
@@ -74,9 +83,9 @@ local function createCache(ctx, platform, index)
 
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "OpenDistrictCache"
-    prompt.ActionText = "CLAIM +3 COINS"
-    prompt.ObjectText = "DISTRICT SUPPLY"
-    prompt.HoldDuration = 0.25
+    prompt.ActionText = "CLAIM +" .. reward .. " COINS"
+    prompt.ObjectText = elite and "ELITE SUPPLY" or "DISTRICT SUPPLY"
+    prompt.HoldDuration = elite and 0.45 or 0.25
     prompt.MaxActivationDistance = ArenaDistrictCaches.PromptReach
     prompt.RequiresLineOfSight = false
     prompt.KeyboardKeyCode = Enum.KeyCode.E
@@ -99,7 +108,7 @@ local function createCache(ctx, platform, index)
     label.TextColor3 = gold
     label.Font = Enum.Font.GothamBold
     label.TextScaled = true
-    label.Text = "OPTIONAL  +3 COINS"
+    label.Text = elite and "HIGH ROUTE  +5" or "SHORT ROUTE  +2"
     label.Parent = tag
     local border = Instance.new("UICorner")
     border.CornerRadius = UDim.new(0, 8)
@@ -144,14 +153,22 @@ local function createCache(ctx, platform, index)
         then
             return
         end
-        -- Mark before paying, preventing two players or repeated touch
-        -- inputs from receiving the same server-owned chest payout.
+        -- Each player can claim a near chest and an elite chest, but not
+        -- all four of the same tier. Both caps are enforced on the server.
+        local userClaims = personalClaims[player.UserId]
+        if not userClaims then
+            userClaims = {}
+            personalClaims[player.UserId] = userClaims
+        end
+        if userClaims[tier] then return end
+        -- Mark first, preventing simultaneous claims or payout duplication.
         claimed = true
+        userClaims[tier] = true
         prompt.Enabled = false
         if ctx.OnCollected then
             pcall(ctx.OnCollected, player,
-                ArenaDistrictCaches.CacheReward,
-                lid.Position, true, "DistrictCache")
+                reward,
+                lid.Position, elite, "DistrictCache")
         end
         model:Destroy()
     end)
@@ -171,25 +188,37 @@ function ArenaDistrictCaches.start(ctx)
     local platforms = arena and arena:FindFirstChild("Platforms")
     if not platforms then return 0 end
 
-    local lookouts = {}
+    local stations = {Easy = {}, Elite = {}}
     for _, item in ipairs(platforms:GetChildren()) do
-        if item:IsA("BasePart")
-            and item:GetAttribute("BranchStep") == 4 then
-            local index = tonumber(item:GetAttribute("BranchRoute"))
-            if index and index >= 1 and index <= 4
-                and index == math.floor(index) and not lookouts[index] then
-                lookouts[index] = item
+        if item:IsA("BasePart") then
+            local tier, route
+            if item:GetAttribute("PerimeterStep") == 4 then
+                tier = "Easy"
+                route = tonumber(item:GetAttribute("PerimeterRoute"))
+            elseif item:GetAttribute("BranchStep") == 4 then
+                tier = "Elite"
+                route = tonumber(item:GetAttribute("BranchRoute"))
+            end
+            if tier and route and route >= 1 and route <= 4
+                and route == math.floor(route)
+                and not stations[tier][route] then
+                stations[tier][route] = item
             end
         end
     end
 
+    local personalClaims = {}
     local built = 0
-    for index = 1, 4 do
-        if lookouts[index] then
-            createCache(ctx, lookouts[index], index)
-            built += 1
+    for route = 1, 4 do
+        for _, tier in ipairs({"Easy", "Elite"}) do
+            local support = stations[tier][route]
+            if support then
+                createCache(ctx, support, route, tier, personalClaims)
+                built += 1
+            end
         end
     end
+    arena:SetAttribute("RoundDistrictCachesAvailable", built)
     return built
 end
 
