@@ -75,6 +75,8 @@ stepMarker.Name = "NextPhysicalDistrictStep"
 stepMarker.ResetOnSpawn = false
 stepMarker.Size = UDim2.fromOffset(104, 32)
 stepMarker.MaxDistance = 100
+-- Stay readable in dusk/dark maps but still occlude behind real walls.
+stepMarker.LightInfluence = 0
 stepMarker.AlwaysOnTop = false
 stepMarker.Enabled = false
 stepMarker.Parent = playerGui
