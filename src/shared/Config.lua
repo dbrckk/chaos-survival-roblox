@@ -27,6 +27,9 @@ local Config = {
     },
 
     ArenaCenter = Vector3.new(0, 0, 0),
-    LobbyCenter = Vector3.new(0, 0, -150),
+    -- Leave physical space between the 224-stud arena, its external
+    -- skyline and the separate 74-stud lobby. The previous -150 placed
+    -- the lobby floor just ONE stud from the enlarged arena edge.
+    LobbyCenter = Vector3.new(0, 0, -270),
 }
 return Config
