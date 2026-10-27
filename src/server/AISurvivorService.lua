@@ -930,6 +930,7 @@ local function sendToArena(record)
     record.districtTraverse = nil
     record.nextDistrictTraverseAt = os.clock() + 3
     record.nextRouteJumpAt = 0
+    record.nextDistrictStageCheckAt = 0
     record.signalInterestRoute = nil
     record.signalInterestUntil = 0
     record.nextSignalInterestAt = os.clock() + 2
@@ -1003,6 +1004,7 @@ local function newRecord(slot)
         districtTraverse = nil,
         nextDistrictTraverseAt = 0,
         nextRouteJumpAt = 0,
+        nextDistrictStageCheckAt = 0,
         signalInterestRoute = nil,
         signalInterestUntil = 0,
         nextSignalInterestAt = 0,
@@ -3145,6 +3147,32 @@ local function stepRecord(record, now)
             record.target = (skybridgeEscape or floorSweepEscape or warnedEscape)
                 and urgentTarget or separateTarget(record, urgentTarget)
             record.nextThink = now + 0.55
+        end
+
+        -- The short arena rethink clock must not strand a runner on an
+        -- already-reached terrace for five seconds. Recheck the physical
+        -- landing at a bounded rate, advance only after a real landing,
+        -- and never run this optional exploration check during danger.
+        if not urgentTarget and record.districtTraverse
+            and now >= (record.nextDistrictStageCheckAt or 0)
+        then
+            record.nextDistrictStageCheckAt = now + 0.42
+            local previousStage = record.districtTraverse.stage
+            local stageTarget, stageHold = districtTraverseTarget(
+                record, root, now)
+            if not record.districtTraverse then
+                -- Fell, expired or disappeared: do not keep walking to the
+                -- old high deck as if the aborted route still existed.
+                record.target = nil
+                record.targetPart = nil
+                record.targetIsPad = false
+                record.nextThink = 0
+            elseif record.districtTraverse.stage ~= previousStage
+                and stageTarget then
+                record.target = stageTarget
+                record.nextThink = now + stageHold
+                record.lastMoveTarget = nil
+            end
         end
 
         if record.targetPart and record.targetPart.Parent then
