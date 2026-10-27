@@ -2507,7 +2507,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
                 panel.BackgroundTransparency = 0.16
                 panel.BorderSizePixel = 0
                 panel.Font = Enum.Font.GothamBold
-                panel.Text = "CLIMB  /  DODGE\\nSURVIVE UNTIL 0"
+                panel.Text = "CLIMB  /  DODGE\nSURVIVE UNTIL 0"
                 panel.TextColor3 = Color3.fromRGB(245, 250, 255)
                 panel.TextScaled = true
                 panel.TextWrapped = true
