@@ -1,5 +1,5 @@
 --!strict
--- Twelve creator-authored 3D district structures make the LARGE arena
+-- Sixteen creator-authored 3D district structures make the LARGE arena
 -- readable at player height. Unlike a billboard facade, each has a
 -- volumetric foundation, pitched metal, layered housing and a landmark top.
 -- All pieces are inert scenery: no collisions, touch, queries, scripts,
@@ -23,7 +23,9 @@ local function element(model, origin, name, kind, size, localFrame, color, mater
 end
 
 local function fixture(folder, base, variantId, theme, side, slot, number)
-    local tangent = (slot - 2) * 92
+    -- Four skyline profiles per side, alternating silhouettes.
+    -- Keep the entire structure inside the 320-stud playable floor.
+    local tangent = (slot - 2.5) * 72
     local outward = base.Size.X * 0.5 - 42
     local x, z, yaw
     if side == "North" then
@@ -42,6 +44,8 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
     model:SetAttribute("SourceIsOriginal", true)
     model:SetAttribute("CosmeticOnly", true)
     model:SetAttribute("DistrictIndex", number)
+    model:SetAttribute("DistrictProfile", slot)
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
     local surface = base.Position.Y + base.Size.Y * 0.5
     local origin = CFrame.new(base.Position.X + x, surface,
         base.Position.Z + z) * CFrame.Angles(0, yaw, 0)
@@ -88,6 +92,82 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         Vector3.new(4.5, 2.8, 0.17), CFrame.new(0, 9.2, -3.5),
         accent, Enum.Material.Glass)
     window.Transparency = 0.32
+
+    -- Recessed metal/glass panels and roof rails give each structure
+    -- meaningful depth without collisions, shadows or extra lights.
+    for _, direction in ipairs({-1, 1}) do
+        make("SideCassette" .. tostring(direction), "Part",
+            Vector3.new(0.85, 4.8, 4.6),
+            CFrame.new(direction * 3.68, 7.6, 0.48),
+            steel:Lerp(dark, 0.21), Enum.Material.CorrodedMetal)
+        local recess = make("SideGlass" .. tostring(direction), "Part",
+            Vector3.new(0.18, 2.2, 3.6),
+            CFrame.new(direction * 4.13, 8.3, 0.48),
+            accent:Lerp(Color3.fromRGB(170, 220, 235), 0.15),
+            Enum.Material.Glass)
+        recess.Transparency = 0.36
+        make("TopRail" .. tostring(direction), "Part",
+            Vector3.new(0.34, 0.38, 8),
+            CFrame.new(direction * 5.4, 14.3, 0.2),
+            alloy, Enum.Material.Metal)
+    end
+
+    -- Four structural profiles x four different arena roof signatures:
+    -- distinct real 3D volumes, rather than sixteen duplicated boxes.
+    if slot == 1 then
+        for _, direction in ipairs({-1, 1}) do
+            make("ObservatoryFin" .. tostring(direction), "WedgePart",
+                Vector3.new(3.3, 5.4, 1.6),
+                CFrame.new(direction * 3, 18.2, 0.2)
+                    * CFrame.Angles(0, direction * math.rad(18), 0),
+                steel)
+        end
+        local ball = make("OrbitalSurveyLens", "Part",
+            Vector3.new(3.6, 3.6, 3.6),
+            CFrame.new(0, 22, -0.3), accent, Enum.Material.Glass)
+        ball.Shape = Enum.PartType.Ball
+        ball.Transparency = 0.18
+    elseif slot == 2 then
+        make("CrossGantry", "Part", Vector3.new(13.5, 1.2, 2),
+            CFrame.new(0, 18.1, 0), alloy)
+        make("CabShell", "Part", Vector3.new(5.6, 3, 4),
+            CFrame.new(0, 15.9, 0), dark)
+        local glass = make("CabGlass", "Part", Vector3.new(4.8, 1.45, 0.16),
+            CFrame.new(0, 16.2, -2.1), accent, Enum.Material.Glass)
+        glass.Transparency = 0.22
+        for _, direction in ipairs({-1, 1}) do
+            make("GantryBlade" .. tostring(direction), "WedgePart",
+                Vector3.new(3, 2.8, 2.6),
+                CFrame.new(direction * 6.8, 19.4, 0), steel)
+        end
+    elseif slot == 3 then
+        for duct = -1, 1 do
+            local tube = make("VentTurbine" .. tostring(duct), "Part",
+                Vector3.new(5.6, 2.6, 2.6),
+                CFrame.new(duct * 3.4, 17.2 + math.abs(duct), 0.1),
+                duct == 0 and accent or alloy, Enum.Material.Metal)
+            tube.Shape = Enum.PartType.Cylinder
+            make("VentArmour" .. tostring(duct), "WedgePart",
+                Vector3.new(2.5, 2.2, 3.2),
+                CFrame.new(duct * 3.4, 19.4 + math.abs(duct), 0),
+                steel)
+        end
+    else
+        make("AerialMast", "Part", Vector3.new(0.7, 12.2, 0.7),
+            CFrame.new(0, 22, 0), steel)
+        for _, direction in ipairs({-1, 1}) do
+            make("CrossAerial" .. tostring(direction), "Part",
+                Vector3.new(9, 0.44, 0.6),
+                CFrame.new(0, 21.2 + direction * 3.1, 0)
+                    * CFrame.Angles(0, direction * math.rad(42), 0),
+                alloy)
+        end
+        local prism = make("SignalCrystal", "WedgePart",
+            Vector3.new(3.6, 4.7, 3.6),
+            CFrame.new(0, 29, 0) * CFrame.Angles(0, math.rad(45), 0),
+            accent, Enum.Material.Glass)
+        prism.Transparency = 0.23
+    end
 
     if variantId == "Towers" then
         -- Tall suspension head with an actual overhead transit cab.
@@ -144,7 +224,7 @@ function ArenaDistrictArchitecture.build(decor, base, variantId, theme)
 
     local count = 0
     for _, side in ipairs({"North", "East", "South", "West"}) do
-        for slot = 1, 3 do
+        for slot = 1, 4 do
             count += 1
             fixture(folder, base, variantId, theme, side, slot, count)
         end

@@ -2694,54 +2694,111 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         OrbitalHelix.build(arena, variant, config.ArenaCenter, theme)
     end
 
-    -- Four clear floor-level navigation corridors into the actual playable
-    -- perimeter sectors. The 224-stud floor previously appeared empty:
-    -- new players saw distant platforms without an obvious approach.
-    -- Cosmetic, low-cost and non-colliding; hazards and spawn physics stay
-    -- authoritative. Keep markers below the feet and inside the floor.
+    -- Navigation is derived from the ACTUAL eight physical platforms per
+    -- outer route. Never point to invented diagonal coordinates: the first
+    -- goal must be a walkable entry terrace, then every real climb step.
+    -- Floor-painted cues are cosmetic and retracted with the shrinking floor.
+    local perRoute = #(variant.PerimeterPlatforms or {}) / 4
     for route = 1, 4 do
-        local signs = {
-            {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
-        }
-        local sx, sz = signs[route][1], signs[route][2]
+        local startIndex = (route - 1) * perRoute
+        local entry = variant.PerimeterPlatforms[startIndex + 1]
+        local lookout = variant.PerimeterPlatforms[startIndex + perRoute]
+        local outward = Vector3.new(entry.offset.X, 0, entry.offset.Z).Unit
+        local alongSteps = Vector3.new(
+            lookout.offset.X - entry.offset.X, 0,
+            lookout.offset.Z - entry.offset.Z
+        ).Unit
+        local routeColor = route % 2 == 0 and theme.Secondary or theme.Accent
+
+        -- Five chevrons on the floor end at the exact entry platform.
         for step = 1, 5 do
-            local progress = step / 5
-            local x = sx * (19 + 54 * progress)
-            local z = sz * (19 + 49 * progress)
-            local center = config.ArenaCenter
-                + Vector3.new(x, variant.BaseSize.Y * 0.5 + 0.035, z)
-            local arrow = decorPart(
-                decor,
-                "OuterRouteChevron" .. route .. "_" .. step,
-                Vector3.new(4.0, 0.055, 0.60),
-                center,
-                step == 5 and theme.Secondary or theme.Accent,
-                VisualTheme.Materials.Glow
+            local fraction = 0.30 + 0.13 * step
+            local point = config.ArenaCenter + Vector3.new(
+                entry.offset.X * fraction,
+                variant.BaseSize.Y * 0.5 + 0.04,
+                entry.offset.Z * fraction
             )
-            -- Face the far corner: repeated chevrons provide a simple
-            -- language even when UI text is hidden on mobile.
-            arrow.CFrame = CFrame.new(center)
-                * CFrame.Angles(0, math.atan2(sx, sz), 0)
-                * CFrame.Angles(0, math.rad(45), 0)
-            arrow.Transparency = 0.34
-            arrow.CastShadow = false
-            arrow:SetAttribute("ChaosWayfinding", true)
+            local facing = CFrame.lookAt(point, point + outward)
+            for side = -1, 1, 2 do
+                local arrow = decorPart(
+                    decor, "OuterRouteChevron" .. route .. "_" .. step
+                        .. "_" .. tostring(side),
+                    Vector3.new(0.28, 0.055, 2.5),
+                    point, routeColor, VisualTheme.Materials.Glow
+                )
+                arrow.CFrame = facing
+                    * CFrame.new(side * 0.57, 0, 0)
+                    * CFrame.Angles(0, math.rad(side * 33), 0)
+                arrow.Transparency = 0.45
+                arrow.CastShadow = false
+                arrow:SetAttribute("ChaosWayfinding", true)
+            end
         end
-        -- A visible non-solid vertical sector identifier, positioned
-        -- alongside rather than on the final playable terrace.
-        local markerPosition = config.ArenaCenter
-            + Vector3.new(sx * 99, 8, sz * 84)
-        local marker = decorPart(
-            decor,
-            "OuterRouteSignal" .. route,
-            Vector3.new(0.75, 13, 0.75),
-            markerPosition,
-            theme.Secondary,
-            VisualTheme.Materials.Glow
+
+        -- A consistent double-chevron etched onto each of the EIGHT real
+        -- destinations. Attach its owning platform ID so Shrinking Arena
+        -- moves/scales the cosmetics WITH that collidable deck.
+        local deckFacing = CFrame.lookAt(Vector3.zero, alongSteps)
+        for step = 1, perRoute do
+            local deck = variant.PerimeterPlatforms[startIndex + step]
+            local platformIndex = #variant.Platforms + startIndex + step
+            local center = config.ArenaCenter + deck.offset
+                + Vector3.new(0, deck.size.Y * 0.5 + 0.07, 0)
+            for side = -1, 1, 2 do
+                local segment = decorPart(
+                    decor, "OuterStepChevron" .. route .. "_" .. step
+                        .. "_" .. tostring(side),
+                    Vector3.new(0.26, 0.07, 1.8),
+                    center, routeColor, VisualTheme.Materials.Glow
+                )
+                segment.CFrame = CFrame.new(center)
+                    * (deckFacing - deckFacing.Position)
+                    * CFrame.new(side * 0.42, 0, 0)
+                    * CFrame.Angles(0, math.rad(side * 35), 0)
+                segment.Transparency = 0.43
+                segment.CastShadow = false
+                segment:SetAttribute("ChaosWayfinding", true)
+                segment:SetAttribute("PerimeterPlatformIndex", platformIndex)
+            end
+        end
+
+        -- Three-part destination beacon on open FLOOR beside (never on)
+        -- the last high terrace. Its metal mast + glass lens are visible
+        -- from the central plaza, without a point light or collision.
+        local signX = lookout.offset.X >= 0 and 1 or -1
+        local signZ = lookout.offset.Z >= 0 and 1 or -1
+        local beaconPoint = config.ArenaCenter + Vector3.new(
+            lookout.offset.X + signX * 11,
+            variant.BaseSize.Y * 0.5 + 17,
+            lookout.offset.Z + signZ * 9
         )
-        marker.Transparency = 0.45
-        marker.CastShadow = false
-        marker:SetAttribute("ChaosWayfinding", true)
+        local terminalIndex = #variant.Platforms + startIndex + perRoute
+        local mast = decorPart(
+            decor, "OuterRouteSignal" .. route,
+            Vector3.new(1.15, 34, 1.15), beaconPoint,
+            theme.Structure:Lerp(theme.Detail, 0.30), Enum.Material.Metal
+        )
+        mast.Transparency = 0.12
+        mast.CastShadow = false
+        local lens = decorPart(
+            decor, "OuterRouteSignalLens" .. route,
+            Vector3.new(3.8, 3.8, 3.8),
+            beaconPoint + Vector3.new(0, 18.5, 0),
+            routeColor, Enum.Material.Glass
+        )
+        lens.Shape = Enum.PartType.Ball
+        lens.Transparency = 0.20
+        local crown = decorPart(
+            decor, "OuterRouteSignalCrown" .. route,
+            Vector3.new(5.0, 0.85, 5.0),
+            beaconPoint + Vector3.new(0, 15.9, 0),
+            theme.Detail, Enum.Material.Metal
+        )
+        for _, piece in ipairs({mast, lens, crown}) do
+            piece:SetAttribute("ChaosWayfinding", true)
+            piece:SetAttribute("PerimeterPlatformIndex", terminalIndex)
+            piece.CastShadow = false
+        end
     end
 
     local beaconOffsets = {

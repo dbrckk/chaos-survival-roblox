@@ -828,10 +828,21 @@ describe("Chaos Survival engine", function()
             -- raycasts/touches from the authoritative disaster floor.
             local districts = decor:FindFirstChild("ArenaDistrictArchitecture3D")
             expect(districts ~= nil and districts:IsA("Folder")).toBe(true)
-            expect(districts:GetAttribute("District3DCount")).toBe(12)
-            expect(#districts:GetChildren()).toBe(12)
+            expect(districts:GetAttribute("District3DCount")).toBe(16)
+            expect(#districts:GetChildren()).toBe(16)
+            local profiles = {}
             for _, model in ipairs(districts:GetChildren()) do
                 expect(model:IsA("Model")).toBe(true)
+                expect(model.ModelStreamingMode).toBe(Enum.ModelStreamingMode.Atomic)
+                local profile = model:GetAttribute("DistrictProfile")
+                expect(type(profile)).toBe("number")
+                expect(profile >= 1 and profile <= 4).toBe(true)
+                profiles[profile] = (profiles[profile] or 0) + 1
+                local signature = ({
+                    "OrbitalSurveyLens", "CabShell", "VentTurbine0",
+                    "SignalCrystal",
+                })[profile]
+                expect(model:FindFirstChild(signature) ~= nil).toBe(true)
                 expect(model:GetAttribute("SourceIsOriginal")).toBe(true)
                 expect(model:GetAttribute("CosmeticOnly")).toBe(true)
                 local pieces = 0
@@ -854,8 +865,11 @@ describe("Chaos Survival engine", function()
                     expect(math.abs(piece.Position.Z - base.Position.Z)
                         < base.Size.Z * 0.5).toBe(true)
                 end
-                expect(pieces >= 11).toBe(true)
-                expect(complex >= 3).toBe(true)
+                expect(pieces >= 19).toBe(true)
+                expect(complex >= 5).toBe(true)
+            end
+            for profile = 1, 4 do
+                expect(profiles[profile]).toBe(4)
             end
             local districtArrows = 0
             for _, instance in ipairs(decor:GetChildren()) do
@@ -877,6 +891,67 @@ describe("Chaos Survival engine", function()
                     local label = anchor:FindFirstChild("ObjectiveLabel")
                     expect(label and label:IsA("BillboardGui")).toBe(true)
                     expect(label.MaxDistance <= 90).toBe(true)
+                end
+            end
+            -- New routes must lead to REAL terrain, not decorative dead
+            -- ends. Validate all five floor cues, eight climb cues and
+            -- 3D landmarks in every one of the four districts.
+            for route = 1, 4 do
+                local firstIndex = (route - 1) * ArenaVariants.PerimeterSteps
+                local entry = variant.PerimeterPlatforms[firstIndex + 1]
+                local finalPlatformIndex = original + firstIndex
+                    + ArenaVariants.PerimeterSteps
+                for step = 1, 5 do
+                    for side = -1, 1, 2 do
+                        local cue = decor:FindFirstChild(
+                            "OuterRouteChevron" .. route .. "_" .. step
+                                .. "_" .. tostring(side)
+                        )
+                        expect(cue ~= nil and cue:IsA("BasePart")).toBe(true)
+                        expect(cue:GetAttribute("ChaosWayfinding")).toBe(true)
+                        expect(cue.CanCollide).toBe(false)
+                        expect(cue.CanTouch).toBe(false)
+                        expect(cue.CanQuery).toBe(false)
+                        local localPosition = cue.Position - Config.ArenaCenter
+                        expect(localPosition.X * entry.offset.X > 0).toBe(true)
+                        expect(localPosition.Z * entry.offset.Z > 0).toBe(true)
+                        expect(math.abs(localPosition.X)
+                            < math.abs(entry.offset.X) + 2).toBe(true)
+                        expect(math.abs(localPosition.Z)
+                            < math.abs(entry.offset.Z) + 2).toBe(true)
+                    end
+                end
+                for step = 1, ArenaVariants.PerimeterSteps do
+                    local platformIndex = original + firstIndex + step
+                    local deck = platforms:FindFirstChild(
+                        "Platform" .. platformIndex
+                    )
+                    for side = -1, 1, 2 do
+                        local cue = decor:FindFirstChild(
+                            "OuterStepChevron" .. route .. "_" .. step
+                                .. "_" .. tostring(side)
+                        )
+                        expect(cue ~= nil and cue:IsA("BasePart")).toBe(true)
+                        expect(cue:GetAttribute("PerimeterPlatformIndex"))
+                            .toBe(platformIndex)
+                        expect(cue:GetAttribute("ChaosWayfinding")).toBe(true)
+                        expect(cue.CanCollide).toBe(false)
+                        expect(math.abs(cue.Position.Y
+                            - (deck.Position.Y + deck.Size.Y * 0.5 + 0.07))
+                            < 0.001).toBe(true)
+                    end
+                end
+                for _, suffix in ipairs({"", "Lens", "Crown"}) do
+                    local signal = decor:FindFirstChild(
+                        "OuterRouteSignal" .. suffix .. route
+                    )
+                    expect(signal ~= nil and signal:IsA("BasePart")).toBe(true)
+                    expect(signal:GetAttribute("PerimeterPlatformIndex"))
+                        .toBe(finalPlatformIndex)
+                    expect(signal.CanCollide).toBe(false)
+                    expect(signal.CanTouch).toBe(false)
+                    expect(signal.CanQuery).toBe(false)
+                    expect(signal.CastShadow).toBe(false)
                 end
             end
             -- The same authoritative folder is inspected by AI, shrinking,
