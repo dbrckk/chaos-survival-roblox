@@ -113,8 +113,16 @@ local function createCache(ctx, platform, index)
             and platform.Transparency < 0.95
             and ctx.Active()
     end
-    platform:GetPropertyChangedSignal("CanCollide"):Connect(refresh)
-    platform:GetPropertyChangedSignal("Transparency"):Connect(refresh)
+    local collisionConnection = platform:GetPropertyChangedSignal(
+        "CanCollide"
+    ):Connect(refresh)
+    local visibilityConnection = platform:GetPropertyChangedSignal(
+        "Transparency"
+    ):Connect(refresh)
+    model.Destroying:Connect(function()
+        collisionConnection:Disconnect()
+        visibilityConnection:Disconnect()
+    end)
     refresh()
 
     prompt.Triggered:Connect(function(player)
