@@ -167,8 +167,8 @@ local function station(folder, base, route, outer)
     label.TextScaled = true
     label.TextWrapped = true
     label.TextColor3 = color
-    label.Text = outer and "CLIMB FOR SUPPLY\\nRETURN TO CENTER"
-        or "FREE FAST TRAVEL\\nOUTER DISTRICT"
+    label.Text = outer and "CLIMB FOR SUPPLY\nRETURN TO CENTER"
+        or "FREE FAST TRAVEL\nOUTER DISTRICT"
     label.Parent = gui
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
