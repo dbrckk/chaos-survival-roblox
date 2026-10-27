@@ -99,7 +99,10 @@ local function update()
     local root = character and character:FindFirstChild("HumanoidRootPart")
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local camera = workspace.CurrentCamera
-    if not roundActive or not root or not root:IsA("BasePart")
+    if not roundActive or player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true
+        or (tonumber(player:GetAttribute("RoundDistrictCaches")) or 0) >= 2
+        or not root or not root:IsA("BasePart")
         or not humanoid or humanoid.Health <= 0 or not camera
     then
         panel.Visible = false
