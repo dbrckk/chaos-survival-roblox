@@ -283,6 +283,37 @@ for _, variantId in ipairs(ArenaVariants.Order) do
         end
     end
     variant.PerimeterPlatforms = routes
+
+    -- The 320-stud floor needs real side destinations, not only a wider
+    -- empty rectangle around the original four straight escape ladders.
+    -- Branch off physical perimeter STEP FIVE toward each distant corner.
+    -- Each ground-supported terrace has a 1-stud gap and a 3-stud rise;
+    -- no hidden collision roof, fake platform or powered jump required.
+    -- Branch definitions append AFTER all 32 original perimeter decks, so
+    -- existing original/skybridge/deck indices and hazard owners are stable.
+    local branches = {}
+    local floorTop = variant.BaseSize.Y * 0.5
+    for route = 1, 4 do
+        local fork = routes[(route - 1) * ArenaVariants.PerimeterSteps + 5]
+        local directionZ = fork.offset.Z >= 0 and 1 or -1
+        local forkTop = fork.offset.Y + fork.size.Y * 0.5
+        for step = 1, 4 do
+            local height = forkTop + step * 3 - floorTop
+            table.insert(branches, {
+                offset = Vector3.new(
+                    fork.offset.X,
+                    floorTop + height * 0.5,
+                    fork.offset.Z + directionZ * 13 * step
+                ),
+                size = Vector3.new(12, height, 12),
+                RouteTier = math.min(4, step + 1),
+                BranchRoute = route,
+                BranchStep = step,
+                BranchParentStep = 5,
+            })
+        end
+    end
+    variant.BranchPlatforms = branches
 end
 
 local legacyRecent = {}

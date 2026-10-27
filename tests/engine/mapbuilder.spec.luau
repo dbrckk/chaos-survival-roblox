@@ -107,7 +107,7 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Classic").Platforms + 32
+            #ArenaVariants.get("Classic").Platforms + 48
         )
         -- Route-tier identity is replicated with the physical decks and
         -- reflects intentional jumpable paths, not client-only cosmetics.
@@ -776,7 +776,7 @@ describe("Chaos Survival engine", function()
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
             local original = #variant.Platforms
-            expect(#platforms:GetChildren()).toBe(original + 32)
+            expect(#platforms:GetChildren()).toBe(original + 48)
             for route = 1, 4 do
                 local previous = nil
                 for step = 1, ArenaVariants.PerimeterSteps do
@@ -960,6 +960,65 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("builds sixteen physical side lookouts without changing original route indices", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local platforms = arena:FindFirstChild("Platforms")
+            local base = arena:FindFirstChild("Base")
+            local start = #variant.Platforms + #variant.PerimeterPlatforms
+            expect(#platforms:GetChildren()).toBe(start + 16)
+            for route = 1, 4 do
+                local forkIndex = #variant.Platforms
+                    + (route - 1) * ArenaVariants.PerimeterSteps + 5
+                for side = -1, 1, 2 do
+                    local arrow = arena:FindFirstChild("Decor")
+                        :FindFirstChild("BranchForkArrow" .. route .. "_"
+                            .. tostring(side))
+                    expect(arrow ~= nil and arrow:IsA("BasePart")).toBe(true)
+                    expect(arrow:GetAttribute("PerimeterPlatformIndex"))
+                        .toBe(forkIndex)
+                    expect(arrow.CanCollide).toBe(false)
+                end
+                for step = 1, 4 do
+                    local index = start + (route - 1) * 4 + step
+                    local deck = platforms:FindFirstChild("Platform" .. index)
+                    expect(deck ~= nil and deck:IsA("BasePart")).toBe(true)
+                    expect(deck.Anchored).toBe(true)
+                    expect(deck.CanCollide).toBe(true)
+                    expect(deck:GetAttribute("BranchRoute")).toBe(route)
+                    expect(deck:GetAttribute("BranchStep")).toBe(step)
+                    expect(deck:GetAttribute("BranchParentStep")).toBe(5)
+                    local decor = arena:FindFirstChild("Decor")
+                    for side = -1, 1, 2 do
+                        local mark = decor:FindFirstChild(
+                            "BranchStepArrow" .. route .. "_" .. step
+                                .. "_" .. tostring(side)
+                        )
+                        expect(mark ~= nil and mark:IsA("BasePart")).toBe(true)
+                        expect(mark:GetAttribute("PerimeterPlatformIndex"))
+                            .toBe(index)
+                        expect(mark.CanCollide).toBe(false)
+                        expect(mark.CanQuery).toBe(false)
+                    end
+                    expect(math.abs(deck.Position.Y - deck.Size.Y * 0.5
+                        - (base.Position.Y + base.Size.Y * 0.5)) < 0.001)
+                        .toBe(true)
+                    if step == 4 then
+                        local billboard = deck:FindFirstChild("SideLookoutLabel")
+                        expect(billboard ~= nil and billboard:IsA("BillboardGui"))
+                            .toBe(true)
+                        expect(billboard.Adornee).toBe(deck)
+                        expect(billboard.MaxDistance <= 80).toBe(true)
+                        expect(billboard.AlwaysOnTop).toBe(false)
+                    end
+                end
+            end
+            root:Destroy()
+        end
+    end)
+
     it("builds physical Tower Run bridges with purely cosmetic edge rails", function()
         local root = MapBuilder.build(Config, "Towers", ArenaVariants)
         local arena = root:FindFirstChild("Arena")
@@ -1014,13 +1073,13 @@ describe("Chaos Survival engine", function()
                 tierCount[tier] += 1
             end
         end
-        expect(#(platforms :: Folder):GetChildren()).toBe(53)
+        expect(#(platforms :: Folder):GetChildren()).toBe(69)
         -- Original 21 decks and Skybridges 18–21 are unchanged.
-        -- Thirty-two outer-rim stages add four complete eight-step escapes.
+        -- Thirty-two main outer-rim stages and sixteen corner spurs complete the arena.
         expect(tierCount[1]).toBe(9)
-        expect(tierCount[2]).toBe(8)
-        expect(tierCount[3]).toBe(8)
-        expect(tierCount[4]).toBe(24)
+        expect(tierCount[2]).toBe(12)
+        expect(tierCount[3]).toBe(12)
+        expect(tierCount[4]).toBe(32)
 
         -- Floor guidance must be genuinely visible but never obstruct
         -- escape movement, hazard collision or updraft pads.
@@ -1063,7 +1122,7 @@ describe("Chaos Survival engine", function()
         local platforms = arena:FindFirstChild("Platforms")
         expect(platforms ~= nil).toBe(true)
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Crossroads").Platforms + 32
+            #ArenaVariants.get("Crossroads").Platforms + 48
         )
         local tiers = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
         for index = 1, 17 do
