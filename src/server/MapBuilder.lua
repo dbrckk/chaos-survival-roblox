@@ -2485,6 +2485,42 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             )
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
+            if definition.PerimeterStep == 1 then
+                -- The first accessible step is the moment to teach the
+                -- objective without another full-screen mobile tutorial.
+                -- Distance-limited, attached to the REAL physical route,
+                -- automatically removed if a disaster removes that deck.
+                local sign = Instance.new("BillboardGui")
+                sign.Name = "SurvivalRouteBriefing"
+                sign.Adornee = platform
+                sign.Size = UDim2.fromOffset(200, 48)
+                sign.StudsOffsetWorldSpace = Vector3.new(
+                    0, platform.Size.Y * 0.5 + 4, 0
+                )
+                sign.MaxDistance = 55
+                sign.AlwaysOnTop = false
+                sign.Parent = platform
+                local panel = Instance.new("TextLabel")
+                panel.Name = "Objective"
+                panel.Size = UDim2.fromScale(1, 1)
+                panel.BackgroundColor3 = Color3.fromRGB(13, 23, 33)
+                panel.BackgroundTransparency = 0.16
+                panel.BorderSizePixel = 0
+                panel.Font = Enum.Font.GothamBold
+                panel.Text = "CLIMB  /  DODGE\nSURVIVE UNTIL 0"
+                panel.TextColor3 = Color3.fromRGB(245, 250, 255)
+                panel.TextScaled = true
+                panel.TextWrapped = true
+                panel.Parent = sign
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0, 8)
+                corner.Parent = panel
+                local stroke = Instance.new("UIStroke")
+                stroke.Color = theme.Accent
+                stroke.Thickness = 1.5
+                stroke.Parent = panel
+                platform:SetAttribute("SurvivalRouteBriefing", true)
+            end
         end
 
         if definition.BranchRoute then

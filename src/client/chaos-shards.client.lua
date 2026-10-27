@@ -147,14 +147,16 @@ end
 
 
 
-local function show(reward, total, goldenFlag, flowBonus)
+local function show(reward, total, goldenFlag, flowBonus, source)
     token += 1
     local current = token
 
     local golden = goldenFlag == true or (tonumber(reward) or 1) >= 3
     local flow = math.max(0, math.floor(tonumber(flowBonus) or 0))
     local shardTotal = math.max(1, math.floor(tonumber(total) or 1))
-    if golden then
+    if source == "DistrictCache" then
+        label.Text = "+" .. tostring(reward) .. " COINS  •  DISTRICT SUPPLY CLAIMED"
+    elseif golden then
         label.Text = "+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD"
     elseif shardTotal == 1 then
         label.Text = "SHARD +1  •  BONUS COIN  •  OPTIONAL"
@@ -208,7 +210,7 @@ end
 
 event.OnClientEvent:Connect(function(payload)
     local reward = tonumber(payload.reward) or 1
-    show(reward, tonumber(payload.total) or 1, payload.golden == true, payload.flowBonus)
+    show(reward, tonumber(payload.total) or 1, payload.golden == true, payload.flowBonus, payload.source)
     worldBurst(payload.position, reward)
 end)
 

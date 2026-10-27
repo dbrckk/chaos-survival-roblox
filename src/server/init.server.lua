@@ -55,6 +55,7 @@ local RoundSettlement = require(script.RoundSettlement)
 local RoundResultState = require(script.RoundResultState)
 local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
+local ArenaDistrictCaches = require(script.ArenaDistrictCaches)
 local RoundChallenge = require(script.RoundChallenge)
 local RoundMedals = require(script.RoundMedals)
 local FlowCombo = require(script.FlowCombo)
@@ -1244,7 +1245,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
             )
         end,
         SoloMode = roundSettings.Solo,
-        OnCollected = function(player, reward, position, golden)
+        EnableDistrictCaches = allowDynamicArenas,
+        OnCollected = function(player, reward, position, golden, source)
             if player.Parent ~= Players
                 or player:GetAttribute("DataLoaded") ~= true
                 or eliminated[player.UserId]
@@ -1286,6 +1288,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 position = position,
                 golden = golden == true,
                 flowBonus = flowBonus,
+                source = source == "DistrictCache" and "DistrictCache" or "ChaosShard",
             })
 
             progressQuest(player, "collect_shard", 1)
@@ -1294,7 +1297,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
             GameAnalytics.economySource(
                 player,
                 amount,
-                golden == true and "GoldenChaosShard" or "ChaosShard",
+                source == "DistrictCache" and "DistrictCache"
+                    or (golden == true and "GoldenChaosShard" or "ChaosShard"),
                 currentArenaVariant,
                 roundSettings.Solo
             )
@@ -1343,6 +1347,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local collectibleOk, collectibleResult = pcall(RoundCollectibles.start, ctx)
     if not collectibleOk then
         warn("Round collectibles failed to start:", collectibleResult)
+    end
+    local districtOk, districtResult = pcall(ArenaDistrictCaches.start, ctx)
+    if not districtOk then
+        warn("Arena district caches failed to start:", districtResult)
     end
 
     for _, disaster in ipairs(selected) do
