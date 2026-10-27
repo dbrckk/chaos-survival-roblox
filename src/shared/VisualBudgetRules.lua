@@ -5,6 +5,8 @@ VisualBudgetRules.LocalFolders = {
     "ArenaSurfaceReliefLocal",
     "ArenaSilhouetteBreakupLocal",
     "ArenaMidgroundMassLocal",
+    -- Four near-playable sector scenes are purely local and tier-capped.
+    "DistrictSectorSetpiecesLocal",
     "ArenaUnderstructureLocal",
     "ArenaHeroSceneryLocal",
     "ArenaArchitecturalDetailsLocal",
