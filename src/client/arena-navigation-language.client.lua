@@ -197,6 +197,54 @@ local function addCenterLandmark(base, theme, variant, tier)
     end
 end
 
+-- Physical first steps are discoverable on every map, but the old
+-- wayfinding covered only optional boost pads and the center sigil.
+-- Paint short nonblocking arrows from the safe floor toward all FOUR
+-- actual entry terraces. No fake directions, user-tracking raycasts or
+-- per-frame work. Names use Center* so the existing floor-follow system
+-- retracts them during Shrinking Arena (never floating beyond its edge).
+local function addPerimeterRouteGuides(base, arena, theme, tier)
+    local platforms = arena:FindFirstChild("Platforms")
+    if not platforms then return end
+    local deckY = base.Position.Y + ArenaPresentation.deckArtOffset(base, 0.05)
+    local firstSteps = {}
+    for _, platform in ipairs(platforms:GetChildren()) do
+        if platform:IsA("BasePart")
+            and platform:GetAttribute("PerimeterStep") == 1 then
+            local routeId = tonumber(platform:GetAttribute("PerimeterRoute"))
+            if routeId and routeId >= 1 and routeId <= 4 then
+                firstSteps[routeId] = platform
+            end
+        end
+    end
+    for routeId = 1, 4 do
+        local target = firstSteps[routeId]
+        if target then
+            local toward = target.Position - base.Position
+            local direction = flattenedUnit(toward)
+            if direction.Magnitude > 0 then
+                local count = tier.Name == "Low" and 2 or 3
+                local color = routeId % 2 == 0 and theme.Secondary or theme.Accent
+                for step = 1, count do
+                    local point = target.Position
+                        - direction * (24 - (step - 1) * 7)
+                    local pos = Vector3.new(point.X, deckY, point.Z)
+                    local left, right = addGroundChevron(
+                        pos, direction, color, 0.28 + (count - step) * 0.09,
+                        100 + routeId * 10 + step
+                    )
+                    if left then
+                        left.Name = "CenterPerimeterArrowL" .. routeId .. "_" .. step
+                    end
+                    if right then
+                        right.Name = "CenterPerimeterArrowR" .. routeId .. "_" .. step
+                    end
+                end
+            end
+        end
+    end
+end
+
 local function rebuild()
     clear()
 
@@ -214,6 +262,7 @@ local function rebuild()
     local low = tier.Name == "Low"
 
     addCenterLandmark(base, theme, variant, tier)
+    addPerimeterRouteGuides(base, arena, theme, tier)
     -- Center paint is anchored to the floor, not to mobility pads.
     -- Scale it with the real shrinking collision deck, while pad beacons
     -- and route chevrons remain owned by their existing pad follower.
