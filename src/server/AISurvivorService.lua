@@ -2712,7 +2712,26 @@ local function recoverIfStuck(record, humanoid, root, now)
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
-    humanoid.Jump = true
+    -- A physical route that cannot make progress must not be selected
+    -- again on the next think tick. Release the route reservation so
+    -- another NPC may try a different sector; keep normal speed/jump.
+    if record.districtTraverse then
+        record.districtTraverse = nil
+        record.nextDistrictTraverseAt = now + 10
+        if record.model then
+            record.model:SetAttribute("DistrictRouteStep", 0)
+        end
+    end
+    if record.signalInterestRoute then
+        record.signalInterestRoute = nil
+        record.signalInterestUntil = 0
+        record.nextSignalInterestAt = now + 6
+    end
+    if humanoid.FloorMaterial ~= Enum.Material.Air
+        and now >= (record.nextRouteJumpAt or 0) then
+        humanoid.Jump = true
+        record.nextRouteJumpAt = now + 0.8
+    end
     record.target = nil
     record.targetPart = nil
     record.targetIsPad = false
@@ -3053,6 +3072,52 @@ local function stepRecord(record, now)
         end
     end
 
+    -- A timed signal may close while the bot is holding a long movement
+    -- target. Verify the *actual* server station each brain tick so rivals
+    -- stop running toward dead events instead of wasting another 2-5s.
+    -- Reactions use the original AI nameplate, never player chat.
+    if not urgentTarget and record.signalInterestRoute
+        and record.inRound and currentState.phase == "round"
+    then
+        local trackedRoute = record.signalInterestRoute
+        local _, arena = arenaParts()
+        local signals = arena and arena:FindFirstChild("DistrictSignalRush")
+        local station = signals and signals:FindFirstChild(
+            "SignalStation" .. tostring(trackedRoute))
+        local foundation = station and station:FindFirstChild("Foundation")
+        local endAt = signals and tonumber(signals:GetAttribute("SignalEndsAt"))
+        local stillOpen = signals
+            and tonumber(signals:GetAttribute("SignalRoute")) == trackedRoute
+            and station and station:GetAttribute("SignalActive") == true
+            and foundation and foundation:IsA("BasePart")
+            and not hasDisaster("ShrinkingArena")
+            and not hasDisaster("RisingLava")
+            and not hasDisaster("Tornado")
+            and not hasDisaster("DisappearingPlatforms")
+            and currentState.finalRush ~= true
+            and (not endAt or endAt <= 0
+                or workspace:GetServerTimeNow() + 0.30 < endAt)
+        local reached = false
+        if stillOpen then
+            local delta = foundation.Position - root.Position
+            local flat = Vector3.new(delta.X, 0, delta.Z).Magnitude
+            reached = flat < 6.8 and math.abs(delta.Y) < 6.5
+        end
+        if not stillOpen or reached then
+            if reached and record.model then
+                record.model:SetAttribute("DistrictSignalWitnessed", trackedRoute)
+                showBotSignal(record, "FOUND IT!", now)
+            end
+            record.signalInterestRoute = nil
+            record.signalInterestUntil = 0
+            record.nextSignalInterestAt = now + (reached and 12 or 4)
+            record.target = nil
+            record.targetPart = nil
+            record.lastMoveTarget = nil
+            record.nextThink = 0
+        end
+    end
+
     if not urgentTarget then
         if recoverIfStuck(record, humanoid, root, now) then
             return
@@ -3301,8 +3366,15 @@ local function stepRecord(record, now)
         if record.target then
             local delta = record.target - root.Position
             local horizontal = Vector3.new(delta.X, 0, delta.Z)
-            if delta.Y > 2.2 and horizontal.Magnitude < 10 then
+            -- The old generic height check fired on every brain tick,
+            -- even while airborne, overriding the bounded parkour jump
+            -- cooldown and creating unnatural pogo-stick movement.
+            if delta.Y > 2.2 and horizontal.Magnitude < 10
+                and humanoid.FloorMaterial ~= Enum.Material.Air
+                and now >= (record.nextRouteJumpAt or 0)
+            then
                 humanoid.Jump = true
+                record.nextRouteJumpAt = now + 0.75
             end
 
             local destination = record.target
