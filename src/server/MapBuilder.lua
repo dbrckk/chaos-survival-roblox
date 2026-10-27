@@ -2632,6 +2632,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
                 Enum.Material.Metal
             )
             pedestal.Transparency = 0.22
+            local platformIndex = #variant.Platforms
+                + (route - 1) * perRoute
+                + (cue.name == "Entry" and 1 or perRoute)
+            pedestal:SetAttribute("PerimeterPlatformIndex", platformIndex)
             local billboard = Instance.new("BillboardGui")
             billboard.Name = "ObjectiveLabel"
             billboard.Size = UDim2.fromOffset(158, 38)
