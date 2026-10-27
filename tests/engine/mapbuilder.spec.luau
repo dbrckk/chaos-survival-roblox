@@ -828,10 +828,21 @@ describe("Chaos Survival engine", function()
             -- raycasts/touches from the authoritative disaster floor.
             local districts = decor:FindFirstChild("ArenaDistrictArchitecture3D")
             expect(districts ~= nil and districts:IsA("Folder")).toBe(true)
-            expect(districts:GetAttribute("District3DCount")).toBe(12)
-            expect(#districts:GetChildren()).toBe(12)
+            expect(districts:GetAttribute("District3DCount")).toBe(16)
+            expect(#districts:GetChildren()).toBe(16)
+            local profiles = {}
             for _, model in ipairs(districts:GetChildren()) do
                 expect(model:IsA("Model")).toBe(true)
+                expect(model.ModelStreamingMode).toBe(Enum.ModelStreamingMode.Atomic)
+                local profile = model:GetAttribute("DistrictProfile")
+                expect(type(profile)).toBe("number")
+                expect(profile >= 1 and profile <= 4).toBe(true)
+                profiles[profile] = (profiles[profile] or 0) + 1
+                local signature = ({
+                    "OrbitalSurveyLens", "CabShell", "VentTurbine0",
+                    "SignalCrystal",
+                })[profile]
+                expect(model:FindFirstChild(signature) ~= nil).toBe(true)
                 expect(model:GetAttribute("SourceIsOriginal")).toBe(true)
                 expect(model:GetAttribute("CosmeticOnly")).toBe(true)
                 local pieces = 0
@@ -854,8 +865,11 @@ describe("Chaos Survival engine", function()
                     expect(math.abs(piece.Position.Z - base.Position.Z)
                         < base.Size.Z * 0.5).toBe(true)
                 end
-                expect(pieces >= 11).toBe(true)
-                expect(complex >= 3).toBe(true)
+                expect(pieces >= 19).toBe(true)
+                expect(complex >= 5).toBe(true)
+            end
+            for profile = 1, 4 do
+                expect(profiles[profile]).toBe(4)
             end
             local districtArrows = 0
             for _, instance in ipairs(decor:GetChildren()) do
