@@ -2454,6 +2454,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
+    -- Keep all original skybridge and perimeter indices unchanged.
+    for _, definition in ipairs(variant.BranchPlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
 
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
@@ -2479,6 +2483,17 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
                 definition.PerimeterStep == 1 and theme.Detail or theme.Secondary,
                 0.30
             )
+            platform.Material = theme.StructureMaterial
+                or VisualTheme.Materials.Structure
+        end
+
+        if definition.BranchRoute then
+            -- The corner spurs are real server-authoritative collision
+            -- geometry, so every disaster/bot/item uses the same deck.
+            platform:SetAttribute("BranchRoute", definition.BranchRoute)
+            platform:SetAttribute("BranchStep", definition.BranchStep)
+            platform:SetAttribute("BranchParentStep", definition.BranchParentStep)
+            platform.Color = theme.Surface:Lerp(theme.Secondary, 0.38)
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
         end
@@ -2556,6 +2571,35 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             trim.Transparency = 0.64
         end
         addPlatformFinish(decor, platform, i, theme)
+
+        if definition.BranchStep == 4 then
+            -- Short, distance-limited hint over each genuinely reachable
+            -- corner destination; the deck carries the label as it moves.
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "SideLookoutLabel"
+            billboard.Adornee = platform
+            billboard.Size = UDim2.fromOffset(140, 35)
+            billboard.StudsOffsetWorldSpace = Vector3.new(
+                0, platform.Size.Y * 0.5 + 4, 0
+            )
+            billboard.MaxDistance = 78
+            billboard.AlwaysOnTop = false
+            billboard.Parent = platform
+            local text = Instance.new("TextLabel")
+            text.Name = "Lookout"
+            text.Size = UDim2.fromScale(1, 1)
+            text.BackgroundColor3 = Color3.fromRGB(18, 28, 38)
+            text.BackgroundTransparency = 0.25
+            text.BorderSizePixel = 0
+            text.Font = Enum.Font.GothamBold
+            text.Text = "SIDE LOOKOUT"
+            text.TextColor3 = Color3.fromRGB(235, 246, 255)
+            text.TextScaled = true
+            text.Parent = billboard
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = text
+        end
 
         if definition.PerimeterStep == #variant.PerimeterPlatforms / 4 then
             -- Original native three-dimensional exit facade at the FINAL terrace: four simple
