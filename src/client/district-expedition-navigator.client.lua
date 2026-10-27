@@ -112,6 +112,110 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 end)
 
+-- A destination arrow that ignores real parkour gaps encourages players
+-- to jump directly into walls. Guide through *real, currently collidable*
+-- platforms in order, and gracefully fall back when streaming omits one.
+local function stagesForRoute(arena, route, elite)
+    local folder = arena and arena:FindFirstChild("Platforms")
+    if not folder then return nil end
+    local perimeter, branch = {}, {}
+    for _, platform in ipairs(folder:GetChildren()) do
+        if platform:IsA("BasePart") and platform.Parent
+            and platform.CanCollide and platform.Transparency < 0.95 then
+            if platform:GetAttribute("PerimeterRoute") == route then
+                local step = tonumber(platform:GetAttribute("PerimeterStep"))
+                if step and step >= 1 and step <= 8
+                    and step == math.floor(step) then
+                    perimeter[step] = platform
+                end
+            end
+            if elite and platform:GetAttribute("BranchRoute") == route then
+                local step = tonumber(platform:GetAttribute("BranchStep"))
+                if step and step >= 1 and step <= 4
+                    and step == math.floor(step) then
+                    branch[step] = platform
+                end
+            end
+        end
+    end
+
+    local stages = {}
+    local lastPerimeter = elite and 5 or 4
+    for step = 1, lastPerimeter do
+        if not perimeter[step] then return nil end
+        stages[#stages + 1] = perimeter[step]
+    end
+    if elite then
+        for step = 1, 4 do
+            if not branch[step] then return nil end
+            stages[#stages + 1] = branch[step]
+        end
+    end
+    return stages
+end
+
+local function chooseParkourWaypoint(arena, route, elite, root, destination)
+    local stages = stagesForRoute(arena, route, elite)
+    if not stages then return nil end
+
+    -- A character is on a deck when close in the horizontal plane AND
+    -- at the correct height. A player standing beneath an elevated final
+    -- chest should still be directed to the bottom of its climb.
+    local highestReached = 0
+    for i, deck in ipairs(stages) do
+        local dx = root.Position.X - deck.Position.X
+        local dz = root.Position.Z - deck.Position.Z
+        local horizontal = math.sqrt(dx * dx + dz * dz)
+        local surface = deck.Position.Y + deck.Size.Y * 0.5
+        if horizontal <= 7.8
+            and math.abs(root.Position.Y - (surface + 2.5)) <= 6.2
+        then
+            highestReached = i
+        end
+    end
+
+    if highestReached >= #stages then
+        return destination, "OPEN SUPPLY CACHE", true
+    end
+    local nextStep = highestReached + 1
+    local deck = stages[nextStep]
+    local surface = deck.Position.Y + deck.Size.Y * 0.5
+    return Vector3.new(deck.Position.X, surface + 2.5, deck.Position.Z),
+        "CLIMB " .. nextStep .. "/" .. #stages, false
+end
+
+-- Free transit is useful for ground-level timed signals. Only recommend
+-- a gate if both physical stations exist, the prompt is enabled, and
+-- walking via the gate beats travelling to the real objective directly.
+-- Never recommend transit for upper decks: it can deposit the player
+-- beneath an unreachable elite cache without an upward access route.
+local function chooseTransitWaypoint(arena, route, root, destination)
+    local stations = arena and arena:FindFirstChild("DistrictTransit")
+    if not stations then return nil end
+    local hub = stations:FindFirstChild("Transit" .. route .. "Hub")
+    local outer = stations:FindFirstChild("Transit" .. route .. "Outer")
+    local prompt = hub and hub:FindFirstChild("TransitHeader")
+    prompt = prompt and prompt:FindFirstChild("TravelToDistrict")
+    local outerHeader = outer and outer:FindFirstChild("TransitHeader")
+    if not (prompt and prompt:IsA("ProximityPrompt")
+        and prompt.Enabled and outerHeader and outerHeader:IsA("BasePart"))
+    then return nil end
+    local header = hub:FindFirstChild("TransitHeader")
+    local direct = (root.Position - destination).Magnitude
+    local toHub = (root.Position - header.Position).Magnitude
+    local after = (outerHeader.Position - destination).Magnitude
+    if direct < 36 or toHub + after + 17 >= direct
+        or toHub > 160 then
+        return nil
+    end
+    return header.Position, "FAST TRAVEL • DISTRICT " .. route
+end
+
+local function currentArena()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    return generated and generated:FindFirstChild("Arena")
+end
+
 local function update()
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -126,88 +230,131 @@ local function update()
         return
     end
 
-    -- A rotating live signal is the urgent target for up to 12 seconds.
-    -- It is server-selected and streamed like any other world Model;
-    -- never draw an arrow to a missing or fabricated signal location.
-    local signalPosition, signalReward = nil, nil
+    local arena = currentArena()
+    if not arena then
+        panel.Visible = false
+        return
+    end
+
+    local signalPosition, signalReward, signalRoute, upcoming = nil, nil, nil, false
     if not claimedSignal
         and (tonumber(player:GetAttribute("RoundDistrictSignals")) or 0) == 0
     then
-        local map = workspace:FindFirstChild("GeneratedMap")
-        local arena = map and map:FindFirstChild("Arena")
-        local signals = arena and arena:FindFirstChild("DistrictSignalRush")
-        local route = signals and tonumber(signals:GetAttribute("SignalRoute"))
+        local signals = arena:FindFirstChild("DistrictSignalRush")
+        local activeRoute = signals
+            and tonumber(signals:GetAttribute("SignalRoute"))
+        local nextRoute = signals
+            and tonumber(signals:GetAttribute("UpcomingSignalRoute"))
+        local route = activeRoute and activeRoute >= 1 and activeRoute <= 4
+            and activeRoute or nextRoute
         if route and route >= 1 and route <= 4
             and route == math.floor(route) then
             local station = signals:FindFirstChild("SignalStation" .. route)
-            if station and station:IsA("Model")
-                and station:GetAttribute("SignalActive") == true then
+            if station and station:IsA("Model") then
+                local active = station:GetAttribute("SignalActive") == true
+                local preview = not active and activeRoute == 0
+                    and nextRoute == route
                 local core = station:FindFirstChild("PulseCore")
-                if core and core:IsA("BasePart") then
+                if (active or preview) and core and core:IsA("BasePart") then
                     signalPosition = core.Position
+                    signalRoute = route
+                    upcoming = preview
                     signalReward = math.clamp(
-                        tonumber(signals:GetAttribute("SignalReward")) or 2, 1, 2)
+                        tonumber(signals:GetAttribute("SignalReward")) or 2,
+                        1, 2)
                 end
             end
         end
     end
 
-    local nearest, nearestPosition, nearestDistance = nil, nil, math.huge
+    local nearest, targetPosition, targetDistance = nil, signalPosition, math.huge
     if signalPosition then
-        nearestPosition = signalPosition
-        nearestDistance = (signalPosition - root.Position).Magnitude
-    end
-    for model in pairs(caches) do
-        if not cacheEligible(model) then
-            caches[model] = nil
-        else
-            local support = model.Parent
-            local tier = model:GetAttribute("CacheTier")
-            if not signalPosition
-                and (tonumber(player:GetAttribute("RoundDistrictCaches")) or 0) < 2
-                and support and support:IsA("BasePart")
-                and not (tier == "Easy" and claimedEasy)
-                and not (tier == "Elite" and claimedElite)
-                and support.CanCollide and support.Transparency < 0.95 then
-                local lid = model:FindFirstChild("CacheLid")
-                if lid and lid:IsA("BasePart") then
-                    local dist = (lid.Position - root.Position).Magnitude
-                    if dist < nearestDistance then
-                        nearest, nearestPosition, nearestDistance = model, lid.Position, dist
+        targetDistance = (signalPosition - root.Position).Magnitude
+    else
+        for model in pairs(caches) do
+            if not cacheEligible(model) then
+                caches[model] = nil
+            else
+                local support = model.Parent
+                local tier = model:GetAttribute("CacheTier")
+                if (tonumber(player:GetAttribute("RoundDistrictCaches")) or 0) < 2
+                    and support and support:IsA("BasePart")
+                    and not (tier == "Easy" and claimedEasy)
+                    and not (tier == "Elite" and claimedElite)
+                    and support.CanCollide and support.Transparency < 0.95 then
+                    local lid = model:FindFirstChild("CacheLid")
+                    if lid and lid:IsA("BasePart") then
+                        local distance = (lid.Position - root.Position).Magnitude
+                        if distance < targetDistance then
+                            nearest, targetPosition, targetDistance
+                                = model, lid.Position, distance
+                        end
                     end
                 end
             end
         end
     end
-    -- Keep the navigation secondary to survival and hazard telegraphs.
-    -- StreamingEnabled may omit distant caches; never fake a target.
-    if not nearestPosition or nearestDistance > (signalPosition and 220 or 165) then
+
+    -- StreamingEnabled may omit far-off objects; no fictitious targets.
+    if not targetPosition or targetDistance > (signalPosition and 230 or 170) then
         panel.Visible = false
         return
     end
 
-    local delta = nearestPosition - root.Position
+    local route = signalRoute
+        or (nearest and tonumber(nearest:GetAttribute("DistrictRoute")))
+    local elite = nearest and nearest:GetAttribute("CacheTier") == "Elite"
+    local reward = signalReward or (nearest
+        and tonumber(nearest:GetAttribute("CacheReward")))
+        or (elite and 5 or 2)
+    local waypoint, taskLabel = targetPosition, nil
+    local directDistance = targetDistance
+
+    if signalPosition then
+        if route and route >= 1 and route <= 4 then
+            local gate, gateLabel = chooseTransitWaypoint(
+                arena, route, root, targetPosition)
+            if gate then
+                waypoint, taskLabel = gate, gateLabel
+            end
+        end
+        if not taskLabel then
+            taskLabel = upcoming
+                and ("NEXT SIGNAL • DISTRICT " .. tostring(route))
+                or "SECURE LIVE SIGNAL"
+        end
+    else
+        if route and route >= 1 and route <= 4
+            and route == math.floor(route) then
+            local stage, label = chooseParkourWaypoint(
+                arena, route, elite, root, targetPosition)
+            if stage then
+                waypoint, taskLabel = stage, label
+            end
+        end
+        if not taskLabel then
+            taskLabel = elite and "FIND HIGH ROUTE" or "FIND SHORT ROUTE"
+        end
+    end
+
+    local delta = waypoint - root.Position
     local horizontal = Vector3.new(delta.X, 0, delta.Z)
     local cameraForward = camera.CFrame.LookVector
     local cameraRight = camera.CFrame.RightVector
     local forward = horizontal:Dot(Vector3.new(cameraForward.X, 0, cameraForward.Z))
     local side = horizontal:Dot(Vector3.new(cameraRight.X, 0, cameraRight.Z))
-    local heading = math.atan2(side, forward)
-    arrow.Rotation = math.deg(heading)
-    local elite = not signalPosition
-        and nearest:GetAttribute("CacheTier") == "Elite"
-    local reward = signalReward or (tonumber(nearest:GetAttribute("CacheReward"))
-        or (elite and 5 or 2))
-    if signalPosition then
-        text.Text = "LIVE SIGNAL  +" .. tostring(reward) .. " COINS\n"
-            .. tostring(math.floor(nearestDistance + 0.5))
-            .. " STUDS  •  LIMITED TIME"
-    else
-        local label = elite and "HIGH ROUTE" or "SHORT ROUTE"
-        text.Text = label .. "  +" .. tostring(reward) .. " COINS\n"
-            .. tostring(math.floor(nearestDistance + 0.5))
-            .. " STUDS  •  OPTIONAL"
+    if horizontal.Magnitude > 0.2 then
+        arrow.Rotation = math.deg(math.atan2(side, forward))
     end
+    local waypointDistance = math.floor(delta.Magnitude + 0.5)
+    local cue = signalPosition
+        and (upcoming and "SIGNAL SOON • +" .. reward
+            or "LIVE NOW • +" .. reward)
+        or ("CACHE +" .. reward .. " COINS")
+    -- Distance is explicitly TO THE NEXT WAYPOINT, not falsely to the
+    -- final chest when several physical jump gaps remain.
+    text.Text = taskLabel .. "\n" .. cue
+        .. " • " .. tostring(waypointDistance) .. "m"
     local color = signalPosition and Color3.fromRGB(255, 163, 83)
         or (elite and Color3.fromRGB(248, 199, 91)
             or Color3.fromRGB(111, 226, 247))
