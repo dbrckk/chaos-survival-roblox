@@ -2694,6 +2694,56 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         OrbitalHelix.build(arena, variant, config.ArenaCenter, theme)
     end
 
+    -- Four clear floor-level navigation corridors into the actual playable
+    -- perimeter sectors. The 224-stud floor previously appeared empty:
+    -- new players saw distant platforms without an obvious approach.
+    -- Cosmetic, low-cost and non-colliding; hazards and spawn physics stay
+    -- authoritative. Keep markers below the feet and inside the floor.
+    for route = 1, 4 do
+        local signs = {
+            {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
+        }
+        local sx, sz = signs[route][1], signs[route][2]
+        for step = 1, 5 do
+            local progress = step / 5
+            local x = sx * (19 + 54 * progress)
+            local z = sz * (19 + 49 * progress)
+            local center = config.ArenaCenter
+                + Vector3.new(x, variant.BaseSize.Y * 0.5 + 0.035, z)
+            local arrow = decorPart(
+                decor,
+                "OuterRouteChevron" .. route .. "_" .. step,
+                Vector3.new(4.0, 0.055, 0.60),
+                center,
+                step == 5 and theme.Secondary or theme.Accent,
+                VisualTheme.Materials.Glow
+            )
+            -- Face the far corner: repeated chevrons provide a simple
+            -- language even when UI text is hidden on mobile.
+            arrow.CFrame = CFrame.new(center)
+                * CFrame.Angles(0, math.atan2(sx, sz), 0)
+                * CFrame.Angles(0, math.rad(45), 0)
+            arrow.Transparency = 0.34
+            arrow.CastShadow = false
+            arrow:SetAttribute("ChaosWayfinding", true)
+        end
+        -- A visible non-solid vertical sector identifier, positioned
+        -- alongside rather than on the final playable terrace.
+        local markerPosition = config.ArenaCenter
+            + Vector3.new(sx * 99, 8, sz * 84)
+        local marker = decorPart(
+            decor,
+            "OuterRouteSignal" .. route,
+            Vector3.new(0.75, 13, 0.75),
+            markerPosition,
+            theme.Secondary,
+            VisualTheme.Materials.Glow
+        )
+        marker.Transparency = 0.45
+        marker.CastShadow = false
+        marker:SetAttribute("ChaosWayfinding", true)
+    end
+
     local beaconOffsets = {
         Vector3.new(-halfX + 3, 4.5, -halfZ + 3),
         Vector3.new(halfX - 3, 4.5, -halfZ + 3),
