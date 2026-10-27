@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
 local ArenaDistrictTransit = require("../../src/server/ArenaDistrictTransit")
+local DistrictSignalRush = require("../../src/server/DistrictSignalRush")
 local FluxRelayRules = require("../../src/shared/FluxRelayRules")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
@@ -1249,6 +1250,80 @@ describe("Arena mechanics", function()
         expect(ArenaDistrictTransit.allowed(inactive)).toBe(false)
         root:Destroy()
         human:Destroy()
+    end)
+
+    it("builds optional timed signal objectives in four real Roblox arena layouts", function()
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local map = MapBuilder.build(Config, variantId, ArenaVariants)
+            local arena = map:FindFirstChild("Arena")
+            local base = arena:FindFirstChild("Base")
+            local live = true
+            local cleanup = {}
+            local ctx = {
+                Active = function() return live end,
+                EnableDistrictSignals = true,
+                ActiveDisasters = {Meteors = true},
+                RoundSeconds = 35,
+                Cleanup = cleanup,
+                IsContestantActive = function() return true end,
+                OnDistrictSignalClaimed = function() return true end,
+            }
+            expect(DistrictSignalRush.allowed(ctx, base)).toBe(true)
+            expect(DistrictSignalRush.start(ctx)).toBe(4)
+            local folder = arena:FindFirstChild("DistrictSignalRush")
+            expect(folder ~= nil and folder:IsA("Folder")).toBe(true)
+            expect(folder:GetAttribute("SignalReward")).toBe(2)
+            expect(folder:GetAttribute("SignalRoute")).toBe(0)
+            expect(#folder:GetChildren()).toBe(4)
+            for route = 1, 4 do
+                local station = folder:FindFirstChild("SignalStation" .. route)
+                expect(station ~= nil and station:IsA("Model")).toBe(true)
+                expect(station:GetAttribute("SignalRoute")).toBe(route)
+                expect(station:GetAttribute("SignalActive")).toBe(false)
+                expect(station.ModelStreamingMode).toBe(
+                    Enum.ModelStreamingMode.Atomic)
+                local spine = station:FindFirstChild("BeaconSpine")
+                expect(spine ~= nil and spine:IsA("BasePart")).toBe(true)
+                local prompt = spine:FindFirstChild("SecureDistrictSignal")
+                expect(prompt ~= nil and prompt:IsA("ProximityPrompt")).toBe(true)
+                expect(prompt.Enabled).toBe(false)
+                expect(prompt.MaxActivationDistance <= 10).toBe(true)
+                for _, part in ipairs(station:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        expect(part.CanCollide).toBe(false)
+                        expect(part.CanTouch).toBe(false)
+                        expect(part.CanQuery).toBe(false)
+                        local x = math.abs(part.Position.X - base.Position.X)
+                        local z = math.abs(part.Position.Z - base.Position.Z)
+                        expect(x < base.Size.X * 0.5 - 10).toBe(true)
+                        expect(z < base.Size.Z * 0.5 - 10).toBe(true)
+                    end
+                end
+            end
+            live = false
+            for _, item in ipairs(cleanup) do
+                if item.Parent then item:Destroy() end
+            end
+            map:Destroy()
+        end
+        local arenaMap = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local base = arenaMap:FindFirstChild("Arena"):FindFirstChild("Base")
+        local ctx = {
+            Active = function() return true end,
+            EnableDistrictSignals = true,
+            RoundSeconds = 35,
+            ActiveDisasters = {ShrinkingArena = true},
+            IsContestantActive = function() return true end,
+            OnDistrictSignalClaimed = function() return true end,
+        }
+        expect(DistrictSignalRush.allowed(ctx, base)).toBe(false)
+        ctx.ActiveDisasters = {}
+        ctx.RoundSeconds = 20
+        expect(DistrictSignalRush.allowed(ctx, base)).toBe(false)
+        ctx.RoundSeconds = 35
+        ctx.EnableDistrictSignals = false
+        expect(DistrictSignalRush.allowed(ctx, base)).toBe(false)
+        arenaMap:Destroy()
     end)
 
     it("keeps mobility impulses non-lethal and bounded", function()
