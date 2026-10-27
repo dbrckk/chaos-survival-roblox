@@ -1024,7 +1024,7 @@ describe("Chaos Survival engine", function()
         local platforms = arena:FindFirstChild("Platforms")
         expect(platforms ~= nil).toBe(true)
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Crossroads").Platforms + 32
+            #ArenaVariants.get("Crossroads").Platforms + 48
         )
         local tiers = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
         for index = 1, 17 do
