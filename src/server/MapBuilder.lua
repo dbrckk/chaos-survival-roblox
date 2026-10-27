@@ -2379,57 +2379,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     addExteriorSilhouettePairs(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantLandmarks(decor, config, variant, theme)
-    -- Four distinct high-contrast 3D silhouettes at the outer district
-    -- corners. They are cheap, native, cosmetic-only geometry: no remote
-    -- assets, lights, collision, touch/query or per-frame animation.
-    -- Players can orient by the four towers from across a 320-stud floor.
-    local cornerPalette = {
-        theme.Accent, theme.Secondary,
-        theme.Accent:Lerp(theme.Secondary, 0.35),
-        theme.Secondary:Lerp(theme.Accent, 0.35),
-    }
-    for cornerIndex, signs in ipairs({
-        {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
-    }) do
-        local sx, sz = signs[1], signs[2]
-        local towerCenter = config.ArenaCenter
-            + Vector3.new(sx * (variant.BaseSize.X * 0.5 - 16),
-                0, sz * (variant.BaseSize.Z * 0.5 - 16))
-        local tint = cornerPalette[cornerIndex]
-        local height = 23 + cornerIndex * 5
-        local shaft = decorPart(
-            decor, "DistrictTower" .. cornerIndex,
-            Vector3.new(6.5, height, 6.5),
-            towerCenter + Vector3.new(0, height * 0.5 + 1, 0),
-            theme.Structure, Enum.Material.Metal
-        )
-        shaft.Transparency = 0.06
-        shaft.CastShadow = false
-        local crown = decorPart(
-            decor, "DistrictTowerCrown" .. cornerIndex,
-            Vector3.new(10.5, 2.2, 10.5),
-            towerCenter + Vector3.new(0, height + 2.1, 0),
-            tint, VisualTheme.Materials.Glow
-        )
-        crown.Transparency = 0.22
-        crown.CastShadow = false
-        for band = 1, 3 do
-            local belt = decorPart(
-                decor, "DistrictTowerBand" .. cornerIndex .. "_" .. band,
-                Vector3.new(7.5, 0.42, 7.5),
-                towerCenter + Vector3.new(0, 3 + height * band / 4, 0),
-                tint, Enum.Material.Metal
-            )
-            belt.CastShadow = false
-        end
-        local mast = decorPart(
-            decor, "DistrictTowerAntenna" .. cornerIndex,
-            Vector3.new(0.6, 8, 0.6),
-            towerCenter + Vector3.new(0, height + 7.1, 0),
-            tint, VisualTheme.Materials.Glow
-        )
-        mast.CastShadow = false
-    end
     addVariantFloorLanguage(decor, config, variant, theme)
     addArenaHologram(decor, config, variant, theme)
 
@@ -2536,6 +2485,42 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
             )
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
+            if definition.PerimeterStep == 1 then
+                -- The first accessible step is the moment to teach the
+                -- objective without another full-screen mobile tutorial.
+                -- Distance-limited, attached to the REAL physical route,
+                -- automatically removed if a disaster removes that deck.
+                local sign = Instance.new("BillboardGui")
+                sign.Name = "SurvivalRouteBriefing"
+                sign.Adornee = platform
+                sign.Size = UDim2.fromOffset(200, 48)
+                sign.StudsOffsetWorldSpace = Vector3.new(
+                    0, platform.Size.Y * 0.5 + 4, 0
+                )
+                sign.MaxDistance = 55
+                sign.AlwaysOnTop = false
+                sign.Parent = platform
+                local panel = Instance.new("TextLabel")
+                panel.Name = "Objective"
+                panel.Size = UDim2.fromScale(1, 1)
+                panel.BackgroundColor3 = Color3.fromRGB(13, 23, 33)
+                panel.BackgroundTransparency = 0.16
+                panel.BorderSizePixel = 0
+                panel.Font = Enum.Font.GothamBold
+                panel.Text = "CLIMB  /  DODGE\\nSURVIVE UNTIL 0"
+                panel.TextColor3 = Color3.fromRGB(245, 250, 255)
+                panel.TextScaled = true
+                panel.TextWrapped = true
+                panel.Parent = sign
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0, 8)
+                corner.Parent = panel
+                local stroke = Instance.new("UIStroke")
+                stroke.Color = theme.Accent
+                stroke.Thickness = 1.5
+                stroke.Parent = panel
+                platform:SetAttribute("SurvivalRouteBriefing", true)
+            end
         end
 
         if definition.BranchRoute then
