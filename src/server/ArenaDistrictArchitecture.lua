@@ -57,12 +57,16 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
 
     -- Full 3D massing: recessed disc, four sculpted supports and an elevated
     -- roof. Narrow x/z footprint leaves generous escape and hazard lanes.
-    make("BasaltFoundation", "Part", Vector3.new(0.7, 15.5, 15.5),
+    local plinth = make("BasaltFoundation", "Part",
+        Vector3.new(0.7, 15.5, 15.5),
         CFrame.new(0, 0.35, 0) * CFrame.Angles(0, 0, math.pi / 2),
         dark, Enum.Material.Slate)
-    make("FoundationRim", "Part", Vector3.new(0.22, 13.8, 13.8),
+    plinth.Shape = Enum.PartType.Cylinder
+    local rim = make("FoundationRim", "Part",
+        Vector3.new(0.22, 13.8, 13.8),
         CFrame.new(0, 0.77, 0) * CFrame.Angles(0, 0, math.pi / 2),
         alloy, Enum.Material.Metal)
+    rim.Shape = Enum.PartType.Cylinder
     for _, direction in ipairs({-1, 1}) do
         local suffix = direction < 0 and "L" or "R"
         make("ArmoredSupport" .. suffix, "Part",
