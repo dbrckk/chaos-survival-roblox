@@ -203,7 +203,7 @@ describe("Adaptive VFX quality", function()
         expect(received).toBe(0)
         expect(complete).toBe(false)
 
-        arena:SetAttribute("Original3DSceneryCount", 4)
+        arena:SetAttribute("Original3DSceneryCount", 8)
         arena:SetAttribute("Original3DSceneryComplete", true)
         local good = Instance.new("Model")
         good.Name = "ApprovedModel"
@@ -212,7 +212,7 @@ describe("Adaptive VFX quality", function()
         good.Parent = folder
         -- A streamed model shell must not be counted as received geometry.
         count, received, complete = SceneryLodRules.original3DAudit(arena)
-        expect(count).toBe(4)
+        expect(count).toBe(8)
         expect(received).toBe(0)
         expect(complete).toBe(true)
 
@@ -225,7 +225,7 @@ describe("Adaptive VFX quality", function()
         local fake = Instance.new("Part")
         fake.Parent = unapproved
         count, received, complete = SceneryLodRules.original3DAudit(arena)
-        expect(count).toBe(4)
+        expect(count).toBe(8)
         expect(received).toBe(1) -- Only the authenticated cosmetic package.
         expect(complete).toBe(true)
 
