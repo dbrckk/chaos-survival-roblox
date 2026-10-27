@@ -9,6 +9,7 @@ local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local caches = {}
 local roundActive = false
+local climbedStage = {}
 local claimedEasy, claimedElite, claimedSignal = false, false, false
 local shardEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
 shardEvent.OnClientEvent:Connect(function(payload)
@@ -102,6 +103,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     if phase == "round" then
         if not roundActive then
             claimedEasy, claimedElite, claimedSignal = false, false, false
+            table.clear(climbedStage)
         end
         roundActive = true
     elseif phase == "intermission" or phase == "voting"
@@ -176,6 +178,21 @@ local function chooseParkourWaypoint(arena, route, elite, root, destination)
         end
     end
 
+    local key = tostring(route) .. (elite and ":Elite" or ":Easy")
+    local previous = climbedStage[key] or 0
+    -- Retain the last stable landing while jumping between decks. This
+    -- prevents the arrow from snapping backwards to stage one mid-jump.
+    -- If the avatar actually falls below that deck, restart the ascent.
+    if previous > 0 then
+        local priorDeck = stages[previous]
+        local priorTop = priorDeck
+            and (priorDeck.Position.Y + priorDeck.Size.Y * 0.5)
+        if not priorTop or root.Position.Y < priorTop - 1.0 then
+            previous = 0
+        end
+    end
+    highestReached = math.max(previous, highestReached)
+    climbedStage[key] = highestReached
     if highestReached >= #stages then
         return destination, "OPEN SUPPLY CACHE", true
     end
