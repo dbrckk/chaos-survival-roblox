@@ -86,6 +86,23 @@ AudioConfig.Composite = {
         {Sound = "GoldenShard", VolumeScale = 0.92, PitchOffset = -0.02},
         {Sound = "Reward", Delay = 0.045, VolumeScale = 0.36, PitchOffset = 0.12},
     },
+    -- Three deliberately different pickup signatures using existing,
+    -- Roblox-included, nonlicensed game sounds. No asset uploads or new
+    -- continuous sound sources. Reward sound group volume stays authoritative.
+    DistrictSignal = {
+        {Sound = "Reward", VolumeScale = 0.72, PitchOffset = -0.22},
+        {Sound = "Countdown", Delay = 0.065, VolumeScale = 0.38, PitchOffset = 0.16},
+        {Sound = "ShardCollect", Delay = 0.135, VolumeScale = 0.32, PitchOffset = 0.31},
+    },
+    DistrictSupply = {
+        {Sound = "Ready", VolumeScale = 0.43, PitchOffset = -0.24},
+        {Sound = "ShardCollect", Delay = 0.075, VolumeScale = 0.58, PitchOffset = 0.12},
+    },
+    DistrictSupplyElite = {
+        {Sound = "GoldenShard", VolumeScale = 0.78, PitchOffset = -0.16},
+        {Sound = "Reward", Delay = 0.065, VolumeScale = 0.46, PitchOffset = 0.09},
+        {Sound = "ShardCollect", Delay = 0.13, VolumeScale = 0.19, PitchOffset = 0.28},
+    },
     Vote = {
         {Sound = "Vote", VolumeScale = 0.84, PitchOffset = -0.03},
         {Sound = "UISelect", Delay = 0.025, VolumeScale = 0.24, PitchOffset = 0.18},

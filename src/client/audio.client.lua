@@ -757,9 +757,18 @@ cosmeticStateEvent.OnClientEvent:Connect(function(payload)
 end)
 
 chaosShardCollectedEvent.OnClientEvent:Connect(function(payload)
+    if type(payload) ~= "table" then return end
     local total = math.max(1, math.floor(tonumber(payload.total) or 1))
     local variance = math.min(0.08, total * 0.008)
-    if payload.golden == true then
+    -- Ordinary crystals, rare physical caches and time-limited missions
+    -- must have distinct sonic identity; all use existing reward sound
+    -- sources, with no new SFX instances or separate audio update loop.
+    if payload.source == "DistrictSignal" then
+        play("DistrictSignal", 0.015)
+    elseif payload.source == "DistrictCache" then
+        play(payload.golden == true and "DistrictSupplyElite"
+            or "DistrictSupply", 0.015)
+    elseif payload.golden == true then
         play("GoldenShard", 0.025)
     else
         play("ShardCollect", variance)
