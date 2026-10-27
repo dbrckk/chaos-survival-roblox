@@ -79,6 +79,12 @@ local FOLDERS = {
         LowDistance = 145,
         MediumDistance = 215,
     },
+    -- Four scenes are WITHIN the 320-stud floor, so Medium distance
+    -- must cover its corners; Low builds no geometry in the first place.
+    DistrictSectorSetpiecesLocal = {
+        LowDistance = 0,
+        MediumDistance = 255,
+    },
     ArenaServicePropsLocal = {
         LowDistance = 105,
         MediumDistance = 165,
