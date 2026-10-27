@@ -260,6 +260,7 @@ function DistrictSignalRush.start(ctx)
     folder.Name = "DistrictSignalRush"
     folder:SetAttribute("SignalReward", DistrictSignalRush.Reward)
     folder:SetAttribute("SignalRoute", 0)
+    folder:SetAttribute("UpcomingSignalRoute", 0)
     folder:SetAttribute("SignalWave", 0)
     folder.Parent = arena
     table.insert(ctx.Cleanup, folder)
@@ -317,8 +318,13 @@ function DistrictSignalRush.start(ctx)
 
     local first = math.random(1, 4)
     local second = ((first + math.random(1, 3) - 1) % 4) + 1
+    -- Preview the NEXT live objective before activation. The client sees
+    -- only the authoritative route ID and can prepare the free transit.
+    folder:SetAttribute("UpcomingSignalRoute", first)
     task.spawn(function()
         for wave, route in ipairs({first, second}) do
+            if not folder.Parent or not ctx.Active() then break end
+            folder:SetAttribute("UpcomingSignalRoute", route)
             task.wait(wave == 1 and DistrictSignalRush.StartDelay
                 or DistrictSignalRush.BetweenWaves)
             if not folder.Parent or not ctx.Active()
@@ -341,6 +347,7 @@ function DistrictSignalRush.start(ctx)
             activeNode = node
             node.setActive(true, false, wave)
             folder:SetAttribute("SignalRoute", route)
+            folder:SetAttribute("UpcomingSignalRoute", 0)
             folder:SetAttribute("SignalWave", wave)
 
             -- Two short event windows, with no RenderStepped or Heartbeat.
@@ -349,6 +356,9 @@ function DistrictSignalRush.start(ctx)
             node.setActive(false, activeClaimed, wave)
             activeNode = nil
             folder:SetAttribute("SignalRoute", 0)
+        end
+        if folder.Parent then
+            folder:SetAttribute("UpcomingSignalRoute", 0)
         end
     end)
 
