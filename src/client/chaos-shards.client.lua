@@ -154,7 +154,9 @@ local function show(reward, total, goldenFlag, flowBonus, source)
     local golden = goldenFlag == true or (tonumber(reward) or 1) >= 3
     local flow = math.max(0, math.floor(tonumber(flowBonus) or 0))
     local shardTotal = math.max(1, math.floor(tonumber(total) or 1))
-    if source == "DistrictCache" then
+    if source == "DistrictSignal" then
+        label.Text = "SIGNAL SECURED  •  +" .. tostring(reward) .. " COINS"
+    elseif source == "DistrictCache" then
         label.Text = "+" .. tostring(reward) .. " COINS  •  DISTRICT SUPPLY CLAIMED"
     elseif golden then
         label.Text = "+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD"
