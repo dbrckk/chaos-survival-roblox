@@ -55,7 +55,7 @@ local function part(model, name, size, cf, color, material)
     return p
 end
 
-local function construct(folder, base, route)
+local function construct(folder, base, route, variantId)
     local signs = ROUTE_SIGNS[route]
     local color = ROUTE_COLORS[route]
     local groundY = base.Position.Y + base.Size.Y * 0.5
@@ -99,6 +99,64 @@ local function construct(folder, base, route)
     local pole = part(model, "BeaconSpine",
         Vector3.new(0.65, 6.8, 0.65),
         frame * CFrame.new(0, 5.6, 0), dark)
+
+    -- Four arena families use different original silhouettes, not
+    -- recolored copies. Geometry stays entirely decorative and below
+    -- the 3D/Android detail budget: no lights or animated physics.
+    if variantId == "Classic" then
+        local dish = part(model, "WeatherReceiver",
+            Vector3.new(0.7, 5.6, 5.6),
+            frame * CFrame.new(0, 13, 0)
+                * CFrame.Angles(0, 0, math.rad(25)),
+            alloy)
+        dish.Shape = Enum.PartType.Cylinder
+        local eye = part(model, "StormEye",
+            Vector3.new(1.7, 1.7, 1.7),
+            frame * CFrame.new(0, 13.2, -0.60),
+            color, Enum.Material.Glass)
+        eye.Shape = Enum.PartType.Ball
+        eye.Transparency = 0.20
+    elseif variantId == "Towers" then
+        part(model, "SuspensionGantry",
+            Vector3.new(10.2, 1.15, 3.1),
+            frame * CFrame.new(0, 12.2, 0), alloy)
+        part(model, "TransitSignalCab",
+            Vector3.new(4.6, 2.8, 3.0),
+            frame * CFrame.new(0, 14.3, 0), dark)
+        local pane = part(model, "CabinWindow",
+            Vector3.new(3.8, 1.2, 0.19),
+            frame * CFrame.new(0, 14.4, -1.6),
+            color, Enum.Material.Glass)
+        pane.Transparency = 0.27
+    elseif variantId == "Crossroads" then
+        for side = -1, 1, 2 do
+            part(model, "ExchangeBlade" .. tostring(side),
+                Vector3.new(3.0, 5.8, 1.1),
+                frame * CFrame.new(side * 3.25, 12.7, 0)
+                    * CFrame.Angles(0, math.rad(18 * side), 0),
+                alloy)
+        end
+        part(model, "RoutingHeader",
+            Vector3.new(9.5, 0.85, 1.6),
+            frame * CFrame.new(0, 16.0, 0),
+            color)
+    elseif variantId == "Orbital" then
+        local radius, segments = 4.3, 8
+        for index = 1, segments do
+            local a1 = 2 * math.pi * (index - 1) / segments
+            local a2 = 2 * math.pi * index / segments
+            local first = Vector3.new(math.cos(a1) * radius,
+                14 + math.sin(a1) * radius, 0)
+            local second = Vector3.new(math.cos(a2) * radius,
+                14 + math.sin(a2) * radius, 0)
+            local length = (second - first).Magnitude
+            part(model, "ReceiverHaloSegment" .. index,
+                Vector3.new(0.55, length, 0.55),
+                frame * CFrame.lookAt((first + second) * 0.5, second)
+                    * CFrame.Angles(math.pi * 0.5, 0, 0),
+                alloy)
+        end
+    end
 
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "SecureDistrictSignal"
@@ -178,8 +236,9 @@ function DistrictSignalRush.start(ctx)
     table.insert(ctx.Cleanup, folder)
 
     local nodes = {}
+    local variantId = tostring(arena:GetAttribute("VariantId") or "Classic")
     for route = 1, 4 do
-        nodes[route] = construct(folder, base, route)
+        nodes[route] = construct(folder, base, route, variantId)
     end
 
     local claimedPlayers = {}
