@@ -336,6 +336,10 @@ local function currentArena()
 end
 
 local function update()
+    -- Caches can be parented before all child parts arrive, or the server
+    -- can refresh a shared prompt as a platform changes collision. Re-mask
+    -- any spent personal tier using the existing 4Hz compass heartbeat.
+    hideClaimedCues()
     if hazardCueVisible() then
         panel.Visible = false
         return
