@@ -363,6 +363,20 @@ task.spawn(function()
                 end
             end
         end
+        -- Four original corner skyline models are separate from the
+        -- exactly sixteen district buildings. Cull each by its own pivot,
+        -- using this existing loop instead of a second mobile update task.
+        local cornerLandmarks = decor and decor:FindFirstChild("ArenaCornerLandmarks3D")
+        if cornerLandmarks and cornerLandmarks:IsA("Folder") then
+            for _, landmark in ipairs(cornerLandmarks:GetChildren()) do
+                if landmark:IsA("Model")
+                    and landmark:GetAttribute("CosmeticOnly") == true
+                    and landmark:GetAttribute("SourceIsOriginal") == true then
+                    applyFolder(landmark, DISTRICT_ARCHITECTURE_LOD,
+                        profile, landmark:GetPivot().Position, cameraPoint)
+                end
+            end
+        end
         local hero = SceneryLodRules.heroArchitectureOwner(workspace)
         if hero then
             applyFolder(hero, HERO_ARCHITECTURE_LOD,
