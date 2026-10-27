@@ -138,9 +138,51 @@ local function cacheEligible(model)
         and model.Parent ~= nil
 end
 
+local function tierAlreadyClaimed(tier)
+    if tier == "Easy" then
+        return claimedEasy
+            or player:GetAttribute("RoundDistrictEasyClaimed") == true
+    elseif tier == "Elite" then
+        return claimedElite
+            or player:GetAttribute("RoundDistrictEliteClaimed") == true
+    end
+    return false
+end
+
+local function hideClaimedCache(model)
+    if not cacheEligible(model)
+        or not tierAlreadyClaimed(model:GetAttribute("CacheTier")) then
+        return
+    end
+    -- Each model is a globally shared server chest. Mask its optional
+    -- interaction *only for this player* after the server has consumed
+    -- their tier entitlement; never destroy the chest for other users.
+    local lid = model:FindFirstChild("CacheLid")
+    if not lid then return end
+    local prompt = lid:FindFirstChild("OpenDistrictCache")
+    if prompt and prompt:IsA("ProximityPrompt") then
+        prompt.Enabled = false
+    end
+    local label = lid:FindFirstChild("SupplyCacheLabel")
+    if label and label:IsA("BillboardGui") then
+        label.Enabled = false
+    end
+end
+
+local function hideClaimedCues()
+    for model in pairs(caches) do
+        if cacheEligible(model) then
+            hideClaimedCache(model)
+        else
+            caches[model] = nil
+        end
+    end
+end
+
 local function track(instance)
     if cacheEligible(instance) then
         caches[instance] = true
+        hideClaimedCache(instance)
     end
 end
 
@@ -151,6 +193,8 @@ end)
 for _, item in ipairs(workspace:GetDescendants()) do
     track(item)
 end
+player:GetAttributeChangedSignal("RoundDistrictEasyClaimed"):Connect(hideClaimedCues)
+player:GetAttributeChangedSignal("RoundDistrictEliteClaimed"):Connect(hideClaimedCues)
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
@@ -292,6 +336,10 @@ local function currentArena()
 end
 
 local function update()
+    -- Caches can be parented before all child parts arrive, or the server
+    -- can refresh a shared prompt as a platform changes collision. Re-mask
+    -- any spent personal tier using the existing 4Hz compass heartbeat.
+    hideClaimedCues()
     if hazardCueVisible() then
         panel.Visible = false
         return
@@ -369,8 +417,7 @@ local function update()
                 local tier = model:GetAttribute("CacheTier")
                 if (tonumber(player:GetAttribute("RoundDistrictCaches")) or 0) < 2
                     and support and support:IsA("BasePart")
-                    and not (tier == "Easy" and claimedEasy)
-                    and not (tier == "Elite" and claimedElite)
+                    and not tierAlreadyClaimed(tier)
                     and support.CanCollide and support.Transparency < 0.95 then
                     local lid = model:FindFirstChild("CacheLid")
                     if lid and lid:IsA("BasePart") then

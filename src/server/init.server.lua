@@ -944,6 +944,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundShardCoins", 0)
         player:SetAttribute("RoundDistrictCaches", 0)
         player:SetAttribute("RoundDistrictCoins", 0)
+        -- Authoritative per-tier reward state for the Android compass.
+        -- Total caches alone cannot tell which physical detour is still
+        -- claimable after the first chest was opened.
+        player:SetAttribute("RoundDistrictEasyClaimed", false)
+        player:SetAttribute("RoundDistrictEliteClaimed", false)
         player:SetAttribute("RoundDistrictSignals", 0)
         player:SetAttribute("RoundSignalCoins", 0)
         player:SetAttribute("RoundNearMisses", 0)
