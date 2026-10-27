@@ -1,6 +1,6 @@
 -- Client-authored 3D signal scanner arches for the two live district
 -- objectives. Existing server models/prompts remain fully authoritative.
--- 0 new parts on Low; max 24 Medium / 44 High decorative parts per arena.
+-- 0 new parts on Low; max 36 Medium / 80 High decorative parts per arena.
 -- No per-frame updates, server replication, new audio or blocking geometry.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -207,6 +207,14 @@ local function rebuild()
     end
     for _, model in ipairs(folderOwner:GetChildren()) do register(model) end
     connections[#connections + 1] = folderOwner.ChildAdded:Connect(register)
+    connections[#connections + 1] = folderOwner.ChildRemoved:Connect(
+        function(model)
+            local entry = stations[model]
+            if entry then
+                stations[model] = nil
+                if entry.owner.Parent then entry.owner:Destroy() end
+            end
+        end)
     connections[#connections + 1] =
         folderOwner:GetAttributeChangedSignal("UpcomingSignalRoute"):Connect(
             function()
