@@ -151,7 +151,7 @@ local function station(folder, base, route, outer)
 
     local gui = Instance.new("BillboardGui")
     gui.Name = "TransitWayfinding"
-    gui.Size = UDim2.fromOffset(164, 38)
+    gui.Size = UDim2.fromOffset(184, 49)
     gui.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
     gui.MaxDistance = 88
     gui.AlwaysOnTop = false
@@ -165,8 +165,10 @@ local function station(folder, base, route, outer)
     label.BorderSizePixel = 0
     label.Font = Enum.Font.GothamBold
     label.TextScaled = true
+    label.TextWrapped = true
     label.TextColor3 = color
-    label.Text = outer and "BACK TO CENTER" or "OUTER DISTRICT"
+    label.Text = outer and "CLIMB FOR SUPPLY\\nRETURN TO CENTER"
+        or "FREE FAST TRAVEL\\nOUTER DISTRICT"
     label.Parent = gui
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
