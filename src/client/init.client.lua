@@ -2203,12 +2203,13 @@ local function showRoundFeedback(feedback)
     local streakBonus = tonumber(feedback.streakBonusCoins) or 0
     local shardCoins = tonumber(feedback.shardCoins) or 0
     local districtCoins = tonumber(feedback.districtCoins) or 0
+    local signalCoins = tonumber(feedback.signalCoins) or 0
     local challengeCoins = tonumber(feedback.challengeCoins) or 0
     local challengeXP = tonumber(feedback.challengeXP) or 0
     local flowCoins = tonumber(feedback.flowCoins) or 0
     local fusionBonusCoins = tonumber(feedback.fusionBonusCoins) or 0
     local shownCoins = (tonumber(feedback.coins) or 0)
-        + shardCoins + districtCoins + challengeCoins + flowCoins
+        + shardCoins + districtCoins + signalCoins + challengeCoins + flowCoins
     local shownXP = (tonumber(feedback.xp) or 0) + challengeXP
 
     local extras = {}
@@ -2220,6 +2221,9 @@ local function showRoundFeedback(feedback)
     end
     if districtCoins > 0 then
         table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_SUPPLIES", districtCoins))
+    end
+    if signalCoins > 0 then
+        table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_SIGNALS", signalCoins))
     end
     if feedback.challengeCompleted then
         table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_CHALLENGE", challengeCoins))
@@ -2294,6 +2298,10 @@ local function showRoundFeedback(feedback)
                 tonumber(feedback.challengeTarget) or 1
             )
         )
+    end
+    local signalCount = math.max(0, math.floor(tonumber(feedback.districtSignalCount) or 0))
+    if signalCount > 0 then
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_SIGNAL_TAG"))
     end
     local shardCount = math.max(0, math.floor(tonumber(feedback.shardCount) or 0))
     if shardCount > 0 then
@@ -2374,6 +2382,8 @@ local function showRoundFeedback(feedback)
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_STREAK_TAG", streakCount))
         elseif crewRounds >= 1 then
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CREW_ROUNDS", crewRounds))
+        elseif signalCount > 0 then
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_SIGNAL_TAG"))
         elseif shardCount > 0 then
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_SHARDS_TAG", shardCount))
         end
