@@ -1981,6 +1981,9 @@ local function districtTraverseTarget(record, root, now)
     -- Riskier personalities explore further; avatars remain capped at 16
     -- studs/second and all jumps use the ordinary Humanoid controller.
     if not expedition then
+        -- A bot already pursuing a time-limited station must not suddenly
+        -- start a long parkour outing on the next ordinary rethink tick.
+        if record.signalInterestRoute then return nil end
         if now < (record.nextDistrictTraverseAt or 0) then
             return nil
         end
@@ -3197,6 +3200,7 @@ local function stepRecord(record, now)
         if currentState.phase == "round"
             and not urgentTarget
             and not record.districtTraverse
+            and not record.signalInterestRoute
             and record.target
             and not record.targetIsPad
             and not AISurvivorRules.committedWorldRoute(
@@ -3217,6 +3221,7 @@ local function stepRecord(record, now)
 
         if not urgentTarget and record.target
             and not record.districtTraverse
+            and not record.signalInterestRoute
             and (root.Position - record.target).Magnitude < 4.2
         then
             record.target = nil
