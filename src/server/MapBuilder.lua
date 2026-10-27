@@ -140,6 +140,44 @@ local function addPerimeterStations(decor, config, variant, theme)
             CFrame.new(0, 0.11, -4.25), Enum.Material.Neon,
             accent, 0.57)
 
+        -- Distinctive architectural kitbash: actual layered 3D forms rather
+        -- than generic floating neon blocks. All authored pieces share the
+        -- existing model, without dynamic updates, shadows or colliders.
+        -- Ground-level floor remains authoritative for hazards and R15.
+        for _, side in ipairs({-1, 1}) do
+            piece(side < 0 and "CompressorPodL" or "CompressorPodR",
+                "Part", Vector3.new(3.7, 3.1, 4.6),
+                CFrame.new(side * 7.0, 2.4, 1.1),
+                Enum.Material.Metal,
+                theme.Structure:Lerp(theme.Detail, 0.36), 0.04)
+            local intake = piece(
+                side < 0 and "IntakeTurbineL" or "IntakeTurbineR",
+                "Part", Vector3.new(2.6, 0.8, 2.6),
+                CFrame.new(side * 7.0, 3.4, -1.4)
+                    * CFrame.Angles(math.rad(90), 0, 0),
+                Enum.Material.Metal, theme.Detail, 0.08)
+            intake.Shape = Enum.PartType.Cylinder
+            piece(side < 0 and "AngledServiceWingL" or "AngledServiceWingR",
+                "WedgePart", Vector3.new(3.4, 1.7, 5.7),
+                CFrame.new(side * 7.0, 4.9, 1.1)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal,
+                theme.Structure:Lerp(theme.Secondary, 0.23), 0.06)
+            piece(side < 0 and "PodDataRailL" or "PodDataRailR",
+                "Part", Vector3.new(0.18, 0.22, 3.1),
+                CFrame.new(side * 8.85, 3.4, 0.7),
+                Enum.Material.Neon, side < 0 and accent or secondary, 0.40)
+        end
+        local generator = piece("GeneratorRotor", "Part",
+            Vector3.new(2.7, 0.9, 2.7),
+            CFrame.new(0, 8.1, -1.4)
+                * CFrame.Angles(math.rad(90), 0, 0),
+            Enum.Material.Metal, theme.Detail, 0.08)
+        generator.Shape = Enum.PartType.Cylinder
+        piece("GeneratorShield", "Part", Vector3.new(4.0, 0.55, 1.4),
+            CFrame.new(0, 7.8, -0.4), Enum.Material.Metal,
+            theme.Structure:Lerp(theme.Accent, 0.24), 0.07)
+
         if variant.Id == "Towers" then
             -- Twin crane masts convey vertical scale without placing an
             -- overhead platform where an R15 could become trapped.
