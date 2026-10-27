@@ -86,7 +86,7 @@ local function sectorSign(model, anchor, copy, color)
     stroke.Parent = label
 end
 
-local function makeSector(base, theme, index, tier)
+local function makeSector(base, theme, index, tier, variant)
     local high = tier == "High"
     local sx, sz, title, number = table.unpack(signs[index])
     local reachX = math.min(116, base.Size.X * 0.5 - 26)
@@ -398,7 +398,7 @@ local function rebuild()
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
     for index = 1, 4 do
-        makeSector(base, theme, index, tier)
+        makeSector(base, theme, index, tier, variant)
     end
 end
 
