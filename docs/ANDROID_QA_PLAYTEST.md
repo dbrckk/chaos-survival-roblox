@@ -2159,3 +2159,42 @@ based solely on `S4/C4`, CI, or the registry's approved model IDs.
 A new test universe must remain distinct from public Universe
 `10771083668` / Place `95351659174730`; do not use the public
 experience as a substitute for isolated staging.
+
+
+## Mega Arena 224-stud release candidate — on-device criteria (27 October)
+
+This change is intentionally NOT a cosmetic zoom. All four server-owned
+Arena.Base collision floors are **224 × 224 studs**, approximately 2.1×
+the prior 150–156-stud floor area. The original 16/21/17/18 core decks
+retain their ordered indices, while four optional perimeter escape
+chains now have **four sequential grounded jump steps each** (16 actual
+collidable platforms, versus the previous eight). The built-in
+ShrinkingArena and disaster target sampling still use the live floor.
+Physical desktop + Android playtesting must verify jump gaps, bots,
+hazard coverage, spectating and returns across the new perimeter.
+
+Each arena now requests eight *placements*, composed from the same six
+previously approved original creator-owned Roblox models. This means
+**more actual 3D model instances, not eight new unique meshes**. Models
+are sanitized, noncolliding, shadowless and streamed atomically, with
+the pre-existing native skyline as fallback for model load failures.
+Perimeter stations also gain distinct native 3D compressor/turbine
+details. No AI-created mesh is represented as approved.
+
+Staging-only native QA capture telemetry should show `3D S8/C8` if
+all eight packages loaded and streamed locally: `S` = server-mounted
+count; `C` = real client-received geometry count. This does NOT prove
+the packages rendered correctly: verify geometry/materials with native
+world-only screenshots. Public builds have no staging QA overlay.
+
+**First-session route discovery:** in READY / the first round, the
+localized coach instructs players to follow floor arrows, climb and
+avoid visible warning zones. Four directions of physical, non-colliding
+route chevrons lead toward the real outer start terraces, and contract
+with the live floor during shrinking rounds. Check usability on narrow
+portrait Android, tablet, desktop and while spectating.
+
+**Release**: green CI is required but insufficient. Only promote to
+public via the user's explicit public playtest dispatch after confirming
+that the current `main` SHA and public Universe/Place ID match exactly.
+No automatic deployment is part of this graphics/geometry change.
