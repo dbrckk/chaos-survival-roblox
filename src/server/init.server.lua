@@ -56,6 +56,7 @@ local RoundResultState = require(script.RoundResultState)
 local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
 local ArenaDistrictCaches = require(script.ArenaDistrictCaches)
+local ArenaDistrictTransit = require(script.ArenaDistrictTransit)
 local RoundChallenge = require(script.RoundChallenge)
 local RoundMedals = require(script.RoundMedals)
 local FlowCombo = require(script.FlowCombo)
@@ -1246,6 +1247,19 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end,
         SoloMode = roundSettings.Solo,
         EnableDistrictCaches = allowDynamicArenas,
+        -- Newcomers focus on survival first. Shrinking Arena contracts
+        -- the floor, so its stationary fast-travel stations stay disabled.
+        EnableDistrictTransit = allowDynamicArenas
+            and activeHazards.ShrinkingArena ~= true,
+        OnDistrictTransitUsed = function(player, route, outbound)
+            if player.Parent ~= Players then return end
+            GameAnalytics.custom(
+                player, "DistrictTransitUsed", 1,
+                "Arena:" .. tostring(currentArenaVariant),
+                "Route:" .. tostring(route),
+                "Direction:" .. (outbound and "Outer" or "Hub")
+            )
+        end,
         OnCollected = function(player, reward, position, golden, source)
             if player.Parent ~= Players
                 or player:GetAttribute("DataLoaded") ~= true
@@ -1342,6 +1356,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
         arenaMechanic = mechanicResult
     else
         warn("Arena mechanic failed to start:", currentArenaVariant, mechanicResult)
+    end
+
+    local transitOk, transitResult = pcall(ArenaDistrictTransit.start, ctx)
+    if not transitOk then
+        warn("District transit failed to start:", transitResult)
     end
 
     local collectibleOk, collectibleResult = pcall(RoundCollectibles.start, ctx)
