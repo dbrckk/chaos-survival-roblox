@@ -9,6 +9,16 @@ local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local caches = {}
 local roundActive = false
+local claimedEasy, claimedElite = false, false
+local shardEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
+shardEvent.OnClientEvent:Connect(function(payload)
+    if type(payload) ~= "table" or payload.source ~= "DistrictCache" then return end
+    if tonumber(payload.reward) == 5 then
+        claimedElite = true
+    elseif tonumber(payload.reward) == 2 then
+        claimedEasy = true
+    end
+end)
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "DistrictExpeditionNavigator"
@@ -83,10 +93,13 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
     local phase = tostring(state.phase or state.Phase or ""):lower()
-    if phase == "round" or phase == "playing" or phase == "active" then
+    if phase == "round" then
+        if not roundActive then
+            claimedEasy, claimedElite = false, false
+        end
         roundActive = true
     elseif phase == "intermission" or phase == "voting"
-        or phase == "ready" or phase == "results"
+        or phase == "ready" or phase == "result"
         or phase == "postround" or phase == "waiting"
     then
         roundActive = false
@@ -115,7 +128,10 @@ local function update()
             caches[model] = nil
         else
             local support = model.Parent
+            local tier = model:GetAttribute("CacheTier")
             if support and support:IsA("BasePart")
+                and not (tier == "Easy" and claimedEasy)
+                and not (tier == "Elite" and claimedElite)
                 and support.CanCollide and support.Transparency < 0.95 then
                 local lid = model:FindFirstChild("CacheLid")
                 if lid and lid:IsA("BasePart") then
