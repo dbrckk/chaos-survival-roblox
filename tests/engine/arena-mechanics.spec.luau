@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
+local ArenaDistrictTransit = require("../../src/server/ArenaDistrictTransit")
 local FluxRelayRules = require("../../src/shared/FluxRelayRules")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
@@ -1176,6 +1177,78 @@ describe("Arena mechanics", function()
             Vector3.new(0, 8, 0)
         )
         expect(falling.Y).toBe(-52)
+    end)
+
+    it("builds usable, server-owned two-way district transit in all four live arenas", function()
+        local human = Instance.new("Humanoid")
+        local root = Instance.new("Part")
+        root.Size = Vector3.new(2, 2, 1)
+        for _, id in ipairs(ArenaVariants.Order) do
+            local map = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = map:FindFirstChild("Arena")
+            local base = arena:FindFirstChild("Base")
+            local cleanup = {}
+            local ctx = {
+                Active = function() return true end,
+                EnableDistrictTransit = true,
+                IsContestantActive = function() return true end,
+                ActiveDisasters = {Meteors = true},
+                Cleanup = cleanup,
+            }
+            expect(ArenaDistrictTransit.start(ctx)).toBe(8)
+            local folder = arena:FindFirstChild("DistrictTransit")
+            expect(folder ~= nil and folder:IsA("Folder")).toBe(true)
+            expect(folder:GetAttribute("ServerAuthoritative")).toBe(true)
+            expect(folder:GetAttribute("TransitStationCount")).toBe(8)
+            for route = 1, 4 do
+                for _, outer in ipairs({false, true}) do
+                    local name = "Transit" .. route .. (outer and "Outer" or "Hub")
+                    local station = folder:FindFirstChild(name)
+                    expect(station ~= nil and station:IsA("Model")).toBe(true)
+                    expect(station:GetAttribute("TransitRoute")).toBe(route)
+                    expect(station:GetAttribute("TransitOuter")).toBe(outer)
+                    local headerPart = station:FindFirstChild("TransitHeader")
+                    expect(headerPart ~= nil).toBe(true)
+                    local prompt = headerPart:FindFirstChildWhichIsA("ProximityPrompt")
+                    expect(prompt ~= nil).toBe(true)
+                    expect(prompt.HoldDuration >= 0.4).toBe(true)
+                    for _, item in ipairs(station:GetDescendants()) do
+                        if item:IsA("BasePart") then
+                            expect(item.CanCollide).toBe(false)
+                            expect(item.CanQuery).toBe(false)
+                            expect(item.CanTouch).toBe(false)
+                        end
+                    end
+                    local arrival = ArenaDistrictTransit.arrival(
+                        arena, base, route, outer, human, root
+                    )
+                    expect(arrival ~= nil).toBe(true)
+                    if arrival then
+                        local edge = base.Size.X * 0.5
+                        expect(math.abs(arrival.X - base.Position.X)
+                            < edge - 4).toBe(true)
+                        expect(math.abs(arrival.Z - base.Position.Z)
+                            < edge - 4).toBe(true)
+                    end
+                end
+            end
+            for _, disposable in ipairs(cleanup) do
+                if disposable.Parent then disposable:Destroy() end
+            end
+            map:Destroy()
+        end
+        local inactive = {
+            Active = function() return true end,
+            EnableDistrictTransit = true,
+            IsContestantActive = function() return true end,
+            ActiveDisasters = {ShrinkingArena = true},
+        }
+        expect(ArenaDistrictTransit.allowed(inactive)).toBe(false)
+        inactive.ActiveDisasters = {}
+        inactive.EnableDistrictTransit = false
+        expect(ArenaDistrictTransit.allowed(inactive)).toBe(false)
+        root:Destroy()
+        human:Destroy()
     end)
 
     it("keeps mobility impulses non-lethal and bounded", function()
