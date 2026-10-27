@@ -100,6 +100,8 @@ def export_obj(source: Path, palette: Path, destination: Path) -> dict:
             continue
         position_data = bytearray()
         normal_data = bytearray()
+        uv_data = bytearray()
+        tangent_data = bytearray()
         mins = [float("inf")] * 3
         maxs = [float("-inf")] * 3
 
@@ -115,9 +117,30 @@ def export_obj(source: Path, palette: Path, destination: Path) -> dict:
             if mag <= 1e-9 or not math.isfinite(mag):
                 raise ValueError("Degenerate face in " + source.name)
             normal = (nx / mag, ny / mag, nz / mag)
+            # UVs are deterministic face-planar with a 6-stud tile repeat.
+            # Keep this on the imported mesh itself (not a runtime script),
+            # so future SurfaceAppearance OpenGL tangent-space normal maps
+            # can function without adding geometry or colliders.
+            main_axis = max(range(3), key=lambda i: abs(normal[i]))
+            u_axis, v_axis = ((2, 1) if main_axis == 0
+                              else ((0, 2) if main_axis == 1 else (0, 1)))
+            projected = [-normal[i] * normal[u_axis] for i in range(3)]
+            projected[u_axis] += 1.0
+            length = math.sqrt(sum(v * v for v in projected))
+            if length <= 1e-8:
+                raise ValueError("Invalid tangent axis")
+            tangent = tuple(v / length for v in projected)
+            cross = (normal[1] * tangent[2] - normal[2] * tangent[1],
+                     normal[2] * tangent[0] - normal[0] * tangent[2],
+                     normal[0] * tangent[1] - normal[1] * tangent[0])
+            handedness = 1.0 if cross[v_axis] >= 0 else -1.0
             for xyz in points:
                 position_data.extend(struct.pack("<3f", *xyz))
                 normal_data.extend(struct.pack("<3f", *normal))
+                uv_data.extend(struct.pack("<2f",
+                                           xyz[u_axis] / 6.0,
+                                           xyz[v_axis] / 6.0))
+                tangent_data.extend(struct.pack("<4f", *tangent, handedness))
                 for i in range(3):
                     mins[i] = min(mins[i], xyz[i])
                     maxs[i] = max(maxs[i], xyz[i])
@@ -125,6 +148,8 @@ def export_obj(source: Path, palette: Path, destination: Path) -> dict:
         count = len(faces) * 3
         pos_view = stream(position_data, 34962)
         norm_view = stream(normal_data, 34962)
+        uv_view = stream(uv_data, 34962)
+        tangent_view = stream(tangent_data, 34962)
         pos_id = len(accessors)
         accessors.append({
             "bufferView": pos_view, "componentType": 5126,
@@ -134,6 +159,16 @@ def export_obj(source: Path, palette: Path, destination: Path) -> dict:
         accessors.append({
             "bufferView": norm_view, "componentType": 5126,
             "count": count, "type": "VEC3",
+        })
+        uv_id = len(accessors)
+        accessors.append({
+            "bufferView": uv_view, "componentType": 5126,
+            "count": count, "type": "VEC2",
+        })
+        tangent_id = len(accessors)
+        accessors.append({
+            "bufferView": tangent_view, "componentType": 5126,
+            "count": count, "type": "VEC4",
         })
 
         values = materials[name]
@@ -152,7 +187,12 @@ def export_obj(source: Path, palette: Path, destination: Path) -> dict:
             "alphaMode": "OPAQUE",
         })
         primitives.append({
-            "attributes": {"POSITION": pos_id, "NORMAL": norm_id},
+            "attributes": {
+                "POSITION": pos_id,
+                "NORMAL": norm_id,
+                "TEXCOORD_0": uv_id,
+                "TANGENT": tangent_id,
+            },
             "material": mat_id, "mode": 4,
         })
 
