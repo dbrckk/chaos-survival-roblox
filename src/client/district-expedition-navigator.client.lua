@@ -381,13 +381,13 @@ local function currentArena()
 end
 
 local function update()
-    stepMarker.Enabled = false
     -- Caches can be parented before all child parts arrive, or the server
     -- can refresh a shared prompt as a platform changes collision. Re-mask
     -- any spent personal tier using the existing 4Hz compass heartbeat.
     hideClaimedCues()
     if hazardCueVisible() then
         panel.Visible = false
+        stepMarker.Enabled = false
         return
     end
     local character = player.Character
@@ -401,12 +401,14 @@ local function update()
         or not humanoid or humanoid.Health <= 0 or not camera
     then
         panel.Visible = false
+        stepMarker.Enabled = false
         return
     end
 
     local arena = currentArena()
     if not arena then
         panel.Visible = false
+        stepMarker.Enabled = false
         return
     end
 
@@ -481,6 +483,7 @@ local function update()
     -- StreamingEnabled may omit far-off objects; no fictitious targets.
     if not targetPosition or targetDistance > (signalPosition and 230 or 170) then
         panel.Visible = false
+        stepMarker.Enabled = false
         return
     end
 
@@ -568,9 +571,16 @@ local function update()
         end
         stepMarker.StudsOffsetWorldSpace =
             Vector3.new(0, landingDeck.Size.Y * 0.5 + 5.0, 0)
-        markerText.Text = "JUMP " .. landingStep .. "/" .. landingTotal
-        markerStroke.Color = color
+        local caption = "JUMP " .. landingStep .. "/" .. landingTotal
+        if markerText.Text ~= caption then
+            markerText.Text = caption
+        end
+        if markerStroke.Color ~= color then
+            markerStroke.Color = color
+        end
         stepMarker.Enabled = true
+    else
+        stepMarker.Enabled = false
     end
 end
 
