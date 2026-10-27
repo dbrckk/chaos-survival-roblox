@@ -2553,8 +2553,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
         end
         addPlatformFinish(decor, platform, i, theme)
 
-        if definition.PerimeterStep == 2 then
-            -- Original native three-dimensional exit facade: four simple
+        if definition.PerimeterStep == 4 then
+            -- Original native three-dimensional exit facade at the FINAL terrace: four simple
             -- nonblocking components per route, no extra emitters/lights.
             -- Mounted on the OUTWARD face of the solid exit pedestal,
             -- away from the player's approach and central hazard lanes.
