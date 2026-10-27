@@ -22,19 +22,24 @@ local ORDER = {
 local MAX_PARTS = 24
 local MAX_DIMENSION = 65
 
--- Four off-floor destinations are intentionally outside player-accessible
--- geometry, kill volumes and hazard telegraphs. Only purely visual meshes
--- are inserted; the existing procedural structures always remain as fallback.
+-- Eight authored locations, using six approved, creator-owned Roblox
+-- Model packages. Four primary skyline anchors plus four staggered
+-- secondary landmarks create real 3D depth on 224-stud mega-arenas.
+-- Cosmetic only: the native fallback architecture, physics and hazards
+-- remain playable if an external model fails to load.
 local VARIANT_ART = {
-    Classic = {"perimeter_gate", "plasma_foundry", "reactor_spire", "service_crane"},
-    Towers = {"service_crane", "sky_transit_exchange", "service_crane", "reactor_spire"},
-    Crossroads = {"perimeter_gate", "sky_transit_exchange", "plasma_foundry", "service_crane"},
-    Orbital = {"orbital_halo_array", "perimeter_gate", "reactor_spire", "orbital_halo_array"},
+    Classic = {"perimeter_gate", "plasma_foundry", "reactor_spire", "service_crane",
+        "sky_transit_exchange", "orbital_halo_array", "plasma_foundry", "perimeter_gate"},
+    Towers = {"service_crane", "sky_transit_exchange", "service_crane", "reactor_spire",
+        "perimeter_gate", "plasma_foundry", "orbital_halo_array", "sky_transit_exchange"},
+    Crossroads = {"perimeter_gate", "sky_transit_exchange", "plasma_foundry", "service_crane",
+        "orbital_halo_array", "reactor_spire", "sky_transit_exchange", "perimeter_gate"},
+    Orbital = {"orbital_halo_array", "perimeter_gate", "reactor_spire", "orbital_halo_array",
+        "sky_transit_exchange", "plasma_foundry", "service_crane", "perimeter_gate"},
 }
 
--- Four authored skyline compositions rather than the same repeated props in
--- every arena. Standoffs are wider for a crane's 22-stud arm than a gate.
--- This keeps all geometry beyond playable platforms on every 150+ stud map.
+-- Each side has two DISTINCT stations, with lateral offsets to avoid
+-- hiding both imported assets behind the same exterior architecture.
 function OriginalMeshScenery.placements(base, variantId)
     if not base or not base:IsA("BasePart") then
         return {}
@@ -51,10 +56,14 @@ function OriginalMeshScenery.placements(base, variantId)
     local halfX, halfZ = base.Size.X * 0.5, base.Size.Z * 0.5
     local surfaceY = base.Position.Y + base.Size.Y * 0.5
     local slots = {
-        {direction = "North", axis = "Z", sign = -1, yaw = 0},
-        {direction = "South", axis = "Z", sign = 1, yaw = math.pi},
-        {direction = "East", axis = "X", sign = 1, yaw = -math.pi * 0.5},
-        {direction = "West", axis = "X", sign = -1, yaw = math.pi * 0.5},
+        {direction = "North", axis = "Z", sign = -1, yaw = 0, lateral = -14},
+        {direction = "South", axis = "Z", sign = 1, yaw = math.pi, lateral = 14},
+        {direction = "East", axis = "X", sign = 1, yaw = -math.pi * 0.5, lateral = -14},
+        {direction = "West", axis = "X", sign = -1, yaw = math.pi * 0.5, lateral = 14},
+        {direction = "NorthRelay", axis = "Z", sign = -1, yaw = 0, lateral = 58},
+        {direction = "SouthRelay", axis = "Z", sign = 1, yaw = math.pi, lateral = -58},
+        {direction = "EastRelay", axis = "X", sign = 1, yaw = -math.pi * 0.5, lateral = 58},
+        {direction = "WestRelay", axis = "X", sign = -1, yaw = math.pi * 0.5, lateral = -58},
     }
     local placements = {}
     for index, slot in ipairs(slots) do
@@ -64,9 +73,9 @@ function OriginalMeshScenery.placements(base, variantId)
         -- safeExteriorPosition additionally accounts for actual imported
         -- bounds and rotation, so all six approved packages stay off-floor.
         local x = slot.axis == "X" and slot.sign * (halfX + setback)
-            or (index % 2 == 0 and 12 or -12)
+            or slot.lateral
         local z = slot.axis == "Z" and slot.sign * (halfZ + setback)
-            or (index % 2 == 0 and 12 or -12)
+            or slot.lateral
         placements[index] = {
             name = "Original" .. names[assetName] .. slot.direction,
             asset = assetName,
@@ -414,11 +423,11 @@ function OriginalMeshScenery.mount(arena, templates)
         end
     end
     -- Counters are replicated for inspection without any Studio-only
-    -- debugging tools. "Complete" means four decorative placements, not
+    -- debugging tools. "Complete" means eight decorative placements, not
     -- proof of texture visibility or Android performance.
     local total = #folder:GetChildren()
     arena:SetAttribute("Original3DSceneryCount", total)
-    arena:SetAttribute("Original3DSceneryComplete", total == 4)
+    arena:SetAttribute("Original3DSceneryComplete", total == 8)
     return mounted
 end
 
