@@ -33,7 +33,7 @@ function DistrictMaterialFinishKit.stencil(surface, serial, accent, tier, style)
     gui.PixelsPerStud = tier == "High" and 24 or 16
     gui.LightInfluence = 0.70
     gui.AlwaysOnTop = false
-    gui.ZOffset = 0.02
+    gui.ZOffset = 0
     gui.Parent = surface
 
     local dark = Color3.fromRGB(12, 21, 31)
