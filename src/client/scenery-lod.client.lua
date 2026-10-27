@@ -26,6 +26,15 @@ local HERO_ARCHITECTURE_LOD = {
     KeepHeroLow = true,
 }
 
+-- Server-authoritative district models are ALL cosmetic and are hidden
+-- together through the existing 0.65/0.90s tier update. No new loops.
+-- Keep visible on most Low Android camera positions while avoiding an
+-- unnecessary full 3D skyline beyond the surrounding district.
+local DISTRICT_ARCHITECTURE_LOD = {
+    LowDistance = 175,
+    MediumDistance = 265,
+}
+
 local FOLDERS = {
     ChaosEnvironmentDepthLocal = {
         LowDistance = 150,
@@ -338,6 +347,11 @@ task.spawn(function()
         local original = decor and decor:FindFirstChild("Original3DScenery")
         if original then
             applyFolder(original, ORIGINAL_MESH_LOD,
+                profile, arenaOrigin, cameraPoint)
+        end
+        local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
+        if district and district:IsA("Folder") then
+            applyFolder(district, DISTRICT_ARCHITECTURE_LOD,
                 profile, arenaOrigin, cameraPoint)
         end
         local hero = SceneryLodRules.heroArchitectureOwner(workspace)
