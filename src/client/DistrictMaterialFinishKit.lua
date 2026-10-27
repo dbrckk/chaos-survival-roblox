@@ -20,7 +20,7 @@ end
 
 -- No image asset uploads, textures with unverifiable IDs, or painted
 -- planes in space. Markings are real surface-attached Roblox UI.
-function DistrictMaterialFinishKit.stencil(surface, serial, accent, tier, style)
+function DistrictMaterialFinishKit.stencil(surface, serial, accent, tier, style, face)
     if not surface or not surface:IsA("BasePart")
         or tier == "Low" then
         return nil
@@ -28,7 +28,8 @@ function DistrictMaterialFinishKit.stencil(surface, serial, accent, tier, style)
 
     local gui = Instance.new("SurfaceGui")
     gui.Name = "AuthoredIndustrialFinish"
-    gui.Face = Enum.NormalId.Front
+    gui.Face = face or Enum.NormalId.Front
+    gui.MaxDistance = tier == "High" and 145 or 115
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     gui.PixelsPerStud = tier == "High" and 24 or 16
     gui.LightInfluence = 0.70
