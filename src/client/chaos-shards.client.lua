@@ -358,7 +358,15 @@ task.spawn(function()
         end
 
         local tier = quality()
-        local dt = task.wait(math.max(1 / 30, tier.UpdateInterval))
+        local reduced = player:GetAttribute("ReduceMotion") == true
+        -- Decorative facets must not consume a 30Hz task on low-end
+        -- Android when they are entirely invisible. High keeps the
+        -- original 30Hz polish; Medium 15Hz, Low 5Hz, reduced motion 5Hz.
+        -- This is the existing single shard scheduler, not a new loop.
+        local interval = tier.Name == "High" and (1 / 30)
+            or (tier.Name == "Medium" and (1 / 15) or 0.20)
+        if reduced then interval = math.max(interval, 0.20) end
+        local dt = task.wait(interval)
         pulseClock += dt
 
         local character = player.Character
@@ -377,7 +385,8 @@ task.spawn(function()
                 local pulseSpeed = golden
                     and (close and 8.2 or 5.2)
                     or (close and 6.5 or 3.8)
-                local pulse = (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
+                local pulse = reduced and 0.5
+                    or (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
 
                 local highlight = folder:FindFirstChild("ShardHighlight")
                 if highlight and highlight:IsA("Highlight") then
@@ -402,22 +411,30 @@ task.spawn(function()
                     ring.Transparency = (close and 0.46 or 0.68) + pulse * 0.12
                 end
 
-                local facetTier = tier.Name
                 for i = 1, 3 do
                     local facet = folder:FindFirstChild("ShardFacet" .. i)
                     if facet and facet:IsA("BasePart") then
-                        local angle = pulseClock
-                            * (golden and 1.85 or (close and 1.45 or 0.75))
-                            + math.rad((i - 1) * 60)
-                        facet.CFrame = shardPart.CFrame
-                            * CFrame.Angles(
-                                0,
-                                angle,
-                                math.rad(22 + math.sin(pulseClock * 2 + i) * 4)
-                            )
-                        facet.Transparency = facetTier == "Low"
-                            and 1
-                            or ((close and 0.12 or 0.26) + pulse * 0.08)
+                        if tier.Name == "Low" then
+                            -- Three faceted parts already exist so users
+                            -- can upgrade quality mid-round, but there is
+                            -- no reason to rotate invisible geometry.
+                            facet.Transparency = 1
+                        else
+                            -- Far-away shards keep a static silhouette.
+                            -- Only nearby ones spend CFrame updates on
+                            -- orbiting crystal facets.
+                            if close and not reduced then
+                                local angle = pulseClock
+                                    * (golden and 1.85 or 1.45)
+                                    + math.rad((i - 1) * 60)
+                                facet.CFrame = shardPart.CFrame
+                                    * CFrame.Angles(0, angle,
+                                        math.rad(22
+                                            + math.sin(pulseClock * 2 + i) * 4))
+                            end
+                            facet.Transparency = (close and 0.12 or 0.36)
+                                + pulse * 0.08
+                        end
                     end
                 end
             end
