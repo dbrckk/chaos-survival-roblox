@@ -941,6 +941,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundEliminated", false)
         player:SetAttribute("RoundChaosShards", 0)
         player:SetAttribute("RoundShardCoins", 0)
+        player:SetAttribute("RoundDistrictCaches", 0)
+        player:SetAttribute("RoundDistrictCoins", 0)
         player:SetAttribute("RoundNearMisses", 0)
         player:SetAttribute("RoundMechanicUses", 0)
         player:SetAttribute("RoundHelixFlowChain", 0)
@@ -1278,8 +1280,19 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 return
             end
 
-            local total = (tonumber(player:GetAttribute("RoundChaosShards")) or 0) + 1
-            local shardCoinTotal = math.max(0, math.floor(tonumber(player:GetAttribute("RoundShardCoins")) or 0)) + amount
+            local isDistrictCache = source == "DistrictCache"
+            local total = math.max(0,
+                math.floor(tonumber(player:GetAttribute("RoundChaosShards")) or 0))
+                + (isDistrictCache and 0 or 1)
+            local shardCoinTotal = math.max(0,
+                math.floor(tonumber(player:GetAttribute("RoundShardCoins")) or 0))
+                + (isDistrictCache and 0 or amount)
+            local districtTotal = math.max(0,
+                math.floor(tonumber(player:GetAttribute("RoundDistrictCaches")) or 0))
+                + (isDistrictCache and 1 or 0)
+            local districtCoins = math.max(0,
+                math.floor(tonumber(player:GetAttribute("RoundDistrictCoins")) or 0))
+                + (isDistrictCache and amount or 0)
             local flowBonus = 0
             if FlowCombo.qualifies(lastMechanicAt[player.UserId], os.clock(), flowComboClaimed[player.UserId]) then
                 flowComboClaimed[player.UserId] = true
@@ -1288,6 +1301,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
             player:SetAttribute("RoundChaosShards", total)
             player:SetAttribute("RoundShardCoins", shardCoinTotal)
+            player:SetAttribute("RoundDistrictCaches", districtTotal)
+            player:SetAttribute("RoundDistrictCoins", districtCoins)
             bumpMomentum(player)
             if flowBonus > 0 then
                 local flowTotal = math.max(0, math.floor(tonumber(player:GetAttribute("RoundFlowCoins")) or 0)) + flowBonus
@@ -1305,7 +1320,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 source = source == "DistrictCache" and "DistrictCache" or "ChaosShard",
             })
 
-            progressQuest(player, "collect_shard", 1)
+            -- Supply exploration must not fake shard collection progress.
+            if not isDistrictCache then
+                progressQuest(player, "collect_shard", 1)
+            end
             progressQuest(player, "coins_earned", amount + flowBonus)
 
             GameAnalytics.economySource(
@@ -1335,18 +1353,21 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
             GameAnalytics.custom(
                 player,
-                "ChaosShardCollected",
+                isDistrictCache and "DistrictCacheCollected"
+                    or "ChaosShardCollected",
                 1,
                 "Arena:" .. tostring(currentArenaVariant),
                 "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo),
-                "Count:" .. tostring(total)
+                "Count:" .. tostring(isDistrictCache and districtTotal or total)
             )
-            GameAnalytics.onboarding(
-                player,
-                6,
-                "FirstShardCollected",
-                roundSettings.Solo
-            )
+            if not isDistrictCache then
+                GameAnalytics.onboarding(
+                    player,
+                    6,
+                    "FirstShardCollected",
+                    roundSettings.Solo
+                )
+            end
         end,
     }
 
@@ -2123,6 +2144,8 @@ while true do
                 fusionName = fusionName,
                 shardCount = roundShardCount,
                 shardCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundShardCoins")) or 0)),
+                districtCacheCount = math.max(0, math.floor(tonumber(p:GetAttribute("RoundDistrictCaches")) or 0)),
+                districtCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundDistrictCoins")) or 0)),
                 flowCoins = roundFlowCoins,
                 nearMissCount = roundNearMissCount,
                 mechanicUses = roundMechanicUses,
