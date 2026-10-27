@@ -2202,11 +2202,13 @@ local function showRoundFeedback(feedback)
 
     local streakBonus = tonumber(feedback.streakBonusCoins) or 0
     local shardCoins = tonumber(feedback.shardCoins) or 0
+    local districtCoins = tonumber(feedback.districtCoins) or 0
     local challengeCoins = tonumber(feedback.challengeCoins) or 0
     local challengeXP = tonumber(feedback.challengeXP) or 0
     local flowCoins = tonumber(feedback.flowCoins) or 0
     local fusionBonusCoins = tonumber(feedback.fusionBonusCoins) or 0
-    local shownCoins = (tonumber(feedback.coins) or 0) + shardCoins + challengeCoins + flowCoins
+    local shownCoins = (tonumber(feedback.coins) or 0)
+        + shardCoins + districtCoins + challengeCoins + flowCoins
     local shownXP = (tonumber(feedback.xp) or 0) + challengeXP
 
     local extras = {}
@@ -2215,6 +2217,9 @@ local function showRoundFeedback(feedback)
     end
     if shardCoins > 0 then
         table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_SHARDS", shardCoins))
+    end
+    if districtCoins > 0 then
+        table.insert(extras, "SUPPLIES +" .. tostring(districtCoins))
     end
     if feedback.challengeCompleted then
         table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_CHALLENGE", challengeCoins))
