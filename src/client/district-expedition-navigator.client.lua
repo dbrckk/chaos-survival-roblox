@@ -36,7 +36,7 @@ local panel = Instance.new("Frame")
 panel.Name = "NearestSupplyRoute"
 panel.AnchorPoint = Vector2.new(0.5, 0)
 panel.Position = UDim2.new(0.5, 0, 0, UserInputService.TouchEnabled and 90 or 96)
-panel.Size = UDim2.fromOffset(UserInputService.TouchEnabled and 198 or 232, 43)
+panel.Size = UDim2.fromOffset(UserInputService.TouchEnabled and 208 or 250, 51)
 panel.BackgroundColor3 = Color3.fromRGB(13, 25, 39)
 panel.BackgroundTransparency = 0.19
 panel.BorderSizePixel = 0
@@ -53,8 +53,8 @@ border.Parent = panel
 
 local arrow = Instance.new("TextLabel")
 arrow.Name = "Direction"
-arrow.Position = UDim2.fromOffset(8, 4)
-arrow.Size = UDim2.fromOffset(36, 34)
+arrow.Position = UDim2.fromOffset(7, 7)
+arrow.Size = UDim2.fromOffset(36, 36)
 arrow.BackgroundTransparency = 1
 arrow.Font = Enum.Font.GothamBlack
 arrow.Text = "▲"
@@ -65,11 +65,12 @@ arrow.Parent = panel
 local text = Instance.new("TextLabel")
 text.Name = "ExpeditionHint"
 text.Position = UDim2.fromOffset(47, 5)
-text.Size = UDim2.new(1, -54, 1, -10)
+text.Size = UDim2.new(1, -53, 1, -10)
 text.BackgroundTransparency = 1
 text.Font = Enum.Font.GothamBold
-text.TextSize = UserInputService.TouchEnabled and 12 or 14
+text.TextSize = UserInputService.TouchEnabled and 11 or 13
 text.TextWrapped = true
+text.TextYAlignment = Enum.TextYAlignment.Center
 text.TextXAlignment = Enum.TextXAlignment.Left
 text.TextColor3 = Color3.fromRGB(225, 247, 255)
 text.Text = ""
@@ -168,7 +169,8 @@ local function chooseParkourWaypoint(arena, route, elite, root, destination)
         local horizontal = math.sqrt(dx * dx + dz * dz)
         local surface = deck.Position.Y + deck.Size.Y * 0.5
         if horizontal <= 7.8
-            and math.abs(root.Position.Y - (surface + 2.5)) <= 6.2
+            and root.Position.Y >= surface + 0.6
+            and math.abs(root.Position.Y - (surface + 2.5)) <= 4.7
         then
             highestReached = i
         end
@@ -308,7 +310,6 @@ local function update()
         and tonumber(nearest:GetAttribute("CacheReward")))
         or (elite and 5 or 2)
     local waypoint, taskLabel = targetPosition, nil
-    local directDistance = targetDistance
 
     if signalPosition then
         if route and route >= 1 and route <= 4 then
@@ -354,7 +355,7 @@ local function update()
     -- Distance is explicitly TO THE NEXT WAYPOINT, not falsely to the
     -- final chest when several physical jump gaps remain.
     text.Text = taskLabel .. "\n" .. cue
-        .. " • " .. tostring(waypointDistance) .. "m"
+        .. " • " .. tostring(waypointDistance) .. " STUDS"
     local color = signalPosition and Color3.fromRGB(255, 163, 83)
         or (elite and Color3.fromRGB(248, 199, 91)
             or Color3.fromRGB(111, 226, 247))
