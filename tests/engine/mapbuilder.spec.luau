@@ -107,7 +107,7 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Classic").Platforms + 8
+            #ArenaVariants.get("Classic").Platforms + 16
         )
         -- Route-tier identity is replicated with the physical decks and
         -- reflects intentional jumpable paths, not client-only cosmetics.
@@ -769,11 +769,11 @@ describe("Chaos Survival engine", function()
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
             local original = #variant.Platforms
-            expect(#platforms:GetChildren()).toBe(original + 8)
+            expect(#platforms:GetChildren()).toBe(original + 16)
             for route = 1, 4 do
                 local previous = nil
-                for step = 1, 2 do
-                    local number = original + (route - 1) * 2 + step
+                for step = 1, 4 do
+                    local number = original + (route - 1) * 4 + step
                     local platform = platforms:FindFirstChild("Platform" .. number)
                     expect(platform ~= nil).toBe(true)
                     expect(platform.CanCollide).toBe(true)
@@ -876,13 +876,13 @@ describe("Chaos Survival engine", function()
                 tierCount[tier] += 1
             end
         end
-        expect(#(platforms :: Folder):GetChildren()).toBe(29)
+        expect(#(platforms :: Folder):GetChildren()).toBe(37)
         -- Original 21 decks and Skybridges 18–21 are unchanged.
-        -- Eight outer-rim stages add four floor entries and four exits.
+        -- Sixteen outer-rim stages add four complete four-level escapes.
         expect(tierCount[1]).toBe(9)
         expect(tierCount[2]).toBe(8)
-        expect(tierCount[3]).toBe(4)
-        expect(tierCount[4]).toBe(4)
+        expect(tierCount[3]).toBe(8)
+        expect(tierCount[4]).toBe(8)
 
         -- Floor guidance must be genuinely visible but never obstruct
         -- escape movement, hazard collision or updraft pads.
@@ -925,7 +925,7 @@ describe("Chaos Survival engine", function()
         local platforms = arena:FindFirstChild("Platforms")
         expect(platforms ~= nil).toBe(true)
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Crossroads").Platforms + 8
+            #ArenaVariants.get("Crossroads").Platforms + 16
         )
         local tiers = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
         for index = 1, 17 do
@@ -1168,7 +1168,7 @@ describe("Chaos Survival engine", function()
             local base = arena and arena:FindFirstChild("Base")
             expect(base ~= nil and decor ~= nil).toBe(true)
             local placements = OriginalMeshScenery.placements(base, variantId)
-            expect(#placements).toBe(4)
+            expect(#placements).toBe(8)
             local art = {}
             for _, slot in ipairs(placements) do
                 art[slot.asset] = (art[slot.asset] or 0) + 1
@@ -1199,13 +1199,13 @@ describe("Chaos Survival engine", function()
                 orbital_halo_array = sanitized,
             }
             local count = OriginalMeshScenery.mount(arena, templates)
-            expect(count).toBe(4)
+            expect(count).toBe(8)
             expect(OriginalMeshScenery.mount(arena, templates)).toBe(0)
-            expect(arena:GetAttribute("Original3DSceneryCount")).toBe(4)
+            expect(arena:GetAttribute("Original3DSceneryCount")).toBe(8)
             expect(arena:GetAttribute("Original3DSceneryComplete")).toBe(true)
             local bucket = decor and decor:FindFirstChild("Original3DScenery")
             expect(bucket ~= nil).toBe(true)
-            expect(#(bucket :: Folder):GetChildren()).toBe(4)
+            expect(#(bucket :: Folder):GetChildren()).toBe(8)
 
             for _, entry in ipairs(placements) do
                 local placed = bucket and bucket:FindFirstChild(entry.name)
@@ -1295,9 +1295,9 @@ describe("Chaos Survival engine", function()
                 end
             end
             expect(#native >= 12).toBe(true)
-            expect(OriginalMeshScenery.mount(arena, templates)).toBe(4)
+            expect(OriginalMeshScenery.mount(arena, templates)).toBe(8)
             local originals = decor:FindFirstChild("Original3DScenery")
-            expect(#originals:GetChildren()).toBe(4)
+            expect(#originals:GetChildren()).toBe(8)
             local occupied = {}
             for _, model in ipairs(originals:GetChildren()) do
                 local cf, size = model:GetBoundingBox()
