@@ -262,6 +262,10 @@ function DistrictSignalRush.start(ctx)
     folder:SetAttribute("SignalRoute", 0)
     folder:SetAttribute("UpcomingSignalRoute", 0)
     folder:SetAttribute("SignalWave", 0)
+    -- Unix-like replicated server clock for accurate mobile countdowns.
+    -- This is presentation metadata, not a reward authorization channel.
+    folder:SetAttribute("SignalStartsAt", 0)
+    folder:SetAttribute("SignalEndsAt", 0)
     folder.Parent = arena
     table.insert(ctx.Cleanup, folder)
 
@@ -301,6 +305,7 @@ function DistrictSignalRush.start(ctx)
             claimedPlayers[player.UserId] = true
             node.setActive(false, true, waveIndex)
             folder:SetAttribute("SignalRoute", 0)
+            folder:SetAttribute("SignalEndsAt", 0)
             local ok, paid = pcall(
                 ctx.OnDistrictSignalClaimed,
                 player, DistrictSignalRush.Reward,
@@ -325,8 +330,12 @@ function DistrictSignalRush.start(ctx)
         for wave, route in ipairs({first, second}) do
             if not folder.Parent or not ctx.Active() then break end
             folder:SetAttribute("UpcomingSignalRoute", route)
-            task.wait(wave == 1 and DistrictSignalRush.StartDelay
-                or DistrictSignalRush.BetweenWaves)
+            local delaySeconds = wave == 1 and DistrictSignalRush.StartDelay
+                or DistrictSignalRush.BetweenWaves
+            folder:SetAttribute("SignalStartsAt",
+                workspace:GetServerTimeNow() + delaySeconds)
+            folder:SetAttribute("SignalEndsAt", 0)
+            task.wait(delaySeconds)
             if not folder.Parent or not ctx.Active()
                 or ctx.FinalRush and ctx.FinalRush()
             then break end
@@ -349,6 +358,9 @@ function DistrictSignalRush.start(ctx)
             folder:SetAttribute("SignalRoute", route)
             folder:SetAttribute("UpcomingSignalRoute", 0)
             folder:SetAttribute("SignalWave", wave)
+            folder:SetAttribute("SignalStartsAt", 0)
+            folder:SetAttribute("SignalEndsAt",
+                workspace:GetServerTimeNow() + available)
 
             -- Two short event windows, with no RenderStepped or Heartbeat.
             task.wait(available)
@@ -356,9 +368,12 @@ function DistrictSignalRush.start(ctx)
             node.setActive(false, activeClaimed, wave)
             activeNode = nil
             folder:SetAttribute("SignalRoute", 0)
+            folder:SetAttribute("SignalEndsAt", 0)
         end
         if folder.Parent then
             folder:SetAttribute("UpcomingSignalRoute", 0)
+            folder:SetAttribute("SignalStartsAt", 0)
+            folder:SetAttribute("SignalEndsAt", 0)
         end
     end)
 
