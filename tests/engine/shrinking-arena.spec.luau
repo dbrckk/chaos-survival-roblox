@@ -108,6 +108,75 @@ describe("Shrinking Arena mobility integration", function()
         root:Destroy()
     end)
 
+    it("retracts wayfinding floor cues and moves lookout signals with their real deck", function()
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local decor = arena:FindFirstChild("Decor")
+        local base = arena:FindFirstChild("Base")
+        local platforms = arena:FindFirstChild("Platforms")
+        local terminal = platforms:FindFirstChild(
+            "Platform" .. tostring(#ArenaVariants.get("Classic").Platforms + 8)
+        )
+        local floorArrow = decor:FindFirstChild("OuterRouteChevron1_1_-1")
+        local arrow = decor:FindFirstChild("OuterStepChevron1_8_-1")
+        local signal = decor:FindFirstChild("OuterRouteSignal1")
+        expect(floorArrow ~= nil).toBe(true)
+        expect(arrow ~= nil).toBe(true)
+        expect(signal ~= nil).toBe(true)
+        local before = {
+            floor = floorArrow.CFrame,
+            arrow = arrow.CFrame,
+            signal = signal.CFrame,
+            deck = terminal.CFrame,
+            arrowSize = arrow.Size,
+            signalSize = signal.Size,
+        }
+        local localFloor = base.CFrame:PointToObjectSpace(floorArrow.Position)
+        local localArrow = terminal.CFrame:ToObjectSpace(arrow.CFrame)
+        local localSignal = terminal.CFrame:ToObjectSpace(signal.CFrame)
+        local width = base.Size.X
+        local active = true
+        local callbacks = {}
+        ShrinkingArena.start({
+            Config = Config,
+            RoundSeconds = 0.35,
+            OnCleanup = callbacks,
+            Active = function() return active end,
+        })
+        task.wait(0.21)
+        local scale = base.Size.X / width
+        expect(scale < 0.98).toBe(true)
+        local expectedFloor = base.CFrame:PointToWorldSpace(Vector3.new(
+            localFloor.X * scale, localFloor.Y, localFloor.Z * scale
+        ))
+        expect((floorArrow.Position - expectedFloor).Magnitude < 0.03)
+            .toBe(true)
+        for _, record in ipairs({
+            {piece = arrow, relative = localArrow, size = before.arrowSize},
+            {piece = signal, relative = localSignal, size = before.signalSize},
+        }) do
+            local p = record.relative.Position
+            local expected = terminal.CFrame
+                * CFrame.new(p.X * scale, p.Y, p.Z * scale)
+                * (record.relative - p)
+            expect((record.piece.Position - expected.Position).Magnitude < 0.03)
+                .toBe(true)
+            expect(math.abs(record.piece.Size.X - record.size.X * scale) < 0.03)
+                .toBe(true)
+        end
+        active = false
+        cleanup(callbacks, {})
+        expect((floorArrow.Position - before.floor.Position).Magnitude < 0.001)
+            .toBe(true)
+        expect((arrow.Position - before.arrow.Position).Magnitude < 0.001)
+            .toBe(true)
+        expect((signal.Position - before.signal.Position).Magnitude < 0.001)
+            .toBe(true)
+        expect((terminal.Position - before.deck.Position).Magnitude < 0.001)
+            .toBe(true)
+        root:Destroy()
+    end)
+
     it("moves outer exit sculptures together with shrinking physical routes", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local root = MapBuilder.build(Config, id, ArenaVariants)
