@@ -158,6 +158,32 @@ local function construct(folder, base, route, variantId)
         end
     end
 
+    -- Temporary luminous floor guidance connects the REAL outer
+    -- transit arrival to this signal. Inactive cues are almost invisible
+    -- to avoid drawing players toward a dormant optional objective.
+    local from = Vector3.new(
+        base.Position.X + signs[1] * (base.Size.X * 0.5 - 37),
+        groundY + 0.08,
+        base.Position.Z + signs[2] * (base.Size.Z * 0.5 - 47)
+    )
+    local planar = Vector3.new(center.X - from.X, 0, center.Z - from.Z)
+    local direction = planar.Unit
+    local arrows = {}
+    for step = 1, 3 do
+        local marker = from + planar * (step / 4)
+        local facing = CFrame.lookAt(marker, marker + direction)
+        for side = -1, 1, 2 do
+            local cue = part(model,
+                "LiveRouteChevron" .. step .. "_" .. tostring(side),
+                Vector3.new(0.25, 0.07, 2.15),
+                facing * CFrame.new(side * 0.48, 0, 0)
+                    * CFrame.Angles(0, math.rad(side * 34), 0),
+                color, Enum.Material.Neon)
+            cue.Transparency = 0.94
+            arrows[#arrows + 1] = cue
+        end
+    end
+
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "SecureDistrictSignal"
     prompt.ActionText = "SECURE +2 COINS"
@@ -203,6 +229,9 @@ local function construct(folder, base, route, variantId)
         model:SetAttribute("SignalClaimed", claimed == true)
         model:SetAttribute("SignalWave", wave or 0)
         emitter.Transparency = active and 0.05 or 0.68
+        for _, cue in ipairs(arrows) do
+            cue.Transparency = active and 0.18 or 0.94
+        end
         billboard.Enabled = active
         prompt.Enabled = active
     end
