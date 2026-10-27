@@ -99,6 +99,7 @@ function D.start(ctx)
                     -- Keep 320-stud district navigation markings on the
                     -- contracting floor, not floating beyond lethal edges.
                     or name:match("^DistrictArrow%d+_%d+_%-?%d+$")
+                    or name:match("^OuterRouteChevron%d+_%d+_%-?%d+$")
                 if floorArt then
                     floorDetails[#floorDetails+1] = {
                         part = item,
