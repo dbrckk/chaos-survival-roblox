@@ -164,6 +164,12 @@ local function createCache(ctx, platform, index, tier, personalClaims)
         -- Mark first, preventing simultaneous claims or payout duplication.
         claimed = true
         userClaims[tier] = true
+        -- Replicate only this player's actual entitlement, not the
+        -- globally shared chest state. Other players may still open
+        -- remaining caches of the same tier.
+        player:SetAttribute(
+            elite and "RoundDistrictEliteClaimed"
+                or "RoundDistrictEasyClaimed", true)
         prompt.Enabled = false
         if ctx.OnCollected then
             pcall(ctx.OnCollected, player,
