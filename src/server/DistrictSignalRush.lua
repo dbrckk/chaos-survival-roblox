@@ -11,8 +11,8 @@ local DistrictSignalRush = {}
 DistrictSignalRush.Reward = 2
 DistrictSignalRush.Range = 10
 DistrictSignalRush.StartDelay = 4
-DistrictSignalRush.Window = 12
-DistrictSignalRush.BetweenWaves = 5
+DistrictSignalRush.Window = 9
+DistrictSignalRush.BetweenWaves = 3
 
 local ROUTE_SIGNS = {
     {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
@@ -324,6 +324,17 @@ function DistrictSignalRush.start(ctx)
             if not folder.Parent or not ctx.Active()
                 or ctx.FinalRush and ctx.FinalRush()
             then break end
+            -- A signal must never look claimable during the final
+            -- survival rush. Clamp its live window to the authoritative
+            -- monotonic round deadline when that clock is provided.
+            local available = DistrictSignalRush.Window
+            local endsAt = tonumber(ctx.RoundEndsAt)
+            if endsAt then
+                available = math.min(available,
+                    math.max(0, endsAt - os.clock() - 5.0))
+            end
+            if available < 2.5 then break end
+
             waveIndex = wave
             activeClaimed = false
             local node = nodes[route]
@@ -332,9 +343,8 @@ function DistrictSignalRush.start(ctx)
             folder:SetAttribute("SignalRoute", route)
             folder:SetAttribute("SignalWave", wave)
 
-            -- Exactly two brief active windows; the safe server sleep
-            -- avoids render loops or per-second allocations on Android.
-            task.wait(DistrictSignalRush.Window)
+            -- Two short event windows, with no RenderStepped or Heartbeat.
+            task.wait(available)
             if not folder.Parent then break end
             node.setActive(false, activeClaimed, wave)
             activeNode = nil
