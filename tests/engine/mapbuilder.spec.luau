@@ -895,6 +895,17 @@ describe("Chaos Survival engine", function()
             local start = #variant.Platforms + #variant.PerimeterPlatforms
             expect(#platforms:GetChildren()).toBe(start + 16)
             for route = 1, 4 do
+                local forkIndex = #variant.Platforms
+                    + (route - 1) * ArenaVariants.PerimeterSteps + 5
+                for side = -1, 1, 2 do
+                    local arrow = arena:FindFirstChild("Decor")
+                        :FindFirstChild("BranchForkArrow" .. route .. "_"
+                            .. tostring(side))
+                    expect(arrow ~= nil and arrow:IsA("BasePart")).toBe(true)
+                    expect(arrow:GetAttribute("PerimeterPlatformIndex"))
+                        .toBe(forkIndex)
+                    expect(arrow.CanCollide).toBe(false)
+                end
                 for step = 1, 4 do
                     local index = start + (route - 1) * 4 + step
                     local deck = platforms:FindFirstChild("Platform" .. index)
@@ -904,6 +915,18 @@ describe("Chaos Survival engine", function()
                     expect(deck:GetAttribute("BranchRoute")).toBe(route)
                     expect(deck:GetAttribute("BranchStep")).toBe(step)
                     expect(deck:GetAttribute("BranchParentStep")).toBe(5)
+                    local decor = arena:FindFirstChild("Decor")
+                    for side = -1, 1, 2 do
+                        local mark = decor:FindFirstChild(
+                            "BranchStepArrow" .. route .. "_" .. step
+                                .. "_" .. tostring(side)
+                        )
+                        expect(mark ~= nil and mark:IsA("BasePart")).toBe(true)
+                        expect(mark:GetAttribute("PerimeterPlatformIndex"))
+                            .toBe(index)
+                        expect(mark.CanCollide).toBe(false)
+                        expect(mark.CanQuery).toBe(false)
+                    end
                     expect(math.abs(deck.Position.Y - deck.Size.Y * 0.5
                         - (base.Position.Y + base.Size.Y * 0.5)) < 0.001)
                         .toBe(true)
