@@ -1173,17 +1173,23 @@ describe("Chaos Survival engine", function()
             for _, slot in ipairs(placements) do
                 art[slot.asset] = (art[slot.asset] or 0) + 1
             end
+            -- Each arena uses all six approved originals, but repeats two
+            -- signature silhouettes for its own eight-slot skyline.
             local expected = if variantId == "Orbital"
-                then {orbital_halo_array = 2, perimeter_gate = 1,
-                    reactor_spire = 1}
-                elseif variantId == "Towers"
-                then {service_crane = 2, sky_transit_exchange = 1,
-                    reactor_spire = 1}
-                elseif variantId == "Crossroads"
-                then {perimeter_gate = 1, sky_transit_exchange = 1,
+                then {orbital_halo_array = 2, perimeter_gate = 2,
+                    reactor_spire = 1, sky_transit_exchange = 1,
                     plasma_foundry = 1, service_crane = 1}
-                else {perimeter_gate = 1, plasma_foundry = 1,
-                    reactor_spire = 1, service_crane = 1}
+                elseif variantId == "Towers"
+                then {service_crane = 2, sky_transit_exchange = 2,
+                    reactor_spire = 1, perimeter_gate = 1,
+                    plasma_foundry = 1, orbital_halo_array = 1}
+                elseif variantId == "Crossroads"
+                then {perimeter_gate = 2, sky_transit_exchange = 2,
+                    plasma_foundry = 1, service_crane = 1,
+                    orbital_halo_array = 1, reactor_spire = 1}
+                else {perimeter_gate = 2, plasma_foundry = 2,
+                    reactor_spire = 1, service_crane = 1,
+                    sky_transit_exchange = 1, orbital_halo_array = 1}
             for key, n in pairs(expected) do
                 expect(art[key]).toBe(n)
             end
