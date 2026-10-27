@@ -107,7 +107,7 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Classic").Platforms + 32
+            #ArenaVariants.get("Classic").Platforms + 48
         )
         -- Route-tier identity is replicated with the physical decks and
         -- reflects intentional jumpable paths, not client-only cosmetics.
@@ -776,7 +776,7 @@ describe("Chaos Survival engine", function()
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
             local original = #variant.Platforms
-            expect(#platforms:GetChildren()).toBe(original + 32)
+            expect(#platforms:GetChildren()).toBe(original + 48)
             for route = 1, 4 do
                 local previous = nil
                 for step = 1, ArenaVariants.PerimeterSteps do
@@ -881,6 +881,42 @@ describe("Chaos Survival engine", function()
             end
             -- The same authoritative folder is inspected by AI, shrinking,
             -- platform collapse, collectibles and native raycasts.
+            root:Destroy()
+        end
+    end)
+
+    it("builds sixteen physical side lookouts without changing original route indices", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local platforms = arena:FindFirstChild("Platforms")
+            local base = arena:FindFirstChild("Base")
+            local start = #variant.Platforms + #variant.PerimeterPlatforms
+            expect(#platforms:GetChildren()).toBe(start + 16)
+            for route = 1, 4 do
+                for step = 1, 4 do
+                    local index = start + (route - 1) * 4 + step
+                    local deck = platforms:FindFirstChild("Platform" .. index)
+                    expect(deck ~= nil and deck:IsA("BasePart")).toBe(true)
+                    expect(deck.Anchored).toBe(true)
+                    expect(deck.CanCollide).toBe(true)
+                    expect(deck:GetAttribute("BranchRoute")).toBe(route)
+                    expect(deck:GetAttribute("BranchStep")).toBe(step)
+                    expect(deck:GetAttribute("BranchParentStep")).toBe(5)
+                    expect(math.abs(deck.Position.Y - deck.Size.Y * 0.5
+                        - (base.Position.Y + base.Size.Y * 0.5)) < 0.001)
+                        .toBe(true)
+                    if step == 4 then
+                        local billboard = deck:FindFirstChild("SideLookoutLabel")
+                        expect(billboard ~= nil and billboard:IsA("BillboardGui"))
+                            .toBe(true)
+                        expect(billboard.Adornee).toBe(deck)
+                        expect(billboard.MaxDistance <= 80).toBe(true)
+                        expect(billboard.AlwaysOnTop).toBe(false)
+                    end
+                end
+            end
             root:Destroy()
         end
     end)
