@@ -9,9 +9,11 @@ local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local NearMissVisualRules = require(ReplicatedStorage.Shared.NearMissVisualRules)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
+local touchDevice = UserInputService.TouchEnabled
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardNearMiss")
 
 local gui = Instance.new("ScreenGui")
@@ -59,7 +61,7 @@ sizeConstraint.Parent = card
 local viewportConnection = nil
 
 local function applyResponsiveLayout()
-    if not UserInputService.TouchEnabled then
+    if not touchDevice then
         card.Position = UDim2.fromScale(0.5, 0.34)
         card.Size = UDim2.new(0.48, 0, 0, 62)
         sizeConstraint.MinSize = Vector2.new(220, 54)
@@ -69,14 +71,13 @@ local function applyResponsiveLayout()
 
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
-    local profile = UIResponsive.mobileProfile(viewport)
-
-    local y = profile.tinyHeight and 0.56
-        or (profile.compactHeight and 0.50 or 0.44)
-    card.Position = UDim2.fromScale(0.5, y)
-    card.Size = UDim2.new(profile.veryNarrow and 0.84 or 0.70, 0, 0, profile.tinyHeight and 54 or 60)
-    sizeConstraint.MinSize = Vector2.new(profile.veryNarrow and 210 or 220, profile.tinyHeight and 50 or 54)
-    sizeConstraint.MaxSize = Vector2.new(440, 68)
+    -- Share the existing foreground toast lane with the mechanic reward,
+    -- escalation and round introduction. Those must never stack on touch.
+    local layout = UIResponsive.mobileEscalationToast(viewport)
+    card.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
+    card.Size = UDim2.new(layout.widthScale, 0, 0, layout.height)
+    sizeConstraint.MinSize = Vector2.new(185, layout.height)
+    sizeConstraint.MaxSize = Vector2.new(500, layout.height)
 end
 
 local function bindResponsiveCamera()
@@ -147,6 +148,18 @@ local function cancelCardTweens()
         tween:Cancel()
     end
     table.clear(activeCardTweens)
+end
+
+-- A higher-priority alert may preempt an active near-miss mid-tween.
+-- Invalidate its delayed hide callback as well as its visible surfaces.
+if touchDevice then
+    MobileHudNotices.Changed:Connect(function(owner)
+        if owner == "near-miss" or not card.Visible then return end
+        token += 1
+        cancelCardTweens()
+        card.Visible = false
+        flash.Visible = false
+    end)
 end
 
 local function playCardTween(instance, info, goals)
@@ -264,6 +277,12 @@ local function show(payload)
     end
     lastNearMissAt = now
 
+    if touchDevice and not MobileHudNotices.claim("near-miss", 30) then
+        -- An alert or introduction already owns the mobile foreground.
+        -- Keep the server reward/gameplay untouched; skip cosmetic UI.
+        return
+    end
+
     token += 1
     local current = token
 
@@ -338,6 +357,7 @@ local function show(payload)
         if not visual.Animate then
             card.Visible = false
             flash.Visible = false
+            if touchDevice then MobileHudNotices.release("near-miss") end
             return
         end
 
@@ -356,6 +376,7 @@ local function show(payload)
         if current == token then
             card.Visible = false
             flash.Visible = false
+            if touchDevice then MobileHudNotices.release("near-miss") end
         end
     end)
 end
