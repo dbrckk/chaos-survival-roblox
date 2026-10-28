@@ -164,6 +164,23 @@ function UIResponsive.mobileRoundBanner(viewport)
     }
 end
 
+-- The ready-phase strategy card must clear the alive counter, which
+-- hangs 5px below the header on Android. Wide phones get a narrower
+-- center card; narrower screens move it below the counter entirely.
+function UIResponsive.mobileArenaGuideLayout(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    return {
+        centerXScale = 0.50,
+        widthScale = c.wide and 0.54
+            or (c.veryNarrow and 0.92 or 0.84),
+        topOffset = profile.topHeight + (c.wide and 12 or 42),
+        height = c.tinyHeight and 62 or 74,
+        minWidth = c.veryNarrow and 240 or (c.wide and 260 or 280),
+        minHeight = c.tinyHeight and 58 or 64,
+    }
+end
+
 -- One safe, testable layout for the client-owned Dash action button.
 -- The native Roblox jump control uses the bottom-right thumb zone.
 -- Keep DASH above it, fully inside the visible viewport even when rotated
