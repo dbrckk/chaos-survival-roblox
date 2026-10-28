@@ -20,7 +20,7 @@ local currentDecor = nil
 local lightBrightness = setmetatable({}, {__mode = "k"})
 
 local function tierName()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), true).Name
 end
 
 local function applyDecor()
