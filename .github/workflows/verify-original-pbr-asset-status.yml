@@ -1,0 +1,79 @@
+name: Verify 16 Original PBR Roblox Assets (Read Only)
+
+# No Roblox POST/PATCH, no image upload, no place publication.
+on:
+  pull_request:
+    paths:
+      - 'tools/audit_original_pbr_assets.py'
+      - '.github/workflows/verify-original-pbr-asset-status.yml'
+      - 'assets/source/roblox-pbr-upload-receipts.json'
+      - 'default.project.json'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/audit_original_pbr_assets.py'
+      - '.github/workflows/verify-original-pbr-asset-status.yml'
+      - 'assets/source/roblox-pbr-upload-receipts.json'
+      - 'default.project.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-readonly-pbr-moderation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-contract:
+    name: Validate all 16 receipts and fail-closed staging contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run local verification with fake owner and moderation responses
+        run: |
+          python tools/audit_original_pbr_assets.py --self-test
+      - name: Generate offline-only report; never declare images approved
+        run: |
+          python tools/audit_original_pbr_assets.py --offline
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("build/pbr-asset-audit/asset-moderation-report.json").read_text())
+          assert len(data["assets"]) == 16
+          assert data["mode"] == "offline"
+          assert data["approved_count"] == 0
+          assert not data["all_16_approved"]
+          assert not data["private_staging_project_created"]
+          assert not Path("build/pbr-asset-audit/default.original-pbr.PRIVATE-STAGING.project.json").exists()
+          print("PASS: offline CI cannot mark 16 Image assets approved.")
+          PY
+
+  live-moderation:
+    name: Read 16 real owner-owned image states from Roblox Open Cloud
+    needs: offline-contract
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      ROBLOX_ASSET_API_KEY: ${{ secrets.ROBLOX_ASSET_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check metadata by GET and stage privately only if all approved
+        run: |
+          python tools/audit_original_pbr_assets.py --live
+      - name: Keep inspectable asset-state report and private staging if eligible
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-16-original-pbr-asset-approval-audit
+          path: build/pbr-asset-audit/
+          if-no-files-found: warn
+          retention-days: 30
