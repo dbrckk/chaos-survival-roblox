@@ -297,6 +297,34 @@ describe("UI responsive profiles", function()
         expect(MobileHudNotices.release("shard")).toBe(true)
     end)
 
+    it("positions GRID and FLUX trackers below Roblox native inset", function()
+        for _, data in ipairs({
+            {viewport = Vector2.new(540, 320), inset = 48},
+            {viewport = Vector2.new(640, 360), inset = 56},
+            {viewport = Vector2.new(960, 440), inset = 54},
+            {viewport = Vector2.new(1536, 688), inset = 68},
+            {viewport = Vector2.new(400, 720), inset = 56},
+        }) do
+            local layout = UIResponsive.mobileMechanicTracker(
+                data.viewport, data.inset)
+            local profile = UIResponsive.mobileProfile(data.viewport)
+            local focusTop = data.viewport.Y - profile.roundFocusBottomOffset
+                - profile.roundFocusHeight
+            expect(layout.fits).toBe(true)
+            expect(layout.centerXScale).toBe(0.5)
+            expect(layout.topOffset >= data.inset + 7 + profile.topHeight
+                + 5 + 24 + 8).toBe(true)
+            expect(layout.topOffset + layout.height + 8 <= focusTop)
+                .toBe(true)
+            expect(layout.width >= 174 and layout.width <= 254).toBe(true)
+            expect(layout.width < data.viewport.X).toBe(true)
+        end
+        -- In split-screen mode the tracker is optional; core survival
+        -- status, player touch actions and world mechanics remain visible.
+        expect(UIResponsive.mobileMechanicTracker(
+            Vector2.new(400, 230), 48).fits).toBe(false)
+    end)
+
     it("hides optional expedition navigation for any survival priority banner", function()
         expect(UIResponsive.showOptionalRoute(false, false, false)).toBe(true)
         expect(UIResponsive.showOptionalRoute(true, false, false)).toBe(false)

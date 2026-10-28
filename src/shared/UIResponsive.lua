@@ -181,6 +181,27 @@ function UIResponsive.mobileArenaGuideLayout(viewport)
     }
 end
 
+-- Ongoing GRID / FLUX progress is useful, but secondary to the
+-- authoritative top hazard + survivor chip. These ScreenGuis IGNORE the
+-- Roblox top inset, so include it explicitly for short Android landscapes.
+function UIResponsive.mobileMechanicTracker(viewport, topInset)
+    local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local inset = math.clamp(tonumber(topInset) or 0, 0, c.height)
+    local height = c.tinyHeight and 30 or 34
+    local top = inset + 7 + profile.topHeight + 5 + 24 + 8
+    local focusTop = c.height - profile.roundFocusBottomOffset
+        - profile.roundFocusHeight
+    return {
+        centerXScale = 0.50,
+        topOffset = top,
+        height = height,
+        width = math.min(254, math.max(174,
+            c.width * (c.veryNarrow and 0.66 or 0.36))),
+        fits = top + height + 8 <= focusTop,
+    }
+end
+
 -- One safe, testable layout for the client-owned Dash action button.
 -- The native Roblox jump control uses the bottom-right thumb zone.
 -- Keep DASH above it, fully inside the visible viewport even when rotated

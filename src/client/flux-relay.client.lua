@@ -8,9 +8,12 @@ local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local LocalizationService = game:GetService("LocalizationService")
 local SoundService = game:GetService("SoundService")
+local GuiService = game:GetService("GuiService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local FluxRelayRules = require(ReplicatedStorage.Shared.FluxRelayRules)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -89,6 +92,48 @@ for index = 1, FluxRelayRules.WeaveCap do
     corner.Parent = pip
     hudPips[index] = pip
 end
+-- A sustained tracker is allowed only when it clears the native Roblox
+-- inset, authoritative hazard/alive header and bottom survival meter.
+local touchDevice = UserInputService.TouchEnabled
+local trackerFits = true
+local hudEligible = false
+local function refreshProgressVisibility()
+    hudPanel.Visible = hudEligible and (not touchDevice
+        or (trackerFits and MobileHudNotices.current() == nil))
+end
+
+local viewportConnection = nil
+local function layoutProgress()
+    if not touchDevice then
+        hudPanel.Position = UDim2.fromScale(0.5, 0.125)
+        hudPanel.Size = UDim2.fromOffset(254, 34)
+        trackerFits = true
+    else
+        local camera = workspace.CurrentCamera
+        local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+        local inset = GuiService:GetGuiInset()
+        local layout = UIResponsive.mobileMechanicTracker(viewport, inset.Y)
+        hudPanel.Position = UDim2.new(layout.centerXScale, 0, 0, layout.topOffset)
+        hudPanel.Size = UDim2.fromOffset(layout.width, layout.height)
+        trackerFits = layout.fits
+    end
+    refreshProgressVisibility()
+end
+
+local function bindProgressCamera()
+    if viewportConnection then viewportConnection:Disconnect() end
+    local camera = workspace.CurrentCamera
+    viewportConnection = camera and camera:GetPropertyChangedSignal("ViewportSize")
+        :Connect(layoutProgress) or nil
+    layoutProgress()
+end
+
+if touchDevice then
+    MobileHudNotices.Changed:Connect(refreshProgressVisibility)
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindProgressCamera)
+bindProgressCamera()
+
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 stateEvent.OnClientEvent:Connect(function(data)
     activeRound = type(data) == "table" and data.phase == "round"
@@ -122,7 +167,8 @@ local function clear()
     table.clear(connections)
     folder:ClearAllChildren()
     table.clear(gates)
-    hudPanel.Visible = false
+    hudEligible = false
+    refreshProgressVisibility()
     lastHudKey = ""
 end
 
@@ -330,7 +376,8 @@ local function renderHUD(serverTime)
     local participant = player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
     local visible = activeRound and participant and next(gates) ~= nil
-    hudPanel.Visible = visible
+    hudEligible = visible
+    refreshProgressVisibility()
     if not visible then
         lastHudKey = ""
         return -1
