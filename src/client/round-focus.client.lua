@@ -373,7 +373,10 @@ local function refresh()
         player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
     )
     local rookieRound = FirstTimeExperience.isGuidedPhase(played, state.phase)
-    setRookieCompactMode(rookieRound and count <= 0)
+    -- On Android a shards challenge already includes the shard count
+    -- (e.g. "ÉCLATS 0/2"). Avoid displaying the same value twice.
+    setRookieCompactMode((rookieRound and count <= 0)
+        or (touchDevice and state.challengeMetric == "shards"))
     local challengeId = state.challengeId
     local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
     local progress = math.min(challengeTarget, challengeProgress(state))

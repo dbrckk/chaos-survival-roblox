@@ -167,6 +167,39 @@ describe("UI responsive profiles", function()
         expect(tiny.dockButtonHeight).toBe(44)
     end)
 
+    it("keeps the optional district route below Android core HUD with safe insets", function()
+        for _, data in ipairs({
+            {viewport = Vector2.new(540, 320), inset = 48},
+            {viewport = Vector2.new(640, 360), inset = 56},
+            {viewport = Vector2.new(960, 440), inset = 54},
+            {viewport = Vector2.new(1536, 688), inset = 68},
+            {viewport = Vector2.new(400, 720), inset = 56},
+        }) do
+            local layout = UIResponsive.mobileExpeditionLayout(
+                data.viewport, data.inset)
+            local profile = UIResponsive.mobileProfile(data.viewport)
+            expect(layout.fits).toBe(true)
+            expect(layout.topOffset >= data.inset + profile.topHeight + 48)
+                .toBe(true)
+            expect(layout.topOffset + layout.height
+                + profile.roundFocusBottomOffset + 10 <= data.viewport.Y)
+                .toBe(true)
+            expect(layout.width <= data.viewport.X - 20).toBe(true)
+            expect(layout.xScale).toBe(profile.topCenterXScale)
+        end
+        local cramped = UIResponsive.mobileExpeditionLayout(
+            Vector2.new(540, 320), 210)
+        expect(cramped.fits).toBe(false)
+    end)
+
+    it("hides optional expedition navigation for any survival priority banner", function()
+        expect(UIResponsive.showOptionalRoute(false, false, false)).toBe(true)
+        expect(UIResponsive.showOptionalRoute(true, false, false)).toBe(false)
+        expect(UIResponsive.showOptionalRoute(false, true, false)).toBe(false)
+        expect(UIResponsive.showOptionalRoute(false, false, true)).toBe(false)
+        expect(UIResponsive.showOptionalRoute(true, true, true)).toBe(false)
+    end)
+
     it("keeps Dash above the native jump/thumb lane on Android orientations", function()
         for _, viewport in ipairs({
             Vector2.new(540, 320),

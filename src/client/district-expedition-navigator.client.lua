@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 local LocalizationService = game:GetService("LocalizationService")
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
@@ -146,23 +147,37 @@ local function hazardCueVisible()
         or false
 end
 
+-- A round-start or escalation banner takes priority over the optional
+-- compass. Those screens use independent ScreenGuis and must not overlap.
+local function priorityBannerVisible()
+    local events = playerGui:FindFirstChild("ChaosRoundEvents")
+    local escalation = events and events:FindFirstChild("EventCard")
+    local juice = playerGui:FindFirstChild("ChaosJuice")
+    local intro = juice and juice:FindFirstChild("RoundIntroBanner")
+    return (escalation and escalation.Visible == true) == true,
+        (intro and intro.Visible == true) == true
+end
+
+local optionalRouteHasRoom = true
 local viewportConnection
 local function applyNavigatorLayout()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize
         or Vector2.new(1280, 720)
-    local profile = UIResponsive.mobileProfile(viewport)
     local touch = UserInputService.TouchEnabled
-    local width = touch and (profile.veryNarrow and 190 or 208) or 250
-    local height = touch and (profile.tinyHeight and 46 or 51) or 51
-    local x = touch and profile.topCenterXScale or 0.50
-    -- The danger panel starts just below the top timer and spans
-    -- 34-42px. This panel owns the next lane, not the same pixels.
-    local y = profile.topHeight
-        + (profile.tinyHeight and 50 or 62)
-    panel.Position = UDim2.new(x, 0, 0, y)
-    panel.Size = UDim2.fromOffset(
-        math.min(width, math.max(168, viewport.X - 20)), height)
+    if not touch then
+        panel.Position = UDim2.new(0.5, 0, 0, 96)
+        panel.Size = UDim2.fromOffset(250, 51)
+        optionalRouteHasRoom = true
+        return
+    end
+
+    local safeTop = GuiService:GetGuiInset()
+    local layout = UIResponsive.mobileExpeditionLayout(
+        viewport, safeTop.Y)
+    panel.Position = UDim2.new(layout.xScale, 0, 0, layout.topOffset)
+    panel.Size = UDim2.fromOffset(layout.width, layout.height)
+    optionalRouteHasRoom = layout.fits
 end
 
 local function bindNavigatorCamera()
@@ -391,7 +406,11 @@ local function update()
     -- can refresh a shared prompt as a platform changes collision. Re-mask
     -- any spent personal tier using the existing 4Hz compass heartbeat.
     hideClaimedCues()
-    if hazardCueVisible() then
+    local eventVisible, introVisible = priorityBannerVisible()
+    if not optionalRouteHasRoom
+        or not UIResponsive.showOptionalRoute(
+            hazardCueVisible(), eventVisible, introVisible)
+    then
         panel.Visible = false
         stepMarker.Enabled = false
         return

@@ -76,6 +76,35 @@ function UIResponsive.mobileProfile(viewport)
     }
 end
 
+-- Optional district routes are secondary to survival alerts on touch.
+-- Account for Roblox's native top-bar inset; unlike the primary ChaosHUD,
+-- the expedition ScreenGui ignores the inset. Never overlap the header or
+-- the bottom survival meter. If there is no room, hide this optional cue.
+function UIResponsive.mobileExpeditionLayout(viewport, topInset)
+    local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local height = profile.tinyHeight and 46 or 51
+    local inset = math.clamp(tonumber(topInset) or 0, 0, c.height)
+    local minimumTop = inset + profile.topHeight + 48
+    local targetTop = math.max(profile.topHeight + 62,
+        inset + profile.topHeight + 66)
+    local maximumTop = c.height - profile.roundFocusBottomOffset - height - 10
+    return {
+        xScale = profile.topCenterXScale,
+        width = math.min(profile.veryNarrow and 190 or 208,
+            math.max(168, c.width - 20)),
+        height = height,
+        topOffset = math.max(0, math.min(targetTop, maximumTop)),
+        fits = maximumTop >= minimumTop,
+    }
+end
+
+function UIResponsive.showOptionalRoute(hazardVisible, roundEventVisible, introVisible)
+    return hazardVisible ~= true
+        and roundEventVisible ~= true
+        and introVisible ~= true
+end
+
 -- Primary round introductions should not cover the avatar and other
 -- survivors on Android. The warning timer already occupies the top edge:
 -- place the short reveal directly below it, never across screen center.
