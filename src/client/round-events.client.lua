@@ -49,6 +49,7 @@ card.BackgroundColor3 = UITheme.Colors.Panel
 card.BackgroundTransparency = 1
 card.BorderSizePixel = 0
 card.Visible = false
+card.ClipsDescendants = true
 card.Parent = gui
 UITheme.addCorner(card, UITheme.Corners.Large)
 
@@ -94,8 +95,8 @@ local scale = Instance.new("UIScale")
 scale.Scale = 0.80
 scale.Parent = card
 
-UITheme.addTextConstraint(title, 15, 30)
-UITheme.addTextConstraint(subtitle, 12, 18)
+local titleTextLimit = UITheme.addTextConstraint(title, 15, 30)
+local subtitleTextLimit = UITheme.addTextConstraint(subtitle, 12, 18)
 
 local edgeTop = Instance.new("Frame")
 edgeTop.Name = "EventEdgeTop"
@@ -138,20 +139,61 @@ local function applyResponsive()
         -- Keep escalation notifications below the round header, but above
         -- the avatar and the ground warnings. A brief compact toast is
         -- preferable to a second full-width central announcement.
+        -- Compact secondary strip: priority warnings remain legible
+        -- without masking the character and route navigation.
         card.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.37 or 0.34)
-        card.Size = UDim2.new(profile.veryNarrow and 0.76 or 0.54, 0, 0, profile.tinyHeight and 52 or 56)
-        size.MinSize = Vector2.new(220, 50)
-        size.MaxSize = Vector2.new(470, 64)
+        card.Size = UDim2.new(
+            profile.veryNarrow and 0.76 or (profile.wide and 0.42 or 0.54),
+            0, 0, profile.tinyHeight and 48 or 52)
+        size.MinSize = Vector2.new(200, 48)
+        size.MaxSize = Vector2.new(390, 56)
+        titleTextLimit.MinTextSize = 14
+        titleTextLimit.MaxTextSize = profile.tinyHeight and 20 or 24
+        subtitleTextLimit.MinTextSize = 11
+        subtitleTextLimit.MaxTextSize = 14
+        title.TextTruncate = Enum.TextTruncate.AtEnd
+        subtitle.TextTruncate = Enum.TextTruncate.AtEnd
+        subtitle.TextWrapped = false
     else
         card.Position = UDim2.fromScale(0.5, 0.27)
         card.Size = UDim2.new(0.54, 0, 0, 74)
         size.MinSize = Vector2.new(250, 62)
         size.MaxSize = Vector2.new(520, 82)
+        titleTextLimit.MinTextSize = 15
+        titleTextLimit.MaxTextSize = 30
+        subtitleTextLimit.MinTextSize = 12
+        subtitleTextLimit.MaxTextSize = 18
+        title.TextTruncate = Enum.TextTruncate.None
+        subtitle.TextTruncate = Enum.TextTruncate.None
+        subtitle.TextWrapped = true
     end
 end
 
 local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+end
+
+-- Dismiss optional overlays in the same frame that a survival escalation
+-- appears. The expedition navigator runs at 4Hz, which left a visible
+-- quarter-second overlap in the owner's Android screenshot.
+local function dismissOptionalMobileOverlays()
+    if not touchDevice then return end
+    local playerGui = player:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then return end
+    local navigator = playerGui:FindFirstChild("DistrictExpeditionNavigator")
+    local route = navigator and navigator:FindFirstChild("NearestSupplyRoute")
+    if route and route:IsA("GuiObject") then
+        route.Visible = false
+    end
+    local waypoint = playerGui:FindFirstChild("NextPhysicalDistrictStep")
+    if waypoint and waypoint:IsA("BillboardGui") then
+        waypoint.Enabled = false
+    end
+    local shardGui = playerGui:FindFirstChild("ChaosShardFeedback")
+    local pickup = shardGui and shardGui:FindFirstChild("Reward")
+    if pickup and pickup:IsA("GuiObject") then
+        pickup.Visible = false
+    end
 end
 
 local function show(kind, mainText, subText, color, duration)
@@ -176,6 +218,7 @@ local function show(kind, mainText, subText, color, duration)
     )
 
     card.Visible = true
+    dismissOptionalMobileOverlays()
     card.BackgroundTransparency = 1
     stroke.Transparency = 1
     title.TextTransparency = 1
