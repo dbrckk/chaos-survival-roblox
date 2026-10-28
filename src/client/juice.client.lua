@@ -127,6 +127,7 @@ criticalStroke.Transparency = 1
 criticalStroke.Parent = criticalFrame
 
 local banner = Instance.new("Frame")
+banner.Name = "RoundIntroBanner"
 banner.AnchorPoint = Vector2.new(0.5, 0.5)
 banner.Position = UDim2.fromScale(0.5, 0.42)
 banner.Size = UDim2.fromScale(0.86, 0.18)
