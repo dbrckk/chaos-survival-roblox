@@ -85,9 +85,13 @@ function UIResponsive.mobileExpeditionLayout(viewport, topInset)
     local profile = UIResponsive.mobileProfile(viewport)
     local height = profile.tinyHeight and 46 or 51
     local inset = math.clamp(tonumber(topInset) or 0, 0, c.height)
-    local minimumTop = inset + profile.topHeight + 48
-    local targetTop = math.max(profile.topHeight + 62,
-        inset + profile.topHeight + 66)
+    -- A 48px clearance was not sufficient on Android screenshots: the
+    -- separately inset Roblox HUD and this full-screen GUI still touched
+    -- around the timer/alive chip. The route is optional, so give it a
+    -- larger gap or hide it when a safe lane does not exist.
+    local minimumTop = inset + profile.topHeight + 72
+    local targetTop = math.max(profile.topHeight + 84,
+        inset + profile.topHeight + 88)
     local maximumTop = c.height - profile.roundFocusBottomOffset - height - 10
     return {
         xScale = profile.topCenterXScale,
@@ -103,6 +107,28 @@ function UIResponsive.showOptionalRoute(hazardVisible, roundEventVisible, introV
     return hazardVisible ~= true
         and roundEventVisible ~= true
         and introVisible ~= true
+end
+
+-- A brief reward is secondary to round alerts and must not intersect the
+-- bottom survival meter. Return a finite, viewport-relative lane rather
+-- than fixing the popup at 51% of the screen on every Android orientation.
+function UIResponsive.mobileRewardLayout(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local height = c.tinyHeight and 36 or 40
+    local bottomOfEvent = c.height * (c.tinyHeight and 0.37 or 0.34)
+        + (c.tinyHeight and 26 or 29)
+    local minimumCenter = bottomOfEvent + height * 0.5 + 8
+    local maximumCenter = c.height - profile.roundFocusBottomOffset
+        - profile.roundFocusHeight - 10 - height * 0.5
+    return {
+        xScale = 0.5,
+        width = math.min(300, math.max(180,
+            c.width * (c.wide and 0.25 or 0.60))),
+        height = height,
+        yScale = math.min(c.height * 0.61, maximumCenter) / c.height,
+        fits = maximumCenter >= minimumCenter,
+    }
 end
 
 -- Primary round introductions should not cover the avatar and other
