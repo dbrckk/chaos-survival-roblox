@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
@@ -10,6 +11,7 @@ local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
+local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
 
 local gui = Instance.new("ScreenGui")
@@ -34,7 +36,9 @@ label.Text = ""
 label.TextColor3 = UITheme.Colors.Cyan
 label.TextStrokeTransparency = 0.65
 label.TextScaled = true
-label.TextWrapped = true
+label.TextWrapped = not UserInputService.TouchEnabled
+label.TextTruncate = UserInputService.TouchEnabled
+    and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None
 label.TextTransparency = 1
 label.Visible = false
 label.Parent = gui
@@ -56,6 +60,7 @@ scale.Parent = label
 local token = 0
 local touchDevice = UserInputService.TouchEnabled
 local pendingReward = nil
+local rewardFits = true
 
 local rewardTextLimit = UITheme.addTextConstraint(label, 12, 23)
 
@@ -73,6 +78,14 @@ local function updateRewardLayout()
     label.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
     label.Size = UDim2.fromOffset(layout.width, layout.height)
     rewardTextLimit.MaxTextSize = 17
+    rewardFits = layout.fits
+    if not rewardFits and label.Visible then
+        -- A viewport rotation can invalidate the lane while a toast is live.
+        -- The gameplay reward remains authoritative on the server.
+        token += 1
+        label.Visible = false
+        MobileHudNotices.release("shard")
+    end
 end
 
 local function bindRewardCamera()
@@ -210,6 +223,9 @@ end
 
 
 local function show(reward, total, goldenFlag, flowBonus, source)
+    if touchDevice and not rewardFits then
+        return
+    end
     if touchDevice and not MobileHudNotices.claim("shard", 10) then
         -- Retain only the latest pickup, not a backlog obscuring survival.
         pendingReward = {
@@ -243,17 +259,17 @@ local function show(reward, total, goldenFlag, flowBonus, source)
     if touchDevice then
         -- Concise tactile feedback fits the side lane on landscape phones.
         if source == "DistrictSignal" then
-            label.Text = "SIGNAL +" .. tostring(reward) .. " COINS"
+            label.Text = (french and "SIGNAL +" or "SIGNAL +") .. tostring(reward)
         elseif source == "DistrictCache" then
-            label.Text = "CACHE +" .. tostring(reward) .. " COINS"
+            label.Text = (french and "CACHE +" or "CACHE +") .. tostring(reward)
         elseif golden then
-            label.Text = "GOLD +" .. tostring(reward) .. " COINS"
+            label.Text = (french and "ÉCLAT DORÉ +" or "GOLD SHARD +") .. tostring(reward)
         else
-            label.Text = "SHARD +" .. tostring(reward) .. " COINS"
+            label.Text = (french and "ÉCLAT +" or "SHARD +") .. tostring(reward)
         end
     end
     if flow > 0 then
-        label.Text ..= touchDevice and (" • COMBO +" .. tostring(flow))
+        label.Text ..= touchDevice and (" • +" .. tostring(flow) .. " COMBO")
             or ("  •  FLOW COMBO +" .. tostring(flow))
     end
     label.TextColor3 = source == "DistrictSignal"

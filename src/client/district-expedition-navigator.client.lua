@@ -117,6 +117,18 @@ markerText.TextSize = 12
 markerText.Text = copy("DISTRICT_NEXT_JUMP")
 markerText.Parent = markerFrame
 
+-- The 4Hz navigator heartbeat is too slow to relinquish a visible route
+-- when an escalation, round intro, or shard reward appears on this frame.
+-- Yield the optional route immediately to the single foreground notice.
+if UserInputService.TouchEnabled then
+    MobileHudNotices.Changed:Connect(function(owner)
+        if owner ~= nil then
+            panel.Visible = false
+            stepMarker.Enabled = false
+        end
+    end)
+end
+
 local text = Instance.new("TextLabel")
 text.Name = "ExpeditionHint"
 text.Position = UDim2.fromOffset(47, 5)

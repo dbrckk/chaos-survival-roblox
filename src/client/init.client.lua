@@ -147,6 +147,7 @@ title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBlack
 title.TextColor3 = UITheme.Colors.Text
 title.TextScaled = true
+title.TextTruncate = Enum.TextTruncate.AtEnd
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Text = "CHAOS SURVIVAL"
 title.Parent = top
@@ -159,10 +160,12 @@ hint.BackgroundTransparency = 1
 hint.Font = Enum.Font.GothamMedium
 hint.TextColor3 = UITheme.Colors.Muted
 hint.TextScaled = true
+hint.TextWrapped = false
+hint.TextTruncate = Enum.TextTruncate.AtEnd
 hint.TextXAlignment = Enum.TextXAlignment.Left
 hint.Text = ""
 hint.Parent = top
-UITheme.addTextConstraint(hint, 12, 20)
+local hintTextConstraint = UITheme.addTextConstraint(hint, 12, 20)
 
 local timer = Instance.new("TextLabel")
 timer.AnchorPoint = Vector2.new(1, 0.5)
@@ -1814,6 +1817,7 @@ local function applyResponsiveLayout()
 
     if not touchDevice then
         titleTextConstraint.MaxTextSize = 30
+        hintTextConstraint.MaxTextSize = 20
         top.Position = UDim2.fromScale(0.5, 0.025)
         top.Size = UDim2.fromScale(0.88, 0.13)
         topHazardGlyph.Position = UDim2.new(0, 16, 0.5, 0)
@@ -1842,6 +1846,9 @@ local function applyResponsiveLayout()
 
     local profile = UIResponsive.mobileProfile(viewport)
     titleTextConstraint.MaxTextSize = profile.tinyHeight and 21 or 25
+    -- Long localized hazard instructions previously intruded underneath
+    -- the countdown circle on Android. Keep them on a single bounded line.
+    hintTextConstraint.MaxTextSize = profile.tinyHeight and 12 or 15
     local panelHeight = math.max(
         170,
         math.min(
