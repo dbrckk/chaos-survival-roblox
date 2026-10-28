@@ -787,6 +787,69 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
     end
 end)
 
+-- The 45-second diagnostics used to enumerate thousands of visual
+-- Instances *inside RenderStepped*, creating the very hitch we want to
+-- measure. Snapshot numeric pacing there; count objects in a yielding task.
+-- Do not add a second frame/render owner or change gameplay VFX priorities.
+local performancePulsePending = false
+local function queuePerformancePulse(snapshot)
+    if performancePulsePending then return end
+    performancePulsePending = true
+    task.spawn(function()
+        local ok, err = pcall(function()
+        -- Stats availability varies across Android client builds and
+        -- permissions. This optional 45-second pulse must never crash
+        -- the primary RenderStepped owner that drives adaptive VFX,
+        -- lighting and feedback for the rest of the player's session.
+        local function optionalStat(read)
+            local ok, value = pcall(read)
+            return ok and value or 0
+        end
+        local okVisual, visualMetrics = pcall(VisualBudgetRules.collect,
+            workspace, function()
+                -- Yield only in this 45-second, non-authoritative census.
+                -- Other callers retain the synchronous snapshot API.
+                task.wait()
+            end)
+        if not okVisual or type(visualMetrics) ~= "table" then
+            visualMetrics = {Parts = 0, Lights = 0, Effects = 0}
+        end
+        local sample = PerformancePulseRules.sanitize({
+            averageFps = math.floor(snapshot.averageFps + 0.5),
+            p95FrameMs = snapshot.p95FrameMs,
+            slowFramePercent = snapshot.slowFramePercent,
+            vfxTier = snapshot.tier,
+            deviceClass = snapshot.deviceClass,
+            tierTransitions = snapshot.tierTransitions,
+            visualParts = visualMetrics.Parts,
+            visualLights = visualMetrics.Lights,
+            visualEffects = visualMetrics.Effects,
+            totalMemoryMb = optionalStat(function()
+                return Stats:GetTotalMemoryUsageMb()
+            end),
+            instanceCount = optionalStat(function()
+                return Stats.InstanceCount
+            end),
+            frameTimeMs = optionalStat(function()
+                return Stats.FrameTime * 1000
+            end),
+            renderCpuMs = optionalStat(function()
+                return Stats.RenderCPUFrameTime * 1000
+            end),
+            renderGpuMs = optionalStat(function()
+                return Stats.RenderGPUFrameTime * 1000
+            end),
+        })
+
+            performancePulseEvent:FireServer(sample)
+        end)
+        performancePulsePending = false
+        if not ok then
+            warn("Chaos performance diagnostics unavailable: ", tostring(err))
+        end
+    end)
+end
+
 RunService.RenderStepped:Connect(function(dt)
     if type(dt) ~= "number" or dt ~= dt or dt < 0 then return end
     camera = workspace.CurrentCamera or camera
@@ -844,45 +907,16 @@ RunService.RenderStepped:Connect(function(dt)
             local p95FrameMs, slowFramePercent =
                 FramePacingRules.summary(performancePacing)
 
-            -- Stats availability varies across Android client builds and
-            -- permissions. This optional 45-second pulse must never crash
-            -- the primary RenderStepped owner that drives adaptive VFX,
-            -- lighting and feedback for the rest of the player's session.
-            local function optionalStat(read)
-                local ok, value = pcall(read)
-                return ok and value or 0
-            end
-            local okVisual, visualMetrics = pcall(VisualBudgetRules.collect, workspace)
-            if not okVisual or type(visualMetrics) ~= "table" then
-                visualMetrics = {Parts = 0, Lights = 0, Effects = 0}
-            end
-            local sample = PerformancePulseRules.sanitize({
-                averageFps = math.floor(averageFps + 0.5),
+            -- Only snapshot O(1) pacing data on the render callback.
+            -- The optional Workspace census runs separately with yields.
+            queuePerformancePulse({
+                averageFps = averageFps,
                 p95FrameMs = p95FrameMs,
                 slowFramePercent = slowFramePercent,
-                vfxTier = vfxTierName,
-                deviceClass = deviceClass,
+                tier = vfxTierName,
                 tierTransitions = vfxTierTransitions,
-                visualParts = visualMetrics.Parts,
-                visualLights = visualMetrics.Lights,
-                visualEffects = visualMetrics.Effects,
-                totalMemoryMb = optionalStat(function()
-                    return Stats:GetTotalMemoryUsageMb()
-                end),
-                instanceCount = optionalStat(function()
-                    return Stats.InstanceCount
-                end),
-                frameTimeMs = optionalStat(function()
-                    return Stats.FrameTime * 1000
-                end),
-                renderCpuMs = optionalStat(function()
-                    return Stats.RenderCPUFrameTime * 1000
-                end),
-                renderGpuMs = optionalStat(function()
-                    return Stats.RenderGPUFrameTime * 1000
-                end),
+                deviceClass = deviceClass,
             })
-            performancePulseEvent:FireServer(sample)
 
             performancePulseClock = 0
             performanceFrameCount = 0
