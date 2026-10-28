@@ -1,10 +1,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local finalRushActive = false
+local touchDevice = UserInputService.TouchEnabled
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosMomentum"
@@ -63,6 +67,58 @@ scale.Parent = chip
 
 local token = 0
 
+local viewportConnection = nil
+local function applyLayout()
+    if not touchDevice then
+        chip.AnchorPoint = Vector2.new(1, 0.5)
+        chip.Position = UDim2.fromScale(0.975, 0.31)
+        chip.Size = UDim2.fromScale(0.22, 0.055)
+        constraint.MinSize = Vector2.new(120, 38)
+        constraint.MaxSize = Vector2.new(230, 54)
+        return
+    end
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local layout = UIResponsive.mobileMomentumChip(viewport)
+    chip.AnchorPoint = Vector2.new(0, 0.5)
+    chip.Position = UDim2.new(0, layout.leftInset, layout.centerYScale, 0)
+    chip.Size = UDim2.fromOffset(layout.width, layout.height)
+    constraint.MinSize = Vector2.new(layout.width, layout.height)
+    constraint.MaxSize = constraint.MinSize
+end
+
+local function bindCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize")
+            :Connect(applyLayout)
+    end
+    applyLayout()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+bindCamera()
+
+local function dismiss()
+    token += 1
+    chip.Visible = false
+    if touchDevice then MobileHudNotices.release("momentum") end
+end
+
+if touchDevice then
+    MobileHudNotices.Changed:Connect(function(owner)
+        if owner ~= "momentum" and chip.Visible then
+            -- A hazard, escalation, intro or pickup supersedes this
+            -- optional combo cue on the same frame.
+            token += 1
+            chip.Visible = false
+        end
+    end)
+end
+
 local function hide(current)
     task.delay(1.05, function()
         if current ~= token then
@@ -93,6 +149,7 @@ local function hide(current)
         task.wait(0.2)
         if current == token then
             chip.Visible = false
+            if touchDevice then MobileHudNotices.release("momentum") end
         end
     end)
 end
@@ -103,10 +160,13 @@ local function refresh()
         and player:GetAttribute("RoundEliminated") ~= true
 
     if not active or combo < 2 or finalRushActive then
-        if finalRushActive and chip.Visible then
-            token += 1
-            chip.Visible = false
-        end
+        dismiss()
+        return
+    end
+    if touchDevice and not MobileHudNotices.claim("momentum", 5) then
+        -- The authoritative gameplay values remain unchanged even if the
+        -- transient combo chip is suppressed by a higher-priority alert.
+        dismiss()
         return
     end
 
@@ -149,10 +209,12 @@ local function refresh()
 end
 
 player:GetAttributeChangedSignal("RoundMomentum"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
     if player:GetAttribute("RoundEliminated") == true then
-        token += 1
-        chip.Visible = false
+        dismiss()
+    else
+        refresh()
     end
 end)
 
@@ -162,8 +224,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     if nextFinalRush ~= finalRushActive then
         finalRushActive = nextFinalRush
         if finalRushActive then
-            token += 1
-            chip.Visible = false
+            dismiss()
         else
             refresh()
         end
