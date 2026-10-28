@@ -86,6 +86,7 @@ local hazardNearMissEvent = RemoteRegistry.ensureRemoteEvent(remotes, "HazardNea
 local chaosShardCollectedEvent = RemoteRegistry.ensureRemoteEvent(remotes, "ChaosShardCollected")
 local performancePulseEvent = RemoteRegistry.ensureRemoteEvent(remotes, "PerformancePulse")
 local accessibilitySettingsEvent = RemoteRegistry.ensureRemoteEvent(remotes, "AccessibilitySettings")
+local AudioMixRules = require(ReplicatedStorage.Shared.AudioMixRules)
 local socialSignalEvent = RemoteRegistry.ensureRemoteEvent(remotes, "SocialSignal")
 local socialReactionEvent = RemoteRegistry.ensureRemoteEvent(remotes, "SocialReaction")
 
@@ -96,13 +97,15 @@ AchievementService.init(remotes)
 
 local allowAccessibilityChange = RateLimiter.new(0.35)
 accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value)
-    if type(setting) ~= "string" or type(value) ~= "boolean" then
-        return
-    end
-    if setting ~= "ReduceMotion"
-        and setting ~= "AudioMuted"
-        and setting ~= "HapticsDisabled"
-    then
+    if type(setting) ~= "string" then return end
+    local isVolume = setting == "MusicVolume" or setting == "EffectsVolume"
+    if isVolume then
+        if not AudioMixRules.validServerVolume(value) then return end
+    elseif setting == "ReduceMotion"
+        or setting == "AudioMuted"
+        or setting == "HapticsDisabled" then
+        if type(value) ~= "boolean" then return end
+    else
         return
     end
     if not allowAccessibilityChange(tostring(player.UserId) .. ":" .. setting) then
@@ -117,7 +120,7 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
     GameAnalytics.custom(
         player,
         "AccessibilitySettingChanged",
-        value and 1 or 0,
+        isVolume and value or (value and 1 or 0),
         "Setting:" .. setting,
         "Device:" .. (player:GetAttribute("ClientDeviceClass") or "Unknown")
     )
