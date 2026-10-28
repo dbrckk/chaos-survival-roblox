@@ -9,6 +9,35 @@ function PbrDistrictRules.limit(tierName)
     return 0
 end
 
+-- An owner quota alone multiplies expensive material sampling across
+-- every streamed building. Cap the total active PBR surfaces per client.
+-- Extra-high Roblox graphics selection never bypasses the Android budget.
+function PbrDistrictRules.globalLimit(tierName, touch)
+    if tierName == "High" then return touch and 72 or 144 end
+    if tierName == "Medium" then return touch and 32 or 48 end
+    return 0
+end
+
+function PbrDistrictRules.distanceLimit(tierName, touch)
+    if tierName == "High" then return touch and 370 or 550 end
+    if tierName == "Medium" then return touch and 240 or 340 end
+    return 0
+end
+
+-- Read-only visibility check: the existing scenery LOD remains the single
+-- authority that hides far ornaments. Do not wake a hidden danger/decor part.
+function PbrDistrictRules.visible(part)
+    return part:GetAttribute("SceneryLodHidden") ~= true
+        and part.LocalTransparencyModifier < 0.95
+end
+
+function PbrDistrictRules.withinDistance(part, cameraPosition, tierName, touch)
+    local limit = PbrDistrictRules.distanceLimit(tierName, touch)
+    if limit <= 0 then return false end
+    if typeof(cameraPosition) ~= "Vector3" then return true end
+    return (part.Position - cameraPosition).Magnitude <= limit
+end
+
 function PbrDistrictRules.eligibleOwner(owner)
     if not owner or not owner:IsA("Model") then return false end
     local sector = owner:GetAttribute("DistrictSector")
@@ -24,13 +53,15 @@ function PbrDistrictRules.eligibleOwner(owner)
         or owner:GetAttribute("ChaosPerimeterStation") == true
 end
 
-function PbrDistrictRules.eligiblePart(part)
+function PbrDistrictRules.eligiblePart(part, ownedVariant)
     if not part or not part:IsA("BasePart")
         or not part.Anchored or part.CanCollide or part.CanTouch
         or part.CanQuery or part.Transparency >= 0.16
         or part.Material == Enum.Material.Neon
         or part.Material == Enum.Material.Glass
-        or part.MaterialVariant ~= "" then
+        or (part.MaterialVariant ~= ""
+            and part.MaterialVariant ~= ownedVariant)
+        or not PbrDistrictRules.visible(part) then
         return false
     end
     -- Preserve any original UV-authored PBR on imported mesh assets.
@@ -84,6 +115,19 @@ function PbrDistrictRules.priority(part)
         or name:find("dish", 1, true)
         or name:find("manifold", 1, true)
     return math.min(area, 4000) + (architecturalFace and 250 or 0)
+end
+
+-- Stable selection that values visible, nearby primary architecture.
+-- Already-selected surfaces get modest hysteresis, preventing a full
+-- material swap whenever the camera moves a few studs on mobile.
+function PbrDistrictRules.selectionPriority(part, cameraPosition, alreadyApplied)
+    local score = PbrDistrictRules.priority(part)
+    if typeof(cameraPosition) == "Vector3" then
+        local distance = (part.Position - cameraPosition).Magnitude
+        score += math.max(0, 400 - distance) * 10
+    end
+    if alreadyApplied then score += 160 end
+    return score
 end
 
 return PbrDistrictRules

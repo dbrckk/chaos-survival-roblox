@@ -633,6 +633,93 @@ describe("PBR materials for four playable district hero environments", function(
         hero:Destroy()
         tiny:Destroy()
     end)
+
+    it("enforces strict global PBR surface budgets on Android and desktop", function()
+        expect(PbrDistrictRules.globalLimit("Low", true)).toBe(0)
+        expect(PbrDistrictRules.globalLimit("Medium", true)).toBe(32)
+        expect(PbrDistrictRules.globalLimit("High", true)).toBe(72)
+        expect(PbrDistrictRules.globalLimit("Low", false)).toBe(0)
+        expect(PbrDistrictRules.globalLimit("Medium", false)).toBe(48)
+        expect(PbrDistrictRules.globalLimit("High", false)).toBe(144)
+        expect(PbrDistrictRules.globalLimit("Unknown", false)).toBe(0)
+        expect(PbrDistrictRules.globalLimit("High", true)
+            < PbrDistrictRules.globalLimit("High", false)).toBe(true)
+        expect(PbrDistrictRules.limit("Medium")).toBe(6)
+        expect(PbrDistrictRules.limit("High")).toBe(16)
+    end)
+
+    it("culls PBR by current LOD hidden state and camera distance", function()
+        local part = Instance.new("Part")
+        part.Size = Vector3.new(8, 5, 4)
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.Position = Vector3.new(0, 10, 0)
+        expect(PbrDistrictRules.visible(part)).toBe(true)
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(true)
+        expect(PbrDistrictRules.withinDistance(
+            part, Vector3.new(0, 10, 0), "Medium", true)).toBe(true)
+        expect(PbrDistrictRules.withinDistance(
+            part, Vector3.new(0, 10, 250), "Medium", true)).toBe(false)
+        expect(PbrDistrictRules.withinDistance(
+            part, Vector3.new(0, 10, 250), "High", true)).toBe(true)
+        expect(PbrDistrictRules.withinDistance(
+            part, Vector3.new(0, 10, 1000), "High", false)).toBe(false)
+        expect(PbrDistrictRules.withinDistance(
+            part, Vector3.zero, "Low", false)).toBe(false)
+        part:SetAttribute("SceneryLodHidden", true)
+        expect(PbrDistrictRules.visible(part)).toBe(false)
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        part:SetAttribute("SceneryLodHidden", false)
+        part.LocalTransparencyModifier = 1
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        part.LocalTransparencyModifier = 0
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(true)
+        part:Destroy()
+    end)
+
+    it("preserves owned PBR variants but never claims unrelated custom ones", function()
+        local part = Instance.new("Part")
+        part.Size = Vector3.new(8, 5, 4)
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.Material = Enum.Material.Foil
+        part.MaterialVariant = "ChaosBrushedTitanium"
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        expect(PbrDistrictRules.eligiblePart(part, "ChaosBrushedTitanium"))
+            .toBe(true)
+        expect(PbrDistrictRules.eligiblePart(part, "OtherCustomVariant"))
+            .toBe(false)
+        part.CanCollide = true
+        expect(PbrDistrictRules.eligiblePart(part, "ChaosBrushedTitanium"))
+            .toBe(false)
+        part.CanCollide = false
+        part:Destroy()
+    end)
+
+    it("prefers nearby hero surfaces and stabilizes existing active PBR", function()
+        local near = Instance.new("Part")
+        near.Name = "ArmorPanel"
+        near.Size = Vector3.new(8, 6, 2)
+        near.Position = Vector3.new(10, 0, 0)
+        local far = Instance.new("Part")
+        far.Name = "ArmorPanel"
+        far.Size = near.Size
+        far.Position = Vector3.new(195, 0, 0)
+        local eye = Vector3.new(0, 0, 0)
+        expect(PbrDistrictRules.selectionPriority(near, eye, false)
+            > PbrDistrictRules.selectionPriority(far, eye, false)).toBe(true)
+        local fresh = PbrDistrictRules.selectionPriority(near, eye, false)
+        local existing = PbrDistrictRules.selectionPriority(near, eye, true)
+        expect(existing - fresh).toBe(160)
+        expect(PbrDistrictRules.selectionPriority(near, nil, true)
+            > PbrDistrictRules.selectionPriority(near, nil, false)).toBe(true)
+        near:Destroy()
+        far:Destroy()
+    end)
 end)
 
 describe("Author-owned kinetic details in four active 3D districts", function()
