@@ -54,7 +54,7 @@ stampLabel.Name = "StagingCommit"
 stampLabel.AnchorPoint = Vector2.new(0, 1)
 -- Keep commit provenance above the bottom-centred runtime panel. On
 -- portrait Android both occupied the same bottom strip and overlapped.
-stampLabel.Position = UDim2.new(0, 10, 1, -98)
+stampLabel.Position = UDim2.new(0, 10, 1, -118)
 stampLabel.Size = UDim2.fromOffset(190, 24)
 stampLabel.BackgroundColor3 = UITheme.Colors.Panel
 stampLabel.BackgroundTransparency = 0.35
@@ -72,7 +72,7 @@ local telemetry = Instance.new("TextLabel")
 telemetry.Name = "StagingRuntimeBudget"
 telemetry.AnchorPoint = Vector2.new(0.5, 1)
 telemetry.Position = UDim2.new(0.5, 0, 1, -10)
-telemetry.Size = UDim2.fromOffset(300, 78)
+telemetry.Size = UDim2.fromOffset(300, 98)
 telemetry.BackgroundColor3 = UITheme.Colors.Panel
 telemetry.BackgroundTransparency = 0.22
 telemetry.BorderSizePixel = 0
@@ -87,7 +87,7 @@ UITheme.addCorner(telemetry, UITheme.Corners.Medium)
 -- Health/provenance labels must refresh immediately: READY is only a
 -- few seconds long, and a four-second graphics sample could miss it.
 -- Expensive visual folder traversal remains on its existing 4-second timer.
-local performanceSummary = "FPS -- | WORST --ms | -- | --\nPARTS --   LIGHTS --   FX --\nCHAOS --   WARN --   METEORS --"
+local performanceSummary = "FPS -- | P95 --ms | SLOW --%\nWORST --ms | -- | --\nPARTS --   LIGHTS --   FX --\nCHAOS --   WARN --   METEORS --"
 local performanceWarning = false
 local telemetryRunning = false
 
@@ -150,6 +150,8 @@ local function startPerformanceTelemetry()
             if not stagingEnabled or not gui.Parent then break end
             local fps = tonumber(player:GetAttribute("ClientObservedFps"))
             local worst = tonumber(player:GetAttribute("ClientObservedWorstFrameMs"))
+            local p95 = tonumber(player:GetAttribute("ClientObservedP95FrameMs"))
+            local slow = tonumber(player:GetAttribute("ClientObservedSlowFramePercent"))
             local tier = tostring(player:GetAttribute("VfxQualityTier") or "High")
             local budget = VisualBudgetRules.forTier(tier)
             local counts = VisualBudgetRules.collect(workspace)
@@ -163,8 +165,10 @@ local function startPerformanceTelemetry()
             )
 
             performanceSummary = string.format(
-                "FPS %s | WORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d\nCHAOS %d   WARN %d   METEORS %d",
+                "FPS %s | P95 %sms | SLOW %s%%\nWORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d\nCHAOS %d   WARN %d   METEORS %d",
                 fps and tostring(fps) or "--",
+                p95 and tostring(p95) or "--",
+                slow and tostring(slow) or "--",
                 worst and tostring(worst) or "--",
                 tier, status,
                 counts.Parts, budget.Parts,
@@ -172,7 +176,9 @@ local function startPerformanceTelemetry()
                 counts.Effects, budget.Effects,
                 hazard.ActiveDisasters, hazard.Warnings, hazard.LiveMeteors
             )
-            performanceWarning = ((fps and fps < 30) or status ~= "OK") == true
+            performanceWarning = ((fps and fps < 30)
+                or (p95 and p95 >= 50) or (slow and slow >= 10)
+                or status ~= "OK") == true
             renderRuntimeTelemetry()
         end
         telemetryRunning = false

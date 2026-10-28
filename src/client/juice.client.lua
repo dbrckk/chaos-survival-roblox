@@ -11,6 +11,7 @@ local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local PerformancePulseRules = require(ReplicatedStorage.Shared.PerformancePulseRules)
+local FramePacingRules = require(ReplicatedStorage.Shared.FramePacingRules)
 local CloudLayer = require(script.Parent.CloudLayer)
 local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
@@ -244,6 +245,8 @@ local vfxTierName = VfxQuality.initialTier(UserInputService.TouchEnabled)
 local vfxTier = VfxQuality.get(vfxTierName)
 local frameTimeAccumulator = 0
 local sampleWorstFrameDt = 0
+local qualityPacing = FramePacingRules.new()
+local performancePacing = FramePacingRules.new()
 local frameSampleCount = 0
 local qualitySampleClock = 0
 local qualityCandidate = nil
@@ -810,11 +813,15 @@ RunService.RenderStepped:Connect(function(dt)
     if activeDt > 0 then
         frameTimeAccumulator += activeDt
         sampleWorstFrameDt = math.max(sampleWorstFrameDt, activeDt)
+        FramePacingRules.add(qualityPacing, activeDt)
+        FramePacingRules.add(performancePacing, activeDt)
         frameSampleCount += 1
         qualitySampleClock += activeDt
     elseif dt > 0.60 then
         frameTimeAccumulator = 0
         sampleWorstFrameDt = 0
+        FramePacingRules.reset(qualityPacing)
+        FramePacingRules.reset(performancePacing)
         frameSampleCount = 0
         qualitySampleClock = 0
         qualityCandidate = nil
@@ -834,6 +841,8 @@ RunService.RenderStepped:Connect(function(dt)
                 240
             )
             local deviceClass = UserInputService.TouchEnabled and "Touch" or "Desktop"
+            local p95FrameMs, slowFramePercent =
+                FramePacingRules.summary(performancePacing)
 
             -- Stats availability varies across Android client builds and
             -- permissions. This optional 45-second pulse must never crash
@@ -849,6 +858,8 @@ RunService.RenderStepped:Connect(function(dt)
             end
             local sample = PerformancePulseRules.sanitize({
                 averageFps = math.floor(averageFps + 0.5),
+                p95FrameMs = p95FrameMs,
+                slowFramePercent = slowFramePercent,
                 vfxTier = vfxTierName,
                 deviceClass = deviceClass,
                 tierTransitions = vfxTierTransitions,
@@ -875,6 +886,7 @@ RunService.RenderStepped:Connect(function(dt)
 
             performancePulseClock = 0
             performanceFrameCount = 0
+            FramePacingRules.reset(performancePacing)
         end
     end
 
@@ -886,6 +898,12 @@ RunService.RenderStepped:Connect(function(dt)
         player:SetAttribute("ClientObservedFps", math.floor(math.clamp(averageFps, 0, 240) + 0.5))
         player:SetAttribute("ClientObservedWorstFrameMs",
             math.floor(math.clamp(sampleWorstFrameDt * 1000, 0, 2000) + 0.5))
+        -- A single worst frame cannot distinguish sustained stutter from
+        -- an isolated OS scheduling spike. Expose robust 2.5-second pacing.
+        local observedP95Ms, observedSlowPercent =
+            FramePacingRules.summary(qualityPacing)
+        player:SetAttribute("ClientObservedP95FrameMs", observedP95Ms)
+        player:SetAttribute("ClientObservedSlowFramePercent", observedSlowPercent)
         local nextTierName = VfxQuality.nextTier(
             vfxTierName, averageFps, UserInputService.TouchEnabled
         )
@@ -925,6 +943,7 @@ RunService.RenderStepped:Connect(function(dt)
 
         frameTimeAccumulator = 0
         sampleWorstFrameDt = 0
+        FramePacingRules.reset(qualityPacing)
         frameSampleCount = 0
         qualitySampleClock = 0
     end

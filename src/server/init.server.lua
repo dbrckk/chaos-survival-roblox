@@ -233,6 +233,8 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
     local totalMemoryMb = sample.totalMemoryMb
     local instanceCount = sample.instanceCount
     local frameTimeMs = sample.frameTimeMs
+    local p95FrameMs = sample.p95FrameMs
+    local slowFramePercent = sample.slowFramePercent
     local renderCpuMs = sample.renderCpuMs
     local renderGpuMs = sample.renderGpuMs
 
@@ -281,6 +283,8 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         "VFX:" .. tier .. "|Device:" .. deviceClass,
         "Instances:" .. tostring(instanceCount),
         "FrameMs:" .. string.format("%.1f", frameTimeMs)
+            .. "|P95:" .. tostring(p95FrameMs)
+            .. "|Slow:" .. tostring(slowFramePercent)
             .. "|CPU:" .. string.format("%.1f", renderCpuMs)
             .. "|GPU:" .. string.format("%.1f", renderGpuMs)
     )
