@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: chaos-pbr-one-shot-owner-20261028
+  group: chaos-pbr-one-shot-owner-short-names-20261028
   cancel-in-progress: false
 
 jobs:
@@ -60,7 +60,7 @@ jobs:
       github.event_name == 'push'
       && github.ref == 'refs/heads/main'
       && github.run_attempt == 1
-      && startsWith(github.event.head_commit.message, 'feat(pbr): approved one-shot recovery of two remaining images')
+      && startsWith(github.event.head_commit.message, 'fix(pbr): approved one-shot retry after rejected asset names')
     runs-on: ubuntu-latest
     timeout-minutes: 16
     env:
@@ -89,7 +89,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: chaos-owner-approved-pbr-one-shot-actual-upload
+          name: chaos-owner-approved-pbr-short-name-recovery
           path: build/pbr-recovery-once/roblox-operations/
           if-no-files-found: warn
           retention-days: 30
