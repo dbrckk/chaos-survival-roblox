@@ -135,7 +135,7 @@ jobs:
           import json,sys
           print(json.dumps({
               "assetType": "Image",
-              "displayName": f"Chaos Original PBR armored_diamondplate {sys.argv[1]} 2K",
+              "displayName": f"Chaos PBR Diamondplate {sys.argv[1].title()} 2K",
               "description": "Original game-authored 2048px PBR map for Chaos Survival.",
               "creationContext": {"creator": {"userId": "9774173158"}}
           },separators=(",",":")))

@@ -25,6 +25,17 @@ ROOT = Path("build/pbr-recovery-once")
 RECEIPTS = Path("assets/source/roblox-pbr-upload-receipts.json")
 CHANNELS = ("roughness", "metallic")
 OWNER = "9774173158"
+# Roblox rejected both previous POSTs with HTTP 400 "Asset name length is
+# invalid." The original prefix was longer for roughness/metallic than the
+# already-created color/normal assets. Use stable SHORT names < 50 chars.
+ROBLOX_ASSET_NAME_MAX = 50
+
+
+def safe_asset_name(channel: str) -> str:
+    assert channel in CHANNELS
+    name = f"Chaos PBR Diamondplate {channel.title()} 2K"
+    assert len(name) <= ROBLOX_ASSET_NAME_MAX, "Roblox Image name too long"
+    return name
 
 
 def write_json(path: Path, value: object) -> None:
@@ -90,6 +101,7 @@ def verify_sources() -> tuple[dict, dict]:
     assert len(manifest["materials"]) == 1
     assert manifest["materials"][0]["name"] == "armored_diamondplate"
     for channel in CHANNELS:
+        assert len(safe_asset_name(channel)) <= ROBLOX_ASSET_NAME_MAX
         entry = manifest["materials"][0]["maps"][channel]
         path = ROOT / entry["path"]
         assert path.is_file() and path.stat().st_size < 20 * 1024 * 1024
@@ -106,7 +118,7 @@ def create_one(channel: str, manifest: dict, key: str, report: dict) -> dict:
     image = (ROOT / entry["path"]).read_bytes()
     request = {
         "assetType": "Image",
-        "displayName": f"Chaos Original PBR armored_diamondplate {channel} 2K",
+        "displayName": safe_asset_name(channel),
         "description": "Original game-authored 2048px PBR map for Chaos Survival.",
         "creationContext": {"creator": {"userId": OWNER}},
     }
@@ -198,6 +210,9 @@ def main() -> int:
         "schema": "Chaos original diamondplate missing-channel one-shot recovery v1",
         "dry_run": args.dry_run,
         "base_source_run": receipts["materials"]["armored_diamondplate"]["selected_partial_run_id"],
+        "previous_two_channel_attempt": 40678338047,
+        "previous_terminal_rejection": "HTTP 400: Asset name length is invalid",
+        "asset_names": {channel: safe_asset_name(channel) for channel in CHANNELS},
         "existing_color_id": "86680602350796",
         "existing_normal_id": "94326474312318",
         "channels": {},
