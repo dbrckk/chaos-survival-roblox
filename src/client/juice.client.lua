@@ -824,6 +824,11 @@ local function queuePerformancePulse(snapshot)
                 visualParts = visualMetrics.Parts,
                 visualLights = visualMetrics.Lights,
                 visualEffects = visualMetrics.Effects,
+                -- PBR controller already maintains these three attributes.
+                -- Read them at the existing 45-second pulse boundary.
+                pbrActive = player:GetAttribute("PbrActiveSurfaceCount"),
+                pbrBudget = player:GetAttribute("PbrActiveSurfaceBudget"),
+                pbrCandidates = player:GetAttribute("PbrVisibleCandidateCount"),
                 totalMemoryMb = optionalStat(function()
                     return Stats:GetTotalMemoryUsageMb()
                 end),
