@@ -68,6 +68,7 @@ scale.Parent = chip
 local token = 0
 
 local viewportConnection = nil
+local momentumFits = true
 local function applyLayout()
     if not touchDevice then
         chip.AnchorPoint = Vector2.new(1, 0.5)
@@ -80,6 +81,12 @@ local function applyLayout()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     local layout = UIResponsive.mobileMomentumChip(viewport)
+    momentumFits = layout.fits
+    if not momentumFits then
+        token += 1
+        chip.Visible = false
+        MobileHudNotices.release("momentum")
+    end
     chip.AnchorPoint = Vector2.new(0, 0.5)
     chip.Position = UDim2.new(0, layout.leftInset, layout.centerYScale, 0)
     chip.Size = UDim2.fromOffset(layout.width, layout.height)
@@ -159,7 +166,8 @@ local function refresh()
     local active = player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
 
-    if not active or combo < 2 or finalRushActive then
+    if not active or combo < 2 or finalRushActive
+        or (touchDevice and not momentumFits) then
         dismiss()
         return
     end
