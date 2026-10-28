@@ -5,11 +5,13 @@
 -- RenderStepped, Heartbeat, lights or high-frequency update tasks.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local DistrictMaterialFinishKit = require(script.Parent.DistrictMaterialFinishKit)
+local DistrictKineticKit = require(script.Parent.DistrictKineticKit)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
@@ -19,6 +21,36 @@ folder.Parent = workspace
 local watchedMap = nil
 local disconnectReady = nil
 local rebuildQueued = false
+local liveTracks = {}
+
+local function currentTier()
+    local requested = player:GetAttribute("VfxQualityTier")
+    return VfxQuality.Tiers[requested]
+        and requested or VfxQuality.initialTier(UserInputService.TouchEnabled)
+end
+
+local function stopKinetics()
+    DistrictKineticKit.stop(liveTracks)
+end
+
+-- Reconfigure the existing four models when the reduced-motion option
+-- changes: do NOT rebuild all district geometry or reset LOD/texture state.
+local function syncKinetics()
+    stopKinetics()
+    local tier = currentTier()
+    if tier == "Low" or player:GetAttribute("ReduceMotion") == true then
+        return
+    end
+    for _, model in ipairs(folder:GetChildren()) do
+        if model:IsA("Model") then
+            local sector = model:GetAttribute("DistrictSector")
+            for _, entry in ipairs(DistrictKineticKit.start(
+                model, sector, tier, false)) do
+                liveTracks[#liveTracks + 1] = entry
+            end
+        end
+    end
+end
 
 local signs = {
     {-1, -1, "OBSERVATORY", "01"},
@@ -385,8 +417,9 @@ local function makeSector(base, theme, index, tier, variant)
 end
 
 local function rebuild()
+    stopKinetics()
     folder:ClearAllChildren()
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    local tier = currentTier()
     -- Low-end phones now receive a recognizable five-Part variant instead
     -- of an empty district; it stays subject to the existing scenery LOD.
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -400,6 +433,7 @@ local function rebuild()
     for index = 1, 4 do
         makeSector(base, theme, index, tier, variant)
     end
+    syncKinetics()
 end
 
 local function scheduleRebuild()
@@ -422,6 +456,7 @@ local function bindMap(generated)
             generated, "Arena", "Base", scheduleRebuild
         )
     else
+        stopKinetics()
         folder:ClearAllChildren()
     end
 end
@@ -438,5 +473,6 @@ workspace.ChildRemoved:Connect(function(child)
     end
 end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(syncKinetics)
 bindMap(workspace:FindFirstChild("GeneratedMap"))
 scheduleRebuild()
