@@ -7,12 +7,16 @@ on:
       - 'default.project.json'
       - '.github/workflows/build-original-pbr-materials.yml'
       - '.github/workflows/upload-original-pbr-material.yml'
+      - '.github/workflows/recover-original-pbr-diamondplate.yml'
+      - 'assets/source/roblox-pbr-upload-receipts.json'
   push:
     branches: [main]
     paths:
       - 'tools/generate_pbr_materials.py'
       - 'default.project.json'
       - '.github/workflows/upload-original-pbr-material.yml'
+      - '.github/workflows/recover-original-pbr-diamondplate.yml'
+      - 'assets/source/roblox-pbr-upload-receipts.json'
   workflow_dispatch:
 
 permissions:
@@ -64,6 +68,48 @@ jobs:
           assert upload["if"] == "inputs.dry_run == false", "Preserve explicit upload-only gate"
           assert "UPLOAD_CHAOS_PBR_2K" in source, "Preserve upload confirmation"
           print("PASS: valid manual-only YAML; Python 3.12 wheels and safety gates verified.")
+
+          # The recovery workflow is a MANUAL single-channel repair, never
+          # a disguised reupload of two already created Roblox images.
+          recovery_path = Path(".github/workflows/recover-original-pbr-diamondplate.yml")
+          recovery = yaml.safe_load(recovery_path.read_text())
+          assert isinstance(recovery, dict), "Recovery workflow has invalid YAML"
+          recovery_triggers = recovery.get("on", recovery.get(True, {}))
+          assert set(recovery_triggers) == {"workflow_dispatch"}, "Recovery must remain manual-only"
+          choices = recovery_triggers["workflow_dispatch"]["inputs"]["channel"]["options"]
+          assert choices == ["roughness", "metallic"], "Recovery cannot upload existing color or normal"
+          assert recovery_triggers["workflow_dispatch"]["inputs"]["dry_run"]["default"] is True
+          repair_job = recovery["jobs"]["recover-one-map"]
+          assert "github.ref == 'refs/heads/main'" in repair_job["if"]
+          repair_steps = repair_job["steps"]
+          repair_python = next(x for x in repair_steps if x.get("uses", "").startswith("actions/setup-python@"))
+          assert repair_python["with"]["python-version"] == "3.12"
+          repair_install = next(x for x in repair_steps if x.get("name","").startswith("Install image dependencies"))
+          assert "--only-binary=:all:" in repair_install["run"]
+          create = next(x for x in repair_steps if x.get("name","").startswith("Upload only this one"))
+          assert create["if"] == "inputs.dry_run == false"
+          assert "UPLOAD_CHAOS_PBR_2K" in recovery_path.read_text()
+          assert "for channel in" not in create["run"], "Never upload multiple channels in one recovery"
+          assert "armored_diamondplate_$CHANNEL" in create["run"]
+          assert "--write-out '%{http_code}'" in create["run"], "Capture HTTP 400 details"
+          evidence = next(x for x in repair_steps if x.get("name","").startswith("Preserve partial receipts"))
+          assert evidence["if"] == "always()"
+
+          # Exact real upload receipts are necessary for avoiding duplicates.
+          import json
+          receipts=json.loads(Path("assets/source/roblox-pbr-upload-receipts.json").read_text())
+          assert receipts["creator_user_id"] == "9774173158"
+          materials=receipts["materials"]
+          for name in ("brushed_titanium", "oxidized_steel", "reactor_ceramic"):
+              assert set(materials[name]["channels"]) == {"color","normal","roughness","metallic"}
+              assert all(str(entry["id"]).isdecimal() for entry in materials[name]["channels"].values())
+          armor=materials["armored_diamondplate"]
+          assert armor["channels"]["color"]["id"] == "86680602350796"
+          assert armor["channels"]["normal"]["id"] == "94326474312318"
+          assert armor["channels"]["roughness"] is None
+          assert armor["channels"]["metallic"] is None
+          assert armor["missing"] == choices
+          print("PASS: no duplicate upload paths; immutable 14-image receipts and manual repair validated.")
           PY
 
       - name: Render four complete original 2K material sets
