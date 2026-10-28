@@ -274,10 +274,16 @@ end
 function UIResponsive.mobilePerformanceOverlay(viewport)
     local c = UIResponsive.classify(viewport, true)
     local profile = UIResponsive.mobileProfile(viewport)
-    local height = 48
+    -- Very short landscape keeps two rows; taller screens can display
+    -- the third PBR residency row without obscuring the focus meter.
+    local height = c.tinyHeight and 48 or 66
     local width = c.veryNarrow and 156 or 176
     local left = c.veryNarrow and 12 or 16
-    local top = math.max(profile.topHeight + 92, c.height * 0.46)
+    -- Portrait optional route guidance uses the 53% mid-screen lane.
+    -- Keep the read-only counter below that guidance and above the
+    -- bottom survival meter; do not place it over the thumb stick.
+    local top = math.max(profile.topHeight + 92,
+        c.height * (c.aspect < 1 and 0.64 or 0.46))
     local maximumTop = c.height - profile.roundFocusBottomOffset
         - profile.roundFocusHeight - height - 10
     return {
