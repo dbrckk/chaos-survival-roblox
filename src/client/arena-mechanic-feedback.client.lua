@@ -216,9 +216,9 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         flashTween = nil
     end
     flash.BackgroundColor3 = accent
-    if reduced then
-        -- Reduced Motion keeps the readable textual acknowledgement
-        -- without a full-screen flash or particle overdraw.
+    if not VfxQuality.optionalFullScreenFlashAllowed(touchDevice, reduced) then
+        -- Preserve hazard visibility and OLED contrast on mobile: the
+        -- localized reward text/character particles still acknowledge pads.
         flash.BackgroundTransparency = 1
     else
         flash.BackgroundTransparency = 0.91 + ((1 - tier.Scale) * 0.04)
