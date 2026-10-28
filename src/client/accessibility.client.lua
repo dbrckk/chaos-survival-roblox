@@ -224,9 +224,10 @@ local function refreshPerformance()
     )
     local actualP95 = player:GetAttribute("ClientObservedP95FrameMs")
     local actualSlow = player:GetAttribute("ClientObservedSlowFramePercent")
-    performanceLabel.TextColor3 = (type(actualP95) == "number"
+    local struggling = (type(actualP95) == "number"
         and actualP95 >= 50) or (type(actualSlow) == "number"
         and actualSlow >= 10)
+    performanceLabel.TextColor3 = struggling
         and UITheme.Colors.Orange or UITheme.Colors.Text
 end
 
