@@ -110,6 +110,23 @@ describe("Character polish rules", function()
         expect(bright("High", "result", true, false, true, false)).toBe(0)
     end)
 
+    it("lifts only the local Android avatar without new remote-light budgets", function()
+        local bright = CharacterPolishRules.lightBrightness
+        local mediumDesktop = bright("Medium", "round", true, false, true, false, false)
+        local mediumMobile = bright("Medium", "round", true, false, true, false, true)
+        local highMobile = bright("High", "round", true, false, true, false, true)
+        expect(mediumMobile > mediumDesktop).toBe(true)
+        expect(mediumMobile < 0.45).toBe(true)
+        expect(highMobile > mediumMobile and highMobile < 0.60).toBe(true)
+        expect(bright("Medium", "round", false, false, true, false, true))
+            .toBe(bright("Medium", "round", false, false, true, false, false))
+        expect(bright("Low", "round", true, false, true, false, true)).toBe(0)
+        expect(bright("Medium", "round", true, false, true, true, true)).toBe(0)
+        expect(bright("High", "round", true, true, true, false, true)).toBe(0)
+        expect(bright("Medium", "round", true, false, false, false, true)).toBe(0)
+        expect(bright("Medium", "waiting", true, false, true, false, true)).toBe(0)
+    end)
+
     it("suppresses extra character lighting during final rush", function()
         expect(CharacterPolishRules.lightBrightness(
             "High",
