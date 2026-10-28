@@ -150,7 +150,59 @@ def build_private_staging(report: dict[str, Any]) -> bool:
     return True
 
 
+
+def verify_shipped_pbr_contract() -> None:
+    """Guard the real shipped variants against the independent owner audit.
+
+    This is a snapshot consistency check, NOT a fresh Roblox moderation check.
+    A revoked permission or changed moderation still requires live Open Cloud
+    re-verification before any public-place deployment.
+    """
+    receipts = load_receipts()
+    evidence_path = Path("assets/source/roblox-pbr-approval-evidence.json")
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    if evidence.get("source") != (
+        "read-only Roblox Open Cloud GET /assets/v1/assets/{assetId}; per-image HTTP 200"
+    ):
+        raise ValueError("Approval evidence must come from real read-only Roblox GET")
+    if (str(evidence.get("creator_user_id")) != CREATOR
+            or evidence.get("all_approved_at_audit") is not True
+            or evidence.get("approved_current_at_audit") != 16
+            or evidence.get("total_unique_image_ids") != 16):
+        raise ValueError("Missing complete creator-owned PBR approval evidence")
+    if evidence.get("public_place_published") is not False:
+        raise ValueError("Audit must not claim a public release")
+    if set(evidence.get("materials", {})) != set(VARIANTS):
+        raise ValueError("Approval evidence material list differs from shipped PBR")
+
+    project = json.loads(SHIPPED_PROJECT.read_text(encoding="utf-8"))
+    variants = project["tree"]["MaterialService"]
+    for material, variant in VARIANTS.items():
+        if variant not in variants:
+            raise ValueError(f"Missing shipped MaterialVariant {variant}")
+        properties = variants[variant]["$properties"]
+        receipt_channels = receipts["materials"][material]["channels"]
+        approval_channels = evidence["materials"][material]
+        if set(approval_channels) != set(CHANNELS):
+            raise ValueError(f"Incomplete audited PBR channels: {material}")
+        for channel, prop in PROPERTIES.items():
+            asset_id = receipt_channels[channel]["id"]
+            approved = approval_channels[channel]
+            if (str(approved.get("id")) != asset_id
+                    or approved.get("current_moderation_at_audit") != "APPROVED"
+                    or str(approved.get("ownership_at_audit")) != CREATOR
+                    or approved.get("asset_metadata_http_status") != 200):
+                raise ValueError(f"Unverified approval for {material}/{channel}")
+            if properties.get(prop) != "rbxassetid://" + asset_id:
+                raise ValueError(
+                    f"Shipped {variant}.{prop} does not match approved owner asset"
+                )
+    print("PASS: all 16 shipped PBR maps match approved owner evidence and receipts.")
+
+
+
 def self_test() -> None:
+    verify_shipped_pbr_contract()
     assets = load_receipts()
     test_id = assets["materials"]["armored_diamondplate"]["channels"]["roughness"]["id"]
     valid = {
