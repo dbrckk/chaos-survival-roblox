@@ -15,6 +15,7 @@ local CloudLayer = require(script.Parent.CloudLayer)
 local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
@@ -351,6 +352,11 @@ local function showBanner(mainText, subText, accent, duration)
     )
     bannerTitle.Text = mainText or ""
     bannerSub.Text = subText or ""
+    -- An urgent disaster introduction is the only foreground notification
+    -- on Android. Escalation and pickup toasts must yield while it appears.
+    if UserInputService.TouchEnabled then
+        MobileHudNotices.claim("intro", 100)
+    end
     banner.Visible = true
     local reduced = player:GetAttribute("ReduceMotion") == true
     banner.BackgroundTransparency = reduced and 0.08 or 1
@@ -377,6 +383,9 @@ local function showBanner(mainText, subText, accent, duration)
             banner.BackgroundTransparency = 1
             bannerScale.Scale = 1
             banner.Visible = false
+            if UserInputService.TouchEnabled then
+                MobileHudNotices.release("intro")
+            end
             return
         end
         animateBanner(banner, TweenInfo.new(0.22), {BackgroundTransparency = 1})
@@ -384,6 +393,9 @@ local function showBanner(mainText, subText, accent, duration)
         task.wait(0.24)
         if token == bannerToken then
             banner.Visible = false
+            if UserInputService.TouchEnabled then
+                MobileHudNotices.release("intro")
+            end
         end
     end)
 end
@@ -405,6 +417,9 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
         if bannerFadingOut then
             banner.Visible = false
             banner.BackgroundTransparency = 1
+            if UserInputService.TouchEnabled then
+                MobileHudNotices.release("intro")
+            end
         else
             banner.BackgroundTransparency = 0.08
         end

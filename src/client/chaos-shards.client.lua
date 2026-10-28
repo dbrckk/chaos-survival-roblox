@@ -6,6 +6,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
@@ -22,9 +24,8 @@ label.Name = "Reward"
 label.AnchorPoint = Vector2.new(0.5, 0.5)
 -- Centered above the Android control cluster; player survival actions
 -- remain unobstructed during an optional pickup.
-label.Position = UDim2.fromScale(0.5, UserInputService.TouchEnabled and 0.51 or 0.66)
-label.Size = UDim2.fromOffset(UserInputService.TouchEnabled and 260 or 300,
-    UserInputService.TouchEnabled and 49 or 54)
+label.Position = UDim2.fromScale(0.5, 0.66)
+label.Size = UDim2.fromOffset(300, 54)
 label.BackgroundColor3 = UITheme.Colors.Panel
 label.BackgroundTransparency = 1
 label.BorderSizePixel = 0
@@ -33,6 +34,7 @@ label.Text = ""
 label.TextColor3 = UITheme.Colors.Cyan
 label.TextStrokeTransparency = 0.65
 label.TextScaled = true
+label.TextWrapped = true
 label.TextTransparency = 1
 label.Visible = false
 label.Parent = gui
@@ -52,6 +54,41 @@ scale.Scale = 0.78
 scale.Parent = label
 
 local token = 0
+local touchDevice = UserInputService.TouchEnabled
+local pendingReward = nil
+
+local rewardTextLimit = UITheme.addTextConstraint(label, 12, 23)
+
+local viewportConnection
+local function updateRewardLayout()
+    if not touchDevice then
+        label.Position = UDim2.fromScale(0.5, 0.66)
+        label.Size = UDim2.fromOffset(300, 54)
+        rewardTextLimit.MaxTextSize = 23
+        return
+    end
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local layout = UIResponsive.mobileShardToast(viewport)
+    label.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
+    label.Size = UDim2.fromOffset(layout.width, layout.height)
+    rewardTextLimit.MaxTextSize = 17
+end
+
+local function bindRewardCamera()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize")
+            :Connect(updateRewardLayout)
+    end
+    updateRewardLayout()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindRewardCamera)
+bindRewardCamera()
 
 local function worldBurst(position, reward, source)
     if typeof(position) ~= "Vector3" then
@@ -173,6 +210,19 @@ end
 
 
 local function show(reward, total, goldenFlag, flowBonus, source)
+    if touchDevice and not MobileHudNotices.claim("shard", 10) then
+        -- Retain only the latest pickup, not a backlog obscuring survival.
+        pendingReward = {
+            deadline = os.clock() + 2.5,
+            reward = reward,
+            total = total,
+            golden = goldenFlag,
+            flowBonus = flowBonus,
+            source = source,
+        }
+        return
+    end
+    pendingReward = nil
     token += 1
     local current = token
 
@@ -190,8 +240,21 @@ local function show(reward, total, goldenFlag, flowBonus, source)
     else
         label.Text = "+" .. tostring(reward) .. " COIN  •  CHAOS SHARD " .. tostring(shardTotal)
     end
+    if touchDevice then
+        -- Concise tactile feedback fits the side lane on landscape phones.
+        if source == "DistrictSignal" then
+            label.Text = "SIGNAL +" .. tostring(reward) .. " COINS"
+        elseif source == "DistrictCache" then
+            label.Text = "CACHE +" .. tostring(reward) .. " COINS"
+        elseif golden then
+            label.Text = "GOLD +" .. tostring(reward) .. " COINS"
+        else
+            label.Text = "SHARD +" .. tostring(reward) .. " COINS"
+        end
+    end
     if flow > 0 then
-        label.Text ..= "  •  FLOW COMBO +" .. tostring(flow)
+        label.Text ..= touchDevice and (" • COMBO +" .. tostring(flow))
+            or ("  •  FLOW COMBO +" .. tostring(flow))
     end
     label.TextColor3 = source == "DistrictSignal"
         and Color3.fromRGB(255, 199, 113)
@@ -241,6 +304,27 @@ local function show(reward, total, goldenFlag, flowBonus, source)
         task.wait(0.23)
         if current == token then
             label.Visible = false
+            if touchDevice then
+                MobileHudNotices.release("shard")
+            end
+        end
+    end)
+end
+
+if touchDevice then
+    MobileHudNotices.Changed:Connect(function(owner)
+        if owner ~= nil and owner ~= "shard" and label.Visible then
+            token += 1
+            label.Visible = false
+        elseif owner == nil and pendingReward then
+            local pending = pendingReward
+            pendingReward = nil
+            if os.clock() <= pending.deadline then
+                task.defer(function()
+                    show(pending.reward, pending.total, pending.golden,
+                        pending.flowBonus, pending.source)
+                end)
+            end
         end
     end)
 end

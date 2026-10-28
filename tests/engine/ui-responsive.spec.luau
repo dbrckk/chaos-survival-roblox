@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local UIResponsive = require("../../src/shared/UIResponsive")
+local MobileHudNotices = require("../../src/shared/MobileHudNotices")
 local NearMissVisualRules = require("../../src/shared/NearMissVisualRules")
 local BotNameplateRules = require("../../src/shared/BotNameplateRules")
 local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
@@ -185,11 +186,61 @@ describe("UI responsive profiles", function()
                 + profile.roundFocusBottomOffset + 10 <= data.viewport.Y)
                 .toBe(true)
             expect(layout.width <= data.viewport.X - 20).toBe(true)
-            expect(layout.xScale).toBe(profile.topCenterXScale)
+            expect(layout.xScale).toBe(profile.wide and 0.23 or 0.50)
         end
         local cramped = UIResponsive.mobileExpeditionLayout(
             Vector2.new(540, 320), 210)
         expect(cramped.fits).toBe(false)
+    end)
+
+    it("separates the Android route, escalation, and shard lanes", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1536, 688),
+            Vector2.new(400, 720),
+        }) do
+            local inset = viewport.Y < 400 and 48 or 56
+            local expedition = UIResponsive.mobileExpeditionLayout(viewport, inset)
+            local escalation = UIResponsive.mobileEscalationToast(viewport)
+            local reward = UIResponsive.mobileShardToast(viewport)
+            local escalationBottom = (
+                escalation.centerYScale * viewport.Y + escalation.height * 0.5)
+            expect(expedition.topOffset > escalationBottom).toBe(true)
+            expect(escalation.height <= 44).toBe(true)
+            expect(reward.height <= 40).toBe(true)
+            expect(reward.centerYScale * viewport.Y + reward.height * 0.5
+                < viewport.Y - 45).toBe(true)
+            if UIResponsive.classify(viewport, true).wide then
+                local rewardTop = reward.centerYScale * viewport.Y
+                    - reward.height * 0.5
+                expect(expedition.topOffset + expedition.height < rewardTop)
+                    .toBe(true)
+                expect(expedition.xScale).toBe(reward.centerXScale)
+                expect(expedition.xScale < escalation.centerXScale).toBe(true)
+                expect(escalation.widthScale < 0.5).toBe(true)
+            end
+        end
+    end)
+
+    it("allows exactly one foreground Android notice at a time", function()
+        MobileHudNotices.release("intro")
+        MobileHudNotices.release("escalation")
+        MobileHudNotices.release("shard")
+        expect(MobileHudNotices.current()).toBe(nil)
+        expect(MobileHudNotices.claim("shard", 10)).toBe(true)
+        expect(MobileHudNotices.claim("escalation", 70)).toBe(true)
+        expect(MobileHudNotices.current()).toBe("escalation")
+        expect(MobileHudNotices.claim("shard", 10)).toBe(false)
+        expect(MobileHudNotices.claim("intro", 100)).toBe(true)
+        expect(MobileHudNotices.current()).toBe("intro")
+        expect(MobileHudNotices.release("shard")).toBe(false)
+        expect(MobileHudNotices.release("escalation")).toBe(false)
+        expect(MobileHudNotices.release("intro")).toBe(true)
+        expect(MobileHudNotices.current()).toBe(nil)
+        expect(MobileHudNotices.claim("shard", 10)).toBe(true)
+        expect(MobileHudNotices.release("shard")).toBe(true)
     end)
 
     it("hides optional expedition navigation for any survival priority banner", function()
