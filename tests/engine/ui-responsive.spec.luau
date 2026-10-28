@@ -477,6 +477,18 @@ describe("UI responsive profiles", function()
         end
     end)
 
+    it("suppresses opt-in FPS overlay while a priority HUD notice is active", function()
+        local show = UIResponsive.showPerformanceOverlay
+        expect(show(false, true, nil)).toBe(false)
+        expect(show(true, false, nil)).toBe(false)
+        expect(show(true, true, nil)).toBe(true)
+        expect(show(true, true, "momentum")).toBe(false)
+        expect(show(true, true, "mechanic")).toBe(false)
+        expect(show(true, true, "escalation")).toBe(false)
+        -- A released notice immediately permits the opted-in diagnostic again.
+        expect(show(true, true, nil)).toBe(true)
+    end)
+
     it("drops optional FPS overlay on a short split-screen view", function()
         expect(UIResponsive.mobilePerformanceOverlay(Vector2.new(400, 230)).fits)
             .toBe(false)
