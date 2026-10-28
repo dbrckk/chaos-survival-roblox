@@ -126,12 +126,26 @@ end
 -- Short phones may hide the route while this reward is on screen.
 function UIResponsive.mobileShardToast(viewport)
     local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local height = c.tinyHeight and 34 or 40
+    -- The original 70–74% Y reward overlapped the 42–46px persistent
+    -- survival meter on 320px/360px/440px Android landscape viewports.
+    -- Clamp below the escalation strip and ABOVE the survival meter.
+    local event = UIResponsive.mobileEscalationToast(viewport)
+    local eventBottom = event.centerYScale * c.height + event.height * 0.5
+    local minCenter = eventBottom + height * 0.5 + 2
+    local maxCenter = c.height - profile.roundFocusBottomOffset
+        - profile.roundFocusHeight - 8 - height * 0.5
+    local desiredCenter = c.height * (c.compactHeight and 0.60 or 0.69)
+    -- On short widescreens the optional route owns the left lane; the
+    -- reward moves to center only while it owns the notice priority.
+    local sideLane = c.wide and not c.compactHeight
     return {
-        centerXScale = c.wide and 0.23 or 0.50,
-        centerYScale = c.tinyHeight and 0.70
-            or (c.compactHeight and 0.74 or 0.69),
+        centerXScale = sideLane and 0.23 or 0.50,
+        centerYScale = math.min(desiredCenter, maxCenter) / c.height,
         width = c.veryNarrow and 184 or 230,
-        height = c.tinyHeight and 34 or 40,
+        height = height,
+        fits = maxCenter >= minCenter,
     }
 end
 
