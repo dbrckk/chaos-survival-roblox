@@ -156,7 +156,22 @@ local function collectCharacterPolish(model, metrics)
     end
 end
 
-function VisualBudgetRules.collect(root)
+-- Optional cooperative checkpoint for the 45s Android diagnostics.
+-- Existing synchronous callers retain identical results and no yields.
+-- The caller controls scheduling; no RenderStepped or per-Part listeners.
+function VisualBudgetRules.collect(root, cooperativeCheckpoint)
+    local yieldAt = type(cooperativeCheckpoint) == "function"
+        and cooperativeCheckpoint or nil
+    local visited = 0
+    local function checkpoint()
+        if not yieldAt then return end
+        visited += 1
+        if visited >= 160 then
+            visited = 0
+            yieldAt()
+        end
+    end
+
     local metrics = {
         Parts = 0,
         Lights = 0,
@@ -180,6 +195,7 @@ function VisualBudgetRules.collect(root)
                 elseif VisualBudgetRules.isEffect(descendant) then
                     metrics.Effects += 1
                 end
+                checkpoint()
             end
         end
     end
@@ -258,6 +274,7 @@ function VisualBudgetRules.collect(root)
                             elseif VisualBudgetRules.isEffect(descendant) then
                                 metrics.Effects += 1
                             end
+                            checkpoint()
                         end
                     end
                     if hasAttachment then
