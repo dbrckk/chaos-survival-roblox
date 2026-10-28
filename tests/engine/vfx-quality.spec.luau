@@ -9,6 +9,7 @@ local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
 local SceneryLodRules = require("../../src/shared/SceneryLodRules")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
+local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
 
 describe("Adaptive VFX quality", function()
     it("bounds Android FPS/memory telemetry before analytics or formatting", function()
@@ -631,6 +632,80 @@ describe("PBR materials for four playable district hero environments", function(
         expect(PbrDistrictRules.priority(hero) > PbrDistrictRules.priority(tiny)).toBe(true)
         hero:Destroy()
         tiny:Destroy()
+    end)
+end)
+
+describe("Author-owned kinetic details in four active 3D districts", function()
+    it("uses restrained medium/high animation signatures on all four models", function()
+        for sector = 1, 4 do
+            expect(#DistrictKineticKit.plan(sector, "Low", false)).toBe(0)
+            expect(#DistrictKineticKit.plan(sector, "Medium", false) >= 1).toBe(true)
+            expect(#DistrictKineticKit.plan(sector, "High", false) >= 2).toBe(true)
+            expect(#DistrictKineticKit.plan(sector, "High", true)).toBe(0)
+        end
+        expect(#DistrictKineticKit.plan(0, "High", false)).toBe(0)
+        expect(#DistrictKineticKit.plan(5, "High", false)).toBe(0)
+        expect(#DistrictKineticKit.plan("abc", "High", false)).toBe(0)
+    end)
+
+    it("animates only safe local cosmetic anchored parts and restores state", function()
+        local model = Instance.new("Model")
+        model:SetAttribute("LocalOriginal3D", true)
+        model:SetAttribute("CosmeticOnly", true)
+        model:SetAttribute("DistrictSector", 4)
+        local target = Instance.new("Part")
+        target.Name = "CommsSignalFin"
+        target.Anchored = true
+        target.CanCollide = false
+        target.CanQuery = false
+        target.CanTouch = false
+        target.Size = Vector3.new(9, 7, 1.4)
+        target.CFrame = CFrame.new(15, 6, 18)
+        target.Parent = model
+        local original = target.CFrame
+        local tracks = DistrictKineticKit.start(model, 4, "Medium", false)
+        expect(#tracks).toBe(1)
+        expect(tracks[1].part).toBe(target)
+        expect(tracks[1].property).toBe("CFrame")
+        DistrictKineticKit.stop(tracks)
+        expect(#tracks).toBe(0)
+        expect(target.CFrame).toBe(original)
+        expect(#DistrictKineticKit.start(model, 4, "Low", false)).toBe(0)
+        expect(#DistrictKineticKit.start(model, 4, "High", true)).toBe(0)
+
+        target.CanCollide = true
+        expect(#DistrictKineticKit.start(model, 4, "High", false)).toBe(0)
+        target.CanCollide = false
+        model:SetAttribute("CosmeticOnly", false)
+        expect(#DistrictKineticKit.start(model, 4, "High", false)).toBe(0)
+        model:Destroy()
+    end)
+
+    it("keeps animated accent fades bounded, tiered and reversible", function()
+        local model = Instance.new("Model")
+        model:SetAttribute("LocalOriginal3D", true)
+        model:SetAttribute("CosmeticOnly", true)
+        model:SetAttribute("DistrictSector", 2)
+        for _, name in ipairs({"CargoStripe-1", "CargoStripe1", "CraneCap"}) do
+            local part = Instance.new("Part")
+            part.Name = name
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanQuery = false
+            part.CanTouch = false
+            part.Transparency = 0.32
+            part.Parent = model
+        end
+        local medium = DistrictKineticKit.start(model, 2, "Medium", false)
+        expect(#medium).toBe(2)
+        DistrictKineticKit.stop(medium)
+        local high = DistrictKineticKit.start(model, 2, "High", false)
+        expect(#high).toBe(3)
+        DistrictKineticKit.stop(high)
+        for _, child in ipairs(model:GetChildren()) do
+            expect(math.abs(child.Transparency - 0.32) < 0.0001).toBe(true)
+        end
+        model:Destroy()
     end)
 end)
 
