@@ -89,7 +89,22 @@
       "missing": [
         "roughness",
         "metallic"
-      ]
+      ],
+      "first_programmatic_attempt": {
+        "run_id": 40678338047,
+        "outcome": "HTTP400_BOTH_REJECTED",
+        "roughness": {
+          "http_status": 400,
+          "error": "Asset name length is invalid.",
+          "asset_id": null
+        },
+        "metallic": {
+          "http_status": 400,
+          "error": "Asset name length is invalid.",
+          "asset_id": null
+        },
+        "meaning": "Roblox rejected both create requests before issuing any image asset IDs. Safe to retry only these two after shortening displayName."
+      }
     }
   }
 }
