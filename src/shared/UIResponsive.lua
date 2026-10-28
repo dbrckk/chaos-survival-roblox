@@ -188,6 +188,19 @@ function UIResponsive.phaseDashLayout(viewport)
     }
 end
 
+-- Optional combo feedback belongs in the left-side mobile lane, away
+-- from the top hazard/alive counter and the right-side DASH/jump buttons.
+-- The shared notice priority hides the navigator while this chip is active.
+function UIResponsive.mobileMomentumChip(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    return {
+        leftInset = c.veryNarrow and 12 or (c.narrowWidth and 16 or 24),
+        centerYScale = c.tinyHeight and 0.54 or (c.compactHeight and 0.46 or 0.50),
+        width = c.veryNarrow and 120 or (c.narrowWidth and 144 or 170),
+        height = c.tinyHeight and 34 or 38,
+    }
+end
+
 function UIResponsive.criticalTextMin(viewport)
     local c = UIResponsive.classify(viewport, true)
     if c.tinyHeight then
