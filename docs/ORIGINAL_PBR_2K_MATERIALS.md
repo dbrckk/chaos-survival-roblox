@@ -29,15 +29,25 @@ This writes **16 square 2K PNGs**, `contact_sheet.jpg` and a SHA-256
 The GitHub action **Build Original 2K PBR Texture Atlas (No Upload)** runs
 the exact generator and keeps a downloadable, inspectable artifact.
 
-### In-game fallbacks (actual, verifiable Roblox asset IDs)
+### Verified original 2K images in all four MaterialVariants
 
-A ready-to-build Roblox `MaterialService` tree is included in
-`default.project.json`, with four `MaterialVariant` instances. Each uses
-**all four maps**: color, normal, roughness, and metalness. They presently
-reference the **verified public Roblox-owned texture IDs** for Foil,
-CorrodedMetal, DiamondPlate and CeramicTiles, rather than inventing IDs for
-the project's generated images. Source of those IDs:
-https://create.roblox.com/docs/parts/materials
+The Rojo `MaterialService` tree in `default.project.json` contains four
+`MaterialVariant` instances. They now point to the actual **16 original
+2048×2048 creator-owned Roblox Image IDs** across Color, OpenGL Normal,
+Roughness and Metalness maps. This changes the *unpublished source code*,
+not the live public Roblox place. The original public Roblox-owned
+fallbacks remain available from Git history for a visual-acceptance
+rollback if needed.
+
+On **28 October 2026, 11:44 UTC**, a read-only authenticated Open Cloud
+audit confirmed every asset as **APPROVED**, with creator ID
+`9774173158`, the expected Image type and correct asset ID.
+Evidence: workflow run
+[40682190586](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/40682190586),
+artifact `12813106994`, and immutable source record
+`assets/source/roblox-pbr-approval-evidence.json`. This proves
+**asset approval/ownership at audit time**, not actual visual quality,
+Android frame rates, texture residency, nor private/game asset access.
 
 `src/client/pbr-district-materials.client.lua` applies these materials
 locally to static **non-colliding cosmetic** district buildings, the four
@@ -53,8 +63,8 @@ Within each eligible model the large architectural faces take precedence
 over incidental small details. Model-scoped quality caps are preserved
 (6 Medium / 16 High; none on Low). When switching tiers or reloading an
 arena, existing native materials and authored variants are restored before
-reallocation. This only reuses the four MaterialService variants; it does
-**not** load new 2K textures or create new geometry. The PBR helper policy
+reallocation. The four MaterialService variants now reference
+the independently approved original 2K images; no new geometry is created. The PBR helper policy
 is tested in the existing real-engine VFX suite.
 
 Mobile tier behavior: **Low** keeps the original lightweight Roblox
@@ -97,13 +107,13 @@ Never rerun a full-material upload or the one-shot recovery. Both
 unuploaded. The old single-channel recovery validates the receipts
 and will stop before uploading if used again.
 
-**Created is not the same as approved or live.** Many Image assets were
-still `Reviewing` when Roblox confirmed creation. Their *current*
-moderation, owner permissions and readability by the experience must be
-checked before substituting original `rbxassetid://...` values into
-`default.project.json`. For now, the live PBR variants retain their
-verified Roblox-owned fallback maps, and the public Roblox place has
-not been updated.
+**Created is not the same as approved or live.** Several Image assets
+were originally `Reviewing` at creation. The newer independent audit
+confirmed **all 16 approved and creator-owned** on 28 October 2026,
+11:44 UTC; the original IDs have now been committed to
+`default.project.json` for source builds. Runtime readability by the
+experience, device screenshots and frame-time budgets remain unverified.
+The public Roblox place has **not** been updated.
 
 ### Automatic 16-image owner and moderation verification
 
@@ -148,11 +158,13 @@ The new workflow **Upload One Chaos Original 2K PBR Material (Manual)**:
 - reports each actual asset ID and moderation state, with immutable
   provenance and per-image operation results.
 
-Once all 16 original Image assets are present, independently verified approved and accessible to the experience, replace the **four properties per
-MaterialVariant** in `default.project.json` with the actual
-`rbxassetid://...` values for the corresponding original PBR maps.
-Never substitute an unverified ID or mark a texture as approved before
-Roblox confirms it.
+The 16 `rbxassetid://...` properties in the four
+`MaterialVariant` instances are now populated with the exact IDs
+recorded in the independently approved audit. The Build Original 2K
+PBR workflow rejects any mismatch with the source receipts and the
+point-in-time approval evidence. Before public release, recheck live
+moderation/access and verify actual material rendering in Roblox Studio
+and on Android; retain a rollback path to native Roblox materials.
 
 For original imported UV-mapped MeshParts, a `SurfaceAppearance` with
 the same four verified maps can be authored/published in an approved model
