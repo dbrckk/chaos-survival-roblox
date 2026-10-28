@@ -114,7 +114,7 @@ function UIResponsive.mobileEscalationToast(viewport)
     local c = UIResponsive.classify(viewport, true)
     return {
         centerXScale = 0.50,
-        centerYScale = c.tinyHeight and 0.43 or 0.43,
+        centerYScale = c.tinyHeight and 0.44 or 0.40,
         widthScale = c.veryNarrow and 0.82 or (c.wide and 0.34 or 0.58),
         height = c.tinyHeight and 38 or 44,
         titleMaxTextSize = c.tinyHeight and 18 or 21,
