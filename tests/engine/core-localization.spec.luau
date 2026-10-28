@@ -229,6 +229,57 @@ describe("Core localization", function()
         expect(CoreLocalization.coach("en-us", source)).toBe(source)
         expect(CoreLocalization.coach("fr-fr", "CUSTOM")).toBe("CUSTOM")
     end)
+    it("localizes every playable district and all physical navigation actions", function()
+        local frSectors = {"OBSERVATOIRE", "DÉPÔT DE FRET", "CENTRALE", "ANTENNES"}
+        local enSectors = {"OBSERVATORY", "CARGO DEPOT", "POWER PLANT", "COMMS ARRAY"}
+        for sector = 1, 4 do
+            expect(CoreLocalization.text("fr-fr", "DISTRICT_SECTOR_" .. sector))
+                .toBe(frSectors[sector])
+            expect(CoreLocalization.text("en-us", "DISTRICT_SECTOR_" .. sector))
+                .toBe(enSectors[sector])
+        end
+        expect(CoreLocalization.text("en-us", "DISTRICT_SECTOR_SIGN", "01", "OBSERVATORY"))
+            .toBe("SECTOR 01\nOBSERVATORY")
+        expect(CoreLocalization.text("fr-fr", "DISTRICT_SECTOR_SIGN", "01", "OBSERVATOIRE"))
+            .toBe("SECTEUR 01\nOBSERVATOIRE")
+
+        local samples = {
+            DISTRICT_NEXT_JUMP = {},
+            DISTRICT_OPEN_CACHE = {},
+            DISTRICT_CLIMB = {2, 8},
+            DISTRICT_FAST_TRAVEL = {2},
+            DISTRICT_NEXT_SIGNAL = {3},
+            DISTRICT_NEXT_SIGNAL_GENERIC = {},
+            DISTRICT_SECURE_SIGNAL = {},
+            DISTRICT_HIGH_ROUTE = {},
+            DISTRICT_SHORT_ROUTE = {},
+            DISTRICT_SIGNAL_SOON = {},
+            DISTRICT_SIGNAL_NOW = {},
+            DISTRICT_SIGNAL_OPENS = {"12s", 4},
+            DISTRICT_SIGNAL_ENDS = {"8s", 4},
+            DISTRICT_CACHE_REWARD = {5},
+            DISTRICT_LANDING_JUMP = {4, 8},
+        }
+        for key, args in pairs(samples) do
+            local english = CoreLocalization.text("en-us", key, table.unpack(args))
+            local french = CoreLocalization.text("fr-fr", key, table.unpack(args))
+            expect(type(english)).toBe("string")
+            expect(type(french)).toBe("string")
+            -- NOW is deliberately three characters in English.
+            expect(#english >= 3).toBe(true)
+            expect(#french >= 3).toBe(true)
+            expect(english ~= key).toBe(true)
+            expect(french ~= key).toBe(true)
+        end
+        expect(CoreLocalization.text("fr-fr", "DISTRICT_CLIMB", 2, 8))
+            .toBe("MONTE 2/8")
+        expect(CoreLocalization.text("fr-fr", "DISTRICT_FAST_TRAVEL", 3))
+            .toBe("TRANSPORT RAPIDE D3")
+        expect(CoreLocalization.text("fr-fr", "DISTRICT_CACHE_REWARD", 5))
+            .toBe("CAISSE +5 PIÈCES")
+        expect(CoreLocalization.text("fr-fr", "DISTRICT_LANDING_JUMP", 2, 6))
+            .toBe("SAUT 2/6")
+    end)
 end)
 
 return nil
