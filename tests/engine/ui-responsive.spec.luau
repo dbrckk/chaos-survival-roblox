@@ -334,6 +334,13 @@ describe("UI responsive profiles", function()
         end
     end)
 
+    it("hides the optional momentum chip on a height-constrained split screen", function()
+        expect(UIResponsive.mobileMomentumChip(Vector2.new(400, 230)).fits)
+            .toBe(false)
+        expect(UIResponsive.mobileMomentumChip(Vector2.new(640, 360)).fits)
+            .toBe(true)
+    end)
+
     it("preempts optional momentum feedback with gameplay notices", function()
         MobileHudNotices.release("momentum")
         MobileHudNotices.release("shard")
