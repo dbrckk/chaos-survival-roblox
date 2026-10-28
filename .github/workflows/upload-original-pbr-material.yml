@@ -60,6 +60,27 @@ jobs:
               echo "::error::Missing creator-scoped secrets.ROBLOX_ASSET_API_KEY."
               exit 1
             fi
+            # The original four material families already have uploaded Image
+            # receipts (including a PARTIAL armor attempt). Another full
+            # 4-channel dispatch would duplicate billable/non-idempotent IDs.
+            # This original uploader remains usable for preview-only dry runs.
+            # Recover individual missing armor channels with the guarded
+            # recover-original-pbr-diamondplate workflow instead.
+            python - "$MATERIAL" <<'PY'
+          import json,sys
+          from pathlib import Path
+          material=sys.argv[1]
+          receipts=json.loads(Path("assets/source/roblox-pbr-upload-receipts.json").read_text())
+          recorded=receipts["materials"].get(material)
+          if recorded and any(
+                  isinstance(item,dict) and str(item.get("id","")).isdecimal()
+                  for item in recorded.get("channels",{}).values()):
+              raise SystemExit(
+                  f"BLOCKED: {material} already has uploaded Image IDs. "
+                  "Never re-create existing textures. Use the dedicated "
+                  "one-channel diamondplate recovery workflow for missing maps."
+              )
+          PY
           fi
           echo 'Target creator: verified Chaos account 9774173158 (Drackk_08).'
           echo 'No public-place action exists in this workflow.'
