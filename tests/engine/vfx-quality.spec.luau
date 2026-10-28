@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VfxQuality = require("../../src/shared/VfxQuality")
 local PerformancePulseRules = require("../../src/shared/PerformancePulseRules")
+local FramePacingRules = require("../../src/shared/FramePacingRules")
 local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
@@ -11,11 +12,60 @@ local SceneryLodRules = require("../../src/shared/SceneryLodRules")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
 
+describe("Android frame pacing without a second RenderStepped owner", function()
+    it("reports the 95th-percentile rather than a single isolated hitch", function()
+        local pacing = FramePacingRules.new()
+        for _ = 1, 95 do
+            expect(FramePacingRules.add(pacing, 1 / 60)).toBe(true)
+        end
+        for _ = 1, 5 do
+            FramePacingRules.add(pacing, 0.1)
+        end
+        local p95, slow = FramePacingRules.summary(pacing)
+        expect(p95).toBe(17)
+        expect(slow).toBe(5)
+        expect(pacing.count).toBe(100)
+
+        FramePacingRules.reset(pacing)
+        for _ = 1, 94 do FramePacingRules.add(pacing, 1 / 60) end
+        for _ = 1, 6 do FramePacingRules.add(pacing, 0.1) end
+        p95, slow = FramePacingRules.summary(pacing)
+        expect(p95).toBe(100)
+        expect(slow).toBe(6)
+    end)
+
+    it("ignores invalid or suspended Android frames without contaminating windows", function()
+        local pacing = FramePacingRules.new()
+        for _, bad in ipairs({0, -1, 0 / 0, math.huge, -math.huge, 0.61}) do
+            expect(FramePacingRules.add(pacing, bad)).toBe(false)
+        end
+        expect(pacing.count).toBe(0)
+        local p95, slow = FramePacingRules.summary(pacing)
+        expect(p95).toBe(0)
+        expect(slow).toBe(0)
+
+        expect(VfxQuality.activeFrameSeconds(5)).toBe(0)
+        expect(FramePacingRules.add(pacing, VfxQuality.activeFrameSeconds(5)))
+            .toBe(false)
+        FramePacingRules.add(pacing, 1 / 30)
+        p95, slow = FramePacingRules.summary(pacing)
+        expect(p95 >= 33 and p95 <= 34).toBe(true)
+        expect(slow).toBe(0)
+        FramePacingRules.reset(pacing)
+        expect(pacing.count).toBe(0)
+        p95, slow = FramePacingRules.summary(pacing)
+        expect(p95).toBe(0)
+        expect(slow).toBe(0)
+    end)
+end)
+
 describe("Adaptive VFX quality", function()
     it("bounds Android FPS/memory telemetry before analytics or formatting", function()
         local sanitize = PerformancePulseRules.sanitize
         local source = {
             averageFps = 56.75,
+            p95FrameMs = 28,
+            slowFramePercent = 12.8,
             vfxTier = "Medium",
             deviceClass = "Touch",
             tierTransitions = 5.99,
@@ -30,6 +80,8 @@ describe("Adaptive VFX quality", function()
         }
         local sample = sanitize(source)
         expect(sample.averageFps).toBe(56.75)
+        expect(sample.p95FrameMs).toBe(28)
+        expect(sample.slowFramePercent).toBe(12)
         expect(sample.deviceClass).toBe("Touch")
         expect(sample.vfxTier).toBe("Medium")
         expect(sample.tierTransitions).toBe(5)
@@ -39,7 +91,8 @@ describe("Adaptive VFX quality", function()
         expect(sample.renderGpuMs).toBe(12.5)
 
         local invalid = sanitize({
-            averageFps = 0 / 0, tierTransitions = math.huge,
+            averageFps = 0 / 0, p95FrameMs = math.huge,
+            slowFramePercent = -math.huge, tierTransitions = math.huge,
             visualParts = -math.huge, visualLights = -9.7,
             visualEffects = 1e8, totalMemoryMb = 0 / 0,
             instanceCount = math.huge, frameTimeMs = -math.huge,
@@ -47,6 +100,8 @@ describe("Adaptive VFX quality", function()
             vfxTier = "Ultra", deviceClass = "iPhone;arbitrary value",
         })
         expect(invalid.averageFps).toBe(0)
+        expect(invalid.p95FrameMs).toBe(0)
+        expect(invalid.slowFramePercent).toBe(0)
         expect(invalid.tierTransitions).toBe(0)
         expect(invalid.visualParts).toBe(0)
         expect(invalid.visualLights).toBe(0)
@@ -65,11 +120,14 @@ describe("Adaptive VFX quality", function()
         expect(empty.deviceClass).toBe("Unknown")
 
         local capped = sanitize({
-            averageFps = 999, tierTransitions = 200,
+            averageFps = 999, p95FrameMs = 888,
+            slowFramePercent = 192, tierTransitions = 200,
             instanceCount = 1e10, frameTimeMs = 1200,
             renderGpuMs = 1800, vfxTier = "High", deviceClass = "Desktop",
         })
         expect(capped.averageFps).toBe(240)
+        expect(capped.p95FrameMs).toBe(600)
+        expect(capped.slowFramePercent).toBe(100)
         expect(capped.tierTransitions).toBe(99)
         expect(capped.instanceCount).toBe(250000)
         expect(capped.frameTimeMs).toBe(1000)
