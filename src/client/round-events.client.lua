@@ -9,6 +9,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -94,8 +95,8 @@ local scale = Instance.new("UIScale")
 scale.Scale = 0.80
 scale.Parent = card
 
-UITheme.addTextConstraint(title, 15, 30)
-UITheme.addTextConstraint(subtitle, 12, 18)
+local titleTextLimit = UITheme.addTextConstraint(title, 15, 30)
+local subtitleTextLimit = UITheme.addTextConstraint(subtitle, 12, 18)
 
 local edgeTop = Instance.new("Frame")
 edgeTop.Name = "EventEdgeTop"
@@ -128,25 +129,27 @@ local lastBlackoutStage = nil
 local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
+local pendingEvent = nil
 
 local function applyResponsive()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
 
     if touchDevice then
-        local profile = UIResponsive.mobileProfile(viewport)
-        -- Keep escalation notifications below the round header, but above
-        -- the avatar and the ground warnings. A brief compact toast is
-        -- preferable to a second full-width central announcement.
-        card.Position = UDim2.fromScale(0.5, profile.tinyHeight and 0.37 or 0.34)
-        card.Size = UDim2.new(profile.veryNarrow and 0.76 or 0.54, 0, 0, profile.tinyHeight and 52 or 56)
-        size.MinSize = Vector2.new(220, 50)
-        size.MaxSize = Vector2.new(470, 64)
+        local layout = UIResponsive.mobileEscalationToast(viewport)
+        card.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
+        card.Size = UDim2.new(layout.widthScale, 0, 0, layout.height)
+        size.MinSize = Vector2.new(185, 38)
+        size.MaxSize = Vector2.new(500, 52)
+        titleTextLimit.MaxTextSize = layout.titleMaxTextSize
+        subtitleTextLimit.MaxTextSize = layout.subtitleMaxTextSize
     else
         card.Position = UDim2.fromScale(0.5, 0.27)
         card.Size = UDim2.new(0.54, 0, 0, 74)
         size.MinSize = Vector2.new(250, 62)
         size.MaxSize = Vector2.new(520, 82)
+        titleTextLimit.MaxTextSize = 30
+        subtitleTextLimit.MaxTextSize = 18
     end
 end
 
@@ -160,6 +163,19 @@ local function show(kind, mainText, subText, color, duration)
     if now < activeUntil and priority < activePriority then
         return false
     end
+    if touchDevice and not MobileHudNotices.claim("escalation", 70) then
+        -- An active disaster introduction wins the mobile notification
+        -- lane. Replay only the latest short-lived escalation when free.
+        if pendingEvent == nil or priority >= pendingEvent.priority then
+            pendingEvent = {
+                priority = priority,
+                deadline = now + 2.5,
+                args = {kind, mainText, subText, color, duration},
+            }
+        end
+        return false
+    end
+    pendingEvent = nil
 
     token += 1
     local current = token
@@ -185,21 +201,29 @@ local function show(kind, mainText, subText, color, duration)
 
     edgeTop.BackgroundColor3 = color
     edgeBottom.BackgroundColor3 = color
-    edgeTop.BackgroundTransparency = 0.12
-    edgeBottom.BackgroundTransparency = 0.12
-    edgeTop.Size = reduceMotion and UDim2.new(0.86, 0, 0, 3) or UDim2.new(0, 0, 0, 4)
-    edgeBottom.Size = edgeTop.Size
-
-    TweenService:Create(
-        edgeTop,
-        TweenInfo.new(reduceMotion and 0.12 or 0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Size = UDim2.new(0.86, 0, 0, 3)}
-    ):Play()
-    TweenService:Create(
-        edgeBottom,
-        TweenInfo.new(reduceMotion and 0.12 or 0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Size = UDim2.new(0.86, 0, 0, 3)}
-    ):Play()
+    -- The screenshots show edge-to-edge event rails competing with the
+    -- survival timer. Keep those cinematic rails desktop-only.
+    if touchDevice then
+        edgeTop.BackgroundTransparency = 1
+        edgeBottom.BackgroundTransparency = 1
+        edgeTop.Size = UDim2.new(0, 0, 0, 3)
+        edgeBottom.Size = edgeTop.Size
+    else
+        edgeTop.BackgroundTransparency = 0.12
+        edgeBottom.BackgroundTransparency = 0.12
+        edgeTop.Size = reduceMotion and UDim2.new(0.86, 0, 0, 3) or UDim2.new(0, 0, 0, 4)
+        edgeBottom.Size = edgeTop.Size
+        TweenService:Create(
+            edgeTop,
+            TweenInfo.new(reduceMotion and 0.12 or 0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = UDim2.new(0.86, 0, 0, 3)}
+        ):Play()
+        TweenService:Create(
+            edgeBottom,
+            TweenInfo.new(reduceMotion and 0.12 or 0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = UDim2.new(0.86, 0, 0, 3)}
+        ):Play()
+    end
 
     TweenService:Create(card, TweenInfo.new(0.16), {BackgroundTransparency = 0.06}):Play()
     TweenService:Create(stroke, TweenInfo.new(0.16), {Transparency = 0.16}):Play()
@@ -245,6 +269,9 @@ local function show(kind, mainText, subText, color, duration)
             flash.Visible = false
             activePriority = 0
             activeUntil = 0
+            if touchDevice then
+                MobileHudNotices.release("escalation")
+            end
         end
     end)
 
@@ -254,6 +281,10 @@ end
 -- Any pending notification and its delayed hide callback are invalid
 -- as soon as a round finishes or the local survivor is eliminated.
 local function clearRoundToast()
+    pendingEvent = nil
+    if touchDevice then
+        MobileHudNotices.release("escalation")
+    end
     token += 1
     activePriority = 0
     activeUntil = 0
@@ -267,6 +298,28 @@ local function clearRoundToast()
     flash.BackgroundTransparency = 1
     edgeTop.BackgroundTransparency = 1
     edgeBottom.BackgroundTransparency = 1
+end
+
+-- A new round intro interrupts an escalation instead of stacking
+-- it over the main hazard banner. When the intro ends, show at most
+-- one still-relevant escalation notification.
+if touchDevice then
+    MobileHudNotices.Changed:Connect(function(owner)
+        if owner == "intro" and card.Visible then
+            clearRoundToast()
+        elseif owner == nil and pendingEvent ~= nil then
+            local entry = pendingEvent
+            pendingEvent = nil
+            if os.clock() <= entry.deadline then
+                task.defer(function()
+                    if previousPhase == "round"
+                        and player:GetAttribute("RoundEliminated") ~= true then
+                        show(table.unpack(entry.args))
+                    end
+                end)
+            end
+        end
+    end)
 end
 
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
