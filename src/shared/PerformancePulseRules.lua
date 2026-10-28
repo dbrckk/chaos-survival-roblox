@@ -15,6 +15,11 @@ local LIMITS = {
     visualParts = {5000, true},
     visualLights = {1000, true},
     visualEffects = {2000, true},
+    -- Current visible-client residency of approved PBR MaterialVariants.
+    -- These are diagnostic counters, never a server-authoritative receipt.
+    pbrActive = {144, true},
+    pbrBudget = {144, true},
+    pbrCandidates = {10000, true},
     totalMemoryMb = {65536, false},
     instanceCount = {250000, true},
     frameTimeMs = {1000, false},
