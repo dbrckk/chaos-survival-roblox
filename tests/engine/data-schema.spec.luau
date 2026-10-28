@@ -136,7 +136,46 @@ describe("Player data schema", function()
 
         expect(data.HapticsDisabled).toBe(false)
         expect(data.DataVersion).toBe(DataSchema.Version)
-        expect(DataSchema.Version).toBe(7)
+        expect(DataSchema.Version).toBe(8)
+    end)
+
+    it("migrates existing profiles to full independent mixer levels", function()
+        local legacy = DataSchema.normalize({
+            DataVersion = 7,
+            AudioMuted = true,
+            HapticsDisabled = false,
+        })
+        expect(legacy.MusicVolume).toBe(100)
+        expect(legacy.EffectsVolume).toBe(100)
+        expect(legacy.AudioMuted).toBe(true)
+        expect(legacy.DataVersion).toBe(DataSchema.Version)
+    end)
+
+    it("persists distinct valid levels and sanitizes corrupted numeric values", function()
+        local custom = DataSchema.normalize({MusicVolume = 35, EffectsVolume = 70})
+        expect(custom.MusicVolume).toBe(35)
+        expect(custom.EffectsVolume).toBe(70)
+
+        local snapshot = DataSchema.snapshot(function(key)
+            if key == "MusicVolume" then return 65 end
+            if key == "EffectsVolume" then return 20 end
+            return nil
+        end)
+        expect(snapshot.MusicVolume).toBe(65)
+        expect(snapshot.EffectsVolume).toBe(20)
+
+        local invalid = DataSchema.normalize({
+            MusicVolume = math.huge,
+            EffectsVolume = -40,
+        })
+        expect(invalid.MusicVolume).toBe(100)
+        expect(invalid.EffectsVolume).toBe(0)
+        local corrupt = DataSchema.normalize({
+            MusicVolume = 0 / 0,
+            EffectsVolume = "bad",
+        })
+        expect(corrupt.MusicVolume).toBe(100)
+        expect(corrupt.EffectsVolume).toBe(100)
     end)
 
     it("uses bounded exponential retry delays", function()
