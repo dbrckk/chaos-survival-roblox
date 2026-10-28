@@ -104,6 +104,15 @@ function VfxQuality.get(tier)
     return VfxQuality.Tiers[tier] or VfxQuality.Tiers.High
 end
 
+-- Before adaptive FPS sampling publishes a tier, touch devices start
+-- cosmetics at Medium rather than briefly allocating desktop High.
+function VfxQuality.deviceTier(tierName, isTouchDevice)
+    if type(tierName) == "string" and VfxQuality.Tiers[tierName] then
+        return VfxQuality.Tiers[tierName]
+    end
+    return VfxQuality.Tiers[VfxQuality.initialTier(isTouchDevice)]
+end
+
 -- Hazard-only scenery pulses and decoration need less frequent refreshes
 -- than gameplay warnings or hit detection. Reduced motion conserves even
 -- more mobile update work without suppressing static hazard cues.

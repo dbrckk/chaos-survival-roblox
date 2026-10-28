@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
@@ -338,7 +339,7 @@ end
 
 task.spawn(function()
     while true do
-        local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
 
         local arenaOrigin, lobbyOrigin = currentOrigins()
         local cameraPoint = cameraPosition()

@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CharacterPolishRules = require(ReplicatedStorage.Shared.CharacterPolishRules)
@@ -14,7 +15,7 @@ local botFolderRemovedConnection = nil
 local playerConnections = {}
 
 local function profile()
-    return VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
+    return VfxQuality.deviceTier(localPlayer:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
 end
 
 local function applyObject(instance)
