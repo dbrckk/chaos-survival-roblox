@@ -944,7 +944,8 @@ RunService.RenderStepped:Connect(function(dt)
         player:SetAttribute("ClientObservedP95FrameMs", observedP95Ms)
         player:SetAttribute("ClientObservedSlowFramePercent", observedSlowPercent)
         local nextTierName = VfxQuality.nextTier(
-            vfxTierName, averageFps, UserInputService.TouchEnabled
+            vfxTierName, averageFps, UserInputService.TouchEnabled,
+            observedP95Ms, observedSlowPercent
         )
 
         if nextTierName == vfxTierName then
