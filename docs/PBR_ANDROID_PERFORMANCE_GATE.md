@@ -28,6 +28,10 @@ without native client captures.
   the existing LOD owner's visibility decisions.
 - Change Material / MaterialVariant **only when the selected variant changes**.
   No full teardown/reapplication on map streaming or ordinary quality updates.
+- **Android startup:** before the adaptive quality attribute exists, scenery
+  LOD, cosmetic particles, industrial facade markings and mobile readability
+  initialize to **Medium** on touch devices, never desktop High. Explicit
+  Low/Medium/High selections always take precedence; desktop defaults to High.
 - Only anchored, non-colliding, non-queryable, opaque cosmetic Parts qualify.
   No authored `SurfaceAppearance` or unrelated custom MaterialVariants are
   overwritten. An external material change revokes the local ownership claim.
