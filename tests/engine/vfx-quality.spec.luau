@@ -904,4 +904,50 @@ describe("Author-owned kinetic details in four active 3D districts", function()
 
 end)
 
+
+describe("Streaming-aware PBR candidate indexing", function()
+    local CandidateIndex = require("../../src/client/PbrCandidateIndex")
+
+    it("tracks existing, streamed-in and streamed-out mesh surfaces", function()
+        local root = Instance.new("Folder")
+        root.Name = "TestPbrStreamingRoot"
+        root.Parent = workspace
+        local existing = Instance.new("Part")
+        existing.Parent = root
+        local callbacks = 0
+        local indexed, disconnect = CandidateIndex.watch(root, function()
+            callbacks += 1
+        end)
+        expect(indexed[existing]).toBe(true)
+
+        -- A fully populated model can arrive in a single streaming batch.
+        local incoming = Instance.new("Model")
+        local mesh = Instance.new("MeshPart")
+        mesh.Parent = incoming
+        incoming.Parent = root
+        task.wait()
+        expect(indexed[mesh]).toBe(true)
+        expect(callbacks > 0).toBe(true)
+
+        incoming.Parent = nil
+        task.wait()
+        expect(indexed[mesh]).toBe(nil)
+        local late = Instance.new("Part")
+        late.Parent = root
+        task.wait()
+        expect(indexed[late]).toBe(true)
+
+        disconnect()
+        expect(next(indexed)).toBe(nil)
+        local afterStop = Instance.new("Part")
+        afterStop.Parent = root
+        task.wait()
+        expect(indexed[afterStop]).toBe(nil)
+        -- Idempotent cleanup while the old map is destroyed.
+        disconnect()
+        root:Destroy()
+        incoming:Destroy()
+    end)
+end)
+
 return nil

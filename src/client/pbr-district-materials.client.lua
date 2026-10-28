@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PbrDistrictRules = require(ReplicatedStorage.Shared.PbrDistrictRules)
+local PbrCandidateIndex = require(script.Parent.PbrCandidateIndex)
 
 local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
@@ -27,8 +28,8 @@ local originals = setmetatable({}, {__mode = "k"})
 local applied = setmetatable({}, {__mode = "k"})
 local boundMap, boundArena, boundDecor, boundLocal = nil, nil, nil, nil
 local mapAdded, mapRemoved, arenaAdded = nil, nil, nil
-local decorAdded, decorRemoved = nil, nil
-local localAdded, localRemoved = nil, nil
+local disconnectDecorIndex, disconnectLocalIndex = nil, nil
+local indexedDecor, indexedLocal = {}, {}
 local pendingScan = false
 local lastCameraPosition = nil
 local lastCameraLook = nil
@@ -101,9 +102,12 @@ local function scan()
         -- Both server arena Decor and four client-authored playable
         -- district models share ONE per-client budget.
         local groups = {}
-        local function collect(root)
+        local function collect(root, candidateParts)
             if not root or not root.Parent then return end
-            for _, part in ipairs(root:GetDescendants()) do
+            for part in pairs(candidateParts) do
+                if not part.Parent or not part:IsDescendantOf(root) then
+                    continue
+                end
                 local old = applied[part]
                 local ownedName = old and old.name or nil
                 local ownedStillIntact = old
@@ -132,8 +136,8 @@ local function scan()
             end
         end
 
-        collect(boundDecor)
-        collect(boundLocal)
+        collect(boundDecor, indexedDecor)
+        collect(boundLocal, indexedLocal)
 
         local ranked = {}
         local function score(part)
@@ -212,13 +216,14 @@ end
 
 local function bindDecor(decor)
     if boundDecor == decor then return end
-    if decorAdded then decorAdded:Disconnect() end
-    if decorRemoved then decorRemoved:Disconnect() end
-    decorAdded, decorRemoved = nil, nil
+    if disconnectDecorIndex then
+        disconnectDecorIndex()
+        disconnectDecorIndex = nil
+    end
+    indexedDecor = {}
     boundDecor = decor
     if decor then
-        decorAdded = decor.DescendantAdded:Connect(schedule)
-        decorRemoved = decor.DescendantRemoving:Connect(schedule)
+        indexedDecor, disconnectDecorIndex = PbrCandidateIndex.watch(decor, schedule)
     end
     schedule()
 end
@@ -257,13 +262,14 @@ end
 
 local function bindLocal(folder)
     if boundLocal == folder then return end
-    if localAdded then localAdded:Disconnect() end
-    if localRemoved then localRemoved:Disconnect() end
-    localAdded, localRemoved = nil, nil
+    if disconnectLocalIndex then
+        disconnectLocalIndex()
+        disconnectLocalIndex = nil
+    end
+    indexedLocal = {}
     boundLocal = folder
     if folder then
-        localAdded = folder.DescendantAdded:Connect(schedule)
-        localRemoved = folder.DescendantRemoving:Connect(schedule)
+        indexedLocal, disconnectLocalIndex = PbrCandidateIndex.watch(folder, schedule)
     end
     schedule()
 end
