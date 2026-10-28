@@ -894,6 +894,14 @@ describe("Author-owned kinetic details in four active 3D districts", function()
         end
         model:Destroy()
     end)
+    it("never uses full-screen cosmetic flashes on touch or reduced motion", function()
+        expect(VfxQuality.optionalFullScreenFlashAllowed(true, false)).toBe(false)
+        expect(VfxQuality.optionalFullScreenFlashAllowed(true, true)).toBe(false)
+        expect(VfxQuality.optionalFullScreenFlashAllowed(false, true)).toBe(false)
+        expect(VfxQuality.optionalFullScreenFlashAllowed(false, false)).toBe(true)
+        expect(VfxQuality.optionalFullScreenFlashAllowed(nil, nil)).toBe(true)
+    end)
+
 end)
 
 return nil
