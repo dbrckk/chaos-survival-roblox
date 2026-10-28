@@ -122,6 +122,21 @@ function UIResponsive.mobileEscalationToast(viewport)
     }
 end
 
+-- A nonessential toast (near misses, combo acknowledgements) must not
+-- cover the authoritative header/alive counter or the bottom survival meter
+-- when Android uses a very short viewport or split-screen mode.
+function UIResponsive.mobileOptionalNoticeFits(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local notice = UIResponsive.mobileEscalationToast(viewport)
+    local top = notice.centerYScale * c.height - notice.height * 0.5
+    local bottom = top + notice.height
+    local headerBottom = 7 + profile.topHeight + 5 + 24 + 5
+    local focusTop = c.height - profile.roundFocusBottomOffset
+        - profile.roundFocusHeight - 6
+    return top >= headerBottom and bottom <= focusTop
+end
+
 -- Optional pickup feedback stays out of the center avatar/camera lane.
 -- Short phones may hide the route while this reward is on screen.
 function UIResponsive.mobileShardToast(viewport)
