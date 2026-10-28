@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
 local LocalizationService = game:GetService("LocalizationService")
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
@@ -408,6 +409,9 @@ local function update()
     hideClaimedCues()
     local eventVisible, introVisible = priorityBannerVisible()
     if not optionalRouteHasRoom
+        -- Optional guidance must yield not only to disaster introductions
+        -- and escalations but also to a reward in the same mobile side lane.
+        or (UserInputService.TouchEnabled and MobileHudNotices.current() ~= nil)
         or not UIResponsive.showOptionalRoute(
             hazardCueVisible(), eventVisible, introVisible)
     then
