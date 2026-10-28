@@ -282,15 +282,31 @@ bindLocal(workspace:FindFirstChild("DistrictSectorSetpiecesLocal"))
 schedule()
 
 -- Follow movement with one slow sampling loop, never RenderStepped/
--- Heartbeat. Re-rank only after >=32 studs of actual camera displacement.
--- While idle or on Low tier this loop does constant-time checks only.
+-- Heartbeat. Also reclaim a capped active surface if scenery LOD hides it
+-- or an external source changes its material; no per-Part listeners.
+local function staleSelection(position, selectedTier)
+    for part, variant in pairs(applied) do
+        if not part.Parent
+            or not PbrDistrictRules.visible(part)
+            or not PbrDistrictRules.withinDistance(
+                part, position, selectedTier, isTouch)
+            or part.Material ~= variant.base
+            or part.MaterialVariant ~= variant.name then
+            return true
+        end
+    end
+    return false
+end
+
 task.spawn(function()
     while task.wait(isTouch and 1.7 or 2.2) do
-        if tier() ~= "Low" and (boundDecor or boundLocal) then
+        local selectedTier = tier()
+        if selectedTier ~= "Low" and (boundDecor or boundLocal) then
             local current = workspace.CurrentCamera
             local position = current and current.CFrame.Position
-            if position and lastCameraPosition
-                and (position - lastCameraPosition).Magnitude >= 32 then
+            if position and (not lastCameraPosition
+                or (position - lastCameraPosition).Magnitude >= 32
+                or staleSelection(position, selectedTier)) then
                 schedule()
             end
         end
