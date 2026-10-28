@@ -9,9 +9,11 @@ local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local NearMissVisualRules = require(ReplicatedStorage.Shared.NearMissVisualRules)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
+local touchDevice = UserInputService.TouchEnabled
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardNearMiss")
 
 local gui = Instance.new("ScreenGui")
@@ -57,9 +59,11 @@ sizeConstraint.MaxSize = Vector2.new(420, 72)
 sizeConstraint.Parent = card
 
 local viewportConnection = nil
+local nearMissFits = true
+local token = 0
 
 local function applyResponsiveLayout()
-    if not UserInputService.TouchEnabled then
+    if not touchDevice then
         card.Position = UDim2.fromScale(0.5, 0.34)
         card.Size = UDim2.new(0.48, 0, 0, 62)
         sizeConstraint.MinSize = Vector2.new(220, 54)
@@ -69,14 +73,18 @@ local function applyResponsiveLayout()
 
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
-    local profile = UIResponsive.mobileProfile(viewport)
-
-    local y = profile.tinyHeight and 0.56
-        or (profile.compactHeight and 0.50 or 0.44)
-    card.Position = UDim2.fromScale(0.5, y)
-    card.Size = UDim2.new(profile.veryNarrow and 0.84 or 0.70, 0, 0, profile.tinyHeight and 54 or 60)
-    sizeConstraint.MinSize = Vector2.new(profile.veryNarrow and 210 or 220, profile.tinyHeight and 50 or 54)
-    sizeConstraint.MaxSize = Vector2.new(440, 68)
+    local layout = UIResponsive.mobileEscalationToast(viewport)
+    nearMissFits = UIResponsive.mobileOptionalNoticeFits(viewport)
+    if not nearMissFits and card.Visible then
+        token += 1
+        card.Visible = false
+        flash.Visible = false
+        MobileHudNotices.release("near-miss")
+    end
+    card.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
+    card.Size = UDim2.new(layout.widthScale, 0, 0, layout.height)
+    sizeConstraint.MinSize = Vector2.new(185, layout.height)
+    sizeConstraint.MaxSize = Vector2.new(500, layout.height)
 end
 
 local function bindResponsiveCamera()
@@ -139,7 +147,6 @@ detail.Parent = card
 
 local combo = 0
 local lastNearMissAt = 0
-local token = 0
 local activeCardTweens = {}
 
 local function cancelCardTweens()
@@ -147,6 +154,17 @@ local function cancelCardTweens()
         tween:Cancel()
     end
     table.clear(activeCardTweens)
+end
+
+-- Priority changes invalidate old delayed fade callbacks immediately.
+if touchDevice then
+    MobileHudNotices.Changed:Connect(function(owner)
+        if owner == "near-miss" or not card.Visible then return end
+        token += 1
+        cancelCardTweens()
+        card.Visible = false
+        flash.Visible = false
+    end)
 end
 
 local function playCardTween(instance, info, goals)
@@ -250,9 +268,6 @@ end
 
 local function show(payload)
     if type(payload) ~= "table" then return end
-    -- A new near miss can arrive while an old exit tween is fading the
-    -- panel; cancel it before showing the new card at full visibility.
-    cancelCardTweens()
     local visual = NearMissVisualRules.profile(
         player:GetAttribute("ReduceMotion") == true
     )
@@ -264,6 +279,14 @@ local function show(payload)
     end
     lastNearMissAt = now
 
+    if touchDevice and (not nearMissFits
+        or not MobileHudNotices.claim("near-miss", 30)) then
+        -- Suppress only the optional visual, not the server-authoritative
+        -- reward or the count of consecutive near misses.
+        return
+    end
+    -- A new accepted cue may arrive during an old exit tween.
+    cancelCardTweens()
     token += 1
     local current = token
 
@@ -310,7 +333,7 @@ local function show(payload)
     card.Visible = true
     card.BackgroundTransparency = visual.Animate and 1 or 0.08
     scale.Scale = visual.Animate and 0.82 or 1
-    flash.Visible = visual.EdgeFlash
+    flash.Visible = visual.EdgeFlash and not touchDevice
     flash.BackgroundTransparency = 0.88
 
     if visual.Animate then
@@ -338,6 +361,7 @@ local function show(payload)
         if not visual.Animate then
             card.Visible = false
             flash.Visible = false
+            if touchDevice then MobileHudNotices.release("near-miss") end
             return
         end
 
@@ -356,6 +380,7 @@ local function show(payload)
         if current == token then
             card.Visible = false
             flash.Visible = false
+            if touchDevice then MobileHudNotices.release("near-miss") end
         end
     end)
 end

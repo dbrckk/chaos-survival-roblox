@@ -122,6 +122,22 @@ function UIResponsive.mobileEscalationToast(viewport)
     }
 end
 
+-- Optional near-miss feedback shares the compact escalation lane.
+-- Gameplay alerts and the bottom survival meter always take precedence.
+-- Unlike the critical disaster cue, the near-miss card can be omitted
+-- on very short split-screen viewports.
+function UIResponsive.mobileOptionalNoticeFits(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local notice = UIResponsive.mobileEscalationToast(viewport)
+    local top = notice.centerYScale * c.height - notice.height * 0.5
+    local bottom = top + notice.height
+    local headerBottom = 7 + profile.topHeight + 5 + 24 + 5
+    local focusTop = c.height - profile.roundFocusBottomOffset
+        - profile.roundFocusHeight - 6
+    return top >= headerBottom and bottom <= focusTop
+end
+
 -- Optional pickup feedback stays out of the center avatar/camera lane.
 -- Short phones may hide the route while this reward is on screen.
 function UIResponsive.mobileShardToast(viewport)
