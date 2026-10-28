@@ -703,7 +703,7 @@ describe("Author-owned kinetic details in four active 3D districts", function()
         expect(#high).toBe(3)
         DistrictKineticKit.stop(high)
         for _, child in ipairs(model:GetChildren()) do
-            expect(child.Transparency).toBe(0.32)
+            expect(math.abs(child.Transparency - 0.32) < 0.0001).toBe(true)
         end
         model:Destroy()
     end)
