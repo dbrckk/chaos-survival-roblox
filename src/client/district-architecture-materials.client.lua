@@ -5,6 +5,7 @@
 -- LocalTransparencyModifier and disconnects on StreamingEnabled removal.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
@@ -96,7 +97,7 @@ end
 
 local function rebuild()
     clear()
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled).Name
     if tier == "Low" then return end
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
