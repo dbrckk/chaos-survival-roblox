@@ -1,6 +1,6 @@
 local DataSchema = {}
 
-DataSchema.Version = 7
+DataSchema.Version = 8
 
 DataSchema.Defaults = {
     DataVersion = DataSchema.Version,
@@ -46,6 +46,8 @@ DataSchema.Defaults = {
     ReduceMotion = false,
     AudioMuted = false,
     HapticsDisabled = false,
+    MusicVolume = 100,
+    EffectsVolume = 100,
 }
 
 function DataSchema.cloneDefaults()
@@ -98,6 +100,17 @@ function DataSchema.normalize(saved)
     data.BestStreak = math.max(0, data.BestStreak)
     data.DailyStreak = math.max(0, data.DailyStreak)
     data.DoubleChaosSurvivals = math.max(0, data.DoubleChaosSurvivals)
+    -- Numbers from legacy/new sessions must never be persisted as NaN,
+    -- infinity or out-of-range SoundGroup gains.
+    for _, field in ipairs({"MusicVolume", "EffectsVolume"}) do
+        local value = data[field]
+        if type(value) ~= "number" or value ~= value
+            or value == math.huge or value == -math.huge then
+            data[field] = 100
+        else
+            data[field] = math.floor(math.clamp(value, 0, 100) + 0.5)
+        end
+    end
     data.Level = DataSchema.levelForXP(data.XP)
     data.DataVersion = DataSchema.Version
 
