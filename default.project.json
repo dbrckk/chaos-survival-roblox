@@ -25,10 +25,10 @@
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "Foil",
-          "ColorMap": "rbxassetid://9466552117",
-          "NormalMap": "rbxassetid://9424786192",
-          "RoughnessMap": "rbxassetid://9424786620",
-          "MetalnessMap": "rbxassetid://9424786272",
+          "ColorMap": "rbxassetid://93512804494811",
+          "NormalMap": "rbxassetid://134136390827741",
+          "RoughnessMap": "rbxassetid://99840526887005",
+          "MetalnessMap": "rbxassetid://125325987942142",
           "StudsPerTile": 7
         }
       },
@@ -36,10 +36,10 @@
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "CorrodedMetal",
-          "ColorMap": "rbxassetid://9920589327",
-          "NormalMap": "rbxassetid://9439548484",
-          "RoughnessMap": "rbxassetid://9439556441",
-          "MetalnessMap": "rbxassetid://9439548749",
+          "ColorMap": "rbxassetid://82285382088265",
+          "NormalMap": "rbxassetid://104267080578064",
+          "RoughnessMap": "rbxassetid://111840273888747",
+          "MetalnessMap": "rbxassetid://129876668948085",
           "StudsPerTile": 9
         }
       },
@@ -47,10 +47,10 @@
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "DiamondPlate",
-          "ColorMap": "rbxassetid://10237720195",
-          "NormalMap": "rbxassetid://9438583222",
-          "RoughnessMap": "rbxassetid://9438583558",
-          "MetalnessMap": "rbxassetid://9438583347",
+          "ColorMap": "rbxassetid://86680602350796",
+          "NormalMap": "rbxassetid://94326474312318",
+          "RoughnessMap": "rbxassetid://121848704472466",
+          "MetalnessMap": "rbxassetid://106394628880013",
           "StudsPerTile": 6
         }
       },
@@ -58,10 +58,10 @@
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "CeramicTiles",
-          "ColorMap": "rbxassetid://17429425079",
-          "NormalMap": "rbxassetid://17429425915",
-          "RoughnessMap": "rbxassetid://17429426861",
-          "MetalnessMap": "rbxassetid://17429426100",
+          "ColorMap": "rbxassetid://116332723277416",
+          "NormalMap": "rbxassetid://83976763267230",
+          "RoughnessMap": "rbxassetid://131401137724195",
+          "MetalnessMap": "rbxassetid://100056220542598",
           "StudsPerTile": 7
         }
       }

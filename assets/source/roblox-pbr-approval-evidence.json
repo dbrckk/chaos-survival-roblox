@@ -1,0 +1,122 @@
+{
+  "schema": "Chaos Survival PBR original creator-owned image approval evidence v1",
+  "audit_utc": "2026-10-28T11:44:02.542996+00:00",
+  "source": "read-only Roblox Open Cloud GET /assets/v1/assets/{assetId}; per-image HTTP 200",
+  "run_id": 40682190586,
+  "artifact_id": 12813106994,
+  "artifact_name": "chaos-16-original-pbr-asset-approval-audit",
+  "source_commit": "b3664163d00d5f2f276abfb1ffe52f01cd032de1",
+  "creator_user_id": "9774173158",
+  "total_unique_image_ids": 16,
+  "approved_current_at_audit": 16,
+  "all_approved_at_audit": true,
+  "runtime_android_qa_complete": false,
+  "public_place_published": false,
+  "notice": "Point-in-time metadata approval and owner verification. Live moderation/access may change; visual and frame-time acceptance must still occur before publishing the game.",
+  "materials": {
+    "brushed_titanium": {
+      "color": {
+        "id": "93512804494811",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "normal": {
+        "id": "134136390827741",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "roughness": {
+        "id": "99840526887005",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "metallic": {
+        "id": "125325987942142",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      }
+    },
+    "oxidized_steel": {
+      "color": {
+        "id": "82285382088265",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "normal": {
+        "id": "104267080578064",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "roughness": {
+        "id": "111840273888747",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "metallic": {
+        "id": "129876668948085",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      }
+    },
+    "reactor_ceramic": {
+      "color": {
+        "id": "116332723277416",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "normal": {
+        "id": "83976763267230",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "roughness": {
+        "id": "131401137724195",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "metallic": {
+        "id": "100056220542598",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      }
+    },
+    "armored_diamondplate": {
+      "color": {
+        "id": "86680602350796",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "normal": {
+        "id": "94326474312318",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "roughness": {
+        "id": "121848704472466",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      },
+      "metallic": {
+        "id": "106394628880013",
+        "current_moderation_at_audit": "APPROVED",
+        "ownership_at_audit": "9774173158",
+        "asset_metadata_http_status": 200
+      }
+    }
+  }
+}

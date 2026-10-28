@@ -9,6 +9,7 @@ on:
       - '.github/workflows/upload-original-pbr-material.yml'
       - '.github/workflows/recover-original-pbr-diamondplate.yml'
       - 'assets/source/roblox-pbr-upload-receipts.json'
+      - 'assets/source/roblox-pbr-approval-evidence.json'
   push:
     branches: [main]
     paths:
@@ -172,7 +173,42 @@ jobs:
               assert props["BaseMaterial"] in {"Foil", "CorrodedMetal", "DiamondPlate", "CeramicTiles"}
               assert all(props[key].startswith("rbxassetid://") for key in
                          ("ColorMap", "NormalMap", "MetalnessMap", "RoughnessMap"))
-          print("PASS: 16 original 2K maps and four baked PBR material fallbacks.")
+          # The shipped Rojo project must use the 16 exact original Images
+          # independently verified APPROVED and creator-owned via Roblox API.
+          receipts = json.loads(pathlib.Path(
+              "assets/source/roblox-pbr-upload-receipts.json").read_text())
+          audit = json.loads(pathlib.Path(
+              "assets/source/roblox-pbr-approval-evidence.json").read_text())
+          assert audit["run_id"] == 40682190586
+          assert audit["artifact_id"] == 12813106994
+          assert audit["approved_current_at_audit"] == 16
+          assert audit["all_approved_at_audit"] is True
+          assert audit["creator_user_id"] == receipts["creator_user_id"] == "9774173158"
+          variants = {
+              "brushed_titanium": "ChaosBrushedTitanium",
+              "oxidized_steel": "ChaosOxidizedSteel",
+              "armored_diamondplate": "ChaosDiamondArmor",
+              "reactor_ceramic": "ChaosReactorCeramic",
+          }
+          props = {
+              "color": "ColorMap", "normal": "NormalMap",
+              "roughness": "RoughnessMap", "metallic": "MetalnessMap",
+          }
+          seen_ids = set()
+          for family, variant in variants.items():
+              actual = choices[variant]["$properties"]
+              for channel, prop in props.items():
+                  receipt_id = receipts["materials"][family]["channels"][channel]["id"]
+                  evidence = audit["materials"][family][channel]
+                  assert evidence["id"] == receipt_id
+                  assert evidence["current_moderation_at_audit"] == "APPROVED"
+                  assert evidence["ownership_at_audit"] == "9774173158"
+                  assert evidence["asset_metadata_http_status"] == 200
+                  assert actual[prop] == "rbxassetid://" + receipt_id, (family, channel)
+                  seen_ids.add(receipt_id)
+          assert len(seen_ids) == 16
+          print("PASS: 16 original 2K maps match the real 16/16 Roblox-approved and creator-owned Image IDs.")
+
           PY
 
       - name: Attach the actual PNG pack and mobile contact sheet
