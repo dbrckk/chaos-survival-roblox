@@ -457,6 +457,45 @@ describe("UI responsive profiles", function()
         expect(MobileHudNotices.current()).toBe(nil)
     end)
 
+    it("keeps opt-in FPS/P95 monitoring clear of the mobile survival HUD", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1536, 688),
+            Vector2.new(400, 720),
+        }) do
+            local layout = UIResponsive.mobilePerformanceOverlay(viewport)
+            local profile = UIResponsive.mobileProfile(viewport)
+            expect(layout.fits).toBe(true)
+            expect(layout.width >= 156 and layout.width <= 176).toBe(true)
+            expect(layout.leftInset + layout.width < viewport.X * 0.50).toBe(true)
+            expect(layout.topOffset > profile.topHeight + 80).toBe(true)
+            expect(layout.topOffset + layout.height + 10 <= viewport.Y
+                - profile.roundFocusBottomOffset - profile.roundFocusHeight)
+                .toBe(true)
+        end
+    end)
+
+    it("suppresses opt-in FPS overlay while a priority HUD notice is active", function()
+        local show = UIResponsive.showPerformanceOverlay
+        expect(show(false, true, nil)).toBe(false)
+        expect(show(true, false, nil)).toBe(false)
+        expect(show(true, true, nil)).toBe(true)
+        expect(show(true, true, "momentum")).toBe(false)
+        expect(show(true, true, "mechanic")).toBe(false)
+        expect(show(true, true, "escalation")).toBe(false)
+        -- A released notice immediately permits the opted-in diagnostic again.
+        expect(show(true, true, nil)).toBe(true)
+    end)
+
+    it("drops optional FPS overlay on a short split-screen view", function()
+        expect(UIResponsive.mobilePerformanceOverlay(Vector2.new(400, 230)).fits)
+            .toBe(false)
+        expect(UIResponsive.mobilePerformanceOverlay(Vector2.new(320, 520)).fits)
+            .toBe(false)
+    end)
+
     it("keeps the HUD compact on a wide Android landscape viewport", function()
         local profile = UIResponsive.mobileProfile(Vector2.new(1536, 688))
 

@@ -9,6 +9,7 @@ local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local AudioMixRules = require(ReplicatedStorage.Shared.AudioMixRules)
 local BuildIdentity = require(ReplicatedStorage.Shared.BuildIdentity)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -99,9 +100,11 @@ end
 local motionButton, motionStroke = makeSettingButton("ReduceMotionToggle")
 local soundButton, soundStroke = makeSettingButton("AudioToggle")
 local hapticsButton, hapticsStroke = makeSettingButton("HapticsToggle")
+local perfButton, perfStroke = makeSettingButton("PerformanceOverlayToggle")
 motionButton.LayoutOrder = 1
 soundButton.LayoutOrder = 2
 hapticsButton.LayoutOrder = 3
+perfButton.LayoutOrder = 6
 
 -- Dedicated tap-safe buttons instead of precision sliders: every change
 -- is an explicit, server-validated 10% step. No per-frame input polling.
@@ -156,7 +159,7 @@ local effectsLabel, effectsDecrease, effectsIncrease =
 -- SOURCE/UNSTAMPED explicitly means the place was not built by GitHub CI.
 local buildIdentity = Instance.new("TextLabel")
 buildIdentity.Name = "BuildIdentityLabel"
-buildIdentity.LayoutOrder = 6
+buildIdentity.LayoutOrder = 7
 buildIdentity.Size = UDim2.new(1, 0, 0, 20)
 buildIdentity.BackgroundTransparency = 1
 buildIdentity.BorderSizePixel = 0
@@ -176,6 +179,65 @@ buildIdentity.Text = "BUILD " .. tostring(BuildIdentity.SourceSha or "UNSTAMPED"
     .. " / " .. (buildChannels[buildChannel] or "DEV")
 buildIdentity.Parent = panel
 
+-- This optional label uses the EXISTING 2.5-second VFX sampler. It has no
+-- RenderStepped connection, new RemoteEvent or touch-intercepting controls.
+-- The setting is session-local and off by default, including on public servers.
+local performanceEnabled = false
+local performanceFits = false
+local performanceLabel = Instance.new("TextLabel")
+performanceLabel.Name = "OptionalPerformanceOverlay"
+performanceLabel.AnchorPoint = Vector2.new(0, 0)
+performanceLabel.Size = UDim2.fromOffset(176, 48)
+performanceLabel.BackgroundColor3 = UITheme.Colors.Panel
+performanceLabel.BackgroundTransparency = 0.26
+performanceLabel.BorderSizePixel = 0
+performanceLabel.Font = Enum.Font.GothamBold
+performanceLabel.TextColor3 = UITheme.Colors.Text
+performanceLabel.TextSize = 12
+performanceLabel.TextXAlignment = Enum.TextXAlignment.Center
+performanceLabel.TextYAlignment = Enum.TextYAlignment.Center
+performanceLabel.TextWrapped = false
+performanceLabel.Active = false
+performanceLabel.Selectable = false
+performanceLabel.Visible = false
+performanceLabel.Parent = gui
+UITheme.addCorner(performanceLabel, UITheme.Corners.Small)
+UITheme.addStroke(performanceLabel, UITheme.Colors.Border, 1, 0.56)
+
+local function displayMetric(value)
+    return type(value) == "number" and value >= 0
+        and value < math.huge and tostring(math.floor(value + 0.5)) or "--"
+end
+
+local function refreshPerformance()
+    performanceLabel.Visible = UIResponsive.showPerformanceOverlay(
+        performanceEnabled, performanceFits, MobileHudNotices.current()
+    )
+    if not performanceLabel.Visible then return end
+    local fps = displayMetric(player:GetAttribute("ClientObservedFps"))
+    local p95 = displayMetric(player:GetAttribute("ClientObservedP95FrameMs"))
+    local slow = displayMetric(player:GetAttribute("ClientObservedSlowFramePercent"))
+    local tier = tostring(player:GetAttribute("VfxQualityTier") or "Medium")
+    if tier ~= "High" and tier ~= "Medium" and tier ~= "Low" then
+        tier = "Medium"
+    end
+    performanceLabel.Text = string.format(
+        "FPS %s  P95 %sms\nSLOW %s%%  %s",
+        fps, p95, slow, string.upper(tier)
+    )
+    local actualP95 = player:GetAttribute("ClientObservedP95FrameMs")
+    local actualSlow = player:GetAttribute("ClientObservedSlowFramePercent")
+    local struggling = (type(actualP95) == "number"
+        and actualP95 >= 50) or (type(actualSlow) == "number"
+        and actualSlow >= 10)
+    performanceLabel.TextColor3 = struggling
+        and UITheme.Colors.Orange or UITheme.Colors.Text
+end
+
+-- A MOMENTUM combo and a diagnostic HUD use the same small left-side
+-- space. Always yield instantly to the notification owner. On release,
+-- restore only if the player explicitly enabled diagnostics.
+MobileHudNotices.Changed:Connect(refreshPerformance)
 
 local currentPhase = "waiting"
 local voteVisible = false
@@ -194,6 +256,15 @@ local function applyResponsive()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     local profile = UIResponsive.mobileProfile(viewport)
+    local perfLayout = UIResponsive.mobilePerformanceOverlay(viewport)
+    performanceFits = perfLayout.fits
+    performanceLabel.Position = UDim2.fromOffset(
+        perfLayout.leftInset, perfLayout.topOffset
+    )
+    performanceLabel.Size = UDim2.fromOffset(
+        perfLayout.width, perfLayout.height
+    )
+    refreshPerformance()
 
     if UserInputService.TouchEnabled then
         local width = profile.veryNarrow and 156 or 168
@@ -217,6 +288,12 @@ local function refresh()
     local reduced = player:GetAttribute("ReduceMotion") == true
     local muted = player:GetAttribute("AudioMuted") == true
     local hapticsDisabled = player:GetAttribute("HapticsDisabled") == true
+    perfButton.Text = performanceEnabled and "FPS / P95 : ON" or "FPS / P95 : OFF"
+    perfStroke.Color = performanceEnabled and UITheme.Colors.Green
+        or UITheme.Colors.Cyan
+    perfButton.BackgroundColor3 = performanceEnabled
+        and UITheme.Colors.Green:Lerp(UITheme.Colors.Panel, 0.78)
+        or UITheme.Colors.PanelRaised
     local musicPercent = AudioMixRules.percent(player:GetAttribute("MusicVolume"))
     local effectsPercent = AudioMixRules.percent(player:GetAttribute("EffectsVolume"))
 
@@ -313,6 +390,24 @@ hapticsButton.Activated:Connect(function()
     accessibilityEvent:FireServer("HapticsDisabled", nextValue)
     refresh()
 end)
+
+perfButton.Activated:Connect(function()
+    if not available() then return end
+    performanceEnabled = not performanceEnabled
+    -- Local display only; never persist a developer-style overlay on
+    -- another device or require any server-side permissions.
+    refresh()
+    refreshPerformance()
+end)
+
+for _, attribute in ipairs({
+    "ClientObservedFps",
+    "ClientObservedP95FrameMs",
+    "ClientObservedSlowFramePercent",
+    "VfxQualityTier",
+}) do
+    player:GetAttributeChangedSignal(attribute):Connect(refreshPerformance)
+end
 
 local lastVolumeChange = {}
 local function changeVolume(setting, delta)
