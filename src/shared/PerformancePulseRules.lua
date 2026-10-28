@@ -7,6 +7,10 @@ local PerformancePulseRules = {}
 
 local LIMITS = {
     averageFps = {240, false},
+    -- Percentile pacing survives one-off OS hitches; both numbers are
+    -- client-reported and diagnostic only, never trusted for game logic.
+    p95FrameMs = {600, true},
+    slowFramePercent = {100, true},
     tierTransitions = {99, true},
     visualParts = {5000, true},
     visualLights = {1000, true},
