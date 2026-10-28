@@ -59,6 +59,8 @@ sizeConstraint.MaxSize = Vector2.new(420, 72)
 sizeConstraint.Parent = card
 
 local viewportConnection = nil
+local nearMissFits = true
+local token = 0
 
 local function applyResponsiveLayout()
     if not touchDevice then
@@ -74,6 +76,13 @@ local function applyResponsiveLayout()
     -- Share the existing foreground toast lane with the mechanic reward,
     -- escalation and round introduction. Those must never stack on touch.
     local layout = UIResponsive.mobileEscalationToast(viewport)
+    nearMissFits = UIResponsive.mobileOptionalNoticeFits(viewport)
+    if not nearMissFits and card.Visible then
+        token += 1
+        card.Visible = false
+        flash.Visible = false
+        MobileHudNotices.release("near-miss")
+    end
     card.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
     card.Size = UDim2.new(layout.widthScale, 0, 0, layout.height)
     sizeConstraint.MinSize = Vector2.new(185, layout.height)
@@ -140,7 +149,6 @@ detail.Parent = card
 
 local combo = 0
 local lastNearMissAt = 0
-local token = 0
 local activeCardTweens = {}
 
 local function cancelCardTweens()
@@ -277,7 +285,8 @@ local function show(payload)
     end
     lastNearMissAt = now
 
-    if touchDevice and not MobileHudNotices.claim("near-miss", 30) then
+    if touchDevice and (not nearMissFits
+        or not MobileHudNotices.claim("near-miss", 30)) then
         -- An alert or introduction already owns the mobile foreground.
         -- Keep the server reward/gameplay untouched; skip cosmetic UI.
         return
