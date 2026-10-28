@@ -8,6 +8,7 @@ local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
 local SceneryLodRules = require("../../src/shared/SceneryLodRules")
+local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 
 describe("Adaptive VFX quality", function()
     it("bounds Android FPS/memory telemetry before analytics or formatting", function()
@@ -552,6 +553,85 @@ describe("Adaptive VFX quality", function()
         lateDecor:Destroy()
     end)
 
+end)
+
+describe("PBR materials for four playable district hero environments", function()
+    it("reserves expensive PBR for Android Medium/High only", function()
+        expect(PbrDistrictRules.limit("Low")).toBe(0)
+        expect(PbrDistrictRules.limit("Medium")).toBe(6)
+        expect(PbrDistrictRules.limit("High")).toBe(16)
+        expect(PbrDistrictRules.limit("Other")).toBe(0)
+    end)
+
+    it("authorizes exactly the four cosmetic local district models", function()
+        local model = Instance.new("Model")
+        model.Name = "Sector01_Observatory"
+        model:SetAttribute("LocalOriginal3D", true)
+        model:SetAttribute("CosmeticOnly", true)
+        model:SetAttribute("DistrictSector", 1)
+        expect(PbrDistrictRules.eligibleOwner(model)).toBe(true)
+        model:SetAttribute("DistrictSector", 4)
+        expect(PbrDistrictRules.eligibleOwner(model)).toBe(true)
+        model:SetAttribute("DistrictSector", 5)
+        expect(PbrDistrictRules.eligibleOwner(model)).toBe(false)
+        model:SetAttribute("DistrictSector", 2)
+        model:SetAttribute("CosmeticOnly", false)
+        expect(PbrDistrictRules.eligibleOwner(model)).toBe(false)
+        model:Destroy()
+        local unsafe = Instance.new("Model")
+        expect(PbrDistrictRules.eligibleOwner(unsafe)).toBe(false)
+        unsafe:SetAttribute("ArenaDistrictArchitecture", true)
+        expect(PbrDistrictRules.eligibleOwner(unsafe)).toBe(true)
+        unsafe:Destroy()
+    end)
+
+    it("never touches hitboxes, neon, glass, authored variants or tiny decals", function()
+        local part = Instance.new("Part")
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.Size = Vector3.new(8, 5, 4)
+        part.Material = Enum.Material.Metal
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(true)
+        part.CanCollide = true
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        part.CanCollide = false
+        part.Material = Enum.Material.Neon
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        part.Material = Enum.Material.Glass
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        part.Material = Enum.Material.Metal
+        part.Transparency = 0.2
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        part.Transparency = 0
+        part.MaterialVariant = "ExistingPBR"
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        part.MaterialVariant = ""
+        part.Size = Vector3.new(2, 2, 2)
+        expect(PbrDistrictRules.eligiblePart(part)).toBe(false)
+        part:Destroy()
+    end)
+
+    it("maps authored material roles to all four real variants", function()
+        expect(PbrDistrictRules.materialKey("FoundationPlinth", Enum.Material.Metal)).toBe("ceramic")
+        expect(PbrDistrictRules.materialKey("DiamondPlateBrace", Enum.Material.Metal)).toBe("armor")
+        expect(PbrDistrictRules.materialKey("CorrodedHousing", Enum.Material.CorrodedMetal)).toBe("oxidized")
+        expect(PbrDistrictRules.materialKey("TelemetryHousing", Enum.Material.Metal)).toBe("titanium")
+        expect(PbrDistrictRules.materialKey("ServiceShroud", Enum.Material.Metal)).toBe("oxidized")
+    end)
+
+    it("prioritizes large important surfaces instead of tiny assembly details", function()
+        local hero = Instance.new("Part")
+        hero.Name = "ReactorHousing"
+        hero.Size = Vector3.new(8, 8, 8)
+        local tiny = Instance.new("Part")
+        tiny.Name = "Rivet"
+        tiny.Size = Vector3.new(1, 1, 1)
+        expect(PbrDistrictRules.priority(hero) > PbrDistrictRules.priority(tiny)).toBe(true)
+        hero:Destroy()
+        tiny:Destroy()
+    end)
 end)
 
 return nil

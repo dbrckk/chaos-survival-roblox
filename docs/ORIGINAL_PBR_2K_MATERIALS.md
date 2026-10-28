@@ -40,9 +40,22 @@ the project's generated images. Source of those IDs:
 https://create.roblox.com/docs/parts/materials
 
 `src/client/pbr-district-materials.client.lua` applies these materials
-locally only to static **non-colliding cosmetic** district buildings,
-corner landmarks, perimeter stations and hero architecture. Real terrain,
-jump surfaces, weather damage, characters and hitboxes are never modified.
+locally to static **non-colliding cosmetic** district buildings, the four
+**playable-sector original 3D setpieces** (observatory, cargo depot, reactor
+and communications), corner landmarks, perimeter stations and hero
+architecture. Both `GeneratedMap.Decor` and
+`Workspace.DistrictSectorSetpiecesLocal` are watched, including delayed
+creation, map replacement and adaptive quality changes. Real terrain, jump
+surfaces, weather damage, characters, original imported MeshParts with
+`SurfaceAppearance` and hitboxes are never modified.
+
+Within each eligible model the large architectural faces take precedence
+over incidental small details. Model-scoped quality caps are preserved
+(6 Medium / 16 High; none on Low). When switching tiers or reloading an
+arena, existing native materials and authored variants are restored before
+reallocation. This only reuses the four MaterialService variants; it does
+**not** load new 2K textures or create new geometry. The PBR helper policy
+is tested in the existing real-engine VFX suite.
 
 Mobile tier behavior: **Low** keeps the original lightweight Roblox
 materials, **Medium** textures up to six substantial decorative pieces per
