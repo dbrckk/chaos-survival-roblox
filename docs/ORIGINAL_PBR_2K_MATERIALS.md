@@ -105,6 +105,33 @@ checked before substituting original `rbxassetid://...` values into
 verified Roblox-owned fallback maps, and the public Roblox place has
 not been updated.
 
+### Automatic 16-image owner and moderation verification
+
+Image creation is complete; **current approval is not established by an
+upload receipt**. The independent, read-only workflow
+`.github/workflows/verify-original-pbr-asset-status.yml` verifies each of
+the 16 images with the existing creator-scoped `ROBLOX_ASSET_API_KEY`
+using `GET https://apis.roblox.com/assets/v1/assets/{assetId}`.
+No image creation, changes to permissions, Roblox place publishing or
+writes to the shipped Rojo project occur.
+
+It checks ID match, creator ownership, Image/Decal asset type, and current
+`moderationResult.moderationState`. Unknown/omitted metadata, API errors,
+`Reviewing`, and `Rejected` **all fail closed**. Every check is recorded
+in the downloadable artifact `chaos-16-original-pbr-asset-approval-audit`.
+If the API key lacks `asset:read`, the report will identify HTTP
+401/403 rather than invent a moderation status. Running on a PR executes
+only offline self-tests; a merge to `main` makes the authenticated GET
+checks automatically.
+
+If and only if *all sixteen* images are approved and creator-owned,
+the workflow writes a **private staging-only Rojo project** under
+`build/pbr-asset-audit/default.original-pbr.PRIVATE-STAGING.project.json`.
+It never edits `default.project.json` or publishes the public Roblox game.
+A true release still requires real in-game permission, Studio and Android
+render QA and performance measurements. Roblox Open Cloud does not
+substitute for these tests.
+
 ### Upload the *original* maps to Roblox
 
 Four 2K files cannot be used as live MaterialVariant textures solely from
