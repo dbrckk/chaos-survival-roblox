@@ -1,7 +1,7 @@
 {
   "schema": "Chaos Survival original PBR Roblox image upload receipts v1",
   "creator_user_id": "9774173158",
-  "disclaimer": "These are IDs and moderation states printed by the Roblox creation operations in GitHub Actions on 2026-10-28. 'Reviewing' and 'Approved' are point-in-time responses, not verified CURRENT moderation state or permission for public game. The Roblox asset catalog must be rechecked prior to replacing fallbacks.",
+  "disclaimer": "These are IDs and moderation states printed by the Roblox creation operations in GitHub Actions on 2026-10-28. 'Reviewing' and 'Approved' are point-in-time responses, not verified CURRENT moderation state or permission for public game. The Roblox asset catalog must be rechecked prior to replacing fallbacks. Final diamondplate recovery: GitHub Actions #40679576853; this record confirms 16 uploaded channels, not current asset moderation or game use.",
   "materials": {
     "brushed_titanium": {
       "run_id": 40674072895,
@@ -78,18 +78,23 @@
           "id": "94326474312318",
           "state_at_upload": "Approved"
         },
-        "roughness": null,
-        "metallic": null
+        "roughness": {
+          "id": "121848704472466",
+          "state_at_upload": "Reviewing",
+          "source_sha256": "24655dc225255c9a111570dc078c10ea4be334a68d1e8e6c013032fc3ccc2bd7"
+        },
+        "metallic": {
+          "id": "106394628880013",
+          "state_at_upload": "Approved",
+          "source_sha256": "e514e07693088dde840f7fb91cab029cef216f2a63533431516f5a88d9cf113b"
+        }
       },
       "duplicate_partial_run": {
         "run_id": 40674169321,
         "color_id": "120093679447953",
         "normal_id": "101692428623846"
       },
-      "missing": [
-        "roughness",
-        "metallic"
-      ],
+      "missing": [],
       "first_programmatic_attempt": {
         "run_id": 40678338047,
         "outcome": "HTTP400_BOTH_REJECTED",
@@ -104,6 +109,24 @@
           "asset_id": null
         },
         "meaning": "Roblox rejected both create requests before issuing any image asset IDs. Safe to retry only these two after shortening displayName."
+      },
+      "final_recovery": {
+        "run_id": 40679576853,
+        "workflow": "One-Shot Approved Recovery of Two Remaining PBR Images",
+        "sha": "c7f98e01dbfd9a9e57657b2bccfc05196849c7f8",
+        "artifact_id": 12812710630,
+        "artifact_name": "chaos-owner-approved-pbr-short-name-recovery",
+        "result": "SUCCESS",
+        "creator_user_id": "9774173158",
+        "post_count_by_channel": {
+          "roughness": 1,
+          "metallic": 1
+        },
+        "moderation_observed_at_creation": {
+          "roughness": "Reviewing",
+          "metallic": "Approved"
+        },
+        "note": "Real Roblox creation operations returned 200 and confirmed both Image asset IDs; CURRENT moderation and asset access must be verified separately."
       }
     }
   }
