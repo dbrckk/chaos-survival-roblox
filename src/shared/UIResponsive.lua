@@ -266,6 +266,31 @@ function UIResponsive.mobileMomentumChip(viewport)
     }
 end
 
+-- Optional on-device performance diagnostics are requested from Settings.
+-- Never spend touch input area on a permanent QA panel. Keep the small
+-- noninteractive label in the far-left middle lane, clear of the top hazard,
+-- bottom focus meter, Roblox thumb stick and right-side DASH/jump buttons.
+-- Extremely shallow split screens have no safe lane: hide it entirely.
+function UIResponsive.mobilePerformanceOverlay(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local height = 48
+    local width = c.veryNarrow and 156 or 176
+    local left = c.veryNarrow and 12 or 16
+    local top = math.max(profile.topHeight + 92, c.height * 0.46)
+    local maximumTop = c.height - profile.roundFocusBottomOffset
+        - profile.roundFocusHeight - height - 10
+    return {
+        leftInset = left,
+        topOffset = top,
+        width = width,
+        height = height,
+        fits = c.width >= 340
+            and left + width < c.width * 0.50
+            and top <= maximumTop,
+    }
+end
+
 function UIResponsive.criticalTextMin(viewport)
     local c = UIResponsive.classify(viewport, true)
     if c.tinyHeight then
