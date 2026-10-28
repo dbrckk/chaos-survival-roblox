@@ -69,9 +69,10 @@ local function applyResponsiveLayout()
 
     if touchDevice then
         local profile = UIResponsive.mobileProfile(viewport)
-        card.Position = UDim2.new(0.5, 0, 0, profile.topHeight + 12)
-        card.Size = UDim2.new(profile.veryNarrow and 0.94 or 0.84, 0, 0, profile.tinyHeight and 62 or 74)
-        cardConstraint.MinSize = Vector2.new(profile.veryNarrow and 240 or 280, profile.tinyHeight and 58 or 64)
+        local layout = UIResponsive.mobileArenaGuideLayout(viewport)
+        card.Position = UDim2.new(layout.centerXScale, 0, 0, layout.topOffset)
+        card.Size = UDim2.new(layout.widthScale, 0, 0, layout.height)
+        cardConstraint.MinSize = Vector2.new(layout.minWidth, layout.minHeight)
         textConstraint.MinTextSize = profile.tinyHeight and 10 or 11
     else
         card.Position = UDim2.fromScale(0.5, 0.165)
