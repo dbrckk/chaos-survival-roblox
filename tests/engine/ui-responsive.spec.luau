@@ -210,18 +210,42 @@ describe("UI responsive profiles", function()
             expect(expedition.topOffset > escalationBottom).toBe(true)
             expect(escalation.height <= 44).toBe(true)
             expect(reward.height <= 40).toBe(true)
-            expect(reward.centerYScale * viewport.Y + reward.height * 0.5
-                < viewport.Y - 45).toBe(true)
-            if UIResponsive.classify(viewport, true).wide then
-                local rewardTop = reward.centerYScale * viewport.Y
-                    - reward.height * 0.5
+            expect(reward.fits).toBe(true)
+            local profile = UIResponsive.mobileProfile(viewport)
+            local rewardTop = reward.centerYScale * viewport.Y
+                - reward.height * 0.5
+            local rewardBottom = reward.centerYScale * viewport.Y
+                + reward.height * 0.5
+            local survivalTop = viewport.Y - profile.roundFocusBottomOffset
+                - profile.roundFocusHeight
+            expect(rewardTop >= escalationBottom + 2).toBe(true)
+            -- The 320px, 360px and 440px Android landscape layouts must
+            -- never render the optional shard toast over the survival bar.
+            expect(rewardBottom + 8 <= survivalTop).toBe(true)
+            local c = UIResponsive.classify(viewport, true)
+            if c.wide and not c.compactHeight then
                 expect(expedition.topOffset + expedition.height < rewardTop)
                     .toBe(true)
                 expect(expedition.xScale).toBe(reward.centerXScale)
+            elseif c.wide then
+                -- No vertical room between route and focus on short wide
+                -- screens: move the reward to a different horizontal lane.
+                expect(reward.centerXScale).toBe(0.50)
+                local distance = (reward.centerXScale - expedition.xScale)
+                    * viewport.X
+                expect(distance > (reward.width + expedition.width) * 0.5)
+                    .toBe(true)
+            end
+            if c.wide then
                 expect(expedition.xScale < escalation.centerXScale).toBe(true)
                 expect(escalation.widthScale < 0.5).toBe(true)
             end
         end
+    end)
+
+    it("hides an optional pickup toast when even the mobile safe lane is too short", function()
+        expect(UIResponsive.mobileShardToast(Vector2.new(400, 230)).fits)
+            .toBe(false)
     end)
 
     it("allows exactly one foreground Android notice at a time", function()
