@@ -9,6 +9,7 @@ local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local AudioMixRules = require(ReplicatedStorage.Shared.AudioMixRules)
 local BuildIdentity = require(ReplicatedStorage.Shared.BuildIdentity)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -209,7 +210,9 @@ local function displayMetric(value)
 end
 
 local function refreshPerformance()
-    performanceLabel.Visible = performanceEnabled and performanceFits
+    performanceLabel.Visible = UIResponsive.showPerformanceOverlay(
+        performanceEnabled, performanceFits, MobileHudNotices.current()
+    )
     if not performanceLabel.Visible then return end
     local fps = displayMetric(player:GetAttribute("ClientObservedFps"))
     local p95 = displayMetric(player:GetAttribute("ClientObservedP95FrameMs"))
@@ -230,6 +233,11 @@ local function refreshPerformance()
     performanceLabel.TextColor3 = struggling
         and UITheme.Colors.Orange or UITheme.Colors.Text
 end
+
+-- A MOMENTUM combo and a diagnostic HUD use the same small left-side
+-- space. Always yield instantly to the notification owner. On release,
+-- restore only if the player explicitly enabled diagnostics.
+MobileHudNotices.Changed:Connect(refreshPerformance)
 
 local currentPhase = "waiting"
 local voteVisible = false
