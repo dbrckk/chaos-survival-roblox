@@ -128,7 +128,8 @@ function UIResponsive.mobileShardToast(viewport)
     local c = UIResponsive.classify(viewport, true)
     return {
         centerXScale = c.wide and 0.23 or 0.50,
-        centerYScale = c.tinyHeight and 0.70 or 0.69,
+        centerYScale = c.tinyHeight and 0.70
+            or (c.compactHeight and 0.74 or 0.69),
         width = c.veryNarrow and 184 or 230,
         height = c.tinyHeight and 34 or 40,
     }
