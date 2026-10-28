@@ -184,6 +184,7 @@ buildIdentity.Parent = panel
 -- The setting is session-local and off by default, including on public servers.
 local performanceEnabled = false
 local performanceFits = false
+local performanceDetailed = false
 local performanceLabel = Instance.new("TextLabel")
 performanceLabel.Name = "OptionalPerformanceOverlay"
 performanceLabel.AnchorPoint = Vector2.new(0, 0)
@@ -221,10 +222,23 @@ local function refreshPerformance()
     if tier ~= "High" and tier ~= "Medium" and tier ~= "Low" then
         tier = "Medium"
     end
-    performanceLabel.Text = string.format(
-        "FPS %s  P95 %sms\nSLOW %s%%  %s",
-        fps, p95, slow, string.upper(tier)
-    )
+    if performanceDetailed then
+        local activePbr = displayMetric(player:GetAttribute("PbrActiveSurfaceCount"))
+        local budgetPbr = displayMetric(player:GetAttribute("PbrActiveSurfaceBudget"))
+        local candidates = displayMetric(player:GetAttribute("PbrVisibleCandidateCount"))
+        performanceLabel.Text = string.format(
+            "FPS %s  P95 %sms\nSLOW %s%%  %s\nPBR %s/%s  C%s",
+            fps, p95, slow, string.upper(tier),
+            activePbr, budgetPbr, candidates
+        )
+    else
+        -- On extremely shallow Android screens, the optional third row
+        -- must never obscure the joystick or the survival focus meter.
+        performanceLabel.Text = string.format(
+            "FPS %s  P95 %sms\nSLOW %s%%  %s",
+            fps, p95, slow, string.upper(tier)
+        )
+    end
     local actualP95 = player:GetAttribute("ClientObservedP95FrameMs")
     local actualSlow = player:GetAttribute("ClientObservedSlowFramePercent")
     local struggling = (type(actualP95) == "number"
@@ -258,6 +272,7 @@ local function applyResponsive()
     local profile = UIResponsive.mobileProfile(viewport)
     local perfLayout = UIResponsive.mobilePerformanceOverlay(viewport)
     performanceFits = perfLayout.fits
+    performanceDetailed = perfLayout.height > 48
     performanceLabel.Position = UDim2.fromOffset(
         perfLayout.leftInset, perfLayout.topOffset
     )
@@ -405,6 +420,9 @@ for _, attribute in ipairs({
     "ClientObservedP95FrameMs",
     "ClientObservedSlowFramePercent",
     "VfxQualityTier",
+    "PbrActiveSurfaceCount",
+    "PbrActiveSurfaceBudget",
+    "PbrVisibleCandidateCount",
 }) do
     player:GetAttributeChangedSignal(attribute):Connect(refreshPerformance)
 end
