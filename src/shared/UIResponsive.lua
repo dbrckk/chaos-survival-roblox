@@ -86,11 +86,14 @@ function UIResponsive.mobileExpeditionLayout(viewport, topInset)
     local height = profile.tinyHeight and 46 or 51
     local inset = math.clamp(tonumber(topInset) or 0, 0, c.height)
     local minimumTop = inset + profile.topHeight + 48
+    -- The top-center survival hazard is inset by Roblox native controls.
+    -- On landscape phones, put the OPTIONAL route in the lower-left side
+    -- lane, rather than the same top-center lane as the hazard banner.
     local targetTop = math.max(profile.topHeight + 62,
-        inset + profile.topHeight + 66)
+        inset + profile.topHeight + 78, c.height * 0.53)
     local maximumTop = c.height - profile.roundFocusBottomOffset - height - 10
     return {
-        xScale = profile.topCenterXScale,
+        xScale = c.wide and 0.23 or 0.50,
         width = math.min(profile.veryNarrow and 190 or 208,
             math.max(168, c.width - 20)),
         height = height,
@@ -103,6 +106,32 @@ function UIResponsive.showOptionalRoute(hazardVisible, roundEventVisible, introV
     return hazardVisible ~= true
         and roundEventVisible ~= true
         and introVisible ~= true
+end
+
+-- Foreground escalation uses one compact toast lane, never a second
+-- full-width strip over the authoritative GEL / hazard timer.
+function UIResponsive.mobileEscalationToast(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    return {
+        centerXScale = 0.50,
+        centerYScale = c.tinyHeight and 0.43 or 0.43,
+        widthScale = c.veryNarrow and 0.82 or (c.wide and 0.34 or 0.58),
+        height = c.tinyHeight and 38 or 44,
+        titleMaxTextSize = c.tinyHeight and 18 or 21,
+        subtitleMaxTextSize = c.tinyHeight and 12 or 14,
+    }
+end
+
+-- Optional pickup feedback stays out of the center avatar/camera lane.
+-- Short phones may hide the route while this reward is on screen.
+function UIResponsive.mobileShardToast(viewport)
+    local c = UIResponsive.classify(viewport, true)
+    return {
+        centerXScale = c.wide and 0.23 or 0.50,
+        centerYScale = c.tinyHeight and 0.70 or 0.69,
+        width = c.veryNarrow and 184 or 230,
+        height = c.tinyHeight and 34 or 40,
+    }
 end
 
 -- Primary round introductions should not cover the avatar and other
