@@ -489,6 +489,28 @@ describe("UI responsive profiles", function()
         expect(show(true, true, nil)).toBe(true)
     end)
 
+    it("shows PBR detail only when a third diagnostics row fits", function()
+        local short = UIResponsive.mobilePerformanceOverlay(Vector2.new(640, 360))
+        expect(short.height).toBe(48)
+        expect(short.fits).toBe(true)
+
+        local tall = UIResponsive.mobilePerformanceOverlay(Vector2.new(1536, 688))
+        expect(tall.height).toBe(66)
+        expect(tall.fits).toBe(true)
+
+        local portrait = Vector2.new(400, 720)
+        local p = UIResponsive.mobilePerformanceOverlay(portrait)
+        local nav = UIResponsive.mobileExpeditionLayout(portrait, 0)
+        expect(p.fits).toBe(true)
+        expect(p.height).toBe(66)
+        -- Optional route card is centered at 53% on tall portrait views.
+        expect(p.topOffset >= nav.topOffset + nav.height + 8).toBe(true)
+        local profile = UIResponsive.mobileProfile(portrait)
+        expect(p.topOffset + p.height + 10
+            <= portrait.Y - profile.roundFocusBottomOffset
+                - profile.roundFocusHeight).toBe(true)
+    end)
+
     it("drops optional FPS overlay on a short split-screen view", function()
         expect(UIResponsive.mobilePerformanceOverlay(Vector2.new(400, 230)).fits)
             .toBe(false)
