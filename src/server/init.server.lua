@@ -101,11 +101,11 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
     local isVolume = setting == "MusicVolume" or setting == "EffectsVolume"
     if isVolume then
         if not AudioMixRules.validServerVolume(value) then return end
-    elseif setting == "ReduceMotion"
-        or setting == "AudioMuted"
-        or setting == "HapticsDisabled" then
-        if type(value) ~= "boolean" then return end
-    else
+    elseif setting ~= "ReduceMotion"
+        and setting ~= "AudioMuted"
+        and setting ~= "HapticsDisabled" then
+        return
+    elseif type(value) ~= "boolean" then
         return
     end
     if not allowAccessibilityChange(tostring(player.UserId) .. ":" .. setting) then
