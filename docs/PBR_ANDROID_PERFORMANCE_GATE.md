@@ -18,9 +18,12 @@ without native client captures.
 
 - All four original MaterialVariants share the **same global** surface limit:
   there is no unbounded `per-model × model-count` GPU multiplier.
-- Prefer **nearby, large, prominent** architectural surfaces for the budget,
-  with a modest selection hysteresis so camera motion does not rapidly toggle
-  different 2K maps.
+- Prefer **nearby, large, prominent, camera-facing** architectural
+  surfaces for the shared budget. Outside a 55-stud near-field radius,
+  surfaces directly ahead gain more priority than equally distant surfaces
+  behind the camera. Selection hysteresis keeps established surfaces stable.
+  This changes WHICH textures receive the existing fixed GPU budget,
+  never raises the per-model or global cap.
 - Respect `SceneryLodHidden` and `LocalTransparencyModifier`; never override
   the existing LOD owner's visibility decisions.
 - Change Material / MaterialVariant **only when the selected variant changes**.
@@ -28,9 +31,13 @@ without native client captures.
 - Only anchored, non-colliding, non-queryable, opaque cosmetic Parts qualify.
   No authored `SurfaceAppearance` or unrelated custom MaterialVariants are
   overwritten. An external material change revokes the local ownership claim.
-- Existing streaming event listeners trigger a delayed, coalesced scan;
-  camera movement triggers at most one low-frequency scan when the camera has
-  moved at least 32 studs. No new RenderStepped or Heartbeat handler.
+- Existing streaming event listeners trigger a delayed, coalesced scan.
+  The same slow camera sampler also rescans after **32 studs of movement**
+  OR **28 degrees of stationary camera rotation**, so looking around reveals
+  detail on newly facing buildings without needing to walk. No new
+  RenderStepped or Heartbeat handler. Before a real CurrentCamera exists,
+  PBR distance eligibility fails closed rather than briefly allocating all
+  2K materials.
 - `Player` **local-client attributes** provide three QA counters:
   `PbrActiveSurfaceCount`, `PbrActiveSurfaceBudget`,
   `PbrVisibleCandidateCount`. These are *not* frame-time or GPU memory
@@ -50,8 +57,10 @@ without native client captures.
    preceding shipped PBR material selection implementation using identical
    scene, quality, camera route and player/bot counts. No claim of an
    Android FPS improvement is made until this paired measurement is taken.
-5. Validate no material flash when new buildings stream, when player crosses
-   the distance threshold, and when quality changes High ↔ Medium ↔ Low.
+5. Validate no material flash when new buildings stream, the camera
+   turns by 28 degrees without moving, the player crosses the distance
+   threshold, CurrentCamera initializes late, and quality changes
+   High ↔ Medium ↔ Low.
 6. Verify that hazard telegraphs, route labels, collision and the effect of
    `ReduceMotion` remain clear and correct. These take precedence over PBR.
 7. Preserve fallback snapshots and release hashes. A merge to `main` is
