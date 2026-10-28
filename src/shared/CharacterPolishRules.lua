@@ -52,7 +52,8 @@ function CharacterPolishRules.lightBrightness(
     localCharacter,
     finalRush,
     activeParticipant,
-    reduceMotion
+    reduceMotion,
+    touchDevice
 )
     if finalRush == true or reduceMotion == true or tostring(tierName) == "Low" then
         return 0
@@ -67,6 +68,13 @@ function CharacterPolishRules.lightBrightness(
     end
 
     if localCharacter == true then
+        -- The dark arena needs one neutral local-avatar fill on Android.
+        -- Reuse the existing torso light instead of allocating extra lights.
+        -- Low, accessibility, final rush and inactive players keep their
+        -- original zero-budget behavior.
+        if touchDevice == true then
+            return tostring(tierName) == "High" and 0.52 or 0.37
+        end
         return tostring(tierName) == "High" and 0.42 or 0.22
     end
     return tostring(tierName) == "High" and 0.18 or 0
