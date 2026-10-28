@@ -83,8 +83,12 @@ end
 
 local function scan()
     local selectedTier = tier()
-    local ownerLimit = PbrDistrictRules.limit(selectedTier)
-    local budget = PbrDistrictRules.globalLimit(selectedTier, isTouch)
+    local budget = PbrDistrictRules.effectiveGlobalLimit(
+        selectedTier, isTouch, player:GetAttribute("PbrMaterialsDisabled")
+    )
+    -- When the Android player disables PBR, select no new surfaces and
+    -- restore all owned variants in the existing diff reconciliation.
+    local ownerLimit = budget == 0 and 0 or PbrDistrictRules.limit(selectedTier)
     local camera = workspace.CurrentCamera
     -- Single coherent CFrame snapshot per reconciliation. A stationary
     -- Android player can rotate the camera to a different facade without
@@ -290,6 +294,7 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(schedule)
+player:GetAttributeChangedSignal("PbrMaterialsDisabled"):Connect(schedule)
 bindMap(workspace:FindFirstChild("GeneratedMap"))
 bindLocal(workspace:FindFirstChild("DistrictSectorSetpiecesLocal"))
 schedule()
