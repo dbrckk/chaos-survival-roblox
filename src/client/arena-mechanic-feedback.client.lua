@@ -5,6 +5,9 @@ local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -62,6 +65,43 @@ local lastTrigger = 0
 local titleToken = 0
 local flashTween = nil
 local titleTweens = {}
+local touchDevice = UserInputService.TouchEnabled
+
+local function layoutTitle()
+    if not touchDevice then
+        overdriveLabel.Position = UDim2.fromScale(0.5, 0.61)
+        overdriveLabel.Size = UDim2.fromOffset(290, 52)
+        return
+    end
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local layout = UIResponsive.mobileEscalationToast(viewport)
+    overdriveLabel.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
+    overdriveLabel.Size = UDim2.fromOffset(
+        math.min(320, math.max(180, viewport.X * layout.widthScale)),
+        layout.height
+    )
+end
+
+local viewportConnection
+local function bindViewport()
+    if viewportConnection then viewportConnection:Disconnect() end
+    local camera = workspace.CurrentCamera
+    viewportConnection = camera and camera:GetPropertyChangedSignal("ViewportSize")
+        :Connect(layoutTitle) or nil
+    layoutTitle()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindViewport)
+bindViewport()
+
+-- Mechanic rewards are optional; hazard introductions and escalations win.
+MobileHudNotices.Changed:Connect(function(owner)
+    if not touchDevice or not overdriveLabel.Visible or owner == "mechanic" then return end
+    titleToken += 1
+    for _, tween in ipairs(titleTweens) do tween:Cancel() end
+    table.clear(titleTweens)
+    overdriveLabel.Visible = false
+end)
 
 -- Rapidly chained pads must never allow an old fade to hide a new reward.
 local function stopTitleTweens()
@@ -193,6 +233,9 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     end
 
     if overdrive or fluxRelay or helixFlow or gridClear or skyrail then
+        if touchDevice and not MobileHudNotices.claim("mechanic", 20) then
+            return
+        end
         titleToken += 1
         local token = titleToken
         stopTitleTweens()
@@ -229,6 +272,7 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
             stopTitleTweens()
             if player:GetAttribute("ReduceMotion") == true then
                 overdriveLabel.Visible = false
+                if touchDevice then MobileHudNotices.release("mechanic") end
                 overdriveLabel.TextTransparency = 1
                 overdriveLabel.BackgroundTransparency = 1
                 return
@@ -240,6 +284,7 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
             task.delay(0.20, function()
                 if token == titleToken then
                     overdriveLabel.Visible = false
+                    if touchDevice then MobileHudNotices.release("mechanic") end
                 end
             end)
         end)
