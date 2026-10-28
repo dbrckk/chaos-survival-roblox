@@ -7,9 +7,13 @@ local LocalizationService = game:GetService("LocalizationService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local GridCircuitRules = require(ReplicatedStorage.Shared.GridCircuitRules)
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -90,6 +94,51 @@ for index = 1, 4 do
     progressPips[index] = pip
 end
 
+-- Optional progress must never sit over the authoritative Android hazard
+-- header or the survivor chip. Its position respects Roblox's GUI inset;
+-- high-priority notifications temporarily hide only this secondary chip.
+local touchDevice = UserInputService.TouchEnabled
+local trackerFits = true
+local hudEligible = false
+local function refreshProgressVisibility()
+    local visible = hudEligible and (not touchDevice
+        or (trackerFits and MobileHudNotices.current() == nil))
+    banner.Visible = visible
+    progressTrack.Visible = visible
+end
+
+local viewportConnection = nil
+local function layoutProgress()
+    if not touchDevice then
+        banner.Position = UDim2.fromScale(0.5, 0.125)
+        banner.Size = UDim2.fromOffset(235, 31)
+        trackerFits = true
+    else
+        local camera = workspace.CurrentCamera
+        local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+        local inset = GuiService:GetGuiInset()
+        local layout = UIResponsive.mobileMechanicTracker(viewport, inset.Y)
+        banner.Position = UDim2.new(layout.centerXScale, 0, 0, layout.topOffset)
+        banner.Size = UDim2.fromOffset(layout.width, layout.height)
+        trackerFits = layout.fits
+    end
+    refreshProgressVisibility()
+end
+
+local function bindProgressCamera()
+    if viewportConnection then viewportConnection:Disconnect() end
+    local camera = workspace.CurrentCamera
+    viewportConnection = camera and camera:GetPropertyChangedSignal("ViewportSize")
+        :Connect(layoutProgress) or nil
+    layoutProgress()
+end
+
+if touchDevice then
+    MobileHudNotices.Changed:Connect(refreshProgressVisibility)
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindProgressCamera)
+bindProgressCamera()
+
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local activeRound = false
 stateEvent.OnClientEvent:Connect(function(data)
@@ -125,6 +174,8 @@ local function clear()
     guidesBuilt = false
     art:ClearAllChildren()
     lastStyleKey = ""
+    hudEligible = false
+    refreshProgressVisibility()
 end
 
 local function cue(sensor, node)
@@ -375,8 +426,8 @@ local function updateLook()
     if key == lastStyleKey then return end
     lastStyleKey = key
 
-    banner.Visible = phase and #GridCircuitRules.Offsets == 4
-    progressTrack.Visible = banner.Visible
+    hudEligible = phase and #GridCircuitRules.Offsets == 4
+    refreshProgressVisibility()
     local visibleProgress = (stage > 0 and not complete and remain <= 0)
         and 0 or stage
     for index, pip in ipairs(progressPips) do
