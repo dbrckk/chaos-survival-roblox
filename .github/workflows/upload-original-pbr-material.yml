@@ -1,0 +1,175 @@
+name: Upload One Chaos Original 2K PBR Material (Manual)
+
+# This is an IMAGE-ASSET workflow, not a Roblox place publish. One material
+# at a time, four upload operations, with visible per-image provenance.
+# The default is safe: generate previews and upload nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      material:
+        type: choice
+        required: true
+        options:
+          - brushed_titanium
+          - oxidized_steel
+          - armored_diamondplate
+          - reactor_ceramic
+      dry_run:
+        type: boolean
+        required: true
+        default: true
+      confirmation:
+        type: string
+        description: For uploads (dry_run=false), type UPLOAD_CHAOS_PBR_2K
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-pbr-owned-image-upload-${{ inputs.material }}
+  cancel-in-progress: false
+
+jobs:
+  material-upload:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MATERIAL: ${{ inputs.material }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      CONFIRM: ${{ inputs.confirmation }}
+      ASSET_API_KEY: ${{ secrets.ROBLOX_ASSET_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate explicit user-owned image upload intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$MATERIAL" in
+            brushed_titanium|oxidized_steel|armored_diamondplate|reactor_ceramic) ;;
+            *) echo "::error::Unknown original source material"; exit 1 ;;
+          esac
+          if [ "$DRY_RUN" != "true" ]; then
+            if [ "$CONFIRM" != "UPLOAD_CHAOS_PBR_2K" ]; then
+              echo "::error::Image upload confirmation is missing. No upload."
+              exit 1
+            fi
+            if [ -z "$ASSET_API_KEY" ]; then
+              echo "::error::Missing creator-scoped secrets.ROBLOX_ASSET_API_KEY."
+              exit 1
+            fi
+          fi
+          echo 'Target creator: verified Chaos account 9774173158 (Drackk_08).'
+          echo 'No public-place action exists in this workflow.'
+
+      - name: Install deterministic image dependencies
+        run: python -m pip install --disable-pip-version-check 'numpy==2.1.3' 'pillow==11.1.0'
+
+      - name: Generate exactly four 2048 square maps
+        run: python tools/generate_pbr_materials.py --size 2048 --material "$MATERIAL" --output build/owned-pbr
+
+      - name: Keep downloadable originals whether uploading or not
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-owned-pbr-source-${{ inputs.material }}
+          path: build/owned-pbr/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload four owned Image assets (no retries of creation POST)
+        if: inputs.dry_run == false
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/owned-pbr/roblox-operations
+          for channel in color normal roughness metallic; do
+            src="build/owned-pbr/${MATERIAL}_${channel}_2k.png"
+            test -s "$src"
+            python - "$src" "$MATERIAL" "$channel" > "$RUNNER_TEMP/request.json" <<'PY'
+          import json, pathlib, sys
+          f, material, channel = sys.argv[1:]
+          if pathlib.Path(f).stat().st_size >= 20 * 1024 * 1024:
+              raise SystemExit("Roblox Image limit exceeded")
+          print(json.dumps({
+              "assetType": "Image",
+              "displayName": f"Chaos Original PBR {material} {channel} 2K",
+              "description": "Original game-authored, 2048 square PBR map for Chaos Survival.",
+              "creationContext": {"creator": {"userId": "9774173158"}},
+          }, separators=(",", ":")))
+          PY
+            request="$(cat "$RUNNER_TEMP/request.json")"
+            # Uploads are NOT idempotent; never blindly retry this POST.
+            curl --silent --show-error --fail-with-body \
+              -H "x-api-key: ${ASSET_API_KEY}" \
+              --form-string "request=${request}" \
+              --form "fileContent=@${src};type=image/png" \
+              "https://apis.roblox.com/assets/v1/assets" \
+              > "$RUNNER_TEMP/started.json"
+            operation="$(python - "$RUNNER_TEMP/started.json" <<'PY'
+          import json,sys
+          result=json.load(open(sys.argv[1]))
+          value=result.get("path", "")
+          if not isinstance(value, str) or not value.startswith("operations/"):
+              raise SystemExit("No approved format for Roblox asset operation")
+          print(value)
+          PY
+            )"
+            state="pending"
+            for attempt in $(seq 1 20); do
+              curl --silent --show-error --fail-with-body \
+                -H "x-api-key: ${ASSET_API_KEY}" \
+                "https://apis.roblox.com/assets/v1/${operation}" \
+                > "$RUNNER_TEMP/result.json"
+              state="$(python - "$RUNNER_TEMP/result.json" <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1]))
+          if data.get("error"): print("error")
+          elif data.get("done") and str(
+                 (data.get("response") or {}).get("assetId") or "").isdecimal():
+              print("complete")
+          else: print("pending")
+          PY
+              )"
+              [ "$state" = "complete" ] && break
+              [ "$state" = "error" ] && { echo "::error::Image asset was rejected"; exit 1; }
+              sleep 5
+            done
+            [ "$state" = "complete" ] || {
+              echo "::error::Image upload incomplete. See operation logs; do not retry blindly."
+              exit 1
+            }
+            cp "$RUNNER_TEMP/result.json" "build/owned-pbr/roblox-operations/${channel}.json"
+            python - "build/owned-pbr/roblox-operations/${channel}.json" "$channel" <<'PY'
+          import json,os,sys
+          response=json.load(open(sys.argv[1]))["response"]
+          asset_id=str(response.get("assetId") or "")
+          if not asset_id.isdecimal(): raise SystemExit("Missing confirmed asset ID")
+          moderation=(response.get("moderationResult") or {}).get(
+              "moderationState","PENDING")
+          print(f"Owned {sys.argv[2]} image ID: {asset_id}; moderation={moderation}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as f:
+              f.write(f"- `{sys.argv[2]}`: `{asset_id}`, moderation `{moderation}`\n")
+          PY
+          done
+
+      - name: Preserve immutable source-to-asset operation evidence
+        if: inputs.dry_run == false
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-pbr-upload-provenance-${{ inputs.material }}
+          path: build/owned-pbr/roblox-operations/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Explain staged acceptance
+        shell: bash
+        run: |
+          {
+            echo '### Original 2K PBR source'
+            echo '- Four distinct 2048px PNG maps generated from original deterministic source.'
+            echo '- Public place unchanged.'
+            echo '- Asset ownership: Drackk_08; model/texture moderation + access still require verification.'
+            echo '- Never replace the shipped fallback IDs until all four image uploads are approved and visible in a private Roblox staging session.'
+          } >> "$GITHUB_STEP_SUMMARY"

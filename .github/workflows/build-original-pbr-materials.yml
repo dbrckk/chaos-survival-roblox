@@ -1,0 +1,106 @@
+name: Build Original 2K PBR Texture Atlas (No Upload)
+
+on:
+  pull_request:
+    paths:
+      - 'tools/generate_pbr_materials.py'
+      - 'default.project.json'
+      - '.github/workflows/build-original-pbr-materials.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/generate_pbr_materials.py'
+      - 'default.project.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-pbr-texture-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: Generate and validate 16 original 2048 PBR maps
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Python 3.12 with supported NumPy and Pillow wheels
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deterministic image dependencies
+        run: python -m pip install --disable-pip-version-check 'numpy==2.1.3' 'pillow==11.1.0'
+
+      - name: Render four complete original 2K material sets
+        run: python tools/generate_pbr_materials.py --size 2048 --output build/pbr-2k
+
+      - name: Inspect maps, file budgets, authorship and baked Roblox fallbacks
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+          import numpy as np
+          from PIL import Image
+
+          root = pathlib.Path("build/pbr-2k")
+          manifest = json.loads((root / "manifest.json").read_text())
+          project = json.loads(pathlib.Path("default.project.json").read_text())
+          assert manifest["resolution"] == [2048, 2048]
+          assert manifest["normal_convention"] == "OpenGL positive Y tangent-space"
+          assert manifest["texture_upload_status"] == "NOT_UPLOADED_TO_ROBLOX"
+          assert len(manifest["materials"]) == 4
+          expected = {"color", "normal", "roughness", "metallic"}
+          for material in manifest["materials"]:
+              assert set(material["maps"]) == expected
+              for channel, entry in material["maps"].items():
+                  path = root / entry["path"]
+                  with Image.open(path) as image:
+                      assert image.size == (2048, 2048)
+                      assert image.mode == ("RGB" if channel in {"color", "normal"} else "L")
+                      assert image.format == "PNG"
+                      probe = np.asarray(image.resize((256, 256), Image.Resampling.BOX))
+                      if channel == "normal":
+                          assert float(np.mean(probe[:, :, 2])) > 190, channel
+                      elif channel != "metallic":
+                          assert float(np.std(probe)) > 5, (material["name"], channel)
+                  assert 0 < path.stat().st_size < 20 * 1024 * 1024
+                  assert entry["roblox_asset_id"] is None
+
+          choices = project["tree"]["MaterialService"]
+          for material in choices.values():
+              if not isinstance(material, dict) or material.get("$className") != "MaterialVariant":
+                  continue
+              props = material["$properties"]
+              assert props["BaseMaterial"] in {"Foil", "CorrodedMetal", "DiamondPlate", "CeramicTiles"}
+              assert all(props[key].startswith("rbxassetid://") for key in
+                         ("ColorMap", "NormalMap", "MetalnessMap", "RoughnessMap"))
+          print("PASS: 16 original 2K maps and four baked PBR material fallbacks.")
+          PY
+
+      - name: Attach the actual PNG pack and mobile contact sheet
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-original-pbr-2k
+          path: build/pbr-2k/
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 14
+
+      - name: Record non-publication status
+        shell: bash
+        run: |
+          {
+            echo '### Chaos Survival — original 2K PBR materials'
+            echo ''
+            echo '- 4 material families × 4 maps (Color / OpenGL Normal / Roughness / Metallic)'
+            echo '- All images: 2048 × 2048 pixels, separate PNG channels'
+            echo '- Original deterministic procedural art, no scraped textures'
+            echo '- ZIP / contact sheet published as build artifact, NOT as Roblox IDs'
+            echo '- **No Roblox asset upload or live-place publication**'
+          } >> "$GITHUB_STEP_SUMMARY"

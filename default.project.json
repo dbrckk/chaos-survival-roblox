@@ -3,14 +3,67 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
-      "Shared": { "$path": "src/shared" }
+      "Shared": {
+        "$path": "src/shared"
+      }
     },
     "ServerScriptService": {
-      "Server": { "$path": "src/server" }
+      "Server": {
+        "$path": "src/server"
+      }
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "Client": { "$path": "src/client" }
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "MaterialService": {
+      "$className": "MaterialService",
+      "ChaosBrushedTitanium": {
+        "$className": "MaterialVariant",
+        "$properties": {
+          "BaseMaterial": "Foil",
+          "ColorMap": "rbxassetid://9466552117",
+          "NormalMap": "rbxassetid://9424786192",
+          "RoughnessMap": "rbxassetid://9424786620",
+          "MetalnessMap": "rbxassetid://9424786272",
+          "StudsPerTile": 7
+        }
+      },
+      "ChaosOxidizedSteel": {
+        "$className": "MaterialVariant",
+        "$properties": {
+          "BaseMaterial": "CorrodedMetal",
+          "ColorMap": "rbxassetid://9920589327",
+          "NormalMap": "rbxassetid://9439548484",
+          "RoughnessMap": "rbxassetid://9439556441",
+          "MetalnessMap": "rbxassetid://9439548749",
+          "StudsPerTile": 9
+        }
+      },
+      "ChaosDiamondArmor": {
+        "$className": "MaterialVariant",
+        "$properties": {
+          "BaseMaterial": "DiamondPlate",
+          "ColorMap": "rbxassetid://10237720195",
+          "NormalMap": "rbxassetid://9438583222",
+          "RoughnessMap": "rbxassetid://9438583558",
+          "MetalnessMap": "rbxassetid://9438583347",
+          "StudsPerTile": 6
+        }
+      },
+      "ChaosReactorCeramic": {
+        "$className": "MaterialVariant",
+        "$properties": {
+          "BaseMaterial": "CeramicTiles",
+          "ColorMap": "rbxassetid://17429425079",
+          "NormalMap": "rbxassetid://17429425915",
+          "RoughnessMap": "rbxassetid://17429426861",
+          "MetalnessMap": "rbxassetid://17429426100",
+          "StudsPerTile": 7
+        }
       }
     }
   }
