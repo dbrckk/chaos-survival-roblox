@@ -34,7 +34,10 @@ end
 function PbrDistrictRules.withinDistance(part, cameraPosition, tierName, touch)
     local limit = PbrDistrictRules.distanceLimit(tierName, touch)
     if limit <= 0 then return false end
-    if typeof(cameraPosition) ~= "Vector3" then return true end
+    -- Camera can be absent during first join/respawn. Never allocate
+    -- high-resolution materials blindly before the real camera exists.
+    -- The existing slow client sampler retries when CurrentCamera appears.
+    if typeof(cameraPosition) ~= "Vector3" then return false end
     return (part.Position - cameraPosition).Magnitude <= limit
 end
 
@@ -117,15 +120,61 @@ function PbrDistrictRules.priority(part)
     return math.min(area, 4000) + (architecturalFace and 250 or 0)
 end
 
+-- 28-degree mobile camera turn threshold. On-site looking around is
+-- meaningful for 2K PBR residency even when the character stands still.
+-- Share the existing 1.7 / 2.2-second sampler; no render-frame callback.
+local CAMERA_TURN_COSINE = math.cos(math.rad(28))
+
+function PbrDistrictRules.cameraNeedsRescan(previousPosition, previousLook,
+    currentPosition, currentLook)
+    if typeof(currentPosition) ~= "Vector3" then return false end
+    if typeof(previousPosition) ~= "Vector3" then return true end
+    if (currentPosition - previousPosition).Magnitude >= 32 then
+        return true
+    end
+    if typeof(previousLook) ~= "Vector3"
+        or typeof(currentLook) ~= "Vector3"
+        or previousLook.Magnitude < 0.5
+        or currentLook.Magnitude < 0.5 then
+        return false
+    end
+    return previousLook.Unit:Dot(currentLook.Unit) < CAMERA_TURN_COSINE
+end
+
+-- Pure camera-forward signal. Surfaces within 55 studs remain omni-
+-- directional to avoid visible PBR popping at arm's length during turns.
+-- More distant surfaces facing into the view receive up to +950 priority;
+-- those clearly behind the camera are gently deprioritized, never invalid.
+-- Under global overload the most visible facades receive the 2K maps.
+function PbrDistrictRules.cameraFacingBonus(part, cameraPosition, lookVector)
+    if typeof(cameraPosition) ~= "Vector3"
+        or typeof(lookVector) ~= "Vector3" then
+        return 0
+    end
+    local delta = part.Position - cameraPosition
+    local distance = delta.Magnitude
+    local forwardLength = lookVector.Magnitude
+    if distance <= 55 or forwardLength < 0.5 then
+        return 0
+    end
+    local facing = math.clamp(
+        delta:Dot(lookVector) / (distance * forwardLength), -1, 1)
+    return facing >= 0 and facing * 950 or facing * 350
+end
+
 -- Stable selection that values visible, nearby primary architecture.
 -- Already-selected surfaces get modest hysteresis, preventing a full
 -- material swap whenever the camera moves a few studs on mobile.
-function PbrDistrictRules.selectionPriority(part, cameraPosition, alreadyApplied)
+-- Optional direction preserves existing callers and offline testability.
+function PbrDistrictRules.selectionPriority(
+    part, cameraPosition, alreadyApplied, cameraLook)
     local score = PbrDistrictRules.priority(part)
     if typeof(cameraPosition) == "Vector3" then
         local distance = (part.Position - cameraPosition).Magnitude
         score += math.max(0, 400 - distance) * 10
     end
+    score += PbrDistrictRules.cameraFacingBonus(
+        part, cameraPosition, cameraLook)
     if alreadyApplied then score += 160 end
     return score
 end
