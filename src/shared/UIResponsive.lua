@@ -291,6 +291,13 @@ function UIResponsive.mobilePerformanceOverlay(viewport)
     }
 end
 
+-- Performance counters are diagnostic, never a gameplay alert. Hide
+-- the optional overlay whenever any foreground notification owns its lane,
+-- including MOMENTUM. No input is intercepted while it is hidden.
+function UIResponsive.showPerformanceOverlay(enabled, fits, noticeOwner)
+    return enabled == true and fits == true and noticeOwner == nil
+end
+
 function UIResponsive.criticalTextMin(viewport)
     local c = UIResponsive.classify(viewport, true)
     if c.tinyHeight then
