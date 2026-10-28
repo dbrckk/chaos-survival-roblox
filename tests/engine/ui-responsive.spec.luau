@@ -179,7 +179,9 @@ describe("UI responsive profiles", function()
                 data.viewport, data.inset)
             local profile = UIResponsive.mobileProfile(data.viewport)
             expect(layout.fits).toBe(true)
-            expect(layout.topOffset >= data.inset + profile.topHeight + 48)
+            -- Reserve an actual gap below the native-inset hazard header:
+            -- the old +48px allowance still overlapped the timer on Android.
+            expect(layout.topOffset >= data.inset + profile.topHeight + 72)
                 .toBe(true)
             expect(layout.topOffset + layout.height
                 + profile.roundFocusBottomOffset + 10 <= data.viewport.Y)
@@ -190,6 +192,34 @@ describe("UI responsive profiles", function()
         local cramped = UIResponsive.mobileExpeditionLayout(
             Vector2.new(540, 320), 210)
         expect(cramped.fits).toBe(false)
+    end)
+
+    it("places mobile shard rewards between event alerts and the survival meter", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1536, 688),
+            Vector2.new(400, 720),
+        }) do
+            local reward = UIResponsive.mobileRewardLayout(viewport)
+            local profile = UIResponsive.mobileProfile(viewport)
+            local center = reward.yScale * viewport.Y
+            local eventBottom = viewport.Y * (profile.tinyHeight and 0.37 or 0.34)
+                + (profile.tinyHeight and 26 or 29)
+            local survivalTop = viewport.Y - profile.roundFocusBottomOffset
+                - profile.roundFocusHeight
+            expect(reward.fits).toBe(true)
+            expect(reward.height >= 36 and reward.height <= 40).toBe(true)
+            expect(reward.width >= 180 and reward.width <= 300).toBe(true)
+            expect(center - reward.height / 2 >= eventBottom + 8).toBe(true)
+            expect(center + reward.height / 2 + 10 <= survivalTop).toBe(true)
+            expect(reward.xScale).toBe(0.5)
+        end
+
+        -- No optional popup is allowed to crowd a truly cramped viewport.
+        expect(UIResponsive.mobileRewardLayout(Vector2.new(400, 230)).fits)
+            .toBe(false)
     end)
 
     it("hides optional expedition navigation for any survival priority banner", function()
