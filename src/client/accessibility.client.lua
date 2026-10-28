@@ -219,7 +219,7 @@ local function refreshPerformance()
         tier = "Medium"
     end
     performanceLabel.Text = string.format(
-        "FPS %s  P95 %sms\\nSLOW %s%%  %s",
+        "FPS %s  P95 %sms\nSLOW %s%%  %s",
         fps, p95, slow, string.upper(tier)
     )
     local actualP95 = player:GetAttribute("ClientObservedP95FrameMs")
