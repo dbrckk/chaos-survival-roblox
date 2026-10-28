@@ -214,7 +214,11 @@ local function show(reward, total, goldenFlag, flowBonus, source)
         -- Retain only the latest pickup, not a backlog obscuring survival.
         pendingReward = {
             deadline = os.clock() + 2.5,
-            args = {reward, total, goldenFlag, flowBonus, source},
+            reward = reward,
+            total = total,
+            golden = goldenFlag,
+            flowBonus = flowBonus,
+            source = source,
         }
         return
     end
@@ -317,7 +321,8 @@ if touchDevice then
             pendingReward = nil
             if os.clock() <= pending.deadline then
                 task.defer(function()
-                    show(table.unpack(pending.args))
+                    show(pending.reward, pending.total, pending.golden,
+                        pending.flowBonus, pending.source)
                 end)
             end
         end
