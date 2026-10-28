@@ -67,6 +67,11 @@ jobs:
           upload = next(x for x in steps if x.get("name", "").startswith("Upload four owned Image assets"))
           assert upload["if"] == "inputs.dry_run == false", "Preserve explicit upload-only gate"
           assert "UPLOAD_CHAOS_PBR_2K" in source, "Preserve upload confirmation"
+          validator = next(x for x in steps if x.get("name", "").startswith("Validate explicit"))
+          assert "roblox-pbr-upload-receipts.json" in validator["run"], "Full upload must check existing receipts"
+          assert "BLOCKED:" in validator["run"], "Full upload must reject duplicates"
+          assert "get(material)" in validator["run"], "Check every material for uploaded IDs"
+
           print("PASS: valid manual-only YAML; Python 3.12 wheels and safety gates verified.")
 
           # The recovery workflow is a MANUAL single-channel repair, never
