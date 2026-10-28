@@ -65,6 +65,48 @@ systems are created for PBR. The existing scenery-LOD system remains
 responsible for hiding faraway decorations. When variants are unavailable,
 parts retain their original materials.
 
+### Verified upload history (28 October 2026)
+
+GitHub Actions run logs show that 3 of the 4 original 2K material packs
+were **created as Roblox Image assets**:
+
+| Material | Source run | Color / Normal / Roughness / Metallic |
+|---|---:|---|
+| `brushed_titanium` | #40674072895 | 4/4 created |
+| `oxidized_steel` | #40674103388 | 4/4 created |
+| `reactor_ceramic` | #40674201135 | 4/4 created |
+| `armored_diamondplate` | #40674439392 | Color + Normal created; Roughness + Metallic missing |
+
+**14 intended channel images created, 2 missing.** The two unsuccessful
+diamondplate runs created two *additional* duplicated color and normal
+images. Never rerun those four-channel workflows: this would create more
+duplicates. The full, exact asset IDs, creation-run provenance and
+**moderation state at the time of upload** are recorded in
+`assets/source/roblox-pbr-upload-receipts.json`.
+
+Both diamondplate attempts failed at the **roughness Image creation POST**
+with HTTP 400; the old workflow discarded the returned Roblox JSON error.
+Consequently, the precise error cause is still **unknown** (do not claim
+it was a moderation rejection, image format failure, quota limit or key
+issue without an actual returned error).
+
+The safe recovery workflow
+`.github/workflows/recover-original-pbr-diamondplate.yml` is
+**manual-only**, defaults to dry run and can upload **one** of the missing
+channels, `roughness` or `metallic`, per run. It reuses the already
+created diamondplate Color and Normal ID pair; it never POSTS those two
+again. For an actual Image upload, select the specific missing channel,
+set `dry_run=false`, and enter `UPLOAD_CHAOS_PBR_2K`. The workflow
+records the HTTP 400 response safely and preserves partial receipts even
+when unsuccessful. Do **not** retry a failed or timed-out creation POST
+without first checking whether Roblox actually created the image.
+
+The fact that a creation operation returned an ID is **not proof of
+current asset moderation, owner permissions, or game availability**.
+Several response statuses were `Reviewing`. The live game's
+`default.project.json` deliberately still uses tested Roblox-owned
+fallback maps until all original images have passed those checks.
+
 ### Upload the *original* maps to Roblox
 
 Four 2K files cannot be used as live MaterialVariant textures solely from
@@ -81,7 +123,7 @@ The new workflow **Upload One Chaos Original 2K PBR Material (Manual)**:
 - reports each actual asset ID and moderation state, with immutable
   provenance and per-image operation results.
 
-After all 16 images are approved, replace the **four properties per
+Once all 16 original Image assets are present, independently verified approved and accessible to the experience, replace the **four properties per
 MaterialVariant** in `default.project.json` with the actual
 `rbxassetid://...` values for the corresponding original PBR maps.
 Never substitute an unverified ID or mark a texture as approved before
