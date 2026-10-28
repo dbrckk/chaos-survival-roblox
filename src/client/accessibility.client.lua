@@ -101,10 +101,15 @@ local motionButton, motionStroke = makeSettingButton("ReduceMotionToggle")
 local soundButton, soundStroke = makeSettingButton("AudioToggle")
 local hapticsButton, hapticsStroke = makeSettingButton("HapticsToggle")
 local perfButton, perfStroke = makeSettingButton("PerformanceOverlayToggle")
+-- Optional comparison: keep rich original PBR on AUTO, let touch players
+-- test a cheaper fallback without altering the overall graphics tier.
+local pbrButton, pbrStroke = makeSettingButton("PbrMaterialsToggle")
+pbrButton.Visible = UserInputService.TouchEnabled
 motionButton.LayoutOrder = 1
 soundButton.LayoutOrder = 2
 hapticsButton.LayoutOrder = 3
 perfButton.LayoutOrder = 6
+pbrButton.LayoutOrder = 7
 
 -- Dedicated tap-safe buttons instead of precision sliders: every change
 -- is an explicit, server-validated 10% step. No per-frame input polling.
@@ -159,7 +164,7 @@ local effectsLabel, effectsDecrease, effectsIncrease =
 -- SOURCE/UNSTAMPED explicitly means the place was not built by GitHub CI.
 local buildIdentity = Instance.new("TextLabel")
 buildIdentity.Name = "BuildIdentityLabel"
-buildIdentity.LayoutOrder = 7
+buildIdentity.LayoutOrder = 8
 buildIdentity.Size = UDim2.new(1, 0, 0, 20)
 buildIdentity.BackgroundTransparency = 1
 buildIdentity.BorderSizePixel = 0
@@ -303,6 +308,12 @@ local function refresh()
     local reduced = player:GetAttribute("ReduceMotion") == true
     local muted = player:GetAttribute("AudioMuted") == true
     local hapticsDisabled = player:GetAttribute("HapticsDisabled") == true
+    local pbrDisabled = player:GetAttribute("PbrMaterialsDisabled") == true
+    pbrButton.Text = pbrDisabled and "TEXTURES PBR : OFF" or "TEXTURES PBR : AUTO"
+    pbrStroke.Color = pbrDisabled and UITheme.Colors.Orange or UITheme.Colors.Green
+    pbrButton.BackgroundColor3 = pbrDisabled
+        and UITheme.Colors.Orange:Lerp(UITheme.Colors.Panel, 0.80)
+        or UITheme.Colors.PanelRaised
     perfButton.Text = performanceEnabled and "FPS / P95 : ON" or "FPS / P95 : OFF"
     perfStroke.Color = performanceEnabled and UITheme.Colors.Green
         or UITheme.Colors.Cyan
@@ -415,6 +426,18 @@ perfButton.Activated:Connect(function()
     refreshPerformance()
 end)
 
+pbrButton.Activated:Connect(function()
+    if not available() or not UserInputService.TouchEnabled then return end
+    -- The user's decision is local to this device and this session.
+    -- Client-owned PBR materials reconcile automatically in the existing
+    -- delayed scan; no RemoteEvent or server setting is added.
+    player:SetAttribute(
+        "PbrMaterialsDisabled",
+        player:GetAttribute("PbrMaterialsDisabled") ~= true
+    )
+    refresh()
+end)
+
 for _, attribute in ipairs({
     "ClientObservedFps",
     "ClientObservedP95FrameMs",
@@ -453,6 +476,7 @@ for _, attribute in ipairs({
     "EffectsVolume",
     "Games",
     "DataLoaded",
+    "PbrMaterialsDisabled",
 }) do
     player:GetAttributeChangedSignal(attribute):Connect(refresh)
 end
