@@ -6,14 +6,17 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local DistrictMaterialFinishKit = require(script.Parent.DistrictMaterialFinishKit)
 local DistrictKineticKit = require(script.Parent.DistrictKineticKit)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
 local folder = Instance.new("Folder")
 folder.Name = "DistrictSectorSetpiecesLocal"
 folder.Parent = workspace
@@ -147,7 +150,10 @@ local function makeSector(base, theme, index, tier, variant)
         CFrame.new(0, 0.27, 0), dark, Enum.Material.Slate, 0.07)
     local face = make("SectorIdentityPlate", Vector3.new(9, 1.6, 0.55),
         CFrame.new(0, 5.4, -5.8), alloy, Enum.Material.Metal, 0.03)
-    sectorSign(model, face, "SECTOR " .. number .. "\n" .. title, accent)
+    sectorSign(model, face, CoreLocalization.text(localeId,
+        "DISTRICT_SECTOR_SIGN", number,
+        CoreLocalization.text(localeId, "DISTRICT_SECTOR_" .. index)),
+        accent)
 
     -- Android Low previously lost all four important in-arena landmarks.
     -- Keep four sharply differentiated five-part silhouettes using real
