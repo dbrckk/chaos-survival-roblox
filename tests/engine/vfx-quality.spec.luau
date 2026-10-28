@@ -72,6 +72,9 @@ describe("Adaptive VFX quality", function()
             visualParts = 312.99,
             visualLights = 18,
             visualEffects = 30,
+            pbrActive = 21,
+            pbrBudget = 32,
+            pbrCandidates = 176,
             totalMemoryMb = 888.25,
             instanceCount = 2300.8,
             frameTimeMs = 18.42,
@@ -87,6 +90,9 @@ describe("Adaptive VFX quality", function()
         expect(sample.tierTransitions).toBe(5)
         expect(sample.visualParts).toBe(312)
         expect(sample.instanceCount).toBe(2300)
+        expect(sample.pbrActive).toBe(21)
+        expect(sample.pbrBudget).toBe(32)
+        expect(sample.pbrCandidates).toBe(176)
         expect(sample.totalMemoryMb).toBe(888.25)
         expect(sample.renderGpuMs).toBe(12.5)
 
@@ -94,7 +100,9 @@ describe("Adaptive VFX quality", function()
             averageFps = 0 / 0, p95FrameMs = math.huge,
             slowFramePercent = -math.huge, tierTransitions = math.huge,
             visualParts = -math.huge, visualLights = -9.7,
-            visualEffects = 1e8, totalMemoryMb = 0 / 0,
+            visualEffects = 1e8, pbrActive = math.huge,
+            pbrBudget = -1, pbrCandidates = 0 / 0,
+            totalMemoryMb = 0 / 0,
             instanceCount = math.huge, frameTimeMs = -math.huge,
             renderCpuMs = math.huge, renderGpuMs = 0 / 0,
             vfxTier = "Ultra", deviceClass = "iPhone;arbitrary value",
@@ -106,6 +114,9 @@ describe("Adaptive VFX quality", function()
         expect(invalid.visualParts).toBe(0)
         expect(invalid.visualLights).toBe(0)
         expect(invalid.visualEffects).toBe(2000)
+        expect(invalid.pbrActive).toBe(0)
+        expect(invalid.pbrBudget).toBe(0)
+        expect(invalid.pbrCandidates).toBe(0)
         expect(invalid.totalMemoryMb).toBe(0)
         expect(invalid.instanceCount).toBe(0)
         expect(invalid.frameTimeMs).toBe(0)
@@ -122,12 +133,16 @@ describe("Adaptive VFX quality", function()
         local capped = sanitize({
             averageFps = 999, p95FrameMs = 888,
             slowFramePercent = 192, tierTransitions = 200,
+            pbrActive = 999, pbrBudget = 200, pbrCandidates = 100500,
             instanceCount = 1e10, frameTimeMs = 1200,
             renderGpuMs = 1800, vfxTier = "High", deviceClass = "Desktop",
         })
         expect(capped.averageFps).toBe(240)
         expect(capped.p95FrameMs).toBe(600)
         expect(capped.slowFramePercent).toBe(100)
+        expect(capped.pbrActive).toBe(144)
+        expect(capped.pbrBudget).toBe(144)
+        expect(capped.pbrCandidates).toBe(10000)
         expect(capped.tierTransitions).toBe(99)
         expect(capped.instanceCount).toBe(250000)
         expect(capped.frameTimeMs).toBe(1000)

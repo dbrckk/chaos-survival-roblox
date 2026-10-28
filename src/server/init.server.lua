@@ -230,6 +230,9 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
     local visualParts = sample.visualParts
     local visualLights = sample.visualLights
     local visualEffects = sample.visualEffects
+    local pbrActive = sample.pbrActive
+    local pbrBudget = sample.pbrBudget
+    local pbrCandidates = sample.pbrCandidates
     local totalMemoryMb = sample.totalMemoryMb
     local instanceCount = sample.instanceCount
     local frameTimeMs = sample.frameTimeMs
@@ -287,6 +290,9 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
             .. "|Slow:" .. tostring(slowFramePercent)
             .. "|CPU:" .. string.format("%.1f", renderCpuMs)
             .. "|GPU:" .. string.format("%.1f", renderGpuMs)
+            .. "|PBR:" .. tostring(pbrActive)
+            .. "/" .. tostring(pbrBudget)
+            .. "/" .. tostring(pbrCandidates)
     )
 end)
 
