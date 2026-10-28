@@ -28,6 +28,12 @@ without native client captures.
 - Only anchored, non-colliding, non-queryable, opaque cosmetic Parts qualify.
   No authored `SurfaceAppearance` or unrelated custom MaterialVariants are
   overwritten. An external material change revokes the local ownership claim.
+- **First-frame safety:** before the adaptive tier attribute exists, the
+  scenery LOD, player/bot cosmetic particles, surface-mounted industrial
+  markings and mobile neon/light readability all initialize to **Medium**
+  on touch devices, never desktop High. They immediately honor any explicit
+  `Low`/`Medium`/`High` tier when it becomes available. The shared
+  `VfxQuality.get()` fallback for unrelated callers is preserved.
 - Existing streaming event listeners trigger a delayed, coalesced scan;
   camera movement triggers at most one low-frequency scan when the camera has
   moved at least 32 studs. No new RenderStepped or Heartbeat handler.
