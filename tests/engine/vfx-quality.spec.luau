@@ -387,6 +387,38 @@ describe("Adaptive VFX quality", function()
         expect(VfxQuality.nextTier("Low", 47, true)).toBe("Medium")
     end)
 
+    it("downgrades repeated Android hitches missed by mean FPS", function()
+        local nextTier = VfxQuality.nextTier
+        -- 60 FPS with 15% slow frames and 50ms P95 is not smooth.
+        expect(nextTier("High", 60, true, 50, 15)).toBe("Medium")
+        -- Medium only drops to Low for severe, repeated frame hitches.
+        expect(nextTier("Medium", 50, true, 70, 30)).toBe("Low")
+        expect(nextTier("Medium", 50, true, 50, 15)).toBe("Medium")
+        -- Isolated long frames do not drive a downgrade.
+        expect(nextTier("High", 60, true, 75, 3)).toBe("High")
+        expect(nextTier("High", 60, true, 40, 25)).toBe("High")
+        -- Desktop keeps its original quality policy, regardless of pacing.
+        expect(nextTier("High", 60, false, 70, 50)).toBe("High")
+        expect(nextTier("Medium", 60, false, 70, 50)).toBe("High")
+    end)
+
+    it("prevents Android quality promotion while pacing remains unstable", function()
+        local nextTier = VfxQuality.nextTier
+        expect(nextTier("Medium", 60, true, 50, 9)).toBe("Medium")
+        expect(nextTier("Medium", 60, true, 32, 8)).toBe("High")
+        expect(nextTier("Low", 60, true, 55, 20)).toBe("Low")
+        expect(nextTier("Low", 60, true, 28, 2)).toBe("Medium")
+        -- Older callers and invalid background samples retain existing
+        -- average-FPS decisions; no NaN/Infinity reaches pacing gates.
+        expect(nextTier("Medium", 60, true)).toBe("High")
+        expect(nextTier("Medium", 60, true, 0, 0)).toBe("High")
+        expect(nextTier("High", 60, true, 0 / 0, 50)).toBe("High")
+        expect(nextTier("High", 60, true, math.huge, 50)).toBe("High")
+        expect(nextTier("High", 60, true, 90, math.huge)).toBe("High")
+        expect(nextTier("High", 60, true, 90, -1)).toBe("High")
+        expect(nextTier("Medium", 60, false, 80, 90)).toBe("High")
+    end)
+
     it("requires stable samples for promotions but not downgrades", function()
         expect(VfxQuality.requiredStableSamples("High", "Medium", false)).toBe(1)
         expect(VfxQuality.requiredStableSamples("Medium", "Low", true)).toBe(1)
