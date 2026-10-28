@@ -465,6 +465,18 @@ describe("Adaptive VFX quality", function()
             - 1 / 15) < 0.0001).toBe(true)
     end)
 
+    it("starts mobile cosmetics in Medium until an explicit tier exists", function()
+        expect(VfxQuality.deviceTier(nil, true).Name).toBe("Medium")
+        expect(VfxQuality.deviceTier("", true).Name).toBe("Medium")
+        expect(VfxQuality.deviceTier("Unknown", true).Name).toBe("Medium")
+        expect(VfxQuality.deviceTier(nil, false).Name).toBe("High")
+        expect(VfxQuality.deviceTier("High", true).Name).toBe("High")
+        expect(VfxQuality.deviceTier("Low", true).Name).toBe("Low")
+        expect(VfxQuality.deviceTier("Medium", false).Name).toBe("Medium")
+        -- Preserve the legacy get() contract for other callers.
+        expect(VfxQuality.get(nil).Name).toBe("High")
+    end)
+
     it("exposes bounded quality scales", function()
         for _, tierName in ipairs({"High", "Medium", "Low"}) do
             local tier = VfxQuality.get(tierName)
