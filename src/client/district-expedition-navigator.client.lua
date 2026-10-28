@@ -4,9 +4,15 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
+local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 
 local player = Players.LocalPlayer
+local localeId = LocalizationService.RobloxLocaleId
+local function copy(key, ...)
+    return CoreLocalization.text(localeId, key, ...)
+end
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local caches = {}
 local roundActive = false
@@ -106,7 +112,7 @@ markerText.Size = UDim2.fromScale(1, 1)
 markerText.Font = Enum.Font.GothamBold
 markerText.TextColor3 = Color3.fromRGB(236, 248, 255)
 markerText.TextSize = 12
-markerText.Text = "NEXT JUMP"
+markerText.Text = copy("DISTRICT_NEXT_JUMP")
 markerText.Parent = markerFrame
 
 local text = Instance.new("TextLabel")
@@ -338,13 +344,13 @@ local function chooseParkourWaypoint(arena, route, elite, root, destination)
     highestReached = math.max(previous, highestReached)
     climbedStage[key] = highestReached
     if highestReached >= #stages then
-        return destination, "OPEN SUPPLY CACHE", true, nil, nil, nil
+        return destination, copy("DISTRICT_OPEN_CACHE"), true, nil, nil, nil
     end
     local nextStep = highestReached + 1
     local deck = stages[nextStep]
     local surface = deck.Position.Y + deck.Size.Y * 0.5
     return Vector3.new(deck.Position.X, surface + 2.5, deck.Position.Z),
-        "CLIMB " .. nextStep .. "/" .. #stages, false,
+        copy("DISTRICT_CLIMB", nextStep, #stages), false,
         deck, nextStep, #stages
 end
 
@@ -372,7 +378,7 @@ local function chooseTransitWaypoint(arena, route, root, destination)
         or toHub > 160 then
         return nil
     end
-    return header.Position, "FAST TRAVEL D" .. route
+    return header.Position, copy("DISTRICT_FAST_TRAVEL", route)
 end
 
 local function currentArena()
@@ -505,9 +511,12 @@ local function update()
             end
         end
         if not taskLabel then
-            taskLabel = upcoming
-                and ("NEXT SIGNAL D" .. tostring(route))
-                or "SECURE LIVE SIGNAL"
+            if upcoming then
+                taskLabel = route and copy("DISTRICT_NEXT_SIGNAL", route)
+                    or copy("DISTRICT_NEXT_SIGNAL_GENERIC")
+            else
+                taskLabel = copy("DISTRICT_SECURE_SIGNAL")
+            end
         end
     else
         if route and route >= 1 and route <= 4
@@ -522,7 +531,7 @@ local function update()
             end
         end
         if not taskLabel then
-            taskLabel = elite and "FIND HIGH ROUTE" or "FIND SHORT ROUTE"
+            taskLabel = copy(elite and "DISTRICT_HIGH_ROUTE" or "DISTRICT_SHORT_ROUTE")
         end
     end
 
@@ -539,11 +548,12 @@ local function update()
     local cue
     if signalPosition then
         local remaining = signalSeconds and (tostring(signalSeconds) .. "s")
-            or (upcoming and "SOON" or "NOW")
-        cue = (upcoming and "OPENS " or "ENDS ")
-            .. remaining .. " • +" .. reward
+            or copy(upcoming and "DISTRICT_SIGNAL_SOON"
+                or "DISTRICT_SIGNAL_NOW")
+        cue = copy(upcoming and "DISTRICT_SIGNAL_OPENS"
+            or "DISTRICT_SIGNAL_ENDS", remaining, reward)
     else
-        cue = "CACHE +" .. reward .. " COINS"
+        cue = copy("DISTRICT_CACHE_REWARD", reward)
     end
     -- Distance is explicitly TO THE NEXT WAYPOINT, not falsely to the
     -- final chest when several physical jump gaps remain.
@@ -571,7 +581,7 @@ local function update()
         end
         stepMarker.StudsOffsetWorldSpace =
             Vector3.new(0, landingDeck.Size.Y * 0.5 + 5.0, 0)
-        local caption = "JUMP " .. landingStep .. "/" .. landingTotal
+        local caption = copy("DISTRICT_LANDING_JUMP", landingStep, landingTotal)
         if markerText.Text ~= caption then
             markerText.Text = caption
         end
