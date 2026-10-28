@@ -1,186 +1,154 @@
--- Four baked, reusable PBR MaterialVariants are defined in the Rojo
--- MaterialService tree. Never mutate ColorMap/NormalMap/RoughnessMap/
--- MetalnessMap at runtime: Roblox protects those properties for plugins.
--- Apply variants only to non-colliding ORIGINAL scenery already in the map.
--- Low mobile retains the authored native material; Medium is selective.
+-- Physically based materials on approved, stationary, non-colliding
+-- cosmetic architecture. The game physics/alerts stay completely untouched.
+-- Reuses four baked Roblox MaterialService MaterialVariants; do not attempt
+-- plugin-protected runtime writes to individual PBR texture maps.
 local Players = game:GetService("Players")
 local MaterialService = game:GetService("MaterialService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local PbrDistrictRules = require(ReplicatedStorage.Shared.PbrDistrictRules)
 
 local player = Players.LocalPlayer
-
 local VARIANTS = {
     titanium = {name = "ChaosBrushedTitanium", base = Enum.Material.Foil},
     oxidized = {name = "ChaosOxidizedSteel", base = Enum.Material.CorrodedMetal},
     armor = {name = "ChaosDiamondArmor", base = Enum.Material.DiamondPlate},
     ceramic = {name = "ChaosReactorCeramic", base = Enum.Material.CeramicTiles},
 }
+
 local originals = setmetatable({}, {__mode = "k"})
 local applied = setmetatable({}, {__mode = "k"})
-local counts = setmetatable({}, {__mode = "k"})
-local decorAdded = nil
-local arenaAdded = nil
-local mapAdded = nil
-local mapRemoved = nil
-local boundMap = nil
-local boundArena = nil
-local boundDecor = nil
+local boundMap, boundArena, boundDecor, boundLocal = nil, nil, nil, nil
+local mapAdded, mapRemoved, arenaAdded = nil, nil, nil
+local decorAdded, decorRemoved = nil, nil
+local localAdded, localRemoved = nil, nil
+local pendingScan = false
 
 local function tier()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
 end
 
-local function templatesReady()
-    for _, info in pairs(VARIANTS) do
-        local ok, actual = pcall(function()
-            return MaterialService:GetMaterialVariant(info.base, info.name)
-        end)
-        if not ok or not actual then
-            return false
-        end
+local function ready()
+    for _, variant in pairs(VARIANTS) do
+        local ok, entry = pcall(
+            MaterialService.GetMaterialVariant,
+            MaterialService, variant.base, variant.name
+        )
+        if not ok or not entry then return false end
     end
     return true
 end
 
-local function originalFor(part)
-    local record = originals[part]
-    if not record then
-        record = {material = part.Material, variant = part.MaterialVariant}
-        originals[part] = record
-    end
-    return record
-end
-
 local function restore()
     for part in pairs(applied) do
-        local original = originals[part]
-        if part.Parent and original then
-            part.MaterialVariant = original.variant
-            part.Material = original.material
+        local saved = originals[part]
+        if part.Parent and saved then
+            -- Restore base before variant. Setting a different base material
+            -- can clear the old variant; restoring the variant last is safe.
+            part.Material = saved.material
+            part.MaterialVariant = saved.variant
         end
         applied[part] = nil
     end
-    table.clear(counts)
 end
 
-local function approvedOwner(part)
-    if not part:IsA("BasePart") or part:IsA("Terrain")
-        or not part.Anchored or part.CanCollide or part.CanQuery
-        or part.CanTouch or part.Transparency >= 0.16
-        or part.Material == Enum.Material.Neon
-        or part.Material == Enum.Material.Glass
-    then
-        return nil
-    end
-    local minimum = math.min(part.Size.X, part.Size.Y, part.Size.Z)
-    local longest = math.max(part.Size.X, part.Size.Y, part.Size.Z)
-    if longest < 3 or minimum < 0.35 then
-        return nil
-    end
-    local owner = part.Parent
-    if not owner or not owner:IsA("Model") then
-        return nil
-    end
-    if owner:GetAttribute("ArenaDistrictArchitecture") == true
-        or owner:GetAttribute("CornerLandmarkIndex") ~= nil
-        or owner.Name == "ArenaHeroArchitecture3D"
-        or owner:GetAttribute("ChaosPerimeterStation") == true
-    then
-        return owner
-    end
-    return nil
-end
-
-local function materialFor(part)
-    local name = part.Name:lower()
-    if name:find("foundation", 1, true)
-        or name:find("basalt", 1, true)
-        or name:find("concrete", 1, true)
-        or name:find("ballast", 1, true)
-        or name:find("ceramic", 1, true)
-    then
-        return VARIANTS.ceramic
-    end
-    if name:find("armor", 1, true)
-        or name:find("armour", 1, true)
-        or name:find("plate", 1, true)
-        or name:find("reinforce", 1, true)
-        or name:find("deck", 1, true)
-    then
-        return VARIANTS.armor
-    end
-    if name:find("rust", 1, true)
-        or name:find("service", 1, true)
-        or name:find("support", 1, true)
-        or name:find("shroud", 1, true)
-        or part.Material == Enum.Material.CorrodedMetal
-    then
-        return VARIANTS.oxidized
-    end
-    return VARIANTS.titanium
-end
-
-local function apply(part)
-    if applied[part] then return end
-    local owner = approvedOwner(part)
-    if not owner then return end
-    local currentTier = tier()
-    if currentTier == "Low" then return end
-    local currentCount = counts[owner] or 0
-    -- This caps texture use per model, rather than creating 4K textures
-    -- on EVERY tiny ring segment and exhausting phone texture memory.
-    local limit = currentTier == "Medium" and 6 or 16
-    if currentCount >= limit then return end
-    local chosen = materialFor(part)
-    originalFor(part)
-    part.Material = chosen.base
-    part.MaterialVariant = chosen.name
-    applied[part] = true
-    counts[owner] = currentCount + 1
-end
-
-local function rescan()
+local function scan()
     restore()
-    if tier() == "Low" or not templatesReady() then
-        return
+    local limit = PbrDistrictRules.limit(tier())
+    if limit == 0 or not ready() then return end
+
+    -- Four playable sector setpieces live in a separate client-owned root.
+    -- Earlier PBR code scanned only GeneratedMap.Decor, leaving these actual
+    -- near-player hero structures with plain native Roblox materials.
+    local groups = {}
+    local function collect(root)
+        if not root or not root.Parent then return end
+        for _, part in ipairs(root:GetDescendants()) do
+            if PbrDistrictRules.eligiblePart(part) then
+                local owner = part.Parent
+                if PbrDistrictRules.eligibleOwner(owner) then
+                    local entries = groups[owner]
+                    if not entries then
+                        entries = {}
+                        groups[owner] = entries
+                    end
+                    entries[#entries + 1] = part
+                end
+            end
+        end
     end
-    local decor = boundDecor
-    if not decor or not decor.Parent then return end
-    for _, object in ipairs(decor:GetDescendants()) do
-        apply(object)
+
+    collect(boundDecor)
+    collect(boundLocal)
+
+    for _, parts in pairs(groups) do
+        table.sort(parts, function(a, b)
+            local priorityA = PbrDistrictRules.priority(a)
+            local priorityB = PbrDistrictRules.priority(b)
+            if priorityA ~= priorityB then
+                return priorityA > priorityB
+            end
+            return a.Name < b.Name
+        end)
+        for index = 1, math.min(limit, #parts) do
+            local part = parts[index]
+            local key = PbrDistrictRules.materialKey(part.Name, part.Material)
+            local chosen = VARIANTS[key]
+            if chosen then
+                local saved = originals[part]
+                if not saved then
+                    saved = {material = part.Material, variant = part.MaterialVariant}
+                    originals[part] = saved
+                end
+                part.Material = chosen.base
+                part.MaterialVariant = chosen.name
+                applied[part] = true
+            end
+        end
     end
+end
+
+-- Event coalescing avoids rescanning after every Part built in the same
+-- frame; no RenderStepped/Heartbeat/poller or new network requests.
+local function schedule()
+    if pendingScan then return end
+    pendingScan = true
+    task.defer(function()
+        pendingScan = false
+        scan()
+    end)
 end
 
 local function bindDecor(decor)
     if boundDecor == decor then return end
     if decorAdded then decorAdded:Disconnect() end
-    decorAdded = nil
-    restore()
+    if decorRemoved then decorRemoved:Disconnect() end
+    decorAdded, decorRemoved = nil, nil
     boundDecor = decor
     if decor then
-        decorAdded = decor.DescendantAdded:Connect(function(part)
-            if part:IsA("BasePart") then apply(part) end
-        end)
+        decorAdded = decor.DescendantAdded:Connect(schedule)
+        decorRemoved = decor.DescendantRemoving:Connect(schedule)
     end
-    rescan()
+    schedule()
 end
 
 local function bindArena(arena)
-    if arena == boundArena then return end
+    if boundArena == arena then return end
     if arenaAdded then arenaAdded:Disconnect() end
     arenaAdded = nil
     boundArena = arena
     bindDecor(arena and arena:FindFirstChild("Decor"))
     if arena then
         arenaAdded = arena.ChildAdded:Connect(function(child)
-            if child.Name == "Decor" then bindDecor(child) end
+            if child.Name == "Decor" then
+                bindDecor(child)
+            end
         end)
     end
 end
 
 local function bindMap(map)
-    if map == boundMap then return end
+    if boundMap == map then return end
     if mapAdded then mapAdded:Disconnect() end
     if mapRemoved then mapRemoved:Disconnect() end
     mapAdded, mapRemoved = nil, nil
@@ -198,15 +166,35 @@ local function bindMap(map)
     end
 end
 
+local function bindLocal(folder)
+    if boundLocal == folder then return end
+    if localAdded then localAdded:Disconnect() end
+    if localRemoved then localRemoved:Disconnect() end
+    localAdded, localRemoved = nil, nil
+    boundLocal = folder
+    if folder then
+        localAdded = folder.DescendantAdded:Connect(schedule)
+        localRemoved = folder.DescendantRemoving:Connect(schedule)
+    end
+    schedule()
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bindMap(workspace:FindFirstChild("GeneratedMap"))
+    elseif child.Name == "DistrictSectorSetpiecesLocal" then
+        bindLocal(workspace:FindFirstChild("DistrictSectorSetpiecesLocal"))
     end
 end)
 workspace.ChildRemoved:Connect(function(child)
     if child == boundMap then
         bindMap(workspace:FindFirstChild("GeneratedMap"))
+    elseif child == boundLocal then
+        bindLocal(workspace:FindFirstChild("DistrictSectorSetpiecesLocal"))
     end
 end)
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rescan)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(schedule)
 bindMap(workspace:FindFirstChild("GeneratedMap"))
+bindLocal(workspace:FindFirstChild("DistrictSectorSetpiecesLocal"))
+schedule()
