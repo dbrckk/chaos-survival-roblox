@@ -65,47 +65,45 @@ systems are created for PBR. The existing scenery-LOD system remains
 responsible for hiding faraway decorations. When variants are unavailable,
 parts retain their original materials.
 
-### Verified upload history (28 October 2026)
+### Verified image upload records (28 October 2026)
 
-GitHub Actions run logs show that 3 of the 4 original 2K material packs
-were **created as Roblox Image assets**:
+**All 16 original 2048×2048 Roblox Image assets have been created**
+in the experience owner's Roblox account. The records are from GitHub
+Actions run logs and real Roblox creation-operation receipts:
 
-| Material | Source run | Color / Normal / Roughness / Metallic |
-|---|---:|---|
-| `brushed_titanium` | #40674072895 | 4/4 created |
-| `oxidized_steel` | #40674103388 | 4/4 created |
-| `reactor_ceramic` | #40674201135 | 4/4 created |
-| `armored_diamondplate` | #40674439392 | Color + Normal created; Roughness + Metallic missing |
+| Material | Source run(s) | Uploaded maps |
+|---|---|---|
+| `brushed_titanium` | 40674072895 | Color, Normal, Roughness, Metallic |
+| `oxidized_steel` | 40674103388 | Color, Normal, Roughness, Metallic |
+| `reactor_ceramic` | 40674201135 | Color, Normal, Roughness, Metallic |
+| `armored_diamondplate` | 40674439392 and 40679576853 | Color, Normal, Roughness, Metallic |
 
-**14 intended channel images created, 2 missing.** The two unsuccessful
-diamondplate runs created two *additional* duplicated color and normal
-images. Never rerun those four-channel workflows: this would create more
-duplicates. The full, exact asset IDs, creation-run provenance and
-**moderation state at the time of upload** are recorded in
+Roblox created the last two diamondplate images successfully in
+[the owner-approved recovery run](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/40679576853):
+`roughness = 121848704472466` (creation-time status **Reviewing**) and
+`metallic = 106394628880013` (creation-time status **Approved**).
+The programmatic recovery used shorter, valid Image display names and
+one create operation per missing channel. Its result artifact is
+`chaos-owner-approved-pbr-short-name-recovery`, artifact ID
+`12812710630`. The earlier POSTs failed because Roblox explicitly
+returned `Asset name length is invalid.`
+
+The **16 unique intended Image IDs**, their individual creation-time
+moderation statuses, the full upload run provenance and the two duplicate
+diamondplate Color/Normal IDs from previous failed runs are recorded in
 `assets/source/roblox-pbr-upload-receipts.json`.
+Never rerun a full-material upload or the one-shot recovery. Both
+`roughness` and `metallic` are already created; no channels remain
+unuploaded. The old single-channel recovery validates the receipts
+and will stop before uploading if used again.
 
-Both diamondplate attempts failed at the **roughness Image creation POST**
-with HTTP 400; the old workflow discarded the returned Roblox JSON error.
-Consequently, the precise error cause is still **unknown** (do not claim
-it was a moderation rejection, image format failure, quota limit or key
-issue without an actual returned error).
-
-The safe recovery workflow
-`.github/workflows/recover-original-pbr-diamondplate.yml` is
-**manual-only**, defaults to dry run and can upload **one** of the missing
-channels, `roughness` or `metallic`, per run. It reuses the already
-created diamondplate Color and Normal ID pair; it never POSTS those two
-again. For an actual Image upload, select the specific missing channel,
-set `dry_run=false`, and enter `UPLOAD_CHAOS_PBR_2K`. The workflow
-records the HTTP 400 response safely and preserves partial receipts even
-when unsuccessful. Do **not** retry a failed or timed-out creation POST
-without first checking whether Roblox actually created the image.
-
-The fact that a creation operation returned an ID is **not proof of
-current asset moderation, owner permissions, or game availability**.
-Several response statuses were `Reviewing`. The live game's
-`default.project.json` deliberately still uses tested Roblox-owned
-fallback maps until all original images have passed those checks.
+**Created is not the same as approved or live.** Many Image assets were
+still `Reviewing` when Roblox confirmed creation. Their *current*
+moderation, owner permissions and readability by the experience must be
+checked before substituting original `rbxassetid://...` values into
+`default.project.json`. For now, the live PBR variants retain their
+verified Roblox-owned fallback maps, and the public Roblox place has
+not been updated.
 
 ### Upload the *original* maps to Roblox
 
