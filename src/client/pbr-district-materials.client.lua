@@ -31,6 +31,7 @@ local decorAdded, decorRemoved = nil, nil
 local localAdded, localRemoved = nil, nil
 local pendingScan = false
 local lastCameraPosition = nil
+local lastCameraLook = nil
 
 local function tier()
     local selected = player:GetAttribute("VfxQualityTier")
@@ -84,8 +85,14 @@ local function scan()
     local ownerLimit = PbrDistrictRules.limit(selectedTier)
     local budget = PbrDistrictRules.globalLimit(selectedTier, isTouch)
     local camera = workspace.CurrentCamera
-    local cameraPosition = camera and camera.CFrame.Position or nil
+    -- Single coherent CFrame snapshot per reconciliation. A stationary
+    -- Android player can rotate the camera to a different facade without
+    -- walking 32 studs; the sampler tracks this direction as well.
+    local cameraFrame = camera and camera.CFrame or nil
+    local cameraPosition = cameraFrame and cameraFrame.Position or nil
+    local cameraLook = cameraFrame and cameraFrame.LookVector or nil
     lastCameraPosition = cameraPosition
+    lastCameraLook = cameraLook
 
     local targets = {}
     local eligibleCount = 0
@@ -131,7 +138,7 @@ local function scan()
         local ranked = {}
         local function score(part)
             return PbrDistrictRules.selectionPriority(
-                part, cameraPosition, applied[part] ~= nil)
+                part, cameraPosition, applied[part] ~= nil, cameraLook)
         end
         for _, parts in pairs(groups) do
             table.sort(parts, function(a, b)
@@ -303,9 +310,11 @@ task.spawn(function()
         local selectedTier = tier()
         if selectedTier ~= "Low" and (boundDecor or boundLocal) then
             local current = workspace.CurrentCamera
-            local position = current and current.CFrame.Position
-            if position and (not lastCameraPosition
-                or (position - lastCameraPosition).Magnitude >= 32
+            local frame = current and current.CFrame or nil
+            local position = frame and frame.Position or nil
+            local look = frame and frame.LookVector or nil
+            if position and (PbrDistrictRules.cameraNeedsRescan(
+                lastCameraPosition, lastCameraLook, position, look)
                 or staleSelection(position, selectedTier)) then
                 schedule()
             end
