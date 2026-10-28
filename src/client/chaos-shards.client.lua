@@ -3,11 +3,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
+local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local player = Players.LocalPlayer
+local touchDevice = UserInputService.TouchEnabled
+local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
+local playerGui = player:WaitForChild("PlayerGui")
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
 
 local gui = Instance.new("ScreenGui")
@@ -15,16 +20,16 @@ gui.Name = "ChaosShardFeedback"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 24
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local label = Instance.new("TextLabel")
 label.Name = "Reward"
 label.AnchorPoint = Vector2.new(0.5, 0.5)
 -- Centered above the Android control cluster; player survival actions
 -- remain unobstructed during an optional pickup.
-label.Position = UDim2.fromScale(0.5, UserInputService.TouchEnabled and 0.51 or 0.66)
-label.Size = UDim2.fromOffset(UserInputService.TouchEnabled and 260 or 300,
-    UserInputService.TouchEnabled and 49 or 54)
+label.Position = UDim2.fromScale(0.5, touchDevice and 0.60 or 0.66)
+label.Size = UDim2.fromOffset(touchDevice and 260 or 300,
+    touchDevice and 40 or 54)
 label.BackgroundColor3 = UITheme.Colors.Panel
 label.BackgroundTransparency = 1
 label.BorderSizePixel = 0
@@ -33,6 +38,8 @@ label.Text = ""
 label.TextColor3 = UITheme.Colors.Cyan
 label.TextStrokeTransparency = 0.65
 label.TextScaled = true
+label.TextWrapped = false
+label.TextTruncate = Enum.TextTruncate.AtEnd
 label.TextTransparency = 1
 label.Visible = false
 label.Parent = gui
@@ -52,6 +59,51 @@ scale.Scale = 0.78
 scale.Parent = label
 
 local token = 0
+local rewardLayoutFits = true
+local rewardTextLimit = UITheme.addTextConstraint(label, 12, touchDevice and 21 or 24)
+
+-- The notification is a secondary lane between the event strips and the
+-- persistent survival bar. Recompute only when the viewport changes.
+local viewportConnection = nil
+local function applyRewardLayout()
+    if not touchDevice then return end
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local layout = UIResponsive.mobileRewardLayout(viewport)
+    label.Position = UDim2.fromScale(layout.xScale, layout.yScale)
+    label.Size = UDim2.fromOffset(layout.width, layout.height)
+    rewardTextLimit.MaxTextSize = layout.height < 40 and 18 or 21
+    rewardLayoutFits = layout.fits
+    if not rewardLayoutFits then
+        label.Visible = false
+    end
+end
+
+local function bindRewardViewport()
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize")
+            :Connect(applyRewardLayout)
+    end
+    applyRewardLayout()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindRewardViewport)
+bindRewardViewport()
+
+-- Important hazard banners win over optional shard reward text. Player
+-- balances and the world pickup effect are still updated normally.
+local function highPriorityBannerVisible()
+    local events = playerGui:FindFirstChild("ChaosRoundEvents")
+    local eventCard = events and events:FindFirstChild("EventCard")
+    local juice = playerGui:FindFirstChild("ChaosJuice")
+    local intro = juice and juice:FindFirstChild("RoundIntroBanner")
+    return (eventCard and eventCard.Visible == true) == true
+        or (intro and intro.Visible == true) == true
+end
 
 local function worldBurst(position, reward, source)
     if typeof(position) ~= "Vector3" then
@@ -190,7 +242,19 @@ local function show(reward, total, goldenFlag, flowBonus, source)
     else
         label.Text = "+" .. tostring(reward) .. " COIN  •  CHAOS SHARD " .. tostring(shardTotal)
     end
-    if flow > 0 then
+    if touchDevice then
+        -- Long desktop receipt strings were shrinking to unreadable sizes
+        -- in the mobile 260px pickup card.
+        if source == "DistrictSignal" then
+            label.Text = (french and "SIGNAL +" or "SIGNAL +") .. tostring(reward)
+        elseif source == "DistrictCache" then
+            label.Text = (french and "CACHE +" or "CACHE +") .. tostring(reward)
+        elseif golden then
+            label.Text = (french and "ÉCLAT DORÉ +" or "GOLD SHARD +") .. tostring(reward)
+        else
+            label.Text = (french and "ÉCLAT +" or "SHARD +") .. tostring(reward)
+        end
+    elseif flow > 0 then
         label.Text ..= "  •  FLOW COMBO +" .. tostring(flow)
     end
     label.TextColor3 = source == "DistrictSignal"
@@ -204,6 +268,10 @@ local function show(reward, total, goldenFlag, flowBonus, source)
         or (source == "DistrictCache"
             and Color3.fromRGB(119, 218, 181))
         or (golden and Color3.fromRGB(255, 165, 55) or UITheme.Colors.Violet)
+    if touchDevice and (not rewardLayoutFits or highPriorityBannerVisible()) then
+        label.Visible = false
+        return
+    end
     label.Visible = true
     label.TextTransparency = 1
     label.BackgroundTransparency = 1
