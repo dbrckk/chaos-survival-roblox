@@ -13,6 +13,43 @@ local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit"
 local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 
 describe("visual budget rules", function()
+    it("spreads a diagnostic census over frames without changing exact counts", function()
+        local root = Instance.new("Folder")
+        local folder = Instance.new("Folder")
+        folder.Name = VisualBudgetRules.LocalFolders[1]
+        folder.Parent = root
+        for _ = 1, 400 do
+            Instance.new("Part").Parent = folder
+        end
+        Instance.new("PointLight").Parent = folder
+        Instance.new("ParticleEmitter").Parent = folder
+
+        local synchronous, syncFolders = VisualBudgetRules.collect(root)
+        expect(synchronous.Parts).toBe(400)
+        expect(synchronous.Lights).toBe(1)
+        expect(synchronous.Effects).toBe(1)
+
+        local checkpoints = 0
+        local spread, audited = VisualBudgetRules.collect(root, function()
+            checkpoints += 1
+            -- The real client yields here; the engine test verifies the
+            -- exact checkpoint contract without introducing test delays.
+        end)
+        expect(checkpoints >= 2).toBe(true)
+        expect(audited).toBe(syncFolders)
+        expect(spread.Parts).toBe(synchronous.Parts)
+        expect(spread.Lights).toBe(synchronous.Lights)
+        expect(spread.Effects).toBe(synchronous.Effects)
+
+        local noRoot, count = VisualBudgetRules.collect(nil, function()
+            checkpoints += 1
+        end)
+        expect(noRoot.Parts).toBe(0)
+        expect(count).toBe(0)
+        expect(checkpoints).toBe(2)
+        root:Destroy()
+    end)
+
     it("counts local meteor facets welded under authoritative impact Parts", function()
         local root = Instance.new("Folder")
         local meteor = Instance.new("Part")
