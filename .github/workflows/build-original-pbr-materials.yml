@@ -111,10 +111,21 @@ jobs:
           armor=materials["armored_diamondplate"]
           assert armor["channels"]["color"]["id"] == "86680602350796"
           assert armor["channels"]["normal"]["id"] == "94326474312318"
-          assert armor["channels"]["roughness"] is None
-          assert armor["channels"]["metallic"] is None
-          assert armor["missing"] == choices
-          print("PASS: no duplicate upload paths; immutable 14-image receipts and manual repair validated.")
+          assert armor["channels"]["roughness"]["id"] == "121848704472466"
+          assert armor["channels"]["metallic"]["id"] == "106394628880013"
+          assert armor["missing"] == [], "Both formerly missing channels now have valid Image IDs"
+          assert armor["final_recovery"]["run_id"] == 40679576853
+          assert armor["final_recovery"]["result"] == "SUCCESS"
+          all_asset_ids = [
+              material["channels"][channel]["id"]
+              for material in materials.values()
+              for channel in ("color", "normal", "roughness", "metallic")
+          ]
+          assert len(all_asset_ids) == 16 and len(set(all_asset_ids)) == 16
+          assert all(str(asset).isdecimal() for asset in all_asset_ids)
+          # Do not rewrite the checked-in fallback MaterialVariants until
+          # all 16 image assets are independently confirmed approved/access.
+          print("PASS: 16 unique created Roblox Image IDs preserved; manual recovery safely blocked by completed receipts.")
           PY
 
       - name: Render four complete original 2K material sets
