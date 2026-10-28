@@ -720,6 +720,95 @@ describe("PBR materials for four playable district hero environments", function(
         near:Destroy()
         far:Destroy()
     end)
+    it("never fills the expensive PBR pool before a real camera exists", function()
+        local part = Instance.new("Part")
+        part.Position = Vector3.new(12, 0, 7)
+        expect(PbrDistrictRules.withinDistance(
+            part, nil, "Medium", true)).toBe(false)
+        expect(PbrDistrictRules.withinDistance(
+            part, "bad camera", "High", true)).toBe(false)
+        expect(PbrDistrictRules.withinDistance(
+            part, part.Position, "High", true)).toBe(true)
+        part:Destroy()
+    end)
+
+    it("allocates far 2K materials to camera-facing hero architecture first", function()
+        local eye = Vector3.new(0, 0, 0)
+        local look = Vector3.new(0, 0, -1)
+        local front = Instance.new("Part")
+        local behind = Instance.new("Part")
+        front.Name = "ArmorPanel"
+        behind.Name = front.Name
+        front.Size = Vector3.new(12, 8, 2)
+        behind.Size = front.Size
+        front.Position = Vector3.new(0, 0, -175)
+        behind.Position = Vector3.new(0, 0, 175)
+
+        local forward = PbrDistrictRules.selectionPriority(
+            front, eye, false, look)
+        local backward = PbrDistrictRules.selectionPriority(
+            behind, eye, false, look)
+        expect(forward > backward + 1000).toBe(true)
+        expect(PbrDistrictRules.cameraFacingBonus(front, eye, look) > 900)
+            .toBe(true)
+        expect(PbrDistrictRules.cameraFacingBonus(behind, eye, look) < 0)
+            .toBe(true)
+        -- Existing surfaces retain positive hysteresis when the user turns.
+        expect(PbrDistrictRules.selectionPriority(
+            front, eye, true, look) - forward).toBe(160)
+        -- With no camera direction, preserve original distance-only ranking.
+        expect(PbrDistrictRules.selectionPriority(
+            front, eye, false, nil)).toBe(
+                PbrDistrictRules.selectionPriority(
+                    behind, eye, false, nil))
+        front:Destroy()
+        behind:Destroy()
+    end)
+
+    it("keeps near-field materials stable during rapid camera turns", function()
+        local eye = Vector3.zero
+        local part = Instance.new("Part")
+        part.Name = "ReactorPanel"
+        part.Size = Vector3.new(8, 8, 3)
+        part.Position = Vector3.new(0, 0, -40)
+        local baseline = PbrDistrictRules.selectionPriority(
+            part, eye, false, Vector3.new(0, 0, -1))
+        local reversed = PbrDistrictRules.selectionPriority(
+            part, eye, false, Vector3.new(0, 0, 1))
+        expect(baseline).toBe(reversed)
+        expect(PbrDistrictRules.cameraFacingBonus(
+            part, eye, Vector3.zero)).toBe(0)
+        expect(PbrDistrictRules.cameraFacingBonus(
+            part, nil, Vector3.new(0, 0, -1))).toBe(0)
+        part:Destroy()
+    end)
+
+    it("resamples stationary look rotations without adding a render loop", function()
+        local origin = Vector3.zero
+        local forward = Vector3.new(0, 0, -1)
+        expect(PbrDistrictRules.cameraNeedsRescan(
+            nil, nil, origin, forward)).toBe(true)
+        expect(PbrDistrictRules.cameraNeedsRescan(
+            origin, forward, nil, forward)).toBe(false)
+        expect(PbrDistrictRules.cameraNeedsRescan(
+            origin, forward, origin + Vector3.new(31, 0, 0), forward))
+            .toBe(false)
+        expect(PbrDistrictRules.cameraNeedsRescan(
+            origin, forward, origin + Vector3.new(32, 0, 0), forward))
+            .toBe(true)
+        expect(PbrDistrictRules.cameraNeedsRescan(
+            origin, forward, origin, Vector3.new(0.2, 0, -0.98)))
+            .toBe(false)
+        expect(PbrDistrictRules.cameraNeedsRescan(
+            origin, forward, origin, Vector3.new(1, 0, 0)))
+            .toBe(true)
+        expect(PbrDistrictRules.cameraNeedsRescan(
+            origin, forward, origin, Vector3.new(0, 0, 1)))
+            .toBe(true)
+        expect(PbrDistrictRules.cameraNeedsRescan(
+            origin, nil, origin, forward)).toBe(false)
+    end)
+
 end)
 
 describe("Author-owned kinetic details in four active 3D districts", function()
