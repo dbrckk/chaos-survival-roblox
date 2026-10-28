@@ -1,0 +1,95 @@
+{
+  "schema": "Chaos Survival original PBR Roblox image upload receipts v1",
+  "creator_user_id": "9774173158",
+  "disclaimer": "These are IDs and moderation states printed by the Roblox creation operations in GitHub Actions on 2026-10-28. 'Reviewing' and 'Approved' are point-in-time responses, not verified CURRENT moderation state or permission for public game. The Roblox asset catalog must be rechecked prior to replacing fallbacks.",
+  "materials": {
+    "brushed_titanium": {
+      "run_id": 40674072895,
+      "channels": {
+        "color": {
+          "id": "93512804494811",
+          "state_at_upload": "Reviewing"
+        },
+        "normal": {
+          "id": "134136390827741",
+          "state_at_upload": "Reviewing"
+        },
+        "roughness": {
+          "id": "99840526887005",
+          "state_at_upload": "Reviewing"
+        },
+        "metallic": {
+          "id": "125325987942142",
+          "state_at_upload": "Approved"
+        }
+      }
+    },
+    "oxidized_steel": {
+      "run_id": 40674103388,
+      "channels": {
+        "color": {
+          "id": "82285382088265",
+          "state_at_upload": "Reviewing"
+        },
+        "normal": {
+          "id": "104267080578064",
+          "state_at_upload": "Reviewing"
+        },
+        "roughness": {
+          "id": "111840273888747",
+          "state_at_upload": "Reviewing"
+        },
+        "metallic": {
+          "id": "129876668948085",
+          "state_at_upload": "Approved"
+        }
+      }
+    },
+    "reactor_ceramic": {
+      "run_id": 40674201135,
+      "channels": {
+        "color": {
+          "id": "116332723277416",
+          "state_at_upload": "Reviewing"
+        },
+        "normal": {
+          "id": "83976763267230",
+          "state_at_upload": "Reviewing"
+        },
+        "roughness": {
+          "id": "131401137724195",
+          "state_at_upload": "Reviewing"
+        },
+        "metallic": {
+          "id": "100056220542598",
+          "state_at_upload": "Approved"
+        }
+      }
+    },
+    "armored_diamondplate": {
+      "source": "Two failed uploads: GitHub Actions runs 40674169321 and 40674439392 both created color and normal before HTTP 400 at roughness; do not rerun the 4-channel workflow.",
+      "selected_partial_run_id": 40674439392,
+      "channels": {
+        "color": {
+          "id": "86680602350796",
+          "state_at_upload": "Approved"
+        },
+        "normal": {
+          "id": "94326474312318",
+          "state_at_upload": "Approved"
+        },
+        "roughness": null,
+        "metallic": null
+      },
+      "duplicate_partial_run": {
+        "run_id": 40674169321,
+        "color_id": "120093679447953",
+        "normal_id": "101692428623846"
+      },
+      "missing": [
+        "roughness",
+        "metallic"
+      ]
+    }
+  }
+}
