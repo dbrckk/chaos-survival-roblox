@@ -64,8 +64,17 @@ jobs:
           echo 'Target creator: verified Chaos account 9774173158 (Drackk_08).'
           echo 'No public-place action exists in this workflow.'
 
-      - name: Install deterministic image dependencies
-        run: python -m pip install --disable-pip-version-check 'numpy==2.1.3' 'pillow==11.1.0'
+      # ubuntu-latest now defaults to Python 3.14, for which pinned Pillow
+      # 11.1.0 has no prebuilt wheel. Never compile it from source on a
+      # live Roblox image-upload job: this already broke all four materials.
+      # Keep the upload generator aligned with the 2K no-upload CI renderer.
+      - name: Use supported Python 3.12 wheels for original image generation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deterministic image dependencies (wheels only)
+        run: python -m pip install --disable-pip-version-check --only-binary=:all: 'numpy==2.1.3' 'pillow==11.1.0'
 
       - name: Generate exactly four 2048 square maps
         run: python tools/generate_pbr_materials.py --size 2048 --material "$MATERIAL" --output build/owned-pbr
