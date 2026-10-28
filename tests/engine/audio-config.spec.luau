@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local AudioConfig = require("../../src/shared/AudioConfig")
+local AudioMixRules = require("../../src/shared/AudioMixRules")
 local ImpactAudioRules = require("../../src/shared/ImpactAudioRules")
 
 describe("Client-only spatial impact sound policy", function()
@@ -68,6 +69,44 @@ describe("Client-only spatial impact sound policy", function()
         expect(ImpactAudioRules.plan("Meteor", -1, "High", false) == nil).toBe(true)
         expect(ImpactAudioRules.plan("Meteor", nil, "High", false) == nil).toBe(true)
         expect(ImpactAudioRules.plan("Meteor", 0, "NoTier", false).LayerCount).toBe(1)
+    end)
+end)
+
+describe("Persistent independent music/effects mix", function()
+    it("keeps existing players at 100 percent without breaking global mute", function()
+        expect(AudioMixRules.percent(nil)).toBe(100)
+        expect(AudioMixRules.percent("75")).toBe(100)
+        expect(AudioMixRules.percent(math.huge)).toBe(100)
+        expect(AudioMixRules.percent(0/0)).toBe(100)
+        local music, effects = AudioMixRules.gains(false, nil, nil)
+        expect(music).toBe(1)
+        expect(effects).toBe(1)
+        local mutedMusic, mutedEffects = AudioMixRules.gains(true, 100, 100)
+        expect(mutedMusic).toBe(0)
+        expect(mutedEffects).toBe(0)
+    end)
+
+    it("keeps buses independent and obeys safety clamping", function()
+        local music, effects = AudioMixRules.gains(false, 25, 80)
+        expect(music).toBe(0.25)
+        expect(effects).toBe(0.8)
+        local musicZero, effectsFull = AudioMixRules.gains(false, 0, 100)
+        expect(musicZero).toBe(0)
+        expect(effectsFull).toBe(1)
+        expect(AudioMixRules.percent(-10)).toBe(0)
+        expect(AudioMixRules.percent(500)).toBe(100)
+        expect(AudioMixRules.percent(55.7)).toBe(56)
+    end)
+
+    it("server accepts only well-formed integral values in 0..100", function()
+        for _, volume in ipairs({0, 10, 45, 90, 100}) do
+            expect(AudioMixRules.validServerVolume(volume)).toBe(true)
+        end
+        for _, value in ipairs({-1, 101, 1.2, math.huge, -math.huge, "50", true}) do
+            expect(AudioMixRules.validServerVolume(value)).toBe(false)
+        end
+        expect(AudioMixRules.validServerVolume(nil)).toBe(false)
+        expect(AudioMixRules.validServerVolume(0/0)).toBe(false)
     end)
 end)
 
