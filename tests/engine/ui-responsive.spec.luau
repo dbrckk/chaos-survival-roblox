@@ -109,6 +109,36 @@ describe("UI responsive profiles", function()
         expect(wide.widthScale < narrow.widthScale).toBe(true)
     end)
 
+    it("keeps the ready strategy card clear of the alive counter on Android", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1536, 688),
+            Vector2.new(400, 720),
+        }) do
+            local guide = UIResponsive.mobileArenaGuideLayout(viewport)
+            local profile = UIResponsive.mobileProfile(viewport)
+            local c = UIResponsive.classify(viewport, true)
+            expect(guide.topOffset + guide.height < viewport.Y * 0.65).toBe(true)
+            if c.wide then
+                -- AliveCounter is anchored to the right of the top HUD,
+                -- 8px inset, with a minimum width of 88px.
+                local aliveLeft = (profile.topCenterXScale
+                    + profile.topWidthScale * 0.5) * viewport.X
+                    - 8 - math.max(88, profile.timerSize + 36)
+                local guideRight = (guide.centerXScale
+                    + guide.widthScale * 0.5) * viewport.X
+                expect(guideRight + 8 <= aliveLeft).toBe(true)
+            else
+                -- Ready-phase alive chip extends 5px below the header,
+                -- then has a 24px height. Keep a visible 6px gap.
+                expect(guide.topOffset >= 7 + profile.topHeight + 5 + 24 + 6)
+                    .toBe(true)
+            end
+        end
+    end)
+
     it("only shows nearby depth-tested AI display names on touch", function()
         local style = BotNameplateRules.presentation
         local normal = style("round", "High", true)
