@@ -265,8 +265,9 @@ describe("Core localization", function()
             local french = CoreLocalization.text("fr-fr", key, table.unpack(args))
             expect(type(english)).toBe("string")
             expect(type(french)).toBe("string")
-            expect(#english > 3).toBe(true)
-            expect(#french > 3).toBe(true)
+            -- NOW is deliberately three characters in English.
+            expect(#english >= 3).toBe(true)
+            expect(#french >= 3).toBe(true)
             expect(english ~= key).toBe(true)
             expect(french ~= key).toBe(true)
         end
