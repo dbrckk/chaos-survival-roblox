@@ -297,6 +297,45 @@ describe("UI responsive profiles", function()
         expect(MobileHudNotices.release("shard")).toBe(true)
     end)
 
+    it("keeps optional near-miss toasts outside live Android survival HUD", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1536, 688),
+            Vector2.new(400, 720),
+        }) do
+            local profile = UIResponsive.mobileProfile(viewport)
+            local toast = UIResponsive.mobileEscalationToast(viewport)
+            local upper = toast.centerYScale * viewport.Y - toast.height * 0.5
+            local lower = upper + toast.height
+            expect(UIResponsive.mobileOptionalNoticeFits(viewport)).toBe(true)
+            expect(upper >= 7 + profile.topHeight + 5 + 24 + 5)
+                .toBe(true)
+            expect(lower + 6 <= viewport.Y - profile.roundFocusBottomOffset
+                - profile.roundFocusHeight).toBe(true)
+        end
+        -- Unusually short split-screen viewports still protect the core HUD.
+        expect(UIResponsive.mobileOptionalNoticeFits(Vector2.new(400, 230)))
+            .toBe(false)
+    end)
+
+    it("prioritizes near-miss over reward but never over survival alerts", function()
+        for _, owner in ipairs({"intro", "escalation", "near-miss", "mechanic", "shard", "momentum"}) do
+            MobileHudNotices.release(owner)
+        end
+        expect(MobileHudNotices.claim("shard", 10)).toBe(true)
+        expect(MobileHudNotices.claim("near-miss", 30)).toBe(true)
+        expect(MobileHudNotices.current()).toBe("near-miss")
+        expect(MobileHudNotices.claim("mechanic", 20)).toBe(false)
+        expect(MobileHudNotices.claim("escalation", 70)).toBe(true)
+        expect(MobileHudNotices.claim("near-miss", 30)).toBe(false)
+        expect(MobileHudNotices.claim("intro", 100)).toBe(true)
+        expect(MobileHudNotices.release("near-miss")).toBe(false)
+        expect(MobileHudNotices.release("intro")).toBe(true)
+        expect(MobileHudNotices.current()).toBe(nil)
+    end)
+
     it("hides optional expedition navigation for any survival priority banner", function()
         expect(UIResponsive.showOptionalRoute(false, false, false)).toBe(true)
         expect(UIResponsive.showOptionalRoute(true, false, false)).toBe(false)
