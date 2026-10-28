@@ -119,11 +119,17 @@ local function applyModel(model)
 
     local brightness = CharacterPolishRules.lightBrightness(
         quality.Name, phase, isLocal, finalRush, activeParticipant,
-        localPlayer:GetAttribute("ReduceMotion") == true
+        localPlayer:GetAttribute("ReduceMotion") == true,
+        localMobileRound
     )
+    -- A neutral, tightly ranged fill lifts the player's silhouette from
+    -- night arenas without saturating their skin or the surrounding neon.
+    -- Remote players and bots retain the original accent-lit material.
+    local fillColor = localMobileRound
+        and Color3.fromRGB(231, 240, 255) or accent
     -- Keep the active light enabled during routine phase/rig refreshes.
     -- Zero brightness allocates nothing and disables old lights immediately.
-    CharacterPolishLightKit.apply(model, brightness, accent, isLocal)
+    CharacterPolishLightKit.apply(model, brightness, fillColor, isLocal)
 end
 
 local function removePolish(model)
