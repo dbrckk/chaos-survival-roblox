@@ -5,6 +5,7 @@ local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local AudioConfig = require(ReplicatedStorage.Shared.AudioConfig)
+local AudioMixRules = require(ReplicatedStorage.Shared.AudioMixRules)
 local GroundContactRules = require(ReplicatedStorage.Shared.GroundContactRules)
 local ImpactAudioRules = require(ReplicatedStorage.Shared.ImpactAudioRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -418,12 +419,18 @@ local function setMix(phase, overdrive, finalRush)
         rewardTarget = 1
     end
 
-    local userScale = player:GetAttribute("AudioMuted") == true and 0 or 1
-    musicTarget *= userScale
-    sfxTarget *= userScale
-    uiTarget *= userScale
-    hazardTarget *= userScale
-    rewardTarget *= userScale
+    -- Music and effects are independent, with global mute still authoritative.
+    -- AudioMixRules preserves 100% for legacy saves and sanitizes bad values.
+    local musicGain, effectsGain = AudioMixRules.gains(
+        player:GetAttribute("AudioMuted"),
+        player:GetAttribute("MusicVolume"),
+        player:GetAttribute("EffectsVolume")
+    )
+    musicTarget *= musicGain
+    sfxTarget *= effectsGain
+    uiTarget *= effectsGain
+    hazardTarget *= effectsGain
+    rewardTarget *= effectsGain
 
     TweenService:Create(musicGroup, TweenInfo.new(0.18), {Volume = musicTarget}):Play()
     TweenService:Create(sfxGroup, TweenInfo.new(0.12), {Volume = sfxTarget}):Play()
@@ -694,9 +701,11 @@ stateEvent.OnClientEvent:Connect(function(state)
     lastTitle = state.title
 end)
 
-player:GetAttributeChangedSignal("AudioMuted"):Connect(function()
-    setMix(lastPhase or "waiting", lastOverdrive, lastFinalRush)
-end)
+for _, setting in ipairs({"AudioMuted", "MusicVolume", "EffectsVolume"}) do
+    player:GetAttributeChangedSignal(setting):Connect(function()
+        setMix(lastPhase or "waiting", lastOverdrive, lastFinalRush)
+    end)
+end
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
     local momentumBest = math.max(0, math.floor(tonumber(feedback.momentumBest) or 0))
