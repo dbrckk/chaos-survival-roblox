@@ -1,0 +1,126 @@
+# ONE-TIME owner-authorized public playtest update, requested 2026-10-28.
+# Runs ONLY for the push that introduces or changes this exact workflow file.
+# It cannot silently deploy later gameplay changes. The actual publish
+# endpoint is exclusively owned by publish-existing-public-playtest.yml.
+name: One-time owner-approved Chaos Survival public playtest dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-owner-public-playtest-20261028.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-survival-one-time-public-playtest-request-20261028
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - name: Await successful exact-main build and engine checks, then dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          repo = os.environ['REPO']
+          sha = os.environ['CANDIDATE_SHA']
+          headers = {
+              'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'chaos-owner-authorized-one-time-public-playtest',
+          }
+          root = 'https://api.github.com/repos/' + repo
+
+          def api_get(path):
+              request = urllib.request.Request(root + path, headers=headers)
+              with urllib.request.urlopen(request, timeout=25) as response:
+                  return json.load(response)
+
+          # This automation is authorized to dispatch a PUBLIC PLAYTEST,
+          # not to claim a certified production release. The downstream
+          # workflow requires its own explicit public-game ID, validates
+          # source SHA/CI, and refuses changes to the private staging place.
+          required = ('Build Validation', 'Roblox Open Cloud Engine Tests')
+          for attempt in range(80):
+              main_sha = api_get('/git/ref/heads/main')['object']['sha']
+              if main_sha != sha:
+                  raise SystemExit(
+                      'Main advanced after the owner-authorized candidate; '
+                      'refusing to publish the old SHA.')
+              runs = api_get('/actions/runs?head_sha=' + sha + '&per_page=100')
+              matched = {}
+              for run in runs.get('workflow_runs', []):
+                  name = run.get('name')
+                  if (name in required and name not in matched
+                      and run.get('head_sha') == sha
+                      and run.get('head_branch') == 'main'
+                      and run.get('event') == 'push'):
+                      matched[name] = run
+              outcomes = {
+                  name: (matched.get(name) or {}).get('conclusion')
+                  for name in required
+              }
+              statuses = {
+                  name: (matched.get(name) or {}).get('status')
+                  for name in required
+              }
+              print('Source checks', statuses, outcomes, flush=True)
+              if all(statuses[n] == 'completed' and outcomes[n] == 'success'
+                     for n in required):
+                  # Recheck the exact public candidate immediately before
+                  # requesting the protected downstream publication workflow.
+                  if api_get('/git/ref/heads/main')['object']['sha'] != sha:
+                      raise SystemExit('Main changed before dispatch; aborting.')
+                  payload = {
+                      'ref': 'main',
+                      'inputs': {
+                          'confirm': 'PUBLISH_EXISTING_10771083668',
+                          'acknowledge_untested': 'true',
+                      },
+                  }
+                  url = root + (
+                      '/actions/workflows/'
+                      'publish-existing-public-playtest.yml/dispatches')
+                  request = urllib.request.Request(
+                      url,
+                      data=json.dumps(payload).encode('utf-8'),
+                      headers={**headers, 'Content-Type': 'application/json'},
+                      method='POST',
+                  )
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      if response.status != 204:
+                          raise SystemExit(
+                              'Unexpected dispatch status: ' + str(response.status))
+                  print(
+                      'Authorized one-time public-playtest dispatch accepted '
+                      'for tested candidate ' + sha, flush=True)
+                  break
+              if any(statuses[n] == 'completed' and outcomes[n] != 'success'
+                     for n in required):
+                  raise SystemExit(
+                      'A required exact-SHA automated check failed: ' +
+                      str(outcomes))
+              time.sleep(15)
+          else:
+              raise SystemExit('Timed out before both exact-SHA checks passed.')
+          PY
