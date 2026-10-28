@@ -193,11 +193,22 @@ end
 -- The shared notice priority hides the navigator while this chip is active.
 function UIResponsive.mobileMomentumChip(viewport)
     local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local centerY = c.tinyHeight and 0.54 or (c.compactHeight and 0.46 or 0.50)
+    local height = c.tinyHeight and 34 or 38
+    local top = centerY * c.height - height * 0.5
+    local bottom = top + height
     return {
         leftInset = c.veryNarrow and 12 or (c.narrowWidth and 16 or 24),
-        centerYScale = c.tinyHeight and 0.54 or (c.compactHeight and 0.46 or 0.50),
+        centerYScale = centerY,
         width = c.veryNarrow and 120 or (c.narrowWidth and 144 or 170),
-        height = c.tinyHeight and 34 or 38,
+        height = height,
+        -- A 230px-tall split-screen leaves no room between the hazard and
+        -- focus meter. Drop optional feedback instead of obscuring gameplay.
+        fits = c.width >= 320
+            and top >= profile.topHeight + 12
+            and bottom <= c.height - profile.roundFocusBottomOffset
+                - profile.roundFocusHeight - 6,
     }
 end
 
