@@ -344,6 +344,51 @@ describe("UI responsive profiles", function()
         expect(wide.roundFocusWidthScale < normal.roundFocusWidthScale).toBe(true)
     end)
 
+    it("keeps mobile momentum feedback away from the hazard, dash and focus bars", function()
+        for _, viewport in ipairs({
+            Vector2.new(540, 320),
+            Vector2.new(640, 360),
+            Vector2.new(960, 440),
+            Vector2.new(1536, 688),
+            Vector2.new(400, 720),
+        }) do
+            local chip = UIResponsive.mobileMomentumChip(viewport)
+            local profile = UIResponsive.mobileProfile(viewport)
+            local left, right = chip.leftInset, chip.leftInset + chip.width
+            local top = chip.centerYScale * viewport.Y - chip.height * 0.5
+            local bottom = top + chip.height
+            expect(left >= 0 and right <= viewport.X * 0.42).toBe(true)
+            expect(top > profile.topHeight + 12).toBe(true)
+            expect(bottom < viewport.Y - profile.roundFocusBottomOffset
+                - profile.roundFocusHeight).toBe(true)
+        end
+    end)
+
+    it("hides the optional momentum chip on a height-constrained split screen", function()
+        expect(UIResponsive.mobileMomentumChip(Vector2.new(400, 230)).fits)
+            .toBe(false)
+        expect(UIResponsive.mobileMomentumChip(Vector2.new(640, 360)).fits)
+            .toBe(true)
+    end)
+
+    it("preempts optional momentum feedback with gameplay notices", function()
+        MobileHudNotices.release("momentum")
+        MobileHudNotices.release("shard")
+        MobileHudNotices.release("escalation")
+        MobileHudNotices.release("intro")
+        expect(MobileHudNotices.claim("momentum", 5)).toBe(true)
+        expect(MobileHudNotices.claim("shard", 10)).toBe(true)
+        expect(MobileHudNotices.current()).toBe("shard")
+        expect(MobileHudNotices.claim("momentum", 5)).toBe(false)
+        expect(MobileHudNotices.claim("mechanic", 20)).toBe(true)
+        expect(MobileHudNotices.claim("escalation", 70)).toBe(true)
+        expect(MobileHudNotices.claim("mechanic", 20)).toBe(false)
+        expect(MobileHudNotices.claim("intro", 100)).toBe(true)
+        expect(MobileHudNotices.release("momentum")).toBe(false)
+        expect(MobileHudNotices.release("intro")).toBe(true)
+        expect(MobileHudNotices.current()).toBe(nil)
+    end)
+
     it("keeps the HUD compact on a wide Android landscape viewport", function()
         local profile = UIResponsive.mobileProfile(Vector2.new(1536, 688))
 
