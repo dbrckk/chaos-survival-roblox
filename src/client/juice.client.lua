@@ -797,49 +797,49 @@ local function queuePerformancePulse(snapshot)
     performancePulsePending = true
     task.spawn(function()
         local ok, err = pcall(function()
-        -- Stats availability varies across Android client builds and
-        -- permissions. This optional 45-second pulse must never crash
-        -- the primary RenderStepped owner that drives adaptive VFX,
-        -- lighting and feedback for the rest of the player's session.
-        local function optionalStat(read)
-            local ok, value = pcall(read)
-            return ok and value or 0
-        end
-        local okVisual, visualMetrics = pcall(VisualBudgetRules.collect,
-            workspace, function()
-                -- Yield only in this 45-second, non-authoritative census.
-                -- Other callers retain the synchronous snapshot API.
-                task.wait()
-            end)
-        if not okVisual or type(visualMetrics) ~= "table" then
-            visualMetrics = {Parts = 0, Lights = 0, Effects = 0}
-        end
-        local sample = PerformancePulseRules.sanitize({
-            averageFps = math.floor(snapshot.averageFps + 0.5),
-            p95FrameMs = snapshot.p95FrameMs,
-            slowFramePercent = snapshot.slowFramePercent,
-            vfxTier = snapshot.tier,
-            deviceClass = snapshot.deviceClass,
-            tierTransitions = snapshot.tierTransitions,
-            visualParts = visualMetrics.Parts,
-            visualLights = visualMetrics.Lights,
-            visualEffects = visualMetrics.Effects,
-            totalMemoryMb = optionalStat(function()
-                return Stats:GetTotalMemoryUsageMb()
-            end),
-            instanceCount = optionalStat(function()
-                return Stats.InstanceCount
-            end),
-            frameTimeMs = optionalStat(function()
-                return Stats.FrameTime * 1000
-            end),
-            renderCpuMs = optionalStat(function()
-                return Stats.RenderCPUFrameTime * 1000
-            end),
-            renderGpuMs = optionalStat(function()
-                return Stats.RenderGPUFrameTime * 1000
-            end),
-        })
+            -- Stats availability varies across Android client builds and
+            -- permissions. This optional 45-second pulse must never crash
+            -- the primary RenderStepped owner that drives adaptive VFX,
+            -- lighting and feedback for the rest of the player's session.
+            local function optionalStat(read)
+                local ok, value = pcall(read)
+                return ok and value or 0
+            end
+            local okVisual, visualMetrics = pcall(VisualBudgetRules.collect,
+                workspace, function()
+                    -- Yield only in this 45-second, non-authoritative census.
+                    -- Other callers retain the synchronous snapshot API.
+                    task.wait()
+                end)
+            if not okVisual or type(visualMetrics) ~= "table" then
+                visualMetrics = {Parts = 0, Lights = 0, Effects = 0}
+            end
+            local sample = PerformancePulseRules.sanitize({
+                averageFps = math.floor(snapshot.averageFps + 0.5),
+                p95FrameMs = snapshot.p95FrameMs,
+                slowFramePercent = snapshot.slowFramePercent,
+                vfxTier = snapshot.tier,
+                deviceClass = snapshot.deviceClass,
+                tierTransitions = snapshot.tierTransitions,
+                visualParts = visualMetrics.Parts,
+                visualLights = visualMetrics.Lights,
+                visualEffects = visualMetrics.Effects,
+                totalMemoryMb = optionalStat(function()
+                    return Stats:GetTotalMemoryUsageMb()
+                end),
+                instanceCount = optionalStat(function()
+                    return Stats.InstanceCount
+                end),
+                frameTimeMs = optionalStat(function()
+                    return Stats.FrameTime * 1000
+                end),
+                renderCpuMs = optionalStat(function()
+                    return Stats.RenderCPUFrameTime * 1000
+                end),
+                renderGpuMs = optionalStat(function()
+                    return Stats.RenderGPUFrameTime * 1000
+                end),
+            })
 
             performancePulseEvent:FireServer(sample)
         end)
