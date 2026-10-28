@@ -44,30 +44,52 @@ function VfxQuality.initialTier(isTouchDevice)
     return isTouchDevice == true and "Medium" or "High"
 end
 
-function VfxQuality.nextTier(currentTier, averageFps, isTouchDevice)
+-- Pacing inputs are optional for compatibility with existing callers.
+-- Touch-only hysteresis responds to repeated long frames that average FPS
+-- alone conceals. Never let a single spike, paused app or malformed sample
+-- trigger a quality drop. This changes cosmetics, never gameplay warnings.
+function VfxQuality.nextTier(currentTier, averageFps, isTouchDevice,
+    p95FrameMs, slowFramePercent)
     local fps = tonumber(averageFps) or 60
     local current = VfxQuality.Tiers[currentTier] and currentTier or "High"
     local touch = isTouchDevice == true
+    local validPacing = touch
+        and type(p95FrameMs) == "number"
+        and p95FrameMs == p95FrameMs
+        and p95FrameMs > 0 and p95FrameMs <= 600
+        and type(slowFramePercent) == "number"
+        and slowFramePercent == slowFramePercent
+        and slowFramePercent >= 0 and slowFramePercent <= 100
+
+    -- P95 requires >=5% affected frames; the slow-frame share requires
+    -- >=12% affected frames, so neither isolated spikes nor a one-off
+    -- transition can force Low graphics on an otherwise smooth device.
+    local repeatedStutter = validPacing
+        and p95FrameMs >= 45 and slowFramePercent >= 12
+    local severeStutter = validPacing
+        and p95FrameMs >= 65 and slowFramePercent >= 25
+    local promotionSafe = not validPacing
+        or (p95FrameMs <= 32 and slowFramePercent <= 8)
 
     if current == "High" then
-        -- Touch devices should lower expensive cosmetics before sustained
-        -- sub-50 FPS play turns into visible heat/throttling or input lag.
-        if fps < (touch and 48 or 42) then
+        -- Keep desktop thresholds unchanged. Android lowers optional
+        -- materials and effects when frame pacing degrades repeatedly.
+        if fps < (touch and 48 or 42) or repeatedStutter then
             return "Medium"
         end
         return "High"
     end
 
     if current == "Medium" then
-        if fps < 32 then
+        if fps < 32 or severeStutter then
             return "Low"
-        elseif fps > (touch and 58 or 54) then
+        elseif fps > (touch and 58 or 54) and promotionSafe then
             return "High"
         end
         return "Medium"
     end
 
-    if fps > (touch and 46 or 44) then
+    if fps > (touch and 46 or 44) and promotionSafe then
         return "Medium"
     end
     return "Low"
