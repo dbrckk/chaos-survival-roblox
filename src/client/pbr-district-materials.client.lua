@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local MaterialService = game:GetService("MaterialService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PbrDistrictRules = require(ReplicatedStorage.Shared.PbrDistrictRules)
 
@@ -25,7 +26,13 @@ local localAdded, localRemoved = nil, nil
 local pendingScan = false
 
 local function tier()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    local selected = player:GetAttribute("VfxQualityTier")
+    if type(selected) ~= "string" or not VfxQuality.Tiers[selected] then
+        -- The client quality sampler may not have published an attribute
+        -- yet. Never eagerly allocate High-tier materials on new phones.
+        return VfxQuality.initialTier(UserInputService.TouchEnabled)
+    end
+    return selected
 end
 
 local function ready()
