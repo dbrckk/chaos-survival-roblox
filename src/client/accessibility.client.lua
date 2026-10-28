@@ -7,6 +7,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local AudioMixRules = require(ReplicatedStorage.Shared.AudioMixRules)
 local BuildIdentity = require(ReplicatedStorage.Shared.BuildIdentity)
 
 local player = Players.LocalPlayer
@@ -43,7 +44,7 @@ UITheme.addStroke(toggle, UITheme.Colors.Cyan, 1.0, 0.45)
 UITheme.addPressFeedback(toggle, 0.96)
 UITheme.addTextConstraint(toggle, 11, 16)
 
-local panel = Instance.new("Frame")
+local panel = Instance.new("ScrollingFrame")
 panel.Name = "SettingsPanel"
 panel.AnchorPoint = Vector2.new(1, 0)
 panel.Position = UDim2.fromScale(0.985, 0.09)
@@ -51,6 +52,11 @@ panel.Size = UDim2.fromOffset(190, 160)
 panel.BackgroundColor3 = UITheme.Colors.Panel
 panel.BackgroundTransparency = 0.03
 panel.BorderSizePixel = 0
+panel.ScrollBarThickness = 3
+panel.ScrollingDirection = Enum.ScrollingDirection.Y
+panel.AutomaticCanvasSize = Enum.AutomaticSize.Y
+panel.CanvasSize = UDim2.fromOffset(0, 0)
+panel.ClipsDescendants = true
 panel.Visible = false
 panel.Parent = gui
 UITheme.addCorner(panel, UITheme.Corners.Medium)
@@ -59,7 +65,8 @@ UITheme.addStroke(panel, UITheme.Colors.Border, 1.0, 0.42)
 local layout = Instance.new("UIListLayout")
 layout.FillDirection = Enum.FillDirection.Vertical
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layout.VerticalAlignment = Enum.VerticalAlignment.Center
+layout.VerticalAlignment = Enum.VerticalAlignment.Top
+layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 6)
 layout.Parent = panel
 
@@ -92,12 +99,64 @@ end
 local motionButton, motionStroke = makeSettingButton("ReduceMotionToggle")
 local soundButton, soundStroke = makeSettingButton("AudioToggle")
 local hapticsButton, hapticsStroke = makeSettingButton("HapticsToggle")
+motionButton.LayoutOrder = 1
+soundButton.LayoutOrder = 2
+hapticsButton.LayoutOrder = 3
+
+-- Dedicated tap-safe buttons instead of precision sliders: every change
+-- is an explicit, server-validated 10% step. No per-frame input polling.
+local function makeVolumeRow(name, order)
+    local row = Instance.new("Frame")
+    row.Name = name
+    row.LayoutOrder = order
+    row.Size = UDim2.new(1, 0, 0, UserInputService.TouchEnabled and 44 or 36)
+    row.BackgroundTransparency = 1
+    row.Parent = panel
+
+    local function stepButton(direction, atRight)
+        local button = Instance.new("TextButton")
+        button.Name = atRight and "Increase" or "Decrease"
+        button.AnchorPoint = Vector2.new(atRight and 1 or 0, 0)
+        button.Position = UDim2.fromScale(atRight and 1 or 0, 0)
+        button.Size = UDim2.new(0, UserInputService.TouchEnabled and 44 or 36, 1, 0)
+        button.BackgroundColor3 = UITheme.Colors.PanelRaised
+        button.BorderSizePixel = 0
+        button.Text = direction
+        button.TextScaled = true
+        button.Font = Enum.Font.GothamBold
+        button.TextColor3 = UITheme.Colors.Text
+        button.Parent = row
+        UITheme.addCorner(button, UITheme.Corners.Small)
+        UITheme.addTextConstraint(button, 14, 20)
+        UITheme.addPressFeedback(button, 0.95)
+        return button
+    end
+    local decrease = stepButton("-", false)
+    local increase = stepButton("+", true)
+    local label = Instance.new("TextLabel")
+    label.Name = "VolumeLabel"
+    label.Position = UDim2.new(0, UserInputService.TouchEnabled and 47 or 39, 0, 0)
+    label.Size = UDim2.new(1, -(UserInputService.TouchEnabled and 94 or 78), 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextColor3 = UITheme.Colors.Text
+    label.TextScaled = true
+    label.Parent = row
+    UITheme.addTextConstraint(label, 10, 14)
+    return label, decrease, increase
+end
+
+local musicLabel, musicDecrease, musicIncrease =
+    makeVolumeRow("MusicVolumeControl", 4)
+local effectsLabel, effectsDecrease, effectsIncrease =
+    makeVolumeRow("EffectsVolumeControl", 5)
 
 -- Visible only inside Settings, never over the playfield. An Android
 -- tester can read the actual packaged revision without the Studio console.
 -- SOURCE/UNSTAMPED explicitly means the place was not built by GitHub CI.
 local buildIdentity = Instance.new("TextLabel")
 buildIdentity.Name = "BuildIdentityLabel"
+buildIdentity.LayoutOrder = 6
 buildIdentity.Size = UDim2.new(1, 0, 0, 20)
 buildIdentity.BackgroundTransparency = 1
 buildIdentity.BorderSizePixel = 0
@@ -140,13 +199,17 @@ local function applyResponsive()
         local width = profile.veryNarrow and 156 or 168
         toggle.Size = UDim2.fromOffset(width, 44)
         toggle.Position = UDim2.new(1, -10, 0, profile.topHeight + 18)
-        panel.Size = UDim2.fromOffset(math.max(176, width + 18), 192)
-        panel.Position = UDim2.new(1, -10, 0, profile.topHeight + 68)
+        local top = profile.topHeight + 68
+        panel.Size = UDim2.fromOffset(math.max(190, width + 18),
+            math.max(104, math.min(330, viewport.Y - top - 12)))
+        panel.Position = UDim2.new(1, -10, 0, top)
     else
         toggle.Size = UDim2.fromOffset(150, 36)
         toggle.Position = UDim2.fromScale(0.985, 0.03)
-        panel.Size = UDim2.fromOffset(178, 168)
-        panel.Position = UDim2.fromScale(0.985, 0.085)
+        local top = math.floor(viewport.Y * 0.085)
+        panel.Size = UDim2.fromOffset(200,
+            math.max(104, math.min(285, viewport.Y - top - 12)))
+        panel.Position = UDim2.new(1, -12, 0, top)
     end
 end
 
@@ -154,6 +217,19 @@ local function refresh()
     local reduced = player:GetAttribute("ReduceMotion") == true
     local muted = player:GetAttribute("AudioMuted") == true
     local hapticsDisabled = player:GetAttribute("HapticsDisabled") == true
+    local musicPercent = AudioMixRules.percent(player:GetAttribute("MusicVolume"))
+    local effectsPercent = AudioMixRules.percent(player:GetAttribute("EffectsVolume"))
+
+    musicLabel.Text = CoreLocalization.text(localeId, "MUSIC_VOLUME", musicPercent)
+    effectsLabel.Text = CoreLocalization.text(localeId, "EFFECTS_VOLUME", effectsPercent)
+    musicDecrease.Active = musicPercent > 0
+    musicIncrease.Active = musicPercent < 100
+    effectsDecrease.Active = effectsPercent > 0
+    effectsIncrease.Active = effectsPercent < 100
+    musicDecrease.TextTransparency = musicPercent == 0 and 0.55 or 0
+    musicIncrease.TextTransparency = musicPercent == 100 and 0.55 or 0
+    effectsDecrease.TextTransparency = effectsPercent == 0 and 0.55 or 0
+    effectsIncrease.TextTransparency = effectsPercent == 100 and 0.55 or 0
 
     toggle.Text = CoreLocalization.text(localeId, "SETTINGS")
 
@@ -238,10 +314,30 @@ hapticsButton.Activated:Connect(function()
     refresh()
 end)
 
+local lastVolumeChange = {}
+local function changeVolume(setting, delta)
+    if not available() then return end
+    local now = os.clock()
+    if now - (lastVolumeChange[setting] or -100) < 0.38 then return end
+    local current = AudioMixRules.percent(player:GetAttribute(setting))
+    local nextValue = math.clamp(current + delta, 0, 100)
+    if nextValue == current then return end
+    lastVolumeChange[setting] = now
+    player:SetAttribute(setting, nextValue)
+    accessibilityEvent:FireServer(setting, nextValue)
+    refresh()
+end
+musicDecrease.Activated:Connect(function() changeVolume("MusicVolume", -10) end)
+musicIncrease.Activated:Connect(function() changeVolume("MusicVolume", 10) end)
+effectsDecrease.Activated:Connect(function() changeVolume("EffectsVolume", -10) end)
+effectsIncrease.Activated:Connect(function() changeVolume("EffectsVolume", 10) end)
+
 for _, attribute in ipairs({
     "ReduceMotion",
     "AudioMuted",
     "HapticsDisabled",
+    "MusicVolume",
+    "EffectsVolume",
     "Games",
     "DataLoaded",
 }) do
