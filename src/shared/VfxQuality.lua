@@ -132,6 +132,13 @@ function VfxQuality.tornadoInterval(tier, reducedMotion, active)
     return VfxQuality.decorativeInterval(tier, reducedMotion)
 end
 
+-- Nonessential mobility/pickup flashes must never wash the entire
+-- Android screen during a hazard. This does NOT affect the actual
+-- disaster warning UI, camera shake or any server-authoritative mechanics.
+function VfxQuality.optionalFullScreenFlashAllowed(isTouchDevice, reducedMotion)
+    return isTouchDevice ~= true and reducedMotion ~= true
+end
+
 function VfxQuality.particleCount(tier, baseCount, minimum)
     local profile = VfxQuality.get(tier)
     local base = math.max(0, tonumber(baseCount) or 0)
