@@ -1,0 +1,240 @@
+name: Recover One Missing Chaos Diamondplate PBR Map (Manual)
+
+# SAFE REPAIR ONLY. In prior failed runs color+normal images were already
+# created successfully. Never generate additional image POSTs for those maps.
+# Two remaining channels must be dispatched SEPARATELY to avoid duplicates
+# if Roblox rejects another request. No place publication.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Only the missing diamondplate map to upload
+        type: choice
+        required: true
+        options:
+          - roughness
+          - metallic
+      dry_run:
+        description: Generate and inspect only (no Roblox POST)
+        type: boolean
+        default: true
+        required: true
+      confirmation:
+        description: For uploads type UPLOAD_CHAOS_PBR_2K
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-diamondplate-one-map-upload
+  cancel-in-progress: false
+
+jobs:
+  recover-one-map:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      CHANNEL: ${{ inputs.channel }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      CONFIRM: ${{ inputs.confirmation }}
+      ASSET_API_KEY: ${{ secrets.ROBLOX_ASSET_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manual approval and previously created asset receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CHANNEL" in roughness|metallic) ;; *) exit 1 ;; esac
+          if [ "$DRY_RUN" != "true" ]; then
+            test "$CONFIRM" = "UPLOAD_CHAOS_PBR_2K" || {
+              echo "::error::Explicit owner confirmation required"; exit 1;
+            }
+            test -n "$ASSET_API_KEY" || {
+              echo "::error::ROBLOX_ASSET_API_KEY is missing"; exit 1;
+            }
+          fi
+          mkdir -p build/diamondplate-recovery/operations
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("assets/source/roblox-pbr-upload-receipts.json").read_text())
+          assert data["creator_user_id"] == "9774173158"
+          material = data["materials"]["armored_diamondplate"]
+          assert material["selected_partial_run_id"] == 40674439392
+          assert material["channels"]["color"]["id"] == "86680602350796"
+          assert material["channels"]["normal"]["id"] == "94326474312318"
+          assert material["channels"]["roughness"] is None
+          assert material["channels"]["metallic"] is None
+          assert material["missing"] == ["roughness", "metallic"]
+          # These were already created, but moderation is NOT reconfirmed here.
+          Path("build/diamondplate-recovery/operations/source-receipt.json").write_text(
+              json.dumps(material, indent=2) + "\n", encoding="utf-8")
+          print("Reuse existing color/normal IDs. Never send duplicate image POSTs.")
+          PY
+
+      - name: Use deterministic supported Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install image dependencies from binary wheels
+        run: |
+          python -m pip install --disable-pip-version-check --only-binary=:all: 'numpy==2.1.3' 'pillow==11.1.0'
+
+      - name: Generate original authored diamondplate PBR maps
+        run: |
+          python tools/generate_pbr_materials.py --size 2048 --material armored_diamondplate --output build/diamondplate-recovery
+
+      - name: Validate that only the selected missing map can upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - "$CHANNEL" <<'PY'
+          import json,sys,hashlib,pathlib
+          from PIL import Image
+          channel=sys.argv[1]
+          assert channel in ("roughness","metallic")
+          directory=pathlib.Path("build/diamondplate-recovery")
+          manifest=json.loads((directory/"manifest.json").read_text())
+          assert manifest["texture_upload_status"]=="NOT_UPLOADED_TO_ROBLOX"
+          assert len(manifest["materials"])==1
+          material=manifest["materials"][0]
+          assert material["name"]=="armored_diamondplate"
+          entry=material["maps"][channel]
+          file=directory/entry["path"]
+          assert file.is_file()
+          assert file.stat().st_size < 20*1024*1024
+          assert hashlib.sha256(file.read_bytes()).hexdigest()==entry["sha256"]
+          with Image.open(file) as image:
+              assert image.format=="PNG" and image.size==(2048,2048)
+              assert image.mode=="L"
+          print("Selected original 2K map verified:",channel)
+          PY
+
+      - name: Save all originals and inspectable SHA manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-diamondplate-recovery-source-${{ inputs.channel }}
+          path: build/diamondplate-recovery/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload only this one missing Roblox Image (NEVER retry creation)
+        if: inputs.dry_run == false
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="build/diamondplate-recovery/armored_diamondplate_$CHANNEL""_2k.png"
+          test -s "$src"
+          mkdir -p build/diamondplate-recovery/operations
+          python - "$CHANNEL" > "$RUNNER_TEMP/pbr-request.json" <<'PY'
+          import json,sys
+          print(json.dumps({
+              "assetType": "Image",
+              "displayName": f"Chaos Original PBR armored_diamondplate {sys.argv[1]} 2K",
+              "description": "Original game-authored 2048px PBR map for Chaos Survival.",
+              "creationContext": {"creator": {"userId": "9774173158"}}
+          },separators=(",",":")))
+          PY
+          # A create POST may succeed remotely even if the network response
+          # fails. Retrying can create duplicates. Do not retry this POST.
+          status="$(curl --silent --show-error \
+            --write-out '%{http_code}' \
+            --output "$RUNNER_TEMP/pbr-created.json" \
+            -H "x-api-key: $ASSET_API_KEY" \
+            --form-string "request=$(cat "$RUNNER_TEMP/pbr-request.json")" \
+            --form "fileContent=@$src;type=image/png" \
+            "https://apis.roblox.com/assets/v1/assets")" || {
+              echo "::error::Network error: creation outcome unknown. Do NOT blindly retry."
+              exit 1
+            }
+          if [[ "$status" != 2?? ]]; then
+            python - "$status" "$RUNNER_TEMP/pbr-created.json" <<'PY'
+          import json,sys
+          from pathlib import Path
+          status,location=sys.argv[1:]
+          try:
+              d=json.loads(Path(location).read_text())
+          except Exception:
+              d={}
+          message=d.get("message") or d.get("error") or d.get("errors") or "No structured Roblox error supplied"
+          message=str(message).replace("\n"," ")[:450]
+          print(f"::error::Roblox HTTP {status}: {message}")
+          print("Do not retry automatically; inspect Roblox quota and image-upload permissions.")
+          PY
+            exit 1
+          fi
+          operation="$(python - "$RUNNER_TEMP/pbr-created.json" <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1]))
+          path=data.get("path","")
+          if not isinstance(path,str) or not path.startswith("operations/"):
+              raise SystemExit("Roblox POST had no valid operation; do not retry blindly.")
+          print(path)
+          PY
+          )"
+          printf '%s\n' "$operation" > "build/diamondplate-recovery/operations/$CHANNEL-operation-path.txt"
+          state=pending
+          for attempt in $(seq 1 24); do
+            curl --silent --show-error --fail-with-body \
+              -H "x-api-key: $ASSET_API_KEY" \
+              "https://apis.roblox.com/assets/v1/$operation" \
+              > "$RUNNER_TEMP/pbr-status.json"
+            state="$(python - "$RUNNER_TEMP/pbr-status.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          if d.get("error"): print("error")
+          elif d.get("done") and str((d.get("response") or {}).get("assetId") or "").isdecimal():
+              print("complete")
+          else: print("pending")
+          PY
+            )"
+            [ "$state" = complete ] && break
+            [ "$state" = error ] && {
+              echo "::error::Roblox operation rejected; stop without recreating the image."
+              exit 1
+            }
+            sleep 5
+          done
+          if [ "$state" != complete ]; then
+            echo "::error::Operation still pending; inspect operation path, NEVER resend POST blindly."
+            exit 1
+          fi
+          cp "$RUNNER_TEMP/pbr-status.json" "build/diamondplate-recovery/operations/$CHANNEL-result.json"
+          python - "build/diamondplate-recovery/operations/$CHANNEL-result.json" "$CHANNEL" <<'PY'
+          import json,os,sys
+          response=json.load(open(sys.argv[1]))["response"]
+          asset_id=str(response["assetId"])
+          assert asset_id.isdecimal()
+          moderation=(response.get("moderationResult") or {}).get("moderationState","PENDING")
+          print(f"Confirmed owned {sys.argv[2]} assetId={asset_id}; creation-time moderation={moderation}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as out:
+              out.write(f"- Recovered original diamondplate {sys.argv[2]} Image: ID {asset_id}; status at upload: {moderation}\n")
+              out.write("- Other maps are NOT reuploaded; public Roblox game unchanged.\n")
+          PY
+
+      - name: Preserve partial receipts even if upload fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-diamondplate-recovery-receipts-${{ inputs.channel }}
+          path: build/diamondplate-recovery/operations/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Explain safe recovery
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "### Diamondplate one-map recovery"
+            echo "- Existing **color and normal** Roblox image IDs reused, never recreated."
+            echo "- Selected missing image: $CHANNEL"
+            echo "- Dry run: $DRY_RUN"
+            echo "- Never rerun a successful upload; use the other remaining channel."
+            echo "- No modifications to the live game; recheck moderation before wiring IDs into MaterialService."
+          } >> "$GITHUB_STEP_SUMMARY"
