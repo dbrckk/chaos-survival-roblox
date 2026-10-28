@@ -352,6 +352,30 @@ local function showBanner(mainText, subText, accent, duration)
     bannerTitle.Text = mainText or ""
     bannerSub.Text = subText or ""
     banner.Visible = true
+
+    -- On touch screens the disaster introduction outranks the optional
+    -- expedition compass and shard pickup toast. Hide them immediately:
+    -- the navigator's 250ms refresh otherwise leaves stacked panels.
+    if UserInputService.TouchEnabled then
+        local playerGui = player:FindFirstChildOfClass("PlayerGui")
+        if playerGui then
+            local navigator = playerGui:FindFirstChild("DistrictExpeditionNavigator")
+            local route = navigator and navigator:FindFirstChild("NearestSupplyRoute")
+            if route and route:IsA("GuiObject") then
+                route.Visible = false
+            end
+            local waypoint = playerGui:FindFirstChild("NextPhysicalDistrictStep")
+            if waypoint and waypoint:IsA("BillboardGui") then
+                waypoint.Enabled = false
+            end
+            local shardGui = playerGui:FindFirstChild("ChaosShardFeedback")
+            local pickup = shardGui and shardGui:FindFirstChild("Reward")
+            if pickup and pickup:IsA("GuiObject") then
+                pickup.Visible = false
+            end
+        end
+    end
+
     local reduced = player:GetAttribute("ReduceMotion") == true
     banner.BackgroundTransparency = reduced and 0.08 or 1
     bannerScale.Scale = reduced and 1 or 0.72
