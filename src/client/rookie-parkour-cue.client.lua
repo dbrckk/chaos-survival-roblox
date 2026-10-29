@@ -124,6 +124,8 @@ local function update()
 
     local pieces = platforms:GetChildren()
     local target = nil
+    local french = player.LocaleId:sub(1, 2) == "fr"
+    local hint = french and "SAUT SUIVANT  ↑" or "NEXT JUMP  ↑"
     if from == base then
         -- The largest missing first-session cue was *before* the first
         -- jump. Guide from the actual floor to a short, grounded entry.
@@ -134,6 +136,21 @@ local function update()
         target = JumpRouteCueRules.nextPhysical(
             from, pieces, base.Position, arena:GetAttribute("VariantId")
         )
+        if from:GetAttribute("PerimeterStep") == 5 then
+            local forward, flank = JumpRouteCueRules.forkOptions(
+                from, pieces
+            )
+            if forward and flank then
+                -- A genuine, server-authored choice. The physical fork
+                -- arrows show the side direction; keep only ONE nearby
+                -- billboard rather than obscuring danger telegraphs.
+                hint = french and "2 ROUTES  •  CHOISIS"
+                    or "2 PATHS  •  CHOOSE"
+            elseif flank and not forward then
+                hint = french and "DÉTOUR SÛR  ↑"
+                    or "SAFE DETOUR  ↑"
+            end
+        end
     end
     if not target or (root.Position - target.Position).Magnitude > 46 then
         hide()
@@ -141,6 +158,7 @@ local function update()
     end
 
     local sign = gui()
+    if caption.Text ~= hint then caption.Text = hint end
     if currentTarget ~= target then
         currentTarget = target
         sign.Adornee = target

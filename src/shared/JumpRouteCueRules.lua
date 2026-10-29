@@ -175,6 +175,41 @@ function JumpRouteCueRules.nearestEntry(orderedPlatforms, floorPoint, maxRange)
     return closest
 end
 
+-- A real tactical fork exists at perimeter step five: continue up the
+-- main escape ridge or turn toward the side lookout. Expose BOTH
+-- server-authored destinations, but never fabricate a diagonal jump.
+-- Returned choices are nil when the physical jump is impossible or
+-- its target has lost collision / transparency.
+function JumpRouteCueRules.forkOptions(from, orderedPlatforms)
+    if not walkable(from) or type(orderedPlatforms) ~= "table"
+        or from:GetAttribute("PerimeterStep") ~= 5 then
+        return nil, nil
+    end
+    local route = from:GetAttribute("PerimeterRoute")
+    if type(route) ~= "number" or route % 1 ~= 0
+        or route < 1 or route > 4 then
+        return nil, nil
+    end
+
+    local forward, flank = nil, nil
+    for _, candidate in ipairs(orderedPlatforms) do
+        if candidate ~= from and candidate:IsA("BasePart")
+            and candidate.Parent == from.Parent then
+            if candidate:GetAttribute("PerimeterRoute") == route
+                and candidate:GetAttribute("PerimeterStep") == 6
+                and JumpRouteCueRules.jumpable(from, candidate) then
+                forward = candidate
+            elseif candidate:GetAttribute("BranchRoute") == route
+                and candidate:GetAttribute("BranchStep") == 1
+                and candidate:GetAttribute("BranchParentStep") == 5
+                and JumpRouteCueRules.jumpable(from, candidate) then
+                flank = candidate
+            end
+        end
+    end
+    return forward, flank
+end
+
 -- Original central routes use conservative spatial selection. Perimeter
 -- and side-lookout steps have explicit server-authored route/step IDs;
 -- using those IDs avoids directing a novice across unrelated adjacent
@@ -190,6 +225,15 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
     local branchStep = from:GetAttribute("BranchStep")
 
     if route ~= nil or branch ~= nil then
+        -- The forward route is the default, but only if the physical
+        -- landing is still safe. The branch offers a real escape option
+        -- when a collapsing or missing main deck blocks the ascent.
+        if route ~= nil and step == 5 then
+            local forward, flank = JumpRouteCueRules.forkOptions(
+                from, orderedPlatforms
+            )
+            return forward or flank
+        end
         local routeId = route or branch
         local index = route ~= nil and step or branchStep
         local last = route ~= nil and 8 or 4
