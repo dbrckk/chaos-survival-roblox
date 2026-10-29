@@ -72,6 +72,33 @@ function SceneryLodRules.original3DVisualOwners(arena)
     return owners
 end
 
+-- Only the four specifically tagged Storm Harbor GANTRY models are
+-- eligible for extra skyline culling. A real platform, hazard signal or
+-- mobility pad cannot enter this list; the source is a cosmetic-only
+-- folder under the active arena's Decor. Reuse the 0.65/0.90-second
+-- scenery owner rather than adding a client render loop.
+function SceneryLodRules.harborGantryOwners(arena)
+    local owners = {}
+    if typeof(arena) ~= "Instance" or not arena:IsA("Folder")
+        or arena.Name ~= "Arena" then
+        return owners
+    end
+    local decor = arena:FindFirstChild("Decor")
+    local folder = decor and decor:FindFirstChild("StormHarborGantryFleet")
+    if not folder or not folder:IsA("Folder") then return owners end
+
+    for _, model in ipairs(folder:GetChildren()) do
+        if model:IsA("Model")
+            and model:GetAttribute("CosmeticOnly") == true
+            and model:GetAttribute("SourceIsOriginal") == true
+            and model:GetAttribute("ChaosDistantScenery") == true
+            and model:FindFirstChildWhichIsA("BasePart") then
+            owners[#owners + 1] = model
+        end
+    end
+    return owners
+end
+
 -- Preserve a sparse skyline rather than an empty horizon on Android Low.
 -- Only an explicitly marked original hero instance may use this exception;
 -- gameplay parts and other scenery folders remain under their normal LOD.
