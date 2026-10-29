@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
+local SceneryLodCache = require(script.Parent.SceneryLodCache)
 
 local player = Players.LocalPlayer
 
@@ -198,55 +199,14 @@ local function cameraPosition()
     return camera and camera.CFrame.Position or Vector3.zero
 end
 
-local folderCaches = setmetatable({}, {__mode = "k"})
-
 local function classifyDescendant(descendant)
-    if descendant:IsA("BasePart")
+    return descendant:IsA("BasePart")
         or VisualBudgetRules.isLight(descendant)
         or VisualBudgetRules.isEffect(descendant)
-    then
-        return descendant
-    end
-    return nil
-end
-
-local function ensureCache(folder)
-    local cache = folderCaches[folder]
-    if cache then
-        return cache
-    end
-
-    cache = {
-        entries = {},
-        dirty = true,
-    }
-    folderCaches[folder] = cache
-
-    -- Roblox can stream an already-populated Model, Folder or Attachment.
-    -- These container callbacks may arrive without a distinct notification
-    -- for each child; invalidate for any hierarchy mutation, not just Parts.
-    folder.DescendantAdded:Connect(function()
-        cache.dirty = true
-    end)
-    folder.DescendantRemoving:Connect(function()
-        cache.dirty = true
-    end)
-
-    return cache
-end
-
-local function refreshCache(folder, cache)
-    table.clear(cache.entries)
-    for _, descendant in ipairs(folder:GetDescendants()) do
-        if classifyDescendant(descendant) then
-            table.insert(cache.entries, descendant)
-        end
-    end
-    cache.dirty = false
 end
 
 local function applyFolder(folder, limits, profile, origin, cameraPoint)
-    local cache = ensureCache(folder)
+    local cache = SceneryLodCache.get(folder)
     local distance = (cameraPoint - origin).Magnitude
     local visible = SceneryLodRules.visible(
         profile.Name, distance, limits.LowDistance, limits.MediumDistance,
@@ -256,7 +216,7 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
     local wasDirty = cache.dirty
     cache.visible = visible
     if wasDirty then
-        refreshCache(folder, cache)
+        SceneryLodCache.refresh(folder, cache, classifyDescendant)
     end
 
     -- An already-visible, unchanged folder has nothing to restore. Skip
