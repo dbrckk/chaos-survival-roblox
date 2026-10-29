@@ -112,16 +112,19 @@ local function worldBurst(position, reward, source)
     local golden = (tonumber(reward) or 1) >= 3
     local signal = source == "DistrictSignal"
     local supply = source == "DistrictCache"
+    local cargo = source == "HarborCargo"
     local reduced = player:GetAttribute("ReduceMotion") == true
     -- The server source already distinguishes pickups; match that source
     -- with recognizably different shapes and color, not extra geometry.
     local primary = signal and Color3.fromRGB(255, 178, 72)
         or (supply and (golden and Color3.fromRGB(255, 222, 110)
             or Color3.fromRGB(109, 244, 193)))
+        or (cargo and Color3.fromRGB(94, 226, 170))
         or (golden and Color3.fromRGB(255, 215, 75) or UITheme.Colors.Cyan)
     local secondary = signal and Color3.fromRGB(255, 107, 76)
         or (supply and (golden and Color3.fromRGB(240, 162, 75)
             or Color3.fromRGB(75, 193, 229)))
+        or (cargo and Color3.fromRGB(82, 188, 227))
         or (golden and Color3.fromRGB(255, 145, 45) or UITheme.Colors.Violet)
 
     local core = Instance.new("Part")
@@ -163,7 +166,7 @@ local function worldBurst(position, reward, source)
         TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
             Size = reduced and Vector3.new(2.4, 2.4, 2.4)
-                or ((signal or supply) and Vector3.new(5.2, 5.2, 5.2)
+                or ((signal or supply or cargo) and Vector3.new(5.2, 5.2, 5.2)
                     or (golden and Vector3.new(5.6, 5.6, 5.6)
                         or Vector3.new(4.2, 4.2, 4.2))),
             Transparency = 1,
@@ -175,7 +178,7 @@ local function worldBurst(position, reward, source)
         TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
             Size = reduced and Vector3.new(0.10, 4.0, 4.0)
-                or ((signal or supply) and Vector3.new(0.10, 12.0, 12.0)
+                or ((signal or supply or cargo) and Vector3.new(0.10, 12.0, 12.0)
                     or (golden and Vector3.new(0.10, 11.5, 11.5)
                         or Vector3.new(0.10, 8.5, 8.5))),
             Transparency = 1,
@@ -249,6 +252,8 @@ local function show(reward, total, goldenFlag, flowBonus, source)
         label.Text = "SIGNAL SECURED  •  +" .. tostring(reward) .. " COINS"
     elseif source == "DistrictCache" then
         label.Text = "SUPPLY CACHE  •  +" .. tostring(reward) .. " COINS"
+    elseif source == "HarborCargo" then
+        label.Text = "CARGO ROUTE CLEARED  •  +" .. tostring(reward) .. " COINS"
     elseif golden then
         label.Text = "+" .. tostring(reward) .. " COINS  •  GOLDEN CHAOS SHARD"
     elseif shardTotal == 1 then
@@ -262,6 +267,8 @@ local function show(reward, total, goldenFlag, flowBonus, source)
             label.Text = (french and "SIGNAL +" or "SIGNAL +") .. tostring(reward)
         elseif source == "DistrictCache" then
             label.Text = (french and "CACHE +" or "CACHE +") .. tostring(reward)
+        elseif source == "HarborCargo" then
+            label.Text = (french and "CARGAISON +" or "CARGO +") .. tostring(reward)
         elseif golden then
             label.Text = (french and "ÉCLAT DORÉ +" or "GOLD SHARD +") .. tostring(reward)
         else
@@ -277,11 +284,15 @@ local function show(reward, total, goldenFlag, flowBonus, source)
         or (source == "DistrictCache"
             and (golden and Color3.fromRGB(255, 225, 105)
                 or Color3.fromRGB(135, 244, 199)))
+        or (source == "HarborCargo"
+            and Color3.fromRGB(126, 255, 194))
         or (golden and Color3.fromRGB(255, 225, 105) or UITheme.Colors.Cyan)
     stroke.Color = source == "DistrictSignal"
         and Color3.fromRGB(255, 135, 90)
         or (source == "DistrictCache"
             and Color3.fromRGB(119, 218, 181))
+        or (source == "HarborCargo"
+            and Color3.fromRGB(61, 174, 155))
         or (golden and Color3.fromRGB(255, 165, 55) or UITheme.Colors.Violet)
     label.Visible = true
     label.TextTransparency = 1
@@ -299,7 +310,8 @@ local function show(reward, total, goldenFlag, flowBonus, source)
         {Scale = 1}
     ):Play()
 
-    local holdSeconds = (source == "DistrictSignal" or source == "DistrictCache")
+    local holdSeconds = (source == "DistrictSignal"
+        or source == "DistrictCache" or source == "HarborCargo")
         and 1.50 or ((not golden and shardTotal == 1) and 1.65 or 1.05)
     task.delay(holdSeconds, function()
         if current ~= token then

@@ -1382,7 +1382,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 position = position,
                 golden = golden == true,
                 flowBonus = flowBonus,
-                source = source == "DistrictCache" and "DistrictCache" or "ChaosShard",
+                source = source == "DistrictCache" and "DistrictCache"
+                    or (source == "HarborCargo" and "HarborCargo"
+                        or "ChaosShard"),
             })
 
             -- Supply exploration must not fake shard collection progress.
@@ -1395,7 +1397,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 player,
                 amount,
                 source == "DistrictCache" and "DistrictCache"
-                    or (golden == true and "GoldenChaosShard" or "ChaosShard"),
+                    or (source == "HarborCargo" and "HarborCargo"
+                        or (golden == true and "GoldenChaosShard"
+                            or "ChaosShard")),
                 currentArenaVariant,
                 roundSettings.Solo
             )
