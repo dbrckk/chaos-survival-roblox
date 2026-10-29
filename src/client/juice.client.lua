@@ -254,6 +254,20 @@ local qualityCandidateSamples = 0
 local visualUpdateClock = 0
 local performancePulseClock = 0
 local performanceFrameCount = 0
+-- Keep 45-second PBR comparisons statistically honest. Any AUTO/OFF
+-- change within a measurement window marks that window MIXED even if
+-- the user switches back before the next analytics pulse.
+local pbrWindowMode = PerformancePulseRules.currentPbrMode(
+    UserInputService.TouchEnabled, player:GetAttribute("PbrMaterialsDisabled")
+)
+local pbrWindowMixed = false
+player:GetAttributeChangedSignal("PbrMaterialsDisabled"):Connect(function()
+    if PerformancePulseRules.currentPbrMode(
+        UserInputService.TouchEnabled, player:GetAttribute("PbrMaterialsDisabled")
+    ) ~= pbrWindowMode then
+        pbrWindowMixed = true
+    end
+end)
 local vfxTierTransitions = 0
 local healthRatio = 1
 player:SetAttribute("VfxQualityTier", vfxTierName)
@@ -820,6 +834,7 @@ local function queuePerformancePulse(snapshot)
                 slowFramePercent = snapshot.slowFramePercent,
                 vfxTier = snapshot.tier,
                 deviceClass = snapshot.deviceClass,
+                pbrMode = snapshot.pbrMode,
                 tierTransitions = snapshot.tierTransitions,
                 visualParts = visualMetrics.Parts,
                 visualLights = visualMetrics.Lights,
@@ -896,6 +911,10 @@ RunService.RenderStepped:Connect(function(dt)
         qualityCandidateSamples = 0
         performancePulseClock = 0
         performanceFrameCount = 0
+        pbrWindowMode = PerformancePulseRules.currentPbrMode(
+            UserInputService.TouchEnabled, player:GetAttribute("PbrMaterialsDisabled")
+        )
+        pbrWindowMixed = false
     end
 
     if activeDt > 0 then
@@ -921,11 +940,16 @@ RunService.RenderStepped:Connect(function(dt)
                 tier = vfxTierName,
                 tierTransitions = vfxTierTransitions,
                 deviceClass = deviceClass,
+                pbrMode = pbrWindowMixed and "MIXED" or pbrWindowMode,
             })
 
             performancePulseClock = 0
             performanceFrameCount = 0
             FramePacingRules.reset(performancePacing)
+            pbrWindowMode = PerformancePulseRules.currentPbrMode(
+                UserInputService.TouchEnabled, player:GetAttribute("PbrMaterialsDisabled")
+            )
+            pbrWindowMixed = false
         end
     end
 
