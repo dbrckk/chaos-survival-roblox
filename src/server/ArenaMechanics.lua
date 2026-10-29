@@ -25,6 +25,10 @@ local gridSweepModule = script and script.Parent:FindFirstChild("ClassicGridSwee
 local ClassicGridSweep = if gridSweepModule
     then require(gridSweepModule)
     else require("./ClassicGridSweep")
+local harborSweepModule = script and script.Parent:FindFirstChild("HarborCargoSweep")
+local HarborCargoSweep = if harborSweepModule
+    then require(harborSweepModule)
+    else require("./HarborCargoSweep")
 local ArenaMechanics = {}
 
 ArenaMechanics.Definitions = {
@@ -83,7 +87,7 @@ ArenaMechanics.Definitions = {
     },
     Harbor = {
         Name = "SQUALL TRANSFER PADS",
-        Hint = "Use sea-blue squall pads for transfers; climb seven cargo-pier steps and reach safe gantries",
+        Hint = "Climb timber cargo piers; orange sweep bays turn red—jump or move to a clear lane",
         Color = Color3.fromRGB(78, 202, 222),
         Pads = {
             -- Clear of pier footprints and first eight spawn points.
@@ -284,6 +288,10 @@ function ArenaMechanics.start(ctx, variantId)
         -- disabled by rookie and externally forced movement safeguards.
         OrbitalHelix.startFlow(ctx, folder, arena)
         dynamicStarted = type(ctx.HelixPulseClaims) == "table"
+    elseif variantId == "Harbor" then
+        -- The blue squall transfer pads remain available every round;
+        -- crane cargo sweeps join only after the shared tutorial period.
+        dynamicStarted = HarborCargoSweep.start(ctx, arena) ~= nil
     end
 
     local hint = ArenaMechanics.effectiveHint(variantId, dynamicStarted)
