@@ -86,8 +86,11 @@ RoundChallenge.HighGround = {
     },
     Orbital = {
         Id = "ORBITAL_HIGH", Title = "REACTOR LOOKOUT",
-        Short = "REACTOR", Metric = "highGround", Target = 3,
-        Coins = 8, XP = 9,
+        -- Orbital has real RouteTier 1, 2 and 4 decks. Tier 3 does
+        -- not exist: completing the Reactor objective means ascending
+        -- the certified core ramp and standing on the tier-four podium.
+        Short = "REACTOR", Metric = "highGround", Target = 4,
+        Coins = 10, XP = 11,
     },
     Harbor = {
         Id = "HARBOR_HIGH", Title = "STORM GANTRY LOOKOUT",
