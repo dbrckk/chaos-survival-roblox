@@ -2597,8 +2597,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             platform:SetAttribute("HarborRoute", definition.HarborRoute)
             platform:SetAttribute("HarborStep", definition.HarborStep)
             platform.Color = theme.Structure:Lerp(theme.Detail, 0.43)
-            platform.Material = theme.StructureMaterial
-                or VisualTheme.Materials.Structure
+            -- A real timber walking deck, rather than just a visual
+            -- plank overlay above a metal collision floor. Roblox native
+            -- steps and our local landing accent now agree on the
+            -- contacted physical material; storm hazards still own it.
+            platform.Material = Enum.Material.WoodPlanks
         end
         if definition.PerimeterRoute then
             -- Explicit route metadata is visible to wayfinding and QA.

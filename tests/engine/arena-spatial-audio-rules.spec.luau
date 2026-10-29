@@ -3,17 +3,37 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaSpatialAudioRules = require("../../src/shared/ArenaSpatialAudioRules")
+local ArenaVariants = require("../../src/server/ArenaVariants")
+local AudioConfig = require("../../src/shared/AudioConfig")
 local MapVisualReadiness = require("../../src/shared/MapVisualReadiness")
 
 describe("Arena spatial audio rules", function()
     it("defines a profile for every arena", function()
-        for _, id in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        for _, id in ipairs(ArenaVariants.Order) do
             local profile = ArenaSpatialAudioRules.profile(id)
             expect(type(profile.Bed)).toBe("string")
             expect(type(profile.Secondary)).toBe("string")
             expect(profile.Volume > 0).toBe(true)
             expect(profile.Radius > 0).toBe(true)
         end
+    end)
+
+    it("gives Storm Harbor a bounded, distinct shore-wind soundscape", function()
+        local harbor = ArenaSpatialAudioRules.profile("Harbor")
+        local classic = ArenaSpatialAudioRules.profile("Classic")
+        expect(harbor ~= classic).toBe(true)
+        expect(harbor.Bed).toBe("Wind")
+        expect(harbor.Secondary).toBe("LowGravity")
+        expect(harbor.Pitch ~= classic.Pitch).toBe(true)
+        expect(harbor.EQ.Low ~= classic.EQ.Low).toBe(true)
+        expect(harbor.Reverb.Decay ~= classic.Reverb.Decay).toBe(true)
+        expect(AudioConfig.Sfx[harbor.Bed] ~= nil).toBe(true)
+        expect(AudioConfig.Sfx[harbor.Secondary] ~= nil).toBe(true)
+        expect(harbor.Volume > 0 and harbor.Volume <= 0.085).toBe(true)
+        expect(harbor.SecondaryVolume > 0
+            and harbor.SecondaryVolume <= 0.032).toBe(true)
+        expect(harbor.Radius >= 44 and harbor.Radius <= 62).toBe(true)
+        expect(ArenaSpatialAudioRules.profile("nonexistent")).toBe(classic)
     end)
 
     it("scales source count with quality", function()

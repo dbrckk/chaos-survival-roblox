@@ -53,6 +53,8 @@ function GroundContactRules.materialStyle(material)
         or material == Enum.Material.Brick
     then
         return "Mineral"
+    elseif material == Enum.Material.WoodPlanks or material == Enum.Material.Wood then
+        return "Timber"
     end
     return "Neutral"
 end
@@ -94,6 +96,7 @@ function GroundContactRules.landingAudio(material, airtime, tierName, reducedMot
         Mineral = -0.45,
         Crystal = 0.11,
         Neutral = -0.18,
+        Timber = -0.08,
     }
     -- Existing engine regression requires a subtle, tightly bounded
     -- accent below 0.18 before SoundGroup gain. Keep this invariant even
