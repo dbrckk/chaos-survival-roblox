@@ -1663,6 +1663,48 @@ describe("Imported 3D per-model Android LOD", function()
     end)
 end)
 
+describe("Storm Harbor dedicated Android gantry LOD", function()
+    it("culls only tagged exterior 3D models and never physical platforms", function()
+        local generated = MapBuilder.build(
+            Config, "Harbor", ArenaVariants, VisualTheme
+        )
+        local arena = generated:FindFirstChild("Arena")
+        local platforms = arena:FindFirstChild("Platforms")
+        local owners = SceneryLodRules.harborGantryOwners(arena)
+        expect(#owners).toBe(4)
+        for _, owner in ipairs(owners) do
+            expect(owner:IsA("Model")).toBe(true)
+            expect(owner.Parent.Name).toBe("StormHarborGantryFleet")
+            expect(owner:GetAttribute("SourceIsOriginal")).toBe(true)
+            expect(owner:GetAttribute("CosmeticOnly")).toBe(true)
+            expect(owner:GetAttribute("ChaosDistantScenery")).toBe(true)
+        end
+        for _, platform in ipairs(platforms:GetChildren()) do
+            for _, owner in ipairs(owners) do
+                expect(owner ~= platform).toBe(true)
+            end
+        end
+        expect(SceneryLodRules.visible("Low", 20, 0, 185, nil))
+            .toBe(false)
+        expect(SceneryLodRules.visible("Medium", 146, 0, 185, nil))
+            .toBe(true)
+        expect(SceneryLodRules.visible("Medium", 250, 0, 185, nil))
+            .toBe(false)
+        expect(#SceneryLodRules.harborGantryOwners(nil)).toBe(0)
+
+        local impostor = Instance.new("Model")
+        impostor.Name = "UntrustedGantry"
+        impostor:SetAttribute("CosmeticOnly", true)
+        impostor:SetAttribute("SourceIsOriginal", true)
+        impostor:SetAttribute("ChaosDistantScenery", true)
+        impostor.Parent = arena:FindFirstChild("Decor")
+            :FindFirstChild("StormHarborGantryFleet")
+        expect(#SceneryLodRules.harborGantryOwners(arena)).toBe(4)
+        impostor:Destroy()
+        generated:Destroy()
+    end)
+end)
+
 describe("Storm Harbor engine and Android scenery certification", function()
     it("builds a fully navigable Storm Harbor with original drydock architecture", function()
         local variant = ArenaVariants.get("Harbor")
