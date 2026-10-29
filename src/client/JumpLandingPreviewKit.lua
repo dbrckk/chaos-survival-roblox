@@ -59,10 +59,8 @@ function JumpLandingPreviewKit.new(player)
     end
 
     local function validSurface(hit)
-        return hit ~= nil and hit.Instance:IsA("BasePart")
-            and hit.Instance.CanCollide
-            and hit.Instance:GetAttribute("CollapsePhase") == nil
-            and hit.Normal.Y >= 0.84
+        return hit ~= nil and hit.Normal.Y >= 0.84
+            and Rules.surfaceStatus(hit.Instance) ~= "Unavailable"
     end
 
     local function update(phase, root, humanoid)
@@ -83,8 +81,8 @@ function JumpLandingPreviewKit.new(player)
 
         -- Collision and collapse can change between samples. Never leave a
         -- visible marker on a deck that has disappeared in the meantime.
-        if targetPart and (not targetPart.Parent or not targetPart.CanCollide
-            or targetPart:GetAttribute("CollapsePhase") ~= nil) then
+        if targetPart and (not targetPart.Parent
+            or Rules.surfaceStatus(targetPart) == "Unavailable") then
             hide()
         end
 
@@ -181,11 +179,18 @@ function JumpLandingPreviewKit.new(player)
         targetPart = hit.Instance
         showing = true
         local caution = margin < 1.75
-        local color = caution and Color3.fromRGB(246, 159, 195)
-            or Color3.fromRGB(135, 222, 252)
+        local warning = Rules.surfaceStatus(hit.Instance) == "Warning"
+        -- Danger is communicated in both colour and silhouette. The
+        -- same four reusable brackets contract into an unmistakable red
+        -- X, without hiding the server's yellow 1.35-second warning.
+        local color = warning and Color3.fromRGB(255, 80, 90)
+            or (caution and Color3.fromRGB(246, 159, 195)
+                or Color3.fromRGB(135, 222, 252))
         local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
         local reduced = player:GetAttribute("ReduceMotion") == true
-        local count = tier == "Low" and 2 or 4
+        -- A danger X needs all four EXISTING segments on Android Low,
+        -- otherwise two fragments could resemble a safe landing bracket.
+        local count = warning and 4 or (tier == "Low" and 2 or 4)
         local up = hit.Normal.Unit
         local forward = Vector3.new(0, 0, -1)
         forward = forward - up * forward:Dot(up)
@@ -200,11 +205,15 @@ function JumpLandingPreviewKit.new(player)
             if index <= count then
                 local angle = (index - 1) * math.pi * 0.5 + math.pi * 0.25
                 part.CFrame = basis * CFrame.Angles(0, angle, 0)
-                    * CFrame.new(0, 0, -0.77)
+                    * CFrame.new(0, 0, warning and -0.43 or -0.77)
+                part.Size = warning and Vector3.new(0.18, 0.045, 0.93)
+                    or Vector3.new(0.11, 0.045, 0.66)
                 part.Color = color
                 -- Only outlines: never tint or cover an underlying hazard.
-                part.Transparency = reduced and 0.50
-                    or (tier == "Low" and 0.44 or 0.34)
+                part.Transparency = warning
+                    and (reduced and 0.43 or 0.20)
+                    or (reduced and 0.50
+                        or (tier == "Low" and 0.44 or 0.34))
             else
                 part.Transparency = 1
             end
