@@ -33,15 +33,54 @@ function Index.watch(root, onChanged)
         end
     end
 
+    -- A populated streamed building can emit DescendantAdded for the Model,
+    -- its Folders, and every Part in one burst. Walk each highest queued
+    -- subtree once at the end of the scheduler turn, rather than doing
+    -- repeated GetDescendants() scans of the same geometry.
+    local pendingAdds = {}
+    local flushScheduled = false
+
+    local function flushAdds()
+        flushScheduled = false
+        if not alive then return end
+        local batch = pendingAdds
+        pendingAdds = {}
+        local changed = false
+        for instance in pairs(batch) do
+            if instance:IsDescendantOf(root) then
+                local parent = instance.Parent
+                local covered = false
+                while parent and parent ~= root do
+                    if batch[parent] then
+                        covered = true
+                        break
+                    end
+                    parent = parent.Parent
+                end
+                if not covered then
+                    addTree(instance)
+                    changed = true
+                end
+            end
+        end
+        if changed then onChanged() end
+    end
+
     addTree(root)
     local added = root.DescendantAdded:Connect(function(instance)
         if not alive then return end
-        addTree(instance)
-        onChanged()
+        pendingAdds[instance] = true
+        if flushScheduled then return end
+        flushScheduled = true
+        task.defer(flushAdds)
     end)
     local removed = root.DescendantRemoving:Connect(function(instance)
         if not alive then return end
+        -- DescendantRemoving fires before the subtree is detached or
+        -- destroyed. Remove synchronously so no cached Parts survive
+        -- streaming-out even if a deferred callback runs after Destroy().
         removeTree(instance)
+        pendingAdds[instance] = nil
         onChanged()
     end)
 
@@ -50,6 +89,7 @@ function Index.watch(root, onChanged)
         alive = false
         added:Disconnect()
         removed:Disconnect()
+        table.clear(pendingAdds)
         table.clear(parts)
     end
 end
