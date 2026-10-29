@@ -238,14 +238,16 @@ function RoundCollectibles.start(ctx)
     end
 
     local function chooseCandidate()
-        -- First rewards remain easy to discover. Afterward, one in three
-        -- appears on a genuine floor-accessible perimeter deck rather
-        -- than endlessly recycling the original spawn positions.
+        -- First rewards remain easy to discover. Later, one in three
+        -- can appear on an actually reachable perimeter deck or Harbor
+        -- cargo ascent. The optional elevated objective is never active
+        -- in protected rookie rounds or with structural disasters.
         local pool = (#outskirts > 0 and (spawnIndex + 1) % 3 == 0)
             and outskirts or candidates
         local available = {}
         for _, candidate in ipairs(pool) do
             if candidate.Parent and candidate.Transparency < 0.95
+                and candidate:GetAttribute("CollapsePhase") == nil
                 and (pool == candidates or candidate.CanCollide) then
                 available[#available + 1] = candidate
             end
