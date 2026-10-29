@@ -3,7 +3,8 @@ name: Roblox Open Cloud Engine Tests
 on:
   push:
     branches: [main]
-  pull_request:
+  # Full engine tests are reserved for final main candidates and explicit dispatch.
+  # Feature PRs run only fast syntax/place-build checks in Build Validation.
   workflow_dispatch:
 
 concurrency:
