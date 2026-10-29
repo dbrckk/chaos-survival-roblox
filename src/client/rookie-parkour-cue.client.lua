@@ -250,7 +250,9 @@ local function update()
     end
     if not target or (root.Position - target.Position).Magnitude > 46 then
         hide()
-        return true
+        -- Veterans without a nearby cargo objective use the slower
+        -- existing polling cadence; only an active guide uses 0.40 s.
+        return rookie
     end
 
     local sign = gui()
