@@ -6,6 +6,17 @@
 -- physics ownership, particles or lights. Client LOD controls mobile cost.
 local ArenaDistrictArchitecture = {}
 
+-- Four navigable sectors need distinct silhouettes AND distinct color IDs.
+-- Tint existing architecture only: zero added Parts, lights, particle emitters
+-- or texture lookups, preserving Android LOD and author-owned PBR budgets.
+-- These muted hues contrast with the predominantly cyan arena ornaments.
+local SECTOR_COLOR = {
+    North = Color3.fromRGB(242, 180, 90),  -- amber / industrial
+    East = Color3.fromRGB(97, 216, 182),   -- teal / transit
+    South = Color3.fromRGB(239, 132, 153), -- coral / power
+    West = Color3.fromRGB(166, 150, 239),  -- indigo / communications
+}
+
 local function element(model, origin, name, kind, size, localFrame, color, material)
     local piece = Instance.new(kind or "Part")
     piece.Name = name
@@ -49,10 +60,19 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
     local surface = base.Position.Y + base.Size.Y * 0.5
     local origin = CFrame.new(base.Position.X + x, surface,
         base.Position.Z + z) * CFrame.Angles(0, yaw, 0)
+    local sectorColor = SECTOR_COLOR[side] or theme.Accent
+    -- Large facade masses keep their original materials; the small colored
+    -- fraction on steel/alloy makes all 16 buildings read as one world.
+    -- Window, lens and data-vane surfaces carry the stronger wayfinding hue.
     local steel = theme.Structure:Lerp(theme.Detail, 0.23)
+        :Lerp(sectorColor, 0.09)
     local dark = theme.Structure:Lerp(Color3.fromRGB(11, 19, 30), 0.42)
     local alloy = theme.Detail:Lerp(theme.Secondary, 0.16)
-    local accent = slot % 2 == 0 and theme.Secondary or theme.Accent
+        :Lerp(sectorColor, 0.17)
+    local baseAccent = slot % 2 == 0 and theme.Secondary or theme.Accent
+    local accent = baseAccent:Lerp(sectorColor, 0.72)
+    model:SetAttribute("DistrictSide", side)
+    model:SetAttribute("DistrictWayfindingColor", accent)
 
     local function make(name, kind, size, localFrame, color, material)
         return element(model, origin, name, kind, size, localFrame,
