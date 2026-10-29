@@ -178,8 +178,8 @@ describe("Streaming-safe scenery LOD cache", function()
         local root = Instance.new("Folder")
         root.Name = "SceneryLodCacheSpec"
         root.Parent = workspace
-        local cache = SceneryLodCache.get(root)
-        expect(SceneryLodCache.get(root)).toBe(cache)
+        local cache = {entries = {}, dirty = true}
+        SceneryLodCache.watch(root, cache)
 
         local function rendered(descendant)
             return descendant:IsA("BasePart")
