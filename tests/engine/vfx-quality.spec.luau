@@ -10,6 +10,7 @@ local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
 local CameraSightlineFilterCache = require("../../src/client/CameraSightlineFilterCache")
 local SceneryLodRules = require("../../src/shared/SceneryLodRules")
+local SceneryLodCache = require("../../src/client/SceneryLodCache")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
 
@@ -169,6 +170,66 @@ describe("Android frame pacing without a second RenderStepped owner", function()
         p95, slow = FramePacingRules.summary(pacing)
         expect(p95).toBe(0)
         expect(slow).toBe(0)
+    end)
+end)
+
+describe("Streaming-safe scenery LOD cache", function()
+    it("invalidates for populated streamed containers and restores actual children", function()
+        local root = Instance.new("Folder")
+        root.Name = "SceneryLodCacheSpec"
+        root.Parent = workspace
+        local cache = SceneryLodCache.get(root)
+        expect(SceneryLodCache.get(root)).toBe(cache)
+
+        local function rendered(descendant)
+            return descendant:IsA("BasePart")
+                or descendant:IsA("PointLight")
+                or descendant:IsA("ParticleEmitter")
+        end
+        expect(#SceneryLodCache.refresh(root, cache, rendered)).toBe(0)
+        expect(cache.dirty).toBe(false)
+
+        local incoming = Instance.new("Model")
+        local wrapper = Instance.new("Folder")
+        wrapper.Parent = incoming
+        local part = Instance.new("Part")
+        part.Parent = wrapper
+        local light = Instance.new("PointLight")
+        light.Parent = part
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Parent = part
+
+        -- The entire pre-populated subtree may arrive as one event.
+        incoming.Parent = root
+        task.wait()
+        expect(cache.dirty).toBe(true)
+        local entries = SceneryLodCache.refresh(root, cache, rendered)
+        expect(#entries).toBe(3)
+        local present = {}
+        for _, instance in ipairs(entries) do present[instance] = true end
+        expect(present[part]).toBe(true)
+        expect(present[light]).toBe(true)
+        expect(present[emitter]).toBe(true)
+        expect(cache.dirty).toBe(false)
+
+        -- A nested empty container still invalidates, even if no new
+        -- renderable descendant has appeared yet.
+        local empty = Instance.new("Folder")
+        empty.Parent = incoming
+        task.wait()
+        expect(cache.dirty).toBe(true)
+        entries = SceneryLodCache.refresh(root, cache, rendered)
+        expect(#entries).toBe(3)
+
+        -- Streaming-out an entire populated Model purges old geometry.
+        incoming.Parent = nil
+        task.wait()
+        expect(cache.dirty).toBe(true)
+        expect(#SceneryLodCache.refresh(root, cache, rendered)).toBe(0)
+        expect(cache.dirty).toBe(false)
+
+        root:Destroy()
+        incoming:Destroy()
     end)
 end)
 
