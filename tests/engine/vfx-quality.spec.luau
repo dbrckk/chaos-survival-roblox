@@ -916,6 +916,21 @@ describe("PBR materials for four playable district hero environments", function(
         expect(effective("High", true, "true")).toBe(72)
     end)
 
+    it("pauses PBR camera and streaming rescans only when no materials can be used", function()
+        local sample = PbrDistrictRules.cameraSamplingEnabled
+        expect(sample("High", true, false, true)).toBe(true)
+        expect(sample("Medium", true, nil, true)).toBe(true)
+        expect(sample("Medium", true, true, true)).toBe(false)
+        expect(sample("High", true, true, true)).toBe(false)
+        expect(sample("Low", true, false, true)).toBe(false)
+        expect(sample("Medium", true, false, false)).toBe(false)
+        expect(sample("High", false, true, true)).toBe(true)
+        -- The source models remain indexed while disabled, and restoring
+        -- the session-local AUTO switch re-enables camera work.
+        expect(sample("High", true, false, true)).toBe(true)
+        expect(sample("Unknown", true, false, true)).toBe(false)
+    end)
+
     it("culls PBR by current LOD hidden state and camera distance", function()
         local part = Instance.new("Part")
         part.Size = Vector3.new(8, 5, 4)
