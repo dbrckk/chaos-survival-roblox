@@ -1376,24 +1376,31 @@ local function disappearingPlatformEscape(record, root, now)
     return clampToArena(root.Position + dodge)
 end
 
--- Classic's wave is an authored floor hazard, not an ordinary disaster
--- warning in Workspace. Bots have humanlike reaction delay and must actually
--- move across the row boundary. Avoid bonuses to speed, jump or survivability.
-local function gridSweepEscape(record, root, now)
-    if arenaVariantId() ~= "Classic" then
+-- Both Classic's grid pulses and Storm Harbor's crane service sweeps
+-- are server-authoritative floor hazards, not workspace disaster markers.
+-- Bots see the exact same replicated warning as players, hesitate for
+-- their existing personality-dependent reaction time, then physically
+-- walk out of the marked lane. NO bot immunity, speed or teleport.
+local function floorSweepEscape(record, root, now)
+    local variant = arenaVariantId()
+    local folderName = variant == "Classic" and "GridSweep"
+        or (variant == "Harbor" and "HarborCargoSweep" or nil)
+    if not folderName then
         record.gridSweepThreat = nil
         record.gridSweepThreatSeenAt = nil
         return nil
     end
     local _, arena = arenaParts()
     local mechanics = arena and arena:FindFirstChild("Mechanics")
-    local folder = mechanics and mechanics:FindFirstChild("GridSweep")
+    local folder = mechanics and mechanics:FindFirstChild(folderName)
+    local phaseAttribute = variant == "Classic"
+        and "GridSweepPhase" or "HarborSweepPhase"
     local threat, localRoot
     if folder then
         for _, band in ipairs(folder:GetChildren()) do
             if band:IsA("BasePart") and (
-                band:GetAttribute("GridSweepPhase") == "Warning"
-                or band:GetAttribute("GridSweepPhase") == "Pulse"
+                band:GetAttribute(phaseAttribute) == "Warning"
+                or band:GetAttribute(phaseAttribute) == "Pulse"
             ) then
                 local point = band.CFrame:PointToObjectSpace(root.Position)
                 if math.abs(point.X) <= band.Size.X * 0.5 + 1.2
@@ -3068,7 +3075,7 @@ local function stepRecord(record, now)
             urgentTarget = immediateThreat(record, root, now)
         end
         if not urgentTarget then
-            urgentTarget = gridSweepEscape(record, root, now)
+            urgentTarget = floorSweepEscape(record, root, now)
         end
     end
 
