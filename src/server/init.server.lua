@@ -59,6 +59,7 @@ local ArenaDistrictCaches = require(script.ArenaDistrictCaches)
 local ArenaDistrictTransit = require(script.ArenaDistrictTransit)
 local DistrictSignalRush = require(script.DistrictSignalRush)
 local RoundChallenge = require(script.RoundChallenge)
+local HighGroundMastery = require(script.HighGroundMastery)
 local RoundMedals = require(script.RoundMedals)
 local FlowCombo = require(script.FlowCombo)
 local ChaosFusion = require(script.ChaosFusion)
@@ -927,7 +928,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
     -- momentum/near-miss task during a protected onboarding round.
     local roundChallenge = RoundChallenge.forContext(
         roundNumber,
-        not allowDynamicArenas
+        not allowDynamicArenas,
+        currentArenaVariant,
+        selected
     )
     local hazardContestants = AISurvivorService.hazardContestants(contestants)
     local cleanup = {}
@@ -940,6 +943,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local lastMechanicAt = {}
     local flowComboClaimed = {}
     local momentumLastAt = {}
+    local groundMasteryStates = {}
 
     local activeHazards = {}
     for _, disaster in ipairs(selected) do
@@ -979,6 +983,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundFlowCoins", 0)
         player:SetAttribute("RoundMomentum", 0)
         player:SetAttribute("RoundMomentumBest", 0)
+        player:SetAttribute("RoundPeakTier", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
@@ -1469,6 +1474,13 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end
     end
 
+    -- Reuse the existing authoritative one-second round heartbeat.
+    -- Nothing is sampled in ordinary challenges, and no extra per-frame
+    -- workers, touch listeners or client-supplied claims are created.
+    local gameplayMap = workspace:FindFirstChild("GeneratedMap")
+    local gameplayArena = gameplayMap and gameplayMap:FindFirstChild("Arena")
+    local masteryPlatforms = gameplayArena
+        and gameplayArena:FindFirstChild("Platforms")
     local endedEarly = false
     for t = roundSettings.RoundSeconds, 1, -1 do
         overdriveActive = overdriveEligible
@@ -1506,6 +1518,30 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 task.wait(2.25)
             end
             break
+        end
+
+        if roundChallenge.Metric == "highGround" and masteryPlatforms
+            and masteryPlatforms.Parent == gameplayArena then
+            local sampleAt = os.clock()
+            for _, contestant in ipairs(contestants) do
+                if contestant.Parent == Players
+                    and contestant:GetAttribute("RoundParticipant") == true
+                    and contestant:GetAttribute("RoundEliminated") ~= true
+                    and eliminated[contestant.UserId] ~= true then
+                    local memory = groundMasteryStates[contestant.UserId] or {}
+                    local nextMemory, tier = HighGroundMastery.sample(
+                        contestant.Character, masteryPlatforms, memory, sampleAt
+                    )
+                    groundMasteryStates[contestant.UserId] = nextMemory
+                    if tier then
+                        local previous = math.max(0, math.floor(tonumber(
+                            contestant:GetAttribute("RoundPeakTier")) or 0))
+                        if tier > previous then
+                            contestant:SetAttribute("RoundPeakTier", tier)
+                        end
+                    end
+                end
+            end
         end
 
         local title = selected[1].Name
@@ -2120,6 +2156,7 @@ while true do
             local roundOverdriveUses = math.max(0, math.floor(tonumber(p:GetAttribute("RoundOverdriveUses")) or 0))
             local roundMomentumBest = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMomentumBest")) or 0))
             local roundFlowCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundFlowCoins")) or 0))
+            local roundPeakTier = math.max(0, math.floor(tonumber(p:GetAttribute("RoundPeakTier")) or 0))
             local challengeProgress = RoundChallenge.progress(
                 roundChallenge,
                 roundShardCount,
@@ -2127,7 +2164,8 @@ while true do
                 roundNearMissCount,
                 roundMomentumBest,
                 roundFlowCoins,
-                survived
+                survived,
+                roundPeakTier
             )
             local challengeCompleted = challengeProgress >= roundChallenge.Target
             local challengeCoins = challengeCompleted and roundChallenge.Coins or 0
