@@ -1069,6 +1069,30 @@ describe("Chaos Survival engine", function()
                 )).toBe(nil)
             end
 
+            -- Before the first jump, all eight native spawn positions
+            -- have a reachable, low original/perimeter entry. No marker
+            -- sends new players to a high roof or an unlandable shortcut.
+            local base = arena:FindFirstChild("Base")
+            local floorY = base.Position.Y + base.Size.Y * 0.5
+            for _, offset in ipairs(variant.SpawnOffsets) do
+                local feet = Vector3.new(
+                    Config.ArenaCenter.X + offset.X, floorY,
+                    Config.ArenaCenter.Z + offset.Z
+                )
+                local entry = JumpRouteCueRules.nearestEntry(pieces, feet, 42)
+                expect(entry ~= nil).toBe(true)
+                expect(entry:GetAttribute("RouteTier")).toBe(1)
+                expect(entry:GetAttribute("BranchRoute")).toBe(nil)
+                expect(entry:GetAttribute("PerimeterRoute") == nil
+                    or entry:GetAttribute("PerimeterStep") == 1).toBe(true)
+                local rise = entry.Position.Y + entry.Size.Y * 0.5 - floorY
+                expect(rise >= 1.5 and rise <= 5.2).toBe(true)
+                expect(entry.CanCollide).toBe(true)
+            end
+            expect(JumpRouteCueRules.nearestEntry(pieces, nil, 42)).toBe(nil)
+            expect(JumpRouteCueRules.nearestEntry({}, Vector3.zero, 42))
+                .toBe(nil)
+
             local from = platforms:FindFirstChild(
                 "Platform" .. (originals + 1))
             local to = platforms:FindFirstChild(
