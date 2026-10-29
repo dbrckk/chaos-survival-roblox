@@ -374,4 +374,74 @@ function ResultPresentation.intensity(feedback)
     return 0.48
 end
 
+
+-- Compact, factual reason to replay, shown below the round's EXISTING
+-- reward receipt. Only authoritative per-player RoundFeedback can create
+-- this line: provisional server-roster results never invent currency,
+-- ranks or progress. No persistence claims or new rewards.
+local function rewardCount(value)
+    local n = tonumber(value)
+    if not n or n ~= n or n == math.huge or n == -math.huge
+        or n < 0 then return 0 end
+    return math.min(999999, math.floor(n))
+end
+
+function ResultPresentation.replayHighlight(feedback, localeId)
+    if type(feedback) ~= "table"
+        or feedback.spectating == true
+        or feedback.pendingRewards == true
+        or feedback.rewardsUnavailable == true then
+        return nil
+    end
+    local fr = french(localeId)
+    local coins = rewardCount(feedback.challengeCoins)
+    local xp = rewardCount(feedback.challengeXP)
+    if feedback.challengeCompleted == true and (coins > 0 or xp > 0) then
+        return {
+            Text = (fr and "DÉFI RÉUSSI" or "CHALLENGE CLEARED")
+                .. string.format("  +%d %s / +%d XP",
+                    coins, fr and "PIÈCES" or "COINS", xp),
+            Kind = "completed",
+        }
+    end
+
+    -- On a lost round, existing ResultTip still teaches how to avoid
+    -- the cause. This extra line shows the REAL next long-term target
+    -- without replacing that actionable survival advice.
+    local mastery = feedback.arenaMastery
+    if type(mastery) == "table" and mastery.maxed ~= true
+        and type(mastery.nextTier) == "string"
+        and mastery.nextTier ~= "" then
+        local missing = rewardCount(mastery.remaining)
+        if missing > 0 then
+            return {
+                Text = (fr and "PROCHAIN RANG " or "NEXT RANK ")
+                    .. tostring(mastery.nextTier)
+                    .. string.format("  •  %d %s", missing,
+                        fr and "POINTS RESTANTS" or "POINTS TO GO"),
+                Kind = "progress",
+            }
+        end
+    end
+
+    if feedback.survived == true and rewardCount(feedback.streak) >= 2 then
+        return {
+            Text = fr and "PROLONGE TA SÉRIE À LA PROCHAINE MANCHE"
+                or "KEEP YOUR STREAK ALIVE NEXT ROUND",
+            Kind = "progress",
+        }
+    end
+    local target = rewardCount(feedback.challengeTarget)
+    if target > 0 and feedback.challengeCompleted ~= true then
+        return {
+            Text = string.format("%s  %d/%d",
+                fr and "DÉFI DE CETTE MANCHE" or "THIS ROUND'S CHALLENGE",
+                math.min(target, rewardCount(feedback.challengeProgress)),
+                target),
+            Kind = "progress",
+        }
+    end
+    return nil
+end
+
 return ResultPresentation
