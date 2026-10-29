@@ -53,6 +53,7 @@ The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources liv
 - Onboarding funnel tracking from join to first survival and first Chaos Shard pickup
 - Contextual first-session coach covering vote, positioning, survival and optional shard collection
 - 5 rotating arena layouts with no immediate repeat: Classic Grid, Tower Run, Crossroads, Orbital Ring and Storm Harbor
+- Mobile-first result screen now shows a verified replay highlight beneath the survival advice: exact challenge bonus (Coins + XP) after the final server receipt, or the remaining points to the next arena mastery rank. Pending rewards/spectators never display invented payouts. No extra update loop, remote, sound, particle system or modal; the existing result card simply reserves a bounded one-line slot and still counts down to the next lobby.
 - Variant-specific hero landmarks, midground masses, understructures, focal lighting, material language and functional service props
 - Animated personal round-result feedback with survival, streak, shard and close-call breakdown
 - Compact live round-focus HUD with Chaos intensity and shard count
