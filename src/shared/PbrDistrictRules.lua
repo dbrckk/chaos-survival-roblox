@@ -3,6 +3,39 @@
 -- out-of-bounds architecture. Pure decisions; no graphics or event loops.
 local PbrDistrictRules = {}
 
+-- Exact creator-owned original-model asset packages shipped by this game.
+-- Geometry inside these packages keeps its authored SurfaceAppearance;
+-- only four local, explicitly marked foundation Parts may receive PBR.
+local APPROVED_ORIGINAL_IDS = {
+    [102992487644269] = true, [119468460691888] = true,
+    [137284215564363] = true, [95926792159328] = true,
+    [95878714550124] = true, [135985134195364] = true,
+}
+local FOUNDATION_PARTS = {
+    FoundationShoulder = true, FoundationInset = true,
+    FoundationBallast = true, FoundationGroundPad = true,
+}
+
+function PbrDistrictRules.isApprovedImportedFoundationOwner(owner)
+    return typeof(owner) == "Instance"
+        and owner:IsA("Model")
+        and owner:GetAttribute("CosmeticOnly") == true
+        and owner:GetAttribute("ChaosDistantScenery") == true
+        and owner:GetAttribute("OriginalFoundationBuilt") == true
+        and APPROVED_ORIGINAL_IDS[owner:GetAttribute("Original3DAssetId")] == true
+end
+
+function PbrDistrictRules.ownerLimit(tierName, owner)
+    if PbrDistrictRules.isApprovedImportedFoundationOwner(owner) then
+        -- A total of eight imported 3D assets cannot exhaust the Android
+        -- global pool: max one support each on Medium, two on High.
+        if tierName == "High" then return 2 end
+        if tierName == "Medium" then return 1 end
+        return 0
+    end
+    return PbrDistrictRules.limit(tierName)
+end
+
 function PbrDistrictRules.limit(tierName)
     if tierName == "High" then return 16 end
     if tierName == "Medium" then return 6 end
@@ -63,6 +96,9 @@ end
 
 function PbrDistrictRules.eligibleOwner(owner)
     if not owner or not owner:IsA("Model") then return false end
+    if PbrDistrictRules.isApprovedImportedFoundationOwner(owner) then
+        return true
+    end
     local sector = owner:GetAttribute("DistrictSector")
     if owner:GetAttribute("LocalOriginal3D") == true
         and owner:GetAttribute("CosmeticOnly") == true
@@ -87,7 +123,20 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         or not PbrDistrictRules.visible(part) then
         return false
     end
-    -- Preserve any original UV-authored PBR on imported mesh assets.
+    -- Never retexture the source geometry of an imported package, even
+    -- if it has no SurfaceAppearance. Only locally authored and explicitly
+    -- tagged structural foundations inside approved packages qualify.
+    local owner = part.Parent
+    if owner and owner:IsA("Model")
+        and owner:GetAttribute("Original3DAssetId") ~= nil then
+        if not PbrDistrictRules.isApprovedImportedFoundationOwner(owner)
+            or not part:IsA("Part")
+            or FOUNDATION_PARTS[part.Name] ~= true
+            or part:GetAttribute("OriginalFoundationVisual") ~= true then
+            return false
+        end
+    end
+    -- Also preserve UV-authored PBR in any OTHER original MeshPart.
     if part:IsA("MeshPart") and part:FindFirstChildOfClass("SurfaceAppearance") then
         return false
     end
@@ -98,6 +147,11 @@ end
 
 function PbrDistrictRules.materialKey(partName, material)
     local name = tostring(partName or ""):lower()
+    -- Authored original foundations have different metal/composite layers;
+    -- do not make their three metallic layers all look like ceramic.
+    if name == "foundationshoulder" then return "titanium" end
+    if name == "foundationinset" then return "oxidized" end
+    if name == "foundationgroundpad" then return "armor" end
     if name:find("foundation", 1, true)
         or name:find("basalt", 1, true)
         or name:find("concrete", 1, true)
@@ -195,6 +249,12 @@ function PbrDistrictRules.selectionPriority(
     end
     score += PbrDistrictRules.cameraFacingBonus(
         part, cameraPosition, cameraLook)
+    -- Playable 3D districts win ties over optional out-of-bounds supports.
+    -- At close range the original foundation can still receive spare PBR.
+    if part:GetAttribute("OriginalFoundationVisual") == true
+        and PbrDistrictRules.isApprovedImportedFoundationOwner(part.Parent) then
+        score -= 950
+    end
     if alreadyApplied then score += 160 end
     return score
 end
