@@ -36,6 +36,8 @@ local VARIANT_ART = {
         "orbital_halo_array", "reactor_spire", "sky_transit_exchange", "perimeter_gate"},
     Orbital = {"orbital_halo_array", "perimeter_gate", "reactor_spire", "orbital_halo_array",
         "sky_transit_exchange", "plasma_foundry", "service_crane", "perimeter_gate"},
+    Harbor = {"service_crane", "plasma_foundry", "perimeter_gate", "service_crane",
+        "sky_transit_exchange", "reactor_spire", "plasma_foundry", "orbital_halo_array"},
 }
 
 -- Each side has two DISTINCT stations, with lateral offsets to avoid
