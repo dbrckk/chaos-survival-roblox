@@ -182,6 +182,48 @@ function HeroArchitecture.build(decor, base, variantId, theme)
                 Vector3.new(2.1, 8.4, 2.1),
                 Vector3.new(side * 4.1, 13, 0), metal)
         end
+    elseif variantId == "Harbor" then
+        -- Drydock flagship with a real hull silhouette, wheelhouse,
+        -- two suspended container lifts and a raised shipyard gantry.
+        -- All inert skyline, far outside traversable/telegraph space.
+        piece("HarborDrydockFoundation", Vector3.new(27, 1.8, 17),
+            Vector3.new(0, 0.9, 0), shadow)
+        piece("CargoHull", Vector3.new(23, 6.2, 11),
+            Vector3.new(0, 5.0, 0), dark)
+        piece("PortFreeboard", Vector3.new(22, 2.0, 1),
+            Vector3.new(0, 8.4, -5.1), metal)
+        piece("StarboardFreeboard", Vector3.new(22, 2.0, 1),
+            Vector3.new(0, 8.4, 5.1), metal)
+        piece("HarborBridge", Vector3.new(7.0, 6.5, 8.0),
+            Vector3.new(-6.2, 11.5, 0), metal)
+        glazing("HarborBridgeGlass", Vector3.new(0.16, 2.3, 6.2),
+            Vector3.new(-9.8, 12.8, 0))
+        piece("BowRamp", Vector3.new(5, 1.2, 10),
+            Vector3.new(12.0, 9.0, 0), trim)
+        piece("SignalTower", Vector3.new(0.75, 10.5, 0.75),
+            Vector3.new(-6.2, 20.0, 0), metal)
+        piece("RadarBar", Vector3.new(5.6, 0.38, 0.7),
+            Vector3.new(-6.2, 25.5, 0), trim)
+        piece("ContainerDeckA", Vector3.new(6.5, 3.3, 4.5),
+            Vector3.new(0, 10.0, -2.4), metal)
+        piece("ContainerDeckB", Vector3.new(6.5, 3.3, 4.5),
+            Vector3.new(6.8, 10.0, 2.4), dark)
+        for _, side in ipairs({-1, 1}) do
+            piece("GantryPylon" .. tostring(side),
+                Vector3.new(1.2, 21, 1.2),
+                Vector3.new(side * 11.5, 19, 0), metal)
+            beam("DiagonalDockBrace" .. tostring(side),
+                Vector3.new(side * 13.5, 7.8, 0),
+                Vector3.new(side * 11.5, 30, 0), 0.66)
+        end
+        piece("GantryCrown", Vector3.new(26, 1.5, 2.6),
+            Vector3.new(0, 30, 0), dark)
+        piece("OverheadTrolley", Vector3.new(2.5, 2.1, 3.3),
+            Vector3.new(3, 28.5, 0), trim)
+        piece("HangingCable", Vector3.new(0.23, 9, 0.23),
+            Vector3.new(3, 23, 0), shadow)
+        piece("CargoSpreader", Vector3.new(8, 0.65, 1.2),
+            Vector3.new(3, 18.4, 0), metal)
     else
         -- Reactor array: two concentric, genuinely 3D segmented orbital
         -- rings plus braced pylons, central core and an inset lens.
@@ -234,6 +276,11 @@ function HeroArchitecture.build(decor, base, variantId, theme)
             "HaloLens", "OrbitalOuterArc1", "OrbitalOuterArc3",
             "OrbitalOuterArc5", "OrbitalOuterArc7", "OrbitalOuterArc9",
             "OrbitalOuterArc11",
+        },
+        Harbor = {
+            "HarborDrydockFoundation", "CargoHull", "HarborBridge",
+            "HarborBridgeGlass", "GantryPylon-1", "GantryPylon1",
+            "GantryCrown", "CargoSpreader",
         },
     }
     local kept = essentials[variantId] or essentials.Classic
