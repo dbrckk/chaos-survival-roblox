@@ -293,7 +293,7 @@ local perimeterLocations = {
     Towers = {entryX = 50, entryZ = 46, outerX = 63, outerZ = 46},
     Crossroads = {entryX = 51, entryZ = 48, outerX = 64, outerZ = 48},
     Orbital = {entryX = 46, entryZ = 46, outerX = 60, outerZ = 54},
-    Harbor = {entryX = 63, entryZ = 72, outerX = 70, outerZ = 72},
+    Harbor = {entryX = 58, entryZ = 72, outerX = 71, outerZ = 72},
 }
 
 ArenaVariants.PerimeterSteps = 8
