@@ -847,8 +847,17 @@ describe("Chaos Survival engine", function()
                 sectorCounts[sectorSide] = (sectorCounts[sectorSide] or 0) + 1
                 local signal = model:FindFirstChild("RecessedSignal")
                 expect(signal ~= nil and signal:IsA("BasePart")).toBe(true)
-                expect(model:GetAttribute("DistrictWayfindingColor") == signal.Color)
-                    .toBe(true)
+                -- Roblox can store Color3 attributes and Part.Color with
+                -- slightly different floating-point precision. Compare
+                -- with a visible-color tolerance, not bitwise equality.
+                local savedColor = model:GetAttribute("DistrictWayfindingColor")
+                expect(typeof(savedColor)).toBe("Color3")
+                local colorError = math.abs(savedColor.R - signal.Color.R)
+                    + math.abs(savedColor.G - signal.Color.G)
+                    + math.abs(savedColor.B - signal.Color.B)
+                assert(colorError < 0.025,
+                    "District wayfinding material/attribute mismatch: "
+                        .. model.Name .. " error=" .. tostring(colorError))
                 if profile == 1 then
                     sectorSignals[sectorSide] = signal.Color
                 end
