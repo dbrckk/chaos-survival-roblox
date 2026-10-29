@@ -831,6 +831,8 @@ describe("Chaos Survival engine", function()
             expect(districts:GetAttribute("District3DCount")).toBe(16)
             expect(#districts:GetChildren()).toBe(16)
             local profiles = {}
+            local sectorCounts = {}
+            local sectorSignals = {}
             for _, model in ipairs(districts:GetChildren()) do
                 expect(model:IsA("Model")).toBe(true)
                 expect(model.ModelStreamingMode).toBe(Enum.ModelStreamingMode.Atomic)
@@ -838,6 +840,27 @@ describe("Chaos Survival engine", function()
                 expect(type(profile)).toBe("number")
                 expect(profile >= 1 and profile <= 4).toBe(true)
                 profiles[profile] = (profiles[profile] or 0) + 1
+                local sectorSide = model:GetAttribute("DistrictSide")
+                expect(type(sectorSide)).toBe("string")
+                expect(({North=true, East=true, South=true, West=true})[sectorSide])
+                    .toBe(true)
+                sectorCounts[sectorSide] = (sectorCounts[sectorSide] or 0) + 1
+                local signal = model:FindFirstChild("RecessedSignal")
+                expect(signal ~= nil and signal:IsA("BasePart")).toBe(true)
+                -- Roblox can store Color3 attributes and Part.Color with
+                -- slightly different floating-point precision. Compare
+                -- with a visible-color tolerance, not bitwise equality.
+                local savedColor = model:GetAttribute("DistrictWayfindingColor")
+                expect(typeof(savedColor)).toBe("Color3")
+                local colorError = math.abs(savedColor.R - signal.Color.R)
+                    + math.abs(savedColor.G - signal.Color.G)
+                    + math.abs(savedColor.B - signal.Color.B)
+                assert(colorError < 0.025,
+                    "District wayfinding material/attribute mismatch: "
+                        .. model.Name .. " error=" .. tostring(colorError))
+                if profile == 1 then
+                    sectorSignals[sectorSide] = signal.Color
+                end
                 local signature = ({
                     "OrbitalSurveyLens", "CabShell", "VentTurbine0",
                     "SignalCrystal",
@@ -870,6 +893,21 @@ describe("Chaos Survival engine", function()
             end
             for profile = 1, 4 do
                 expect(profiles[profile]).toBe(4)
+            end
+            -- Four navigable sectors are visually distinguishable at
+            -- player height without adding geometry, lights or UI.
+            local sides = {"North", "East", "South", "West"}
+            for _, side in ipairs(sides) do
+                expect(sectorCounts[side]).toBe(4)
+                expect(typeof(sectorSignals[side])).toBe("Color3")
+            end
+            for i = 1, #sides do
+                for j = i + 1, #sides do
+                    local a, b = sectorSignals[sides[i]], sectorSignals[sides[j]]
+                    local difference = math.abs(a.R - b.R)
+                        + math.abs(a.G - b.G) + math.abs(a.B - b.B)
+                    expect(difference > 0.20).toBe(true)
+                end
             end
             local districtArrows = 0
             for _, instance in ipairs(decor:GetChildren()) do
