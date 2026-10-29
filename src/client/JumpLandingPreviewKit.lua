@@ -188,7 +188,9 @@ function JumpLandingPreviewKit.new(player)
                 or Color3.fromRGB(135, 222, 252))
         local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
         local reduced = player:GetAttribute("ReduceMotion") == true
-        local count = tier == "Low" and 2 or 4
+        -- A danger X needs all four EXISTING segments on Android Low,
+        -- otherwise two fragments could resemble a safe landing bracket.
+        local count = warning and 4 or (tier == "Low" and 2 or 4)
         local up = hit.Normal.Unit
         local forward = Vector3.new(0, 0, -1)
         forward = forward - up * forward:Dot(up)
