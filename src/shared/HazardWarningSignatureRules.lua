@@ -175,6 +175,38 @@ function HazardWarningSignatureRules.jumpPrompt(secondsRemaining, localeId, loca
     return key == "JUMP_SHOCK_NOW" and "JUMP!" or "GET READY"
 end
 
+-- Choose ONE actionable instruction when Double Chaos combines global
+-- Jump Shock with a nearby bomb/meteor. A jump only becomes urgent inside
+-- the server-aligned 0.42-second action window; an impact striking sooner
+-- still wins. Outside that final window the local escape route remains
+-- the priority, so we never replace an imminent dodge with "GET READY".
+-- Pure logic for reproducible Android QA without simulating any damage.
+function HazardWarningSignatureRules.mobileActionCue(
+    escapeClearance, escapeRemaining, shockRemaining
+)
+    local function finite(value)
+        return type(value) == "number" and value == value
+            and math.abs(value) < math.huge
+    end
+    local escape = finite(escapeClearance) and escapeClearance <= 5
+        and finite(escapeRemaining) and escapeRemaining > 0
+    local shock = finite(shockRemaining) and shockRemaining > 0
+    if shock and shockRemaining <= HazardWarningSignatureRules.JumpNowWindow
+        and (not escape or escapeRemaining > shockRemaining + 0.06) then
+        return "shock"
+    end
+    if escape then return "escape" end
+    if shock then return "shock" end
+    return nil
+end
+
+-- On touch, many translucent escape chevrons obscure moving hazards and
+-- the player's feet. Only the most actionable nearby strike gets arrows;
+-- desktop continues to show multiple strikes except at Low/final rush.
+function HazardWarningSignatureRules.nearestEscapeArrowsOnly(touch, tier, finalRush)
+    return touch == true or tier == "Low" or finalRush == true
+end
+
 -- The world-space warning and the top-of-screen mobile cue share this
 -- localized timeline and the server's replicated impact countdown.
 local WARNING_IDS = {
