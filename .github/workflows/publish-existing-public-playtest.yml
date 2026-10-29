@@ -127,7 +127,11 @@ jobs:
               if (
                   run.get("head_sha") == sha
                   and run.get("head_branch") == "main"
-                  and run.get("event") == "push"
+                  # New owner policy: final tests run only on deliberate
+                  # workflow_dispatch, never during ordinary feature work.
+                  # Older already-green push checks for the exact SHA
+                  # are accepted solely for backward compatibility.
+                  and run.get("event") in ("workflow_dispatch", "push")
                   and run.get("status") == "completed"
                   and run.get("conclusion") == "success"
               ):
