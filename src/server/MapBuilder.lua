@@ -510,6 +510,47 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
             CFrame.new(0, 45, 0), Enum.Material.Metal, hull)
         piece("SignalCrown", "WedgePart", Vector3.new(5.6, 3.4, 2.8),
             CFrame.new(0, 54, 0), Enum.Material.Metal, rim, 0.12)
+    elseif variant.Id == "Harbor" then
+        -- Northern container-lift terminal: paired heavy port towers,
+        -- unequal suspended payloads and a tall articulated gantry.
+        -- Original exterior-only metal parts; no lights/collision/VFX.
+        for side = -1, 1, 2 do
+            piece(side < 0 and "QuayPortLeg" or "QuayStarboardLeg",
+                "Part", Vector3.new(3.3, 40, 3.8),
+                CFrame.new(side * 16, 20, 0),
+                Enum.Material.Metal, hull)
+            piece(side < 0 and "QuayRakerPort" or "QuayRakerStarboard",
+                "Part", Vector3.new(1.2, 34, 1.5),
+                CFrame.new(side * 10.5, 25, 0)
+                    * CFrame.Angles(0, 0, side * math.rad(23)),
+                Enum.Material.Metal, metal)
+            piece(side < 0 and "QuayWinchPort" or "QuayWinchStarboard",
+                "Part", Vector3.new(5.4, 4.2, 5.5),
+                CFrame.new(side * 10.6, 44, 0),
+                Enum.Material.Metal, metal)
+            piece(side < 0 and "QuayHoistPort" or "QuayHoistStarboard",
+                "Part", Vector3.new(0.3, 17, 0.3),
+                CFrame.new(side * 10.6, 33, -2.5),
+                Enum.Material.Metal, rim)
+        end
+        piece("QuayCraneSpanningBeam", "Part",
+            Vector3.new(41, 2.1, 4.4), CFrame.new(0, 43.5, 0),
+            Enum.Material.Metal, metal)
+        piece("QuayCraneCounterweight", "Part",
+            Vector3.new(7, 5.8, 7), CFrame.new(-10, 48, 3.0),
+            Enum.Material.Metal, hull)
+        piece("QuayStormMast", "Part",
+            Vector3.new(1.1, 11.5, 1.1), CFrame.new(0, 51.5, 0),
+            Enum.Material.Metal, metal)
+        piece("QuayControlCab", "Part",
+            Vector3.new(7.2, 5.4, 5.2), CFrame.new(4.8, 39.5, 0),
+            Enum.Material.Glass, glint, 0.25)
+        piece("QuayCargoStack", "Part",
+            Vector3.new(21, 4.2, 9), CFrame.new(0, 4.1, 0),
+            Enum.Material.Metal, hull)
+        piece("QuaySpreader", "Part",
+            Vector3.new(25, 0.8, 1.8), CFrame.new(0, 23, -2.5),
+            Enum.Material.Metal, rim)
     else
         -- Classic Grid: a long-range relay observatory and dish array.
         -- Cylindrical receivers/diagonal legs interrupt the default
@@ -675,6 +716,40 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
             CFrame.new(0, 43, 0), Enum.Material.Metal, alloy)
         piece("CabWindow", "Part", Vector3.new(7, 2.2, 0.28),
             CFrame.new(0, 43, -3.6), Enum.Material.Glass, signal, 0.24)
+    elseif variant.Id == "Harbor" then
+        -- Southern storm-break lightship and twin container stacks.
+        -- This open drydock gantry stays behind the player's horizon.
+        for side = -1, 1, 2 do
+            piece(side < 0 and "WestQuayColumn" or "EastQuayColumn",
+                "Part", Vector3.new(4.5, 35, 4.5),
+                CFrame.new(side * 16, 17.5, 0),
+                Enum.Material.Concrete, hull)
+            piece(side < 0 and "WestQuayCargo" or "EastQuayCargo",
+                "Part", Vector3.new(11, 7, 8),
+                CFrame.new(side * 16, 5.5, 0),
+                Enum.Material.Metal, alloy)
+            piece(side < 0 and "WestContainerHoist" or "EastContainerHoist",
+                "Part", Vector3.new(0.8, 19, 1.0),
+                CFrame.new(side * 12.5, 27, 0),
+                Enum.Material.Metal, signal)
+            piece(side < 0 and "WestQuayRig" or "EastQuayRig",
+                "WedgePart", Vector3.new(8, 4, 5),
+                CFrame.new(side * 17, 38, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, alloy)
+        end
+        piece("HarborLightshipBridge", "Part",
+            Vector3.new(41, 2.2, 5.7), CFrame.new(0, 34.5, 0),
+            Enum.Material.Metal, hull)
+        piece("HarborSignalCab", "Part",
+            Vector3.new(9, 4.5, 6), CFrame.new(0, 39, 0),
+            Enum.Material.Metal, alloy)
+        piece("HarborStormLens", "Part",
+            Vector3.new(6.8, 2, 0.22), CFrame.new(0, 39.3, -3.1),
+            Enum.Material.Glass, signal, 0.25)
+        piece("HarborStormBeacon", "Part",
+            Vector3.new(0.8, 7, 0.8), CFrame.new(0, 46, 0),
+            Enum.Material.Metal, hull)
     else
         -- Classic Grid's multi-dish radar observatory contrasts with
         -- the taller single northern relay tower.
