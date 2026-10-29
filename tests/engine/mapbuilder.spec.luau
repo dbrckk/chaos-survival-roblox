@@ -13,8 +13,52 @@ local OrbitalRouteSignKit = require("../../src/client/OrbitalRouteSignKit")
 local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
 local SpawnSafety = require("../../src/server/SpawnSafety")
 local ArenaPresentation = require("../../src/shared/ArenaPresentation")
+local VisualTheme = require("../../src/shared/VisualTheme")
 
 describe("Chaos Survival engine", function()
+    it("gives all four physical parkour maps distinct premium deck materials", function()
+        local expected = {
+            Classic = Enum.Material.DiamondPlate,
+            Towers = Enum.Material.Foil,
+            Crossroads = Enum.Material.CorrodedMetal,
+            Orbital = Enum.Material.CeramicTiles,
+        }
+        local seen = {}
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local material = expected[variantId]
+            expect(material ~= nil).toBe(true)
+            expect(seen[material] == nil).toBe(true)
+            seen[material] = variantId
+            expect(VisualTheme.arena(variantId).PanelMaterial).toBe(material)
+
+            local root = MapBuilder.build(Config, variantId, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local decor = arena:FindFirstChild("Decor")
+            local platforms = arena:FindFirstChild("Platforms")
+            local n = #platforms:GetChildren()
+
+            -- Sample near, center, and outer branch platforms. Deck
+            -- materials are cosmetic; their true server collision,
+            -- geometry, structural material, and hazard tags are intact.
+            for _, index in ipairs({1, math.floor(n * 0.5), n}) do
+                local platform = platforms:FindFirstChild("Platform" .. index)
+                if not platform then
+                    platform = platforms:FindFirstChild("Skybridge" .. index)
+                end
+                local panel = decor:FindFirstChild("PlatformPanel" .. index)
+                expect(platform ~= nil).toBe(true)
+                expect(panel ~= nil).toBe(true)
+                expect(platform.Anchored).toBe(true)
+                expect(platform.CanCollide).toBe(true)
+                expect(panel.Material).toBe(material)
+                expect(panel.CanCollide).toBe(false)
+                expect(panel.CanTouch).toBe(false)
+                expect(panel.CanQuery).toBe(false)
+            end
+            root:Destroy()
+        end
+    end)
+
     it("builds a complete playable map hierarchy", function()
         local existing = workspace:FindFirstChild("GeneratedMap")
         if existing then
