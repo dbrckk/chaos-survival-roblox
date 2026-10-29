@@ -110,9 +110,16 @@ jobs:
           staging_safe = bool(staging_universe and staging_place
                               and staging_universe != expected["ROBLOX_UNIVERSE_ID"]
                               and staging_place != expected["ROBLOX_PLACE_ID"])
-          row("Isolated private staging", "PASS" if staging_safe else "BLOCKED",
+          # Staging isolation is mandatory for the *certified* release
+          # pipeline, but the owner-approved public-playtest workflow
+          # deliberately targets the EXISTING public game. Do not mark the
+          # unrelated public-playtest preflight as failed just because the
+          # full-release certification path has not been provisioned.
+          row("Isolated private staging (certified release only)",
+              "PASS" if staging_safe else "CHECK",
               "Separate target IDs configured" if staging_safe else
-              "Missing or colliding staging IDs: full Studio/Android certification is blocked")
+              "Not isolated: FULL release certification remains blocked; "
+              "this is not required for the explicitly uncertified public playtest")
 
           try:
               query = urllib.parse.urlencode({
@@ -147,7 +154,7 @@ jobs:
               notes.append(f"Actions inspection unavailable: {type(exc).__name__}")
 
           report = [
-              "# Chaos Survival — READ-ONLY public release preflight",
+              "# Chaos Survival — READ-ONLY public-playtest source preflight",
               "",
               f"Candidate: `{sha}`",
               "",
@@ -155,16 +162,25 @@ jobs:
               "| --- | --- | --- |",
               *rows,
               "",
-              ("**Automated source/target preflight: BLOCKED.**" if blocking
-               else "**Automated source/target preflight: PASS.**"),
+              ("**Public-playtest source/target preflight: BLOCKED.**" if blocking
+               else "**Public-playtest source/target preflight: PASS.**"),
               "",
+              ("**Full-release certification: BLOCKED — no isolated staging.**"
+               if not staging_safe else
+               "**Full-release certification: NOT VERIFIED — additional "
+               "Studio, Android and player checks are required.**"),
+              "",
+              "The playtest preflight does not override the Release Candidate Gate,",
+              "and a PASS here is NOT a certified release or permission to publish.",
               "This report does **not** publish the place, prove Roblox API-key permissions,",
               "verify the live place version, or certify real device/Studio results.",
               "Do not declare 1.0 certified until authenticated Studio, Android,",
               "persistence/rejoin and real-player acceptance are documented.",
               "",
-              "For any public playtest update, use the separate manual workflow only",
-              "after correcting variables and explicitly accepting the risks.",
+              "For a public playtest update, use the separate, explicitly",
+              "acknowledged public workflow ONLY after successful exact-SHA",
+              "build and engine checks and verified production target IDs.",
+              "Private staging credentials are not needed for this path.",
           ]
           if notes:
               report.extend(["", "Inspection notes:", *["- " + note for note in notes]])
