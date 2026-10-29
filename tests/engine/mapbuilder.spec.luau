@@ -1097,6 +1097,42 @@ describe("Chaos Survival engine", function()
                     )).toBe(to)
                     expect(JumpRouteCueRules.jumpable(to, from)).toBe(false)
                 end
+                -- A fifth-step perimeter fork has TWO real alternative
+                -- landings: continue along the ridge or climb the
+                -- orthogonal side lookout. Both respect ordinary R15
+                -- rise/gap constraints; collapsing one leaves the other.
+                local fork = platforms:FindFirstChild("Platform" .. (
+                    originals + (route - 1) * ArenaVariants.PerimeterSteps + 5))
+                local forward = platforms:FindFirstChild("Platform" .. (
+                    originals + (route - 1) * ArenaVariants.PerimeterSteps + 6))
+                local side = platforms:FindFirstChild("Platform" .. (
+                    perimeterEnd + (route - 1) * 4 + 1))
+                local mainOption, sideOption =
+                    JumpRouteCueRules.forkOptions(fork, pieces)
+                expect(mainOption).toBe(forward)
+                expect(sideOption).toBe(side)
+                expect(JumpRouteCueRules.jumpable(fork, side)).toBe(true)
+                expect(JumpRouteCueRules.nextPhysical(
+                    fork, pieces, Config.ArenaCenter, variantId
+                )).toBe(forward)
+                forward.CanCollide = false
+                expect(JumpRouteCueRules.nextPhysical(
+                    fork, pieces, Config.ArenaCenter, variantId
+                )).toBe(side)
+                forward.CanCollide = true
+                side.CanCollide = false
+                local availableMain, unavailableSide =
+                    JumpRouteCueRules.forkOptions(fork, pieces)
+                expect(availableMain).toBe(forward)
+                expect(unavailableSide).toBe(nil)
+                forward.CanCollide = false
+                expect(JumpRouteCueRules.nextPhysical(
+                    fork, pieces, Config.ArenaCenter, variantId
+                )).toBe(nil)
+                forward.CanCollide = true
+                side.CanCollide = true
+                -- The final outer lookout is still a terminal platform,
+                -- not a route back to the beginning.
                 local last = platforms:FindFirstChild("Platform" .. (
                     originals + route * ArenaVariants.PerimeterSteps))
                 expect(JumpRouteCueRules.nextPhysical(
