@@ -1,6 +1,6 @@
 local ArenaVariants = {}
 
-ArenaVariants.Order = {"Classic", "Towers", "Crossroads", "Orbital"}
+ArenaVariants.Order = {"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}
 
 ArenaVariants.Definitions = {
     Classic = {
@@ -237,6 +237,51 @@ ArenaVariants.Definitions = {
 }
 
 
+-- STORM HARBOR: four ORIGINAL cargo-pier switchbacks, each a genuine
+-- seven-jump lane with one-stud clear gaps and three-stud rises.
+-- Physical zig-zags make the harbor an alternative to the circular
+-- reactor and straight perimeter climbs, rather than a fifth recolor.
+ArenaVariants.Definitions.Harbor = {
+    Id = "Harbor",
+    Name = "STORM HARBOR",
+    StrategyHint = "CROSS CARGO PIERS • CLIMB STORM GANTRIES • SURVIVE TO 0",
+    BaseSize = Vector3.new(320, 2, 320),
+    BaseColor = Color3.fromRGB(48, 83, 96),
+    PlatformColor = Color3.fromRGB(92, 170, 185),
+    SpawnOffsets = {
+        Vector3.new(-45, 3, -12), Vector3.new(45, 3, -12),
+        Vector3.new(-45, 3, 12), Vector3.new(45, 3, 12),
+        Vector3.new(-12, 3, -45), Vector3.new(12, 3, -45),
+        Vector3.new(-12, 3, 45), Vector3.new(12, 3, 45),
+    },
+    Platforms = (function()
+        local decks = {}
+        local corners = {
+            {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
+        }
+        local turns = {
+            {12, 11}, {25, 11}, {25, 24}, {38, 24},
+            {38, 37}, {51, 37}, {51, 50},
+        }
+        for route, signs in ipairs(corners) do
+            for step, coords in ipairs(turns) do
+                table.insert(decks, {
+                    offset = Vector3.new(
+                        signs[1] * coords[1], 4 + (step - 1) * 3,
+                        signs[2] * coords[2]
+                    ),
+                    size = Vector3.new(12, 2, 12),
+                    RouteTier = math.min(step, 4),
+                    HarborRoute = route,
+                    HarborStep = step,
+                })
+            end
+        end
+        return decks
+    end)(),
+}
+
+
 -- Mega districts: 320 x 320 is 2.04x the preceding 224 x 224 map.
 -- Keep the authored central routes and bridge indices unchanged. Eight
 -- physical, ground-supported perimeter terraces now lead toward the outer
@@ -248,6 +293,7 @@ local perimeterLocations = {
     Towers = {entryX = 50, entryZ = 46, outerX = 63, outerZ = 46},
     Crossroads = {entryX = 51, entryZ = 48, outerX = 64, outerZ = 48},
     Orbital = {entryX = 46, entryZ = 46, outerX = 60, outerZ = 54},
+    Harbor = {entryX = 58, entryZ = 72, outerX = 71, outerZ = 72},
 }
 
 ArenaVariants.PerimeterSteps = 8

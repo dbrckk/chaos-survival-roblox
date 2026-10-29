@@ -361,8 +361,8 @@ describe("Arena variants", function()
         invalid:Destroy()
     end)
 
-    it("defines four distinct playable layouts", function()
-        expect(#ArenaVariants.Order).toBe(4)
+    it("defines five distinct playable survival layouts", function()
+        expect(#ArenaVariants.Order).toBe(5)
 
         local seen = {}
         for _, id in ipairs(ArenaVariants.Order) do

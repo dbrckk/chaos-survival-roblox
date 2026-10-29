@@ -30,6 +30,12 @@ function ArenaPresentation.lookTarget(variantId, spawnPosition, arenaCenter)
         local tangent = Vector3.new(-radial.Z, 0, radial.X)
         local inward = -radial
         return spawn + tangent * 26 + inward * 11 + Vector3.new(0, 6, 0)
+    elseif variant == "Harbor" then
+        -- Face the actual first cargo-pier takeoff from either side of
+        -- the docks, not the empty harbor water/camera periphery.
+        local dockX = spawn.X >= center.X and 12 or -12
+        local dockZ = spawn.Z >= center.Z and 11 or -11
+        return center + Vector3.new(dockX, 5, dockZ)
     end
 
     return center + Vector3.new(0, 6, 0)

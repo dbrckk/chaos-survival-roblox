@@ -81,6 +81,20 @@ ArenaMechanics.Definitions = {
             return result
         end)(),
     },
+    Harbor = {
+        Name = "SQUALL TRANSFER PADS",
+        Hint = "Use sea-blue squall pads for transfers; climb seven cargo-pier steps and reach safe gantries",
+        Color = Color3.fromRGB(78, 202, 222),
+        Pads = {
+            -- Clear of pier footprints and first eight spawn points.
+            -- Strong directional transfers remain strictly capped by
+            -- MovementSafety; no scripted boost or paid mobility.
+            {offset = Vector3.new(35, 1.7, 0), impulse = Vector3.new(-32, 12, 22)},
+            {offset = Vector3.new(-35, 1.7, 0), impulse = Vector3.new(32, 12, -22)},
+            {offset = Vector3.new(0, 1.7, 35), impulse = Vector3.new(22, 12, -32)},
+            {offset = Vector3.new(0, 1.7, -35), impulse = Vector3.new(-22, 12, 32)},
+        },
+    },
 }
 
 -- Optional dynamic challenges are deliberately disabled in early or
@@ -91,6 +105,7 @@ ArenaMechanics.BaselineHints = {
     Towers = "Climb from the hub through low-to-high decks; cyan updrafts assist when safe",
     Crossroads = "Reach the hub, then climb an outer lane and its elevated side branch",
     Orbital = "Follow a floor-level green booster to an outer ramp and cross a Helix",
+    Harbor = "Follow seven-step cargo switchbacks; blue squall pads offer optional cross-dock transfers",
 }
 
 function ArenaMechanics.effectiveHint(variantId, dynamicStarted)

@@ -252,6 +252,29 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
         return nil
     end
 
+    -- Storm Harbor's tight 90-degree switchbacks need their real,
+    -- authored order. Spatial nearest-tier selection alone can steer
+    -- novices to a DIFFERENT quay with no attainable jump.
+    local harborRoute = from:GetAttribute("HarborRoute")
+    local harborStep = from:GetAttribute("HarborStep")
+    if harborRoute ~= nil or harborStep ~= nil then
+        if type(harborRoute) ~= "number" or harborRoute % 1 ~= 0
+            or harborRoute < 1 or harborRoute > 4
+            or type(harborStep) ~= "number" or harborStep % 1 ~= 0
+            or harborStep < 1 or harborStep >= 7 then
+            return nil
+        end
+        for _, destination in ipairs(orderedPlatforms) do
+            if destination ~= from and destination:IsA("BasePart")
+                and destination:GetAttribute("HarborRoute") == harborRoute
+                and destination:GetAttribute("HarborStep") == harborStep + 1
+                and JumpRouteCueRules.jumpable(from, destination) then
+                return destination
+            end
+        end
+        return nil
+    end
+
     local route = from:GetAttribute("PerimeterRoute")
     local step = from:GetAttribute("PerimeterStep")
     local branch = from:GetAttribute("BranchRoute")

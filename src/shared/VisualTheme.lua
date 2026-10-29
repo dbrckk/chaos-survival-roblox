@@ -81,6 +81,18 @@ VisualTheme.Arenas = {
         Secondary = Color3.fromRGB(74, 188, 255),
         Detail = Color3.fromRGB(100, 170, 160),
     },
+    Harbor = {
+        -- Storm-port slate/concrete and salt-worn pier planks. Muted blue
+        -- and seafoam reserve orange/red exclusively for hazard telegraphs.
+        FloorMaterial = Enum.Material.Concrete,
+        StructureMaterial = Enum.Material.Metal,
+        PanelMaterial = Enum.Material.WoodPlanks,
+        Surface = Color3.fromRGB(26, 48, 59),
+        Structure = Color3.fromRGB(45, 75, 85),
+        Accent = Color3.fromRGB(70, 195, 211),
+        Secondary = Color3.fromRGB(111, 163, 215),
+        Detail = Color3.fromRGB(122, 172, 173),
+    },
 }
 
 function VisualTheme.arena(id)
