@@ -2,6 +2,7 @@
 -- physics, hazards, the server map or another player's performance budget.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
@@ -258,7 +259,7 @@ local function rebuild()
     if not arena or not base then return end
 
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled).Name
     local theme = VisualTheme.arena(variant)
     activeBase = base
     activeTier = tier
