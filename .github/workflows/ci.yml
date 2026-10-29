@@ -13,7 +13,58 @@ permissions:
   contents: read
 
 jobs:
+  # During active development, do only a quick syntax + packaging smoke
+  # check. No engine simulation, multi-suite regressions or asset audits.
+  # Those remain mandatory on exact main before ANY public release.
+  pr-fast:
+    name: Fast PR smoke (syntax + place)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Luau syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            --retry 3 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 15 --max-time 90 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            -o /tmp/luau.zip \
+            https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          unzip -tq /tmp/luau.zip >/dev/null
+          mkdir -p /tmp/luau
+          unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
+            xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
+      - name: Package exact PR candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            --retry 3 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 15 --max-time 90 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            -o /tmp/rojo.zip \
+            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          unzip -tq /tmp/rojo.zip >/dev/null
+          mkdir -p /tmp/rojo
+          unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          python3 tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel CANDIDATE
+          /tmp/rojo/rojo build default.project.json -o /tmp/chaos-pr-smoke.rbxlx
+          test -s /tmp/chaos-pr-smoke.rbxlx
+          grep -Fq "$GITHUB_SHA" /tmp/chaos-pr-smoke.rbxlx
+      - name: Guard critical mobile first-frame budget
+        run: python tools/validate_mobile_vfx_first_frame.py
+
+  # On main the unchanged comprehensive source, architecture, privacy,
+  # Android, integrity and full packaging gates still run for the exact
+  # SHA, before the public publish workflow can accept it.
   build:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
