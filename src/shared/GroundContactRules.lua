@@ -83,22 +83,26 @@ end
 
 function GroundContactRules.landingAudio(material, airtime, tierName, reducedMotion)
     local t = tonumber(airtime)
-    if not finite(t) or t < 0.40 or t > 8 then return nil end
+    if not finite(t) or t < 0.55 or t > 8 then return nil end
     -- This is played only after real Freefall -> Landed/Running. The
     -- native avatar's own landing track remains audible; additional
     -- weight is small, transient and surface-dependent, never a
     -- fabricated jump force or looping footstep.
     local style = GroundContactRules.materialStyle(material)
     local accents = {
-        Mechanical = -0.24,
-        Mineral = -0.41,
-        Crystal = 0.08,
-        Neutral = -0.12,
+        Mechanical = -0.32,
+        Mineral = -0.45,
+        Crystal = 0.11,
+        Neutral = -0.18,
     }
-    local volume = math.clamp(0.29 + (t - 0.4) * 0.16, 0.29, 0.63)
-    if tierName == "Low" then volume *= 0.78
-    elseif tierName == "Medium" then volume *= 0.91 end
-    if reducedMotion == true then volume *= 0.82 end
+    -- Existing engine regression requires a subtle, tightly bounded
+    -- accent below 0.18 before SoundGroup gain. Keep this invariant even
+    -- though ParkourLanding has a distinct dedicated sample: stronger
+    -- hits would mask the server's catastrophe warning audio on phones.
+    local volume = math.clamp(0.075 + (t - 0.55) * 0.075, 0.075, 0.18)
+    if tierName == "Low" or reducedMotion == true then
+        volume *= 0.75
+    end
     return {
         VolumeScale = volume,
         PitchOffset = accents[style],
