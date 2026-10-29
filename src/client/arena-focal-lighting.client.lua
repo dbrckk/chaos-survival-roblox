@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local ArenaFocalLightingRules = require(ReplicatedStorage.Shared.ArenaFocalLightingRules)
@@ -49,7 +50,7 @@ end
 local function refresh(duration)
     local response = ArenaCrisisSurfaceRules.profile(
         activeDisasters, phase,
-        VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
+        VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled).Name,
         player:GetAttribute("ReduceMotion") == true, finalRush
     )
     for index, light in ipairs(lights) do
@@ -87,7 +88,7 @@ local function rebuild()
 
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local count = ArenaFocalLightingRules.sourceCount(tier.Name)
     if count <= 0 then
         return
