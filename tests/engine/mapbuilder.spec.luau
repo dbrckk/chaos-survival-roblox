@@ -488,6 +488,7 @@ describe("Chaos Survival engine", function()
             Towers = "OverheadServiceBridge",
             Crossroads = "UpperExchange",
             Orbital = "ReactorArc1",
+            Harbor = "QuayCraneSpanningBeam",
         }
         for _, id in ipairs(ArenaVariants.Order) do
             local root = MapBuilder.build(Config, id, ArenaVariants)
@@ -532,6 +533,7 @@ describe("Chaos Survival engine", function()
             Towers = "SuspendedTransitCabin-1",
             Crossroads = "ExchangeCoupler1",
             Orbital = "OrbitalOuterArc1",
+            Harbor = "GantryCrown",
         }
         local counts = {}
         for _, id in ipairs(ArenaVariants.Order) do
@@ -582,6 +584,7 @@ describe("Chaos Survival engine", function()
             Towers = "CabinWestObservation-1",
             Crossroads = "ExchangeDataPane",
             Orbital = "ReactorServicePane",
+            Harbor = "HarborBridgeGlass",
         }
         for _, id in ipairs(ArenaVariants.Order) do
             local root = MapBuilder.build(Config, id, ArenaVariants)
@@ -623,6 +626,7 @@ describe("Chaos Survival engine", function()
     it("keeps a recognizable original 3D skyline under the Android Low budget", function()
         local expectedEssential = {
             Classic = 10, Towers = 8, Crossroads = 6, Orbital = 10,
+            Harbor = 8,
         }
         for _, id in ipairs(ArenaVariants.Order) do
             local root = MapBuilder.build(Config, id, ArenaVariants)
@@ -655,6 +659,8 @@ describe("Chaos Survival engine", function()
                 expect(names.SkyTransitMainBeam).toBe(true)
             elseif id == "Crossroads" then
                 expect(names.EastConduit).toBe(true)
+            elseif id == "Harbor" then
+                expect(names.HarborDrydockFoundation).toBe(true)
             else
                 expect(names.HaloLens).toBe(true)
             end
@@ -668,6 +674,7 @@ describe("Chaos Survival engine", function()
             Towers = "SkyTransfer",
             Crossroads = "CentralSwitchCab",
             Orbital = "ObservationArc1",
+            Harbor = "HarborLightshipBridge",
         }
         for _, id in ipairs(ArenaVariants.Order) do
             local root = MapBuilder.build(Config, id, ArenaVariants)
@@ -754,12 +761,14 @@ describe("Chaos Survival engine", function()
                 "CrossroadLaneFill3", "CrossroadLaneFill4",
                 "CrossroadHubMark"},
             Orbital = {"OrbitalCoreMark"},
+            Harbor = {"HarborQuayInlay1", "HarborQuayInlay2"},
         }
         local smallCues = {
             Classic = "ClassicEntryChevron1_-1",
             Towers = "TowerAscentChevron1_-1",
             Crossroads = "FluxRouteChevron1_1_-1",
             Orbital = "OrbitalSpoke1",
+            Harbor = "DistrictArrow1_1_-1",
         }
         for _, id in ipairs(ArenaVariants.Order) do
             local root = MapBuilder.build(Config, id, ArenaVariants)
