@@ -349,6 +349,37 @@ describe("Premium frost and electric warning silhouettes", function()
         end
     end)
 
+    it("shows the Jump Shock action in Double Chaos when it hits first", function()
+        local cue = WarningSignatures.mobileActionCue
+        -- A nearby meteor must not conceal the server-timed JUMP action.
+        expect(cue(-3, 1.10, 0.35)).toBe("shock")
+        expect(cue(2, 1.10, 0.20)).toBe("shock")
+        expect(cue(math.huge, math.huge, 0.35)).toBe("shock")
+        -- During the anticipation window, the current local danger wins.
+        expect(cue(-3, 0.75, 0.65)).toBe("escape")
+        expect(cue(-3, 0.18, 0.22)).toBe("escape")
+        -- Simultaneous impacts prioritize the faster local strike.
+        expect(cue(-3, 0.20, 0.24)).toBe("escape")
+        -- Outside impact radius, the global jump clock is still actionable.
+        expect(cue(6, 0.1, 0.40)).toBe("shock")
+        expect(cue(2, 0.3, math.huge)).toBe("escape")
+        expect(cue(6, 0.3, math.huge)).toBe(nil)
+        expect(cue(nil, nil, nil)).toBe(nil)
+        expect(cue(0/0, 0.2, 0/0)).toBe(nil)
+        expect(cue(-3, -1, -2)).toBe(nil)
+    end)
+
+    it("limits Android escape arrows to one actionable strike even on High", function()
+        local single = WarningSignatures.nearestEscapeArrowsOnly
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            expect(single(true, tier, false)).toBe(true)
+        end
+        expect(single(false, "High", false)).toBe(false)
+        expect(single(false, "Medium", false)).toBe(false)
+        expect(single(false, "Low", false)).toBe(true)
+        expect(single(false, "High", true)).toBe(true)
+    end)
+
     it("prioritizes imminent overlapping lethal impacts over remote countdowns", function()
         local prefer = WarningSignatures.preferThreat
         -- An exposed player must see the sooner impact, even if a second,
