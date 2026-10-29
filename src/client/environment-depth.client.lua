@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -372,7 +373,7 @@ end
 local function rebuild()
     clear()
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local variant = arenaVariant()
     addTransitDepth(tier)
     addHorizonDepth(tier, variant)
@@ -775,7 +776,7 @@ local function isTransitGlow(part)
 end
 
 local function applyGlobalGlowPhase(duration)
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local reduced = player:GetAttribute("ReduceMotion") == true
     local phaseBias
     if currentPhase == "round" then
@@ -810,7 +811,7 @@ local function applyTransitPhase(phase)
     currentPhase = tostring(phase or "waiting")
     transitionToken += 1
     local token = transitionToken
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local reduced = player:GetAttribute("ReduceMotion") == true
 
     if currentPhase == "ready" then
