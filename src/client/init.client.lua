@@ -1710,7 +1710,7 @@ resultGlyphSecondary.Parent = resultCard
 
 local resultTitle = Instance.new("TextLabel")
 resultTitle.Name = "ResultTitle"
-resultTitle.Size = UDim2.new(1, -28, 0.34, 0)
+resultTitle.Size = UDim2.new(1, -28, 0.27, 0)
 resultTitle.Position = UDim2.fromOffset(14, 10)
 resultTitle.BackgroundTransparency = 1
 resultTitle.Font = Enum.Font.GothamBlack
@@ -1722,8 +1722,8 @@ resultTitle.Parent = resultCard
 
 local resultReward = Instance.new("TextLabel")
 resultReward.Name = "ResultReward"
-resultReward.Size = UDim2.new(1, -28, 0.24, 0)
-resultReward.Position = UDim2.new(0, 14, 0.40, 0)
+resultReward.Size = UDim2.new(1, -28, 0.22, 0)
+resultReward.Position = UDim2.new(0, 14, 0.33, 0)
 resultReward.BackgroundTransparency = 1
 resultReward.Font = Enum.Font.GothamBold
 resultReward.TextColor3 = UITheme.Colors.Gold
@@ -1734,8 +1734,8 @@ resultReward.Text = ""
 resultReward.Parent = resultCard
 
 local resultMeta = Instance.new("TextLabel")
-resultMeta.Size = UDim2.new(1, -28, 0.20, 0)
-resultMeta.Position = UDim2.new(0, 14, 0.62, 0)
+resultMeta.Size = UDim2.new(1, -28, 0.13, 0)
+resultMeta.Position = UDim2.new(0, 14, 0.565, 0)
 resultMeta.BackgroundTransparency = 1
 resultMeta.Font = Enum.Font.GothamMedium
 resultMeta.TextColor3 = UITheme.Colors.Muted
@@ -1747,8 +1747,8 @@ resultMeta.Parent = resultCard
 
 local resultTip = Instance.new("TextLabel")
 resultTip.Name = "ResultTip"
-resultTip.Size = UDim2.new(1, -28, 0.10, 0)
-resultTip.Position = UDim2.new(0, 14, 0.78, 0)
+resultTip.Size = UDim2.new(1, -28, 0.082, 0)
+resultTip.Position = UDim2.new(0, 14, 0.705, 0)
 resultTip.BackgroundTransparency = 1
 resultTip.Font = Enum.Font.GothamMedium
 resultTip.TextColor3 = UITheme.Colors.Muted
@@ -1761,7 +1761,7 @@ resultTip.Parent = resultCard
 local resultNext = Instance.new("TextLabel")
 resultNext.Name = "NextRoundCountdown"
 resultNext.Size = UDim2.new(1, -28, 0.075, 0)
-resultNext.Position = UDim2.new(0, 14, 0.90, 0)
+resultNext.Position = UDim2.new(0, 14, 0.915, 0)
 resultNext.BackgroundTransparency = 1
 resultNext.Font = Enum.Font.GothamBold
 resultNext.TextColor3 = UITheme.Colors.Cyan
@@ -1770,6 +1770,25 @@ resultNext.Text = ""
 resultNext.ZIndex = 22
 resultNext.Parent = resultCard
 UITheme.addTextConstraint(resultNext, 10, 15)
+
+-- A single short replay incentive next to the existing results; separate
+-- from the pending reward amount, the survival advice and the lobby timer.
+-- Allocated once per session, never stacked for repeated result packets.
+local resultMilestone = Instance.new("TextLabel")
+resultMilestone.Name = "ResultVerifiedProgress"
+resultMilestone.Size = UDim2.new(1, -28, 0.085, 0)
+resultMilestone.Position = UDim2.new(0, 14, 0.805, 0)
+resultMilestone.BackgroundTransparency = 1
+resultMilestone.Font = Enum.Font.GothamBold
+resultMilestone.TextColor3 = UITheme.Colors.Green
+resultMilestone.TextScaled = true
+resultMilestone.TextWrapped = false
+resultMilestone.TextTruncate = Enum.TextTruncate.AtEnd
+resultMilestone.Text = ""
+resultMilestone.Visible = false
+resultMilestone.ZIndex = 22
+resultMilestone.Parent = resultCard
+UITheme.addTextConstraint(resultMilestone, 10, 15)
 
 local function refreshTopHazardIdentity(state)
     local phase = tostring(state and state.phase or "")
@@ -2250,6 +2269,11 @@ local function showRoundFeedback(feedback)
                 and CoreLocalization.text(localeId, "RESULT_REWARDS_PENDING")
                 or CoreLocalization.text(localeId, "COINS_XP", shownCoins, shownXP)))
     resultNext.Text = CoreLocalization.text(localeId, "RESULT_LOBBY_SOON")
+    local replay = ResultPresentation.replayHighlight(feedback, localeId)
+    resultMilestone.Visible = replay ~= nil
+    resultMilestone.Text = replay and replay.Text or ""
+    resultMilestone.TextColor3 = replay and replay.Kind == "completed"
+        and UITheme.Colors.Gold or UITheme.Colors.Green
     if feedback.pendingRewards ~= true and feedback.rewardsUnavailable ~= true
         and #extras > 0 and not touchDevice then
         resultReward.Text ..= "   •   " .. table.concat(extras, "   •   ")

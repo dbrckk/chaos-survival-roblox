@@ -284,6 +284,11 @@ local function challengeProgress(state)
         return math.max(0, math.floor(tonumber(player:GetAttribute("RoundMomentumBest")) or 0))
     elseif metric == "flow" then
         return (tonumber(player:GetAttribute("RoundFlowCoins")) or 0) > 0 and 1 or 0
+    elseif metric == "highGround" then
+        -- Live progress mirrors a server-confirmed, stable physical
+        -- landing. The local client cannot award mastery or currency.
+        return math.clamp(math.floor(tonumber(
+            player:GetAttribute("RoundPeakTier")) or 0), 0, 4)
     elseif metric == "variety" then
         local variety = 0
         if (tonumber(player:GetAttribute("RoundChaosShards")) or 0) > 0 then variety += 1 end
@@ -532,6 +537,7 @@ player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundNearMisses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundMechanicUses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundMomentumBest"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundPeakTier"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundFlowCoins"):Connect(refresh)
 
 player:GetAttributeChangedSignal("RoundChaosShards"):Connect(function()
