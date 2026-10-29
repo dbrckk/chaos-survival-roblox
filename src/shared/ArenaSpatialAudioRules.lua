@@ -45,6 +45,20 @@ ArenaSpatialAudioRules.Profiles = {
         EQ = {Low = 1.1, Mid = -1.2, High = 0.2},
         Reverb = {Wet = -23, Decay = 0.86, Density = 0.54, Diffusion = 0.92},
     },
+    Harbor = {
+        -- Shore squalls, distant machinery and enclosed dock acoustics.
+        -- Uses already-authorized engine samples, not remote audio IDs.
+        -- Keep the 3D bed quiet so catastrophe alarms remain foreground.
+        Bed = "Wind",
+        Secondary = "LowGravity",
+        Pitch = 0.44,
+        SecondaryPitch = 0.51,
+        Volume = 0.073,
+        SecondaryVolume = 0.019,
+        Radius = 58,
+        EQ = {Low = 1.8, Mid = -1.4, High = -1.2},
+        Reverb = {Wet = -32, Decay = 0.54, Density = 0.46, Diffusion = 0.78},
+    },
 }
 
 function ArenaSpatialAudioRules.profile(id)
