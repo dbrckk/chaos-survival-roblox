@@ -24,6 +24,10 @@ AudioConfig.Sfx = {
     ShardCollect = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.30, PlaybackSpeed = 2.25},
     GoldenShard = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.50, PlaybackSpeed = 1.60},
     LevelUp = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.58, PlaybackSpeed = 2.15},
+    -- Short, licensed-in-engine layers underneath the Roblox avatar's
+    -- native Jump/Landing tracks. These are never looped or replicated.
+    ParkourTakeoff = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.12, PlaybackSpeed = 1.38},
+    ParkourLanding = {SoundId = "rbxasset://sounds/collide.wav", Volume = 0.22, PlaybackSpeed = 1.08},
     JumpShock = {SoundId = "rbxasset://sounds/short spring sound.wav", Volume = 0.34, PlaybackSpeed = 1.15},
     Meteor = {SoundId = "rbxasset://sounds/collide.wav", Volume = 0.30, PlaybackSpeed = 0.9},
     Bombs = {SoundId = "rbxasset://sounds/collide.wav", Volume = 0.36, PlaybackSpeed = 0.7},

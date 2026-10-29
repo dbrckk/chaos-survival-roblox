@@ -3,6 +3,8 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VfxQuality = require("../../src/shared/VfxQuality")
+local GroundContactRules = require("../../src/shared/GroundContactRules")
+local AudioConfig = require("../../src/shared/AudioConfig")
 local JumpLandingPreviewRules = require("../../src/shared/JumpLandingPreviewRules")
 local PerformancePulseRules = require("../../src/shared/PerformancePulseRules")
 local FramePacingRules = require("../../src/shared/FramePacingRules")
@@ -14,6 +16,80 @@ local SceneryLodRules = require("../../src/shared/SceneryLodRules")
 local SceneryLodCache = require("../../src/client/SceneryLodCache")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
+
+describe("Parkour sound response in real Roblox engine", function()
+    it("uses independent, short nonlooped takeoff and landing identities", function()
+        local jump = AudioConfig.Sfx.ParkourTakeoff
+        local land = AudioConfig.Sfx.ParkourLanding
+        expect(jump ~= nil and land ~= nil).toBe(true)
+        expect(jump.SoundId ~= land.SoundId).toBe(true)
+        expect(jump.Looped == true).toBe(false)
+        expect(land.Looped == true).toBe(false)
+        expect(jump.Volume <= 0.16).toBe(true)
+        expect(land.Volume <= 0.25).toBe(true)
+    end)
+
+    it("gates repeated jumping and ignores invalid timestamps", function()
+        local first = GroundContactRules.takeoffAudio(
+            10, -math.huge, "Medium", false
+        )
+        expect(first ~= nil).toBe(true)
+        expect(first.VolumeScale > 0 and first.VolumeScale < 0.5).toBe(true)
+        expect(GroundContactRules.takeoffAudio(
+            10.12, 10, "Medium", false
+        )).toBe(nil)
+        expect(GroundContactRules.takeoffAudio(
+            10, 11, "High", false
+        )).toBe(nil)
+        expect(GroundContactRules.takeoffAudio(
+            10.29, 10, "High", false
+        ) ~= nil).toBe(true)
+        expect(GroundContactRules.takeoffAudio(
+            0 / 0, 0, "High", false
+        )).toBe(nil)
+        expect(GroundContactRules.takeoffAudio(
+            math.huge, 0, "High", false
+        )).toBe(nil)
+        local mobile = GroundContactRules.takeoffAudio(
+            12, 10, "Low", true
+        )
+        expect(mobile.VolumeScale < first.VolumeScale).toBe(true)
+    end)
+
+    it("scales landing by verified airtime, material and mobile profile", function()
+        expect(GroundContactRules.materialStyle(Enum.Material.Foil))
+            .toBe("Mechanical")
+        expect(GroundContactRules.materialStyle(Enum.Material.CeramicTiles))
+            .toBe("Mineral")
+        local alloy = GroundContactRules.landingAudio(
+            Enum.Material.Foil, 0.85, "High", false
+        )
+        local mineral = GroundContactRules.landingAudio(
+            Enum.Material.CeramicTiles, 0.85, "High", false
+        )
+        local crystal = GroundContactRules.landingAudio(
+            Enum.Material.Ice, 0.85, "High", false
+        )
+        expect(alloy.Style).toBe("Mechanical")
+        expect(mineral.Style).toBe("Mineral")
+        expect(crystal.Style).toBe("Crystal")
+        expect(alloy.PitchOffset ~= mineral.PitchOffset).toBe(true)
+        expect(crystal.PitchOffset ~= mineral.PitchOffset).toBe(true)
+        local longFall = GroundContactRules.landingAudio(
+            Enum.Material.Metal, 1.6, "High", false
+        )
+        expect(longFall.VolumeScale > alloy.VolumeScale).toBe(true)
+        local low = GroundContactRules.landingAudio(
+            Enum.Material.Metal, 0.85, "Low", true
+        )
+        expect(low.VolumeScale < alloy.VolumeScale).toBe(true)
+        for _, seconds in ipairs({-1, 0, 0.2, 8.5, math.huge}) do
+            expect(GroundContactRules.landingAudio(
+                Enum.Material.Foil, seconds, "Medium", false
+            )).toBe(nil)
+        end
+    end)
+end)
 
 describe("Physical landing safety reticle for collapsing platforms", function()
     it("shows a conspicuous danger state before an amber deck disappears", function()

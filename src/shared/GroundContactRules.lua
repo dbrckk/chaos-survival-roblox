@@ -46,17 +46,48 @@ function GroundContactRules.materialStyle(material)
         return "Mineral"
     elseif material == Enum.Material.Metal
         or material == Enum.Material.DiamondPlate
+        or material == Enum.Material.Foil
     then
         return "Mechanical"
+    elseif material == Enum.Material.CeramicTiles
+        or material == Enum.Material.Brick
+    then
+        return "Mineral"
     end
     return "Neutral"
 end
 
+local function finite(value)
+    return type(value) == "number" and value == value
+        and value > -math.huge and value < math.huge
+end
+
+-- A quiet, short, deliberately non-repeating takeoff signature. The
+-- default Roblox avatar already has a Jump sound, so this is a
+-- material-independent accent, NOT a second full-volume jump track.
+-- Physics remains exclusively the native Humanoid's responsibility.
+function GroundContactRules.takeoffAudio(now, lastPlayed, tierName, reducedMotion)
+    if not finite(now) or now < 0 then return nil end
+    if finite(lastPlayed) and (now < lastPlayed
+        or now - lastPlayed < 0.28) then
+        return nil
+    end
+    local profile = tierName == "Low" and 0.72
+        or (tierName == "Medium" and 0.88 or 1)
+    if reducedMotion == true then profile *= 0.8 end
+    return {
+        VolumeScale = 0.48 * profile,
+        PitchOffset = -0.06,
+    }
+end
+
 function GroundContactRules.landingAudio(material, airtime, tierName, reducedMotion)
     local t = tonumber(airtime)
-    if not t or t < 0.55 then return nil end
-    -- The default Roblox Landing sound is already present, so this is
-    -- deliberately a faint low-frequency impact rather than a second footstep.
+    if not finite(t) or t < 0.55 or t > 8 then return nil end
+    -- This is played only after real Freefall -> Landed/Running. The
+    -- native avatar's own landing track remains audible; additional
+    -- weight is small, transient and surface-dependent, never a
+    -- fabricated jump force or looping footstep.
     local style = GroundContactRules.materialStyle(material)
     local accents = {
         Mechanical = -0.32,
@@ -64,6 +95,10 @@ function GroundContactRules.landingAudio(material, airtime, tierName, reducedMot
         Crystal = 0.11,
         Neutral = -0.18,
     }
+    -- Existing engine regression requires a subtle, tightly bounded
+    -- accent below 0.18 before SoundGroup gain. Keep this invariant even
+    -- though ParkourLanding has a distinct dedicated sample: stronger
+    -- hits would mask the server's catastrophe warning audio on phones.
     local volume = math.clamp(0.075 + (t - 0.55) * 0.075, 0.075, 0.18)
     if tierName == "Low" or reducedMotion == true then
         volume *= 0.75
