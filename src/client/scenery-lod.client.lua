@@ -205,8 +205,21 @@ local function classifyDescendant(descendant)
         or VisualBudgetRules.isEffect(descendant)
 end
 
+-- The weak-key cache retains no destroyed map root. The small helper
+-- only owns hierarchy invalidation/refresh, never a second LOD loop.
+local folderCaches = setmetatable({}, {__mode = "k"})
+
+local function ensureCache(folder)
+    local cached = folderCaches[folder]
+    if cached then return cached end
+    local cache = {entries = {}, dirty = true}
+    folderCaches[folder] = cache
+    SceneryLodCache.watch(folder, cache)
+    return cache
+end
+
 local function applyFolder(folder, limits, profile, origin, cameraPoint)
-    local cache = SceneryLodCache.get(folder)
+    local cache = ensureCache(folder)
     local distance = (cameraPoint - origin).Magnitude
     local visible = SceneryLodRules.visible(
         profile.Name, distance, limits.LowDistance, limits.MediumDistance,
