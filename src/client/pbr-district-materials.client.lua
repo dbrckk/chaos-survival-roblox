@@ -148,12 +148,14 @@ local function scan()
             return PbrDistrictRules.selectionPriority(
                 part, cameraPosition, applied[part] ~= nil, cameraLook)
         end
-        for _, parts in pairs(groups) do
+        for owner, parts in pairs(groups) do
             table.sort(parts, function(a, b)
                 local sa, sb = score(a), score(b)
                 return sa == sb and a.Name < b.Name or sa > sb
             end)
-            for i = 1, math.min(ownerLimit, #parts) do
+            for i = 1, math.min(
+                PbrDistrictRules.ownerLimit(selectedTier, owner), #parts
+            ) do
                 local part = parts[i]
                 local original = originals[part]
                 local baseMaterial = original and original.material
