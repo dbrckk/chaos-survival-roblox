@@ -135,6 +135,36 @@ function JumpRouteCueRules.jumpable(from, target)
         and rise >= 0.4 and rise <= JumpRouteCueRules.MaxRise
 end
 
+-- On the arena floor, lead a rookie toward a REAL low, grounded
+-- takeoff deck. Only first-tier original/perimeter entries are eligible;
+-- never point toward a floating roof, a side-branch shortcut or a hidden
+-- platform. Position is the actual floor raycast hit, not the camera.
+function JumpRouteCueRules.nearestEntry(orderedPlatforms, floorPoint, maxRange)
+    if type(orderedPlatforms) ~= "table"
+        or typeof(floorPoint) ~= "Vector3" then
+        return nil
+    end
+    local range = math.clamp(tonumber(maxRange) or 42, 8, 48)
+    local closest, bestDistance = nil, math.huge
+    for _, part in ipairs(orderedPlatforms) do
+        if walkable(part)
+            and part:GetAttribute("RouteTier") == 1
+            and part:GetAttribute("BranchRoute") == nil
+            and (part:GetAttribute("PerimeterRoute") == nil
+                or part:GetAttribute("PerimeterStep") == 1) then
+            local top = part.Position.Y + part.Size.Y * 0.5
+            local rise = top - floorPoint.Y
+            local delta = part.Position - floorPoint
+            local distance = Vector3.new(delta.X, 0, delta.Z).Magnitude
+            if rise >= 1.5 and rise <= 5.2
+                and distance <= range and distance < bestDistance then
+                closest, bestDistance = part, distance
+            end
+        end
+    end
+    return closest
+end
+
 -- Original central routes use conservative spatial selection. Perimeter
 -- and side-lookout steps have explicit server-authored route/step IDs;
 -- using those IDs avoids directing a novice across unrelated adjacent
