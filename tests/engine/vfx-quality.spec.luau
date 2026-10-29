@@ -760,6 +760,49 @@ describe("Adaptive VFX quality", function()
         light:Destroy()
     end)
 
+    it("coalesces nested streamed neon models into one readability pass", function()
+        local decor = Instance.new("Folder")
+        decor.Name = "StreamedDecorTest"
+        decor.Parent = workspace
+        local model = Instance.new("Model")
+        model.Parent = decor
+        local nested = Instance.new("Folder")
+        nested.Parent = model
+        local strip = Instance.new("Part")
+        strip.Material = Enum.Material.Neon
+        strip.Parent = nested
+        local independent = Instance.new("Part")
+        independent.Parent = decor
+        local outside = Instance.new("Part")
+        outside.Parent = workspace
+
+        local pending = {
+            [model] = true,
+            [nested] = true,
+            [strip] = true,
+            [independent] = true,
+            [outside] = true,
+        }
+        local roots = MobileReadabilityKit.collapseStreamRoots(pending, decor)
+        expect(#roots).toBe(2)
+        local selected = {}
+        for _, root in ipairs(roots) do selected[root] = true end
+        expect(selected[model]).toBe(true)
+        expect(selected[independent]).toBe(true)
+        expect(selected[strip] == nil).toBe(true)
+        expect(selected[outside] == nil).toBe(true)
+
+        -- Removal before the deferred flush must not touch the old model.
+        model.Parent = nil
+        roots = MobileReadabilityKit.collapseStreamRoots(pending, decor)
+        expect(#roots).toBe(1)
+        expect(roots[1]).toBe(independent)
+        expect(#MobileReadabilityKit.collapseStreamRoots(pending, nil)).toBe(0)
+        decor:Destroy()
+        model:Destroy()
+        outside:Destroy()
+    end)
+
     it("reattaches mobile readability to late Decor and replaced arenas", function()
         local generated = Instance.new("Folder")
         local arena = Instance.new("Folder")
