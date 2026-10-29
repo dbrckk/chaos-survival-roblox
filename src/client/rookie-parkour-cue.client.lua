@@ -10,6 +10,8 @@ local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+local currentPhase = "waiting"
 local marker
 local caption
 local currentTarget
@@ -24,6 +26,14 @@ local function hide()
     if marker then marker.Enabled = false end
     currentTarget = nil
 end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
+    currentPhase = tostring(state.phase or "waiting")
+    if currentPhase ~= "ready" and currentPhase ~= "round" then
+        hide()
+    end
+end)
 
 local function gui()
     if marker and marker.Parent == playerGui then return marker end
@@ -70,6 +80,7 @@ local function update()
     -- This is instructional only: never compete with the normal hazard
     -- HUD, reward panels or experienced players' own route choices.
     if not FirstTimeExperience.isRookie(games)
+        or (currentPhase ~= "ready" and currentPhase ~= "round")
         or player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true then
         hide()
