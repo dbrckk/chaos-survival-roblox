@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local DisasterClimax = require(ReplicatedStorage.Shared.DisasterClimax)
 local DisasterClimaxSignatureKit = require(script.Parent.DisasterClimaxSignatureKit)
@@ -170,14 +171,15 @@ local function playClimax(id, stage, base, delaySeconds, currentToken, currentGe
 
         -- Cosmetic Double Chaos tier scales independently of the device's
         -- selected graphics setting; hazard telegraphs are never changed.
-        local tierName = DisasterClimax.burstTier(
-            player:GetAttribute("VfxQualityTier"), burstCount
-        )
+        local selectedTier = VfxQuality.deviceTier(
+            player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+        ).Name
+        local tierName = DisasterClimax.burstTier(selectedTier, burstCount)
         local tier = VfxQuality.get(tierName)
         local reduced = player:GetAttribute("ReduceMotion") == true
         local incoming = DisasterClimax.burstPieceCount(tierName, reduced)
         local limit = DisasterClimax.burstPartLimit(
-            player:GetAttribute("VfxQualityTier"), burstCount, reduced
+            selectedTier, burstCount, reduced
         )
         reserveClimaxPieces(incoming, limit)
         play(profile, base, stage, tier, reduced)
