@@ -577,6 +577,49 @@ local function playSpatialImpact(payload)
     Debris:AddItem(holder, plan.Lifetime)
 end
 
+-- Storm Harbor's amber crane lane is visible in-world, but the view
+-- may be behind an Android runner. Reuse the regular RoundState heartbeat
+-- (roughly once a second) for ONE short local warning per real lane-wave.
+-- No new polling thread, RemoteEvent, audio asset or permanent emitter.
+local harborSweepHeard = setmetatable({}, {__mode = "k"})
+local function alertNearbyHarborSweep()
+    if player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true then return end
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not arena or arena:GetAttribute("VariantId") ~= "Harbor" then return end
+
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not root or not root:IsA("BasePart")
+        or not humanoid or humanoid.Health <= 0 then return end
+
+    local mechanics = arena:FindFirstChild("Mechanics")
+    local folder = mechanics and mechanics:FindFirstChild("HarborCargoSweep")
+    if not folder then return end
+
+    for _, band in ipairs(folder:GetChildren()) do
+        if band:IsA("BasePart")
+            and band:GetAttribute("HarborSweepPhase") == "Warning" then
+            local startedAt = band:GetAttribute("HarborSweepWarningAt")
+            local point = band.CFrame:PointToObjectSpace(root.Position)
+            -- Alert runners within one short step of the real lane,
+            -- not people across the harbor, and exempt high-ground
+            -- players already above the physical sweep's reach.
+            local near = math.abs(point.X) <= band.Size.X * 0.5 + 5
+                and math.abs(point.Z) <= band.Size.Z * 0.5 + 5
+                and point.Y >= 0.5 and point.Y <= 5.1
+            if near and type(startedAt) == "number"
+                and harborSweepHeard[band] ~= startedAt then
+                harborSweepHeard[band] = startedAt
+                playRaw("PlatformWarning", 0, 0.36, -0.12)
+                break
+            end
+        end
+    end
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = state.phase
     local seconds = tonumber(state.seconds) or 0
@@ -585,6 +628,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     local finalRush = phase == "round" and state.finalRush == true
 
     setMix(phase, overdrive, finalRush)
+    if phase == "round" then
+        alertNearbyHarborSweep()
+    end
 
     if finalRush and not lastFinalRush then
         play("FinalRush")
