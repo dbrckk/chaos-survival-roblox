@@ -68,6 +68,7 @@ describe("Adaptive VFX quality", function()
             slowFramePercent = 12.8,
             vfxTier = "Medium",
             deviceClass = "Touch",
+            pbrMode = "OFF",
             tierTransitions = 5.99,
             visualParts = 312.99,
             visualLights = 18,
@@ -86,6 +87,7 @@ describe("Adaptive VFX quality", function()
         expect(sample.p95FrameMs).toBe(28)
         expect(sample.slowFramePercent).toBe(12)
         expect(sample.deviceClass).toBe("Touch")
+        expect(sample.pbrMode).toBe("OFF")
         expect(sample.vfxTier).toBe("Medium")
         expect(sample.tierTransitions).toBe(5)
         expect(sample.visualParts).toBe(312)
@@ -106,6 +108,7 @@ describe("Adaptive VFX quality", function()
             instanceCount = math.huge, frameTimeMs = -math.huge,
             renderCpuMs = math.huge, renderGpuMs = 0 / 0,
             vfxTier = "Ultra", deviceClass = "iPhone;arbitrary value",
+            pbrMode = "OFF|Injected:field",
         })
         expect(invalid.averageFps).toBe(0)
         expect(invalid.p95FrameMs).toBe(0)
@@ -124,11 +127,13 @@ describe("Adaptive VFX quality", function()
         expect(invalid.renderGpuMs).toBe(0)
         expect(invalid.vfxTier).toBe("Unknown")
         expect(invalid.deviceClass).toBe("Unknown")
+        expect(invalid.pbrMode).toBe("Unknown")
 
         local empty = sanitize(nil)
         expect(empty.averageFps).toBe(0)
         expect(empty.totalMemoryMb).toBe(0)
         expect(empty.deviceClass).toBe("Unknown")
+        expect(empty.pbrMode).toBe("Unknown")
 
         local capped = sanitize({
             averageFps = 999, p95FrameMs = 888,
@@ -148,6 +153,22 @@ describe("Adaptive VFX quality", function()
         expect(capped.frameTimeMs).toBe(1000)
         expect(capped.renderGpuMs).toBe(1000)
         expect(capped.deviceClass).toBe("Desktop")
+    end)
+
+    it("separates clean Android PBR AUTO/OFF windows from ambiguous mixed samples", function()
+        local mode = PerformancePulseRules.currentPbrMode
+        local sanitize = PerformancePulseRules.sanitize
+        expect(mode(true, nil)).toBe("AUTO")
+        expect(mode(true, false)).toBe("AUTO")
+        expect(mode(true, true)).toBe("OFF")
+        expect(mode(false, true)).toBe("AUTO")
+        expect(mode(true, "true")).toBe("AUTO")
+        for _, cohort in ipairs({"AUTO", "OFF", "MIXED"}) do
+            expect(sanitize({pbrMode = cohort}).pbrMode).toBe(cohort)
+        end
+        for _, invalid in ipairs({"auto", "OFF;injection", "mixed", 37, {}, true}) do
+            expect(sanitize({pbrMode = invalid}).pbrMode).toBe("Unknown")
+        end
     end)
 
     it("filters Android structural sightlines to arena geometry, not other avatars", function()
