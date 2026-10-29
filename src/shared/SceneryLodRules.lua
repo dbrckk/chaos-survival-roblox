@@ -49,6 +49,29 @@ function SceneryLodRules.heroArchitectureOwner(root)
     return nil
 end
 
+-- Imported original MeshParts stand beyond the physical 320-stud floor.
+-- Center-of-arena distance incorrectly culled ALL of them on Android Medium,
+-- including the closest one as the camera approached the perimeter.
+-- Only sanitized, approved, currently replicated visual models are owners.
+-- Call this from the existing 0.65/0.90-second LOD loop, never per frame.
+function SceneryLodRules.original3DVisualOwners(arena)
+    local owners = {}
+    if typeof(arena) ~= "Instance" then return owners end
+    local decor = arena:FindFirstChild("Decor")
+    local folder = decor and decor:FindFirstChild("Original3DScenery")
+    if not folder or not folder:IsA("Folder") then return owners end
+
+    for _, model in ipairs(folder:GetChildren()) do
+        if model:IsA("Model")
+            and model:GetAttribute("CosmeticOnly") == true
+            and type(model:GetAttribute("Original3DAssetId")) == "number"
+            and model:FindFirstChildWhichIsA("BasePart") then
+            owners[#owners + 1] = model
+        end
+    end
+    return owners
+end
+
 -- Preserve a sparse skyline rather than an empty horizon on Android Low.
 -- Only an explicitly marked original hero instance may use this exception;
 -- gameplay parts and other scenery folders remain under their normal LOD.
@@ -98,21 +121,7 @@ function SceneryLodRules.original3DAudit(arena)
         serverCount = math.floor(serverCount)
     end
 
-    local replicated = 0
-    local decor = arena:FindFirstChild("Decor")
-    local folder = decor and decor:FindFirstChild("Original3DScenery")
-    if folder and folder:IsA("Folder") then
-        for _, model in ipairs(folder:GetChildren()) do
-            -- Ignore unrelated cosmetics and empty streamed model shells.
-            -- Only approved, already-sanitized source packages qualify.
-            if model:IsA("Model")
-                and model:GetAttribute("CosmeticOnly") == true
-                and type(model:GetAttribute("Original3DAssetId")) == "number"
-                and model:FindFirstChildWhichIsA("BasePart") then
-                replicated += 1
-            end
-        end
-    end
+    local replicated = #SceneryLodRules.original3DVisualOwners(arena)
 
     return serverCount, replicated,
         arena:GetAttribute("Original3DSceneryComplete") == true
