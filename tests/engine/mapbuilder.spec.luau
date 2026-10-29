@@ -157,7 +157,7 @@ describe("Chaos Survival engine", function()
             end
         end
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Classic").Platforms + 48
+            #ArenaVariants.get("Classic").Platforms + 52
         )
         -- Route-tier identity is replicated with the physical decks and
         -- reflects intentional jumpable paths, not client-only cosmetics.
@@ -826,7 +826,7 @@ describe("Chaos Survival engine", function()
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
             local original = #variant.Platforms
-            expect(#platforms:GetChildren()).toBe(original + 48)
+            expect(#platforms:GetChildren()).toBe(original + 52)
             for route = 1, 4 do
                 local previous = nil
                 for step = 1, ArenaVariants.PerimeterSteps do
@@ -1073,6 +1073,102 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("builds four real ridge-to-lookout escape crosslinks per arena", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            expect(#variant.CrosslinkPlatforms).toBe(4)
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local platforms = arena:FindFirstChild("Platforms")
+            local decor = arena:FindFirstChild("Decor")
+            local base = arena:FindFirstChild("Base")
+            local originalCount = #variant.Platforms
+            local branchEnd = originalCount + #variant.PerimeterPlatforms
+                + #variant.BranchPlatforms
+            local all = platforms:GetChildren()
+            expect(#all).toBe(branchEnd + 4)
+
+            for route = 1, 4 do
+                local ridge6 = platforms:FindFirstChild("Platform" .. (
+                    originalCount + (route - 1) * 8 + 6))
+                local ridge7 = platforms:FindFirstChild("Platform" .. (
+                    originalCount + (route - 1) * 8 + 7))
+                local side2 = platforms:FindFirstChild("Platform" .. (
+                    originalCount + 32 + (route - 1) * 4 + 2))
+                local connectorIndex = branchEnd + route
+                local crossing = platforms:FindFirstChild(
+                    "Platform" .. connectorIndex
+                )
+                local panel = decor:FindFirstChild(
+                    "PlatformPanel" .. connectorIndex
+                )
+                expect(crossing ~= nil).toBe(true)
+                expect(panel ~= nil and panel.CanCollide == false).toBe(true)
+                expect(crossing.Anchored).toBe(true)
+                expect(crossing.CanCollide).toBe(true)
+                expect(crossing:GetAttribute("CrosslinkRoute")).toBe(route)
+                expect(crossing:GetAttribute("CrosslinkFromPerimeterStep"))
+                    .toBe(6)
+                expect(crossing:GetAttribute("CrosslinkToBranchStep"))
+                    .toBe(2)
+                expect(crossing:GetAttribute("RouteTier")).toBe(4)
+                expect(math.abs(
+                    crossing.Position.Y - crossing.Size.Y * 0.5
+                    - (base.Position.Y + base.Size.Y * 0.5)
+                ) < 0.001).toBe(true)
+                local firstGap = JumpRouteCueRules.gap(ridge6, crossing)
+                local secondGap = JumpRouteCueRules.gap(crossing, side2)
+                expect(firstGap > 0.15 and firstGap <= 3.85).toBe(true)
+                expect(secondGap > 0.15 and secondGap <= 3.85).toBe(true)
+                expect(JumpRouteCueRules.jumpable(ridge6, crossing)).toBe(true)
+                expect(JumpRouteCueRules.jumpable(crossing, side2)).toBe(true)
+
+                local forward, detour = JumpRouteCueRules.crosslinkOptions(
+                    ridge6, all
+                )
+                expect(forward).toBe(ridge7)
+                expect(detour).toBe(crossing)
+                expect(JumpRouteCueRules.nextPhysical(
+                    ridge6, all, Config.ArenaCenter, id
+                )).toBe(ridge7)
+                expect(JumpRouteCueRules.nextPhysical(
+                    crossing, all, Config.ArenaCenter, id
+                )).toBe(side2)
+
+                -- Real collapsing terrain must not be advertised as a
+                -- route; the crossing remains a physically valid bypass.
+                ridge7:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.nextPhysical(
+                    ridge6, all, Config.ArenaCenter, id
+                )).toBe(crossing)
+                crossing:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.nextPhysical(
+                    ridge6, all, Config.ArenaCenter, id
+                )).toBe(nil)
+                ridge7:SetAttribute("CollapsePhase", nil)
+                expect(JumpRouteCueRules.nextPhysical(
+                    ridge6, all, Config.ArenaCenter, id
+                )).toBe(ridge7)
+                crossing:SetAttribute("CollapsePhase", nil)
+
+                ridge7.CanCollide = false
+                expect(JumpRouteCueRules.nextPhysical(
+                    ridge6, all, Config.ArenaCenter, id
+                )).toBe(crossing)
+                ridge7.CanCollide = true
+                side2.CanCollide = false
+                expect(JumpRouteCueRules.nextPhysical(
+                    crossing, all, Config.ArenaCenter, id
+                )).toBe(nil)
+                side2.CanCollide = true
+                expect(JumpRouteCueRules.nextPhysical(
+                    crossing, all, Config.ArenaCenter, id
+                )).toBe(side2)
+            end
+            root:Destroy()
+        end
+    end)
+
     it("guides rookie parkour only between currently jumpable physical platforms", function()
         for _, variantId in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(variantId)
@@ -1288,7 +1384,7 @@ describe("Chaos Survival engine", function()
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
             local start = #variant.Platforms + #variant.PerimeterPlatforms
-            expect(#platforms:GetChildren()).toBe(start + 16)
+            expect(#platforms:GetChildren()).toBe(start + 20)
             for route = 1, 4 do
                 local forkIndex = #variant.Platforms
                     + (route - 1) * ArenaVariants.PerimeterSteps + 5
@@ -1393,13 +1489,18 @@ describe("Chaos Survival engine", function()
                 tierCount[tier] += 1
             end
         end
-        expect(#(platforms :: Folder):GetChildren()).toBe(69)
+        local authored = ArenaVariants.get("Towers")
+        expect(#(platforms :: Folder):GetChildren()).toBe(
+            #authored.Platforms + #authored.PerimeterPlatforms
+                + #authored.BranchPlatforms + #authored.CrosslinkPlatforms
+        )
         -- Original 21 decks and Skybridges 18–21 are unchanged.
-        -- Thirty-two main outer-rim stages and sixteen corner spurs complete the arena.
+        -- The outer rim, 16 corner spurs and four physical crosslinks
+        -- expand the routes without changing legacy game-system indices.
         expect(tierCount[1]).toBe(9)
         expect(tierCount[2]).toBe(12)
         expect(tierCount[3]).toBe(12)
-        expect(tierCount[4]).toBe(32)
+        expect(tierCount[4]).toBe(36)
 
         -- Floor guidance must be genuinely visible but never obstruct
         -- escape movement, hazard collision or updraft pads.
@@ -1442,7 +1543,7 @@ describe("Chaos Survival engine", function()
         local platforms = arena:FindFirstChild("Platforms")
         expect(platforms ~= nil).toBe(true)
         expect(#(platforms :: Folder):GetChildren()).toBe(
-            #ArenaVariants.get("Crossroads").Platforms + 48
+            #ArenaVariants.get("Crossroads").Platforms + 52
         )
         local tiers = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
         for index = 1, 17 do
