@@ -1115,6 +1115,33 @@ describe("Chaos Survival engine", function()
                 expect(JumpRouteCueRules.nextPhysical(
                     fork, pieces, Config.ArenaCenter, variantId
                 )).toBe(forward)
+
+                -- Disaster warning phases are signaled *before* the
+                -- platform loses collision. Favor the playable flank
+                -- during an amber ridge collapse, and vice versa.
+                forward:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.forkOptions(fork, pieces))
+                    .toBe(nil)
+                expect(JumpRouteCueRules.nextPhysical(
+                    fork, pieces, Config.ArenaCenter, variantId
+                )).toBe(side)
+                side:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.nextPhysical(
+                    fork, pieces, Config.ArenaCenter, variantId
+                )).toBe(nil)
+                forward:SetAttribute("CollapsePhase", nil)
+                expect(JumpRouteCueRules.nextPhysical(
+                    fork, pieces, Config.ArenaCenter, variantId
+                )).toBe(forward)
+                side:SetAttribute("CollapsePhase", nil)
+                -- If the fork itself is warning, the player must still
+                -- see a safe escape rather than being trapped there.
+                fork:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.nextPhysical(
+                    fork, pieces, Config.ArenaCenter, variantId
+                )).toBe(forward)
+                fork:SetAttribute("CollapsePhase", nil)
+
                 forward.CanCollide = false
                 expect(JumpRouteCueRules.nextPhysical(
                     fork, pieces, Config.ArenaCenter, variantId
