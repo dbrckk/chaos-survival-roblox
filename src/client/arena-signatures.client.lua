@@ -2,6 +2,7 @@
 -- All motion is time-sliced and pauses in the lobby / on reduced motion.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local SignatureKit = require(script.Parent.ArenaSignatureKit)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -42,7 +43,7 @@ local function rebuild()
     end
 
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     -- Readiness, arena identity and graphics tier can replicate on separate
     -- scheduler turns. If the requested sculpture is already alive and
     -- matches all three inputs, keep it (including animation continuity).
@@ -162,7 +163,7 @@ scheduleRebuild()
 
 task.spawn(function()
     while true do
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
         local active = phase == "round" or phase == "ready"
         local reduced = player:GetAttribute("ReduceMotion") == true
         if (active or settling) and not reduced
