@@ -1387,4 +1387,67 @@ describe("Streaming-aware PBR candidate indexing", function()
     end)
 end)
 
+
+describe("Imported 3D per-model Android LOD", function()
+    it("keeps the nearest approved exterior mesh visible on Medium", function()
+        local arena = Instance.new("Folder")
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local folder = Instance.new("Folder")
+        folder.Name = "Original3DScenery"
+        folder.Parent = decor
+
+        local function original(name, position, approved)
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("CosmeticOnly", true)
+            if approved then model:SetAttribute("Original3DAssetId", 1234) end
+            local mesh = Instance.new("Part")
+            mesh.Anchored = true
+            mesh.CFrame = CFrame.new(position)
+            mesh.Parent = model
+            model.Parent = folder
+            return model
+        end
+        local far = original("FarReactor", Vector3.new(0, 0, 0), true)
+        local near = original("NearGate", Vector3.new(245, 0, 0), true)
+        local unrelated = original("Unapproved", Vector3.new(244, 0, 0), false)
+        local shell = Instance.new("Model")
+        shell.Name = "StreamingShell"
+        shell:SetAttribute("CosmeticOnly", true)
+        shell:SetAttribute("Original3DAssetId", 1234)
+        shell.Parent = folder
+
+        local owners = SceneryLodRules.original3DVisualOwners(arena)
+        expect(#owners).toBe(2)
+        local selected = {}
+        for _, model in ipairs(owners) do selected[model] = true end
+        expect(selected[near]).toBe(true)
+        expect(selected[far]).toBe(true)
+        expect(selected[unrelated]).toBe(nil)
+        expect(selected[shell]).toBe(nil)
+
+        local camera = Vector3.new(240, 0, 0)
+        local function visible(model, tier)
+            return SceneryLodRules.visible(
+                tier, (camera - model:GetPivot().Position).Magnitude,
+                0, 140, nil
+            )
+        end
+        -- The old arena-center distance was 240, hiding BOTH on Medium.
+        expect(visible(far, "Medium")).toBe(false)
+        expect(visible(near, "Medium")).toBe(true)
+        expect(visible(far, "Low")).toBe(false)
+        expect(visible(near, "Low")).toBe(false)
+        expect(visible(far, "High")).toBe(true)
+        expect(visible(near, "High")).toBe(true)
+
+        near:Destroy() -- Streaming out must not retain old visual owners.
+        expect(#SceneryLodRules.original3DVisualOwners(arena)).toBe(1)
+        expect(#SceneryLodRules.original3DVisualOwners(nil)).toBe(0)
+        arena:Destroy()
+    end)
+end)
+
 return nil
