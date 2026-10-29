@@ -1138,6 +1138,20 @@ local function runDisasterSet(selected, contestants, roundSettings)
             and not activeHazards.JumpShock
             and not activeHazards.LowGravity
             and not activeHazards.SpeedSurge,
+        -- Advanced-only port challenge. No sweep on beginner maps,
+        -- overlapping disasters, forced movement or moving/vanishing
+        -- ground. Full server-owned warnings for humans and bots alike.
+        EnableHarborCargoSweep = currentArenaVariant == "Harbor"
+            and #selected == 1 and allowDynamicArenas
+            and roundSettings.RoundSeconds >= 24
+            and not activeHazards.DisappearingPlatforms
+            and not activeHazards.ShrinkingArena
+            and not activeHazards.RisingLava
+            and not activeHazards.Freeze
+            and not activeHazards.Tornado
+            and not activeHazards.JumpShock
+            and not activeHazards.LowGravity
+            and not activeHazards.SpeedSurge,
         Cleanup = cleanup,
         OnCleanup = onCleanup,
         Active = function() return roundActive end,
