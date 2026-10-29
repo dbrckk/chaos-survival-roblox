@@ -31,7 +31,7 @@ local function gui()
     marker = Instance.new("BillboardGui")
     marker.Name = "RookiePhysicalJumpCue"
     marker.Size = UDim2.fromOffset(144, 38)
-    marker.MaxDistance = 34
+    marker.MaxDistance = 48
     marker.AlwaysOnTop = false
     marker.LightInfluence = 0
     marker.Enabled = false
@@ -106,16 +106,25 @@ local function update()
         root.Position, Vector3.new(0, -9, 0), rayParams
     )
     local from = hit and hit.Instance
-    if not from or from.Parent ~= platforms or hit.Normal.Y < 0.65 then
+    if not from or hit.Normal.Y < 0.65 then
         hide()
         return true
     end
 
-    local target = JumpRouteCueRules.nextPhysical(
-        from, platforms:GetChildren(), base.Position,
-        arena:GetAttribute("VariantId")
-    )
-    if not target or (root.Position - target.Position).Magnitude > 36 then
+    local pieces = platforms:GetChildren()
+    local target = nil
+    if from == base then
+        -- The largest missing first-session cue was *before* the first
+        -- jump. Guide from the actual floor to a short, grounded entry.
+        target = JumpRouteCueRules.nearestEntry(
+            pieces, hit.Position, 42
+        )
+    elseif from.Parent == platforms then
+        target = JumpRouteCueRules.nextPhysical(
+            from, pieces, base.Position, arena:GetAttribute("VariantId")
+        )
+    end
+    if not target or (root.Position - target.Position).Magnitude > 46 then
         hide()
         return true
     end
