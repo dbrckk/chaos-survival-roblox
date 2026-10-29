@@ -3,6 +3,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local VfxQuality = require("../../src/shared/VfxQuality")
+local JumpLandingPreviewRules = require("../../src/shared/JumpLandingPreviewRules")
 local PerformancePulseRules = require("../../src/shared/PerformancePulseRules")
 local FramePacingRules = require("../../src/shared/FramePacingRules")
 local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
@@ -13,6 +14,41 @@ local SceneryLodRules = require("../../src/shared/SceneryLodRules")
 local SceneryLodCache = require("../../src/client/SceneryLodCache")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
+
+describe("Physical landing safety reticle for collapsing platforms", function()
+    it("shows a conspicuous danger state before an amber deck disappears", function()
+        local deck = Instance.new("Part")
+        deck.Name = "LandingSafetySpecDeck"
+        deck.Anchored = true
+        deck.CanCollide = true
+        deck.Transparency = 0
+        expect(JumpLandingPreviewRules.surfaceStatus(deck)).toBe("Safe")
+
+        -- Server telegraphs collapse before physical collision changes.
+        deck:SetAttribute("CollapsePhase", "Warning")
+        expect(deck.CanCollide).toBe(true)
+        expect(JumpLandingPreviewRules.surfaceStatus(deck)).toBe("Warning")
+
+        deck:SetAttribute("CollapsePhase", "Gone")
+        expect(JumpLandingPreviewRules.surfaceStatus(deck)).toBe("Unavailable")
+        deck.CanCollide = false
+        deck:SetAttribute("CollapsePhase", nil)
+        expect(JumpLandingPreviewRules.surfaceStatus(deck)).toBe("Unavailable")
+
+        deck.CanCollide = true
+        deck.Transparency = 1
+        expect(JumpLandingPreviewRules.surfaceStatus(deck)).toBe("Unavailable")
+        deck.Transparency = 0
+        deck:SetAttribute("CollapsePhase", "Pending")
+        expect(JumpLandingPreviewRules.surfaceStatus(deck)).toBe("Unavailable")
+        deck:SetAttribute("CollapsePhase", nil)
+        expect(JumpLandingPreviewRules.surfaceStatus(deck)).toBe("Safe")
+
+        expect(JumpLandingPreviewRules.surfaceStatus(nil)).toBe("Unavailable")
+        expect(JumpLandingPreviewRules.surfaceStatus({})).toBe("Unavailable")
+        deck:Destroy()
+    end)
+end)
 
 describe("Android camera sightline filter lifecycle", function()
     local function contains(params, target)
