@@ -1120,8 +1120,10 @@ describe("Chaos Survival engine", function()
                 -- platform loses collision. Favor the playable flank
                 -- during an amber ridge collapse, and vice versa.
                 forward:SetAttribute("CollapsePhase", "Warning")
-                expect(JumpRouteCueRules.forkOptions(fork, pieces))
-                    .toBe(nil)
+                local unsafeForward, safeFlank =
+                    JumpRouteCueRules.forkOptions(fork, pieces)
+                expect(unsafeForward).toBe(nil)
+                expect(safeFlank).toBe(side)
                 expect(JumpRouteCueRules.nextPhysical(
                     fork, pieces, Config.ArenaCenter, variantId
                 )).toBe(side)
