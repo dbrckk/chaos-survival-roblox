@@ -110,4 +110,108 @@ function JumpRouteCueRules.takeoffFrame(from, target, paintOffset)
         from.CFrame.UpVector)
 end
 
+
+-- First-session in-world guidance follows ONLY actual server-created,
+-- physically jumpable decks. The source is a raycast against collidable
+-- platforms, not a guessed screen-space waypoint. Never suggest a route
+-- into a disabled/disappearing platform, or across an impossible jump.
+local function walkable(part)
+    return part ~= nil and part:IsA("BasePart")
+        and part.Name:match("^Platform%d+$") ~= nil
+        and part.Anchored and part.CanCollide
+        and part.Transparency < 0.75
+end
+
+function JumpRouteCueRules.jumpable(from, target)
+    if not walkable(from) or not walkable(target)
+        or from == target or from.Parent ~= target.Parent then
+        return false
+    end
+    local gap = JumpRouteCueRules.gap(from, target)
+    local rise = (target.Position.Y + target.Size.Y * 0.5)
+        - (from.Position.Y + from.Size.Y * 0.5)
+    return gap ~= nil
+        and gap > 0.15 and gap <= JumpRouteCueRules.MaxGap
+        and rise >= 0.4 and rise <= JumpRouteCueRules.MaxRise
+end
+
+-- On the arena floor, lead a rookie toward a REAL low, grounded
+-- takeoff deck. Only first-tier original/perimeter entries are eligible;
+-- never point toward a floating roof, a side-branch shortcut or a hidden
+-- platform. Position is the actual floor raycast hit, not the camera.
+function JumpRouteCueRules.nearestEntry(orderedPlatforms, floorPoint, maxRange)
+    if type(orderedPlatforms) ~= "table"
+        or typeof(floorPoint) ~= "Vector3" then
+        return nil
+    end
+    local range = math.clamp(tonumber(maxRange) or 42, 8, 48)
+    local closest, bestDistance = nil, math.huge
+    for _, part in ipairs(orderedPlatforms) do
+        if walkable(part)
+            and part:GetAttribute("RouteTier") == 1
+            and part:GetAttribute("BranchRoute") == nil
+            and (part:GetAttribute("PerimeterRoute") == nil
+                or part:GetAttribute("PerimeterStep") == 1) then
+            local top = part.Position.Y + part.Size.Y * 0.5
+            local rise = top - floorPoint.Y
+            local delta = part.Position - floorPoint
+            local distance = Vector3.new(delta.X, 0, delta.Z).Magnitude
+            if rise >= 1.5 and rise <= 5.2
+                and distance <= range and distance < bestDistance then
+                closest, bestDistance = part, distance
+            end
+        end
+    end
+    return closest
+end
+
+-- Original central routes use conservative spatial selection. Perimeter
+-- and side-lookout steps have explicit server-authored route/step IDs;
+-- using those IDs avoids directing a novice across unrelated adjacent
+-- towers. The last step is a genuine end point, never a phantom jump.
+function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, variantId)
+    if not walkable(from) or type(orderedPlatforms) ~= "table" then
+        return nil
+    end
+
+    local route = from:GetAttribute("PerimeterRoute")
+    local step = from:GetAttribute("PerimeterStep")
+    local branch = from:GetAttribute("BranchRoute")
+    local branchStep = from:GetAttribute("BranchStep")
+
+    if route ~= nil or branch ~= nil then
+        local routeId = route or branch
+        local index = route ~= nil and step or branchStep
+        local last = route ~= nil and 8 or 4
+        if type(routeId) ~= "number" or routeId % 1 ~= 0
+            or routeId < 1 or routeId > 4
+            or type(index) ~= "number" or index % 1 ~= 0
+            or index < 1 or index >= last then
+            return nil
+        end
+
+        for _, candidate in ipairs(orderedPlatforms) do
+            if candidate ~= from and candidate:IsA("BasePart")
+                and candidate:GetAttribute(
+                    route ~= nil and "PerimeterRoute" or "BranchRoute"
+                ) == routeId
+                and candidate:GetAttribute(
+                    route ~= nil and "PerimeterStep" or "BranchStep"
+                ) == index + 1
+                and JumpRouteCueRules.jumpable(from, candidate) then
+                return candidate
+            end
+        end
+        return nil
+    end
+
+    local target = JumpRouteCueRules.select(
+        from, orderedPlatforms, arenaCenter, variantId
+    )
+    if target and JumpRouteCueRules.jumpable(from, target) then
+        return target
+    end
+    return nil
+end
+
 return JumpRouteCueRules
