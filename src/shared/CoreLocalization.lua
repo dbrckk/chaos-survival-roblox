@@ -744,6 +744,11 @@ local CHALLENGE_SHORT = {
         MOMENTUM_3 = "MOMENTUM",
         FLOW_CHAIN = "FLOW",
         MIX_IT_UP = "VARIETY",
+        CLASSIC_RIDGE = "RIDGE",
+        TOWER_SUMMIT = "SUMMIT",
+        CROSSROADS_HIGH = "OVERPASS",
+        ORBITAL_HIGH = "REACTOR",
+        HARBOR_HIGH = "GANTRY",
     },
     fr = {
         FIRST_SURVIVAL = "RESTE EN VIE",
@@ -753,6 +758,11 @@ local CHALLENGE_SHORT = {
         MOMENTUM_3 = "ÉLAN",
         FLOW_CHAIN = "FLUIDITÉ",
         MIX_IT_UP = "VARIÉTÉ",
+        CLASSIC_RIDGE = "CRÊTE",
+        TOWER_SUMMIT = "SOMMET",
+        CROSSROADS_HIGH = "PASSERELLE",
+        ORBITAL_HIGH = "RÉACTEUR",
+        HARBOR_HIGH = "PORTIQUE",
     },
 }
 
