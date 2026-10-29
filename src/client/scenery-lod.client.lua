@@ -18,6 +18,14 @@ local ORIGINAL_MESH_LOD = {
     MediumDistance = 140,
 }
 
+-- The four new Storm Harbor gantry sculptures are external eye-candy,
+-- never routes or hazard cover. Low Android retains the drydock hero
+-- silhouette but skips the exterior cranes; Medium shows nearby ones.
+local HARBOR_GANTRY_LOD = {
+    LowDistance = 0,
+    MediumDistance = 185,
+}
+
 -- The new off-map hero architectures are static Roblox-native 3D. On
 -- low-tier Android hide these optional skyline parts; medium shows them
 -- near the arena and high keeps the authored silhouette fully visible.
@@ -342,6 +350,13 @@ task.spawn(function()
         for _, model in ipairs(SceneryLodRules.original3DVisualOwners(arena)) do
             applyFolder(model, ORIGINAL_MESH_LOD,
                 profile, model:GetPivot().Position, cameraPoint)
+        end
+        -- Use each crane's own pivot so approaching the port edge
+        -- reveals its silhouette smoothly on Medium. Exact model
+        -- ownership rules prevent culling gameplay or other arenas.
+        for _, crane in ipairs(SceneryLodRules.harborGantryOwners(arena)) do
+            applyFolder(crane, HARBOR_GANTRY_LOD,
+                profile, crane:GetPivot().Position, cameraPoint)
         end
         local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
         if district and district:IsA("Folder") then
