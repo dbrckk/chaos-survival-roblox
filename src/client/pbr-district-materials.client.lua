@@ -218,6 +218,17 @@ local function schedule()
     end)
 end
 
+-- Streamed geometry still builds its candidate index while opt-out
+-- is active, so the first AUTO toggle is instantaneous. Only omit the
+-- expensive material reconciliation, not the streaming listeners.
+local function scheduleIfEnabled()
+    if PbrDistrictRules.cameraSamplingEnabled(
+        tier(), isTouch, player:GetAttribute("PbrMaterialsDisabled"), true
+    ) then
+        schedule()
+    end
+end
+
 local function bindDecor(decor)
     if boundDecor == decor then return end
     if disconnectDecorIndex then
@@ -227,7 +238,7 @@ local function bindDecor(decor)
     indexedDecor = {}
     boundDecor = decor
     if decor then
-        indexedDecor, disconnectDecorIndex = PbrCandidateIndex.watch(decor, schedule)
+        indexedDecor, disconnectDecorIndex = PbrCandidateIndex.watch(decor, scheduleIfEnabled)
     end
     schedule()
 end
@@ -273,7 +284,7 @@ local function bindLocal(folder)
     indexedLocal = {}
     boundLocal = folder
     if folder then
-        indexedLocal, disconnectLocalIndex = PbrCandidateIndex.watch(folder, schedule)
+        indexedLocal, disconnectLocalIndex = PbrCandidateIndex.watch(folder, scheduleIfEnabled)
     end
     schedule()
 end
@@ -319,7 +330,10 @@ end
 task.spawn(function()
     while task.wait(isTouch and 1.7 or 2.2) do
         local selectedTier = tier()
-        if selectedTier ~= "Low" and (boundDecor or boundLocal) then
+        if PbrDistrictRules.cameraSamplingEnabled(
+            selectedTier, isTouch, player:GetAttribute("PbrMaterialsDisabled"),
+            boundDecor ~= nil or boundLocal ~= nil
+        ) then
             local current = workspace.CurrentCamera
             local frame = current and current.CFrame or nil
             local position = frame and frame.Position or nil
