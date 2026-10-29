@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local ArenaMaterialRules = require(ReplicatedStorage.Shared.ArenaMaterialRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -118,7 +119,7 @@ local function rebuild()
         return
     end
 
-    local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local arena = generated:FindFirstChild("Arena")
     local lobby = generated:FindFirstChild("Lobby")
     local variant = tostring(arena and arena:GetAttribute("VariantId") or "Classic")
