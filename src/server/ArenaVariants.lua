@@ -314,6 +314,35 @@ for _, variantId in ipairs(ArenaVariants.Order) do
         end
     end
     variant.BranchPlatforms = branches
+
+    -- Four compact, fully solid escape crosslinks join the *existing*
+    -- perimeter step SIX to side-branch step TWO. Players can reach the
+    -- lookout even after the next ridge deck disappears. Both ends are
+    -- genuine R15 jumps: 1 or sqrt(2)-stud clear gaps and 1.2-stud rises.
+    -- These append AFTER all previously authored platform IDs, so no
+    -- skybridge, damage, bot, collectible or side-lookout owner changes.
+    local crosslinks = {}
+    for route = 1, 4 do
+        local ridge = routes[(route - 1) * ArenaVariants.PerimeterSteps + 6]
+        local flank = branches[(route - 1) * 4 + 2]
+        local ridgeTop = ridge.offset.Y + ridge.size.Y * 0.5
+        local flankTop = flank.offset.Y + flank.size.Y * 0.5
+        local top = (ridgeTop + flankTop) * 0.5
+        local height = top - floorTop
+        table.insert(crosslinks, {
+            offset = Vector3.new(
+                ridge.offset.X,
+                floorTop + height * 0.5,
+                (ridge.offset.Z + flank.offset.Z) * 0.5
+            ),
+            size = Vector3.new(12, height, 12),
+            RouteTier = 4,
+            CrosslinkRoute = route,
+            CrosslinkFromPerimeterStep = 6,
+            CrosslinkToBranchStep = 2,
+        })
+    end
+    variant.CrosslinkPlatforms = crosslinks
 end
 
 local legacyRecent = {}
