@@ -764,6 +764,24 @@ describe("PBR materials for four playable district hero environments", function(
         expect(PbrDistrictRules.limit("High")).toBe(16)
     end)
 
+    it("allows session-local PBR opt-out only on touch without changing defaults", function()
+        local effective = PbrDistrictRules.effectiveGlobalLimit
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            -- Unset switch, explicit false and desktop retain all defaults.
+            local android = PbrDistrictRules.globalLimit(tier, true)
+            local desktop = PbrDistrictRules.globalLimit(tier, false)
+            expect(effective(tier, true, nil)).toBe(android)
+            expect(effective(tier, true, false)).toBe(android)
+            expect(effective(tier, false, true)).toBe(desktop)
+            expect(effective(tier, false, nil)).toBe(desktop)
+            -- An explicit Android-only session opt-out uses the existing
+            -- zero-budget restoration path; no protected game geometry.
+            expect(effective(tier, true, true)).toBe(0)
+        end
+        expect(effective("Unknown", true, false)).toBe(0)
+        expect(effective("High", true, "true")).toBe(72)
+    end)
+
     it("culls PBR by current LOD hidden state and camera distance", function()
         local part = Instance.new("Part")
         part.Size = Vector3.new(8, 5, 4)

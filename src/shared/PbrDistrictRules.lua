@@ -18,6 +18,17 @@ function PbrDistrictRules.globalLimit(tierName, touch)
     return 0
 end
 
+-- Optional session-local Android comparison switch. Default stays AUTO:
+-- desktop and untouched mobile players preserve the existing PBR budget.
+-- Disabling PBR affects client-owned materials only, never collision,
+-- warning surfaces, physics or the player's adaptive quality tier.
+function PbrDistrictRules.effectiveGlobalLimit(tierName, touch, disabled)
+    if touch == true and disabled == true then
+        return 0
+    end
+    return PbrDistrictRules.globalLimit(tierName, touch)
+end
+
 function PbrDistrictRules.distanceLimit(tierName, touch)
     if tierName == "High" then return touch and 370 or 550 end
     if tierName == "Medium" then return touch and 240 or 340 end
