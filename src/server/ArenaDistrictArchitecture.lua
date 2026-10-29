@@ -113,6 +113,51 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         accent, Enum.Material.Glass)
     window.Transparency = 0.32
 
+    -- ONE architectural sign per sector, on the building already facing
+    -- the playable center. The codes are language-independent and legible
+    -- through a muted panel rather than a full-screen HUD/billboard.
+    -- SurfaceGui is culled with its model by the existing scenery LOD.
+    -- No additional Parts, lights, queries, particles or collision.
+    if slot == 2 then
+        local sectorNumber = ({North = 1, East = 2, South = 3, West = 4})[side]
+        local sign = Instance.new("SurfaceGui")
+        sign.Name = "DistrictWayfindingSign"
+        sign.Face = Enum.NormalId.Front
+        sign.Adornee = window
+        sign.AlwaysOnTop = false
+        sign.LightInfluence = 0
+        sign.CanvasSize = Vector2.new(448, 240)
+        sign.Parent = window
+
+        local panel = Instance.new("Frame")
+        panel.Name = "SignPlate"
+        panel.Size = UDim2.fromScale(1, 1)
+        panel.BackgroundColor3 = Color3.fromRGB(12, 20, 29)
+        panel.BackgroundTransparency = 0.10
+        panel.BorderSizePixel = 0
+        panel.Parent = sign
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Name = "SectorStroke"
+        stroke.Color = accent
+        stroke.Thickness = 5
+        stroke.Transparency = 0.10
+        stroke.Parent = panel
+
+        local code = Instance.new("TextLabel")
+        code.Name = "SectorCode"
+        code.Position = UDim2.fromScale(0.04, 0.05)
+        code.Size = UDim2.fromScale(0.92, 0.90)
+        code.BackgroundTransparency = 1
+        code.Font = Enum.Font.GothamBlack
+        code.Text = side:sub(1, 1) .. "  /  " .. string.format("%02d", sectorNumber)
+        code.TextScaled = true
+        code.TextColor3 = accent:Lerp(Color3.new(1, 1, 1), 0.52)
+        code.TextStrokeColor3 = Color3.fromRGB(6, 10, 15)
+        code.TextStrokeTransparency = 0.24
+        code.Parent = panel
+    end
+
     -- Recessed metal/glass panels and roof rails give each structure
     -- meaningful depth without collisions, shadows or extra lights.
     for _, direction in ipairs({-1, 1}) do

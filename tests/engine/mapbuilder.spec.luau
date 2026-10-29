@@ -833,6 +833,7 @@ describe("Chaos Survival engine", function()
             local profiles = {}
             local sectorCounts = {}
             local sectorSignals = {}
+            local physicalSigns = 0
             for _, model in ipairs(districts:GetChildren()) do
                 expect(model:IsA("Model")).toBe(true)
                 expect(model.ModelStreamingMode).toBe(Enum.ModelStreamingMode.Atomic)
@@ -860,6 +861,28 @@ describe("Chaos Survival engine", function()
                         .. model.Name .. " error=" .. tostring(colorError))
                 if profile == 1 then
                     sectorSignals[sectorSide] = signal.Color
+                end
+                local surfaceSign = signal:FindFirstChild("DistrictWayfindingSign")
+                if profile == 2 then
+                    physicalSigns += 1
+                    expect(surfaceSign ~= nil
+                        and surfaceSign:IsA("SurfaceGui")).toBe(true)
+                    expect(surfaceSign.Adornee).toBe(signal)
+                    expect(surfaceSign.Face).toBe(Enum.NormalId.Front)
+                    expect(surfaceSign.AlwaysOnTop).toBe(false)
+                    local plate = surfaceSign:FindFirstChild("SignPlate")
+                    local code = plate and plate:FindFirstChild("SectorCode")
+                    expect(code ~= nil and code:IsA("TextLabel")).toBe(true)
+                    local sectorIndex = ({
+                        North = 1, East = 2, South = 3, West = 4,
+                    })[sectorSide]
+                    expect(code.Text).toBe(
+                        sectorSide:sub(1, 1) .. "  /  "
+                            .. string.format("%02d", sectorIndex)
+                    )
+                else
+                    -- Exactly one HUD-free architectural sign per side.
+                    expect(surfaceSign).toBe(nil)
                 end
                 local signature = ({
                     "OrbitalSurveyLens", "CabShell", "VentTurbine0",
@@ -894,8 +917,10 @@ describe("Chaos Survival engine", function()
             for profile = 1, 4 do
                 expect(profiles[profile]).toBe(4)
             end
-            -- Four navigable sectors are visually distinguishable at
-            -- player height without adding geometry, lights or UI.
+            -- Four navigable sectors now have muted facade hues and
+            -- one depth-tested, static, 3D-mounted sign each. No Parts
+            -- or dynamic lights are added to the client GPU budget.
+            expect(physicalSigns).toBe(4)
             local sides = {"North", "East", "South", "West"}
             for _, side in ipairs(sides) do
                 expect(sectorCounts[side]).toBe(4)

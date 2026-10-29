@@ -203,6 +203,9 @@ local function classifyDescendant(descendant)
     return descendant:IsA("BasePart")
         or VisualBudgetRules.isLight(descendant)
         or VisualBudgetRules.isEffect(descendant)
+        -- World-space sector signs must disappear with their facade.
+        -- Otherwise SurfaceGuis could remain after mobile LOD culls 3D.
+        or descendant:IsA("SurfaceGui")
 end
 
 -- The weak-key cache retains no destroyed map root. The small helper
@@ -273,6 +276,7 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
             end
         elseif VisualBudgetRules.isEffect(descendant)
             or VisualBudgetRules.isLight(descendant)
+            or descendant:IsA("SurfaceGui")
         then
             if partVisible then
                 if lodHidden then
