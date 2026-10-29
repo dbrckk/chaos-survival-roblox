@@ -210,6 +210,39 @@ function JumpRouteCueRules.forkOptions(from, orderedPlatforms)
     return forward, flank
 end
 
+-- A second, real choice exists at perimeter step SIX. A grounded
+-- crossing connects that ridge to the second step of its side branch.
+-- During collapse, suggest the connector instead of an impossible jump
+-- to the next ridge. These are *real* server-created Part references.
+function JumpRouteCueRules.crosslinkOptions(from, orderedPlatforms)
+    if not walkable(from) or type(orderedPlatforms) ~= "table"
+        or from:GetAttribute("PerimeterStep") ~= 6 then
+        return nil, nil
+    end
+    local route = from:GetAttribute("PerimeterRoute")
+    if type(route) ~= "number" or route % 1 ~= 0
+        or route < 1 or route > 4 then
+        return nil, nil
+    end
+    local forward, detour = nil, nil
+    for _, candidate in ipairs(orderedPlatforms) do
+        if candidate ~= from and candidate:IsA("BasePart")
+            and candidate.Parent == from.Parent then
+            if candidate:GetAttribute("PerimeterRoute") == route
+                and candidate:GetAttribute("PerimeterStep") == 7
+                and JumpRouteCueRules.jumpable(from, candidate) then
+                forward = candidate
+            elseif candidate:GetAttribute("CrosslinkRoute") == route
+                and candidate:GetAttribute("CrosslinkFromPerimeterStep") == 6
+                and candidate:GetAttribute("CrosslinkToBranchStep") == 2
+                and JumpRouteCueRules.jumpable(from, candidate) then
+                detour = candidate
+            end
+        end
+    end
+    return forward, detour
+end
+
 -- Original central routes use conservative spatial selection. Perimeter
 -- and side-lookout steps have explicit server-authored route/step IDs;
 -- using those IDs avoids directing a novice across unrelated adjacent
@@ -223,6 +256,24 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
     local step = from:GetAttribute("PerimeterStep")
     local branch = from:GetAttribute("BranchRoute")
     local branchStep = from:GetAttribute("BranchStep")
+    local crossing = from:GetAttribute("CrosslinkRoute")
+
+    if crossing ~= nil then
+        if type(crossing) ~= "number" or crossing % 1 ~= 0
+            or crossing < 1 or crossing > 4
+            or from:GetAttribute("CrosslinkToBranchStep") ~= 2 then
+            return nil
+        end
+        for _, target in ipairs(orderedPlatforms) do
+            if target ~= from and target:IsA("BasePart")
+                and target:GetAttribute("BranchRoute") == crossing
+                and target:GetAttribute("BranchStep") == 2
+                and JumpRouteCueRules.jumpable(from, target) then
+                return target
+            end
+        end
+        return nil
+    end
 
     if route ~= nil or branch ~= nil then
         -- The forward route is the default, but only if the physical
@@ -233,6 +284,12 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
                 from, orderedPlatforms
             )
             return forward or flank
+        end
+        if route ~= nil and step == 6 then
+            local forward, detour = JumpRouteCueRules.crosslinkOptions(
+                from, orderedPlatforms
+            )
+            return forward or detour
         end
         local routeId = route or branch
         local index = route ~= nil and step or branchStep
