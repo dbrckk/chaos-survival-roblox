@@ -37,6 +37,12 @@ local function bounded(value, maxValue, integer)
     return integer and math.floor(clamped) or clamped
 end
 
+-- Modes are session-local, diagnostic only. Never use a client-reported
+-- graphics mode to grant rewards or make gameplay decisions.
+function PerformancePulseRules.currentPbrMode(isTouch, disabled)
+    return isTouch == true and disabled == true and "OFF" or "AUTO"
+end
+
 function PerformancePulseRules.sanitize(raw)
     local source = type(raw) == "table" and raw or {}
     local result = {}
@@ -47,6 +53,10 @@ function PerformancePulseRules.sanitize(raw)
     local tier = source.vfxTier
     result.vfxTier = (tier == "Low" or tier == "Medium" or tier == "High")
         and tier or "Unknown"
+
+    local mode = source.pbrMode
+    result.pbrMode = (mode == "AUTO" or mode == "OFF" or mode == "MIXED")
+        and mode or "Unknown"
 
     -- Only these two classes are emitted by the real client; accepting
     -- arbitrary text explodes analytics dimensions and needlessly allocates.
