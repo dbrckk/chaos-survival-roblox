@@ -331,10 +331,13 @@ task.spawn(function()
         local generated = workspace:FindFirstChild("GeneratedMap")
         local arena = generated and generated:FindFirstChild("Arena")
         local decor = arena and arena:FindFirstChild("Decor")
-        local original = decor and decor:FindFirstChild("Original3DScenery")
-        if original then
-            applyFolder(original, ORIGINAL_MESH_LOD,
-                profile, arenaOrigin, cameraPoint)
+        -- Cull imported MeshParts by EACH model pivot. These six approved
+        -- asset types are positioned outside the playable 320-stud floor:
+        -- arena-center culling hid even a nearby model on Android Medium.
+        -- Low still hides them, High still shows them, and no new loop runs.
+        for _, model in ipairs(SceneryLodRules.original3DVisualOwners(arena)) do
+            applyFolder(model, ORIGINAL_MESH_LOD,
+                profile, model:GetPivot().Position, cameraPoint)
         end
         local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
         if district and district:IsA("Folder") then
