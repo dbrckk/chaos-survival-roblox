@@ -940,6 +940,101 @@ describe("PBR materials for four playable district hero environments", function(
         unsafe:Destroy()
     end)
 
+    it("applies bounded PBR only to authored supports on approved original 3D assets", function()
+        local original = Instance.new("Model")
+        original.Name = "OriginalServiceCraneWest"
+        original:SetAttribute("Original3DAssetId", 119468460691888)
+        original:SetAttribute("CosmeticOnly", true)
+        original:SetAttribute("ChaosDistantScenery", true)
+        original:SetAttribute("OriginalFoundationBuilt", true)
+        local approved = PbrDistrictRules.isApprovedImportedFoundationOwner
+        expect(approved(original)).toBe(true)
+        expect(PbrDistrictRules.eligibleOwner(original)).toBe(true)
+        expect(PbrDistrictRules.ownerLimit("Low", original)).toBe(0)
+        expect(PbrDistrictRules.ownerLimit("Medium", original)).toBe(1)
+        expect(PbrDistrictRules.ownerLimit("High", original)).toBe(2)
+        expect(PbrDistrictRules.ownerLimit("Medium", nil)).toBe(6)
+        expect(PbrDistrictRules.ownerLimit("High", nil)).toBe(16)
+
+        local shoulder = Instance.new("Part")
+        shoulder.Name = "FoundationShoulder"
+        shoulder.Size = Vector3.new(20, 0.62, 18)
+        shoulder.Anchored = true
+        shoulder.CanCollide = false
+        shoulder.CanTouch = false
+        shoulder.CanQuery = false
+        shoulder.Material = Enum.Material.Metal
+        shoulder:SetAttribute("OriginalFoundationVisual", true)
+        shoulder.Parent = original
+        expect(PbrDistrictRules.eligiblePart(shoulder)).toBe(true)
+        expect(PbrDistrictRules.materialKey(shoulder.Name, shoulder.Material))
+            .toBe("titanium")
+        expect(PbrDistrictRules.materialKey("FoundationInset", Enum.Material.Metal))
+            .toBe("oxidized")
+        expect(PbrDistrictRules.materialKey("FoundationBallast", Enum.Material.Concrete))
+            .toBe("ceramic")
+        expect(PbrDistrictRules.materialKey("FoundationGroundPad", Enum.Material.Metal))
+            .toBe("armor")
+
+        local fakeSupport = Instance.new("Part")
+        fakeSupport.Name = "FoundationInset"
+        fakeSupport.Size = shoulder.Size
+        fakeSupport.Anchored = true
+        fakeSupport.CanCollide = false
+        fakeSupport.CanTouch = false
+        fakeSupport.CanQuery = false
+        fakeSupport.Parent = original
+        expect(PbrDistrictRules.eligiblePart(fakeSupport)).toBe(false)
+        fakeSupport:SetAttribute("OriginalFoundationVisual", true)
+        expect(PbrDistrictRules.eligiblePart(fakeSupport)).toBe(true)
+        fakeSupport.Name = "ImportedMeshGeometry"
+        expect(PbrDistrictRules.eligiblePart(fakeSupport)).toBe(false)
+
+        local imported = Instance.new("MeshPart")
+        imported.Name = "FoundationShoulder"
+        imported.Size = Vector3.new(12, 7, 4)
+        imported.Anchored = true
+        imported.CanCollide = false
+        imported.CanTouch = false
+        imported.CanQuery = false
+        imported:SetAttribute("OriginalFoundationVisual", true)
+        imported.Parent = original
+        -- A deceptive imported MeshPart must never be claimed as the
+        -- authored local foundation, even if its name/attribute matches.
+        expect(PbrDistrictRules.eligiblePart(imported)).toBe(false)
+        local uv = Instance.new("SurfaceAppearance")
+        uv.Parent = imported
+        expect(PbrDistrictRules.eligiblePart(imported)).toBe(false)
+
+        local localArchitecture = Instance.new("Part")
+        localArchitecture.Name = shoulder.Name
+        localArchitecture.Size = shoulder.Size
+        localArchitecture.Position = shoulder.Position
+        localArchitecture.Parent = workspace
+        -- Competing equal-area playable architecture wins a PBR tie.
+        expect(PbrDistrictRules.selectionPriority(
+            localArchitecture, Vector3.zero, false)
+            > PbrDistrictRules.selectionPriority(
+                shoulder, Vector3.zero, false)).toBe(true)
+        localArchitecture:Destroy()
+
+        -- Fail closed when any provenance or ownership tag is absent.
+        original:SetAttribute("Original3DAssetId", 42)
+        expect(approved(original)).toBe(false)
+        expect(PbrDistrictRules.eligibleOwner(original)).toBe(false)
+        expect(PbrDistrictRules.eligiblePart(shoulder)).toBe(false)
+        original:SetAttribute("Original3DAssetId", 119468460691888)
+        original:SetAttribute("OriginalFoundationBuilt", false)
+        expect(approved(original)).toBe(false)
+        original:SetAttribute("OriginalFoundationBuilt", true)
+        original:SetAttribute("CosmeticOnly", false)
+        expect(approved(original)).toBe(false)
+        original:SetAttribute("CosmeticOnly", true)
+        original:SetAttribute("ChaosDistantScenery", false)
+        expect(approved(original)).toBe(false)
+        original:Destroy()
+    end)
+
     it("never touches hitboxes, neon, glass, authored variants or tiny decals", function()
         local part = Instance.new("Part")
         part.Anchored = true

@@ -1510,6 +1510,19 @@ describe("Chaos Survival engine", function()
                             expect(p.CastShadow).toBe(false)
                         end
                     end
+                    local builtSupports = 0
+                    local validNames = {
+                        FoundationShoulder = true, FoundationInset = true,
+                        FoundationBallast = true, FoundationGroundPad = true,
+                    }
+                    for _, support in ipairs(placed:GetChildren()) do
+                        if support:GetAttribute("OriginalFoundationVisual") == true then
+                            expect(support:IsA("Part")).toBe(true)
+                            expect(validNames[support.Name]).toBe(true)
+                            builtSupports += 1
+                        end
+                    end
+                    expect(builtSupports).toBe(4)
                     local x, z = entry.position.X, entry.position.Z
                     expect(math.abs(x - base.Position.X) > base.Size.X * 0.5
                         or math.abs(z - base.Position.Z) > base.Size.Z * 0.5)
