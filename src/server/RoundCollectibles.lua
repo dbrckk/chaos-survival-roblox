@@ -6,6 +6,10 @@ RoundCollectibles.SpawnInterval = 8
 RoundCollectibles.InitialDelay = 4
 RoundCollectibles.CoinReward = 1
 RoundCollectibles.GoldenCoinReward = 3
+-- Optional high-route objective, never active in beginner-protected
+-- rounds or alongside structural collapse / shrinking disasters.
+RoundCollectibles.HarborCargoReward = 2
+RoundCollectibles.HarborCargoLifetime = 22
 
 function RoundCollectibles.maxActive(contestantCount, soloMode)
     if soloMode then
@@ -62,9 +66,20 @@ local function candidateParts(arena, ctx)
         for _, child in ipairs(platforms:GetChildren()) do
             if child:IsA("BasePart") and child.Parent
                 and child.CanCollide and child.Transparency < 0.95 then
+                local harborStep = tonumber(child:GetAttribute("HarborStep"))
+                local harborRoute = tonumber(child:GetAttribute("HarborRoute"))
+                local elevatedCargo = harborRoute and harborRoute >= 1
+                    and harborRoute <= 4
+                    and (harborStep == 4 or harborStep == 6)
                 if allowOutskirts
-                    and child:GetAttribute("PerimeterStep") == 1
-                    and tonumber(child:GetAttribute("PerimeterRoute")) then
+                    and child:GetAttribute("CollapsePhase") == nil
+                    and ((child:GetAttribute("PerimeterStep") == 1
+                        and tonumber(child:GetAttribute("PerimeterRoute")))
+                        or elevatedCargo) then
+                    -- On Harbor, the player can climb a *real* four- or
+                    -- six-step cargo route for a valuable optional cache.
+                    -- Every destination is a server-owned, colliding
+                    -- physical platform, never a floating collectible.
                     table.insert(outskirts, child)
                 elseif #spawns == 0 then
                     -- A future map without spawn pads still supports the
@@ -77,9 +92,10 @@ local function candidateParts(arena, ctx)
     return spawns, outskirts
 end
 
-local function makeShard(container, supportPart, index, reward, golden)
+local function makeShard(container, supportPart, index, reward, golden, cargo)
     local resolvedReward = math.max(1, math.floor(tonumber(reward) or RoundCollectibles.CoinReward))
     local isGolden = golden == true
+    local isCargo = cargo == true and not isGolden
 
     local shard = Instance.new("Part")
     shard.Name = "ChaosShard" .. index
@@ -91,11 +107,14 @@ local function makeShard(container, supportPart, index, reward, golden)
     shard.CanTouch = true
     shard.CastShadow = false
     shard.Material = Enum.Material.Neon
-    shard.Color = isGolden and Color3.fromRGB(255, 205, 70) or Color3.fromRGB(95, 220, 255)
+    shard.Color = isGolden and Color3.fromRGB(255, 205, 70)
+        or (isCargo and Color3.fromRGB(94, 226, 170)
+            or Color3.fromRGB(95, 220, 255))
     shard.Position = supportPart.Position + Vector3.new(0, (supportPart.Size.Y * 0.5) + 2.2, 0)
     shard:SetAttribute("ChaosShard", true)
     shard:SetAttribute("ChaosShardReward", resolvedReward)
     shard:SetAttribute("ChaosShardGolden", isGolden)
+    shard:SetAttribute("ChaosShardCargo", isCargo)
     shard.Parent = container
 
     local light = Instance.new("PointLight")
@@ -147,9 +166,9 @@ local function makeShard(container, supportPart, index, reward, golden)
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ShardLabel"
     billboard.AlwaysOnTop = true
-    billboard.Size = UDim2.fromOffset(96, 34)
+    billboard.Size = UDim2.fromOffset(isCargo and 118 or 96, 34)
     billboard.StudsOffset = Vector3.new(0, 1.8, 0)
-    billboard.MaxDistance = 70
+    billboard.MaxDistance = isCargo and 95 or 70
     billboard.Parent = shard
 
     local label = Instance.new("TextLabel")
@@ -158,8 +177,12 @@ local function makeShard(container, supportPart, index, reward, golden)
     label.BackgroundTransparency = 0.18
     label.BorderSizePixel = 0
     label.Font = Enum.Font.GothamBlack
-    label.Text = isGolden and ("GOLD SHARD  +" .. tostring(resolvedReward)) or ("SHARD  +" .. tostring(resolvedReward))
-    label.TextColor3 = isGolden and Color3.fromRGB(255, 230, 115) or Color3.fromRGB(150, 235, 255)
+    label.Text = isGolden and ("GOLD SHARD  +" .. tostring(resolvedReward))
+        or (isCargo and ("CARGO CACHE  +" .. tostring(resolvedReward))
+            or ("SHARD  +" .. tostring(resolvedReward)))
+    label.TextColor3 = isGolden and Color3.fromRGB(255, 230, 115)
+        or (isCargo and Color3.fromRGB(140, 255, 195)
+            or Color3.fromRGB(150, 235, 255))
     label.TextScaled = true
     label.TextStrokeTransparency = 0.7
     label.Parent = billboard
@@ -257,18 +280,28 @@ function RoundCollectibles.start(ctx)
 
         spawnIndex += 1
         local golden = ctx.Overdrive and ctx.Overdrive() == true and not goldenSpawned
-        local reward = golden and RoundCollectibles.goldenReward() or RoundCollectibles.reward()
+        local cargoStep = tonumber(support:GetAttribute("HarborStep"))
+        local cargo = not golden and tonumber(support:GetAttribute("HarborRoute"))
+            and (cargoStep == 4 or cargoStep == 6)
+            and ctx.EnableDistrictCaches == true
+            and (ctx.ActiveDisasters or {}).DisappearingPlatforms ~= true
+            and (ctx.ActiveDisasters or {}).ShrinkingArena ~= true
+        local reward = golden and RoundCollectibles.goldenReward()
+            or (cargo and RoundCollectibles.HarborCargoReward
+                or RoundCollectibles.reward())
         if golden then
             goldenSpawned = true
         end
 
-        local shard = makeShard(container, support, spawnIndex, reward, golden)
+        local shard = makeShard(
+            container, support, spawnIndex, reward, golden, cargo)
         local claimed = false
 
         -- An uncollected shard must never occupy the final active slot
         -- for the entire round. Rotate inaccessible/ignored pickups after
-        -- 12 seconds, preserving the existing four-shard hard ceiling.
-        task.delay(12, function()
+        -- 12 seconds on normal floors, 22 for a real four/six-jump
+        -- cargo ascent. The four-shard ceiling remains unchanged.
+        task.delay(cargo and RoundCollectibles.HarborCargoLifetime or 12, function()
             if shard.Parent and not claimed then
                 shard:Destroy()
             end
@@ -295,7 +328,9 @@ function RoundCollectibles.start(ctx)
                     player,
                     collectedReward,
                     shard.Position,
-                    shard:GetAttribute("ChaosShardGolden") == true
+                    shard:GetAttribute("ChaosShardGolden") == true,
+                    shard:GetAttribute("ChaosShardCargo") == true
+                        and "HarborCargo" or nil
                 )
                 if not ok then
                     warn("Chaos shard reward callback failed:", err)
