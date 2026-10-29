@@ -18,6 +18,7 @@ local OrbitalHelix = if helixModule
 
 local HeroArchitecture = require("./HeroArchitecture")
 local ArenaDistrictArchitecture = require("./ArenaDistrictArchitecture")
+local HarborScenery = require("./HarborScenery")
 
 local MapBuilder = {}
 
@@ -2375,6 +2376,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- One distinctive real 3D skyline per arena. No external asset ID is
     -- required; this is the always-available mobile-friendly model layer.
     HeroArchitecture.build(decor, arena:FindFirstChild("Base"), variant.Id, theme)
+    if variant.Id == "Harbor" then
+        -- Exterior harbor cranes distinguish the new cargo port without
+        -- extra colliders, sound loops or cameras tracking scenic models.
+        HarborScenery.build(decor, base, theme)
+    end
     -- Twelve 3D models occupy the now-playable outer districts. They are
     -- cosmetic and LOD managed, not new physical/hazard blocking geometry.
     ArenaDistrictArchitecture.build(decor, base, variant.Id, theme)
@@ -2482,6 +2488,16 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local routeTier = tonumber(definition.RouteTier)
         if routeTier and routeTier >= 1 and routeTier <= 4 then
             platform:SetAttribute("RouteTier", routeTier)
+        end
+        if definition.HarborRoute then
+            -- The seven-step cargo-pier switchbacks are real physical
+            -- routes. Preserve both the road and step identity so the
+            -- novice coach never points across inaccessible cargo stacks.
+            platform:SetAttribute("HarborRoute", definition.HarborRoute)
+            platform:SetAttribute("HarborStep", definition.HarborStep)
+            platform.Color = theme.Structure:Lerp(theme.Detail, 0.43)
+            platform.Material = theme.StructureMaterial
+                or VisualTheme.Materials.Structure
         end
         if definition.PerimeterRoute then
             -- Explicit route metadata is visible to wayfinding and QA.
