@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CameraOcclusionRules = require(ReplicatedStorage.Shared.CameraOcclusionRules)
+local CameraSightlineFilterCache = require(script.Parent.CameraSightlineFilterCache)
 
 local player = Players.LocalPlayer
 local roundState = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -14,6 +15,9 @@ local faded = nil
 local previousModifier = 0
 local fadeValue = 0.72
 local lastCamera = nil
+local structuralFilter = CameraSightlineFilterCache.new(
+    CameraOcclusionRules.arenaRaycastParams
+)
 
 -- The Android screenshots showed players overlapping directly in front
 -- of the lens. Soften at most TWO actual sightline blockers, rather than
@@ -153,6 +157,7 @@ local function refreshAvatarOccluder(camera, localRoot, localCharacter)
 end
 
 local function restore()
+    structuralFilter:clear()
     restoreAvatars()
     if faded and faded.Parent then
         -- Yield to native Roblox camera/streaming writers if they adjusted
@@ -236,7 +241,9 @@ local function update()
     -- different survivor, bot, local particle shell or hazard marker may
     -- stand closer to the lens than an opaque column; none should prevent
     -- the column from being tested. Avatars are handled independently.
-    local params = CameraOcclusionRules.arenaRaycastParams(arena, base)
+    -- Reuse the same include-only filter for unchanged streamed geometry.
+    -- A map/platform change or skybridge marker invalidates it explicitly.
+    local params = structuralFilter:get(arena, base)
     local hit = params and workspace:Raycast(start, toAvatar, params)
     local nextPart = nil
     if hit and supportedTarget(hit.Instance, arena, base) then
