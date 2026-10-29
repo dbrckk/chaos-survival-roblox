@@ -1,6 +1,7 @@
 -- Human-only momentum ribbons; bot trails have their own owner.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local Quality = require(ReplicatedStorage.Shared.VfxQuality)
 local Rules = require(ReplicatedStorage.Shared.CharacterMotionTrailRules)
 local Viewport = require(ReplicatedStorage.Shared.VisualViewportRules)
@@ -13,7 +14,7 @@ local phase, finalRush = "waiting", false
 local remoteCandidates, selectedRemote = {}, {}
 
 local function suspendIfDisabled()
-    local quality = Quality.get(localPlayer:GetAttribute("VfxQualityTier"))
+    local quality = Quality.deviceTier(localPlayer:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     if Rules.suspended(phase, finalRush, quality.Name,
         localPlayer:GetAttribute("ReduceMotion") == true) then
         Rules.suspendOwned(tracked, localPlayer.Character, Builder.release)
@@ -34,12 +35,12 @@ localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(suspendIfDisable
 
 task.spawn(function()
     while true do
-        local waitTier = Quality.get(localPlayer:GetAttribute("VfxQualityTier"))
+        local waitTier = Quality.deviceTier(localPlayer:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
         task.wait(Rules.updateInterval(waitTier.Name, phase,
             localPlayer:GetAttribute("ReduceMotion") == true, finalRush))
         -- An attribute or RoundState event may run during task.wait.
         -- Render with current settings, not the scheduling snapshot.
-        local tier = Quality.get(localPlayer:GetAttribute("VfxQualityTier"))
+        local tier = Quality.deviceTier(localPlayer:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
         local reduceMotion = localPlayer:GetAttribute("ReduceMotion") == true
         local ribbonPhaseActive = not Rules.suspended(
             phase, finalRush, tier.Name, reduceMotion)
