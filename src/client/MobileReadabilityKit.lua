@@ -62,6 +62,32 @@ function Kit.applyTree(root, tier, originalBrightness)
     end
 end
 
+-- Roblox may signal both a streamed Model and every already populated
+-- descendant in the same update. Keep only the highest pending ancestor:
+-- one streamed building receives one tint walk, not N nested rescans.
+-- A detached item is never touched after a new arena replaces the old.
+function Kit.collapseStreamRoots(pending, decor)
+    local roots = {}
+    if typeof(decor) ~= "Instance" then return roots end
+    for instance in pairs(pending) do
+        if typeof(instance) == "Instance" and instance:IsDescendantOf(decor) then
+            local parent = instance.Parent
+            local covered = false
+            while parent and parent ~= decor do
+                if pending[parent] then
+                    covered = true
+                    break
+                end
+                parent = parent.Parent
+            end
+            if not covered then
+                roots[#roots + 1] = instance
+            end
+        end
+    end
+    return roots
+end
+
 -- Distance LOD writes its saved visibility modifier before clearing the
 -- hidden attribute. Observe only that explicit reveal transition: a
 -- static touch tint can then be restored without a polling/render loop.
