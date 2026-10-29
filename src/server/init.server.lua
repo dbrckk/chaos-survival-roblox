@@ -226,6 +226,7 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
     local fps = sample.averageFps
     local tier = sample.vfxTier
     local deviceClass = sample.deviceClass
+    local pbrMode = sample.pbrMode
     local tierTransitions = sample.tierTransitions
     local visualParts = sample.visualParts
     local visualLights = sample.visualLights
@@ -267,7 +268,7 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         "ClientPerformancePulse",
         math.floor(fps + 0.5),
         "VFX:" .. tier,
-        "Device:" .. deviceClass,
+        "Device:" .. deviceClass .. "|PBR:" .. pbrMode,
         "Round:" .. tostring(roundNumber)
             .. "|TierChanges:" .. tostring(tierTransitions)
             .. "|Visual:" .. tostring(visualParts)
@@ -283,7 +284,7 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
         player,
         "ClientMemoryPulse",
         math.floor(totalMemoryMb + 0.5),
-        "VFX:" .. tier .. "|Device:" .. deviceClass,
+        "VFX:" .. tier .. "|Device:" .. deviceClass .. "|PBR:" .. pbrMode,
         "Instances:" .. tostring(instanceCount),
         "FrameMs:" .. string.format("%.1f", frameTimeMs)
             .. "|P95:" .. tostring(p95FrameMs)
