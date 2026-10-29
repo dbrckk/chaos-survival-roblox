@@ -16,6 +16,26 @@ JumpLandingPreviewRules.MaxHorizontalTravel = 8
 JumpLandingPreviewRules.ProbeSeconds = {0.08, 0.23, 0.36}
 JumpLandingPreviewRules.ProbeToleranceSeconds = 0.14
 
+-- Classify a REAL collidable landing before drawing local brackets.
+-- An amber CollapsePhase=Warning target is not safe: show an explicit
+-- hazard X while collision still exists, rather than silently hiding the
+-- only preview of the upcoming landing. Gone and unrecognised phases are
+-- rejected. This is UI-only: it cannot change server-owned terrain.
+function JumpLandingPreviewRules.surfaceStatus(part)
+    if typeof(part) ~= "Instance" or not part:IsA("BasePart")
+        or not part.CanCollide or part.Transparency >= 0.75 then
+        return "Unavailable"
+    end
+    local phase = part:GetAttribute("CollapsePhase")
+    if phase == "Warning" then
+        return "Warning"
+    end
+    if phase ~= nil then
+        return "Unavailable"
+    end
+    return "Safe"
+end
+
 function JumpLandingPreviewRules.probeMatches(probeSeconds, contactSeconds)
     return finite(probeSeconds) and finite(contactSeconds)
         and probeSeconds >= 0
