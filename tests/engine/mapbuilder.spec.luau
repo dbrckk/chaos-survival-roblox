@@ -1023,6 +1023,91 @@ describe("Chaos Survival engine", function()
         end
     end)
 
+    it("guides rookie parkour only between currently jumpable physical platforms", function()
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(variantId)
+            local root = MapBuilder.build(Config, variantId, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local platforms = arena:FindFirstChild("Platforms")
+            local originals = #variant.Platforms
+            local perimeterEnd = originals + #variant.PerimeterPlatforms
+            local pieces = platforms:GetChildren()
+
+            for route = 1, 4 do
+                -- The first seven perimeter jumps must lead to the next
+                -- REAL collidable deck; never a location invented by a GUI.
+                for step = 1, ArenaVariants.PerimeterSteps - 1 do
+                    local number = originals
+                        + (route - 1) * ArenaVariants.PerimeterSteps + step
+                    local from = platforms:FindFirstChild("Platform" .. number)
+                    local to = platforms:FindFirstChild("Platform" .. number + 1)
+                    expect(JumpRouteCueRules.jumpable(from, to)).toBe(true)
+                    expect(JumpRouteCueRules.nextPhysical(
+                        from, pieces, Config.ArenaCenter, variantId
+                    )).toBe(to)
+                    expect(JumpRouteCueRules.jumpable(to, from)).toBe(false)
+                end
+                local last = platforms:FindFirstChild("Platform" .. (
+                    originals + route * ArenaVariants.PerimeterSteps))
+                expect(JumpRouteCueRules.nextPhysical(
+                    last, pieces, Config.ArenaCenter, variantId
+                )).toBe(nil)
+
+                for step = 1, 3 do
+                    local number = perimeterEnd + (route - 1) * 4 + step
+                    local from = platforms:FindFirstChild("Platform" .. number)
+                    local to = platforms:FindFirstChild("Platform" .. number + 1)
+                    expect(JumpRouteCueRules.jumpable(from, to)).toBe(true)
+                    expect(JumpRouteCueRules.nextPhysical(
+                        from, pieces, Config.ArenaCenter, variantId
+                    )).toBe(to)
+                end
+                local lookout = platforms:FindFirstChild("Platform" .. (
+                    perimeterEnd + route * 4))
+                expect(JumpRouteCueRules.nextPhysical(
+                    lookout, pieces, Config.ArenaCenter, variantId
+                )).toBe(nil)
+            end
+
+            local from = platforms:FindFirstChild(
+                "Platform" .. (originals + 1))
+            local to = platforms:FindFirstChild(
+                "Platform" .. (originals + 2))
+            expect(from ~= nil and to ~= nil).toBe(true)
+            to.CanCollide = false
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(nil)
+            to.CanCollide = true
+
+            to.Transparency = 1
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(nil)
+            to.Transparency = 0
+
+            -- A mistakenly tagged/streamed deck must never bypass
+            -- the actual geometry, displacement and height validation.
+            to.Position += Vector3.new(15, 0, 0)
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(nil)
+            to.Position -= Vector3.new(15, 0, 0)
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(to)
+
+            expect(JumpRouteCueRules.nextPhysical(
+                arena:FindFirstChild("Base"), pieces,
+                Config.ArenaCenter, variantId
+            )).toBe(nil)
+            expect(JumpRouteCueRules.nextPhysical(
+                from, {}, Config.ArenaCenter, variantId
+            )).toBe(nil)
+            root:Destroy()
+        end
+    end)
+
     it("builds sixteen physical side lookouts without changing original route indices", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
