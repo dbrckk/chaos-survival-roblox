@@ -111,7 +111,8 @@ function RoundChallenge.forContext(roundNumber, firstRound, arenaId, activeDisas
     end
     local sequence = math.floor(tonumber(roundNumber) or 1)
     local routeMission = RoundChallenge.HighGround[tostring(arenaId)]
-    if routeMission and sequence > 0 and sequence % 3 == 0 then
+    if routeMission and sequence > 0 and sequence % 3 == 0
+        and (type(activeDisasters) ~= "table" or #activeDisasters <= 1) then
         -- No unobtainable platform challenges while the arena floor
         -- is disappearing or shrinking. A dangerous but fully stable
         -- ordinary round may still offer a fair skill objective.
