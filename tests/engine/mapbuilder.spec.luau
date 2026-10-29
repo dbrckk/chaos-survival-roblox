@@ -1489,13 +1489,18 @@ describe("Chaos Survival engine", function()
                 tierCount[tier] += 1
             end
         end
-        expect(#(platforms :: Folder):GetChildren()).toBe(69)
+        local authored = ArenaVariants.get("Towers")
+        expect(#(platforms :: Folder):GetChildren()).toBe(
+            #authored.Platforms + #authored.PerimeterPlatforms
+                + #authored.BranchPlatforms + #authored.CrosslinkPlatforms
+        )
         -- Original 21 decks and Skybridges 18–21 are unchanged.
-        -- Thirty-two main outer-rim stages and sixteen corner spurs complete the arena.
+        -- The outer rim, 16 corner spurs and four physical crosslinks
+        -- expand the routes without changing legacy game-system indices.
         expect(tierCount[1]).toBe(9)
         expect(tierCount[2]).toBe(12)
         expect(tierCount[3]).toBe(12)
-        expect(tierCount[4]).toBe(32)
+        expect(tierCount[4]).toBe(36)
 
         -- Floor guidance must be genuinely visible but never obstruct
         -- escape movement, hazard collision or updraft pads.
