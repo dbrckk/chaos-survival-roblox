@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
+local SceneryLodCache = require(script.Parent.SceneryLodCache)
 
 local player = Players.LocalPlayer
 
@@ -198,52 +199,23 @@ local function cameraPosition()
     return camera and camera.CFrame.Position or Vector3.zero
 end
 
-local folderCaches = setmetatable({}, {__mode = "k"})
-
 local function classifyDescendant(descendant)
-    if descendant:IsA("BasePart")
+    return descendant:IsA("BasePart")
         or VisualBudgetRules.isLight(descendant)
         or VisualBudgetRules.isEffect(descendant)
-    then
-        return descendant
-    end
-    return nil
 end
+
+-- The weak-key cache retains no destroyed map root. The small helper
+-- only owns hierarchy invalidation/refresh, never a second LOD loop.
+local folderCaches = setmetatable({}, {__mode = "k"})
 
 local function ensureCache(folder)
-    local cache = folderCaches[folder]
-    if cache then
-        return cache
-    end
-
-    cache = {
-        entries = {},
-        dirty = true,
-    }
+    local cached = folderCaches[folder]
+    if cached then return cached end
+    local cache = {entries = {}, dirty = true}
     folderCaches[folder] = cache
-
-    folder.DescendantAdded:Connect(function(descendant)
-        if classifyDescendant(descendant) then
-            cache.dirty = true
-        end
-    end)
-    folder.DescendantRemoving:Connect(function(descendant)
-        if classifyDescendant(descendant) then
-            cache.dirty = true
-        end
-    end)
-
+    SceneryLodCache.watch(folder, cache)
     return cache
-end
-
-local function refreshCache(folder, cache)
-    table.clear(cache.entries)
-    for _, descendant in ipairs(folder:GetDescendants()) do
-        if classifyDescendant(descendant) then
-            table.insert(cache.entries, descendant)
-        end
-    end
-    cache.dirty = false
 end
 
 local function applyFolder(folder, limits, profile, origin, cameraPoint)
@@ -257,7 +229,7 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
     local wasDirty = cache.dirty
     cache.visible = visible
     if wasDirty then
-        refreshCache(folder, cache)
+        SceneryLodCache.refresh(folder, cache, classifyDescendant)
     end
 
     -- An already-visible, unchanged folder has nothing to restore. Skip
