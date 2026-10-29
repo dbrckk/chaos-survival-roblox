@@ -67,6 +67,8 @@ describe("Parkour sound response in real Roblox engine", function()
             .toBe("Mechanical")
         expect(GroundContactRules.materialStyle(Enum.Material.CeramicTiles))
             .toBe("Mineral")
+        expect(GroundContactRules.materialStyle(Enum.Material.WoodPlanks))
+            .toBe("Timber")
         local alloy = GroundContactRules.landingAudio(
             Enum.Material.Foil, 0.85, "High", false
         )
@@ -79,6 +81,12 @@ describe("Parkour sound response in real Roblox engine", function()
         expect(alloy.Style).toBe("Mechanical")
         expect(mineral.Style).toBe("Mineral")
         expect(crystal.Style).toBe("Crystal")
+        local wood = GroundContactRules.landingAudio(
+            Enum.Material.WoodPlanks, 0.85, "High", false
+        )
+        expect(wood.Style).toBe("Timber")
+        expect(wood.PitchOffset ~= alloy.PitchOffset).toBe(true)
+        expect(wood.VolumeScale <= 0.18).toBe(true)
         expect(alloy.PitchOffset ~= mineral.PitchOffset).toBe(true)
         expect(crystal.PitchOffset ~= mineral.PitchOffset).toBe(true)
         local longFall = GroundContactRules.landingAudio(
