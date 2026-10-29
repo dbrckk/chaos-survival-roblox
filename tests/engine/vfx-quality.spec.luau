@@ -8,9 +8,122 @@ local FramePacingRules = require("../../src/shared/FramePacingRules")
 local DisasterCosmeticRules = require("../../src/shared/DisasterCosmeticRules")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
 local CameraOcclusionRules = require("../../src/shared/CameraOcclusionRules")
+local CameraSightlineFilterCache = require("../../src/client/CameraSightlineFilterCache")
 local SceneryLodRules = require("../../src/shared/SceneryLodRules")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
+
+describe("Android camera sightline filter lifecycle", function()
+    local function contains(params, target)
+        for _, instance in ipairs(params.FilterDescendantsInstances) do
+            if instance == target then return true end
+        end
+        return false
+    end
+
+    it("reuses raycast filters until the arena or skybridge role changes", function()
+        local arena = Instance.new("Folder")
+        arena.Name = "CameraFilterCacheArenaTest"
+        arena.Parent = workspace
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Parent = arena
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = arena
+        local support = Instance.new("Part")
+        support.Name = "Support"
+        support.Parent = arena
+        local skybridge = Instance.new("Part")
+        skybridge.Name = "OptionalSkybridge"
+        skybridge.Parent = platforms
+
+        local builds = 0
+        local cache = CameraSightlineFilterCache.new(function(owner, floor)
+            builds += 1
+            return CameraOcclusionRules.arenaRaycastParams(owner, floor)
+        end)
+        local first = cache:get(arena, base)
+        expect(first ~= nil and contains(first, support)).toBe(true)
+        expect(contains(first, base)).toBe(false)
+        expect(contains(first, skybridge)).toBe(false)
+        for _ = 1, 12 do
+            expect(cache:get(arena, base)).toBe(first)
+        end
+        expect(builds).toBe(1)
+
+        skybridge:SetAttribute("ChaosSkybridge", true)
+        local second = cache:get(arena, base)
+        expect(builds).toBe(2)
+        expect(second ~= first).toBe(true)
+        expect(contains(second, skybridge)).toBe(true)
+        skybridge:SetAttribute("ChaosSkybridge", false)
+        expect(contains(cache:get(arena, base), skybridge)).toBe(false)
+        expect(builds).toBe(3)
+
+        -- Stream in new arena support; the next sample picks it up.
+        local streamed = Instance.new("Part")
+        streamed.Name = "StreamedSupport"
+        streamed.Parent = arena
+        expect(contains(cache:get(arena, base), streamed)).toBe(true)
+        expect(builds).toBe(4)
+
+        -- Base swaps must force a fresh filter even if topology stays put.
+        local replacementBase = Instance.new("Part")
+        replacementBase.Name = "Base"
+        replacementBase.Parent = arena
+        local updated = cache:get(arena, replacementBase)
+        expect(contains(updated, replacementBase)).toBe(false)
+        expect(contains(updated, base)).toBe(true)
+
+        cache:clear()
+        local before = builds
+        skybridge:SetAttribute("ChaosSkybridge", true)
+        expect(builds).toBe(before)
+        arena:Destroy()
+    end)
+
+    it("rebinds streamed Platforms and never retains stale listeners", function()
+        local arena = Instance.new("Folder")
+        arena.Parent = workspace
+        local floor = Instance.new("Part")
+        floor.Parent = arena
+        local oldPlatforms = Instance.new("Folder")
+        oldPlatforms.Name = "Platforms"
+        oldPlatforms.Parent = arena
+        local oldBridge = Instance.new("Part")
+        oldBridge:SetAttribute("ChaosSkybridge", true)
+        oldBridge.Parent = oldPlatforms
+
+        local builds = 0
+        local cache = CameraSightlineFilterCache.new(function(owner, base)
+            builds += 1
+            return CameraOcclusionRules.arenaRaycastParams(owner, base)
+        end)
+        expect(contains(cache:get(arena, floor), oldBridge)).toBe(true)
+        oldPlatforms.Parent = nil
+        local replacement = Instance.new("Folder")
+        replacement.Name = "Platforms"
+        replacement.Parent = arena
+        local newBridge = Instance.new("Part")
+        newBridge:SetAttribute("ChaosSkybridge", true)
+        newBridge.Parent = replacement
+        local current = cache:get(arena, floor)
+        expect(contains(current, oldBridge)).toBe(false)
+        expect(contains(current, newBridge)).toBe(true)
+
+        oldBridge:SetAttribute("ChaosSkybridge", false)
+        expect(cache:get(arena, floor)).toBe(current)
+        newBridge.Parent = nil
+        expect(contains(cache:get(arena, floor), newBridge)).toBe(false)
+        cache:clear()
+        expect(cache:get(nil, nil)).toBe(nil)
+        replacement:Destroy()
+        oldPlatforms:Destroy()
+        arena:Destroy()
+        expect(builds >= 3).toBe(true)
+    end)
+end)
 
 describe("Android frame pacing without a second RenderStepped owner", function()
     it("reports the 95th-percentile rather than a single isolated hitch", function()
