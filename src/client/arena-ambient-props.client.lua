@@ -65,6 +65,8 @@ local function arenaTheme()
         return Color3.fromRGB(235, 105, 220), Color3.fromRGB(213, 86, 255)
     elseif currentVariant == "Orbital" then
         return Color3.fromRGB(65, 255, 205), Color3.fromRGB(74, 188, 255)
+    elseif currentVariant == "Harbor" then
+        return Color3.fromRGB(85, 191, 199), Color3.fromRGB(126, 164, 184)
     end
     return Color3.fromRGB(90, 185, 255), Color3.fromRGB(120, 100, 255)
 end
@@ -196,6 +198,43 @@ local function rebuild()
                 radius = math.max(halfX, halfZ) + 11,
             }
         end
+    elseif currentVariant == "Harbor" then
+        -- Storm Harbor gets its own visible moving cargo activity,
+        -- without introducing a RenderStepped listener or server work.
+        -- These are local purely cosmetic lifts outside the 320-stud
+        -- playable boundary: never a deceptive jump destination.
+        local quay = {
+            Vector3.new(-halfX - 11, 16, -halfZ * 0.35),
+            Vector3.new(halfX + 11, 17, halfZ * 0.35),
+            Vector3.new(-halfX * 0.35, 18, halfZ + 11),
+            Vector3.new(halfX * 0.35, 16, -halfZ - 11),
+            Vector3.new(halfX + 11, 20, -halfZ * 0.28),
+            Vector3.new(-halfX - 11, 19, halfZ * 0.28),
+        }
+        for i = 1, math.min(limit, #quay) do
+            local p = makeProp(
+                "HarborCargoHoist" .. i,
+                Vector3.new(5.6, 3.2, 4.1),
+                i % 2 == 0 and secondary or accent,
+                center + quay[i],
+                Enum.Material.CorrodedMetal
+            )
+            local cap = makeProp(
+                "HarborCargoHoistTrim" .. i,
+                Vector3.new(5.7, 0.18, 4.2),
+                i % 2 == 0 and accent or secondary,
+                p.Position + Vector3.new(0, 1.70, 0),
+                Enum.Material.Metal
+            )
+            p.Transparency = 0.10
+            p:SetAttribute("AmbientBaseTransparency", 0.10)
+            tracked[#tracked + 1] = {
+                part = p,
+                glow = cap,
+                base = p.Position,
+                index = i,
+            }
+        end
     end
 
     applyPhaseVisibility()
@@ -311,6 +350,18 @@ task.spawn(function()
                             13 + lift,
                             math.sin(angle) * item.radius
                         )
+                    elseif currentVariant == "Harbor" then
+                        -- Slow asynchronous hoist travel in the existing
+                        -- 10 Hz ambient update. On ReduceMotion the
+                        -- displacement contracts to one quarter.
+                        local hoist = math.sin(now * 0.58 * modeSpeed
+                            + item.index * 0.91 * modeDirection)
+                            * 2.8 * qualityScale * motionScale * modeAmplitude
+                        p.Position = item.base + Vector3.new(0, hoist, 0)
+                        if item.glow and item.glow.Parent then
+                            item.glow.Position = p.Position
+                                + Vector3.new(0, p.Size.Y * 0.5 + 0.1, 0)
+                        end
                     end
                 end
             end
