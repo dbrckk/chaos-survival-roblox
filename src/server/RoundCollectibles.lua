@@ -41,7 +41,7 @@ local function playerFromHit(hit)
 end
 
 local function candidateParts(arena, ctx)
-    local spawns, outskirts = {}, {}
+    local spawns, outskirts, cargoCandidates = {}, {}, {}
 
     -- Keep the center safe for the first three guided rounds, and when
     -- a structural disaster might move/hide a support under an anchored
@@ -80,7 +80,11 @@ local function candidateParts(arena, ctx)
                     -- six-step cargo route for a valuable optional cache.
                     -- Every destination is a server-owned, colliding
                     -- physical platform, never a floating collectible.
-                    table.insert(outskirts, child)
+                    if elevatedCargo then
+                        table.insert(cargoCandidates, child)
+                    else
+                        table.insert(outskirts, child)
+                    end
                 elseif #spawns == 0 then
                     -- A future map without spawn pads still supports the
                     -- original shard mechanic on solid physical decks.
@@ -89,7 +93,7 @@ local function candidateParts(arena, ctx)
             end
         end
     end
-    return spawns, outskirts
+    return spawns, outskirts, cargoCandidates
 end
 
 local function makeShard(container, supportPart, index, reward, golden, cargo)
@@ -115,6 +119,12 @@ local function makeShard(container, supportPart, index, reward, golden, cargo)
     shard:SetAttribute("ChaosShardReward", resolvedReward)
     shard:SetAttribute("ChaosShardGolden", isGolden)
     shard:SetAttribute("ChaosShardCargo", isCargo)
+    if isCargo then
+        shard:SetAttribute(
+            "HarborCargoRoute", supportPart:GetAttribute("HarborRoute"))
+        shard:SetAttribute(
+            "HarborCargoStep", supportPart:GetAttribute("HarborStep"))
+    end
     shard.Parent = container
 
     local light = Instance.new("PointLight")
@@ -207,7 +217,7 @@ function RoundCollectibles.start(ctx)
         return nil
     end
 
-    local candidates, outskirts = candidateParts(arena, ctx)
+    local candidates, outskirts, cargoCandidates = candidateParts(arena, ctx)
     if #candidates == 0 then
         return nil
     end
@@ -238,12 +248,17 @@ function RoundCollectibles.start(ctx)
     end
 
     local function chooseCandidate()
-        -- First rewards remain easy to discover. Later, one in three
-        -- can appear on an actually reachable perimeter deck or Harbor
-        -- cargo ascent. The optional elevated objective is never active
-        -- in protected rookie rounds or with structural disasters.
-        local pool = (#outskirts > 0 and (spawnIndex + 1) % 3 == 0)
-            and outskirts or candidates
+        -- Floor, then a marked elevated cargo challenge, then an
+        -- entry-route reward. Dedicated pools prevent the interesting
+        -- prize being lost in a random draw among sixteen perimeter
+        -- decks; ordinary rounds never gain the cargo-only pool.
+        local ordinal = spawnIndex + 1
+        local pool = candidates
+        if #cargoCandidates > 0 and ordinal % 3 == 2 then
+            pool = cargoCandidates
+        elseif #outskirts > 0 and ordinal % 3 == 0 then
+            pool = outskirts
+        end
         local available = {}
         for _, candidate in ipairs(pool) do
             if candidate.Parent and candidate.Transparency < 0.95
