@@ -1,10 +1,8 @@
 name: Roblox Open Cloud Engine Tests
 
+# Never run Roblox Open Cloud tests automatically during development.
+# Dispatch this manually at the final pre-publication milestone on main.
 on:
-  push:
-    branches: [main]
-  # Full engine tests are reserved for final main candidates and explicit dispatch.
-  # Feature PRs run only fast syntax/place-build checks in Build Validation.
   workflow_dispatch:
 
 concurrency:
