@@ -849,30 +849,59 @@ local function bindHealthAudio(character)
 
     local previousHealth = humanoid.Health
     local airborneAt = nil
+    local lastTakeoffAt = -math.huge
+    local lastLandingAt = -math.huge
 
     stateConnection = humanoid.StateChanged:Connect(function(_, state)
-        if state == Enum.HumanoidStateType.Freefall then
+        -- Bind once per real avatar. Streaming/respawn listeners from an
+        -- older humanoid must not play effects on the current character.
+        if player.Character ~= character or humanoid.Parent ~= character
+            or humanoid.Health <= 0 then
+            return
+        end
+        if state == Enum.HumanoidStateType.Jumping then
+            airborneAt = nil
+            if GroundContactRules.eligible(
+                lastPhase, true,
+                player:GetAttribute("RoundParticipant"),
+                player:GetAttribute("RoundEliminated"), false)
+            then
+                local now = os.clock()
+                local plan = GroundContactRules.takeoffAudio(
+                    now, lastTakeoffAt,
+                    VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
+                    player:GetAttribute("ReduceMotion") == true
+                )
+                if plan then
+                    lastTakeoffAt = now
+                    playRaw("ParkourTakeoff", 0, plan.VolumeScale,
+                        plan.PitchOffset)
+                end
+            end
+        elseif state == Enum.HumanoidStateType.Freefall then
             airborneAt = airborneAt or os.clock()
         elseif airborneAt and (
             state == Enum.HumanoidStateType.Landed
             or state == Enum.HumanoidStateType.Running
             or state == Enum.HumanoidStateType.RunningNoPhysics
         ) then
-            local airtime = os.clock() - airborneAt
+            local now = os.clock()
+            local airtime = now - airborneAt
             airborneAt = nil
 
-            if player.Character == character and humanoid.Health > 0
-                and GroundContactRules.eligible(
-                    lastPhase, true,
-                    player:GetAttribute("RoundParticipant"),
-                    player:GetAttribute("RoundEliminated"), false)
-            then
+            if GroundContactRules.eligible(
+                lastPhase, true,
+                player:GetAttribute("RoundParticipant"),
+                player:GetAttribute("RoundEliminated"), false)
+                and now - lastLandingAt >= 0.30 then
                 local plan = GroundContactRules.landingAudio(
                     humanoid.FloorMaterial, airtime,
                     VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
                     player:GetAttribute("ReduceMotion") == true)
                 if plan then
-                    playRaw("Hit", 0.015, plan.VolumeScale, plan.PitchOffset)
+                    lastLandingAt = now
+                    playRaw("ParkourLanding", 0, plan.VolumeScale,
+                        plan.PitchOffset)
                 end
             end
         end
