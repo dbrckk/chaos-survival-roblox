@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
@@ -17,7 +18,7 @@ local loopStarted = false
 local ensureRenderLoop
 
 local function quality()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
 end
 
 local function localPart(name, size, color, material, className)
