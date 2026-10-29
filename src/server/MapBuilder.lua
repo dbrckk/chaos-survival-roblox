@@ -2462,6 +2462,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     for _, definition in ipairs(variant.BranchPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
+    -- Append only: preserve every existing owner/index and keep bridges
+    -- fully server-authoritative for disasters, AI and collectibles.
+    for _, definition in ipairs(variant.CrosslinkPlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
 
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
@@ -2559,6 +2564,20 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 mark:SetAttribute("PerimeterPlatformIndex", i)
                 mark:SetAttribute("ChaosWayfinding", true)
             end
+        end
+
+        if definition.CrosslinkRoute then
+            -- Crossings are real grounded terrain, not cosmetic bridges.
+            -- Distinct alloy helps an escaping player recognize the
+            -- alternate route without adding lights, UI or moving Parts.
+            platform:SetAttribute("CrosslinkRoute", definition.CrosslinkRoute)
+            platform:SetAttribute("CrosslinkFromPerimeterStep",
+                definition.CrosslinkFromPerimeterStep)
+            platform:SetAttribute("CrosslinkToBranchStep",
+                definition.CrosslinkToBranchStep)
+            platform.Color = theme.Structure:Lerp(theme.Secondary, 0.32)
+            platform.Material = theme.StructureMaterial
+                or VisualTheme.Materials.Structure
         end
 
         if definition.Skybridge == true then
