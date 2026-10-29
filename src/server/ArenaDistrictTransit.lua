@@ -38,7 +38,7 @@ function ArenaDistrictTransit.allowed(ctx)
             and ctx.ActiveDisasters.ShrinkingArena == true)
 end
 
-function ArenaDistrictTransit.stationOffset(route, outer, floorWidth)
+function ArenaDistrictTransit.stationOffset(route, outer, floorWidth, variantId)
     local signs = SIGNS[route]
     if not signs then return nil end
     -- The stations remain inside the floor, even for a smaller future
@@ -48,6 +48,12 @@ function ArenaDistrictTransit.stationOffset(route, outer, floorWidth)
     end
     local sx, sz = signs[1], signs[2]
     if outer then
+        -- Harbor's raised side branch occupies the old ±110/±98
+        -- arrival strip. Move its return terminals to the open quay
+        -- corners instead of teleporting into a solid support column.
+        if variantId == "Harbor" then
+            return Vector3.new(sx * 139, 0, sz * 139)
+        end
         return Vector3.new(sx * ArenaDistrictTransit.OuterX,
             0, sz * ArenaDistrictTransit.OuterZ)
     end
@@ -59,7 +65,8 @@ end
 -- parkour decks and the map's current solid collision geometry.
 function ArenaDistrictTransit.arrival(arena, base, route, outer, humanoid, root)
     local target = ArenaDistrictTransit.stationOffset(
-        route, outer, math.min(base.Size.X, base.Size.Z)
+        route, outer, math.min(base.Size.X, base.Size.Z),
+        arena:GetAttribute("VariantId")
     )
     if not target then return nil end
     local sx, sz = SIGNS[route][1], SIGNS[route][2]
@@ -98,7 +105,8 @@ end
 
 local function station(folder, base, route, outer, variantId)
     local offset = ArenaDistrictTransit.stationOffset(
-        route, outer, math.min(base.Size.X, base.Size.Z)
+        route, outer, math.min(base.Size.X, base.Size.Z),
+        variantId
     )
     if not offset then return nil end
     local color = ROUTE_COLOR[route]
@@ -175,6 +183,19 @@ local function station(folder, base, route, outer, variantId)
                 color, Enum.Material.Metal)
             arrow.Shape = Enum.PartType.Block
         end
+    elseif variantId == "Harbor" then
+        -- Compact port-hoist silhouette rather than generic archway.
+        -- Optical machinery only; the ProximityPrompt below stays the
+        -- sole server-authoritative free transport interaction.
+        part(model, "HarborSignalHoist", Vector3.new(7.5, 1.2, 2.2),
+            frame * CFrame.new(0, 10.4, 0),
+            Color3.fromRGB(88, 142, 156))
+        part(model, "HarborTrolley", Vector3.new(2.3, 2.5, 2.2),
+            frame * CFrame.new(1.8, 11.4, 0),
+            color, Enum.Material.Metal)
+        part(model, "HarborCable", Vector3.new(0.25, 2.5, 0.25),
+            frame * CFrame.new(1.8, 8.9, -0.2),
+            Color3.fromRGB(105, 156, 165))
     elseif variantId == "Orbital" then
         local hub = part(model, "OrbitReceiver",
             Vector3.new(3.1, 3.1, 3.1),
