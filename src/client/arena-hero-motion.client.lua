@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local LandmarkReactions = require(ReplicatedStorage.Shared.LandmarkDisasterReactionRules)
 local HeroMotionBudget = require(ReplicatedStorage.Shared.HeroMotionBudgetRules)
 local SourceWatcher = require(script.Parent.HeroScenerySourceWatcher)
@@ -18,13 +20,15 @@ local reaction = nil
 local function refreshReaction()
     reaction = LandmarkReactions.compose(
         activeDisasters, currentPhase,
-        player:GetAttribute("VfxQualityTier"),
+        VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+            UserInputService.TouchEnabled).Name,
         player:GetAttribute("ReduceMotion") == true, finalRush
     )
 end
 
 local function tierName()
-    return tostring(player:GetAttribute("VfxQualityTier") or "Medium")
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+        UserInputService.TouchEnabled).Name
 end
 
 
