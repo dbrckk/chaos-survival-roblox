@@ -49,7 +49,8 @@ VisualTheme.Arenas = {
     Towers = {
         FloorMaterial = Enum.Material.Metal,
         StructureMaterial = Enum.Material.Metal,
-        PanelMaterial = Enum.Material.DiamondPlate,
+        -- Bright machined alloy, unlike Classic's industrial checker plate.
+        PanelMaterial = Enum.Material.Foil,
         Surface = Color3.fromRGB(28, 38, 52),
         Structure = Color3.fromRGB(55, 76, 92),
         Accent = Color3.fromRGB(62, 215, 225),
@@ -59,7 +60,9 @@ VisualTheme.Arenas = {
     Crossroads = {
         FloorMaterial = Enum.Material.Slate,
         StructureMaterial = Enum.Material.Metal,
-        PanelMaterial = Enum.Material.DiamondPlate,
+        -- Weathered intersection infrastructure; map accent stays distinct
+        -- from amber/red disaster telegraphs.
+        PanelMaterial = Enum.Material.CorrodedMetal,
         Surface = Color3.fromRGB(37, 32, 50),
         Structure = Color3.fromRGB(73, 59, 92),
         Accent = Color3.fromRGB(213, 86, 255),
@@ -69,7 +72,9 @@ VisualTheme.Arenas = {
     Orbital = {
         FloorMaterial = Enum.Material.Metal,
         StructureMaterial = Enum.Material.Metal,
-        PanelMaterial = Enum.Material.SmoothPlastic,
+        -- Hard reactor composite with built-in tile surface detail; a
+        -- coherent alternative to featureless smooth plastic panels.
+        PanelMaterial = Enum.Material.CeramicTiles,
         Surface = Color3.fromRGB(23, 43, 48),
         Structure = Color3.fromRGB(50, 79, 82),
         Accent = Color3.fromRGB(76, 235, 190),
