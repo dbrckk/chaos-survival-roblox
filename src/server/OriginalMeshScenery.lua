@@ -350,6 +350,9 @@ function OriginalMeshScenery.addFoundation(model, assetName, target, size)
         p.CastShadow = false
         p.TopSurface = Enum.SurfaceType.Smooth
         p.BottomSurface = Enum.SurfaceType.Smooth
+        -- Explicit provenance: imported package geometry can have arbitrary
+        -- names, but only these four locally authored parts may get PBR.
+        p:SetAttribute("OriginalFoundationVisual", true)
         p.Parent = model
     end
     model:SetAttribute("OriginalFoundationBuilt", true)
