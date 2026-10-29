@@ -1,6 +1,7 @@
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -152,7 +153,7 @@ local function applyMood(duration)
     currentVariant = readVariant()
     local mood = MOODS[currentVariant] or MOODS.Classic
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
-    local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local quality = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local roundScale = phase == "round" and 0.14 or (phase == "ready" and 0.50 or 1)
     local accessibilityScale = reducedMotion and 0.72 or 1
     local scale = roundScale * accessibilityScale

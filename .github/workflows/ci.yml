@@ -155,6 +155,10 @@ jobs:
           echo "/tmp/rojo" >> "$GITHUB_PATH"
           /tmp/rojo/rojo --version
 
+      - name: Guard Android first-frame VFX budgets
+        shell: bash
+        run: python tools/validate_mobile_vfx_first_frame.py
+
       - name: Validate Luau syntax
         shell: bash
         run: |

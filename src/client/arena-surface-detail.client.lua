@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local ArenaCrisisSurfaceRules = require(ReplicatedStorage.Shared.ArenaCrisisSurfaceRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -156,7 +157,7 @@ local function rebuild()
 
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     -- The entire detail composition follows a rotated or tilted arena deck.
     local surfaceFrame = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.18, 0)
     local halfX = base.Size.X * 0.5
@@ -310,7 +311,7 @@ local function refreshSurfaceAccent()
     local reaction = ArenaCrisisSurfaceRules.profile(
         state and state.disasterIds or {},
         state and state.phase or "waiting",
-        VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name,
+        VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled).Name,
         player:GetAttribute("ReduceMotion") == true,
         state and state.finalRush == true
     )
@@ -385,7 +386,7 @@ refreshSurfaceAccent()
 -- and reduced-motion clients get static event-specific colors only.
 task.spawn(function()
     while true do
-        local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+        local quality = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
         local state = currentState
         local animate = state and state.phase == "round"
             and quality.Name ~= "Low"

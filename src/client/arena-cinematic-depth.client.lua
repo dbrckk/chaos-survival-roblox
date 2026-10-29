@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -364,7 +365,7 @@ local function rebuild()
         return
     end
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local token = motionToken
 
     addHorizonArchitecture(base, variant, theme, tier)

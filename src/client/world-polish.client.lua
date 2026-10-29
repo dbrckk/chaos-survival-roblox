@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local LocalizationService = game:GetService("LocalizationService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
@@ -43,7 +44,7 @@ local secondaryLights = {}
 local refreshArenaHologramText = nil
 
 local function quality()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
 end
 
 local function clearTableInstances(collection)

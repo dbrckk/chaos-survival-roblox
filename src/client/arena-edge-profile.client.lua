@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
@@ -179,7 +180,7 @@ local function rebuild()
 
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local topY = base.Size.Y * 0.5

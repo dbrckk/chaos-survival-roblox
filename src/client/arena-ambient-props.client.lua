@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
@@ -48,7 +49,7 @@ local function makeProp(name, size, color, position, material)
 end
 
 local function tierLimits()
-    local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     if profile.Name == "Low" then
         return 2, 0.42
     elseif profile.Name == "Medium" then

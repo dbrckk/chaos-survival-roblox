@@ -2,6 +2,7 @@
 -- disaster state but never provides a fictional safe collision surface.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local AerialSurveyRules = require(ReplicatedStorage.Shared.AerialSurveyRules)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
@@ -38,7 +39,7 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    if VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name == "Low" then
+    if VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled).Name == "Low" then
         AerialSurveyKit.suspendEffects(fleet)
     end
 end)
@@ -74,7 +75,7 @@ end
 
 task.spawn(function()
     while folder.Parent do
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+        local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled).Name
         local base, variant = context()
         if currentBase ~= base or currentVariant ~= variant
             or currentTier ~= tier or (fleet and not fleet.folder.Parent)

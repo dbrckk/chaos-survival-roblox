@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local TornadoBoundaryRules = require(ReplicatedStorage.Shared.TornadoBoundaryRules)
@@ -71,7 +72,7 @@ local function buildBoundary()
     clearBoundary()
     if not dangerZone or not dangerZone.Parent then return end
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local profile = TornadoBoundaryRules.profile(dangerZone.Size, tier.Name)
     if not profile then return end
     local center = dangerZone.Position + Vector3.new(0, 0.07, 0)
@@ -151,7 +152,7 @@ local function buildDebris()
         return
     end
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local count = tier.Name == "Low" and 5 or (tier.Name == "Medium" and 8 or 12)
 
     debrisFolder = Instance.new("Folder")
@@ -312,7 +313,7 @@ ensureRenderLoop = function()
 
     task.spawn(function()
         while true do
-            local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+            local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
             local reduceMotion = player:GetAttribute("ReduceMotion") == true
             local active = activeModel ~= nil and activeModel.Parent ~= nil
             local dt = task.wait(VfxQuality.tornadoInterval(

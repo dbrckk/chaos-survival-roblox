@@ -2,6 +2,7 @@
 -- Rendered locally on server-owned RoundMeteor parts, never changing physics.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
@@ -121,7 +122,7 @@ local function add(meteor, tier, lifetime)
 end
 
 sync = function()
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local profile = MeteorRules.profile(tier.Name,
         player:GetAttribute("ReduceMotion") == true)
     if phase ~= "round" or not meteorsActive or profile.MaxTrails == 0 then

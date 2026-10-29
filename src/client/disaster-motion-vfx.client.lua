@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local SceneRules = require(ReplicatedStorage.Shared.DisasterMotionSceneRules)
@@ -98,7 +99,7 @@ local function rebuildCharacterEffects()
         return
     end
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local reduced = player:GetAttribute("ReduceMotion") == true
 
     if has("LowGravity") and tier.Name ~= "Low" and not reduced then
@@ -364,7 +365,7 @@ ensureRenderLoop = function()
                 task.wait(0.16)
                 continue
             end
-            local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+            local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
             local dt = task.wait(VfxQuality.decorativeInterval(tier.Name,
                 player:GetAttribute("ReduceMotion") == true))
             if currentPhase ~= "round" then continue end

@@ -64,7 +64,7 @@ local function applyModel(model)
     local player = Players:GetPlayerFromCharacter(model)
     local isLocal = player == localPlayer
     local isAI = model:GetAttribute("AISurvivor") == true
-    local quality = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
+    local quality = VfxQuality.deviceTier(localPlayer:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local accent = accentFor(model, isLocal, isAI)
 
     local activeParticipant = true
