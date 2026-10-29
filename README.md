@@ -53,6 +53,7 @@ The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources liv
 - Onboarding funnel tracking from join to first survival and first Chaos Shard pickup
 - Contextual first-session coach covering vote, positioning, survival and optional shard collection
 - 5 rotating arena layouts with no immediate repeat: Classic Grid, Tower Run, Crossroads, Orbital Ring and Storm Harbor
+- Arena-specific high-ground mastery objectives every third experienced round: Radar Ridge, Tower Summit, Crossroads Overpass, Reactor Lookout or Storm Gantry Lookout. Reach a real, solid, upper-tier parkour deck and remain physically grounded long enough for two ordinary server heartbeat samples; the existing HUD shows the highest confirmed route tier and the existing round settlement pays capped Coins/XP. Rookie, dual-disaster, lava, shrinking-arena and disappearing-platform rounds keep the regular goals. No new render/server task, collectible, RemoteEvent or pay-to-win power.
 - Variant-specific hero landmarks, midground masses, understructures, focal lighting, material language and functional service props
 - Animated personal round-result feedback with survival, streak, shard and close-call breakdown
 - Compact live round-focus HUD with Chaos intensity and shard count
