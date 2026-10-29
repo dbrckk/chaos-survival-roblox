@@ -1,0 +1,138 @@
+# Owner-authorized ONE TIME milestone requested 2026-10-29.
+# This file is deliberately triggered only when FIRST committed to main.
+# It runs BOTH expensive checks on the final SHA once, not on each PR.
+# If either fails, it refuses public Roblox publication.
+name: One-time Chaos Survival vNext final gate and PUBLIC publish
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-release-milestone-20261029.yml'
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: chaos-survival-release-milestone-20261029
+  cancel-in-progress: false
+jobs:
+  public-candidate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    steps:
+      - name: Dispatch full final checks, await both green, then publish existing public game
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          repo = os.environ['REPO']
+          sha = os.environ['CANDIDATE_SHA']
+          root = 'https://api.github.com/repos/' + repo
+          headers = {
+              'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'chaos-survival-owner-release-milestone',
+          }
+
+          def request(path, payload=None):
+              data = json.dumps(payload).encode('utf-8') if payload is not None else None
+              req = urllib.request.Request(
+                  root + path,
+                  data=data,
+                  method='POST' if data is not None else 'GET',
+                  headers={**headers, 'Content-Type': 'application/json'},
+              )
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(req, timeout=40) as response:
+                          if data is not None:
+                              if response.status != 204:
+                                  raise RuntimeError('Unexpected dispatch status ' + str(response.status))
+                              return {}
+                          return json.load(response)
+                  except (urllib.error.URLError, TimeoutError) as exc:
+                      if attempt == 3:
+                          raise
+                      print('Transient GitHub API failure:', str(exc), flush=True)
+                      time.sleep(3 * (attempt + 1))
+
+          def assert_head():
+              head = request('/git/ref/heads/main')['object']['sha']
+              if head != sha:
+                  raise SystemExit('main changed: refusing validation or publishing of stale SHA ' + sha)
+
+          assert_head()
+          workflows = (
+              ('Build Validation', 'ci.yml'),
+              ('Roblox Open Cloud Engine Tests', 'roblox-cloud-test.yml'),
+          )
+          print('Owner-authorized FINAL MILESTONE candidate:', sha, flush=True)
+          for name, path in workflows:
+              request('/actions/workflows/' + path + '/dispatches', {'ref': 'main'})
+              print('Explicit milestone check dispatched:', name, flush=True)
+              time.sleep(3)
+
+          for attempt in range(360):
+              assert_head()
+              runs = request('/actions/runs?head_sha=' + sha + '&per_page=100')
+              checked = {}
+              for run in runs.get('workflow_runs', []):
+                  if (run.get('head_sha') != sha
+                      or run.get('head_branch') != 'main'
+                      or run.get('event') != 'workflow_dispatch'):
+                      continue
+                  name = run.get('name')
+                  if name in (n for n, _ in workflows):
+                      previous = checked.get(name)
+                      if previous is None or run.get('created_at', '') > previous.get('created_at', ''):
+                          checked[name] = run
+              state = {
+                  name: (checked.get(name) or {}).get('status', 'not_started')
+                  + '/' + str((checked.get(name) or {}).get('conclusion'))
+                  for name, _ in workflows
+              }
+              if attempt % 4 == 0:
+                  print('FINAL MILESTONE', state, flush=True)
+              if any(
+                  (checked.get(name) or {}).get('status') == 'completed'
+                  and (checked.get(name) or {}).get('conclusion') != 'success'
+                  for name, _ in workflows
+              ):
+                  raise SystemExit('FINAL MILESTONE FAILED: ' + str(state) + '; NO PUBLISH')
+              if all(
+                  (checked.get(name) or {}).get('status') == 'completed'
+                  and (checked.get(name) or {}).get('conclusion') == 'success'
+                  for name, _ in workflows
+              ):
+                  assert_head()
+                  print('Both exhaustive main-SHA checks PASS. Requesting PUBLIC playtest update.', flush=True)
+                  request(
+                      '/actions/workflows/publish-existing-public-playtest.yml/dispatches',
+                      {
+                          'ref': 'main',
+                          'inputs': {
+                              'confirm': 'PUBLISH_EXISTING_10771083668',
+                              'acknowledge_untested': 'true',
+                          },
+                      },
+                  )
+                  print('Protected PUBLIC Roblox publication workflow dispatched for', sha, flush=True)
+                  print('Public game universe 10771083668, place 95351659174730.', flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit('Timeout waiting for both final exact-SHA checks; NO PUBLISH')
+          PY
