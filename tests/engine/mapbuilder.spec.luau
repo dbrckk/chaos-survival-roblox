@@ -1421,6 +1421,11 @@ describe("Chaos Survival engine", function()
                 .toBe(true)
         end
 
+        -- Source models may have a stale authored/importer WorldPivot.
+        -- Moving cloned Parts individually does not repair it automatically.
+        -- This intentionally wrong pivot must not reach mounted scenery.
+        (sanitized :: Model).WorldPivot = CFrame.new(900, 80, -900)
+
         for _, variantId in ipairs(ArenaVariants.Order) do
             local root = MapBuilder.build(Config, variantId, ArenaVariants)
             local arena = root:FindFirstChild("Arena")
@@ -1480,8 +1485,21 @@ describe("Chaos Survival engine", function()
                     expect(placed:GetAttribute("Original3DAssetId"))
                         .toBe(entry.assetId)
                     expect(placed:GetAttribute("CosmeticOnly")).toBe(true)
-                    local _, dimensions = placed:GetBoundingBox()
+                    local box, dimensions = placed:GetBoundingBox()
                     expect(dimensions.Y > 0).toBe(true)
+                    -- The LOD computes distance with GetPivot(), not
+                    -- GetBoundingBox(); both must refer to the *mounted*
+                    -- exterior location, never the stale template pivot.
+                    local pivot = placed:GetPivot().Position
+                    expect(math.abs(pivot.X - box.Position.X) < 0.05)
+                        .toBe(true)
+                    expect(math.abs(pivot.Z - box.Position.Z) < 0.05)
+                        .toBe(true)
+                    -- Four supports extend below the original mesh.
+                    expect(math.abs(pivot.Y - box.Position.Y) < 8)
+                        .toBe(true)
+                    expect((pivot - Vector3.new(900, 80, -900)).Magnitude > 400)
+                        .toBe(true)
                     for _, p in ipairs(placed:GetDescendants()) do
                         expect(p:IsA("BasePart")).toBe(true)
                         if p:IsA("BasePart") then
