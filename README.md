@@ -146,6 +146,22 @@ src/
 ```
 
 
+## Fast development checks and final release gate
+
+To keep feature development efficient, pull requests use **only a fast Luau
+syntax check, Rojo packaging smoke check, and the critical Android first-frame
+VFX budget guard**. The full Roblox Cloud engine regression matrix, six original
+mesh export checks, security/integrity audits, and comprehensive place build run
+once against the **merged `main` commit** (or by explicit workflow dispatch)
+before a new public update. No repeated full engine suite during routine edits.
+
+**Release safety is unchanged:** the public-playtest publisher refuses to
+publish if *either* `Build Validation` or `Roblox Open Cloud Engine Tests`
+on the exact `main` push SHA has not succeeded, and refuses to replace a
+newer main with an older build. Physical Android/desktop/Studio QA must not be
+described as complete unless actually performed. This is a sequencing
+optimization, not removal of release checks.
+
 ## Automated playtesting
 
 The default CI uses Roblox Open Cloud Engine Tests and currently covers all arena/disaster combinations plus every allowed Double Chaos pair in a real Roblox DataModel.
