@@ -411,6 +411,14 @@ function OriginalMeshScenery.mount(arena, templates)
                     OriginalMeshScenery.addFoundation(
                         clone, placement.asset, target, size
                     )
+                    -- A sanitized Model has no PrimaryPart, and moving the
+                    -- individual BasePart CFrames does NOT necessarily update
+                    -- a previously initialized WorldPivot (e.g. cloned from
+                    -- an imported package). Keep the pivot at the *actual*
+                    -- placed mesh center so the Android per-model LOD uses
+                    -- the correct camera distance after each map swap.
+                    -- Setting WorldPivot changes NO geometry or collision.
+                    clone.WorldPivot = target
                     -- Roblox StreamingEnabled: keep the imported MeshPart
                     -- and its four structural supports visually coherent
                     -- as one atomic unit. Unlike Persistent, this can still
