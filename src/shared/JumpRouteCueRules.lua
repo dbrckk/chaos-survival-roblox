@@ -122,8 +122,18 @@ local function walkable(part)
         and part.Transparency < 0.75
 end
 
+-- A yellow collapse warning is already a bad landing choice while
+-- its server-owned CanCollide is still true. Do not direct newcomers to
+-- the doomed target; a player standing on a warning deck may still be
+-- guided OUT to a safe successor.
+function JumpRouteCueRules.safeLandingTarget(part)
+    if not walkable(part) then return false end
+    local phase = part:GetAttribute("CollapsePhase")
+    return phase ~= "Warning" and phase ~= "Gone"
+end
+
 function JumpRouteCueRules.jumpable(from, target)
-    if not walkable(from) or not walkable(target)
+    if not walkable(from) or not JumpRouteCueRules.safeLandingTarget(target)
         or from == target or from.Parent ~= target.Parent then
         return false
     end
@@ -147,7 +157,7 @@ function JumpRouteCueRules.nearestEntry(orderedPlatforms, floorPoint, maxRange)
     local range = math.clamp(tonumber(maxRange) or 42, 8, 48)
     local closest, bestDistance = nil, math.huge
     for _, part in ipairs(orderedPlatforms) do
-        if walkable(part)
+        if JumpRouteCueRules.safeLandingTarget(part)
             and part:GetAttribute("RouteTier") == 1
             and part:GetAttribute("BranchRoute") == nil
             and (part:GetAttribute("PerimeterRoute") == nil
