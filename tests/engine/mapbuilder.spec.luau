@@ -31,7 +31,13 @@ describe("Chaos Survival engine", function()
             seen[material] = variantId
             expect(VisualTheme.arena(variantId).PanelMaterial).toBe(material)
 
-            local root = MapBuilder.build(Config, variantId, ArenaVariants)
+            -- Inject the candidate's source palette: the Open Cloud test
+            -- DataModel may still contain the previously published Shared
+            -- VisualTheme asset. Production calls continue using its
+            -- replicated module after the next certified publish.
+            local root = MapBuilder.build(
+                Config, variantId, ArenaVariants, VisualTheme
+            )
             local arena = root:FindFirstChild("Arena")
             local decor = arena:FindFirstChild("Decor")
             local platforms = arena:FindFirstChild("Platforms")
