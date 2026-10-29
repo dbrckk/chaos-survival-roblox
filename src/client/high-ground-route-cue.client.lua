@@ -209,6 +209,16 @@ local function update()
         return
     end
 
+    -- The pre-existing ONE-sign rookie/cargo coach wins if active.
+    -- This prevents duplicate targets where a Harbor cargo cache
+    -- coincides with a mastery objective on a veteran round.
+    local existingGuide = playerGui:FindFirstChild("RookiePhysicalJumpCue")
+    if existingGuide and existingGuide:IsA("BillboardGui")
+        and existingGuide.Enabled then
+        hide()
+        return
+    end
+
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local platforms = arena and arena:FindFirstChild("Platforms")
