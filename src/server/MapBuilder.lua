@@ -1445,6 +1445,32 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             theme.PanelMaterial or Enum.Material.Metal
         )
         hub.Transparency = 0.32
+    elseif variant.Id == "Harbor" then
+        -- Two tiers of flush quay markings break up the large industrial
+        -- ground without adding false cover, fake water or collider parts.
+        -- Blue/seafoam is deliberate; the hazard palette owns amber/red.
+        local lanes = {
+            {x = -89, z = -23, alongX = false},
+            {x = -89, z = 23, alongX = false},
+            {x = 89, z = -23, alongX = false},
+            {x = 89, z = 23, alongX = false},
+            {x = -23, z = -89, alongX = true},
+            {x = 23, z = -89, alongX = true},
+            {x = -23, z = 89, alongX = true},
+            {x = 23, z = 89, alongX = true},
+        }
+        for index, lane in ipairs(lanes) do
+            local line = decorPart(
+                decor, "HarborQuayInlay" .. index,
+                lane.alongX and Vector3.new(52, 0.055, 0.45)
+                    or Vector3.new(0.45, 0.055, 52),
+                center + Vector3.new(lane.x, 1.20, lane.z),
+                index % 2 == 0 and theme.Accent or theme.Secondary,
+                theme.PanelMaterial
+            )
+            line.Transparency = 0.38
+            line.CastShadow = false
+        end
     elseif variant.Id == "Orbital" then
         for i = 0, 7 do
             local angle = math.rad(i * 45)
