@@ -1324,6 +1324,67 @@ describe("Streaming-aware PBR candidate indexing", function()
         root:Destroy()
         incoming:Destroy()
     end)
+
+    it("batches a streamed building rather than rescanning every nested Part", function()
+        local root = Instance.new("Folder")
+        root.Name = "PbrCandidateBatchRoot"
+        root.Parent = workspace
+        local callbacks = 0
+        local indexed, disconnect = CandidateIndex.watch(root, function()
+            callbacks += 1
+        end)
+
+        local building = Instance.new("Model")
+        local nested = Instance.new("Folder")
+        nested.Parent = building
+        local parts = {}
+        for index = 1, 48 do
+            local p = Instance.new("Part")
+            p.Name = "Facade" .. index
+            p.Parent = nested
+            parts[#parts + 1] = p
+        end
+        building.Parent = root
+        task.wait()
+        for _, p in ipairs(parts) do
+            expect(indexed[p]).toBe(true)
+        end
+        -- Most engines report the entire subtree in one scheduler turn.
+        -- Allow a few event batches, never one index rebuild per Part.
+        expect(callbacks < #parts / 2).toBe(true)
+
+        building.Parent = nil
+        -- Removal is synchronous: even a frame before the next deferred
+        -- add callback, no detached geometry may remain in the PBR index.
+        for _, p in ipairs(parts) do
+            expect(indexed[p]).toBe(nil)
+        end
+        task.wait()
+        expect(next(indexed)).toBe(nil)
+
+        local transient = Instance.new("Model")
+        local transientPart = Instance.new("Part")
+        transientPart.Parent = transient
+        transient.Parent = root
+        transient.Parent = nil
+        task.wait()
+        expect(indexed[transientPart]).toBe(nil)
+
+        local orphan = Instance.new("Model")
+        local orphanPart = Instance.new("Part")
+        orphanPart.Parent = orphan
+        orphan.Parent = root
+        disconnect()
+        task.wait()
+        expect(next(indexed)).toBe(nil)
+        expect(indexed[orphanPart]).toBe(nil)
+        disconnect()
+
+        root:Destroy()
+        building:Destroy()
+        transient:Destroy()
+        orphan:Destroy()
+    end)
 end)
 
 return nil
