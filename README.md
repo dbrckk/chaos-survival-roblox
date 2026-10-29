@@ -53,6 +53,7 @@ The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources liv
 - Onboarding funnel tracking from join to first survival and first Chaos Shard pickup
 - Contextual first-session coach covering vote, positioning, survival and optional shard collection
 - 5 rotating arena layouts with no immediate repeat: Classic Grid, Tower Run, Crossroads, Orbital Ring and Storm Harbor
+- Storm Harbor advanced cargo sweep: four alternating, server-owned crane-service lanes; 2.6-second orange warning, short red pulse and capped nonlethal push **toward the centre**, avoided by jumping or climbing above floor level. All rookie and incompatible-hazard rounds stay exempt; humans and AI survivors obey the same rules. No extra client animation loop, network event or imported asset.
 - Variant-specific hero landmarks, midground masses, understructures, focal lighting, material language and functional service props
 - Animated personal round-result feedback with survival, streak, shard and close-call breakdown
 - Compact live round-focus HUD with Chaos intensity and shard count
