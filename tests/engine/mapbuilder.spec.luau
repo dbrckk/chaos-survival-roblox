@@ -1154,6 +1154,39 @@ describe("Chaos Survival engine", function()
             )).toBe(nil)
             to.CanCollide = true
 
+            -- Warning starts 1.35 seconds before physical collapse.
+            -- Collidability alone is NOT proof that it is safe to land.
+            to:SetAttribute("CollapsePhase", "Warning")
+            expect(JumpRouteCueRules.safeLandingTarget(to)).toBe(false)
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(nil)
+            to:SetAttribute("CollapsePhase", "Gone")
+            expect(JumpRouteCueRules.safeLandingTarget(to)).toBe(false)
+            to:SetAttribute("CollapsePhase", nil)
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(to)
+
+            -- Escaping FROM a yellow deck must remain possible. Only
+            -- its use as the landing destination is suppressed.
+            from:SetAttribute("CollapsePhase", "Warning")
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(to)
+            -- The first floor-to-platform cue obeys the same rule.
+            local floorY = arena:FindFirstChild("Base").Position.Y
+                + arena:FindFirstChild("Base").Size.Y * 0.5
+            local floorNearStart = Vector3.new(from.Position.X, floorY,
+                from.Position.Z)
+            expect(JumpRouteCueRules.nearestEntry(
+                {from}, floorNearStart, 24
+            )).toBe(nil)
+            from:SetAttribute("CollapsePhase", nil)
+            expect(JumpRouteCueRules.nearestEntry(
+                {from}, floorNearStart, 24
+            )).toBe(from)
+
             to.Transparency = 1
             expect(JumpRouteCueRules.nextPhysical(
                 from, pieces, Config.ArenaCenter, variantId
