@@ -29,6 +29,15 @@ function PbrDistrictRules.effectiveGlobalLimit(tierName, touch, disabled)
     return PbrDistrictRules.globalLimit(tierName, touch)
 end
 
+-- Do not spend even the existing 1.7s/2.2s camera-sampling
+-- work when PBR is off, unavailable on Low, or no scenery is loaded.
+-- Direct opt-out/tier change listeners still reconcile/restores immediately.
+function PbrDistrictRules.cameraSamplingEnabled(tierName, touch, disabled, hasSource)
+    return hasSource == true
+        and PbrDistrictRules.limit(tierName) > 0
+        and PbrDistrictRules.effectiveGlobalLimit(tierName, touch, disabled) > 0
+end
+
 function PbrDistrictRules.distanceLimit(tierName, touch)
     if tierName == "High" then return touch and 370 or 550 end
     if tierName == "Medium" then return touch and 240 or 340 end
