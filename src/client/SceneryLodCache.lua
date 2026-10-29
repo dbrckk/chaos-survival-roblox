@@ -3,28 +3,15 @@
 -- already-populated Model or Attachment in a single hierarchy mutation.
 -- Treat every change as dirty, then rebuild lazily in the EXISTING LOD tick.
 local SceneryLodCache = {}
-local cacheByRoot = setmetatable({}, {__mode = "k"})
-
-function SceneryLodCache.get(root)
-    assert(typeof(root) == "Instance",
-        "SceneryLodCache.get requires an Instance")
-    local cached = cacheByRoot[root]
-    if cached then return cached end
-
-    local cache = {
-        entries = {},
-        dirty = true,
-    }
-    cacheByRoot[root] = cache
-
+function SceneryLodCache.watch(root, cache)
+    assert(typeof(root) == "Instance" and type(cache) == "table",
+        "SceneryLodCache.watch requires an Instance and cache")
     root.DescendantAdded:Connect(function()
         cache.dirty = true
     end)
     root.DescendantRemoving:Connect(function()
         cache.dirty = true
     end)
-
-    return cache
 end
 
 function SceneryLodCache.refresh(root, cache, classify)
