@@ -2,6 +2,12 @@
 local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
+local Config = require("../../src/shared/Config")
+local MapBuilder = require("../../src/server/MapBuilder")
+local ArenaVariants = require("../../src/server/ArenaVariants")
+local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
+local ArenaPresentation = require("../../src/shared/ArenaPresentation")
+local VisualTheme = require("../../src/shared/VisualTheme")
 local VfxQuality = require("../../src/shared/VfxQuality")
 local GroundContactRules = require("../../src/shared/GroundContactRules")
 local AudioConfig = require("../../src/shared/AudioConfig")
@@ -1655,6 +1661,132 @@ describe("Imported 3D per-model Android LOD", function()
         expect(#SceneryLodRules.original3DVisualOwners(nil)).toBe(0)
         arena:Destroy()
     end)
+end)
+
+describe("Storm Harbor engine and Android scenery certification", function()
+    it("builds a fully navigable Storm Harbor with original drydock architecture", function()
+        local variant = ArenaVariants.get("Harbor")
+        expect(variant.Id).toBe("Harbor")
+        expect(variant.BaseSize).toBe(Vector3.new(320, 2, 320))
+        expect(#variant.Platforms).toBe(28)
+        expect(#variant.SpawnOffsets).toBe(8)
+        local root = MapBuilder.build(
+            Config, "Harbor", ArenaVariants, VisualTheme
+        )
+        local arena = root:FindFirstChild("Arena")
+        local base = arena and arena:FindFirstChild("Base")
+        local platforms = arena and arena:FindFirstChild("Platforms")
+        local decor = arena and arena:FindFirstChild("Decor")
+        expect(arena:GetAttribute("VariantId")).toBe("Harbor")
+        expect(base ~= nil and platforms ~= nil and decor ~= nil).toBe(true)
+        expect(#platforms:GetChildren()).toBe(
+            #variant.Platforms + #variant.PerimeterPlatforms
+                + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
+        )
+        expect(#platforms:GetChildren()).toBe(80)
+        local parts = platforms:GetChildren()
+        for route = 1, 4 do
+            local previous = nil
+            for step = 1, 7 do
+                local index = (route - 1) * 7 + step
+                local deck = platforms:FindFirstChild("Platform" .. index)
+                expect(deck ~= nil).toBe(true)
+                expect(deck.Anchored and deck.CanCollide).toBe(true)
+                expect(deck:GetAttribute("HarborRoute")).toBe(route)
+                expect(deck:GetAttribute("HarborStep")).toBe(step)
+                expect(deck:GetAttribute("RouteTier")).toBe(math.min(step, 4))
+                local panel = decor:FindFirstChild("PlatformPanel" .. index)
+                expect(panel ~= nil).toBe(true)
+                expect(panel.Material).toBe(Enum.Material.WoodPlanks)
+                expect(panel.CanCollide).toBe(false)
+
+                if previous then
+                    local gap = JumpRouteCueRules.gap(previous, deck)
+                    local rise = deck.Position.Y + deck.Size.Y * 0.5
+                        - (previous.Position.Y + previous.Size.Y * 0.5)
+                    expect(gap > 0.15 and gap <= 3.85).toBe(true)
+                    expect(math.abs(rise - 3) < 0.01).toBe(true)
+                    expect(JumpRouteCueRules.jumpable(previous, deck))
+                        .toBe(true)
+                    expect(JumpRouteCueRules.nextPhysical(
+                        previous, parts, Config.ArenaCenter, "Harbor"
+                    )).toBe(deck)
+                end
+                previous = deck
+            end
+            -- Seven steps are complete, not a fake eighth waypoint.
+            expect(JumpRouteCueRules.nextPhysical(
+                previous, parts, Config.ArenaCenter, "Harbor"
+            )).toBe(nil)
+            -- Never advertise a terminal top that is collapsing.
+            local before = platforms:FindFirstChild(
+                "Platform" .. ((route - 1) * 7 + 6)
+            )
+            previous:SetAttribute("CollapsePhase", "Warning")
+            expect(JumpRouteCueRules.nextPhysical(
+                before, parts, Config.ArenaCenter, "Harbor"
+            )).toBe(nil)
+            previous:SetAttribute("CollapsePhase", nil)
+        end
+
+        -- No original tier-one cargo pier can spawn a player into its
+        -- collision volume or a low-headroom stacked roof.
+        local floorY = base.Position.Y + base.Size.Y * 0.5
+        for _, offset in ipairs(variant.SpawnOffsets) do
+            local spawnPoint = Config.ArenaCenter
+                + Vector3.new(offset.X, floorY - Config.ArenaCenter.Y,
+                    offset.Z)
+            local entry = JumpRouteCueRules.nearestEntry(
+                parts, spawnPoint, 42
+            )
+            expect(entry ~= nil).toBe(true)
+            for index = 1, 28 do
+                local deck = platforms:FindFirstChild("Platform" .. index)
+                local withinX = math.abs(deck.Position.X - spawnPoint.X)
+                    < deck.Size.X * 0.5 + 4.3
+                local withinZ = math.abs(deck.Position.Z - spawnPoint.Z)
+                    < deck.Size.Z * 0.5 + 4.3
+                expect(withinX and withinZ).toBe(false)
+            end
+            local facing = ArenaPresentation.lookTarget(
+                "Harbor", spawnPoint, Config.ArenaCenter
+            )
+            expect((facing - spawnPoint).Magnitude > 5).toBe(true)
+        end
+
+        -- Original drydock & four exterior gantries are entirely inert
+        -- on the real survival floor, including at Android Low graphics.
+        local hero = decor:FindFirstChild("ArenaHeroArchitecture3D")
+        local fleet = decor:FindFirstChild("StormHarborGantryFleet")
+        expect(hero ~= nil and fleet ~= nil).toBe(true)
+        expect(hero:GetAttribute("SignatureVariant")).toBe("Harbor")
+        expect(hero:FindFirstChild("CargoHull") ~= nil).toBe(true)
+        expect(hero:GetAttribute("HeroEssentialParts") >= 8).toBe(true)
+        expect(#fleet:GetChildren()).toBe(4)
+        for _, crane in ipairs(fleet:GetChildren()) do
+            expect(crane:IsA("Model")).toBe(true)
+            expect(crane:GetAttribute("CosmeticOnly")).toBe(true)
+            expect(crane:GetAttribute("ChaosDistantScenery")).toBe(true)
+            expect(#crane:GetChildren() <= 12).toBe(true)
+            for _, p in ipairs(crane:GetChildren()) do
+                expect(p:IsA("BasePart")).toBe(true)
+                expect(p.Anchored).toBe(true)
+                expect(p.CanCollide).toBe(false)
+                expect(p.CanTouch).toBe(false)
+                expect(p.CanQuery).toBe(false)
+                local offX = math.abs(p.Position.X - base.Position.X)
+                expect(offX > base.Size.X * 0.5 + 2).toBe(true)
+            end
+        end
+        for i = 1, 8 do
+            local inlay = decor:FindFirstChild("HarborQuayInlay" .. i)
+            expect(inlay ~= nil).toBe(true)
+            expect(inlay.CanCollide).toBe(false)
+            expect(inlay.CanQuery).toBe(false)
+        end
+        root:Destroy()
+    end)
+
 end)
 
 return nil
