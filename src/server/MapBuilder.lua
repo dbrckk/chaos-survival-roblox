@@ -2235,7 +2235,7 @@ local function buildLobby(root, config)
     archTop:SetAttribute("ArenaGate", true)
 end
 
-function MapBuilder.buildArena(config, variantId, arenaVariants)
+function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local root = workspace:FindFirstChild("GeneratedMap")
     if not root then
         root = Instance.new("Folder")
@@ -2250,7 +2250,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
 
     assert(arenaVariants, "arenaVariants is required")
     local variant = arenaVariants.get(variantId) or arenaVariants.get("Classic")
-    local theme = VisualTheme.arena(variant.Id)
+    -- CI may mount an older published Shared package alongside the newer
+    -- source being tested. An explicit, server-only provider lets the
+    -- engine regression exercise the exact candidate visual palette.
+    -- Production callers omit it and use the replicated Material palette.
+    local theme = (themeProvider or VisualTheme).arena(variant.Id)
     local arena = Instance.new("Folder")
     arena.Name = "Arena"
     arena:SetAttribute("VariantId", variant.Id)
@@ -2975,7 +2979,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants)
     return arena
 end
 
-function MapBuilder.build(config, variantId, arenaVariants)
+function MapBuilder.build(config, variantId, arenaVariants, themeProvider)
     local old = workspace:FindFirstChild("GeneratedMap")
     if old then
         old:Destroy()
@@ -2986,7 +2990,9 @@ function MapBuilder.build(config, variantId, arenaVariants)
     root.Parent = workspace
 
     buildLobby(root, config)
-    MapBuilder.buildArena(config, variantId or "Classic", arenaVariants)
+    MapBuilder.buildArena(
+        config, variantId or "Classic", arenaVariants, themeProvider
+    )
 
     return root
 end
