@@ -222,15 +222,14 @@ local function ensureCache(folder)
     }
     folderCaches[folder] = cache
 
-    folder.DescendantAdded:Connect(function(descendant)
-        if classifyDescendant(descendant) then
-            cache.dirty = true
-        end
+    -- Roblox can stream an already-populated Model, Folder or Attachment.
+    -- These container callbacks may arrive without a distinct notification
+    -- for each child; invalidate for any hierarchy mutation, not just Parts.
+    folder.DescendantAdded:Connect(function()
+        cache.dirty = true
     end)
-    folder.DescendantRemoving:Connect(function(descendant)
-        if classifyDescendant(descendant) then
-            cache.dirty = true
-        end
+    folder.DescendantRemoving:Connect(function()
+        cache.dirty = true
     end)
 
     return cache
