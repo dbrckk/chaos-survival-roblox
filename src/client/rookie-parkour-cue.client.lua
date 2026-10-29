@@ -151,6 +151,21 @@ local function update()
                     or "SAFE DETOUR  ↑"
             end
         end
+        if from:GetAttribute("PerimeterStep") == 6 then
+            local forward, detour = JumpRouteCueRules.crosslinkOptions(
+                from, pieces
+            )
+            if forward and detour then
+                hint = french and "2 ROUTES  •  CHOISIS"
+                    or "2 PATHS  •  CHOOSE"
+            elseif detour and not forward then
+                hint = french and "PASSAGE SÛR  ↑"
+                    or "SAFE CROSSING  ↑"
+            end
+        elseif from:GetAttribute("CrosslinkRoute") ~= nil then
+            hint = french and "VERS LE BELVÉDÈRE  ↑"
+                or "TO LOOKOUT  ↑"
+        end
     end
     if not target or (root.Position - target.Position).Magnitude > 46 then
         hide()
