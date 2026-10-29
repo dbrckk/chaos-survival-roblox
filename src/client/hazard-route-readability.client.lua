@@ -480,7 +480,9 @@ ensureRenderLoop = function()
                 end
             end
 
-            local onlyNearest = finalRush or tier.Name == "Low"
+            local onlyNearest = WarningRules.nearestEscapeArrowsOnly(
+                UserInputService.TouchEnabled, tier.Name, finalRush
+            )
             for warning, state in pairs(warningStates) do
                 if onlyNearest and warning ~= nearestWarning then
                     hideState(state)
@@ -489,11 +491,23 @@ ensureRenderLoop = function()
                 end
             end
 
-            local showCue = nearestState ~= nil and nearestClearance <= 5
-            -- Reuse the existing narrow-screen cue. A direct Meteor/Bomb
-            -- escape takes precedence over the shock countdown if both hit.
-            local showShock = not showCue and shockRemaining < math.huge
-            cue.Visible = showCue or showShock
+            -- The Android foreground must give one truthful action.
+            -- When global Jump Shock hits first, "JUMP!" cannot be hidden
+            -- by a still-distant bomb/meteor warning from Double Chaos.
+            -- On desktop, keep the previous impact-first presentation.
+            local cueMode
+            if UserInputService.TouchEnabled then
+                cueMode = WarningRules.mobileActionCue(
+                    nearestClearance, nearestRemaining, shockRemaining
+                )
+            elseif nearestState ~= nil and nearestClearance <= 5 then
+                cueMode = "escape"
+            elseif shockRemaining < math.huge then
+                cueMode = "shock"
+            end
+            local showCue = cueMode == "escape"
+            local showShock = cueMode == "shock"
+            cue.Visible = cueMode ~= nil
             if showCue then
                 local kind = nearestState.kind
                 local color = KIND_COLORS[kind] or UITheme.Colors.Red
@@ -518,6 +532,7 @@ ensureRenderLoop = function()
                 and nearestWarning
                 and nearestState
                 and nearestClearance <= 14
+                and (not UserInputService.TouchEnabled or not showShock)
             then
                 local viewportPoint, onScreen =
                     camera:WorldToViewportPoint(nearestWarning.Position)
