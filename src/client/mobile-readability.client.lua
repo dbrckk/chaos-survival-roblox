@@ -18,6 +18,9 @@ local lodReturnConnections = {}
 local disconnectMap = nil
 local currentDecor = nil
 local lightBrightness = setmetatable({}, {__mode = "k"})
+local pendingStreamRoots = {}
+local streamFlushScheduled = false
+local streamGeneration = 0
 
 local function tierName()
     return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), true).Name
@@ -72,6 +75,11 @@ local function bindDecor(decor)
     if currentDecor == decor then
         return
     end
+    -- Invalidates pending work from a streamed-out arena without a
+    -- heartbeat or an extra per-part listener.
+    streamGeneration += 1
+    streamFlushScheduled = false
+    table.clear(pendingStreamRoots)
     if decorConnection then
         decorConnection:Disconnect()
         decorConnection = nil
@@ -91,12 +99,28 @@ local function bindDecor(decor)
     watchNeon(decor, decor)
     decorRemovingConnection = decor.DescendantRemoving:Connect(stopWatching)
     decorConnection = decor.DescendantAdded:Connect(function(descendant)
-        watchNeon(descendant, decor)
+        -- A pre-populated building may emit DescendantAdded for its model
+        -- AND every child. Batch this streaming burst into one deferred
+        -- pass; the pure helper skips descendants already covered by an
+        -- ancestor queued in the same frame.
+        pendingStreamRoots[descendant] = true
+        if streamFlushScheduled then return end
+        streamFlushScheduled = true
+        local generation = streamGeneration
         task.defer(function()
-            -- Discard stale deferred callbacks from a previous arena.
-            if currentDecor == decor and descendant:IsDescendantOf(decor) then
+            if currentDecor ~= decor or generation ~= streamGeneration then
+                return
+            end
+            streamFlushScheduled = false
+            local pending = pendingStreamRoots
+            pendingStreamRoots = {}
+            local roots = MobileReadabilityKit.collapseStreamRoots(
+                pending, decor)
+            local selectedTier = tierName()
+            for _, root in ipairs(roots) do
+                watchNeon(root, decor)
                 MobileReadabilityKit.applyTree(
-                    descendant, tierName(), lightBrightness)
+                    root, selectedTier, lightBrightness)
             end
         end)
     end)
