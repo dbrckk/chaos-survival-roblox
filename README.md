@@ -146,21 +146,26 @@ src/
 ```
 
 
-## Fast development checks and final release gate
+## Tests uniquement avant une étape importante / milestone-only validation
 
-To keep feature development efficient, pull requests use **only a fast Luau
-syntax check, Rojo packaging smoke check, and the critical Android first-frame
-VFX budget guard**. The full Roblox Cloud engine regression matrix, six original
-mesh export checks, security/integrity audits, and comprehensive place build run
-once against the **merged `main` commit** (or by explicit workflow dispatch)
-before a new public update. No repeated full engine suite during routine edits.
+**Règle générale du développement : aucun test automatique pendant la phase
+d'amélioration.** Cela inclut les PR, les commits sur les branches et les
+commits ordinaires sur `main`. Les workflows de vérification lourde sont
+**manuels** : ni `push` ni `pull_request` ne lancent des tests.
 
-**Release safety is unchanged:** the public-playtest publisher refuses to
-publish if *either* `Build Validation` or `Roblox Open Cloud Engine Tests`
-on the exact `main` push SHA has not succeeded, and refuses to replace a
-newer main with an older build. Physical Android/desktop/Studio QA must not be
-described as complete unless actually performed. This is a sequencing
-optimization, not removal of release checks.
+À un jalon réellement important, notamment juste avant de mettre à jour le
+jeu public, déclencher depuis `main`, sur **le même commit exact** :
+
+1. `Build Validation` — audit du code, sécurité, ressources, performances
+   Android, Rojo, intégrité et provenance de l'archive ;
+2. `Roblox Open Cloud Engine Tests` — les cinq suites réelles complètes ;
+3. publier seulement si les deux sont vertes pour ce commit sur `main`,
+   avec une validation explicite du propriétaire.
+
+Le workflow de publication publique conserve les protections d'identité
+d'univers/place, d'exactitude du commit, de non-régression de branche et
+l'avertissement sur les tests Android/PC physiques non certifiés.
+Aucun test non exécuté ne doit être présenté comme validé.
 
 ## Automated playtesting
 
