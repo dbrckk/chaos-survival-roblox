@@ -13,9 +13,11 @@ local localeId = LocalizationService.RobloxLocaleId
 local touchDevice = UserInputService.TouchEnabled
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
--- A clear, replayable explanation for every player. The automatic introduction
--- only appears in a quiet first-time lobby and disappears before a vote starts.
--- No DataStore writes, client polling, remote messages or extra gameplay steps.
+-- The detailed, replayable instructions open only on an explicit tap.
+-- First-time players already get a contextual survival coach in ChaosHUD;
+-- a full-screen automatic modal instead blocked their first movement in
+-- the short 8-second lobby. Highlight the existing help button nonmodally.
+-- No DataStore writes, polling, remotes or added UI surfaces.
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosHowToPlay"
 gui.ResetOnSpawn = false
@@ -136,6 +138,20 @@ UITheme.addCorner(close, UITheme.Corners.Medium)
 local currentState = nil
 local introduced = false
 local openedManually = false
+local firstRunHintVisible = false
+
+-- Enlarge only the existing 48px help affordance during the first quiet
+-- lobby. The player can walk/jump while this nonblocking hint is shown;
+-- the already-localized rookie HUD communicates the actual objective.
+local function setFirstRunHint(visible)
+    if firstRunHintVisible == visible then return end
+    firstRunHintVisible = visible
+    help.Text = visible and (localeId:sub(1, 2) == "fr" and "AIDE" or "HELP")
+        or "?"
+    help.Size = visible and UDim2.fromOffset(68, 48)
+        or UDim2.fromOffset(48, 48)
+    help.TextSize = visible and 18 or 27
+end
 
 local function showGuide(manual)
     openedManually = manual == true
@@ -148,6 +164,7 @@ local function hideGuide()
 end
 
 help.Activated:Connect(function()
+    setFirstRunHint(false)
     if backdrop.Visible then
         hideGuide()
     else
@@ -195,6 +212,7 @@ local function tryInitialGuide()
     local inSession = player:GetAttribute("SessionRoundsPlayed")
     if FirstTimeExperience.effectiveGames(saved, inSession) > 0 then
         introduced = true
+        setFirstRunHint(false)
         return
     end
     if FirstTimeExperience.shouldOfferIntro(
@@ -203,7 +221,9 @@ local function tryInitialGuide()
         saved, inSession, currentState
     ) then
         introduced = true
-        showGuide(false)
+        -- No modal at join: do not intercept the first touch or obstruct
+        -- lobby movement. Keep the full instructions one explicit tap away.
+        setFirstRunHint(true)
     end
 end
 
@@ -220,6 +240,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     -- However, never leave it covering a new ballot or an entering round:
     -- these require immediate movement or a live UI decision.
     local enteredBusy = phase ~= previousPhase or (hasVote and not hadVote)
+    if busy then
+        setFirstRunHint(false)
+    end
     if busy and backdrop.Visible and (not openedManually or enteredBusy) then
         hideGuide()
     end
