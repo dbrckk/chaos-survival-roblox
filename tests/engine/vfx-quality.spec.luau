@@ -23,6 +23,7 @@ local SceneryLodCache = require("../../src/client/SceneryLodCache")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
 local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
+local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 
 describe("Parkour sound response in real Roblox engine", function()
     it("uses independent, short nonlooped takeoff and landing identities", function()
@@ -1669,6 +1670,73 @@ describe("Imported 3D per-model Android LOD", function()
         expect(#SceneryLodRules.original3DVisualOwners(arena)).toBe(1)
         expect(#SceneryLodRules.original3DVisualOwners(nil)).toBe(0)
         arena:Destroy()
+    end)
+end)
+
+describe("Storm Harbor actual mobile platform timber-and-steel identity", function()
+    it("provides ORIGINAL timber/steel load marks without Classic artifacts", function()
+        local root = MapBuilder.build(
+            Config, "Harbor", ArenaVariants, VisualTheme
+        )
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena and arena:FindFirstChild("Platforms")
+        local real = platforms and platforms:FindFirstChild("Platform1")
+        expect(real ~= nil).toBe(true)
+        expect(real.Material).toBe(Enum.Material.WoodPlanks)
+        local names = PlatformFinishKit.names("Harbor")
+        expect(names ~= nil and #names == 3).toBe(true)
+        expect(PlatformFinishKit.names("Classic")[1] ~= names[1])
+            .toBe(true)
+        local theme = VisualTheme.arena("Harbor")
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local bucket = Instance.new("Folder")
+            bucket.Name = "HarborArt_" .. tier
+            bucket.Parent = workspace
+            local pieces = PlatformFinishKit.build(
+                bucket, real, "Harbor", tier, theme
+            )
+            expect(#pieces).toBe(PlatformFinishKit.count(tier))
+            for i, piece in ipairs(pieces) do
+                expect(piece.Name).toBe(names[i])
+                expect(piece:IsA("BasePart")).toBe(true)
+                expect(piece.Anchored).toBe(false)
+                expect(piece.Massless).toBe(true)
+                expect(piece.CanCollide).toBe(false)
+                expect(piece.CanTouch).toBe(false)
+                expect(piece.CanQuery).toBe(false)
+                expect(piece:GetAttribute("ChaosPlatformTrim")).toBe(true)
+                expect(piece:FindFirstChild("ChaosPlatformTrimWeld")
+                    ~= nil).toBe(true)
+                expect(piece.Material == Enum.Material.WoodPlanks
+                    or piece.Material == Enum.Material.CorrodedMetal
+                    or piece.Material == Enum.Material.Metal).toBe(true)
+                expect(piece.Name:find("Classic") == nil).toBe(true)
+            end
+            if tier == "Low" then
+                expect(#PlatformFinishKit.buildArmor(
+                    bucket, real, "Harbor", tier, theme
+                )).toBe(0)
+                expect(#PlatformFinishKit.buildLoadBraces(
+                    bucket, real, "Harbor", tier, theme
+                )).toBe(0)
+            else
+                expect(#PlatformFinishKit.buildArmor(
+                    bucket, real, "Harbor", tier, theme
+                )).toBe(PlatformFinishKit.armorCount(tier))
+                expect(#PlatformFinishKit.buildLoadBraces(
+                    bucket, real, "Harbor", tier, theme
+                )).toBe(PlatformFinishKit.braceCount(tier))
+            end
+            local first = pieces[1]
+            PlatformFinishKit.applyCollapseVisibility(pieces, "Warning")
+            expect(first.Transparency >= 0.80).toBe(true)
+            PlatformFinishKit.applyCollapseVisibility(pieces, "Gone")
+            expect(first.Transparency).toBe(1)
+            PlatformFinishKit.applyCollapseVisibility(pieces, nil)
+            expect(first.Transparency < 0.80).toBe(true)
+            bucket:Destroy()
+        end
+        root:Destroy()
     end)
 end)
 
