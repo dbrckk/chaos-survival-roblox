@@ -8,6 +8,7 @@ local NAMES = {
     Towers = {"TowerHoistMount", "TowerGuideBracket", "TowerMaintenanceMark"},
     Crossroads = {"CrossroadsRouteChevron", "CrossroadsTrafficBranch", "CrossroadsDirectionStud"},
     Orbital = {"OrbitalFluxSpine", "OrbitalMagnetGuide", "OrbitalTelemetryEye"},
+    Harbor = {"HarborTimberSplice", "HarborCargoSteelBand", "HarborUndersideKeel"},
 }
 
 function PlatformFinishKit.names(variant)
@@ -526,6 +527,25 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme)
         piece(3, CFrame.new(sx * 0.37, top + 0.015, sz * 0.33),
             Vector3.new(0.42, 0.028, 0.42),
             theme.Accent, Enum.Material.Glass, 0.48)
+
+    elseif variant == "Harbor" then
+        -- Every 90-degree cargo switchback gets distinct wood-and-steel
+        -- construction, never the Classic radar-grid markings. Finish
+        -- parts remain INSIDE the real physical deck and are welded to it,
+        -- so Shrinking Arena cannot leave a ghost walkway. A low-end
+        -- Android client sees one cheap inset on alternate platforms only.
+        local timber = theme.Surface:Lerp(Color3.fromRGB(113, 91, 73), 0.28)
+        local hardware = theme.Structure:Lerp(theme.Detail, 0.34)
+        piece(1, CFrame.new(-sx * 0.16, top, -sz * 0.18),
+            Vector3.new(math.max(2.2, sx * 0.52), 0.028, 0.34),
+            timber, Enum.Material.WoodPlanks, 0.16)
+        piece(2, CFrame.new(sx * 0.14, top + 0.009, sz * 0.28),
+            Vector3.new(math.max(2.0, sx * 0.56), 0.038, 0.23),
+            hardware, Enum.Material.CorrodedMetal, 0.18)
+        piece(3, CFrame.new(0, -sy * 0.5 - 0.20, 0),
+            Vector3.new(math.max(2.4, sx * 0.64), 0.26,
+                math.max(0.7, sz * 0.20)),
+            hardware, Enum.Material.Metal, 0.10)
 
     elseif variant == "Orbital" then
         -- An arc-segment tangent to the route + a non-flashing telemetry lens.
