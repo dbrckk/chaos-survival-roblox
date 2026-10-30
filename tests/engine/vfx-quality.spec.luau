@@ -1165,6 +1165,84 @@ describe("PBR materials for four playable district hero environments", function(
         original:Destroy()
     end)
 
+    it("uses existing approved PBR maps on the genuine Harbor ship only within Android caps", function()
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local fleet = Instance.new("Folder")
+        fleet.Name = "StormHarborGantryFleet"
+        fleet.Parent = decor
+        local ship = Instance.new("Model")
+        ship.Name = "HarborCargoVessel"
+        ship.Parent = fleet
+        for _, attribute in ipairs({
+            "HarborVesselScenery", "CosmeticOnly",
+            "SourceIsOriginal", "ChaosDistantScenery",
+        }) do
+            ship:SetAttribute(attribute, true)
+        end
+
+        local owned = PbrDistrictRules.isAuthoredHarborVesselOwner
+        expect(owned(ship)).toBe(true)
+        expect(PbrDistrictRules.eligibleOwner(ship)).toBe(true)
+        expect(PbrDistrictRules.ownerLimit("Low", ship)).toBe(0)
+        expect(PbrDistrictRules.ownerLimit("Medium", ship)).toBe(1)
+        expect(PbrDistrictRules.ownerLimit("High", ship)).toBe(3)
+        -- The shared global 2K budget NEVER increases for the cargo.
+        expect(PbrDistrictRules.globalLimit("Medium", true)).toBe(32)
+        expect(PbrDistrictRules.globalLimit("High", true)).toBe(72)
+
+        local hull = Instance.new("Part")
+        hull.Name = "MainHull"
+        hull.Size = Vector3.new(88, 8.2, 20)
+        hull.Material = Enum.Material.CorrodedMetal
+        hull.Anchored = true
+        hull.CanCollide = false
+        hull.CanQuery = false
+        hull.CanTouch = false
+        hull.Parent = ship
+        expect(PbrDistrictRules.eligiblePart(hull)).toBe(true)
+        expect(PbrDistrictRules.materialKey(hull.Name, hull.Material))
+            .toBe("oxidized")
+        local deck = hull:Clone()
+        deck.Name = "MainCargoDeck"
+        deck.Size = Vector3.new(88, 0.7, 19)
+        deck.Material = Enum.Material.Metal
+        deck.Parent = ship
+        expect(PbrDistrictRules.eligiblePart(deck)).toBe(true)
+        expect(PbrDistrictRules.materialKey(deck.Name, deck.Material))
+            .toBe("armor")
+        local glass = hull:Clone()
+        glass.Name = "BridgePanorama"
+        glass.Material = Enum.Material.Glass
+        glass.Parent = ship
+        expect(PbrDistrictRules.eligiblePart(glass)).toBe(false)
+        local gameplay = hull:Clone()
+        gameplay.CanCollide = true
+        gameplay.Parent = ship
+        expect(PbrDistrictRules.eligiblePart(gameplay)).toBe(false)
+
+        ship:SetAttribute("HarborVesselScenery", false)
+        expect(owned(ship)).toBe(false)
+        expect(PbrDistrictRules.eligibleOwner(ship)).toBe(false)
+        ship:SetAttribute("HarborVesselScenery", true)
+        ship:SetAttribute("CosmeticOnly", false)
+        expect(owned(ship)).toBe(false)
+        ship:SetAttribute("CosmeticOnly", true)
+        ship.Parent = workspace
+        expect(owned(ship)).toBe(false)
+        ship.Parent = fleet
+        expect(owned(ship)).toBe(true)
+        fleet.Name = "UnapprovedSceneryFleet"
+        expect(owned(ship)).toBe(false)
+        fleet.Name = "StormHarborGantryFleet"
+        expect(owned(ship)).toBe(true)
+
+        arena:Destroy()
+    end)
+
     it("never touches hitboxes, neon, glass, authored variants or tiny decals", function()
         local part = Instance.new("Part")
         part.Anchored = true

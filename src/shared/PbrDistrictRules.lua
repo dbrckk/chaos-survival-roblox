@@ -40,6 +40,30 @@ function PbrDistrictRules.isAuthoredHarborGantryOwner(owner)
         and owner.Parent.Name == "StormHarborGantryFleet"
 end
 
+-- This exact ship is original, localizable outside the playable arena,
+-- and is already controlled by the Harbor cosmetic distance LOD. Do not
+-- allow a copied cargo marker, hazard, or untrusted Model with the same
+-- name to consume approved 2K materials or enter visibility ownership.
+function PbrDistrictRules.isAuthoredHarborVesselOwner(owner)
+    if typeof(owner) ~= "Instance" or not owner:IsA("Model")
+        or owner.Name ~= "HarborCargoVessel"
+        or owner:GetAttribute("HarborVesselScenery") ~= true
+        or owner:GetAttribute("CosmeticOnly") ~= true
+        or owner:GetAttribute("SourceIsOriginal") ~= true
+        or owner:GetAttribute("ChaosDistantScenery") ~= true then
+        return false
+    end
+    local fleet = owner.Parent
+    local decor = fleet and fleet.Parent
+    local arena = decor and decor.Parent
+    return fleet ~= nil and fleet:IsA("Folder")
+        and fleet.Name == "StormHarborGantryFleet"
+        and decor ~= nil and decor:IsA("Folder")
+        and decor.Name == "Decor"
+        and arena ~= nil and arena:IsA("Folder")
+        and arena.Name == "Arena"
+end
+
 function PbrDistrictRules.ownerLimit(tierName, owner)
     if PbrDistrictRules.isApprovedImportedFoundationOwner(owner) then
         -- A total of eight imported 3D assets cannot exhaust the Android
@@ -52,6 +76,14 @@ function PbrDistrictRules.ownerLimit(tierName, owner)
         -- Skyline cranes must never consume a full per-model PBR pool.
         if tierName == "High" then return 4 end
         if tierName == "Medium" then return 2 end
+        return 0
+    end
+    if PbrDistrictRules.isAuthoredHarborVesselOwner(owner) then
+        -- A >90-stud full freighter is made of many small original Parts.
+        -- Give at most three LARGE surfaces 2K relief on High, one on
+        -- Medium, and none on Low; still subject to the global limit.
+        if tierName == "High" then return 3 end
+        if tierName == "Medium" then return 1 end
         return 0
     end
     return PbrDistrictRules.limit(tierName)
@@ -128,6 +160,7 @@ function PbrDistrictRules.eligibleOwner(owner)
         return true
     end
     return PbrDistrictRules.isAuthoredHarborGantryOwner(owner)
+        or PbrDistrictRules.isAuthoredHarborVesselOwner(owner)
         or owner:GetAttribute("ArenaDistrictArchitecture") == true
         or owner:GetAttribute("CornerLandmarkIndex") ~= nil
         or owner.Name == "ArenaHeroArchitecture3D"
@@ -277,9 +310,13 @@ function PbrDistrictRules.selectionPriority(
         and PbrDistrictRules.isApprovedImportedFoundationOwner(part.Parent) then
         score -= 950
     end
-    -- Optional off-floor cranes receive available spare 2K textures
-    -- after nearer playable districts; distance and device caps still win.
-    if PbrDistrictRules.isAuthoredHarborGantryOwner(part.Parent) then
+    -- Optional off-floor scenery receives spare PBR only AFTER
+    -- visible nearby playable districts. The cargo ship gets a slightly
+    -- bigger penalty than narrow crane housings; its giant surface area
+    -- must not evict the actual jump-route art from Android's global pool.
+    if PbrDistrictRules.isAuthoredHarborVesselOwner(part.Parent) then
+        score -= 1050
+    elseif PbrDistrictRules.isAuthoredHarborGantryOwner(part.Parent) then
         score -= 700
     end
     if alreadyApplied then score += 160 end

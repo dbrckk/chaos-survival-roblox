@@ -81,3 +81,46 @@ without native client captures.
 - `assets/source/roblox-pbr-upload-receipts.json` and
   `assets/source/roblox-pbr-approval-evidence.json`: actual asset IDs,
   upload provenance, and point-in-time Open Cloud moderation/owner audit.
+
+## 30 octobre 2026 — cuirasse PBR réelle du cargo de Storm Harbor
+
+Le navire `HarborCargoVessel` (modèle 3D original de la PR #416)
+était initialement rendu avec les matériaux Roblox natifs. Le contrôleur
+PBR existant reconnaissait les quatre grues `HarborGantry`, mais pas
+le navire. Ce nouveau suivi utilise les **mêmes variantes 2K originales
+approuvées**, contenant les quatre cartes couleur, normale, rugosité et
+métallicité, sans uploader ou créer de textures supplémentaires.
+
+Le prédicat `PbrDistrictRules.isAuthoredHarborVesselOwner` exige à la
+fois le nom exact `HarborCargoVessel`, les quatre attributs de provenance
+et le véritable chemin `Arena/Decor/StormHarborGantryFleet`. Il refuse
+les copies, autres modèles, géométries de collision et éléments Glass.
+Les grandes surfaces cuirassées (`MainHull`, `LowerKeel`) demandent la
+variante acier oxydé, et le pont `MainCargoDeck` la variante anti-dérapante
+sur base métal, selon la sélection **déjà implémentée**. Seules les
+surfaces réellement éligibles et près de la caméra peuvent recevoir
+un `MaterialVariant`.
+
+| Qualité | Cargo : quota par modèle | Budget global Android (inchangé) |
+|---|---:|---:|
+| Low | 0 | 0 |
+| Medium | 1 | 32 |
+| High | 3 | 72 |
+
+La même boucle de sélection toutes les 1,7/2,2 s reste seule propriétaire
+des variantes locales. Aucune nouvelle boucle, physique, RemoteEvent,
+texture externe, propriété serveur ou lumière. L'extérieur maritime
+reçoit une **pénalité de sélection** supplémentaire pour laisser les
+proches surfaces jouables prioritaires dans le budget global. Si le
+navire est masqué par le LOD ou si le joueur désactive PBR sur Android,
+les variantes locales sont restaurées comme avant. Les Materials déjà
+validés comme source ne prouvent ni l'accessibilité actuelle des images
+en jeu, ni la qualité visuelle ou les FPS sur téléphone.
+
+Réception : vérifier sur un vrai appareil Android, à quelques dizaines
+de studs du port nord et sur Medium puis High, les normales (+Y), l'échelle
+des reliefs métalliques, la cohérence coque/pont, les changements de
+LOD/streaming et `PbrActiveSurfaceCount <= PbrActiveSurfaceBudget`.
+Le premier lancement du port doit fonctionner sur Low avec **0** PBR.
+La PR correspondante doit passer la compilation et toutes les suites
+Roblox Cloud sur son SHA final avant mise en ligne.
