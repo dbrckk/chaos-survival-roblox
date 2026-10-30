@@ -1818,7 +1818,18 @@ describe("Storm Harbor engine and Android scenery certification", function()
             expect(crane:IsA("Model")).toBe(true)
             expect(crane:GetAttribute("CosmeticOnly")).toBe(true)
             expect(crane:GetAttribute("ChaosDistantScenery")).toBe(true)
-            expect(#crane:GetChildren() <= 12).toBe(true)
+            -- The original 11-part placeholder was replaced by authored
+            -- mechanical trusses and a real suspended load silhouette.
+            -- Preserve an EXACT bounded art contract instead of silently
+            -- accepting any inflated Part count on low-end Android.
+            local partCount = #crane:GetChildren()
+            local hasContainer = crane:FindFirstChild("ContainerArmor") ~= nil
+            local hasDrum = crane:FindFirstChild("CableDrum") ~= nil
+            expect(hasContainer ~= hasDrum).toBe(true)
+            expect(partCount).toBe(hasContainer and 31 or 30)
+            expect(crane:FindFirstChild("TrolleyDriveHousing") ~= nil).toBe(true)
+            expect(crane:FindFirstChild("BoomTruss-1_0") ~= nil).toBe(true)
+            expect(crane:GetAttribute("HarborGantryScenery")).toBe(true)
             for _, p in ipairs(crane:GetChildren()) do
                 expect(p:IsA("BasePart")).toBe(true)
                 expect(p.Anchored).toBe(true)
