@@ -18,12 +18,16 @@ local ORIGINAL_MESH_LOD = {
     MediumDistance = 140,
 }
 
--- The four new Storm Harbor gantry sculptures are external eye-candy,
--- never routes or hazard cover. Low Android retains the drydock hero
--- silhouette but skips the exterior cranes; Medium shows nearby ones.
+-- The existing exterior fleet includes 4 gantries and one full cargo
+-- vessel. Low Android keeps ONLY the 14 structural cargo silhouette
+-- Parts explicitly authored on the real ship, not 30-Part cranes, tiny
+-- railings, corrugations, effects or gameplay hazard cover. Medium shows
+-- the nearby complete vessel and cranes; High retains full original art.
+-- Keep using this one 0.65/0.90-second scenery-LOD update owner.
 local HARBOR_GANTRY_LOD = {
     LowDistance = 0,
     MediumDistance = 185,
+    KeepHeroLow = true,
 }
 
 -- The new off-map hero architectures are static Roblox-native 3D. On
@@ -351,12 +355,13 @@ task.spawn(function()
             applyFolder(model, ORIGINAL_MESH_LOD,
                 profile, model:GetPivot().Position, cameraPoint)
         end
-        -- Use each crane's own pivot so approaching the port edge
-        -- reveals its silhouette smoothly on Medium. Exact model
-        -- ownership rules prevent culling gameplay or other arenas.
-        for _, crane in ipairs(SceneryLodRules.harborGantryOwners(arena)) do
-            applyFolder(crane, HARBOR_GANTRY_LOD,
-                profile, crane:GetPivot().Position, cameraPoint)
+        -- Use each exterior model pivot, including the full cargo vessel,
+        -- for Medium proximity. On Low only server-marked essential ship
+        -- Parts survive; four separate cranes retain zero visible Parts.
+        -- Native collision and hazards are never touched.
+        for _, scenery in ipairs(SceneryLodRules.harborGantryOwners(arena)) do
+            applyFolder(scenery, HARBOR_GANTRY_LOD,
+                profile, scenery:GetPivot().Position, cameraPoint)
         end
         local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
         if district and district:IsA("Folder") then

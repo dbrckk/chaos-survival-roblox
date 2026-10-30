@@ -36,6 +36,18 @@ local function buildCargoVessel(fleet, base, theme)
         theme.Secondary:Lerp(Color3.fromRGB(72, 102, 109), 0.66),
     }
 
+    -- The full freighter has many decorative ribs, railings and details.
+    -- On low-end Android an entirely invisible cargo landmark leaves the
+    -- north skyline empty. Retain exactly fourteen LARGE structural pieces
+    -- of this already-replicated 3D ship, never a new low-cost fake mesh.
+    -- The existing scenery LOD exclusively owns the visibility; it
+    -- still hides all four separate gantry cranes on Low.
+    local lowSilhouette = {
+        MainHull = true, LowerKeel = true, MainCargoDeck = true,
+        BowTaperPort = true, BowTaperStarboard = true,
+        SternDeckhouse = true, Wheelhouse = true, ExhaustStack = true,
+    }
+
     local function segment(name, size, offset, color, material, kind)
         local piece = Instance.new(kind or "Part")
         piece.Name = name
@@ -48,6 +60,9 @@ local function buildCargoVessel(fleet, base, theme)
         piece.CanTouch = false
         piece.CanQuery = false
         piece.CastShadow = false
+        if lowSilhouette[name] == true then
+            piece:SetAttribute("HeroSilhouetteEssential", true)
+        end
         piece.Parent = vessel
         return piece
     end
@@ -104,6 +119,12 @@ local function buildCargoVessel(fleet, base, theme)
                 local y = 6.8 + (layer - 1) * 4.6
                 local tone = cargoColors[(bay + layer + (side + 1) / 2) % 3 + 1]
                 local prefix = "Container" .. bay .. "_" .. side .. "_" .. layer
+                if layer == 1 then
+                    -- Six first-layer containers establish the ship's
+                    -- freight silhouette. All upper tiers and small
+                    -- corrugation ribs stay hidden on Low.
+                    lowSilhouette[prefix] = true
+                end
                 segment(prefix, Vector3.new(15, 4.0, 7.7),
                     CFrame.new(x, y, z), tone, Enum.Material.CorrodedMetal)
                 for rib = -1, 1, 2 do
