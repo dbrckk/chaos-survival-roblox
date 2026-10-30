@@ -1,6 +1,9 @@
 -- Four reusable, non-colliding contact brackets. A real collision
 -- raycast anchors the preview; it never adds a platform or a movement buff.
 -- Reused by the existing movement-feel render owner (no additional loop).
+-- A red contact X also respects genuine server-authored disaster sweeps
+-- and the actual width/phase of a Tower shutter. Never draw a false
+-- cyan "safe" marker on a floor lane currently receiving a warning.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Rules = require(ReplicatedStorage.Shared.JumpLandingPreviewRules)
@@ -61,6 +64,32 @@ function JumpLandingPreviewKit.new(player)
     local function validSurface(hit)
         return hit ~= nil and hit.Normal.Y >= 0.84
             and Rules.surfaceStatus(hit.Instance) ~= "Unavailable"
+    end
+
+    -- Inspect ONLY the active arena's three known mechanic folders, and
+    -- only when the 10Hz reticle already found a real impending landing.
+    -- Four floor bands or four skybridge shutters at most, no workspace
+    -- search, no extra collision rays and no separate event/render owner.
+    local function landingHazards(arena)
+        local hazards = {}
+        local mechanics = arena and arena:FindFirstChild("Mechanics")
+        if not mechanics then return hazards end
+        for _, folderName in ipairs({
+            "GridSweep", "HarborCargoSweep", "SkybridgeShutters",
+        }) do
+            local folder = mechanics:FindFirstChild(folderName)
+            if folder then
+                for _, candidate in ipairs(folder:GetChildren()) do
+                    if candidate:IsA("BasePart")
+                        and (candidate:GetAttribute("BridgeShutter") == true
+                            or candidate.Name:match("^GridSweepBand%d+$")
+                            or candidate.Name:match("^HarborSweepLane%d+$")) then
+                        hazards[#hazards + 1] = candidate
+                    end
+                end
+            end
+        end
+        return hazards
     end
 
     local function update(phase, root, humanoid)
@@ -179,7 +208,11 @@ function JumpLandingPreviewKit.new(player)
         targetPart = hit.Instance
         showing = true
         local caution = margin < 1.75
+        local projectedRoot = hit.Position + Vector3.new(0, footOffset, 0)
         local warning = Rules.surfaceStatus(hit.Instance) == "Warning"
+            or Rules.hazardAt(
+                projectedRoot, hit.Instance, landingHazards(arena)
+            )
         -- Danger is communicated in both colour and silhouette. The
         -- same four reusable brackets contract into an unmistakable red
         -- X, without hiding the server's yellow 1.35-second warning.
