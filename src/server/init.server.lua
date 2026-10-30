@@ -1518,47 +1518,52 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 params.RespectCanCollide = true
                 parkourStates[userId] = memory
 
-                parkourConnections[userId] = hum.StateChanged:Connect(function(_, state)
-                    if state ~= Enum.HumanoidStateType.Landed
-                        and state ~= Enum.HumanoidStateType.Running
-                        and state ~= Enum.HumanoidStateType.RunningNoPhysics then
+                local function sampleGroundedLanding()
+                    if not roundActive or contestant.Parent ~= Players
+                        or contestant:GetAttribute("RoundEliminated") == true
+                        or eliminated[userId] == true
+                        or contestant.Character ~= character
+                        or hum.Parent ~= character
+                        or masteryPlatforms.Parent ~= gameplayArena
+                        or hum.FloorMaterial == Enum.Material.Air then
                         return
                     end
-                    -- A single physically confirmed surface sample after
-                    -- Roblox settles FloorMaterial. Duplicate signals do
-                    -- not make a second move: the module deduplicates deck.
-                    local now = os.clock()
-                    if now - (memory.lastLandingEvent or -math.huge) < 0.20 then
-                        return
+                    local deck = ParkourFlow.landedDeck(
+                        character, masteryPlatforms, params
+                    )
+                    local nextState = ParkourFlow.advance(
+                        memory, deck, masteryPlatforms,
+                        parkourBase.Position, currentArenaVariant, os.clock()
+                    )
+                    parkourStates[userId] = nextState
+                    local chain = nextState.chain or 0
+                    local best = nextState.best or 0
+                    if contestant:GetAttribute("RoundParkourChain") ~= chain then
+                        contestant:SetAttribute("RoundParkourChain", chain)
                     end
-                    memory.lastLandingEvent = now
-                    task.delay(0.10, function()
-                        if not roundActive or contestant.Parent ~= Players
-                            or contestant:GetAttribute("RoundEliminated") == true
-                            or eliminated[userId] == true
-                            or contestant.Character ~= character
-                            or hum.Parent ~= character
-                            or masteryPlatforms.Parent ~= gameplayArena then
-                            return
+                    if contestant:GetAttribute("RoundParkourBest") ~= best then
+                        contestant:SetAttribute("RoundParkourBest", best)
+                    end
+                end
+
+                -- StateChanged(Landed) can fire one frame before the real
+                -- FloorMaterial settles. Observe BOTH transitions rather
+                -- than delaying 100ms and missing a skilled fast re-jump.
+                -- Deduplication by physical Part prevents double scores.
+                table.insert(parkourConnections,
+                    hum.StateChanged:Connect(function(_, state)
+                        if state == Enum.HumanoidStateType.Landed
+                            or state == Enum.HumanoidStateType.Running
+                            or state == Enum.HumanoidStateType.RunningNoPhysics then
+                            sampleGroundedLanding()
                         end
-                        local deck = ParkourFlow.landedDeck(
-                            character, masteryPlatforms, params
-                        )
-                        local nextState = ParkourFlow.advance(
-                            memory, deck, masteryPlatforms,
-                            parkourBase.Position, currentArenaVariant, os.clock()
-                        )
-                        parkourStates[userId] = nextState
-                        local chain = nextState.chain or 0
-                        local best = nextState.best or 0
-                        if contestant:GetAttribute("RoundParkourChain") ~= chain then
-                            contestant:SetAttribute("RoundParkourChain", chain)
+                    end))
+                table.insert(parkourConnections,
+                    hum:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
+                        if hum.FloorMaterial ~= Enum.Material.Air then
+                            sampleGroundedLanding()
                         end
-                        if contestant:GetAttribute("RoundParkourBest") ~= best then
-                            contestant:SetAttribute("RoundParkourBest", best)
-                        end
-                    end)
-                end)
+                    end))
             end
         end
         table.insert(onCleanup, function()
