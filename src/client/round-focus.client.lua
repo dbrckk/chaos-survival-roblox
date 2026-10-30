@@ -121,6 +121,27 @@ barBg.BackgroundTransparency = 0.08
 barBg.BorderSizePixel = 0
 barBg.Parent = root
 
+-- Earned parkour flow is a small contextual accent above the EXISTING
+-- round bar, never a second HUD or an obstruction of disaster alerts.
+-- All numbers are replicated server-owned player attributes.
+local parkourChip = Instance.new("TextLabel")
+parkourChip.Name = "VerifiedParkourFlow"
+parkourChip.AnchorPoint = Vector2.new(0.5, 1)
+parkourChip.Position = UDim2.new(0.5, 0, 0, -5)
+parkourChip.Size = UDim2.fromOffset(touchDevice and 134 or 158, 27)
+parkourChip.BackgroundColor3 = UITheme.Colors.Panel
+parkourChip.BackgroundTransparency = 0.06
+parkourChip.BorderSizePixel = 0
+parkourChip.Font = Enum.Font.GothamBlack
+parkourChip.TextScaled = true
+parkourChip.TextColor3 = UITheme.Colors.Cyan
+parkourChip.Text = ""
+parkourChip.Visible = false
+parkourChip.Parent = root
+UITheme.addCorner(parkourChip, UITheme.Corners.Pill)
+UITheme.addStroke(parkourChip, UITheme.Colors.Cyan, 1.2, 0.25)
+UITheme.addTextConstraint(parkourChip, 12, 18)
+
 local bgCorner = Instance.new("UICorner")
 bgCorner.CornerRadius = UDim.new(1, 0)
 bgCorner.Parent = barBg
@@ -329,6 +350,7 @@ local function refresh()
     local isEliminated = player:GetAttribute("RoundEliminated") == true
 
     if not state or state.phase ~= "round" or not isParticipant or isEliminated then
+        parkourChip.Visible = false
         setRookieCompactMode(false)
         if root.Visible and not isHiding then
             visibleToken += 1
@@ -366,6 +388,23 @@ local function refresh()
         root.Visible = true
         transition(root, 0.20, {BackgroundTransparency = 0.12})
         transition(scale, 0.22, {Scale = 1}, Enum.EasingStyle.Back)
+    end
+
+    -- A bounded skill badge, never a permanent fourth objective.
+    -- Hide it in final rush so the urgent survival counter stays dominant.
+    local parkour = math.clamp(
+        math.floor(tonumber(player:GetAttribute("RoundParkourChain")) or 0),
+        0, 7
+    )
+    parkourChip.Visible = parkour >= 2
+        and state.finalRush ~= true
+        and state.challengeMetric ~= "highGround"
+        and (not touchDevice or player:GetAttribute("VfxQualityTier") ~= "Low")
+    if parkourChip.Visible then
+        parkourChip.Text = (localeId:sub(1, 2) == "fr"
+            and "ENCHAÎNEMENT ×" or "JUMP CHAIN ×") .. tostring(parkour)
+        parkourChip.TextColor3 = parkour >= 6
+            and UITheme.Colors.Gold or UITheme.Colors.Cyan
     end
 
     local count = shardCount()
@@ -538,6 +577,7 @@ player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundNearMisses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundMechanicUses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundMomentumBest"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundParkourChain"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundPeakTier"):Connect(function()
     -- Each increase is confirmed by the server after two grounded
     -- observations of a real deck. Give the player a restrained cue
