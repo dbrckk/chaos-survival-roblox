@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-30 — Android jump reliability and touch descent camera (unpublished)
+
+- Fix a real delayed replication bug: the old jump-assist script stopped listening if the Humanoid arrived >5 seconds after respawn. It now attaches event-driven whenever the Humanoid appears, supports same-character Humanoid replacement, and disconnects all old callbacks on respawn. Zero per-frame polling.
+- Resolve the one-shot buffered jump race when `FloorMaterial` and `StateChanged(Landed/Running)` arrive out of order. A still-live 120ms request dispatches once only on true grounded contact and enabled jumping; preserve existing 100ms coyote grace, no double-jump and no Freeze bypass.
+- Stabilize *passive* third-person motion on descending Android touch players (0.48 coefficient) so FOV/lean acceleration does not distract from precision landings. Real disaster impacts, landing feedback and physics stay unchanged. Discard stale/zero/invalid Android resume deltas before camera-spring integration.
+- Extend **existing** real Roblox engine specs and document explicit Android/PC matrix: [jump and camera acceptance plan](docs/PREMIUM_ANDROID_JUMP_CAMERA_2026-10-30.md). Tests deliberately reserved for next major milestone. No Roblox publish, FPS or session success falsely asserted.
+
 ## 2026-10-30 — Real rising Skybridge shutters and calibrated premium roadmap (unpublished)
 
 - Introduce four real, 2.05-stud tall **Tower Run timing obstacles**. In an eligible veteran round, exactly one rises at a time on an existing fixed skybridge after a 2.6-second visible amber ground warning; players jump over it or wait 1.8 seconds for a clear crossing. Other bridges stay solid/open. An actual metal Part becomes collidable only after the visible 0.32-second lift; check human/bot root occupancy before closure, otherwise cancel. Event and geometry fully cleaned at round end.
