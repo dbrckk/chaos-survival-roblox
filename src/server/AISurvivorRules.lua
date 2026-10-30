@@ -875,6 +875,43 @@ function AISurvivorRules.routeWarningPenalty(origin, destination, warningCenter,
     return math.clamp(1 - closest / buffer, 0, 1) * 90
 end
 
+-- Server-owned floor sweeps run in an oriented rectangular corridor.
+-- Choose the closest of the FOUR real exits: the end of a long lane can
+-- be nearer than either side. The center distance is a tiny tie-breaker
+-- toward the safe arena interior, not a teleport or movement advantage.
+-- This is a pure spatial decision; the humanoid must walk there normally.
+function AISurvivorRules.floorSweepExitTarget(frame, size, position, center)
+    if typeof(frame) ~= "CFrame" or typeof(size) ~= "Vector3"
+        or typeof(position) ~= "Vector3"
+        or typeof(center) ~= "Vector3"
+        or size.X <= 0 or size.Z <= 0 then
+        return nil
+    end
+    local relative = frame:PointToObjectSpace(position)
+    local margin = 5.5
+    local candidates = {
+        Vector3.new(-size.X * 0.5 - margin, relative.Y, relative.Z),
+        Vector3.new(size.X * 0.5 + margin, relative.Y, relative.Z),
+        Vector3.new(relative.X, relative.Y, -size.Z * 0.5 - margin),
+        Vector3.new(relative.X, relative.Y, size.Z * 0.5 + margin),
+    }
+    local chosen, bestScore = nil, math.huge
+    for _, point in ipairs(candidates) do
+        local destination = frame:PointToWorldSpace(point)
+        local delta = destination - position
+        local walking = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        -- Tie only: inside a lane the distance to a physical escape
+        -- boundary must dominate the orientation of the arena.
+        local interior = destination - center
+        local centerDistance = Vector3.new(interior.X, 0, interior.Z).Magnitude
+        local score = walking + math.min(centerDistance, 160) * 0.003
+        if score < bestScore then
+            chosen, bestScore = destination, score
+        end
+    end
+    return chosen
+end
+
 -- A bot that is already dodging one live warning should not switch
 -- its attention on every brain tick when two equal-size blast footprints
 -- overlap. Switch only when the competing warning is meaningfully closer.

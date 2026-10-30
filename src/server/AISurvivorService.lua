@@ -1395,7 +1395,7 @@ local function floorSweepEscape(record, root, now)
     local folder = mechanics and mechanics:FindFirstChild(folderName)
     local phaseAttribute = variant == "Classic"
         and "GridSweepPhase" or "HarborSweepPhase"
-    local threat, localRoot
+    local threat
     if folder then
         for _, band in ipairs(folder:GetChildren()) do
             if band:IsA("BasePart") and (
@@ -1407,7 +1407,7 @@ local function floorSweepEscape(record, root, now)
                     and math.abs(point.Z) <= band.Size.Z * 0.5 + 1.2
                     and point.Y >= 1 and point.Y <= 5.1
                 then
-                    threat, localRoot = band, point
+                    threat = band
                     break
                 end
             end
@@ -1426,18 +1426,17 @@ local function floorSweepEscape(record, root, now)
         record.gridSweepThreatSeenAt, now, record.profile.ReactionSeconds
     ) then return nil end
 
-    -- Use the shorter ground-level exit, on the X or Z axis depending
-    -- on which direction the band runs. Staying at the original Y avoids
-    -- making a bot chase an elevated platform it cannot reach.
-    local crossX = threat.Size.X < threat.Size.Z
-    local cross = crossX and localRoot.X or localRoot.Z
-    local sign = cross < 0 and -1 or 1
-    local safe = sign * (
-        (crossX and threat.Size.X or threat.Size.Z) * 0.5 + 5.5
+    -- Human runners can use either SIDE or END of the marked corridor.
+    -- At a long strip's end the old cross-axis-only rule unnecessarily
+    -- made bots traverse the lane. The real server band is oriented, so
+    -- derive the nearest physical escape in local space, keeping the
+    -- current Y and normal walk speed (no bot-only teleport or jump).
+    local base = arenaBase()
+    local exit = AISurvivorRules.floorSweepExitTarget(
+        threat.CFrame, threat.Size, root.Position,
+        base and base.Position or config.ArenaCenter
     )
-    local localGoal = crossX and Vector3.new(safe, localRoot.Y, localRoot.Z)
-        or Vector3.new(localRoot.X, localRoot.Y, safe)
-    return clampToArena(threat.CFrame:PointToWorldSpace(localGoal))
+    return exit and clampToArena(exit) or nil
 end
 
 local function immediateThreat(record, root, now)
@@ -3204,9 +3203,17 @@ local function stepRecord(record, now)
             local skybridgeEscape = record.platformThreat
                 and record.platformThreat.Parent
                 and record.platformThreat:GetAttribute("ChaosSkybridge") == true
-            local floorSweepEscape = record.gridSweepThreat
-                and record.gridSweepThreat.Parent
-                and record.gridSweepThreat:GetAttribute("GridSweepPhase") ~= nil
+            -- Both Classic and Harbor sweeps are real spatial hazards.
+            -- NEVER add the social sidestep jitter to the server-derived
+            -- floor exit: Harbor used to miss this check, steering NPCs
+            -- straight back through an active cargo lane.
+            local sweepBand = record.gridSweepThreat
+            local sweepPhase = sweepBand
+                and (sweepBand:GetAttribute("GridSweepPhase")
+                    or sweepBand:GetAttribute("HarborSweepPhase"))
+            local floorSweepEscape = sweepBand
+                and sweepBand.Parent ~= nil
+                and (sweepPhase == "Warning" or sweepPhase == "Pulse")
             -- saferThreatEscape already validated this exact destination
             -- against *every* live bomb and meteor corridor and real floor
             -- support. Adding a random social separation offset afterward
