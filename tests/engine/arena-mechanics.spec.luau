@@ -434,7 +434,10 @@ describe("Arena mechanics", function()
             expect(gate.CanCollide).toBe(false)
             expect(gate.Transparency).toBe(1)
             expect(gate.Material).toBe(Enum.Material.Metal)
-            expect(gate.Size.Y).toBe(SkybridgeShutters.Height)
+            -- BasePart.Size has float32 storage, 2.05 studs serializes
+            -- as approximately 2.04999995; test geometry, not bit equality.
+            expect(math.abs(gate.Size.Y - SkybridgeShutters.Height) < 0.001)
+                .toBe(true)
             expect(state.stripe ~= nil).toBe(true)
             expect(state.stripe.CanCollide).toBe(false)
             expect(state.stripe.CanQuery).toBe(false)

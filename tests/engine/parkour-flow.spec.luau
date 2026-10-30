@@ -345,6 +345,10 @@ describe("Real active arena sweep lanes never lure jump coaching into danger", f
 end)
 
 
+-- Roblox BasePart.Size serializes through float32: numeric decimal deck
+-- footprints such as 11.6 and 11.2 cannot be compared byte-exactly to
+-- Lua number literals. Test physical dimensions within 0.001 studs;
+-- keep actual reachability and legalJump checks fully strict.
 describe("Physically progressive landing footprints on all five arenas", function()
     it("uses deterministic bounded 4-grade course difficulty", function()
         local shapes = {
@@ -384,8 +388,8 @@ describe("Physically progressive landing footprints on all five arenas", functio
                     local deck = platforms:FindFirstChild("Platform" .. index)
                     local expectedWidth, expectedGrade =
                         ArenaVariants.parkourFootprint("Perimeter", step)
-                    expect(deck.Size.X).toBe(expectedWidth)
-                    expect(deck.Size.Z).toBe(expectedWidth)
+                    expect(math.abs(deck.Size.X - expectedWidth) < 0.001).toBe(true)
+                    expect(math.abs(deck.Size.Z - expectedWidth) < 0.001).toBe(true)
                     expect(deck:GetAttribute("ParkourGrade")).toBe(expectedGrade)
                     expect(deck.Anchored and deck.CanCollide).toBe(true)
                     if previous then
@@ -421,8 +425,8 @@ describe("Physically progressive landing footprints on all five arenas", functio
                     )
                     local expectedWidth, grade =
                         ArenaVariants.parkourFootprint("Branch", step)
-                    expect(deck.Size.X).toBe(expectedWidth)
-                    expect(deck.Size.Z).toBe(expectedWidth)
+                    expect(math.abs(deck.Size.X - expectedWidth) < 0.001).toBe(true)
+                    expect(math.abs(deck.Size.Z - expectedWidth) < 0.001).toBe(true)
                     expect(deck:GetAttribute("ParkourGrade")).toBe(grade)
                     if sideLast then
                         expect(JumpRouteCueRules.jumpable(sideLast, deck)).toBe(true)
@@ -452,8 +456,8 @@ describe("Physically progressive landing footprints on all five arenas", functio
                         )
                         local width, grade =
                             ArenaVariants.parkourFootprint("Harbor", step)
-                        expect(deck.Size.X).toBe(width)
-                        expect(deck.Size.Z).toBe(width)
+                        expect(math.abs(deck.Size.X - width) < 0.001).toBe(true)
+                        expect(math.abs(deck.Size.Z - width) < 0.001).toBe(true)
                         expect(deck:GetAttribute("ParkourGrade")).toBe(grade)
                         if previous then
                             expect(JumpRouteCueRules.gap(previous, deck)
