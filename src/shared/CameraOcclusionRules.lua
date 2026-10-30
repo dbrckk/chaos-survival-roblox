@@ -130,6 +130,30 @@ function CameraOcclusionRules.chooseOccluders(candidates, maximum)
     return selected
 end
 
+-- Camera sightline samples can strike the same steel beam at head and
+-- torso height. Keep distinct server-authored BaseParts only, in stable
+-- sampling order, and cap local softening to two physical obstructions.
+-- This is visual-only; no terrain collision or raycast filter is changed.
+function CameraOcclusionRules.chooseStructuralBlockers(candidates, maximum)
+    if type(candidates) ~= "table" then return {} end
+    local rawLimit = tonumber(maximum)
+    if not rawLimit or rawLimit ~= rawLimit
+        or rawLimit == math.huge or rawLimit == -math.huge then
+        rawLimit = 2
+    end
+    local limit = math.clamp(math.floor(rawLimit), 0, 2)
+    local picked, seen = {}, {}
+    for _, part in ipairs(candidates) do
+        if #picked >= limit then break end
+        if typeof(part) == "Instance" and part:IsA("BasePart")
+            and not seen[part] then
+            picked[#picked + 1] = part
+            seen[part] = true
+        end
+    end
+    return picked
+end
+
 function CameraOcclusionRules.localModifier()
     -- Other survivors remain visible and recognizable even when their
     -- character briefly blocks most of the third-person camera.

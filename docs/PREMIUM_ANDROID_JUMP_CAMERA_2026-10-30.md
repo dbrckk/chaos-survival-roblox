@@ -21,6 +21,39 @@ A `JumpRequest` up to **120 milliseconds before landing** remains buffered under
 
 `LocomotionDynamics.precisionCameraFactor` provides a **0.48 passive-motion envelope** only while a touch player is actually descending (`verticalSpeed < -3`) in a real round. The one existing `movement-feel.client.lua` RenderStep owner uses it for speed-driven FOV, acceleration kick, lean and low-gravity drift, limiting apparent deck-size and sightline changes right before a precision landing. Existing disaster impact shake, landing feedback, local collision landing brackets, button input, spectator controls and R15 physics are **not disabled or rewritten**. No new camera/animation/render owner. NaN/zero/paused Android frame deltas are also clamped to a quiet 1/60-second restart frame rather than driving the spring with a multi-second elapsed time.
 
+## Follow-up: dual-height third-person structural sightlines
+
+In the existing touch camera, only **one** physical arena support could be
+softened: a torso-level brace could hide the jumper's body while an independent
+overhead steel beam still obscured the head and the landing edge. The existing
+avatar-obstruction code already handles two NPCs; structural occlusion did not.
+
+The same 180-ms camera update now projects **two** raycasts, aimed from the
+current actual camera toward the local R15 root's **torso (+1.25 studs)** and
+**upper-body/head (+3.05 studs)**. Both rays use the **existing cached,
+arena-only include filter**: no global scene query, no avatar collision,
+no new RenderStepped connection and no overhead from dynamic filter rebuilds.
+The new `CameraOcclusionRules.chooseStructuralBlockers` returns up to **two
+distinct real BaseParts** in deterministic order. Only eligible solid,
+non-neon arena scenery / permitted tagged bridge geometry is softened;
+walkable routes, the survival floor, dynamic hazards and 3D-only decorations
+remain untouched.
+
+The client stores and restores the **original independent local transparency
+modifier for each part**, and relinquishes ownership if Roblox's native
+camera or another local visual system supersedes it. Both fades are restored
+as soon as that support leaves the two true sightlines, on round exit,
+character respawn, camera replacement, or first-person/spectator zoom.
+Remote replication, collisions, camera CFrame and speed, physics and gameplay
+remain unchanged.
+
+The **existing** `tests/engine/ui-responsive.spec.luau` now covers
+distinctness, native BasePart type checks, count caps, input order, nil,
+zero/oversized/invalid limits and duplicate hits. This is a structural
+logic regression, **not** proof of Android visual quality: verify a crowded
+Harbor gantry with two overlapping real structural supports in the final
+Android release review. No new independent test suite or publisher is added.
+
 ## Correctness and release gate
 
 Existing real Roblox engine spec files are expanded **without adding new standalone unit-test suites**:
