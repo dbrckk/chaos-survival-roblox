@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-30 — Original Storm Harbor playable platforms and exterior cargo 3D (source only)
+
+- Fix another cross-arena identity defect: `PlatformFinishKit` omitted Harbor from its supported physical platform visuals, so Medium/High protective armor and load braces were missing and `arena-platform-identity.client.lua` painted Classic's calibration neon across the cargo piers. Harbor now has its own original wood-plank splice, corroded steel lashing and below-deck timber/metal keel, welded to the **actual physically jumpable platforms** with Shrinking Arena and CollapsePhase lifecycle. Existing Low/Medium/High finish counts remain 1/2/3; Low adds no optional Harbor-specific trim and zero armor/braces.
+- Replace the second Classic fallback in `arena-architectural-details.client.lua` with an exterior maritime cargo-loading crane: steel legs, overhanging boom, suspended timber cargo, mid/high rigging/brace/wheel/cab details. Sync the load, cable and high-detail ribs using the already-owned 5-Hz cosmetic phase. No fake gameplay geometry, server hitbox, network change or extra animation loop.
+- Add real Roblox engine geometry/ownership/material/collapse coverage to `tests/engine/vfx-quality.spec.luau`. See [physical Harbor art acceptance](docs/PREMIUM_HARBOR_PHYSICAL_DECK_ART_2026-10-30.md) for mobile screenshots and exact-SHA public release gate.
+- This change is NOT part of the last confirmed public Roblox update `82f925c320b2525a58acb4944e74435a75a2795c` until a separately successful guarded publisher run. No unsupported AAA/FPS claim.
+
 ## 2026-10-30 — Harbor industrial deck language, no Classic visual fallback (unpublished)
 
 - Fix the second missing fifth-arena art branch: `arena-surface-relief.client.lua` still used Classic's metal hatches for Storm Harbor on Android Medium/High. `addHarbor` now authors shallow maritime cargo cleats, rusty-steel/wood-plank materials and engraved load lines at safe exterior service corners, rather than reusing Classic's survey hardware.
