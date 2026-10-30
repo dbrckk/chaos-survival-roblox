@@ -21,7 +21,7 @@ Widths refer to **both X and Z dimensions of the actual collidable top deck**, n
 - Side branches keep physical 3-stud rises and preserve actual ridge/branch crosslinks. Crosslinks remain 12 studs wide for emergency escape and other disasters.
 - All platform centers, R15 clearance, arena base dimensions, original platform IDs, raycast/grounded detection, ai bot navigation metadata, collectible positions and map generation ordering are untouched.
 - A new server-authored `ParkourGrade` attribute is derived from the same stage definition as the physical size. It cannot be set by a player to modify collisions, score or jump powers.
-- The existing landing top panel and bevels use a modest material color progression tied to grade. **Zero new platform Parts, lights, shadows, UIs, remotes, expensive PBR materials or per-frame physics**. Android rendering costs remain effectively bounded by the existing map.
+- The existing landing top panel and bevels use a modest material color progression tied to grade. The original single depth-tested rookie/recovery jump cue now announces **PRECISION JUMP / SAUT PRÉCIS** at grade III and **EXPERT JUMP / SAUT EXPERT** at grade IV. Objective, choice-of-route, cargo and safe-detour messages still have priority. **Zero new platform Parts, lights, shadows, UIs, remotes, expensive PBR materials or per-frame physics**. Android rendering costs remain effectively bounded by the existing map.
 - The existing user scores, skill medals, server-verified jump chains, persistent personal bests and daily/weekly quests automatically use these **real physical surfaces**. No client score claims or artificial difficulty bonuses.
 
 ## Regression and accessibility contract
