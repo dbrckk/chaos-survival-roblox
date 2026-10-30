@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-30 — Real rising Skybridge shutters and calibrated premium roadmap (unpublished)
+
+- Introduce four real, 2.05-stud tall **Tower Run timing obstacles**. In an eligible veteran round, exactly one rises at a time on an existing fixed skybridge after a 2.6-second visible amber ground warning; players jump over it or wait 1.8 seconds for a clear crossing. Other bridges stay solid/open. An actual metal Part becomes collidable only after the visible 0.32-second lift; check human/bot root occupancy before closure, otherwise cancel. Event and geometry fully cleaned at round end.
+- Alternate the shutters with the existing Skybridge Pressure collapsing-bridge challenge, **never stack both** in one round or with incompatible disasters. Existing Skyrail boosters may not launch a runner into a warning/raised shutter. AI survivors stop selecting already obstructed Skyrail crossings. One server event loop, no new client RenderStepped, remotes, XP authority or paid movement.
+- FR/EN event-driven, depth-tested local warning signage and noncolliding, floor-flush amber indicators; streamed gate ownership via CollectionService tag. Specs added to the **existing** real Roblox engine integration suite for full geometry, phase, collision, cleanup, bot safety, Skyrail lockout and mechanic alternation. These scenarios are not yet executed on this SHA.
+- Update [verified competitor benchmark and measurable 9/10 exit plan](docs/PREMIUM_BENCHMARK_AND_COMPLETION_PLAN_2026-10-30.md), referencing original Tower of Hell / Flood Escape 2 / Speed Run 4 / Natural Disaster Survival. Provisional source review **6.2/10**, low-to-medium confidence, NOT a real Android/PC assessment.
+- Fix the README's stale public provenance: last verified **public** Roblox publish was successful 30 October 2026, commit `a0f56bcd4cfa401162a608404c95649bb39b6446`. This new source change does **not** deploy to Roblox; owner requires a premium-quality final public release.
+
 ## 2026-10-24 — Readable industrial arena floors instead of oversized neon fills (candidate)
 
 - Responds to four real Android screenshots showing pink/cyan bloom hiding route edges and player avatars. Change **only the broad decorative surfaces** of Towers, Crossroads and Orbital from emissive Neon to subdued platform metal with arena-toned colors; the towers' small center inlays remain Neon but at higher transparency. De-emphasize the four very long cross-map neon seams.
