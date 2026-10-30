@@ -21,7 +21,20 @@ function RoundIntensity.factor(elapsedSeconds, roundSeconds, solo, doubleChaos)
         endFactor = math.min(endFactor, solo and 1.06 or 1.10)
     end
 
-    local eased = progress * progress * (3 - (2 * progress))
+    -- Three deliberate acts: readable opening, sustained middle pressure,
+    -- then a short climactic finale. Smooth interpolation at the joins
+    -- avoids an abrupt unfair spike during a player's committed jump.
+    local eased
+    if progress <= 0.22 then
+        local t = progress / 0.22
+        eased = 0.18 * t * t * (3 - 2 * t)
+    elseif progress <= 0.76 then
+        local t = (progress - 0.22) / 0.54
+        eased = 0.18 + 0.57 * t * t * (3 - 2 * t)
+    else
+        local t = (progress - 0.76) / 0.24
+        eased = 0.75 + 0.25 * t * t * (3 - 2 * t)
+    end
     return startFactor + ((endFactor - startFactor) * eased)
 end
 
