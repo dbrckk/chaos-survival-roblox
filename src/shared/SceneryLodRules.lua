@@ -72,11 +72,12 @@ function SceneryLodRules.original3DVisualOwners(arena)
     return owners
 end
 
--- Only the four specifically tagged Storm Harbor GANTRY models are
--- eligible for extra skyline culling. A real platform, hazard signal or
--- mobility pad cannot enter this list; the source is a cosmetic-only
--- folder under the active arena's Decor. Reuse the 0.65/0.90-second
--- scenery owner rather than adding a client render loop.
+-- The same authored Storm Harbor skyline fleet now includes four
+-- steel gantries and one actual static container vessel. Keep the legacy
+-- helper name because scenery-lod.client.lua already calls it, but accept
+-- only provenance-verified cosmetic Models in that single Decor folder.
+-- The existing 0.65/0.90-second owner handles distance culling; no extra
+-- client loop or eligibility for hazards, platforms or transport Pads.
 function SceneryLodRules.harborGantryOwners(arena)
     local owners = {}
     if typeof(arena) ~= "Instance" or not arena:IsA("Folder")
