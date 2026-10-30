@@ -249,7 +249,7 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         make("TransferRailHousing", "Part", Vector3.new(13.0, 0.8, 2.4),
             CFrame.new(0, 20.1, -2.0), alloy)
         for _, direction in ipairs({-1, 1}) do
-            make("HoistDriveHousing" .. direction, "Part",
+            make("HoistDriveHousing" .. tostring(direction), "Part",
                 Vector3.new(2.6, 2.5, 2.8),
                 CFrame.new(direction * 5.25, 18.6, -2.0),
                 dark, Enum.Material.CorrodedMetal)
@@ -266,7 +266,7 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         make("ReactorCap", "WedgePart", Vector3.new(5.4, 2, 4),
             CFrame.new(0, 23.0, 0), dark)
         for _, direction in ipairs({-1, 1}) do
-            make("ContainmentShield" .. direction, "WedgePart",
+            make("ContainmentShield" .. tostring(direction), "WedgePart",
                 Vector3.new(3.2, 8.4, 4.2),
                 CFrame.new(direction * 6.6, 19.0, 0)
                     * CFrame.Angles(0, direction * math.rad(22), 0),
@@ -280,12 +280,12 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         make("SwitchArm", "Part", Vector3.new(13, 1.2, 2),
             CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(18), 0), alloy)
         for _, direction in ipairs({-1, 1}) do
-            make("SwitchPod" .. direction, "WedgePart",
+            make("SwitchPod" .. tostring(direction), "WedgePart",
                 Vector3.new(3.1, 2.3, 3.8),
                 CFrame.new(direction * 5, 19.5, 0)
                     * CFrame.Angles(0, direction < 0 and math.pi or 0, 0),
                 accent)
-            make("RouteRelayHousing" .. direction, "WedgePart",
+            make("RouteRelayHousing" .. tostring(direction), "WedgePart",
                 Vector3.new(3.0, 3.5, 3.1),
                 CFrame.new(direction * 5.6, 22.5, -2.7)
                     * CFrame.Angles(0, direction * math.rad(27), 0),
