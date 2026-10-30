@@ -2255,6 +2255,18 @@ while true do
                 0, 7
             )
             local parkourXP = ParkourFlow.bonusXP(roundParkourBest)
+            local oldParkourRecord = math.clamp(
+                math.floor(tonumber(p:GetAttribute("ParkourBestRecord")) or 0),
+                0, 7
+            )
+            if roundParkourBest > oldParkourRecord then
+                -- One monotonic DataSchema v9 record across ALL five arenas.
+                -- PlayerData.add refuses mutation if DataStore ownership
+                -- is unavailable: never claim persistent success offline.
+                PlayerData.add(
+                    p, "ParkourBestRecord", roundParkourBest - oldParkourRecord
+                )
+            end
             if parkourXP > 0 then
                 PlayerData.add(p, "XP", parkourXP)
                 GameAnalytics.custom(
