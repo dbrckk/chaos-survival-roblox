@@ -24,6 +24,11 @@ local NAMES = {
         "OrbitalIrisPetalWest", "OrbitalIrisPetalEast",
         "OrbitalContainmentLensNorth", "OrbitalContainmentLensSouth",
     },
+    Harbor = {
+        "HarborDryDockPlankWest", "HarborDryDockPlankEast",
+        "HarborLoadRailNorth", "HarborLoadRailSouth",
+        "HarborMooringPlatePort", "HarborMooringPlateStarboard",
+    },
 }
 
 function ArenaDeckFinishKit.count(tierName)
@@ -63,6 +68,20 @@ local function recipes(variant, hx, hz)
             {Vector3.new(4.4, 0.09, 2.6), Vector3.new(hx * 0.27, 0, edgeZ), 180, "Slate", "Accent", "WedgePart"},
             {Vector3.new(6.5, 0.08, 0.55), Vector3.new(-edgeX, 0, -hz * 0.27 + 4), 0, "Metal", "Structure"},
             {Vector3.new(6.5, 0.08, 0.55), Vector3.new(edgeX, 0, hz * 0.27 - 4), 0, "Metal", "Structure"},
+        }
+    elseif variant == "Harbor" then
+        -- Maritime hardware, NOT Orbital's glowing wedges or Classic's
+        -- grid rulers. Place all six distinct macro-details near genuine
+        -- quiet exterior service berths, beyond player spawns and sweep
+        -- lanes. All remain fully non-colliding and follow the live floor
+        -- through the existing ArenaFloorFollowerKit.
+        return {
+            {Vector3.new(10.8, 0.11, 2.5), Vector3.new(-hx * 0.79, 0, -hz * 0.24), 0, "WoodPlanks", "Structure"},
+            {Vector3.new(10.8, 0.11, 2.5), Vector3.new(hx * 0.79, 0, hz * 0.24), 0, "WoodPlanks", "Structure"},
+            {Vector3.new(8.4, 0.10, 0.50), Vector3.new(-hx * 0.22, 0, -hz * 0.81), 0, "CorrodedMetal", "Detail"},
+            {Vector3.new(8.4, 0.10, 0.50), Vector3.new(hx * 0.22, 0, hz * 0.81), 0, "CorrodedMetal", "Detail"},
+            {Vector3.new(3.4, 0.12, 1.75), Vector3.new(-hx * 0.87, 0, hz * 0.46), 25, "Metal", "Structure", "WedgePart"},
+            {Vector3.new(3.4, 0.12, 1.75), Vector3.new(hx * 0.87, 0, -hz * 0.46), -25, "Metal", "Structure", "WedgePart"},
         }
     end
 
