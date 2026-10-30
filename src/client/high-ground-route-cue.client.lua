@@ -164,9 +164,19 @@ local function show(target, isRamp, remaining, returnToRamp)
     if currentTarget ~= target then
         currentTarget = target
         marker.Adornee = target
-        marker.StudsOffsetWorldSpace = Vector3.new(
-            0, target.Size.Y * 0.5 + 2.7, 0
-        )
+        local rampStart = isRamp and target:GetAttribute("HelixStart") or nil
+        if typeof(rampStart) == "Vector3" then
+            -- The physical ramp entrance is the actionable place to run.
+            -- Its center can be many studs away from the takeoff lip,
+            -- particularly on a long reactor spoke on a narrow phone.
+            -- World-space offset stays coupled to the REAL authored Part.
+            marker.StudsOffsetWorldSpace = rampStart
+                + Vector3.new(0, 3.0, 0) - target.Position
+        else
+            marker.StudsOffsetWorldSpace = Vector3.new(
+                0, target.Size.Y * 0.5 + 2.7, 0
+            )
+        end
     end
     marker.Enabled = remaining > 0
 end
