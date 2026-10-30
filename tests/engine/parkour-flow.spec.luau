@@ -345,6 +345,51 @@ describe("Real active arena sweep lanes never lure jump coaching into danger", f
 end)
 
 
+-- Rookie guidance and the airborne landing reticle must agree about
+-- actual 3D blast damage. Floor overlays alone cannot suppress perfectly
+-- safe elevated Harbor routes, but any route through a true impact sphere
+-- must still yield to the primary disaster escape warning.
+describe("Honest rookie meteor and bomb route guidance", function()
+    it("keeps upper roof paths visible above blast height", function()
+        local warning = Instance.new("Part")
+        warning.Name = "MeteorWarning"
+        warning.Size = Vector3.new(5.5, 0.15, 5.5)
+        warning.Anchored = true
+        warning.CanCollide = false
+        warning.Position = Vector3.new(0, 2, 0)
+        warning:SetAttribute("WarningEndSize", 16)
+        warning.Parent = workspace
+
+        local safe = JumpRouteCueRules.safeGuidedPath
+        -- Server damage radius is eight studs, with three extra studs
+        -- intentionally reserved by the optional rookie guide.
+        local floorWest = Vector3.new(-15, 4, 0)
+        local floorEast = Vector3.new(15, 4, 0)
+        expect(safe(floorWest, floorEast, {warning})).toBe(false)
+        -- Root height 17: 14 studs clear of actual impact center at Y=3.
+        local roofWest = Vector3.new(-15, 17, 0)
+        local roofEast = Vector3.new(15, 17, 0)
+        expect(safe(roofWest, roofEast, {warning})).toBe(true)
+        expect(safe(roofWest, floorEast, {warning})).toBe(false)
+        -- Moving well outside the true blast footprint remains a route.
+        expect(safe(
+            Vector3.new(14, 4, 16),
+            Vector3.new(20, 4, 16), {warning}
+        )).toBe(true)
+
+        warning.Name = "BombWarning"
+        expect(safe(floorWest, floorEast, {warning})).toBe(false)
+        expect(safe(roofWest, roofEast, {warning})).toBe(true)
+        -- Delayed warning-size replication must still be conservative
+        -- around the actual server marker, not invent a safe crossing.
+        warning:SetAttribute("WarningEndSize", nil)
+        expect(safe(floorWest, floorEast, {warning})).toBe(false)
+        expect(safe(roofWest, roofEast, {warning})).toBe(true)
+        warning:Destroy()
+        expect(safe(floorWest, floorEast, {warning})).toBe(true)
+    end)
+end)
+
 -- Roblox BasePart.Size serializes through float32: numeric decimal deck
 -- footprints such as 11.6 and 11.2 cannot be compared byte-exactly to
 -- Lua number literals. Test physical dimensions within 0.001 studs;
