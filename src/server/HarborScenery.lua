@@ -32,6 +32,7 @@ function HarborScenery.build(decor, base, theme)
         crane:SetAttribute("ChaosDistantScenery", true)
         crane:SetAttribute("CosmeticOnly", true)
         crane:SetAttribute("SourceIsOriginal", true)
+        crane:SetAttribute("HarborGantryScenery", true)
         crane.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 
         local origin = CFrame.new(
@@ -80,6 +81,71 @@ function HarborScenery.build(decor, base, theme)
                 CFrame.new(sign * 5, 23.8, 0)
                     * CFrame.Angles(0, 0, math.rad(sign * 31)), metal)
         end
+
+        -- Authored gantry: real triangular bracing, paired trolley rails,
+        -- suspended loads and a visible counterweight. Cosmetic-only
+        -- parts share the existing per-model mobile LOD; no new loops.
+        local function brace(name, from, to, width, color)
+            local delta = to - from
+            if delta.Magnitude < 0.2 then return end
+            return beam(name, Vector3.new(width, width, delta.Magnitude),
+                CFrame.lookAt((from + to) * 0.5, to),
+                color or metal, Enum.Material.Metal)
+        end
+        for side = -1, 1, 2 do
+            beam("TrackRail" .. side, Vector3.new(0.38, 0.34, 31),
+                CFrame.new(side * 1.15, 33.0, -3), trim)
+            brace("GantryKneeBrace" .. side,
+                Vector3.new(side * 8, 4.5, -4.2),
+                Vector3.new(side * 8, 27.0, 3.4), 0.48, metal)
+            beam("CounterweightArmor" .. side,
+                Vector3.new(0.45, 3.0, 3.7),
+                CFrame.new(side * 2.96, 31.7, 15),
+                shadow:Lerp(metal, 0.24), Enum.Material.CorrodedMetal)
+            for section = 0, 2 do
+                local z = -18 + section * 11
+                brace("BoomTruss" .. side .. "_" .. section,
+                    Vector3.new(side * 1.15, 32.7, z),
+                    Vector3.new(side * 1.15, 35.0, z + 10),
+                    0.29, shadow:Lerp(metal, 0.48))
+            end
+            brace("CargoSling" .. side,
+                Vector3.new(side * 3.9, 15.2, -15),
+                Vector3.new(side * 3.6, 12.8, -15), 0.20, shadow)
+        end
+        beam("TrolleyDriveHousing", Vector3.new(3.8, 1.4, 3.3),
+            CFrame.new(0, 31.6, -13), shadow, Enum.Material.CorrodedMetal)
+
+        -- Alternating container and industrial cable drum give the four
+        -- skyline cranes distinct profiles; no loose or falling objects.
+        local loadTone = index % 2 == 0
+            and theme.Structure:Lerp(Color3.fromRGB(99, 120, 128), 0.35)
+            or theme.Detail:Lerp(Color3.fromRGB(75, 92, 101), 0.43)
+        if index % 2 == 1 then
+            beam("ContainerArmor", Vector3.new(8.6, 4.9, 5.3),
+                CFrame.new(0, 10.1, -15),
+                loadTone, Enum.Material.CorrodedMetal)
+            beam("ContainerRoof", Vector3.new(8.9, 0.33, 5.55),
+                CFrame.new(0, 12.72, -15), metal)
+            for side = -1, 1, 2 do
+                beam("ContainerRib" .. side,
+                    Vector3.new(0.27, 4.4, 0.27),
+                    CFrame.new(side * 3.25, 10.1, -17.72), trim)
+            end
+        else
+            local drum = beam("CableDrum",
+                Vector3.new(7.5, 4.3, 4.3),
+                CFrame.new(0, 10.3, -15),
+                loadTone, Enum.Material.CorrodedMetal)
+            drum.Shape = Enum.PartType.Cylinder
+            for side = -1, 1, 2 do
+                local cap = beam("DrumArmorPlate" .. side,
+                    Vector3.new(0.46, 5.1, 5.1),
+                    CFrame.new(side * 3.9, 10.3, -15), metal)
+                cap.Shape = Enum.PartType.Cylinder
+            end
+        end
+
         -- Two restrained reflective stripe accents, NOT hazard colors.
         beam("SignalRidge", Vector3.new(18, 0.24, 0.28),
             CFrame.new(0, 31.3, -0.8), trim)
