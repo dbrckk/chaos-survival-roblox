@@ -272,6 +272,7 @@ end
 -- cross-experience custom-field cardinality budget.
 local KNOWN_ARENAS = {
     Classic = true, Towers = true, Crossroads = true, Orbital = true,
+    Harbor = true,
 }
 
 local function finiteNonnegative(value, maxValue)
@@ -294,6 +295,60 @@ function GameAnalytics.arenaRoundFields(arenaId, solo, primaryId, doubleChaos, d
         "Primary:" .. primary
             .. "|Fusion:" .. (doubleChaos == true and "Yes" or "No")
             .. "|Extra:" .. (dynamicActive == true and "Yes" or "No")
+end
+
+-- One bounded per-human diagnostic snapshot when the round ends.
+-- Existing device class is a small, server-sanitized cohort, never an
+-- identifier. Roblox's analytic custom-field budget stays at three.
+-- The separate "attempts" event includes zero attempts so completion
+-- rates do not accidentally exclude players who never climb.
+function GameAnalytics.parkourRoundFields(arenaId, solo, deviceClass)
+    local arena = KNOWN_ARENAS[arenaId] and arenaId or "Unknown"
+    local device = tostring(deviceClass or "Unknown")
+    if device ~= "Mobile" and device ~= "Desktop"
+        and device ~= "Tablet" and device ~= "Console" then
+        device = "Unknown"
+    end
+    return "Arena:" .. arena,
+        "Mode:" .. GameAnalytics.modeLabel(solo),
+        "Device:" .. device
+end
+
+function GameAnalytics.parkourRoundMetrics(player, metrics)
+    if not player or type(metrics) ~= "table" then return false end
+    local arena, mode, device = GameAnalytics.parkourRoundFields(
+        metrics.arenaId, metrics.solo, metrics.deviceClass
+    )
+    local attempts = math.floor(finiteNonnegative(metrics.attempts, 80))
+    local successes = math.min(attempts,
+        math.floor(finiteNonnegative(metrics.successes, 80)))
+    local best = math.floor(finiteNonnegative(metrics.best, 7))
+    local hardest = math.floor(finiteNonnegative(metrics.hardestGrade, 4))
+    local counted = GameAnalytics.custom(
+        player, "ParkourRoundAttempts", attempts,
+        arena, mode, device
+    )
+    -- Zero attempts are deliberately recorded above: those players form
+    -- the adoption denominator, not a misleading 100% expert subset.
+    if attempts == 0 then
+        return counted and GameAnalytics.custom(
+            player, "ParkourRoundBest", best,
+            arena, mode, device
+        )
+    end
+    local landed = GameAnalytics.custom(
+        player, "ParkourRoundSuccessRate", successes / attempts,
+        arena, mode, device
+    )
+    local bestLogged = GameAnalytics.custom(
+        player, "ParkourRoundBest", best,
+        arena, mode, device
+    )
+    local gradeLogged = GameAnalytics.custom(
+        player, "ParkourMaxAttemptedGrade", hardest,
+        arena, mode, device
+    )
+    return counted and landed and bestLogged and gradeLogged
 end
 
 -- Character deaths are measured on the same monotonic clock as the
