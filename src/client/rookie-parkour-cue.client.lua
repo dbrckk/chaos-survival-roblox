@@ -18,6 +18,7 @@ local finalRush = false
 local recoveryDeck = nil
 local recoveryAnchor = nil
 local recoverySince = 0
+local recoveryCharacter = nil
 local function resetRecovery()
     recoveryDeck, recoveryAnchor, recoverySince = nil, nil, 0
 end
@@ -235,12 +236,21 @@ local function update()
     end
 
     local character = player.Character
+    if character ~= recoveryCharacter then
+        recoveryCharacter = character
+        resetRecovery()
+    end
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not humanoid or not root or humanoid.Health <= 0
-        or humanoid.FloorMaterial == Enum.Material.Air then
+    if not humanoid or not root or humanoid.Health <= 0 then
         hide()
         resetRecovery()
+        return true
+    end
+    if humanoid.FloorMaterial == Enum.Material.Air then
+        -- Hide guidance while airborne, but retain the same-deck timer.
+        -- A failed jump should NOT restart the veteran's recovery delay.
+        hide()
         return true
     end
 
@@ -276,9 +286,11 @@ local function update()
     local now = os.clock()
     -- Walking several studs or reaching another real deck immediately
     -- removes the optional recovery sign; no HUD spam for skilled runs.
+    local traveled = JumpRouteCueRules.horizontalProgressDistance(
+        recoveryAnchor, root.Position
+    )
     if from ~= recoveryDeck or not recoveryAnchor
-        or (root.Position - recoveryAnchor).Magnitude
-            > JumpRouteCueRules.RecoveryTravel then
+        or traveled > JumpRouteCueRules.RecoveryTravel then
         recoveryDeck = from
         recoveryAnchor = root.Position
         recoverySince = now
@@ -297,7 +309,7 @@ local function update()
             and not finalRush and from.Parent == platforms
             and JumpRouteCueRules.recoveryHintReady(
                 now - recoverySince,
-                (root.Position - recoveryAnchor).Magnitude,
+                traveled,
                 true
             ) then
             target = JumpRouteCueRules.nextPhysical(
