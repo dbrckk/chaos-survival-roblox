@@ -1,7 +1,7 @@
 # Final verification after preserving 94 native Harbor decks and correcting
 # test source ownership for the authoritative candidate skyway jump rules.
 # Tests only: NEVER publishes Roblox. All five engine suites + build on exact SHA.
-name: One-time Storm Harbor Freighter 2K PBR Corrected Final QA 2026-10-30
+name: One-time Android Real Harbor Vessel Low Silhouette Final QA 2026-10-30
 on:
   push:
     branches: [main]
@@ -11,7 +11,7 @@ permissions:
   contents: read
   actions: write
 concurrency:
-  group: storm-harbor-cargo-pbr-corrected-final-20261030
+  group: android-real-harbor-vessel-low-silhouette-qa-20261030
   cancel-in-progress: false
 jobs:
   final-quality:
