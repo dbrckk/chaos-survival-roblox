@@ -138,6 +138,10 @@ local function createBand(folder, base, index)
     p.Transparency = 0.94
     p:SetAttribute("HarborSweepIndex", index)
     p:SetAttribute("HarborSweepPhase", "Idle")
+    -- All client-facing countdowns come from the same actual values
+    -- that gate the server's phase transitions. No guessed durations.
+    p:SetAttribute("HarborSweepWarningSeconds", HarborCargoSweep.WarningSeconds)
+    p:SetAttribute("HarborSweepPulseSeconds", HarborCargoSweep.PulseSeconds)
     p.Parent = folder
 
     -- Text + colour warn together for accessibility; the caption is
@@ -173,13 +177,19 @@ end
 function HarborCargoSweep.setPhase(band, marker, label, phase, now)
     if not band or not band.Parent then return end
     if phase == "Warning" then
-        band:SetAttribute("HarborSweepWarningAt", now)
+        band:SetAttribute(
+            "HarborSweepWarningAt", now or workspace:GetServerTimeNow()
+        )
+        band:SetAttribute("HarborSweepPulseAt", nil)
         band.Color = Color3.fromRGB(255, 186, 76)
         band.Transparency = 0.20
         label.TextColor3 = Color3.fromRGB(255, 222, 126)
         label.Text = "CARGO SWEEP  •  JUMP!"
         marker.Enabled = true
     elseif phase == "Pulse" then
+        band:SetAttribute(
+            "HarborSweepPulseAt", now or workspace:GetServerTimeNow()
+        )
         band.Color = Color3.fromRGB(255, 86, 93)
         band.Transparency = 0.08
         label.TextColor3 = Color3.fromRGB(255, 155, 157)
@@ -189,6 +199,7 @@ function HarborCargoSweep.setPhase(band, marker, label, phase, now)
         band.Color = Color3.fromRGB(67, 133, 156)
         band.Transparency = 0.94
         band:SetAttribute("HarborSweepWarningAt", nil)
+        band:SetAttribute("HarborSweepPulseAt", nil)
         marker.Enabled = false
     end
     band:SetAttribute("HarborSweepPhase", phase or "Idle")
