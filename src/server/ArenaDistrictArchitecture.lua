@@ -234,15 +234,28 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         prism.Transparency = 0.23
     end
 
+    -- Every arena has a distinct real 3D skyline language. These details
+    -- belong to the existing 16 atomic cosmetic building models, so the
+    -- established per-model Android LOD and 2K PBR budgets still apply.
+    -- Keep each signature compact to protect the survival routes and HUD.
     if variantId == "Towers" then
-        -- Tall suspension head with an actual overhead transit cab.
+        -- Elevated cargo transfer, not a generic industrial antenna.
         make("GantryArch", "Part", Vector3.new(12.5, 1.15, 1.9),
             CFrame.new(0, 18.5, 0), alloy)
         make("TransitCab", "Part", Vector3.new(4.5, 3.1, 3.5),
             CFrame.new(0, 16.4, -1), steel)
         make("TransitGlazing", "Part", Vector3.new(3.5, 1.1, 0.18),
             CFrame.new(0, 16.6, -2.83), accent, Enum.Material.Glass)
+        make("TransferRailHousing", "Part", Vector3.new(13.0, 0.8, 2.4),
+            CFrame.new(0, 20.1, -2.0), alloy)
+        for _, direction in ipairs({-1, 1}) do
+            make("HoistDriveHousing" .. direction, "Part",
+                Vector3.new(2.6, 2.5, 2.8),
+                CFrame.new(direction * 5.25, 18.6, -2.0),
+                dark, Enum.Material.CorrodedMetal)
+        end
     elseif variantId == "Orbital" then
+        -- Ceramic shroud around the actual raised, ring-shaped antenna.
         local ring = make("HaloReceiver", "Part", Vector3.new(0.7, 9, 9),
             CFrame.new(0, 19, 0) * CFrame.Angles(0, 0, math.pi / 2),
             alloy)
@@ -252,17 +265,38 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         heart.Shape = Enum.PartType.Ball
         make("ReactorCap", "WedgePart", Vector3.new(5.4, 2, 4),
             CFrame.new(0, 23.0, 0), dark)
+        for _, direction in ipairs({-1, 1}) do
+            make("ContainmentShield" .. direction, "WedgePart",
+                Vector3.new(3.2, 8.4, 4.2),
+                CFrame.new(direction * 6.6, 19.0, 0)
+                    * CFrame.Angles(0, direction * math.rad(22), 0),
+                steel, Enum.Material.CeramicTiles)
+        end
+        make("ReactorCollectorHousing", "Part",
+            Vector3.new(7.2, 0.8, 5.2),
+            CFrame.new(0, 24.4, 0), alloy)
     elseif variantId == "Crossroads" then
+        -- Paired switching arms and a front-facing physical route selector.
         make("SwitchArm", "Part", Vector3.new(13, 1.2, 2),
             CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(18), 0), alloy)
         for _, direction in ipairs({-1, 1}) do
-            make("SwitchPod" .. tostring(direction), "WedgePart",
+            make("SwitchPod" .. direction, "WedgePart",
                 Vector3.new(3.1, 2.3, 3.8),
                 CFrame.new(direction * 5, 19.5, 0)
                     * CFrame.Angles(0, direction < 0 and math.pi or 0, 0),
                 accent)
+            make("RouteRelayHousing" .. direction, "WedgePart",
+                Vector3.new(3.0, 3.5, 3.1),
+                CFrame.new(direction * 5.6, 22.5, -2.7)
+                    * CFrame.Angles(0, direction * math.rad(27), 0),
+                alloy)
         end
-    else
+        make("SwitchboardPanel", "Part",
+            Vector3.new(8.2, 2.7, 0.6),
+            CFrame.new(0, 21.5, -4.1), dark)
+    elseif variantId == "Classic" then
+        -- A compact physical storm-observation dish and its receiver
+        -- above the existing roof profile, visible across the grid.
         make("ObservatoryColumn", "Part", Vector3.new(2.6, 8, 2.6),
             CFrame.new(0, 18.7, 0), alloy)
         local lens = make("StormSensor", "Part", Vector3.new(5, 5, 5),
@@ -271,6 +305,28 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         lens.Transparency = 0.18
         make("LightningTip", "Part", Vector3.new(0.45, 4.2, 0.45),
             CFrame.new(0, 28.3, 0), steel)
+        local dish = make("WeatherRadarShell", "Part",
+            Vector3.new(0.65, 5.3, 5.3),
+            CFrame.new(2.6, 24.8, -2.3)
+                * CFrame.Angles(0, math.rad(-28), math.rad(18)),
+            alloy, Enum.Material.Metal)
+        dish.Shape = Enum.PartType.Cylinder
+        make("RadarFeedHousing", "Part", Vector3.new(1.2, 1.2, 1.2),
+            CFrame.new(1.8, 25.1, -4.2), dark)
+    else
+        -- Storm Harbor is no longer reusing Classic's observatory.
+        -- Small, distinct dockside hoists match its larger outer cranes.
+        make("HarborHoistTower", "Part", Vector3.new(2.8, 12.2, 2.8),
+            CFrame.new(0, 20.5, 0), steel)
+        make("HarborLoadCrossarm", "Part", Vector3.new(12.5, 1.2, 2.0),
+            CFrame.new(0, 26.5, 0), alloy)
+        make("HarborHoistCabin", "Part", Vector3.new(4.5, 2.4, 3.3),
+            CFrame.new(3.1, 23.5, -0.5), dark)
+        make("HarborCargoCable", "Part", Vector3.new(0.3, 4.8, 0.3),
+            CFrame.new(-4.4, 23.6, -1.5), dark)
+        make("HarborCargoHousing", "Part", Vector3.new(4.8, 2.9, 3.7),
+            CFrame.new(-4.4, 19.6, -1.5),
+            steel, Enum.Material.CorrodedMetal)
     end
 
     model.Parent = folder
