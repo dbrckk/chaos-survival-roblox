@@ -72,6 +72,13 @@ function JumpLandingPreviewKit.new(player)
     -- search, no extra collision rays and no separate event/render owner.
     local function landingHazards(arena)
         local hazards = {}
+        -- RoundLava is a non-queryable server hazard at workspace root,
+        -- so collision rays cannot detect it. Its actual replicated
+        -- surface must still turn the landing bracket into a danger X.
+        local lava = workspace:FindFirstChild("RoundLava")
+        if lava and lava:IsA("BasePart") then
+            hazards[#hazards + 1] = lava
+        end
         local mechanics = arena and arena:FindFirstChild("Mechanics")
         if not mechanics then return hazards end
         for _, folderName in ipairs({
