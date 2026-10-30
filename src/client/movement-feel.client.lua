@@ -385,7 +385,8 @@ RunService:BindToRenderStep(
         local verticalSpeed = root.AssemblyLinearVelocity.Y
         local inFreefall = humanoid:GetState() == Enum.HumanoidStateType.Freefall
             and humanoid.FloorMaterial == Enum.Material.Air
-        if type(dt) ~= "number" or dt ~= dt or dt > 0.30 then
+        if type(dt) ~= "number" or dt ~= dt or dt <= 0
+            or dt == math.huge or dt > 0.30 then
             -- Ignore stale velocities after Android app suspension.
             wasAirborne = false
             airborneStartedAt = -math.huge
@@ -395,6 +396,9 @@ RunService:BindToRenderStep(
             lastHorizontalSpeed = Vector3.new(
                 root.AssemblyLinearVelocity.X, 0, root.AssemblyLinearVelocity.Z
             ).Magnitude
+            -- One quiet, bounded restart frame: never feed a 2-second
+            -- Android background delta into the camera spring or sine.
+            dt = 1 / 60
         end
         if inFreefall then
             if not wasAirborne then
@@ -407,6 +411,10 @@ RunService:BindToRenderStep(
         end
 
         local scale = qualityScale()
+        local precisionFactor = LocomotionDynamics.precisionCameraFactor(
+            UserInputService.TouchEnabled, previousPhase,
+            humanoid.FloorMaterial ~= Enum.Material.Air, verticalSpeed
+        )
         if scale <= 0 then
             CameraFeelBus.reset()
             landingPreview.hide()
@@ -418,11 +426,15 @@ RunService:BindToRenderStep(
         local speed = horizontalVelocity.Magnitude
         local rawAcceleration = (speed - lastHorizontalSpeed) / math.max(dt, 1 / 240)
         lastHorizontalSpeed = speed
-        local targetAccelerationKick = math.clamp(rawAcceleration / 420, -0.030, 0.030)
+        local targetAccelerationKick = math.clamp(
+            rawAcceleration / 420, -0.030, 0.030
+        ) * precisionFactor
         local reducedMotion = player:GetAttribute("ReduceMotion") == true
         local speedExcess = math.max(0, speed - 16)
         local surgeFovBonus = speedSurgeActive and math.clamp(speedExcess * 0.16 + 0.8, 0, 2.2) or 0
-        local targetFovOffset = reducedMotion and 0 or math.clamp(speedExcess * 0.12 + surgeFovBonus, 0, 4.2)
+        local targetFovOffset = reducedMotion and 0
+            or math.clamp(speedExcess * 0.12 + surgeFovBonus, 0, 4.2)
+                * precisionFactor
         speedFovOffset = exponential(
             speedFovOffset,
             targetFovOffset,
@@ -438,7 +450,9 @@ RunService:BindToRenderStep(
         )
 
         local lateralSpeed = camera.CFrame.RightVector:Dot(horizontalVelocity)
-        local targetLean = math.clamp(-lateralSpeed / 950, -0.018, 0.018)
+        local targetLean = math.clamp(
+            -lateralSpeed / 950, -0.018, 0.018
+        ) * precisionFactor
         lean = exponential(lean, targetLean, 8.5, dt)
 
         local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
@@ -460,7 +474,7 @@ RunService:BindToRenderStep(
 
         local surgeWave = speedSurgeActive and math.sin(shakeClock * 0.92) * 0.006 * math.clamp(speed / 24, 0, 1) or 0
         local lowGravityDrift = lowGravityActive and not grounded
-            and math.sin(shakeClock * 0.28) * 0.010
+            and math.sin(shakeClock * 0.28) * 0.010 * precisionFactor
             or 0
         local tornadoRoll = 0
         local tornadoLift = 0

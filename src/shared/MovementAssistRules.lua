@@ -56,4 +56,25 @@ function MovementAssistRules.bufferActive(now, expiresAt)
     return (tonumber(expiresAt) or -math.huge) >= (tonumber(now) or 0)
 end
 
+-- During an Android/slow-network landing the local FloorMaterial and
+-- HumanoidStateType.Landed events may arrive in either order. The buffered
+-- request is valid only after actual grounded contact, while jumping is
+-- enabled, and outside the OLD Jumping state. A landed callback rechecks it
+-- without adding a Heartbeat loop or a second midair jump.
+function MovementAssistRules.canDispatchBufferedJump(
+    now, expiresAt, grounded, state, enabled
+)
+    -- FloorMaterial may settle to Solid while Roblox still reports
+    -- Freefall/Jumping. Those states are not permission to jump AGAIN.
+    -- The matching Landed/Running event will retry without polling.
+    local contactState = state == Enum.HumanoidStateType.Landed
+        or state == Enum.HumanoidStateType.Running
+        or state == Enum.HumanoidStateType.RunningNoPhysics
+    return grounded == true
+        and enabled == true
+        and contactState
+        and MovementAssistRules.stateAllowsJump(state)
+        and MovementAssistRules.bufferActive(now, expiresAt)
+end
+
 return MovementAssistRules

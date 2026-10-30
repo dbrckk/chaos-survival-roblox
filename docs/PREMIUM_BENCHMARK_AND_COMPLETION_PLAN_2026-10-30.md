@@ -63,6 +63,8 @@ Le nouveau `src/server/SkybridgeShutters.lua` comporte :
 - **Critères d'acceptation proposés** : 0 saut physiquement impossible ; ≥90% de réussite sur la première section par des joueurs ayant compris le contrôle ; p95 commande→réaction visuelle ≤100 ms dans les conditions de test fixées ; aucune zone cachée par caméra / HUD sur Android.
 - **Dépendance** : M0.
 
+**Avancement M1 source (non publié) :** le cycle de vie des sauts a été corrigé pour les `Humanoid` qui apparaissent après l'ancien délai de 5 s. Les entrées mises en mémoire attendent désormais un vrai état `Landed` / `Running`, même si `FloorMaterial` est arrivé dans l'autre ordre. Une stabilisation des perturbations cosmétiques de caméra tactile intervient seulement pendant la descente. Voir [la matrice de vérification Android M1](PREMIUM_ANDROID_JUMP_CAMERA_2026-10-30.md). **Il reste à exécuter les tests moteur du commit final et à mesurer le ressenti sur de vrais appareils avant toute hausse de note.**
+
 ### M2 — Véritable variété de parcours et compétences physiques
 
 - **Code cible** : `ArenaVariants.lua`, `ArenaMechanics.lua`, `MapBuilder.lua`, `SkybridgeShutters.lua`, `SkybridgePressure.lua`, `CrossroadsSwitchyard.lua`, `HarborCargoSweep.lua`.

@@ -11,6 +11,8 @@ local character = nil
 local humanoid = nil
 local floorConnection = nil
 local stateConnection = nil
+local childAddedConnection = nil
+local childRemovedConnection = nil
 local bindVersion = 0
 local lastGroundedAt = -math.huge
 local bufferedUntil = -math.huge
@@ -25,6 +27,14 @@ local function disconnect()
     if stateConnection then
         stateConnection:Disconnect()
         stateConnection = nil
+    end
+    if childAddedConnection then
+        childAddedConnection:Disconnect()
+        childAddedConnection = nil
+    end
+    if childRemovedConnection then
+        childRemovedConnection:Disconnect()
+        childRemovedConnection = nil
     end
     character = nil
     humanoid = nil
@@ -92,81 +102,146 @@ local function requestAssistedJump()
 end
 
 local function bindCharacter(nextCharacter)
-    -- The initial task and CharacterAdded can race during replication.
-    if player.Character ~= nextCharacter then
-        return
-    end
+    if player.Character ~= nextCharacter then return end
 
     disconnect()
     local version = bindVersion
     character = nextCharacter
 
-    local nextHumanoid = nextCharacter:WaitForChild("Humanoid", 5)
-    if not nextHumanoid or not nextHumanoid:IsA("Humanoid")
-        or bindVersion ~= version or character ~= nextCharacter
-        or player.Character ~= nextCharacter or nextHumanoid.Parent ~= nextCharacter
-    then
-        return
-    end
-    humanoid = nextHumanoid
-
-    if nextHumanoid.FloorMaterial ~= Enum.Material.Air then
-        lastGroundedAt = os.clock()
-        coyoteConsumed = false
-    else
-        lastGroundedAt = -math.huge
-        coyoteConsumed = true
-    end
-    bufferedUntil = -math.huge
-
-    floorConnection = nextHumanoid:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
-        if not isCurrent(version, nextCharacter, nextHumanoid) then
+    -- There is NO timeout. Android streaming and delayed avatar assembly
+    -- can take longer than WaitForChild("Humanoid", 5): that old path
+    -- silently left the player without any assisted jumping until respawn.
+    -- Keep only two event subscriptions on the current character.
+    local function attachIfReady()
+        if bindVersion ~= version or character ~= nextCharacter
+            or player.Character ~= nextCharacter then
             return
         end
+        local nextHumanoid = nextCharacter:FindFirstChildOfClass("Humanoid")
+        if not nextHumanoid or nextHumanoid.Parent ~= nextCharacter then
+            return
+        end
+        if humanoid == nextHumanoid then return end
 
+        if floorConnection then
+            floorConnection:Disconnect()
+            floorConnection = nil
+        end
+        if stateConnection then
+            stateConnection:Disconnect()
+            stateConnection = nil
+        end
+        humanoid = nextHumanoid
         if nextHumanoid.FloorMaterial ~= Enum.Material.Air then
-            local now = os.clock()
-            lastGroundedAt = now
+            lastGroundedAt = os.clock()
             coyoteConsumed = false
-
-            if MovementAssistRules.bufferActive(now, bufferedUntil)
-                and jumpEnabled(nextHumanoid)
-                and MovementAssistRules.stateAllowsJump(nextHumanoid:GetState())
-            then
-                bufferedUntil = -math.huge
-                task.defer(function()
-                    -- Landing callbacks can outlive this rig or the Freeze
-                    -- Pulse that briefly disabled jumping.
-                    if isCurrent(version, nextCharacter, nextHumanoid)
-                        and nextHumanoid.FloorMaterial ~= Enum.Material.Air
-                        and jumpEnabled(nextHumanoid)
-                        and MovementAssistRules.stateAllowsJump(nextHumanoid:GetState())
-                    then
-                        nextHumanoid.Jump = true
-                    end
-                end)
-            end
-        end
-    end)
-
-    stateConnection = nextHumanoid.StateChanged:Connect(function(_, state)
-        if not isCurrent(version, nextCharacter, nextHumanoid) then
-            return
-        end
-        -- Roblox can transition from Jumping to Freefall within the
-        -- 100ms coyote window. Consume the window for a normal jump so
-        -- a second tap cannot create an unintended mid-air double jump.
-        if state == Enum.HumanoidStateType.Jumping then
+        else
+            lastGroundedAt = -math.huge
             coyoteConsumed = true
-            bufferedUntil = -math.huge
         end
-        if state == Enum.HumanoidStateType.Dead
-            or state == Enum.HumanoidStateType.Seated
-            or state == Enum.HumanoidStateType.Swimming
-        then
-            bufferedUntil = -math.huge
+        bufferedUntil = -math.huge
+
+        local dispatchQueued = false
+        local function dispatchBufferedLanding()
+            if not isCurrent(version, nextCharacter, nextHumanoid)
+                or dispatchQueued then return end
+            local now = os.clock()
+            if not MovementAssistRules.bufferActive(now, bufferedUntil) then
+                bufferedUntil = -math.huge
+                return
+            end
+            if not MovementAssistRules.canDispatchBufferedJump(
+                now, bufferedUntil,
+                nextHumanoid.FloorMaterial ~= Enum.Material.Air,
+                nextHumanoid:GetState(), jumpEnabled(nextHumanoid)
+            ) then
+                return
+            end
+            dispatchQueued = true
+            task.defer(function()
+                dispatchQueued = false
+                if not isCurrent(version, nextCharacter, nextHumanoid) then
+                    return
+                end
+                local sampleTime = os.clock()
+                if MovementAssistRules.canDispatchBufferedJump(
+                    sampleTime, bufferedUntil,
+                    nextHumanoid.FloorMaterial ~= Enum.Material.Air,
+                    nextHumanoid:GetState(), jumpEnabled(nextHumanoid)
+                ) then
+                    -- One consumed request, even if FloorMaterial and
+                    -- StateChanged both announce the same R15 landing.
+                    bufferedUntil = -math.huge
+                    coyoteConsumed = true
+                    nextHumanoid.Jump = true
+                end
+            end)
+        end
+
+        floorConnection = nextHumanoid:GetPropertyChangedSignal(
+            "FloorMaterial"
+        ):Connect(function()
+            if not isCurrent(version, nextCharacter, nextHumanoid) then
+                return
+            end
+            if nextHumanoid.FloorMaterial ~= Enum.Material.Air then
+                lastGroundedAt = os.clock()
+                coyoteConsumed = false
+                dispatchBufferedLanding()
+            end
+        end)
+
+        stateConnection = nextHumanoid.StateChanged:Connect(function(_, state)
+            if not isCurrent(version, nextCharacter, nextHumanoid) then
+                return
+            end
+            if state == Enum.HumanoidStateType.Jumping then
+                -- Normal jump already happened: no coyote double-tap.
+                coyoteConsumed = true
+                bufferedUntil = -math.huge
+            elseif state == Enum.HumanoidStateType.Dead
+                or state == Enum.HumanoidStateType.Seated
+                or state == Enum.HumanoidStateType.Swimming then
+                bufferedUntil = -math.huge
+            elseif state == Enum.HumanoidStateType.Landed
+                or state == Enum.HumanoidStateType.Running
+                or state == Enum.HumanoidStateType.RunningNoPhysics then
+                if nextHumanoid.FloorMaterial ~= Enum.Material.Air then
+                    -- FloorMaterial may have reached Solid one frame
+                    -- BEFORE StateChanged or vice versa. Only a real
+                    -- grounded state with a pending buffer can dispatch.
+                    lastGroundedAt = os.clock()
+                    dispatchBufferedLanding()
+                end
+            end
+        end)
+    end
+
+    childAddedConnection = nextCharacter.ChildAdded:Connect(function(child)
+        if child:IsA("Humanoid") then
+            task.defer(attachIfReady)
         end
     end)
+    childRemovedConnection = nextCharacter.ChildRemoved:Connect(function(child)
+        if child == humanoid then
+            if floorConnection then
+                floorConnection:Disconnect()
+                floorConnection = nil
+            end
+            if stateConnection then
+                stateConnection:Disconnect()
+                stateConnection = nil
+            end
+            humanoid = nil
+            lastGroundedAt = -math.huge
+            bufferedUntil = -math.huge
+            coyoteConsumed = true
+            -- Handle a second Humanoid already replicated before the
+            -- removal event; never reattach to the old rig.
+            task.defer(attachIfReady)
+        end
+    end)
+    attachIfReady()
 end
 
 UserInputService.JumpRequest:Connect(requestAssistedJump)

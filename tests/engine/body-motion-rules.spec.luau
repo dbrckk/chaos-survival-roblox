@@ -156,6 +156,21 @@ describe("Body motion rules", function()
     end)
 
 
+    it("stabilizes the existing touch camera only while aiming a descent", function()
+        local factor = LocomotionDynamics.precisionCameraFactor
+        expect(factor(true, "round", false, -14)).toBe(0.48)
+        expect(factor(true, "round", false, -3.01)).toBe(0.48)
+        expect(factor(true, "round", false, -3)).toBe(1)
+        expect(factor(true, "round", false, 12)).toBe(1)
+        expect(factor(true, "round", true, -25)).toBe(1)
+        expect(factor(false, "round", false, -22)).toBe(1)
+        expect(factor(true, "ready", false, -22)).toBe(1)
+        expect(factor(true, "round", false, 0 / 0)).toBe(1)
+        expect(factor(true, "round", false, math.huge)).toBe(1)
+        -- Human/damage reaction feedback is still handled by the
+        -- existing independent impact/landing terms, never disabled.
+    end)
+
     it("differentiates starting sprint and braking with released input", function()
         local launch, noBrake = LocomotionDynamics.acceleration(12, 2, 0.10, true)
         local noLaunch, braking = LocomotionDynamics.acceleration(8, 20, 0.10, true)

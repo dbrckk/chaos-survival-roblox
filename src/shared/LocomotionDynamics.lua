@@ -3,6 +3,21 @@
 -- This module NEVER writes Motor6Ds, Humanoids or camera transforms.
 local LocomotionDynamics = {}
 
+-- The default third-person camera is already the aiming reference.
+-- On touch screens, passive speed-FOV/lean must not change apparent deck
+-- width while the player is descending toward a narrow physical platform.
+-- Genuine disaster and landing impacts retain their own feedback layers.
+-- No changes to humanoid steering, forces, camera target or jump height.
+function LocomotionDynamics.precisionCameraFactor(touch, phase, grounded, verticalSpeed)
+    if touch ~= true or phase ~= "round" or grounded == true
+        or type(verticalSpeed) ~= "number"
+        or verticalSpeed ~= verticalSpeed or math.abs(verticalSpeed) == math.huge
+        or verticalSpeed >= -3 then
+        return 1
+    end
+    return 0.48
+end
+
 function LocomotionDynamics.profile(tier, reduced)
     if reduced == true then
         return 0.10

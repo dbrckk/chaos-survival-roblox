@@ -79,6 +79,43 @@ describe("Movement assist rules", function()
         expect(MovementAssistRules.bufferActive(10.08, expires)).toBe(true)
         expect(MovementAssistRules.bufferActive(10.13, expires)).toBe(false)
     end)
+    it("delivers one buffered jump only after grounded R15 contact, regardless of signal order", function()
+        local eligible = MovementAssistRules.canDispatchBufferedJump
+        local landed = Enum.HumanoidStateType.Landed
+        local running = Enum.HumanoidStateType.Running
+        local oldJump = Enum.HumanoidStateType.Jumping
+        local freefall = Enum.HumanoidStateType.Freefall
+        local expiry = MovementAssistRules.bufferUntil(40)
+        expect(eligible(40.08, expiry, true, landed, true)).toBe(true)
+        expect(eligible(40.08, expiry, true, running, true)).toBe(true)
+        expect(eligible(
+            40.08, expiry, true, Enum.HumanoidStateType.RunningNoPhysics, true
+        )).toBe(true)
+
+        -- Roblox can replicate FloorMaterial first, then StateChanged.
+        -- Never jump while the old Freefall / Jumping state persists.
+        expect(eligible(40.04, expiry, true, freefall, true)).toBe(false)
+        expect(eligible(40.04, expiry, true, oldJump, true)).toBe(false)
+        expect(eligible(40.04, expiry, false, landed, true)).toBe(false)
+        expect(eligible(40.04, expiry, true, landed, false)).toBe(false)
+        expect(eligible(40.04, expiry, true,
+            Enum.HumanoidStateType.Seated, true)).toBe(false)
+        expect(eligible(40.14, expiry, true, landed, true)).toBe(false)
+        expect(eligible(40.08, -math.huge, true, landed, true)).toBe(false)
+        -- A single consumed buffer cannot be replayed by a subsequent
+        -- FloorMaterial / Running event for the same landing.
+        expect(eligible(40.09, -math.huge, true, running, true)).toBe(false)
+    end)
+
+    it("preserves exact coyote limits and never jumps after Freeze disables it", function()
+        local allowed = MovementAssistRules.canCoyoteJump
+        local freefall = Enum.HumanoidStateType.Freefall
+        expect(allowed(false, 0.10, freefall, true, false)).toBe(true)
+        expect(allowed(false, 0.1001, freefall, true, false)).toBe(false)
+        expect(allowed(false, 0.07, freefall, false, false)).toBe(false)
+        expect(allowed(false, 0.07, freefall, true, true)).toBe(false)
+    end)
+
     it("predicts only near-term descending contact and validates edges", function()
         local Rules = require("../../src/shared/JumpLandingPreviewRules")
         local freefall = Enum.HumanoidStateType.Freefall
