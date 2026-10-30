@@ -235,6 +235,84 @@ local function buildOrbital(base, theme, tier)
     end
 end
 
+-- Original cargo-terminal load frame for STORM HARBOR. This exists
+-- OUTSIDE the authoritative 320x320 playable arena and has zero
+-- collision, touch, query, rays or network cost. Classic's animated
+-- broadcast/archive mast must never appear in a maritime freight port.
+-- The player uses the actual quay platforms, not this decorative crane.
+local function buildHarbor(base, theme, tier)
+    local f = baseFrame(
+        base, -base.Size.X * 0.5 - 24, base.Size.Z * 0.46, 90
+    )
+    local high = tier == "High"
+    local height = tier == "Low" and 15 or 22
+    local dark = theme.Structure:Lerp(VisualTheme.World.Deep, 0.34)
+    local steel = theme.Detail:Lerp(Color3.fromRGB(127, 110, 93), 0.25)
+    for side = -1, 1, 2 do
+        part("HarborContainerCraneLeg" .. side,
+            Vector3.new(3.2, height, 3.4),
+            f * CFrame.new(side * 9.4, height * 0.5, 0),
+            dark, Enum.Material.CorrodedMetal, 0.03, high)
+    end
+    part("HarborContainerCraneCrosshead",
+        Vector3.new(23.0, 1.35, 4.5),
+        f * CFrame.new(0, height + 0.2, 0),
+        steel, Enum.Material.Metal, 0.04, high)
+    part("HarborContainerCraneBoom",
+        Vector3.new(16.5, 0.95, 2.3),
+        f * CFrame.new(6, height + 2.0, -3)
+            * CFrame.Angles(math.rad(11), 0, 0),
+        dark, Enum.Material.CorrodedMetal, 0.05, high)
+    part("HarborContainerCraneCargo",
+        Vector3.new(7.4, 4.4, 4.8),
+        f * CFrame.new(1.3, height - 7.3, -1.6),
+        theme.Surface:Lerp(steel, 0.44),
+        Enum.Material.WoodPlanks, 0.04, high)
+
+    if tier ~= "Low" then
+        -- The cable and cargo move IN PHASE through the existing
+        -- bounded 5Hz cosmetic owner, not through separate frame loops.
+        local cable = part("HarborContainerCraneCable",
+            Vector3.new(0.32, 7.8, 0.32),
+            f * CFrame.new(1.3, height - 1.5, -1.6),
+            steel, Enum.Material.Metal, 0.08, false)
+        local suspended = folder:FindFirstChild("HarborContainerCraneCargo")
+        if suspended then
+            track(suspended, "lift", 0.62, 0.52, 0.4)
+        end
+        track(cable, "lift", 0.62, 0.52, 0.4)
+        for side = -1, 1, 2 do
+            part("HarborContainerCraneBrace" .. side,
+                Vector3.new(11.0, 0.78, 1.2),
+                f * CFrame.new(side * 5.2, height - 5.2, 0)
+                    * CFrame.Angles(0, 0, math.rad(side * 35)),
+                dark, Enum.Material.CorrodedMetal, 0.05, high)
+            part("HarborContainerCraneWheel" .. side,
+                Vector3.new(3.2, 0.6, 3.2),
+                f * CFrame.new(side * 9.4, 0.35, 0),
+                steel, Enum.Material.DiamondPlate, 0.07, false)
+        end
+        part("HarborContainerCraneCab",
+            Vector3.new(3.9, 2.9, 3.0),
+            f * CFrame.new(-7.5, height - 2.3, -2.2),
+            dark, Enum.Material.Metal, 0.12, false)
+
+        if high then
+            for index = 1, 4 do
+                part("HarborContainerCraneContainerRib" .. index,
+                    Vector3.new(0.18, 3.9, 4.85),
+                    f * CFrame.new(-2.4 + index * 1.55,
+                        height - 7.3, -1.6),
+                    steel, Enum.Material.CorrodedMetal, 0.12, false)
+            end
+            part("HarborContainerCraneLoadRail",
+                Vector3.new(19.8, 0.24, 0.36),
+                f * CFrame.new(0, height - 0.48, -2.28),
+                theme.Detail, Enum.Material.Metal, 0.14, false)
+        end
+    end
+end
+
 local function restoreMotion()
     for _, item in ipairs(animated) do
         local p = item.object
@@ -270,7 +348,9 @@ local function rebuild()
         buildCrossroads(base, theme, tier)
     elseif variant == "Orbital" then
         buildOrbital(base, theme, tier)
-    else
+    elseif variant == "Harbor" then
+        buildHarbor(base, theme, tier)
+    elseif variant == "Classic" then
         buildClassic(base, theme, tier)
     end
 end
