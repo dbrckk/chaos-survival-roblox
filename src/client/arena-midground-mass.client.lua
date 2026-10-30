@@ -206,6 +206,76 @@ local function buildOrbital(base, theme, tier)
     end
 end
 
+
+-- Storm Harbor needs maritime silhouettes, not Classic's television
+-- transmitter blocks. These NON-WALKABLE cargo hulks are stationed beyond
+-- the true map edge, and add layered steel relief without imported assets.
+local function buildHarbor(base, theme, tier)
+    local hx, hz = base.Size.X * 0.5, base.Size.Z * 0.5
+    local count = tier.Name == "Low" and 2
+        or (tier.Name == "Medium" and 3 or 4)
+    local berths = {
+        {-hx * 1.31, -hz * 0.55, 14},
+        {hx * 1.32, hz * 0.54, -16},
+        {-hx * 0.49, hz * 1.33, 93},
+        {hx * 0.58, -hz * 1.34, 86},
+    }
+    local hullColor = theme.Structure:Lerp(VisualTheme.World.Deep, 0.35)
+    local freightColor = theme.Surface:Lerp(
+        Color3.fromRGB(111, 97, 82), 0.36
+    )
+    local ribColor = theme.Detail:Lerp(hullColor, 0.52)
+    local deckY = base.Size.Y * 0.5
+
+    for i = 1, count do
+        local berth = berths[i]
+        local origin = frame(
+            base, berth[1], deckY + 0.45, berth[2], berth[3]
+        )
+        makePart(
+            "HarborFreightBargeHull" .. i,
+            Vector3.new(28, 3.5, 13.2),
+            origin,
+            hullColor, Enum.Material.CorrodedMetal,
+            tier.Name == "Low" and 0.28 or 0.13
+        )
+        local container = makePart(
+            "HarborFreightContainer" .. i,
+            Vector3.new(21.0, 7.4, 8.6),
+            origin * CFrame.new(0, 5.18, 0),
+            freightColor, Enum.Material.CorrodedMetal,
+            tier.Name == "Low" and 0.26 or 0.10
+        )
+        makePart(
+            "HarborFreightLoadSill" .. i,
+            Vector3.new(22.0, 0.38, 9.6),
+            container.CFrame * CFrame.new(0, -3.9, 0),
+            ribColor, Enum.Material.Metal, 0.08
+        )
+
+        if tier.Name ~= "Low" then
+            local ribCount = tier.Name == "High" and 4 or 2
+            for rib = 1, ribCount do
+                local x = -8.0 + (rib - 1) * (16.0 / math.max(1, ribCount - 1))
+                makePart(
+                    "HarborFreightCorrugation" .. i .. "_" .. rib,
+                    Vector3.new(0.24, 6.9, 8.72),
+                    container.CFrame * CFrame.new(x, 0, 0),
+                    ribColor, Enum.Material.CorrodedMetal, 0.12
+                )
+            end
+        end
+        if tier.Name == "High" then
+            makePart(
+                "HarborFreightRidgeCap" .. i,
+                Vector3.new(21.4, 0.24, 8.9),
+                container.CFrame * CFrame.new(0, 3.77, 0),
+                ribColor, Enum.Material.DiamondPlate, 0.12
+            )
+        end
+    end
+end
+
 local function rebuild()
     clear()
 
@@ -226,7 +296,9 @@ local function rebuild()
         buildCrossroads(base, theme, tier)
     elseif variant == "Orbital" then
         buildOrbital(base, theme, tier)
-    else
+    elseif variant == "Harbor" then
+        buildHarbor(base, theme, tier)
+    elseif variant == "Classic" then
         buildClassic(base, theme, tier)
     end
 end
