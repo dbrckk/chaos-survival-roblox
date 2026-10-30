@@ -2273,6 +2273,21 @@ while true do
                 math.floor(tonumber(p:GetAttribute("RoundParkourBest")) or 0),
                 0, 7
             )
+            -- Include ALL human contestants, including those who never
+            -- tried a jump and those who died. A winner-only sample would
+            -- hide the steepest difficulty and early abandonment.
+            local parkourDiagnostic = ParkourFlow.roundMetrics(
+                parkourStates[p.UserId]
+            )
+            GameAnalytics.parkourRoundMetrics(p, {
+                arenaId = currentArenaVariant,
+                solo = roundSettings.Solo,
+                deviceClass = p:GetAttribute("ClientDeviceClass"),
+                attempts = parkourDiagnostic.attempts,
+                successes = parkourDiagnostic.successes,
+                best = parkourDiagnostic.best,
+                hardestGrade = parkourDiagnostic.hardestGrade,
+            })
             -- During a no-save session medals remain cosmetic, but the
             -- result must not claim earned persistent XP that the DataStore
             -- owner refused to commit.
