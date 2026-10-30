@@ -102,11 +102,13 @@ function ImpactSurfaceScarKit.crack(index, total, radius, kind, family)
     -- Original material-dependent fracture morphology: ice has branching
     -- crystal cuts, metal keeps tight scored seams, and dust spreads softly.
     -- The same five-or-fewer static pieces remain on all graphics tiers.
-    local familySkew = family == "Timber" and 0.13
-        or (family == "Ice" and 0.16
-        or (family == "Metal" and -0.09
-            or (family == "Dust" and 0.09
-                or (family == "Polished" and -0.04 or 0))))
+    local familySkew = ({
+        Timber = 0.13,
+        Ice = 0.16,
+        Metal = -0.09,
+        Dust = 0.09,
+        Polished = -0.04,
+    })[family] or 0
     local side = index % 2 == 0 and -1 or 1
     local angle = ((index - 1) / total) * math.pi * 2
         + (kind == "Meteor" and 0.21 or 0.11)
