@@ -42,19 +42,19 @@ end
 -- and Pivot banks into a tighter side-curved ribbon.
 local GESTURES = {
     High = {
-        Launch = {Width = 0.21, Peak = 0.22, Emission = 0.75,
+        Launch = {Width = 0.19, Peak = 0.22, Emission = 0.56,
             DurationScale = 1.08},
-        Skid = {Width = 0.32, Peak = 0.48, Emission = 0.62,
+        Skid = {Width = 0.28, Peak = 0.48, Emission = 0.48,
             DurationScale = 0.74},
-        Pivot = {Width = 0.26, Peak = 0.36, Emission = 0.70,
+        Pivot = {Width = 0.23, Peak = 0.36, Emission = 0.52,
             DurationScale = 0.88},
     },
     Medium = {
-        Launch = {Width = 0.145, Peak = 0.22, Emission = 0.52,
+        Launch = {Width = 0.135, Peak = 0.22, Emission = 0.43,
             DurationScale = 1.02},
-        Skid = {Width = 0.22, Peak = 0.48, Emission = 0.42,
+        Skid = {Width = 0.20, Peak = 0.48, Emission = 0.36,
             DurationScale = 0.74},
-        Pivot = {Width = 0.18, Peak = 0.36, Emission = 0.48,
+        Pivot = {Width = 0.17, Peak = 0.36, Emission = 0.40,
             DurationScale = 0.88},
     },
 }
