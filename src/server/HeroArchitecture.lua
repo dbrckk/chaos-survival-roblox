@@ -101,6 +101,16 @@ function HeroArchitecture.build(decor, base, variantId, theme)
             Vector3.new(0, 35.1, 0), metal)
         local tip = piece("SensorTip", Vector3.new(1.1, 1.1, 1.1),
             Vector3.new(0, 39.1, 0), trim)
+        -- The dish is held by actual offset structural struts rather
+        -- than floating above the roof, improving its close-up contour.
+        for _, side in ipairs({-1, 1}) do
+            beam("DishReceiverStrut" .. tostring(side),
+                Vector3.new(side * 5.8, 21.2, -1.8),
+                Vector3.new(side * 2.5, 25.6, -0.7),
+                0.42, metal)
+        end
+        piece("AnemometerCrossbar", Vector3.new(7.2, 0.48, 0.54),
+            Vector3.new(0, 33.6, 0), metal)
         tip.Shape = Enum.PartType.Ball
     elseif variantId == "Towers" then
         -- Suspension gantry with a long canopy and TWO genuine hanging
@@ -149,6 +159,18 @@ function HeroArchitecture.build(decor, base, variantId, theme)
                 Vector3.new(0.13, 1.55, 3.05),
                 Vector3.new(x - 3.27, 13.4, 0))
         end
+        -- The twin moving-cabin silhouettes share a realistic suspended
+        -- guide frame; these strips remain static decorative metal.
+        for _, side in ipairs({-1, 1}) do
+            local x = side * 6.8
+            beam("CabinGuideStrut" .. tostring(side),
+                Vector3.new(x + side * 2.0, 12.1, 1.7),
+                Vector3.new(x + side * 3.8, 23.9, 1.7),
+                0.38, metal)
+            piece("CanopyEndHousing" .. tostring(side),
+                Vector3.new(2.3, 2.3, 4.8),
+                Vector3.new(side * 14.7, 25.7, 0), shadow)
+        end
     elseif variantId == "Crossroads" then
         -- Four-way exchange with a raised routing hub, shoring and a
         -- distinctive offset stack, not a repeated cylindrical skyline.
@@ -181,6 +203,15 @@ function HeroArchitecture.build(decor, base, variantId, theme)
             piece("ExchangeShroud" .. tostring(side),
                 Vector3.new(2.1, 8.4, 2.1),
                 Vector3.new(side * 4.1, 13, 0), metal)
+        end
+        -- An industrial selector head gives the exchange silhouette a
+        -- distinct stacked profile visible behind its four-way bridge.
+        piece("RoutingHeadHousing", Vector3.new(7.1, 2.3, 5.2),
+            Vector3.new(0, 33.3, 0), metal)
+        for _, side in ipairs({-1, 1}) do
+            piece("RoutingSwitchFin" .. tostring(side),
+                Vector3.new(2.3, 5.6, 0.65),
+                Vector3.new(side * 5.2, 28.5, 0), trim)
         end
     elseif variantId == "Harbor" then
         -- Drydock flagship with a real hull silhouette, wheelhouse,
@@ -244,6 +275,13 @@ function HeroArchitecture.build(decor, base, variantId, theme)
             beam("RadialStabilizer" .. tostring(side),
                 Vector3.new(0, 2, side * 6),
                 Vector3.new(0, 19.4, side * 7.2), 0.76)
+        end
+        -- Two shield housings join the base of the 3D rings; no added
+        -- light, Neon or force and still inside the 32-part hero budget.
+        for _, side in ipairs({-1, 1}) do
+            piece("ReactorStabilizerHousing" .. tostring(side),
+                Vector3.new(2.6, 7.0, 5.4),
+                Vector3.new(side * 7.5, 14.2, 0), metal)
         end
     end
     local pieces = #model:GetChildren()
