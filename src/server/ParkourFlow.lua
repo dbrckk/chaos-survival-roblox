@@ -28,11 +28,39 @@ end
 -- For real forks there may be two valid successors: the default guide
 -- chooses one, but players are rewarded equally for the physical detour.
 function ParkourFlow.legalJump(from, to, platforms, center, variant)
-    if not validDeck(from, platforms) or not validDeck(to, platforms)
-        or not JumpRouteCueRules.jumpable(from, to) then
+    if not validDeck(from, platforms) or not validDeck(to, platforms) then
         return false
     end
     local parts = platforms:GetChildren()
+
+    -- Harbor's original high-quay skyways use REAL, level, jumped steel
+    -- decks. The global ascending jump rule deliberately rejects zero rise,
+    -- so without this explicit route-scoped exception successful physical
+    -- crossings wrongly reset the server's skill chain and earned bonus XP.
+    -- Do not authorize arbitrary flat hops across other parts/maps:
+    -- eligibility must be a verified, adjacent, server-authored skyway edge.
+    local skywayFrom = from:GetAttribute("HarborSkywayLane")
+    local skywayTo = to:GetAttribute("HarborSkywayLane")
+    if skywayFrom ~= nil or skywayTo ~= nil then
+        if variant ~= "Harbor"
+            or not JumpRouteCueRules.skywayLeap(from, to) then
+            return false
+        end
+        if skywayFrom == nil then
+            -- Only a genuine step-seven Harbor cargo terminal can enter
+            -- its own bridge; no free floor/nearby terrace shortcut.
+            return JumpRouteCueRules.nextSkyway(from, parts) == to
+        end
+        -- Server scores a valid backtrack equally, independently of the
+        -- cosmetic client coach's preferred direction. Both destinations
+        -- must still be colliding and outside an active collapse warning.
+        return JumpRouteCueRules.nextSkyway(from, parts, 1) == to
+            or JumpRouteCueRules.nextSkyway(from, parts, -1) == to
+    end
+
+    if not JumpRouteCueRules.jumpable(from, to) then
+        return false
+    end
     if JumpRouteCueRules.nextPhysical(from, parts, center, variant) == to then
         return true
     end
