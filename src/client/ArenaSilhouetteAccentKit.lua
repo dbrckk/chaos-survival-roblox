@@ -108,13 +108,22 @@ function ArenaSilhouetteAccentKit.build(parent, base, variant, tierName, theme)
         p.Size = entry[1]
         p.CFrame = base.CFrame * entry[2]
         p.Color = palette[entry[3]]
-        p.Material = (index == 1 and variant == "Towers" and Enum.Material.CorrodedMetal)
-            or (index == 1 and variant == "Harbor" and Enum.Material.CorrodedMetal)
-            or (index == 3 and variant == "Harbor" and Enum.Material.DiamondPlate)
-            or (index == 1 and variant == "Crossroads" and Enum.Material.Concrete)
-            or (index == 4 and tierName == "High" and variant == "Orbital" and Enum.Material.Glass)
-            or (index == 4 and tierName == "High" and Enum.Material.DiamondPlate)
-            or Enum.Material.Metal
+        -- Preserve the existing 3/4 part mobile caps while making the
+        -- silhouettes recognizable through their actual materials, not
+        -- just different colors. No meshes, textures or new instances.
+        local materials = {
+            Classic = {Enum.Material.DiamondPlate, Enum.Material.Metal,
+                Enum.Material.Metal, Enum.Material.DiamondPlate},
+            Towers = {Enum.Material.CorrodedMetal, Enum.Material.CorrodedMetal,
+                Enum.Material.CorrodedMetal, Enum.Material.Metal},
+            Crossroads = {Enum.Material.Concrete, Enum.Material.Concrete,
+                Enum.Material.Metal, Enum.Material.Concrete},
+            Orbital = {Enum.Material.Metal, Enum.Material.Metal,
+                Enum.Material.Metal, Enum.Material.Glass},
+            Harbor = {Enum.Material.CorrodedMetal, Enum.Material.Metal,
+                Enum.Material.DiamondPlate, Enum.Material.CorrodedMetal},
+        }
+        p.Material = materials[variant][index]
         p.Transparency = index == 4 and 0.27 or 0.08
         p.Anchored = true
         p.CanCollide = false
