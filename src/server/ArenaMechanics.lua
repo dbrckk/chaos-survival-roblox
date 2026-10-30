@@ -129,7 +129,8 @@ end
 -- in a rookie or incompatible disaster round.
 function ArenaMechanics.mode(variantId, dynamicStarted, shuttersStarted)
     if not ArenaMechanics.Definitions[variantId] then return nil end
-    if variantId == "Towers" and shuttersStarted == true then
+    if variantId == "Towers" and dynamicStarted == true
+        and shuttersStarted == true then
         return "TowersShutters"
     end
     return variantId .. (dynamicStarted == true and "Active" or "Safe")
