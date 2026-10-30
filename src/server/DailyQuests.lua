@@ -57,6 +57,14 @@ DailyQuests.Definitions = {
         Coins = 55,
         XP = 30,
     },
+    PARKOUR_2 = {
+        Id = "PARKOUR_2",
+        Title = "Chain 3 real jumps in 2 rounds",
+        Event = "parkour_ace",
+        Target = 2,
+        Coins = 50,
+        XP = 30,
+    },
 }
 
 local ORDER = {
@@ -67,6 +75,7 @@ local ORDER = {
     "PLAY_5",
     "SURVIVE_3",
     "COLLECT_6",
+    "PARKOUR_2",
 }
 
 function DailyQuests.dayNumber(timestamp)
