@@ -210,6 +210,52 @@ describe("Authentic airborne parkour score protection", function()
         root:Destroy()
     end)
 
+    it("does not erase real long Moon Gravity jumps but rejects stale flights", function()
+        local root = MapBuilder.build(
+            Config, "Classic", ArenaVariants, VisualTheme
+        )
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena:FindFirstChild("Platforms")
+        local base = arena:FindFirstChild("Base")
+        local first, second
+        for _, deck in ipairs(platforms:GetChildren()) do
+            if deck:GetAttribute("PerimeterRoute") == 3 then
+                if deck:GetAttribute("PerimeterStep") == 1 then first = deck end
+                if deck:GetAttribute("PerimeterStep") == 2 then second = deck end
+            end
+        end
+        local state = ParkourFlow.advance(
+            nil, first, platforms, base.Position,
+            "Classic", 10, standingPosition(first)
+        )
+        state = ParkourFlow.takeoff(
+            state, platforms, standingPosition(first), 10.4
+        )
+        local landing, valid = ParkourFlow.advance(
+            state, second, platforms, base.Position,
+            "Classic", 14.7, standingPosition(second)
+        )
+        expect(valid).toBe(true)
+        expect(landing.best).toBe(1)
+
+        -- Even in a low-gravity mode, an old airborne flag is not a
+        -- valid receipt for a different round or a much later teleport.
+        landing = ParkourFlow.advance(
+            landing, first, platforms, base.Position,
+            "Classic", 16, standingPosition(first)
+        )
+        landing = ParkourFlow.takeoff(
+            landing, platforms, standingPosition(first), 16.5
+        )
+        local stale, credited = ParkourFlow.advance(
+            landing, second, platforms, base.Position,
+            "Classic", 22.1, standingPosition(second)
+        )
+        expect(credited).toBe(false)
+        expect(stale.best).toBe(1)
+        root:Destroy()
+    end)
+
     it("rejects non-airborne teleport, low-flight and impossible speed", function()
         local root = MapBuilder.build(
             Config, "Classic", ArenaVariants, VisualTheme
