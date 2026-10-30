@@ -82,7 +82,12 @@ local function applyModel(model)
     local hasAuraHighlight = auraHighlight and auraHighlight:IsA("Highlight")
 
     highlight.FillColor = accent:Lerp(Color3.new(1, 1, 1), 0.08)
-    highlight.OutlineColor = accent:Lerp(Color3.new(1, 1, 1), 0.28)
+    -- Only the local player's usability outline inherits their accent.
+    -- All other contestants (human and AI) get the same neutral contour;
+    -- the server keeps the honest identity and leaderboard distinction.
+    highlight.OutlineColor = isLocal
+        and accent:Lerp(Color3.new(1, 1, 1), 0.28)
+        or Color3.fromRGB(203, 214, 223)
 
     local fillTransparency = CharacterPolishRules.fillTransparency(
         quality.Name,

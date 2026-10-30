@@ -22,9 +22,11 @@ function CharacterPolishRules.outlineTransparency(
     if state == "round" or state == "ready" then
         if localCharacter == true then
             return tier == "Low" and 0.68 or (tier == "Medium" and 0.54 or 0.44)
-        elseif aiCharacter == true then
-            return tier == "Low" and 0.86 or (tier == "Medium" and 0.76 or 0.68)
         end
+        -- Human opponents and AI share the exact same outline budget and
+        -- opacity. A brighter synthetic outline previously made NPCs
+        -- immediately distinguishable from real participants.
+        -- Identity/status information remains server-authoritative.
         return tier == "Low" and 0.90 or (tier == "Medium" and 0.82 or 0.75)
     end
 
