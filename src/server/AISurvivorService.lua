@@ -1415,6 +1415,68 @@ local function disappearingPlatformEscape(record, root, now)
     return clampToArena(root.Position + dodge)
 end
 
+-- A bot that committed to a Skyrail bridge BEFORE its warning should
+-- not run straight into a newly raised physical sill. Consult just the
+-- current arena's four replicated gates (8 direct children including
+-- warning stripes), not the full world. The response follows the same
+-- human-readable warning phase with an individual reaction delay.
+local function skybridgeShutterEscape(record, root, now)
+    if arenaVariantId() ~= "Towers" then
+        record.shutterThreat = nil
+        record.shutterSeenAt = nil
+        return nil
+    end
+    local _, arena = arenaParts()
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    local folder = mechanics and mechanics:FindFirstChild("SkybridgeShutters")
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    if not folder or not platforms then
+        record.shutterThreat = nil
+        record.shutterSeenAt = nil
+        return nil
+    end
+    local threatened, escape = nil, nil
+    for _, gate in ipairs(folder:GetChildren()) do
+        if gate:IsA("BasePart")
+            and gate:GetAttribute("BridgeShutter") == true then
+            local phase = gate:GetAttribute("ShutterPhase")
+            if phase == "Warning" or phase == "Raising"
+                or phase == "Raised" then
+                local bridgeName = gate:GetAttribute("BridgeName")
+                local bridge = type(bridgeName) == "string"
+                    and platforms:FindFirstChild(bridgeName) or nil
+                if bridge and bridge:IsA("BasePart")
+                    and bridge:GetAttribute("ChaosSkybridge") == true
+                    and bridge.CanCollide then
+                    local target = AISurvivorRules.skybridgeShutterEscapeTarget(
+                        root.Position, bridge.CFrame, bridge.Size, phase
+                    )
+                    if target then
+                        threatened = gate
+                        escape = target
+                        break
+                    end
+                end
+            end
+        end
+    end
+    if not threatened then
+        record.shutterThreat = nil
+        record.shutterSeenAt = nil
+        return nil
+    end
+    if record.shutterThreat ~= threatened then
+        record.shutterThreat = threatened
+        record.shutterSeenAt = now
+    end
+    if AISurvivorRules.reactionReady(
+        record.shutterSeenAt, now, record.profile.ReactionSeconds
+    ) then
+        return escape
+    end
+    return nil
+end
+
 -- Both Classic's grid pulses and Storm Harbor's crane service sweeps
 -- are server-authoritative floor hazards, not workspace disaster markers.
 -- Bots see the exact same replicated warning as players, hesitate for
@@ -3117,6 +3179,9 @@ local function stepRecord(record, now)
         if not urgentTarget then
             urgentTarget = floorSweepEscape(record, root, now)
         end
+        if not urgentTarget then
+            urgentTarget = skybridgeShutterEscape(record, root, now)
+        end
     end
 
     -- A timed signal may close while the bot is holding a long movement
@@ -3241,9 +3306,13 @@ local function stepRecord(record, now)
             record.targetPart = nil
             -- Separation offsets would push a Skybridge escape target off
             -- the narrow deck. Keep the server-planned centre-line path.
-            local skybridgeEscape = record.platformThreat
-                and record.platformThreat.Parent
-                and record.platformThreat:GetAttribute("ChaosSkybridge") == true
+            local skybridgeEscape = (record.platformThreat
+                    and record.platformThreat.Parent
+                    and record.platformThreat:GetAttribute("ChaosSkybridge") == true)
+                or (record.shutterThreat and record.shutterThreat.Parent
+                    and (record.shutterThreat:GetAttribute("ShutterPhase") == "Warning"
+                        or record.shutterThreat:GetAttribute("ShutterPhase") == "Raising"
+                        or record.shutterThreat:GetAttribute("ShutterPhase") == "Raised"))
             -- Both Classic and Harbor sweeps are real spatial hazards.
             -- NEVER add the social sidestep jitter to the server-derived
             -- floor exit: Harbor used to miss this check, steering NPCs
@@ -3317,6 +3386,20 @@ local function stepRecord(record, now)
                     record.target = nil
                     record.targetPart = nil
                     record.targetIsSkyrail = false
+                    record.nextThink = 0
+                elseif record.targetIsSkyrail
+                    and record.targetPart:GetAttribute("ChaosSkybridge") == true
+                    and record.targetPart:GetAttribute("BridgeShutterPhase") ~= nil
+                    and record.targetPart:GetAttribute("BridgeShutterPhase") ~= "Idle"
+                then
+                    -- This target was selected before the actual gate
+                    -- warned. Stop committing to an obstructed crossing;
+                    -- a bot ON the bridge has already received its
+                    -- humanlike delayed retreat in skybridgeShutterEscape.
+                    record.target = nil
+                    record.targetPart = nil
+                    record.targetIsSkyrail = false
+                    record.skyrailDirection = nil
                     record.nextThink = 0
                 elseif record.targetIsSkyrail
                     and record.targetPart:GetAttribute("ChaosSkybridge") == true
