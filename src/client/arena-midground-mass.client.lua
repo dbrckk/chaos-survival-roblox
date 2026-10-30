@@ -75,11 +75,11 @@ local function buildClassic(base, theme, tier)
         if glowEnabled then
             makePart(
                 "ClassicBroadcastMassGlow" .. i,
-                Vector3.new(body.Size.X * 0.66, 0.28, body.Size.Z + 0.10),
-                body.CFrame * CFrame.new(0, body.Size.Y * 0.5 + 0.18, 0),
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                tier.Name == "High" and 0.62 or 0.70
+                Vector3.new(body.Size.X * 0.74, 0.42, body.Size.Z + 0.16),
+                body.CFrame * CFrame.new(0, body.Size.Y * 0.5 + 0.23, 0),
+                theme.Detail:Lerp(theme.Structure, i % 2 == 0 and 0.33 or 0.18),
+                Enum.Material.DiamondPlate,
+                tier.Name == "High" and 0.16 or 0.24
             )
         end
     end
@@ -115,11 +115,11 @@ local function buildTowers(base, theme, tier)
         if stripEnabled then
             makePart(
                 "TowerCoolingMassStrip" .. i,
-                Vector3.new(0.42, body.Size.Y * 0.68, body.Size.Z + 0.10),
-                body.CFrame * CFrame.new(0, 0, -body.Size.Z * 0.5 - 0.08),
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                tier.Name == "High" and 0.58 or 0.68
+                Vector3.new(0.84, body.Size.Y * 0.78, body.Size.Z * 0.16),
+                body.CFrame * CFrame.new(0, 0, -body.Size.Z * 0.5 - 0.10),
+                theme.Detail:Lerp(theme.Structure, 0.40),
+                Enum.Material.CorrodedMetal,
+                tier.Name == "High" and 0.12 or 0.20
             )
         end
     end
@@ -155,14 +155,14 @@ local function buildCrossroads(base, theme, tier)
             makePart(
                 "CrossroadsTransitMassRail" .. i,
                 Vector3.new(
-                    body.Size.X > body.Size.Z and body.Size.X * 0.76 or 0.34,
-                    0.28,
-                    body.Size.Z >= body.Size.X and body.Size.Z * 0.76 or 0.34
+                    body.Size.X > body.Size.Z and body.Size.X * 0.76 or 0.56,
+                    0.38,
+                    body.Size.Z >= body.Size.X and body.Size.Z * 0.76 or 0.56
                 ),
-                body.CFrame * CFrame.new(0, body.Size.Y * 0.5 + 0.20, 0),
-                i % 2 == 0 and theme.Secondary or theme.Accent,
-                Enum.Material.Neon,
-                tier.Name == "High" and 0.60 or 0.70
+                body.CFrame * CFrame.new(0, body.Size.Y * 0.5 + 0.24, 0),
+                theme.Detail:Lerp(theme.Structure, 0.30),
+                Enum.Material.Concrete,
+                tier.Name == "High" and 0.12 or 0.22
             )
         end
     end
