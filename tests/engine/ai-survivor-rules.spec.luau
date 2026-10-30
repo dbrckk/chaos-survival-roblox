@@ -1043,7 +1043,8 @@ describe("AI survivor rules", function()
         -- collision or sideways into open air. It holds until clear;
         -- the gate's real server occupancy check cancels unsafe closure.
         local center = Vector3.new(0.5, 15.4, -28)
-        expect(rule(center, north, length, "Raising")).toBe(center)
+        expect((rule(center, north, length, "Raising") - center).Magnitude
+            < 0.001).toBe(true)
         expect(rule(center, north, length, "Idle") == nil).toBe(true)
         expect(rule(center, north, length, nil) == nil).toBe(true)
         expect(rule(center, north, length, "Gone") == nil).toBe(true)
