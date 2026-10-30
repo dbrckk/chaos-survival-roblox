@@ -1714,6 +1714,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             lastSurvivorUserId = (survivorsAlive == 1 and humanSurvivorsAlive == 1) and lastSurvivorUserId() or nil,
             arenaMechanicName = arenaMechanic and arenaMechanic.name or nil,
             arenaMechanicHint = arenaMechanic and arenaMechanic.hint or nil,
+            -- This mode is derived only AFTER the real arena mechanic
+            -- starts. No rookie is told to seek a forbidden shock lane.
+            -- The existing 1Hz RoundState owns a short, no-extra-UI
+            -- introduction; main hazard instructions retain priority.
+            arenaMechanicMode = arenaMechanic and arenaMechanic.mode or nil,
+            arenaMechanicIntro = t > roundSettings.RoundSeconds - 6,
             overdrive = overdriveActive,
             overdriveSeconds = overdriveActive and math.max(1, t - overdriveEndRemaining) or 0,
             finalRush = finalRushActive,
