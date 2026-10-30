@@ -2391,6 +2391,8 @@ local function chooseArenaTarget(record, root, now)
             for _, bridge in ipairs(platforms:GetChildren()) do
                 if bridge:IsA("BasePart")
                     and bridge:GetAttribute("ChaosSkybridge") == true
+                    and (bridge:GetAttribute("BridgeShutterPhase") == nil
+                        or bridge:GetAttribute("BridgeShutterPhase") == "Idle")
                     and AISurvivorRules.platformAvailable(
                         bridge.CanCollide, bridge.Transparency,
                         bridge:GetAttribute("CollapsePhase"))
