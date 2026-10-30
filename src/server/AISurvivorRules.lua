@@ -955,6 +955,59 @@ function AISurvivorRules.floorSweepExitTarget(frame, size, position, center)
     return chosen
 end
 
+-- A circular meteor/bomb escape can cross a *second* rectangular
+-- floor sweep. Score the WHOLE walking segment against the real oriented
+-- server corridor; a safe-looking endpoint is not enough.
+-- Ground-level sweeps do not affect an NPC already on a high platform.
+-- Pure bounded geometry: no raycasts, new watchers or privileged movement.
+function AISurvivorRules.floorSweepRoutePenalty(origin, destination, bandFrame, bandSize)
+    if typeof(origin) ~= "Vector3"
+        or typeof(destination) ~= "Vector3"
+        or typeof(bandFrame) ~= "CFrame"
+        or typeof(bandSize) ~= "Vector3"
+        or bandSize.X <= 0 or bandSize.Z <= 0
+    then
+        return 0
+    end
+    local start = bandFrame:PointToObjectSpace(origin)
+    local finish = bandFrame:PointToObjectSpace(destination)
+    -- The real hazard checks RootPart local Y within 1..5.1 studs.
+    -- A character safe on an elevated walkway is not crossing the pulse.
+    if start.Y < 0.5 or start.Y > 5.8
+        or finish.Y < 0.5 or finish.Y > 5.8 then
+        return 0
+    end
+
+    local halfX = bandSize.X * 0.5 + 1.2
+    local halfZ = bandSize.Z * 0.5 + 1.2
+    local function inside(p)
+        return math.abs(p.X) <= halfX and math.abs(p.Z) <= halfZ
+    end
+    local beginsInside = inside(start)
+    local endsInside = inside(finish)
+    -- Leaving the dangerous strip should never be penalized; otherwise
+    -- an NPC trapped inside has no incentive to get out immediately.
+    if beginsInside then return endsInside and 125 or 0 end
+
+    local travel = finish - start
+    local entry, exit = 0, 1
+    for _, axis in ipairs({"X", "Z"}) do
+        local bound = axis == "X" and halfX or halfZ
+        local offset, delta = start[axis], travel[axis]
+        if math.abs(delta) < 0.0001 then
+            if math.abs(offset) > bound then return 0 end
+        else
+            local a = (-bound - offset) / delta
+            local z = (bound - offset) / delta
+            if a > z then a, z = z, a end
+            entry = math.max(entry, a)
+            exit = math.min(exit, z)
+            if entry > exit then return 0 end
+        end
+    end
+    return endsInside and 125 or 90
+end
+
 -- A bot that is already dodging one live warning should not switch
 -- its attention on every brain tick when two equal-size blast footprints
 -- overlap. Switch only when the competing warning is meaningfully closer.
