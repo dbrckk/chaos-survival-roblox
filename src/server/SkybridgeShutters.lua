@@ -65,9 +65,32 @@ function SkybridgeShutters.gateFor(bridge, folder)
     -- Client-only locale/accessibility notice follows this real object.
     -- Tags replicate with streamed-in gates; no descendant polling.
     CollectionService:AddTag(gate, "TowerSkybridgeShutter")
+
+    -- A flush, non-colliding warning strip is readable BEFORE the shutter
+    -- emerges from beneath the deck. This avoids an invisible late blocker
+    -- and preserves the genuine jumpable bridge collision.
+    local stripe = Instance.new("Part")
+    stripe.Name = "BridgeShutterWarning" .. bridge.Name
+    stripe.Size = alongX
+        and Vector3.new(1.1, 0.08, width)
+        or Vector3.new(width, 0.08, 1.1)
+    stripe.CFrame = bridge.CFrame * CFrame.new(
+        0, bridge.Size.Y * 0.5 + 0.055, 0
+    )
+    stripe.Anchored = true
+    stripe.CanCollide = false
+    stripe.CanTouch = false
+    stripe.CanQuery = false
+    stripe.CastShadow = false
+    stripe.Material = Enum.Material.Metal
+    stripe.Color = Color3.fromRGB(242, 183, 74)
+    stripe.Transparency = 1
+    stripe.Parent = folder
+
     return {
         bridge = bridge,
         gate = gate,
+        stripe = stripe,
         raised = gate.CFrame,
         lowered = gate.CFrame * CFrame.new(0, -SkybridgeShutters.Height, 0),
     }
@@ -103,6 +126,11 @@ function SkybridgeShutters.setPhase(state, phase, timestamp)
         gate:SetAttribute("ShutterWarningAt", nil)
     end
     gate:SetAttribute("ShutterPhase", phase)
+    if state.stripe and state.stripe.Parent then
+        state.stripe.Transparency = phase == "Warning" and 0.20
+            or (phase == "Raising" and 0.12
+                or (phase == "Raised" and 0.62 or 1))
+    end
     -- Skyrail boosts must not throw a runner toward a forming barrier.
     if state.bridge and state.bridge.Parent then
         state.bridge:SetAttribute("BridgeShutterPhase", phase)
