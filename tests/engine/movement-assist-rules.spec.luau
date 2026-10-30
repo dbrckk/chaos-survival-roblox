@@ -214,6 +214,60 @@ describe("Movement assist rules", function()
         folder:Destroy()
     end)
 
+    it("shows landing danger only inside live meteor or bomb blast spheres", function()
+        local Rules = require("../../src/shared/JumpLandingPreviewRules")
+        local deck = Instance.new("Part")
+        deck.Name = "Platform17"
+        deck.Size = Vector3.new(12, 2, 12)
+        deck.Anchored = true
+        deck.Parent = workspace
+        local marker = Instance.new("Part")
+        marker.Name = "MeteorWarning"
+        marker.Anchored = true
+        marker.CanCollide = false
+        marker.CanQuery = false
+        marker.Size = Vector3.new(5.5, 0.15, 5.5)
+        marker.Position = Vector3.new(20, 2, 0)
+        marker.Parent = workspace
+
+        local blastCenter = marker.Position + Vector3.new(0, 1, 0)
+        -- Marker can be visible before the server has replicated complete
+        -- HazardWarning metadata; never infer a made-up blast footprint.
+        expect(Rules.impactWarningAt(blastCenter, marker)).toBe(false)
+        marker:SetAttribute("WarningEndSize", 16)
+        expect(Rules.impactWarningAt(blastCenter, marker)).toBe(false)
+        marker:SetAttribute("WarningKind", "Meteor")
+        expect(Rules.impactWarningAt(blastCenter, marker)).toBe(true)
+        expect(Rules.hazardAt(blastCenter, deck, {marker})).toBe(true)
+        expect(Rules.impactWarningAt(blastCenter + Vector3.new(7.9, 0, 0),
+            marker)).toBe(true)
+        expect(Rules.impactWarningAt(blastCenter + Vector3.new(8.1, 0, 0),
+            marker)).toBe(false)
+        -- A rooftop ABOVE the server-owned 3D damage sphere remains safe
+        -- despite being inside the same visible ground-warning X/Z circle.
+        expect(Rules.hazardAt(blastCenter + Vector3.new(0, 10, 0),
+            deck, {marker})).toBe(false)
+        expect(Rules.hazardAt(Vector3.new(-30, 3, 0),
+            deck, {marker})).toBe(false)
+
+        marker.Name = "BombWarning"
+        expect(Rules.impactWarningAt(blastCenter, marker)).toBe(false)
+        marker:SetAttribute("WarningKind", "Bomb")
+        expect(Rules.impactWarningAt(blastCenter, marker)).toBe(true)
+        marker:SetAttribute("WarningEndSize", 0 / 0)
+        expect(Rules.impactWarningAt(blastCenter, marker)).toBe(false)
+        marker:SetAttribute("WarningEndSize", 16)
+        marker:SetAttribute("WarningKind", "Unknown")
+        expect(Rules.impactWarningAt(blastCenter, marker)).toBe(false)
+        marker:SetAttribute("WarningKind", "Bomb")
+        marker.Parent = nil
+        expect(Rules.impactWarningAt(blastCenter, marker)).toBe(false)
+        expect(Rules.hazardAt(blastCenter, deck, {marker})).toBe(false)
+
+        marker:Destroy()
+        deck:Destroy()
+    end)
+
     it("predicts only near-term descending contact and validates edges", function()
         local Rules = require("../../src/shared/JumpLandingPreviewRules")
         local freefall = Enum.HumanoidStateType.Freefall
