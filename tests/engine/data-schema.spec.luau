@@ -37,6 +37,23 @@ describe("Player data schema", function()
         expect(data.Level).toBe(DataSchema.levelForXP(900))
     end)
 
+    it("migrates a stable 0..7 physical parkour record without corrupting old saves", function()
+        expect(DataSchema.Version >= 9).toBe(true)
+        expect(DataSchema.normalize({Wins = 7}).ParkourBestRecord).toBe(0)
+        expect(DataSchema.normalize({ParkourBestRecord = 6}).ParkourBestRecord).toBe(6)
+        expect(DataSchema.normalize({ParkourBestRecord = 7.9}).ParkourBestRecord).toBe(7)
+        expect(DataSchema.normalize({ParkourBestRecord = 1000}).ParkourBestRecord).toBe(7)
+        expect(DataSchema.normalize({ParkourBestRecord = -5}).ParkourBestRecord).toBe(0)
+        expect(DataSchema.normalize({ParkourBestRecord = math.huge}).ParkourBestRecord).toBe(0)
+        expect(DataSchema.normalize({ParkourBestRecord = 0 / 0}).ParkourBestRecord).toBe(0)
+        expect(DataSchema.normalize({ParkourBestRecord = "7"}).ParkourBestRecord).toBe(0)
+        local snapshot = DataSchema.snapshot(function(key)
+            if key == "ParkourBestRecord" then return 5 end
+            return nil
+        end)
+        expect(snapshot.ParkourBestRecord).toBe(5)
+    end)
+
     it("migrates legacy aura equipment into the aura slot", function()
         local data = DataSchema.normalize({
             OwnedCosmetics = "aura_emerald",
