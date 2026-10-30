@@ -20,6 +20,43 @@ local ImpactPulseRules = require("../../src/shared/ImpactPulseRules")
 local CinematicPulseRingKit = require("../../src/client/CinematicPulseRingKit")
 local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 
+local ImpactSurfaceScarKit = require("../../src/client/ImpactSurfaceScarKit")
+
+describe("Material-aware Harbor timber impact appearance", function()
+    it("uses original wood grain cracks rather than stone on actual planks", function()
+        expect(ImpactSurfaceScarKit.family(Enum.Material.WoodPlanks)).toBe("Timber")
+        expect(ImpactSurfaceScarKit.family(Enum.Material.Wood)).toBe("Timber")
+        expect(ImpactSurfaceScarKit.family(Enum.Material.Concrete)).toBe("Stone")
+        local style = ImpactSurfaceScarKit.recipe(
+            "Meteor", "High", Enum.Material.WoodPlanks,
+            Color3.fromRGB(120, 90, 60), Color3.fromRGB(250, 114, 54), false
+        )
+        expect(style.Family).toBe("Timber")
+        expect(style.Material).toBe(Enum.Material.WoodPlanks)
+        expect(style.CrackCount).toBe(5)
+        local crack = ImpactSurfaceScarKit.crack(1, 5, 9, "Meteor", "Timber")
+        expect(crack.Wedge).toBe(false)
+        expect(crack.Name).toBe("PressureCut")
+        local root = Instance.new("Folder")
+        root.Parent = workspace
+        local pieces = ImpactSurfaceScarKit.build(
+            root, CFrame.new(), "Bomb", "Medium",
+            Enum.Material.Wood, Color3.fromRGB(120, 90, 60),
+            Color3.fromRGB(220, 95, 40), 9, false
+        )
+        expect(#pieces).toBe(4)
+        for _, piece in ipairs(pieces) do
+            expect(piece.Material).toBe(Enum.Material.WoodPlanks)
+            expect(piece:GetAttribute("ImpactScarFamily")).toBe("Timber")
+            expect(piece.CanCollide).toBe(false)
+            expect(piece.CanTouch).toBe(false)
+            expect(piece.CanQuery).toBe(false)
+            expect(piece.CastShadow).toBe(false)
+        end
+        root:Destroy()
+    end)
+end)
+
 describe("Disaster visual identities", function()
     it("adds bounded structural diagonal braces only under safe visual decks", function()
         local root = Instance.new("Folder")
