@@ -501,4 +501,86 @@ describe("Veteran parkour retry coaching after unsuccessful physical jumps", fun
     end)
 end)
 
+-- The exact physical Harbor 14-deck skyways are part of parkour gameplay,
+-- not map scenery. Keep their engine assertions here instead of inflating
+-- mapbuilder.spec.luau beyond Lest Open Cloud's 105 KB single-spec cap.
+describe("Actual bidirectional Harbor cross-quay parkour", function()
+    it("crosses both real upper gantries, rejects collapsing landings", function()
+        local variantId = "Harbor"
+        local variant = ArenaVariants.get(variantId)
+        local root = MapBuilder.build(Config, variantId, ArenaVariants)
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena:FindFirstChild("Platforms")
+        local pieces = platforms:GetChildren()
+        local originals = #variant.Platforms
+            -- Exercise the REAL Harbor physics geometry via both physical
+            -- terminal-to-terminal upper paths, never synthetic dummy Parts.
+                expect(#variant.SkywayPlatforms).toBe(14)
+                local startIndex = originals + #variant.PerimeterPlatforms
+                    + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
+                for lane = 1, 2 do
+                    local westRoute = lane == 1 and 1 or 3
+                    local eastRoute = westRoute + 1
+                    local west = platforms:FindFirstChild(
+                        "Platform" .. ((westRoute - 1) * 7 + 7)
+                    )
+                    local east = platforms:FindFirstChild(
+                        "Platform" .. ((eastRoute - 1) * 7 + 7)
+                    )
+                    expect(west ~= nil and east ~= nil).toBe(true)
+                    local previous = west
+                    for step = 1, 7 do
+                        local deck = platforms:FindFirstChild(
+                            "Platform" .. (startIndex + (lane - 1) * 7 + step)
+                        )
+                        expect(deck ~= nil).toBe(true)
+                        expect(deck.Anchored and deck.CanCollide).toBe(true)
+                        expect(deck.Material).toBe(Enum.Material.CorrodedMetal)
+                        expect(deck:GetAttribute("HarborSkywayLane")).toBe(lane)
+                        expect(deck:GetAttribute("HarborSkywayStep")).toBe(step)
+                        expect(JumpRouteCueRules.skywayLeap(previous, deck))
+                            .toBe(true)
+                        expect(JumpRouteCueRules.nextPhysical(
+                            previous, pieces, Config.ArenaCenter, variantId, 1
+                        )).toBe(deck)
+                        previous = deck
+                    end
+                    expect(JumpRouteCueRules.skywayLeap(previous, east))
+                        .toBe(true)
+                    expect(JumpRouteCueRules.nextPhysical(
+                        previous, pieces, Config.ArenaCenter, variantId, 1
+                    )).toBe(east)
+
+                    previous = east
+                    for step = 7, 1, -1 do
+                        local deck = platforms:FindFirstChild(
+                            "Platform" .. (startIndex + (lane - 1) * 7 + step)
+                        )
+                        expect(JumpRouteCueRules.skywayLeap(previous, deck))
+                            .toBe(true)
+                        expect(JumpRouteCueRules.nextPhysical(
+                            previous, pieces, Config.ArenaCenter, variantId, -1
+                        )).toBe(deck)
+                        previous = deck
+                    end
+                    expect(JumpRouteCueRules.nextPhysical(
+                        previous, pieces, Config.ArenaCenter, variantId, -1
+                    )).toBe(west)
+
+                    -- An impending collapse must invalidate this ACTUAL
+                    -- landing, not leave a fictitious safe next-jump sign.
+                    local first = platforms:FindFirstChild(
+                        "Platform" .. (startIndex + (lane - 1) * 7 + 1)
+                    )
+                    first:SetAttribute("CollapsePhase", "Warning")
+                    expect(JumpRouteCueRules.nextPhysical(
+                        west, pieces, Config.ArenaCenter, variantId, 1
+                    )).toBe(nil)
+                    first:SetAttribute("CollapsePhase", nil)
+                end
+
+        root:Destroy()
+    end)
+end)
+
 return nil
