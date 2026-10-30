@@ -206,6 +206,39 @@ describe("AI survivor rules", function()
             Vector3.new(36, 13.5, -18), true)).toBe(false)
     end)
 
+    it("avoids simultaneous rotated floor sweeps along the whole impact escape", function()
+        local penalty = AISurvivorRules.floorSweepRoutePenalty
+        local band = CFrame.new(0, 0, 0)
+        local size = Vector3.new(8, 0.1, 68)
+
+        -- Both endpoints are clear but the segment crosses the active lane.
+        expect(penalty(Vector3.new(-20, 3, 0),
+            Vector3.new(20, 3, 0), band, size)).toBe(90)
+        -- An unthreatened sideways exit and elevated escape remain valid.
+        expect(penalty(Vector3.new(20, 3, 0),
+            Vector3.new(25, 3, 0), band, size)).toBe(0)
+        expect(penalty(Vector3.new(-20, 15, 0),
+            Vector3.new(20, 15, 0), band, size)).toBe(0)
+        -- A bot already inside must NOT be discouraged from escaping out.
+        expect(penalty(Vector3.new(0, 3, 0),
+            Vector3.new(16, 3, 0), band, size)).toBe(0)
+        expect(penalty(Vector3.new(0, 3, 0),
+            Vector3.new(1, 3, 0), band, size)).toBe(125)
+        expect(penalty(Vector3.new(-20, 3, 0),
+            Vector3.new(1, 3, 0), band, size)).toBe(125)
+
+        -- Rotation must follow the actual server-authored band, not assume
+        -- global X/Z coordinates or fabricate a rectangular world axis.
+        local rotated = CFrame.new(32, 0, -40)
+            * CFrame.Angles(0, math.rad(90), 0)
+        local first = rotated:PointToWorldSpace(Vector3.new(-20, 3, 0))
+        local last = rotated:PointToWorldSpace(Vector3.new(20, 3, 0))
+        expect(penalty(first, last, rotated, size)).toBe(90)
+        expect(penalty(first, first, rotated, size)).toBe(0)
+        expect(penalty(first, last, nil, size)).toBe(0)
+        expect(penalty(first, last, rotated, Vector3.new(0, 0, 68))).toBe(0)
+    end)
+
     it("uses a varied fictional identity pool without AI-labelled public names", function()
         local identities = AISurvivorService.identityCatalog()
         expect(#identities >= 20).toBe(true)
