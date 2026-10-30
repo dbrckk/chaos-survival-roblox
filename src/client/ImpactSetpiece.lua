@@ -49,13 +49,16 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         part.CanTouch = false
         part.CanQuery = false
         part.CastShadow = false
+        -- Shrapnel must read as solid matter, not glowing glass/plastic.
+        -- Preserve color-coded impacts; emission belongs to the existing
+        -- warning/flash effects rather than collisionless fragments.
         part.Material = recipe.Kind == "Meteor"
-            and Enum.Material.Glass
-            or Enum.Material.Neon
+            and Enum.Material.Basalt
+            or Enum.Material.Metal
         part.Color = recipe.Kind == "Meteor"
             and payload.color:Lerp(Color3.fromRGB(255, 242, 176), recipe.ColorMix)
             or payload.color:Lerp(Color3.fromRGB(255, 246, 246), recipe.ColorMix)
-        part.Transparency = recipe.Kind == "Meteor" and 0.12 or 0.22
+        part.Transparency = recipe.Kind == "Meteor" and 0.06 or 0.16
         part.Size = recipe.Kind == "Meteor"
             and Vector3.new(fragment.Width, fragment.Length, fragment.Width * 1.8)
             or Vector3.new(fragment.Width, 0.08, fragment.Length * 0.50)
