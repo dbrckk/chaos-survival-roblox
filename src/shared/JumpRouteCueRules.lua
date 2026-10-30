@@ -383,16 +383,17 @@ function JumpRouteCueRules.safeGuidedPath(fromPosition, toPosition, warnings)
             end
             local radius = math.clamp(math.max(diameter, visibleDiameter) * 0.5
                 + 3, 0, 120)
-            local start = Vector3.new(
-                fromPosition.X - warning.Position.X, 0,
-                fromPosition.Z - warning.Position.Z
-            )
-            local finish = Vector3.new(
-                toPosition.X - warning.Position.X, 0,
-                toPosition.Z - warning.Position.Z
-            )
-            -- If standing in a warning, danger arrows take precedence:
-            -- don't advertise an optional parkour objective.
+            -- Real Meteor/Bomb damage uses 3D root-to-impact distance,
+            -- not a flat floor circle. Match its impact center while
+            -- retaining the rookie guide's 3-stud safety buffer: a roof
+            -- above the blast sphere remains a genuinely safe escape.
+            -- Until WarningEndSize replicates, conservatively use the
+            -- visible server-authored marker's current footprint.
+            local impactCenter = warning.Position + Vector3.new(0, 1, 0)
+            local start = fromPosition - impactCenter
+            local finish = toPosition - impactCenter
+            -- Hide optional parkour coaching if a true near-impact route
+            -- intersects this sphere. The main survival warning still wins.
             if start.Magnitude <= radius or finish.Magnitude <= radius then
                 return false
             end
