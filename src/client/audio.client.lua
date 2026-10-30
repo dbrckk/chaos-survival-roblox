@@ -620,8 +620,38 @@ local function alertNearbyHarborSweep()
     end
 end
 
+-- Physical parkour mastery has an authoritative RoundPeakTier attribute.
+-- One small reward chime on a newly validated tier (at most four per
+-- round) makes the objective legible without client-side guesswork,
+-- new audio assets, polling loops, networking or persistent emitters.
+local masteryRoundActive = false
+local lastMasteryChimeTier = 0
+
+local function onMasteryTierConfirmed()
+    local tier = math.clamp(math.floor(tonumber(
+        player:GetAttribute("RoundPeakTier")) or 0), 0, 4)
+    if not masteryRoundActive or tier <= lastMasteryChimeTier
+        or tier <= 0
+        or player:GetAttribute("RoundEliminated") == true then
+        return
+    end
+    lastMasteryChimeTier = tier
+    playRaw("Reward", 0, tier == 4 and 0.36 or 0.20, 0.06)
+end
+
+player:GetAttributeChangedSignal("RoundPeakTier"):Connect(onMasteryTierConfirmed)
+
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = state.phase
+    local isMastery = phase == "round"
+        and state.challengeMetric == "highGround"
+    if not isMastery then
+        lastMasteryChimeTier = 0
+    end
+    masteryRoundActive = isMastery
+    if isMastery then
+        onMasteryTierConfirmed()
+    end
     local seconds = tonumber(state.seconds) or 0
     currentIntensity = math.clamp(tonumber(state.intensity) or 1, 0.85, 1.25)
     local overdrive = phase == "round" and state.overdrive == true

@@ -218,6 +218,7 @@ end)
 local currentState = nil
 local visibleToken = 0
 local completedChallengeId = nil
+local lastNotifiedPeakTier = 0
 local rookieCompactMode = false
 local isHiding = false
 local lastIntensityScale = nil
@@ -537,7 +538,36 @@ player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundNearMisses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundMechanicUses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundMomentumBest"):Connect(refresh)
-player:GetAttributeChangedSignal("RoundPeakTier"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundPeakTier"):Connect(function()
+    -- Each increase is confirmed by the server after two grounded
+    -- observations of a real deck. Give the player a restrained cue
+    -- for intermediate tiers using the already-visible challenge pill.
+    -- No extra BillboardGui, timer, animation loop or RemoteEvent.
+    local previous = lastNotifiedPeakTier
+    local peak = math.clamp(math.floor(tonumber(
+        player:GetAttribute("RoundPeakTier")) or 0), 0, 4)
+    lastNotifiedPeakTier = peak
+    refresh()
+
+    local state = currentState
+    if not state or state.phase ~= "round"
+        or state.challengeMetric ~= "highGround"
+        or player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true
+        or peak <= previous or peak <= 0
+        or peak >= (tonumber(state.challengeTarget) or 3)
+        or not root.Visible or isHiding then
+        return
+    end
+
+    challenge.BackgroundColor3 = UITheme.Colors.Green:Lerp(
+        UITheme.Colors.PanelSoft, 0.62
+    )
+    if player:GetAttribute("ReduceMotion") ~= true then
+        scale.Scale = 1.035
+        transition(scale, 0.18, {Scale = 1}, Enum.EasingStyle.Back)
+    end
+end)
 player:GetAttributeChangedSignal("RoundFlowCoins"):Connect(refresh)
 
 player:GetAttributeChangedSignal("RoundChaosShards"):Connect(function()
@@ -580,6 +610,9 @@ end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
+    if state.phase ~= "round" then
+        lastNotifiedPeakTier = 0
+    end
     currentState = state
     refresh()
 end)
