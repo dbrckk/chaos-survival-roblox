@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-30 — Harbor industrial deck language, no Classic visual fallback (unpublished)
+
+- Fix the second missing fifth-arena art branch: `arena-surface-relief.client.lua` still used Classic's metal hatches for Storm Harbor on Android Medium/High. `addHarbor` now authors shallow maritime cargo cleats, rusty-steel/wood-plank materials and engraved load lines at safe exterior service corners, rather than reusing Classic's survey hardware.
+- **LOD contract:** Android Low still gets the original essential 12 shared deck pieces only (zero new Harbor floor geometry). Medium adds 8 inlaid, collision-free local surface parts; High adds 20 detailed parts including mooring tie-downs. All floor-follow with Shrinking Arena. No new server physics, lights, textures, scripts, audio, HUD, raycast or render loops.
+- [Harbor source and acceptance spec](docs/PREMIUM_HARBOR_SKYLINE_2026-10-30.md) now covers both the original 3D skyline and the follow-up floor-identity pass. Engine tests and real-device visual validation are reserved for the next meaningful milestone; this source is **not in the published SHA 82f925c**.
+
 ## 2026-10-30 — Successful verified public playtest update and next Harbor art pass
 
 - **Public Roblox update confirmed:** exact SHA `82f925c320b2525a58acb4944e74435a75a2795c` deployed into the existing Universe `10771083668` / Place `95351659174730` via successful [official public publisher](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41088325686). [Build Validation](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41087607663), [real Roblox Open Cloud Engine Tests](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41087618418) and [one-time exact-SHA source gate](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41087594018) all green. Previously failed source candidate was correctly blocked, with float32 size assertions repaired before publishing.
