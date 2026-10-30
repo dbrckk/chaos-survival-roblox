@@ -268,6 +268,73 @@ local function addOrbital(base, theme, tier)
     end
 end
 
+-- Dedicated STORM HARBOR floor-language. Previously the fifth map fell
+-- through to Classic's machined industrial hatches, undermining its original
+-- timber-and-rusted-steel dock identity. Make shallow, asymmetric cargo
+-- cleats and painted load-line insets, always surface-flush and entirely
+-- passive. These four corners are away from the original spawn/gateway
+-- positions, Harbor's crane service sweep corridors and authored routes.
+-- Low tier retains ONLY the already-existing essential deck plates.
+local function addHarbor(base, theme, tier)
+    local hx, hz = base.Size.X * 0.5, base.Size.Z * 0.5
+    local y = ArenaPresentation.deckArtOffset(base, 0.14)
+    local count = tier.Name == "High" and 8 or 4
+    local metal = theme.Structure:Lerp(Color3.fromRGB(110, 94, 80), 0.34)
+    local insetColor = theme.Detail:Lerp(theme.Surface, 0.38)
+    for i = 1, count do
+        local corner = (i - 1) % 4
+        local sx = corner % 2 == 0 and -1 or 1
+        local sz = corner < 2 and -1 or 1
+        local inner = i > 4
+        local x = sx * (hx * 0.78 - (inner and 9 or 0))
+        local z = sz * (hz * 0.77 - (inner and 9 or 0))
+        local yaw = sx == sz and 90 or 0
+        local plate = makePart(
+            "HarborDeckCargoCleat" .. i,
+            Vector3.new(7.8, 0.14, 2.9),
+            base.CFrame * CFrame.new(x, y, z)
+                * CFrame.Angles(0, math.rad(yaw), 0),
+            metal,
+            i % 2 == 0 and Enum.Material.CorrodedMetal
+                or Enum.Material.WoodPlanks,
+            0.12,
+            false
+        )
+        -- Narrow, embossed stripe is visibly distinct from the 7.5-stud
+        -- orange RED hazard sweep footprints (which remain server-authored).
+        -- No Neon, SurfaceGui, bloom or sound in this floor identity.
+        makePart(
+            "HarborDeckLoadLine" .. i,
+            Vector3.new(5.7, 0.045, 0.23),
+            plate.CFrame * CFrame.new(0, 0.099, 0),
+            insetColor,
+            Enum.Material.Metal,
+            0.20,
+            false
+        )
+    end
+    if tier.Name == "High" then
+        -- Four low-profile steel tie-downs add convincing cargo hardware
+        -- without introducing any step, obstruction or touch detector.
+        for i = 1, 4 do
+            local sx = i % 2 == 0 and 1 or -1
+            local sz = i <= 2 and -1 or 1
+            makePart(
+                "HarborQuayTieDown" .. i,
+                Vector3.new(1.1, 0.16, 1.1),
+                base.CFrame * CFrame.new(
+                    sx * hx * 0.74, ArenaPresentation.deckArtOffset(base, 0.16),
+                    sz * hz * 0.72
+                ),
+                theme.Detail:Lerp(metal, 0.25),
+                Enum.Material.CorrodedMetal,
+                0.11,
+                false
+            )
+        end
+    end
+end
+
 -- Mobile/Low should not turn into a featureless glowing rectangle.
 -- Use a handful of low-profile, matte mechanical plates near the edges
 -- (outside the spawn lanes); unlike bloom and particles they are cheap,
@@ -346,7 +413,9 @@ local function rebuild()
         addCrossroads(base, theme, tier)
     elseif variant == "Orbital" then
         addOrbital(base, theme, tier)
-    else
+    elseif variant == "Harbor" then
+        addHarbor(base, theme, tier)
+    elseif variant == "Classic" then
         addClassic(base, theme, tier)
     end
     stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
