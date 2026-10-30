@@ -392,7 +392,7 @@ end
 -- This is NOT a hazard lock: immediateThreat, collapsing decks, stuck
 -- recovery and a missing destination still override or clear the target.
 -- Ordinary roaming remains spontaneous and may change its mind.
-function AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart)
+function AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart, activeExpedition)
     if targetIsSkyrail == true then
         return true
     end
@@ -403,6 +403,20 @@ function AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart)
         return false
     end
     local step = tonumber(targetPart:GetAttribute("PerimeterStep"))
+    -- A deliberate 8-stage climb (or 4-step side branch) stays committed
+    -- beyond stage two. Do NOT lock an unrelated casual roam target on
+    -- an elevated deck just because its metadata mentions PerimeterStep.
+    local branch = tonumber(targetPart:GetAttribute("BranchStep"))
+    if activeExpedition == true then
+        if step and step >= 1 and step <= 8
+            and step == math.floor(step) then
+            return true
+        end
+        if branch and branch >= 1 and branch <= 4
+            and branch == math.floor(branch) then
+            return true
+        end
+    end
     return step == 1 or step == 2
         or targetPart:GetAttribute("GridCircuitIndex") ~= nil
         or targetPart:GetAttribute("FluxRelayIndex") ~= nil
@@ -411,7 +425,7 @@ end
 -- Long world routes must survive the ordinary roaming rethink clock.
 -- Arrival, urgent hazard overrides, invalid targets and stuck recovery
 -- still clear the goal; a bounded grace period prevents permanent locks.
-function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targetIsSkyrail, targetPart, urgent)
+function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targetIsSkyrail, targetPart, urgent, activeExpedition)
     -- Replanning a casual goal must never overwrite a live disaster escape
     -- after the ordinary timer expires. Survival always takes precedence.
     if urgent == true and typeof(target) == "Vector3" then
@@ -424,7 +438,9 @@ function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targe
         return false
     end
     if phase == "round"
-        and AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart)
+        and AISurvivorRules.committedWorldRoute(
+            targetIsSkyrail, targetPart, activeExpedition
+        )
     then
         -- Limit long crossings to a five-second grace period beyond the
         -- normal rethink deadline, even if the rig keeps moving in circles.
@@ -435,9 +451,36 @@ end
 
 -- Free-form side-to-side motion looks natural on the main floor but can
 -- knock an NPC off a narrow perimeter step or out of a mastery trigger.
-function AISurvivorRules.allowRouteStrafe(targetIsPad, targetIsSkyrail, targetPart)
+function AISurvivorRules.allowRouteStrafe(
+    targetIsPad, targetIsSkyrail, targetPart, activeExpedition)
     return targetIsPad ~= true
-        and not AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart)
+        and not AISurvivorRules.committedWorldRoute(
+            targetIsSkyrail, targetPart, activeExpedition
+        )
+end
+
+-- Confirm a grounded landing on the REAL rotated collision deck.
+-- A horizontal-distance-only test incorrectly completes a stage while
+-- an NPC is airborne beside or above the platform. No raycasts, no
+-- extra physics queries and no client-replicated progress claims.
+function AISurvivorRules.landedOnRouteDeck(deckFrame, deckSize, rootPosition, grounded)
+    if grounded ~= true
+        or typeof(deckFrame) ~= "CFrame"
+        or typeof(deckSize) ~= "Vector3"
+        or typeof(rootPosition) ~= "Vector3"
+        or deckSize.X <= 0 or deckSize.Y <= 0 or deckSize.Z <= 0
+    then
+        return false
+    end
+    local localRoot = deckFrame:PointToObjectSpace(rootPosition)
+    -- Slightly inset the footprint so stepping along an outside edge
+    -- is not mistaken for a successful landing.
+    local halfX = math.max(0.1, deckSize.X * 0.5 - 0.3)
+    local halfZ = math.max(0.1, deckSize.Z * 0.5 - 0.3)
+    return math.abs(localRoot.X) <= halfX
+        and math.abs(localRoot.Z) <= halfZ
+        and localRoot.Y >= deckSize.Y * 0.5 + 1.0
+        and localRoot.Y <= deckSize.Y * 0.5 + 5.5
 end
 
 -- A runner heading for an authored outer parkour route needs time to
