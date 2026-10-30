@@ -2104,12 +2104,13 @@ local function districtTraverseTarget(record, root, now)
         return nil
     end
 
-    local top = deck.Position.Y + deck.Size.Y * 0.5
-    local offset = root.Position - deck.Position
-    local horizontal = Vector3.new(offset.X, 0, offset.Z).Magnitude
-    local standing = horizontal <= math.max(5.1, deck.Size.X * 0.46)
-        and root.Position.Y >= top + 1.0
-        and root.Position.Y <= top + 5.5
+    local humanoid = record.model
+        and record.model:FindFirstChildOfClass("Humanoid")
+    local grounded = humanoid ~= nil
+        and humanoid.FloorMaterial ~= Enum.Material.Air
+    local standing = AISurvivorRules.landedOnRouteDeck(
+        deck.CFrame, deck.Size, root.Position, grounded
+    )
 
     if standing then
         step += 1
@@ -2121,7 +2122,6 @@ local function districtTraverseTarget(record, root, now)
             return nil
         end
         deck = stages[step]
-        top = deck.Position.Y + deck.Size.Y * 0.5
     elseif step > 1 then
         local previous = stages[step - 1]
         local oldTop = previous.Position.Y + previous.Size.Y * 0.5
@@ -3311,7 +3311,8 @@ local function stepRecord(record, now)
             and record.target
             and not record.targetIsPad
             and not AISurvivorRules.committedWorldRoute(
-                record.targetIsSkyrail, record.targetPart
+                record.targetIsSkyrail, record.targetPart,
+                record.districtTraverse ~= nil
             )
             and now >= (record.nextReconsiderAt or 0)
         then
@@ -3357,7 +3358,8 @@ local function stepRecord(record, now)
             record.target,
             record.targetIsSkyrail,
             record.targetPart,
-            urgentTarget ~= nil
+            urgentTarget ~= nil,
+            record.districtTraverse ~= nil
         ) then
             local traits = decisionTraits(record)
             if currentState.phase == "round"
@@ -3396,7 +3398,8 @@ local function stepRecord(record, now)
                 and AISurvivorRules.allowRouteStrafe(
                     record.targetIsPad,
                     record.targetIsSkyrail,
-                    record.targetPart
+                    record.targetPart,
+                    record.districtTraverse ~= nil
                 )
                 and horizontal.Magnitude > 8
                 and math.abs(record.strafeBias or 0) > 0.03

@@ -71,7 +71,16 @@ describe("AI survivor rules", function()
         expect(committed(false, target)).toBe(true)
         target:SetAttribute("PerimeterStep", 3)
         expect(committed(false, target)).toBe(false)
+        -- Only a deliberate expedition owns later decks: casual wanderers
+        -- may still change their minds when seeing an unreachable terrace.
+        expect(committed(false, target, true)).toBe(true)
+        target:SetAttribute("PerimeterStep", 8)
+        expect(committed(false, target, true)).toBe(true)
         target:SetAttribute("PerimeterStep", nil)
+        target:SetAttribute("BranchStep", 4)
+        expect(committed(false, target)).toBe(false)
+        expect(committed(false, target, true)).toBe(true)
+        target:SetAttribute("BranchStep", nil)
 
         target:SetAttribute("GridCircuitIndex", 3)
         expect(committed(false, target)).toBe(true)
@@ -107,8 +116,21 @@ describe("AI survivor rules", function()
         expect(strafe(false, false, waypoint)).toBe(false)
         waypoint:SetAttribute("PerimeterStep", 2)
         expect(chooseAgain("round", 11, 8, destination, false, waypoint)).toBe(false)
+        waypoint:SetAttribute("PerimeterStep", 6)
+        expect(strafe(false, false, waypoint)).toBe(true)
+        expect(strafe(false, false, waypoint, true)).toBe(false)
+        expect(chooseAgain("round", 11, 8, destination,
+            false, waypoint, false, true)).toBe(false)
+        expect(chooseAgain("round", 13, 8, destination,
+            false, waypoint, false, true)).toBe(true)
+        expect(chooseAgain("round", 11, 8, destination,
+            false, waypoint, true, true)).toBe(false)
 
         waypoint:SetAttribute("PerimeterStep", nil)
+        waypoint:SetAttribute("BranchStep", 3)
+        expect(strafe(false, false, waypoint, true)).toBe(false)
+        expect(strafe(false, false, waypoint)).toBe(true)
+        waypoint:SetAttribute("BranchStep", nil)
         waypoint:SetAttribute("GridCircuitIndex", 2)
         expect(chooseAgain("round", 11, 8, destination, false, waypoint)).toBe(false)
         expect(strafe(false, false, waypoint)).toBe(false)
@@ -160,6 +182,28 @@ describe("AI survivor rules", function()
         expect(shouldReplan("round", 10, 0, nil,
             false, floor, true)).toBe(true)
         floor:Destroy()
+    end)
+
+    it("advances perimeter and branch stages only after a real grounded deck landing", function()
+        local landed = AISurvivorRules.landedOnRouteDeck
+        local frame = CFrame.new(36, 8, -18)
+        local size = Vector3.new(12, 6, 12)
+        -- The physical top is Y=11, and a HumanoidRootPart stands above it.
+        expect(landed(frame, size, Vector3.new(36, 13.5, -18), true)).toBe(true)
+        expect(landed(frame, size, Vector3.new(36, 13.5, -18), false)).toBe(false)
+        expect(landed(frame, size, Vector3.new(36, 13.5, -18), nil)).toBe(false)
+        expect(landed(frame, size, Vector3.new(36, 18, -18), true)).toBe(false)
+        expect(landed(frame, size, Vector3.new(36, 13.5, -25), true)).toBe(false)
+        expect(landed(frame, size, Vector3.new(36, 13.5, -18), true)).toBe(true)
+
+        local rotated = frame * CFrame.Angles(0, math.rad(45), 0)
+        local inside = rotated:PointToWorldSpace(Vector3.new(4, 5.5, 4))
+        local outside = rotated:PointToWorldSpace(Vector3.new(6, 5.5, 0))
+        expect(landed(rotated, size, inside, true)).toBe(true)
+        expect(landed(rotated, size, outside, true)).toBe(false)
+        expect(landed(frame, size, nil, true)).toBe(false)
+        expect(landed(frame, Vector3.new(-1, 6, 12),
+            Vector3.new(36, 13.5, -18), true)).toBe(false)
     end)
 
     it("uses a varied fictional identity pool without AI-labelled public names", function()
