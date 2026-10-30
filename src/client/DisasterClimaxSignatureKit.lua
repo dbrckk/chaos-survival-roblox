@@ -57,10 +57,15 @@ function DisasterClimaxSignatureKit.recipe(kind, index, count, span, stage)
             - math.pi * 0.5 + (secondary and 0.18 or -0.16),
         kind == "freeze" and (secondary and 0.10 or -0.10) or 0
     )
-    local length = full * (
+    -- An arena-scaled 40+ stud discharge/ice wedge can hide the very
+    -- escape route it is supposed to telegraph on a mobile camera.
+    -- Keep the same count, placement and progression but cap the visible
+    -- length of each signature, not the actual gameplay hazard.
+    local rawLength = full * (
         kind == "freeze" and (0.11 + stage * 0.012)
             or (0.14 + stage * 0.012)
     )
+    local length = math.min(rawLength, kind == "freeze" and 22 or 26)
     return {
         Kind = kind,
         Wedge = kind == "freeze",

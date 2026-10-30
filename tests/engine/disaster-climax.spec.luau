@@ -21,6 +21,23 @@ local IDS = {
     "JumpShock",
 }
 
+describe("Bounded disaster climax visual strokes on large arenas", function()
+    it("keeps both freeze crystals and electric discharge readable at all stages", function()
+        for _, kind in ipairs({"freeze", "shock"}) do
+            local cap = kind == "freeze" and 22 or 26
+            for stage = 1, 3 do
+                for _, span in ipairs({40, 120, 240}) do
+                    local profile = Signature.recipe(kind, 1, 6, span, stage)
+                    expect(profile ~= nil).toBe(true)
+                    expect(profile.GoalSize.X <= cap).toBe(true)
+                    expect(profile.Size.X <= cap).toBe(true)
+                    expect(profile.GoalSize.X > 0).toBe(true)
+                end
+            end
+        end
+    end)
+end)
+
 describe("Disaster climax progression", function()
     it("covers every disaster with a unique climax profile", function()
         local kinds = {}
