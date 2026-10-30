@@ -1,7 +1,7 @@
 # Final verification after preserving 94 native Harbor decks and correcting
 # test source ownership for the authoritative candidate skyway jump rules.
 # Tests only: NEVER publishes Roblox. All five engine suites + build on exact SHA.
-name: One-time Harbor Cloud Candidate Rules Verified Gate 2026-10-30
+name: One-time Harbor Skill Fairness Final QA 2026-10-30
 on:
   push:
     branches: [main]
@@ -11,7 +11,7 @@ permissions:
   contents: read
   actions: write
 concurrency:
-  group: premium-harbor-candidate-source-retest-20261030
+  group: harbor-skill-fairness-final-quality-20261030
   cancel-in-progress: false
 jobs:
   final-quality:
