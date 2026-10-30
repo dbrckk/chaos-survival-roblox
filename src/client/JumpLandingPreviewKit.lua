@@ -49,6 +49,25 @@ function JumpLandingPreviewKit.new(player)
     local observedPlatforms = nil
     local observedHelix = nil
 
+    -- The server already creates live warning Parts at workspace root.
+    -- Subscribe once; do not enumerate the full DataModel at 10 Hz while
+    -- a player is airborne. Removed impacts disappear immediately from
+    -- the next safety evaluation, even when their visual fade is mid-tween.
+    local impactWarnings = {}
+    local function trackImpact(part)
+        if part:IsA("BasePart") and (part.Name == "MeteorWarning"
+            or part.Name == "BombWarning") then
+            impactWarnings[part] = true
+        end
+    end
+    for _, part in ipairs(workspace:GetChildren()) do
+        trackImpact(part)
+    end
+    workspace.ChildAdded:Connect(trackImpact)
+    workspace.ChildRemoved:Connect(function(part)
+        impactWarnings[part] = nil
+    end)
+
     local function hide()
         -- No redundant property writes every RenderStep in the lobby or
         -- during a grounded run: Android needs the visual state, not 60Hz
@@ -66,10 +85,10 @@ function JumpLandingPreviewKit.new(player)
             and Rules.surfaceStatus(hit.Instance) ~= "Unavailable"
     end
 
-    -- Inspect ONLY the active arena's three known mechanic folders, and
-    -- only when the 10Hz reticle already found a real impending landing.
-    -- Four floor bands or four skybridge shutters at most, no workspace
-    -- search, no extra collision rays and no separate event/render owner.
+    -- Inspect only currently tracked authoritative impact warnings and
+    -- the three known mechanic folders, and only once a valid, near-term
+    -- physical contact was raycast. No 10Hz workspace scan, extra collision
+    -- rays, or second event/render owner.
     local function landingHazards(arena)
         local hazards = {}
         -- RoundLava is a non-queryable server hazard at workspace root,
@@ -78,6 +97,13 @@ function JumpLandingPreviewKit.new(player)
         local lava = workspace:FindFirstChild("RoundLava")
         if lava and lava:IsA("BasePart") then
             hazards[#hazards + 1] = lava
+        end
+        for marker in pairs(impactWarnings) do
+            if marker.Parent == workspace then
+                hazards[#hazards + 1] = marker
+            else
+                impactWarnings[marker] = nil
+            end
         end
         local mechanics = arena and arena:FindFirstChild("Mechanics")
         if not mechanics then return hazards end
