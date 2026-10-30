@@ -153,7 +153,8 @@ describe("Player data schema", function()
 
         expect(data.HapticsDisabled).toBe(false)
         expect(data.DataVersion).toBe(DataSchema.Version)
-        expect(DataSchema.Version).toBe(8)
+        -- Legacy haptic defaults must survive the v9 parkour record migration.
+        expect(DataSchema.Version).toBe(9)
     end)
 
     it("migrates existing profiles to full independent mixer levels", function()
