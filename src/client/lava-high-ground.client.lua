@@ -7,6 +7,7 @@ local LocalizationService = game:GetService("LocalizationService")
 
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
@@ -27,6 +28,8 @@ local signs = {}
 local collapseConnections = {}
 local currentState = nil
 local rebuildQueued = false
+local currentLava = nil
+local lavaPositionConnection = nil
 
 local function lavaIsActive(state)
     if type(state) ~= "table"
@@ -67,17 +70,42 @@ local function refresh()
     local active = lavaIsActive(currentState)
         and isCurrentArena(currentState)
     local quality = visualQuality()
+    local lava = currentLava and currentLava.Parent == workspace
+        and currentLava or nil
     for _, sign in ipairs(signs) do
         local platform = sign.platform
-        -- Dual-hazard rounds may collapse the same high deck. Never
-        -- advertise an absent or temporarily non-solid "safe" platform.
+        -- A tier-four deck may still be below the live flood line.
+        -- High-ground status alone is NOT proof of safety: use exactly
+        -- the server's standing-root lava clearance, even during surges.
+        -- A collapsed deck can never be recommended as a refuge either.
         local visible = active
             and platform.Parent == activePlatforms
             and platform.CanCollide
             and platform:GetAttribute("CollapsePhase") == nil
+            and not (lava and JumpRouteCueRules.lavaOnDeck(platform, lava))
         sign.billboard.Enabled = visible
         sign.outline.Enabled = visible and quality ~= "Low"
     end
+end
+
+-- Subscribe only to the replicated server hazard's actual motion.
+-- No per-frame sweep, new polling loop, client physics or remote. Every
+-- old lava connection is disconnected when the round replaces the Part.
+local function bindLava(lava)
+    if currentLava == lava then return end
+    if lavaPositionConnection then
+        lavaPositionConnection:Disconnect()
+        lavaPositionConnection = nil
+    end
+    currentLava = lava and lava:IsA("BasePart")
+        and lava.Name == "RoundLava" and lava.Parent == workspace
+        and lava or nil
+    if currentLava then
+        lavaPositionConnection = currentLava:GetPropertyChangedSignal(
+            "Position"
+        ):Connect(refresh)
+    end
+    refresh()
 end
 
 local function createSign(platform, accent)
@@ -250,6 +278,9 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 workspace.ChildAdded:Connect(function(child)
+    if child.Name == "RoundLava" and child:IsA("BasePart") then
+        bindLava(child)
+    end
     if child.Name == "GeneratedMap"
         and workspace:FindFirstChild("GeneratedMap") == child then
         bindMap(child)
@@ -257,6 +288,9 @@ workspace.ChildAdded:Connect(function(child)
 end)
 
 workspace.ChildRemoved:Connect(function(child)
+    if child == currentLava then
+        bindLava(workspace:FindFirstChild("RoundLava"))
+    end
     if child == activeMap then
         bindMap(workspace:FindFirstChild("GeneratedMap"))
     end
@@ -264,3 +298,4 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refresh)
 bindMap(workspace:FindFirstChild("GeneratedMap"))
+bindLava(workspace:FindFirstChild("RoundLava"))
