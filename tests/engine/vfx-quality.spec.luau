@@ -1753,6 +1753,53 @@ describe("Imported 3D per-model Android LOD", function()
     end)
 end)
 
+describe("Five-arena original platform side material identity", function()
+    it("uses distinct affordable construction materials without fake collision on Medium or High", function()
+        local expected = {
+            Classic = Enum.Material.DiamondPlate,
+            Towers = Enum.Material.CorrodedMetal,
+            Crossroads = Enum.Material.Concrete,
+            Orbital = Enum.Material.Metal,
+            Harbor = Enum.Material.WoodPlanks,
+        }
+        local platform = Instance.new("Part")
+        platform.Size = Vector3.new(12, 2, 12)
+        platform.Anchored = true
+        platform.Parent = workspace
+        local folder = Instance.new("Folder")
+        folder.Parent = workspace
+        for variant, material in pairs(expected) do
+            local theme = VisualTheme.arena(variant)
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local pieces = PlatformFinishKit.buildSideRails(
+                    folder, platform, tier, theme, variant
+                )
+                local count = tier == "Low" and 0
+                    or (tier == "Medium" and 2 or 4)
+                expect(#pieces).toBe(count)
+                for _, piece in ipairs(pieces) do
+                    expect(piece.Material).toBe(material)
+                    expect(piece:GetAttribute("ChaosPlatformTrim")).toBe(true)
+                    expect(piece.Anchored).toBe(false)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.CastShadow).toBe(false)
+                    expect(piece:FindFirstChild("ChaosPlatformTrimWeld") ~= nil).toBe(true)
+                    expect((piece.CFrame.Position - platform.Position).Magnitude < 12)
+                        .toBe(true)
+                end
+                folder:ClearAllChildren()
+            end
+        end
+        expect(#PlatformFinishKit.buildSideRails(
+            folder, platform, "High", VisualTheme.arena("Harbor"), "Unknown"
+        )).toBe(0)
+        folder:Destroy()
+        platform:Destroy()
+    end)
+end)
+
 describe("Storm Harbor maritime deck finish in all Android quality tiers", function()
     it("builds exactly two/four/six original floor details on the real harbor base", function()
         local root = MapBuilder.build(

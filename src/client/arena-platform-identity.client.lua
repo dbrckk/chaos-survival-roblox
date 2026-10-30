@@ -381,7 +381,7 @@ local function rebuild()
                 registerVisual(platform, piece)
             end
             for _, piece in ipairs(PlatformFinishKit.buildSideRails(
-                folder, platform, tier.Name, theme
+                folder, platform, tier.Name, theme, variant
             )) do
                 registerVisual(platform, piece)
             end
