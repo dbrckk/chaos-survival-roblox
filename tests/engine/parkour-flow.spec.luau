@@ -583,4 +583,92 @@ describe("Actual bidirectional Harbor cross-quay parkour", function()
     end)
 end)
 
+-- Every rewarded leap requires a real server Humanoid takeoff and a
+-- physical landing; the horizontal skyways must not silently reset the
+-- combo, unlike arbitrary flat movements between unrelated platforms.
+describe("Server-owned Harbor elevated parkour scoring", function()
+    it("keeps both bidirectional cargo-to-skyway skill chains", function()
+        local id = "Harbor"
+        local variant = ArenaVariants.get(id)
+        local root = MapBuilder.build(Config, id, ArenaVariants)
+        local platforms = root:FindFirstChild("Arena"):FindFirstChild("Platforms")
+        local startIndex = #variant.Platforms
+            + #variant.PerimeterPlatforms
+            + #variant.BranchPlatforms
+            + #variant.CrosslinkPlatforms
+
+        for lane = 1, 2 do
+            local westRoute = lane == 1 and 1 or 3
+            local west = platforms:FindFirstChild(
+                "Platform" .. ((westRoute - 1) * 7 + 7)
+            )
+            local east = platforms:FindFirstChild(
+                "Platform" .. (westRoute * 7 + 7)
+            )
+            local decks = {}
+            for step = 1, 7 do
+                decks[step] = platforms:FindFirstChild(
+                    "Platform" .. (startIndex + (lane - 1) * 7 + step)
+                )
+            end
+
+            local now = 10
+            local memory = ParkourFlow.advance(
+                nil, west, platforms, Config.ArenaCenter,
+                id, now, standingPosition(west)
+            )
+            local function leap(to)
+                local from = memory.deck
+                expect(ParkourFlow.legalJump(
+                    from, to, platforms, Config.ArenaCenter, id
+                )).toBe(true)
+                local tookOff
+                memory, tookOff = ParkourFlow.takeoff(
+                    memory, platforms, standingPosition(from), now + 0.35
+                )
+                expect(tookOff).toBe(true)
+                local earned
+                memory, earned = ParkourFlow.advance(
+                    memory, to, platforms, Config.ArenaCenter,
+                    id, now + 0.90, standingPosition(to)
+                )
+                expect(earned).toBe(true)
+                now += 0.90
+            end
+
+            for step = 1, 7 do
+                leap(decks[step])
+                expect(memory.chain).toBe(step)
+            end
+            leap(east)
+            expect(memory.best).toBe(7)
+            expect(ParkourFlow.bonusXP(memory.best)).toBe(7)
+
+            for step = 7, 1, -1 do
+                leap(decks[step])
+                expect(memory.chain).toBe(7)
+            end
+            leap(west)
+
+            -- Cross-variant abuse and warned/noncolliding destinations
+            -- must never convert into a server XP combo.
+            expect(ParkourFlow.legalJump(
+                west, decks[1], platforms, Config.ArenaCenter, "Classic"
+            )).toBe(false)
+            decks[1]:SetAttribute("CollapsePhase", "Warning")
+            expect(ParkourFlow.legalJump(
+                west, decks[1], platforms, Config.ArenaCenter, id
+            )).toBe(false)
+            decks[1]:SetAttribute("CollapsePhase", nil)
+            decks[1].CanCollide = false
+            expect(ParkourFlow.legalJump(
+                west, decks[1], platforms, Config.ArenaCenter, id
+            )).toBe(false)
+            decks[1].CanCollide = true
+        end
+
+        root:Destroy()
+    end)
+end)
+
 return nil
