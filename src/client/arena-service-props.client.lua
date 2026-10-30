@@ -264,6 +264,75 @@ local function addOrbital(base, theme, tier)
     end
 end
 
+
+-- Storm Harbor has its own marine hardware. Never fall back to Classic's
+-- television camera tripods: a port needs solid, legible mooring equipment.
+-- All pieces are anchored visual-only geometry, with 2 / 4 / 6 fittings
+-- on Low / Medium / High. No new physics, sounds, meshes or render loops.
+local function addHarbor(base, theme, tier)
+    local hx, hz = base.Size.X * 0.5, base.Size.Z * 0.5
+    local placements = {
+        {-0.89, -0.68, 20}, {0.89, 0.68, 200},
+        {-0.89, 0.68, 160}, {0.89, -0.68, -20},
+        {-0.68, -0.89, 90}, {0.68, 0.89, -90},
+    }
+    local agedIron = theme.Structure:Lerp(Color3.fromRGB(106, 91, 76), 0.38)
+    local rubbedSteel = theme.Detail:Lerp(Color3.fromRGB(150, 135, 113), 0.32)
+    for i = 1, math.min(budget(tier.Name), #placements) do
+        local d = placements[i]
+        -- The footing is flush with the real dock top, entirely inside
+        -- the authoritative floor, outside the main crane sweep corridors.
+        local frame = localFrame(
+            base, d[1] * hx, base.Size.Y * 0.5 + 0.14,
+            d[2] * hz, d[3]
+        )
+        local footing = makePart(
+            "HarborMooringFooting" .. i,
+            Vector3.new(3.5, 0.28, 2.8),
+            frame,
+            agedIron, Enum.Material.CorrodedMetal, 0.06
+        )
+        makePart(
+            "HarborMooringStem" .. i,
+            Vector3.new(0.96, 0.94, 1.0),
+            frame * CFrame.new(0, 0.53, 0),
+            agedIron, Enum.Material.Metal, 0.03
+        )
+        makePart(
+            "HarborMooringCrossHead" .. i,
+            Vector3.new(2.46, 0.38, 1.14),
+            frame * CFrame.new(0, 1.00, 0),
+            rubbedSteel, Enum.Material.CorrodedMetal, 0.03
+        )
+
+        -- Medium and High receive genuine bolted feet and diegetic berth
+        -- labels, never Classic's camera optics or bright neon fins.
+        if tier.Name ~= "Low" then
+            for side = -1, 1, 2 do
+                makePart(
+                    "HarborMooringAnchorBolt" .. i .. "_" .. side,
+                    Vector3.new(0.34, 0.18, 0.34),
+                    frame * CFrame.new(side * 1.24, 0.20, 0),
+                    rubbedSteel, Enum.Material.Metal, 0.08,
+                    Enum.PartType.Ball
+                )
+            end
+            addSurfaceLabel(
+                footing, string.format("BERTH %02d", i),
+                theme.Detail, tier, Enum.NormalId.Top
+            )
+        end
+        if tier.Name == "High" then
+            makePart(
+                "HarborMooringWearPlate" .. i,
+                Vector3.new(1.14, 0.05, 0.96),
+                frame * CFrame.new(0, 0.17, 0),
+                rubbedSteel, Enum.Material.DiamondPlate, 0.20
+            )
+        end
+    end
+end
+
 local function rebuild()
     clear()
 
@@ -284,7 +353,9 @@ local function rebuild()
         addCrossroads(base, theme, tier)
     elseif variant == "Orbital" then
         addOrbital(base, theme, tier)
-    else
+    elseif variant == "Harbor" then
+        addHarbor(base, theme, tier)
+    elseif variant == "Classic" then
         addClassic(base, theme, tier)
     end
 
