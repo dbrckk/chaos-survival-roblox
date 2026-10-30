@@ -5,6 +5,7 @@
 -- Works only in veteran, single-hazard rounds already eligible for the
 -- existing Skybridge Pressure mechanic; never stacks with that outage.
 local TweenService = game:GetService("TweenService")
+local CollectionService = game:GetService("CollectionService")
 local SkybridgePressure = require(script.Parent.SkybridgePressure)
 
 local SkybridgeShutters = {}
@@ -61,6 +62,9 @@ function SkybridgeShutters.gateFor(bridge, folder)
     gate:SetAttribute("BridgeName", bridge.Name)
     gate:SetAttribute("ShutterPhase", "Idle")
     gate.Parent = folder
+    -- Client-only locale/accessibility notice follows this real object.
+    -- Tags replicate with streamed-in gates; no descendant polling.
+    CollectionService:AddTag(gate, "TowerSkybridgeShutter")
     return {
         bridge = bridge,
         gate = gate,
