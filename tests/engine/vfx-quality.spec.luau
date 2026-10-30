@@ -1753,6 +1753,51 @@ describe("Imported 3D per-model Android LOD", function()
     end)
 end)
 
+describe("Five-arena near-field diagonal load-bearing identity", function()
+    it("uses actual five material profiles with existing mobile budgets and no collision", function()
+        local materials = {
+            Classic = Enum.Material.DiamondPlate,
+            Towers = Enum.Material.CorrodedMetal,
+            Crossroads = Enum.Material.Concrete,
+            Orbital = Enum.Material.Metal,
+            Harbor = Enum.Material.WoodPlanks,
+        }
+        local platform = Instance.new("Part")
+        platform.Size = Vector3.new(12, 2, 12)
+        platform.Anchored = true
+        platform.Parent = workspace
+        local folder = Instance.new("Folder")
+        folder.Parent = workspace
+        for variant, material in pairs(materials) do
+            for _, tier in ipairs({"Low", "Medium", "High"}) do
+                local parts = PlatformFinishKit.buildLoadBraces(
+                    folder, platform, variant, tier, VisualTheme.arena(variant)
+                )
+                expect(#parts).toBe(tier == "Low" and 0
+                    or (tier == "Medium" and 2 or 4))
+                for _, part in ipairs(parts) do
+                    expect(part.Material).toBe(material)
+                    expect(part:GetAttribute("ChaosLoadBrace")).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    expect(part:FindFirstChild("ChaosPlatformTrimWeld") ~= nil)
+                        .toBe(true)
+                end
+                folder:ClearAllChildren()
+            end
+        end
+        platform:SetAttribute("ChaosSkybridge", true)
+        expect(#PlatformFinishKit.buildLoadBraces(
+            folder, platform, "Harbor", "High",
+            VisualTheme.arena("Harbor")
+        )).toBe(0)
+        folder:Destroy()
+        platform:Destroy()
+    end)
+end)
+
 describe("Five-arena original platform side material identity", function()
     it("uses distinct affordable construction materials without fake collision on Medium or High", function()
         local expected = {

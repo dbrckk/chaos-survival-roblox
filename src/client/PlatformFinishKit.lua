@@ -432,7 +432,23 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     if count == 0 or math.min(sx, sz) < 9 then return {} end
 
     local drop = math.clamp(math.min(sx, sz) * 0.24, 1.5, 3.0)
-    local color = theme.Structure:Lerp(theme.Detail, 0.28)
+    -- Each real close-up jump deck has its own load-bearing language.
+    -- Reuse the same 0/2/4 brace budget, welds and shrink/collapse owner:
+    -- no new physics, decorative parts, loops or fake reachable ledges.
+    local profiles = {
+        Classic = {material = Enum.Material.DiamondPlate, width = 0.55,
+            depth = 0.58, tone = theme.Detail:Lerp(theme.Structure, 0.44)},
+        Towers = {material = Enum.Material.CorrodedMetal, width = 0.75,
+            depth = 0.64, tone = theme.Structure:Lerp(theme.Detail, 0.22)},
+        Crossroads = {material = Enum.Material.Concrete, width = 0.68,
+            depth = 0.60, tone = theme.Surface:Lerp(theme.Structure, 0.55)},
+        Orbital = {material = Enum.Material.Metal, width = 0.42,
+            depth = 0.48, tone = theme.Detail:Lerp(theme.Secondary, 0.35)},
+        Harbor = {material = Enum.Material.WoodPlanks, width = 0.70,
+            depth = 0.58, tone = theme.Surface:Lerp(Color3.fromRGB(104, 80, 58), 0.38)},
+    }
+    local profile = profiles[variant]
+    local color = profile.tone
     local corners = {
         {-1, -1},
         {1, 1},
@@ -453,8 +469,8 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
         local brace = add(
             parent, platform, variant .. "LoadBrace" .. i,
             CFrame.lookAt(midpoint, finish),
-            Vector3.new(0.44, 0.55, length),
-            color, Enum.Material.Metal, tier == "High" and 0.08 or 0.14
+            Vector3.new(profile.width, profile.depth, length),
+            color, profile.material, tier == "High" and 0.08 or 0.14
         )
         brace:SetAttribute("ChaosLoadBrace", true)
         built[#built + 1] = brace
