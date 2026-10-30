@@ -1,7 +1,15 @@
 -- Server-verified consecutive physical platform landings. No client
 -- messages, touch shortcuts, invented checkpoints or movement modifiers.
 -- One raycast is sampled only after a humanoid's actual landing event.
-local JumpRouteCueRules = require(game:GetService("ReplicatedStorage").Shared.JumpRouteCueRules)
+-- Production requires the live replicated rule module. Real Roblox
+-- Open Cloud tests execute REPOSITORY source against an older, already-
+-- published place: the published Shared folder can predate HarborSkyway
+-- functions, so Cloud must resolve candidate rules from source instead
+-- of mistakenly testing new scoring against stale published modules.
+-- The same strict live/source split is already used by server AI services.
+local JumpRouteCueRules = if script
+    then require(game:GetService("ReplicatedStorage").Shared.JumpRouteCueRules)
+    else require("../shared/JumpRouteCueRules")
 
 local ParkourFlow = {}
 
