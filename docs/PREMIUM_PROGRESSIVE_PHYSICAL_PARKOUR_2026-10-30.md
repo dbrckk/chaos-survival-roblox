@@ -30,4 +30,10 @@ New cases in the already-registered `tests/engine/parkour-flow.spec.luau` cover 
 
 For premium acceptance **beyond automation**, a real Android + PC play session must measure early-stage success against late-stage completion, input latency, overshoot/falls and 30/60 fps frame pacing. Verify players still identify where to jump during simultaneous disasters and find the optional safe branches without excessive hints. In particular test low-gravity, speed surge, collapsing platforms, streaming/reconnect, bots and the last narrow Harbor deck.
 
+### Recovery guidance under repeated missed attempts
+
+The previous optional veteran coach reset its 5.2-second wait whenever a character jumped. An expert who repeatedly tried and failed the same ledge could therefore remain stranded *forever* without assistance. The same effect happened when simply rising vertically more than 3.4 studs: the old 3D progress distance counted jump height as if it were traversal.
+
+The existing client now **hides its single physical target cue while airborne but preserves the same-deck stall timer**, measures actual horizontal X/Z progress, and only resets when a new grounded deck is reached, the avatar moves more than 3.4 studs horizontally, the character respawns, the arena changes, or the round becomes ineligible. The cue appears after a genuine stall **including several unsuccessful hops**, while a skilled player who progresses through the course sees no persistent GPS overlay. A pure distance helper and engine assertions protect these decisions without any new polling loop, billboard, remote event or jump physics modifications. No tests were run during this improvement phase.
+
 **Current status:** source improvement only, not a certified final AAA product and not a public Roblox update.
