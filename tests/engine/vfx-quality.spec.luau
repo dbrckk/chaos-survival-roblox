@@ -22,6 +22,7 @@ local SceneryLodRules = require("../../src/shared/SceneryLodRules")
 local SceneryLodCache = require("../../src/client/SceneryLodCache")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
+local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
 
 describe("Parkour sound response in real Roblox engine", function()
     it("uses independent, short nonlooped takeoff and landing identities", function()
@@ -1850,5 +1851,67 @@ describe("Storm Harbor engine and Android scenery certification", function()
     end)
 
 end)
+
+
+describe("Storm Harbor original industrial skyline on all Android LOD tiers", function()
+    it("uses unique maritime 3D cargo geometry, not Classic/Orbital silhouettes", function()
+        local base = Instance.new("Part")
+        base.Name = "HarborSilhouettePhysicalFloor"
+        base.Size = Vector3.new(320, 2, 320)
+        base.CFrame = CFrame.new(35, 8, -19)
+            * CFrame.Angles(0, math.rad(26), 0)
+        base.Anchored = true
+        base.Parent = workspace
+        local art = Instance.new("Folder")
+        art.Name = "LocalHarborSilhouetteTest"
+        art.Parent = workspace
+        local theme = VisualTheme.arena("Harbor")
+        local expectedNames = {
+            "HarborMooringSpire", "HarborDockBoom",
+            "HarborCargoHoist", "HarborNavigationCrown",
+        }
+        local names = ArenaSilhouetteAccentKit.names("Harbor")
+        expect(#names).toBe(4)
+        for index, name in ipairs(expectedNames) do
+            expect(names[index]).toBe(name)
+        end
+        expect(#ArenaSilhouetteAccentKit.names("Unknown")).toBe(0)
+
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            art:ClearAllChildren()
+            local count = tier == "High" and 4 or 3
+            local pieces = ArenaSilhouetteAccentKit.build(
+                art, base, "Harbor", tier, theme
+            )
+            expect(#pieces).toBe(count)
+            expect(#art:GetChildren()).toBe(count)
+            for i, piece in ipairs(pieces) do
+                expect(piece.Name).toBe(expectedNames[i])
+                expect(piece:IsA("BasePart")).toBe(true)
+                expect(piece:GetAttribute("ChaosSilhouetteAccent")).toBe(true)
+                expect(piece:GetAttribute("ArenaVariant")).toBe("Harbor")
+                expect(piece.Anchored).toBe(true)
+                expect(piece.CanCollide).toBe(false)
+                expect(piece.CanTouch).toBe(false)
+                expect(piece.CanQuery).toBe(false)
+                expect(piece.CastShadow).toBe(false)
+                -- Every maritime landmark part is beyond the ACTUAL
+                -- base's rotated playable Z boundary, never a collision.
+                local localPos = base.CFrame:PointToObjectSpace(piece.Position)
+                expect(localPos.Z > base.Size.Z * 0.5 + 10).toBe(true)
+                expect(piece.Size.X > 0 and piece.Size.Y > 0
+                    and piece.Size.Z > 0).toBe(true)
+            end
+            expect(pieces[1].Material).toBe(Enum.Material.CorrodedMetal)
+            expect(pieces[3].Material).toBe(Enum.Material.DiamondPlate)
+            if tier == "High" then
+                expect(pieces[4].Shape).toBe(Enum.PartType.Cylinder)
+            end
+        end
+        art:Destroy()
+        base:Destroy()
+    end)
+end)
+
 
 return nil
