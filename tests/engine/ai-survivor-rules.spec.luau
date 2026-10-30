@@ -1029,6 +1029,41 @@ describe("AI survivor rules", function()
         ) == nil).toBe(true)
     end)
 
+    it("responds to actual timed skybridge shutters with physically supported retreat or waiting", function()
+        local rule = AISurvivorRules.skybridgeShutterEscapeTarget
+        local north = CFrame.new(0, 12.5, -28)
+        local length = Vector3.new(49, 1, 4.5)
+        local warning = "Warning"
+        local right = rule(Vector3.new(15, 15.4, -28), north, length, warning)
+        expect(right ~= nil and right.X > 26).toBe(true)
+        local left = rule(Vector3.new(-15, 15.4, -28), north, length, "Raised")
+        expect(left ~= nil and left.X < -26).toBe(true)
+
+        -- A bot standing at the gate must not be sent THROUGH the
+        -- collision or sideways into open air. It holds until clear;
+        -- the gate's real server occupancy check cancels unsafe closure.
+        local center = Vector3.new(0.5, 15.4, -28)
+        expect(rule(center, north, length, "Raising")).toBe(center)
+        expect(rule(center, north, length, "Idle") == nil).toBe(true)
+        expect(rule(center, north, length, nil) == nil).toBe(true)
+        expect(rule(center, north, length, "Gone") == nil).toBe(true)
+
+        local west = CFrame.new(-28, 12.5, 0)
+        local westSize = Vector3.new(4.5, 1, 49)
+        local farEnd = rule(
+            Vector3.new(-28, 15.4, -12), west, westSize, "Warning"
+        )
+        expect(farEnd ~= nil and farEnd.Z < -26).toBe(true)
+        expect(math.abs(farEnd.X + 28) < 0.1).toBe(true)
+        expect(rule(Vector3.new(0, 3, -28), north, length, warning)
+            == nil).toBe(true)
+        expect(rule(Vector3.new(0, 15.4, -38), north, length, warning)
+            == nil).toBe(true)
+        expect(rule(Vector3.new(0, 15.4, -28), north,
+            Vector3.new(49, 1, 2), warning) == nil).toBe(true)
+        expect(rule(nil, north, length, warning) == nil).toBe(true)
+    end)
+
     it("allows one pre-jump per Shock warning and ignores unrelated markers", function()
         local handled = {}
         local shock = Instance.new("Part")
