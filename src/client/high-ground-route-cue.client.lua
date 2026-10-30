@@ -117,7 +117,7 @@ local function orbitalNext(arena, from, root)
     return nil
 end
 
-local function show(target, isRamp, remaining, returnToRamp)
+local function show(target, isRamp, achieved, required, returnToRamp)
     if not marker then
         marker = Instance.new("BillboardGui")
         marker.Name = "GroundedMasteryRouteCue"
@@ -158,7 +158,12 @@ local function show(target, isRamp, remaining, returnToRamp)
     else
         message = french and "VERS LE SOMMET  ↑" or "CLIMB HIGHER  ↑"
     end
-    caption.Text = message
+    -- Explicit progress is more actionable than an indefinite arrow.
+    -- Use only the player's server-replicated peak and the current
+    -- server-issued requirement; never count local raycasts as score.
+    local progress = string.format("  %d/%d",
+        math.min(achieved, required), required)
+    caption.Text = message .. progress
     local tier = player:GetAttribute("VfxQualityTier")
     marker.MaxDistance = tier == "Low" and 36 or (tier == "Medium" and 44 or 48)
     if currentTarget ~= target then
@@ -178,7 +183,7 @@ local function show(target, isRamp, remaining, returnToRamp)
             )
         end
     end
-    marker.Enabled = remaining > 0
+    marker.Enabled = achieved < required
 end
 
 local function update()
@@ -275,7 +280,7 @@ local function update()
         hide()
         return
     end
-    show(target, isRamp, required - achieved, returnToRamp)
+    show(target, isRamp, achieved, required, returnToRamp)
 end
 
 states.OnClientEvent:Connect(function(state)
