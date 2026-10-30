@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-30 — Fair live Tower shutter reactions for bots and real nearby audio (unpublished)
+
+- Correct a **live behavior bug** left by the timed 2.05-stud metal shutter feature: a survivor bot could commit to a real Tower skybridge while it was `Idle` and keep sprinting toward the barrier once it entered `Warning`, `Raising`, or `Raised`. AI now reads only the four current, server-owned bridge gate phases; with the existing personality-dependent reaction time, it physically retreats toward the nearest supported tower endpoint or holds its position at a gate it cannot safely pass. Already-committed Skyrail crossings are cancelled before any boost into the blocker. Normal Humanoid movement, hazard priorities and safety exit centreline stay unchanged; no AI teleport or speed buff.
+- The existing `audio.client.lua` RoundState listener plays one quiet, **nearby-only** `PlatformWarning` for the exact server warning timestamp, reusing the game's existing mute/effects-volume controls and official local sound. No client loop, asset purchase, new SoundId, or RemoteEvent. Remote survivors, eliminated players and spectators do not hear a proximity cue.
+- Extend existing real Roblox engine AI specs with four-axis bridge geometry, centerline holding, unsupported/off-map rejection, inactive phases and both bridge orientations. Update [premium completion/acceptance plan](docs/PREMIUM_BENCHMARK_AND_COMPLETION_PLAN_2026-10-30.md) with bot screenshot and device-audio acceptance.
+- **No tests executed in the iterative development phase**, no new Roblox publication, no invented FPS or achievement data.
+
 ## 2026-10-30 — Android jump reliability and touch descent camera (unpublished)
 
 - Fix a real delayed replication bug: the old jump-assist script stopped listening if the Humanoid arrived >5 seconds after respawn. It now attaches event-driven whenever the Humanoid appears, supports same-character Humanoid replacement, and disconnects all old callbacks on respawn. Zero per-frame polling.
