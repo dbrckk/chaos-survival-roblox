@@ -614,8 +614,8 @@ ensureRenderLoop = function()
                 cueBadge.Text = "!"
                 local fr = string.sub(string.lower(tostring(localeId)), 1, 2) == "fr"
                 if harborGuide.phase == "Pulse" then
-                    cueText.Text = fr and "BALAYAGE !  ÉCARTE-TOI"
-                        or "SWEEP ACTIVE!  MOVE"
+                    cueText.Text = fr and "BALAYAGE • BOUGE !"
+                        or "SWEEP • MOVE NOW!"
                 else
                     cueText.Text = string.format("%s  %.1fs",
                         fr and "SAUTE OU SORS" or "JUMP OR EXIT",
