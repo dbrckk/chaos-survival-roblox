@@ -41,6 +41,14 @@ WeeklyChallenges.Definitions = {
         Coins = 210,
         XP = 140,
     },
+    PARKOUR_8 = {
+        Id = "PARKOUR_8",
+        Title = "Chain 3 real jumps in 8 rounds",
+        Event = "parkour_ace",
+        Target = 8,
+        Coins = 200,
+        XP = 140,
+    },
 }
 
 local ORDER = {
@@ -49,6 +57,7 @@ local ORDER = {
     "COLLECT_30",
     "DOUBLE_3",
     "EARN_500",
+    "PARKOUR_8",
 }
 
 function WeeklyChallenges.weekNumber(timestamp)
