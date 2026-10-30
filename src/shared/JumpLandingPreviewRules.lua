@@ -40,6 +40,34 @@ function JumpLandingPreviewRules.surfaceStatus(part)
     return "Safe"
 end
 
+-- Meteor and bomb warnings are replicated by the authoritative server
+-- BEFORE damage, with an exact final blast diameter. The actual disaster
+-- damages HumanoidRootPart within a THREE-DIMENSIONAL sphere centered one
+-- stud above the warning Part. A 2D circle would incorrectly mark safe
+-- high-ground roofs red. Only read fully configured, live, known warnings;
+-- never trust unrelated neon geometry or client-supplied danger labels.
+function JumpLandingPreviewRules.impactWarningAt(landingRoot, marker)
+    if typeof(landingRoot) ~= "Vector3"
+        or typeof(marker) ~= "Instance" or not marker:IsA("BasePart")
+        or marker.Parent ~= workspace then
+        return false
+    end
+    local kind = marker:GetAttribute("WarningKind")
+    if not ((marker.Name == "MeteorWarning" and kind == "Meteor")
+        or (marker.Name == "BombWarning" and kind == "Bomb")) then
+        return false
+    end
+    local diameter = tonumber(marker:GetAttribute("WarningEndSize"))
+    if not finite(diameter) or diameter <= 0 then
+        return false
+    end
+    -- Server-owned radial damage is measured at the character's ROOT,
+    -- not the feet or a cosmetic client-side impact shell.
+    local center = marker.Position + Vector3.new(0, 1, 0)
+    local radius = math.clamp(diameter * 0.5, 0.05, 120)
+    return (landingRoot - center).Magnitude <= radius
+end
+
 -- The existing landing reticle must not declare "safe" when the
 -- SERVER'S own active shock band crosses this precise physical contact.
 -- Compare the projected HumanoidRootPart position, not the deck surface:
@@ -57,6 +85,9 @@ function JumpLandingPreviewRules.hazardAt(landingRoot, landingPart, hazards)
     for _, hazard in ipairs(hazards) do
         if typeof(hazard) == "Instance" and hazard:IsA("BasePart")
             and hazard.Parent ~= nil then
+            if JumpLandingPreviewRules.impactWarningAt(landingRoot, hazard) then
+                return true
+            end
             if JumpRouteCueRules.lavaAtRoot(landingRoot, hazard) then
                 return true
             end
