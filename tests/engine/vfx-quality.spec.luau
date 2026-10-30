@@ -1814,7 +1814,9 @@ describe("Storm Harbor dedicated Android gantry LOD", function()
         local arena = generated:FindFirstChild("Arena")
         local platforms = arena:FindFirstChild("Platforms")
         local owners = SceneryLodRules.harborGantryOwners(arena)
-        expect(#owners).toBe(4)
+        -- Four original gantries plus the new nonphysical 3D freighter.
+        -- Both share the same existing cosmetic-only client LOD owner.
+        expect(#owners).toBe(5)
         for _, owner in ipairs(owners) do
             expect(owner:IsA("Model")).toBe(true)
             expect(owner.Parent.Name).toBe("StormHarborGantryFleet")
@@ -1842,7 +1844,7 @@ describe("Storm Harbor dedicated Android gantry LOD", function()
         impostor:SetAttribute("ChaosDistantScenery", true)
         impostor.Parent = arena:FindFirstChild("Decor")
             :FindFirstChild("StormHarborGantryFleet")
-        expect(#SceneryLodRules.harborGantryOwners(arena)).toBe(4)
+        expect(#SceneryLodRules.harborGantryOwners(arena)).toBe(5)
         impostor:Destroy()
         generated:Destroy()
     end)
@@ -1971,8 +1973,15 @@ describe("Storm Harbor engine and Android scenery certification", function()
         expect(hero:GetAttribute("SignatureVariant")).toBe("Harbor")
         expect(hero:FindFirstChild("CargoHull") ~= nil).toBe(true)
         expect(hero:GetAttribute("HeroEssentialParts") >= 8).toBe(true)
-        expect(#fleet:GetChildren()).toBe(4)
+        expect(#fleet:GetChildren()).toBe(5)
+        local cargoVessel = fleet:FindFirstChild("HarborCargoVessel")
+        expect(cargoVessel ~= nil and cargoVessel:IsA("Model")).toBe(true)
+        expect(cargoVessel:GetAttribute("HarborVesselScenery")).toBe(true)
+        expect(cargoVessel:GetAttribute("CosmeticOnly")).toBe(true)
+        local gantryCount = 0
         for _, crane in ipairs(fleet:GetChildren()) do
+            if crane == cargoVessel then continue end
+            gantryCount += 1
             expect(crane:IsA("Model")).toBe(true)
             expect(crane:GetAttribute("CosmeticOnly")).toBe(true)
             expect(crane:GetAttribute("ChaosDistantScenery")).toBe(true)
@@ -1998,6 +2007,7 @@ describe("Storm Harbor engine and Android scenery certification", function()
                 expect(offX > base.Size.X * 0.5 + 2).toBe(true)
             end
         end
+        expect(gantryCount).toBe(4)
         for i = 1, 8 do
             local inlay = decor:FindFirstChild("HarborQuayInlay" .. i)
             expect(inlay ~= nil).toBe(true)
