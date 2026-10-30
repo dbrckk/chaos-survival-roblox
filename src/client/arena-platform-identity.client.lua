@@ -246,6 +246,52 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
     end
 end
 
+-- Storm Harbor needs a recognizable timber quay on each genuine
+-- jumpable platform, not Classic's calibration-axis neon. Keep the
+-- additional detailing off Low-tier touch phones; core Harbor finish
+-- pieces, takeoff chevrons and physical panels still display normally.
+-- All pieces are inside the real deck, linked to its shrink footprint
+-- and inherit collapse visibility from the existing single owner.
+local function decorateHarbor(platform, index, theme, tier)
+    if tier.Name == "Low" then return end
+    local width = math.min(platform.Size.X, platform.Size.Z)
+    if width < 4.5 then return end
+    local top = PlatformFinishKit.surfacePaintOffset(platform, 0.045)
+    local hardware = theme.Structure:Lerp(
+        Color3.fromRGB(114, 101, 89), 0.38
+    )
+    -- Short offset cargo lashing stripe is an intentionally incomplete
+    -- crossbar, NOT a fake bridge or hazard arrow.
+    makePart(
+        "HarborCargoLashing" .. index,
+        Vector3.new(math.min(platform.Size.X * 0.55, 6.8), 0.045, 0.24),
+        platform.CFrame * CFrame.new(
+            0, top, platform.Size.Z * 0.26
+        ),
+        hardware,
+        Enum.Material.CorrodedMetal,
+        0.26,
+        platform
+    )
+    if tier.Name == "High" then
+        makePart(
+            "HarborKeelMount" .. index,
+            Vector3.new(
+                math.min(platform.Size.X * 0.58, 7.0),
+                0.27,
+                math.min(platform.Size.Z * 0.22, 1.8)
+            ),
+            platform.CFrame * CFrame.new(
+                0, -platform.Size.Y * 0.5 - 0.23, 0
+            ),
+            theme.Detail:Lerp(hardware, 0.58),
+            Enum.Material.WoodPlanks,
+            0.13,
+            platform
+        )
+    end
+end
+
 -- Mark only geometry-verified ascending routes. The two short chevron
 -- strokes are fully inside the takeoff deck, welded to its real footprint.
 -- Existing collapse and shrink listeners own all visibility/resize work.
@@ -352,7 +398,9 @@ local function rebuild()
                 decorateCrossroads(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Orbital" then
                 decorateOrbital(platform, visualIndex, theme, tier, base.Position)
-            else
+            elseif variant == "Harbor" then
+                decorateHarbor(platform, visualIndex, theme, tier)
+            elseif variant == "Classic" then
                 decorateClassic(platform, visualIndex, theme, tier)
             end
             end
