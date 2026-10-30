@@ -243,6 +243,74 @@ function JumpRouteCueRules.crosslinkOptions(from, orderedPlatforms)
     return forward, detour
 end
 
+-- Skill-aware parkour hint: after a veteran stays on the SAME physical
+-- deck without travelling, show just one next-step marker. Normal movement,
+-- jumping, emergencies and live mastery guidance always take precedence.
+-- Pure predicate so client and engine specs agree on the timing contract.
+JumpRouteCueRules.RecoverySeconds = 5.2
+JumpRouteCueRules.RecoveryTravel = 3.4
+
+function JumpRouteCueRules.recoveryHintReady(elapsed, progressDistance, grounded)
+    local time = tonumber(elapsed)
+    local distance = tonumber(progressDistance)
+    return grounded == true
+        and time ~= nil and time == time and time < math.huge
+        and time >= JumpRouteCueRules.RecoverySeconds
+        and distance ~= nil and distance == distance
+        and distance >= 0 and distance <= JumpRouteCueRules.RecoveryTravel
+end
+
+-- A "NEXT JUMP" sign must not lure someone onto, or THROUGH, an
+-- imminent meteor/bomb footprint. Those warnings are actual server
+-- Parts at workspace root; the final impact diameter is authoritative,
+-- not the initially small yellow preview. The danger UI owns escapes.
+-- No scene queries or client-side hazard guesses; short, bounded math.
+function JumpRouteCueRules.safeGuidedPath(fromPosition, toPosition, warnings)
+    if typeof(fromPosition) ~= "Vector3"
+        or typeof(toPosition) ~= "Vector3"
+        or type(warnings) ~= "table" then
+        return false
+    end
+    for _, warning in ipairs(warnings) do
+        if typeof(warning) == "Instance"
+            and warning:IsA("BasePart")
+            and warning.Parent == workspace
+            and (warning.Name == "MeteorWarning" or warning.Name == "BombWarning")
+        then
+            local diameter = tonumber(warning:GetAttribute("WarningEndSize"))
+            local visibleDiameter = math.max(warning.Size.X, warning.Size.Z)
+            if not diameter or diameter ~= diameter
+                or diameter <= 0 or diameter == math.huge then
+                diameter = visibleDiameter
+            end
+            local radius = math.clamp(math.max(diameter, visibleDiameter) * 0.5
+                + 3, 0, 120)
+            local start = Vector3.new(
+                fromPosition.X - warning.Position.X, 0,
+                fromPosition.Z - warning.Position.Z
+            )
+            local finish = Vector3.new(
+                toPosition.X - warning.Position.X, 0,
+                toPosition.Z - warning.Position.Z
+            )
+            -- If standing in a warning, danger arrows take precedence:
+            -- don't advertise an optional parkour objective.
+            if start.Magnitude <= radius or finish.Magnitude <= radius then
+                return false
+            end
+            local travel = finish - start
+            local lengthSquared = travel:Dot(travel)
+            if lengthSquared > 0.001 then
+                local t = math.clamp(-start:Dot(travel) / lengthSquared, 0, 1)
+                if (start + travel * t).Magnitude <= radius then
+                    return false
+                end
+            end
+        end
+    end
+    return true
+end
+
 -- Original central routes use conservative spatial selection. Perimeter
 -- and side-lookout steps have explicit server-authored route/step IDs;
 -- using those IDs avoids directing a novice across unrelated adjacent

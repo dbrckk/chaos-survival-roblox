@@ -2009,4 +2009,55 @@ describe("Chaos Survival engine", function()
     end)
 end)
 
+
+-- The coach uses exact live physical decks and server warning footprints;
+-- only its visual optional guidance changes, never a score or collision.
+describe("Adaptive premium parkour guidance", function()
+    it("shows veteran recovery cues only after a real stall", function()
+        local ready = JumpRouteCueRules.recoveryHintReady
+        expect(ready(5.2, 0.2, true)).toBe(true)
+        expect(ready(4.9, 0, true)).toBe(false)
+        expect(ready(15, 4, true)).toBe(false)
+        expect(ready(15, 1, false)).toBe(false)
+        expect(ready(15, 1, nil)).toBe(false)
+        expect(ready(math.huge, 0, true)).toBe(false)
+        expect(ready(10, 0 / 0, true)).toBe(false)
+        expect(ready(10, -1, true)).toBe(false)
+    end)
+
+    it("does not point toward or across a live server meteor or bomb", function()
+        local safe = JumpRouteCueRules.safeGuidedPath
+        local warning = Instance.new("Part")
+        warning.Name = "MeteorWarning"
+        warning.Anchored = true
+        warning.CanCollide = false
+        warning.Size = Vector3.new(3, 0.1, 3)
+        warning.Position = Vector3.new(0, 2, 0)
+        warning:SetAttribute("WarningEndSize", 24)
+        warning.Parent = workspace
+        local present = {warning}
+        -- Both endpoints are safe, yet the straight jump path crosses the
+        -- authoritative FUTURE 24-stud-diameter impact footprint.
+        expect(safe(Vector3.new(-24, 5, 0),
+            Vector3.new(24, 5, 0), present)).toBe(false)
+        expect(safe(Vector3.new(-24, 5, 25),
+            Vector3.new(24, 5, 25), present)).toBe(true)
+        expect(safe(Vector3.new(0, 5, 0),
+            Vector3.new(20, 5, 0), present)).toBe(false)
+        expect(safe(Vector3.new(-25, 5, 0),
+            Vector3.new(0, 5, 0), present)).toBe(false)
+        warning.Name = "BombWarning"
+        expect(safe(Vector3.new(-24, 5, 0),
+            Vector3.new(24, 5, 0), present)).toBe(false)
+        warning.Name = "HarmlessDecoration"
+        expect(safe(Vector3.new(-24, 5, 0),
+            Vector3.new(24, 5, 0), present)).toBe(true)
+        warning:Destroy()
+        expect(safe(Vector3.new(-24, 5, 0),
+            Vector3.new(24, 5, 0), present)).toBe(true)
+        expect(safe(nil, Vector3.zero, {})).toBe(false)
+        expect(safe(Vector3.zero, Vector3.zero, nil)).toBe(false)
+    end)
+end)
+
 return nil

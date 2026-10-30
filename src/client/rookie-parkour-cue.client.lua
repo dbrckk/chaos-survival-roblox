@@ -12,6 +12,45 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local currentPhase = "waiting"
+local currentChallenge = nil
+local finalRush = false
+-- Recovery is session-local cosmetic state, never a server score or entitlement.
+local recoveryDeck = nil
+local recoveryAnchor = nil
+local recoverySince = 0
+local function resetRecovery()
+    recoveryDeck, recoveryAnchor, recoverySince = nil, nil, 0
+end
+
+-- Reuse the existing low-frequency coach polling. Cache ONLY the actual
+-- server warning Parts; never scan every descendant on each Android tick.
+local liveWarnings = {}
+local function trackWarning(child)
+    if child:IsA("BasePart")
+        and (child.Name == "MeteorWarning" or child.Name == "BombWarning")
+    then
+        liveWarnings[child] = true
+    end
+end
+workspace.ChildAdded:Connect(trackWarning)
+workspace.ChildRemoved:Connect(function(child)
+    liveWarnings[child] = nil
+end)
+for _, child in ipairs(workspace:GetChildren()) do
+    trackWarning(child)
+end
+
+local function warningsNow()
+    local result = {}
+    for part in pairs(liveWarnings) do
+        if part.Parent == workspace then
+            result[#result + 1] = part
+        else
+            liveWarnings[part] = nil
+        end
+    end
+    return result
+end
 local marker
 local caption
 local currentTarget
@@ -29,9 +68,14 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
+    local previous = currentPhase
     currentPhase = tostring(state.phase or "waiting")
+    currentChallenge = state.challengeMetric
+    finalRush = state.finalRush == true
+    if currentPhase ~= previous then resetRecovery() end
     if currentPhase ~= "ready" and currentPhase ~= "round" then
         hide()
+        resetRecovery()
     end
 end)
 
@@ -162,6 +206,7 @@ local function update()
         or player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true then
         hide()
+        resetRecovery()
         return false
     end
 
@@ -171,6 +216,7 @@ local function update()
     if not humanoid or not root or humanoid.Health <= 0
         or humanoid.FloorMaterial == Enum.Material.Air then
         hide()
+        resetRecovery()
         return true
     end
 
@@ -180,6 +226,7 @@ local function update()
     local base = arena and arena:FindFirstChild("Base")
     if not platforms or not base or not base:IsA("BasePart") then
         hide()
+        resetRecovery()
         return true
     end
 
@@ -188,6 +235,7 @@ local function update()
     if generated ~= currentMap or platforms ~= mapPlatforms then
         currentMap, mapPlatforms = generated, platforms
         hide()
+        resetRecovery()
     end
 
     rayParams.FilterDescendantsInstances = {character}
@@ -197,7 +245,19 @@ local function update()
     local from = hit and hit.Instance
     if not from or hit.Normal.Y < 0.65 then
         hide()
+        resetRecovery()
         return true
+    end
+
+    local now = os.clock()
+    -- Walking several studs or reaching another real deck immediately
+    -- removes the optional recovery sign; no HUD spam for skilled runs.
+    if from ~= recoveryDeck or not recoveryAnchor
+        or (root.Position - recoveryAnchor).Magnitude
+            > JumpRouteCueRules.RecoveryTravel then
+        recoveryDeck = from
+        recoveryAnchor = root.Position
+        recoverySince = now
     end
 
     local pieces = platforms:GetChildren()
@@ -205,8 +265,25 @@ local function update()
     local french = player.LocaleId:sub(1, 2) == "fr"
     local hint = french and "SAUT SUIVANT  ↑" or "NEXT JUMP  ↑"
     if not rookie then
+        -- Mastery already owns its own physical objective marker. An
+        -- optional hint only assists a genuinely stalled platform runner.
         target, hint = cargoWaypoint(
             from, pieces, base, root, arena, french)
+        if not target and currentChallenge ~= "highGround"
+            and not finalRush and from.Parent == platforms
+            and JumpRouteCueRules.recoveryHintReady(
+                now - recoverySince,
+                (root.Position - recoveryAnchor).Magnitude,
+                true
+            ) then
+            target = JumpRouteCueRules.nextPhysical(
+                from, pieces, base.Position, arena:GetAttribute("VariantId")
+            )
+            if target then
+                hint = french and "REPRENDS LE PARCOURS  ↑"
+                    or "RESUME THE ROUTE  ↑"
+            end
+        end
     elseif from == base then
         -- The largest missing first-session cue was *before* the first
         -- jump. Guide from the actual floor to a short, grounded entry.
@@ -248,10 +325,50 @@ local function update()
                 or "TO LOOKOUT  ↑"
         end
     end
+    local dangerWarnings = warningsNow()
+    -- If a genuine timed hazard overlaps the proposed jump, never put
+    -- an optional route sign on top of the game's primary escape cue.
+    -- At authored perimeter forks prefer a real alternate path instead.
+    if target and not JumpRouteCueRules.safeGuidedPath(
+        root.Position, target.Position, dangerWarnings
+    ) then
+        local alternative = nil
+        if rookie and from == base then
+            -- Don't simply hide the very first actionable cue when a
+            -- meteor covers the nearest entry; look for another REAL
+            -- first-tier takeoff in range, only during a live warning.
+            local remaining = {}
+            for _, deck in ipairs(pieces) do
+                if deck:IsA("BasePart") and JumpRouteCueRules.safeGuidedPath(
+                    root.Position, deck.Position, dangerWarnings
+                ) then
+                    remaining[#remaining + 1] = deck
+                end
+            end
+            alternative = JumpRouteCueRules.nearestEntry(
+                remaining, hit.Position, 42
+            )
+        elseif from.Parent == platforms then
+            if from:GetAttribute("PerimeterStep") == 5 then
+                local forward, flank = JumpRouteCueRules.forkOptions(from, pieces)
+                alternative = target == forward and flank or forward
+            elseif from:GetAttribute("PerimeterStep") == 6 then
+                local forward, crossing = JumpRouteCueRules.crosslinkOptions(from, pieces)
+                alternative = target == forward and crossing or forward
+            end
+        end
+        if alternative and JumpRouteCueRules.safeGuidedPath(
+            root.Position, alternative.Position, dangerWarnings
+        ) then
+            target = alternative
+            hint = french and "DÉTOUR SÛR  ↑" or "SAFE DETOUR  ↑"
+        else
+            target = nil
+        end
+    end
     if not target or (root.Position - target.Position).Magnitude > 46 then
         hide()
-        -- Veterans without a nearby cargo objective use the slower
-        -- existing polling cadence; only an active guide uses 0.40 s.
+        -- Never burn an extra fast loop to search for optional hints.
         return rookie
     end
 
