@@ -60,6 +60,7 @@ local ArenaDistrictTransit = require(script.ArenaDistrictTransit)
 local DistrictSignalRush = require(script.DistrictSignalRush)
 local RoundChallenge = require(script.RoundChallenge)
 local HighGroundMastery = require(script.HighGroundMastery)
+local ParkourFlow = require(script.ParkourFlow)
 local RoundMedals = require(script.RoundMedals)
 local FlowCombo = require(script.FlowCombo)
 local ChaosFusion = require(script.ChaosFusion)
@@ -944,6 +945,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local flowComboClaimed = {}
     local momentumLastAt = {}
     local groundMasteryStates = {}
+    local parkourStates = {}
+    local parkourConnections = {}
 
     local activeHazards = {}
     for _, disaster in ipairs(selected) do
@@ -984,6 +987,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundMomentum", 0)
         player:SetAttribute("RoundMomentumBest", 0)
         player:SetAttribute("RoundPeakTier", 0)
+        player:SetAttribute("RoundParkourChain", 0)
+        player:SetAttribute("RoundParkourBest", 0)
 
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
@@ -1497,6 +1502,71 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local gameplayMap = workspace:FindFirstChild("GeneratedMap")
     local gameplayArena = gameplayMap and gameplayMap:FindFirstChild("Arena")
     local masteryPlatforms = gameplayArena and gameplayArena:FindFirstChild("Platforms")
+    local parkourBase = gameplayArena and gameplayArena:FindFirstChild("Base")
+    if masteryPlatforms and parkourBase then
+        -- Only actual landed Humanoid states trigger a geometry check.
+        -- No new Heartbeat, tick loop, player remote, or touch reward.
+        for _, contestant in ipairs(contestants) do
+            local character = contestant.Character
+            local hum = character and character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                local userId = contestant.UserId
+                local memory = {chain = 0, best = 0}
+                local params = RaycastParams.new()
+                params.FilterType = Enum.RaycastFilterType.Exclude
+                params.FilterDescendantsInstances = {character}
+                params.RespectCanCollide = true
+                parkourStates[userId] = memory
+
+                parkourConnections[userId] = hum.StateChanged:Connect(function(_, state)
+                    if state ~= Enum.HumanoidStateType.Landed
+                        and state ~= Enum.HumanoidStateType.Running
+                        and state ~= Enum.HumanoidStateType.RunningNoPhysics then
+                        return
+                    end
+                    -- A single physically confirmed surface sample after
+                    -- Roblox settles FloorMaterial. Duplicate signals do
+                    -- not make a second move: the module deduplicates deck.
+                    local now = os.clock()
+                    if now - (memory.lastLandingEvent or -math.huge) < 0.20 then
+                        return
+                    end
+                    memory.lastLandingEvent = now
+                    task.delay(0.10, function()
+                        if not roundActive or contestant.Parent ~= Players
+                            or contestant:GetAttribute("RoundEliminated") == true
+                            or eliminated[userId] == true
+                            or contestant.Character ~= character
+                            or hum.Parent ~= character
+                            or masteryPlatforms.Parent ~= gameplayArena then
+                            return
+                        end
+                        local deck = ParkourFlow.landedDeck(
+                            character, masteryPlatforms, params
+                        )
+                        local nextState = ParkourFlow.advance(
+                            memory, deck, masteryPlatforms,
+                            parkourBase.Position, currentArenaVariant, os.clock()
+                        )
+                        parkourStates[userId] = nextState
+                        local chain = nextState.chain or 0
+                        local best = nextState.best or 0
+                        if contestant:GetAttribute("RoundParkourChain") ~= chain then
+                            contestant:SetAttribute("RoundParkourChain", chain)
+                        end
+                        if contestant:GetAttribute("RoundParkourBest") ~= best then
+                            contestant:SetAttribute("RoundParkourBest", best)
+                        end
+                    end)
+                end)
+            end
+        end
+        table.insert(onCleanup, function()
+            for _, connection in pairs(parkourConnections) do
+                connection:Disconnect()
+            end
+        end)
+    end
     local endedEarly = false
     for t = roundSettings.RoundSeconds, 1, -1 do
         overdriveActive = overdriveEligible
@@ -2173,6 +2243,16 @@ while true do
             local roundMomentumBest = math.max(0, math.floor(tonumber(p:GetAttribute("RoundMomentumBest")) or 0))
             local roundFlowCoins = math.max(0, math.floor(tonumber(p:GetAttribute("RoundFlowCoins")) or 0))
             local roundPeakTier = math.max(0, math.floor(tonumber(p:GetAttribute("RoundPeakTier")) or 0))
+            -- Cosmetic progression is always server-verified. The only
+            -- economy effect is one capped XP grant during settlement.
+            local roundParkourBest = math.clamp(
+                math.floor(tonumber(p:GetAttribute("RoundParkourBest")) or 0),
+                0, 7
+            )
+            local parkourXP = ParkourFlow.bonusXP(roundParkourBest)
+            if parkourXP > 0 then
+                PlayerData.add(p, "XP", parkourXP)
+            end
             local challengeProgress = RoundChallenge.progress(
                 roundChallenge,
                 roundShardCount,
@@ -2194,6 +2274,7 @@ while true do
                 nearMisses = roundNearMissCount,
                 overdriveUses = roundOverdriveUses,
                 momentumBest = roundMomentumBest,
+                parkourBest = roundParkourBest,
                 criticalSurvival = criticalSurvival,
                 eliminationCause = survived and nil or eliminationCauses[p.UserId],
                 arenaMastery = arenaMasteryState,
@@ -2282,6 +2363,8 @@ while true do
                 challengeCoins = challengeCoins,
                 challengeXP = challengeXP,
                 medals = medals,
+                parkourBest = roundParkourBest,
+                parkourXP = parkourXP,
                 momentumBest = roundMomentumBest,
                 bestSessionStreak = bestSessionStreak,
                 crewRounds = math.max(
