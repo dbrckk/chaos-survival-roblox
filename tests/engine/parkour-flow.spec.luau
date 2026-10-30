@@ -475,4 +475,26 @@ describe("Physically progressive landing footprints on all five arenas", functio
 end)
 
 
+
+describe("Veteran parkour retry coaching after unsuccessful physical jumps", function()
+    it("tracks actual horizontal progress and ignores vertical jump arcs", function()
+        local distance = JumpRouteCueRules.horizontalProgressDistance
+        local anchor = Vector3.new(23, 4, -45)
+        -- A 6-stud hop straight up is an attempt, not progress along
+        -- the platform course. Retain the optional 5.2-second help timer.
+        expect(distance(anchor, anchor + Vector3.new(0, 6, 0))).toBe(0)
+        expect(distance(anchor, anchor + Vector3.new(3, 0, 4))).toBe(5)
+        expect(distance(anchor,
+            anchor + Vector3.new(3, 100, 0))).toBe(3)
+        expect(distance(nil, anchor)).toBe(math.huge)
+        expect(distance(anchor, nil)).toBe(math.huge)
+        expect(JumpRouteCueRules.recoveryHintReady(
+            5.2, distance(anchor, anchor + Vector3.new(0, 6, 0)), true
+        )).toBe(true)
+        expect(JumpRouteCueRules.recoveryHintReady(
+            5.2, distance(anchor, anchor + Vector3.new(4, 0, 0)), true
+        )).toBe(false)
+    end)
+end)
+
 return nil
