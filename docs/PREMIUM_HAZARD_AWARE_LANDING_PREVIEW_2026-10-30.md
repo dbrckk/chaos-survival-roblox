@@ -57,6 +57,50 @@ threshold, raised safe decks, bomb/mismatch/invalid warnings, and
 immediate removal. Real Android Low/Medium checks must confirm that
 the red X is legible midair but never obscures the real server warning.
 
+## Follow-up: one honest three-dimensional escape language
+
+Source inspection after the successful engine validation of the new
+Meteor/Bomb red-X landing reticle found one **real misleading split**:
+`JumpLandingPreviewRules.impactWarningAt` correctly used the blast's
+authoritative **3D** HumanoidRootPart damage sphere while the *rookie
+world-space NEXT JUMP sign* still flattened all meteor/bomb warnings to
+**2D X/Z ground circles**. A high, physically safe Harbor gantry would
+lose its legitimate route direction merely because a meteor was hitting
+the freight yard fifteen studs below it.
+
+`JumpRouteCueRules.safeGuidedPath` now checks closest three-dimensional
+point on the existing single straight guide segment against the true
+`warning.Position+(0,1,0)` impact center. It **retains the original
+3-stud early-warning margin** over the server's radial damage radius,
+and preserves the visible marker size fallback before replicated
+`WarningEndSize` is complete. Both start and destination inside the
+radius remain suppressed. Root-to-target descent which crosses an
+impact sphere also remains suppressed; the optional guide never
+supersedes the primary survival warning.
+
+`rookie-parkour-cue.client.lua` now passes the true approximate
+standing **HumanoidRootPart position** of the *actual colliding target
+platform* (top surface + 2.5 studs) instead of the platform's low
+geometric center. Real cargo pickups remain at their original actual
+target positions. This uses the existing 0.40/0.85-s coaching update,
+one sign and existing cached warning Parts; **no new animation,
+per-frame queries, collision, client control, network, or rewards**.
+
+The existing `tests/engine/parkour-flow.spec.luau` contains a real Roblox
+engine scenario for safe upper roof crossings above an active bomb
+or meteor, genuine low-ground impact avoidance, unsafe descents,
+unconfigured early warning metadata, and marker disappearance. This
+does not certify a measured Android playthrough. On the next physical
+run, verify an upper Harbor skyway above a warned yard (guide remains
+visible), then descend into the actual warning (guide hides), with the
+landing red-X and primary disaster telegraph agreeing.
+
+**Release boundary:** source candidate not yet public. Exact-SHA
+quality gate required after merge. The last independently verified
+public upload remains the successful
+[publisher 41112157340](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41112157340)
+at SHA `77e5805c96d9dd793e5bc058b93b4d7e904e1530`.
+
 ## Regression specification (written, execution deferred)
 
 `tests/engine/movement-assist-rules.spec.luau` now checks:
