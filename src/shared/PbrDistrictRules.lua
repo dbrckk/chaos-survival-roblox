@@ -25,12 +25,33 @@ function PbrDistrictRules.isApprovedImportedFoundationOwner(owner)
         and APPROVED_ORIGINAL_IDS[owner:GetAttribute("Original3DAssetId")] == true
 end
 
+
+-- Only the four original, inert Storm Harbor skyline models, not a
+-- gameplay crane, a copied asset or an arbitrarily tagged hazard.
+function PbrDistrictRules.isAuthoredHarborGantryOwner(owner)
+    return typeof(owner) == "Instance"
+        and owner:IsA("Model")
+        and owner:GetAttribute("HarborGantryScenery") == true
+        and owner:GetAttribute("CosmeticOnly") == true
+        and owner:GetAttribute("SourceIsOriginal") == true
+        and owner:GetAttribute("ChaosDistantScenery") == true
+        and owner.Parent ~= nil
+        and owner.Parent:IsA("Folder")
+        and owner.Parent.Name == "StormHarborGantryFleet"
+end
+
 function PbrDistrictRules.ownerLimit(tierName, owner)
     if PbrDistrictRules.isApprovedImportedFoundationOwner(owner) then
         -- A total of eight imported 3D assets cannot exhaust the Android
         -- global pool: max one support each on Medium, two on High.
         if tierName == "High" then return 2 end
         if tierName == "Medium" then return 1 end
+        return 0
+    end
+    if PbrDistrictRules.isAuthoredHarborGantryOwner(owner) then
+        -- Skyline cranes must never consume a full per-model PBR pool.
+        if tierName == "High" then return 4 end
+        if tierName == "Medium" then return 2 end
         return 0
     end
     return PbrDistrictRules.limit(tierName)
@@ -106,7 +127,8 @@ function PbrDistrictRules.eligibleOwner(owner)
         and sector >= 1 and sector <= 4 and sector == math.floor(sector) then
         return true
     end
-    return owner:GetAttribute("ArenaDistrictArchitecture") == true
+    return PbrDistrictRules.isAuthoredHarborGantryOwner(owner)
+        or owner:GetAttribute("ArenaDistrictArchitecture") == true
         or owner:GetAttribute("CornerLandmarkIndex") ~= nil
         or owner.Name == "ArenaHeroArchitecture3D"
         or owner:GetAttribute("ChaosPerimeterStation") == true
@@ -254,6 +276,11 @@ function PbrDistrictRules.selectionPriority(
     if part:GetAttribute("OriginalFoundationVisual") == true
         and PbrDistrictRules.isApprovedImportedFoundationOwner(part.Parent) then
         score -= 950
+    end
+    -- Optional off-floor cranes receive available spare 2K textures
+    -- after nearer playable districts; distance and device caps still win.
+    if PbrDistrictRules.isAuthoredHarborGantryOwner(part.Parent) then
+        score -= 700
     end
     if alreadyApplied then score += 160 end
     return score
