@@ -219,6 +219,7 @@ local TEXT = {
         RESULT_EXTRA_SIGNALS = "SIGNAL +%d",
         RESULT_EXTRA_CHALLENGE = "CHALLENGE +%d",
         RESULT_EXTRA_FLOW = "FLOW +%d",
+        RESULT_EXTRA_PARKOUR = "PARKOUR +%d XP",
         RESULT_EXTRA_FUSION = "FUSION +%d",
         RESULT_RUSH_BONUS = "RUSH BONUS",
         RESULT_CLUTCH_TAG = "CLUTCH SURVIVAL",
@@ -498,6 +499,7 @@ local TEXT = {
         RESULT_EXTRA_SIGNALS = "SIGNAL +%d",
         RESULT_EXTRA_CHALLENGE = "DÉFI +%d",
         RESULT_EXTRA_FLOW = "FLUIDITÉ +%d",
+        RESULT_EXTRA_PARKOUR = "PARCOURS +%d XP",
         RESULT_EXTRA_FUSION = "FUSION +%d",
         RESULT_RUSH_BONUS = "BONUS RUSH",
         RESULT_CLUTCH_TAG = "SURVIE EXTRÊME",
@@ -722,6 +724,8 @@ local MEDAL_COPY = {
         ["DAREDEVIL"] = "DAREDEVIL",
         ["OVERDRIVE RIDER"] = "OVERDRIVE RIDER",
         ["MOMENTUM MASTER"] = "MOMENTUM MASTER",
+        ["PARKOUR ACE"] = "PARKOUR ACE",
+        ["RIDGE LEGEND"] = "RIDGE LEGEND",
         ["CLUTCH"] = "CLUTCH",
     },
     fr = {
@@ -731,6 +735,8 @@ local MEDAL_COPY = {
         ["DAREDEVIL"] = "CASSE-COU",
         ["OVERDRIVE RIDER"] = "PILOTE SURCHARGE",
         ["MOMENTUM MASTER"] = "MAÎTRE DE L'ÉLAN",
+        ["PARKOUR ACE"] = "AS DU PARCOURS",
+        ["RIDGE LEGEND"] = "LÉGENDE DES CRÊTES",
         ["CLUTCH"] = "SURVIE EXTRÊME",
     },
 }
