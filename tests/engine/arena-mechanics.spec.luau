@@ -538,6 +538,18 @@ describe("Arena mechanics", function()
             ctx, sensor, bridge, body, cooldown, 11
         )).toBe(false)
 
+        -- Even with a fresh cooldown and enough run-up speed, a new
+        -- Skyrail impulse must not hurl an AI or player into the real gate.
+        bridge:SetAttribute("BridgeShutterPhase", "Warning")
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 20
+        )).toBe(false)
+        bridge:SetAttribute("BridgeShutterPhase", "Raised")
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 20
+        )).toBe(false)
+        bridge:SetAttribute("BridgeShutterPhase", "Idle")
+
         bot:SetAttribute("AISurvivorInRound", false)
         expect(SkyrailSlipstream.tryTrigger(
             ctx, sensor, bridge, body, cooldown, 20
