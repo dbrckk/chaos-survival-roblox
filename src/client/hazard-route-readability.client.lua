@@ -8,6 +8,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local WarningRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
+local HarborSweepGuidance = require(ReplicatedStorage.Shared.HarborSweepGuidance)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -215,6 +216,77 @@ local function makeArrowPart(name, color)
     return part
 end
 
+-- The SAME primary danger HUD handles Storm Harbor's server-owned
+-- cargo lanes. Reuse its existing adaptive loop; no new scheduler.
+local harborArrows = nil
+
+local function hideHarborArrows()
+    if not harborArrows then return end
+    for _, part in ipairs(harborArrows) do
+        if part and part.Parent then part.Transparency = 1 end
+    end
+end
+
+local function drawHarborExit(guide, characterRoot, tier, now)
+    if not harborArrows or not harborArrows[1].Parent
+        or not harborArrows[2].Parent then
+        harborArrows = {
+            makeArrowPart("LocalHarborExitLeft", UITheme.Colors.Orange),
+            makeArrowPart("LocalHarborExitRight", UITheme.Colors.Orange),
+        }
+    end
+    local direction = guide.direction
+    local lateral = Vector3.new(direction.Z, 0, -direction.X)
+    local origin = characterRoot.Position + Vector3.new(0, -2.65, 0)
+        + direction * 3.0
+    local yaw = math.atan2(-direction.X, -direction.Z)
+    local color = guide.phase == "Pulse" and UITheme.Colors.Red
+        or Color3.fromRGB(255, 186, 76)
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local pulse = reduced and 0.5 or (math.sin(now * 7.5) + 1) * 0.5
+    local transparency = (tier.Name == "Low" and 0.35 or 0.22)
+        + pulse * 0.16
+    for index, part in ipairs(harborArrows) do
+        local side = index == 1 and -1 or 1
+        part.Color = color
+        part.CFrame = CFrame.new(origin + lateral * side * 0.52)
+            * CFrame.Angles(0, yaw - side * math.rad(43), 0)
+        part.Size = Vector3.new(
+            tier.Name == "High" and 2.1 or 1.75, 0.065, 0.25
+        )
+        part.Transparency = math.clamp(transparency, 0, 0.9)
+    end
+end
+
+local function harborSweepFolder()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not arena or arena:GetAttribute("VariantId") ~= "Harbor" then
+        return nil, nil
+    end
+    local mechanics = arena:FindFirstChild("Mechanics")
+    local sweep = mechanics and mechanics:FindFirstChild("HarborCargoSweep")
+    local base = arena:FindFirstChild("Base")
+    if not sweep or not base or not base:IsA("BasePart") then
+        return nil, nil
+    end
+    return sweep, base
+end
+
+local function harborWaveActive()
+    local sweep = harborSweepFolder()
+    if not sweep then return false end
+    for _, band in ipairs(sweep:GetChildren()) do
+        if band:IsA("BasePart") then
+            local phase = band:GetAttribute("HarborSweepPhase")
+            if phase == "Warning" or phase == "Pulse" then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 local function createState(warning, snapshot)
     if warningStates[warning] or not warning:IsA("BasePart") then
         return
@@ -293,6 +365,7 @@ local function hideAllStates()
     for _, state in pairs(warningStates) do
         hideState(state)
     end
+    hideHarborArrows()
 end
 
 local function updateState(warning, state, root, tier, now, serverNow)
@@ -399,7 +472,8 @@ ensureRenderLoop = function()
 
     task.spawn(function()
         while true do
-            if currentPhase ~= "round" or next(warningStates) == nil then
+            if currentPhase ~= "round"
+                or (next(warningStates) == nil and not harborWaveActive()) then
                 cue.Visible = false
                 offscreenArrow.Visible = false
                 hideAllStates()
@@ -414,7 +488,8 @@ ensureRenderLoop = function()
             -- A round may finish, the map may change or warnings may be
             -- removed during the wait. Never revive stale escape arrows
             -- over the result screen or the next arena's onboarding.
-            if currentPhase ~= "round" or next(warningStates) == nil then
+            if currentPhase ~= "round"
+                or (next(warningStates) == nil and not harborWaveActive()) then
                 cue.Visible = false
                 offscreenArrow.Visible = false
                 hideAllStates()
@@ -445,6 +520,11 @@ ensureRenderLoop = function()
             local nearestClearance = math.huge
             local nearestRemaining = math.huge
             local shockRemaining = math.huge
+            local sweepFolder, harborFloor = harborSweepFolder()
+            local harborGuide = sweepFolder and harborFloor
+                and HarborSweepGuidance.select(
+                    sweepFolder, root.Position, harborFloor.Position, serverNow
+                ) or nil
 
             -- Select threats before drawing ANY escape arrows. The
             -- previous order drew every overlapping warning, then hid
@@ -505,9 +585,19 @@ ensureRenderLoop = function()
             elseif shockRemaining < math.huge then
                 cueMode = "shock"
             end
+            -- Deadly impacts/shock outrank the nonlethal cargo sweep.
+            if cueMode == nil and harborGuide then
+                cueMode = "harbor"
+            end
             local showCue = cueMode == "escape"
             local showShock = cueMode == "shock"
+            local showHarbor = cueMode == "harbor"
             cue.Visible = cueMode ~= nil
+            if showHarbor then
+                drawHarborExit(harborGuide, root, tier, now)
+            else
+                hideHarborArrows()
+            end
             if showCue then
                 local kind = nearestState.kind
                 local color = KIND_COLORS[kind] or UITheme.Colors.Red
@@ -515,6 +605,23 @@ ensureRenderLoop = function()
                 cueBadge.BackgroundColor3 = color
                 cueBadge.Text = KIND_BADGES[kind] or "!"
                 cueText.Text = localizedHazardCue(kind)
+            elseif showHarbor then
+                local color = harborGuide.phase == "Pulse"
+                    and UITheme.Colors.Red
+                    or Color3.fromRGB(255, 186, 76)
+                cueStroke.Color = color
+                cueBadge.BackgroundColor3 = color
+                cueBadge.Text = "!"
+                local fr = string.sub(string.lower(tostring(localeId)), 1, 2) == "fr"
+                if harborGuide.phase == "Pulse" then
+                    cueText.Text = fr and "BALAYAGE !  ÉCARTE-TOI"
+                        or "SWEEP ACTIVE!  MOVE"
+                else
+                    cueText.Text = string.format("%s  %.1fs",
+                        fr and "SAUTE OU SORS" or "JUMP OR EXIT",
+                        harborGuide.remaining
+                    )
+                end
             elseif showShock then
                 local color = KIND_COLORS.JumpShock
                 cueStroke.Color = color
@@ -532,6 +639,7 @@ ensureRenderLoop = function()
                 and nearestWarning
                 and nearestState
                 and nearestClearance <= 14
+                and cueMode ~= "harbor"
                 and (not UserInputService.TouchEnabled or not showShock)
             then
                 local viewportPoint, onScreen =
