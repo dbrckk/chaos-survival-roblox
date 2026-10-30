@@ -333,7 +333,22 @@ local function update()
         root.Position, target.Position, dangerWarnings
     ) then
         local alternative = nil
-        if from.Parent == platforms then
+        if rookie and from == base then
+            -- Don't simply hide the very first actionable cue when a
+            -- meteor covers the nearest entry; look for another REAL
+            -- first-tier takeoff in range, only during a live warning.
+            local remaining = {}
+            for _, deck in ipairs(pieces) do
+                if deck:IsA("BasePart") and JumpRouteCueRules.safeGuidedPath(
+                    root.Position, deck.Position, dangerWarnings
+                ) then
+                    remaining[#remaining + 1] = deck
+                end
+            end
+            alternative = JumpRouteCueRules.nearestEntry(
+                remaining, hit.Position, 42
+            )
+        elseif from.Parent == platforms then
             if from:GetAttribute("PerimeterStep") == 5 then
                 local forward, flank = JumpRouteCueRules.forkOptions(from, pieces)
                 alternative = target == forward and flank or forward
