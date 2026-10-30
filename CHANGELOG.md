@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-30 — Authentic five-arena mechanic guidance and complete Harbor locale (unpublished)
+
+- Fix misleading static arena briefing: a map previously described collapsing bridges or timed sweeps even when the server had disabled them during beginner or incompatible-disaster rounds. The existing `ArenaMechanics.start` now exposes a strict `MechanicMode` attribute and `mode` return value derived from the **actually started challenge**, including disambiguation of Towers' real timed metal shutter vs disappearing bridge rounds. The already-existing 1Hz `RoundState` includes mode + short intro window.
+- Experienced players see a concise FR/EN action in the **existing round-status pill for six seconds**, not a new HUD. Final Rush, Overdrive, impact-wave warnings, double collapse, double-chaos and rookie survival copy all outrank this optional tip. Unknown/cross-map modes never display an invented danger.
+- Complete missing **Storm Harbor / Port des Tempêtes** static name, route strategy, pad description and server-name alias for French and English. All five arenas now have real localized onboarding.
+- Add coverage to existing real Roblox arena mechanics and CoreLocalization engine specs. [Arena-action acceptance plan](docs/PREMIUM_ARENA_ACTION_ONBOARDING_2026-10-30.md). No new objects, audio assets, client loops or RPCs; no gameplay physics or reward changes.
+- **Engine tests and Android visual checks remain deferred to next major premium release milestone.** No Roblox public update.
+
 ## 2026-10-30 — Landing preview reflects real active floor sweeps and Tower shutters (unpublished)
 
 - Fix a mobile platformer safety problem: the existing locally predicted **cyan safe landing** could be displayed on a real deck which was about to be hit by Classic's Grid Sweep, Harbor's Cargo Sweep or Tower Run's timed bridge shutter. The existing four-bracket reticle now shows a **red X** for the exact server-authored hazard footprint and replicated phase, with the SAME 10-Hz sample and up to four collision rays as before.
