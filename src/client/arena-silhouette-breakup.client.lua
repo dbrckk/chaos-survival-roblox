@@ -317,6 +317,89 @@ local function orbital(base, theme, high)
     )
 end
 
+-- Storm Harbor previously fell through to Classic's service mast and
+-- inherited its silhouette. This unique offshore freight-terminal is a
+-- properly layered industrial 3D scene, not a shared decorative placeholder.
+-- Medium: seven non-colliding parts; High: four extra rigging details.
+-- The whole structure sits beyond the northern floor edge, clear of
+-- Harbor's authored 90-degree piers, bot routes, hazards and camera.
+local function harbor(base, theme, high)
+    local hx, hz = base.Size.X * 0.5, base.Size.Z * 0.5
+    local color = theme.Structure:Lerp(VisualTheme.World.Deep, 0.36)
+    local rusty = theme.Detail:Lerp(Color3.fromRGB(142, 99, 78), 0.28)
+    local berth = localFrame(base, -hx * 0.52, base.Size.Y * 0.5,
+        -hz - 26, -11)
+
+    makePart(
+        "HarborOuterBerthHull",
+        Vector3.new(36, 1.25, 9),
+        berth * CFrame.new(0, 0.7, 0),
+        color,
+        Enum.Material.Concrete, 0.06, nil, high
+    )
+    for side = -1, 1, 2 do
+        local columnHeight = side < 0 and 13 or 16
+        local column = makePart(
+            side < 0 and "HarborNorthBollardPort"
+                or "HarborNorthBollardStarboard",
+            Vector3.new(3.5, columnHeight, 3.5),
+            berth * CFrame.new(side * 14, columnHeight * 0.5 + 1.0, 0),
+            rusty,
+            Enum.Material.CorrodedMetal, 0.06, nil, high
+        )
+        if high then
+            makePart(
+                side < 0 and "HarborNorthBollardCapPort"
+                    or "HarborNorthBollardCapStarboard",
+                Vector3.new(5.2, 0.65, 5.2),
+                column.CFrame * CFrame.new(0, columnHeight * 0.5 + 0.3, 0),
+                theme.Detail,
+                Enum.Material.DiamondPlate, 0.10, nil, true
+            )
+        end
+    end
+    makePart(
+        "HarborOuterBerthOverheadTruss",
+        Vector3.new(29.2, 1.3, 2.4),
+        berth * CFrame.new(0, 13.8, -0.25)
+            * CFrame.Angles(0, 0, math.rad(-7)),
+        theme.Detail:Lerp(color, 0.14),
+        Enum.Material.Metal, 0.04, nil, high
+    )
+
+    for i = 1, 2 do
+        local containerSize = Vector3.new(8.5, 5.1, 6.6)
+        makePart(
+            "HarborTerminalFreightContainer" .. i,
+            containerSize,
+            berth * CFrame.new(-4.8 + 9.6 * (i - 1), 3.9, 0.8),
+            i == 1 and rusty or theme.Detail:Lerp(theme.Secondary, 0.17),
+            Enum.Material.DiamondPlate, 0.07, nil, high
+        )
+    end
+
+    makePart(
+        "HarborTerminalSafeNavigationStrip",
+        Vector3.new(0.30, 5.2, 0.45),
+        berth * CFrame.new(-13.9, 9.6, -2.0),
+        theme.Secondary:Lerp(color, 0.38),
+        Enum.Material.Neon, 0.66, nil, false
+    )
+    if high then
+        local upper = berth * CFrame.new(0, 13.8, -0.25)
+        for side = -1, 1, 2 do
+            makePart(
+                side < 0 and "HarborOuterBerthSuspensionL"
+                    or "HarborOuterBerthSuspensionR",
+                Vector3.new(0.45, 6.8, 0.45),
+                upper * CFrame.new(side * 6.1, -4.0, 0),
+                color,
+                Enum.Material.Metal, 0.07, nil, true
+            )
+        end
+    end
+end
+
 -- Two outboard safety stations give each skyline a secondary industrial
 -- silhouette. They never enter the playfield, block the camera with full-
 -- width billboards or participate in collision/raycast logic.
@@ -462,7 +545,9 @@ local function rebuild()
             crossroads(base, theme, high)
         elseif variant == "Orbital" then
             orbital(base, theme, high)
-        else
+        elseif variant == "Harbor" then
+            harbor(base, theme, high)
+        elseif variant == "Classic" then
             classic(base, theme, high)
         end
     end
