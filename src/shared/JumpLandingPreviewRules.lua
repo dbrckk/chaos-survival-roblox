@@ -57,6 +57,9 @@ function JumpLandingPreviewRules.hazardAt(landingRoot, landingPart, hazards)
     for _, hazard in ipairs(hazards) do
         if typeof(hazard) == "Instance" and hazard:IsA("BasePart")
             and hazard.Parent ~= nil then
+            if JumpRouteCueRules.lavaAtRoot(landingRoot, hazard) then
+                return true
+            end
             if JumpRouteCueRules.activeSweepOnPath(
                 landingRoot, landingRoot, hazard
             ) then
