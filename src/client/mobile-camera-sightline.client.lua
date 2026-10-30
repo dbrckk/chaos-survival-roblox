@@ -16,6 +16,7 @@ local activePhase = "waiting"
 -- head. Never soften more than TWO actual arena structural blockers.
 local fadedStructures = {} -- BasePart -> original LocalTransparencyModifier
 local fadeValue = 0.72
+local STRUCTURAL_SIGHTLINE_HEIGHTS = {1.25, 3.05}
 local lastCamera = nil
 local structuralFilter = CameraSightlineFilterCache.new(
     CameraOcclusionRules.arenaRaycastParams
@@ -260,7 +261,7 @@ local function update()
     local params = structuralFilter:get(arena, base)
     local candidates = {}
     if params then
-        for _, height in ipairs({1.25, 3.05}) do
+        for _, height in ipairs(STRUCTURAL_SIGHTLINE_HEIGHTS) do
             local target = root.Position + Vector3.new(0, height, 0)
             local hit = workspace:Raycast(start, target - start, params)
             if hit and supportedTarget(hit.Instance, arena, base) then
