@@ -299,11 +299,14 @@ local function buildHarbor(base, theme, tier)
 
         if high then
             for index = 1, 4 do
-                part("HarborContainerCraneContainerRib" .. index,
+                local rib = part("HarborContainerCraneContainerRib" .. index,
                     Vector3.new(0.18, 3.9, 4.85),
                     f * CFrame.new(-2.4 + index * 1.55,
                         height - 7.3, -1.6),
                     steel, Enum.Material.CorrodedMetal, 0.12, false)
+                -- Ribs must follow the same suspended cargo lift; static
+                -- ribs would appear to slide straight THROUGH the crate.
+                track(rib, "lift", 0.62, 0.52, 0.4)
             end
             part("HarborContainerCraneLoadRail",
                 Vector3.new(19.8, 0.24, 0.36),
