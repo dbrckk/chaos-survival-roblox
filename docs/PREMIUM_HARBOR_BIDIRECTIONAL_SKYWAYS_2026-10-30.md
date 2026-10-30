@@ -33,6 +33,16 @@ The targeted fix first validates source and destination as actual server-anchore
 
 Existing `tests/engine/parkour-flow.spec.luau` now exercises server takeoff → physical skyway landing → capped seven-jump legend XP on both lanes, in both directions, and rejects cross-variant, collapse-warning and noncolliding destinations. This separate scoring follow-up is prepared on a feature branch while the preceding **source-cap fix** exact-SHA engine QA is in progress; it is not yet merged or published.
 
+## Post-publication mastery integrity — direction-locked streaks
+
+**Observed source vulnerability after successful public update of SHA `77e5805c`:** the Harbor cross-quay bridge has legal server-authored jumps in either direction. `ParkourFlow.advance` previously credited all physically valid jumps as a contiguous chain, allowing a player to repeat `SkywayStep1 ⇄ SkywayStep2` until earning `RIDGE LEGEND` and bonus XP without actually traversing the bridge.
+
+The corrected server-side flow maintains a tiny `skywayDirection` value in existing per-player round memory, derived exclusively from the existing server-authored `HarborRoute` and `HarborSkywayStep` metadata after a real Humanoid takeoff and physical landing. Once a player has committed to one end of the bridge, a reverse jump remains **legitimate movement and safe during a disaster**, but it ends the *current mastery chain*. Advancing along the same direction continues the streak; reaching an actual terminal clears the direction so a complete return crossing can earn independent progression. A failed landing also clears the direction. No movement or camera restriction, new UI, new network event, artificial checkpoint, recurring task, currency grant or additional mobile cost.
+
+An engine scenario was added to the **existing** `tests/engine/parkour-flow.spec.luau` to bounce repeatedly between two actual Harbor decks with valid server takeoff/landing events. It requires `best == 2`, `bonusXP(best) == 0`, and confirms real forward travel still scores while tactical reverse hops remain legal but break mastery. Existing two-way full-crossing certification is retained unchanged.
+
+**Release policy:** feature branch only until next exact-SHA build and real five-suite Roblox Open Cloud gate. The previously published public game remains on `77e5805c`; no automated publication has been attempted. Android/manual acceptance still requires an actual screen and tactile performance review.
+
 ## Existing engine regression coverage (not executed during feature work)
 Extended **existing** `tests/engine/mapbuilder.spec.luau` rather than adding a new suite:
 - update only aggregate platform-count expectations for the Harbor-only append;
