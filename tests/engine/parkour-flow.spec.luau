@@ -7,6 +7,7 @@ local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local ParkourFlow = require("../../src/server/ParkourFlow")
+local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 
 local function standingPosition(deck)
     return deck.CFrame:PointToWorldSpace(
@@ -40,7 +41,7 @@ describe("Premium parkour flow over actual server-authored platforms", function(
         expect(state.chain).toBe(0)
         state = ParkourFlow.advance(
             state, pieces[1], platforms, base.Position,
-            "Classic", 10.5, standingPosition(pieces[1])
+            "Classic", 10.05, standingPosition(pieces[1])
         )
         expect(state.chain).toBe(0)
         for step = 2, 8 do
@@ -253,6 +254,47 @@ describe("Authentic airborne parkour score protection", function()
         expect(credited).toBe(false)
         expect(invalid.best).toBe(0)
         root:Destroy()
+    end)
+end)
+
+
+describe("Real active arena sweep lanes never lure jump coaching into danger", function()
+    it("rejects oriented floor lanes but allows high decks and idle waves", function()
+        local band = Instance.new("Part")
+        band.Name = "HarborSweepLane1"
+        band.Size = Vector3.new(7.5, 0.10, 68)
+        band.CFrame = CFrame.new(26, 4, -35)
+            * CFrame.Angles(0, math.rad(35), 0)
+        band.Anchored = true
+        band.CanCollide = false
+        band.Parent = workspace
+        band:SetAttribute("HarborSweepPhase", "Warning")
+        local from = band.CFrame:PointToWorldSpace(Vector3.new(-20, 3, 0))
+        local to = band.CFrame:PointToWorldSpace(Vector3.new(20, 3, 0))
+        expect(JumpRouteCueRules.activeSweepOnPath(from, to, band)).toBe(true)
+        expect(JumpRouteCueRules.safeGuidedPath(from, to, {band})).toBe(false)
+        expect(JumpRouteCueRules.safeGuidedPath(
+            band.CFrame:PointToWorldSpace(Vector3.new(-20, 15, 0)),
+            band.CFrame:PointToWorldSpace(Vector3.new(20, 15, 0)),
+            {band}
+        )).toBe(true)
+        expect(JumpRouteCueRules.safeGuidedPath(
+            band.CFrame:PointToWorldSpace(Vector3.new(-20, 3, 48)),
+            band.CFrame:PointToWorldSpace(Vector3.new(20, 3, 48)),
+            {band}
+        )).toBe(true)
+
+        band:SetAttribute("HarborSweepPhase", "Pulse")
+        expect(JumpRouteCueRules.safeGuidedPath(from, to, {band})).toBe(false)
+        band:SetAttribute("HarborSweepPhase", "Idle")
+        expect(JumpRouteCueRules.safeGuidedPath(from, to, {band})).toBe(true)
+        band.Name = "GridSweepBand2"
+        band:SetAttribute("GridSweepPhase", "Warning")
+        expect(JumpRouteCueRules.safeGuidedPath(from, to, {band})).toBe(false)
+        band:SetAttribute("GridSweepPhase", "Pulse")
+        expect(JumpRouteCueRules.safeGuidedPath(from, to, {band})).toBe(false)
+        band:Destroy()
+        expect(JumpRouteCueRules.safeGuidedPath(from, to, {band})).toBe(true)
     end)
 end)
 
