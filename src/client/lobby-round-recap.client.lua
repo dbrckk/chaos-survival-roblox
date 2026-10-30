@@ -112,7 +112,9 @@ local function build()
     billboard = Instance.new("BillboardGui")
     billboard.Name = "RoundRecapBoard"
     billboard.Adornee = anchor
-    billboard.Size = UDim2.fromOffset(390, 142)
+    -- Taller billboard gives mobile-sized captions clear separation from
+    -- the hazard name and the genuine survival tally.
+    billboard.Size = UDim2.fromOffset(420, 166)
     billboard.AlwaysOnTop = false
     billboard.LightInfluence = 0
     billboard.MaxDistance = 82
@@ -144,7 +146,7 @@ local function build()
 
     title = Instance.new("TextLabel")
     title.Position = UDim2.fromScale(0.05, 0.15)
-    title.Size = UDim2.fromScale(0.90, 0.18)
+    title.Size = UDim2.fromScale(0.90, 0.17)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBold
     title.Text = CoreLocalization.text(localeId, "LAST_CHAOS")
@@ -155,7 +157,7 @@ local function build()
     UITheme.addTextConstraint(title, 10, 15)
 
     hazard = Instance.new("TextLabel")
-    hazard.Position = UDim2.fromScale(0.05, 0.36)
+    hazard.Position = UDim2.fromScale(0.05, 0.34)
     hazard.Size = UDim2.fromScale(0.69, 0.26)
     hazard.BackgroundTransparency = 1
     hazard.Font = Enum.Font.GothamBlack
@@ -168,8 +170,8 @@ local function build()
     UITheme.addTextConstraint(hazard, 15, 24)
 
     meta = Instance.new("TextLabel")
-    meta.Position = UDim2.fromScale(0.05, 0.68)
-    meta.Size = UDim2.fromScale(0.69, 0.18)
+    meta.Position = UDim2.fromScale(0.05, 0.63)
+    meta.Size = UDim2.fromScale(0.90, 0.16)
     meta.BackgroundTransparency = 1
     meta.Font = Enum.Font.GothamBold
     meta.Text = ""
@@ -202,8 +204,8 @@ local function build()
     -- screens where the central round HUD may be outside the camera.
     nextStep = Instance.new("TextLabel")
     nextStep.Name = "NextVoteCue"
-    nextStep.Position = UDim2.fromScale(0.05, 0.82)
-    nextStep.Size = UDim2.fromScale(0.90, 0.085)
+    nextStep.Position = UDim2.fromScale(0.05, 0.79)
+    nextStep.Size = UDim2.fromScale(0.90, 0.10)
     nextStep.BackgroundTransparency = 1
     nextStep.Font = Enum.Font.GothamBold
     nextStep.TextColor3 = UITheme.Colors.Muted
@@ -215,8 +217,8 @@ local function build()
 
     local survivorTrack = Instance.new("Frame")
     survivorTrack.Name = "SurvivorRatioTrack"
-    survivorTrack.Position = UDim2.fromScale(0.05, 0.91)
-    survivorTrack.Size = UDim2.fromScale(0.90, 0.035)
+    survivorTrack.Position = UDim2.fromScale(0.05, 0.925)
+    survivorTrack.Size = UDim2.fromScale(0.90, 0.038)
     survivorTrack.BackgroundColor3 = UITheme.Colors.PanelSoft
     survivorTrack.BackgroundTransparency = 0.10
     survivorTrack.BorderSizePixel = 0
