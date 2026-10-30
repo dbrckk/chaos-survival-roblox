@@ -96,3 +96,53 @@ sans mesures sur un appareil physique.
 est [GitHub Actions 41112157340](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41112157340),
 SHA `77e5805c96d9dd793e5bc058b93b4d7e904e1530`. Ce cargo et les
 autres changements après cet SHA ne sont pas présumés disponibles en jeu.
+
+
+## 30 octobre — vrai cargo toujours lisible sur Android Low
+
+**Défaut réel audité :** la flotte extérieure `StormHarborGantryFleet`
+reçoit `LowDistance=0` dans `scenery-lod.client.lua`. Le nouveau
+navire 3D (`HarborCargoVessel`) est dans cette même flotte. **Sans
+modification, la totalité de la coque disparaît sur Android Low**, alors
+qu'elle donne au monde son identité maritime. Rendre le navire complet
+sur Low chargerait inutilement des dizaines de fines nervures et
+garde-corps au premier plan de la côte.
+
+**Correction visuelle intégrée dans l'architecture en place :**
+
+- Les huit masses de silhouette réellement importantes sont conservées :
+  `MainHull`, `LowerKeel`, `MainCargoDeck`, les deux faces de proue,
+  `SternDeckhouse`, `Wheelhouse`, `ExhaustStack`. Avec les **six
+  conteneurs du premier niveau**, le cargo Low conserve exactement
+  **14 vraies pièces originales 3D**.
+- Chaque pièce retenue possède le marqueur serveur
+  `HeroSilhouetteEssential=true` au moment de la construction ; les
+  dizaines de petits détails, conteneurs supérieurs, rivets, rails,
+  radar, vitres et **quatre grues complètes** restent masqués sur Low.
+- Le système existant `SceneryLodRules.entryVisible` et son propriétaire
+  `scenery-lod.client.lua` utilisent la même exception
+  `KeepHeroLow` que les autres silhouettes essentielles : zéro nouveau
+  script, listener, boucle, téléportation, RemoteEvent ou surface
+  physique. Medium et High conservent le navire entier selon la distance
+  et les règles existantes.
+- Les **14 pièces sont déjà répliquées** dans le même Model atomique :
+  cette passe **ne réduit pas le nombre d'instances réseau ni
+  l'occupation mémoire de streaming**. Elle limite le nombre de
+  géométries visibles sur Low ; la réduction effective du coût GPU et les
+  FPS doivent être mesurés en jeu, pas supposés.
+- Low continue d'utiliser **zéro** matériau PBR 2K du navire. Les
+  plafonds globaux PBR Medium/High et la propriété du LOD ne changent pas.
+
+L'assertion de la suite moteur Roblox
+`tests/engine/visual-budget-rules.spec.luau` vérifie **les 14 noms
+exacts**, les flags, la visibilité de chaque pièce sur Low/Medium/High,
+l'absence de visibilité de toute grue en Low, les collisions désactivées
+et l'emplacement extérieur. Sur **un vrai Android**, vérifier le cargo
+depuis la façade nord en Low, la bascule Low → Medium → High, les
+changements de caméra, ainsi que la lisibilité des avertissements
+météores/lave et la fluidité lors de l'arrivée par la passerelle.
+Cette QA native n'est pas attestée par le test moteur seul.
+
+**État :** changement source non publié tant que le nouvel exact-SHA
+Build Validation + Roblox Cloud Engine Tests n'ont pas réussi et que
+le workflow public protégé n'a pas été exécuté avec accord explicite.
