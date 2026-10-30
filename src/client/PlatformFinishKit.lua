@@ -188,9 +188,9 @@ function PlatformFinishKit.sideRailCount(tier)
     return 0
 end
 
-function PlatformFinishKit.buildSideRails(parent, platform, tier, theme)
+function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant)
     if not parent or not platform or not platform:IsA("BasePart")
-        or not theme then
+        or not theme or not NAMES[variant] then
         return {}
     end
     local count = PlatformFinishKit.sideRailCount(tier)
@@ -203,7 +203,23 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme)
     -- below the top so it cannot be mistaken for a walkable ledge.
     local y = -sy * 0.5 + railHeight * 0.5
     local outside = 0.055
-    local color = theme.Detail:Lerp(theme.Structure, 0.38)
+    -- Structural side faces express each arena's actual material
+    -- language without any extra Parts, emissive light, fake top
+    -- ledge or change to the physical deck. Make the nearby platform
+    -- construction recognizable even when its distant skyline is culled.
+    local sideMaterials = {
+        Classic = Enum.Material.DiamondPlate,
+        Towers = Enum.Material.CorrodedMetal,
+        Crossroads = Enum.Material.Concrete,
+        Orbital = Enum.Material.Metal,
+        Harbor = Enum.Material.WoodPlanks,
+    }
+    local material = sideMaterials[variant]
+    local color = variant == "Harbor"
+        and theme.Surface:Lerp(Color3.fromRGB(103, 82, 65), 0.42)
+        or (variant == "Crossroads"
+            and theme.Structure:Lerp(theme.Surface, 0.48)
+            or theme.Detail:Lerp(theme.Structure, 0.38))
     local segments = {
         {Vector3.new(0, y, -sz * 0.5 - outside), Vector3.new(sx * 0.72, railHeight, 0.13)},
         {Vector3.new(0, y, sz * 0.5 + outside), Vector3.new(sx * 0.72, railHeight, 0.13)},
@@ -215,7 +231,7 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme)
         if count == 4 or index <= 2 then
             local piece = add(parent, platform, "PlatformRecessedSideRail" .. index,
                 CFrame.new(segment[1]), segment[2], color,
-                Enum.Material.Metal, 0.08)
+                material, 0.08)
             table.insert(built, piece)
         end
     end
