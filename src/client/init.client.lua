@@ -2351,6 +2351,12 @@ local function showRoundFeedback(feedback)
     if momentumBest >= 2 then
         table.insert(tags, CoreLocalization.text(localeId, "RESULT_MOMENTUM_TAG", momentumBest))
     end
+    local parkourBest = math.clamp(
+        math.floor(tonumber(feedback.parkourBest) or 0), 0, 7
+    )
+    if parkourBest >= 2 then
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_PARKOUR_TAG", parkourBest))
+    end
 
     local medals = type(feedback.medals) == "table" and feedback.medals or {}
     local localizedMedals = {}
