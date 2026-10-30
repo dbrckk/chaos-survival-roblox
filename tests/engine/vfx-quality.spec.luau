@@ -24,6 +24,8 @@ local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
 local DistrictKineticKit = require("../../src/client/DistrictKineticKit")
 local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
 local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
+local ArenaDeckFinishKit = require("../../src/client/ArenaDeckFinishKit")
+local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 
 describe("Parkour sound response in real Roblox engine", function()
     it("uses independent, short nonlooped takeoff and landing identities", function()
@@ -1670,6 +1672,70 @@ describe("Imported 3D per-model Android LOD", function()
         expect(#SceneryLodRules.original3DVisualOwners(arena)).toBe(1)
         expect(#SceneryLodRules.original3DVisualOwners(nil)).toBe(0)
         arena:Destroy()
+    end)
+end)
+
+describe("Storm Harbor maritime deck finish in all Android quality tiers", function()
+    it("builds exactly two/four/six original floor details on the real harbor base", function()
+        local root = MapBuilder.build(
+            Config, "Harbor", ArenaVariants, VisualTheme
+        )
+        local arena = root:FindFirstChild("Arena")
+        local base = arena:FindFirstChild("Base")
+        local theme = VisualTheme.arena("Harbor")
+        local expectedNames = {
+            "HarborDryDockPlankWest", "HarborDryDockPlankEast",
+            "HarborLoadRailNorth", "HarborLoadRailSouth",
+            "HarborMooringPlatePort", "HarborMooringPlateStarboard",
+        }
+        local names = ArenaDeckFinishKit.names("Harbor")
+        expect(#names).toBe(6)
+        expect(ArenaDeckFinishKit.names("Unknown")[1] == nil).toBe(true)
+        for _, tier in ipairs({"Low", "Medium", "High"}) do
+            local folder = Instance.new("Folder")
+            folder.Name = "HarborDeckFinishCheck" .. tier
+            folder.Parent = workspace
+            local pieces = ArenaDeckFinishKit.build(
+                folder, base, "Harbor", tier, theme
+            )
+            expect(#pieces).toBe(ArenaDeckFinishKit.count(tier))
+            for index, part in ipairs(pieces) do
+                expect(part.Name).toBe(expectedNames[index])
+                expect(part:GetAttribute("ArenaVariant")).toBe("Harbor")
+                expect(part:GetAttribute("ChaosDeckFinish")).toBe(true)
+                expect(part.CanCollide).toBe(false)
+                expect(part.CanTouch).toBe(false)
+                expect(part.CanQuery).toBe(false)
+                expect(part.CastShadow).toBe(false)
+                expect(part.Anchored).toBe(true)
+                expect(part.Material == Enum.Material.WoodPlanks
+                    or part.Material == Enum.Material.CorrodedMetal
+                    or part.Material == Enum.Material.Metal).toBe(true)
+                expect(part:GetAttribute("SurfaceBaseColor")).toBe(part.Color)
+                local localPosition = base.CFrame:PointToObjectSpace(
+                    part.Position
+                )
+                expect(math.abs(localPosition.X) <= base.Size.X * 0.5)
+                    .toBe(true)
+                expect(math.abs(localPosition.Z) <= base.Size.Z * 0.5)
+                    .toBe(true)
+            end
+            local tracked = ArenaFloorFollowerKit.capture(base, folder)
+            expect(tracked ~= nil).toBe(true)
+            local originalSize = base.Size
+            local prevSize = pieces[1].Size
+            base.Size = Vector3.new(
+                originalSize.X * 0.80, originalSize.Y,
+                originalSize.Z * 0.80
+            )
+            expect(ArenaFloorFollowerKit.apply(tracked)).toBe(#pieces)
+            expect(pieces[1].Size.X < prevSize.X).toBe(true)
+            expect(pieces[1].CanCollide).toBe(false)
+            base.Size = originalSize
+            ArenaFloorFollowerKit.apply(tracked)
+            folder:Destroy()
+        end
+        root:Destroy()
     end)
 end)
 
