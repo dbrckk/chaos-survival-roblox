@@ -76,6 +76,19 @@ local function warningsNow()
     end
     return result
 end
+-- This optional sign must not recommend a deck already submerged by
+-- the live server-owned lava. Keep the existing meteor/bomb/sweep route
+-- classifier and add only one cheap workspace-root lookup per target.
+local function safeGuidedTargetPath(fromPosition, target, warnings)
+    if not target or not JumpRouteCueRules.safeGuidedPath(
+        fromPosition, target.Position, warnings
+    ) then
+        return false
+    end
+    local lava = workspace:FindFirstChild("RoundLava")
+    return not JumpRouteCueRules.lavaOnDeck(target, lava)
+end
+
 local marker
 local caption
 local currentTarget
@@ -365,8 +378,8 @@ local function update()
     -- If a genuine timed hazard overlaps the proposed jump, never put
     -- an optional route sign on top of the game's primary escape cue.
     -- At authored perimeter forks prefer a real alternate path instead.
-    if target and not JumpRouteCueRules.safeGuidedPath(
-        root.Position, target.Position, dangerWarnings
+    if target and not safeGuidedTargetPath(
+        root.Position, target, dangerWarnings
     ) then
         local alternative = nil
         if rookie and from == base then
@@ -375,8 +388,8 @@ local function update()
             -- first-tier takeoff in range, only during a live warning.
             local remaining = {}
             for _, deck in ipairs(pieces) do
-                if deck:IsA("BasePart") and JumpRouteCueRules.safeGuidedPath(
-                    root.Position, deck.Position, dangerWarnings
+                if deck:IsA("BasePart") and safeGuidedTargetPath(
+                    root.Position, deck, dangerWarnings
                 ) then
                     remaining[#remaining + 1] = deck
                 end
@@ -393,8 +406,8 @@ local function update()
                 alternative = target == forward and crossing or forward
             end
         end
-        if alternative and JumpRouteCueRules.safeGuidedPath(
-            root.Position, alternative.Position, dangerWarnings
+        if alternative and safeGuidedTargetPath(
+            root.Position, alternative, dangerWarnings
         ) then
             target = alternative
             hint = french and "DÉTOUR SÛR  ↑" or "SAFE DETOUR  ↑"
