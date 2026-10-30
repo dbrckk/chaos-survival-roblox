@@ -116,6 +116,104 @@ describe("Movement assist rules", function()
         expect(allowed(false, 0.07, freefall, true, true)).toBe(false)
     end)
 
+    it("never marks a real sweep lane safe during the server's warned or active phase", function()
+        local Rules = require("../../src/shared/JumpLandingPreviewRules")
+        local folder = Instance.new("Folder")
+        folder.Name = "LandingWarningRegression"
+        folder.Parent = workspace
+        local deck = Instance.new("Part")
+        deck.Name = "Platform12"
+        deck.Size = Vector3.new(12, 2, 12)
+        deck.Anchored = true
+        deck.CFrame = CFrame.new(0, 0, 0)
+        deck.Parent = folder
+        local sweep = Instance.new("Part")
+        sweep.Name = "GridSweepBand1"
+        sweep.Size = Vector3.new(7.8, 0.10, 64)
+        sweep.Anchored = true
+        sweep.CanCollide = false
+        sweep.CFrame = CFrame.new(0, 0.29, 0)
+        sweep:SetAttribute("GridSweepPhase", "Warning")
+        sweep.Parent = folder
+
+        local imminentRoot = Vector3.new(0, 2.9, 0)
+        expect(Rules.surfaceStatus(deck)).toBe("Safe")
+        expect(Rules.hazardAt(imminentRoot, deck, {sweep})).toBe(true)
+        sweep:SetAttribute("GridSweepPhase", "Pulse")
+        expect(Rules.hazardAt(imminentRoot, deck, {sweep})).toBe(true)
+        sweep:SetAttribute("GridSweepPhase", "Idle")
+        expect(Rules.hazardAt(imminentRoot, deck, {sweep})).toBe(false)
+        -- Elevated collision decks escape these genuinely FLOOR-only bands.
+        sweep:SetAttribute("GridSweepPhase", "Warning")
+        expect(Rules.hazardAt(Vector3.new(0, 10, 0), deck, {sweep}))
+            .toBe(false)
+        expect(Rules.hazardAt(Vector3.new(13, 2.9, 0), deck, {sweep}))
+            .toBe(false)
+        expect(Rules.hazardAt(nil, deck, {sweep})).toBe(false)
+        expect(Rules.hazardAt(imminentRoot, deck, nil)).toBe(false)
+
+        -- Harbor uses rotated real service corridors rather than all
+        -- global X/Z space. Verify the exact CFrame footprint.
+        local harbor = Instance.new("Part")
+        harbor.Name = "HarborSweepLane1"
+        harbor.Size = Vector3.new(7.5, 0.1, 68)
+        harbor.CFrame = CFrame.new(25, 0.29, 18)
+            * CFrame.Angles(0, math.rad(35), 0)
+        harbor:SetAttribute("HarborSweepPhase", "Warning")
+        harbor.Parent = folder
+        local center = harbor.CFrame:PointToWorldSpace(Vector3.new(0, 2.6, 0))
+        local flank = harbor.CFrame:PointToWorldSpace(Vector3.new(12, 2.6, 0))
+        expect(Rules.hazardAt(center, deck, {harbor})).toBe(true)
+        expect(Rules.hazardAt(flank, deck, {harbor})).toBe(false)
+        expect(Rules.hazardAt(center, deck, {sweep, harbor})).toBe(true)
+        harbor:SetAttribute("HarborSweepPhase", "Idle")
+        expect(Rules.hazardAt(center, deck, {harbor})).toBe(false)
+        folder:Destroy()
+    end)
+
+    it("warns only at the real physical Tower shutter footprint, never the whole bridge", function()
+        local Rules = require("../../src/shared/JumpLandingPreviewRules")
+        local folder = Instance.new("Folder")
+        folder.Name = "LandingShutterRegression"
+        folder.Parent = workspace
+        local bridge = Instance.new("Part")
+        bridge.Name = "Skybridge18"
+        bridge.Size = Vector3.new(49, 1, 4.5)
+        bridge.Parent = folder
+        local other = Instance.new("Part")
+        other.Name = "Skybridge19"
+        other.Parent = folder
+        local shutter = Instance.new("Part")
+        shutter.Name = "BridgeShutterSkybridge18"
+        shutter.Size = Vector3.new(0.85, 2.05, 4.38)
+        shutter.CFrame = CFrame.new(0, 1.6, 0)
+        shutter:SetAttribute("BridgeShutter", true)
+        shutter:SetAttribute("BridgeName", "Skybridge18")
+        shutter:SetAttribute("ShutterPhase", "Warning")
+        shutter.Parent = folder
+
+        expect(Rules.hazardAt(Vector3.new(0, 2.9, 0), bridge, {shutter}))
+            .toBe(true)
+        expect(Rules.hazardAt(Vector3.new(9, 2.9, 0), bridge, {shutter}))
+            .toBe(false)
+        expect(Rules.hazardAt(Vector3.new(0, 2.9, 0), other, {shutter}))
+            .toBe(false)
+        shutter:SetAttribute("ShutterPhase", "Raising")
+        expect(Rules.hazardAt(Vector3.new(0, 2.9, 0), bridge, {shutter}))
+            .toBe(true)
+        shutter:SetAttribute("ShutterPhase", "Raised")
+        expect(Rules.hazardAt(Vector3.new(0, 2.9, 0), bridge, {shutter}))
+            .toBe(true)
+        shutter:SetAttribute("ShutterPhase", "Idle")
+        expect(Rules.hazardAt(Vector3.new(0, 2.9, 0), bridge, {shutter}))
+            .toBe(false)
+        shutter:SetAttribute("ShutterPhase", "Warning")
+        shutter:SetAttribute("BridgeName", "Skybridge99")
+        expect(Rules.hazardAt(Vector3.new(0, 2.9, 0), bridge, {shutter}))
+            .toBe(false)
+        folder:Destroy()
+    end)
+
     it("predicts only near-term descending contact and validates edges", function()
         local Rules = require("../../src/shared/JumpLandingPreviewRules")
         local freefall = Enum.HumanoidStateType.Freefall
