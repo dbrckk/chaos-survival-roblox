@@ -32,6 +32,17 @@ describe("Round medals", function()
         expect(medals[1]).toBe("FIRST CHAOS")
     end)
 
+    it("awards both skill medals only for server-verified parkour chains", function()
+        local ace = RoundMedals.evaluate({parkourBest = 3})
+        expect(#ace).toBe(1)
+        expect(ace[1]).toBe("PARKOUR ACE")
+        local legend = RoundMedals.evaluate({parkourBest = 7})
+        expect(#legend).toBe(2)
+        expect(legend[1]).toBe("PARKOUR ACE")
+        expect(legend[2]).toBe("RIDGE LEGEND")
+        expect(#RoundMedals.evaluate({parkourBest = 2})).toBe(0)
+    end)
+
     it("does not award medals below thresholds", function()
         local medals = RoundMedals.evaluate({
             shards = 2,

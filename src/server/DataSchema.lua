@@ -1,6 +1,6 @@
 local DataSchema = {}
 
-DataSchema.Version = 8
+DataSchema.Version = 9
 
 DataSchema.Defaults = {
     DataVersion = DataSchema.Version,
@@ -11,6 +11,7 @@ DataSchema.Defaults = {
     Games = 0,
     Level = 1,
     BestStreak = 0,
+    ParkourBestRecord = 0,
     DailyStreak = 0,
     LastDailyDay = -1,
 
@@ -98,6 +99,15 @@ function DataSchema.normalize(saved)
     data.Wins = math.max(0, data.Wins)
     data.Games = math.max(0, data.Games)
     data.BestStreak = math.max(0, data.BestStreak)
+    -- Version 9: persistent best chain of REAL physically verified jumps.
+    -- Old accounts receive zero; arbitrary client/local values never
+    -- become unbounded records or exploit a broken saved snapshot.
+    local record = data.ParkourBestRecord
+    if type(record) ~= "number" or record ~= record
+        or record == math.huge or record == -math.huge then
+        record = 0
+    end
+    data.ParkourBestRecord = math.clamp(math.floor(record), 0, 7)
     data.DailyStreak = math.max(0, data.DailyStreak)
     data.DoubleChaosSurvivals = math.max(0, data.DoubleChaosSurvivals)
     -- Numbers from legacy/new sessions must never be persisted as NaN,

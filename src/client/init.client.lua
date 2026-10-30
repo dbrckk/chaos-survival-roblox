@@ -2232,11 +2232,14 @@ local function showRoundFeedback(feedback)
     local signalCoins = tonumber(feedback.signalCoins) or 0
     local challengeCoins = tonumber(feedback.challengeCoins) or 0
     local challengeXP = tonumber(feedback.challengeXP) or 0
+    local parkourXP = math.clamp(
+        math.floor(tonumber(feedback.parkourXP) or 0), 0, 7
+    )
     local flowCoins = tonumber(feedback.flowCoins) or 0
     local fusionBonusCoins = tonumber(feedback.fusionBonusCoins) or 0
     local shownCoins = (tonumber(feedback.coins) or 0)
         + shardCoins + districtCoins + signalCoins + challengeCoins + flowCoins
-    local shownXP = (tonumber(feedback.xp) or 0) + challengeXP
+    local shownXP = (tonumber(feedback.xp) or 0) + challengeXP + parkourXP
 
     local extras = {}
     if streakBonus > 0 then
@@ -2259,6 +2262,9 @@ local function showRoundFeedback(feedback)
     end
     if fusionBonusCoins > 0 then
         table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_FUSION", fusionBonusCoins))
+    end
+    if parkourXP > 0 then
+        table.insert(extras, CoreLocalization.text(localeId, "RESULT_EXTRA_PARKOUR", parkourXP))
     end
 
     resultReward.Text = feedback.spectating == true
@@ -2344,6 +2350,12 @@ local function showRoundFeedback(feedback)
     end
     if momentumBest >= 2 then
         table.insert(tags, CoreLocalization.text(localeId, "RESULT_MOMENTUM_TAG", momentumBest))
+    end
+    local parkourBest = math.clamp(
+        math.floor(tonumber(feedback.parkourBest) or 0), 0, 7
+    )
+    if parkourBest >= 2 then
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_PARKOUR_TAG", parkourBest))
     end
 
     local medals = type(feedback.medals) == "table" and feedback.medals or {}

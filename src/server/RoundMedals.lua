@@ -23,6 +23,17 @@ function RoundMedals.evaluate(stats)
     if (tonumber(stats.momentumBest) or 0) >= 4 then
         table.insert(medals, "MOMENTUM MASTER")
     end
+    -- Physical traversal is verified by the server's ParkourFlow sampler:
+    -- no touch pickups or client-claimed jumps qualify for these medals.
+    local parkour = math.clamp(
+        math.floor(tonumber(stats.parkourBest) or 0), 0, 7
+    )
+    if parkour >= 3 then
+        table.insert(medals, "PARKOUR ACE")
+    end
+    if parkour >= 6 then
+        table.insert(medals, "RIDGE LEGEND")
+    end
     if stats.criticalSurvival == true then
         table.insert(medals, "CLUTCH")
     end
