@@ -991,9 +991,10 @@ function AISurvivorRules.floorSweepRoutePenalty(origin, destination, bandFrame, 
 
     local travel = finish - start
     local entry, exit = 0, 1
-    for _, axis in ipairs({"X", "Z"}) do
-        local bound = axis == "X" and halfX or halfZ
-        local offset, delta = start[axis], travel[axis]
+    for _, isX in ipairs({true, false}) do
+        local bound = isX and halfX or halfZ
+        local offset = isX and start.X or start.Z
+        local delta = isX and travel.X or travel.Z
         if math.abs(delta) < 0.0001 then
             if math.abs(offset) > bound then return 0 end
         else
