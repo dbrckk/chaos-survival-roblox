@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-30 — Successful verified public playtest update and next Harbor art pass
+
+- **Public Roblox update confirmed:** exact SHA `82f925c320b2525a58acb4944e74435a75a2795c` deployed into the existing Universe `10771083668` / Place `95351659174730` via successful [official public publisher](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41088325686). [Build Validation](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41087607663), [real Roblox Open Cloud Engine Tests](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41087618418) and [one-time exact-SHA source gate](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41087594018) all green. Previously failed source candidate was correctly blocked, with float32 size assertions repaired before publishing.
+- **Next source-only art pass (not live):** finish the missing fifth arena identity, Storm Harbor, in the existing client-only skyline finishing system. On Android Low, three distinctive mooring-spire / dock-boom / cargo-hoist shapes (instead of zero parts); on High, fourth navigation crown. On Medium/High, use a new seven/eleven-part, non-colliding offshore freight berth rather than incorrectly reusing Classic's land survey mast. Built-in corroded/steel/concrete finishes, no new texture downloads, lights, network traffic or extra frame loops.
+- Existing engine art spec expanded for new Harbor geometry, precise rotated map exterior bounds, non-colliding surface, materials and bounded LOD. **This new art has not yet been engine-tested, Android-screenshot approved, or published.** See [Harbor visual acceptance plan](docs/PREMIUM_HARBOR_SKYLINE_2026-10-30.md).
+
 ## 2026-10-30 — Authentic five-arena mechanic guidance and complete Harbor locale (unpublished)
 
 - Fix misleading static arena briefing: a map previously described collapsing bridges or timed sweeps even when the server had disabled them during beginner or incompatible-disaster rounds. The existing `ArenaMechanics.start` now exposes a strict `MechanicMode` attribute and `mode` return value derived from the **actually started challenge**, including disambiguation of Towers' real timed metal shutter vs disappearing bridge rounds. The already-existing 1Hz `RoundState` includes mode + short intro window.

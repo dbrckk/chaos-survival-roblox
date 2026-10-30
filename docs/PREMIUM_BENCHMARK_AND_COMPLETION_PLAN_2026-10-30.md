@@ -83,6 +83,8 @@ Le nouveau `src/server/SkybridgeShutters.lua` comporte :
 - **Perf** : LOD pour modèles éloignés, compression et limitation des textures lourdes, limite d'effets simultanés, pas de flash agressif ni d'alerte uniquement fondée sur la couleur.
 - **Sortie** : captures réelles validées dans 5 arènes × 3 éclairages × 3 tiers graphiques ; les dangers et zones d'atterrissage restent lisibles ; aucun asset sans licence maîtrisée.
 
+**Avancement M3 — identité propre à Storm Harbor :** les finitions locales des silhouettes avaient encore une lacune : Harbor n'avait aucun accent architectural `Low` et héritait, aux réglages Medium/High, du mât de Classic par défaut. Une véritable silhouette portuaire créée avec des géométries 3D originales remplace ce comportement : trois/quatre parties Low/High pour la grue de quai éloignée et un terminal de fret architectural de sept/onze parties selon les réglages. Le matériel est inerte et placé hors des routes. Voir [l'acceptation graphique et LOD de Harbor](PREMIUM_HARBOR_SKYLINE_2026-10-30.md). **Statut : nouveau code source seulement, pas dans le SHA public 82f925c ; aucune validation visuelle Android encore.**
+
 ### M4 — Rétention, objectifs et équité
 
 - **Code cible** : `RoundSettlement.lua`, `ParkourFlow.lua`, `DailyQuests.lua`, `WeeklyChallenges.lua`, `lobby-round-recap.client.lua`, `RoundResultState.lua`, `AISurvivorService.lua`.
