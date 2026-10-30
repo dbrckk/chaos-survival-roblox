@@ -2,6 +2,26 @@ local ArenaVariants = {}
 
 ArenaVariants.Order = {"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}
 
+-- Actual landing surfaces progress from forgiving first-session geometry
+-- to harder late-route precision. Keep center positions, jumps, top
+-- heights, decorations and disaster ownership unchanged. This is not a
+-- dynamic client scaling trick: every player sees the SAME solid platforms.
+local COURSE_WIDTHS = {
+    Harbor = {12, 12, 11.6, 11.1, 10.6, 10.1, 9.6},
+    Perimeter = {12, 12, 12, 11.6, 11.2, 10.8, 10.4, 10},
+    Branch = {12, 12, 11.2, 10.4},
+}
+
+function ArenaVariants.parkourFootprint(kind, step)
+    if type(step) ~= "number" or step % 1 ~= 0 then return nil, nil end
+    local widths = COURSE_WIDTHS[kind]
+    if not widths or not widths[step] then return nil, nil end
+    local grade = kind == "Branch"
+        and (step <= 2 and 3 or 4)
+        or math.min(4, math.floor((step + 1) / 2))
+    return widths[step], grade
+end
+
 ArenaVariants.Definitions = {
     Classic = {
         Id = "Classic",
@@ -265,13 +285,17 @@ ArenaVariants.Definitions.Harbor = {
         }
         for route, signs in ipairs(corners) do
             for step, coords in ipairs(turns) do
+                local width, grade = ArenaVariants.parkourFootprint(
+                    "Harbor", step
+                )
                 table.insert(decks, {
                     offset = Vector3.new(
                         signs[1] * coords[1], 4 + (step - 1) * 3,
                         signs[2] * coords[2]
                     ),
-                    size = Vector3.new(12, 2, 12),
+                    size = Vector3.new(width, 2, width),
                     RouteTier = math.min(step, 4),
+                    ParkourGrade = grade,
                     HarborRoute = route,
                     HarborStep = step,
                 })
@@ -305,24 +329,32 @@ for _, variantId in ipairs(ArenaVariants.Order) do
     local quadrants = {{-1,-1}, {1,-1}, {-1,1}, {1,1}}
     for route, signs in ipairs(quadrants) do
         local sx, sz = signs[1], signs[2]
+        local entryWidth, entryGrade = ArenaVariants.parkourFootprint(
+            "Perimeter", 1
+        )
         table.insert(routes, {
             offset = Vector3.new(sx * positions.entryX, 2.5,
                 sz * positions.entryZ),
-            size = Vector3.new(12, 3, 12),
+            size = Vector3.new(entryWidth, 3, entryWidth),
             RouteTier = 1,
+            ParkourGrade = entryGrade,
             PerimeterRoute = route,
             PerimeterStep = 1,
         })
         for step = 2, ArenaVariants.PerimeterSteps do
+            local width, grade = ArenaVariants.parkourFootprint(
+                "Perimeter", step
+            )
             table.insert(routes, {
                 offset = Vector3.new(
                     sx * (positions.outerX + (step - 2) * 13),
                     4.3 + (step - 2) * 1.8,
                     sz * positions.outerZ
                 ),
-                size = Vector3.new(12, 6.6 + (step - 2) * 3.6, 12),
+                size = Vector3.new(width, 6.6 + (step - 2) * 3.6, width),
                 -- Guidance/visual tiers stay within the existing 1..4 API.
                 RouteTier = math.min(step, 4),
+                ParkourGrade = grade,
                 PerimeterRoute = route,
                 PerimeterStep = step,
             })
@@ -345,14 +377,18 @@ for _, variantId in ipairs(ArenaVariants.Order) do
         local forkTop = fork.offset.Y + fork.size.Y * 0.5
         for step = 1, 4 do
             local height = forkTop + step * 3 - floorTop
+            local width, grade = ArenaVariants.parkourFootprint(
+                "Branch", step
+            )
             table.insert(branches, {
                 offset = Vector3.new(
                     fork.offset.X,
                     floorTop + height * 0.5,
                     fork.offset.Z + directionZ * 13 * step
                 ),
-                size = Vector3.new(12, height, 12),
+                size = Vector3.new(width, height, width),
                 RouteTier = math.min(4, step + 1),
+                ParkourGrade = grade,
                 BranchRoute = route,
                 BranchStep = step,
                 BranchParentStep = 5,
@@ -383,6 +419,9 @@ for _, variantId in ipairs(ArenaVariants.Order) do
             ),
             size = Vector3.new(12, height, 12),
             RouteTier = 4,
+            -- A rescue crossover must remain generously sized even when
+            -- the surrounding late-route decks grow more challenging.
+            ParkourGrade = 3,
             CrosslinkRoute = route,
             CrosslinkFromPerimeterStep = 6,
             CrosslinkToBranchStep = 2,
