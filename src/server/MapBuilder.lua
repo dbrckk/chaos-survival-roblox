@@ -2581,6 +2581,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     for _, definition in ipairs(variant.CrosslinkPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
+    -- Genuine Harbor top-deck links append LAST; no original platform
+    -- indices or existing disaster/collectible anchors are renumbered.
+    for _, definition in ipairs(variant.SkywayPlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
 
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
@@ -2615,6 +2620,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             -- steps and our local landing accent now agree on the
             -- contacted physical material; storm hazards still own it.
             platform.Material = Enum.Material.WoodPlanks
+        end
+        if definition.HarborSkywayLane then
+            -- Two genuinely walkable elevated freight gantries connect
+            -- the Harbor's former dead-end cargo switchbacks. These are
+            -- server-owned collision decks, never a cosmetic fake bridge.
+            platform:SetAttribute("HarborSkywayLane", definition.HarborSkywayLane)
+            platform:SetAttribute("HarborSkywayStep", definition.HarborSkywayStep)
+            platform.Color = theme.Structure:Lerp(theme.Secondary, 0.42)
+            platform.Material = Enum.Material.CorrodedMetal
         end
         if definition.PerimeterRoute then
             -- Explicit route metadata is visible to wayfinding and QA.
