@@ -620,6 +620,45 @@ local function alertNearbyHarborSweep()
     end
 end
 
+-- Tower Run's rising metal sill uses exactly the same already
+-- licensed local warning asset and RoundState cadence as Harbor. Only
+-- runners near the REAL currently warning gate hear a short cue, once per
+-- unique server warning timestamp; no extra threads or replication.
+local shutterHeard = setmetatable({}, {__mode = "k"})
+local function alertNearbySkybridgeShutter()
+    if player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true then return end
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not arena or arena:GetAttribute("VariantId") ~= "Towers" then return end
+    local mechanics = arena:FindFirstChild("Mechanics")
+    local folder = mechanics and mechanics:FindFirstChild("SkybridgeShutters")
+    if not folder then return end
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local hum = character and character:FindFirstChildOfClass("Humanoid")
+    if not root or not root:IsA("BasePart")
+        or not hum or hum.Health <= 0 then return end
+
+    for _, gate in ipairs(folder:GetChildren()) do
+        if gate:IsA("BasePart")
+            and gate:GetAttribute("BridgeShutter") == true
+            and gate:GetAttribute("ShutterPhase") == "Warning" then
+            local startedAt = gate:GetAttribute("ShutterWarningAt")
+            local point = gate.CFrame:PointToObjectSpace(root.Position)
+            local near = math.abs(point.X) <= gate.Size.X * 0.5 + 10
+                and math.abs(point.Z) <= gate.Size.Z * 0.5 + 5
+                and point.Y >= -2 and point.Y <= 7.5
+            if near and type(startedAt) == "number"
+                and shutterHeard[gate] ~= startedAt then
+                shutterHeard[gate] = startedAt
+                playRaw("PlatformWarning", 0, 0.33, -0.08)
+                break
+            end
+        end
+    end
+end
+
 -- Physical parkour mastery has an authoritative RoundPeakTier attribute.
 -- One small reward chime on a newly validated tier (at most four per
 -- round) makes the objective legible without client-side guesswork,
@@ -660,6 +699,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     setMix(phase, overdrive, finalRush)
     if phase == "round" then
         alertNearbyHarborSweep()
+        alertNearbySkybridgeShutter()
     end
 
     if finalRush and not lastFinalRush then
