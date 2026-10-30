@@ -178,6 +178,9 @@ local function buildOrbital(base, theme, tier)
         local x = math.cos(angle) * radial
         local z = math.sin(angle) * radial
         local size = 8 + (i % 3) * 2
+        -- A low-poly sphere remains recognizable as an orbital node,
+        -- while its metallic finish resembles a manufactured hull.
+        -- Retain the same geometry and quality-tier part counts.
 
         local body = makePart(
             "OrbitalStationMass" .. i,
@@ -198,9 +201,10 @@ local function buildOrbital(base, theme, tier)
                 "OrbitalStationMassArm" .. i,
                 Vector3.new(14 + (i % 2) * 4, 0.60, 1.15),
                 body.CFrame * CFrame.Angles(0, -tangent, 0),
-                glowing and theme.Secondary or theme.Detail,
-                glowing and Enum.Material.Neon or Enum.Material.Metal,
-                glowing and 0.60 or 0.20
+                glowing and theme.Secondary:Lerp(theme.Structure, 0.60)
+                    or theme.Detail:Lerp(theme.Structure, 0.28),
+                Enum.Material.DiamondPlate,
+                glowing and 0.22 or 0.12
             )
         end
     end
@@ -244,13 +248,13 @@ local function buildHarbor(base, theme, tier)
             Vector3.new(21.0, 7.4, 8.6),
             origin * CFrame.new(0, 5.18, 0),
             freightColor, Enum.Material.CorrodedMetal,
-            tier.Name == "Low" and 0.26 or 0.10
+            tier.Name == "Low" and 0.18 or 0.05
         )
         makePart(
             "HarborFreightLoadSill" .. i,
             Vector3.new(22.0, 0.38, 9.6),
             container.CFrame * CFrame.new(0, -3.9, 0),
-            ribColor, Enum.Material.Metal, 0.08
+            ribColor, Enum.Material.DiamondPlate, 0.08
         )
 
         if tier.Name ~= "Low" then
@@ -261,7 +265,8 @@ local function buildHarbor(base, theme, tier)
                     "HarborFreightCorrugation" .. i .. "_" .. rib,
                     Vector3.new(0.24, 6.9, 8.72),
                     container.CFrame * CFrame.new(x, 0, 0),
-                    ribColor, Enum.Material.CorrodedMetal, 0.12
+                    ribColor:Lerp(freightColor, 0.28),
+                    Enum.Material.CorrodedMetal, 0.06
                 )
             end
         end
