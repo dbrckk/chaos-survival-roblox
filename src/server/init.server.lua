@@ -2299,6 +2299,15 @@ while true do
                     "XP:" .. tostring(parkourXP)
                 )
             end
+            -- Exactly one authentic parkour quest tick per completed round,
+            -- independent of coin drops, client inputs and repeated jumps.
+            -- A player who earns ACE then dies still earned that skill.
+            -- PlayerData.progressQuestEvent requires DataStore session
+            -- ownership and advances only quests subscribed to parkour_ace.
+            if roundParkourBest >= ParkourFlow.AceJumps then
+                progressQuest(p, "parkour_ace", 1)
+            end
+
             local challengeProgress = RoundChallenge.progress(
                 roundChallenge,
                 roundShardCount,
