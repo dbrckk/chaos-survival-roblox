@@ -17,6 +17,10 @@ local pressureModule = script and script.Parent:FindFirstChild("SkybridgePressur
 local SkybridgePressure = if pressureModule
     then require(pressureModule)
     else require("./SkybridgePressure")
+local shutterModule = script and script.Parent:FindFirstChild("SkybridgeShutters")
+local SkybridgeShutters = if shutterModule
+    then require(shutterModule)
+    else require("./SkybridgeShutters")
 local switchyardModule = script and script.Parent:FindFirstChild("CrossroadsSwitchyard")
 local CrossroadsSwitchyard = if switchyardModule
     then require(switchyardModule)
@@ -270,6 +274,7 @@ function ArenaMechanics.start(ctx, variantId)
     end
 
     local dynamicStarted = false
+    local shuttersStarted = false
     if variantId == "Classic" then
         -- The four-station skill course and blue pads remain available even
         -- in a beginner-friendly round with no floor waves.
@@ -277,7 +282,16 @@ function ArenaMechanics.start(ctx, variantId)
         dynamicStarted = ClassicGridSweep.start(ctx, arena) ~= nil
     elseif variantId == "Towers" then
         SkyrailSlipstream.start(ctx, folder, arena)
-        dynamicStarted = SkybridgePressure.start(ctx, arena) == true
+        -- Alternate two DIFFERENT course skills. Never run physical
+        -- shutters together with disappearing-bridge pressure or let
+        -- Skyrail boosts force survivors through a forming metal gate.
+        local oddRound = math.floor(tonumber(ctx.RoundNumber) or 0) % 2 == 1
+        if oddRound and SkybridgeShutters.allowed(ctx) then
+            shuttersStarted = SkybridgeShutters.start(ctx, arena) == true
+            dynamicStarted = shuttersStarted
+        else
+            dynamicStarted = SkybridgePressure.start(ctx, arena) == true
+        end
     elseif variantId == "Crossroads" then
         CrossroadsFluxRelay.start(ctx, folder, base.Position)
         dynamicStarted = CrossroadsSwitchyard.start(
@@ -295,6 +309,9 @@ function ArenaMechanics.start(ctx, variantId)
     end
 
     local hint = ArenaMechanics.effectiveHint(variantId, dynamicStarted)
+    if shuttersStarted then
+        hint = "Timed bridge shutters rise: JUMP the low bar or WAIT for an open crossing"
+    end
     folder:SetAttribute("MechanicHint", hint)
     folder:SetAttribute("DynamicRouteActive", dynamicStarted)
     return {
