@@ -78,6 +78,41 @@ describe("UI responsive profiles", function()
             ~= nil).toBe(true)
     end)
 
+    it("softens at most two distinct real head/torso arena supports", function()
+        local rules = CameraOcclusionRules
+        local lower = Instance.new("Part")
+        lower.Name = "LowerCameraGirder"
+        lower.Anchored = true
+        local upper = Instance.new("Part")
+        upper.Name = "UpperCameraGirder"
+        upper.Anchored = true
+        local third = Instance.new("Part")
+        third.Name = "ThirdGirder"
+        third.Anchored = true
+        local ignored = Instance.new("Folder")
+
+        local two = rules.chooseStructuralBlockers({
+            lower, lower, ignored, upper, third,
+        }, 2)
+        expect(#two).toBe(2)
+        expect(two[1]).toBe(lower)
+        expect(two[2]).toBe(upper)
+        expect(#rules.chooseStructuralBlockers({lower, lower}, 2)).toBe(1)
+        expect(rules.chooseStructuralBlockers({lower, upper}, 1)[1])
+            .toBe(lower)
+        expect(#rules.chooseStructuralBlockers({lower, upper}, 0)).toBe(0)
+        expect(#rules.chooseStructuralBlockers({lower, upper, third}, 99))
+            .toBe(2)
+        expect(#rules.chooseStructuralBlockers(nil, 2)).toBe(0)
+        expect(#rules.chooseStructuralBlockers({lower, upper}, math.huge))
+            .toBe(2)
+
+        lower:Destroy()
+        upper:Destroy()
+        third:Destroy()
+        ignored:Destroy()
+    end)
+
     it("classifies short landscape phones as tiny height", function()
         local c = UIResponsive.classify(Vector2.new(640, 360), true)
         expect(c.touch).toBe(true)
