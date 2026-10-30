@@ -497,4 +497,80 @@ describe("Veteran parkour retry coaching after unsuccessful physical jumps", fun
     end)
 end)
 
+
+describe("Real server-grounded platformer difficulty diagnostics", function()
+    it("keeps zero-jump contestants in the denominator and bounds bad values", function()
+        local empty = ParkourFlow.roundMetrics(nil)
+        expect(empty.attempts).toBe(0)
+        expect(empty.successes).toBe(0)
+        expect(empty.successRate).toBe(0)
+        expect(empty.best).toBe(0)
+        expect(empty.hardestGrade).toBe(0)
+        local corrupt = ParkourFlow.roundMetrics({
+            attempts = math.huge, successes = 600,
+            best = 999, hardestAttemptGrade = 999,
+        })
+        expect(corrupt.attempts).toBe(0)
+        expect(corrupt.successes).toBe(0)
+        expect(corrupt.best).toBe(7)
+        expect(corrupt.hardestGrade).toBe(4)
+        local bounded = ParkourFlow.roundMetrics({
+            attempts = 3, successes = 6, best = 2,
+            hardestAttemptGrade = 3,
+        })
+        expect(bounded.attempts).toBe(3)
+        expect(bounded.successes).toBe(3)
+        expect(bounded.successRate).toBe(1)
+    end)
+
+    it("records a real attempt once and only scores an actual next-platform landing", function()
+        local root = MapBuilder.build(Config, "Classic", ArenaVariants, VisualTheme)
+        local arena = root:FindFirstChild("Arena")
+        local platforms = arena:FindFirstChild("Platforms")
+        local first, second
+        for _, deck in ipairs(platforms:GetChildren()) do
+            if deck:GetAttribute("PerimeterRoute") == 1 then
+                if deck:GetAttribute("PerimeterStep") == 1 then first = deck end
+                if deck:GetAttribute("PerimeterStep") == 2 then second = deck end
+            end
+        end
+        local memory = ParkourFlow.advance(
+            nil, first, platforms, Config.ArenaCenter, "Classic",
+            10, standingPosition(first)
+        )
+        memory = ParkourFlow.takeoff(
+            memory, platforms, standingPosition(first), 10.5
+        )
+        local attempt, duplicated = ParkourFlow.takeoff(
+            memory, platforms, standingPosition(first), 10.6
+        )
+        expect(duplicated).toBe(false)
+        expect(ParkourFlow.roundMetrics(attempt).attempts).toBe(1)
+        memory = ParkourFlow.advance(
+            attempt, second, platforms, Config.ArenaCenter, "Classic",
+            11.1, standingPosition(second)
+        )
+        local metrics = ParkourFlow.roundMetrics(memory)
+        expect(metrics.attempts).toBe(1)
+        expect(metrics.successes).toBe(1)
+        expect(metrics.successRate).toBe(1)
+        expect(metrics.best).toBe(1)
+        expect(metrics.hardestGrade).toBe(1)
+        -- Jumping and dropping back on the SAME original deck is a failed
+        -- attempt, not another successful route link.
+        memory = ParkourFlow.takeoff(
+            memory, platforms, standingPosition(second), 12
+        )
+        memory = ParkourFlow.advance(
+            memory, second, platforms, Config.ArenaCenter, "Classic",
+            12.6, standingPosition(second)
+        )
+        metrics = ParkourFlow.roundMetrics(memory)
+        expect(metrics.attempts).toBe(2)
+        expect(metrics.successes).toBe(1)
+        expect(metrics.successRate).toBe(0.5)
+        root:Destroy()
+    end)
+end)
+
 return nil
