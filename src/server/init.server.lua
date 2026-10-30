@@ -2257,6 +2257,12 @@ while true do
             local parkourXP = ParkourFlow.bonusXP(roundParkourBest)
             if parkourXP > 0 then
                 PlayerData.add(p, "XP", parkourXP)
+                GameAnalytics.custom(
+                    p, "PhysicalParkourMastery", roundParkourBest,
+                    "Arena:" .. tostring(currentArenaVariant),
+                    "Mode:" .. GameAnalytics.modeLabel(roundSettings.Solo),
+                    "XP:" .. tostring(parkourXP)
+                )
             end
             local challengeProgress = RoundChallenge.progress(
                 roundChallenge,
