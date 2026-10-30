@@ -67,6 +67,8 @@ Le nouveau `src/server/SkybridgeShutters.lua` comporte :
 
 **Sécurité et lisibilité des atterrissages :** le même indicateur physique Android/PC à quatre segments distingue désormais un atterrissage dans un vrai **Grid Sweep, Cargo Sweep ou portillon actif de Towers** d'une plateforme réellement sûre. Les zones hors du couloir de danger et les plateformes surélevées échappant à l'onde restent indiquées comme sûres ; les marques de danger sont des X rouges et non une simple couleur. Voir [les règles, performances et cas de validation](PREMIUM_HAZARD_AWARE_LANDING_PREVIEW_2026-10-30.md). **Il reste à exécuter les tests moteur du commit final et à mesurer le ressenti sur de vrais appareils avant toute hausse de note.**
 
+**Lisibilité des objectifs (code source complété, essais manquants) :** les cinq arènes disposent à présent d'une consigne FR/EN **liée à la mécanique réellement activée côté serveur**. Pendant les six premières secondes d'une manche avancée compatible, le bandeau de statut existant peut présenter une action concrète (pads, transfert, contournement de pont, saut/attente sur un vrai portillon) sans supplanter les catastrophes prioritaires ou les premières instructions des débutants. Le mode TowersShutters ne peut plus être confondu avec la disparition des ponts ; Storm Harbor a enfin sa véritable localisation. Voir [la matrice de validation de guidage et de traduction](PREMIUM_ARENA_ACTION_ONBOARDING_2026-10-30.md).
+
 ### M2 — Véritable variété de parcours et compétences physiques
 
 - **Code cible** : `ArenaVariants.lua`, `ArenaMechanics.lua`, `MapBuilder.lua`, `SkybridgeShutters.lua`, `SkybridgePressure.lua`, `CrossroadsSwitchyard.lua`, `HarborCargoSweep.lua`.
