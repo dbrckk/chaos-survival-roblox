@@ -396,6 +396,20 @@ local function update()
         return rookie
     end
 
+    -- Only standard jump/recovery cues announce the late precision grade.
+    -- Never replace cargo objectives, fork choices or an emergency
+    -- safe-detour hint. Reuse the one existing depth-tested BillboardGui.
+    local grade = tonumber(target:GetAttribute("ParkourGrade"))
+    if grade and (hint == (french and "SAUT SUIVANT  ↑" or "NEXT JUMP  ↑")
+        or hint == (french and "REPRENDS LE PARCOURS  ↑"
+            or "RESUME THE ROUTE  ↑")) then
+        if grade >= 4 then
+            hint = french and "SAUT EXPERT  ↑" or "EXPERT JUMP  ↑"
+        elseif grade >= 3 then
+            hint = french and "SAUT PRÉCIS  ↑" or "PRECISION JUMP  ↑"
+        end
+    end
+
     local sign = gui()
     -- Calm teal for normal rookie guidance, sea-green for cargo. Retain
     -- depth testing and a single HUD owner on all Android tiers.
