@@ -67,3 +67,57 @@ prouvent ni la qualité artistique, ni les causes de départ. Mesurer la D1/D7
 dans l'Analytics Roblox avec ses définitions officielles et des cohortes
 suffisantes. Respecter les règles de confidentialité et ne jamais loguer de
 pseudonymes, chat, identifiants personnels ou données sensibles ici.
+
+## 30 octobre — boucle de revanche personnalisée sans écran supplémentaire
+
+### Déficit observé dans le code du récapitulatif
+
+Le panneau existant `LobbyRoundRecapLocal`, visible après chaque manche,
+présentait uniquement le nom de la catastrophe, les survivants et la consigne
+de vote. Il ne rappelait pas au joueur **son propre résultat**, alors que
+l'interface de résultat sait déjà distinguer survivant, champion,
+participant éliminé et simple spectateur. L'ancien rafraîchissement
+détruisait et recréait aussi tous les traits du pictogramme de catastrophe
+à chaque paquet de compte à rebours (coût d'instances UI inutile sur Android).
+
+### Modification finalisée côté code
+
+- `ResultPresentation.lobbyReplayCue(feedback, localeId)` produit une
+  incitation FR/EN **courte, factuelle, personnalisée**, sans argent ou XP
+  inventé. Champion/Survivant : objectif de rejouer ; élimination avec
+  cause serveur connue : **une action de progression**, comme monter plus
+  haut contre la lave, quitter le rouge contre une bombe, ou mieux viser un
+  saut. Cause inconnue : « Réessaie ! » sans accusation inventée.
+- Le panneau `lobby-round-recap.client.lua` réutilise
+  `ResultPresentation.fallbackFeedback` à partir des **listes figées
+  de participants et survivants** du paquet `RoundState.result`.
+  Un `RoundFeedback` individuel arrivé ensuite peut enrichir uniquement
+  **cette même manche** avec la vraie cause d'élimination. Les reçus plus
+  anciens sont rejetés ; un spectateur n'est jamais affiché comme
+  participant ou perdant. Le bouton de vote/consigne « NEXT » reste visible.
+- Les segments du pictogramme sont maintenant reconstruits **uniquement
+  lorsque son identifiant de catastrophe ou sa couleur changent** (ou
+  quand le vrai plateau/lobby est reconstruit). Les simples paquets de
+  décompte ne créent plus de `Frame`/`UICorner` supplémentaires.
+- Pas de RemoteEvent, écran, DataStore, monnaie, nouvelle progression,
+  animation répétée, réseau externe ou boucle de rendu. On conserve le
+  résultat personnalisé et la mécanique de vote existants.
+
+### Critères de réception
+
+Le cas moteur ajouté à la suite existante
+`tests/engine/result-presentation.spec.luau` vérifie les intitulés
+FR/EN, survivant, champion, élimination connue, cause inconnue,
+spectateur et résultat incomplet. Au jalon de publication, vérifier
+**en vrai sur Android** : fin de manche survivant → panneau du lobby
+« Survécu — Rejoue », mort par lave → « Monte plus haut », entrée
+en spectateur → panneau générique « Last Chaos », puis vote et démarrage
+de la manche suivante. Si le reçu individuel arrive en retard, seule
+la manche correspondante est enrichie ; aucun faux résultat après
+`READY`. Confirmer la lisibilité sur écran paysage 360 px et l'absence
+de recréation des glyphes à chaque seconde.
+
+**Statut : candidat source, pas une publication Roblox ni une hausse
+mesurée de rétention.** Le dernier upload public vérifié reste
+[publisher 41112157340](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41112157340),
+SHA `77e5805c96d9dd793e5bc058b93b4d7e904e1530`.

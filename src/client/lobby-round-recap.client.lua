@@ -12,6 +12,7 @@ local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundFeedback")
 
 local folder = Instance.new("Folder")
 folder.Name = "LobbyRoundRecapLocal"
@@ -30,6 +31,10 @@ local glyphCanvas = nil
 local survivorFill = nil
 local nextStep = nil
 local wasVisible = false
+local lastGlyphHazard = nil
+local lastGlyphColor = nil
+local personalReceipt = nil
+local personalReceiptRound = nil
 
 local function clear()
     folder:ClearAllChildren()
@@ -44,12 +49,17 @@ local function clear()
     survivorFill = nil
     nextStep = nil
     wasVisible = false
+    lastGlyphHazard = nil
+    lastGlyphColor = nil
 end
 
 local function renderGlyph(container, hazardId, color)
-    if not container then
+    if not container or (lastGlyphHazard == hazardId
+        and lastGlyphColor == color) then
         return
     end
+    lastGlyphHazard = hazardId
+    lastGlyphColor = color
 
     for _, child in ipairs(container:GetChildren()) do
         child:Destroy()
@@ -265,6 +275,17 @@ local function refresh()
             contestants
         ) .. "  •  " .. tostring(arenaName)
 
+        -- Lobby recap keeps a concrete reason to return after a loss.
+        -- Fallback uses the server's frozen participant/survivor rosters;
+        -- a later same-round personal receipt adds the real death cause.
+        -- Neither path claims Coins, XP or victory for a spectator.
+        local feedback = latestRecap.personalFeedback
+        if personalReceiptRound == latestRecap.roundNumber then
+            feedback = personalReceipt
+        end
+        title.Text = ResultPresentation.lobbyReplayCue(feedback, localeId)
+            or CoreLocalization.text(localeId, "LAST_CHAOS")
+
         accent.BackgroundColor3 = UITheme.disasterAccent(
             ids[1],
             UITheme.Colors.Cyan
@@ -305,6 +326,7 @@ local function refresh()
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     currentPhase = tostring(state.phase or "waiting")
 
     if currentPhase == "result"
@@ -328,11 +350,34 @@ stateEvent.OnClientEvent:Connect(function(state)
                 survivorsAlive = state.survivorsAlive,
                 contestantCount = state.contestantCount,
                 roundNumber = incomingRound,
+                personalFeedback = ResultPresentation.fallbackFeedback(
+                    state, player.UserId,
+                    player:GetAttribute("RoundParticipant") == true
+                ),
             }
         end
     end
 
     refresh()
+end)
+
+-- Only a server-sent personalized receipt may refine a recap with the
+-- true elimination cause. Out-of-order receipts from older rounds cannot
+-- replace more recent or already observed outcomes after reconnect.
+feedbackEvent.OnClientEvent:Connect(function(feedback)
+    if type(feedback) ~= "table" then return end
+    local number = tonumber(feedback.roundNumber)
+    if not number or number ~= number or number < 1
+        or number == math.huge or number ~= math.floor(number)
+        or (personalReceiptRound and number < personalReceiptRound)
+        or (latestRecap and number < latestRecap.roundNumber) then
+        return
+    end
+    personalReceiptRound = number
+    personalReceipt = feedback
+    if latestRecap and number == latestRecap.roundNumber then
+        refresh()
+    end
 end)
 
 for _, attribute in ipairs({"Games", "DataLoaded", "ReduceMotion"}) do

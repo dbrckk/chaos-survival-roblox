@@ -136,6 +136,53 @@ local ELIMINATION_TO_DISASTER = {
     ShrinkingArena = "ShrinkingArena",
 }
 
+-- A compact, result-backed lobby prompt, never a fabricated achievement.
+-- A real winner receives a replay goal; a real eliminated contestant
+-- receives ONE concrete next-try action appropriate to their confirmed
+-- elimination cause. Spectators never get a false personal result.
+-- The board still shows the actual disasters and the next voting action.
+local REPLAY_ACTIONS_EN = {
+    Meteor = "REMATCH: MOVE EARLY",
+    Bomb = "REMATCH: LEAVE RED ZONES",
+    Lava = "REMATCH: CLIMB HIGHER",
+    Tornado = "REMATCH: DODGE THE WIND",
+    JumpShock = "REMATCH: TIME YOUR JUMP",
+    LowGravity = "REMATCH: STEER IN THE AIR",
+    DisappearingPlatforms = "REMATCH: LEAVE FLASHING DECKS",
+    ShrinkingArena = "REMATCH: REACH THE CENTER",
+    Fall = "REMATCH: AIM YOUR LANDING",
+}
+local REPLAY_ACTIONS_FR = {
+    Meteor = "REVANCHE : BOUGE PLUS TÔT",
+    Bomb = "REVANCHE : QUITTE LE ROUGE",
+    Lava = "REVANCHE : MONTE PLUS HAUT",
+    Tornado = "REVANCHE : ÉVITE LA TORNADE",
+    JumpShock = "REVANCHE : SAUTE À TEMPS",
+    LowGravity = "REVANCHE : CORRIGE EN L'AIR",
+    DisappearingPlatforms = "REVANCHE : QUITTE LES DALLES",
+    ShrinkingArena = "REVANCHE : VA AU CENTRE",
+    Fall = "REVANCHE : VISE TON SAUT",
+}
+
+function ResultPresentation.lobbyReplayCue(feedback, localeId)
+    if type(feedback) ~= "table" or feedback.spectating == true then
+        return nil
+    end
+    local fr = french(localeId)
+    if feedback.survived == true then
+        if feedback.soleSurvivor == true then
+            return fr and "CHAMPION — DÉFENDS TA PLACE"
+                or "CHAMPION — DEFEND YOUR TITLE"
+        end
+        return fr and "SURVÉCU — REJOUE !" or "SURVIVED — PLAY AGAIN!"
+    end
+    if feedback.survived ~= false then return nil end
+    local actions = fr and REPLAY_ACTIONS_FR or REPLAY_ACTIONS_EN
+    return actions[tostring(feedback.eliminationCause or "")]
+        or (fr and "REVANCHE : RÉESSAIE !"
+            or "REMATCH: TRY AGAIN!")
+end
+
 function ResultPresentation.visualHazardOrder(feedback)
     feedback = type(feedback) == "table" and feedback or {}
     local ids = type(feedback.disasterIds) == "table" and feedback.disasterIds or {}
