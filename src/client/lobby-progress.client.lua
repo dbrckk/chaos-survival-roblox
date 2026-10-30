@@ -60,6 +60,22 @@ title.TextXAlignment = Enum.TextXAlignment.Left
 title.Text = CoreLocalization.text(localeId, "CHAOS_RUN")
 title.Parent = panel
 
+-- A persistent PERSONAL record reinforces replay without another lobby
+-- billboard. It only reflects DataSchema v9's server-owned saved value.
+local parkourRecord = Instance.new("TextLabel")
+parkourRecord.Name = "ParkourPersonalBest"
+parkourRecord.AnchorPoint = Vector2.new(1, 0)
+parkourRecord.Position = UDim2.new(1, -16, 0, 10)
+parkourRecord.Size = UDim2.new(0.28, 0, 0.26, 0)
+parkourRecord.BackgroundTransparency = 1
+parkourRecord.Font = Enum.Font.GothamBlack
+parkourRecord.TextColor3 = UITheme.Colors.Gold
+parkourRecord.TextScaled = true
+parkourRecord.TextXAlignment = Enum.TextXAlignment.Right
+parkourRecord.Text = ""
+parkourRecord.Visible = false
+parkourRecord.Parent = panel
+
 local stats = Instance.new("TextLabel")
 stats.Size = UDim2.new(1, -32, 0.28, 0)
 stats.Position = UDim2.new(0, 16, 0.30, 0)
@@ -137,6 +153,16 @@ local function refresh()
         owned,
         total
     )
+    local record = math.clamp(
+        math.floor(tonumber(player:GetAttribute("ParkourBestRecord")) or 0),
+        0, 7
+    )
+    parkourRecord.Visible = record > 0
+    parkourRecord.Text = record > 0
+        and CoreLocalization.text(localeId, "RUN_PARKOUR_RECORD", record) or ""
+    title.Size = parkourRecord.Visible
+        and UDim2.new(0.70, -16, 0.26, 0)
+        or UDim2.new(1, -32, 0.26, 0)
     goal.Text = remaining > 0
         and CoreLocalization.text(localeId, "RUN_NEXT_LEVEL", level + 1, remaining)
         or CoreLocalization.text(localeId, "RUN_LEVEL_READY", level + 1)
@@ -152,7 +178,7 @@ local function refresh()
     end
 end
 
-for _, attribute in ipairs({"Level", "Wins", "XP", "OwnedCosmetics", "CosmeticCatalogTotal"}) do
+for _, attribute in ipairs({"Level", "Wins", "XP", "OwnedCosmetics", "CosmeticCatalogTotal", "ParkourBestRecord"}) do
     player:GetAttributeChangedSignal(attribute):Connect(refresh)
 end
 
