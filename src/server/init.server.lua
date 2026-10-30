@@ -2254,7 +2254,11 @@ while true do
                 math.floor(tonumber(p:GetAttribute("RoundParkourBest")) or 0),
                 0, 7
             )
-            local parkourXP = ParkourFlow.bonusXP(roundParkourBest)
+            -- During a no-save session medals remain cosmetic, but the
+            -- result must not claim earned persistent XP that the DataStore
+            -- owner refused to commit.
+            local parkourXP = PlayerData.canMutate(p)
+                and ParkourFlow.bonusXP(roundParkourBest) or 0
             local oldParkourRecord = math.clamp(
                 math.floor(tonumber(p:GetAttribute("ParkourBestRecord")) or 0),
                 0, 7
