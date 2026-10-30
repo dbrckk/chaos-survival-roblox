@@ -258,7 +258,8 @@ ArenaVariants.Definitions = {
 
 
 -- STORM HARBOR: four ORIGINAL cargo-pier switchbacks, each a genuine
--- seven-jump lane with one-stud clear gaps and three-stud rises.
+-- seven-deck lane with progressively tighter 1..3.25-stud clear gaps
+-- and consistent three-stud rises.
 -- Physical zig-zags make the harbor an alternative to the circular
 -- reactor and straight perimeter climbs, rather than a fifth recolor.
 ArenaVariants.Definitions.Harbor = {
@@ -310,8 +311,8 @@ ArenaVariants.Definitions.Harbor = {
 -- Keep the authored central routes and bridge indices unchanged. Eight
 -- physical, ground-supported perimeter terraces now lead toward the outer
 -- 320-stud boundary rather than terminating in a mostly empty floor.
--- Every route is traversable via standard R15 jumps (1-stud gaps and
--- 3.6-stud elevation gains), with no low-ceiling crawl traps underneath.
+-- Every route is traversable via standard R15 jumps (1..3-stud gaps
+-- and 3.6-stud elevation gains), with no low-ceiling crawl traps underneath.
 local perimeterLocations = {
     Classic = {entryX = 49, entryZ = 49, outerX = 62, outerZ = 49},
     Towers = {entryX = 50, entryZ = 46, outerX = 63, outerZ = 46},
@@ -365,7 +366,8 @@ for _, variantId in ipairs(ArenaVariants.Order) do
     -- The 320-stud floor needs real side destinations, not only a wider
     -- empty rectangle around the original four straight escape ladders.
     -- Branch off physical perimeter STEP FIVE toward each distant corner.
-    -- Each ground-supported terrace has a 1-stud gap and a 3-stud rise;
+    -- Side-route landing widths gently tighten; there is still a real
+    -- achievable jump and a 3-stud rise between grounded terraces.
     -- no hidden collision roof, fake platform or powered jump required.
     -- Branch definitions append AFTER all 32 original perimeter decks, so
     -- existing original/skybridge/deck indices and hazard owners are stable.
