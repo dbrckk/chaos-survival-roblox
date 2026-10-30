@@ -294,7 +294,21 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         make("SwitchboardPanel", "Part",
             Vector3.new(8.2, 2.7, 0.6),
             CFrame.new(0, 21.5, -4.1), dark)
-    elseif variantId == "Classic" then
+    elseif variantId == "Harbor" then
+        -- Storm Harbor is no longer reusing Classic's observatory.
+        -- Small, distinct dockside hoists match its larger outer cranes.
+        make("HarborHoistTower", "Part", Vector3.new(2.8, 12.2, 2.8),
+            CFrame.new(0, 20.5, 0), steel)
+        make("HarborLoadCrossarm", "Part", Vector3.new(12.5, 1.2, 2.0),
+            CFrame.new(0, 26.5, 0), alloy)
+        make("HarborHoistCabin", "Part", Vector3.new(4.5, 2.4, 3.3),
+            CFrame.new(3.1, 23.5, -0.5), dark)
+        make("HarborCargoCable", "Part", Vector3.new(0.3, 4.8, 0.3),
+            CFrame.new(-4.4, 23.6, -1.5), dark)
+        make("HarborCargoHousing", "Part", Vector3.new(4.8, 2.9, 3.7),
+            CFrame.new(-4.4, 19.6, -1.5),
+            steel, Enum.Material.CorrodedMetal)
+    else
         -- A compact physical storm-observation dish and its receiver
         -- above the existing roof profile, visible across the grid.
         make("ObservatoryColumn", "Part", Vector3.new(2.6, 8, 2.6),
@@ -313,20 +327,6 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
         dish.Shape = Enum.PartType.Cylinder
         make("RadarFeedHousing", "Part", Vector3.new(1.2, 1.2, 1.2),
             CFrame.new(1.8, 25.1, -4.2), dark)
-    else
-        -- Storm Harbor is no longer reusing Classic's observatory.
-        -- Small, distinct dockside hoists match its larger outer cranes.
-        make("HarborHoistTower", "Part", Vector3.new(2.8, 12.2, 2.8),
-            CFrame.new(0, 20.5, 0), steel)
-        make("HarborLoadCrossarm", "Part", Vector3.new(12.5, 1.2, 2.0),
-            CFrame.new(0, 26.5, 0), alloy)
-        make("HarborHoistCabin", "Part", Vector3.new(4.5, 2.4, 3.3),
-            CFrame.new(3.1, 23.5, -0.5), dark)
-        make("HarborCargoCable", "Part", Vector3.new(0.3, 4.8, 0.3),
-            CFrame.new(-4.4, 23.6, -1.5), dark)
-        make("HarborCargoHousing", "Part", Vector3.new(4.8, 2.9, 3.7),
-            CFrame.new(-4.4, 19.6, -1.5),
-            steel, Enum.Material.CorrodedMetal)
     end
 
     model.Parent = folder
