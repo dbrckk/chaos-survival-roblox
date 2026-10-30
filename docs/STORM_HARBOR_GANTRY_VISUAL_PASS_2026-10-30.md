@@ -15,7 +15,7 @@ The existing Android/desktop scenery owner still culls the **whole** gantry per 
 
 Only `StormHarborGantryFleet` descendants with the new `HarborGantryScenery` author tag **and** all existing original/cosmetic/distant-scene tags qualify for `PbrDistrictRules`. Their rigid architecture may use the **four existing, approved 2K MaterialVariants**. The per-model residency cap is **2 on Medium, 4 on High, 0 on Low**. The existing mobile global cap (32 Medium / 72 High), distance gate, PBR OFF option, selection hysteresis, stream index and original material restoration all remain unchanged. Playable or collidable parts and imported models' UV/SurfaceAppearance are not modified.
 
-There are 74 new inert parts across all four cranes: each gantry still contains just one atomic streamed model, and no work is scheduled per part.
+There are 78 new inert parts across all four cranes (31 per container-bearing crane, 30 per drum-bearing crane, compared with 11 per original crane): each gantry still contains just one atomic streamed model, and no work is scheduled per part.
 
 ## Next important publication gate
 
