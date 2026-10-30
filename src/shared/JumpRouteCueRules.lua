@@ -332,6 +332,37 @@ function JumpRouteCueRules.activeSweepOnPath(fromPosition, toPosition, band)
     return enter ~= nil
 end
 
+-- The actual RisingLava server checks HumanoidRootPart against the
+-- replicated RoundLava volume with 2.5 studs of foot clearance.
+-- Reuse the SAME geometric threshold for CLIENT-ONLY navigation and the
+-- landing reticle: do not draw an inviting teal safe marker in lethal lava.
+-- No prediction of future flood rise, extra RemoteEvents or physics changes.
+function JumpRouteCueRules.lavaAtRoot(rootPosition, lava)
+    if typeof(rootPosition) ~= "Vector3"
+        or typeof(lava) ~= "Instance" or not lava:IsA("BasePart")
+        or lava.Name ~= "RoundLava" or lava.Parent ~= workspace then
+        return false
+    end
+    local halfX, halfZ = lava.Size.X * 0.5, lava.Size.Z * 0.5
+    local topY = lava.Position.Y + lava.Size.Y * 0.5
+    return math.abs(rootPosition.X - lava.Position.X) <= halfX
+        and math.abs(rootPosition.Z - lava.Position.Z) <= halfZ
+        and rootPosition.Y - 2.5 <= topY
+end
+
+-- A wayfinding target is a real BasePart, not an avatar. Use the real
+-- deck top + the minimum avatar clearance: when lava reaches this deck,
+-- even standing on it cannot provide a safe route. Never hide high decks.
+function JumpRouteCueRules.lavaOnDeck(deck, lava)
+    if typeof(deck) ~= "Instance" or not deck:IsA("BasePart") then
+        return false
+    end
+    local rootAtDeck = deck.Position + Vector3.new(
+        0, deck.Size.Y * 0.5 + 2.5, 0
+    )
+    return JumpRouteCueRules.lavaAtRoot(rootAtDeck, lava)
+end
+
 function JumpRouteCueRules.safeGuidedPath(fromPosition, toPosition, warnings)
     if typeof(fromPosition) ~= "Vector3"
         or typeof(toPosition) ~= "Vector3"
