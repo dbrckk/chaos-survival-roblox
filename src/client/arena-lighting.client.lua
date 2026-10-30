@@ -136,6 +136,36 @@ local MOODS = {
         CloudDensity = 0.13,
         Wind = Vector3.new(7, 0, 4),
     },
+    -- Storm Harbor should never inherit Classic's cold blue survey-grid
+    -- light: ocean haze, painted steel, cargo timber and warning decals
+    -- need a distinct neutral maritime palette with readable contrast.
+    -- No new lights or post-process instances; reuse the same controller,
+    -- one existing atmosphere layer and Android Low/Medium/High budgets.
+    Harbor = {
+        Tint = Color3.fromRGB(237, 240, 230),
+        Ambient = Color3.fromRGB(74, 83, 86),
+        Outdoor = Color3.fromRGB(121, 133, 130),
+        Saturation = -0.008,
+        Contrast = 0.040,
+        ColorShiftTop = Color3.fromRGB(13, 16, 13),
+        ColorShiftBottom = Color3.fromRGB(7, 10, 11),
+        ShadowSoftness = 0.38,
+        CloudColor = Color3.fromRGB(212, 222, 217),
+        AtmosColor = Color3.fromRGB(193, 207, 203),
+        AtmosDecay = Color3.fromRGB(83, 96, 101),
+        Density = 0.15,
+        Haze = 1.02,
+        Glare = 0.065,
+        ClockTime = 16.85,
+        Exposure = -0.025,
+        EnvironmentDiffuse = 0.39,
+        EnvironmentSpecular = 0.79,
+        SunRays = 0.025,
+        AtmosOffset = 0.07,
+        CloudCover = 0.45,
+        CloudDensity = 0.19,
+        Wind = Vector3.new(8, 0, -6),
+    },
 }
 
 local phase = "waiting"
