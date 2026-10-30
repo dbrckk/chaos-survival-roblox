@@ -82,8 +82,10 @@ describe("Arena mechanics", function()
         end
         expect(ArenaMechanics.mode("Towers", true, true))
             .toBe("TowersShutters")
+        -- A malformed flag combination cannot announce a gate
+        -- unless the server actually started a dynamic challenge.
         expect(ArenaMechanics.mode("Towers", false, true))
-            .toBe("TowersShutters")
+            .toBe("TowersSafe")
         expect(ArenaMechanics.mode("Unknown", true, true)).toBe(nil)
         expect(ArenaMechanics.mode(nil, true, true)).toBe(nil)
     end)
