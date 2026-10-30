@@ -84,6 +84,15 @@ function ParkourFlow.takeoff(memory, platforms, rootPosition, now)
     state.jumpFrom = state.deck
     state.jumpAt = now
     state.jumpOrigin = rootPosition
+    -- One bounded server-observed attempt per REAL Jumping state.
+    -- Diagnostic counters do not modify the score, XP or saved profile.
+    state.attempts = math.min(80, (state.attempts or 0) + 1)
+    local grade = tonumber(state.deck:GetAttribute("ParkourGrade"))
+        or tonumber(state.deck:GetAttribute("RouteTier")) or 1
+    state.hardestAttemptGrade = math.max(
+        state.hardestAttemptGrade or 0,
+        math.clamp(math.floor(grade), 1, 4)
+    )
     return state, true
 end
 
@@ -130,6 +139,9 @@ function ParkourFlow.advance(memory, landedDeck, platforms, center, variant, now
         and plausibleFlight
         and ParkourFlow.legalJump(state.deck, landedDeck, platforms, center, variant)
     clearFlight(state)
+    if continued then
+        state.successes = math.min(80, (state.successes or 0) + 1)
+    end
     state.chain = continued and math.min(7, (state.chain or 0) + 1) or 0
     state.best = math.max(
         math.max(0, math.floor(tonumber(state.best) or 0)),
@@ -138,6 +150,32 @@ function ParkourFlow.advance(memory, landedDeck, platforms, center, variant, now
     state.deck = landedDeck
     state.at = now
     return state, continued
+end
+
+-- Exact, bounded, aggregate diagnostics for difficulty tuning.
+-- Counts REAL takeoffs on course decks, and legitimate successor landings.
+-- Attempts without a later success (fall, death, time-out, disconnect)
+-- remain in the denominator. One report per human per round; no player
+-- identifiers, positions, input logs or per-jump analytics events.
+function ParkourFlow.roundMetrics(memory)
+    local state = type(memory) == "table" and memory or {}
+    local function bounded(value, ceiling)
+        local number = tonumber(value)
+        if not number or number ~= number
+            or number == math.huge or number == -math.huge then
+            return 0
+        end
+        return math.clamp(math.floor(number), 0, ceiling)
+    end
+    local attempts = bounded(state.attempts, 80)
+    local successes = math.min(attempts, bounded(state.successes, 80))
+    return {
+        attempts = attempts,
+        successes = successes,
+        successRate = attempts > 0 and successes / attempts or 0,
+        best = bounded(state.best, 7),
+        hardestGrade = bounded(state.hardestAttemptGrade, 4),
+    }
 end
 
 function ParkourFlow.bonusXP(best)
