@@ -11,6 +11,9 @@ ParkourFlow.AceXP = 4
 ParkourFlow.LegendExtraXP = 3
 ParkourFlow.MinTransitionSeconds = 0.27
 ParkourFlow.MaxTransitionSeconds = 9.0
+-- The veteran Moon Gravity disaster can sustain a real jump far longer
+-- than a normal gravity arc; don't misclassify slow, authentic landings.
+ParkourFlow.MaxAirSeconds = 5.0
 
 local function validDeck(deck, platforms)
     return typeof(deck) == "Instance" and deck:IsA("BasePart")
@@ -44,34 +47,96 @@ function ParkourFlow.legalJump(from, to, platforms, center, variant)
     return false
 end
 
-function ParkourFlow.advance(memory, landedDeck, platforms, center, variant, now)
+local function validTime(now)
+    return type(now) == "number" and now == now
+        and now > -math.huge and now < math.huge
+end
+
+local function clearFlight(state)
+    state.jumpFrom = nil
+    state.jumpAt = nil
+    state.jumpOrigin = nil
+end
+
+-- A route link is not a jump merely because the character changes Parts.
+-- Observe the server Humanoid's Jumping state WHILE the last grounded deck
+-- is still within true takeoff/coyote distance. Never accept a client claim.
+function ParkourFlow.takeoff(memory, platforms, rootPosition, now)
     local state = memory or {chain = 0, best = 0}
-    local tick = tonumber(now)
-    if not tick or tick ~= tick or tick == math.huge
-        or tick == -math.huge then
+    if state.jumpFrom ~= nil then
+        return state, false
+    end
+    if not validTime(now) or typeof(rootPosition) ~= "Vector3"
+        or not validDeck(state.deck, platforms) then
+        return state, false
+    end
+    local position = state.deck.CFrame:PointToObjectSpace(rootPosition)
+    local halfX, halfZ = state.deck.Size.X * 0.5, state.deck.Size.Z * 0.5
+    local halfY = state.deck.Size.Y * 0.5
+    -- Allow legitimate edge/coyote launches, but no jumps teleported from
+    -- outside the actual departure deck or already high in the air.
+    if math.abs(position.X) > halfX + 3.2
+        or math.abs(position.Z) > halfZ + 3.2
+        or position.Y < halfY + 0.35
+        or position.Y > halfY + 8 then
+        return state, false
+    end
+    state.jumpFrom = state.deck
+    state.jumpAt = now
+    state.jumpOrigin = rootPosition
+    return state, true
+end
+
+-- A jump is counted only after an observed takeoff AND a physically verified
+-- landing on an authored successor. Reject walking across deck seams,
+-- stale airborne events, teleports, repeated contact callbacks and hovering.
+-- A failed jump resets the CURRENT chain but never erases the round's best.
+function ParkourFlow.advance(memory, landedDeck, platforms, center, variant, now, landingPosition)
+    local state = memory or {chain = 0, best = 0}
+    if not validTime(now) then
         return state, false
     end
     if not validDeck(landedDeck, platforms) then
+        clearFlight(state)
         state.deck = nil
         state.chain = 0
         state.at = nil
         return state, false
     end
-    -- Duplicate Landed/Running transitions must never generate free links.
+    -- Native Landed/Running/FloorMaterial can all fire on the same deck.
+    -- A same-deck landing consumes a jump; walking afterward cannot cash it.
     if state.deck == landedDeck then
+        clearFlight(state)
         return state, false
     end
-    local elapsed = tick - (state.at or -math.huge)
-    local continued = elapsed >= ParkourFlow.MinTransitionSeconds
+
+    local flightSeconds = now - (state.jumpAt or -math.huge)
+    local elapsed = now - (state.at or -math.huge)
+    local displacement = math.huge
+    if typeof(landingPosition) == "Vector3"
+        and typeof(state.jumpOrigin) == "Vector3" then
+        local difference = landingPosition - state.jumpOrigin
+        displacement = Vector3.new(difference.X, 0, difference.Z).Magnitude
+    end
+    -- Speed boosts exist; allow 48 studs/s plus 5 studs of sampling/jump
+    -- leeway, but do not reward instant multi-deck teleports.
+    local plausibleFlight = flightSeconds >= 0.20
+        and flightSeconds <= ParkourFlow.MaxAirSeconds
+        and displacement >= 0.8
+        and displacement <= flightSeconds * 48 + 5
+    local continued = state.jumpFrom == state.deck
+        and elapsed >= ParkourFlow.MinTransitionSeconds
         and elapsed <= ParkourFlow.MaxTransitionSeconds
+        and plausibleFlight
         and ParkourFlow.legalJump(state.deck, landedDeck, platforms, center, variant)
+    clearFlight(state)
     state.chain = continued and math.min(7, (state.chain or 0) + 1) or 0
     state.best = math.max(
         math.max(0, math.floor(tonumber(state.best) or 0)),
         state.chain
     )
     state.deck = landedDeck
-    state.at = tick
+    state.at = now
     return state, continued
 end
 

@@ -265,6 +265,58 @@ end
 -- Parts at workspace root; the final impact diameter is authoritative,
 -- not the initially small yellow preview. The danger UI owns escapes.
 -- No scene queries or client-side hazard guesses; short, bounded math.
+-- Geometric slab clipping against the server's oriented, floor-only
+-- moving sweep corridors. Reusing their real CFrame/Size and active phase
+-- avoids displaying NEXT JUMP inside a timed shock lane. Clip Y too:
+-- a legitimate high cargo platform above the pulse stays navigable.
+local function clipAxis(start, delta, lower, upper, enter, exit)
+    if math.abs(delta) < 0.0001 then
+        if start < lower or start > upper then return nil, nil end
+        return enter, exit
+    end
+    local first = (lower - start) / delta
+    local last = (upper - start) / delta
+    if first > last then first, last = last, first end
+    enter = math.max(enter, first)
+    exit = math.min(exit, last)
+    if enter > exit then return nil, nil end
+    return enter, exit
+end
+
+function JumpRouteCueRules.activeSweepOnPath(fromPosition, toPosition, band)
+    if typeof(fromPosition) ~= "Vector3"
+        or typeof(toPosition) ~= "Vector3"
+        or typeof(band) ~= "Instance" or not band:IsA("BasePart")
+        or band.Parent == nil then
+        return false
+    end
+    local phase = nil
+    if band.Name:match("^GridSweepBand%d+$") then
+        phase = band:GetAttribute("GridSweepPhase")
+    elseif band.Name:match("^HarborSweepLane%d+$") then
+        phase = band:GetAttribute("HarborSweepPhase")
+    end
+    if phase ~= "Warning" and phase ~= "Pulse" then return false end
+
+    local start = band.CFrame:PointToObjectSpace(fromPosition)
+    local finish = band.CFrame:PointToObjectSpace(toPosition)
+    local travel = finish - start
+    local enter, exit = clipAxis(
+        start.X, travel.X, -band.Size.X * 0.5 - 1.4,
+        band.Size.X * 0.5 + 1.4, 0, 1
+    )
+    if not enter then return false end
+    enter, exit = clipAxis(
+        start.Z, travel.Z, -band.Size.Z * 0.5 - 1.4,
+        band.Size.Z * 0.5 + 1.4, enter, exit
+    )
+    if not enter then return false end
+    enter, exit = clipAxis(
+        start.Y, travel.Y, 0.65, 5.8, enter, exit
+    )
+    return enter ~= nil
+end
+
 function JumpRouteCueRules.safeGuidedPath(fromPosition, toPosition, warnings)
     if typeof(fromPosition) ~= "Vector3"
         or typeof(toPosition) ~= "Vector3"
@@ -306,6 +358,13 @@ function JumpRouteCueRules.safeGuidedPath(fromPosition, toPosition, warnings)
                     return false
                 end
             end
+        elseif typeof(warning) == "Instance"
+            and warning:IsA("BasePart")
+            and warning.Parent ~= nil
+            and JumpRouteCueRules.activeSweepOnPath(
+                fromPosition, toPosition, warning
+            ) then
+            return false
         end
     end
     return true

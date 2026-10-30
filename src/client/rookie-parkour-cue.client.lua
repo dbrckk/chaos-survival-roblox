@@ -49,6 +49,30 @@ local function warningsNow()
             liveWarnings[part] = nil
         end
     end
+
+    -- Unlike meteor warning Parts, these permanent lanes live under the
+    -- CURRENT arena mechanics and transition between Idle/Warning/Pulse.
+    -- Four inexpensive direct children per map at existing 0.4/0.85 s
+    -- guide cadence, no per-frame descendants scan or stale-map watcher.
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    if mechanics then
+        for _, folderName in ipairs({"GridSweep", "HarborCargoSweep"}) do
+            local folder = mechanics:FindFirstChild(folderName)
+            if folder then
+                for _, band in ipairs(folder:GetChildren()) do
+                    if band:IsA("BasePart")
+                        and (band:GetAttribute("GridSweepPhase") == "Warning"
+                            or band:GetAttribute("GridSweepPhase") == "Pulse"
+                            or band:GetAttribute("HarborSweepPhase") == "Warning"
+                            or band:GetAttribute("HarborSweepPhase") == "Pulse") then
+                        result[#result + 1] = band
+                    end
+                end
+            end
+        end
+    end
     return result
 end
 local marker
