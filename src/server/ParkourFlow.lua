@@ -83,6 +83,35 @@ function ParkourFlow.legalJump(from, to, platforms, center, variant)
     return false
 end
 
+-- A valid Harbor skyway is walkable in BOTH directions for survival,
+-- but a skill streak must actually progress toward a terminal. Without
+-- direction continuity, repeatedly bouncing between two safe adjacent
+-- decks earns the same LEGEND award as crossing an entire steel gangway.
+-- Determine course direction from server-authored route/step attributes,
+-- not camera heading, joystick input or client-provided claims.
+local function skywayProgressDirection(from, to, variant)
+    if variant ~= "Harbor" or typeof(from) ~= "Instance"
+        or typeof(to) ~= "Instance" then
+        return nil
+    end
+    local fromStep = from:GetAttribute("HarborSkywayStep")
+    local toStep = to:GetAttribute("HarborSkywayStep")
+    if fromStep == nil and toStep == nil then
+        return nil
+    end
+    if fromStep ~= nil and toStep ~= nil then
+        return toStep > fromStep and 1 or -1
+    end
+    if toStep ~= nil then
+        -- A cargo terminal with an odd HarborRoute is the west entrance;
+        -- the even-numbered terminal is the east entrance.
+        local route = from:GetAttribute("HarborRoute")
+        return route % 2 == 1 and 1 or -1
+    end
+    local route = to:GetAttribute("HarborRoute")
+    return route % 2 == 0 and 1 or -1
+end
+
 local function validTime(now)
     return type(now) == "number" and now == now
         and now > -math.huge and now < math.huge
@@ -136,6 +165,7 @@ function ParkourFlow.advance(memory, landedDeck, platforms, center, variant, now
         clearFlight(state)
         state.deck = nil
         state.chain = 0
+        state.skywayDirection = nil
         state.at = nil
         return state, false
     end
@@ -165,7 +195,23 @@ function ParkourFlow.advance(memory, landedDeck, platforms, center, variant, now
         and elapsed <= ParkourFlow.MaxTransitionSeconds
         and plausibleFlight
         and ParkourFlow.legalJump(state.deck, landedDeck, platforms, center, variant)
+
+    local routeDirection = nil
+    if continued then
+        routeDirection = skywayProgressDirection(state.deck, landedDeck, variant)
+        -- Reverse jumps remain physically legal and useful during disasters,
+        -- but crossing backwards midway ends the previous mastery streak.
+        -- A complete arrival at the far cargo terminal clears the lock, so
+        -- the real return crossing can score its own uninterrupted journey.
+        if routeDirection ~= nil and state.skywayDirection ~= nil
+            and routeDirection ~= state.skywayDirection then
+            continued = false
+        end
+    end
     clearFlight(state)
+    state.skywayDirection = (continued and routeDirection ~= nil
+        and landedDeck:GetAttribute("HarborSkywayStep") ~= nil)
+        and routeDirection or nil
     state.chain = continued and math.min(7, (state.chain or 0) + 1) or 0
     state.best = math.max(
         math.max(0, math.floor(tonumber(state.best) or 0)),
