@@ -12,6 +12,7 @@ local NAMES = {
     Towers = {"CoolingIntakeSpine", "CoolingBaffleA", "CoolingBaffleB", "CoolingExhaustCap"},
     Crossroads = {"TransitDirectionBeam", "TransitSplitArrow", "TransitUpperRoute", "TransitLowerRoute"},
     Orbital = {"DockFieldSpine", "DockFieldPetalA", "DockFieldPetalB", "DockFieldLens"},
+    Harbor = {"HarborMooringSpire", "HarborDockBoom", "HarborCargoHoist", "HarborNavigationCrown"},
 }
 
 function ArenaSilhouetteAccentKit.count(tierName)
@@ -52,6 +53,28 @@ local function geometry(variant, base)
             {Vector3.new(10.5, 1.1, 2.4), CFrame.new(x + 5.8, top + 17.2, z) * CFrame.Angles(0, 0, math.rad(-29)), "accent", nil, "WedgePart"},
             {Vector3.new(11.5, 1.1, 2.2), CFrame.new(x + 6.0, top + 9.4, z) * CFrame.Angles(0, 0, math.rad(23)), "detail"},
         }
+    elseif variant == "Harbor" then
+        -- A REAL maritime silhouette distinct from Classic's survey rig:
+        -- mooring pylon + diagonal dock boom + armored hoist + navigation
+        -- crown. Exactly three cosmetic Parts on Android Low/Medium and
+        -- four on High. Always outside the 320x320 survival collision.
+        local x, z = hx * 0.38, hz + 18
+        return {
+            {Vector3.new(3.6, 20, 3.6),
+                CFrame.new(x, top + 10, z), "structure"},
+            {Vector3.new(21, 1.25, 2.0),
+                CFrame.new(x + 6.8, top + 17.6, z - 0.4)
+                    * CFrame.Angles(0, math.rad(13), math.rad(-8)),
+                "detail"},
+            {Vector3.new(6.8, 6.2, 5.4),
+                CFrame.new(x + 13.4, top + 7.8, z - 1.2)
+                    * CFrame.Angles(0, math.rad(13), 0),
+                "accent"},
+            {Vector3.new(6.0, 0.8, 6.0),
+                CFrame.new(x, top + 20.8, z)
+                    * CFrame.Angles(0, 0, math.rad(90)),
+                "detail", Enum.PartType.Cylinder},
+        }
     else
         -- Orbital containment: separated radial petals around a muted optical node.
         local x, z = -hx * 0.36, hz + 18
@@ -86,6 +109,8 @@ function ArenaSilhouetteAccentKit.build(parent, base, variant, tierName, theme)
         p.CFrame = base.CFrame * entry[2]
         p.Color = palette[entry[3]]
         p.Material = (index == 1 and variant == "Towers" and Enum.Material.CorrodedMetal)
+            or (index == 1 and variant == "Harbor" and Enum.Material.CorrodedMetal)
+            or (index == 3 and variant == "Harbor" and Enum.Material.DiamondPlate)
             or (index == 1 and variant == "Crossroads" and Enum.Material.Concrete)
             or (index == 4 and tierName == "High" and variant == "Orbital" and Enum.Material.Glass)
             or (index == 4 and tierName == "High" and Enum.Material.DiamondPlate)
