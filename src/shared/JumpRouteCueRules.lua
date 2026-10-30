@@ -416,13 +416,90 @@ function JumpRouteCueRules.safeGuidedPath(fromPosition, toPosition, warnings)
     return true
 end
 
+-- Harbor's two upper freight gantries are level, intentionally separated
+-- by genuine jump gaps. They do not use the ASCENDING-only helper above:
+-- accepting a flat leap globally would also create fake low-ceiling routes.
+-- This predicate is only applied to explicit server-owned HarborSkyway IDs.
+function JumpRouteCueRules.skywayLeap(from, target)
+    if not walkable(from) or not JumpRouteCueRules.safeLandingTarget(target)
+        or from == target or from.Parent ~= target.Parent then
+        return false
+    end
+    local gap = JumpRouteCueRules.gap(from, target)
+    local rise = (target.Position.Y + target.Size.Y * 0.5)
+        - (from.Position.Y + from.Size.Y * 0.5)
+    return gap ~= nil and gap > 0.15 and gap <= JumpRouteCueRules.MaxGap
+        and math.abs(rise) <= 1.2
+end
+
+-- The same physical skyway is traversable in either direction. The
+-- optional travelDirection is the rookie coach's last REAL landed step,
+-- never client authority over platforms or jumps.
+function JumpRouteCueRules.nextSkyway(from, orderedPlatforms, travelDirection)
+    if not walkable(from) or type(orderedPlatforms) ~= "table" then
+        return nil
+    end
+    local lane = from:GetAttribute("HarborSkywayLane")
+    local step = from:GetAttribute("HarborSkywayStep")
+    local harborRoute = from:GetAttribute("HarborRoute")
+    local harborStep = from:GetAttribute("HarborStep")
+
+    local targetLane, nextStep, targetHarbor = nil, nil, nil
+    if (lane == 1 or lane == 2)
+        and type(step) == "number" and step % 1 == 0
+        and step >= 1 and step <= 7 then
+        -- Veteran/late-stream fallback directs toward the nearer terminal,
+        -- while an active traverser keeps the direction of their last jump.
+        local direction = travelDirection == 1 and 1
+            or (travelDirection == -1 and -1
+                or (from.Position.X < 0 and -1 or 1))
+        targetLane = lane
+        nextStep = step + direction
+        if nextStep < 1 or nextStep > 7 then
+            targetHarbor = lane == 1
+                and (direction > 0 and 2 or 1)
+                or (direction > 0 and 4 or 3)
+            targetLane, nextStep = nil, nil
+        end
+    elseif harborStep == 7 and type(harborRoute) == "number"
+        and harborRoute % 1 == 0 and harborRoute >= 1
+        and harborRoute <= 4 then
+        targetLane = harborRoute <= 2 and 1 or 2
+        nextStep = harborRoute % 2 == 1 and 1 or 7
+    else
+        return nil
+    end
+
+    for _, candidate in ipairs(orderedPlatforms) do
+        if candidate:IsA("BasePart")
+            and candidate.Parent == from.Parent
+            and (targetHarbor and candidate:GetAttribute("HarborRoute")
+                    == targetHarbor
+                and candidate:GetAttribute("HarborStep") == 7
+                or targetLane
+                    and candidate:GetAttribute("HarborSkywayLane")
+                        == targetLane
+                    and candidate:GetAttribute("HarborSkywayStep") == nextStep)
+            and JumpRouteCueRules.skywayLeap(from, candidate) then
+            return candidate
+        end
+    end
+    return nil
+end
+
 -- Original central routes use conservative spatial selection. Perimeter
 -- and side-lookout steps have explicit server-authored route/step IDs;
 -- using those IDs avoids directing a novice across unrelated adjacent
 -- towers. The last step is a genuine end point, never a phantom jump.
-function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, variantId)
+function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, variantId, skywayDirection)
     if not walkable(from) or type(orderedPlatforms) ~= "table" then
         return nil
+    end
+
+    if from:GetAttribute("HarborSkywayLane") ~= nil then
+        return JumpRouteCueRules.nextSkyway(
+            from, orderedPlatforms, skywayDirection
+        )
     end
 
     -- Storm Harbor's tight 90-degree switchbacks need their real,
@@ -434,8 +511,11 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
         if type(harborRoute) ~= "number" or harborRoute % 1 ~= 0
             or harborRoute < 1 or harborRoute > 4
             or type(harborStep) ~= "number" or harborStep % 1 ~= 0
-            or harborStep < 1 or harborStep >= 7 then
+            or harborStep < 1 or harborStep > 7 then
             return nil
+        end
+        if harborStep == 7 then
+            return JumpRouteCueRules.nextSkyway(from, orderedPlatforms)
         end
         for _, destination in ipairs(orderedPlatforms) do
             if destination ~= from and destination:IsA("BasePart")

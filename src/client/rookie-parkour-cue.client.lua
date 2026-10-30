@@ -19,6 +19,15 @@ local recoveryDeck = nil
 local recoveryAnchor = nil
 local recoverySince = 0
 local recoveryCharacter = nil
+-- Track actual contacted decks, not camera heading or guessed joystick
+-- intent. This lets the SAME physical upper Harbor gangway guide jumps
+-- in either direction, including backtracking during a storm.
+local lastSkywayDeck = nil
+local skywayDirection = nil
+local skywayArrival = nil
+local function resetSkyway()
+    lastSkywayDeck, skywayDirection, skywayArrival = nil, nil, nil
+end
 local function resetRecovery()
     recoveryDeck, recoveryAnchor, recoverySince = nil, nil, 0
 end
@@ -110,7 +119,10 @@ stateEvent.OnClientEvent:Connect(function(state)
     currentPhase = tostring(state.phase or "waiting")
     currentChallenge = state.challengeMetric
     finalRush = state.finalRush == true
-    if currentPhase ~= previous then resetRecovery() end
+    if currentPhase ~= previous then
+        resetRecovery()
+        resetSkyway()
+    end
     if currentPhase ~= "ready" and currentPhase ~= "round" then
         hide()
         resetRecovery()
@@ -252,6 +264,7 @@ local function update()
     if character ~= recoveryCharacter then
         recoveryCharacter = character
         resetRecovery()
+        resetSkyway()
     end
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -283,6 +296,7 @@ local function update()
         currentMap, mapPlatforms = generated, platforms
         hide()
         resetRecovery()
+        resetSkyway()
     end
 
     rayParams.FilterDescendantsInstances = {character}
@@ -294,6 +308,42 @@ local function update()
         hide()
         resetRecovery()
         return true
+    end
+
+    -- A skyway bridge has no scripted jump, only genuine, raised steel
+    -- landing Parts. Preserve last completed direction across a freefall
+    -- and do not point straight BACK at the roof after reaching its end.
+    if from ~= lastSkywayDeck then
+        local lane = from:GetAttribute("HarborSkywayLane")
+        local previous = lastSkywayDeck
+        if lane ~= nil then
+            local formerLane = previous and previous:GetAttribute(
+                "HarborSkywayLane"
+            )
+            local formerStep = previous and previous:GetAttribute(
+                "HarborSkywayStep"
+            )
+            local step = from:GetAttribute("HarborSkywayStep")
+            if formerLane == lane and type(formerStep) == "number"
+                and type(step) == "number" and formerStep ~= step then
+                skywayDirection = step > formerStep and 1 or -1
+            elseif previous and previous:GetAttribute("HarborStep") == 7 then
+                skywayDirection = previous.Position.X < base.Position.X
+                    and 1 or -1
+            else
+                skywayDirection = from.Position.X < base.Position.X
+                    and 1 or -1
+            end
+            skywayArrival = nil
+        elseif from:GetAttribute("HarborStep") == 7 and previous
+            and previous:GetAttribute("HarborSkywayLane") ~= nil then
+            skywayArrival = from
+            skywayDirection = nil
+        else
+            skywayDirection = nil
+            skywayArrival = nil
+        end
+        lastSkywayDeck = from
     end
 
     local now = os.clock()
@@ -310,6 +360,13 @@ local function update()
     end
 
     local pieces = platforms:GetChildren()
+    if skywayArrival == from then
+        -- This is a completed, genuine harbor-to-harbor crossing. The
+        -- destination's own cargo route has no forced continuation and
+        -- should not immediately nag a newcomer to reverse direction.
+        hide()
+        return true
+    end
     local target = nil
     local french = player.LocaleId:sub(1, 2) == "fr"
     local hint = french and "SAUT SUIVANT  ↑" or "NEXT JUMP  ↑"
@@ -326,7 +383,8 @@ local function update()
                 true
             ) then
             target = JumpRouteCueRules.nextPhysical(
-                from, pieces, base.Position, arena:GetAttribute("VariantId")
+                from, pieces, base.Position, arena:GetAttribute("VariantId"),
+                skywayDirection
             )
             if target then
                 hint = french and "REPRENDS LE PARCOURS  ↑"
@@ -341,7 +399,8 @@ local function update()
         )
     elseif from.Parent == platforms then
         target = JumpRouteCueRules.nextPhysical(
-            from, pieces, base.Position, arena:GetAttribute("VariantId")
+            from, pieces, base.Position, arena:GetAttribute("VariantId"),
+            skywayDirection
         )
         if from:GetAttribute("PerimeterStep") == 5 then
             local forward, flank = JumpRouteCueRules.forkOptions(

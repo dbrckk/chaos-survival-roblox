@@ -307,6 +307,33 @@ ArenaVariants.Definitions.Harbor = {
 }
 
 
+-- ORIGINAL HIGH-QUAY CROSSINGS: north and south cargo endpoints previously
+-- terminated as isolated level-23 platforms. Two seven-landing, genuinely
+-- COLLABORATIVE skyways now connect west and east terminals in both directions.
+-- The +/-50 Z corridors run outside the lower Harbor zig-zag rises at +/-37:
+-- never place an overhead roof over the working step-five/six takeoff.
+-- 12.75 studs between centers, with 9.8..10.5-stud landings gives real
+-- 2.25..2.95-stud jump gaps; all top surfaces align at Y +23.
+-- Append after every original/outer/branch/crosslink platform identity.
+ArenaVariants.Definitions.Harbor.SkywayPlatforms = (function()
+    local bridge = {}
+    for lane, signedZ in ipairs({-50, 50}) do
+        for step = 1, 7 do
+            local width = (step == 1 or step == 7) and 10.5 or 9.8
+            bridge[#bridge + 1] = {
+                offset = Vector3.new(-51 + step * 12.75, 22, signedZ),
+                size = Vector3.new(width, 2, width),
+                RouteTier = 4,
+                ParkourGrade = (step >= 3 and step <= 5) and 4 or 3,
+                HarborSkywayLane = lane,
+                HarborSkywayStep = step,
+            }
+        end
+    end
+    return bridge
+end)()
+
+
 -- Mega districts: 320 x 320 is 2.04x the preceding 224 x 224 map.
 -- Keep the authored central routes and bridge indices unchanged. Eight
 -- physical, ground-supported perimeter terraces now lead toward the outer
