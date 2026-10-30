@@ -1864,11 +1864,16 @@ describe("Storm Harbor engine and Android scenery certification", function()
         local decor = arena and arena:FindFirstChild("Decor")
         expect(arena:GetAttribute("VariantId")).toBe("Harbor")
         expect(base ~= nil and platforms ~= nil and decor ~= nil).toBe(true)
+        -- The original 80 real parkour decks remain stable at their
+        -- original IDs. The two 7-jump steel gantries are appended, so
+        -- this Android scenery check must certify the full active topology.
+        expect(#variant.SkywayPlatforms).toBe(14)
         expect(#platforms:GetChildren()).toBe(
             #variant.Platforms + #variant.PerimeterPlatforms
                 + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
+                + #variant.SkywayPlatforms
         )
-        expect(#platforms:GetChildren()).toBe(80)
+        expect(#platforms:GetChildren()).toBe(94)
         local parts = platforms:GetChildren()
         for route = 1, 4 do
             local previous = nil
@@ -1900,10 +1905,28 @@ describe("Storm Harbor engine and Android scenery certification", function()
                 end
                 previous = deck
             end
-            -- Seven steps are complete, not a fake eighth waypoint.
+            -- The seventh cargo step is no longer a dead end: its
+            -- first crossing is a REAL server-created steel roof, not
+            -- a phantom eighth cargo platform or a free teleport.
+            local skywayLane = route <= 2 and 1 or 2
+            local skywayStep = route % 2 == 1 and 1 or 7
+            local skywayIndex = #variant.Platforms
+                + #variant.PerimeterPlatforms
+                + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
+                + (skywayLane - 1) * 7 + skywayStep
+            local crossingEntry = platforms:FindFirstChild(
+                "Platform" .. skywayIndex
+            )
+            expect(crossingEntry ~= nil).toBe(true)
+            expect(crossingEntry:GetAttribute("HarborSkywayLane"))
+                .toBe(skywayLane)
+            expect(crossingEntry:GetAttribute("HarborSkywayStep"))
+                .toBe(skywayStep)
+            expect(JumpRouteCueRules.skywayLeap(previous, crossingEntry))
+                .toBe(true)
             expect(JumpRouteCueRules.nextPhysical(
                 previous, parts, Config.ArenaCenter, "Harbor"
-            )).toBe(nil)
+            )).toBe(crossingEntry)
             -- Never advertise a terminal top that is collapsing.
             local before = platforms:FindFirstChild(
                 "Platform" .. ((route - 1) * 7 + 6)

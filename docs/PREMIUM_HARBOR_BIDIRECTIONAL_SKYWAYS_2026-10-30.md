@@ -25,6 +25,14 @@ Coordinates and widths imply eight consecutive traversable edges for each roof:
 `[-51,-38.25,-25.5,-12.75,0,12.75,25.5,38.25,51]`.
 Clear gaps are `[2.70,2.60,2.95,2.95,2.95,2.95,2.60,2.70]`, **all within the shared maximum 3.85**. This is a geometric source review; it is not a human-engine parkour run or device FPS measurement.
 
+## Follow-up: real server-awarded skill progression for roof-to-roof jumps
+
+The skyway geometry and optional rookie hints alone did not complete the loop: before this follow-up, `ParkourFlow.legalJump` unconditionally called `JumpRouteCueRules.jumpable`, which *correctly* rejects level-height transitions on ordinary ascending courses. It therefore falsely reset an otherwise authentic Harbor skyway combo on every horizontal jump, preventing the established parkour XP bonus during the most challenging new route.
+
+The targeted fix first validates source and destination as actual server-anchored, solid, active `Arena.Platforms` instances. **Only for Harbor's explicitly authored skyway endpoints**, it delegates horizontal geometry and safe landing to `skywayLeap` and confirms the destination is the immediate corresponding server-authored `nextSkyway` in either direction. Other arenas and horizontal moves on unrelated decks still fail; no new RemoteEvent, client claim, reward value, jump power, currency grant, replay loophole or pay-to-win path. The existing server-observed Humanoid takeoff, plausible flight speed/time, physical raycast landing, capped combo and once-per-round bonus continue unchanged.
+
+Existing `tests/engine/parkour-flow.spec.luau` now exercises server takeoff → physical skyway landing → capped seven-jump legend XP on both lanes, in both directions, and rejects cross-variant, collapse-warning and noncolliding destinations. This separate scoring follow-up is prepared on a feature branch while the preceding **source-cap fix** exact-SHA engine QA is in progress; it is not yet merged or published.
+
 ## Existing engine regression coverage (not executed during feature work)
 Extended **existing** `tests/engine/mapbuilder.spec.luau` rather than adding a new suite:
 - update only aggregate platform-count expectations for the Harbor-only append;
