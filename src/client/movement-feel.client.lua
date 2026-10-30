@@ -378,6 +378,20 @@ RunService:BindToRenderStep(
             return
         end
 
+        -- Roblox's camera can temporarily belong to a scripted reveal,
+        -- another survivor or an external camera owner during respawn.
+        -- Never apply footstep rotation/FOV from our local character to a
+        -- camera that is NOT actually following that character. Android
+        -- thumb-aiming and spectator transitions must remain in control.
+        local subject = camera.CameraSubject
+        if camera.CameraType == Enum.CameraType.Scriptable
+            or not subject
+            or (subject ~= humanoid and not subject:IsDescendantOf(character)) then
+            CameraFeelBus.reset()
+            landingPreview.hide()
+            return
+        end
+
         -- One existing render owner performs a bounded 10Hz collision
         -- sample while descending. All other frames only check state.
         landingPreview.update(previousPhase, root, humanoid)
