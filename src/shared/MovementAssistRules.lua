@@ -64,9 +64,15 @@ end
 function MovementAssistRules.canDispatchBufferedJump(
     now, expiresAt, grounded, state, enabled
 )
+    -- FloorMaterial may settle to Solid while Roblox still reports
+    -- Freefall/Jumping. Those states are not permission to jump AGAIN.
+    -- The matching Landed/Running event will retry without polling.
+    local contactState = state == Enum.HumanoidStateType.Landed
+        or state == Enum.HumanoidStateType.Running
+        or state == Enum.HumanoidStateType.RunningNoPhysics
     return grounded == true
         and enabled == true
-        and state ~= Enum.HumanoidStateType.Jumping
+        and contactState
         and MovementAssistRules.stateAllowsJump(state)
         and MovementAssistRules.bufferActive(now, expiresAt)
 end
