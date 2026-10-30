@@ -37,6 +37,33 @@ describe("Daily quests", function()
         expect(secondCompleted).toBe(false)
     end)
 
+    it("uses only genuine round-scoped parkour mastery events", function()
+        local id = "PARKOUR_2"
+        local def = DailyQuests.definition(id)
+        expect(def.Event).toBe("parkour_ace")
+        expect(def.Target).toBe(2)
+        local unrelated, wrong = DailyQuests.applyProgress(
+            id, 0, "play_round", 10
+        )
+        expect(unrelated).toBe(0)
+        expect(wrong).toBe(false)
+        local first, firstDone = DailyQuests.applyProgress(
+            id, 0, "parkour_ace", 1
+        )
+        expect(first).toBe(1)
+        expect(firstDone).toBe(false)
+        local last, completed = DailyQuests.applyProgress(
+            id, first, "parkour_ace", 1
+        )
+        expect(last).toBe(2)
+        expect(completed).toBe(true)
+        local repeatCount, repeated = DailyQuests.applyProgress(
+            id, last, "parkour_ace", 1
+        )
+        expect(repeatCount).toBe(2)
+        expect(repeated).toBe(false)
+    end)
+
     it("handles coin progress in batches", function()
         local progress, completed = DailyQuests.applyProgress("EARN_75", 50, "coins_earned", 25)
         expect(progress).toBe(75)

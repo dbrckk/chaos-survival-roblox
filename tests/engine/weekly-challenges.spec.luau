@@ -61,6 +61,28 @@ describe("Weekly challenges", function()
         expect(secondCompleted).toBe(false)
     end)
 
+    it("rewards eight verified three-jump rounds, never mere participation", function()
+        local id = "PARKOUR_8"
+        local def = WeeklyChallenges.definition(id)
+        expect(def.Event).toBe("parkour_ace")
+        expect(def.Target).toBe(8)
+        local noProgress, noReward = WeeklyChallenges.applyProgress(
+            id, 7, "play_round", 20
+        )
+        expect(noProgress).toBe(7)
+        expect(noReward).toBe(false)
+        local completed, claim = WeeklyChallenges.applyProgress(
+            id, 7, "parkour_ace", 1
+        )
+        expect(completed).toBe(8)
+        expect(claim).toBe(true)
+        local capped, duplicate = WeeklyChallenges.applyProgress(
+            id, completed, "parkour_ace", 9
+        )
+        expect(capped).toBe(8)
+        expect(duplicate).toBe(false)
+    end)
+
     it("uses a stable seven day bucket", function()
         expect(WeeklyChallenges.weekNumber(0)).toBe(0)
         expect(WeeklyChallenges.weekNumber(604799)).toBe(0)

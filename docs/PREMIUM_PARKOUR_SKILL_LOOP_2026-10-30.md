@@ -41,3 +41,16 @@ The initial validation at `874918ed1f1f62de36c486cac88c795fa0c44ff7` correctly r
 This pass closes a discovered integrity bug: previously a character crossing from one server-owned `Platform#` Part onto its physically adjacent successor could earn a chained "jump" **without taking off**. Now both the takeoff and the destination must be server-observed, the originating foot position must be within a narrow real-deck/coyote margin and the flight displacement must be plausible. No double-jumps, arbitrary speed changes, remote score inputs, or force impulses are added.
 
 At the same time, `JumpRouteCueRules.safeGuidedPath` checks authentic server-owned `GridSweepBand#` and `HarborSweepLane#` Parts during `Warning` and `Pulse`. It clips the path through each real band CFrame, including the server's floor-only Y range; raised walkways safely clear the pulse. The client reads only the four direct `Mechanics` children at its existing 0.40/0.85 s cue sampling cadence, with no RenderStepped / Humanoid movement writes. The isolated `parkour-flow.spec.luau` covers all these cases for the next major QA milestone; these tests have **not yet been run for this latest unpublished revision**.
+
+## Persistent daily and weekly mastery goals (unpublished)
+
+The player progression system now includes **skill-based**, server-authoritative goals rather than only survival or grind counters:
+
+- Daily `PARKOUR_2`: achieve at least three authentic linked physical jumps in **two separate rounds**; reward 50 Coins and 30 XP using the existing daily quest claim/grant path.
+- Weekly `PARKOUR_8`: perform the same challenge in **eight separate rounds**; reward 200 Coins and 140 XP through the existing weekly challenge path.
+- Both subscribe to the same `parkour_ace` event, emitted **exactly once per human per settled round** only when `RoundParkourBest >= ParkourFlow.AceJumps`. Multiple chains in one round are not repeated claims. The score is computed by the server's airborne/deck validator; a client cannot submit the event.
+- The existing `PlayerData.progressQuestEvent` handles the real DataStore session guard, deterministic daily/weekly selections, capped target, one-time rewards, UI notices and persistence. Existing account quests remain valid during migration; a new quest is selected only at the ordinary next day/week rotation. The existing quest menu uses localized EN/FR titles.
+- No new currency, DataStore keys, remotes, HUD panels, services, premium passes or extra physics loops.
+- Added daily/weekly quest engine assertions; **tests are unexecuted for this newly changed candidate**. Re-run complete source/engine release gates at the next major public milestone only.
+
+Product verification: the actual level/map-specific three-jump chain completion rate must be measured by human Android playtests before treating these as fully balanced across the five arenas. A technically valid quest can still be too demanding for inexperienced players; tune only against real outcomes.

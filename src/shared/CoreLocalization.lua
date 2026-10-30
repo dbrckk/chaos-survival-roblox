@@ -679,11 +679,13 @@ local QUEST_TITLES = {
         PLAY_5 = "Play 5 rounds",
         SURVIVE_3 = "Survive 3 rounds",
         COLLECT_6 = "Collect 6 Chaos Shards",
+        PARKOUR_2 = "Chain 3 real jumps in 2 rounds",
         PLAY_20 = "Play 20 rounds",
         SURVIVE_10 = "Survive 10 rounds",
         COLLECT_30 = "Collect 30 Chaos Shards",
         DOUBLE_3 = "Survive 3 Double Chaos rounds",
         EARN_500 = "Earn 500 round coins",
+        PARKOUR_8 = "Chain 3 real jumps in 8 rounds",
     },
     fr = {
         PLAY_3 = "Joue 3 manches",
@@ -693,11 +695,13 @@ local QUEST_TITLES = {
         PLAY_5 = "Joue 5 manches",
         SURVIVE_3 = "Survis à 3 manches",
         COLLECT_6 = "Ramasse 6 éclats du Chaos",
+        PARKOUR_2 = "Enchaîne 3 sauts dans 2 manches",
         PLAY_20 = "Joue 20 manches",
         SURVIVE_10 = "Survis à 10 manches",
         COLLECT_30 = "Ramasse 30 éclats du Chaos",
         DOUBLE_3 = "Survis à 3 manches Double Chaos",
         EARN_500 = "Gagne 500 pièces en manche",
+        PARKOUR_8 = "Enchaîne 3 sauts dans 8 manches",
     },
 }
 
