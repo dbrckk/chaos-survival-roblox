@@ -1647,9 +1647,11 @@ local function addPlatformFinish(decor, platform, index, theme)
     local halfX, halfZ = platform.Size.X * 0.5, platform.Size.Z * 0.5
     local bevelDepth = math.clamp(math.min(halfX, halfZ) * 0.15, 0.28, 0.65)
     local bevelY = platform.Position.Y + platform.Size.Y * 0.5 - 0.20
+    local visibleGrade = parkourGrade or routeTier
     local edgeColor = theme.Structure:Lerp(
-        routeTier and theme.Secondary or theme.Detail,
-        routeTier and (0.14 + math.clamp(routeTier, 1, 4) * 0.04) or 0.40
+        visibleGrade and theme.Secondary or theme.Detail,
+        visibleGrade and (0.14 + math.clamp(visibleGrade, 1, 4) * 0.04)
+            or 0.40
     )
     local edgeMaterial = VisualTheme.Materials.Structure
     local edgeSpecs = {
