@@ -836,7 +836,9 @@ describe("Chaos Survival engine", function()
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
             local original = #variant.Platforms
-            expect(#platforms:GetChildren()).toBe(original + 52)
+            expect(#platforms:GetChildren()).toBe(
+                original + 52 + #(variant.SkywayPlatforms or {})
+            )
             for route = 1, 4 do
                 local previous = nil
                 for step = 1, ArenaVariants.PerimeterSteps do
@@ -1096,7 +1098,9 @@ describe("Chaos Survival engine", function()
             local branchEnd = originalCount + #variant.PerimeterPlatforms
                 + #variant.BranchPlatforms
             local all = platforms:GetChildren()
-            expect(#all).toBe(branchEnd + 4)
+            expect(#all).toBe(
+                branchEnd + 4 + #(variant.SkywayPlatforms or {})
+            )
 
             for route = 1, 4 do
                 local ridge6 = platforms:FindFirstChild("Platform" .. (
@@ -1382,6 +1386,74 @@ describe("Chaos Survival engine", function()
             expect(JumpRouteCueRules.nextPhysical(
                 from, {}, Config.ArenaCenter, variantId
             )).toBe(nil)
+
+            -- Exercise the REAL Harbor physics geometry via both physical
+            -- terminal-to-terminal upper paths, never synthetic dummy Parts.
+            if variantId == "Harbor" then
+                expect(#variant.SkywayPlatforms).toBe(14)
+                local startIndex = originals + #variant.PerimeterPlatforms
+                    + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
+                for lane = 1, 2 do
+                    local westRoute = lane == 1 and 1 or 3
+                    local eastRoute = westRoute + 1
+                    local west = platforms:FindFirstChild(
+                        "Platform" .. ((westRoute - 1) * 7 + 7)
+                    )
+                    local east = platforms:FindFirstChild(
+                        "Platform" .. ((eastRoute - 1) * 7 + 7)
+                    )
+                    expect(west ~= nil and east ~= nil).toBe(true)
+                    local previous = west
+                    for step = 1, 7 do
+                        local deck = platforms:FindFirstChild(
+                            "Platform" .. (startIndex + (lane - 1) * 7 + step)
+                        )
+                        expect(deck ~= nil).toBe(true)
+                        expect(deck.Anchored and deck.CanCollide).toBe(true)
+                        expect(deck.Material).toBe(Enum.Material.CorrodedMetal)
+                        expect(deck:GetAttribute("HarborSkywayLane")).toBe(lane)
+                        expect(deck:GetAttribute("HarborSkywayStep")).toBe(step)
+                        expect(JumpRouteCueRules.skywayLeap(previous, deck))
+                            .toBe(true)
+                        expect(JumpRouteCueRules.nextPhysical(
+                            previous, pieces, Config.ArenaCenter, variantId, 1
+                        )).toBe(deck)
+                        previous = deck
+                    end
+                    expect(JumpRouteCueRules.skywayLeap(previous, east))
+                        .toBe(true)
+                    expect(JumpRouteCueRules.nextPhysical(
+                        previous, pieces, Config.ArenaCenter, variantId, 1
+                    )).toBe(east)
+
+                    previous = east
+                    for step = 7, 1, -1 do
+                        local deck = platforms:FindFirstChild(
+                            "Platform" .. (startIndex + (lane - 1) * 7 + step)
+                        )
+                        expect(JumpRouteCueRules.skywayLeap(previous, deck))
+                            .toBe(true)
+                        expect(JumpRouteCueRules.nextPhysical(
+                            previous, pieces, Config.ArenaCenter, variantId, -1
+                        )).toBe(deck)
+                        previous = deck
+                    end
+                    expect(JumpRouteCueRules.nextPhysical(
+                        previous, pieces, Config.ArenaCenter, variantId, -1
+                    )).toBe(west)
+
+                    -- An impending collapse must invalidate this ACTUAL
+                    -- landing, not leave a fictitious safe next-jump sign.
+                    local first = platforms:FindFirstChild(
+                        "Platform" .. (startIndex + (lane - 1) * 7 + 1)
+                    )
+                    first:SetAttribute("CollapsePhase", "Warning")
+                    expect(JumpRouteCueRules.nextPhysical(
+                        west, pieces, Config.ArenaCenter, variantId, 1
+                    )).toBe(nil)
+                    first:SetAttribute("CollapsePhase", nil)
+                end
+            end
             root:Destroy()
         end
     end)
@@ -1394,7 +1466,9 @@ describe("Chaos Survival engine", function()
             local platforms = arena:FindFirstChild("Platforms")
             local base = arena:FindFirstChild("Base")
             local start = #variant.Platforms + #variant.PerimeterPlatforms
-            expect(#platforms:GetChildren()).toBe(start + 20)
+            expect(#platforms:GetChildren()).toBe(
+                start + 20 + #(variant.SkywayPlatforms or {})
+            )
             for route = 1, 4 do
                 local forkIndex = #variant.Platforms
                     + (route - 1) * ArenaVariants.PerimeterSteps + 5
