@@ -1,0 +1,31 @@
+# Chaos Survival — Premium platformer skill loop (30 October 2026)
+
+## Target
+
+Make the five large survival arenas feel worth mastering as physical platformer courses, not just impressive scenery. This package adds a **complete** parkour reward loop on top of existing 100ms coyote jumping, 120ms buffered jumps, physical routes, 2K PBR, danger telegraphs and deterministic rookie coaching.
+
+**No Roblox public update** is authorized or triggered by this feature. The last verified public version remains the successful 30 October release of `a0f56bcd4cfa401162a608404c95649bb39b6446`.
+
+## End-to-end implementation
+
+1. **Actual physical jump validation — `ParkourFlow`.** The server observes human `Humanoid.StateChanged` and `FloorMaterial` transitions (no Heartbeat loops, no client messages). Once the humanoid reports ground contact, it raycasts downward with collision respected and the character excluded. Only an anchored, collidable, uncollapsed, opaque server-owned `Platform#` inside the ACTIVE arena's `Platforms` folder can register. The character root must be inside the genuine CFrame footprint and plausible standing height. Cosmetic structures, stale maps, collapsed pads, the main floor, duplicated signals and airborne movement are not credited.
+2. **Exact course progression.** Only an actual successor accepted by `JumpRouteCueRules.nextPhysical` is a successful link. At authored perimeter stages 5/6, either legitimate physically jumpable branch/crosslink is also accepted. Stage transitions must occur between **0.27 and 9.0 seconds** apart; returning to an older deck, exiting onto the floor or changing arena breaks the CURRENT chain. The BEST chain for the round is retained. No teleport, modified jump power or artificially added collision. Perimeter routes support up to 7 chained jumps across eight platforms; Harbor offers 6 across seven quays.
+3. **Visible feel, rather than GPS spam.** Once two real jumps are chained, the EXISTING lower round focus card displays a slim, localized jump-chain badge anchored above it. The badge disappears for low-end Android Low tier, for final rush and for high-ground mission HUD priority. No extra RenderStepped, remotes, world geometry or GPU-heavy bloom.
+4. **Meaningful but capped rewards.** A verified best chain of 3 earns the **PARKOUR ACE** medal and **4 XP**. Six or more earns **RIDGE LEGEND** too, with a total of **7 XP** (not additional unlimited grants). XP is added once in the authoritative per-player end-of-round settlement, including a round where the player later dies; challenge coins, purchases, DataStores and ordinary survival payouts remain unchanged. No client can call an endpoint to claim an earned jump.
+5. **Honest results and analytics.** The round receipt includes `parkourBest`, `parkourXP`, both localized medal names and the actual increased XP total; EN/FR detailed XP and jump-chain tags are shown. One analytics event after a real XP payout helps study whether players climb higher and replay more.
+
+## Performance and lifecycle
+
+- Two event connections PER human participant only while alive in a round; both disconnected through the existing `RoundCleanup` callbacks, no extra permanent watchers.
+- No new per-frame query. A single physics ray is attempted only on landed/ground material transitions; duplicate landings on the same physical Part never increase the chain.
+- Engine specs added to the existing `mapbuilder.spec.luau` and `round-medals.spec.luau`: full eight-platform route, stale/invalid/ghost deck, time bounds, duplicate contacts, capped rewards and medals. No tests are run during this ongoing improvement phase, per owner rules.
+
+## Minimum premium exit gate (NOT YET PROVEN)
+
+- On a real Android phone, play a complete round in **each of the five arenas**: verify normal jump grace, preview, server event progression, safe alternate forks, no fake chain credit, no FPS regression or obscured survival alerts.
+- Complete and deliberately fail a three-jump chain, then a six-jump chain, including an early death: compare exact `RoundParkourBest`, medal/XP receipts, saved XP and UI transitions. Check French and English.
+- Exercise changing arena, respawning during results, unstable network, disappearing/collapsing decks, speed buffs and all difficulty tiers. Confirm `RoundCleanup` disconnects every event and that player-owned physics spoofing cannot earn beyond the capped once-per-round bonus.
+- Run **exact-SHA Build Validation** and **real Roblox Open Cloud Engine Tests** on the intended final source. Block public publish on any failure; a passed automation is not a substitute for manual Android QA.
+- Measure session completion, jump success, successful route chains, early churn and 30/60 FPS frame pacing on representative low-/mid-range Android hardware. Only actual results can justify saying the desired premium quality is achieved.
+
+This is a finished skill-loop implementation, **not evidence that the entire Roblox game has reached the quality of the genre leaders**.
