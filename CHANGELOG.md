@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-30 — Landing preview reflects real active floor sweeps and Tower shutters (unpublished)
+
+- Fix a mobile platformer safety problem: the existing locally predicted **cyan safe landing** could be displayed on a real deck which was about to be hit by Classic's Grid Sweep, Harbor's Cargo Sweep or Tower Run's timed bridge shutter. The existing four-bracket reticle now shows a **red X** for the exact server-authored hazard footprint and replicated phase, with the SAME 10-Hz sample and up to four collision rays as before.
+- Raised platforms above a floor sweep and safe locations elsewhere on a skybridge **remain safely marked**, avoiding false red warnings. Reuse `JumpRouteCueRules.activeSweepOnPath` for the actual rotated sweep geometry; the shutter test matches the actual `BridgeName` and physically narrow metal gate rather than every bridge.
+- Only the existing three named arena mechanic folders are read, after a genuine imminent landing was found. No new camera loop, UI layer, sound, network traffic or player ability. Extended existing real Roblox engine movement spec for phase, rotation, height and real shutter proximity; see [hazard-aware landing acceptance plan](docs/PREMIUM_HAZARD_AWARE_LANDING_PREVIEW_2026-10-30.md).
+- **Not yet executed on the final SHA**, no public or private Roblox deployment. Mobile image/video confirmation remains part of the owner's final premium gate.
+
 ## 2026-10-30 — Fair live Tower shutter reactions for bots and real nearby audio (unpublished)
 
 - Correct a **live behavior bug** left by the timed 2.05-stud metal shutter feature: a survivor bot could commit to a real Tower skybridge while it was `Idle` and keep sprinting toward the barrier once it entered `Warning`, `Raising`, or `Raised`. AI now reads only the four current, server-owned bridge gate phases; with the existing personality-dependent reaction time, it physically retreats toward the nearest supported tower endpoint or holds its position at a gate it cannot safely pass. Already-committed Skyrail crossings are cancelled before any boost into the blocker. Normal Humanoid movement, hazard priorities and safety exit centreline stay unchanged; no AI teleport or speed buff.
