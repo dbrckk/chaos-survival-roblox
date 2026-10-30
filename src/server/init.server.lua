@@ -1528,12 +1528,15 @@ local function runDisasterSet(selected, contestants, roundSettings)
                         or hum.FloorMaterial == Enum.Material.Air then
                         return
                     end
+                    local root = character:FindFirstChild("HumanoidRootPart")
+                    if not root or not root:IsA("BasePart") then return end
                     local deck = ParkourFlow.landedDeck(
                         character, masteryPlatforms, params
                     )
                     local nextState = ParkourFlow.advance(
                         memory, deck, masteryPlatforms,
-                        parkourBase.Position, currentArenaVariant, os.clock()
+                        parkourBase.Position, currentArenaVariant,
+                        os.clock(), root.Position
                     )
                     parkourStates[userId] = nextState
                     local chain = nextState.chain or 0
@@ -1546,13 +1549,24 @@ local function runDisasterSet(selected, contestants, roundSettings)
                     end
                 end
 
-                -- StateChanged(Landed) can fire one frame before the real
-                -- FloorMaterial settles. Observe BOTH transitions rather
-                -- than delaying 100ms and missing a skilled fast re-jump.
-                -- Deduplication by physical Part prevents double scores.
+                -- A legitimate jump must have a prior server-observed
+                -- takeoff from the deck. This closes the old exploit where
+                -- walking between two Parts could award parkour XP.
+                -- FloorMaterial can settle before StateChanged(Landed);
+                -- observe BOTH without a delayed per-player polling loop.
                 table.insert(parkourConnections,
                     hum.StateChanged:Connect(function(_, state)
-                        if state == Enum.HumanoidStateType.Landed
+                        if state == Enum.HumanoidStateType.Jumping then
+                            local root = character:FindFirstChild("HumanoidRootPart")
+                            if roundActive and contestant.Parent == Players
+                                and contestant.Character == character
+                                and eliminated[userId] ~= true
+                                and root and root:IsA("BasePart") then
+                                ParkourFlow.takeoff(
+                                    memory, masteryPlatforms, root.Position, os.clock()
+                                )
+                            end
+                        elseif state == Enum.HumanoidStateType.Landed
                             or state == Enum.HumanoidStateType.Running
                             or state == Enum.HumanoidStateType.RunningNoPhysics then
                             sampleGroundedLanding()
@@ -1564,6 +1578,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
                             sampleGroundedLanding()
                         end
                     end))
+                -- Capture a player already standing on the first deck when
+                -- READY ends. Otherwise the first real jump cannot chain.
+                if hum.FloorMaterial ~= Enum.Material.Air then
+                    sampleGroundedLanding()
+                end
             end
         end
         table.insert(onCleanup, function()
