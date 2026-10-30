@@ -52,7 +52,7 @@ describe("Game analytics helpers", function()
 
     it("builds stable low-cardinality arena cohorts for every round type", function()
         local a = GameAnalytics
-        for _, arena in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        for _, arena in ipairs({"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}) do
             local field1, field2, field3 = a.arenaRoundFields(
                 arena, true, "Meteors", false, true
             )
@@ -75,6 +75,28 @@ describe("Game analytics helpers", function()
         expect(safe).toBe("Primary:Unknown|Fusion:No|Extra:No")
         local _, _, empty = a.arenaRoundFields(nil, nil, nil, nil, nil)
         expect(empty).toBe("Primary:Unknown|Fusion:No|Extra:No")
+    end)
+
+    it("reports real parkour cohorts using bounded map and device classes", function()
+        local a = GameAnalytics
+        local x, y, z = a.parkourRoundFields(
+            "Harbor", false, "Mobile"
+        )
+        expect(x).toBe("Arena:Harbor")
+        expect(y).toBe("Mode:Multiplayer")
+        expect(z).toBe("Device:Mobile")
+        local unknown, solo, device = a.parkourRoundFields(
+            "unknown;foo", true, "injected:tracking-value"
+        )
+        expect(unknown).toBe("Arena:Unknown")
+        expect(solo).toBe("Mode:Solo")
+        expect(device).toBe("Device:Unknown")
+        expect(a.parkourRoundMetrics(nil, {})).toBe(false)
+        expect(a.parkourRoundMetrics(nil, nil)).toBe(false)
+        local harbor = a.arenaRoundFields(
+            "Harbor", true, "Meteor", false, false
+        )
+        expect(harbor).toBe("Arena:Harbor")
     end)
 
     it("normalizes real time-alive measurements and one-per-round AI rates", function()
