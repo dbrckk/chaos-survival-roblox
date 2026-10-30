@@ -17,6 +17,10 @@ local STONE = {
     [Enum.Material.Pavement] = true,
     [Enum.Material.Cobblestone] = true,
 }
+local WOOD = {
+    [Enum.Material.Wood] = true,
+    [Enum.Material.WoodPlanks] = true,
+}
 local SOFT = {
     [Enum.Material.Ground] = true,
     [Enum.Material.Sand] = true,
@@ -31,6 +35,7 @@ local COLD = {
 
 function ImpactSurfaceScarKit.family(material)
     if METAL[material] then return "Metal" end
+    if WOOD[material] then return "Timber" end
     if STONE[material] then return "Stone" end
     if SOFT[material] then return "Dust" end
     if COLD[material] then return "Ice" end
@@ -43,6 +48,7 @@ end
 
 local MAT = {
     Metal = {Enum.Material.Metal, Color3.fromRGB(53, 65, 76), 0.50},
+    Timber = {Enum.Material.WoodPlanks, Color3.fromRGB(71, 48, 34), 0.55},
     Stone = {Enum.Material.Slate, Color3.fromRGB(42, 40, 39), 0.58},
     Dust = {Enum.Material.Ground, Color3.fromRGB(73, 61, 50), 0.64},
     Ice = {Enum.Material.Ice, Color3.fromRGB(145, 193, 213), 0.44},
@@ -96,10 +102,13 @@ function ImpactSurfaceScarKit.crack(index, total, radius, kind, family)
     -- Original material-dependent fracture morphology: ice has branching
     -- crystal cuts, metal keeps tight scored seams, and dust spreads softly.
     -- The same five-or-fewer static pieces remain on all graphics tiers.
-    local familySkew = family == "Ice" and 0.16
-        or (family == "Metal" and -0.09
-            or (family == "Dust" and 0.09
-                or (family == "Polished" and -0.04 or 0)))
+    local familySkew = ({
+        Timber = 0.13,
+        Ice = 0.16,
+        Metal = -0.09,
+        Dust = 0.09,
+        Polished = -0.04,
+    })[family] or 0
     local side = index % 2 == 0 and -1 or 1
     local angle = ((index - 1) / total) * math.pi * 2
         + (kind == "Meteor" and 0.21 or 0.11)
@@ -108,6 +117,9 @@ function ImpactSurfaceScarKit.crack(index, total, radius, kind, family)
     local reach = radius * (0.28 + (index % 3) * 0.055)
         * (family == "Ice" and 1.08 or (family == "Dust" and 0.84 or 1))
     local isFracture = kind == "Meteor" or family == "Ice"
+    -- A blasted timber plank splits into long grain cuts, not stone wedges.
+    -- Keep the exact same crack/Part budget on all tiers.
+    if family == "Timber" then isFracture = false end
     return {
         Name = isFracture and "RimFacet" or "PressureCut",
         Wedge = isFracture,
