@@ -268,6 +268,45 @@ describe("Movement assist rules", function()
         deck:Destroy()
     end)
 
+    it("never advertises a tier-four refuge covered by live RisingLava", function()
+        local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
+        local platform = Instance.new("Part")
+        platform.Name = "Platform18"
+        platform.Size = Vector3.new(12, 2, 12)
+        platform.Position = Vector3.new(0, 12, 0)
+        platform.Anchored = true
+        platform:SetAttribute("RouteTier", 4)
+        platform.Parent = workspace
+        local lava = Instance.new("Part")
+        lava.Name = "RoundLava"
+        lava.Size = Vector3.new(48, 4, 48)
+        lava.Anchored = true
+        lava.CanCollide = false
+        lava.Position = Vector3.new(0, 2, 0)
+        lava.Parent = workspace
+
+        -- Platform top Y=13. Root Y=15.5; server lava contact occurs at
+        -- root.Y-2.5 <= lava.TopY, so even exactly Y=13 is lethal.
+        expect(JumpRouteCueRules.lavaOnDeck(platform, lava)).toBe(false)
+        lava.Position = Vector3.new(0, 10.99, 0)
+        expect(JumpRouteCueRules.lavaOnDeck(platform, lava)).toBe(false)
+        lava.Position = Vector3.new(0, 11, 0)
+        expect(JumpRouteCueRules.lavaOnDeck(platform, lava)).toBe(true)
+        lava.Position = Vector3.new(0, 15, 0)
+        expect(JumpRouteCueRules.lavaOnDeck(platform, lava)).toBe(true)
+        lava.Position = Vector3.new(50, 15, 0)
+        expect(JumpRouteCueRules.lavaOnDeck(platform, lava)).toBe(false)
+        lava.Position = Vector3.new(0, 15, 0)
+        lava.Name = "OtherPart"
+        expect(JumpRouteCueRules.lavaOnDeck(platform, lava)).toBe(false)
+        lava.Name = "RoundLava"
+        lava.Parent = nil
+        expect(JumpRouteCueRules.lavaOnDeck(platform, lava)).toBe(false)
+
+        lava:Destroy()
+        platform:Destroy()
+    end)
+
     it("predicts only near-term descending contact and validates edges", function()
         local Rules = require("../../src/shared/JumpLandingPreviewRules")
         local freefall = Enum.HumanoidStateType.Freefall
