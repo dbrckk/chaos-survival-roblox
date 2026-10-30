@@ -1,9 +1,155 @@
 --!strict
 -- STORM HARBOR skyline: four creator-authored, collision-free gantry
--- crane silhouettes, outside the actual 320x320 survival map.
+-- cranes and one full original static cargo vessel, outside the actual
+-- 320x320 survival map.
 -- Zero moving parts, sound emitters, scripts, lights or runtime loops.
 -- Atomic streaming and distant-scene tags allow Android LOD culling.
 local HarborScenery = {}
+
+-- One recognizable full cargo-freighter silhouette behind the northern
+-- yard. This is an original Roblox-native 3D assembly, not a decal, mesh
+-- asset dependency or a gameplay platform. The ship belongs to the same
+-- protected distant-scenery LOD fleet as the existing four cranes.
+local function buildCargoVessel(fleet, base, theme)
+    local vessel = Instance.new("Model")
+    vessel.Name = "HarborCargoVessel"
+    vessel:SetAttribute("ChaosDistantScenery", true)
+    vessel:SetAttribute("CosmeticOnly", true)
+    vessel:SetAttribute("SourceIsOriginal", true)
+    vessel:SetAttribute("HarborVesselScenery", true)
+    vessel.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+
+    local origin = CFrame.new(
+        base.Position.X - base.Size.X * 0.18,
+        base.Position.Y + base.Size.Y * 0.5 - 3,
+        base.Position.Z - base.Size.Z * 0.5 - 68
+    )
+    local hull = theme.Structure:Lerp(Color3.fromRGB(29, 46, 54), 0.33)
+    local lower = hull:Lerp(Color3.fromRGB(18, 29, 36), 0.34)
+    local alloy = theme.Detail:Lerp(Color3.fromRGB(112, 127, 127), 0.25)
+    local roof = theme.Surface:Lerp(Color3.fromRGB(42, 54, 60), 0.48)
+    local stripe = theme.Accent:Lerp(alloy, 0.82)
+    local glass = alloy:Lerp(Color3.fromRGB(35, 68, 81), 0.65)
+    local cargoColors = {
+        theme.Detail:Lerp(Color3.fromRGB(94, 121, 126), 0.55),
+        theme.Structure:Lerp(Color3.fromRGB(110, 90, 79), 0.55),
+        theme.Secondary:Lerp(Color3.fromRGB(72, 102, 109), 0.66),
+    }
+
+    local function segment(name, size, offset, color, material, kind)
+        local piece = Instance.new(kind or "Part")
+        piece.Name = name
+        piece.Size = size
+        piece.CFrame = origin * offset
+        piece.Color = color or hull
+        piece.Material = material or Enum.Material.Metal
+        piece.Anchored = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+        piece.Parent = vessel
+        return piece
+    end
+    local function brace(name, a, b, thickness, color)
+        local delta = b - a
+        return segment(name, Vector3.new(thickness, thickness, delta.Magnitude),
+            CFrame.lookAt((a + b) * 0.5, b), color or alloy)
+    end
+
+    -- Ship axis is X, starboard/port Z. Layered hull bands and tapered
+    -- bow/stern read as a genuine vessel even with particles disabled.
+    segment("LowerKeel", Vector3.new(83, 4.2, 14),
+        CFrame.new(0, -4.4, 0), lower, Enum.Material.CorrodedMetal)
+    segment("MainHull", Vector3.new(88, 8.2, 20),
+        CFrame.new(0, -0.4, 0), hull, Enum.Material.CorrodedMetal)
+    segment("BowTaperPort", Vector3.new(14, 7.0, 10),
+        CFrame.new(49.5, -1.0, -5) * CFrame.Angles(0, math.pi / 2, 0),
+        hull, Enum.Material.CorrodedMetal, "WedgePart")
+    segment("BowTaperStarboard", Vector3.new(14, 7.0, 10),
+        CFrame.new(49.5, -1.0, 5) * CFrame.Angles(0, -math.pi / 2, 0),
+        hull, Enum.Material.CorrodedMetal, "WedgePart")
+    segment("SternTaperPort", Vector3.new(9, 6.5, 10),
+        CFrame.new(-47, -1.0, -4.8) * CFrame.Angles(0, -math.pi / 2, 0),
+        hull, Enum.Material.CorrodedMetal, "WedgePart")
+    segment("SternTaperStarboard", Vector3.new(9, 6.5, 10),
+        CFrame.new(-47, -1.0, 4.8) * CFrame.Angles(0, math.pi / 2, 0),
+        hull, Enum.Material.CorrodedMetal, "WedgePart")
+    segment("MainCargoDeck", Vector3.new(88, 0.7, 19),
+        CFrame.new(0, 4.1, 0), roof)
+    for _, side in ipairs({-1, 1}) do
+        segment("HullWaterline" .. side, Vector3.new(78, 0.45, 0.18),
+            CFrame.new(0, -2.9, side * 10.08), stripe)
+        segment("DeckGunwale" .. side, Vector3.new(85, 0.76, 0.65),
+            CFrame.new(0, 4.7, side * 9.5), alloy)
+        for index = 1, 5 do
+            local x = -35 + (index - 1) * 17
+            segment("GuardrailPost" .. side .. "_" .. index,
+                Vector3.new(0.24, 2.2, 0.24),
+                CFrame.new(x, 6.0, side * 9.55), alloy)
+        end
+        segment("GuardrailTop" .. side, Vector3.new(75, 0.18, 0.18),
+            CFrame.new(0, 7.15, side * 9.55), alloy)
+    end
+
+    -- Recessed deck bays with two-high stacks, independent ribs and top
+    -- corner castings. Cargo remains cargo: zero invisible colliders.
+    for bay = 1, 3 do
+        local x = -9 + (bay - 1) * 20
+        segment("CargoBaySill" .. bay, Vector3.new(16.6, 0.35, 17),
+            CFrame.new(x, 4.65, 0), lower)
+        for side = -1, 1, 2 do
+            for layer = 1, 2 do
+                local z = side * 4.25
+                local y = 6.8 + (layer - 1) * 4.6
+                local tone = cargoColors[(bay + layer + (side + 1) / 2) % 3 + 1]
+                local prefix = "Container" .. bay .. "_" .. side .. "_" .. layer
+                segment(prefix, Vector3.new(15, 4.0, 7.7),
+                    CFrame.new(x, y, z), tone, Enum.Material.CorrodedMetal)
+                for rib = -1, 1, 2 do
+                    segment(prefix .. "Rib" .. rib, Vector3.new(0.22, 3.5, 0.24),
+                        CFrame.new(x + rib * 5.5, y, z + side * 3.89),
+                        alloy:Lerp(tone, 0.65))
+                end
+                segment(prefix .. "DoorLine", Vector3.new(0.20, 3.7, 6.5),
+                    CFrame.new(x + 7.55, y, z), lower)
+            end
+        end
+    end
+
+    -- Tall stern bridge supplies a clear human-scale reference, even
+    -- through the distant LOD, rather than one generic rectangular barge.
+    segment("SternDeckhouse", Vector3.new(13.5, 13, 16),
+        CFrame.new(-34, 10.9, 0), alloy)
+    segment("Wheelhouse", Vector3.new(16, 5.8, 17),
+        CFrame.new(-34, 20.0, 0), roof)
+    segment("BridgeCap", Vector3.new(19, 0.75, 19),
+        CFrame.new(-34, 23.1, 0), lower)
+    segment("BridgePanorama", Vector3.new(0.20, 2.2, 14.5),
+        CFrame.new(-25.9, 20.6, 0), glass, Enum.Material.Glass)
+    for _, side in ipairs({-1, 1}) do
+        segment("BridgeSideWindow" .. side,
+            Vector3.new(8.3, 2.15, 0.15),
+            CFrame.new(-34, 20.6, side * 8.6),
+            glass, Enum.Material.Glass)
+    end
+    segment("ExhaustStack", Vector3.new(4.5, 8.8, 4.5),
+        CFrame.new(-43, 18.7, -2.6), lower)
+    segment("ExhaustLip", Vector3.new(5, 0.6, 5),
+        CFrame.new(-43, 23.2, -2.6), alloy)
+    segment("RadarMast", Vector3.new(0.55, 12.0, 0.55),
+        CFrame.new(-31, 29.3, 1.7), alloy)
+    segment("RadarBoom", Vector3.new(8.2, 0.36, 0.50),
+        CFrame.new(-31, 34.6, 1.7), stripe)
+    brace("MastBackstay",
+        Vector3.new(-31, 32.7, 1.7),
+        Vector3.new(-41, 22.9, 6.4), 0.24, lower)
+
+    -- Vessel model is built before parenting to avoid partially streamed
+    -- bundles; the shared Harbor LOD controller owns all its visual Parts.
+    vessel.Parent = fleet
+    return vessel
+end
 
 function HarborScenery.build(decor, base, theme)
     if not decor or not base or not base:IsA("BasePart") then
@@ -156,6 +302,8 @@ function HarborScenery.build(decor, base, theme)
         end
         crane.Parent = folder
     end
+
+    buildCargoVessel(folder, base, theme)
 
     return folder
 end
