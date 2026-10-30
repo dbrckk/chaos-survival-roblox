@@ -1,5 +1,6 @@
-# One-time owner-authorized final quality milestone. Tests only: NEVER publishes Roblox.
-name: One-time Premium Harbor Skyways Source-Cap Retest 2026-10-30
+# Single final verification after preserving 94 native Harbor platforms and authentic skyway XP.
+# Tests only: NEVER publishes Roblox. All five engine suites + build on exact SHA.
+name: One-time Premium Harbor Final Quality Gate 2026-10-30
 on:
   push:
     branches: [main]
@@ -9,7 +10,7 @@ permissions:
   contents: read
   actions: write
 concurrency:
-  group: premium-harbor-skyways-source-cap-retest-20261030
+  group: premium-harbor-final-verified-20261030
   cancel-in-progress: false
 jobs:
   final-quality:
