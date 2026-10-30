@@ -669,6 +669,65 @@ describe("Server-owned Harbor elevated parkour scoring", function()
 
         root:Destroy()
     end)
+
+    it("never awards legend XP from bouncing between two skyway decks", function()
+        local id = "Harbor"
+        local variant = ArenaVariants.get(id)
+        local root = MapBuilder.build(Config, id, ArenaVariants)
+        local platforms = root:FindFirstChild("Arena"):FindFirstChild("Platforms")
+        local start = #variant.Platforms + #variant.PerimeterPlatforms
+            + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
+        local terminal = platforms:FindFirstChild("Platform7")
+        local first = platforms:FindFirstChild("Platform" .. (start + 1))
+        local second = platforms:FindFirstChild("Platform" .. (start + 2))
+        local third = platforms:FindFirstChild("Platform" .. (start + 3))
+        local now = 10
+        local state = ParkourFlow.advance(
+            nil, terminal, platforms, Config.ArenaCenter,
+            id, now, standingPosition(terminal)
+        )
+
+        local function jump(to, shouldCount)
+            local from = state.deck
+            -- Every move is an honest physical leap; only monotonic
+            -- traversal of the authored bridge should extend mastery.
+            expect(ParkourFlow.legalJump(
+                from, to, platforms, Config.ArenaCenter, id
+            )).toBe(true)
+            local launched
+            state, launched = ParkourFlow.takeoff(
+                state, platforms, standingPosition(from), now + 0.35
+            )
+            expect(launched).toBe(true)
+            local counted
+            state, counted = ParkourFlow.advance(
+                state, to, platforms, Config.ArenaCenter,
+                id, now + 0.90, standingPosition(to)
+            )
+            expect(counted).toBe(shouldCount)
+            now += 0.90
+        end
+
+        jump(first, true)
+        jump(second, true)
+        expect(state.chain).toBe(2)
+        for _ = 1, 8 do
+            jump(first, false)
+            jump(second, true)
+            expect(state.chain).toBe(1)
+        end
+        expect(state.best).toBe(2)
+        expect(ParkourFlow.bonusXP(state.best)).toBe(0)
+
+        -- Advancing to a third actual deck resumes legitimate skill.
+        jump(third, true)
+        expect(state.chain).toBe(2)
+        -- A life-saving retreat never becomes an illegal physics move,
+        -- yet it must not credit a forward-progress medal.
+        jump(second, false)
+        expect(state.best).toBe(2)
+        root:Destroy()
+    end)
 end)
 
 return nil

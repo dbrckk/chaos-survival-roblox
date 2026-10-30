@@ -1,6 +1,6 @@
 # Storm Harbor — real cross-quay roof routes, bidirectional navigation
 
-Date: 30 October 2026. Feature source branch only until a subsequent **exact-SHA build + real Roblox Open Cloud verification and approved public publisher**.
+Date: 30 October 2026. Skyway geometry, guidance and server-verified XP are **published in the public playtest** at SHA `77e5805c96d9dd793e5bc058b93b4d7e904e1530` ([publisher 41112157340](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41112157340), Success). New anti-farming follow-up below is **not yet public**.
 
 ## Inspected gameplay defect
 Storm Harbor has four seven-step cargo switchbacks, one per quadrant, ending at world offsets (`±51, +22, ±50`) with 9.6×9.6-stud walkable top surfaces at height **23 studs**. Despite four authentic top platforms, the high routes were dead ends: crossing to an adjacent gantry required dropping to the floor and restarting the climb. There was no inter-quay high-route choice. The 320×320 mega-arena's elevated navigability remained fragmented.
@@ -31,7 +31,17 @@ The skyway geometry and optional rookie hints alone did not complete the loop: b
 
 The targeted fix first validates source and destination as actual server-anchored, solid, active `Arena.Platforms` instances. **Only for Harbor's explicitly authored skyway endpoints**, it delegates horizontal geometry and safe landing to `skywayLeap` and confirms the destination is the immediate corresponding server-authored `nextSkyway` in either direction. Other arenas and horizontal moves on unrelated decks still fail; no new RemoteEvent, client claim, reward value, jump power, currency grant, replay loophole or pay-to-win path. The existing server-observed Humanoid takeoff, plausible flight speed/time, physical raycast landing, capped combo and once-per-round bonus continue unchanged.
 
-Existing `tests/engine/parkour-flow.spec.luau` now exercises server takeoff → physical skyway landing → capped seven-jump legend XP on both lanes, in both directions, and rejects cross-variant, collapse-warning and noncolliding destinations. This separate scoring follow-up is prepared on a feature branch while the preceding **source-cap fix** exact-SHA engine QA is in progress; it is not yet merged or published.
+Existing `tests/engine/parkour-flow.spec.luau` now exercises server takeoff → physical skyway landing → capped seven-jump legend XP on both lanes, in both directions, and rejects cross-variant, collapse-warning and noncolliding destinations. This scoring fix passed the exact-SHA real Roblox engine and build gate and was published with the public update `77e5805c`.
+
+## Post-publication mastery integrity — direction-locked streaks
+
+**Observed source vulnerability after successful public update of SHA `77e5805c`:** the Harbor cross-quay bridge has legal server-authored jumps in either direction. `ParkourFlow.advance` previously credited all physically valid jumps as a contiguous chain, allowing a player to repeat `SkywayStep1 ⇄ SkywayStep2` until earning `RIDGE LEGEND` and bonus XP without actually traversing the bridge.
+
+The corrected server-side flow maintains a tiny `skywayDirection` value in existing per-player round memory, derived exclusively from the existing server-authored `HarborRoute` and `HarborSkywayStep` metadata after a real Humanoid takeoff and physical landing. Once a player has committed to one end of the bridge, a reverse jump remains **legitimate movement and safe during a disaster**, but it ends the *current mastery chain*. Advancing along the same direction continues the streak; reaching an actual terminal clears the direction so a complete return crossing can earn independent progression. A failed landing also clears the direction. No movement or camera restriction, new UI, new network event, artificial checkpoint, recurring task, currency grant or additional mobile cost.
+
+An engine scenario was added to the **existing** `tests/engine/parkour-flow.spec.luau` to bounce repeatedly between two actual Harbor decks with valid server takeoff/landing events. It requires `best == 2`, `bonusXP(best) == 0`, and confirms real forward travel still scores while tactical reverse hops remain legal but break mastery. Existing two-way full-crossing certification is retained unchanged.
+
+**Release policy:** feature branch only until next exact-SHA build and real five-suite Roblox Open Cloud gate. The previously published public game remains on `77e5805c`; no automated publication has been attempted. Android/manual acceptance still requires an actual screen and tactile performance review.
 
 ## Existing engine regression coverage (not executed during feature work)
 Extended **existing** `tests/engine/mapbuilder.spec.luau` rather than adding a new suite:
@@ -46,4 +56,4 @@ Extended **existing** `tests/engine/mapbuilder.spec.luau` rather than adding a n
 ## Hardware/visual acceptance still required
 A real Roblox Studio and Android run must confirm four climb → seven precision jumps → opposite port terminal traversals; camera does not clip support posts; elevated seams and underside materials look authentic; hazard warnings/collapse stay authoritative; Low/Medium/High FPS and 360px mobile touch navigation remain within device targets. Existing automated suites cannot certify real-device rendering, retaining players, or 9/10 overall quality.
 
-Current actual public baseline prior to merge: `030e191407ff454a09315c9db66688559e641fff` (publisher [41095777897](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41095777897)). No claim that this new skyway has been published.
+Published public baseline while developing this anti-farming follow-up: `77e5805c96d9dd793e5bc058b93b4d7e904e1530` (publisher [41112157340](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41112157340), Success). Physical-device Android/Studio review remains incomplete.
