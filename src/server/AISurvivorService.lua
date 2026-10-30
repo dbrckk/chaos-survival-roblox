@@ -1204,6 +1204,34 @@ local function warnNearbyContestants(record, now)
     showBotSignal(record, cue, now)
 end
 
+-- Reuse only actual server-created bands from the current arena.
+-- No part listeners, replicated client hints or synthetic danger zones.
+-- This is sampled only while ranking an imminent impact dodge, not every
+-- bot brain tick.
+local function activeFloorSweepBands()
+    local variant = arenaVariantId()
+    local folderName = variant == "Harbor" and "HarborCargoSweep"
+        or (variant == "Classic" and "GridSweep" or nil)
+    if not folderName then return {} end
+    local _, arena = arenaParts()
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    local folder = mechanics and mechanics:FindFirstChild(folderName)
+    local phaseName = variant == "Harbor" and "HarborSweepPhase"
+        or "GridSweepPhase"
+    local bands = {}
+    if folder then
+        for _, band in ipairs(folder:GetChildren()) do
+            if band:IsA("BasePart") then
+                local phase = band:GetAttribute(phaseName)
+                if phase == "Warning" or phase == "Pulse" then
+                    bands[#bands + 1] = band
+                end
+            end
+        end
+    end
+    return bands
+end
+
 -- Sample several WALKABLE escape headings rather than committing to one
 -- random tangent. This matters at arena edges, on narrow platforms, and
 -- when two growing meteor/bomb warnings overlap. Bounded to six headings,
@@ -1237,6 +1265,7 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
     local best = nil
     local bestScore = -math.huge
     local activeWarnings = warningParts()
+    local liveSweeps = activeFloorSweepBands()
     for _, heading in ipairs(headings) do
         local destination = clampToArena(
             root.Position + heading.Unit * length
@@ -1297,6 +1326,16 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
                     score -= (4 - clearance) * 4
                 end
             end
+        end
+
+        -- Two simultaneous hazards must not turn an otherwise sound
+        -- meteor escape into a cargo/grid sweep. The server's active band
+        -- CFrame and Size are the only authority; the helper checks
+        -- the WHOLE walking segment and ignores safe raised platforms.
+        for _, band in ipairs(liveSweeps) do
+            score -= AISurvivorRules.floorSweepRoutePenalty(
+                root.Position, destination, band.CFrame, band.Size
+            ) * 1.6
         end
 
         if score > bestScore then
