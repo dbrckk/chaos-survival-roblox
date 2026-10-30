@@ -250,6 +250,21 @@ end
 JumpRouteCueRules.RecoverySeconds = 5.2
 JumpRouteCueRules.RecoveryTravel = 3.4
 
+-- Jumping in place raises the character root several studs vertically.
+-- That is NOT horizontal course progress and must not silently restart the
+-- veteran's 5.2-second help timer after every unsuccessful jump attempt.
+function JumpRouteCueRules.horizontalProgressDistance(fromPosition, toPosition)
+    if typeof(fromPosition) ~= "Vector3"
+        or typeof(toPosition) ~= "Vector3" then
+        return math.huge
+    end
+    local dx = toPosition.X - fromPosition.X
+    local dz = toPosition.Z - fromPosition.Z
+    local distance = math.sqrt(dx * dx + dz * dz)
+    return distance == distance and distance < math.huge
+        and distance or math.huge
+end
+
 function JumpRouteCueRules.recoveryHintReady(elapsed, progressDistance, grounded)
     local time = tonumber(elapsed)
     local distance = tonumber(progressDistance)
