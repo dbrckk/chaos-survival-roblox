@@ -6,7 +6,9 @@
 -- existing Skybridge Pressure mechanic; never stacks with that outage.
 local TweenService = game:GetService("TweenService")
 local CollectionService = game:GetService("CollectionService")
-local SkybridgePressure = require(script.Parent.SkybridgePressure)
+local pressureModule = script and script.Parent:FindFirstChild("SkybridgePressure")
+local SkybridgePressure = if pressureModule
+    then require(pressureModule) else require("./SkybridgePressure")
 
 local SkybridgeShutters = {}
 
