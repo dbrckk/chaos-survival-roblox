@@ -11,8 +11,10 @@ local player = Players.LocalPlayer
 local roundState = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local activePhase = "waiting"
-local faded = nil
-local previousModifier = 0
+-- Two ray samples protect both the head and torso on small Android
+-- screens. One metal girder may hide the torso while another obscures the
+-- head. Never soften more than TWO actual arena structural blockers.
+local fadedStructures = {} -- BasePart -> original LocalTransparencyModifier
 local fadeValue = 0.72
 local lastCamera = nil
 local structuralFilter = CameraSightlineFilterCache.new(
@@ -156,18 +158,28 @@ local function refreshAvatarOccluder(camera, localRoot, localCharacter)
     applyAvatarFades(CameraOcclusionRules.chooseOccluders(candidates, 2))
 end
 
+local function restoreStructural(part)
+    local original = fadedStructures[part]
+    if original == nil then return end
+    if part.Parent
+        and math.abs(part.LocalTransparencyModifier - fadeValue) < 0.001 then
+        -- Yield to the native camera when another visibility owner has
+        -- already replaced this local modifier.
+        part.LocalTransparencyModifier = original
+    end
+    fadedStructures[part] = nil
+end
+
+local function restoreStructures()
+    for part in pairs(fadedStructures) do
+        restoreStructural(part)
+    end
+end
+
 local function restore()
     structuralFilter:clear()
     restoreAvatars()
-    if faded and faded.Parent then
-        -- Yield to native Roblox camera/streaming writers if they adjusted
-        -- this modifier while our temporary fade was in effect.
-        if math.abs(faded.LocalTransparencyModifier - fadeValue) < 0.001 then
-            faded.LocalTransparencyModifier = previousModifier
-        end
-    end
-    faded = nil
-    previousModifier = 0
+    restoreStructures()
     lastCamera = nil
 end
 
@@ -228,7 +240,8 @@ local function update()
     end
 
     local start = camera.CFrame.Position
-    local toAvatar = root.Position + Vector3.new(0, 1.25, 0) - start
+    local focus = root.Position + Vector3.new(0, 1.25, 0)
+    local toAvatar = focus - start
     local distance = toAvatar.Magnitude
     -- First-person views and spectator/zoomed-out cameras must not alter
     -- the appearance of the surrounding arena.
@@ -242,33 +255,37 @@ local function update()
     -- stand closer to the lens than an opaque column; none should prevent
     -- the column from being tested. Avatars are handled independently.
     -- Reuse the same include-only filter for unchanged streamed geometry.
-    -- A map/platform change or skybridge marker invalidates it explicitly.
+    -- Two bounded rays per 180 ms sample (not per frame) are enough to
+    -- capture a waist-level girder AND an upper-head blocking support.
     local params = structuralFilter:get(arena, base)
-    local hit = params and workspace:Raycast(start, toAvatar, params)
-    local nextPart = nil
-    if hit and supportedTarget(hit.Instance, arena, base) then
-        nextPart = hit.Instance
-    end
-
-    if nextPart ~= faded then
-        -- Only restore the structural blocker here: remote avatar fade is
-        -- independently owned and must not flicker when terrain ray hits
-        -- change during movement.
-        if faded and faded.Parent
-            and math.abs(faded.LocalTransparencyModifier - fadeValue) < 0.001 then
-            faded.LocalTransparencyModifier = previousModifier
+    local candidates = {}
+    if params then
+        for _, height in ipairs({1.25, 3.05}) do
+            local target = root.Position + Vector3.new(0, height, 0)
+            local hit = workspace:Raycast(start, target - start, params)
+            if hit and supportedTarget(hit.Instance, arena, base) then
+                candidates[#candidates + 1] = hit.Instance
+            end
         end
-        faded = nil
-        previousModifier = 0
-        if nextPart and nextPart.Parent then
-            faded = nextPart
-            previousModifier = faded.LocalTransparencyModifier
-            -- Don't overwrite parts intentionally hidden by another
-            -- client-side visibility owner.
-            if previousModifier < 0.55 then
-                faded.LocalTransparencyModifier = fadeValue
-            else
-                faded = nil
+    end
+    local wanted = {}
+    for _, part in ipairs(
+        CameraOcclusionRules.chooseStructuralBlockers(candidates, 2)
+    ) do
+        wanted[part] = true
+    end
+    for part in pairs(fadedStructures) do
+        if not wanted[part] or not part.Parent then
+            restoreStructural(part)
+        end
+    end
+    for part in pairs(wanted) do
+        if fadedStructures[part] == nil and part.Parent then
+            local original = part.LocalTransparencyModifier
+            -- Respect the native camera and other local visibility owners.
+            if original < 0.55 then
+                fadedStructures[part] = original
+                part.LocalTransparencyModifier = fadeValue
             end
         end
     end
