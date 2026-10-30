@@ -344,4 +344,135 @@ describe("Real active arena sweep lanes never lure jump coaching into danger", f
     end)
 end)
 
+
+describe("Physically progressive landing footprints on all five arenas", function()
+    it("uses deterministic bounded 4-grade course difficulty", function()
+        local shapes = {
+            Harbor = {12, 12, 11.6, 11.1, 10.6, 10.1, 9.6},
+            Perimeter = {12, 12, 12, 11.6, 11.2, 10.8, 10.4, 10},
+            Branch = {12, 12, 11.2, 10.4},
+        }
+        for kind, widths in pairs(shapes) do
+            local previous = math.huge
+            for step, width in ipairs(widths) do
+                local actual, grade = ArenaVariants.parkourFootprint(kind, step)
+                expect(actual).toBe(width)
+                expect(actual <= previous).toBe(true)
+                expect(actual >= 9.6).toBe(true)
+                expect(grade >= 1 and grade <= 4).toBe(true)
+                previous = actual
+            end
+            expect(ArenaVariants.parkourFootprint(kind, 0)).toBe(nil)
+            expect(ArenaVariants.parkourFootprint(kind, #widths + 1)).toBe(nil)
+        end
+        expect(ArenaVariants.parkourFootprint("UntrustedRoute", 2)).toBe(nil)
+        expect(ArenaVariants.parkourFootprint("Harbor", 2.5)).toBe(nil)
+    end)
+
+    it("keeps all five real perimeter ascents reachable as stages tighten", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local root = MapBuilder.build(Config, id, ArenaVariants, VisualTheme)
+            local arena = root:FindFirstChild("Arena")
+            local platforms = arena:FindFirstChild("Platforms")
+            local originals = #variant.Platforms
+            for route = 1, 4 do
+                local previous = nil
+                for step = 1, ArenaVariants.PerimeterSteps do
+                    local index = originals
+                        + (route - 1) * ArenaVariants.PerimeterSteps + step
+                    local deck = platforms:FindFirstChild("Platform" .. index)
+                    local expectedWidth, expectedGrade =
+                        ArenaVariants.parkourFootprint("Perimeter", step)
+                    expect(deck.Size.X).toBe(expectedWidth)
+                    expect(deck.Size.Z).toBe(expectedWidth)
+                    expect(deck:GetAttribute("ParkourGrade")).toBe(expectedGrade)
+                    expect(deck.Anchored and deck.CanCollide).toBe(true)
+                    if previous then
+                        local gap = JumpRouteCueRules.gap(previous, deck)
+                        expect(gap > 0.15 and gap < 3.85).toBe(true)
+                        expect(JumpRouteCueRules.jumpable(previous, deck)).toBe(true)
+                        expect(ParkourFlow.legalJump(
+                            previous, deck, platforms,
+                            Config.ArenaCenter, id
+                        )).toBe(true)
+                    end
+                    previous = deck
+                end
+            end
+            root:Destroy()
+        end
+    end)
+
+    it("preserves all elevated branches, safe rescue crosslinks and harbor switchbacks", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local root = MapBuilder.build(Config, id, ArenaVariants, VisualTheme)
+            local arena = root:FindFirstChild("Arena")
+            local platforms = arena:FindFirstChild("Platforms")
+            local original = #variant.Platforms
+            local branchStart = original + #variant.PerimeterPlatforms
+            local crossStart = branchStart + #variant.BranchPlatforms
+            for route = 1, 4 do
+                local sideLast = nil
+                for step = 1, 4 do
+                    local deck = platforms:FindFirstChild(
+                        "Platform" .. (branchStart + (route - 1) * 4 + step)
+                    )
+                    local expectedWidth, grade =
+                        ArenaVariants.parkourFootprint("Branch", step)
+                    expect(deck.Size.X).toBe(expectedWidth)
+                    expect(deck.Size.Z).toBe(expectedWidth)
+                    expect(deck:GetAttribute("ParkourGrade")).toBe(grade)
+                    if sideLast then
+                        expect(JumpRouteCueRules.jumpable(sideLast, deck)).toBe(true)
+                        expect(ParkourFlow.legalJump(
+                            sideLast, deck, platforms, Config.ArenaCenter, id
+                        )).toBe(true)
+                    end
+                    sideLast = deck
+                end
+                local ridge6 = platforms:FindFirstChild("Platform" ..
+                    (original + (route - 1) * 8 + 6))
+                local link = platforms:FindFirstChild("Platform" .. (crossStart + route))
+                local branch2 = platforms:FindFirstChild("Platform" ..
+                    (branchStart + (route - 1) * 4 + 2))
+                expect(link.Size.X).toBe(12)
+                expect(link.Size.Z).toBe(12)
+                expect(link:GetAttribute("ParkourGrade")).toBe(3)
+                expect(JumpRouteCueRules.jumpable(ridge6, link)).toBe(true)
+                expect(JumpRouteCueRules.jumpable(link, branch2)).toBe(true)
+            end
+            if id == "Harbor" then
+                for route = 1, 4 do
+                    local previous = nil
+                    for step = 1, 7 do
+                        local deck = platforms:FindFirstChild(
+                            "Platform" .. ((route - 1) * 7 + step)
+                        )
+                        local width, grade =
+                            ArenaVariants.parkourFootprint("Harbor", step)
+                        expect(deck.Size.X).toBe(width)
+                        expect(deck.Size.Z).toBe(width)
+                        expect(deck:GetAttribute("ParkourGrade")).toBe(grade)
+                        if previous then
+                            expect(JumpRouteCueRules.gap(previous, deck)
+                                <= JumpRouteCueRules.MaxGap).toBe(true)
+                            expect(JumpRouteCueRules.jumpable(previous, deck))
+                                .toBe(true)
+                            expect(ParkourFlow.legalJump(
+                                previous, deck, platforms,
+                                Config.ArenaCenter, id
+                            )).toBe(true)
+                        end
+                        previous = deck
+                    end
+                end
+            end
+            root:Destroy()
+        end
+    end)
+end)
+
+
 return nil

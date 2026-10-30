@@ -1625,10 +1625,15 @@ local function addPlatformFinish(decor, platform, index, theme)
     -- rim now reads as a separate machined structural layer.
     topPanel.Transparency = 0.07
     local routeTier = tonumber(platform:GetAttribute("RouteTier"))
-    if routeTier then
-        -- Tiers stay predominantly machined metal. Subtle cold-color
-        -- differences reveal the height route without competing with
-        -- orange/red disaster warnings or introducing extra draw calls.
+    local parkourGrade = tonumber(platform:GetAttribute("ParkourGrade"))
+    if parkourGrade then
+        -- Make the ACTUAL collision landing area visibly readable.
+        -- Recolor the existing inset only: no extra geometry, lights,
+        -- expensive material or warning-color overlap on low-end phones.
+        topPanel.Color = theme.Surface:Lerp(
+            theme.Detail, 0.20 + math.clamp(parkourGrade, 1, 4) * 0.07
+        )
+    elseif routeTier then
         topPanel.Color = theme.Surface:Lerp(
             theme.Detail, 0.24 + (math.clamp(routeTier, 1, 4) - 1) * 0.06
         )
@@ -1642,9 +1647,11 @@ local function addPlatformFinish(decor, platform, index, theme)
     local halfX, halfZ = platform.Size.X * 0.5, platform.Size.Z * 0.5
     local bevelDepth = math.clamp(math.min(halfX, halfZ) * 0.15, 0.28, 0.65)
     local bevelY = platform.Position.Y + platform.Size.Y * 0.5 - 0.20
+    local visibleGrade = parkourGrade or routeTier
     local edgeColor = theme.Structure:Lerp(
-        routeTier and theme.Secondary or theme.Detail,
-        routeTier and (0.14 + math.clamp(routeTier, 1, 4) * 0.04) or 0.40
+        visibleGrade and theme.Secondary or theme.Detail,
+        visibleGrade and (0.14 + math.clamp(visibleGrade, 1, 4) * 0.04)
+            or 0.40
     )
     local edgeMaterial = VisualTheme.Materials.Structure
     local edgeSpecs = {
@@ -2589,6 +2596,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local routeTier = tonumber(definition.RouteTier)
         if routeTier and routeTier >= 1 and routeTier <= 4 then
             platform:SetAttribute("RouteTier", routeTier)
+        end
+        local parkourGrade = tonumber(definition.ParkourGrade)
+        if parkourGrade and parkourGrade >= 1 and parkourGrade <= 4 then
+            -- Server-owned difficulty classification follows the physical
+            -- landing footprint; never transmitted as a client claim.
+            platform:SetAttribute("ParkourGrade", parkourGrade)
         end
         if definition.HarborRoute then
             -- The seven-step cargo-pier switchbacks are real physical
