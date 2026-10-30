@@ -119,7 +119,12 @@ function SkyrailSlipstream.tryTrigger(ctx, sensor, bridge, hit, ready, now)
         or not sensor or not sensor.Parent
         or not bridge or not bridge.Parent or not bridge.CanCollide
         or bridge:GetAttribute("ChaosSkybridge") ~= true
+        or (bridge:GetAttribute("BridgeShutterPhase") ~= nil
+            and bridge:GetAttribute("BridgeShutterPhase") ~= "Idle")
     then
+        -- A timed physical gate is forming at the checkpoint itself:
+        -- NEVER add a speed impulse that launches a player or bot into
+        -- the raised metal bar. They can jump, wait, or pick another bridge.
         return false
     end
     local rig, hum, root, player, bot = subject(hit)

@@ -10,6 +10,7 @@ local FluxRelayRules = require("../../src/shared/FluxRelayRules")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
 local SkybridgePressure = require("../../src/server/SkybridgePressure")
+local SkybridgeShutters = require("../../src/server/SkybridgeShutters")
 local GridCircuitService = require("../../src/server/GridCircuitService")
 local ClassicGridSweep = require("../../src/server/ClassicGridSweep")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
@@ -330,6 +331,170 @@ describe("Arena mechanics", function()
         root:Destroy()
     end)
 
+    it("alternates real rising shutters with skybridge outages only in fair veteran rounds", function()
+        local shutter = SkybridgeShutters
+        local permitted = {
+            Active = function() return false end,
+            IsContestantActive = function() return false end,
+            Cleanup = {},
+            OnCleanup = {},
+            Contestants = {},
+            EnableSkybridgePressure = true,
+            ActiveDisasters = {Meteors = true},
+            RoundEndsAt = os.clock() + 40,
+            RoundNumber = 3,
+        }
+        expect(shutter.allowed(permitted)).toBe(true)
+        expect(shutter.canComplete({RoundEndsAt = 30}, 22)).toBe(true)
+        expect(shutter.canComplete({RoundEndsAt = 30}, 24)).toBe(false)
+        for _, danger in ipairs({
+            "Tornado", "JumpShock", "SpeedSurge", "LowGravity",
+            "DisappearingPlatforms", "ShrinkingArena", "Freeze", "RisingLava",
+        }) do
+            permitted.ActiveDisasters = {[danger] = true}
+            expect(shutter.allowed(permitted)).toBe(false)
+        end
+        permitted.ActiveDisasters = {Meteors = true}
+        local map = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = map:FindFirstChild("Arena")
+        local result = ArenaMechanics.start(permitted, "Towers")
+        expect(result.dynamicStarted).toBe(true)
+        expect(result.hint:find("JUMP") ~= nil).toBe(true)
+        local mechanics = arena:FindFirstChild("Mechanics")
+        local folder = mechanics:FindFirstChild("SkybridgeShutters")
+        expect(folder ~= nil).toBe(true)
+        -- Four actual gates + four flush, collision-free warning strips.
+        expect(#folder:GetChildren()).toBe(8)
+        expect(#permitted.OnCleanup).toBe(1)
+        expect(mechanics:GetAttribute("DynamicRouteActive")).toBe(true)
+        for _, cleanup in ipairs(permitted.OnCleanup) do cleanup() end
+        expect(folder.Parent == nil).toBe(true)
+        map:Destroy()
+
+        -- The following round uses the old disappearing-bridge challenge,
+        -- never both at once. The safe choice is consistent for all users.
+        permitted.RoundNumber = 4
+        permitted.OnCleanup = {}
+        local alternate = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local other = ArenaMechanics.start(permitted, "Towers")
+        local alternateMechanics = alternate:FindFirstChild("Arena")
+            :FindFirstChild("Mechanics")
+        expect(other.dynamicStarted).toBe(true)
+        expect(alternateMechanics:FindFirstChild("SkybridgeShutters") == nil)
+            .toBe(true)
+        expect(#permitted.OnCleanup).toBe(1)
+        for _, cleanup in ipairs(permitted.OnCleanup) do cleanup() end
+        alternate:Destroy()
+    end)
+
+    it("builds four actual jumpable, replicated low metal shutters without fake bridge collision", function()
+        local CollectionService = game:GetService("CollectionService")
+        local map = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = map:FindFirstChild("Arena")
+        local platforms = arena:FindFirstChild("Platforms")
+        local folder = Instance.new("Folder")
+        folder.Name = "ShutterSpecFolder"
+        folder.Parent = arena
+        local states = {}
+        for _, bridge in ipairs(SkybridgePressure.bridges(platforms)) do
+            local state = SkybridgeShutters.gateFor(bridge, folder)
+            expect(state ~= nil).toBe(true)
+            local gate = state.gate
+            expect(CollectionService:HasTag(gate, "TowerSkybridgeShutter"))
+                .toBe(true)
+            expect(gate.Anchored).toBe(true)
+            expect(gate.CanTouch).toBe(false)
+            expect(gate.CanCollide).toBe(false)
+            expect(gate.Transparency).toBe(1)
+            expect(gate.Material).toBe(Enum.Material.Metal)
+            expect(gate.Size.Y).toBe(SkybridgeShutters.Height)
+            expect(state.stripe ~= nil).toBe(true)
+            expect(state.stripe.CanCollide).toBe(false)
+            expect(state.stripe.CanQuery).toBe(false)
+            expect(state.stripe.Transparency).toBe(1)
+            local width = math.max(gate.Size.X, gate.Size.Z)
+            expect(width > 4 and width < 4.5).toBe(true)
+            expect(bridge.CanCollide).toBe(true)
+            expect(bridge:GetAttribute("ChaosSkybridge")).toBe(true)
+
+            expect(SkybridgeShutters.setPhase(state, "Warning", 100))
+                .toBe(true)
+            expect(gate:GetAttribute("ShutterPhase")).toBe("Warning")
+            expect(gate:GetAttribute("ShutterWarningAt")).toBe(100)
+            expect(gate.CanCollide).toBe(false)
+            expect(state.stripe.Transparency < 0.4).toBe(true)
+            expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Warning")
+            expect(SkybridgeShutters.setPhase(state, "Raising")).toBe(true)
+            expect(gate.CanCollide).toBe(false)
+            expect(SkybridgeShutters.setPhase(state, "Raised")).toBe(true)
+            expect(gate.CanCollide).toBe(true)
+            expect(gate.CanQuery).toBe(true)
+            expect(gate.Material).toBe(Enum.Material.Metal)
+            -- The actual bridge remains solid; no lethal gap is created.
+            expect(bridge.CanCollide).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
+            expect(gate.CanCollide).toBe(false)
+            expect(gate.CanQuery).toBe(false)
+            expect(gate.Transparency).toBe(1)
+            expect(state.stripe.Transparency).toBe(1)
+            expect(state.stripe.CanCollide).toBe(false)
+            expect(gate:GetAttribute("ShutterWarningAt") == nil)
+                .toBe(true)
+            expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Idle")
+            states[#states + 1] = state
+        end
+        expect(#states).toBe(4)
+        folder:Destroy()
+        map:Destroy()
+    end)
+
+    it("never closes a shutter on a real player or AI root occupying the crossing", function()
+        local map = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local arena = map:FindFirstChild("Arena")
+        local folder = Instance.new("Folder")
+        folder.Parent = arena
+        local bridge = arena:FindFirstChild("Platforms")
+            :FindFirstChild("Skybridge18")
+        local state = SkybridgeShutters.gateFor(bridge, folder)
+        expect(state ~= nil).toBe(true)
+
+        local bot = Instance.new("Model")
+        bot.Name = "ShutterSafetyBot"
+        bot:SetAttribute("AISurvivor", true)
+        local hum = Instance.new("Humanoid")
+        hum.Parent = bot
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.Anchored = true
+        root.CanCollide = false
+        root.Parent = bot
+        bot.Parent = workspace
+        local subject = {Character = bot}
+        local occupants = {subject}
+        local function eligible(_subject) return true end
+
+        root.CFrame = state.raised * CFrame.new(0, 2.1, 0)
+        expect(SkybridgeShutters.occupied(
+            state, occupants, eligible
+        )).toBe(true)
+        root.CFrame = state.raised * CFrame.new(12, 2.1, 0)
+        expect(SkybridgeShutters.occupied(
+            state, occupants, eligible
+        )).toBe(false)
+        root.CFrame = state.raised * CFrame.new(0, 2.1, 0)
+        expect(SkybridgeShutters.occupied(
+            state, occupants, function() return false end
+        )).toBe(false)
+        hum.Health = 0
+        expect(SkybridgeShutters.occupied(
+            state, occupants, eligible
+        )).toBe(false)
+        bot:Destroy()
+        folder:Destroy()
+        map:Destroy()
+    end)
+
     it("authorizes a running survivor bot once, not an outsider or repeated touch", function()
         local rootMap = MapBuilder.build(Config, "Towers", ArenaVariants)
         local arena = rootMap:FindFirstChild("Arena")
@@ -380,6 +545,18 @@ describe("Arena mechanics", function()
         expect(SkyrailSlipstream.tryTrigger(
             ctx, sensor, bridge, body, cooldown, 11
         )).toBe(false)
+
+        -- Even with a fresh cooldown and enough run-up speed, a new
+        -- Skyrail impulse must not hurl an AI or player into the real gate.
+        bridge:SetAttribute("BridgeShutterPhase", "Warning")
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 20
+        )).toBe(false)
+        bridge:SetAttribute("BridgeShutterPhase", "Raised")
+        expect(SkyrailSlipstream.tryTrigger(
+            ctx, sensor, bridge, body, cooldown, 20
+        )).toBe(false)
+        bridge:SetAttribute("BridgeShutterPhase", "Idle")
 
         bot:SetAttribute("AISurvivorInRound", false)
         expect(SkyrailSlipstream.tryTrigger(
