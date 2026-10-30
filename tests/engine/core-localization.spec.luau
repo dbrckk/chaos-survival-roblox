@@ -221,6 +221,71 @@ describe("Core localization", function()
         expect(CoreLocalization.medal("fr-fr", "UNKNOWN")).toBe("UNKNOWN")
     end)
 
+    it("localizes real Storm Harbor traversal rather than displaying English fallback", function()
+        expect(CoreLocalization.arenaName(
+            "fr-fr", "Harbor", "fallback"
+        )).toBe("PORT DES TEMPÊTES")
+        expect(CoreLocalization.arenaName(
+            "fr-fr", "STORM HARBOR", "fallback"
+        )).toBe("PORT DES TEMPÊTES")
+        expect(CoreLocalization.arenaName(
+            "en-us", "STORM HARBOR", "fallback"
+        )).toBe("STORM HARBOR")
+        expect(CoreLocalization.arenaStrategy(
+            "fr-fr", "Harbor", "fallback"
+        )).toBe(
+            "Monte sur les quais • saute entre les plateformes • survis jusqu'à zéro"
+        )
+        expect(CoreLocalization.arenaMechanicName(
+            "fr-fr", "Harbor", "fallback"
+        )).toBe("PADS DE TRANSFERT")
+        expect(CoreLocalization.arenaMechanicHint(
+            "fr-fr", "Harbor", "fallback"
+        )).toBe(
+            "Les pads bleus relient les quais ; évite les balayages orange ou saute"
+        )
+    end)
+
+    it("explains ONLY the actually selected server-owned arena mechanic in both languages", function()
+        local actions = {
+            {arena = "Classic", safe = "ClassicSafe", live = "ClassicActive"},
+            {arena = "Towers", safe = "TowersSafe", live = "TowersActive"},
+            {arena = "Crossroads", safe = "CrossroadsSafe", live = "CrossroadsActive"},
+            {arena = "Orbital", safe = "OrbitalSafe", live = "OrbitalActive"},
+            {arena = "Harbor", safe = "HarborSafe", live = "HarborActive"},
+        }
+        local localize = CoreLocalization.arenaMechanicAction
+        for _, item in ipairs(actions) do
+            local quietEnglish = localize("en-us", item.arena, item.safe)
+            local liveEnglish = localize("en-us", item.arena, item.live)
+            local quietFrench = localize("fr-fr", item.arena, item.safe)
+            local liveFrench = localize("fr-fr", item.arena, item.live)
+            expect(type(quietEnglish)).toBe("string")
+            expect(type(liveEnglish)).toBe("string")
+            expect(type(quietFrench)).toBe("string")
+            expect(type(liveFrench)).toBe("string")
+            expect(quietEnglish ~= liveEnglish).toBe(true)
+            expect(quietFrench ~= liveFrench).toBe(true)
+            expect(#quietFrench < 30 and #liveFrench < 30).toBe(true)
+            expect(localize("fr-fr", item.arena, "TowersShutters")
+                == nil or item.arena == "Towers").toBe(true)
+        end
+        expect(localize("fr-fr", "Towers", "TowersShutters"))
+            .toBe("PORTE : SAUTE/ATTENDS")
+        expect(localize("en-us", "TOWER RUN", "TowersShutters"))
+            .toBe("GATE: JUMP / WAIT")
+        expect(localize("fr-fr", "Towers", "TowersActive"))
+            .toBe("PONT : DÉTOUR")
+        expect(localize("fr-fr", "STORM HARBOR", "HarborActive"))
+            .toBe("BALAYAGE : ÉVITE")
+        expect(localize("fr-fr", "Towers", "HarborActive")).toBe(nil)
+        expect(localize("en-us", "Harbor", "TowersShutters")).toBe(nil)
+        expect(localize("fr-fr", "Unknown", "ClassicActive")).toBe(nil)
+        expect(localize("fr-fr", "Classic", "Unknown")).toBe(nil)
+        expect(localize("fr-fr", "Classic", nil)).toBe(nil)
+        expect(localize("en-us", nil, "ClassicActive")).toBe(nil)
+    end)
+
     it("localizes first-time coaching without altering unknown copy", function()
         local source = "VOTE  •  TAP THE CHAOS YOU WANT TO FACE"
         expect(CoreLocalization.coach("fr-fr", source)).toBe(

@@ -626,6 +626,12 @@ local ARENA_COPY = {
             mechanicName = "ORBIT BOOSTERS",
             mechanicHint = "Green pads circle the lower floor; amber Helix lanes and core ramps lead upward",
         },
+        Harbor = {
+            name = "STORM HARBOR",
+            strategy = "Climb the cargo piers • jump between switchbacks • survive to zero",
+            mechanicName = "SQUALL TRANSFER PADS",
+            mechanicHint = "Blue pads transfer between docks; amber sweep bays mean jump or move away",
+        },
     },
     fr = {
         Classic = {
@@ -652,6 +658,12 @@ local ARENA_COPY = {
             mechanicName = "BOOSTERS ORBITAUX",
             mechanicHint = "Les pads verts sont au sol ; les rampes de l'anneau mènent au réacteur surélevé"
         },
+        Harbor = {
+            name = "PORT DES TEMPÊTES",
+            strategy = "Monte sur les quais • saute entre les plateformes • survis jusqu'à zéro",
+            mechanicName = "PADS DE TRANSFERT",
+            mechanicHint = "Les pads bleus relient les quais ; évite les balayages orange ou saute",
+        },
     },
 }
 
@@ -664,6 +676,61 @@ local ARENA_ALIASES = {
     ["CROSSROADS"] = "Crossroads",
     ["Orbital"] = "Orbital",
     ["ORBITAL RING"] = "Orbital",
+    ["Harbor"] = "Harbor",
+    ["STORM HARBOR"] = "Harbor",
+    ["PORT DES TEMPÊTES"] = "Harbor",
+}
+
+-- Only an ACTUALLY STARTED server arena mode may replace the
+-- ordinary status pill. Each map/mode pair has a bounded, short action
+-- in FR/EN; a stale or impossible mode fails closed to the hazard status.
+local ARENA_ACTIONS = {
+    en = {
+        Classic = {
+            ClassicSafe = "BLUE PADS: CLIMB",
+            ClassicActive = "AMBER LINE: DODGE",
+        },
+        Towers = {
+            TowersSafe = "CYAN PADS: CLIMB",
+            TowersActive = "BRIDGE: DETOUR",
+            TowersShutters = "GATE: JUMP / WAIT",
+        },
+        Crossroads = {
+            CrossroadsSafe = "PINK PADS: CLIMB",
+            CrossroadsActive = "GOLD: SIDE PATH",
+        },
+        Orbital = {
+            OrbitalSafe = "GREEN: CLIMB RAMP",
+            OrbitalActive = "HELIX: TRANSFER",
+        },
+        Harbor = {
+            HarborSafe = "BLUE: CROSS DOCKS",
+            HarborActive = "SWEEP: JUMP / MOVE",
+        },
+    },
+    fr = {
+        Classic = {
+            ClassicSafe = "PADS BLEUS : MONTE",
+            ClassicActive = "BANDE : ÉVITE",
+        },
+        Towers = {
+            TowersSafe = "PADS CYAN : MONTE",
+            TowersActive = "PONT : DÉTOUR",
+            TowersShutters = "PORTE : SAUTE/ATTENDS",
+        },
+        Crossroads = {
+            CrossroadsSafe = "PADS ROSES : MONTE",
+            CrossroadsActive = "OR : VOIE DE CÔTÉ",
+        },
+        Orbital = {
+            OrbitalSafe = "VERT : MONTE RAMPE",
+            OrbitalActive = "HÉLICE : TRANSFERT",
+        },
+        Harbor = {
+            HarborSafe = "BLEU : CHANGE DE QUAI",
+            HarborActive = "BALAYAGE : ÉVITE",
+        },
+    },
 }
 
 local function arenaRecord(localeId, arenaIdOrName)
@@ -874,6 +941,18 @@ end
 function CoreLocalization.arenaMechanicHint(localeId, arenaIdOrName, fallback)
     local record = arenaRecord(localeId, arenaIdOrName)
     return record and record.mechanicHint or fallback
+end
+
+function CoreLocalization.arenaMechanicAction(localeId, arenaIdOrName, mode)
+    if type(mode) ~= "string" then return nil end
+    local language = CoreLocalization.language(localeId)
+    local raw = tostring(arenaIdOrName or "")
+    local id = ARENA_ALIASES[raw] or raw
+    local localized = ARENA_ACTIONS[language] and ARENA_ACTIONS[language][id]
+    local english = ARENA_ACTIONS.en[id]
+    return (localized and localized[mode])
+        or (english and english[mode])
+        or nil
 end
 
 function CoreLocalization.questTitle(localeId, questId, fallback)

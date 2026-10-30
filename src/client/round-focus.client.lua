@@ -480,6 +480,13 @@ local function refresh()
         intensity,
         tonumber(state.seconds) or 0
     )
+    -- The top HUD remains the permanent hazard authority. Reuse only
+    -- this existing status pill for a brief, server-confirmed action
+    -- at round entry; don't teach a player a disabled arena mechanic.
+    local introAction = state.arenaMechanicIntro == true
+        and CoreLocalization.arenaMechanicAction(
+            localeId, state.arenaName, state.arenaMechanicMode
+        ) or nil
     if state.finalRush then
         text = CoreLocalization.text(
             localeId,
@@ -506,6 +513,13 @@ local function refresh()
     elseif not rookieRound and state.doubleCollapseUnlocked == true then
         text = CoreLocalization.text(localeId, "DOUBLE_COLLAPSE")
         color = UITheme.Colors.Orange
+    elseif not rookieRound and not state.doubleChaos and introAction then
+        -- For experienced players the next *physical action* beats a
+        -- redundant stable/status label for the first few seconds.
+        -- Never override the actual hazard instructions above or the
+        -- first-session SURVIVE objective on mobile.
+        text = introAction
+        color = UITheme.Colors.Cyan
     elseif state.doubleChaos then
         text = tostring(state.fusionName or CoreLocalization.text(localeId, "CHAOS_FUSION"))
         color = UITheme.Colors.Violet

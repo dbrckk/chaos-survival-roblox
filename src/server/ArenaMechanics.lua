@@ -123,6 +123,19 @@ function ArenaMechanics.effectiveHint(variantId, dynamicStarted)
     return ArenaMechanics.BaselineHints[variantId] or definition.Hint
 end
 
+-- This is the actual SERVER-STARTED arena challenge, not the mere
+-- possibility that a mechanic exists on the map. Clients may localize
+-- only these enumerated modes; they must never invent an active danger
+-- in a rookie or incompatible disaster round.
+function ArenaMechanics.mode(variantId, dynamicStarted, shuttersStarted)
+    if not ArenaMechanics.Definitions[variantId] then return nil end
+    if variantId == "Towers" and dynamicStarted == true
+        and shuttersStarted == true then
+        return "TowersShutters"
+    end
+    return variantId .. (dynamicStarted == true and "Active" or "Safe")
+end
+
 local function createPad(folder, center, definition, index)
     local padDefinition = definition.Pads[index]
     local pad = Instance.new("Part")
@@ -312,11 +325,16 @@ function ArenaMechanics.start(ctx, variantId)
     if shuttersStarted then
         hint = "Timed bridge shutters rise: JUMP the low bar or WAIT for an open crossing"
     end
+    local mode = ArenaMechanics.mode(
+        variantId, dynamicStarted, shuttersStarted
+    )
     folder:SetAttribute("MechanicHint", hint)
     folder:SetAttribute("DynamicRouteActive", dynamicStarted)
+    folder:SetAttribute("MechanicMode", mode)
     return {
         name = definition.Name,
         hint = hint,
+        mode = mode,
         dynamicStarted = dynamicStarted,
     }
 end
