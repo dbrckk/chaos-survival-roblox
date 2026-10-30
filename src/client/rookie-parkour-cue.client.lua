@@ -89,8 +89,19 @@ end
 -- the live server-owned lava. Keep the existing meteor/bomb/sweep route
 -- classifier and add only one cheap workspace-root lookup per target.
 local function safeGuidedTargetPath(fromPosition, target, warnings)
-    if not target or not JumpRouteCueRules.safeGuidedPath(
-        fromPosition, target.Position, warnings
+    if not target or not target:IsA("BasePart") then return false end
+    -- Compare the same HumanoidRootPart clearance used by the authoritative
+    -- disaster and the airborne landing preview. Using the deck's CENTER
+    -- instead of the player's standing height incorrectly hides safe upper
+    -- exits while a bomb detonates well below them.
+    -- Cargo pickups are not standable platforms; keep their actual goal
+    -- position for the route test rather than inventing a floor under them.
+    local toPosition = target.Position
+    if target.Parent and target.Parent.Name == "Platforms" then
+        toPosition += Vector3.new(0, target.Size.Y * 0.5 + 2.5, 0)
+    end
+    if not JumpRouteCueRules.safeGuidedPath(
+        fromPosition, toPosition, warnings
     ) then
         return false
     end
