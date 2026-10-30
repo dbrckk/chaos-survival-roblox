@@ -19,7 +19,7 @@ Make the five large survival arenas feel worth mastering as physical platformer 
 
 - Two event connections PER human participant only while alive in a round; both disconnected through the existing `RoundCleanup` callbacks, no extra permanent watchers.
 - No new per-frame query. A single physics ray is attempted only on landed/ground material transitions; duplicate landings on the same physical Part never increase the chain. The sampler handles both signals immediately instead of delaying 100ms and missing rapid expert re-jumps.
-- Engine specs added to the existing `mapbuilder.spec.luau`, `round-medals.spec.luau` and `data-schema.spec.luau`: full eight-platform route, stale/invalid/ghost deck, time bounds, duplicate contacts, capped rewards, medals and safe schema v9 migration. No tests are run during this ongoing improvement phase, per owner rules.
+- Engine specs added to the dedicated `parkour-flow.spec.luau` and existing `round-medals.spec.luau` / `data-schema.spec.luau`: full eight-platform route, stale/invalid/ghost deck, time bounds, duplicate contacts, capped rewards, medals and safe schema v9 migration. No tests are run during this ongoing improvement phase, per owner rules.
 
 ## Minimum premium exit gate (NOT YET PROVEN)
 
@@ -30,3 +30,7 @@ Make the five large survival arenas feel worth mastering as physical platformer 
 - Measure session completion, jump success, successful route chains, early churn and 30/60 FPS frame pacing on representative low-/mid-range Android hardware. Only actual results can justify saying the desired premium quality is achieved.
 
 This is a finished skill-loop implementation, **not evidence that the entire Roblox game has reached the quality of the genre leaders**.
+
+## First milestone validation — real blocker repaired
+
+The initial validation at `874918ed1f1f62de36c486cac88c795fa0c44ff7` correctly refused engine certification **before any Roblox test task** because the existing `mapbuilder.spec.luau` exceeded the Cloud batch composer's strict 105,000-byte per-spec ceiling after adding the new parkour tests. The new, fully separate `parkour-flow.spec.luau` is explicitly included in the gameplay shard. The original mapbuilder source is back under the size cap; neither its existing tests nor the new parkour tests are removed. The retry gate is validation-only, with no public publication capability.
