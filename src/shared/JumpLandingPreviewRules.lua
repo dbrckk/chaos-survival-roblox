@@ -1,6 +1,10 @@
 -- Pure, bounded rules for the local descent reticle. The reticle is an
 -- estimate, never an authoritative prediction of hazards or collision.
 local JumpLandingPreviewRules = {}
+local routeModule = script and script.Parent:FindFirstChild("JumpRouteCueRules")
+local JumpRouteCueRules = if routeModule
+    then require(routeModule)
+    else require("./JumpRouteCueRules")
 
 local function finite(value)
     return type(value) == "number" and value == value
@@ -34,6 +38,46 @@ function JumpLandingPreviewRules.surfaceStatus(part)
         return "Unavailable"
     end
     return "Safe"
+end
+
+-- The existing landing reticle must not declare "safe" when the
+-- SERVER'S own active shock band crosses this precise physical contact.
+-- Compare the projected HumanoidRootPart position, not the deck surface:
+-- raised platforms above the band are genuinely protected. The shared
+-- path classifier already handles rotated/axis-aligned sweep footprints.
+-- Tower shutters are a separate obstacle on a REAL named skybridge; warn
+-- only close to the actual metal sill, not on the whole safe bridge.
+function JumpLandingPreviewRules.hazardAt(landingRoot, landingPart, hazards)
+    if typeof(landingRoot) ~= "Vector3"
+        or typeof(landingPart) ~= "Instance"
+        or not landingPart:IsA("BasePart")
+        or type(hazards) ~= "table" then
+        return false
+    end
+    for _, hazard in ipairs(hazards) do
+        if typeof(hazard) == "Instance" and hazard:IsA("BasePart")
+            and hazard.Parent ~= nil then
+            if JumpRouteCueRules.activeSweepOnPath(
+                landingRoot, landingRoot, hazard
+            ) then
+                return true
+            end
+            if hazard:GetAttribute("BridgeShutter") == true
+                and hazard:GetAttribute("BridgeName") == landingPart.Name then
+                local phase = hazard:GetAttribute("ShutterPhase")
+                if phase == "Warning" or phase == "Raising"
+                    or phase == "Raised" then
+                    local point = hazard.CFrame:PointToObjectSpace(landingRoot)
+                    if math.abs(point.X) <= hazard.Size.X * 0.5 + 1.3
+                        and math.abs(point.Z) <= hazard.Size.Z * 0.5 + 1.3
+                        and point.Y >= -3 and point.Y <= 6.5 then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    return false
 end
 
 function JumpLandingPreviewRules.probeMatches(probeSeconds, contactSeconds)
