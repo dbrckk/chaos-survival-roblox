@@ -67,11 +67,13 @@ function Rules.momentumStyle(tier, band)
     end
     local life, breadth, peak, emission, opacity
     if band == "Surge" then
-        life, breadth, peak, emission, opacity = 1.07, 1.08, 0.38, 0.82, 0.48
+        -- Distinct momentum stages remain legible, but avoid continuous
+        -- overbright cyan ribbons masking the floor and hazard paint.
+        life, breadth, peak, emission, opacity = 1.07, 0.95, 0.38, 0.58, 0.60
     elseif band == "Drive" then
-        life, breadth, peak, emission, opacity = 1, 1, 0.28, 0.74, 0.56
+        life, breadth, peak, emission, opacity = 1, 0.88, 0.28, 0.47, 0.68
     else
-        life, breadth, peak, emission, opacity = 0.90, 0.85, 0.19, 0.65, 0.64
+        life, breadth, peak, emission, opacity = 0.90, 0.75, 0.19, 0.34, 0.75
     end
     return {Lifetime = lifetime * life, Width = width * breadth,
         Peak = peak, Emission = emission, Opacity = opacity}
