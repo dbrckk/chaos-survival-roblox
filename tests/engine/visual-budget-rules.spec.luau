@@ -1191,6 +1191,61 @@ describe("Android decorative scenery LOD stability", function()
         root:Destroy()
     end)
 
+    it("mounts a real original cargo vessel beyond Harbor without collisions or extra LOD owners", function()
+        local HarborScenery = require("../../src/server/HarborScenery")
+        local VisualTheme = require("../../src/shared/VisualTheme")
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320, 2, 320)
+        base.Anchored = true
+        base.Parent = arena
+
+        local fleet = HarborScenery.build(
+            decor, base, VisualTheme.arena("Harbor")
+        )
+        expect(fleet ~= nil and fleet.Parent == decor).toBe(true)
+        expect(#SceneryLodRules.harborGantryOwners(arena)).toBe(5)
+        local ship = fleet:FindFirstChild("HarborCargoVessel")
+        expect(ship ~= nil and ship:IsA("Model")).toBe(true)
+        expect(ship:GetAttribute("ChaosDistantScenery")).toBe(true)
+        expect(ship:GetAttribute("CosmeticOnly")).toBe(true)
+        expect(ship:GetAttribute("SourceIsOriginal")).toBe(true)
+        expect(ship:GetAttribute("HarborVesselScenery")).toBe(true)
+        expect(ship.ModelStreamingMode).toBe(Enum.ModelStreamingMode.Atomic)
+        for _, component in ipairs({
+            "MainHull", "LowerKeel", "MainCargoDeck",
+            "BowTaperPort", "CargoBaySill2", "Container2_1_2",
+            "Wheelhouse", "BridgePanorama", "RadarMast",
+        }) do
+            expect(ship:FindFirstChild(component) ~= nil).toBe(true)
+        end
+        local parts = ship:GetDescendants()
+        expect(#parts >= 65 and #parts <= 120).toBe(true)
+        local arenaNorth = base.Position.Z - base.Size.Z * 0.5
+        for _, part in ipairs(parts) do
+            expect(part:IsA("BasePart")).toBe(true)
+            expect(part.Anchored).toBe(true)
+            expect(part.CanCollide).toBe(false)
+            expect(part.CanTouch).toBe(false)
+            expect(part.CanQuery).toBe(false)
+            expect(part.CastShadow).toBe(false)
+            expect(part.Position.Z + part.Size.Z * 0.5 < arenaNorth - 12)
+                .toBe(true)
+        end
+
+        -- Clients may cull this original model, never real gameplay Parts.
+        ship:SetAttribute("CosmeticOnly", false)
+        expect(#SceneryLodRules.harborGantryOwners(arena)).toBe(4)
+        ship:SetAttribute("CosmeticOnly", true)
+        expect(#SceneryLodRules.harborGantryOwners(arena)).toBe(5)
+        arena:Destroy()
+    end)
+
     it("preserves only marked original 3D silhouette pieces on Android Low", function()
         local partVisible = SceneryLodRules.entryVisible
         expect(partVisible("Low", false, true, true)).toBe(true)
