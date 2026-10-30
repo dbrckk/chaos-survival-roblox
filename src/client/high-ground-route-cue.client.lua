@@ -46,6 +46,26 @@ local function findRealChild(folder, name)
     return nil
 end
 
+local function nearestOrbitalEntry(circuit, root, maxStartDistance)
+    local best, bestDistance = nil, maxStartDistance
+    for i = 1, 8 do
+        local ramp = findRealChild(circuit, "EntryRamp" .. i)
+        if ramp then
+            local start = ramp:GetAttribute("HelixStart")
+            if typeof(start) == "Vector3" then
+                local flat = Vector3.new(
+                    start.X - root.Position.X, 0,
+                    start.Z - root.Position.Z
+                ).Magnitude
+                if flat < bestDistance then
+                    best, bestDistance = ramp, flat
+                end
+            end
+        end
+    end
+    return best
+end
+
 local function orbitalNext(arena, from, root)
     -- Orbital's eight authored stair-free paths are physical inclined
     -- ramps, NOT jump-sized gaps. Always guide to a real server-owned
@@ -56,28 +76,19 @@ local function orbitalNext(arena, from, root)
     if not circuit or not platforms or not base then return nil end
 
     if from == base then
-        local best, bestDistance = nil, 44
-        for i = 1, 8 do
-            local ramp = findRealChild(circuit, "EntryRamp" .. i)
-            if ramp then
-                local start = ramp:GetAttribute("HelixStart")
-                if typeof(start) == "Vector3" then
-                    local flat = Vector3.new(
-                        start.X - root.Position.X, 0,
-                        start.Z - root.Position.Z
-                    ).Magnitude
-                    if flat < bestDistance then
-                        best, bestDistance = ramp, flat
-                    end
-                end
-            end
-        end
-        return best
+        return nearestOrbitalEntry(circuit, root, 44)
     end
 
     if from.Parent == platforms then
         local id = tonumber(from.Name:match("^Platform(%d+)$"))
         if not id then return nil end
+        if id == 17 then
+            -- The low central rescue hub is NOT under the reactor's
+            -- climbable core. Players must descend safely to the floor
+            -- and take a real outer entry ramp. Without this route,
+            -- the mastery sign vanishes at the most confusing fork.
+            return nearestOrbitalEntry(circuit, root, 56)
+        end
         if id >= 1 and id <= 8 then
             return findRealChild(circuit, "HelixRamp" .. id)
         elseif id >= 9 and id <= 16 then
@@ -106,23 +117,7 @@ local function orbitalNext(arena, from, root)
     return nil
 end
 
-local function cargoCueHasPriority(root, arena)
-    if arena:GetAttribute("VariantId") ~= "Harbor" then
-        return false
-    end
-    local collectibles = workspace:FindFirstChild("RoundChaosShards")
-    if not collectibles then return false end
-    for _, shard in ipairs(collectibles:GetChildren()) do
-        if shard:IsA("BasePart") and shard.Parent == collectibles
-            and shard:GetAttribute("ChaosShardCargo") == true
-            and (shard.Position - root.Position).Magnitude <= 48 then
-            return true
-        end
-    end
-    return false
-end
-
-local function show(target, isRamp, remaining)
+local function show(target, isRamp, remaining, returnToRamp)
     if not marker then
         marker = Instance.new("BillboardGui")
         marker.Name = "GroundedMasteryRouteCue"
@@ -156,7 +151,9 @@ local function show(target, isRamp, remaining)
 
     local french = player.LocaleId:sub(1, 2) == "fr"
     local message
-    if isRamp then
+    if returnToRamp then
+        message = french and "SORS DU HUB  •  RAMPE" or "EXIT HUB  •  RAMP"
+    elseif isRamp then
         message = french and "SUIS LA RAMPE  ↑" or "FOLLOW RAMP  ↑"
     else
         message = french and "VERS LE SOMMET  ↑" or "CLIMB HIGHER  ↑"
@@ -223,8 +220,7 @@ local function update()
     local arena = generated and generated:FindFirstChild("Arena")
     local platforms = arena and arena:FindFirstChild("Platforms")
     local base = arena and arena:FindFirstChild("Base")
-    if not arena or not platforms or not liveSurface(base)
-        or cargoCueHasPriority(root, arena) then
+    if not arena or not platforms or not liveSurface(base) then
         hide()
         return
     end
@@ -242,11 +238,13 @@ local function update()
     local variant = arena:GetAttribute("VariantId")
     local target
     local isRamp = false
+    local returnToRamp = false
     if variant == "Orbital" then
         target = orbitalNext(arena, from, root)
         local circuit = arena:FindFirstChild("HelixCircuit")
         isRamp = circuit ~= nil and target ~= nil
             and target.Parent == circuit
+        returnToRamp = from.Parent == platforms and from.Name == "Platform17"
     elseif from == base then
         target = JumpRouteCueRules.nearestEntry(
             platforms:GetChildren(), hit.Position, 42
@@ -267,7 +265,7 @@ local function update()
         hide()
         return
     end
-    show(target, isRamp, required - achieved)
+    show(target, isRamp, required - achieved, returnToRamp)
 end
 
 states.OnClientEvent:Connect(function(state)
