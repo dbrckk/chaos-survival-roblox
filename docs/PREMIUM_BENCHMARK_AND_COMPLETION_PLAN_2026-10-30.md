@@ -39,7 +39,7 @@ Le gameplay de Tower Run disposait déjà de **Skyrail Slipstream** (accélérat
 Le nouveau `src/server/SkybridgeShutters.lua` comporte :
 
 1. **Quatre vrais portillons métalliques**, un par pont physique, 2,05 studs de haut, couvrant la largeur du pont sans le faire disparaître. La géométrie reste physiquement franchissable par un saut Roblox ordinaire ; attendre son ouverture reste possible.
-2. Un seul portillon menacé à la fois, cycle d'avertissement **2,6 s**, levée **0,32 s**, maintien **1,8 s**, puis retour au calme. Trois autres ponts et leurs issues restent praticables. Aucun événement ne débute s'il ne peut terminer avant la fin de la manche.
+2. Un seul portillon menacé à la fois, cycle d'avertissement **2,6 s**, levée **0,32 s**, maintien **1,8 s**, puis retour au calme. Une **bande métallique ambre affleurante**, visible avant la levée et sans collision, signale la position réelle de l'obstacle (quatre bandes et quatre portillons au total). Trois autres ponts et leurs issues restent praticables. Aucun événement ne débute s'il ne peut terminer avant la fin de la manche.
 3. Éligibilité *uniquement* aux manches avancées, solo-hazard et sans calamités conflictuelles. **Alternance avec Skybridge Pressure**, jamais de cumul des deux événements sur une manche.
 4. Un obstacle devient **réellement collidable uniquement lorsqu'il est visible et levé** ; le serveur vérifie qu'aucun joueur/bot vivant n'occupe le passage avant d'activer la collision. Un occupant tardif annule la fermeture.
 5. **Skyrail Slipstream ne propulse pas** un joueur/bot vers un portillon en avertissement/levée/fermeture ; le boost revient après réouverture.
