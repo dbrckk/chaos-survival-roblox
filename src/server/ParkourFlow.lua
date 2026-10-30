@@ -11,6 +11,9 @@ ParkourFlow.AceXP = 4
 ParkourFlow.LegendExtraXP = 3
 ParkourFlow.MinTransitionSeconds = 0.27
 ParkourFlow.MaxTransitionSeconds = 9.0
+-- The veteran Moon Gravity disaster can sustain a real jump far longer
+-- than a normal gravity arc; don't misclassify slow, authentic landings.
+ParkourFlow.MaxAirSeconds = 5.0
 
 local function validDeck(deck, platforms)
     return typeof(deck) == "Instance" and deck:IsA("BasePart")
@@ -118,7 +121,7 @@ function ParkourFlow.advance(memory, landedDeck, platforms, center, variant, now
     -- Speed boosts exist; allow 48 studs/s plus 5 studs of sampling/jump
     -- leeway, but do not reward instant multi-deck teleports.
     local plausibleFlight = flightSeconds >= 0.20
-        and flightSeconds <= 3.0
+        and flightSeconds <= ParkourFlow.MaxAirSeconds
         and displacement >= 0.8
         and displacement <= flightSeconds * 48 + 5
     local continued = state.jumpFrom == state.deck
