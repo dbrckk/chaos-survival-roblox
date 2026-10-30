@@ -48,6 +48,47 @@ local function addPanelLanguage(base, theme, tier, variant)
     local top = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.18, 0)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
+
+    if variant == "Harbor" then
+        -- Replace the old giant 275-stud generic survey-grid seams and
+        -- shiny repair hatches with SHORT, quiet maritime deck joints.
+        -- Keep them on empty outboard cargo aprons, away from the
+        -- four central floor-sweep corridors and eight spawn positions.
+        -- This path allocates LESS geometry than the old generic layer.
+        local count = tier.Name == "Low" and 2
+            or (tier.Name == "Medium" and 4 or 6)
+        local timber = theme.Surface:Lerp(
+            Color3.fromRGB(119, 99, 80), 0.28
+        )
+        local steel = theme.Structure:Lerp(
+            Color3.fromRGB(139, 122, 105), 0.22
+        )
+        for i = 1, count do
+            local side = i % 2 == 1 and -1 or 1
+            local bank = math.floor((i - 1) / 2)
+            local x = side * halfX * (0.62 + bank * 0.09)
+            local z = (bank == 1 and 1 or -1) * halfZ * 0.49
+            local deck = top * CFrame.new(x, 0, z)
+            makePart(
+                "HarborQuayPlankJoint" .. i,
+                Vector3.new(8.2, 0.038, 0.16),
+                deck * CFrame.Angles(0, math.rad(side * 18), 0),
+                timber, Enum.Material.WoodPlanks,
+                tier.Name == "Low" and 0.48 or 0.30
+            )
+            if tier.Name ~= "Low" then
+                makePart(
+                    "HarborQuayFixing" .. i,
+                    Vector3.new(1.1, 0.052, 0.34),
+                    deck * CFrame.new(0, 0.032, -1.1),
+                    steel, Enum.Material.CorrodedMetal,
+                    tier.Name == "High" and 0.22 or 0.34
+                )
+            end
+        end
+        return
+    end
+
     local seamAlpha = tier.Name == "Low" and 0.76 or (tier.Name == "Medium" and 0.64 or 0.56)
 
     local seamCount

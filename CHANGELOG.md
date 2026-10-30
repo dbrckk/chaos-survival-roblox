@@ -1,17 +1,23 @@
 # Changelog
 
-## 2026-10-30 — Original Storm Harbor playable platforms and exterior cargo 3D (source only)
+## 2026-10-30 — Harbor maritime deck finishing AFTER verified second publication (source only)
+
+- The preceding Harbor 3D/physical-platform update is **LIVE** in the existing public Roblox place. Exact published source `58af603f185c2adebabd70517ce37f36b778aea8` passed [Build Validation](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41091324370), [real Roblox engine tests](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41091334778), [owner-only exact-SHA release gate](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41091311509) and [public publisher](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41092002110).
+- **Newly prepared, not yet published:** `ArenaDeckFinishKit` has original Storm Harbor drydock timber planks, cargo metal rails and mooring plates with exact 2/4/6 Low/Medium/High cosmetic-part budget. `arena-surface-detail.client.lua` now uses compact marine plank joints and corroded steel fixing pieces instead of long Classic-like grid seams/repair patches, reducing decorative part count across all LOD tiers and preserving real floor-sweep/hazard readability.
+- Existing real-engine `vfx-quality.spec.luau` covers all 2/4/6 original parts, real Harbor map geometry, no collision/touch/query, allowed materials and Shrinking Arena floor following. [Source acceptance contract](docs/PREMIUM_HARBOR_DECK_FINISH_FOLLOWUP_2026-10-30.md); actual Android screenshots and FPS remain unmeasured. This follow-up requires its **own** release gate before public inclusion.
+
+## 2026-10-30 — Original Storm Harbor playable platforms and exterior cargo 3D (published)
 
 - Fix another cross-arena identity defect: `PlatformFinishKit` omitted Harbor from its supported physical platform visuals, so Medium/High protective armor and load braces were missing and `arena-platform-identity.client.lua` painted Classic's calibration neon across the cargo piers. Harbor now has its own original wood-plank splice, corroded steel lashing and below-deck timber/metal keel, welded to the **actual physically jumpable platforms** with Shrinking Arena and CollapsePhase lifecycle. Existing Low/Medium/High finish counts remain 1/2/3; Low adds no optional Harbor-specific trim and zero armor/braces.
 - Replace the second Classic fallback in `arena-architectural-details.client.lua` with an exterior maritime cargo-loading crane: steel legs, overhanging boom, suspended timber cargo, mid/high rigging/brace/wheel/cab details. Sync the load, cable and high-detail ribs using the already-owned 5-Hz cosmetic phase. No fake gameplay geometry, server hitbox, network change or extra animation loop.
 - Add real Roblox engine geometry/ownership/material/collapse coverage to `tests/engine/vfx-quality.spec.luau`. See [physical Harbor art acceptance](docs/PREMIUM_HARBOR_PHYSICAL_DECK_ART_2026-10-30.md) for mobile screenshots and exact-SHA public release gate.
-- This change is NOT part of the last confirmed public Roblox update `82f925c320b2525a58acb4944e74435a75a2795c` until a separately successful guarded publisher run. No unsupported AAA/FPS claim.
+- **Published** as part of the verified public Roblox SHA `58af603f185c2adebabd70517ce37f36b778aea8` (run [41092002110](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41092002110)); physical Android/desktop FPS and AAA parity are still not certified.
 
-## 2026-10-30 — Harbor industrial deck language, no Classic visual fallback (unpublished)
+## 2026-10-30 — Harbor industrial deck language, no Classic visual fallback (published)
 
 - Fix the second missing fifth-arena art branch: `arena-surface-relief.client.lua` still used Classic's metal hatches for Storm Harbor on Android Medium/High. `addHarbor` now authors shallow maritime cargo cleats, rusty-steel/wood-plank materials and engraved load lines at safe exterior service corners, rather than reusing Classic's survey hardware.
 - **LOD contract:** Android Low still gets the original essential 12 shared deck pieces only (zero new Harbor floor geometry). Medium adds 8 inlaid, collision-free local surface parts; High adds 20 detailed parts including mooring tie-downs. All floor-follow with Shrinking Arena. No new server physics, lights, textures, scripts, audio, HUD, raycast or render loops.
-- [Harbor source and acceptance spec](docs/PREMIUM_HARBOR_SKYLINE_2026-10-30.md) now covers both the original 3D skyline and the follow-up floor-identity pass. Engine tests and real-device visual validation are reserved for the next meaningful milestone; this source is **not in the published SHA 82f925c**.
+- [Harbor source and acceptance spec](docs/PREMIUM_HARBOR_SKYLINE_2026-10-30.md) now covers both the original 3D skyline and the follow-up floor-identity pass. Cloud engine tests passed for published SHA `58af603f185c2adebabd70517ce37f36b778aea8` in run [41091334778](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41091334778); physical Android/PC visual acceptance remains outstanding.
 
 ## 2026-10-30 — Successful verified public playtest update and next Harbor art pass
 
