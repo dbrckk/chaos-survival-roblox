@@ -1227,7 +1227,25 @@ describe("Android decorative scenery LOD stability", function()
         local parts = ship:GetDescendants()
         expect(#parts >= 65 and #parts <= 120).toBe(true)
         local arenaNorth = base.Position.Z - base.Size.Z * 0.5
+        -- Low device quality retains only authentic major ship masses,
+        -- rather than an empty skyline or the entire detail-heavy fleet.
+        local lowCount = 0
+        local lowNames = {}
+        local entryVisible = SceneryLodRules.entryVisible
+        expect(SceneryLodRules.visible("Low", 50, 0, 185, nil))
+            .toBe(false)
         for _, part in ipairs(parts) do
+            local essential = part:GetAttribute("HeroSilhouetteEssential") == true
+            if essential then
+                lowCount += 1
+                lowNames[part.Name] = true
+            end
+            expect(entryVisible("Low", false, true, essential))
+                .toBe(essential)
+            expect(entryVisible("Medium", false, true, essential))
+                .toBe(false)
+            expect(entryVisible("High", true, true, essential))
+                .toBe(true)
             expect(part:IsA("BasePart")).toBe(true)
             expect(part.Anchored).toBe(true)
             expect(part.CanCollide).toBe(false)
@@ -1236,6 +1254,25 @@ describe("Android decorative scenery LOD stability", function()
             expect(part.CastShadow).toBe(false)
             expect(part.Position.Z + part.Size.Z * 0.5 < arenaNorth - 12)
                 .toBe(true)
+        end
+        expect(lowCount).toBe(14)
+        for _, expected in ipairs({
+            "MainHull", "LowerKeel", "MainCargoDeck",
+            "BowTaperPort", "BowTaperStarboard", "SternDeckhouse",
+            "Wheelhouse", "ExhaustStack",
+            "Container1_-1_1", "Container1_1_1",
+            "Container2_-1_1", "Container2_1_1",
+            "Container3_-1_1", "Container3_1_1",
+        }) do
+            expect(lowNames[expected]).toBe(true)
+        end
+        for _, gantry in ipairs(fleet:GetChildren()) do
+            if gantry ~= ship then
+                for _, part in ipairs(gantry:GetDescendants()) do
+                    expect(part:GetAttribute("HeroSilhouetteEssential") == true)
+                        .toBe(false)
+                end
+            end
         end
 
         -- Clients may cull this original model, never real gameplay Parts.
