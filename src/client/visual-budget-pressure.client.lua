@@ -82,20 +82,19 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 task.spawn(function()
-    local lastWake = os.clock()
     while player.Parent do
-        task.wait(OBSERVE_SECONDS)
+        -- task.wait reports the ACTUAL elapsed scheduler delay; use it
+        -- instead of assuming Android resumed exactly five seconds later.
+        local elapsed = task.wait(OBSERVE_SECONDS)
         local now = os.clock()
         -- Backgrounding Roblox on Android can suspend scheduling for
         -- minutes. Never interpret one wakeup after suspension as a
         -- second consecutive bad FPS sample, or reuse old arena counts.
-        if now - lastWake > SUSPEND_GAP_SECONDS then
-            lastWake = now
+        if elapsed > SUSPEND_GAP_SECONDS then
             streak = 0
             invalidateCensus()
             continue
         end
-        lastWake = now
 
         -- No full diagnostic traversal during READY, lobby, results or
         -- map streaming. The next live round gets a fresh count.
