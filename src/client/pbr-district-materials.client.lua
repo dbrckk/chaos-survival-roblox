@@ -26,10 +26,10 @@ local originals = setmetatable({}, {__mode = "k"})
 -- A value here means this client owns the exact MaterialVariant and may
 -- revert it if the asset leaves the target set. Never revert another writer.
 local applied = setmetatable({}, {__mode = "k"})
-local boundMap, boundArena, boundDecor, boundLocal = nil, nil, nil, nil
+local boundMap, boundArena, boundDecor, boundLocal, boundHero = nil, nil, nil, nil, nil
 local mapAdded, mapRemoved, arenaAdded = nil, nil, nil
-local disconnectDecorIndex, disconnectLocalIndex = nil, nil
-local indexedDecor, indexedLocal = {}, {}
+local disconnectDecorIndex, disconnectLocalIndex, disconnectHeroIndex = nil, nil, nil
+local indexedDecor, indexedLocal, indexedHero = {}, {}, {}
 local pendingScan = false
 local lastCameraPosition = nil
 local lastCameraLook = nil
@@ -142,6 +142,9 @@ local function scan()
 
         collect(boundDecor, indexedDecor)
         collect(boundLocal, indexedLocal)
+        -- Includes authored Classic/Towers/Crossroads/Orbital/Harbor
+        -- architecture. One active model only, with shared GPU quota.
+        collect(boundHero, indexedHero)
 
         local ranked = {}
         local function score(part)
@@ -160,7 +163,8 @@ local function scan()
                 local original = originals[part]
                 local baseMaterial = original and original.material
                     or part.Material
-                local key = PbrDistrictRules.materialKey(part.Name, baseMaterial)
+                local key = PbrDistrictRules.materialKey(
+                    part.Name, baseMaterial, part.Parent)
                 local chosen = VARIANTS[key]
                 if chosen then
                     ranked[#ranked + 1] = {
@@ -291,11 +295,31 @@ local function bindLocal(folder)
     schedule()
 end
 
+-- Hero setpieces are a single local Folder which rebuilds its children
+-- on map/tier swaps. Reuse the incremental candidate cache, no new scan
+-- loop, and disconnect stale indexes when its source disappears.
+local function bindHero(folder)
+    if boundHero == folder then return end
+    if disconnectHeroIndex then
+        disconnectHeroIndex()
+        disconnectHeroIndex = nil
+    end
+    indexedHero = {}
+    boundHero = folder
+    if folder and PbrDistrictRules.isAuthoredHeroArchitectureOwner(folder) then
+        indexedHero, disconnectHeroIndex =
+            PbrCandidateIndex.watch(folder, scheduleIfEnabled)
+    end
+    schedule()
+end
+
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
         bindMap(workspace:FindFirstChild("GeneratedMap"))
     elseif child.Name == "DistrictSectorSetpiecesLocal" then
         bindLocal(workspace:FindFirstChild("DistrictSectorSetpiecesLocal"))
+    elseif child.Name == "ArenaArchitecturalDetailsLocal" then
+        bindHero(workspace:FindFirstChild("ArenaArchitecturalDetailsLocal"))
     end
 end)
 workspace.ChildRemoved:Connect(function(child)
@@ -303,6 +327,8 @@ workspace.ChildRemoved:Connect(function(child)
         bindMap(workspace:FindFirstChild("GeneratedMap"))
     elseif child == boundLocal then
         bindLocal(workspace:FindFirstChild("DistrictSectorSetpiecesLocal"))
+    elseif child == boundHero then
+        bindHero(workspace:FindFirstChild("ArenaArchitecturalDetailsLocal"))
     end
 end)
 
@@ -310,6 +336,7 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(schedule)
 player:GetAttributeChangedSignal("PbrMaterialsDisabled"):Connect(schedule)
 bindMap(workspace:FindFirstChild("GeneratedMap"))
 bindLocal(workspace:FindFirstChild("DistrictSectorSetpiecesLocal"))
+bindHero(workspace:FindFirstChild("ArenaArchitecturalDetailsLocal"))
 schedule()
 
 -- Follow movement with one slow sampling loop, never RenderStepped/
@@ -334,7 +361,7 @@ task.spawn(function()
         local selectedTier = tier()
         if PbrDistrictRules.cameraSamplingEnabled(
             selectedTier, isTouch, player:GetAttribute("PbrMaterialsDisabled"),
-            boundDecor ~= nil or boundLocal ~= nil
+            boundDecor ~= nil or boundLocal ~= nil or boundHero ~= nil
         ) then
             local current = workspace.CurrentCamera
             local frame = current and current.CFrame or nil
