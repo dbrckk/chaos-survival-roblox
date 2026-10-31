@@ -22,6 +22,7 @@ folder.Parent = workspace
 local phase = "waiting"
 local previousPhase = "waiting"
 local lastIds = {}
+local lastRoundNumber = nil
 local roundToken = 0
 
 local function tier()
@@ -492,6 +493,18 @@ workspace.ChildAdded:Connect(warningResidue)
 stateEvent.OnClientEvent:Connect(function(state)
     -- A malformed snapshot must not tear down the client visual controller.
     local snapshot = type(state) == "table" and state or {}
+    local incoming = tonumber(snapshot.roundNumber)
+    if not incoming or incoming ~= incoming or incoming <= 0
+        or incoming == math.huge or incoming ~= math.floor(incoming) then
+        incoming = nil
+    end
+    if incoming and lastRoundNumber and incoming < lastRoundNumber then
+        return
+    end
+    local newRound = incoming ~= nil and lastRoundNumber ~= nil
+        and incoming ~= lastRoundNumber
+    if incoming then lastRoundNumber = incoming end
+
     previousPhase = phase
     phase = tostring(snapshot.phase or "waiting")
 
@@ -504,13 +517,17 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
         lastIds = ids
 
-        if previousPhase ~= "round" then
+        if previousPhase ~= "round" or newRound then
+            -- A same-phase new round must invalidate delayed warning
+            -- scars from the previous round as well as fade old surfaces.
             clearResidue(0.18)
         end
     elseif previousPhase == "round" and phase == "result" then
         roundToken += 1
         resultWithRetry(roundToken, 3)
-    elseif phase == "ready" or phase == "intermission" or phase == "waiting" then
+    elseif (phase == "ready" or phase == "intermission"
+        or phase == "waiting") and (phase ~= previousPhase or newRound) then
+        -- Avoid re-tweening the same scars every RoundState heartbeat.
         clearResidue(0.28)
     end
 end)
