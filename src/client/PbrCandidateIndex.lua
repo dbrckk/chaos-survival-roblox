@@ -40,6 +40,19 @@ function Index.watch(root, onChanged)
     local pendingAdds = {}
     local flushScheduled = false
 
+    -- Roblox can dispatch DescendantRemoving for both a removed Model
+    -- and its nested Parts. The old implementation called GetDescendants
+    -- for EVERY callback, repeatedly scanning an entire streamed subtree.
+    -- Prune the first removed subtree synchronously, then skip children
+    -- already covered by it until the end of the scheduler turn.
+    local removedRoots = {}
+    local removalFlushScheduled = false
+    local function flushRemovals()
+        removalFlushScheduled = false
+        table.clear(removedRoots)
+        if alive then onChanged() end
+    end
+
     local function flushAdds()
         flushScheduled = false
         if not alive then return end
@@ -77,11 +90,25 @@ function Index.watch(root, onChanged)
     local removed = root.DescendantRemoving:Connect(function(instance)
         if not alive then return end
         -- DescendantRemoving fires before the subtree is detached or
-        -- destroyed. Remove synchronously so no cached Parts survive
-        -- streaming-out even if a deferred callback runs after Destroy().
+        -- destroyed. Remove each FIRST affected tree synchronously, so
+        -- the parts table can never serve a detached Part to the PBR scan.
+        local ancestor = instance.Parent
+        while ancestor and ancestor ~= root do
+            if removedRoots[ancestor] then
+                pendingAdds[instance] = nil
+                return
+            end
+            ancestor = ancestor.Parent
+        end
+        removedRoots[instance] = true
         removeTree(instance)
         pendingAdds[instance] = nil
-        onChanged()
+        -- Keep PBR invalidation once per removal burst, rather than once
+        -- for every Part in a large atomic streamed building.
+        if not removalFlushScheduled then
+            removalFlushScheduled = true
+            task.defer(flushRemovals)
+        end
     end)
 
     return parts, function()
@@ -90,6 +117,7 @@ function Index.watch(root, onChanged)
         added:Disconnect()
         removed:Disconnect()
         table.clear(pendingAdds)
+        table.clear(removedRoots)
         table.clear(parts)
     end
 end
