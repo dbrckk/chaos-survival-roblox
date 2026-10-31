@@ -40,6 +40,31 @@ function DistrictMaterialFinishKit.stencil(surface, serial, accent, tier, style,
     local dark = Color3.fromRGB(12, 21, 31)
     local pale = Color3.fromRGB(199, 214, 223)
 
+    -- The front service-door ID is a small upper metal stencil, not an
+    -- opaque fullscreen facade decal. It preserves the original native
+    -- relief and any approved, budgeted PBR material beneath.
+    if style == "service-door" then
+        local plate = rect(gui, "ServiceDoorNumberPlate",
+            UDim2.fromScale(0.84, 0.25),
+            UDim2.fromScale(0.08, 0.07), dark, 0.08)
+        rect(plate, "SectorIdentityEdge",
+            UDim2.fromScale(1, 0.09),
+            UDim2.fromScale(0, 0), accent, 0.12)
+        local stamp = Instance.new("TextLabel")
+        stamp.Name = "StampedDoorIdentity"
+        stamp.Size = UDim2.fromScale(0.91, 0.74)
+        stamp.Position = UDim2.fromScale(0.045, 0.18)
+        stamp.BackgroundTransparency = 1
+        stamp.Font = Enum.Font.GothamBold
+        stamp.Text = serial
+        stamp.TextColor3 = pale
+        stamp.TextScaled = true
+        stamp.TextStrokeTransparency = 0.85
+        stamp.TextXAlignment = Enum.TextXAlignment.Center
+        stamp.Parent = plate
+        return gui
+    end
+
     -- Large quiet opaque coating, not a fully luminous flat billboard.
     local coating = rect(gui, "EtchedPanel", UDim2.fromScale(1, 1),
         UDim2.fromScale(0, 0), dark, 0.18)
