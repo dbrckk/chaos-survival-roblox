@@ -8,6 +8,7 @@ local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresen
 local SpectatorTargetRules = require(ReplicatedStorage.Shared.SpectatorTargetRules)
 local CameraFeelBus = require(script.Parent.CameraFeelBus)
 local LocomotionDynamics = require(ReplicatedStorage.Shared.LocomotionDynamics)
+local CharacterReactionRules = require(ReplicatedStorage.Shared.CharacterReactionRules)
 local JumpLandingPreviewKit = require(script.Parent.JumpLandingPreviewKit)
 
 local player = Players.LocalPlayer
@@ -44,8 +45,32 @@ local tornadoModel = nil
 local presentationKick = 0
 local presentationKickTarget = 0
 local previousPhase = "waiting"
+local lastRoundNumber = nil
 local lastFinalRush = false
 local lastOverdrive = false
+
+-- Clear client-only camera springs whenever Roblox hands camera ownership
+-- to a spectator/cinematic or resumes from a suspended Android frame.
+-- Rebase speed on the real root so a return cannot invent acceleration.
+local function suspendCameraMotion()
+    lean, bob = 0, 0
+    landingKick, impactKick, mechanicKick = 0, 0, 0
+    presentationKick, presentationKickTarget = 0, 0
+    accelerationKick, speedFovOffset = 0, 0
+    wasAirborne = false
+    airborneStartedAt, lastAirSampleAt = -math.huge, -math.huge
+    peakFallSpeed = 0
+    if root and root.Parent == character then
+        local velocity = root.AssemblyLinearVelocity
+        lastHorizontalSpeed = Vector3.new(
+            velocity.X, 0, velocity.Z
+        ).Magnitude
+    else
+        lastHorizontalSpeed = 0
+    end
+    CameraFeelBus.reset()
+    landingPreview.hide()
+end
 
 local function disconnectCharacter()
     bindVersion += 1
@@ -61,7 +86,8 @@ local function disconnectCharacter()
 end
 
 local function qualityScale()
-    local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local profile = VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local scale = profile.Name == "Low" and 0.48 or (profile.Name == "Medium" and 0.76 or 1)
     if UserInputService.TouchEnabled then
         scale *= 0.78
@@ -73,7 +99,10 @@ local function qualityScale()
 end
 
 local function emitLandingBurst(strength)
-    if not root or not root.Parent then
+    if previousPhase ~= "round"
+        or player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true
+        or not root or root.Parent ~= character then
         return
     end
 
@@ -83,8 +112,9 @@ local function emitLandingBurst(strength)
     end
     lastLandingBurstAt = now
 
-    local tierName = player:GetAttribute("VfxQualityTier")
-    local profile = VfxQuality.get(tierName)
+    local profile = VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
+    local tierName = profile.Name
     if profile.Name == "Low" and strength < 0.34 then
         return
     end
@@ -283,19 +313,26 @@ end)
 bindTornado(workspace:FindFirstChild("RoundTornado"))
 
 hazardImpactEvent.OnClientEvent:Connect(function(payload)
-    if player:GetAttribute("RoundParticipant") ~= true
+    if previousPhase ~= "round"
+        or player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true
-        or not root or not root.Parent or typeof(payload) ~= "table" then
+        or not root or root.Parent ~= character or type(payload) ~= "table" then
         return
     end
 
     local position = payload.position
-    if typeof(position) ~= "Vector3" then
+    if not CharacterReactionRules.validPosition(position) then
+        return
+    end
+    local requestedRadius = tonumber(payload.radius)
+    if requestedRadius and (requestedRadius ~= requestedRadius
+        or math.abs(requestedRadius) == math.huge
+        or requestedRadius <= 0) then
         return
     end
 
     local distance = (root.Position - position).Magnitude
-    local radius = math.clamp(tonumber(payload.radius) or 8, 1, 40)
+    local radius = math.clamp(requestedRadius or 8, 1, 40)
     local reach = math.max(24, radius * 5.5)
     if distance > reach then
         return
@@ -313,14 +350,25 @@ mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    local surge = false
-    local lowGravity = false
-    local phase = state and tostring(state.phase or "waiting") or "waiting"
+    if type(state) ~= "table" then return end
+    local candidate = tonumber(state.roundNumber)
+    local roundNumber = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if roundNumber and lastRoundNumber and roundNumber < lastRoundNumber then
+        -- Old snapshots cannot re-arm a previous round's camera impulses.
+        return
+    end
+    local newRound = roundNumber ~= nil and lastRoundNumber ~= nil
+        and roundNumber ~= lastRoundNumber
+    if roundNumber then lastRoundNumber = roundNumber end
+    local phase = tostring(state.phase or "waiting")
     local finalRush = phase == "round" and state.finalRush == true
     local overdrive = phase == "round" and state.overdrive == true
-
-    if state and phase == "round" then
-        for _, id in ipairs(state.disasterIds or {}) do
+    local surge, lowGravity = false, false
+    if phase == "round" then
+        for _, id in ipairs(type(state.disasterIds) == "table"
+            and state.disasterIds or {}) do
             if id == "SpeedSurge" then
                 surge = true
             elseif id == "LowGravity" then
@@ -328,15 +376,23 @@ stateEvent.OnClientEvent:Connect(function(state)
             end
         end
     end
-
+    if phase ~= previousPhase or newRound then
+        suspendCameraMotion()
+    end
+    local previousRush = lastFinalRush
+    local previousOverdrive = lastOverdrive
+    if newRound then
+        previousRush, previousOverdrive = false, false
+    end
     local kick = RoundEventPresentation.cameraKick(
-        previousPhase,
-        state,
-        lastFinalRush,
-        lastOverdrive
+        newRound and "ready" or previousPhase, state,
+        previousRush, previousOverdrive
     )
-    presentationKickTarget = math.max(presentationKickTarget, kick)
-
+    if player:GetAttribute("RoundEliminated") ~= true
+        and (phase ~= "round"
+            or player:GetAttribute("RoundParticipant") == true) then
+        presentationKickTarget = math.max(presentationKickTarget, kick)
+    end
     speedSurgeActive = surge
     lowGravityActive = lowGravity
     previousPhase = phase
@@ -361,20 +417,16 @@ RunService:BindToRenderStep(
         ) then
             -- CameraSubject belongs to spectator mode, not the player's
             -- distant lobby avatar; never add local footstep shake to it.
-            lean = 0
-            bob = 0
-            accelerationKick = 0
-            speedFovOffset = 0
-            CameraFeelBus.reset()
-            landingPreview.hide()
+            suspendCameraMotion()
             return
         end
-        if not camera or player.Character ~= character
+        if not camera or camera.ViewportSize.X <= 0
+            or camera.ViewportSize.Y <= 0
+            or player.Character ~= character
             or not root or root.Parent ~= character
             or not humanoid or humanoid.Parent ~= character
             or humanoid.Health <= 0 then
-            CameraFeelBus.reset()
-            landingPreview.hide()
+            suspendCameraMotion()
             return
         end
 
@@ -387,8 +439,7 @@ RunService:BindToRenderStep(
         if camera.CameraType == Enum.CameraType.Scriptable
             or not subject
             or (subject ~= humanoid and not subject:IsDescendantOf(character)) then
-            CameraFeelBus.reset()
-            landingPreview.hide()
+            suspendCameraMotion()
             return
         end
 
@@ -401,15 +452,9 @@ RunService:BindToRenderStep(
             and humanoid.FloorMaterial == Enum.Material.Air
         if type(dt) ~= "number" or dt ~= dt or dt <= 0
             or dt == math.huge or dt > 0.30 then
-            -- Ignore stale velocities after Android app suspension.
-            wasAirborne = false
-            airborneStartedAt = -math.huge
-            lastAirSampleAt = -math.huge
-            peakFallSpeed = 0
-            accelerationKick = 0
-            lastHorizontalSpeed = Vector3.new(
-                root.AssemblyLinearVelocity.X, 0, root.AssemblyLinearVelocity.Z
-            ).Magnitude
+            -- Do not replay a pre-suspension impact or landing after
+            -- Android resumes, even if the avatar has stayed alive.
+            suspendCameraMotion()
             -- One quiet, bounded restart frame: never feed a 2-second
             -- Android background delta into the camera spring or sine.
             dt = 1 / 60
@@ -430,8 +475,7 @@ RunService:BindToRenderStep(
             humanoid.FloorMaterial ~= Enum.Material.Air, verticalSpeed
         )
         if scale <= 0 then
-            CameraFeelBus.reset()
-            landingPreview.hide()
+            suspendCameraMotion()
             return
         end
 
