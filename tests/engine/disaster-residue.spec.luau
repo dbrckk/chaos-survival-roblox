@@ -202,6 +202,9 @@ describe("Ground-correct meteor/bomb aftermath in active rounds", function()
         local families = {
             {Enum.Material.Metal, "Metal", Enum.Material.Metal},
             {Enum.Material.Slate, "Stone", Enum.Material.Slate},
+            -- Harbor's real boardwalk fractures into timber grain, not slate.
+            {Enum.Material.Wood, "Timber", Enum.Material.WoodPlanks},
+            {Enum.Material.WoodPlanks, "Timber", Enum.Material.WoodPlanks},
             {Enum.Material.Ground, "Dust", Enum.Material.Ground},
             {Enum.Material.Ice, "Ice", Enum.Material.Ice},
             {Enum.Material.Glass, "Polished", Enum.Material.Glass},
@@ -226,7 +229,7 @@ describe("Ground-correct meteor/bomb aftermath in active rounds", function()
         end
         expect(ImpactSurfaceScarKit.recipe("Unknown", "High",
             Enum.Material.Metal, source, source, false) == nil).toBe(true)
-        expect(ImpactSurfaceScarKit.family(Enum.Material.Wood)).toBe("Stone")
+        expect(ImpactSurfaceScarKit.family(Enum.Material.Wood)).toBe("Timber")
     end)
 
     it("maintains the previous 1/4/6 total-part budget across tiers and slopes", function()
