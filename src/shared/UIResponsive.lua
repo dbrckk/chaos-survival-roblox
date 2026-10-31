@@ -83,7 +83,11 @@ end
 function UIResponsive.mobileExpeditionLayout(viewport, topInset)
     local c = UIResponsive.classify(viewport, true)
     local profile = UIResponsive.mobileProfile(viewport)
-    local height = profile.tinyHeight and 46 or 51
+    -- The optional 2-coin objective in real Android landscape shots
+    -- occupies too much of the left gameplay lane. Keep a readable
+    -- 2-line card, with a smaller footprint on *wide* touch screens.
+    local height = c.wide and 44
+        or (profile.tinyHeight and 46 or 51)
     local inset = math.clamp(tonumber(topInset) or 0, 0, c.height)
     local minimumTop = inset + profile.topHeight + 48
     -- The top-center survival hazard is inset by Roblox native controls.
@@ -94,7 +98,8 @@ function UIResponsive.mobileExpeditionLayout(viewport, topInset)
     local maximumTop = c.height - profile.roundFocusBottomOffset - height - 10
     return {
         xScale = c.wide and 0.23 or 0.50,
-        width = math.min(profile.veryNarrow and 190 or 208,
+        width = math.min(c.wide and 182
+                or (profile.veryNarrow and 190 or 208),
             math.max(168, c.width - 20)),
         height = height,
         topOffset = math.max(0, math.min(targetTop, maximumTop)),

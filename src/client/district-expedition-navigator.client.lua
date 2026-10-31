@@ -256,16 +256,57 @@ local function hideClaimedCues()
     end
 end
 
+-- Real Android images show the OPTIONAL server-owned English world
+-- billboards ("SHORT ROUTE", "CLIMB / DODGE", signal/transit titles)
+-- crossing the localized primary disaster HUD. The mobile expedition
+-- navigator already gives the real target, distance and direction,
+-- while 3D stations, lights and native proximity prompts remain.
+-- Suppress ONLY these duplicative labels locally on touch devices.
+-- Desktop signs and all server/shared gameplay are untouched.
+local OPTIONAL_WORLD_BILLBOARDS = {
+    SupplyCacheLabel = true,
+    SurvivalRouteBriefing = true,
+    ObjectiveLabel = true,
+    SideLookoutLabel = true,
+    SignalObjective = true,
+    TransitWayfinding = true,
+}
+local worldLabelConnections = {}
+local function suppressOptionalWorldLabel(instance)
+    if not UserInputService.TouchEnabled
+        or not instance:IsA("BillboardGui")
+        or not OPTIONAL_WORLD_BILLBOARDS[instance.Name]
+        or worldLabelConnections[instance] then
+        return
+    end
+    -- A server signal can enable its billboard again for a new wave.
+    -- Keep this local preference authoritative, event-driven and cheap.
+    local function suppress()
+        if instance.Enabled then
+            instance.Enabled = false
+        end
+    end
+    worldLabelConnections[instance] =
+        instance:GetPropertyChangedSignal("Enabled"):Connect(suppress)
+    suppress()
+end
+
 local function track(instance)
     if cacheEligible(instance) then
         caches[instance] = true
         hideClaimedCache(instance)
     end
+    suppressOptionalWorldLabel(instance)
 end
 
 workspace.DescendantAdded:Connect(track)
 workspace.DescendantRemoving:Connect(function(instance)
     caches[instance] = nil
+    local connection = worldLabelConnections[instance]
+    if connection then
+        connection:Disconnect()
+        worldLabelConnections[instance] = nil
+    end
 end)
 for _, item in ipairs(workspace:GetDescendants()) do
     track(item)
@@ -592,8 +633,22 @@ local function update()
     end
     -- Distance is explicitly TO THE NEXT WAYPOINT, not falsely to the
     -- final chest when several physical jump gaps remain.
-    text.Text = taskLabel .. "\n" .. cue
-        .. " • " .. tostring(waypointDistance) .. "st"
+    -- A timed +2 optional signal does not need a third line of currency
+    -- detail during a lethal disaster. Keep the time AND true distance;
+    -- the nearby server prompt still shows the exact reward.
+    if UserInputService.TouchEnabled
+        and UIResponsive.classify(camera.ViewportSize, true).wide
+        and signalPosition then
+        local shortTime = signalSeconds
+            and (tostring(signalSeconds) .. "s")
+            or copy(upcoming and "DISTRICT_SIGNAL_SOON"
+                or "DISTRICT_SIGNAL_NOW")
+        text.Text = taskLabel .. "\n" .. shortTime
+            .. " • " .. tostring(waypointDistance) .. "st"
+    else
+        text.Text = taskLabel .. "\n" .. cue
+            .. " • " .. tostring(waypointDistance) .. "st"
+    end
     local color = signalPosition and Color3.fromRGB(255, 163, 83)
         or (elite and Color3.fromRGB(248, 199, 91)
             or Color3.fromRGB(111, 226, 247))
