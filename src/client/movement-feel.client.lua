@@ -379,10 +379,14 @@ stateEvent.OnClientEvent:Connect(function(state)
     if phase ~= previousPhase or newRound then
         suspendCameraMotion()
     end
+    local previousRush = lastFinalRush
+    local previousOverdrive = lastOverdrive
+    if newRound then
+        previousRush, previousOverdrive = false, false
+    end
     local kick = RoundEventPresentation.cameraKick(
         newRound and "ready" or previousPhase, state,
-        newRound and false or lastFinalRush,
-        newRound and false or lastOverdrive
+        previousRush, previousOverdrive
     )
     if player:GetAttribute("RoundEliminated") ~= true
         and (phase ~= "round"
