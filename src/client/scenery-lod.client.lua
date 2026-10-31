@@ -242,6 +242,8 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
     )
     local wasVisible = cache.visible
     local wasDirty = cache.dirty
+    local previousTier = cache.lastProfile
+    cache.lastProfile = profile.Name
     cache.visible = visible
     if wasDirty then
         SceneryLodCache.refresh(folder, cache, classifyDescendant)
@@ -251,7 +253,8 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
     -- walking hundreds of parts/effects on every Android LOD update.
     -- Hidden folders still run each pass to enforce concealment if another
     -- cosmetic owner changes a transparency or Enabled property.
-    if visible and wasVisible == true and not wasDirty then
+    if visible and wasVisible == true and not wasDirty
+        and previousTier == profile.Name then
         return
     end
 
@@ -266,6 +269,14 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
             profile.Name, visible, limits.KeepHeroLow,
             descendant:GetAttribute("HeroSilhouetteEssential")
         )
+        -- Optional detail tiers are visibility masks, never destructive
+        -- server asset edits. Quality switches must reveal/hide them even
+        -- if the building's distance visibility itself has not changed.
+        local minimumTier = descendant:GetAttribute("SceneryMinimumTier")
+        if minimumTier == "Medium" and profile.Name == "Low"
+            or minimumTier == "High" and profile.Name ~= "High" then
+            partVisible = false
+        end
 
         if descendant:IsA("BasePart") then
             if partVisible then
