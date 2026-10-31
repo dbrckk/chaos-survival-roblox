@@ -46,11 +46,21 @@ local function releaseWarning(warning)
     local entry = warningEntries[warning]
     if not entry then return end
     warningEntries[warning] = nil
+    -- creationOrder owns strong references to server Warning Parts. Removing
+    -- only warningEntries leaves the most recent destroyed warning retained
+    -- until a later hazard arrives (possibly many rounds later).
+    for i = #creationOrder, 1, -1 do
+        if creationOrder[i] == warning then
+            table.remove(creationOrder, i)
+        end
+    end
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
+    table.clear(entry.connections)
     if entry.group then
         entry.group:Destroy()
+        entry.group = nil
     end
 end
 
@@ -193,6 +203,16 @@ local function tryPresent(warning)
         bombSignature(warning, group, tier.Name, reduced, remaining, progress)
     end
     Debris:AddItem(group, remaining + 0.10)
+    -- Debris owns the cosmetic folder, not the three attribute listeners
+    -- or our creationOrder slot. The warning may linger briefly after its
+    -- impact (streaming/server cleanup), so close the owner at the SAME
+    -- bounded lifetime instead of retaining it across idle sessions.
+    local issuedEntry = entry
+    task.delay(remaining + 0.12, function()
+        if warningEntries[warning] == issuedEntry then
+            releaseWarning(warning)
+        end
+    end)
 end
 
 local function bindWarning(warning)
