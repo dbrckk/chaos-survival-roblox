@@ -23,5 +23,11 @@ if (-not $runner.Contains($selected)) {
     throw "STUDIO_ARENA_RUNNER_WRITE_FAILED"
 }
 # Keep the caller's chosen arena and upstream suite/timeout intact.
-Set-Content -LiteralPath $OutputPath -Value $runner -Encoding UTF8
+# Windows PowerShell 5.1 writes a UTF-8 BOM with Set-Content -Encoding UTF8.
+# Roblox Luau CLI must receive plain UTF-8 without an injected BOM.
+[System.IO.File]::WriteAllText(
+    [System.IO.Path]::GetFullPath($OutputPath),
+    $runner,
+    [System.Text.UTF8Encoding]::new($false)
+)
 Write-Host "STUDIO_ARENA_RUNNER_READY arena=$Arena"
