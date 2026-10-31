@@ -493,6 +493,7 @@ local function playResultResidue()
     local base = arenaBase()
     if not base then return false end
     local quality = tier()
+    if #lastIds == 0 then return true end
     local partLimit = impactBudget(quality)
     -- Prioritize short-lived result motifs over obsolete impact scars, but
     -- allocate no more than the same live per-tier Part limit.
