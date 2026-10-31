@@ -90,8 +90,14 @@ local function track(p, motion, amplitude, speed, phase)
 end
 
 local function baseFrame(base, x, z, yaw)
-    return base.CFrame * CFrame.new(x, base.Size.Y * 0.5, z)
+    local frame = base.CFrame * CFrame.new(x, base.Size.Y * 0.5, z)
         * CFrame.Angles(0, math.rad(yaw), 0)
+    -- All five original hero structures use one baseFrame per rebuild.
+    -- Publish the REAL outboard location so Android distance LOD does
+    -- not cull a nearby structure just because the player is far from
+    -- the arena center. No new Part, listener or per-frame work.
+    folder:SetAttribute("CosmeticWorldOrigin", frame.Position)
+    return frame
 end
 
 local function buildClassic(base, theme, tier)
@@ -527,6 +533,9 @@ end
 
 local function clear()
     table.clear(animated)
+    -- Do not leave the previous map's origin when a new arena is
+    -- streaming in, especially while BuildMap still lacks a Base.
+    folder:SetAttribute("CosmeticWorldOrigin", nil)
     folder:ClearAllChildren()
     activeBase = nil
 end

@@ -81,6 +81,9 @@ local FOLDERS = {
     ArenaArchitecturalDetailsLocal = {
         LowDistance = 145,
         MediumDistance = 220,
+        -- The authored hero is OUTBOARD of the 320-stud arena, not at
+        -- the arena center. Use its real local build origin on Android.
+        Origin = "CosmeticArt",
     },
     -- Native client-only signal-ring structures appear only on Medium/
     -- High and stay hidden after the sector streams far away.
@@ -347,6 +350,15 @@ task.spawn(function()
                 local folder = workspace:FindFirstChild(folderName)
                 if folder then
                     local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
+                    if limits.Origin == "CosmeticArt" then
+                        -- The local builder publishes one position for the
+                        -- currently loaded arena. Before its Base streams
+                        -- in (or after a map swap), fall back safely.
+                        local authored = folder:GetAttribute("CosmeticWorldOrigin")
+                        if typeof(authored) == "Vector3" then
+                            origin = authored
+                        end
+                    end
                     applyFolder(folder, limits, profile, origin, cameraPoint)
                 end
             end
@@ -404,8 +416,11 @@ task.spawn(function()
         end
         local hero = SceneryLodRules.heroArchitectureOwner(workspace)
         if hero then
+            -- Server-authored original hero model also lives beyond the
+            -- playable floor. Model pivot is a reliable location for its
+            -- geometric visual owner, unlike the arena's central Base.
             applyFolder(hero, HERO_ARCHITECTURE_LOD,
-                profile, arenaOrigin, cameraPoint)
+                profile, hero:GetPivot().Position, cameraPoint)
         end
 
         -- A pad's Highlight and particle emitter have separate parents.
