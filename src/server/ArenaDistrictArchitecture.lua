@@ -17,6 +17,26 @@ local SECTOR_COLOR = {
     West = Color3.fromRGB(166, 150, 239),  -- indigo / communications
 }
 
+-- Variant-specific physical finish on the same eight collisionless door Parts.
+-- This changes neither geometry allocations nor parkour collision.
+local FACADE_FINISH = {
+    Classic = {recess = Enum.Material.CorrodedMetal, door = Enum.Material.DiamondPlate,
+        lintel = Enum.Material.Metal, canopy = Enum.Material.Metal,
+        hardware = Enum.Material.Metal, canopyDepth = 1.85},
+    Towers = {recess = Enum.Material.Metal, door = Enum.Material.Foil,
+        lintel = Enum.Material.DiamondPlate, canopy = Enum.Material.DiamondPlate,
+        hardware = Enum.Material.Metal, canopyDepth = 2.45},
+    Crossroads = {recess = Enum.Material.CorrodedMetal, door = Enum.Material.DiamondPlate,
+        lintel = Enum.Material.CorrodedMetal, canopy = Enum.Material.Concrete,
+        hardware = Enum.Material.CorrodedMetal, canopyDepth = 2.20},
+    Orbital = {recess = Enum.Material.CeramicTiles, door = Enum.Material.CeramicTiles,
+        lintel = Enum.Material.Metal, canopy = Enum.Material.CeramicTiles,
+        hardware = Enum.Material.Metal, canopyDepth = 2.0},
+    Harbor = {recess = Enum.Material.CorrodedMetal, door = Enum.Material.CorrodedMetal,
+        lintel = Enum.Material.CorrodedMetal, canopy = Enum.Material.WoodPlanks,
+        hardware = Enum.Material.CorrodedMetal, canopyDepth = 3.0},
+}
+
 local function element(model, origin, name, kind, size, localFrame, color, material)
     local piece = Instance.new(kind or "Part")
     piece.Name = name
@@ -119,26 +139,34 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
     -- are cosmetic: they do not alter stairs, parkour, sweeps or collision.
     -- Two large door masses remain on Low; six smaller hardware details
     -- are progressively revealed by the existing client scenery LOD.
+    local finish = FACADE_FINISH[variantId] or FACADE_FINISH.Classic
     local function facadePart(name, size, frame, color, material, minimumTier)
         local part = make(name, "Part", size, frame, color, material)
         if minimumTier then
             part:SetAttribute("SceneryMinimumTier", minimumTier)
         end
+        -- Concrete/timber should remain genuinely concrete/timber, not
+        -- receive a metallic 2K MaterialVariant from the shared PBR pass.
+        if material == Enum.Material.Concrete
+            or material == Enum.Material.WoodPlanks then
+            part:SetAttribute("PreserveNativeMaterial", true)
+        end
         return part
     end
     facadePart("ServiceEntryRecess", Vector3.new(5.8, 5.2, 0.48),
-        CFrame.new(0, 4.0, -4.02), dark, Enum.Material.CorrodedMetal)
+        CFrame.new(0, 4.0, -4.02), dark, finish.recess)
     facadePart("ServiceEntryDoor", Vector3.new(4.65, 4.68, 0.18),
-        CFrame.new(-0.35, 4.0, -4.36), steel, Enum.Material.Metal)
+        CFrame.new(-0.35, 4.0, -4.36), steel, finish.door)
     facadePart("ServiceEntryLintel", Vector3.new(6.7, 0.62, 0.95),
-        CFrame.new(0, 6.98, -4.13), alloy, Enum.Material.Metal, "Medium")
-    facadePart("ServiceEntryCanopy", Vector3.new(7.6, 0.38, 2.25),
-        CFrame.new(0, 7.45, -4.57), steel, Enum.Material.CorrodedMetal, "Medium")
+        CFrame.new(0, 6.98, -4.13), alloy, finish.lintel, "Medium")
+    facadePart("ServiceEntryCanopy",
+        Vector3.new(7.6, 0.38, finish.canopyDepth),
+        CFrame.new(0, 7.45, -4.57), steel, finish.canopy, "Medium")
     for _, direction in ipairs({-1, 1}) do
         facadePart("PortalHydraulicColumn" .. tostring(direction),
             Vector3.new(0.42, 5.25, 0.42),
             CFrame.new(direction * 3.35, 4.08, -4.20),
-            alloy, Enum.Material.Metal, "Medium")
+            alloy, finish.hardware, "Medium")
     end
 
     -- Two High-only profile accents per building. Authored silhouettes
