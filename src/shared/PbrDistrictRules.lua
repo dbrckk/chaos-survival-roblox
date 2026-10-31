@@ -271,8 +271,17 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         and (smallest >= 0.35 or canonicalServiceDoor(part, owner))
 end
 
-function PbrDistrictRules.materialKey(partName, material)
+function PbrDistrictRules.materialKey(partName, material, owner)
     local name = tostring(partName or ""):lower()
+    if PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner) then
+        -- The original hero setpieces use explicit real material families.
+        -- A large diamondplate crosshead must remain armored steel, not
+        -- turn into brushed titanium merely because its name lacks "plate".
+        -- This override is restricted to locally approved hero surfaces.
+        if material == Enum.Material.DiamondPlate then return "armor" end
+        if material == Enum.Material.CorrodedMetal then return "oxidized" end
+        if material == Enum.Material.CeramicTiles then return "ceramic" end
+    end
     -- Respect the native front-door material before generic naming heuristics.
     -- Otherwise the "service" substring turns an Orbital ceramic airlock
     -- into oxidized steel, or plated tower access into rust.
