@@ -301,12 +301,15 @@ local function decorateTakeoff(platform, target, index, theme, quality)
     )
     if not frame then return end
     local strokes = {}
-    local opacity = quality.Name == "Low" and 0.42 or 0.51
-    local color = theme.Accent:Lerp(theme.Secondary, 0.26)
+    -- The verified safe route is restrained cool-white across all arenas;
+    -- collapse/hazard warnings remain the more urgent amber/orange cue.
+    -- Enlarge only these TWO existing strokes, not their part count.
+    local opacity = quality.Name == "Low" and 0.34 or 0.43
+    local color = Color3.fromRGB(185, 236, 239):Lerp(theme.Accent, 0.24)
     for side = -1, 1, 2 do
         local piece = makePart(
             "ParkourTakeoffChevron" .. index .. "_" .. tostring(side),
-            Vector3.new(0.12, 0.045, 0.82),
+            Vector3.new(0.15, 0.045, 1.02),
             frame * CFrame.new(side * 0.28, 0, 0.14)
                 * CFrame.Angles(0, math.rad(side * 38), 0),
             color,
@@ -319,18 +322,19 @@ local function decorateTakeoff(platform, target, index, theme, quality)
     routeCueStates[platform] = {target = target, strokes = strokes}
 end
 
-local function syncTakeoff(platform)
+local function syncTakeoff(platform, center, variant)
     local cue = routeCueStates[platform]
     if not cue then return end
-    local target = cue.target
-    local valid = platform.Parent ~= nil
-        and target.Parent == platform.Parent
-        and platform.CanCollide and target.CanCollide
-        and platform:GetAttribute("CollapsePhase") == nil
-        and target:GetAttribute("CollapsePhase") == nil
+    -- A shrinking deck can retain collision but lose the original gap:
+    -- do not continue to advertise a now-impossible jump on Android.
+    local valid = JumpRouteCueRules.cueStillSafe(
+        platform, cue.target, center, variant
+    )
     for _, stroke in ipairs(cue.strokes) do
-        stroke.Transparency = valid
-            and stroke:GetAttribute("ChaosBaseTransparency") or 1
+        if stroke.Parent then
+            stroke.Transparency = valid
+                and stroke:GetAttribute("ChaosBaseTransparency") or 1
+        end
     end
 end
 
@@ -433,19 +437,30 @@ local function rebuild()
 
             -- A platform can enter while already Gone (streaming/late
             -- replication) or switch phase after the visuals are built.
+            local function syncRoute()
+                syncTakeoff(platform, base.Position, variant)
+            end
             local function syncCollapse()
                 PlatformFinishKit.applyCollapseVisibility(
                     visualsByPlatform[platform],
                     platform:GetAttribute("CollapsePhase")
                 )
-                syncTakeoff(platform)
+                syncRoute()
             end
             collapseConnections[platform] =
                 platform:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse)
             if target then
+                -- Size can shrink without any CollapsePhase change.
+                -- These events only refresh the two route strokes;
+                -- the larger decorative fade remains phase-triggered.
                 routeTargetConnections[platform] = {
-                    target:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse),
-                    target:GetPropertyChangedSignal("CanCollide"):Connect(syncCollapse),
+                    platform:GetPropertyChangedSignal("Size"):Connect(syncRoute),
+                    platform:GetPropertyChangedSignal("CanCollide"):Connect(syncRoute),
+                    platform:GetPropertyChangedSignal("Transparency"):Connect(syncRoute),
+                    target:GetAttributeChangedSignal("CollapsePhase"):Connect(syncRoute),
+                    target:GetPropertyChangedSignal("Size"):Connect(syncRoute),
+                    target:GetPropertyChangedSignal("CanCollide"):Connect(syncRoute),
+                    target:GetPropertyChangedSignal("Transparency"):Connect(syncRoute),
                 }
             end
             syncCollapse()
