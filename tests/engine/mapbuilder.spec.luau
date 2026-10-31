@@ -953,6 +953,21 @@ describe("Chaos Survival engine", function()
                 expect(model:FindFirstChild(signature) ~= nil).toBe(true)
                 expect(model:GetAttribute("SourceIsOriginal")).toBe(true)
                 expect(model:GetAttribute("CosmeticOnly")).toBe(true)
+                -- Two readable core door volumes must remain server owned.
+                -- Optional Medium/High 3D facade Parts are local-only and
+                -- MUST NOT multiply replication across sixteen buildings.
+                expect(model:GetAttribute("FacadeVisualVersion")).toBe(1)
+                expect(model:GetAttribute("FacadeVariantId")).toBe(id)
+                expect(model:GetAttribute("FacadeDetailPieceCount")).toBe(2)
+                expect(model:GetAttribute("FacadeOptionalLocalPartBudget")).toBe(6)
+                local serviceDoor = model:FindFirstChild("ServiceEntryDoor")
+                local serviceRecess = model:FindFirstChild("ServiceEntryRecess")
+                expect(serviceDoor ~= nil and serviceDoor:IsA("BasePart")).toBe(true)
+                expect(serviceRecess ~= nil and serviceRecess:IsA("BasePart")).toBe(true)
+                expect(model:FindFirstChild("ServiceEntryLintel")).toBe(nil)
+                expect(model:FindFirstChild("ServiceEntryCanopy")).toBe(nil)
+                expect(model:FindFirstChild("PortalHydraulicColumn-1")).toBe(nil)
+                expect(model:FindFirstChild("PortalHydraulicColumn1")).toBe(nil)
                 local pieces = 0
                 local complex = 0
                 for _, piece in ipairs(model:GetChildren()) do
