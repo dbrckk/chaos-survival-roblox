@@ -4,6 +4,8 @@ local RunService = game:GetService("RunService")
 
 local BodyMotionRules = require(ReplicatedStorage.Shared.BodyMotionRules)
 local LocomotionDynamics = require(ReplicatedStorage.Shared.LocomotionDynamics)
+local CharacterReactionRules = require(ReplicatedStorage.Shared.CharacterReactionRules)
+local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 local GroundFx = require(script.Parent.LocomotionGroundFx)
 
 local player = Players.LocalPlayer
@@ -28,6 +30,8 @@ local landingRecoveryClock = 0
 local celebrationKind = nil
 local celebrationWeight = 0
 local celebrationUntil = 0
+local lastCelebrationRound = nil
+local lastCelebrationKind = nil
 local airborne = false
 local airborneStartedAt = -math.huge
 local lastAirSampleAt = -math.huge
@@ -222,6 +226,8 @@ local function bind(nextCharacter)
     celebrationKind = nil
     celebrationWeight = 0
     celebrationUntil = 0
+    lastCelebrationRound = nil
+    lastCelebrationKind = nil
     airborne = false
     airborneStartedAt = -math.huge
     lastAirSampleAt = -math.huge
@@ -339,6 +345,13 @@ stateEvent.OnClientEvent:Connect(function(state)
     if oldPhase ~= roundPhase or newRound then
         GroundFx.clear()
         lastGroundCueAt = -math.huge
+        if newRound or roundPhase == "ready"
+            or roundPhase == "waiting" or roundPhase == "intermission" then
+            -- A previous winner must never enter the next match still
+            -- wearing the old post-result body celebration pose.
+            celebrationKind = nil
+            celebrationWeight, celebrationUntil = 0, 0
+        end
     end
 end)
 
@@ -355,13 +368,12 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 mechanicFeedbackEvent.OnClientEvent:Connect(function(payload)
-    if player:GetAttribute("ReduceMotion") == true then
+    if player:GetAttribute("ReduceMotion") == true
+        or type(payload) ~= "table" or roundPhase == "result" then
         return
     end
-    launchWeight = math.max(
-        launchWeight,
-        type(payload) == "table" and payload.overdrive == true and 1 or 0.72
-    )
+    launchWeight = math.max(launchWeight,
+        payload.overdrive == true and 1 or 0.72)
 end)
 
 hazardImpactEvent.OnClientEvent:Connect(function(payload)
@@ -369,20 +381,24 @@ hazardImpactEvent.OnClientEvent:Connect(function(payload)
         or player:GetAttribute("RoundParticipant") ~= true
         or player:GetAttribute("RoundEliminated") == true
         or player:GetAttribute("ReduceMotion") == true
-        or typeof(payload) ~= "table"
-        or not root
-        or not root.Parent
+        or type(payload) ~= "table"
+        or not root or root.Parent ~= character
     then
         return
     end
 
     local position = payload.position
-    if typeof(position) ~= "Vector3" then
+    if not CharacterReactionRules.validPosition(position) then
+        return
+    end
+    local radius = tonumber(payload.radius)
+    if radius and (radius ~= radius or math.abs(radius) == math.huge
+        or radius <= 0) then
         return
     end
 
     local proximity, side, forward = BodyMotionRules.blastResponse(
-        root.CFrame, position, payload.radius
+        root.CFrame, position, radius
     )
     if proximity > 0 then
         -- Keep the existing soft impulse envelope; new directional accents
@@ -396,7 +412,14 @@ hazardImpactEvent.OnClientEvent:Connect(function(payload)
 end)
 
 feedbackEvent.OnClientEvent:Connect(function(feedback)
-    if type(feedback) ~= "table" or player:GetAttribute("ReduceMotion") == true then
+    if player:GetAttribute("ReduceMotion") == true
+        or not ResultPresentation.acceptReceipt(
+            feedback, roundPhase, lastRoundNumber, lastRoundNumber
+        ) then
+        return
+    end
+    local receiptRound = tonumber(feedback.roundNumber)
+    if lastRoundNumber and receiptRound ~= lastRoundNumber then
         return
     end
 
@@ -405,10 +428,19 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
     local masterRound = survived
         and feedback.challengeCompleted == true
         and momentumBest >= 4
-
-    celebrationKind = masterRound and "master" or (survived and "survive" or "eliminated")
+    local kind = masterRound and "master"
+        or (survived and "survive" or "eliminated")
+    -- A personalized receipt may legitimately upgrade a pending preview
+    -- from survive to master. Identical duplicates must not restart pose.
+    if receiptRound == lastCelebrationRound
+        and kind == lastCelebrationKind then
+        return
+    end
+    lastCelebrationRound, lastCelebrationKind = receiptRound, kind
+    celebrationKind = kind
     celebrationWeight = 1
-    celebrationUntil = os.clock() + (masterRound and 1.35 or (survived and 0.95 or 0.65))
+    celebrationUntil = os.clock()
+        + (masterRound and 1.35 or (survived and 0.95 or 0.65))
 end)
 
 local function celebrationTargets(weight)
