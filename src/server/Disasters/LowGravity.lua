@@ -57,30 +57,13 @@ local function makeTideBeacon(ctx)
     beacon.Material = Enum.Material.Neon
     beacon.Color = Color3.fromRGB(120, 205, 255)
 
-    local gui = Instance.new("BillboardGui")
-    gui.Name = "GravityTideSignal"
-    gui.AlwaysOnTop = true
-    gui.Size = UDim2.fromOffset(240, 64)
-    gui.MaxDistance = 190
-    gui.StudsOffsetWorldSpace = Vector3.new(0, 3.3, 0)
-    gui.Parent = beacon
-
-    local text = Instance.new("TextLabel")
-    text.Name = "GravityTideText"
-    text.Size = UDim2.fromScale(1, 1)
-    text.Text = "GRAVITY TIDE\nFLOAT • LONGER JUMPS"
-    text.TextColor3 = Color3.fromRGB(245, 250, 255)
-    text.BackgroundColor3 = Color3.fromRGB(13, 23, 46)
-    text.BackgroundTransparency = 0.15
-    text.BorderSizePixel = 0
-    text.TextScaled = true
-    text.TextWrapped = true
-    text.Font = Enum.Font.GothamBold
-    text.Parent = gui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 9)
-    corner.Parent = text
+    -- The last real Android screenshots show this 240x64 AlwaysOnTop
+    -- English BillboardGui overlaid on the already-localized French
+    -- Moon Gravity header, hiding traversal and the mobile HUD.
+    -- Stage changes are ALREADY replicated on RoundState and presented
+    -- through the existing localized round-events client toast.
+    -- Keep the small color-changing 3D beacon/light only: no duplicate
+    -- world-space text, no second countdown or extra mobile draw calls.
 
     local light = Instance.new("PointLight")
     light.Color = beacon.Color
@@ -91,7 +74,7 @@ local function makeTideBeacon(ctx)
 
     beacon.Parent = workspace
     ctx.Cleanup[#ctx.Cleanup + 1] = beacon
-    return beacon, text, light
+    return beacon, light
 end
 
 function D.compensationForce(mass, worldGravity, targetGravity)
@@ -107,9 +90,9 @@ function D.start(ctx)
     local targetGravity = D.FloatGravity
     local worldGravity = workspace.Gravity
     local startedAt = tonumber(ctx.RoundStartedAt) or os.clock()
-    local beacon, beaconText, beaconLight
+    local beacon, beaconLight
     if tidesEnabled then
-        beacon, beaconText, beaconLight = makeTideBeacon(ctx)
+        beacon, beaconLight = makeTideBeacon(ctx)
         -- Use the existing once-per-second authoritative RoundState feed.
         -- No new remote or polling loop on mobile devices.
         local _, initialStage = D.tideAt(os.clock() - startedAt, true)
@@ -159,7 +142,6 @@ function D.start(ctx)
     end
 
     task.spawn(function()
-        local lastCue = nil
         local lastPullStage = nil
         while ctx.Active() do
             if tidesEnabled then
@@ -169,11 +151,6 @@ function D.start(ctx)
                 )
                 ctx.GravityTideStage = stage
                 if beacon and beacon.Parent then
-                    local cue = D.tideCue(stage, remaining)
-                    if cue ~= lastCue then
-                        beaconText.Text = "GRAVITY TIDE\n" .. cue
-                        lastCue = cue
-                    end
                     local pullStage = stage == "Pull" or stage == "PullRising"
                     if pullStage ~= lastPullStage then
                         beacon.Color = pullStage
