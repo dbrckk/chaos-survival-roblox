@@ -40,6 +40,7 @@ blur.Parent = Lighting
 
 local lastPhase = "waiting"
 local lastDisasters = {}
+local lastRoundNumber = nil
 local token = 0
 local tintTween = nil
 local blurTween = nil
@@ -117,15 +118,35 @@ local function playAftermath(ids)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
+    local incoming = tonumber(state.roundNumber)
+    if not incoming or incoming ~= incoming or incoming <= 0
+        or incoming == math.huge or incoming ~= math.floor(incoming) then
+        incoming = nil
+    end
+    -- A late old snapshot must not roll back post-round color treatment.
+    if incoming and lastRoundNumber and incoming < lastRoundNumber then
+        return
+    end
+    local newRound = incoming ~= nil and lastRoundNumber ~= nil
+        and incoming ~= lastRoundNumber
+    if incoming then lastRoundNumber = incoming end
 
     if phase == "round" then
-        lastDisasters = table.clone(state.disasterIds or {})
-        token += 1
-        reset(0.18)
+        -- Keep the final disaster mix current without creating two new
+        -- Tweens on EVERY per-second RoundState heartbeat.
+        lastDisasters = type(state.disasterIds) == "table"
+            and table.clone(state.disasterIds) or {}
+        if lastPhase ~= "round" or newRound then
+            token += 1
+            reset(0.18)
+        end
     elseif lastPhase == "round" and phase == "result" then
         playAftermath(lastDisasters)
-    elseif phase ~= "result" then
+    elseif phase ~= "result" and (phase ~= lastPhase or newRound) then
+        -- Do not repeatedly cancel/recreate neutral tweens throughout
+        -- an idle lobby, READY countdown or intermission.
         token += 1
         reset(0.35)
     end

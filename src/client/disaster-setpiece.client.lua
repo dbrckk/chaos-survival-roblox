@@ -11,6 +11,7 @@ local DisasterIntroMotionKit=require(script.Parent.DisasterIntroMotionKit)
 local player=Players.LocalPlayer
 local stateEvent=ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local previousPhase="waiting"
+local lastRoundNumber=nil
 local token=0
 local glyphFolder=Instance.new("Folder")
 glyphFolder.Name="DisasterIntroGlyphLocal"
@@ -51,7 +52,7 @@ end
 -- Existing per-hazard physical intro is enhanced by a distinct geometric
 -- emblem for each of the eleven disasters, never a shared generic ring.
 local function revealGlyphs(base, ids, current)
-    if token~=current or not base.Parent then return end
+    if token~=current or not base.Parent or arenaBase()~=base then return end
     local tier=VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced=player:GetAttribute("ReduceMotion")==true
     local duration=reduced and 0.33 or 0.80
@@ -69,7 +70,7 @@ local function revealGlyphs(base, ids, current)
 end
 
 local function playProfile(profile,base,index,total,current)
-    if token~=current or not base.Parent then return end
+    if token~=current or not base.Parent or arenaBase()~=base then return end
     local tier=VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced=player:GetAttribute("ReduceMotion")==true
     local centerFrame=base.CFrame*CFrame.new(0,base.Size.Y*0.5+0.14,0)
@@ -137,8 +138,9 @@ local function startIntro(state, current, retry)
         end
         return
     end
-    revealGlyphs(base,state.disasterIds,current)
-    local profiles=DisasterSetpiece.forIds(state.disasterIds)
+    local ids=type(state.disasterIds)=="table" and state.disasterIds or {}
+    revealGlyphs(base,ids,current)
+    local profiles=DisasterSetpiece.forIds(ids)
     for i,p in ipairs(profiles) do
         task.delay((i-1)*0.11,function()
             playProfile(p,base,i,#profiles,current)
@@ -147,13 +149,28 @@ local function startIntro(state, current, retry)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state)~="table" then return end
     local phase=tostring(state.phase or "waiting")
-    if phase=="round" and previousPhase~="round" then
+    local incoming=tonumber(state.roundNumber)
+    if not incoming or incoming~=incoming or incoming<=0
+        or incoming==math.huge or incoming~=math.floor(incoming) then
+        incoming=nil
+    end
+    if incoming and lastRoundNumber and incoming<lastRoundNumber then
+        return
+    end
+    local newRound=incoming~=nil and lastRoundNumber~=nil
+        and incoming~=lastRoundNumber
+    if incoming then lastRoundNumber=incoming end
+
+    if phase=="round" and (previousPhase~="round" or newRound) then
         token+=1
         glyphFolder:ClearAllChildren()
         motionFolder:ClearAllChildren()
         startIntro(state,token,true)
-    elseif phase~="round" then
+    elseif phase~="round" and phase~=previousPhase then
+        -- Repeated lobby/READY/result snapshots do not need to clear
+        -- empty folders or invalidate delayed tasks every second.
         token+=1
         glyphFolder:ClearAllChildren()
         motionFolder:ClearAllChildren()
@@ -163,6 +180,9 @@ end)
 
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     if player:GetAttribute("ReduceMotion")==true then
+        -- Invalidate a queued Double Chaos flourish as well as already
+        -- emitted pieces: clearing alone does not cancel task.delay.
+        token+=1
         glyphFolder:ClearAllChildren()
         motionFolder:ClearAllChildren()
     end
