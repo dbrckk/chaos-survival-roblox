@@ -24,6 +24,14 @@ local function quality()
     return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
 end
 
+-- CrackedLava is a native Roblox surface with actual fissure relief;
+-- keep its color/transparency consistent through quality switches.
+-- No custom texture, extra mesh, emitter, or additional render pass.
+local function lavaSurfaceAlpha(tierName, reduced, pulse)
+    local base = tierName == "Low" and 0.23 or 0.13
+    return base + (reduced and 0 or math.clamp(pulse, 0, 1) * 0.08)
+end
+
 local function localPart(name, size, color, material, className)
     local p = Instance.new(className or "Part")
     p.Name = name
@@ -60,7 +68,7 @@ local function bindLava(lava)
         if lavaState.embers.Rate ~= rate then lavaState.embers.Rate = rate end
         lavaState.light.Range = 20 + 8 * tier.Scale
         lavaState.light.Brightness = 1.25 * tier.Scale
-        lavaState.surface.Transparency = tier.Name == "Low" and 0.38 or 0.24
+        lavaState.surface.Transparency = lavaSurfaceAlpha(tier.Name, reduced, 0.5)
         return
     end
 
@@ -70,13 +78,13 @@ local function bindLava(lava)
     local surface = localPart(
         "LavaSurfaceLocal",
         Vector3.new(math.max(1, lava.Size.X - 1.2), 0.12, math.max(1, lava.Size.Z - 1.2)),
-        Color3.fromRGB(255, 145, 35),
-        Enum.Material.Neon
+        Color3.fromRGB(235, 104, 40),
+        Enum.Material.CrackedLava
     )
     -- Place the overlay immediately: the dormant renderer may be sleeping
     -- when a new lava part replicates, and must never show a piece at (0,0,0).
     surface.CFrame = lava.CFrame * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
-    surface.Transparency = tier.Name == "Low" and 0.38 or 0.24
+    surface.Transparency = lavaSurfaceAlpha(tier.Name, reduced, 0.5)
     table.insert(instances, surface)
 
     local attachment = Instance.new("Attachment")
@@ -91,11 +99,13 @@ local function bindLava(lava)
     embers.Speed = NumberRange.new(2.5, 6.5)
     embers.Acceleration = Vector3.new(0, 4.5, 0)
     embers.SpreadAngle = Vector2.new(180, 180)
-    embers.LightEmission = 1
+    -- Hot sparks cool into dark cinders; the separate surface light
+    -- remains the only broad source of lava illumination.
+    embers.LightEmission = 0.68
     embers.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 225, 85)),
         ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 105, 25)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(135, 25, 10)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(79, 36, 28)),
     })
     embers.Size = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.22),
@@ -400,13 +410,15 @@ ensureRenderLoop = function()
             )
             surface.CFrame = lava.CFrame
                 * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
+            -- Animate heat tint slightly, not the full-area emissive
+            -- brightness: the true lava Part remains the server hazard.
             surface.Color = Color3.fromRGB(
-                255,
-                128 + math.floor(pulse * 40),
-                25
+                235,
+                92 + math.floor(pulse * 32),
+                40
             )
-            surface.Transparency = (tier.Name == "Low" and 0.33 or 0.22)
-                + pulse * (reduceMotion and 0 or 0.13)
+            surface.Transparency = lavaSurfaceAlpha(
+                tier.Name, reduceMotion, pulse)
         end
         if lavaState.embers and lavaState.embers.Parent then
             local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduceMotion)
