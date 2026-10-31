@@ -6,6 +6,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
+local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 
 local player = Players.LocalPlayer
 
@@ -261,7 +262,7 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
     -- cosmetic owner changes a transparency or Enabled property.
     if visible and wasVisible == true and not wasDirty
         and previousTier == profile.Name then
-        return
+        return visible
     end
 
     for _, descendant in ipairs(cache.entries) do
@@ -322,6 +323,7 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
             end
         end
     end
+    return visible
 end
 
 local function currentOrigins()
@@ -411,18 +413,30 @@ task.spawn(function()
                 profile, scenery:GetPivot().Position, cameraPoint)
         end
         local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
+        local localFacadeParts = 0
         if district and district:IsA("Folder") then
             for _, structure in ipairs(district:GetChildren()) do
                 if structure:IsA("Model")
                     and structure:GetAttribute("CosmeticOnly") == true
                     and structure:GetAttribute("SourceIsOriginal") == true then
-                    -- A geometric pivot is stable for an anchored model.
-                    -- Individual culling preserves nearby landmarks even
-                    -- when the camera moves into a far corner of the map.
-                    applyFolder(structure, DISTRICT_ARCHITECTURE_LOD,
-                        profile, structure:GetPivot().Position, cameraPoint)
+                    -- Both LOD and facade kit use the same real model
+                    -- location and the exact same scheduled camera snapshot.
+                    -- Core 3D silhouette remains server-owned; four/six
+                    -- optional local details are created only near-camera.
+                    local origin = structure:GetPivot().Position
+                    local visible = applyFolder(
+                        structure, DISTRICT_ARCHITECTURE_LOD,
+                        profile, origin, cameraPoint)
+                    localFacadeParts += DistrictFacadeDetailKit.sync(
+                        structure, profile.Name, visible,
+                        (cameraPoint - origin).Magnitude)
                 end
             end
+        end
+        -- The counter measures LOCAL instances, not server replication,
+        -- GPU time or device FPS. Keep it stable on unchanged LOD passes.
+        if player:GetAttribute("LocalFacadeDetailCount") ~= localFacadeParts then
+            player:SetAttribute("LocalFacadeDetailCount", localFacadeParts)
         end
         -- Four original corner skyline models are separate from the
         -- exactly sixteen district buildings. Cull each by its own pivot,
