@@ -6,6 +6,7 @@ local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local Layout = require(ReplicatedStorage.Shared.DisasterAtmosphereLayout)
+local VisualBudgetPressureRules = require(ReplicatedStorage.Shared.VisualBudgetPressureRules)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
@@ -340,6 +341,8 @@ local function refreshRates()
             local rate = enabled
                 and baseRate * tier.ParticleScale
                     * Layout.particleMultiplier(#disasterIds, finalRush)
+                    * VisualBudgetPressureRules.emissionScale(
+                        player:GetAttribute("OptionalVfxPressure"))
                     * (reduced and 0.35 or 1)
                 or 0
             -- RoundState can be rebroadcast without a quality/intensity
@@ -481,6 +484,7 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshRates)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(refreshRates)
 
 stateEvent.OnClientEvent:Connect(function(state)
     -- Do not clear a valid arena ambience because a late or malformed
