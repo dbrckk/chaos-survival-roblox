@@ -70,7 +70,14 @@ describe("Disaster visual identities", function()
         local decor = Instance.new("Folder")
         decor.Parent = root
 
-        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        local expectedBraces = {
+            Classic = Enum.Material.DiamondPlate,
+            Towers = Enum.Material.CorrodedMetal,
+            Crossroads = Enum.Material.Concrete,
+            Orbital = Enum.Material.Metal,
+            Harbor = Enum.Material.WoodPlanks,
+        }
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}) do
             local theme = require("../../src/shared/VisualTheme").arena(variant)
             for _, tier in ipairs({"Low", "Medium", "High"}) do
                 local braces = PlatformFinishKit.buildLoadBraces(
@@ -86,7 +93,7 @@ describe("Disaster visual identities", function()
                     expect(brace.CanTouch).toBe(false)
                     expect(brace.CanQuery).toBe(false)
                     expect(brace.CastShadow).toBe(false)
-                    expect(brace.Material).toBe(Enum.Material.Metal)
+                    expect(brace.Material).toBe(expectedBraces[variant])
                     expect(platform.CFrame:PointToObjectSpace(brace.Position).Y
                         < -platform.Size.Y * 0.5).toBe(true)
                     local weld = brace:FindFirstChildOfClass("WeldConstraint")
@@ -133,9 +140,12 @@ describe("Disaster visual identities", function()
         folder.Parent = workspace
 
         for _, tier in ipairs({"Low", "Medium", "High"}) do
-            local parts = PlatformFinishKit.buildSideRails(folder, platform, tier, theme)
+            local parts = PlatformFinishKit.buildSideRails(
+                folder, platform, tier, theme, "Towers"
+            )
             expect(#parts).toBe(PlatformFinishKit.sideRailCount(tier))
             for _, rail in ipairs(parts) do
+                expect(rail.Material).toBe(Enum.Material.CorrodedMetal)
                 expect(rail.CanCollide).toBe(false)
                 expect(rail.CanTouch).toBe(false)
                 expect(rail.CanQuery).toBe(false)
@@ -828,6 +838,8 @@ describe("Surface-specific meteor and bomb cosmetic microdebris", function()
         local cases = {
             {Enum.Material.Metal, "Metal", Enum.Material.Metal},
             {Enum.Material.DiamondPlate, "Metal", Enum.Material.Metal},
+            {Enum.Material.Wood, "Timber", Enum.Material.WoodPlanks},
+            {Enum.Material.WoodPlanks, "Timber", Enum.Material.WoodPlanks},
             {Enum.Material.Concrete, "Stone", Enum.Material.Slate},
             {Enum.Material.Rock, "Stone", Enum.Material.Slate},
             {Enum.Material.Ice, "Ice", Enum.Material.Ice},
@@ -850,7 +862,7 @@ describe("Surface-specific meteor and bomb cosmetic microdebris", function()
             expect(rules.palette(c[1], surface, hot, "Bomb", "Low", false).Count).toBe(0)
             expect(rules.palette(c[1], surface, hot, "Bomb", "High", true).Count).toBe(0)
         end
-        expect(rules.family(Enum.Material.Wood)).toBe("Stone")
+        expect(rules.family(Enum.Material.Wood)).toBe("Timber")
     end)
 
     it("scales material fragments down as players move away or storms intensify", function()

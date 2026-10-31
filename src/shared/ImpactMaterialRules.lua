@@ -7,6 +7,10 @@ local METALS = {
     [Enum.Material.DiamondPlate] = true,
     [Enum.Material.CorrodedMetal] = true,
 }
+local TIMBER = {
+    [Enum.Material.Wood] = true,
+    [Enum.Material.WoodPlanks] = true,
+}
 local STONE = {
     [Enum.Material.Concrete] = true,
     [Enum.Material.Slate] = true,
@@ -30,6 +34,7 @@ local COLD = {
 
 function ImpactMaterialRules.family(material)
     if METALS[material] then return "Metal" end
+    if TIMBER[material] then return "Timber" end
     if STONE[material] then return "Stone" end
     if SOFT[material] then return "Dust" end
     if COLD[material] then return "Ice" end
@@ -54,6 +59,13 @@ function ImpactMaterialRules.palette(material, surfaceColor, eventColor, kind, t
         chipColor = ground:Lerp(Color3.fromRGB(74, 83, 95), 0.58)
         dust = ground:Lerp(Color3.fromRGB(135, 145, 155), 0.56)
         motion = 1.0
+    elseif family == "Timber" then
+        -- Broken pier planks shed wood, never slate/stone. Match the
+        -- existing Harbor scar family without adding debris instances.
+        chipMaterial = Enum.Material.WoodPlanks
+        chipColor = ground:Lerp(Color3.fromRGB(95, 69, 46), 0.54)
+        dust = ground:Lerp(Color3.fromRGB(106, 84, 63), 0.42)
+        motion = 0.72
     elseif family == "Ice" then
         chipMaterial = Enum.Material.Ice
         chipColor = ground:Lerp(Color3.fromRGB(194, 232, 244), 0.72)
