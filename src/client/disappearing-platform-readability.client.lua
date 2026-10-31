@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local Debris = game:GetService("Debris")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PlatformVisualRules = require(ReplicatedStorage.Shared.DisappearingPlatformVisualRules)
@@ -17,7 +18,11 @@ local clock = 0
 local lastCollapseWarningCueAt = -math.huge
 
 local function profile()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    -- A fresh Android client should use Medium until adaptive quality
+    -- publishes its first tier, never silently allocate desktop High.
+    return VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    )
 end
 
 local function clearState(part)
@@ -70,6 +75,8 @@ local function ensureState(part)
         east = east,
         crossA = crossA,
         crossB = crossB,
+        phase = nil,
+        goneAt = nil,
     }
     tracked[part] = state
     return state
@@ -86,6 +93,15 @@ local function layout(part, state, phase, now)
         or (math.sin(now * (phase == "Gone" and 4.2 or 7.2)) + 1) * 0.5
     local baseAlpha = phase == "Gone" and 0.62 or (low and 0.48 or 0.28)
     local alpha = math.clamp(baseAlpha + pulse * (phase == "Gone" and 0.18 or 0.24), 0, 0.9)
+    if phase == "Gone" then
+        -- Collision has already been removed by the server. Keep a brief
+        -- receding outline to communicate the *loss* of the deck, then
+        -- reveal empty air. A permanent amber rectangle on a nonexistent
+        -- platform looked like another safe ledge.
+        local age = math.max(0, os.clock() - (state.goneAt or os.clock()))
+        local fade = math.clamp(age / 0.42, 0, 1)
+        alpha = alpha + (1 - alpha) * fade
+    end
 
     state.north.Size = Vector3.new(part.Size.X + 0.35, 0.06, thickness)
     state.south.Size = state.north.Size
@@ -163,7 +179,12 @@ local function refreshPart(part)
     end
     local firstVisibleWarning = tracked[part] == nil
         and part:GetAttribute("CollapsePhase") == "Warning"
-    ensureState(part)
+    local state = ensureState(part)
+    local phase = part:GetAttribute("CollapsePhase")
+    if state.phase ~= phase then
+        state.phase = phase
+        state.goneAt = phase == "Gone" and os.clock() or nil
+    end
     if firstVisibleWarning and player:GetAttribute("AudioMuted") ~= true then
         local camera = workspace.CurrentCamera
         local rig = player.Character
@@ -327,6 +348,13 @@ ensureRenderLoop = function()
 
             for part, state in pairs(tracked) do
                 if not PlatformVisualRules.shouldDisplay(part, activePlatforms) then
+                    clearState(part)
+                elseif state.phase == "Gone" and state.goneAt
+                    and os.clock() - state.goneAt >= 0.42 then
+                    -- Remove six temporary pieces once the deck is truly
+                    -- gone. The phase listener stays bound for the next
+                    -- Warning/restore, so there are no orphaned contours
+                    -- or permanent per-frame draws in an empty gap.
                     clearState(part)
                 else
                     layout(part, state, part:GetAttribute("CollapsePhase"), clock)
