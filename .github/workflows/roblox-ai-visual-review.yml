@@ -4,6 +4,18 @@ name: Roblox AI Visual Review (15 Real Studio Frames)
 # supply true Roblox scene PNGs. A github-hosted ephemeral runner cannot.
 on:
   workflow_dispatch:
+    inputs:
+      arena:
+        description: "Choose a real Studio arena for 15 bot-view images"
+        required: true
+        type: choice
+        default: Harbor
+        options:
+          - Classic
+          - Towers
+          - Crossroads
+          - Orbital
+          - Harbor
   push:
     branches: [main]
     paths:
@@ -90,13 +102,20 @@ jobs:
             "utc=$([DateTime]::UtcNow.ToString('o'))"
           ) | Set-Content build/visual-ai-captures/provenance.txt -Encoding utf8
 
-      - name: Play solo round from AI bot view and capture real PNGs
+      - name: Play actual selected arena from real AI bot viewpoints
         shell: pwsh
+        env:
+          CHAOS_ARENA: ${{ inputs.arena || 'Harbor' }}
         run: |
           $ErrorActionPreference = "Stop"
+          $arena = $env:CHAOS_ARENA
+          if (@("Classic", "Towers", "Crossroads", "Orbital", "Harbor") -cnotcontains $arena) {
+            throw "Unsupported authenticated Studio visual test arena"
+          }
           $place = (Resolve-Path build/ChaosSurvival.rbxlx).Path
-          $script = (Resolve-Path studio/visual-ai-runner.luau).Path
-          & ./studio/capture-ai-visual-review.ps1 -StudioExe "$env:STUDIO_EXE" -PlaceFile "$place" -RunScriptFile "$script" -OutputDirectory "build/visual-ai-captures" -Count 15 -IntervalSeconds 3
+          $script = Join-Path build/visual-ai-captures visual-ai-runner-selected.luau
+          & ./studio/prepare-visual-ai-arena.ps1 -Arena $arena -OutputPath $script
+          & ./studio/capture-ai-visual-review.ps1 -StudioExe "$env:STUDIO_EXE" -PlaceFile "$place" -RunScriptFile "$script" -OutputDirectory "build/visual-ai-captures" -Count 15 -IntervalSeconds 3 -ExpectedArena $arena
           if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "Screenshot collector failed." }
 
       - name: Install Python for reproducible image audit
@@ -110,7 +129,8 @@ jobs:
           $ErrorActionPreference = "Stop"
           python -m pip install --disable-pip-version-check "Pillow==11.2.1"
           if ($LASTEXITCODE -ne 0) { throw "Pillow install failed." }
-          python studio/analyze-visual-ai.py build/visual-ai-captures
+          $arena = "${{ inputs.arena || 'Harbor' }}"
+          python studio/analyze-visual-ai.py build/visual-ai-captures $arena
           if ($LASTEXITCODE -ne 0) { throw "Real-frame audit failed." }
           $report = "build/visual-ai-captures/visual-ai-audit.md"
           Get-Content $report | Out-File -Append -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8
