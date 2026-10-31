@@ -64,7 +64,12 @@ local function add(model, origin, name, kind, size, localFrame,
     piece.CastShadow = false
     piece:SetAttribute("LocalFacadeDetail", true)
     piece:SetAttribute("SceneryMinimumTier", requiredTier)
-    if material == Enum.Material.Concrete or material == Enum.Material.WoodPlanks then
+    if material == Enum.Material.Concrete or material == Enum.Material.WoodPlanks
+        -- 0.42-stud hydraulic rods and 0.56-stud conduits do not merit
+        -- expensive 2K maps. Keep PBR eligibility for large doors and
+        -- meaningful structural volumes, preserving their native finish.
+        or name:find("PortalHydraulicColumn", 1, true)
+        or name:find("AerialCableConduit", 1, true) then
         piece:SetAttribute("PreserveNativeMaterial", true)
     end
     piece.Parent = model
