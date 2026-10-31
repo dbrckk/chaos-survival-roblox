@@ -190,12 +190,14 @@ local function bindFreeze(warning, snapshot)
                 segment.Transparency = reduced and 0.66 or style.Transparency
             end
             local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
+            local emittedBefore = current.mist.Rate > 0
             if current.mist.Rate ~= rate then current.mist.Rate = rate end
-            if reduced then
-                -- Rate = 0 stops future emissions, but particles from the
-                -- previous setting remain visible without an explicit clear.
+            if reduced and emittedBefore then
+                -- Zero emission does not retire already alive mist particles.
+                -- Clear on the real transition, not on repeated tier updates.
                 current.mist:Clear()
             end
+            current.staticPose = nil
             return
         end
     end
@@ -281,6 +283,7 @@ local function bindFreeze(warning, snapshot)
         startedAt = snapshot.StartedAt,
         duration = snapshot.Duration,
         mist = mist,
+        staticPose = nil,
     }
 
     if ensureRenderLoop then
@@ -403,22 +406,25 @@ ensureRenderLoop = function()
         if surface and surface.Parent then
             local pulse = reduceMotion and 0.5
                 or (math.sin(clock * 2.8) + 1) * 0.5
-            surface.Size = Vector3.new(
+            local nextSize = Vector3.new(
                 math.max(1, lava.Size.X - 1.2),
                 0.12,
                 math.max(1, lava.Size.Z - 1.2)
             )
-            surface.CFrame = lava.CFrame
+            local nextFrame = lava.CFrame
                 * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
-            -- Animate heat tint slightly, not the full-area emissive
-            -- brightness: the true lava Part remains the server hazard.
-            surface.Color = Color3.fromRGB(
-                235,
-                92 + math.floor(pulse * 32),
-                40
+            -- The server can raise lava during ReduceMotion. Retain
+            -- positional tracking but skip identical GPU property writes.
+            if surface.Size ~= nextSize then surface.Size = nextSize end
+            if surface.CFrame ~= nextFrame then surface.CFrame = nextFrame end
+            local nextColor = Color3.fromRGB(
+                235, 92 + math.floor(pulse * 32), 40
             )
-            surface.Transparency = lavaSurfaceAlpha(
-                tier.Name, reduceMotion, pulse)
+            if surface.Color ~= nextColor then surface.Color = nextColor end
+            local nextAlpha = lavaSurfaceAlpha(tier.Name, reduceMotion, pulse)
+            if surface.Transparency ~= nextAlpha then
+                surface.Transparency = nextAlpha
+            end
         end
         if lavaState.embers and lavaState.embers.Parent then
             local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduceMotion)
@@ -427,16 +433,30 @@ ensureRenderLoop = function()
             end
         end
         if lavaState.light and lavaState.light.Parent then
-            lavaState.light.Brightness = (
+            local brightness = (
                 1.0 + math.sin(clock * 3.1)
                     * (reduceMotion and 0 or 0.22)
             ) * tier.Scale
+            if lavaState.light.Brightness ~= brightness then
+                lavaState.light.Brightness = brightness
+            end
         end
     end
 
+    local serverNow = workspace:GetServerTimeNow()
     for warning, state in pairs(freezeStates) do
         if not warning.Parent then
             clearFreeze(warning)
+            continue
+        end
+
+        -- Server warning timing owns the cosmetic deadline. After the
+        -- actual impact, do not continue drawing static ice for a lingering
+        -- replicated warning Part. Keep metadata listeners available if
+        -- that same Part is ever re-armed by the server.
+        if serverNow >= state.startedAt + state.duration then
+            clearFreeze(warning)
+            if warning.Parent == workspace then tryBindFreeze(warning) end
             continue
         end
 
@@ -445,22 +465,48 @@ ensureRenderLoop = function()
             tryBindFreeze(warning)
             continue
         end
-        local elapsed = workspace:GetServerTimeNow() - state.startedAt
-        local alpha = math.clamp(elapsed / state.duration, 0, 1)
         local count = #state.segments
-        local frame = HazardWarningSignatureRules.frame(warning.Position, state.deck)
-        for i, segment in ipairs(state.segments) do
-            if segment.Parent then
-                local design = HazardWarningSignatureRules.recipe(
-                    "Freeze", i, count, state.diameter,
-                    reduceMotion and 0 or alpha
-                )
-                segment.CFrame = frame * CFrame.new(design.Offset)
-                    * design.Rotation
-                segment.Size = design.Size
-                segment.Transparency = reduceMotion and 0.66
-                    or design.Transparency
+        local position = warning.Position
+        local previous = state.staticPose
+        -- Under ReduceMotion the final ice footprint is static. Only
+        -- recompute it if the warning moved, its tier/size changed, or
+        -- a fragment was lost (reusableFreeze validated the children).
+        local reusePose = reduceMotion and previous
+            and previous.position == position
+            and previous.diameter == state.diameter
+            and previous.tier == tier.Name
+            and previous.count == count
+        if not reusePose then
+            local alpha = math.clamp(
+                (serverNow - state.startedAt) / state.duration, 0, 1)
+            local frame = HazardWarningSignatureRules.frame(position, state.deck)
+            for i, segment in ipairs(state.segments) do
+                if segment.Parent then
+                    local design = HazardWarningSignatureRules.recipe(
+                        "Freeze", i, count, state.diameter,
+                        reduceMotion and 0 or alpha
+                    )
+                    local transform = frame * CFrame.new(design.Offset)
+                        * design.Rotation
+                    if segment.CFrame ~= transform then
+                        segment.CFrame = transform
+                    end
+                    if segment.Size ~= design.Size then
+                        segment.Size = design.Size
+                    end
+                    local transparency = reduceMotion and 0.66
+                        or design.Transparency
+                    if segment.Transparency ~= transparency then
+                        segment.Transparency = transparency
+                    end
+                end
             end
+            state.staticPose = reduceMotion and {
+                position = position,
+                diameter = state.diameter,
+                tier = tier.Name,
+                count = count,
+            } or nil
         end
 
         if state.mist and state.mist.Parent then
