@@ -9,6 +9,7 @@ local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local WarningRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 local HarborSweepGuidance = require(ReplicatedStorage.Shared.HarborSweepGuidance)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -36,6 +37,25 @@ cue.BorderSizePixel = 0
 cue.Visible = false
 cue.Parent = cueGui
 UITheme.addCorner(cue, UITheme.Corners.Pill)
+
+-- The client's real danger instruction must preempt optional cash/route
+-- toasts *as soon as the warning is selected*, not 250 ms later when
+-- the district compass polls the other ScreenGui. Reuse the existing
+-- one-notification lane; the phase timer and touch controls are separate.
+-- Rank 85 outranks escalation (70), rewards (10), near miss (30), while
+-- the round-introduction (100) retains its initial presentation priority.
+local hazardNoticeClaimed = false
+local function showUrgentCue(visible)
+    cue.Visible = visible
+    if not UserInputService.TouchEnabled then return end
+    if visible then
+        hazardNoticeClaimed = MobileHudNotices.claim("imminent-hazard", 85)
+    elseif hazardNoticeClaimed then
+        MobileHudNotices.release("imminent-hazard")
+        hazardNoticeClaimed = false
+    end
+end
+
 local cueStroke = UITheme.addStroke(cue, UITheme.Colors.Red, 2, 0.12)
 
 local cueBadge = Instance.new("TextLabel")
@@ -456,7 +476,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     finalRush = state.finalRush == true
 
     if currentPhase ~= "round" then
-        cue.Visible = false
+        showUrgentCue(false)
         offscreenArrow.Visible = false
         hideAllStates()
     elseif ensureRenderLoop then
@@ -474,7 +494,7 @@ ensureRenderLoop = function()
         while true do
             if currentPhase ~= "round"
                 or (next(warningStates) == nil and not harborWaveActive()) then
-                cue.Visible = false
+                showUrgentCue(false)
                 offscreenArrow.Visible = false
                 hideAllStates()
                 task.wait(0.18)
@@ -490,7 +510,7 @@ ensureRenderLoop = function()
             -- over the result screen or the next arena's onboarding.
             if currentPhase ~= "round"
                 or (next(warningStates) == nil and not harborWaveActive()) then
-                cue.Visible = false
+                showUrgentCue(false)
                 offscreenArrow.Visible = false
                 hideAllStates()
                 continue
@@ -499,7 +519,7 @@ ensureRenderLoop = function()
             if player:GetAttribute("RoundParticipant") ~= true
                 or player:GetAttribute("RoundEliminated") == true
             then
-                cue.Visible = false
+                showUrgentCue(false)
                 offscreenArrow.Visible = false
                 hideAllStates()
                 continue
@@ -507,7 +527,7 @@ ensureRenderLoop = function()
 
             local root = rootPart()
             if not root then
-                cue.Visible = false
+                showUrgentCue(false)
                 offscreenArrow.Visible = false
                 hideAllStates()
                 continue
@@ -592,7 +612,7 @@ ensureRenderLoop = function()
             local showCue = cueMode == "escape"
             local showShock = cueMode == "shock"
             local showHarbor = cueMode == "harbor"
-            cue.Visible = cueMode ~= nil
+            showUrgentCue(cueMode ~= nil)
             if showHarbor then
                 drawHarborExit(harborGuide, root, tier, now)
             else

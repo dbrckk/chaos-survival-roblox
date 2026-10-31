@@ -305,7 +305,11 @@ end
 -- one still-relevant escalation notification.
 if touchDevice then
     MobileHudNotices.Changed:Connect(function(owner)
-        if owner == "intro" and card.Visible then
+        if owner ~= nil and owner ~= "escalation" and card.Visible then
+            -- A real lethal warning or the round introduction can take
+            -- over the mobile foreground lane immediately. Stop the
+            -- old escalation's fades/timer so its panel cannot remain
+            -- visible behind the urgent instruction.
             clearRoundToast()
         elseif owner == nil and pendingEvent ~= nil then
             local entry = pendingEvent
