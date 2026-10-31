@@ -295,6 +295,9 @@ local function makeSector(base, theme, index, tier, variant)
         end
     end
 
+    local weathered = dark:Lerp(theme.Detail, 0.23)
+    local brushed = alloy:Lerp(Color3.fromRGB(165, 178, 193), 0.14)
+
     -- A single variant-specific architecture vocabulary across the FOUR
     -- near-playable districts. Two structural volumes on Medium and three
     -- on High: no change to the exact five-Part Android Low silhouettes.
@@ -396,8 +399,6 @@ local function makeSector(base, theme, index, tier, variant)
     -- Profiled edge armour, real rivet bosses and procedural stamped
     -- markings provide depth/texture from multiple camera angles. These
     -- additions are purely client decoration: no collision or replication.
-    local weathered = dark:Lerp(theme.Detail, 0.23)
-    local brushed = alloy:Lerp(Color3.fromRGB(165, 178, 193), 0.14)
     for side = -1, 1, 2 do
         make("ChamferedBaseArmour" .. side, Vector3.new(1.8, 3.6, 3.5),
             CFrame.new(side * 5.6, 2.2, -2.1)
