@@ -165,15 +165,51 @@ try {
     }
     Start-Sleep -Seconds 3
     $collector = Join-Path $Workspace "studio\capture-ai-visual-review.ps1"
+    $prepareRunner = Join-Path $Workspace "studio\prepare-visual-ai-arena.ps1"
     $place = Join-Path $Workspace "build\ChaosSurvival.rbxlx"
-    $test = Join-Path $Workspace "studio\visual-ai-runner.luau"
-    Write-Stage "CAPTURING_REAL_GAMEPLAY_PNGS"
-    & $collector -StudioExe $StudioExe -PlaceFile $place -RunScriptFile $test -OutputDirectory $output -Count 15 -IntervalSeconds 3
-    $images = @(Get-ChildItem -LiteralPath $output -Filter "ai-frame-*.png" -ErrorAction SilentlyContinue)
-    if ($images.Count -ne 15) {
-        throw "INCOMPLETE_CAPTURE: expected 15 PNGs, found $($images.Count)"
+    $scopeFile = Join-Path $Workspace "build\visual-ai-audit-scope.txt"
+    # Manually started older runners without a scope file keep Harbor only.
+    $scope = if (Test-Path -LiteralPath $scopeFile) {
+        (Get-Content -LiteralPath $scopeFile -Raw).Trim()
     }
-    "PASS" | Set-Content -LiteralPath $passedFile -Encoding utf8
+    else { "Harbor" }
+    $allArenas = @("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+    if ($scope -eq "All") {
+        $targets = $allArenas
+    }
+    elseif ($allArenas -ccontains $scope) {
+        $targets = @($scope)
+    }
+    else {
+        throw "INVALID_VISUAL_SCOPE: refusing unknown untrusted arena choice"
+    }
+
+    # All five maps reuse the same one-time authenticated Roblox Studio
+    # desktop. Each map gets its own CLI runner, 15 real PNGs, and manifest.
+    for ($index = 0; $index -lt $targets.Count; $index++) {
+        $arena = $targets[$index]
+        $arenaDir = Join-Path $output $arena
+        $test = Join-Path $arenaDir "visual-ai-runner-selected.luau"
+        & $prepareRunner -Arena $arena -OutputPath $test
+        if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
+            throw "RUNNER_PREPARATION_FAILED: $arena"
+        }
+        Write-Stage ("CAPTURING_" + $arena.ToUpperInvariant() +
+            "_" + ($index + 1) + "_OF_" + $targets.Count)
+        & $collector -StudioExe $StudioExe -PlaceFile $place -RunScriptFile $test `
+            -OutputDirectory $arenaDir -ExpectedArena $arena `
+            -Count 15 -IntervalSeconds 3
+        if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
+            throw "ARENA_COLLECTOR_FAILED: $arena"
+        }
+        $images = @(Get-ChildItem -LiteralPath $arenaDir -Filter "ai-frame-*.png" -ErrorAction SilentlyContinue)
+        if ($images.Count -ne 15) {
+            throw "INCOMPLETE_CAPTURE: $arena has $($images.Count) / 15 verified PNGs"
+        }
+    }
+    # Write PASS only after ALL requested maps have independently passed
+    # engine checks and actual PNG-count checks. Never partial success.
+    "PASS" | Set-Content -LiteralPath $passedFile -Encoding ascii
     Write-Stage "CAPTURE_COMPLETE"
 }
 catch {
