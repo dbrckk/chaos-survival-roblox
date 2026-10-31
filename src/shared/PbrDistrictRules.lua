@@ -167,6 +167,29 @@ function PbrDistrictRules.eligibleOwner(owner)
         or owner:GetAttribute("ChaosPerimeterStation") == true
 end
 
+-- The sixteen original service doors are intentionally 0.18 studs deep:
+-- the general 0.35-stud minimum excluded ALL of them even though the
+-- PBR material selector explicitly maps and prioritizes their surfaces.
+-- Allow only these canonical server-authored noninteractive facade Parts,
+-- never arbitrary thin client props, UI panels or imported meshes.
+local function canonicalServiceDoor(part, owner)
+    if not part:IsA("Part") or part.Name ~= "ServiceEntryDoor"
+        or not owner or not owner:IsA("Model")
+        or owner:GetAttribute("ArenaDistrictArchitecture") ~= true
+        or owner:GetAttribute("SourceIsOriginal") ~= true
+        or owner:GetAttribute("CosmeticOnly") ~= true then
+        return false
+    end
+    local index = owner:GetAttribute("DistrictIndex")
+    local parent = owner.Parent
+    return type(index) == "number"
+        and index % 1 == 0 and index >= 1 and index <= 16
+        and parent ~= nil and parent:IsA("Folder")
+        and parent.Name == "ArenaDistrictArchitecture3D"
+        and part.Size.X >= 4 and part.Size.Y >= 4
+        and part.Size.Z >= 0.15 and part.Size.Z <= 0.30
+end
+
 function PbrDistrictRules.eligiblePart(part, ownedVariant)
     if not part or not part:IsA("BasePart")
         or not part.Anchored or part.CanCollide or part.CanTouch
@@ -202,7 +225,10 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
     end
     local smallest = math.min(part.Size.X, part.Size.Y, part.Size.Z)
     local longest = math.max(part.Size.X, part.Size.Y, part.Size.Z)
-    return longest >= 3 and smallest >= 0.35
+    -- Keep the regular >=0.35-stud minimum for every other Part. The
+    -- approved authored entrance is the sole thin-surface exception.
+    return longest >= 3
+        and (smallest >= 0.35 or canonicalServiceDoor(part, owner))
 end
 
 function PbrDistrictRules.materialKey(partName, material)
@@ -224,6 +250,10 @@ function PbrDistrictRules.materialKey(partName, material)
     if name == "foundationshoulder" then return "titanium" end
     if name == "foundationinset" then return "oxidized" end
     if name == "foundationgroundpad" then return "armor" end
+    -- Some brand-new Orbital containment wings are legitimately ceramic
+    -- but their NAME contains no "ceramic". Respect that native ceramic
+    -- first rather than replacing it with a reflective titanium variant.
+    if material == Enum.Material.CeramicTiles then return "ceramic" end
     if name:find("foundation", 1, true)
         or name:find("basalt", 1, true)
         or name:find("concrete", 1, true)
@@ -263,11 +293,12 @@ function PbrDistrictRules.priority(part)
         or name:find("tower", 1, true)
         or name:find("dish", 1, true)
         or name:find("manifold", 1, true)
-    -- Nearby player-facing doors deserve a 2K map before remote trim;
-    -- this does not change either the per-model or global material budget.
+    -- Prefer a readable PBR entrance on the nearby actual building
+    -- rather than giving the 2K budget to a taller but remote roof shell.
+    -- The existing owner/global quotas remain authoritative.
     local primaryEntrance = name == "serviceentrydoor"
     return math.min(area, 4000) + (architecturalFace and 250 or 0)
-        + (primaryEntrance and 350 or 0)
+        + (primaryEntrance and 1200 or 0)
 end
 
 -- 28-degree mobile camera turn threshold. On-site looking around is
