@@ -66,7 +66,10 @@ $command = '"' + $psExe + '" ' + $arguments
 Set-ItemProperty -Path $runKey -Name "ChaosAIVisualReviewV2" -Value $command
 
 # Also register a Task Scheduler OnLogon trigger. Windows remote desktop
-# sessions can sometimes reconnect without processing Run keys. Both
+# sessions can sometimes reconnect without processing Run keys. A single
+# All-arenas 75-frame session can span multiple Studio launches after login;
+# its task lifetime must exceed the combined five-map capture duration.
+# Both
 # launchers are safe: the task itself avoids duplicate sessions via mutex.
 $taskName = "ChaosAIVisualReview"
 try {
@@ -74,7 +77,7 @@ try {
     $taskAction = New-ScheduledTaskAction -Execute $psExe -Argument $arguments
     $taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $identity
     $taskPrincipal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
-    $taskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 17) -MultipleInstances IgnoreNew
+    $taskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 42) -MultipleInstances IgnoreNew
     Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Force | Out-Null
     Write-Host "AI_VISUAL_WATCHER_SCHEDULED: interactive Windows logon"
 }
