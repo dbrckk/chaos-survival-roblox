@@ -14,19 +14,30 @@ function TornadoSpiralKit.clear(state)
     state.reduced = nil
 end
 
-function TornadoSpiralKit.sync(state, source, parent, tier, reduced, elapsed, rules)
+function TornadoSpiralKit.sync(state, source, parent, tier, reduced, elapsed, rules, simultaneous)
     if type(state) ~= "table" then return end
     local valid = typeof(source) == "Instance" and source:IsA("BasePart")
         and source:IsDescendantOf(workspace)
         and typeof(parent) == "Instance" and parent.Parent ~= nil
         and type(rules) == "table"
-    local count = valid and rules.count(tier, reduced) or 0
+    local count = valid and rules.count(tier, reduced, simultaneous) or 0
     if count == 0 then
         TornadoSpiralKit.clear(state)
         return
     end
 
-    if state.source ~= source or #state.parts ~= count then
+    local needsRebuild = state.source ~= source or #state.parts ~= count
+    if not needsRebuild then
+        for _, part in ipairs(state.parts) do
+            if not part or part.Parent ~= parent then
+                -- An old reference to a streamed-out/deleted local Part
+                -- must not suppress reconstruction of the live spiral.
+                needsRebuild = true
+                break
+            end
+        end
+    end
+    if needsRebuild then
         TornadoSpiralKit.clear(state)
         state.source = source
         state.parts = {}
@@ -39,6 +50,17 @@ function TornadoSpiralKit.sync(state, source, parent, tier, reduced, elapsed, ru
             part.CanQuery = false
             part.CastShadow = false
             part.Material = Enum.Material.Glass
+            -- First pose before parenting: never flash fragments at origin
+            -- while the streamed client awaits its next decorative tick.
+            local origin = source.Position - Vector3.new(0, 3, 0)
+            local still = reduced == true or tier == "Low"
+            local recipe = rules.segment(origin, index, count, elapsed, still)
+            if recipe then
+                part.CFrame = recipe.CFrame
+                part.Size = recipe.Size
+                part.Color = recipe.Color
+                part.Transparency = recipe.Transparency
+            end
             part.Parent = parent
             state.parts[index] = part
         end
