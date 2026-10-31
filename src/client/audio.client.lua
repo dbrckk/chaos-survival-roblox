@@ -186,6 +186,9 @@ local ARENA_AUDIO = {
     Towers = {Pitch = 0.988, Low = 0.8, Mid = -0.4, High = 1.0},
     Crossroads = {Pitch = 1.012, Low = -0.8, Mid = 1.1, High = 0.6},
     Orbital = {Pitch = 0.976, Low = 1.2, Mid = -0.7, High = -0.2},
+    -- Storm Harbor's moving freight and maritime disaster lanes need a
+    -- separate muted, weighty spectral profile (no extra music asset).
+    Harbor = {Pitch = 0.962, Low = 1.6, Mid = -0.9, High = -1.1},
 }
 
 local function arenaAudioProfile()
@@ -198,6 +201,12 @@ end
 local activeVoices = {}
 
 local function playRaw(name, pitchVariance, volumeScale, pitchOffset)
+    -- Do not spawn/clone short-lived voices when all local effects are
+    -- muted. SoundGroup gain remains the authoritative mix for long loops.
+    if player:GetAttribute("AudioMuted") == true
+        or AudioMixRules.percent(player:GetAttribute("EffectsVolume")) == 0 then
+        return
+    end
     local baseSound = sfx[name]
     if not baseSound then return end
 
@@ -377,14 +386,23 @@ local function setDisasterLoop(disasterIds)
     end
 end
 
+local lastMusicTarget = nil
+local activeMusicTween = nil
 local function musicVolume(target, duration)
-    TweenService:Create(
+    -- RoundState arrives repeatedly. Don't allocate a new Tween each
+    -- second for an already-owned, unchanged background music target.
+    if target == lastMusicTarget then return end
+    lastMusicTarget = target
+    if activeMusicTween then activeMusicTween:Cancel() end
+    activeMusicTween = TweenService:Create(
         lobbyMusic,
         TweenInfo.new(duration or 0.25),
         {Volume = target}
-    ):Play()
+    )
+    activeMusicTween:Play()
 end
 
+local lastMixTargets = nil
 local function setMix(phase, overdrive, finalRush)
     local musicTarget = 1
     local sfxTarget = 1
@@ -432,15 +450,34 @@ local function setMix(phase, overdrive, finalRush)
     hazardTarget *= effectsGain
     rewardTarget *= effectsGain
 
+    -- Only retween if phase, accessibility volume or arena spectral identity
+    -- changes. Previously every RoundState heartbeat launched 5 SoundGroup
+    -- tweens + a three-band EQ tween even with identical destinations.
+    local eqLow = lowGain + arenaProfile.Low
+    local eqMid = midGain + arenaProfile.Mid
+    local eqHigh = highGain + arenaProfile.High
+    local values = {musicTarget, sfxTarget, uiTarget, hazardTarget,
+        rewardTarget, eqLow, eqMid, eqHigh}
+    if lastMixTargets then
+        local unchanged = true
+        for i, value in ipairs(values) do
+            if lastMixTargets[i] ~= value then
+                unchanged = false
+                break
+            end
+        end
+        if unchanged then return end
+    end
+    lastMixTargets = values
     TweenService:Create(musicGroup, TweenInfo.new(0.18), {Volume = musicTarget}):Play()
     TweenService:Create(sfxGroup, TweenInfo.new(0.12), {Volume = sfxTarget}):Play()
     TweenService:Create(uiGroup, TweenInfo.new(0.12), {Volume = uiTarget}):Play()
     TweenService:Create(hazardGroup, TweenInfo.new(0.10), {Volume = hazardTarget}):Play()
     TweenService:Create(rewardGroup, TweenInfo.new(0.14), {Volume = rewardTarget}):Play()
     TweenService:Create(musicEq, TweenInfo.new(0.18), {
-        LowGain = lowGain + arenaProfile.Low,
-        MidGain = midGain + arenaProfile.Mid,
-        HighGain = highGain + arenaProfile.High,
+        LowGain = eqLow,
+        MidGain = eqMid,
+        HighGain = eqHigh,
     }):Play()
 end
 
@@ -451,6 +488,10 @@ setMix(lastPhase or "waiting", lastOverdrive, lastFinalRush)
 local lastSpatialImpactByKind = {}
 local function playSpatialImpact(payload)
     if type(payload) ~= "table" then return end
+    if player:GetAttribute("AudioMuted") == true
+        or AudioMixRules.percent(player:GetAttribute("EffectsVolume")) == 0 then
+        return
+    end
     local position = payload.position
     if typeof(position) ~= "Vector3" then return end
 
