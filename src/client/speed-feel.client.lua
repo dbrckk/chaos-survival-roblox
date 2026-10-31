@@ -1,9 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+local roundPhase = "waiting"
+local lastRoundNumber = nil
 local gui = Instance.new("ScreenGui")
 gui.Name = "SpeedFeel"
 gui.ResetOnSpawn = false
@@ -53,7 +57,8 @@ makeStreak("RightLow", UDim2.fromScale(0.92, 0.66), UDim2.fromScale(0.15, 0.006)
 makeStreak("RightBottom", UDim2.fromScale(0.88, 0.80), UDim2.fromScale(0.12, 0.005), -28)
 
 local function qualityScale()
-    local profile = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local profile = VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local scale = profile.Name == "Low" and 0.35 or (profile.Name == "Medium" and 0.68 or 1)
     if player:GetAttribute("ReduceMotion") == true then
         scale *= 0.16
@@ -76,15 +81,39 @@ local function hideStreaks()
     end
 end
 
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then return end
+    if number then lastRoundNumber = number end
+    roundPhase = tostring(state.phase or "waiting")
+    if roundPhase ~= "round" then hideStreaks() end
+end)
+
 task.spawn(function()
     while true do
         local character = player.Character
         local root = character and character:FindFirstChild("HumanoidRootPart")
-        local active = player:GetAttribute("RoundParticipant") == true
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local camera = workspace.CurrentCamera
+        local followsCharacter = camera ~= nil and humanoid ~= nil
+            and camera.CameraType ~= Enum.CameraType.Scriptable
+            and camera.ViewportSize.X > 0 and camera.ViewportSize.Y > 0
+            and camera.CameraSubject ~= nil
+            and (camera.CameraSubject == humanoid
+                or camera.CameraSubject:IsDescendantOf(character))
+        local active = roundPhase == "round"
+            and player:GetAttribute("RoundParticipant") == true
             and player:GetAttribute("RoundEliminated") ~= true
-            and root ~= nil
+            and player:GetAttribute("ReduceMotion") ~= true
+            and humanoid ~= nil and humanoid.Health > 0
+            and root ~= nil and root:IsA("BasePart")
+            and followsCharacter
 
-        if not active or not root then
+        if not active then
             hideStreaks()
             task.wait(0.40)
             continue

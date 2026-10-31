@@ -37,6 +37,7 @@ local hasMotionBaseline = false
 local speedSurgeActive = false
 local lowGravityActive = false
 local roundPhase = "waiting"
+local lastRoundNumber = nil
 local readyPose = 0
 local launchWeight = 0
 local impactWeight = 0
@@ -304,11 +305,24 @@ local function expAlpha(speed, dt)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        return
+    end
+    local newRound = number ~= nil and lastRoundNumber ~= nil
+        and number ~= lastRoundNumber
+    if number then lastRoundNumber = number end
+    local oldPhase = roundPhase
+    local nextPhase = tostring(state.phase or "waiting")
     local surge = false
     local lowGravity = false
-    roundPhase = state and tostring(state.phase or "waiting") or "waiting"
-    if state and roundPhase == "round" then
-        for _, id in ipairs(state.disasterIds or {}) do
+    if nextPhase == "round" then
+        for _, id in ipairs(type(state.disasterIds) == "table"
+            and state.disasterIds or {}) do
             if id == "SpeedSurge" then
                 surge = true
             elseif id == "LowGravity" then
@@ -316,10 +330,13 @@ stateEvent.OnClientEvent:Connect(function(state)
             end
         end
     end
+    roundPhase = nextPhase
     speedSurgeActive = surge
     lowGravityActive = lowGravity
-    if roundPhase ~= "round" then
-        -- Cosmetic floor cues must not outlive the active survival round.
+    -- Ground decals and skid cues are short-lived. Repeated RoundState
+    -- heartbeats must not destroy them; only actual phase/round changes
+    -- invalidate the previous match's cosmetics and cue cooldown.
+    if oldPhase ~= roundPhase or newRound then
         GroundFx.clear()
         lastGroundCueAt = -math.huge
     end

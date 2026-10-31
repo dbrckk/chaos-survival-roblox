@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local GroundContactRules = require(ReplicatedStorage.Shared.GroundContactRules)
@@ -13,6 +14,8 @@ local botFolderConnection = nil
 local botFolderRemovedConnection = nil
 local botFolder = nil
 local currentPhase = "waiting"
+local lastRoundNumber = nil
+local playerConnections = {}
 local lastContact = setmetatable({}, {__mode = "k"})
 local activePieces = setmetatable({}, {__mode = "k"})
 local folder = Instance.new("Folder")
@@ -97,7 +100,8 @@ local function emitLanding(model, root, airtime)
     local humanoid = model:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health <= 0 then return end
 
-    local quality = VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier"))
+    local quality = VfxQuality.deviceTier(
+        localPlayer:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local reduced = localPlayer:GetAttribute("ReduceMotion") == true
     local localCharacter = model == localPlayer.Character
     local count = GroundContactRules.pieceBudget(
@@ -168,8 +172,13 @@ local function watchModel(model)
     registry.watch(model)
 end
 local function watchPlayer(player)
-    player.CharacterAdded:Connect(function(model) task.defer(watchModel, model) end)
-    player.CharacterRemoving:Connect(function(model)
+    if playerConnections[player] then return end
+    local connections = {}
+    playerConnections[player] = connections
+    connections[#connections + 1] = player.CharacterAdded:Connect(function(model)
+        task.defer(watchModel, model)
+    end)
+    connections[#connections + 1] = player.CharacterRemoving:Connect(function(model)
         registry.stop(model)
         lastContact[model] = nil
     end)
@@ -178,7 +187,17 @@ end
 for _, player in ipairs(Players:GetPlayers()) do watchPlayer(player) end
 Players.PlayerAdded:Connect(watchPlayer)
 Players.PlayerRemoving:Connect(function(player)
-    if player.Character then registry.stop(player.Character) end
+    if player.Character then
+        registry.stop(player.Character)
+        lastContact[player.Character] = nil
+    end
+    local connections = playerConnections[player]
+    if connections then
+        for _, connection in ipairs(connections) do
+            connection:Disconnect()
+        end
+        playerConnections[player] = nil
+    end
 end)
 local function watchBots(nextFolder)
     if botFolderConnection then botFolderConnection:Disconnect() end
@@ -212,10 +231,27 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    local snapshot = type(state) == "table" and state or {}
-    currentPhase = tostring(snapshot.phase or "waiting")
-    finalRush = currentPhase == "round" and snapshot.finalRush == true
-    if currentPhase ~= "round" then
+    if type(state) ~= "table" then return end
+    local nextPhase = tostring(state.phase or "waiting")
+    local candidate = tonumber(state.roundNumber)
+    local roundNumber = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    -- A late previous-round packet must not wipe the current landing FX.
+    if roundNumber and lastRoundNumber and roundNumber < lastRoundNumber then
+        return
+    end
+    local roundChanged = roundNumber ~= nil and lastRoundNumber ~= nil
+        and roundNumber ~= lastRoundNumber
+    if roundNumber then lastRoundNumber = roundNumber end
+    local changedPhase = nextPhase ~= currentPhase
+    currentPhase = nextPhase
+    finalRush = currentPhase == "round" and state.finalRush == true
+
+    if changedPhase or roundChanged then
+        -- Preserve live landing imprints through recurring RoundState
+        -- heartbeats. Clear only across a phase or numbered-round boundary;
+        -- this also discards airborne timestamps from previous matches.
         registry.clearAirborne()
         folder:ClearAllChildren()
     end
@@ -227,7 +263,9 @@ localPlayer:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     end
 end)
 localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    if VfxQuality.get(localPlayer:GetAttribute("VfxQualityTier")).Name == "Low" then
+    if VfxQuality.deviceTier(
+        localPlayer:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    ).Name == "Low" then
         folder:ClearAllChildren()
     end
 end)
