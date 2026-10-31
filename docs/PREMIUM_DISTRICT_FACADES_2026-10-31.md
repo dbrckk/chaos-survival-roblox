@@ -13,7 +13,7 @@ Each of the **16 district buildings** receives a new original, fully 3D service 
 | Quality tier | Additional rendered parts per visible building | What remains |
 | --- | ---: | --- |
 | Low | 2 | Large, legible recessed door frame and offset steel entry leaf |
-| Medium | 6 | Above plus lintel, shadow-forming canopy and paired industrial hydraulic columns |
+| Medium | 6 | Above plus lintel, projecting weather canopy and paired industrial hydraulic columns |
 | High | 8 | Above plus a pair of profile-specific devices: survey cabinets, freight winch housings, turbine collars or aerial conduits |
 
 At full High visibility this adds **128 native anchored parts** across 16 buildings. All 128 are replicated to the client; Low/Medium reduce **rendered visibility**, not network transfer or total Instance count. The building distance LOD still hides complete far-away models. No misleading claim of reduced replication cost.
