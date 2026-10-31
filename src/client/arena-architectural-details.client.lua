@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 
 local player = Players.LocalPlayer
 local roundState = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -619,12 +620,26 @@ task.spawn(function()
         if activeBase and activeBase.Parent and activeTier ~= "Low"
             and player:GetAttribute("ReduceMotion") ~= true then
             local camera = workspace.CurrentCamera
-            if camera and (camera.CFrame.Position - activeBase.Position).Magnitude < 220 then
+            -- LOD now measures each hero against its REAL outboard
+            -- position. The animation budget must use that same origin:
+            -- otherwise a nearby animated cargo load can freeze while
+            -- a distant, hidden hero keeps consuming 5 Hz CFrame updates.
+            local origin = folder:GetAttribute("CosmeticWorldOrigin")
+            if typeof(origin) ~= "Vector3" then
+                origin = activeBase.Position
+            end
+            local maxDistance = activeTier == "Medium"
+                and (220 + SceneryLodRules.Hysteresis) or 220
+            if camera and (camera.CFrame.Position - origin).Magnitude < maxDistance then
                 local t = os.clock()
                 local activity = roundActive and 1.15 or 1
                 for _, item in ipairs(animated) do
                     local p = item.object
-                    if p and p.Parent then
+                    -- Distance LOD owns hidden state. Do not animate an
+                    -- entirely culled Part just because the folder's
+                    -- live camera origin was updated this tick.
+                    if p and p.Parent
+                        and p:GetAttribute("SceneryLodHidden") ~= true then
                         local phase = t * item.speed * activity + item.phase
                         local wave = math.sin(phase)
                         if item.motion == "scan" then
