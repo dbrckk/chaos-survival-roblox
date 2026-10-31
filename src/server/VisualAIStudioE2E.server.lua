@@ -62,8 +62,8 @@ report.OnServerEvent:Connect(function(player, payload)
     end
     if payload.kind ~= "frame" then return end
 
-    -- Require an *actual* server-owned Harbor round at every capture.
-    -- A GUI label or a client-supplied arena string alone is not proof.
+    -- Require the real server-created arena for each requested variant.
+    -- Client GUI labels, phase text and bot metadata are not authority.
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local actualArena = arena and arena:GetAttribute("VariantId")
@@ -88,9 +88,13 @@ report.OnServerEvent:Connect(function(player, payload)
     local root = model and model:FindFirstChild("HumanoidRootPart")
     local humanoid = model and model:FindFirstChildOfClass("Humanoid")
     if not model or model:GetAttribute("AISurvivor") ~= true
+        -- A bot can be alive in the lobby, after the round, or while
+        -- waiting for its next spawn. Only its SERVER-authored round
+        -- participation attribute proves a live gameplay subject.
+        or model:GetAttribute("AISurvivorInRound") ~= true
         or not root or not root:IsA("BasePart")
         or not humanoid or humanoid.Health <= 0 then
-        reject("visual subject is not a living AI survivor")
+        reject("visual subject is not a participating living AI survivor")
         return
     end
 
@@ -193,10 +197,13 @@ task.spawn(function()
         return
     end
 
-    -- Give the external Windows desktop collector time to finish the last
-    -- real PNG before Studio closes. This is NOT proof that PNGs exist:
-    -- the workflow independently checks image count, size and diversity.
-    task.wait(11)
+    -- The final server marker is logged before the external Windows
+    -- screenshot is taken. Keep the actual rendered Studio client up
+    -- for a bounded capture grace period so the CLI does not close the
+    -- real 15th viewpoint while CopyFromScreen/PNG encoding is running.
+    -- This grace alone does NOT prove the image exists: the independent
+    -- Windows collector still checks all 15 hashes and Studio PASS.
+    task.wait(18)
     print("CHAOS_VISUAL_AI_VERIFIED", sampleCount, "samples", different, "AI subjects", "round=", hasRound)
     StudioTestService:EndTest(string.format(
         "PASS: visual AI: %d real %s round frames, %d autonomous bots",
