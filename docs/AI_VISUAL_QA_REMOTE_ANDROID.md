@@ -38,8 +38,27 @@ des captures issues du rendu Roblox Studio, pas des images générées.
 
 Dans **Actions → Chaos AI Visual Capture (Temporary Windows) → Run workflow**,
 choisir `arena = All` (option par défaut), ou une seule des cinq cartes
-pour un contrôle ciblé. Cette exécution n'est **pas automatique** à chaque
-modification du jeu : elle consomme des minutes GitHub Actions Windows.
+pour un contrôle ciblé. Depuis le 31 octobre 2026, ce workflow est **exclusivement manuel** :
+aucun commit ou modification de fichier ne le déclenche. L'ancien déclencheur
+sur `studio/REMOTE_AI_QA_TRIGGER` lançait un Windows de capture sans
+opérateur présent pour se connecter à Roblox et a consommé des minutes
+GitHub Actions sans image réelle. Ne le lancer que lorsque la connexion
+Android Tailscale/RDP et l'authentification Roblox Studio peuvent être
+effectuées pendant la fenêtre de connexion (environ 10 minutes).
+
+État documenté du dernier essai : [run 41221440236](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41221440236).
+Le Windows et la signature Studio étaient corrects, mais le watchdog est resté
+à `AWAITING_OFFICIAL_ROBLOX_LOGIN`, puis `AUTH_REQUIRED` : **0/75 captures
+certifiées**, aucune validation visuelle ni mise à jour publique.
+
+**Séquence minimale depuis Android :** ouvrir
+[le workflow manuel](https://github.com/dbrckk/chaos-survival-roblox/actions/workflows/roblox-ai-remote-windows.yml),
+choisir `Run workflow` sur `main` et `arena = All`, puis ouvrir le résumé
+de l'exécution et utiliser son adresse Tailscale pour joindre le bureau
+`runneradmin` avec votre secret RDP existant. Se connecter à Roblox Studio
+avec l'interface officielle ; le collector démarre ensuite automatiquement
+et archive ses fichiers. Le résultat n'est considéré validé que si les 75
+PNG authentiques, leurs manifestes et les cinq rapports sont présents.
 Pour réduire les ressources, l'option `All` réutilise la même connexion
 plutôt que de créer cinq ordinateurs temporaires.
 
