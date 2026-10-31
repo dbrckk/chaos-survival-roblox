@@ -37,6 +37,23 @@ local function destroyNames(model, names)
     end
 end
 
+local function clearOwned(model, slot)
+    -- A changing or incomplete streamed provenance must also remove the
+    -- previous locally created details, but never server-owned Parts.
+    -- On normal Low/offscreen ticks we already know the slot: inspect only
+    -- its six names instead of up to twelve per model, every 0.65 seconds.
+    destroyNames(model, MEDIUM)
+    if HIGH[slot] then
+        destroyNames(model, HIGH[slot])
+    else
+        -- Missing/invalid streamed metadata: clean every prior profile
+        -- so no old optional details survive a provenance transition.
+        for _, names in pairs(HIGH) do
+            destroyNames(model, names)
+        end
+    end
+end
+
 local function countOwned(model, names)
     local count = 0
     for _, name in ipairs(names) do
@@ -146,12 +163,14 @@ end
 -- No stateful per-Model connection or weak-key table. We inspect two
 -- owned instance names on each LOD tick; Roblox owns their lifecycle when
 -- streamed models disappear. Hysteresis prevents churning at the cutoff.
-function DistrictFacadeDetailKit.sync(model, tierName, visible, distance)
-    if not model or not model:IsA("Model")
-        or model:GetAttribute("ArenaDistrictArchitecture") ~= true
+function DistrictFacadeDetailKit.sync(model, tierName, visible, distance,
+    isTouch, cameraReady)
+    if not model or not model:IsA("Model") then return 0 end
+    if model:GetAttribute("ArenaDistrictArchitecture") ~= true
         or model:GetAttribute("SourceIsOriginal") ~= true
         or model:GetAttribute("CosmeticOnly") ~= true
         or model:GetAttribute("FacadeVisualVersion") ~= 1 then
+        clearOwned(model)
         return 0
     end
     local slot = model:GetAttribute("DistrictProfile")
@@ -159,30 +178,36 @@ function DistrictFacadeDetailKit.sync(model, tierName, visible, distance)
     local finish = type(variantId) == "string" and Styles[variantId] or nil
     if type(slot) ~= "number" or slot ~= math.floor(slot)
         or not HIGH[slot] or not finish then
+        clearOwned(model)
         return 0
     end
 
-    -- Even on High, tiny hardware is pointless across the full arena.
-    -- The four larger structural silhouettes remain server-authored.
-    -- Use a distinct near-field tier budget without changing scenery LOD.
-    local cutoff = tierName == "High" and 230
-        or tierName == "Medium" and 175 or 0
+    -- Android keeps the near-field 175/230-stud budgets, avoiding
+    -- needless parts on distant buildings. PC High must NOT inherit
+    -- that mobile-only distance cap: before local ownership, all six
+    -- details were server-replicated and fully visible on desktop High.
+    -- A valid camera/viewport is required before generating local art.
+    local cutoff = 0
+    if tierName == "High" then
+        cutoff = isTouch == true and 230 or math.huge
+    elseif tierName == "Medium" then
+        cutoff = isTouch == true and 175 or 245
+    end
     local mediumPresent = owned(model, MEDIUM[1]) ~= nil
     local highPresent = owned(model, HIGH[slot][1]) ~= nil
     local wasNear = mediumPresent or highPresent
-    local near = visible == true and typeof(distance) == "number"
-        and cutoff > 0
+    local near = visible == true and cameraReady == true
+        and type(distance) == "number" and distance == distance
+        and distance >= 0 and distance < math.huge and cutoff > 0
         and distance <= cutoff + (wasNear and 8 or -8)
     if not near then
-        destroyNames(model, MEDIUM)
-        destroyNames(model, HIGH[slot])
+        clearOwned(model, slot)
         return 0
     end
 
     local origin, steel, dark, alloy = originAndPalette(model)
     if not origin then
-        destroyNames(model, MEDIUM)
-        destroyNames(model, HIGH[slot])
+        clearOwned(model, slot)
         return 0
     end
     makeMedium(model, origin, steel, alloy, finish)

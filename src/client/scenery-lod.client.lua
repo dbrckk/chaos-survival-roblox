@@ -9,6 +9,7 @@ local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 
 local player = Players.LocalPlayer
+local isTouch = UserInputService.TouchEnabled
 
 -- Server-owned original meshes are purely decorative and have reliable
 -- Roblox-native horizon fallback. Low-end Android never renders them;
@@ -215,7 +216,12 @@ local FOLDERS = {
 
 local function cameraPosition()
     local camera = workspace.CurrentCamera
-    return camera and camera.CFrame.Position or Vector3.zero
+    if not camera then return Vector3.zero, false end
+    local viewport = camera.ViewportSize
+    -- Streaming can complete before Android creates a usable viewport.
+    -- Keep existing LOD computation, but defer new optional Parts until
+    -- a real camera is available to show them.
+    return camera.CFrame.Position, viewport.X > 0 and viewport.Y > 0
 end
 
 local function classifyDescendant(descendant)
@@ -346,10 +352,10 @@ end
 
 task.spawn(function()
     while true do
-        local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
+        local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), isTouch)
 
         local arenaOrigin, lobbyOrigin = currentOrigins()
-        local cameraPoint = cameraPosition()
+        local cameraPoint, cameraReady = cameraPosition()
         for folderName, limits in pairs(FOLDERS) do
             if folderName ~= "PracticePadPolishLocal" then
                 local folder = workspace:FindFirstChild(folderName)
@@ -434,7 +440,7 @@ task.spawn(function()
                         profile, origin, cameraPoint)
                     localFacadeParts += DistrictFacadeDetailKit.sync(
                         structure, profile.Name, visible,
-                        (cameraPoint - origin).Magnitude)
+                        (cameraPoint - origin).Magnitude, isTouch, cameraReady)
                 end
             end
         end
