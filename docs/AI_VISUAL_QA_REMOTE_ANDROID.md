@@ -1,4 +1,4 @@
-# Chaos Survival — 15 captures IA avec Android et GitHub Windows
+# Chaos Survival — audit IA des 5 arènes depuis Android et GitHub Windows
 
 ## But
 
@@ -18,11 +18,16 @@ locale de connexion `Authenticated: YES`, puis démarre de lui-même :
 2. L'IA des trois survivants existants pilote leurs vraies animations et
    leurs déplacements ; aucun mouvement n'est inventé pour faire une image.
 3. La caméra filme les bots, en vue poursuite, latérale et première personne.
-4. Quinze PNG réels sont capturés, environ toutes les 3 secondes.
-5. Un contrôle vérifie les quinze prises, les horodatages, l'activité du
-   moteur, les signatures PNG et le changement entre images.
-6. Une mosaïque 5 × 3 et les alertes de luminosité/contraste sont archivées
-   sur GitHub. Les originaux sont conservés.
+4. Sélectionner **All** exécute cinq parties locales successives — Classic,
+   Towers, Crossroads, Orbital et Harbor — **15 PNG authentiques par carte,
+   75 au total**. Une seule connexion Roblox Studio est nécessaire dans
+   cette session Windows temporaire.
+5. Le serveur valide réellement la carte, le bot, la phase de manche,
+   l'avancement du rendu et les échantillons de chaque capture. Chaque PNG
+   reçoit son horodatage, SHA-256 et son identifiant d'arène.
+6. Chaque carte génère une mosaïque 5 × 3, un manifeste et un rapport de
+   luminosité/contraste. L'échec d'une carte bloque le verdict global.
+   Les originaux sont conservés séparément par nom d'arène.
 
 **Ce test ne représente pas les FPS du vrai Redmi Android**, mais ce sont bien
 des captures issues du rendu Roblox Studio, pas des images générées.
@@ -30,6 +35,18 @@ des captures issues du rendu Roblox Studio, pas des images générées.
 ## Déclencher la machine temporaire
 
 [Workflow GitHub Android/Windows](../.github/workflows/roblox-ai-remote-windows.yml)
+
+Dans **Actions → Chaos AI Visual Capture (Temporary Windows) → Run workflow**,
+choisir `arena = All` (option par défaut), ou une seule des cinq cartes
+pour un contrôle ciblé. Cette exécution n'est **pas automatique** à chaque
+modification du jeu : elle consomme des minutes GitHub Actions Windows.
+Pour réduire les ressources, l'option `All` réutilise la même connexion
+plutôt que de créer cinq ordinateurs temporaires.
+
+À la fin, ouvrir l'**Artifact** du workflow, puis les dossiers
+`Classic/`, `Towers/`, `Crossroads/`, `Orbital/` et `Harbor/`.
+Chacun contient `ai-frame-01.png` à `ai-frame-15.png`, une mosaïque
+`visual-ai-contact-sheet.jpg` et un rapport de preuve.
 
 Le dépôt doit contenir les deux secrets GitHub déjà utilisés pour l'ancien
 Windows distant :
@@ -56,7 +73,7 @@ Selon la géolocalisation des deux appareils, Roblox peut refuser cette
 fonction : se connecter alors directement **dans Roblox Studio**.
 
 Le bureau ouvre un surveillant de connexion. S'il ne démarre pas
-automatiquement les 15 images après l'authentification, double-cliquer
+automatiquement les 15 images par arène après l'authentification, double-cliquer
 `START_CHAOS_AI_CAPTURE.cmd` sur le Bureau. Rien d'autre n'est demandé :
 le lancement local, la prise des captures et l'archivage sont automatisés.
 Ne pas fermer la session RDP pendant l'enregistrement.
@@ -66,7 +83,7 @@ Ne pas fermer la session RDP pendant l'enregistrement.
 - **Sans la connexion Roblox** dans le Windows éphémère, il est impossible
   de produire des prises authentiques avec ce chemin officiel.
 - GitHub Hosted Windows est une machine **jetable**. Une nouvelle exécution
-  nécessite de se reconnecter. La prise des quinze images demeure
+  nécessite de se reconnecter. La prise des images demeure
   automatisée après cette étape.
 - Les minutes de GitHub Actions peuvent être imputées sur le forfait du
   compte GitHub. Le workflow ne crée aucun serveur permanent ou abonnement
