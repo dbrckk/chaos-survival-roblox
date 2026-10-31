@@ -100,12 +100,31 @@ function DisasterAtmosphereLayout.shouldAnimate(part)
         and part:GetAttribute("SceneryLodHidden") ~= true
 end
 
-function DisasterAtmosphereLayout.beaconCount(tier, active)
+-- This is optional *arena atmosphere*, not an authoritative
+-- Meteor/Bomb warning or a damage zone. A crowded Double Chaos phase
+-- should not stack a full single-disaster ambience on top of every
+-- other cosmetic controller. A missing count preserves old callers.
+function DisasterAtmosphereLayout.beaconCount(tier, active, simultaneous)
     if active ~= true then return 0 end
+    local count = tonumber(simultaneous) or 1
+    if count ~= count or count < 0 or count == math.huge then count = 1 end
     if tier == "Low" then return 4 end
-    if tier == "Medium" then return 6 end
-    if tier == "High" then return 8 end
+    if tier == "Medium" then return count >= 2 and 4 or 6 end
+    if tier == "High" then
+        return count >= 3 and 4 or (count >= 2 and 6 or 8)
+    end
     return 0
+end
+
+-- Keep final-rush contrast while preventing the full 1.45x emitter spike
+-- from multiplying across several simultaneous hazard identities. Other
+-- owners (actual warning rings, impact decals, route cues) are untouched.
+function DisasterAtmosphereLayout.particleMultiplier(simultaneous, finalRush)
+    local count = tonumber(simultaneous) or 1
+    if count ~= count or count < 0 or count == math.huge then count = 1 end
+    if count >= 3 then return finalRush == true and 0.80 or 0.70 end
+    if count >= 2 then return finalRush == true and 1.00 or 0.85 end
+    return finalRush == true and 1.45 or 1
 end
 
 return DisasterAtmosphereLayout
