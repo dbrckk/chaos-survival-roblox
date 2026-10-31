@@ -3,6 +3,7 @@
 -- Locomotion, hit detection, Animator, physics and camera are untouched.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local Rules = require(ReplicatedStorage.Shared.CharacterReactionRules)
 local ReactionVisuals = require(script.Parent.CharacterReactionVisuals)
@@ -17,6 +18,8 @@ local impactEvent = remotes:WaitForChild("HazardImpactFeedback")
 local roundEvent = remotes:WaitForChild("RoundState")
 
 local phase = "waiting"
+local lastRoundNumber = nil
+local playerConnections = {}
 local lastDodge = -math.huge
 local lastImpact = -math.huge
 local impactByModel = setmetatable({}, {__mode = "k"})
@@ -27,7 +30,8 @@ local botFolderRemovedConnection = nil
 local botFolder = nil
 
 local function profile()
-    local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local quality = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+        UserInputService.TouchEnabled)
     return Rules.profile(quality.Name, player:GetAttribute("ReduceMotion") == true)
 end
 
@@ -233,10 +237,13 @@ local function watchLanding(model)
 end
 
 local function watchPlayer(p)
-    p.CharacterAdded:Connect(function(character)
+    if playerConnections[p] then return end
+    local connections = {}
+    playerConnections[p] = connections
+    connections[#connections + 1] = p.CharacterAdded:Connect(function(character)
         task.defer(watchLanding, character)
     end)
-    p.CharacterRemoving:Connect(function(character)
+    connections[#connections + 1] = p.CharacterRemoving:Connect(function(character)
         rigRegistry.stop(character)
         landingByModel[character] = nil
         impactByModel[character] = nil
@@ -249,7 +256,18 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(watchPlayer)
 Players.PlayerRemoving:Connect(function(p)
-    if p.Character then rigRegistry.stop(p.Character) end
+    if p.Character then
+        rigRegistry.stop(p.Character)
+        landingByModel[p.Character] = nil
+        impactByModel[p.Character] = nil
+    end
+    local connections = playerConnections[p]
+    if connections then
+        for _, connection in ipairs(connections) do
+            connection:Disconnect()
+        end
+        playerConnections[p] = nil
+    end
 end)
 
 local function bindBots(folder)
@@ -312,9 +330,24 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
 end)
 
 roundEvent.OnClientEvent:Connect(function(snapshot)
-    phase = tostring(type(snapshot) == "table"
-        and snapshot.phase or "waiting")
-    if phase ~= "round" then
+    if type(snapshot) ~= "table" then return end
+    local nextPhase = tostring(snapshot.phase or "waiting")
+    local candidate = tonumber(snapshot.roundNumber)
+    local roundNumber = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    -- A delayed earlier snapshot should not cancel current valid reactions.
+    if roundNumber and lastRoundNumber and roundNumber < lastRoundNumber then
+        return
+    end
+    local roundChanged = roundNumber ~= nil and lastRoundNumber ~= nil
+        and roundNumber ~= lastRoundNumber
+    if roundNumber then lastRoundNumber = roundNumber end
+    local changedPhase = nextPhase ~= phase
+    phase = nextPhase
+    if changedPhase or roundChanged then
+        -- Keep valid airborne/landing and blast VFX across ordinary
+        -- second-by-second RoundState packets; reset at real boundaries.
         rigRegistry.clearAirborne()
         killPieces()
     end
