@@ -28,8 +28,31 @@ function DisasterAtmosphereLayout.perimeterRadius(baseSize, multiple)
     return math.max(baseSize.X, baseSize.Z) * factor
 end
 
+-- A global radius based on max(X, Z) cuts through the short edges on
+-- rectangular floors and points at the interior on diagonal bearings.
+-- Intersect the ray with the CURRENT rectangular Base footprint instead.
+-- The default 0.52 leaves a tiny 4% buffer beyond the collision edge,
+-- preserving the original cardinal placement on a square arena.
+function DisasterAtmosphereLayout.edgeRadius(baseSize, angle, multiple)
+    if typeof(baseSize) ~= "Vector3"
+        or type(angle) ~= "number" or angle ~= angle
+        or math.abs(angle) == math.huge
+        or baseSize.X <= 0 or baseSize.Z <= 0 then
+        return nil
+    end
+    local factor = multiple == nil and 0.52 or multiple
+    if type(factor) ~= "number" or factor <= 0
+        or factor ~= factor or math.abs(factor) == math.huge then
+        return nil
+    end
+    local cosA, sinA = math.abs(math.cos(angle)), math.abs(math.sin(angle))
+    local xLimit = cosA > 1e-6 and baseSize.X * factor / cosA or math.huge
+    local zLimit = sinA > 1e-6 and baseSize.Z * factor / sinA or math.huge
+    return math.min(xLimit, zLimit)
+end
+
 function DisasterAtmosphereLayout.beaconFrame(baseFrame, baseSize, angle)
-    local radius = DisasterAtmosphereLayout.perimeterRadius(baseSize)
+    local radius = DisasterAtmosphereLayout.edgeRadius(baseSize, angle)
     if not radius then return nil end
     local position = DisasterAtmosphereLayout.point(
         baseFrame, baseSize, angle, radius, 0.8
