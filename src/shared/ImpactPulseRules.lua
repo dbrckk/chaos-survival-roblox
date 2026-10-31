@@ -58,6 +58,24 @@ function ImpactPulseRules.richDetailAllowed(tier, reduced, distance,
 end
 
 
+-- Distant cosmetic bursts must not consume the entire simultaneous-impact
+-- queue before a blast near the player's camera arrives. This is a SECOND,
+-- smaller pool for peripheral effects on Android only. Nearby explosions
+-- still use the existing total queue; no server warning or damage is gated.
+-- nil means the impact is near enough (or desktop) to bypass this sub-cap.
+function ImpactPulseRules.peripheralBurstCap(tier, reducedMotion, touchDevice, distance)
+    if touchDevice ~= true or type(distance) ~= "number"
+        or distance ~= distance or distance < 0
+        or math.abs(distance) == math.huge then
+        return nil
+    end
+    local near = tier == "Low" and 48
+        or (tier == "Medium" and 72 or 88)
+    if distance <= near then return nil end
+    return reducedMotion == true and 1
+        or (tier == "Low" and 1 or 2)
+end
+
 -- Peripheral impacts remain perceptible through the existing compact
 -- pressure wave, warning glyph and audio. On touch GPUs, reserve the
 -- expensive smoke, PointLight and extra fragment sculpture for explosions
