@@ -7,7 +7,9 @@ param(
     [Parameter(Mandatory = $true)][string]$RunScriptFile,
     [Parameter(Mandatory = $true)][string]$OutputDirectory,
     [ValidateRange(15, 15)][int]$Count = 15,
-    [ValidateRange(2, 8)][int]$IntervalSeconds = 3
+    [ValidateRange(2, 8)][int]$IntervalSeconds = 3,
+    [ValidateSet("Classic", "Towers", "Crossroads", "Orbital", "Harbor")]
+    [string]$ExpectedArena = "Harbor"
 )
 $ErrorActionPreference = "Stop"
 if (-not [Environment]::UserInteractive) {
@@ -23,7 +25,7 @@ $stderr = Join-Path $OutputDirectory "studio-stderr.log"
 $engineLog = Join-Path $OutputDirectory "studio-run-script.log"
 $manifest = Join-Path $OutputDirectory "frames.tsv"
 $probeStartedAt = Get-Date
-(@("index", "utc", "window_title", "width", "height", "sha256") -join [char]9) |
+(@("index", "utc", "window_title", "width", "height", "sha256", "arena", "bot", "mode", "phase") -join [char]9) |
     Set-Content -Path $manifest -Encoding utf8
 
 Add-Type -AssemblyName System.Drawing
@@ -155,6 +157,37 @@ try {
         if ($studio.HasExited) {
             throw "Studio exited before image $i / $Count could be recorded."
         }
+
+        # A timestamp alone is not proof of which part of the match was
+        # rendered. Require this exact game's server-approved sample.
+        $tag = "{0:D2}/{1:D2}" -f $i, $Count
+        $markerPattern = 'CHAOS_VISUAL_AI_CAPTURE_MARKER\s+' +
+            [regex]::Escape($tag) +
+            '\s+arena=(?<arena>Classic|Towers|Crossroads|Orbital|Harbor)' +
+            '\s+bot=(?<bot>[A-Za-z0-9_]+)' +
+            '\s+mode=(?<mode>CHASE|SIDE|POV)\s+phase=(?<phase>round)\b'
+        $marker = $null
+        $markerDeadline = (Get-Date).AddSeconds(8)
+        while ((Get-Date) -lt $markerDeadline) {
+            $found = [regex]::Matches((Read-Output), $markerPattern)
+            if ($found.Count -gt 0) {
+                $marker = $found[$found.Count - 1]
+                break
+            }
+            if ($studio.HasExited) { break }
+            Start-Sleep -Milliseconds 180
+        }
+        if (-not $marker) {
+            throw "NO_VERIFIED_FRAME_MARKER: missing live server sample $tag"
+        }
+        $arena = $marker.Groups["arena"].Value
+        $bot = $marker.Groups["bot"].Value
+        $mode = $marker.Groups["mode"].Value
+        $phase = $marker.Groups["phase"].Value
+        if ($arena -ne $ExpectedArena) {
+            throw "WRONG_ARENA: expected $ExpectedArena but marker says $arena"
+        }
+
         $window = Find-RenderedStudioWindow
         if ($null -eq $window) {
             throw "NO_RENDERED_WINDOW: no visible Roblox Studio/client window for frame $i."
@@ -195,7 +228,7 @@ try {
         $hash = (Get-FileHash -Algorithm SHA256 -Path $file).Hash
         $name = ($window.Title -replace "[\t\r\n]", " ").Trim()
         $utc = [DateTime]::UtcNow.ToString("o")
-        (@("$i", $utc, $name, "$($window.Width)", "$($window.Height)", $hash) -join [char]9) |
+        (@("$i", $utc, $name, "$($window.Width)", "$($window.Height)", $hash, $arena, $bot, $mode, $phase) -join [char]9) |
             Add-Content -LiteralPath $manifest -Encoding utf8
         $hashes += $hash
         Write-Host ("CHAOS_VISUAL_AI_REAL_PNG {0:D2}/{1:D2} {2} {3}x{4}" -f
