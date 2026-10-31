@@ -27,13 +27,29 @@ local streak = 0
 local OBSERVE_SECONDS = 5
 local CENSUS_SECONDS = 20
 local SUSPEND_GAP_SECONDS = 18
+local QUALITY_SETTLE_SECONDS = 8
 local cachedCounts = nil
 local lastCensusAt = nil
+local settleUntil = 0
 
 local function invalidateCensus()
     cachedCounts = nil
     lastCensusAt = nil
 end
+
+-- A changed adaptive tier changes both the VFX population and the
+-- Parts/Lights/Effects allowances. Never reuse a High-tier census against
+-- Low-tier limits, nor count old FPS samples toward the new tier's streak.
+-- Keep the current pressure (safe, non-visual) while cosmetic owners settle.
+local function resetForQualityChange()
+    generation += 1
+    streak = 0
+    invalidateCensus()
+    settleUntil = os.clock() + QUALITY_SETTLE_SECONDS
+end
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(resetForQualityChange)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(resetForQualityChange)
 
 local function publish(nextValue)
     if pressure == nextValue
@@ -106,14 +122,20 @@ task.spawn(function()
         local observedGeneration = generation
         if not cachedCounts or not lastCensusAt
             or now - lastCensusAt >= CENSUS_SECONDS then
+            local interrupted = false
             local counts = VisualBudgetRules.collect(workspace, function()
                 -- Yield at the existing 160-instance checkpoint, never
                 -- scan all local decorations in one long Android frame.
-                task.wait()
+                -- Suspension can happen DURING a multi-yield census too.
+                if task.wait() > SUSPEND_GAP_SECONDS then
+                    interrupted = true
+                end
             end)
-            if observedGeneration ~= generation or phase ~= "round"
+            if interrupted or observedGeneration ~= generation
+                or phase ~= "round"
                 or not workspace:FindFirstChild("GeneratedMap")
                 or not player.Parent then
+                if interrupted then streak = 0 end
                 invalidateCensus()
                 continue
             end
@@ -124,6 +146,13 @@ task.spawn(function()
         -- census is cached, and quality tier normalization stays current.
         if observedGeneration ~= generation or phase ~= "round" then
             invalidateCensus()
+            continue
+        end
+        -- Tier-dependent VFX owners have a short event-driven window to
+        -- rebuild. Do not let one just-updated profile prompt an immediate
+        -- opposite pressure change and ping-pong with adaptive graphics.
+        if os.clock() < settleUntil then
+            streak = 0
             continue
         end
         local tier = VfxQuality.deviceTier(
