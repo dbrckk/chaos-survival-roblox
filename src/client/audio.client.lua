@@ -1029,8 +1029,10 @@ local function unbindHealthAudio()
 end
 
 local function bindHealthAudio(character)
-    unbindHealthAudio()
+    -- An initial deferred spawn may start after the next CharacterAdded:
+    -- reject old avatars BEFORE invalidating the new avatar's listener.
     if not character or player.Character ~= character then return end
+    unbindHealthAudio()
     boundHealthCharacter = character
     local issuedEpoch = healthBindEpoch
     local humanoid = character:WaitForChild("Humanoid", 5)
