@@ -196,22 +196,13 @@ local function makeCracks(name, position, radius, profile, count, lifetime)
     end
 end
 
-local function impactBudget(profile)
-    if profile.Name == "Low" then
-        return 18
-    elseif profile.Name == "Medium" then
-        return 34
-    end
-    return 52
-end
-
 local function remainingParts(limit)
     return math.max(0, limit - #folder:GetChildren())
 end
 
 local function trimBudget(reserve)
     local children = folder:GetChildren()
-    local totalLimit = impactBudget(tier())
+    local totalLimit = DisasterResidue.impactPartLimit(tier().Name)
     local reserved = math.clamp(math.floor(tonumber(reserve) or 0), 0, totalLimit)
     local limit = totalLimit - reserved
     if #children <= limit then return end
@@ -302,10 +293,7 @@ local function impactResidue(payload)
     local frame = flatCFrame(surface, normal, 0)
     local radius = math.max(2, ImpactSetpieceRules.safeRadius(payload.radius))
     local reduced = player:GetAttribute("ReduceMotion") == true
-    local expectedPieces = 1 + (reduced and 0
-        or (quality.Name == "High" and 5
-            or (quality.Name == "Medium" and 3 or 0)))
-    trimBudget(expectedPieces)
+    trimBudget(ImpactSurfaceScarKit.partCount(quality.Name, reduced))
     local pieces = ImpactSurfaceScarKit.build(
         folder, frame, kind, quality.Name,
         groundMaterial, groundColor, profile.Color, radius, reduced
@@ -352,7 +340,7 @@ local function warningResidue(instance)
             return
         end
 
-        local capacity = impactBudget(quality)
+        local capacity = DisasterResidue.impactPartLimit(quality.Name)
         if remainingParts(capacity) < 1 then return end
         makeDisc(
             id .. "PulseResidue",
@@ -494,7 +482,7 @@ local function playResultResidue()
     if not base then return false end
     local quality = tier()
     if #lastIds == 0 then return true end
-    local partLimit = impactBudget(quality)
+    local partLimit = DisasterResidue.impactPartLimit(quality.Name)
     -- Prioritize short-lived result motifs over obsolete impact scars, but
     -- allocate no more than the same live per-tier Part limit.
     local expected = DisasterResidue.resultBudget(quality.Name)
