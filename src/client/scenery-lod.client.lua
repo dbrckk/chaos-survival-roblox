@@ -49,6 +49,15 @@ local DISTRICT_ARCHITECTURE_LOD = {
     MediumDistance = 245,
 }
 
+-- The FOUR client-authored sector monuments are distributed across the
+-- actual 320-stud playable map. Applying one arena-center LOD decision to
+-- their parent Folder needlessly keeps distant sectors rendered (or hides
+-- a nearby one at an extreme corner). Cull each true model pivot instead.
+local LOCAL_SECTOR_SETPIECE_LOD = {
+    LowDistance = 245,
+    MediumDistance = 255,
+}
+
 local FOLDERS = {
     ChaosEnvironmentDepthLocal = {
         LowDistance = 150,
@@ -102,14 +111,8 @@ local FOLDERS = {
         LowDistance = 145,
         MediumDistance = 215,
     },
-    -- Near-playable exterior models sit inside the 320-stud floor.
-    -- Low renders only four five-Part silhouettes and needs to see them
-    -- while approaching the outskirts; Medium shows detailed scenes.
-    -- Apply through the existing ONE scenery scheduler.
-    DistrictSectorSetpiecesLocal = {
-        LowDistance = 245,
-        MediumDistance = 255,
-    },
+    -- DistrictSectorSetpiecesLocal is deliberately handled below PER
+    -- MODEL rather than hiding all four sectors from the arena center.
     ArenaServicePropsLocal = {
         LowDistance = 105,
         MediumDistance = 165,
@@ -360,6 +363,27 @@ task.spawn(function()
                         end
                     end
                     applyFolder(folder, limits, profile, origin, cameraPoint)
+                end
+            end
+        end
+
+        -- Each playable-sector original 3D monument is its own client
+        -- Model at a different location. Keep the exact old Low/Medium
+        -- thresholds but use the real model pivot for each, like the
+        -- existing server district/corner building culling below.
+        -- Native prompts, camera controls and hazards are not modified.
+        local sectorFolder = workspace:FindFirstChild("DistrictSectorSetpiecesLocal")
+        if sectorFolder and sectorFolder:IsA("Folder") then
+            for _, model in ipairs(sectorFolder:GetChildren()) do
+                local sector = model:GetAttribute("DistrictSector")
+                if model:IsA("Model")
+                    and model:GetAttribute("LocalOriginal3D") == true
+                    and model:GetAttribute("CosmeticOnly") == true
+                    and type(sector) == "number"
+                    and sector >= 1 and sector <= 4
+                    and sector == math.floor(sector) then
+                    applyFolder(model, LOCAL_SECTOR_SETPIECE_LOD,
+                        profile, model:GetPivot().Position, cameraPoint)
                 end
             end
         end
