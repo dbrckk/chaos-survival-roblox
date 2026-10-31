@@ -10,6 +10,7 @@ local ImpactSetpieceRules = require(ReplicatedStorage.Shared.ImpactSetpieceRules
 local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
 local ImpactPulseRules = require(ReplicatedStorage.Shared.ImpactPulseRules)
 local ImpactMaterialRules = require(ReplicatedStorage.Shared.ImpactMaterialRules)
+local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -19,6 +20,8 @@ local stateEvent = remotes:WaitForChild("RoundState")
 local MAX_DISTANCE = 150
 local activeBursts = 0
 local activePeripheralBursts = 0
+local activeDecorativeBundles = 0
+local activeDisasterCount = 1
 local currentPhase = "waiting"
 local hasRoundSnapshot = false
 local lastRoundNumber = nil
@@ -37,6 +40,7 @@ local function clearBurstVisuals()
     burstEpoch += 1
     activeBursts = 0
     activePeripheralBursts = 0
+    activeDecorativeBundles = 0
     setpieceFolder:ClearAllChildren()
 end
 
@@ -182,21 +186,43 @@ local function renderBurst(payload)
     -- retain their authoritative warnings and a compact visual pulse, but
     -- skip high-overdraw smoke, bloom light and additional shrapnel. This
     -- matters most on Android during overlapping Meteor/Bomb hazards.
-    -- First 2/3 concurrent bursts receive full authored lights/smoke on
-    -- touch devices. Every further overlapping impact still gets its
-    -- compact flash, radial pressure cue and material-aware aftermath.
-    local richDetail = not peripheralCap and foregroundDetail
+    -- Burst flashes have their own short-lived quota. Shrapnel/material
+    -- chips, however, survive much longer; on Android they share a SECOND
+    -- pool covering their whole on-screen lifetime. An offscreen burst
+    -- never spends this optional geometry budget.
+    local touch = UserInputService.TouchEnabled
+    local bundleCap = touch and ImpactPulseRules.decorativeBundleCap(
+        profile.Name, reduced, activeDisasterCount) or nil
+    local decorate = foregroundDetail
+        and (not touch or (bundleCap > 0
+            and activeDecorativeBundles < bundleCap))
+    if touch and decorate then
+        activeDecorativeBundles += 1
+        task.delay(ImpactPulseRules.decorativeBundleHoldSeconds(), function()
+            -- Invalidated map/round timers cannot release a new round's
+            -- already-reserved decorative capacity.
+            if emittedEpoch == burstEpoch then
+                activeDecorativeBundles = math.max(
+                    0, activeDecorativeBundles - 1)
+            end
+        end)
+    end
+    local richDetail = decorate and not peripheralCap
         and ImpactPulseRules.richDetailAllowed(
-            profile.Name, reduced, viewerDistance, activeBursts,
-            UserInputService.TouchEnabled
+            profile.Name, reduced, viewerDistance,
+            touch and activeDecorativeBundles or activeBursts, touch
         )
-    local materialStyle, groundFrame = sampleGround(
-        position, color, kind, profile, reduced
-    )
-    materialStyle.Count = foregroundDetail
-        and ImpactMaterialRules.chipCount(
+    -- No ground raycast or material shader work for an offscreen/over-cap
+    -- cosmetic impact. The flash and pulse still render normally.
+    local materialStyle, groundFrame
+    if decorate then
+        materialStyle, groundFrame = sampleGround(
+            position, color, kind, profile, reduced
+        )
+        materialStyle.Count = ImpactMaterialRules.chipCount(
             profile.Name, reduced, viewerDistance, activeBursts
-        ) or 0
+        )
+    end
     local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
     local targetDiameter = radius * 2
         * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
@@ -217,15 +243,17 @@ local function renderBurst(payload)
     -- and smoke. Local shrapnel now shares its correct collision-plane
     -- orientation and muted real-surface palette, even on tilted decks.
     -- This does not alter authoritative impact coordinates or damage.
-    ImpactSetpiece.spawn(setpieceFolder, {
-        position = position,
-        color = color,
-        radius = radius,
-        kind = kind,
-        surfaceFrame = groundFrame,
-        surfaceColor = materialStyle.Color,
-        surfaceMaterial = materialStyle.Material,
-    }, richDetail and profile.Name or "Low", reduced)
+    if decorate then
+        ImpactSetpiece.spawn(setpieceFolder, {
+            position = position,
+            color = color,
+            radius = radius,
+            kind = kind,
+            surfaceFrame = groundFrame,
+            surfaceColor = materialStyle.Color,
+            surfaceMaterial = materialStyle.Material,
+        }, richDetail and profile.Name or "Low", reduced)
+    end
 
     local burst = Instance.new("Part")
     burst.Name = "LocalHazardImpactBurst"
@@ -452,7 +480,9 @@ local function renderBurst(payload)
         emitter:Emit(VfxQuality.particleCount("Medium", 14, 6))
     end
 
-    makeAftermath(kind, profile, materialStyle, groundFrame, radius)
+    if decorate then
+        makeAftermath(kind, profile, materialStyle, groundFrame, radius)
+    end
 
     local lifetime = duration * 1.35 + 0.08
     Debris:AddItem(burst, lifetime)
@@ -490,6 +520,21 @@ stateEvent.OnClientEvent:Connect(function(state)
     if number then lastRoundNumber = number end
 
     local nextPhase = state.phase
+    local newCount = 1
+    if nextPhase == "round" and type(state.disasterIds) == "table" then
+        local unique = {}
+        local count = 0
+        for _, id in ipairs(state.disasterIds) do
+            if type(id) == "string" and DisasterVisuals.get(id)
+                and not unique[id] then
+                unique[id] = true
+                count += 1
+                if count >= 3 then break end
+            end
+        end
+        newCount = math.max(1, count)
+    end
+    activeDisasterCount = newCount
     if (hasRoundSnapshot and nextPhase ~= currentPhase) or newRound then
         clearBurstVisuals()
     end
