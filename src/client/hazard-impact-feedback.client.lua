@@ -180,13 +180,18 @@ local function renderBurst(payload)
         )
     end
 
-    -- Layer one brief, profile-bounded signature over the existing impact
-    -- ring/plume. This never alters damage, hit detection or scorch ownership.
+    -- Reuse the SINGLE ground raycast already performed for material chips
+    -- and smoke. Local shrapnel now shares its correct collision-plane
+    -- orientation and muted real-surface palette, even on tilted decks.
+    -- This does not alter authoritative impact coordinates or damage.
     ImpactSetpiece.spawn(setpieceFolder, {
         position = position,
         color = color,
         radius = radius,
         kind = kind,
+        surfaceFrame = groundFrame,
+        surfaceColor = materialStyle.Color,
+        surfaceMaterial = materialStyle.Material,
     }, richDetail and profile.Name or "Low", reduced)
 
     local burst = Instance.new("Part")
@@ -228,16 +233,24 @@ local function renderBurst(payload)
             and "MeteorImpactColumn"
             or "BombBlastCloud"
         plumeEmitter.Rate = 0
-        plumeEmitter.LightEmission = kind == "Meteor" and 0.78 or 0.38
-        plumeEmitter.LightInfluence = kind == "Meteor" and 0.08 or 0.42
+        -- Separate incandescent core from settling material dust within
+        -- the SAME original emitter. Fire-orange-only meteor particles
+        -- looked like endless flames rather than blasted stone and ash.
+        -- The critical flash is still handled by the existing burst/light.
+        plumeEmitter.LightEmission = kind == "Meteor" and 0.28 or 0.20
+        plumeEmitter.LightInfluence = kind == "Meteor" and 0.30 or 0.42
         plumeEmitter.Color = kind == "Meteor"
-            and ColorSequence.new(
-                Color3.fromRGB(255, 220, 120),
-                Color3.fromRGB(255, 110, 48)
-            )
+            and ColorSequence.new({
+                ColorSequenceKeypoint.new(0,
+                    materialStyle.DustColor:Lerp(color, 0.32)),
+                ColorSequenceKeypoint.new(0.34,
+                    materialStyle.DustColor:Lerp(Color3.fromRGB(85, 79, 75), 0.44)),
+                ColorSequenceKeypoint.new(1,
+                    materialStyle.DustColor:Lerp(Color3.fromRGB(48, 49, 51), 0.62)),
+            })
             or ColorSequence.new(
-                materialStyle.DustColor:Lerp(color, 0.20),
-                materialStyle.DustColor:Lerp(Color3.fromRGB(58, 54, 60), 0.55)
+                materialStyle.DustColor:Lerp(color, 0.12),
+                materialStyle.DustColor:Lerp(Color3.fromRGB(58, 54, 60), 0.60)
             )
         plumeEmitter.Lifetime = kind == "Meteor"
             and NumberRange.new(0.30, 0.56)
