@@ -109,6 +109,10 @@ task.spawn(function()
         if elapsed > SUSPEND_GAP_SECONDS then
             streak = 0
             invalidateCensus()
+            -- FPS/p95 may still describe frames from before the Android
+            -- process suspension. Give the existing sampler time to
+            -- publish new readings before resuming automatic decisions.
+            settleUntil = os.clock() + QUALITY_SETTLE_SECONDS
             continue
         end
 
