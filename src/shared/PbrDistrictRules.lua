@@ -171,6 +171,7 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
     if not part or not part:IsA("BasePart")
         or not part.Anchored or part.CanCollide or part.CanTouch
         or part.CanQuery or part.Transparency >= 0.16
+        or part:GetAttribute("PreserveNativeMaterial") == true
         or part.Material == Enum.Material.Neon
         or part.Material == Enum.Material.Glass
         -- The only approved original 2K variants are metals/ceramics.
@@ -206,6 +207,18 @@ end
 
 function PbrDistrictRules.materialKey(partName, material)
     local name = tostring(partName or ""):lower()
+    -- Respect the native front-door material before generic naming heuristics.
+    -- Otherwise the "service" substring turns an Orbital ceramic airlock
+    -- into oxidized steel, or plated tower access into rust.
+    if name == "serviceentrydoor"
+        or name == "serviceentryrecess"
+        or name == "serviceentrylintel"
+        or name == "serviceentrycanopy" then
+        if material == Enum.Material.CeramicTiles then return "ceramic" end
+        if material == Enum.Material.DiamondPlate then return "armor" end
+        if material == Enum.Material.CorrodedMetal then return "oxidized" end
+        return "titanium"
+    end
     -- Authored original foundations have different metal/composite layers;
     -- do not make their three metallic layers all look like ceramic.
     if name == "foundationshoulder" then return "titanium" end
@@ -250,7 +263,11 @@ function PbrDistrictRules.priority(part)
         or name:find("tower", 1, true)
         or name:find("dish", 1, true)
         or name:find("manifold", 1, true)
+    -- Nearby player-facing doors deserve a 2K map before remote trim;
+    -- this does not change either the per-model or global material budget.
+    local primaryEntrance = name == "serviceentrydoor"
     return math.min(area, 4000) + (architecturalFace and 250 or 0)
+        + (primaryEntrance and 350 or 0)
 end
 
 -- 28-degree mobile camera turn threshold. On-site looking around is

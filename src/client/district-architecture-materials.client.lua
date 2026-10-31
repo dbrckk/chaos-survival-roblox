@@ -66,21 +66,26 @@ local function attach(model, variant, tier)
     -- canvases at once. Show half of the facades there, all 16 on High;
     -- each is additionally culled at 115/145 studs by SurfaceGui.
     if tier == "Medium" and index % 2 ~= 0 then return end
-    local plate = model:FindFirstChild("SideCassette1")
+    -- Mark the player-facing service door instead of a side cassette.
+    -- Reuse the same Medium/High canvas quota with no added 3D Parts.
+    local plate = model:FindFirstChild("ServiceEntryDoor")
     if not plate or not plate:IsA("BasePart") or details[plate] then
         return
     end
 
     local theme = VisualTheme.arena(variant)
     local accent = index % 2 == 0 and theme.Secondary or theme.Accent
+    local side = tostring(model:GetAttribute("DistrictSide") or "N")
     local profile = tonumber(model:GetAttribute("DistrictProfile")) or 1
-    local style = (profile == 2 or profile == 3)
-        and "hazard" or "telemetry"
-
+    local functions = {
+        [1] = "SURVEY", [2] = "CARGO",
+        [3] = "VENT", [4] = "COMMS",
+    }
     local gui = DistrictMaterialFinishKit.stencil(
         plate,
-        "CS-" .. string.format("%02d", index) .. " / " .. string.upper(variant),
-        accent, tier, style, Enum.NormalId.Right
+        side:sub(1, 1) .. "-" .. string.format("%02d", index)
+            .. " / " .. (functions[profile] or "SERVICE"),
+        accent, tier, "service-door", Enum.NormalId.Front
     )
     if not gui then return end
 
