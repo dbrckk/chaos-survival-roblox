@@ -51,6 +51,15 @@ function DisasterResidue.get(id)
     return DisasterResidue.Profiles[id]
 end
 
+-- Shared hard cap for locally owned residue Parts across impact scars,
+-- warning traces and end-of-round motifs. Callers should reserve slots
+-- before constructing geometry, not create-and-evict afterwards.
+function DisasterResidue.impactPartLimit(tierName)
+    if tierName == "Low" then return 18 end
+    if tierName == "Medium" then return 34 end
+    return 52
+end
+
 function DisasterResidue.resultBudget(tierName)
     if tierName == "Low" then
         return 3
