@@ -434,27 +434,30 @@ local function rebuild()
 
             -- A platform can enter while already Gone (streaming/late
             -- replication) or switch phase after the visuals are built.
+            local function syncRoute()
+                syncTakeoff(platform, base.Position, variant)
+            end
             local function syncCollapse()
                 PlatformFinishKit.applyCollapseVisibility(
                     visualsByPlatform[platform],
                     platform:GetAttribute("CollapsePhase")
                 )
-                syncTakeoff(platform, base.Position, variant)
+                syncRoute()
             end
             collapseConnections[platform] =
                 platform:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse)
             if target then
                 -- Size can shrink without any CollapsePhase change.
-                -- Each signal rechecks this ONE verified pair; no polling,
-                -- arena-wide rebuild or per-frame update is introduced.
+                -- These events only refresh the two route strokes;
+                -- the larger decorative fade remains phase-triggered.
                 routeTargetConnections[platform] = {
-                    platform:GetPropertyChangedSignal("Size"):Connect(syncCollapse),
-                    platform:GetPropertyChangedSignal("CanCollide"):Connect(syncCollapse),
-                    platform:GetPropertyChangedSignal("Transparency"):Connect(syncCollapse),
-                    target:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse),
-                    target:GetPropertyChangedSignal("Size"):Connect(syncCollapse),
-                    target:GetPropertyChangedSignal("CanCollide"):Connect(syncCollapse),
-                    target:GetPropertyChangedSignal("Transparency"):Connect(syncCollapse),
+                    platform:GetPropertyChangedSignal("Size"):Connect(syncRoute),
+                    platform:GetPropertyChangedSignal("CanCollide"):Connect(syncRoute),
+                    platform:GetPropertyChangedSignal("Transparency"):Connect(syncRoute),
+                    target:GetAttributeChangedSignal("CollapsePhase"):Connect(syncRoute),
+                    target:GetPropertyChangedSignal("Size"):Connect(syncRoute),
+                    target:GetPropertyChangedSignal("CanCollide"):Connect(syncRoute),
+                    target:GetPropertyChangedSignal("Transparency"):Connect(syncRoute),
                 }
             end
             syncCollapse()
