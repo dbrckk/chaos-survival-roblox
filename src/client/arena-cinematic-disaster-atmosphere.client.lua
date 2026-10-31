@@ -16,6 +16,7 @@ folder.Name = "ArenaCinematicDisasterAtmosphereLocal"
 folder.Parent = workspace
 
 local phase = "waiting"
+local lastRoundNumber = nil
 local finalRush = false
 local disasterIds = {}
 local clock = 0
@@ -252,7 +253,7 @@ local function rebuild()
     local accent = profile and profile.Accent or theme.Accent
     local secondary = secondaryProfile and secondaryProfile.Accent or theme.Secondary
 
-    local beaconCount = Layout.beaconCount(tier.Name, true)
+    local beaconCount = Layout.beaconCount(tier.Name, true, #disasterIds)
 
     for i = 1, beaconCount do
         local angle = ((i - 1) / beaconCount) * math.pi * 2
@@ -338,7 +339,7 @@ local function refreshRates()
             local enabled = phase == "round"
             local rate = enabled
                 and baseRate * tier.ParticleScale
-                    * (finalRush and 1.45 or 1)
+                    * Layout.particleMultiplier(#disasterIds, finalRush)
                     * (reduced and 0.35 or 1)
                 or 0
             -- RoundState can be rebroadcast without a quality/intensity
@@ -482,12 +483,40 @@ end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshRates)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    -- A malformed/late snapshot must not kill the one client owner.
-    if type(state) ~= "table" then state = {} end
-    local newPhase = tostring(state.phase or "waiting")
-    local newIds = type(state.disasterIds) == "table" and state.disasterIds or {}
-    local changed = newPhase ~= phase or #newIds ~= #disasterIds
+    -- Do not clear a valid arena ambience because a late or malformed
+    -- RoundState happens to arrive during Android stream-in/resume.
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        return
+    end
+    local newRound = number ~= nil and lastRoundNumber ~= nil
+        and number ~= lastRoundNumber
+    if number then lastRoundNumber = number end
 
+    local newPhase = state.phase
+    local newIds = {}
+    if newPhase == "round" and type(state.disasterIds) == "table" then
+        local seen = {}
+        for _, id in ipairs(state.disasterIds) do
+            if type(id) == "string" and DisasterVisuals.get(id)
+                and not seen[id] then
+                seen[id] = true
+                newIds[#newIds + 1] = id
+                -- The first two decorate the arena; a third reports
+                -- density for throttling. Actual hazards are not filtered.
+                if #newIds >= 3 then break end
+            end
+        end
+    end
+
+    local changed = newRound or newPhase ~= phase
+        or #newIds ~= #disasterIds
     if not changed then
         for i, id in ipairs(newIds) do
             if disasterIds[i] ~= id then
@@ -496,14 +525,10 @@ stateEvent.OnClientEvent:Connect(function(state)
             end
         end
     end
-
     phase = newPhase
-    finalRush = phase == "round" and state.finalRush == true
+    finalRush = newPhase == "round" and state.finalRush == true
     disasterIds = newIds
-
-    if changed then
-        rebuild()
-    end
+    if changed then rebuild() end
     refreshRates()
 end)
 
