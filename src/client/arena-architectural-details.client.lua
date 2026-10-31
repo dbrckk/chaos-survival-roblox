@@ -263,11 +263,13 @@ local function buildHarbor(base, theme, tier)
         f * CFrame.new(6, height + 2.0, -3)
             * CFrame.Angles(math.rad(11), 0, 0),
         dark, Enum.Material.CorrodedMetal, 0.05, high)
+    -- A shipping container needs a corrugated steel shell, not a
+    -- smooth wooden box. Keep the same outboard silhouette and physics.
+    local cargoFrame = f * CFrame.new(1.3, height - 7.3, -1.6)
+    local cargoTone = theme.Surface:Lerp(steel, 0.44)
     part("HarborContainerCraneCargo",
-        Vector3.new(7.4, 4.4, 4.8),
-        f * CFrame.new(1.3, height - 7.3, -1.6),
-        theme.Surface:Lerp(steel, 0.44),
-        Enum.Material.WoodPlanks, 0.04, high)
+        Vector3.new(7.4, 4.4, 4.8), cargoFrame,
+        cargoTone, Enum.Material.CorrodedMetal, 0.04, high)
 
     if tier ~= "Low" then
         -- The cable and cargo move IN PHASE through the existing
@@ -297,16 +299,39 @@ local function buildHarbor(base, theme, tier)
             f * CFrame.new(-7.5, height - 2.3, -2.2),
             dark, Enum.Material.Metal, 0.12, false)
 
-        if high then
-            for index = 1, 4 do
-                local rib = part("HarborContainerCraneContainerRib" .. index,
-                    Vector3.new(0.18, 3.9, 4.85),
-                    f * CFrame.new(-2.4 + index * 1.55,
-                        height - 7.3, -1.6),
-                    steel, Enum.Material.CorrodedMetal, 0.12, false)
-                -- Ribs must follow the same suspended cargo lift; static
-                -- ribs would appear to slide straight THROUGH the crate.
+        -- Corrugation is attached to the actual container shell on
+        -- both exposed long faces. Every panel follows the cargo's lift;
+        -- no detached floating ribs, extra tweens or render callbacks.
+        local ribCount = high and 6 or 3
+        for face = -1, 1, 2 do
+            for index = 1, ribCount do
+                local x = -3.7 + 7.4 * index / (ribCount + 1)
+                local rib = part(
+                    "HarborContainerCraneCorrugation" .. face .. "_" .. index,
+                    Vector3.new(0.13, 3.78, 0.13),
+                    cargoFrame * CFrame.new(x, 0, face * 2.43),
+                    steel:Lerp(cargoTone, 0.25),
+                    Enum.Material.CorrodedMetal, 0.08, false)
                 track(rib, "lift", 0.62, 0.52, 0.4)
+            end
+        end
+        -- Two recessed door leaves and their center seam make the
+        -- suspended object recognizable as a freight container.
+        for side = -1, 1, 2 do
+            local door = part("HarborContainerCraneDoor" .. side,
+                Vector3.new(3.26, 3.74, 0.12),
+                cargoFrame * CFrame.new(side * 1.73, 0, -2.45),
+                cargoTone:Lerp(dark, 0.25),
+                Enum.Material.Metal, 0.09, false)
+            track(door, "lift", 0.62, 0.52, 0.4)
+        end
+        if high then
+            for side = -1, 1, 2 do
+                local lockingBar = part("HarborContainerCraneDoorLock" .. side,
+                    Vector3.new(0.10, 3.5, 0.15),
+                    cargoFrame * CFrame.new(side * 0.34, 0, -2.55),
+                    steel, Enum.Material.DiamondPlate, 0.05, false)
+                track(lockingBar, "lift", 0.62, 0.52, 0.4)
             end
             part("HarborContainerCraneLoadRail",
                 Vector3.new(19.8, 0.24, 0.36),
