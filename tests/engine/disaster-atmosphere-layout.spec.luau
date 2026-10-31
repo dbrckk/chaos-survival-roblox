@@ -43,7 +43,7 @@ describe("Slope-correct live disaster atmosphere", function()
         expect(Layout.perimeterRadius(nil) == nil).toBe(true)
         expect(Layout.perimeterRadius(size, -1) == nil).toBe(true)
         expect(Layout.edgeRadius(nil, 0) == nil).toBe(true)
-        expect(Layout.edgeRadius(size, 0 / 0) == nil).toBe(true)
+        expect(Layout.edgeRadius(size, math.huge) == nil).toBe(true)
         expect(Layout.beaconFrame(nil, size, 0) == nil).toBe(true)
         expect(Layout.orbitalCoreFrame(nil) == nil).toBe(true)
 
@@ -64,7 +64,7 @@ describe("Slope-correct live disaster atmosphere", function()
                     < 0.001).toBe(true)
                 expect(math.abs(localPosition.Z - math.sin(angle) * edgeRadius)
                     < 0.001).toBe(true)
-                -- Each beam is just beyond the true rectangular edge,
+                -- Each beacon is just beyond the true rectangular edge,
                 -- including diagonals when the floor is not square.
                 expect(math.abs(math.max(
                     math.abs(localPosition.X) / shrunk.X,
