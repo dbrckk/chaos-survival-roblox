@@ -300,9 +300,11 @@ local function makeSector(base, theme, index, tier, variant)
                         math.sin(angle) * 5.0)
                         * CFrame.Angles(0, -angle, 0),
                     segment % 2 == 0 and paintedAlloy or alloy,
-                    segment % 2 == 0 and Enum.Material.Glass
-                        or Enum.Material.Metal,
-                    segment % 2 == 0 and 0.42 or 0.06)
+                    -- Machined containment metal, not eight alternating
+                    -- opaque/neon slabs. Preserve existing High-tier
+                    -- animated collar ownership with no glass overdraw.
+                    Enum.Material.Metal,
+                    segment % 2 == 0 and 0.08 or 0.06)
             end
         end
     else
