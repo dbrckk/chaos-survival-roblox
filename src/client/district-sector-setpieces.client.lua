@@ -195,6 +195,7 @@ local function makeSector(base, theme, index, tier, variant)
                 Enum.Material.Glass, 0.2, Enum.PartType.Ball)
         end
         model:SetAttribute("Decorative3DParts", 5)
+        model:SetAttribute("VariantArchitectureParts", 0)
         return model
     end
 
@@ -348,7 +349,7 @@ local function makeSector(base, theme, index, tier, variant)
     elseif variant == "Crossroads" then
         -- Two physically separate transit masses offset the repeated
         -- roofs, in weathered stone and matte steel, not glowing arrows.
-        local upper = structure("SwitchConcourse",
+        structure("SwitchConcourse",
             Vector3.new(15.8, 1.2, 4.0),
             Vector3.new(0, 12.2, 3.4),
             alloy, Enum.Material.CorrodedMetal)
@@ -376,7 +377,7 @@ local function makeSector(base, theme, index, tier, variant)
         end
         if high then
             structure("ContainmentCrossbrace", Vector3.new(13.6, 0.85, 2.2),
-                Vector3.new(0, 15.2, 2.2),
+                Vector3.new(0, 15.0, 2.2),
                 brushed, Enum.Material.Metal)
         end
     elseif variant == "Harbor" then
@@ -390,11 +391,16 @@ local function makeSector(base, theme, index, tier, variant)
         end
         if high then
             structure("DocksideHoistCrosshead", Vector3.new(15.0, 1.6, 3.4),
-                Vector3.new(0, 13.9, 2.8),
+                Vector3.new(0, 13.75, 2.8),
                 brushed, Enum.Material.DiamondPlate)
         end
     end
     model:SetAttribute("VariantArchitectureParts", infrastructure)
+    if variant == "Classic" or variant == "Towers" or variant == "Crossroads"
+        or variant == "Orbital" or variant == "Harbor" then
+        assert(infrastructure == (high and 3 or 2),
+            "Near-route district macro geometry exceeded its tier contract")
+    end
 
     -- Profiled edge armour, real rivet bosses and procedural stamped
     -- markings provide depth/texture from multiple camera angles. These
