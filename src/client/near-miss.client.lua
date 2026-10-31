@@ -109,6 +109,7 @@ local function applyResponsiveLayout()
         token += 1
         card.Visible = false
         flash.Visible = false
+        clearWorldEffects()
         MobileHudNotices.release("near-miss")
     end
     card.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
@@ -205,6 +206,9 @@ if touchDevice then
         cancelCardTweens()
         card.Visible = false
         flash.Visible = false
+        -- An imminent hazard must also preempt optional near-miss rings
+        -- and avatar lights, not merely the reward toast on Android.
+        clearWorldEffects()
     end)
 end
 
