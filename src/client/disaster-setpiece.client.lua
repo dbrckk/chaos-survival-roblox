@@ -2,6 +2,7 @@ local Debris=game:GetService("Debris")
 local Players=game:GetService("Players")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local TweenService=game:GetService("TweenService")
+local UserInputService=game:GetService("UserInputService")
 
 local VfxQuality=require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterSetpiece=require(ReplicatedStorage.Shared.DisasterSetpiece)
@@ -53,7 +54,8 @@ end
 -- emblem for each of the eleven disasters, never a shared generic ring.
 local function revealGlyphs(base, ids, current)
     if token~=current or not base.Parent or arenaBase()~=base then return end
-    local tier=VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier=VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"),UserInputService.TouchEnabled)
     local reduced=player:GetAttribute("ReduceMotion")==true
     local duration=reduced and 0.33 or 0.80
     for slot,id in ipairs(ids or {}) do
@@ -71,7 +73,8 @@ end
 
 local function playProfile(profile,base,index,total,current)
     if token~=current or not base.Parent or arenaBase()~=base then return end
-    local tier=VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier=VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"),UserInputService.TouchEnabled)
     local reduced=player:GetAttribute("ReduceMotion")==true
     local centerFrame=base.CFrame*CFrame.new(0,base.Size.Y*0.5+0.14,0)
     local span=math.max(base.Size.X,base.Size.Z)
@@ -139,8 +142,20 @@ local function startIntro(state, current, retry)
         return
     end
     local ids=type(state.disasterIds)=="table" and state.disasterIds or {}
-    revealGlyphs(base,ids,current)
-    local profiles=DisasterSetpiece.forIds(ids)
+    -- Limit full-arena cosmetic flourishes to two distinct recognized
+    -- hazards even when a malformed list contains repeated entries.
+    -- Authoritative warning parts remain untouched.
+    local selected={}
+    local seen={}
+    for _,id in ipairs(ids) do
+        if type(id)=="string" and DisasterSetpiece.get(id) and not seen[id] then
+            selected[#selected+1]=id
+            seen[id]=true
+            if #selected>=2 then break end
+        end
+    end
+    revealGlyphs(base,selected,current)
+    local profiles=DisasterSetpiece.forIds(selected)
     for i,p in ipairs(profiles) do
         task.delay((i-1)*0.11,function()
             playProfile(p,base,i,#profiles,current)
@@ -182,6 +197,16 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     if player:GetAttribute("ReduceMotion")==true then
         -- Invalidate a queued Double Chaos flourish as well as already
         -- emitted pieces: clearing alone does not cancel task.delay.
+        token+=1
+        glyphFolder:ClearAllChildren()
+        motionFolder:ClearAllChildren()
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name=="GeneratedMap" then
+        -- Retire full-arena flourishes immediately when their map is
+        -- removed, even before a replacement RoundState arrives.
         token+=1
         glyphFolder:ClearAllChildren()
         motionFolder:ClearAllChildren()

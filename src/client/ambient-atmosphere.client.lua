@@ -9,8 +9,12 @@ local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local currentState = nil
+local lastRoundNumber = nil
 local attachment = nil
 local emitter = nil
+local paintedPrimary = nil
+local paintedSecondary = nil
+local palettePainted = false
 
 local function tier()
     return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
@@ -22,6 +26,9 @@ local function destroyEmitter()
     end
     attachment = nil
     emitter = nil
+    paintedPrimary = nil
+    paintedSecondary = nil
+    palettePainted = false
 end
 
 local function ensureEmitter()
@@ -82,17 +89,24 @@ local function refresh()
         return
     end
 
-    local ids = state.disasterIds or {}
-    local profile = DisasterVisuals.combine(ids)
-    local secondary = ids[2] and DisasterVisuals.get(ids[2]) or nil
-
-    local primaryColor = profile and profile.Accent or Color3.fromRGB(95, 185, 255)
-    local secondaryColor = secondary and secondary.Accent or Color3.fromRGB(175, 115, 255)
-
-    emitter.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, primaryColor),
-        ColorSequenceKeypoint.new(1, secondaryColor),
-    })
+    local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
+    local primaryId = type(ids[1]) == "string" and ids[1] or nil
+    local secondaryId = type(ids[2]) == "string" and ids[2] or nil
+    if not palettePainted
+        or primaryId ~= paintedPrimary or secondaryId ~= paintedSecondary then
+        local profile = DisasterVisuals.combine({primaryId, secondaryId})
+        local secondary = secondaryId and DisasterVisuals.get(secondaryId) or nil
+        local primaryColor = profile and profile.Accent
+            or Color3.fromRGB(95, 185, 255)
+        local secondaryColor = secondary and secondary.Accent
+            or Color3.fromRGB(175, 115, 255)
+        emitter.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, primaryColor),
+            ColorSequenceKeypoint.new(1, secondaryColor),
+        })
+        paintedPrimary, paintedSecondary = primaryId, secondaryId
+        palettePainted = true
+    end
 
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
     local finalRush = state.phase == "round" and state.finalRush == true
@@ -105,14 +119,29 @@ local function refresh()
         baseRate *= 0.35
     end
 
-    emitter.Rate = math.max(0, baseRate * quality.ParticleScale)
-
+    local nextRate = math.max(0, baseRate * quality.ParticleScale)
     if quality.Name == "Low" then
-        emitter.Rate = math.min(emitter.Rate, 1.25)
+        nextRate = math.min(nextRate, 1.25)
+    end
+    -- Avoid re-writing unchanged cosmetic properties every RoundState
+    -- heartbeat; no new timer or update loop is needed.
+    if math.abs(emitter.Rate - nextRate) > 0.001 then
+        emitter.Rate = nextRate
     end
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        return
+    end
+    if number then lastRoundNumber = number end
     currentState = state
     refresh()
 end)
@@ -120,6 +149,7 @@ end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refresh)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(refresh)
 
+player.CharacterRemoving:Connect(destroyEmitter)
 player.CharacterAdded:Connect(function()
     task.wait(0.1)
     refresh()
