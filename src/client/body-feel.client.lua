@@ -1,10 +1,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local BodyMotionRules = require(ReplicatedStorage.Shared.BodyMotionRules)
 local LocomotionDynamics = require(ReplicatedStorage.Shared.LocomotionDynamics)
 local CharacterReactionRules = require(ReplicatedStorage.Shared.CharacterReactionRules)
+local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 local GroundFx = require(script.Parent.LocomotionGroundFx)
 
@@ -362,7 +364,9 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    if player:GetAttribute("VfxQualityTier") == "Low" then
+    if VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    ).Name == "Low" then
         GroundFx.clear()
     end
 end)
@@ -554,8 +558,11 @@ RunService:BindToRenderStep(
             launchTarget, skidTarget = 0, 0
         end
         lastSpeed = speed
+        local cosmeticTier = VfxQuality.deviceTier(
+            player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+        ).Name
         local dynamicScale = LocomotionDynamics.profile(
-            player:GetAttribute("VfxQualityTier"), reduced
+            cosmeticTier, reduced
         )
         startPose += (launchTarget - startPose) * expAlpha(11, dt)
         skidPose += (skidTarget - skidPose) * expAlpha(12, dt)
@@ -584,7 +591,7 @@ RunService:BindToRenderStep(
 
         local cue, cueStrength = LocomotionDynamics.groundCue(
             launchTarget, skidTarget, cutTarget,
-            player:GetAttribute("VfxQualityTier"), reduced, roundPhase
+            cosmeticTier, reduced, roundPhase
         )
         local now = os.clock()
         if cue and LocomotionDynamics.footworkEligible(
@@ -594,7 +601,7 @@ RunService:BindToRenderStep(
             -- No extra per-frame loop: only a brief geometry burst for a
             -- grounded start, hard-stop skid or high-speed planted pivot.
             local contact = GroundFx.emit(
-                root, cue, cueStrength, player:GetAttribute("VfxQualityTier")
+                root, cue, cueStrength, cosmeticTier
             )
             if contact then
                 lastGroundCueAt = now
