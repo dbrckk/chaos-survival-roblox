@@ -1620,7 +1620,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
         local humanSurvivorsAlive = countContestantsRemaining()
         local aiSurvivorsAlive = AISurvivorService.aliveRoundCount()
         local survivorsAlive = humanSurvivorsAlive + aiSurvivorsAlive
-        if humanSurvivorsAlive <= 0 then
+        -- An authenticated, isolated Studio AI-camera review must keep
+        -- observing autonomous survivors even if its idle human observer
+        -- gets eliminated. Public solo rounds still end immediately.
+        if humanSurvivorsAlive <= 0 and not isStudioVisualAI then
             endedEarly = true
 
             if aiSurvivorsAlive > 0 then
