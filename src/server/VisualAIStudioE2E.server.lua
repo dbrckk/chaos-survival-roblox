@@ -13,11 +13,18 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local sampleCount = math.clamp(math.floor(tonumber(args.sampleCount) or 15), 1, 15)
 local timeout = math.clamp(tonumber(args.timeoutSeconds) or 110, 65, 145)
+local ALLOWED_ARENAS = {
+    Classic = true, Towers = true, Crossroads = true,
+    Orbital = true, Harbor = true,
+}
+local requiredArena = ALLOWED_ARENAS[args.arenaVariant]
+    and args.arenaVariant or "Harbor"
 -- StudioTestService:GetTestArgs() has a known issue when invoked in
 -- LocalScripts. The server is authoritative, so forward only the safe
 -- suite activation/configuration through replicated attributes.
 ReplicatedStorage:SetAttribute("ChaosVisualAISuite", true)
 ReplicatedStorage:SetAttribute("ChaosVisualAISamples", sampleCount)
+ReplicatedStorage:SetAttribute("ChaosVisualAIArena", requiredArena)
 ReplicatedStorage:SetAttribute(
     "ChaosVisualAIInterval", math.clamp(tonumber(args.intervalSeconds) or 3, 2, 8)
 )
@@ -54,6 +61,21 @@ report.OnServerEvent:Connect(function(player, payload)
         return
     end
     if payload.kind ~= "frame" then return end
+
+    -- Require an *actual* server-owned Harbor round at every capture.
+    -- A GUI label or a client-supplied arena string alone is not proof.
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local actualArena = arena and arena:GetAttribute("VariantId")
+    if actualArena ~= requiredArena
+        or payload.arenaVariant ~= actualArena then
+        reject("camera capture belongs to wrong/unknown arena")
+        return
+    end
+    if payload.phase ~= "round" or payload.inRound ~= true then
+        reject("camera capture was taken outside a live AI round")
+        return
+    end
     samplePlayer = player
     local index = #samples + 1
     if payload.index ~= index or index > sampleCount then
@@ -126,14 +148,16 @@ report.OnServerEvent:Connect(function(player, payload)
         bot = model.Name,
         mode = mode,
         phase = tostring(payload.phase or ""),
+        arena = actualArena,
         fps = math.floor(tonumber(payload.fps) or 0),
         viewport = string.format("%dx%d", vp.X, vp.Y),
         voteVisible = payload.voteVisible == true,
         practiceVisible = payload.practiceVisible == true,
     }
     print(string.format(
-        "CHAOS_VISUAL_AI_CAPTURE_MARKER %02d/%02d bot=%s mode=%s phase=%s fps=%d",
-        index, sampleCount, model.Name, mode, tostring(payload.phase), samples[index].fps
+        "CHAOS_VISUAL_AI_CAPTURE_MARKER %02d/%02d arena=%s bot=%s mode=%s phase=%s fps=%d",
+        index, sampleCount, actualArena, model.Name, mode,
+        tostring(payload.phase), samples[index].fps
     ))
 end)
 
@@ -175,7 +199,7 @@ task.spawn(function()
     task.wait(11)
     print("CHAOS_VISUAL_AI_VERIFIED", sampleCount, "samples", different, "AI subjects", "round=", hasRound)
     StudioTestService:EndTest(string.format(
-        "PASS: visual AI: %d renderer frames, %d autonomous bots, live round witnessed",
-        sampleCount, different
+        "PASS: visual AI: %d real %s round frames, %d autonomous bots",
+        sampleCount, requiredArena, different
     ))
 end)

@@ -5,6 +5,8 @@ local HttpService = game:GetService("HttpService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local isStudioE2E = false
+local isStudioVisualAI = false
+local studioVisualArena = nil
 
 if RunService:IsStudio() then
     local okService, StudioTestService = pcall(game.GetService, game, "StudioTestService")
@@ -21,6 +23,23 @@ if RunService:IsStudio() then
             Config.Solo.VoteSeconds = 2
             Config.Solo.ReadySeconds = 1
             Config.Solo.RoundSeconds = 5
+            Config.Solo.PostRoundSeconds = 2
+        elseif okArgs and type(args) == "table"
+            and args.suite == "ChaosVisualAI" then
+            -- Signed-in Studio-only capture: a fully playable, longer solo
+            -- round so its 15 photographs depict live AI hazard decisions.
+            -- This does not change public round duration or bot abilities.
+            isStudioVisualAI = true
+            local allowed = {
+                Classic = true, Towers = true, Crossroads = true,
+                Orbital = true, Harbor = true,
+            }
+            studioVisualArena = allowed[args.arenaVariant]
+                and args.arenaVariant or "Harbor"
+            Config.Solo.IntermissionSeconds = 2
+            Config.Solo.VoteSeconds = 2
+            Config.Solo.ReadySeconds = 2
+            Config.Solo.RoundSeconds = 65
             Config.Solo.PostRoundSeconds = 2
         end
     end
@@ -1601,7 +1620,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
         local humanSurvivorsAlive = countContestantsRemaining()
         local aiSurvivorsAlive = AISurvivorService.aliveRoundCount()
         local survivorsAlive = humanSurvivorsAlive + aiSurvivorsAlive
-        if humanSurvivorsAlive <= 0 then
+        -- An authenticated, isolated Studio AI-camera review must keep
+        -- observing autonomous survivors even if its idle human observer
+        -- gets eliminated. Public solo rounds still end immediately.
+        if humanSurvivorsAlive <= 0 and not isStudioVisualAI then
             endedEarly = true
 
             if aiSurvivorsAlive > 0 then
@@ -1786,7 +1808,11 @@ while true do
     botVoteStarted = false
     AISurvivorService.clearVotes()
 
-    if isStudioE2E then
+    if isStudioVisualAI then
+        -- Exact real map selection for Studio visual evidence only.
+        -- Never overridden in an ordinary public Roblox server.
+        currentArenaVariant = studioVisualArena
+    elseif isStudioE2E then
         studioE2EArenaIndex += 1
         local order = ArenaVariants.Order
         currentArenaVariant = order[((studioE2EArenaIndex - 1) % #order) + 1]
