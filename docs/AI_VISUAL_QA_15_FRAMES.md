@@ -3,26 +3,40 @@
 ## What the test actually does
 
 1. Builds **the exact Git commit** into a local Roblox Studio place with Rojo.
-2. Runs one real local Studio client/server match. Three server-controlled
-   **AISurvivors** use their existing independent AI navigation/animations.
+2. Runs one real, **Studio-only 65-second Harbor round** with the original
+   server-controlled **AISurvivors** navigating and surviving normally.
+   The passive test observer's elimination cannot terminate this isolated
+   recording; public solo matches retain their normal early-end rules.
 3. The Studio-only spectator camera follows a living AI, switching subjects
    after every five samples. It shows chase, side and eye-level views, with
    no scripted imitation of bot movement.
 4. Reports **15 Roblox-rendered camera states**, one roughly every three
-   seconds. The authoritative test checks bot identity, living Humanoid,
-   camera proximity, renderer frames, time gaps and presence of a live round.
+   seconds. The server validates **each** against the real Harbor arena
+   attribute, active round, marked living AI subject, camera proximity,
+   renderer advancement and sample timing. A single lobby/result frame
+   cannot count as a successfully audited 15-frame round.
 5. An authenticated **interactive Windows desktop** screenshots the actual
-   Roblox Studio/client window fifteen times into distinct PNGs. Every PNG
-   gets a UTC timestamp, viewport size and SHA-256 provenance.
-6. A Python/Pillow audit validates the fifteen PNGs, rejects identical/static
-   content, quantifies brightness/contrast/frame changes, and produces a
-   5 × 3 **contact sheet** for visual review with the full-resolution PNGs.
+   Roblox Studio/client window fifteen times into distinct PNGs. Before
+   each PNG, the collector requires the corresponding authoritative
+   `CHAOS_VISUAL_AI_CAPTURE_MARKER NN/15 arena=Harbor`. The manifest binds
+   its SHA-256 hash, UTC timestamp, size, bot, camera mode and round phase
+   to that real marker.
+6. A Python/Pillow audit validates the fifteen PNGs, strictly checks
+   Harbor/round-only provenance, two or more bot identities, all three
+   camera angles, UTC spacing and hashes, rejects static content,
+   quantifies brightness/contrast, and produces a 5 × 3 **contact sheet**
+   for visual review with the original full-resolution PNGs.
 7. The GitHub Actions artifact contains all evidence, including logs,
    source SHA, fifteen PNGs, montage, JSON and Markdown review reports.
 
+**Coverage:** this first deterministic scenario audits **Harbor only**.
+Classic, Towers, Crossroads and Orbital still need separate genuine rendered
+sessions; neither the code review nor this Harbor-only script certifies them.
+
 **Important:** these are REAL game-engine frames from an isolated Studio
-simulation, **not** frames from the already published Roblox server and
-**not** a simulated/AI-generated illustration. Desktop captures are **not**
+simulation **only after an authenticated capture workflow actually passes**.
+They are **not** frames from the already published Roblox server and
+**not** simulated/AI-generated illustrations. Desktop captures are **not**
 a substitute for verifying real Android FPS, touch UX or actual mobile
 GPU output. Never call a successful headless Open Cloud engine test an
 authenticated GUI screenshot test.
@@ -91,6 +105,8 @@ change automatically to the public Roblox experience.
 | `WINDOW_NOT_FOREGROUND` | Another desktop window would be captured |
 | `STATIC_DESKTOP` | Pixels do not show enough changing game content |
 | `STUDIO_TEST_FAILED` | StudioTestService did not confirm 15 live bot samples |
+| `NO_VERIFIED_FRAME_MARKER` | The PNG has no matching server-validated live frame |
+| `WRONG_ARENA` | Client/server marker reports a map other than expected Harbor |
 | `INCOMPLETE_CAPTURE` | Fewer than 15 PNG frames were saved |
 
 An unsuccessful workflow may attach diagnostic logs and partial PNGs,
