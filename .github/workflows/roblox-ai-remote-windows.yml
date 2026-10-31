@@ -1,4 +1,6 @@
 name: Chaos AI Visual Capture (Temporary Windows)
+# Intentionally workflow_dispatch ONLY: an unattended main push cannot sign in
+# to Roblox Studio and previously consumed Windows Actions minutes for 0 PNGs.
 # Secure temporary Windows desktop accessible from Android, with a genuine
 # Studio AI camera test. No user account tokens or cookies are stored.
 on:
@@ -16,11 +18,6 @@ on:
           - Crossroads
           - Orbital
           - Harbor
-  push:
-    branches:
-      - main
-    paths:
-      - "studio/REMOTE_AI_QA_TRIGGER"
 
 concurrency:
   group: chaos-studio-ai-visual-hosted
@@ -395,8 +392,110 @@ jobs:
               }
             }
             if (Test-Path $errorFile) {
-              Write-Host "Interactive Roblox Studio capture failed; review the sanitized error artifact."
-              throw "AI camera capture failed; no false screenshot certification."
+              $reason = (Get-Content -LiteralPath $errorFile -Raw).Trim()
+              if ($reason -notmatch '^[A-Z_]{3,64}
+            if (Test-Path $successFile) {
+              $status = (Get-Content -LiteralPath $successFile -Raw).Trim()
+              $scope = (Get-Content build/visual-ai-audit-scope.txt -Raw).Trim()
+              $arenas = if ($scope -eq "All") {
+                @("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+              } else { @($scope) }
+              $count = 0
+              foreach ($arena in $arenas) {
+                $folder = Join-Path $captureDir $arena
+                $frames = @(Get-ChildItem -LiteralPath $folder -Filter "ai-frame-*.png" -ErrorAction SilentlyContinue)
+                if ($frames.Count -ne 15) {
+                  throw "Studio evidence incomplete for $arena : $($frames.Count)/15"
+                }
+                $count += $frames.Count
+              }
+              if ($status -ne "PASS" -or $count -ne 15 * $arenas.Count) {
+                throw "Studio screenshot workflow failed to certify all selected arenas."
+              }
+              $complete = $true
+              Write-Host "PASS: $count authentic Studio AI PNGs across $($arenas.Count) selected arenas."
+              break
+            }
+            $listener = @(Get-NetTCPConnection -LocalPort 3389 -State Listen -ErrorAction SilentlyContinue)
+            if ($listener.Count -eq 0) { throw "Private Windows Remote Desktop listener stopped." }
+            $state = (& tailscale status --json | ConvertFrom-Json).BackendState
+            if ($state -ne "Running") { throw "Private Tailscale network disconnected." }
+            Start-Sleep -Seconds 20
+            Write-Host ("AI CAPTURE WAIT {0:u}: session online; awaiting Roblox sign-in or local test completion." -f (Get-Date).ToUniversalTime())
+          }
+          if (-not $complete) {
+            @(
+              "### Visual QA not certified",
+              "",
+              "- Reason: AUTH_REQUIRED_OR_CAPTURE_TIMEOUT",
+              "- No complete authenticated 15-frame per-arena evidence was received.",
+              "- Avoid rerunning until the owner's official Studio login can be completed during the temporary RDP session."
+            ) | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            throw "AUTH_REQUIRED_OR_CAPTURE_TIMEOUT: no complete real authenticated Studio evidence. Do not count partial screenshots."
+          }
+
+      - name: Install image QA dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Audit all authenticated arena PNGs and make separate contact sheets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python -m pip install --disable-pip-version-check "Pillow==11.2.1"
+          if ($LASTEXITCODE -ne 0) { throw "Pillow installation failed." }
+          $scope = (Get-Content build/visual-ai-audit-scope.txt -Raw).Trim()
+          $arenas = if ($scope -eq "All") {
+            @("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+          } else { @($scope) }
+          foreach ($arena in $arenas) {
+            $directory = Join-Path build/visual-ai-captures $arena
+            python studio/analyze-visual-ai.py $directory $arena
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed authenticated screenshot provenance/visual audit for $arena"
+            }
+            Get-Content (Join-Path $directory "visual-ai-audit.md") |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          }
+          Write-Host "All $($arenas.Count) requested arena evidence reports verified."
+
+      - name: Upload original source PNGs, montage and analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-authentic-five-arena-studio-pngs-hosted-windows
+          # Never upload raw Studio logs; they can contain local
+          # authentication state or other unrelated user data. Only image
+          # evidence and safe status/manifests are retained.
+          path: |
+            build/visual-ai-captures/*/ai-frame-*.png
+            build/visual-ai-captures/*/frames.tsv
+            build/visual-ai-captures/bootstrap-status.txt
+            build/visual-ai-captures/watchdog-status.txt
+            build/visual-ai-captures/watchdog-history.txt
+            build/visual-ai-captures/capture-error-metadata.txt
+            build/visual-ai-captures/capture-status.txt
+            build/visual-ai-captures/capture-error.txt
+            build/visual-ai-captures/*/visual-ai-contact-sheet.jpg
+            build/visual-ai-captures/*/visual-ai-audit.json
+            build/visual-ai-captures/*/visual-ai-audit.md
+            build/visual-ai-audit-scope.txt
+            build/visual-ai-audit-provenance.txt
+          if-no-files-found: warn
+          retention-days: 14
+) {
+                $reason = "LOCAL_CAPTURE_FAILURE"
+              }
+              @(
+                "### Visual QA not certified",
+                "",
+                "- Sanitized reason: " + $reason,
+                "- Genuine Studio captures: **not certified**; inspect the uploaded status artifact.",
+                "- For AUTH_REQUIRED, trigger a NEW manual run only when ready to log in through private Tailscale/RDP.",
+                "- This workflow never bypasses the official Roblox login and never updates the public game."
+              ) | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              throw "AI camera capture failed ($reason); no false screenshot certification."
             }
             if (Test-Path $successFile) {
               $status = (Get-Content -LiteralPath $successFile -Raw).Trim()
