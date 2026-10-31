@@ -303,13 +303,16 @@ local function tryBindFreeze(warning)
         stopPendingFreeze(warning)
         return
     end
-    local snapshot = HazardWarningSignatureRules.snapshot(
-        warning, workspace:GetServerTimeNow())
-    if snapshot then
+    local now = workspace:GetServerTimeNow()
+    local snapshot = HazardWarningSignatureRules.snapshot(warning, now)
+    if snapshot and now < snapshot.StartedAt + snapshot.Duration then
         stopPendingFreeze(warning)
         bindFreeze(warning, snapshot)
         return
     end
+    -- A complete but EXPIRED snapshot is not live. Remain subscribed to
+    -- metadata changes instead of re-creating the same ice geometry
+    -- every 1/15–1/30s until the old server Part is finally removed.
     if pendingFreezeMetadata[warning] then return end
     local listeners = {}
     pendingFreezeMetadata[warning] = listeners
@@ -323,9 +326,9 @@ local function tryBindFreeze(warning)
             end)
     end
     -- Catch a complete metadata set that arrived during subscriptions.
-    local latest = HazardWarningSignatureRules.snapshot(
-        warning, workspace:GetServerTimeNow())
-    if latest then
+    local secondNow = workspace:GetServerTimeNow()
+    local latest = HazardWarningSignatureRules.snapshot(warning, secondNow)
+    if latest and secondNow < latest.StartedAt + latest.Duration then
         stopPendingFreeze(warning)
         bindFreeze(warning, latest)
     end

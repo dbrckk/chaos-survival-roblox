@@ -1,6 +1,7 @@
 -- Prevent simultaneous meteor/bomb impact feedback from filling the playfield.
 -- Rendering may be reduced, but the server's damage and hazard timing never are.
 local ImpactPulseRules = {}
+local DisasterCosmeticRules = require(script.Parent.DisasterCosmeticRules)
 local BUDGETS = {
     Low = {Near = 70, Concurrent = 2, Expansion = 1.04},
     Medium = {Near = 105, Concurrent = 3, Expansion = 1.16},
@@ -74,6 +75,28 @@ function ImpactPulseRules.peripheralBurstCap(tier, reducedMotion, touchDevice, d
     if distance <= near then return nil end
     return reducedMotion == true and 1
         or (tier == "Low" and 1 or 2)
+end
+
+-- A short flash lasts ~0.3–0.4s, but airborne material chips and
+-- local impact sculptures remain alive for up to ~1.01s. Protect an
+-- independent, long-lived pool for OPTIONAL geometry on touch clients.
+-- The flash, warning HUD and server damage are outside this cap.
+-- Zero explicitly disables sculpture in ReduceMotion; those clients
+-- retain the existing compact central flash and critical danger cues.
+function ImpactPulseRules.decorativeBundleCap(tier, reduced, simultaneous)
+    if reduced == true then return 0 end
+    local base = tier == "Low" and 2
+        or (tier == "Medium" and 3 or (tier == "High" and 4 or 0))
+    if base == 0 then return 0 end
+    local pressure = DisasterCosmeticRules.pressureMultiplier(simultaneous)
+    return math.max(1, math.min(base, math.floor(base * pressure + 0.5)))
+end
+
+-- Retention covers ImpactSetpiece's 0.85s + 0.12s cleanup and material
+-- chip's 0.87s + 0.14s cleanup. Do not free the cosmetic slot at the
+-- shorter flash lifetime while its parts still occupy the GPU budget.
+function ImpactPulseRules.decorativeBundleHoldSeconds()
+    return 1.10
 end
 
 -- Peripheral impacts remain perceptible through the existing compact
