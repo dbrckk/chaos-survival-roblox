@@ -124,3 +124,60 @@ LOD/streaming et `PbrActiveSurfaceCount <= PbrActiveSurfaceBudget`.
 Le premier lancement du port doit fonctionner sur Low avec **0** PBR.
 La PR correspondante doit passer la compilation et toutes les suites
 Roblox Cloud sur son SHA final avant mise en ligne.
+
+## 31 October 2026 — original 2K finish on the five architectural hero props
+
+A focused source audit found that `ArenaArchitecturalDetailsLocal` already contained
+the five distinct outboard setpieces (Classic broadcast archive, Towers engine,
+Crossroads concourse, Orbital dock and Harbor cargo crane), **but was not
+indexed by the existing PBR client**. The original 16 approved Image assets
+and four MaterialVariants could never reach these recently improved meshes.
+
+The client-side architectural builder now marks its *own* eligible opaque
+metal, corroded steel, diamondplate and ceramic `Part`/`WedgePart` objects.
+The PBR rule validates the exact `Workspace.ArenaArchitecturalDetailsLocal`
+Folder and its two local origin/cosmetic attributes, then requires this
+per-Part marker, original stationary/noncolliding conditions and approved
+material families. Non-PBR concrete, timber, slate, glass, functional Neon
+and external MeshPart SurfaceAppearance assets remain as authored.
+
+The incremental PBR controller watches that exact local folder through
+the **existing** `PbrCandidateIndex`, adds it to the already-shared ranked
+candidate pool, and tears down its index on removal. Map swaps and
+VfxQuality changes continue through their existing listeners; no extra
+polling loop, RenderStepped, remotes, textures or geometry are introduced.
+Selections still reconcile material deltas rather than repeatedly rebinding
+unchanged surfaces.
+
+| Client tier | Hero-setpiece 2K cap | Existing global Android cap |
+| --- | ---: | ---: |
+| Low | 0 | 0 |
+| Medium | 3 | 32 |
+| High | 8 | 72 |
+
+Only one of the five arena-specific heroes exists at a time.
+The offboard hero candidate receives a **−800 priority** score, allowing
+nearby playable district facades first claim to the global pool. For this
+exact verified hero owner, `DiamondPlate` maps to the armored texture,
+`CorrodedMetal` to oxidized steel and `CeramicTiles` to ceramic; all
+other owners retain their established selector behavior. The Android
+`PbrMaterialsDisabled` flag still restores locally owned finishes.
+
+### Required acceptance at release gate
+
+- Exact-head Build Validation and existing five Roblox Open Cloud engine suites,
+  checking all changes after PR merge; no workflow result from an older SHA is sufficient.
+- Real Studio and Android captures on all **five** arena variants in Low,
+  Medium and High, at close range and outside the decorative model's LOD.
+- Verify `PbrActiveSurfaceCount <= PbrActiveSurfaceBudget` across map swaps,
+  Android PBR opt-out, camera turn, StreamingEnabled churn and quality changes.
+- Check actual color/normal/roughness/metallic response and orientation,
+  texture tiling and lighting on the new hero wedges, doors, main load
+  frame and roof assemblies; use native fallback where the result regresses.
+- Compare real frame-time, memory and thermals on physical Android. This
+  source integration is **not** proof of approved runtime image access,
+  observed GPU efficiency, AAA visual quality or public deployment.
+
+The last independently verified public publication remains commit
+`97a2533cf57e33f74fc2abe9948922e7ac1d8a4f`; GitHub source
+changes require a separate approved release gate and Roblox publishing.
