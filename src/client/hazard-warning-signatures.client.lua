@@ -48,15 +48,42 @@ local function localPart(group, className, name, size, frame, color, transparenc
     return part
 end
 
+local function removeFromOrder(warning)
+    -- The ordered array holds strong refs. Purge even when this is the
+    -- last server warning of a round; no subsequent warning is guaranteed.
+    for i = #creationOrder, 1, -1 do
+        if creationOrder[i] == warning then
+            table.remove(creationOrder, i)
+        end
+    end
+end
+
+local function suspendSignature(warning)
+    local entry = warningEntries[warning]
+    if not entry then return end
+    -- Under Double Chaos, evict only the optional local decoration. Keep
+    -- the server warning and its attribute watcher eligible for a future
+    -- spare graphics slot, instead of permanently losing its signature.
+    removeFromOrder(warning)
+    entry.rendered = false
+    if entry.group then
+        entry.group:Destroy()
+        entry.group = nil
+    end
+end
+
 local function releaseWarning(warning)
     local entry = warningEntries[warning]
     if not entry then return end
     warningEntries[warning] = nil
+    removeFromOrder(warning)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
+    table.clear(entry.connections)
     if entry.group then
         entry.group:Destroy()
+        entry.group = nil
     end
 end
 
@@ -71,8 +98,8 @@ local function reserveSignature(tierName, reduced)
     end
     local limit = WarningRules.activeLimit(tierName, reduced)
     while #creationOrder >= limit do
-        local oldest = table.remove(creationOrder, 1)
-        releaseWarning(oldest)
+        local oldest = creationOrder[1]
+        suspendSignature(oldest)
     end
 end
 
@@ -204,6 +231,16 @@ local function tryPresent(warning)
         bombSignature(warning, group, tier.Name, reduced, remaining, progress)
     end
     Debris:AddItem(group, remaining + 0.10)
+    -- Debris owns the cosmetic folder, not the three attribute listeners
+    -- or our creationOrder slot. The warning may linger briefly after its
+    -- impact (streaming/server cleanup), so close the owner at the SAME
+    -- bounded lifetime instead of retaining it across idle sessions.
+    local issuedEntry = entry
+    task.delay(remaining + 0.12, function()
+        if warningEntries[warning] == issuedEntry then
+            releaseWarning(warning)
+        end
+    end)
 end
 
 local function bindWarning(warning)
@@ -414,6 +451,23 @@ task.spawn(function()
             task.wait(0.12)
         else
             task.wait(0.35)
+        end
+
+        -- A Double Chaos burst may initially exceed the local signature
+        -- budget. When an earlier warning expires/streams away, reuse that
+        -- spare slot for a still-live suspended warning. The server warning,
+        -- impact timer, and hitbox are never changed. This reuses the
+        -- existing slow visual-controller loop (no new scheduler).
+        local limit = WarningRules.activeLimit(
+            profile().Name, player:GetAttribute("ReduceMotion") == true
+        )
+        if #creationOrder < limit then
+            for warning, entry in pairs(warningEntries) do
+                if #creationOrder >= limit then break end
+                if not entry.rendered and warning.Parent == workspace then
+                    tryPresent(warning)
+                end
+            end
         end
     end
 end)
