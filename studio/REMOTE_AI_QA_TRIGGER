@@ -1,5 +1,8 @@
-Chaos Survival | 15-frame Studio AI visual QA diagnostic rerun | 2026-10-25
-Fix PR #204 merged commit 4c10b3ae84ac808a4d2b98cf3b94c9635c17195e
-Capture real gameplay 15 PNGs if official Roblox Studio auth exists.
-On error: preserve sanitized failure type, line and step chronology for debugging, not passwords/cookies.
-No change to public Roblox experience.
+Chaos Survival — owner-requested visual validation of all five real arenas
+Date: 2026-10-31
+Scope: All (Classic, Towers, Crossroads, Orbital, Harbor); 15 genuine Roblox Studio PNG frames per arena.
+Runtime: the existing temporary Windows / signed Roblox Studio / private Tailscale workflow.
+Code candidate already source/build/engine verified at f01da24c1ad7e8e176d079b33cd3299b43349b9b.
+IMPORTANT: this file is only the consented workflow trigger. It does not change any game code, publish Roblox or fabricate screenshot evidence.
+The Studio signed-in graphical session must be authenticated before capture can pass. On a missing login or image evidence the workflow must fail closed.
+Previous capture #41197492582 failed on the Windows String.Split argument; its fix is already present in current main.
