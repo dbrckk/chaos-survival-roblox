@@ -36,7 +36,10 @@ function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId
         return nil
     end
     local tier = deckTier(from)
-    if not tier or tier == 4 or type(orderedPlatforms) ~= "table" then
+    if not tier or tier == 4 or type(orderedPlatforms) ~= "table"
+        or not from.Anchored or not from.CanCollide
+        or from.Transparency >= 0.75
+        or from:GetAttribute("CollapsePhase") ~= nil then
         return nil
     end
 
@@ -49,7 +52,9 @@ function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId
     for _, target in ipairs(orderedPlatforms) do
         local targetTier = deckTier(target)
         if target ~= from and target.Parent == from.Parent
-            and targetTier
+            and targetTier and target.Anchored and target.CanCollide
+            and target.Transparency < 0.75
+            and target:GetAttribute("CollapsePhase") == nil
             and (targetTier == tier + 1 or (hub and targetTier == tier))
         then
             local rise = target.Position.Y + target.Size.Y * 0.5 - fromTop
@@ -82,6 +87,28 @@ function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId
         end
     end
     return best
+end
+
+-- A takeoff marker is only truthful while the current physical pair
+-- still satisfies the exact same tier/rise/gap limits as the original
+-- selection. Shrinking Arena may change either deck's footprint without
+-- destroying it: a static, previously valid arrow can become impossible.
+-- Re-evaluate just this pair on relevant replication/size changes, not
+-- the whole arena and not on RenderStepped.
+function JumpRouteCueRules.cueStillSafe(from, target, arenaCenter, variantId)
+    if not from or not target
+        or not from:IsA("BasePart") or not target:IsA("BasePart")
+        or not from.Parent or target.Parent ~= from.Parent
+        or not from.Anchored or not target.Anchored
+        or not from.CanCollide or not target.CanCollide
+        or from.Transparency >= 0.75 or target.Transparency >= 0.75
+        or from:GetAttribute("CollapsePhase") ~= nil
+        or target:GetAttribute("CollapsePhase") ~= nil then
+        return false
+    end
+    return JumpRouteCueRules.select(
+        from, {from, target}, arenaCenter, variantId
+    ) == target
 end
 
 -- Position the sign INSIDE the supporting collision footprint, never
