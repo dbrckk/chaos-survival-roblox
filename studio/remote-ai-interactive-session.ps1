@@ -78,8 +78,21 @@ try {
     }
     $entries = @{}
     foreach ($line in [System.IO.File]::ReadAllLines($attestation)) {
-        $pair = $line.Split(@('='), 2)
-        if ($pair.Length -eq 2) { $entries[$pair[0]] = $pair[1] }
+        # PowerShell resolves String.Split(@('='), 2) to the overload
+        # Split(string[], StringSplitOptions), where the integer 2 is
+        # NOT a valid StringSplitOptions enum. This crashed the actual
+        # 31 Oct GitHub Studio audit before authentication (run 41197492582).
+        # Find the FIRST separator explicitly; values may contain '='
+        # because the attested Studio path is Base64-encoded.
+        $separator = $line.IndexOf('=', [StringComparison]::Ordinal)
+        if ($separator -gt 0) {
+            $key = $line.Substring(0, $separator)
+            $value = $line.Substring($separator + 1)
+            if ($entries.ContainsKey($key)) {
+                throw "STUDIO_ATTESTATION_INVALID: duplicate attestation key"
+            }
+            $entries[$key] = $value
+        }
     }
     if ($entries["signer"] -ne "Roblox" -or
         $entries["signature"] -ne "Valid" -or
