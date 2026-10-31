@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local SceneRules = require(ReplicatedStorage.Shared.DisasterMotionSceneRules)
 local TornadoSpiralRules = require(ReplicatedStorage.Shared.TornadoSpiralRules)
+local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local TornadoSpiralKit = require(script.Parent.TornadoSpiralKit)
 
 local player = Players.LocalPlayer
@@ -15,6 +16,7 @@ worldEffects.Name = "ChaosMotionDisasterVfxLocal"
 worldEffects.Parent = workspace
 
 local activeIds = {}
+local activeDisasterCount = 1
 local characterEffects = {}
 local shrinkParts = {}
 local shrinkBase = nil
@@ -300,7 +302,7 @@ local function refreshTornado(tier)
     TornadoSpiralKit.sync(
         tornadoSpiral, lower, worldEffects, tier.Name,
         player:GetAttribute("ReduceMotion") == true,
-        clock, TornadoSpiralRules
+        clock, TornadoSpiralRules, activeDisasterCount
     )
 end
 
@@ -335,9 +337,14 @@ local function applyState(state)
 
     currentPhase = nextPhase
     table.clear(activeIds)
+    local recognized = 0
     for _, id in ipairs(nextIds) do
         activeIds[id] = true
+        if nextPhase == "round" and DisasterVisuals.get(id) then
+            recognized += 1
+        end
     end
+    activeDisasterCount = math.max(1, math.min(3, recognized))
 
     if nextSignature ~= activeSignature or newRound then
         activeSignature = nextSignature
