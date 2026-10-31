@@ -122,7 +122,8 @@ local function ensureRenderLoop()
                 continue
             end
 
-            currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+            currentTier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+                UserInputService.TouchEnabled)
             task.wait(math.max(1 / 30, currentTier.UpdateInterval))
 
             -- All simultaneous warnings must use the SAME authoritative
