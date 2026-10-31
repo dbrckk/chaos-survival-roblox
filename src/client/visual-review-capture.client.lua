@@ -175,12 +175,13 @@ local function startPerformanceTelemetry()
             )
 
             performanceSummary = string.format(
-                "FPS %s | P95 %sms | SLOW %s%%\nWORST %sms | %s | %s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d\nCHAOS %d   WARN %d   METEORS %d\nTOP OWNER %s",
+                "FPS %s | P95 %sms | SLOW %s%%\nWORST %sms | %s | %s | P%s\nPARTS %d/%d   LIGHTS %d/%d   FX %d/%d\nCHAOS %d   WARN %d   METEORS %d\nTOP OWNER %s",
                 fps and tostring(fps) or "--",
                 p95 and tostring(p95) or "--",
                 slow and tostring(slow) or "--",
                 worst and tostring(worst) or "--",
                 tier, status,
+                tostring(player:GetAttribute("OptionalVfxPressure") or 0),
                 counts.Parts, budget.Parts,
                 counts.Lights, budget.Lights,
                 counts.Effects, budget.Effects,

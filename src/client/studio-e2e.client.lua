@@ -98,6 +98,7 @@ local function sendVisualPhaseProbe(phase)
             phase = phase,
             arenaId = arenaId,
             vfxTier = tierName,
+            optionalVfxPressure = player:GetAttribute("OptionalVfxPressure") or 0,
             fieldOfView = camera and camera.FieldOfView or 0,
             auditedFolders = folders,
             visualMetrics = metrics,
