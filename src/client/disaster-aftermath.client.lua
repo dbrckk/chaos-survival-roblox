@@ -2,6 +2,7 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterAftermathTone = require(ReplicatedStorage.Shared.DisasterAftermathTone)
@@ -79,7 +80,9 @@ local function reset(duration)
 end
 
 local function playAftermath(ids)
-    local quality = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local quality = VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    )
     local profile = DisasterAftermathTone.presentation(
         ids, quality.Name, player:GetAttribute("ReduceMotion") == true)
     if not profile then return end
@@ -118,7 +121,9 @@ local function playAftermath(ids)
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    if type(state) ~= "table" then return end
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
     local phase = tostring(state.phase or "waiting")
     local incoming = tonumber(state.roundNumber)
     if not incoming or incoming ~= incoming or incoming <= 0
