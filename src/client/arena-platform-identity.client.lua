@@ -301,12 +301,15 @@ local function decorateTakeoff(platform, target, index, theme, quality)
     )
     if not frame then return end
     local strokes = {}
-    local opacity = quality.Name == "Low" and 0.42 or 0.51
-    local color = theme.Accent:Lerp(theme.Secondary, 0.26)
+    -- The verified safe route is restrained cool-white across all arenas;
+    -- collapse/hazard warnings remain the more urgent amber/orange cue.
+    -- Enlarge only these TWO existing strokes, not their part count.
+    local opacity = quality.Name == "Low" and 0.34 or 0.43
+    local color = Color3.fromRGB(185, 236, 239):Lerp(theme.Accent, 0.24)
     for side = -1, 1, 2 do
         local piece = makePart(
             "ParkourTakeoffChevron" .. index .. "_" .. tostring(side),
-            Vector3.new(0.12, 0.045, 0.82),
+            Vector3.new(0.15, 0.045, 1.02),
             frame * CFrame.new(side * 0.28, 0, 0.14)
                 * CFrame.Angles(0, math.rad(side * 38), 0),
             color,
