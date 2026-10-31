@@ -27,7 +27,7 @@ local originals = setmetatable({}, {__mode = "k"})
 -- revert it if the asset leaves the target set. Never revert another writer.
 local applied = setmetatable({}, {__mode = "k"})
 local boundMap, boundArena, boundDecor, boundLocal, boundHero = nil, nil, nil, nil, nil
-local mapAdded, mapRemoved, arenaAdded = nil, nil, nil
+local mapAdded, mapRemoved, arenaAdded, arenaRemoved = nil, nil, nil, nil
 local disconnectDecorIndex, disconnectLocalIndex, disconnectHeroIndex = nil, nil, nil
 local indexedDecor, indexedLocal, indexedHero = {}, {}, {}
 local pendingScan = false
@@ -262,12 +262,22 @@ end
 local function bindArena(arena)
     if boundArena == arena then return end
     if arenaAdded then arenaAdded:Disconnect() end
-    arenaAdded = nil
+    if arenaRemoved then arenaRemoved:Disconnect() end
+    arenaAdded, arenaRemoved = nil, nil
     boundArena = arena
     bindDecor(arena and arena:FindFirstChild("Decor"))
     if arena then
         arenaAdded = arena.ChildAdded:Connect(function(child)
             if child.Name == "Decor" then bindDecor(child) end
+        end)
+        -- Destroying or replacing Decor while the Arena remains valid
+        -- does not trigger bindArena or bindMap. Disconnect the former
+        -- streamed candidate index immediately, restore owned PBR on the
+        -- next coalesced scan, and accept a newly replicated Decor later.
+        arenaRemoved = arena.ChildRemoved:Connect(function(child)
+            if child == boundDecor then
+                bindDecor(arena:FindFirstChild("Decor"))
+            end
         end)
     end
 end
