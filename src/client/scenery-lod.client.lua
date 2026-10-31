@@ -423,7 +423,12 @@ task.spawn(function()
                     -- location and the exact same scheduled camera snapshot.
                     -- Core 3D silhouette remains server-owned; four/six
                     -- optional local details are created only near-camera.
-                    local origin = structure:GetPivot().Position
+                    -- Client-generated facade hardware can extend
+                    -- model bounds. Use the stable SERVER foundation instead
+                    -- of a dynamic bounding-box pivot for LOD hysteresis.
+                    local anchor = structure:FindFirstChild("BasaltFoundation")
+                    local origin = anchor and anchor:IsA("BasePart")
+                        and anchor.Position or structure:GetPivot().Position
                     local visible = applyFolder(
                         structure, DISTRICT_ARCHITECTURE_LOD,
                         profile, origin, cameraPoint)
