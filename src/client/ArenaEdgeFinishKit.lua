@@ -7,6 +7,9 @@ local MOTIFS = {
     Towers = {"TowerCantilever", "TowerCableGuard", "TowerHoistBeacon"},
     Crossroads = {"CrossroadsTransitChevron", "CrossroadsRoutePlate", "CrossroadsSignalStud"},
     Orbital = {"OrbitalFluxArc", "OrbitalContainmentPanel", "OrbitalTelemetryCore"},
+    -- Harbor previously had NO perimeter finish despite the other four
+    -- arenas using this existing tiered facade owner.
+    Harbor = {"HarborQuayFenderBeam", "HarborFenderBackplate", "HarborMooringRoller"},
 }
 
 local function count(tier)
@@ -110,6 +113,28 @@ function ArenaEdgeFinishKit.build(parent, base, variant, tier, theme)
             add(3, Vector3.new(0.48, 0.26, 0.18),
                 Vector3.new(width * 0.35, 0.25, -1.09), nil,
                 theme.Accent, Enum.Material.Neon, 0.45)
+
+        elseif variant == "Harbor" then
+            -- A physical below-deck maritime fender silhouette, not
+            -- Classic's signal mast or a dangerous fake walkable ledge.
+            -- Each side receives one large timber beam on Low, an
+            -- oxidized steel backplate on Medium and a nonmoving
+            -- mooring roller on High. No lights or animated machinery.
+            local timber = theme.Surface:Lerp(
+                Color3.fromRGB(109, 88, 67), 0.46)
+            local weathered = theme.Structure:Lerp(
+                Color3.fromRGB(99, 92, 80), 0.37)
+            local hardware = theme.Detail:Lerp(weathered, 0.35)
+            add(1, Vector3.new(width * 0.94, 1.55, 0.83),
+                Vector3.new(0, -0.91, -0.64),
+                nil, timber, Enum.Material.WoodPlanks, 0.10)
+            add(2, Vector3.new(width * 0.83, 0.58, 0.34),
+                Vector3.new(0, -1.80, -1.04),
+                nil, weathered, Enum.Material.CorrodedMetal, 0.08)
+            add(3, Vector3.new(width * 0.28, 0.88, 0.88),
+                Vector3.new(width * 0.27, -0.67, -1.16),
+                nil, hardware, Enum.Material.Metal, 0.10,
+                Enum.PartType.Cylinder)
 
         elseif variant == "Orbital" then
             -- Radial field restraint with glass rather than generic neon rails.
