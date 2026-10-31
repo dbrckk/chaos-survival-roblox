@@ -290,7 +290,7 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                             if descendant:IsA("BasePart") then
                                 add("LobbyPracticePadsLocal", "Parts")
                             elseif VisualBudgetRules.isLight(descendant) then
-                                add("AttachedLavaFreezeCosmetics", "Lights")
+                                add("LobbyPracticePadsLocal", "Lights")
                             elseif VisualBudgetRules.isEffect(descendant) then
                                 add("LobbyPracticePadsLocal", "Effects")
                             end
