@@ -3,35 +3,39 @@
 ## What the test actually does
 
 1. Builds **the exact Git commit** into a local Roblox Studio place with Rojo.
-2. Runs one real, **Studio-only 65-second Harbor round** with the original
-   server-controlled **AISurvivors** navigating and surviving normally.
+2. Runs one real, **Studio-only 65-second round in the selected arena** with
+   the original server-controlled **AISurvivors** navigating and surviving normally.
    The passive test observer's elimination cannot terminate this isolated
    recording; public solo matches retain their normal early-end rules.
 3. The Studio-only spectator camera follows a living AI, switching subjects
    after every five samples. It shows chase, side and eye-level views, with
    no scripted imitation of bot movement.
 4. Reports **15 Roblox-rendered camera states**, one roughly every three
-   seconds. The server validates **each** against the real Harbor arena
+   seconds. The server validates **each** against the real selected arena
    attribute, active round, marked living AI subject, camera proximity,
    renderer advancement and sample timing. A single lobby/result frame
    cannot count as a successfully audited 15-frame round.
 5. An authenticated **interactive Windows desktop** screenshots the actual
    Roblox Studio/client window fifteen times into distinct PNGs. Before
    each PNG, the collector requires the corresponding authoritative
-   `CHAOS_VISUAL_AI_CAPTURE_MARKER NN/15 arena=Harbor`. The manifest binds
+   `CHAOS_VISUAL_AI_CAPTURE_MARKER NN/15 arena=<selected map>`. The manifest binds
    its SHA-256 hash, UTC timestamp, size, bot, camera mode and round phase
    to that real marker.
 6. A Python/Pillow audit validates the fifteen PNGs, strictly checks
-   Harbor/round-only provenance, two or more bot identities, all three
+   selected-map/round-only provenance, two or more bot identities, all three
    camera angles, UTC spacing and hashes, rejects static content,
    quantifies brightness/contrast, and produces a 5 × 3 **contact sheet**
    for visual review with the original full-resolution PNGs.
 7. The GitHub Actions artifact contains all evidence, including logs,
    source SHA, fifteen PNGs, montage, JSON and Markdown review reports.
 
-**Coverage:** this first deterministic scenario audits **Harbor only**.
-Classic, Towers, Crossroads and Orbital still need separate genuine rendered
-sessions; neither the code review nor this Harbor-only script certifies them.
+**Coverage:** Classic, Towers, Crossroads, Orbital and Harbor are individually
+selectable. The temporary Windows / Android pathway supports **All**: one
+Roblox Studio sign-in, five consecutive independent engine/PNG audits,
+**75 real frames**, five 5×3 contact sheets, five frame-by-frame reports.
+The existing persistent Windows self-hosted workflow supports selecting one
+arena per run. No map is certified without an actual successful Studio
+session and its PNG evidence.
 
 **Important:** these are REAL game-engine frames from an isolated Studio
 simulation **only after an authenticated capture workflow actually passes**.
@@ -56,9 +60,10 @@ authenticated GUI screenshot test.
 - Execute `studio/self-hosted-runner-preflight.ps1` under that same user.
   It tests authentication without logging credentials.
 - On GitHub **Actions → Roblox AI Visual Review → Run workflow**, choose
-  the branch containing the desired candidate commit. The workflow has
-  a manual trigger; an update to `studio/VISUAL_AI_TRIGGER` on `main`
-  may also trigger it once a runner is online.
+  the candidate branch and one arena (Classic/Towers/Crossroads/Orbital/Harbor).
+  For five maps in one authenticated disposable Windows session instead,
+  select **All** in **Chaos AI Visual Capture (Temporary Windows)**.
+  Both workflows are opt-in; merely merging code does not launch paid minutes.
 - The workflow never publishes the public place, writes DataStores in a
   live production session, uploads captures to Roblox galleries or
   touches other users' devices. It saves only local preview pixels into
@@ -106,7 +111,7 @@ change automatically to the public Roblox experience.
 | `STATIC_DESKTOP` | Pixels do not show enough changing game content |
 | `STUDIO_TEST_FAILED` | StudioTestService did not confirm 15 live bot samples |
 | `NO_VERIFIED_FRAME_MARKER` | The PNG has no matching server-validated live frame |
-| `WRONG_ARENA` | Client/server marker reports a map other than expected Harbor |
+| `WRONG_ARENA` | Client/server marker reports a map other than the chosen variant |
 | `INCOMPLETE_CAPTURE` | Fewer than 15 PNG frames were saved |
 
 An unsuccessful workflow may attach diagnostic logs and partial PNGs,
