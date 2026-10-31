@@ -105,6 +105,11 @@ local function syncShockSignature(part, state, diameter, progress, reduced)
             "JumpShock", index, count, diameter, reduced and 0 or progress
         )
         local piece = pieces[index]
+        if piece and piece.Parent ~= localDecor then
+            piece:Destroy()
+            piece = nil
+            pieces[index] = nil
+        end
         if not piece then
             piece = Instance.new("Part")
             piece.Name = "JumpShockAngularWarning" .. index
