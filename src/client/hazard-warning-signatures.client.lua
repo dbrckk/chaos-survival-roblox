@@ -4,6 +4,7 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local WarningRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
@@ -24,7 +25,10 @@ local warningEntries = {}
 local creationOrder = {}
 
 local function profile()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    -- Until the adaptive sampler publishes the first tier, Android must
+    -- use Medium rather than briefly instantiating desktop High effects.
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+        UserInputService.TouchEnabled)
 end
 
 local function localPart(group, className, name, size, frame, color, transparency)
@@ -350,6 +354,20 @@ stateEvent.OnClientEvent:Connect(function(state)
     local nextPhase = tostring(state.phase or "waiting")
     local changedPhase = nextPhase ~= currentPhase
     currentPhase = nextPhase
+
+    if newRound then
+        -- A missing intermission snapshot must not carry optional 3D
+        -- signatures from the previous round into a new numbered round.
+        -- The server warning Parts remain untouched.
+        local previous = {}
+        for warning in pairs(warningEntries) do
+            previous[#previous + 1] = warning
+        end
+        for _, warning in ipairs(previous) do
+            releaseWarning(warning)
+        end
+        table.clear(creationOrder)
+    end
 
     local active = false
     if currentPhase == "round" then
