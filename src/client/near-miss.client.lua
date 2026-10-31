@@ -14,7 +14,37 @@ local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
 local touchDevice = UserInputService.TouchEnabled
-local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardNearMiss")
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local event = remotes:WaitForChild("HazardNearMiss")
+local stateEvent = remotes:WaitForChild("RoundState")
+local phaseKnown = false
+local currentPhase = "waiting"
+local lastRoundNumber = nil
+-- Only local cosmetic near-miss geometry is owned by this controller.
+-- Weak keys avoid retaining effects once their original Debris timer expires.
+local worldEffects = setmetatable({}, {__mode = "k"})
+
+local function clearWorldEffects()
+    for object in pairs(worldEffects) do
+        worldEffects[object] = nil
+        if object.Parent then object:Destroy() end
+    end
+end
+
+local function mobileWorldPulseAllowed()
+    if not touchDevice then return true end
+    local liveRings = 0
+    for object, kind in pairs(worldEffects) do
+        if not object.Parent then
+            worldEffects[object] = nil
+        elseif kind == "ring" then
+            liveRings += 1
+        end
+    end
+    -- Double Chaos may send adjacent near-miss rewards. Keep their HUD
+    -- information but never layer three world-space shock circles.
+    return liveRings < 2
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosNearMiss"
@@ -79,6 +109,7 @@ local function applyResponsiveLayout()
         token += 1
         card.Visible = false
         flash.Visible = false
+        clearWorldEffects()
         MobileHudNotices.release("near-miss")
     end
     card.Position = UDim2.fromScale(layout.centerXScale, layout.centerYScale)
@@ -156,6 +187,17 @@ local function cancelCardTweens()
     table.clear(activeCardTweens)
 end
 
+local function clearPresentation()
+    -- Hide optional reward visuals at real phase/character boundaries.
+    -- Never alter server-computed combo, XP, rewards or hazard warnings.
+    token += 1
+    cancelCardTweens()
+    card.Visible = false
+    flash.Visible = false
+    clearWorldEffects()
+    if touchDevice then MobileHudNotices.release("near-miss") end
+end
+
 -- Priority changes invalidate old delayed fade callbacks immediately.
 if touchDevice then
     MobileHudNotices.Changed:Connect(function(owner)
@@ -164,6 +206,9 @@ if touchDevice then
         cancelCardTweens()
         card.Visible = false
         flash.Visible = false
+        -- An imminent hazard must also preempt optional near-miss rings
+        -- and avatar lights, not merely the reward toast on Android.
+        clearWorldEffects()
     end)
 end
 
@@ -174,13 +219,15 @@ local function playCardTween(instance, info, goals)
 end
 
 local function quality()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    return VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), touchDevice)
 end
 
 local function pulseWorld(color, severity)
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not root or not root:IsA("BasePart") then
+    if not root or not root:IsA("BasePart") or root.Parent ~= character
+        or not mobileWorldPulseAllowed() then
         return
     end
 
@@ -203,6 +250,7 @@ local function pulseWorld(color, severity)
     ring.Color = color
     ring.Transparency = 0.62
     ring.Parent = workspace
+    worldEffects[ring] = "ring"
 
     TweenService:Create(
         ring,
@@ -222,9 +270,8 @@ local function pulseWorld(color, severity)
     ):Play()
 
     task.delay(0.34, function()
-        if ring.Parent then
-            ring:Destroy()
-        end
+        worldEffects[ring] = nil
+        if ring.Parent then ring:Destroy() end
     end)
 
     if profile.Name == "High" and not reduced then
@@ -235,6 +282,7 @@ local function pulseWorld(color, severity)
         light.Range = 10 + 6 * strength
         light.Shadows = false
         light.Parent = root
+        worldEffects[light] = "light"
 
         TweenService:Create(
             light,
@@ -243,9 +291,8 @@ local function pulseWorld(color, severity)
         ):Play()
 
         task.delay(0.22, function()
-            if light.Parent then
-                light:Destroy()
-            end
+            worldEffects[light] = nil
+            if light.Parent then light:Destroy() end
         end)
     end
 end
@@ -267,7 +314,15 @@ local function readableKind(kind)
 end
 
 local function show(payload)
-    if type(payload) ~= "table" then return end
+    if type(payload) ~= "table"
+        or (phaseKnown and currentPhase ~= "round")
+        or player:GetAttribute("RoundEliminated") == true
+        or player:GetAttribute("RoundParticipant") == false then
+        return
+    end
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health <= 0 then return end
     local visual = NearMissVisualRules.profile(
         player:GetAttribute("ReduceMotion") == true
     )
@@ -293,7 +348,9 @@ local function show(payload)
     local distance = tonumber(payload.distance)
     local radius = tonumber(payload.radius)
     local dangerRatio = nil
-    if distance and radius and radius > 0 then
+    if distance and radius and distance == distance and radius == radius
+        and math.abs(distance) < math.huge and math.abs(radius) < math.huge
+        and distance >= 0 and radius > 0 then
         dangerRatio = math.clamp(distance / radius, 0, 2)
     end
 
@@ -384,5 +441,53 @@ local function show(payload)
         end
     end)
 end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        return
+    end
+    local newRound = number ~= nil and lastRoundNumber ~= nil
+        and number ~= lastRoundNumber
+    if number then lastRoundNumber = number end
+
+    local nextPhase = state.phase
+    -- Accept a legitimate near-miss that arrives before the very first
+    -- RoundState on a slow client. If that first snapshot says the round
+    -- is not active, remove it; subsequent packets only act on changes.
+    local changed = (phaseKnown and nextPhase ~= currentPhase)
+        or newRound or (not phaseKnown and nextPhase ~= "round")
+    phaseKnown = true
+    currentPhase = nextPhase
+    if changed then
+        combo = 0
+        lastNearMissAt = 0
+        clearPresentation()
+    end
+end)
+
+player.CharacterRemoving:Connect(clearPresentation)
+player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
+    if player:GetAttribute("RoundEliminated") == true then
+        clearPresentation()
+    end
+end)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if player:GetAttribute("ReduceMotion") == true then
+        -- Keep the readable card; remove only moving world geometry.
+        clearWorldEffects()
+    end
+end)
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
+    if quality().Name == "Low" then
+        clearWorldEffects()
+    end
+end)
 
 event.OnClientEvent:Connect(show)
