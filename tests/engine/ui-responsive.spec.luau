@@ -253,6 +253,16 @@ describe("UI responsive profiles", function()
             expect(layout.width <= data.viewport.X - 20).toBe(true)
             expect(layout.xScale).toBe(profile.wide and 0.23 or 0.50)
         end
+        -- Screenshot-driven Android wide mode: the secondary timed
+        -- signal should not claim a 208px/51px primary-action lane.
+        local landscape = UIResponsive.mobileExpeditionLayout(
+            Vector2.new(1536, 688), 68)
+        expect(landscape.width).toBe(182)
+        expect(landscape.height).toBe(44)
+        local portrait = UIResponsive.mobileExpeditionLayout(
+            Vector2.new(400, 720), 56)
+        expect(portrait.width).toBe(208)
+        expect(portrait.height).toBe(51)
         local cramped = UIResponsive.mobileExpeditionLayout(
             Vector2.new(540, 320), 210)
         expect(cramped.fits).toBe(false)
