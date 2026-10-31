@@ -304,8 +304,10 @@ task.spawn(function()
             task.wait(math.max(0.1, interval - 0.18))
         end
     end
-    -- Keep the final rendered frame displayed while the desktop screenshot
-    -- collector finishes. EndTest is intentionally delayed on the server.
-    task.wait(12)
+    -- Keep the last bot's authentic camera and on-screen provenance
+    -- visible longer than the SERVER's 18-second closing grace. The
+    -- Windows collector still certifies its own 15th PNG/hash and PASS;
+    -- restoring at 12 seconds could instead capture the local spectator.
+    task.wait(22)
     restore()
 end)
