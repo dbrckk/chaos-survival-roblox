@@ -13,6 +13,9 @@ localFolder.Parent = workspace
 
 local lavaState = nil
 local freezeStates = {}
+-- A FreezeWarning can stream before the server's four timing/size attrs.
+-- Only pending warnings own metadata listeners; remove them at bind/teardown.
+local pendingFreezeMetadata = {}
 local clock = 0
 local loopStarted = false
 local ensureRenderLoop
@@ -130,7 +133,17 @@ local function bindLava(lava)
     end
 end
 
+local function stopPendingFreeze(warning)
+    local listeners = pendingFreezeMetadata[warning]
+    if not listeners then return end
+    pendingFreezeMetadata[warning] = nil
+    for _, connection in ipairs(listeners) do
+        connection:Disconnect()
+    end
+end
+
 local function clearFreeze(warning)
+    stopPendingFreeze(warning)
     local state = freezeStates[warning]
     if not state then
         return
@@ -141,10 +154,15 @@ local function clearFreeze(warning)
     end
 end
 
-local function bindFreeze(warning)
-    if not warning:IsA("BasePart") then return end
+local function bindFreeze(warning, snapshot)
+    if not warning:IsA("BasePart") or not snapshot then return end
     local current = freezeStates[warning]
     if current and DisasterCosmeticRules.reusableFreeze(current, warning) then
+        -- A delayed or re-replicated authoritative timeline must replace
+        -- any old local schedule on quality/accessibility refresh.
+        current.startedAt = snapshot.StartedAt
+        current.duration = snapshot.Duration
+        current.diameter = snapshot.EndSize
         -- Same-piece-count refreshes reuse the glass ring and mist emitter.
         local tier = quality()
         local reduced = player:GetAttribute("ReduceMotion") == true
@@ -175,7 +193,7 @@ local function bindFreeze(warning)
 
     local tier = quality()
     local reduced = player:GetAttribute("ReduceMotion") == true
-    local diameter = math.max(warning.Size.Y, warning.Size.Z)
+    local diameter = snapshot.EndSize
     local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
@@ -250,9 +268,8 @@ local function bindFreeze(warning)
         instances = instances,
         diameter = diameter,
         deck = deck,
-        startedAt = tonumber(warning:GetAttribute("WarningStartedAt"))
-            or workspace:GetServerTimeNow(),
-        duration = math.max(0.1, tonumber(warning:GetAttribute("WarningDuration")) or 0.7),
+        startedAt = snapshot.StartedAt,
+        duration = snapshot.Duration,
         mist = mist,
     }
 
@@ -261,13 +278,49 @@ local function bindFreeze(warning)
     end
 end
 
+-- Event-driven streaming tolerance: use the same complete timing
+-- snapshot as the authoritative hazard-warning owner. An incomplete
+-- warning is never animated using guessed durations or a guessed start.
+local function tryBindFreeze(warning)
+    if warning.Parent ~= workspace then
+        stopPendingFreeze(warning)
+        return
+    end
+    local snapshot = HazardWarningSignatureRules.snapshot(
+        warning, workspace:GetServerTimeNow())
+    if snapshot then
+        stopPendingFreeze(warning)
+        bindFreeze(warning, snapshot)
+        return
+    end
+    if pendingFreezeMetadata[warning] then return end
+    local listeners = {}
+    pendingFreezeMetadata[warning] = listeners
+    for _, name in ipairs({
+        "WarningKind", "WarningStartedAt", "WarningDuration",
+        "WarningStartSize", "WarningEndSize",
+    }) do
+        listeners[#listeners + 1] =
+            warning:GetAttributeChangedSignal(name):Connect(function()
+                tryBindFreeze(warning)
+            end)
+    end
+    -- Catch a complete metadata set that arrived during subscriptions.
+    local latest = HazardWarningSignatureRules.snapshot(
+        warning, workspace:GetServerTimeNow())
+    if latest then
+        stopPendingFreeze(warning)
+        bindFreeze(warning, latest)
+    end
+end
+
 local function maybeBind(instance)
     if instance.Name == "RoundLava" and instance:IsA("BasePart") then
         bindLava(instance)
     elseif instance.Name == "FreezeWarning" and instance:IsA("BasePart") then
         task.defer(function()
-            if instance.Parent then
-                bindFreeze(instance)
+            if instance.Parent == workspace then
+                tryBindFreeze(instance)
             end
         end)
     end
@@ -294,7 +347,11 @@ local function rebuildQuality()
         table.insert(warnings, warning)
     end
     for _, warning in ipairs(warnings) do
-        if warning.Parent then bindFreeze(warning) else clearFreeze(warning) end
+        if warning.Parent then
+            tryBindFreeze(warning)
+        else
+            clearFreeze(warning)
+        end
     end
 end
 
