@@ -2,6 +2,7 @@
 -- Deterministic tornado spiral silhouettes. Pure client-side geometry recipes:
 -- server wind impulses, damage, arena navigation and roster remain unchanged.
 local TornadoSpiralRules = {}
+local DisasterCosmeticRules = require(script.Parent.DisasterCosmeticRules)
 
 -- Two intertwined arms give the funnel a distinct silhouette. Each arm
 -- remains short and inexpensive: 3/6/9 segments per arm.
@@ -12,12 +13,14 @@ local function finite(value)
         and math.abs(value) < math.huge
 end
 
-function TornadoSpiralRules.count(tier, reducedMotion)
+function TornadoSpiralRules.count(tier, reducedMotion, simultaneous)
     local count = COUNTS[tostring(tier or "")] or 0
-    if reducedMotion == true then
-        return math.min(count, 6)
-    end
-    return count
+    if reducedMotion == true then count = math.min(count, 6) end
+    if count == 0 then return 0 end
+    local scaled = count * DisasterCosmeticRules.pressureMultiplier(simultaneous)
+    -- Each helical arm must receive an equal number of segments.
+    return math.max(4, math.min(count,
+        math.floor(scaled / 2 + 0.5) * 2))
 end
 
 -- Each ribbon extends between two heights on an expanding outer funnel.
