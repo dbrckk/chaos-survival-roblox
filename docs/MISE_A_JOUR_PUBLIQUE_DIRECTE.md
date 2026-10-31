@@ -17,7 +17,7 @@ Le workflow dédié [Publish Existing Chaos Survival (Public Playtest Update)](.
 - l'exécution ne part pas de `main` avec une confirmation explicite `PUBLISH_EXISTING_10771083668` et la case de consentement à la publication **non certifiée** ;
 - l'univers/lieu configurés dans les variables du dépôt ne sont pas **exactement** `10771083668` et `95351659174730` ;
 - le candidat `GITHUB_SHA` ne correspond plus à la tête actuelle de `main` ;
-- les workflows `Build Validation` et `Roblox Open Cloud Engine Tests` ne sont pas **SUCCESS sur ce commit précis** pour des événements `push` de `main` ;
+- les workflows `Build Validation` et `Roblox Open Cloud Engine Tests` ne sont pas **SUCCESS sur ce commit précis** pour des exécutions manuelles `workflow_dispatch` sur `main` (ou d'anciens `push` réussis du même SHA) ;
 - la clé de publication `ROBLOX_API_KEY` manque ou ne possède pas les droits requis sur le jeu ;
 - un marqueur réservé au staging se trouve dans les sources.
 
@@ -27,7 +27,7 @@ Aucune simulation d'un résultat Android/Studio `PASS`, aucun contournement de l
 
 Avant de toucher à la version publique, lancer [Public Release Readiness (Read Only)](https://github.com/dbrckk/chaos-survival-roblox/actions/workflows/public-release-readiness.yml) dans **Actions → Run workflow → main**. Consulter ensuite son **Step Summary**.
 
-Cette vérification **ne télécharge ni n'utilise de clé Roblox**, ne publie rien et ne modifie aucun réglage. Elle compare la branche et le commit exact, les deux identifiants publics `10771083668` / `95351659174730`, puis les deux suites de tests du *push main* sur ce SHA. Elle signale séparément l'absence de staging privé ou une collision avec la production.
+Cette vérification **ne télécharge ni n'utilise de clé Roblox**, ne publie rien et ne modifie aucun réglage. Elle compare la branche et le commit exact, les deux identifiants publics `10771083668` / `95351659174730`, puis les contrôles manuels `Build Validation` et `Roblox Open Cloud Engine Tests` du SHA exact sur `main` (ainsi que les anciennes exécutions `push` admissibles). Elle signale séparément l'absence de staging privé ou une collision avec la production.
 
 Si le rapport indique **BLOCKED**, ne pas lancer le workflow de publication. Un résultat **PASS** n'est qu'une préparation technique : il ne certifie ni les permissions secrètes, ni les tests Studio/Android, ni la version effectivement jouée sur Roblox.
 

@@ -149,9 +149,12 @@ jobs:
                   continue
               if latest_seen[name] is None:
                   latest_seen[name] = run
-              trusted = run.get("head_branch") == "main"
+              trusted = (
+                  run.get("head_branch") == "main"
+                  and run.get("head_sha") == sha
+              )
               if name == "Build Validation":
-                  trusted = trusted and run.get("event") == "push"
+                  trusted = trusted and run.get("event") in {"workflow_dispatch", "push"}
               elif name == "Roblox Open Cloud Engine Tests":
                   trusted = trusted and run.get("event") in {"push", "workflow_dispatch"}
               else:
