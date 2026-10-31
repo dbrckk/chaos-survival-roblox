@@ -42,6 +42,8 @@ describe("Slope-correct live disaster atmosphere", function()
         expect(math.abs(originalRadius - 96 * 0.52) < 0.001).toBe(true)
         expect(Layout.perimeterRadius(nil) == nil).toBe(true)
         expect(Layout.perimeterRadius(size, -1) == nil).toBe(true)
+        expect(Layout.edgeRadius(nil, 0) == nil).toBe(true)
+        expect(Layout.edgeRadius(size, math.huge) == nil).toBe(true)
         expect(Layout.beaconFrame(nil, size, 0) == nil).toBe(true)
         expect(Layout.orbitalCoreFrame(nil) == nil).toBe(true)
 
@@ -54,19 +56,26 @@ describe("Slope-correct live disaster atmosphere", function()
                 .toBe(true)
             for index = 1, 8 do
                 local angle = ((index - 1) / 8) * math.pi * 2
+                local edgeRadius = Layout.edgeRadius(shrunk, angle)
                 local beaconFrame = Layout.beaconFrame(frame, shrunk, angle)
                 expect(typeof(beaconFrame)).toBe("CFrame")
                 local localPosition = frame:PointToObjectSpace(beaconFrame.Position)
-                expect(math.abs(localPosition.X - math.cos(angle) * radius)
+                expect(math.abs(localPosition.X - math.cos(angle) * edgeRadius)
                     < 0.001).toBe(true)
-                expect(math.abs(localPosition.Z - math.sin(angle) * radius)
+                expect(math.abs(localPosition.Z - math.sin(angle) * edgeRadius)
                     < 0.001).toBe(true)
+                -- Each beacon is just beyond the true rectangular edge,
+                -- including diagonals when the floor is not square.
+                expect(math.abs(math.max(
+                    math.abs(localPosition.X) / shrunk.X,
+                    math.abs(localPosition.Z) / shrunk.Z
+                ) - 0.52) < 0.001).toBe(true)
                 expect(math.abs(localPosition.Y - (shrunk.Y * 0.5 + 0.8))
                     < 0.001).toBe(true)
                 expect(beaconFrame.UpVector:Dot(frame.UpVector) > 0.999)
                     .toBe(true)
 
-                local shaftRadius = Layout.perimeterRadius(shrunk, 0.52 * 1.08)
+                local shaftRadius = Layout.edgeRadius(shrunk, angle, 0.52 * 1.08)
                 local shaft = Layout.beamFrame(
                     frame, shrunk, angle, shaftRadius, 42
                 )
