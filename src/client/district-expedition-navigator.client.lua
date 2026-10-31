@@ -291,12 +291,54 @@ local function suppressOptionalWorldLabel(instance)
     suppress()
 end
 
+-- Only UI copy is localized on the client. The Roblox native
+-- ProximityPrompt still sends its own authenticated interaction to the
+-- original server-owned station, cache or transit gate; no new remotes.
+-- French users should not lose translation when redundant English
+-- world billboards are suppressed. English keeps the original server copy.
+local function localizeOptionalPrompt(instance)
+    if CoreLocalization.language(localeId) ~= "fr"
+        or not instance:IsA("ProximityPrompt") then
+        return
+    end
+
+    if instance.Name == "OpenDistrictCache" then
+        local lid = instance.Parent
+        local model = lid and lid.Parent
+        local reward = model
+            and tonumber(model:GetAttribute("CacheReward"))
+            or tonumber(tostring(instance.ActionText):match("%+(%d+)"))
+        if not reward or reward < 1 or reward > 5 then
+            return
+        end
+        local elite = (model and model:GetAttribute("CacheTier") == "Elite")
+            or instance.ObjectText == "ELITE SUPPLY"
+        instance.ActionText = copy("DISTRICT_PROMPT_CLAIM", reward)
+        instance.ObjectText = copy(elite and "DISTRICT_PROMPT_CACHE_ELITE"
+            or "DISTRICT_PROMPT_CACHE")
+    elseif instance.Name == "SecureDistrictSignal" then
+        instance.ActionText = copy("DISTRICT_PROMPT_SIGNAL_CLAIM")
+        instance.ObjectText = copy("DISTRICT_PROMPT_SIGNAL")
+    elseif instance.Name == "TravelToHub"
+        or instance.Name == "TravelToDistrict" then
+        local route = tonumber(tostring(instance.ObjectText):match("(%d+)$"))
+        if not route or route < 1 or route > 4 then
+            return
+        end
+        instance.ActionText = copy(instance.Name == "TravelToHub"
+            and "DISTRICT_PROMPT_TRAVEL_BACK"
+            or "DISTRICT_PROMPT_TRAVEL_OUT")
+        instance.ObjectText = copy("DISTRICT_PROMPT_TRANSIT", route)
+    end
+end
+
 local function track(instance)
     if cacheEligible(instance) then
         caches[instance] = true
         hideClaimedCache(instance)
     end
     suppressOptionalWorldLabel(instance)
+    localizeOptionalPrompt(instance)
 end
 
 workspace.DescendantAdded:Connect(track)
