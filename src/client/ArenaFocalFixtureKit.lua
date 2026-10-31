@@ -27,6 +27,14 @@ local SCHEMES = {
         {"IrisPrismShroud", "WedgePart", Vector3.new(1.32, 0.51, 1.23),
             Vector3.new(0, -0.32, -0.54), 26, Enum.Material.Glass, "Accent"},
     },
+    Harbor = {
+        -- Corroded marine floodlight cowl: muted metal never imitates an
+        -- amber hazard zone. High adds a native metal shutter, not a glow.
+        {"DockFloodlightCowl", "WedgePart", Vector3.new(1.85, 0.70, 1.60),
+            Vector3.new(0, 0, 0.19), 0, Enum.Material.CorrodedMetal, "Structure"},
+        {"DockStormBaffle", "Part", Vector3.new(1.60, 0.26, 1.32),
+            Vector3.new(0, -0.38, -0.37), 0, Enum.Material.Metal, "Detail"},
+    },
 }
 function ArenaFocalFixtureKit.count(tier)
     return COUNTS[tier] or 0
