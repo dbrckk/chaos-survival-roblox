@@ -98,8 +98,12 @@ function UIResponsive.mobileExpeditionLayout(viewport, topInset)
     local maximumTop = c.height - profile.roundFocusBottomOffset - height - 10
     return {
         xScale = c.wide and 0.23 or 0.50,
+        -- Only *short* narrow landscape screens need a 190px card.
+        -- A 400x720 portrait has enough horizontal room for the
+        -- readable 208px route title required by the mobile HUD contract.
+        -- Preserve the compact 182px lane on ultra-wide Android.
         width = math.min(c.wide and 182
-                or (profile.veryNarrow and 190 or 208),
+                or (profile.veryNarrow and profile.tinyHeight and 190 or 208),
             math.max(168, c.width - 20)),
         height = height,
         topOffset = math.max(0, math.min(targetTop, maximumTop)),
