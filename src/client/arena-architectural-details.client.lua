@@ -39,6 +39,25 @@ local function part(name, size, frame, color, material, transparency, highShadow
     return p
 end
 
+-- Dedicated structural slope instead of stacking another rectangular
+-- slab. Shares the same local cosmetic folder, lifecycle and LOD rules.
+local function wedge(name, size, frame, color, material, transparency, highShadow)
+    local p = Instance.new("WedgePart")
+    p.Name = name
+    p.Size = size
+    p.CFrame = frame
+    p.Color = color
+    p.Material = material
+    p.Transparency = transparency or 0
+    p.Anchored = true
+    p.CanCollide = false
+    p.CanTouch = false
+    p.CanQuery = false
+    p.CastShadow = highShadow == true
+    p.Parent = folder
+    return p
+end
+
 local function track(p, motion, amplitude, speed, phase)
     animated[#animated + 1] = {
         object = p,
@@ -81,6 +100,37 @@ local function buildClassic(base, theme, tier)
         theme.Detail, Enum.Material.DiamondPlate, 0.06, high)
 
     if tier ~= "Low" then
+        -- Pitched weather hood and recognizable receiving antenna; the
+        -- original flat plate reads as a box even against the horizon.
+        -- These are *outside* the playable base, not jumpable platforms.
+        local roof = theme.Structure:Lerp(theme.Detail, 0.25)
+        for side = -1, 1, 2 do
+            wedge("ClassicArchiveSlopedWeatherCap" .. side,
+                Vector3.new(9.6, 1.35, 3.4),
+                f * CFrame.new(side * 4.65, height + 1.6, -0.1)
+                    * CFrame.Angles(0, 0, math.rad(side * 11)),
+                roof, Enum.Material.CorrodedMetal, 0.04, high)
+        end
+        part("ClassicArchiveRoofRidge", Vector3.new(19.2, 0.38, 0.78),
+            f * CFrame.new(0, height + 2.45, 0),
+            theme.Detail, Enum.Material.DiamondPlate, 0.08, false)
+        part("ClassicArchiveReceiverMast", Vector3.new(0.52, 5.7, 0.52),
+            f * CFrame.new(6.1, height + 5.25, 0.6),
+            theme.Detail, Enum.Material.CorrodedMetal, 0.04, false)
+        part("ClassicArchiveReceiverBar", Vector3.new(4.8, 0.38, 0.38),
+            f * CFrame.new(6.1, height + 7.6, 0.6),
+            roof, Enum.Material.Metal, 0.04, false)
+        if high then
+            -- Reinforced cap ends make the two slopes look supported.
+            for side = -1, 1, 2 do
+                part("ClassicArchiveWeatherBracket" .. side,
+                    Vector3.new(0.55, 2.1, 2.1),
+                    f * CFrame.new(side * 9.0, height + 0.55, -0.7)
+                        * CFrame.Angles(0, 0, math.rad(side * 22)),
+                    theme.Detail, Enum.Material.Metal, 0.05, false)
+            end
+        end
+
         local rows = high and 5 or 3
         for i = 1, rows do
             part("ClassicArchiveLouver" .. i, Vector3.new(12, 0.65, 1.0),
@@ -196,11 +246,42 @@ local function buildCrossroads(base, theme, tier)
     part("CrossroadsConcoursePanel", Vector3.new(19, 4.0, 0.65),
         f * CFrame.new(0, height - 2.6, -2.0),
         VisualTheme.World.Surface, Enum.Material.Slate, 0.02, false)
+    -- The thick full-width neon strip competes with actual lane lights.
+    -- Make this architectural fascia metallic; only the individual
+    -- traffic signals retain an emissive material.
     part("CrossroadsConcourseBlade", Vector3.new(19, 0.48, 1.1),
         f * CFrame.new(0, height - 0.3, -2.45),
-        theme.Secondary, Enum.Material.Neon, 0.35, false)
+        theme.Secondary:Lerp(theme.Structure, 0.62),
+        Enum.Material.Metal, 0.08, false)
 
     if tier ~= "Low" then
+        -- Alternating sloped canopies and diagonal supports break up the
+        -- former rectangular roof, without covering real transit routes.
+        local canopy = theme.Detail:Lerp(VisualTheme.World.Surface, 0.34)
+        for side = -1, 1, 2 do
+            wedge("CrossroadsTransitCanopyWing" .. side,
+                Vector3.new(8.1, 1.1, 7.2),
+                f * CFrame.new(side * 7.4, height + 1.65, 0.2)
+                    * CFrame.Angles(0, 0, math.rad(side * 9)),
+                canopy, Enum.Material.Concrete, 0.05, high)
+            part("CrossroadsTransitDiagonalStay" .. side,
+                Vector3.new(0.68, 3.4, 1.0),
+                f * CFrame.new(side * 8.8, height - 1.4, -1.6)
+                    * CFrame.Angles(0, 0, math.rad(-side * 28)),
+                theme.Structure, Enum.Material.CorrodedMetal, 0.05, high)
+        end
+        if high then
+            -- Weatherproof service vents, not three more luminous bars.
+            for i = 1, 3 do
+                part("CrossroadsTransitRoofVent" .. i,
+                    Vector3.new(3.6, 0.42, 0.85),
+                    f * CFrame.new((i - 2) * 6.1, height + 1.62, 2.85)
+                        * CFrame.Angles(math.rad(-12), 0, 0),
+                    theme.Structure:Lerp(theme.Detail, 0.38),
+                    Enum.Material.CorrodedMetal, 0.06, false)
+            end
+        end
+
         part("CrossroadsConcourseGlazing", Vector3.new(18.0, 0.36, 5.8),
             f * CFrame.new(0, height + 1.46, -0.5),
             theme.Accent:Lerp(VisualTheme.World.Metal, 0.55),
@@ -236,8 +317,11 @@ local function buildOrbital(base, theme, tier)
         f * CFrame.new(0, 0.8, 0),
         VisualTheme.World.Surface, Enum.Material.Slate, 0.05, high)
     for side = -1, 1, 2 do
+        -- The existing two wings now tilt up toward the containment
+        -- ring; even Low sees purposeful load paths without extra Parts.
         part("OrbitalDockWing" .. side, Vector3.new(8.5, 0.95, 1.7),
-            f * CFrame.new(side * 5.4, height - 4, 0),
+            f * CFrame.new(side * 5.4, height - 4, 0)
+                * CFrame.Angles(0, 0, math.rad(side * 13)),
             theme.Detail, Enum.Material.DiamondPlate, 0.08, high)
     end
 
@@ -258,6 +342,35 @@ local function buildOrbital(base, theme, tier)
             i % 3 == 0 and 0.30 or 0.06, false)
     end
     if tier ~= "Low" then
+        -- A suspended ring needs visible support to read as a working
+        -- containment assembly rather than detached glowing segments.
+        -- Beam length comes from the actual two 3D endpoints, avoiding
+        -- misaligned bars when the authored arena origin is rotated.
+        local function support(name, from, to, width, tone)
+            local delta = to - from
+            local beamFrame = CFrame.lookAt((from + to) * 0.5, to)
+                * CFrame.Angles(math.pi * 0.5, 0, 0)
+            part(name, Vector3.new(width, delta.Magnitude, width),
+                beamFrame, tone, Enum.Material.CorrodedMetal, 0.04, high)
+        end
+        for side = -1, 1, 2 do
+            local lower = (f * CFrame.new(side * 2.1, 4.0, 0)).Position
+            local upper = (f * CFrame.new(side * 6.35, height - 1.2, 0)).Position
+            support("OrbitalDockMainTruss" .. side, lower, upper, 0.68,
+                theme.Detail:Lerp(theme.Structure, 0.22))
+            if high then
+                local anchor = part("OrbitalDockTrussJoint" .. side,
+                    Vector3.new(1.35, 1.35, 1.35),
+                    CFrame.new(upper), theme.Structure,
+                    Enum.Material.CorrodedMetal, 0.04, false)
+                anchor.Shape = Enum.PartType.Ball
+                support("OrbitalDockCrossBrace" .. side,
+                    (f * CFrame.new(side * 3.3, 7.5, 1.7)).Position,
+                    (f * CFrame.new(side * 6.0, height - 5.0, 0)).Position,
+                    0.42, theme.Detail)
+            end
+        end
+
         local collar = part("OrbitalDockSignalCollar", Vector3.new(10.0, 0.52, 2.0),
             f * CFrame.new(0, height - 2.3, -2.6),
             theme.Secondary, Enum.Material.Neon, 0.38, false)
