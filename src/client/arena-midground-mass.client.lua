@@ -236,13 +236,18 @@ local function buildHarbor(base, theme, tier)
         local origin = frame(
             base, berth[1], deckY + 0.45, berth[2], berth[3]
         )
-        makePart(
+        local hull = makePart(
             "HarborFreightBargeHull" .. i,
             Vector3.new(28, 3.5, 13.2),
             origin,
             hullColor, Enum.Material.CorrodedMetal,
             tier.Name == "Low" and 0.28 or 0.13
         )
+        -- Give these actual original cargo barges large, maritime profiles:
+        -- tapered prow on Low, wheelhouse on Medium, boom on High.
+        -- Reuse the SAME tiered Midground kit/owner as the four other maps.
+        -- All parts are client-only, inert and removed with this folder.
+        ArenaDetailKit.build(folder, "Midground", "Harbor", hull, tier.Name, theme)
         local container = makePart(
             "HarborFreightContainer" .. i,
             Vector3.new(21.0, 7.4, 8.6),
