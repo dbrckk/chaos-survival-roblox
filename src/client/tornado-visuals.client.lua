@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local TornadoBoundaryRules = require(ReplicatedStorage.Shared.TornadoBoundaryRules)
 local TornadoVisualBindRules = require(ReplicatedStorage.Shared.TornadoVisualBindRules)
 
@@ -127,6 +128,40 @@ local function followBoundary()
     boundaryCenter = center
 end
 
+-- Storm debris must look like it came from the actual arena: a dock
+-- sheds timber and marine steel, a reactor sheds ceramic composite, and
+-- a transit station sheds stone. Original Roblox materials only; no
+-- custom image residency, external assets, extra geometry or emitters.
+-- A muted glint appears on one in four fragments but is never Glass/Neon.
+local DEBRIS_MATERIALS = {
+    Classic = {Enum.Material.DiamondPlate, Enum.Material.Metal},
+    Towers = {Enum.Material.CorrodedMetal, Enum.Material.DiamondPlate},
+    Crossroads = {Enum.Material.Concrete, Enum.Material.Slate},
+    Orbital = {Enum.Material.CeramicTiles, Enum.Material.Metal},
+    Harbor = {Enum.Material.WoodPlanks, Enum.Material.CorrodedMetal},
+}
+
+local function debrisFinish(index)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local variant = tostring(arena and arena:GetAttribute("VariantId") or "Classic")
+    local materials = DEBRIS_MATERIALS[variant] or DEBRIS_MATERIALS.Classic
+    local theme = VisualTheme.arena(variant)
+    local highlighted = index % 4 == 0
+    local material = highlighted and materials[2] or materials[1]
+    local color
+    if variant == "Harbor" and not highlighted then
+        color = Color3.fromRGB(120, 101, 82):Lerp(theme.Surface, 0.15)
+    elseif variant == "Crossroads" then
+        color = Color3.fromRGB(129, 122, 131):Lerp(theme.Structure, 0.20)
+    elseif variant == "Orbital" and not highlighted then
+        color = Color3.fromRGB(165, 178, 168):Lerp(theme.Detail, 0.15)
+    else
+        color = theme.Structure:Lerp(theme.Detail, highlighted and 0.68 or 0.36)
+    end
+    return material, color
+end
+
 -- One authored helical pose per debris shard. Reuse the same 5/8/12
 -- Parts for all tiers; no extra emitters, lights or collision instances.
 local function poseShard(state, center, time)
@@ -160,7 +195,6 @@ local function buildDebris()
     debrisFolder.Parent = workspace
 
     for i = 1, count do
-        local glint = i % 4 == 0
         local piece = Instance.new("WedgePart")
         piece.Name = "WindDebris" .. i
         piece.Anchored = true
@@ -168,18 +202,18 @@ local function buildDebris()
         piece.CanTouch = false
         piece.CanQuery = false
         piece.CastShadow = false
-        -- A few pale glass facets catch the storm's light; the majority
-        -- remain matte, wind-sheared metal, not glowing generic cubes.
-        piece.Material = glint and Enum.Material.Glass or Enum.Material.Metal
-        piece.Color = glint and Color3.fromRGB(122, 211, 220)
-            or (i % 3 == 0 and Color3.fromRGB(72, 106, 121)
-                or Color3.fromRGB(98, 115, 125))
+        -- Real environment-specific debris instead of identical cyan
+        -- glass/metal shards on all five arenas. The amber danger ring
+        -- remains the dominant gameplay signal, independent of this art.
+        local material, color = debrisFinish(i)
+        piece.Material = material
+        piece.Color = color
         piece.Size = Vector3.new(
             0.30 + ((i * 7) % 5) * 0.11,
             0.24 + ((i * 3) % 4) * 0.09,
             1.20 + ((i * 5) % 7) * 0.19
         )
-        piece.Transparency = glint and 0.29 or 0.08
+        piece.Transparency = i % 4 == 0 and 0.16 or 0.07
         piece.Parent = debrisFolder
         local height = 2 + ((i * 7) % 13)
         local state = {
