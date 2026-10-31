@@ -123,6 +123,13 @@ task.spawn(function()
             continue
         end
 
+        -- During adaptive-tier and resume stabilization, skip the costly
+        -- census as well as decisions. Otherwise a scan can be wasted
+        -- immediately after the VFX owners rebuild.
+        if now < settleUntil then
+            streak = 0
+            continue
+        end
         local observedGeneration = generation
         if not cachedCounts or not lastCensusAt
             or now - lastCensusAt >= CENSUS_SECONDS then
