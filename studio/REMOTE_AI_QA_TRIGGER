@@ -1,8 +1,8 @@
-Chaos Survival — owner-requested visual validation of all five real arenas
+Chaos Survival — genuine five-arena Studio visual QA after installer-race recovery
 Date: 2026-10-31
-Scope: All (Classic, Towers, Crossroads, Orbital, Harbor); 15 genuine Roblox Studio PNG frames per arena.
-Runtime: the existing temporary Windows / signed Roblox Studio / private Tailscale workflow.
-Code candidate already source/build/engine verified at f01da24c1ad7e8e176d079b33cd3299b43349b9b.
-IMPORTANT: this file is only the consented workflow trigger. It does not change any game code, publish Roblox or fabricate screenshot evidence.
-The Studio signed-in graphical session must be authenticated before capture can pass. On a missing login or image evidence the workflow must fail closed.
-Previous capture #41197492582 failed on the Windows String.Split argument; its fix is already present in current main.
+Selected capture scope: All (Classic, Towers, Crossroads, Orbital, Harbor), 15 original PNG images per arena.
+Last attempt: 41221117346 (failed before RDP; Roblox Studio executable was still locked by installer).
+Pipeline correction: retry only signed Studio EXE file-sharing lock, bounded to 90 seconds. Keep signed binary and SHA-256 requirements.
+Game code is unchanged relative to successfully validated engine candidate f01da24c1ad7e8e176d079b33cd3299b43349b9b.
+This text file authorizes ONE existing temporary Windows visual QA run via the path-scoped push workflow. No game publication.
+Never mark visual PASS before verifying real authenticated Studio PNGs and contact sheets.
