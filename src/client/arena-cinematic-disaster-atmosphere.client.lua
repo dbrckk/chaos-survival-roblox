@@ -6,6 +6,7 @@ local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local Layout = require(ReplicatedStorage.Shared.DisasterAtmosphereLayout)
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -18,7 +19,9 @@ local phase = "waiting"
 local finalRush = false
 local disasterIds = {}
 local clock = 0
-local mapConnection = nil
+local disconnectMapWatch = nil
+local mapSerial = 0
+local rebuildQueued = false
 local loopStarted = false
 local beaconParts = {}
 local beamStates = {}
@@ -249,7 +252,6 @@ local function rebuild()
     local accent = profile and profile.Accent or theme.Accent
     local secondary = secondaryProfile and secondaryProfile.Accent or theme.Secondary
 
-    local radius = Layout.perimeterRadius(base.Size)
     local beaconCount = Layout.beaconCount(tier.Name, true)
 
     for i = 1, beaconCount do
@@ -279,7 +281,9 @@ local function rebuild()
         end
 
         if tier.Name ~= "Low" and i % 2 == 1 then
-            addVolumetricBeam(i, base, angle, radius * 1.08, beacon.Color, tier)
+            addVolumetricBeam(i, base, angle,
+                Layout.edgeRadius(base.Size, angle, 0.52 * 1.08),
+                beacon.Color, tier)
         end
     end
 
@@ -404,7 +408,7 @@ local function ensureRenderLoop()
                 local angle = state.angle + sweep
                 local deckFrame = Layout.beamFrame(
                     base.CFrame, base.Size, angle,
-                    Layout.perimeterRadius(base.Size, 0.52 * 1.08),
+                    Layout.edgeRadius(base.Size, angle, 0.52 * 1.08),
                     state.height
                 )
                 part.CFrame = deckFrame * CFrame.Angles(
@@ -421,32 +425,45 @@ local function ensureRenderLoop()
     end)
 end
 
+-- Map sections and the Base part may replicate in any order. The
+-- existing visual readiness owner watches Arena, Base and late VariantId;
+-- it also cancels subscriptions when a new GeneratedMap takes ownership.
+local function scheduleRebuild()
+    if rebuildQueued then return end
+    rebuildQueued = true
+    local serial = mapSerial
+    task.defer(function()
+        if serial ~= mapSerial then return end
+        rebuildQueued = false
+        rebuild()
+        refreshRates()
+    end)
+end
+
 local function bindMap()
-    if mapConnection then
-        mapConnection:Disconnect()
-        mapConnection = nil
+    mapSerial += 1
+    rebuildQueued = false
+    if disconnectMapWatch then
+        disconnectMapWatch()
+        disconnectMapWatch = nil
     end
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     if generated then
-        mapConnection = generated.ChildAdded:Connect(function(child)
-            if child.Name == "Arena" then
-                task.delay(0.08, function()
-                    rebuild()
-                    refreshRates()
-                end)
+        disconnectMapWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Base", function()
+                if workspace:FindFirstChild("GeneratedMap") == generated then
+                    scheduleRebuild()
+                end
             end
-        end)
+        )
     end
+    scheduleRebuild()
 end
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
-        task.defer(function()
-            bindMap()
-            rebuild()
-            refreshRates()
-        end)
+        bindMap()
     end
 end)
 
@@ -465,8 +482,10 @@ end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshRates)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    -- A malformed/late snapshot must not kill the one client owner.
+    if type(state) ~= "table" then state = {} end
     local newPhase = tostring(state.phase or "waiting")
-    local newIds = state.disasterIds or {}
+    local newIds = type(state.disasterIds) == "table" and state.disasterIds or {}
     local changed = newPhase ~= phase or #newIds ~= #disasterIds
 
     if not changed then
