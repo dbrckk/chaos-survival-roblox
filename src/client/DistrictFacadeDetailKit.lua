@@ -37,12 +37,20 @@ local function destroyNames(model, names)
     end
 end
 
-local function clearOwned(model)
+local function clearOwned(model, slot)
     -- A changing or incomplete streamed provenance must also remove the
     -- previous locally created details, but never server-owned Parts.
+    -- On normal Low/offscreen ticks we already know the slot: inspect only
+    -- its six names instead of up to twelve per model, every 0.65 seconds.
     destroyNames(model, MEDIUM)
-    for _, names in pairs(HIGH) do
-        destroyNames(model, names)
+    if HIGH[slot] then
+        destroyNames(model, HIGH[slot])
+    else
+        -- Missing/invalid streamed metadata: clean every prior profile
+        -- so no old optional details survive a provenance transition.
+        for _, names in pairs(HIGH) do
+            destroyNames(model, names)
+        end
     end
 end
 
@@ -193,13 +201,13 @@ function DistrictFacadeDetailKit.sync(model, tierName, visible, distance,
         and distance >= 0 and distance < math.huge and cutoff > 0
         and distance <= cutoff + (wasNear and 8 or -8)
     if not near then
-        clearOwned(model)
+        clearOwned(model, slot)
         return 0
     end
 
     local origin, steel, dark, alloy = originAndPalette(model)
     if not origin then
-        clearOwned(model)
+        clearOwned(model, slot)
         return 0
     end
     makeMedium(model, origin, steel, alloy, finish)
