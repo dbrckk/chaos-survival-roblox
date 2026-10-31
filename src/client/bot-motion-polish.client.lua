@@ -188,6 +188,12 @@ task.spawn(function()
             if state.humanoid.Health <= 0 then
                 local trail = state.root:FindFirstChild("AISurvivorCosmeticTrail")
                 if trail and trail:IsA("Trail") then trail.Enabled = false end
+                -- Prevent stale movement from a finished rig becoming a
+                -- false launch/skid if this Humanoid is reused after reset.
+                state.lastVelocity = state.root.AssemblyLinearVelocity
+                state.lastSpeed = 0
+                state.cueKind = nil
+                state.cueUntil = 0
                 continue
             end
 
@@ -208,16 +214,22 @@ task.spawn(function()
             local distance = viewerPosition
                 and (state.root.Position - viewerPosition).Magnitude or math.huge
             local trail = state.root:FindFirstChild("AISurvivorCosmeticTrail")
-            local onScreen = true
+            -- Never emit optional bot footwork when there is no renderable
+            -- camera, including during Android background/foreground
+            -- transitions. The previous true default could spend the
+            -- shared GroundFx budget in a non-rendering session.
+            local onScreen = false
             -- Only project nearby rigs that could show optional VFX; never
             -- spend camera work on Low/ReduceMotion or distant bots.
             if camera and phase == "round" and not reduceMotion
                 and q.Name ~= "Low" and distance <= 110 then
-                local p = camera:WorldToViewportPoint(state.root.Position)
                 local view = camera.ViewportSize
-                onScreen = ViewportRules.contains(p.X, p.Y, p.Z,
-                    view.X, view.Y, trail ~= nil and trail:IsA("Trail")
-                        and trail.Enabled == true)
+                if view.X > 0 and view.Y > 0 then
+                    local p = camera:WorldToViewportPoint(state.root.Position)
+                    onScreen = ViewportRules.contains(p.X, p.Y, p.Z,
+                        view.X, view.Y, trail ~= nil and trail:IsA("Trail")
+                            and trail.Enabled == true)
+                end
             end
             if trail and trail:IsA("Trail") then
                 if state.trail ~= trail then
