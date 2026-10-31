@@ -141,12 +141,8 @@ local DEBRIS_MATERIALS = {
     Harbor = {Enum.Material.WoodPlanks, Enum.Material.CorrodedMetal},
 }
 
-local function debrisFinish(index)
-    local generated = workspace:FindFirstChild("GeneratedMap")
-    local arena = generated and generated:FindFirstChild("Arena")
-    local variant = tostring(arena and arena:GetAttribute("VariantId") or "Classic")
+local function debrisFinish(variant, theme, index)
     local materials = DEBRIS_MATERIALS[variant] or DEBRIS_MATERIALS.Classic
-    local theme = VisualTheme.arena(variant)
     local highlighted = index % 4 == 0
     local material = highlighted and materials[2] or materials[1]
     local color
@@ -194,6 +190,13 @@ local function buildDebris()
     debrisFolder.Name = "TornadoDebrisLocal"
     debrisFolder.Parent = workspace
 
+    -- Resolve the map material vocabulary once on build/quality changes,
+    -- not for each shard and never in the existing animation loop.
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local variant = tostring(arena and arena:GetAttribute("VariantId") or "Classic")
+    local theme = VisualTheme.arena(variant)
+
     for i = 1, count do
         local piece = Instance.new("WedgePart")
         piece.Name = "WindDebris" .. i
@@ -205,7 +208,7 @@ local function buildDebris()
         -- Real environment-specific debris instead of identical cyan
         -- glass/metal shards on all five arenas. The amber danger ring
         -- remains the dominant gameplay signal, independent of this art.
-        local material, color = debrisFinish(i)
+        local material, color = debrisFinish(variant, theme, i)
         piece.Material = material
         piece.Color = color
         piece.Size = Vector3.new(
