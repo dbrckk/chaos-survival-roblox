@@ -504,7 +504,7 @@ describe("Collapsing platform visual truth", function()
 end)
 
 describe("Headless disaster playtest", function()
-    it("runs smooth Moon Gravity tides with an authoritative world warning", function()
+    it("runs Moon Gravity tides with a small beacon and no unlocalized world billboard", function()
         local gravity = require("../../src/server/Disasters/LowGravity")
         local target, stage, remaining = gravity.tideAt(0, false)
         expect(target).toBe(55)
@@ -564,12 +564,14 @@ describe("Headless disaster playtest", function()
         expect(ctx.GravityTideStage).toBe("Pull")
         local beacon = workspace:FindFirstChild("MoonGravityBeacon")
         expect(beacon ~= nil).toBe(true)
-        local label = beacon and beacon:FindFirstChild("GravityTideSignal")
-        local text = label and label:FindFirstChild("GravityTideText")
-        expect(text ~= nil).toBe(true)
-        if text then
-            expect(string.find(text.Text, "PULL", 1, true) ~= nil).toBe(true)
-        end
+        -- The authoritative changing gravity state is still replicated
+        -- and the client HUD already localizes the warning. The former
+        -- 240px AlwaysOnTop English world billboard blocked the Android
+        -- hazard banner and traversal view.
+        expect(beacon:FindFirstChild("GravityTideSignal") == nil).toBe(true)
+        local light = beacon:FindFirstChildOfClass("PointLight")
+        expect(light ~= nil).toBe(true)
+        expect(light and light.Brightness > 0).toBe(true)
         local force = root:FindFirstChild("MoonGravityForce")
         expect(force ~= nil).toBe(true)
         if force then
