@@ -25,6 +25,18 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         return nil
     end
 
+    -- The impact-feedback owner has already raycast the true collision
+    -- surface. Use its surface-aligned frame for shrapnel and crater lips
+    -- on tilted, rotated or sloping platforms. The optional fields retain
+    -- compatibility with existing callers and engine specs.
+    local groundFrame = typeof(payload.surfaceFrame) == "CFrame"
+        and payload.surfaceFrame or CFrame.new(payload.position)
+    local groundColor = typeof(payload.surfaceColor) == "Color3"
+        and payload.surfaceColor or Color3.fromRGB(106, 101, 95)
+    local groundMaterial = typeof(payload.surfaceMaterial) == "EnumItem"
+        and payload.surfaceMaterial.EnumType == Enum.Material
+        and payload.surfaceMaterial or Enum.Material.Metal
+
     local container = Instance.new("Folder")
     container.Name = "ImpactSignature_" .. recipe.Kind
     container.Parent = parent
@@ -33,11 +45,9 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         local fragment = rules.fragment(recipe.Kind, index, recipe.Count, recipe.Radius)
         local direction = fragment.Direction
         local yaw = math.atan2(direction.X, direction.Z)
-        local start = payload.position
-            + direction * fragment.StartRadius
+        local start = direction * fragment.StartRadius
             + Vector3.new(0, 0.28, 0)
-        local finish = payload.position
-            + direction * fragment.EndRadius
+        local finish = direction * fragment.EndRadius
             + Vector3.new(0, fragment.Lift, 0)
 
         local part = recipe.Kind == "Meteor"
@@ -53,11 +63,14 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         -- Preserve color-coded impacts; emission belongs to the existing
         -- warning/flash effects rather than collisionless fragments.
         part.Material = recipe.Kind == "Meteor"
-            and Enum.Material.Basalt
-            or Enum.Material.Metal
+            and Enum.Material.Basalt or groundMaterial
+        -- Bright impact flash is handled by the existing short-lived
+        -- burst/light. Physical shrapnel is dark ejecta or actual chipped
+        -- ground, never the same glowing orange-yellow as the explosion.
         part.Color = recipe.Kind == "Meteor"
-            and payload.color:Lerp(Color3.fromRGB(255, 242, 176), recipe.ColorMix)
-            or payload.color:Lerp(Color3.fromRGB(255, 246, 246), recipe.ColorMix)
+            and groundColor:Lerp(Color3.fromRGB(58, 49, 44), 0.72)
+                :Lerp(payload.color, 0.08)
+            or groundColor:Lerp(payload.color, 0.12)
         part.Transparency = recipe.Kind == "Meteor" and 0.06 or 0.16
         part.Size = recipe.Kind == "Meteor"
             and Vector3.new(fragment.Width, fragment.Length, fragment.Width * 1.8)
@@ -65,7 +78,7 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         -- Compose authored trajectory, oblique yaw and silhouette bank.
         -- Geometry is still one wedge/part per existing budget slot.
         local rotation = CFrame.Angles(0, yaw + fragment.YawSkew, fragment.Bank)
-        part.CFrame = CFrame.new(start) * rotation
+        part.CFrame = groundFrame * CFrame.new(start) * rotation
         part.Parent = container
 
         local goalSize = recipe.Kind == "Meteor"
@@ -79,7 +92,7 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
                 Enum.EasingDirection.Out
             ),
             {
-                CFrame = CFrame.new(finish) * rotation,
+                CFrame = groundFrame * CFrame.new(finish) * rotation,
                 Size = goalSize,
                 Transparency = 1,
             }
@@ -101,26 +114,28 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         piece.CastShadow = false
         piece.Material = meteor and Enum.Material.Slate or Enum.Material.Metal
         piece.Color = meteor
-            and payload.color:Lerp(Color3.fromRGB(48, 40, 35), 0.70)
-            or payload.color:Lerp(Color3.fromRGB(145, 139, 145), 0.56)
+            and groundColor:Lerp(Color3.fromRGB(48, 40, 35), 0.74)
+                :Lerp(payload.color, 0.06)
+            or groundColor:Lerp(Color3.fromRGB(125, 122, 122), 0.46)
+                :Lerp(payload.color, 0.10)
         piece.Transparency = meteor and 0.11 or 0.18
         piece.Size = meteor
             and Vector3.new(finish.Width, finish.Height, finish.Width * 0.75)
             or Vector3.new(finish.Width, 0.15, 0.25)
         local angle = finish.Angle
         local rotation = CFrame.Angles(0, -angle + finish.YawSkew, finish.Bank)
-        local start = payload.position + finish.Direction * finish.StartRadius
+        local start = finish.Direction * finish.StartRadius
             + Vector3.new(0, meteor and finish.Height * 0.5 or 0.16, 0)
-        local goal = payload.position + finish.Direction * finish.EndRadius
+        local goal = finish.Direction * finish.EndRadius
             + Vector3.new(0, finish.Lift, 0)
-        piece.CFrame = CFrame.new(start) * rotation
+        piece.CFrame = groundFrame * CFrame.new(start) * rotation
         piece.Parent = container
         TweenService:Create(
             piece,
             TweenInfo.new(recipe.Lifetime * (meteor and 0.85 or 0.72),
                 Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
-                CFrame = CFrame.new(goal) * rotation,
+                CFrame = groundFrame * CFrame.new(goal) * rotation,
                 Size = meteor
                     and Vector3.new(finish.Width * 0.62,
                         finish.Height * 0.43, finish.Width * 0.32)
