@@ -267,23 +267,25 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
             alloy, Enum.Material.Metal)
     end
 
-    -- Four structural profiles x four different arena roof signatures:
-    -- distinct real 3D volumes, rather than sixteen duplicated boxes.
+    -- Four recognizable macro profiles: taller radar fins, wider freight
+    -- beams, full-sized vent casings and a long communications mast. This
+    -- resizes EXISTING inert Parts: no extra server replication, no new
+    -- collision and no changes to the service-door silhouette budget.
     if slot == 1 then
         for _, direction in ipairs({-1, 1}) do
             make("ObservatoryFin" .. tostring(direction), "WedgePart",
-                Vector3.new(3.3, 5.4, 1.6),
-                CFrame.new(direction * 3, 18.2, 0.2)
+                Vector3.new(3.8, 7.8, 1.8),
+                CFrame.new(direction * 3, 19.2, 0.2)
                     * CFrame.Angles(0, direction * math.rad(18), 0),
                 steel)
         end
         local ball = make("OrbitalSurveyLens", "Part",
-            Vector3.new(3.6, 3.6, 3.6),
-            CFrame.new(0, 22, -0.3), accent, Enum.Material.Glass)
+            Vector3.new(4.4, 4.4, 4.4),
+            CFrame.new(0, 24.6, -0.3), accent, Enum.Material.Glass)
         ball.Shape = Enum.PartType.Ball
         ball.Transparency = 0.18
     elseif slot == 2 then
-        make("CrossGantry", "Part", Vector3.new(13.5, 1.2, 2),
+        make("CrossGantry", "Part", Vector3.new(17.2, 1.45, 2.6),
             CFrame.new(0, 18.1, 0), alloy)
         make("CabShell", "Part", Vector3.new(5.6, 3, 4),
             CFrame.new(0, 15.9, 0), dark)
@@ -298,28 +300,28 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
     elseif slot == 3 then
         for duct = -1, 1 do
             local tube = make("VentTurbine" .. tostring(duct), "Part",
-                Vector3.new(5.6, 2.6, 2.6),
-                CFrame.new(duct * 3.4, 17.2 + math.abs(duct), 0.1),
+                Vector3.new(6.4, 3.4, 3.4),
+                CFrame.new(duct * 3.4, 18.4 + math.abs(duct), 0.1),
                 duct == 0 and accent or alloy, Enum.Material.Metal)
             tube.Shape = Enum.PartType.Cylinder
             make("VentArmour" .. tostring(duct), "WedgePart",
-                Vector3.new(2.5, 2.2, 3.2),
-                CFrame.new(duct * 3.4, 19.4 + math.abs(duct), 0),
+                Vector3.new(3.0, 3.1, 3.6),
+                CFrame.new(duct * 3.4, 21.2 + math.abs(duct), 0),
                 steel)
         end
     else
-        make("AerialMast", "Part", Vector3.new(0.7, 12.2, 0.7),
-            CFrame.new(0, 22, 0), steel)
+        make("AerialMast", "Part", Vector3.new(0.85, 16.5, 0.85),
+            CFrame.new(0, 23, 0), steel)
         for _, direction in ipairs({-1, 1}) do
             make("CrossAerial" .. tostring(direction), "Part",
-                Vector3.new(9, 0.44, 0.6),
-                CFrame.new(0, 21.2 + direction * 3.1, 0)
+                Vector3.new(11.2, 0.52, 0.65),
+                CFrame.new(0, 22.1 + direction * 3.1, 0)
                     * CFrame.Angles(0, direction * math.rad(42), 0),
                 alloy)
         end
         local prism = make("SignalCrystal", "WedgePart",
-            Vector3.new(3.6, 4.7, 3.6),
-            CFrame.new(0, 29, 0) * CFrame.Angles(0, math.rad(45), 0),
+            Vector3.new(4.1, 5.8, 4.1),
+            CFrame.new(0, 32.1, 0) * CFrame.Angles(0, math.rad(45), 0),
             accent, Enum.Material.Glass)
         prism.Transparency = 0.23
     end
