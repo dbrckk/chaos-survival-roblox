@@ -61,6 +61,19 @@ local signs = {
     {1, 1, "COMMS ARRAY", "04"},
 }
 
+-- The sixteen real server district facades already identify their
+-- North/East/South/West routes with these four distinct hues
+-- (ArenaDistrictArchitecture.SECTOR_COLOR). The four nearby sector
+-- monuments previously alternated only theme.Accent/theme.Secondary:
+-- cyan/violet even next to an amber/coral building. Keep the *same*
+-- wayfinding vocabulary without touching server facades or hazard hues.
+local SECTOR_IDENTITY = {
+    Color3.fromRGB(242, 180, 90),   -- 01 North: industrial observatory
+    Color3.fromRGB(97, 216, 182),   -- 02 East: cargo transit
+    Color3.fromRGB(239, 132, 153),  -- 03 South: energy facility
+    Color3.fromRGB(166, 150, 239),  -- 04 West: communications
+}
+
 local function part(parent, name, size, frame, color, material, alpha, shape)
     local piece = Instance.new("Part")
     piece.Name = name
@@ -139,12 +152,18 @@ local function makeSector(base, theme, index, tier, variant)
 
     local dark = theme.Structure:Lerp(Color3.fromRGB(14, 22, 31), 0.42)
     local alloy = theme.Detail:Lerp(theme.Structure, 0.36)
-    local accent = index % 2 == 0 and theme.Secondary or theme.Accent
+    local baseAccent = index % 2 == 0 and theme.Secondary or theme.Accent
+    local accent = baseAccent:Lerp(SECTOR_IDENTITY[index], 0.72)
+    -- Large structural shells must stay weathered, not take on
+    -- intense wayfinding colors. Reserve accent for compact identity
+    -- markings, lenses and service serials.
+    local paintedAlloy = alloy:Lerp(accent, 0.32)
     local model = Instance.new("Model")
     model.Name = "Sector" .. number .. "_" .. title:gsub("%s+", "")
     model:SetAttribute("LocalOriginal3D", true)
     model:SetAttribute("CosmeticOnly", true)
     model:SetAttribute("DistrictSector", index)
+    model:SetAttribute("DistrictWayfindingColor", accent)
     model.Parent = folder
 
     local function make(name, size, localCFrame, color, material, alpha, shape)
@@ -226,8 +245,11 @@ local function makeSector(base, theme, index, tier, variant)
             make("ScannerBalance", Vector3.new(8.2, 0.7, 0.7),
                 CFrame.new(0, 17, 1.8) * CFrame.Angles(0, math.rad(30), 0),
                 alloy)
+            -- Etched glass instrument face instead of a full-bright
+            -- decorative neon plate above the player's route.
             make("DishBacklight", Vector3.new(3.2, 0.2, 1.1),
-                CFrame.new(0.3, 14.0, -1), accent, Enum.Material.Neon, 0.35)
+                CFrame.new(0.3, 14.0, -1), paintedAlloy,
+                Enum.Material.Glass, 0.38)
         end
         eye:SetAttribute("OriginalLens", true)
     elseif index == 2 then
@@ -236,9 +258,12 @@ local function makeSector(base, theme, index, tier, variant)
             make("CargoPod" .. side, Vector3.new(5.6, 5.4, 4.5),
                 CFrame.new(side * 3.1, 3.25, 0), dark,
                 Enum.Material.CorrodedMetal, 0.06)
+            -- Cargo identification is painted steel, never a huge
+            -- glowing route surface. Keep its existing subtle flicker
+            -- tween and unique four-sector wayfinding hue.
             make("CargoStripe" .. side, Vector3.new(5.7, 0.46, 4.6),
-                CFrame.new(side * 3.1, 5.65, 0), accent,
-                Enum.Material.Neon, 0.32)
+                CFrame.new(side * 3.1, 5.65, 0), paintedAlloy,
+                Enum.Material.Metal, 0.08)
         end
         make("GantryBridge", Vector3.new(16.5, 1.6, 4),
             CFrame.new(0, 15, 0), alloy)
@@ -252,7 +277,8 @@ local function makeSector(base, theme, index, tier, variant)
             make("RaisedSupplyPod", Vector3.new(4.8, 3.0, 3.4),
                 CFrame.new(0, 7.4, 0), theme.Detail)
             make("CraneCap", Vector3.new(4.5, 0.6, 5),
-                CFrame.new(0, 16, 0), accent, Enum.Material.Neon, 0.44)
+                CFrame.new(0, 16, 0), paintedAlloy,
+                Enum.Material.DiamondPlate, 0.12)
         end
     elseif index == 3 then
         -- Power station: visual containment volume with axial fins.
@@ -273,10 +299,12 @@ local function makeSector(base, theme, index, tier, variant)
                     CFrame.new(math.cos(angle) * 5.0, 14.0,
                         math.sin(angle) * 5.0)
                         * CFrame.Angles(0, -angle, 0),
-                    segment % 2 == 0 and accent or alloy,
-                    segment % 2 == 0 and Enum.Material.Neon
-                        or Enum.Material.Metal,
-                    segment % 2 == 0 and 0.35 or 0.06)
+                    segment % 2 == 0 and paintedAlloy or alloy,
+                    -- Machined containment metal, not eight alternating
+                    -- opaque/neon slabs. Preserve existing High-tier
+                    -- animated collar ownership with no glass overdraw.
+                    Enum.Material.Metal,
+                    segment % 2 == 0 and 0.08 or 0.06)
             end
         end
     else
