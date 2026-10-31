@@ -21,7 +21,39 @@ ArenaFocalLightingRules.Definitions = {
         {Offset = Vector3.new(0.62, 16, -0.92), Role = "Secondary", Range = 48, Angle = 48, Intensity = 0.60},
         {Offset = Vector3.new(0.82, 11, 0.74), Role = "Detail", Range = 46, Angle = 50, Intensity = 0.42},
     },
+    -- Storm Harbor floodlamps illuminate its actual storm-signal gantry,
+    -- cargo-yard edges and docks; never reuse Classic's broadcast pylons.
+    -- Same two Medium / three High source budget as the other arenas.
+    Harbor = {
+        {Offset = Vector3.new(0, 19, 1.14), Role = "Detail", Range = 58, Angle = 52, Intensity = 0.78},
+        {Offset = Vector3.new(-0.93, 12, -0.48), Role = "Secondary", Range = 49, Angle = 48, Intensity = 0.56},
+        {Offset = Vector3.new(0.94, 15, 0.28), Role = "Accent", Range = 49, Angle = 46, Intensity = 0.42},
+    },
 }
+
+-- One exact local-space spotlight transform shared by initial build and
+-- an existing floor shrinking/tilting. Return nil for malformed inputs.
+-- No hidden server movement, raycasts, or separate animation scheduler.
+function ArenaFocalLightingRules.anchorFrame(baseFrame, baseSize, definition)
+    if typeof(baseFrame) ~= "CFrame" or typeof(baseSize) ~= "Vector3"
+        or type(definition) ~= "table"
+        or typeof(definition.Offset) ~= "Vector3"
+        or baseSize.X <= 0 or baseSize.Z <= 0 then
+        return nil
+    end
+    local offset = definition.Offset
+    local halfX, halfZ = baseSize.X * 0.5, baseSize.Z * 0.5
+    local position = baseFrame:PointToWorldSpace(Vector3.new(
+        offset.X * halfX, offset.Y, offset.Z * halfZ
+    ))
+    local destination = baseFrame:PointToWorldSpace(Vector3.new(
+        math.clamp(offset.X, -1, 1) * halfX * 0.42,
+        4.0,
+        math.clamp(offset.Z, -1, 1) * halfZ * 0.42
+    ))
+    if (destination - position).Magnitude < 0.01 then return nil end
+    return CFrame.lookAt(position, destination, baseFrame.UpVector)
+end
 
 function ArenaFocalLightingRules.sourceCount(tierName)
     local tier = tostring(tierName or "Medium")

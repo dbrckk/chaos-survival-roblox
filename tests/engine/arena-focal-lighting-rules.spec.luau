@@ -26,11 +26,35 @@ describe("Arena focal lighting rules", function()
     end)
 
     it("defines three focal candidates for every arena", function()
-        for _, id in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        for _, id in ipairs({"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}) do
             local definitions = ArenaFocalLightingRules.definitions(id)
             expect(#definitions >= 3).toBe(true)
             expect(definitions[1].Range > 0).toBe(true)
             expect(definitions[1].Angle > 0).toBe(true)
+            -- A real tilted and shrinking rectangular deck changes
+            -- spotlight placement, not the number of GPU light sources.
+            local base = CFrame.new(12, 20, -8)
+                * CFrame.Angles(math.rad(12), math.rad(24), math.rad(-8))
+            local largeSize = Vector3.new(146, 3.5, 102)
+            local smallSize = Vector3.new(82, 3.5, 58)
+            local start = ArenaFocalLightingRules.anchorFrame(
+                base, largeSize, definitions[1]
+            )
+            local shrunk = ArenaFocalLightingRules.anchorFrame(
+                base, smallSize, definitions[1]
+            )
+            local expected = Vector3.new(
+                definitions[1].Offset.X * 73,
+                definitions[1].Offset.Y,
+                definitions[1].Offset.Z * 51
+            )
+            expect(typeof(start)).toBe("CFrame")
+            expect(typeof(shrunk)).toBe("CFrame")
+            expect((base:PointToObjectSpace(start.Position) - expected).Magnitude
+                < 0.001).toBe(true)
+            expect(start.Position ~= shrunk.Position).toBe(true)
+            expect(ArenaFocalLightingRules.anchorFrame(nil, largeSize,
+                definitions[1]) == nil).toBe(true)
         end
     end)
 
@@ -68,14 +92,14 @@ end)
 
 
 describe("Motivated physical focal light fixtures", function()
-    it("uses four noncolliding identities with mobile tier limits", function()
+    it("uses five noncolliding identities with mobile tier limits", function()
         local parent = Instance.new("Folder")
         local anchor = Instance.new("Part")
         anchor.CFrame = CFrame.new(12, 20, -18)
             * CFrame.Angles(math.rad(15), math.rad(39), math.rad(-12))
         anchor.Parent = parent
         local seen = {}
-        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}) do
             local names = ArenaFocalFixtureKit.names(variant)
             expect(#names).toBe(2)
             expect(seen[names[1]] == nil).toBe(true)

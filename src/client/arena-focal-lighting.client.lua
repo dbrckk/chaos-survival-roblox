@@ -18,12 +18,25 @@ folder.Name = "ArenaFocalLightingLocal"
 folder.Parent = workspace
 
 local lights = {}
+local anchorStates = {}
+local basePoseConnections = {}
+local liveBase = nil
+local poseSerial = 0
+local poseQueued = false
 local phase = "waiting"
 local finalRush = false
 local activeDisasters = {}
 local disconnectMapWatch = nil
 
 local function clear()
+    poseSerial += 1
+    poseQueued = false
+    for _, connection in ipairs(basePoseConnections) do
+        connection:Disconnect()
+    end
+    table.clear(basePoseConnections)
+    liveBase = nil
+    table.clear(anchorStates)
     for _, light in ipairs(lights) do
         if light and light.Parent then
             light:Destroy()
@@ -76,6 +89,40 @@ local function refresh(duration)
     end
 end
 
+-- Only during an actual Base.Size/CFrame change (ShrinkingArena or a
+-- tilting map), reposition the *existing* spotlights AND their anchored
+-- hardware together. No per-frame polling and no new light allocations.
+local function syncAnchorFrames()
+    local base = liveBase
+    if not base or not base.Parent then return end
+    local frame, size = base.CFrame, base.Size
+    for _, state in ipairs(anchorStates) do
+        local nextFrame = ArenaFocalLightingRules.anchorFrame(
+            frame, size, state.definition
+        )
+        if nextFrame and state.anchor.Parent
+            and state.anchor.CFrame ~= nextFrame then
+            state.anchor.CFrame = nextFrame
+            for _, fixture in ipairs(state.fixtures) do
+                if fixture.part.Parent then
+                    fixture.part.CFrame = nextFrame * fixture.localFrame
+                end
+            end
+        end
+    end
+end
+
+local function queueAnchorSync()
+    if poseQueued then return end
+    poseQueued = true
+    local serial = poseSerial
+    task.defer(function()
+        if serial ~= poseSerial then return end
+        poseQueued = false
+        syncAnchorFrames()
+    end)
+end
+
 local function rebuild()
     clear()
 
@@ -95,27 +142,17 @@ local function rebuild()
     end
 
     local definitions = ArenaFocalLightingRules.definitions(variant)
-    local halfX = base.Size.X * 0.5
-    local halfZ = base.Size.Z * 0.5
     for i = 1, math.min(count, #definitions) do
         local definition = definitions[i]
-        local offset = definition.Offset
-        local worldPosition = base.CFrame:PointToWorldSpace(Vector3.new(
-            offset.X * halfX,
-            offset.Y,
-            offset.Z * halfZ
-        ))
-        local focusLocal = Vector3.new(
-            math.clamp(offset.X, -1, 1) * halfX * 0.42,
-            4.0,
-            math.clamp(offset.Z, -1, 1) * halfZ * 0.42
+        local frame = ArenaFocalLightingRules.anchorFrame(
+            base.CFrame, base.Size, definition
         )
-        local target = base.CFrame:PointToWorldSpace(focusLocal)
+        if not frame then continue end
 
         local anchor = Instance.new("Part")
         anchor.Name = "ArenaFocalLightAnchor" .. i
         anchor.Size = Vector3.new(0.18, 0.18, 0.18)
-        anchor.CFrame = CFrame.lookAt(worldPosition, target)
+        anchor.CFrame = frame
         anchor.Anchored = true
         anchor.CanCollide = false
         anchor.CanTouch = false
@@ -123,7 +160,21 @@ local function rebuild()
         anchor.CastShadow = false
         anchor.Transparency = 1
         anchor.Parent = folder
-        ArenaFocalFixtureKit.build(folder, anchor, variant, tier.Name, theme, i)
+        local parts = ArenaFocalFixtureKit.build(
+            folder, anchor, variant, tier.Name, theme, i
+        )
+        local fixtures = {}
+        for _, part in ipairs(parts) do
+            fixtures[#fixtures + 1] = {
+                part = part,
+                localFrame = frame:ToObjectSpace(part.CFrame),
+            }
+        end
+        anchorStates[#anchorStates + 1] = {
+            anchor = anchor,
+            definition = definition,
+            fixtures = fixtures,
+        }
 
         local light = Instance.new("SpotLight")
         light.Name = "ArenaFocalSpot" .. i
@@ -145,6 +196,13 @@ local function rebuild()
         table.insert(lights, light)
     end
 
+    liveBase = base
+    basePoseConnections[#basePoseConnections + 1] =
+        base:GetPropertyChangedSignal("Size"):Connect(queueAnchorSync)
+    basePoseConnections[#basePoseConnections + 1] =
+        base:GetPropertyChangedSignal("CFrame"):Connect(queueAnchorSync)
+    -- Catch a size/pose update that happened while we created the lights.
+    syncAnchorFrames()
     refresh(0.16)
 end
 
