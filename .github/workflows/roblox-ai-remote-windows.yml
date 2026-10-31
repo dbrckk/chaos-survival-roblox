@@ -46,8 +46,20 @@ jobs:
           if ($allowed -cnotcontains $env:CHAOS_VISUAL_SCOPE) {
             throw "Untrusted or missing visual QA map selection"
           }
+          $actual = (git rev-parse HEAD).Trim()
+          if ($actual -ne $env:GITHUB_SHA) {
+            throw "Exact Git checkout SHA mismatch; refusing visual evidence."
+          }
           New-Item -ItemType Directory -Force build | Out-Null
           Set-Content -LiteralPath build/visual-ai-audit-scope.txt -Value $env:CHAOS_VISUAL_SCOPE -Encoding ascii
+          @(
+            "capture_kind=AUTHENTIC_INTERACTIVE_ROBLOX_STUDIO",
+            "source_sha=$env:GITHUB_SHA",
+            "github_run_id=$env:GITHUB_RUN_ID",
+            "arena_scope=$env:CHAOS_VISUAL_SCOPE",
+            "android_performance_certified=false",
+            "public_roblox_place_modified=false"
+          ) | Set-Content -LiteralPath build/visual-ai-audit-provenance.txt -Encoding ascii
           Write-Host ("Studio QA scope: " + $env:CHAOS_VISUAL_SCOPE)
 
       - name: Validate opt-in secrets
@@ -426,5 +438,6 @@ jobs:
             build/visual-ai-captures/*/visual-ai-audit.json
             build/visual-ai-captures/*/visual-ai-audit.md
             build/visual-ai-audit-scope.txt
+            build/visual-ai-audit-provenance.txt
           if-no-files-found: warn
           retention-days: 14
